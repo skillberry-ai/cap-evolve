@@ -16,8 +16,8 @@ export type RunStatus =
 
 export type Verdict = 'accept' | 'reject' | 'indecisive' | 'no measurement'
 
-/** One row of summary.gate_decisions. Δ̄/SE/n are parsed out of the gate's own reason
- *  string; a value the gate did not record is `null` — never a stand-in 0. */
+/** One row of summary.gate_decisions, as `reduce_run()` emits it. A value the gate did
+ *  not record is `null`/absent — never a stand-in 0. */
 export interface GateDecision {
   iteration: number | null
   candidate: string
@@ -30,6 +30,8 @@ export interface GateDecision {
   n: number | null
   k_se: number | null
   threshold: number | null
+  /** 2·SE — the smallest Δ̄ this measurement could resolve. Absent on older run dirs. */
+  resolvable_effect_size?: number | null
   reason: string
   /** Which reference the gate actually used ("parent" vs a drift-controlled reference). */
   gate_mode?: string | null
@@ -295,6 +297,22 @@ export interface GraphNode {
    *  screen's own rollouts (see `ScreenRow.per_task`) — never emitted by the reducer
    *  itself, so absent means "a real candidate". */
   kind?: 'candidate' | 'screen'
+  /** Structured gate numbers the reducer copies onto the node when the algorithm
+   *  recorded them (see dashboard.py `_gk` loop). All optional: older run dirs lack them. */
+  gate_delta?: number | null
+  gate_stderr?: number | null
+  gate_n?: number | null
+  gate_k_se?: number | null
+  gate_threshold?: number | null
+  gate_resolvable_effect_size?: number | null
+  gate_mode?: string | null
+  gate_verdict?: Verdict | null
+  control_relative_verdict?: Verdict | null
+  control_relative_delta?: number | null
+  evidence_bar?: number | null
+  overrode_gate?: boolean | null
+  reject_basis?: string | null
+  verdict_stable?: boolean | null
   /** Set when the driver's own handover file came back empty/malformed for this
    *  round: the `reason`/`note` shown is reconstructed after the fact, not the
    *  optimizer's live reasoning. */

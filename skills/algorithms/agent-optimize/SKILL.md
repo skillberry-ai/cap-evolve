@@ -151,7 +151,7 @@ Only the candidate pays, for the subset. `decision` is `kill` or `promote`
 — **never accept** — kills only on proven harm. **Check the arithmetic before trusting a screen:**
 `savings.breakeven_kill_rate` (`fired / full_val_rollouts`) is the fraction it must kill to pay for itself;
 `savings.net_rollouts` books what it cost. Screen only when that break-even sits below your observed kill
-rate — on a small val the tier-1 floor makes it unreachable, so pay full val directly — and read a screen as
+rate — on a small val the tier-1 floor makes it unreachable, skip, but not by rote (#585) — and read a screen as
 evidence about the tasks the edit targeted, never as a gate decision.
 
 **4. Honest gate on FULL val.** Before this step, confirm every addressable diagnosed cluster

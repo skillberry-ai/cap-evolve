@@ -84,15 +84,23 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
         ``tokens=0`` and discarding real usage.
       * COST falls back to summing the per-message ``cost`` values that ARE present,
         which beats zero when only a few messages are unpriced.
-      * It deliberately does NOT price tokens from a public rate table here — the
-        proxy/RITS endpoint's real rates are not knowable from this adapter, and a
-        fabricated dollar figure next to measured ones is worse than an absent one.
+      * It deliberately does NOT price tokens from a rate table here — a fabricated
+        dollar figure next to measured ones is worse than an absent one; pricing is
+        litellm's per-call job (see the last bullet).
       * ``cost_source``/``messages_missing_cost`` record which case happened, so a
         0.0 reads as "unpriced" rather than "free" (``Rollout.cost_usd`` is a
         non-optional float that coerces ``None`` to ``0.0``).
+      * Per-token rates live in ``gateway.PRICING_PER_1M`` and are registered with
+        litellm, so tau2's per-message costs are real for listed models. A model NOT
+        listed is registered at $0, so tau2 "prices" it at 0.0: ``cost_measured`` and
+        ``unpriced_models`` say so, and ``cost_source`` becomes ``unpriced`` (no call
+        class priced) or ``partial_models`` (cost_usd is a lower bound).
     """
     global _cost_unpriced_warned
+    import gateway  # sibling module
 
+    unpriced_models = sorted({m for m in (gateway.agent_model(), gateway.user_model())
+                              if not gateway.is_priced(m)})
     agent_cost, user_cost = sim.agent_cost, sim.user_cost
     try:
         messages = list(sim.get_messages())
@@ -109,10 +117,18 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
     missing_usage = sum(1 for m in messages if getattr(m, "usage", None) is None)
 
     if agent_cost is not None or user_cost is not None:
+        if not unpriced_models:
+            source = "tau2"
+        elif len(unpriced_models) == len({gateway.agent_model(), gateway.user_model()}):
+            source = "unpriced"
+        else:
+            source = "partial_models"
         return (
             float(agent_cost or 0.0) + float(user_cost or 0.0),
             tokens,
-            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage},
+            {"cost_source": source, "cost_measured": not unpriced_models,
+             "unpriced_models": unpriced_models,
+             "messages_missing_cost": 0, "messages_missing_usage": missing_usage},
         )
 
     # tau2 gave up on the whole run: salvage whatever the provider did price.
@@ -133,6 +149,8 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
             )
     return partial, tokens, {
         "cost_source": source,
+        "cost_measured": False,
+        "unpriced_models": unpriced_models,
         "messages_missing_cost": missing,
         "messages_missing_usage": missing_usage,
     }

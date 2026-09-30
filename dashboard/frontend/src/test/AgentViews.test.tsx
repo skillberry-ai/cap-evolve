@@ -191,6 +191,39 @@ describe('GatePanel', () => {
     render(<GatePanel summary={summary({ gate_decisions: [row({ reason: 'churn — broke t1' })] })} />)
     expect(screen.getByText(/churn — broke t1/)).toBeInTheDocument()
   })
+
+  // Shapes copied from reduce_run() on run_v18_fromscratch_20260930 (cand_3, cand_1).
+  it('renders the structured SE / bar / control Δ / stability / override fields', () => {
+    const gated = row({
+      candidate: 'cand_3', verdict: 'accept', val: 0.6733, parent_val: 0.5333, delta: 0.14,
+      stderr: 0.036703, n: 30, k_se: 0.2, threshold: 0.007340644213641223,
+      resolvable_effect_size: 0.073406, gate_mode: 'parent', control_relative_verdict: 'accept',
+      control_relative_delta: 0.18000000000000002, evidence_bar: 0.0467, gate_verdict: 'accept',
+      overrode_gate: false, verdict_stable: true,
+      // A reason whose prose disagrees: the table must show the structured numbers.
+      reason: 'SE=9.9999, 0.5·SE=8.8888',
+    })
+    const overridden = row({
+      candidate: 'cand_1', verdict: 'reject', val: 0.63, gate_verdict: 'accept',
+      overrode_gate: true, reject_basis: 'driver_judgement',
+    })
+    render(<GatePanel summary={summary({ gate_decisions: [gated, overridden] })} />)
+    expect(screen.getByText('±0.0367')).toBeInTheDocument()
+    expect(screen.getByText('0.0073')).toBeInTheDocument()
+    expect(screen.getByText('k=0.2')).toBeInTheDocument()
+    expect(screen.getByText('+0.1800')).toBeInTheDocument()
+    expect(screen.getByText('bar 0.0467')).toBeInTheDocument()
+    expect(screen.getByText('stable')).toBeInTheDocument()
+    expect(screen.getByText('overrode gate (raw accept)')).toBeInTheDocument()
+    expect(screen.queryByText('±9.9999')).not.toBeInTheDocument()
+  })
+
+  it('omits the newer fields on an older row that lacks them instead of crashing', () => {
+    render(<GatePanel summary={summary({ gate_decisions: [row()] })} />)
+    expect(screen.queryByText('stable')).not.toBeInTheDocument()
+    expect(screen.queryByText(/overrode gate/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^bar \d/)).not.toBeInTheDocument()
+  })
 })
 
 describe('KpiStrip', () => {

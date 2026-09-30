@@ -1239,6 +1239,13 @@ def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
     events = _read_jsonl(_safe_subpath(root, "events.jsonl"))
+    # #610: agent-mode USD per candidate, split by host.py from the session's real total
+    # once it ends (the decision events themselves can only carry metered tokens/seconds).
+    opt_usd_attributed: dict = {}
+    for e in events:
+        if e.get("kind") == "opt_cost_attribution":
+            for _cid, _usd in (e.get("by_candidate") or {}).items():
+                opt_usd_attributed[_cid] = opt_usd_attributed.get(_cid, 0.0) + float(_usd)
     baseline = _read_json(_safe_subpath(root, "baseline.json"))
     final = _read_json(_safe_subpath(root, "final.json"))
 
@@ -1497,7 +1504,8 @@ def reduce_run(run_dir) -> dict:
             "tokens": ev.get("tokens") or vev.get("tokens") or 0,
             # Per-iteration optimizer cost/tokens (RITS runner cost is often $0/null,
             # but the optimizer agent CLI reports opt_cost_usd / opt_tokens per step).
-            "opt_cost_usd": ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd"),
+            "opt_cost_usd": (ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd")
+                             or opt_usd_attributed.get(cid)),
             "opt_tokens": ev.get("opt_tokens") or ev.get("optimizer_tokens") or 0,
             # Cache-read/-creation tokens (issue #575 D.3): separate from opt_tokens on
             # purpose — folding them in would hide the cache hit rate opt_tokens is
@@ -2010,6 +2018,11 @@ def reduce_run(run_dir) -> dict:
                 note = (f"{note + ' — ' if note else ''}unpriced: the target model's "
                         f"provider returned no per-message cost for {unpriced} rollout(s) "
                         f"({int(ev.get('tokens') or 0):,} tokens recorded instead)")
+            elif cs_counts.get("partial_models"):
+                # e.g. the agent under test is priced but the user simulator is not.
+                note = (f"{note + ' — ' if note else ''}partially priced: "
+                        f"{cs_counts['partial_models']} rollout(s) include an unpriced "
+                        f"model, so this cost is a lower bound")
             ledger.append({
                 "phase": _phase_for(ev), "split": split,
                 "kind": "baseline_eval" if is_base else ("test_eval" if split == "test"
@@ -2029,6 +2042,9 @@ def reduce_run(run_dir) -> dict:
             usd = ev.get("opt_cost_usd")
             if usd is None:
                 usd = ev.get("optimizer_cost_usd")
+            if usd is None:
+                # Once per candidate: its accept and step records are both _STEP_KINDS.
+                usd = opt_usd_attributed.pop(cid, None)
             truncated = cid in opt_error_ids
             ledger.append({
                 "phase": "optimize", "kind": "optimizer_call", "split": None,

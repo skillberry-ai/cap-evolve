@@ -91,6 +91,7 @@ from datetime import datetime
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
+import meter
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
@@ -1048,6 +1049,9 @@ def _agent_env(model: str | None) -> dict:
         # agent must remember is the form that already failed.
         "PATH": os.pathsep.join([str(Path(sys.executable).parent),
                                  os.environ.get("PATH", "")]).rstrip(os.pathsep),
+        # #610: tells commit.py this is a hosted session, so it meters each decision's
+        # optimizer tokens/seconds from this session's log (meter.py) instead of leaving null.
+        "CAPEVOLVE_HOST_METER": "1",
     }
     if model:
         env["CAPEVOLVE_OPTIMIZER_MODEL"] = model
@@ -1316,6 +1320,11 @@ def main(argv=None) -> int:
                          timed_out=timed_out, stop_reason=stop_reason, num_turns=num_turns,
                          is_error=is_error, terminal_reason=terminal_reason,
                          permission_denials=permission_denials, attempt=attempt)
+            # #610: the session's real USD exists only now; split it over the decisions
+            # commit.py metered during it, so per-candidate optimizer cost is recorded.
+            attribution = meter.attribute_usd(run_dir, usd)
+            if attribution is not None:
+                rd.log_event("opt_cost_attribution", **attribution)
             # Book only what the agent did not already attribute to a round during THIS
             # invocation. `seconds` is booked too: without it the run recorded
             # `optimizer_seconds: 0.0` for a loop that ran for hours, so metrics.py's

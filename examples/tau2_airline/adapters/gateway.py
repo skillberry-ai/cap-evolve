@@ -138,26 +138,48 @@ def llm_args_for(model: str) -> dict:
     change the args. It exists so the adapter can stay explicit about which call class it
     is configuring, and so a split (a judge on a different endpoint) has a seam.
 
-    It also registers ``model``'s zero cost, because this is the one function the runner
+    It also registers ``model``'s price, because this is the one function the runner
     calls per call class before the rollouts start. Without it litellm has no price entry
     and tau2 logs "This model isn't mapped yet" at ERROR level on EVERY completion, which
     buries real failures in the run log.
     """
-    register_zero_cost(model, _bare(model))
+    register_cost(model, _bare(model))
     return llm_args()
 
 
-def register_zero_cost(*models: str) -> None:
-    """Tell litellm the gateway models are unmetered here, so its cost lookup returns 0
-    instead of logging "model isn't mapped yet" on every call. Honest: gateway spend is
-    not metered by this run, so a 0 in the cost panel means NOT MEASURED, not free.
-    Never raises — cost mapping is cosmetic."""
+# Published per-1M-token USD rates for gateway catalog ids (bare, unprefixed, CASE-SENSITIVE
+# like the catalog). Add a model here to price it; nothing else changes. A model NOT listed
+# is registered at $0 and reported as unmeasured (see ``is_priced``) — never as free.
+PRICING_PER_1M = {
+    "aws/gpt-oss-120b": {"in": 0.15, "out": 0.60},
+}
+
+
+def is_priced(model: str) -> bool:
+    """True iff ``model`` has a real rate in :data:`PRICING_PER_1M` (so its cost is measured)."""
+    return _bare(model) in PRICING_PER_1M
+
+
+def register_cost(*models: str) -> None:
+    """Register each gateway model's per-token price with litellm.
+
+    litellm then prices every completion from the response's own prompt/completion token
+    split, and tau2 records that as each message's ``cost`` — exact in/out billing, no
+    blended estimate. Unknown models get 0/0 only so litellm stops logging "model isn't
+    mapped yet" on every call; that 0 means NOT MEASURED (``is_priced`` is False).
+    Never raises — a failed registration must not kill a run."""
     try:
         import litellm
 
-        zero = {"input_cost_per_token": 0.0, "output_cost_per_token": 0.0,
-                "litellm_provider": "openai", "mode": "chat"}
-        litellm.register_model({m: dict(zero) for m in models if m})
+        entries = {}
+        for m in models:
+            if not m:
+                continue
+            rate = PRICING_PER_1M.get(_bare(m), {"in": 0.0, "out": 0.0})
+            entries[m] = {"input_cost_per_token": rate["in"] / 1e6,
+                          "output_cost_per_token": rate["out"] / 1e6,
+                          "litellm_provider": "openai", "mode": "chat"}
+        litellm.register_model(entries)
     except Exception:  # noqa: BLE001
         pass
 
@@ -174,7 +196,7 @@ def probe(model: str | None = None, *, max_tokens: int = 2048) -> dict:
 
     m = normalize(model or (os.environ.get("TAU2_AGENT_MODEL") or DEFAULT_GATEWAY_MODEL))
     base, _ = gateway_credentials()
-    register_zero_cost(m)
+    register_cost(m, _bare(m))
     resp = litellm.completion(
         model=m, api_base=base, max_tokens=max_tokens, temperature=0.0,
         messages=[{"role": "user", "content": "Reply with the single word: ready"}],
@@ -208,4 +230,6 @@ if __name__ == "__main__":  # self-check: routing is a credential path
     llm_args_for("openai/aws/gpt-oss-120b")
     assert "aws/gpt-oss-120b" in litellm.model_cost, \
         "unmapped model -> tau2 logs an ERROR on every completion"
+    assert litellm.model_cost["aws/gpt-oss-120b"]["output_cost_per_token"] == 0.60 / 1e6
+    assert is_priced("openai/aws/gpt-oss-120b") and not is_priced("aws/claude-sonnet-5")
     print("gateway.py self-check OK")
