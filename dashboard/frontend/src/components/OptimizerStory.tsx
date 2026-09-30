@@ -1,4 +1,5 @@
 import type { GraphNode, GateDecision, PerIterationCost } from '../lib/types'
+import { VerdictBadge } from './StatusBadge'
 
 interface OptimizerStoryProps {
   nodes: GraphNode[]
@@ -82,16 +83,7 @@ export function OptimizerStory({ nodes, gates, perIteration, onIterationClick }:
                 <td className="p-3">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs">{node.id}</span>
-                    {node.status === 'accepted' && (
-                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-[var(--accepted)] bg-opacity-20 text-[var(--accepted)] border border-[var(--accepted)] border-opacity-30">
-                        ✓
-                      </span>
-                    )}
-                    {node.status === 'rejected' && (
-                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-[var(--rejected)] bg-opacity-20 text-[var(--rejected)] border border-[var(--rejected)] border-opacity-30">
-                        ✕
-                      </span>
-                    )}
+                    {gate && <VerdictBadge verdict={gate.verdict || node.status} />}
                   </div>
                 </td>
 

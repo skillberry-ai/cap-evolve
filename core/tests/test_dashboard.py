@@ -674,3 +674,122 @@ def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):
     cfg = reduce_run(rd)["summary"]["config"]
     assert cfg["spec_missing"] is True
     assert [f["path"] for f in cfg["files"]] == ["adapters/adapter.py"]
+
+
+
+
+def test_reduce_run_builds_activities():
+    """Activities timeline is built from eval_start and evaluate events."""
+    from cap_evolve import dashboard
+    evs = [
+        {"kind": "start", "t": 0.0},
+        {"kind": "splits", "train": ["t1"], "val": ["t2", "t3"], "test": ["t4"]},
+        {"kind": "baseline", "candidate": "seed", "split": "val", "reward": 0.5, "t": 10.0},
+        {"kind": "eval_start", "tag": "cand_0001", "split": "val", "t": 100.0},
+        {"kind": "evaluate", "tag": "cand_0001", "split": "val", "reward": 0.75, "t": 110.0},
+        {"kind": "step", "candidate": "cand_0001", "accept": True, "val": 0.75, "parent": "seed", "t": 111.0},
+        {"kind": "eval_start", "tag": "FINAL", "split": "test", "t": 200.0},
+        {"kind": "evaluate", "tag": "FINAL", "split": "test", "reward": 0.8, "t": 220.0},
+        {"kind": "finalize", "t": 221.0},
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=evs, baseline={"val": {"reward": 0.5}})
+        (rd.root / "candidates" / "cand_0001").mkdir(parents=True)
+        r = dashboard.reduce_run(rd)
+        
+        activities = r["summary"]["activities"]
+        assert activities is not None
+        
+        # Check optimize activity
+        opt_acts = [a for a in activities if a["type"] == "optimize"]
+        assert len(opt_acts) >= 1
+        opt = opt_acts[0]
+        assert opt["candidate"] == "cand_0001"
+        assert opt["start"] < opt["end"]
+        
+        # Check evaluate activity
+        eval_acts = [a for a in activities if a["type"] == "evaluate" and a["candidate"] == "cand_0001"]
+        assert len(eval_acts) == 1
+        ev = eval_acts[0]
+        assert ev["start"] == 100.0
+        assert ev["end"] == 110.0
+        
+        # Check final_eval activity
+        final_acts = [a for a in activities if a["type"] == "final_eval"]
+        assert len(final_acts) >= 1
+
+
+def test_reduce_run_builds_outcomes():
+    """Outcomes classify tasks as fixed/broke/still_failing/still_passing."""
+    from cap_evolve import dashboard
+    evs = _BASE_EVENTS[:4]  # seed + cand_0001 accepted
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=evs, baseline=_BASELINE)
+        # Add per_task data
+        (rd.root / "rollouts" / "seed" / "val").mkdir(parents=True)
+        (rd.root / "rollouts" / "seed" / "val" / "t1.json").write_text('{"reward": 0.0}')
+        (rd.root / "rollouts" / "seed" / "val" / "t2.json").write_text('{"reward": 1.0}')
+        (rd.root / "rollouts" / "cand_0001" / "val").mkdir(parents=True)
+        (rd.root / "rollouts" / "cand_0001" / "val" / "t1.json").write_text('{"reward": 1.0}')
+        (rd.root / "rollouts" / "cand_0001" / "val" / "t2.json").write_text('{"reward": 0.0}')
+        
+        r = dashboard.reduce_run(rd)
+        nodes = {n["id"]: n for n in r["graph"]["nodes"]}
+        
+        # Check that outcomes structure exists
+        seed_outcomes = nodes["seed"]["outcomes"]
+        assert "fixed" in seed_outcomes
+        assert "broke" in seed_outcomes
+        assert "still_failing" in seed_outcomes
+        assert "still_passing" in seed_outcomes
+        
+        # Check cand_0001 outcomes - it should have per_task data from rollouts
+        cand_outcomes = nodes["cand_0001"]["outcomes"]
+        assert isinstance(cand_outcomes["fixed"], list)
+        assert isinstance(cand_outcomes["broke"], list)
+        assert isinstance(cand_outcomes["still_failing"], list)
+        assert isinstance(cand_outcomes["still_passing"], list)
+        
+        # If per_task was loaded, check the classification
+        if nodes["cand_0001"].get("per_task"):
+            assert "t1" in cand_outcomes["fixed"]  # was 0, now 1
+            assert "t2" in cand_outcomes["broke"]  # was 1, now 0
+
+
+def test_reduce_run_builds_prompt_map():
+    """Prompt map includes line counts, headings, and add/rem lines."""
+    from cap_evolve import dashboard
+    evs = _BASE_EVENTS[:4]
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=evs, baseline=_BASELINE)
+        cand_dir = rd.root / "candidates" / "cand_0001"
+        cand_dir.mkdir(parents=True)
+        
+        # Create a prompt file with headings
+        prompt_content = """# Main heading
+Some text here.
+
+## Subheading 1
+More text.
+
+### Deep heading
+Even more text.
+"""
+        (cand_dir / "prompt.md").write_text(prompt_content)
+        
+        r = dashboard.reduce_run(rd)
+        nodes = {n["id"]: n for n in r["graph"]["nodes"]}
+        
+        if "prompt_map" in nodes["cand_0001"]:
+            pmap = nodes["cand_0001"]["prompt_map"]
+            assert "prompt.md" in pmap
+            pm = pmap["prompt.md"]
+            assert pm["lines"] > 0
+            assert pm["bytes"] > 0
+            assert len(pm["headings"]) >= 3  # Should find the headings
+            # Check heading format: [line, level, text]
+            for h in pm["headings"]:
+                assert len(h) == 3
+                assert isinstance(h[0], int)  # line number
+                assert isinstance(h[1], int)  # level
+                assert isinstance(h[2], str)  # text

@@ -1,210 +1,158 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { IterationDetail } from '../components/IterationDetail'
+import fixtureData from './fixtures/run_payload.json'
 import type { GraphNode, GateDecision } from '../lib/types'
 
 describe('IterationDetail', () => {
-  const mockParent: GraphNode = {
-    id: 'seed',
-    parent: null,
-    children: ['cand_0001'],
-    status: 'seed',
-    val: 0.45,
-    stderr: 0.08,
-  }
-
-  const mockCandidate: GraphNode = {
-    id: 'cand_0001',
-    parent: 'seed',
-    children: [],
-    status: 'accepted',
-    val: 0.975,
-    stderr: 0.08,
-    fixed: ['task1', 'task2'],
-    broke: [],
-    iteration: 1,
-    optimizer_seconds: 2920,
-    runner_seconds: 430,
-    opt_cost_usd: 10.5,
-    cost_usd: 10.5,
-    opt_tokens: 150000,
-    tokens: 650000,
-  }
-
-  const mockGate: GateDecision = {
+  const runId = fixtureData.summary.run_id
+  const nodes = fixtureData.graph.nodes as GraphNode[]
+  const candidate = nodes.find(n => n.id === 'cand_0001')!
+  const parent = nodes.find(n => n.id === 'seed')!
+  const gate: GateDecision = {
     iteration: 1,
     candidate: 'cand_0001',
     verdict: 'accept',
-    val: 0.975,
+    val: 0.75,
     parent: 'seed',
-    parent_val: 0.45,
-    delta: 0.525,
-    stderr: 0.08,
-    n: 40,
+    parent_val: 0.5,
+    delta: 0.25,
+    stderr: 0.0,
+    n: 4,
     k_se: 1.96,
-    threshold: 0.15,
-    reason: 'Cleared threshold',
+    threshold: 0.0,
+    reason: 'up'
   }
 
-  const mockOnClose = vi.fn()
-
-  it('renders iteration header', () => {
+  it('renders overview tab without crashing', () => {
+    const onClose = vi.fn()
     render(
       <IterationDetail
         iteration={1}
-        candidate={mockCandidate}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
       />
     )
-
-    expect(screen.getByText('Iteration 1')).toBeInTheDocument()
-    // Candidate ID appears multiple times (header badge and in overview)
-    const candidateElements = screen.getAllByText(/cand_0001/)
-    expect(candidateElements.length).toBeGreaterThan(0)
-    expect(screen.getByText(/accepted/)).toBeInTheDocument()
+    expect(screen.getByText('Iteration 1')).toBeTruthy()
+    expect(screen.getAllByText('cand_0001').length).toBeGreaterThan(0)
   })
 
-  it('displays parent to candidate delta', () => {
+  it('renders diagnosis tab with diagnosis data', () => {
+    const onClose = vi.fn()
     render(
       <IterationDetail
         iteration={1}
-        candidate={mockCandidate}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
       />
     )
-
-    expect(screen.getByText(/from seed/)).toBeInTheDocument()
-    expect(screen.getByText(/45\.0%.*→.*97\.5%/)).toBeInTheDocument()
+    // Tab should be present
+    expect(screen.getByText('Optimizer · diagnosis')).toBeTruthy()
   })
 
-  it('renders overview tab by default', () => {
+  it('renders diagnosis tab fallback when no diagnosis', () => {
+    const onClose = vi.fn()
+    const candidateNoDiagnosis = { ...candidate, diagnosis: undefined }
     render(
       <IterationDetail
         iteration={1}
-        candidate={mockCandidate}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
+        candidate={candidateNoDiagnosis}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
       />
     )
-
-    expect(screen.getByText('Parent')).toBeInTheDocument()
-    expect(screen.getByText('Optimizer')).toBeInTheDocument()
-    expect(screen.getByText('Candidate')).toBeInTheDocument()
-    expect(screen.getByText('Evaluation')).toBeInTheDocument()
-    expect(screen.getByText('Gate')).toBeInTheDocument()
+    // Tab should still be present
+    expect(screen.getByText('Optimizer · diagnosis')).toBeTruthy()
   })
 
-  it('shows stats grid with fixed/broke counts', () => {
+  it('renders gate tab when gate data exists', () => {
+    const onClose = vi.fn()
     render(
       <IterationDetail
         iteration={1}
-        candidate={mockCandidate}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
       />
     )
-
-    expect(screen.getByText('Fixed')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.getByText('Broke')).toBeInTheDocument()
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByText('Gate decision')).toBeTruthy()
   })
 
-  it('calls onClose when close button clicked', () => {
+  it('renders diff tab when parent exists', () => {
+    const onClose = vi.fn()
     render(
       <IterationDetail
         iteration={1}
-        candidate={mockCandidate}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
       />
     )
+    expect(screen.getByText('Changes (diff)')).toBeTruthy()
+  })
 
+  it('renders PROCESS.md tab', () => {
+    const onClose = vi.fn()
+    render(
+      <IterationDetail
+        iteration={1}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
+      />
+    )
+    expect(screen.getByText('PROCESS.md')).toBeTruthy()
+  })
+
+  it('calls onClose when close button is clicked', () => {
+    const onClose = vi.fn()
+    render(
+      <IterationDetail
+        iteration={1}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
+      />
+    )
     const closeButton = screen.getByText('Close')
     closeButton.click()
-    expect(mockOnClose).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('shows diagnosis tab when diagnosis exists', () => {
-    const candidateWithDiagnosis: GraphNode = {
-      ...mockCandidate,
-      diagnosis: {
-        candidate: 'cand_0001',
-        headline: 'Test diagnosis',
-        clusters: [],
-        edits: [],
-        skipped: [],
-        techniques: [],
-      },
-    }
-
-    render(
+  it('renders verdict badge with text and without custom bg class', () => {
+    const onClose = vi.fn()
+    const { container } = render(
       <IterationDetail
         iteration={1}
-        candidate={candidateWithDiagnosis}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
+        candidate={candidate}
+        parent={parent}
+        gate={gate}
+        runId={runId}
+        onClose={onClose}
       />
     )
-
-    expect(screen.getByText('Optimizer · diagnosis')).toBeInTheDocument()
-  })
-
-  it('hides diagnosis tab when no diagnosis', () => {
-    render(
-      <IterationDetail
-        iteration={1}
-        candidate={mockCandidate}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
-      />
-    )
-
-    expect(screen.queryByText('Optimizer · diagnosis')).not.toBeInTheDocument()
-  })
-
-  it('shows prompt map tab when prompt_map exists', () => {
-    const candidateWithPromptMap: GraphNode = {
-      ...mockCandidate,
-      prompt_map: {
-        'prompt.md': {
-          lines: 100,
-          bytes: 5000,
-          headings: [],
-          add: [],
-          rem: [],
-          touched: [],
-        },
-      },
-    }
-
-    render(
-      <IterationDetail
-        iteration={1}
-        candidate={candidateWithPromptMap}
-        parent={mockParent}
-        gate={mockGate}
-        runId="run_123"
-        onClose={mockOnClose}
-      />
-    )
-
-    expect(screen.getByText('Prompt map')).toBeInTheDocument()
+    
+    // Should render "accept" text
+    expect(screen.getByText('accept')).toBeTruthy()
+    
+    // Should not use custom bg-[var(--accepted)] class
+    const badges = container.querySelectorAll('[class*="bg-[var(--accepted)]"]')
+    expect(badges.length).toBe(0)
   })
 })

@@ -5,6 +5,7 @@ import { TaskMatrix } from './TaskMatrix'
 import { IterationsDiff } from './IterationsDiff'
 import { DiagnosisFlow } from './DiagnosisFlow'
 import { PromptMap } from './PromptMap'
+import { VerdictBadge } from './StatusBadge'
 
 interface IterationDetailProps {
   iteration: number
@@ -27,12 +28,11 @@ export function IterationDetail({
 }: IterationDetailProps) {
   const [activeTab, setActiveTab] = useState<TabId>('overview')
 
-  const hasDiagnosis = !!candidate.diagnosis
   const hasPromptMap = !!candidate.prompt_map
 
   const tabs: Array<{ id: TabId; label: string; enabled: boolean }> = [
     { id: 'overview', label: 'Overview', enabled: true },
-    { id: 'diagnosis', label: 'Optimizer · diagnosis', enabled: hasDiagnosis },
+    { id: 'diagnosis', label: 'Optimizer · diagnosis', enabled: true }, // Always show, with fallback
     { id: 'prompt-map', label: 'Prompt map', enabled: hasPromptMap },
     { id: 'tasks', label: 'Evaluation · tasks', enabled: !!candidate.per_task },
     { id: 'gate', label: 'Gate decision', enabled: !!gate },
@@ -44,8 +44,10 @@ export function IterationDetail({
     return v == null ? '—' : `${(v * 100).toFixed(1)}%`
   }
 
-  const formatUsd = (v: number | null | undefined) => {
-    return v == null ? '—' : `$${v.toFixed(2)}`
+  const formatUsd = (v: number | null | undefined, metered: boolean = true) => {
+    if (v == null) return '—'
+    if (!metered || v === 0) return '—'
+    return `$${v.toFixed(4)}`
   }
 
   const formatTokens = (v: number | null | undefined) => {
@@ -70,16 +72,7 @@ export function IterationDetail({
         <span className="px-2 py-1 text-xs rounded bg-[var(--surface-2)] border border-[var(--border)] font-mono">
           {candidate.id}
         </span>
-        {candidate.status === 'accepted' && (
-          <span className="px-2 py-1 text-xs rounded bg-[var(--accepted)] bg-opacity-20 text-[var(--accepted)] border border-[var(--accepted)] border-opacity-30">
-            ✓ accepted
-          </span>
-        )}
-        {candidate.status === 'rejected' && (
-          <span className="px-2 py-1 text-xs rounded bg-[var(--rejected)] bg-opacity-20 text-[var(--rejected)] border border-[var(--rejected)] border-opacity-30">
-            ✕ rejected
-          </span>
-        )}
+        {gate && <VerdictBadge verdict={gate.verdict || candidate.status} />}
         <button
           onClick={onClose}
           className="ml-auto px-3 py-1 text-sm bg-[var(--surface-2)] border border-[var(--border)] rounded hover:border-[var(--border-strong)] transition-colors"
@@ -238,18 +231,75 @@ export function IterationDetail({
                   Cost
                 </div>
                 <div className="font-mono text-lg font-semibold mt-1.5">
-                  {formatUsd(candidate.cost_usd)}
+                  {candidate.cost_usd != null && candidate.cost_usd > 0 ? formatUsd(candidate.cost_usd) : '—'}
                 </div>
                 <div className="font-mono text-xs text-[var(--muted)] mt-1">
-                  opt {formatUsd(candidate.opt_cost_usd)}
+                  opt {candidate.opt_cost_usd != null && candidate.opt_cost_usd > 0 ? formatUsd(candidate.opt_cost_usd) : '—'}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === 'diagnosis' && candidate.diagnosis && (
-          <DiagnosisFlow diagnosis={candidate.diagnosis} outcomes={candidate.outcomes} />
+        {activeTab === 'diagnosis' && (
+          <>
+            {candidate.diagnosis ? (
+              <DiagnosisFlow diagnosis={candidate.diagnosis} outcomes={candidate.outcomes} />
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm text-[var(--muted)]">
+                  No structured diagnosis available for this iteration.
+                </div>
+                
+                {/* Show outcomes data if available */}
+                {candidate.outcomes && (
+                  <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-4">
+                    <h3 className="text-sm font-semibold mb-3">Task Outcomes vs Parent</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <div className="text-xs text-[var(--muted)] mb-1">Fixed</div>
+                        <div className="font-mono text-lg font-semibold text-[var(--accepted)]">
+                          {candidate.outcomes.fixed?.length || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-[var(--muted)] mb-1">Broke</div>
+                        <div className="font-mono text-lg font-semibold text-[var(--rejected)]">
+                          {candidate.outcomes.broke?.length || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-[var(--muted)] mb-1">Still Failing</div>
+                        <div className="font-mono text-lg font-semibold text-[var(--failed)]">
+                          {candidate.outcomes.still_failing?.length || 0}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-[var(--muted)] mb-1">Still Passing</div>
+                        <div className="font-mono text-lg font-semibold">
+                          {candidate.outcomes.still_passing?.length || 0}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Link to PROCESS.md */}
+                <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-4">
+                  <p className="text-sm mb-2">
+                    For optimizer reasoning, see the{' '}
+                    <button
+                      onClick={() => setActiveTab('process')}
+                      className="text-[var(--primary)] hover:underline"
+                    >
+                      PROCESS.md tab
+                    </button>
+                    .
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === 'prompt-map' && candidate.prompt_map && (

@@ -84,7 +84,7 @@ export function PromptMap({ promptMap, candidateId }: PromptMapProps) {
                       isSelected
                         ? 'border-[var(--primary)] bg-[var(--primary-soft)]'
                         : hasChanges
-                          ? 'border-[var(--accent)] border-opacity-40 bg-[var(--surface-2)]'
+                          ? 'border-amber-500/40 bg-[var(--surface-2)]'
                           : 'border-[var(--border)] bg-[var(--surface-2)]'
                     }`}
                     style={{ height: `${height}px` }}
@@ -170,13 +170,15 @@ export function PromptMap({ promptMap, candidateId }: PromptMapProps) {
                     key={idx}
                     className={`p-2 rounded border transition-all ${
                       isTouched
-                        ? 'border-[var(--accent)] bg-[var(--accent)] bg-opacity-10'
+                        ? 'border-amber-500/40 bg-amber-500/10'
                         : 'border-[var(--border)] bg-[var(--surface-2)]'
                     }`}
                     style={{ paddingLeft: `${level * 12 + 8}px` }}
                   >
                     <div className="flex items-start gap-2">
-                      <span className="font-mono text-[10px] text-[var(--muted)] mt-0.5">
+                      <span className={`font-mono text-[10px] mt-0.5 font-semibold ${
+                        isTouched ? 'text-gray-900 dark:text-gray-100' : 'text-[var(--muted)]'
+                      }`}>
                         {line}
                       </span>
                       <span className="text-sm flex-1">{text}</span>

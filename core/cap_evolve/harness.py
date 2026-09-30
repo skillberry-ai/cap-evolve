@@ -3420,16 +3420,61 @@ def _validate_diagnosis_json(cand_dir: Path, run_dir: RunDir | None = None,
     return {"warnings": warnings, "diagnosis": diag}
 
 
-def _parse_process_md_tables(process_text: str) -> dict | None:
+def _parse_process_md_tables(process_text: str, val_task_ids: set[str] | None = None) -> dict | None:
     """Fallback: extract diagnosis from PROCESS.md tables when DIAGNOSIS.json absent.
     
     Parses the "Ranked issue list" and "Changes made this iteration" tables
     from PROCESS.md and returns a diagnosis-like structure.
     
+    Args:
+        process_text: The PROCESS.md content
+        val_task_ids: Set of valid task IDs from the val split (for validation)
+    
     Returns None if tables cannot be parsed.
     """
     if not process_text:
         return None
+    
+    # Initialize warnings list before nested functions that use it
+    warnings = []
+    
+    def strip_markdown(text: str) -> str:
+        """Strip markdown formatting from text."""
+        # Remove bold/italic: **text** or *text*
+        text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+        # Remove inline code: `text`
+        text = re.sub(r'`([^`]+)`', r'\1', text)
+        # Remove links: [text](url)
+        text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+        return text.strip()
+    
+    def extract_task_ids(text: str, valid_ids: set[str] | None) -> list[str]:
+        """Extract task IDs from text, validating against val split if provided."""
+        # Split on common delimiters, parentheses, and whitespace
+        tokens = re.split(r'[,\s()\[\]{}+]+', text)
+        task_ids = []
+        
+        for token in tokens:
+            # Clean up the token - remove any remaining punctuation at edges
+            token = token.strip('.,;:!?()[]{}+-*/')
+            if not token:
+                continue
+            
+            # If we have valid IDs, check against them (this is the authoritative list)
+            if valid_ids is not None:
+                if token in valid_ids:
+                    task_ids.append(token)
+                # Only warn if it looks like it could be a task ID but isn't in the val split
+                elif re.match(r'^[\w-]+\d+', token):  # Contains digits, might be a task ID
+                    warnings.append(f"Unknown task ID in PROCESS.md: {token}")
+            else:
+                # No validation set - accept tokens that look like task IDs
+                # This includes numeric (123), dash-numeric (123-45), or alphanumeric (task1)
+                if re.match(r'^[\w-]+$', token) and any(c.isdigit() for c in token):
+                    task_ids.append(token)
+        
+        return task_ids
     
     clusters = []
     edits = []
@@ -3445,19 +3490,19 @@ def _parse_process_md_tables(process_text: str) -> dict | None:
         for row in table_rows:
             if not row.strip():
                 continue
-            cells = [c.strip() for c in row.split('|')[1:-1]]  # Skip empty first/last
+            cells = [strip_markdown(c.strip()) for c in row.split('|')[1:-1]]  # Skip empty first/last
             if len(cells) >= 5:
-                cluster_id = cells[1] if len(cells) > 1 else ""
+                rank = cells[0] if len(cells) > 0 else ""
+                cluster_name = cells[1] if len(cells) > 1 else ""
                 tasks_str = cells[2] if len(cells) > 2 else ""
-                # Parse task IDs from various formats: "task1, task2" or "task1 task2"
-                task_ids = [t.strip() for t in re.split(r'[,\s]+', tasks_str) if t.strip()]
                 root_cause = cells[3] if len(cells) > 3 else ""
                 tag = cells[4] if len(cells) > 4 else ""
                 
-                if cluster_id and cluster_id != "cluster":  # Skip header row
+                if rank and rank.lower() != "rank":  # Skip header row
+                    task_ids = extract_task_ids(tasks_str, val_task_ids)
                     clusters.append({
-                        "id": cluster_id,
-                        "name": root_cause[:50] if root_cause else cluster_id,
+                        "id": rank,
+                        "name": cluster_name,
                         "detail": root_cause,
                         "tasks": task_ids,
                         "tag": tag
@@ -3474,31 +3519,34 @@ def _parse_process_md_tables(process_text: str) -> dict | None:
         for i, row in enumerate(table_rows):
             if not row.strip():
                 continue
-            cells = [c.strip() for c in row.split('|')[1:-1]]
+            cells = [strip_markdown(c.strip()) for c in row.split('|')[1:-1]]
             if len(cells) >= 4:
                 cluster_ref = cells[0] if len(cells) > 0 else ""
                 edit_class = cells[1] if len(cells) > 1 else ""
                 files = cells[2] if len(cells) > 2 else ""
                 what_why = cells[3] if len(cells) > 3 else ""
                 
-                if cluster_ref and cluster_ref != "cluster":  # Skip header row
+                if cluster_ref and cluster_ref.lower() != "cluster":  # Skip header row
                     # Parse file names from "file / tool" column
                     file_list = [f.strip() for f in files.split(',') if f.strip()]
                     if not file_list:
                         file_list = [files] if files else []
+                    
+                    # Parse cluster refs (can be comma-separated like "1, 3")
+                    cluster_list = [c.strip() for c in cluster_ref.split(',') if c.strip()]
                     
                     edits.append({
                         "id": f"E{i+1}",
                         "title": what_why[:100] if what_why else edit_class,
                         "files": file_list,
                         "lever": edit_class,
-                        "clusters": [cluster_ref] if cluster_ref else []
+                        "clusters": cluster_list
                     })
     
     if not clusters and not edits:
         return None
     
-    return {
+    result = {
         "candidate": "unknown",
         "headline": "Parsed from PROCESS.md tables",
         "clusters": clusters,
@@ -3507,6 +3555,11 @@ def _parse_process_md_tables(process_text: str) -> dict | None:
         "techniques": [],
         "_source": "process_md_fallback"
     }
+    
+    if warnings:
+        result["warnings"] = warnings
+    
+    return result
 
 
 def _capability_validate(capabilities, cand_dir: Path,

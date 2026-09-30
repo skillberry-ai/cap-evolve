@@ -101,4 +101,17 @@ describe('PromptMap', () => {
     const mbElements = screen.getAllByText(/1\.[0-9]MB/)
     expect(mbElements.length).toBeGreaterThan(0)
   })
+
+  it('does not use broken bg-opacity or border-opacity classes', () => {
+    const { container } = render(<PromptMap promptMap={mockPromptMap} candidateId="cand_0001" runId="run_123" />)
+    
+    // Check that no element has bg-opacity-* or border-opacity-* classes
+    const allElements = container.querySelectorAll('*')
+    allElements.forEach(element => {
+      const className = element.className
+      if (typeof className === 'string') {
+        expect(className).not.toMatch(/\b(bg|border)-opacity-\d+/)
+      }
+    })
+  })
 })

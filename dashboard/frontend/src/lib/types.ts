@@ -646,6 +646,8 @@ export interface Diagnosis {
   techniques: string[]
   /** Validation warnings from the harness (advisory only). */
   warnings?: string[]
+  /** Source of the diagnosis: 'diagnosis_json' or 'process_md_fallback'. */
+  _source?: string
 }
 
 /** Per-task outcome classification (from graph.nodes[].outcomes). */

@@ -214,10 +214,10 @@ def test_parse_process_md_tables_with_ranked_list():
     result = harness._parse_process_md_tables(process_text)
     assert result is not None
     assert len(result["clusters"]) == 2
-    assert result["clusters"][0]["id"] == "A"
+    assert result["clusters"][0]["id"] == "1"  # Rank, not cluster name
     assert "task1" in result["clusters"][0]["tasks"]
     assert "task2" in result["clusters"][0]["tasks"]
-    assert result["clusters"][1]["id"] == "B"
+    assert result["clusters"][1]["id"] == "2"  # Rank, not cluster name
 
 
 def test_parse_process_md_tables_with_changes():

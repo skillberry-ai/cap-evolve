@@ -228,13 +228,25 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     return per, fb
 
 
-def _compute_outcomes(per_task: dict, parent_per_task: dict | None, fixed: list = None, broke: list = None) -> dict:
+def _compute_outcomes(per_task: dict, parent_per_task: dict | None, fixed: list = None, broke: list = None, diagnosis: dict = None) -> dict:
     """Classify each task's outcome vs its parent: fixed, broke, still_failing, still_passing.
     
-    Returns a dict mapping task_id to outcome string. Used for the diagnosis flow view.
+    Returns a dict with lists grouped by result type, plus a 'targeted' list from diagnosis.
     When per_task data is missing but fixed/broke lists are available, builds outcomes from those.
     """
-    outcomes = {}
+    result = {
+        "fixed": [],
+        "broke": [],
+        "still_failing": [],
+        "still_passing": [],
+        "targeted": []
+    }
+    
+    # Extract targeted tasks from diagnosis clusters
+    if diagnosis and "clusters" in diagnosis:
+        for cluster in diagnosis["clusters"]:
+            if "tasks" in cluster:
+                result["targeted"].extend(cluster["tasks"])
     
     # If we have per_task data, use it for detailed classification
     if per_task:
@@ -242,39 +254,38 @@ def _compute_outcomes(per_task: dict, parent_per_task: dict | None, fixed: list 
             if parent_per_task and task_id in parent_per_task:
                 parent_reward = parent_per_task[task_id]
                 if reward > parent_reward:
-                    outcomes[task_id] = "fixed"
+                    result["fixed"].append(str(task_id))
                 elif reward < parent_reward:
-                    outcomes[task_id] = "broke"
+                    result["broke"].append(str(task_id))
                 elif reward == 0 or reward < 0.5:  # still failing (binary 0/1 rewards)
-                    outcomes[task_id] = "still_failing"
+                    result["still_failing"].append(str(task_id))
                 else:
-                    outcomes[task_id] = "still_passing"
+                    result["still_passing"].append(str(task_id))
             else:
                 # No parent comparison available
                 if reward == 0 or reward < 0.5:
-                    outcomes[task_id] = "still_failing"
+                    result["still_failing"].append(str(task_id))
                 else:
-                    outcomes[task_id] = "still_passing"
+                    result["still_passing"].append(str(task_id))
     
     # If per_task is missing but we have fixed/broke lists, build outcomes from those
     elif (fixed or broke) and parent_per_task:
         # Mark fixed tasks
-        for task_id in (fixed or []):
-            outcomes[task_id] = "fixed"
+        result["fixed"] = [str(t) for t in (fixed or [])]
         
         # Mark broke tasks
-        for task_id in (broke or []):
-            outcomes[task_id] = "broke"
+        result["broke"] = [str(t) for t in (broke or [])]
         
         # Infer still_failing and still_passing from parent's per_task
         for task_id, parent_reward in parent_per_task.items():
-            if task_id not in outcomes:
+            task_id_str = str(task_id)
+            if task_id_str not in result["fixed"] and task_id_str not in result["broke"]:
                 if parent_reward == 0 or parent_reward < 0.5:
-                    outcomes[task_id] = "still_failing"
+                    result["still_failing"].append(task_id_str)
                 else:
-                    outcomes[task_id] = "still_passing"
+                    result["still_passing"].append(task_id_str)
     
-    return outcomes
+    return result
 
 
 def _val_per_task_file(root: Path) -> dict:
@@ -1276,6 +1287,22 @@ def reduce_run(run_dir) -> dict:
         if e.get("kind") in ("step_indecisive", "tamper_detected", "inconclusive")
     } - {None}
 
+    # --- Extract val task IDs early for PROCESS.md fallback validation ---
+    val_task_ids = None
+    split_ev = next((e for e in events if e.get("kind") == "splits"), None)
+    if split_ev is not None:
+        va = split_ev.get("val")
+        if isinstance(va, list):
+            val_task_ids = set(str(tid) for tid in va)
+    
+    # Fallback: read from splits.json if event missing
+    if val_task_ids is None:
+        splits_json = _read_json(_safe_subpath(root, "splits.json"))
+        if splits_json and "val" in splits_json:
+            va = splits_json.get("val")
+            if isinstance(va, list):
+                val_task_ids = set(str(tid) for tid in va)
+    
     # --- nodes: start with the seed -------------------------------------
     nodes: dict[str, dict] = {}
     seed_per, seed_fb = _per_task_from_rollouts(run_dir, "seed", "val")
@@ -1294,6 +1321,7 @@ def reduce_run(run_dir) -> dict:
         "seconds": (base_val_obj.get("seconds") or 0.0),
         "optimizer_seconds": 0.0, "runner_seconds": (base_val_obj.get("seconds") or 0.0),
         "iteration": 0, "reason": "baseline (seed)", "best_so_far": baseline_val,
+        "outcomes": {"fixed": [], "broke": [], "still_failing": [], "still_passing": [], "targeted": []},
     }
 
     gate_warnings: list[dict] = []
@@ -1517,11 +1545,13 @@ def reduce_run(run_dir) -> dict:
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
             # Per-task outcomes: classify each task's result vs parent for UI display
+            # Note: diagnosis is loaded later, so we pass None here and update after
             "outcomes": _compute_outcomes(
                 per, 
                 nodes.get(parent, {}).get("per_task") if parent else None,
                 fixed=movement.get("fixed"),
-                broke=movement.get("broke")
+                broke=movement.get("broke"),
+                diagnosis=None
             ),
             "best_so_far": best,
             # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
@@ -1628,12 +1658,34 @@ def reduce_run(run_dir) -> dict:
                     try:
                         from . import harness
                         process_text = process_path.read_text(encoding="utf-8")
-                        parsed = harness._parse_process_md_tables(process_text)
+                        # Use val_task_ids extracted early in reduce_run (line ~1274)
+                        parsed = harness._parse_process_md_tables(
+                            process_text, 
+                            list(val_task_ids) if val_task_ids else []
+                        )
                         if parsed:
                             parsed["candidate"] = nid
+                            parsed["_source"] = "process_md_fallback"
                             n["diagnosis"] = parsed
-                    except Exception:  # noqa: BLE001
-                        pass  # fallback is best-effort
+                    except (OSError, ValueError, KeyError) as e:
+                        # Record parse errors as warnings in diagnosis
+                        n["diagnosis"] = {
+                            "candidate": nid,
+                            "_source": "process_md_fallback",
+                            "_parse_error": str(e),
+                            "clusters": [],
+                            "edits": [],
+                        }
+    
+    # --- update outcomes with targeted tasks from diagnosis -------------
+    for nid, n in nodes.items():
+        if n.get("diagnosis") and n.get("outcomes"):
+            # Extract targeted tasks from diagnosis clusters
+            targeted = []
+            for cluster in n["diagnosis"].get("clusters", []):
+                if "tasks" in cluster:
+                    targeted.extend(cluster["tasks"])
+            n["outcomes"]["targeted"] = targeted
 
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():

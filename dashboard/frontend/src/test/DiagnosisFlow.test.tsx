@@ -130,8 +130,36 @@ describe('DiagnosisFlow', () => {
 
     render(<DiagnosisFlow diagnosis={diagnosisWithWarnings} outcomes={mockOutcomes} />)
 
-    expect(screen.getByText('Validation Warnings')).toBeInTheDocument()
-    expect(screen.getByText(/Unknown task ID: task99/)).toBeInTheDocument()
-    expect(screen.getByText(/Edit E3 references missing cluster C/)).toBeInTheDocument()
+    // Warnings are now shown as a collapsed button with count
+    expect(screen.getByText('2 warnings')).toBeInTheDocument()
+  })
+
+  it('renders edit cards with cluster chip text and tooltips', () => {
+    render(<DiagnosisFlow diagnosis={mockDiagnosis} outcomes={mockOutcomes} />)
+
+    // Edit E1 references cluster A
+    const clusterChips = screen.getAllByText('A')
+    expect(clusterChips.length).toBeGreaterThan(0)
+    
+    // Check that cluster chip has tooltip (title attribute)
+    const editSection = screen.getByText('Carry cached values forward').closest('div')
+    expect(editSection).toBeInTheDocument()
+    
+    // Edit E2 references cluster B
+    const clusterBChips = screen.getAllByText('B')
+    expect(clusterBChips.length).toBeGreaterThan(0)
+  })
+
+  it('does not use broken bg-opacity or border-opacity classes', () => {
+    const { container } = render(<DiagnosisFlow diagnosis={mockDiagnosis} outcomes={mockOutcomes} />)
+    
+    // Check that no element has bg-opacity-* or border-opacity-* classes
+    const allElements = container.querySelectorAll('*')
+    allElements.forEach(element => {
+      const className = element.className
+      if (typeof className === 'string') {
+        expect(className).not.toMatch(/\b(bg|border)-opacity-\d+/)
+      }
+    })
   })
 })

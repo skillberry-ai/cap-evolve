@@ -331,11 +331,11 @@ def test_outcomes_classification():
         assert "outcomes" in nodes["cand_0001"]
         outcomes = nodes["cand_0001"]["outcomes"]
         
-        # Verify classifications
-        assert outcomes.get("t1") == "fixed"
-        assert outcomes.get("t2") == "broke"
-        assert outcomes.get("t3") == "still_failing"
-        assert outcomes.get("t4") == "still_passing"
+        # Verify classifications (outcomes is now lists grouped by result)
+        assert "t1" in outcomes["fixed"]
+        assert "t2" in outcomes["broke"]
+        assert "t3" in outcomes["still_failing"]
+        assert "t4" in outcomes["still_passing"]
 
 
 def test_outcomes_from_fixed_broke_lists():
@@ -386,8 +386,8 @@ def test_outcomes_from_fixed_broke_lists():
         outcomes = nodes["cand_0001"]["outcomes"]
         
         # Verify classifications from fixed/broke lists
-        assert outcomes.get("t1") == "fixed"
-        assert outcomes.get("t2") == "broke"
+        assert "t1" in outcomes["fixed"]
+        assert "t2" in outcomes["broke"]
         # t3 and t4 should be inferred from parent's per_task
-        assert outcomes.get("t3") == "still_failing"
-        assert outcomes.get("t4") == "still_passing"
+        assert "t3" in outcomes["still_failing"]
+        assert "t4" in outcomes["still_passing"]

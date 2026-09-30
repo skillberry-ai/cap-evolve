@@ -104,20 +104,10 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
     ? outcomes.broke.filter(t => !outcomes.targeted?.includes(t)).length
     : 0
 
+  const [warningsExpanded, setWarningsExpanded] = useState(false)
+
   return (
     <div className="space-y-4">
-      {/* Validation warnings */}
-      {diagnosis.warnings && diagnosis.warnings.length > 0 && (
-        <div className="bg-[var(--failed)] bg-opacity-10 border border-[var(--failed)] border-opacity-30 rounded-lg p-3">
-          <div className="text-sm font-semibold text-[var(--failed)] mb-2">Validation Warnings</div>
-          <ul className="text-sm text-[var(--muted)] space-y-1">
-            {diagnosis.warnings.map((w, i) => (
-              <li key={i}>• {w}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* Headline */}
       {diagnosis.headline && (
         <div className="text-sm text-[var(--muted-strong)] leading-relaxed">{diagnosis.headline}</div>
@@ -175,6 +165,30 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
           </div>
         </div>
       </div>
+
+      {/* Validation warnings - collapsed by default, below tally row */}
+      {diagnosis.warnings && diagnosis.warnings.length > 0 && (
+        <div className="border border-[var(--border)] rounded-lg overflow-hidden">
+          <button
+            onClick={() => setWarningsExpanded(!warningsExpanded)}
+            className="w-full px-3 py-2 text-left text-sm font-medium bg-[var(--surface-2)] hover:bg-[var(--surface-3)] transition-colors flex items-center justify-between"
+          >
+            <span className="text-[var(--failed)]">
+              {diagnosis.warnings.length} warning{diagnosis.warnings.length !== 1 ? 's' : ''}
+            </span>
+            <span className="text-[var(--muted)]">{warningsExpanded ? '▼' : '▶'}</span>
+          </button>
+          {warningsExpanded && (
+            <div className="px-3 py-2 bg-[var(--surface)] border-t border-[var(--border)]">
+              <ul className="text-xs text-[var(--muted-strong)] space-y-1">
+                {diagnosis.warnings.map((w, i) => (
+                  <li key={i} className="leading-relaxed">• {w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Three-column flow diagram */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -296,14 +310,19 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
                     ))}
                   </div>
                   <div className="flex gap-1 mt-1 flex-wrap">
-                    {edit.clusters.map(c => (
-                      <span
-                        key={c}
-                        className="px-1.5 py-0.5 text-[9px] font-mono bg-[var(--primary)] bg-opacity-20 text-[var(--primary)] rounded"
-                      >
-                        {c}
-                      </span>
-                    ))}
+                    {edit.clusters.map(c => {
+                      const cluster = clusters.find(cl => cl.id === c)
+                      if (!cluster) return null // Skip unresolved refs
+                      return (
+                        <span
+                          key={c}
+                          className="px-1.5 py-0.5 text-[9px] font-mono bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded cursor-help"
+                          title={cluster.name}
+                        >
+                          {c}
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
               )

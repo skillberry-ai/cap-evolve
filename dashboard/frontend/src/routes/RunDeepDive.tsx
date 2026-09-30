@@ -8,6 +8,7 @@ import { AppShell } from '../components/AppShell'
 import { Card } from '../components/ui/Card'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Tabs, type TabDef } from '../components/ui/Tabs'
+import { ErrorBoundary } from '../components/ui/ErrorBoundary'
 import { RunHeader } from '../components/RunHeader'
 import { KpiStrip } from '../components/KpiStrip'
 import { BestCurveChart } from '../components/BestCurveChart'
@@ -182,13 +183,15 @@ export function RunDeepDive() {
             <KpiStrip summary={summary} />
             <Tabs tabs={tabs}>
               {(active) => (
-                <TabBody
-                  active={active}
-                  data={data}
-                  runId={id!}
-                  selectedCandidate={selectedCandidate}
-                  onSelectCandidate={setSelectedCandidate}
-                />
+                <ErrorBoundary>
+                  <TabBody
+                    active={active}
+                    data={data}
+                    runId={id!}
+                    selectedCandidate={selectedCandidate}
+                    onSelectCandidate={setSelectedCandidate}
+                  />
+                </ErrorBoundary>
               )}
             </Tabs>
           </div>
@@ -213,7 +216,9 @@ function TabBody({
 }) {
   const s = data.summary
   const extra = s.algo_extra ?? {}
-  switch (active) {
+  
+  const content = (() => {
+    switch (active) {
     case 'overview':
       return (
         <div className="space-y-5">
@@ -279,20 +284,22 @@ function TabBody({
         
         if (candidate) {
           return (
-            <IterationDetail
-              iteration={iteration}
-              candidate={candidate}
-              parent={parent || null}
-              gate={gate || null}
-              runId={runId}
-              onClose={() => {
-                const params = new URLSearchParams(window.location.search)
-                params.delete('iteration')
-                params.delete('tab')
-                window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`)
-                window.dispatchEvent(new PopStateEvent('popstate'))
-              }}
-            />
+            <ErrorBoundary>
+              <IterationDetail
+                iteration={iteration}
+                candidate={candidate}
+                parent={parent || null}
+                gate={gate || null}
+                runId={runId}
+                onClose={() => {
+                  const params = new URLSearchParams(window.location.search)
+                  params.delete('iteration')
+                  params.delete('tab')
+                  window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`)
+                  window.dispatchEvent(new PopStateEvent('popstate'))
+                }}
+              />
+            </ErrorBoundary>
           )
         }
       }
@@ -344,5 +351,8 @@ function TabBody({
           <div className="p-8 text-center text-sm text-muted">Unknown view.</div>
         </Card>
       )
-  }
+    }
+  })()
+  
+  return <ErrorBoundary>{content}</ErrorBoundary>
 }

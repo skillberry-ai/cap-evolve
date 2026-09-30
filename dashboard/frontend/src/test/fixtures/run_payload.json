@@ -1,0 +1,803 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": "seed",
+        "parent": null,
+        "children": [
+          "cand_0001"
+        ],
+        "status": "seed",
+        "val": 0.5,
+        "stderr": null,
+        "per_task": {
+          "t1": 0.0,
+          "t2": 1.0,
+          "t3": 0.0,
+          "t4": 1.0
+        },
+        "feedback": {
+          "t1": "wrong",
+          "t2": "correct",
+          "t3": "wrong",
+          "t4": "correct"
+        },
+        "cost_usd": 0.0,
+        "tokens": 0,
+        "seconds": 0.0,
+        "optimizer_seconds": 0.0,
+        "runner_seconds": 0.0,
+        "iteration": 0,
+        "reason": "baseline (seed)",
+        "best_so_far": true,
+        "outcomes": {
+          "fixed": [],
+          "broke": [],
+          "still_failing": [],
+          "still_passing": [],
+          "targeted": []
+        }
+      },
+      {
+        "id": "cand_0001",
+        "parent": "seed",
+        "children": [
+          "cand_0002"
+        ],
+        "status": "accepted",
+        "val": 0.75,
+        "stderr": 0.0,
+        "n_scored": null,
+        "per_task": {
+          "t1": 1.0,
+          "t2": 0.0,
+          "t3": 0.0,
+          "t4": 1.0
+        },
+        "feedback": {
+          "t1": "fixed",
+          "t2": "broke",
+          "t3": "still wrong",
+          "t4": "still correct"
+        },
+        "cost_usd": 0.01,
+        "tokens": 500,
+        "opt_cost_usd": null,
+        "opt_tokens": 0,
+        "cache_read_tokens": null,
+        "cache_creation_tokens": null,
+        "seconds": 110.0,
+        "optimizer_seconds": 100.0,
+        "runner_seconds": 10.0,
+        "iteration": 1,
+        "reason": "up",
+        "fixed": [
+          "t1"
+        ],
+        "broke": [
+          "t2"
+        ],
+        "parent_val": 0.5,
+        "best_so_far": true,
+        "outcomes": {
+          "fixed": [
+            "t1"
+          ],
+          "broke": [
+            "t2"
+          ],
+          "still_failing": [
+            "t3"
+          ],
+          "still_passing": [
+            "t4"
+          ],
+          "targeted": [
+            "t1"
+          ]
+        },
+        "best_so_far": 0.75,
+        "screened": null,
+        "round_id": null,
+        "context_warning": null,
+        "diagnosis": {
+          "candidate": "cand_0001",
+          "headline": "Fix task t1",
+          "clusters": [
+            {
+              "id": "A",
+              "name": "Wrong calculation",
+              "tasks": [
+                "t1"
+              ],
+              "detail": "Math error"
+            }
+          ],
+          "edits": [
+            {
+              "id": "E1",
+              "title": "Fix math",
+              "files": [
+                "prompt.md"
+              ],
+              "clusters": [
+                "A"
+              ]
+            }
+          ],
+          "skipped": []
+        },
+        "prompt_map": {
+          "DIAGNOSIS.json": {
+            "lines": 27,
+            "bytes": 390,
+            "headings": [],
+            "add": [],
+            "rem": [],
+            "touched": []
+          }
+        }
+      },
+      {
+        "id": "cand_0002",
+        "parent": "cand_0001",
+        "children": [],
+        "status": "accepted",
+        "val": 1.0,
+        "stderr": 0.0,
+        "n_scored": null,
+        "per_task": {
+          "t1": 1.0,
+          "t2": 1.0,
+          "t3": 1.0,
+          "t4": 1.0
+        },
+        "feedback": {
+          "t1": "still fixed",
+          "t2": "fixed back",
+          "t3": "fixed",
+          "t4": "still correct"
+        },
+        "cost_usd": 0.01,
+        "tokens": 500,
+        "opt_cost_usd": null,
+        "opt_tokens": 0,
+        "cache_read_tokens": null,
+        "cache_creation_tokens": null,
+        "seconds": 110.0,
+        "optimizer_seconds": 100.0,
+        "runner_seconds": 10.0,
+        "iteration": 2,
+        "reason": "up",
+        "fixed": [
+          "t2",
+          "t3"
+        ],
+        "broke": [],
+        "parent_val": 0.75,
+        "outcomes": {
+          "fixed": [
+            "t2",
+            "t3"
+          ],
+          "broke": [],
+          "still_failing": [],
+          "still_passing": [
+            "t1",
+            "t4"
+          ],
+          "targeted": [
+            "t2",
+            "t3"
+          ]
+        },
+        "best_so_far": true,
+        "screened": null,
+        "round_id": null,
+        "context_warning": null,
+        "diagnosis": {
+          "candidate": "cand_0002",
+          "headline": "Parsed from PROCESS.md tables",
+          "_source": "process_md_fallback",
+          "clusters": [
+            {
+              "id": "B",
+              "name": "Incorrect logic",
+              "detail": "Incorrect logic",
+              "tasks": [
+                "t2",
+                "t3"
+              ],
+              "tag": "CONTRACT"
+            }
+          ],
+          "edits": [
+            {
+              "id": "E1",
+              "title": "Fix the logic error",
+              "files": [
+                "prompt.md"
+              ],
+              "lever": "CONTRACT",
+              "clusters": [
+                "B"
+              ]
+            }
+          ],
+          "skipped": [],
+          "techniques": [],
+          "_source": "process_md_fallback"
+        }
+      }
+    ],
+    "root": "seed",
+    "best_id": "cand_0002"
+  },
+  "summary": {
+    "run_id": "run_t",
+    "algorithm": "hill-climb",
+    "algorithm_source": "events",
+    "activities": [
+      {
+        "id": "seed-eval",
+        "type": "seed",
+        "lane": "evaluator",
+        "iteration": 0,
+        "candidate": "seed",
+        "start": 0.0,
+        "end": 5.0,
+        "error": false
+      },
+      {
+        "id": "iter-1-opt",
+        "type": "optimize",
+        "lane": "optimizer",
+        "iteration": 1,
+        "candidate": "cand_0001",
+        "start": 5.0,
+        "end": 105.0,
+        "error": false
+      },
+      {
+        "id": "iter-1-eval",
+        "type": "evaluate",
+        "lane": "evaluator",
+        "iteration": 1,
+        "candidate": "cand_0001",
+        "start": 105.0,
+        "end": 115.0,
+        "error": false
+      },
+      {
+        "id": "iter-1-gate",
+        "type": "gate",
+        "lane": "gate",
+        "iteration": 1,
+        "candidate": "cand_0001",
+        "start": 120.0,
+        "end": 120.0,
+        "error": false
+      },
+      {
+        "id": "iter-2-opt",
+        "type": "optimize",
+        "lane": "optimizer",
+        "iteration": 2,
+        "candidate": "cand_0002",
+        "start": 115.0,
+        "end": 220.0,
+        "error": false
+      },
+      {
+        "id": "iter-2-eval",
+        "type": "evaluate",
+        "lane": "evaluator",
+        "iteration": 2,
+        "candidate": "cand_0002",
+        "start": 220.0,
+        "end": 230.0,
+        "error": false
+      },
+      {
+        "id": "iter-2-gate",
+        "type": "gate",
+        "lane": "gate",
+        "iteration": 2,
+        "candidate": "cand_0002",
+        "start": 235.0,
+        "end": 235.0,
+        "error": false
+      }
+    ],
+    "capabilities": {
+      "activities": true,
+      "per_task": true,
+      "lineage": true,
+      "gate": true,
+      "cost": true,
+      "log": true,
+      "trajectories": true,
+      "diffs": true,
+      "minibatch": false,
+      "gepa": false,
+      "skillopt": false,
+      "epochs": false,
+      "focus": false,
+      "evograph": false,
+      "screens": false,
+      "compliance": false,
+      "parallel": false,
+      "narrative": true,
+      "config": false,
+      "host_transcript": false,
+      "controls": false,
+      "screened": false,
+      "context_warnings": false,
+      "screen_gate_bypass": false,
+      "round_batches": false,
+      "background_mass_kills": false,
+      "merge_rejects": false,
+      "freeform": false,
+      "process_html": false
+    },
+    "status": "interrupted",
+    "status_reason": "no finalize and no event for 29845398 min \u2014 the run died, was killed, or is still being written by a process that is no longer logging",
+    "started_t": 100.0,
+    "last_event_t": 335.0,
+    "elapsed_seconds": 235.0,
+    "elapsed_open": false,
+    "event_count": 10,
+    "splits": {
+      "train": 4,
+      "val": 4,
+      "test": 2,
+      "seed": 0,
+      "no_holdout": false,
+      "warning": ""
+    },
+    "gate_decisions": [
+      {
+        "iteration": 1,
+        "candidate": "cand_0001",
+        "verdict": "accept",
+        "val": 0.75,
+        "parent": "seed",
+        "parent_val": 0.5,
+        "delta": null,
+        "stderr": null,
+        "n": null,
+        "k_se": null,
+        "threshold": null,
+        "resolvable_effect_size": null,
+        "reason": "up"
+      },
+      {
+        "iteration": 2,
+        "candidate": "cand_0002",
+        "verdict": "accept",
+        "val": 1.0,
+        "parent": "cand_0001",
+        "parent_val": 0.75,
+        "delta": null,
+        "stderr": null,
+        "n": null,
+        "k_se": null,
+        "threshold": null,
+        "resolvable_effect_size": null,
+        "reason": "up"
+      }
+    ],
+    "controls": [],
+    "cost_ledger": {
+      "rows": [
+        {
+          "phase": "intake",
+          "kind": "intake",
+          "label": "Intake + scaffold",
+          "candidate": null,
+          "split": null,
+          "usd": 0.0,
+          "seconds": 0.0,
+          "tokens": 0,
+          "note": ""
+        },
+        {
+          "phase": "baseline",
+          "split": "val",
+          "kind": "baseline_eval",
+          "label": "Baseline eval \u2014 seed on val",
+          "candidate": "seed",
+          "usd": 0.0,
+          "seconds": 5.0,
+          "tokens": 0,
+          "note": "reward 0.500"
+        },
+        {
+          "phase": "optimize",
+          "split": "val",
+          "kind": "candidate_eval",
+          "label": "Eval cand_0001 on val",
+          "candidate": "cand_0001",
+          "usd": 0.01,
+          "seconds": 10.0,
+          "tokens": 500,
+          "note": "reward 0.750"
+        },
+        {
+          "phase": "optimize",
+          "kind": "optimizer_call",
+          "split": null,
+          "label": "Optimizer call \u2192 cand_0001",
+          "candidate": "cand_0001",
+          "usd": null,
+          "seconds": 100.0,
+          "tokens": 0,
+          "note": ""
+        },
+        {
+          "phase": "optimize",
+          "split": "val",
+          "kind": "candidate_eval",
+          "label": "Eval cand_0002 on val",
+          "candidate": "cand_0002",
+          "usd": 0.01,
+          "seconds": 10.0,
+          "tokens": 500,
+          "note": "reward 1.000"
+        },
+        {
+          "phase": "optimize",
+          "kind": "optimizer_call",
+          "split": null,
+          "label": "Optimizer call \u2192 cand_0002",
+          "candidate": "cand_0002",
+          "usd": null,
+          "seconds": 100.0,
+          "tokens": 0,
+          "note": ""
+        }
+      ],
+      "attributed_usd": 0.02,
+      "total_usd": 0.02,
+      "unattributed_usd": 0.0,
+      "rows_missing_cost": 2,
+      "metered": true
+    },
+    "log": [
+      {
+        "seq": 0,
+        "t": 100.0,
+        "kind": "splits",
+        "phase": "baseline",
+        "candidate": null,
+        "detail": {
+          "train": 4,
+          "val": 4,
+          "test": 2,
+          "seed": 0
+        },
+        "text": ""
+      },
+      {
+        "seq": 1,
+        "t": 100.0,
+        "kind": "eval_start",
+        "phase": "baseline",
+        "candidate": "seed",
+        "detail": {
+          "split": "val",
+          "tag": "seed"
+        },
+        "text": ""
+      },
+      {
+        "seq": 2,
+        "t": 105.0,
+        "kind": "evaluate",
+        "phase": "baseline",
+        "candidate": "seed",
+        "detail": {
+          "split": "val",
+          "tag": "seed",
+          "reward": 0.5,
+          "stderr": 0.0,
+          "cost_usd": 0.0,
+          "tokens": 0,
+          "seconds": 5.0
+        },
+        "text": ""
+      },
+      {
+        "seq": 3,
+        "t": 105.0,
+        "kind": "baseline",
+        "phase": "baseline",
+        "candidate": null,
+        "detail": {
+          "val": 0.5,
+          "stderr": 0.0
+        },
+        "text": ""
+      },
+      {
+        "seq": 4,
+        "t": 205.0,
+        "kind": "eval_start",
+        "phase": "optimize",
+        "candidate": "cand_0001",
+        "detail": {
+          "split": "val",
+          "tag": "cand_0001"
+        },
+        "text": ""
+      },
+      {
+        "seq": 5,
+        "t": 215.0,
+        "kind": "evaluate",
+        "phase": "optimize",
+        "candidate": "cand_0001",
+        "detail": {
+          "split": "val",
+          "tag": "cand_0001",
+          "reward": 0.75,
+          "stderr": 0.0,
+          "cost_usd": 0.01,
+          "tokens": 500,
+          "seconds": 10.0
+        },
+        "text": ""
+      },
+      {
+        "seq": 6,
+        "t": 220.0,
+        "kind": "step",
+        "phase": "optimize",
+        "candidate": "cand_0001",
+        "detail": {
+          "candidate": "cand_0001",
+          "accept": true,
+          "reason": "up",
+          "val": 0.75,
+          "parent": "seed",
+          "parent_val": 0.5,
+          "optimizer_seconds": 100.0,
+          "runner_seconds": 10.0,
+          "cost_usd": 0.01,
+          "tokens": 500,
+          "fixed": [
+            "t1"
+          ],
+          "broke": [
+            "t2"
+          ]
+        },
+        "text": "up"
+      },
+      {
+        "seq": 7,
+        "t": 320.0,
+        "kind": "eval_start",
+        "phase": "optimize",
+        "candidate": "cand_0002",
+        "detail": {
+          "split": "val",
+          "tag": "cand_0002"
+        },
+        "text": ""
+      },
+      {
+        "seq": 8,
+        "t": 330.0,
+        "kind": "evaluate",
+        "phase": "optimize",
+        "candidate": "cand_0002",
+        "detail": {
+          "split": "val",
+          "tag": "cand_0002",
+          "reward": 1.0,
+          "stderr": 0.0,
+          "cost_usd": 0.01,
+          "tokens": 500,
+          "seconds": 10.0
+        },
+        "text": ""
+      },
+      {
+        "seq": 9,
+        "t": 335.0,
+        "kind": "step",
+        "phase": "optimize",
+        "candidate": "cand_0002",
+        "detail": {
+          "candidate": "cand_0002",
+          "accept": true,
+          "reason": "up",
+          "val": 1.0,
+          "parent": "cand_0001",
+          "parent_val": 0.75,
+          "optimizer_seconds": 100.0,
+          "runner_seconds": 10.0,
+          "cost_usd": 0.01,
+          "tokens": 500,
+          "fixed": [
+            "t2",
+            "t3"
+          ],
+          "broke": []
+        },
+        "text": "up"
+      }
+    ],
+    "algo_extra": {},
+    "baseline_val": 0.5,
+    "baseline_stderr": null,
+    "best_val": 1.0,
+    "best_id": "cand_0002",
+    "delta_abs": 0.5,
+    "delta_pct": 100.0,
+    "test_reward": null,
+    "test_stderr": null,
+    "test_pass_k": null,
+    "test_baseline_reward": null,
+    "test_delta": null,
+    "test_sealed": false,
+    "train_reward": null,
+    "train_baseline_reward": null,
+    "train_delta": null,
+    "train_equals_val": null,
+    "counts": {
+      "accepted": 2,
+      "rejected": 0,
+      "failed": 0,
+      "seed": 1,
+      "indecisive": 0,
+      "total": 3
+    },
+    "frontier": 1,
+    "tasks": [
+      "t1",
+      "t2",
+      "t3",
+      "t4"
+    ],
+    "wall_clock_seconds": 220.0,
+    "optimizer_seconds": 200.0,
+    "runner_seconds": 20.0,
+    "intake_seconds": 0.0,
+    "cost": {
+      "optimizer_usd": 0.0,
+      "runner_usd": 0.02,
+      "intake_usd": 0.0,
+      "total_usd": 0.02,
+      "metered": true
+    },
+    "tokens": 1000,
+    "tokens_by_role": {
+      "runner": 1000,
+      "optimizer": 0,
+      "intake": 0
+    },
+    "per_iteration": [
+      {
+        "iteration": 1,
+        "candidate": "cand_0001",
+        "status": "accepted",
+        "optimizer_usd": null,
+        "optimizer_seconds": 100.0,
+        "optimizer_tokens": 0,
+        "cache_read_tokens": null,
+        "cache_creation_tokens": null,
+        "runner_usd": 0.01,
+        "runner_seconds": 10.0,
+        "runner_tokens": 500
+      },
+      {
+        "iteration": 2,
+        "candidate": "cand_0002",
+        "status": "accepted",
+        "optimizer_usd": null,
+        "optimizer_seconds": 100.0,
+        "optimizer_tokens": 0,
+        "cache_read_tokens": null,
+        "cache_creation_tokens": null,
+        "runner_usd": 0.01,
+        "runner_seconds": 10.0,
+        "runner_tokens": 500
+      }
+    ],
+    "evaluations": [
+      {
+        "id": "baseline",
+        "kind": "baseline",
+        "candidate": "seed",
+        "split": "val",
+        "reward": 0.5,
+        "stderr": null,
+        "n_tasks": 4,
+        "trials": 1,
+        "cost_usd": 0.0,
+        "seconds": 0.0,
+        "tokens": 0,
+        "cost_source": {}
+      },
+      {
+        "id": "cand_0001",
+        "kind": "candidate",
+        "candidate": "cand_0001",
+        "split": "val",
+        "reward": 0.75,
+        "stderr": 0.0,
+        "n_tasks": 4,
+        "trials": 1,
+        "cost_usd": 0.01,
+        "seconds": 10.0,
+        "tokens": 500,
+        "cost_source": {}
+      },
+      {
+        "id": "cand_0002",
+        "kind": "candidate",
+        "candidate": "cand_0002",
+        "split": "val",
+        "reward": 1.0,
+        "stderr": 0.0,
+        "n_tasks": 4,
+        "trials": 1,
+        "cost_usd": 0.01,
+        "seconds": 10.0,
+        "tokens": 500,
+        "cost_source": {}
+      }
+    ],
+    "intake": {
+      "usd": 0.0,
+      "seconds": 0.0,
+      "tokens": 0,
+      "output_summary": "",
+      "implemented": [],
+      "recorded": false
+    },
+    "target_profile": null,
+    "budget": {
+      "max_iterations": 20,
+      "max_metric_calls": 0,
+      "max_usd": 0.0,
+      "stall": 0,
+      "max_optimizer_usd": 0.0,
+      "stop_at_reward": 0.0
+    },
+    "spent": {
+      "iterations": 0,
+      "metric_calls": 0,
+      "usd": 0.0,
+      "stall": 0,
+      "runner_tokens": 0,
+      "runner_seconds": 0.0,
+      "optimizer_seconds": 0.0,
+      "optimizer_usd": 0.0,
+      "optimizer_tokens": 0,
+      "intake_usd": 0.0,
+      "intake_tokens": 0,
+      "intake_seconds": 0.0,
+      "best_val": 0.0
+    },
+    "budget_warnings": [],
+    "background_mass_kills": [],
+    "gate_warnings": [],
+    "diagnoses": [],
+    "git_log": [],
+    "narrative": {
+      "files": [
+        {
+          "name": "PROCESS.md",
+          "title": "Process \u2014 best candidate (cand_0002)",
+          "text": "## Ranked issue list\n\n| rank | cluster | tasks | shared root cause | tag | planned change class |\n|------|---------|-------|-------------------|-----|---------------------|\n| 1 | **B** | t2, t3 | Incorrect logic | CONTRACT | Fix logic |\n\n## Changes made this iteration\n\n| cluster | edit class | file / tool | what & why | protects passing? |\n|---------|-----------|-------------|------------|-------------------|\n| **B** | CONTRACT | prompt.md | Fix the logic error | yes |",
+          "template_only": false
+        }
+      ]
+    },
+    "config": {},
+    "host_session": {}
+  }
+}

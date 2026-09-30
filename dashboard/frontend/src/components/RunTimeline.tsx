@@ -203,29 +203,92 @@ export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProp
           Val score
         </text>
 
-        {/* Phase bands */}
-        {summary.algo_extra?.epochs && (
-          <g>
-            <rect
-              x={x(0)}
-              y={rows.phase}
-              width={x(elapsed) - x(0) - 2}
-              height={22}
-              rx={5}
-              fill="var(--primary)"
-              fillOpacity={0.14}
-              stroke="var(--primary)"
-              strokeOpacity={0.4}
-            />
-            <text
-              x={x(0) + 8}
-              y={rows.phase + 15}
-              className="text-[11.5px] font-semibold fill-[var(--primary)]"
-            >
-              Optimize · {summary.algorithm}
-            </text>
-          </g>
-        )}
+        {/* Phase bands: seed → iterations → finalize */}
+        {(() => {
+          const seedEnd = activities.find((a: Activity) => a.type === 'seed')?.end || 0
+          const firstOpt = activities.find((a: Activity) => a.type === 'optimize')
+          const lastEval = activities.filter((a: Activity) => a.type === 'evaluate').pop()
+          const finalizeStart = activities.find((a: Activity) => a.type === 'finalize')?.start || elapsed
+          
+          const iterStart = firstOpt?.start || seedEnd
+          const iterEnd = lastEval?.end || finalizeStart
+          
+          return (
+            <g>
+              {/* Seed phase */}
+              {seedEnd > 0 && (
+                <>
+                  <rect
+                    x={x(0)}
+                    y={rows.phase}
+                    width={x(seedEnd) - x(0)}
+                    height={22}
+                    rx={5}
+                    fill="var(--seed)"
+                    fillOpacity={0.12}
+                    stroke="var(--seed)"
+                    strokeOpacity={0.3}
+                  />
+                  <text
+                    x={x(0) + 8}
+                    y={rows.phase + 15}
+                    className="text-[11px] font-semibold fill-[var(--seed)]"
+                  >
+                    Seed
+                  </text>
+                </>
+              )}
+              
+              {/* Iterations phase */}
+              {iterStart < iterEnd && (
+                <>
+                  <rect
+                    x={x(iterStart)}
+                    y={rows.phase}
+                    width={x(iterEnd) - x(iterStart)}
+                    height={22}
+                    rx={5}
+                    fill="var(--primary)"
+                    fillOpacity={0.12}
+                    stroke="var(--primary)"
+                    strokeOpacity={0.3}
+                  />
+                  <text
+                    x={x(iterStart) + 8}
+                    y={rows.phase + 15}
+                    className="text-[11px] font-semibold fill-[var(--primary)]"
+                  >
+                    Iterations
+                  </text>
+                </>
+              )}
+              
+              {/* Finalize phase */}
+              {finalizeStart < elapsed && (
+                <>
+                  <rect
+                    x={x(finalizeStart)}
+                    y={rows.phase}
+                    width={x(elapsed) - x(finalizeStart)}
+                    height={22}
+                    rx={5}
+                    fill="var(--accent)"
+                    fillOpacity={0.12}
+                    stroke="var(--accent)"
+                    strokeOpacity={0.3}
+                  />
+                  <text
+                    x={x(finalizeStart) + 8}
+                    y={rows.phase + 15}
+                    className="text-[11px] font-semibold fill-[var(--accent)]"
+                  >
+                    Finalize
+                  </text>
+                </>
+              )}
+            </g>
+          )
+        })()}
 
         {/* Iteration bands */}
         {iterations.map((it: number) => {
