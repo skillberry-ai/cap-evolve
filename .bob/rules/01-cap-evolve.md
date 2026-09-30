@@ -18,6 +18,13 @@ Bob Shell reads this file on every run in this repository, including the
     are gated on the run's `capabilities`.
   - Use the theme tokens in `src/index.css` (`--primary`, `--accepted`,
     `--rejected`, `--failed`, `--seed`, ...) for every color, in both light and dark themes.
+  - Never combine `bg-opacity-*` / `border-opacity-*` with an arbitrary color such
+    as `bg-[var(--accepted)]`. In this Tailwind 3 setup the opacity class has no
+    effect on a CSS-variable color, so the background stays solid, and text in the
+    same color becomes invisible. Reuse the existing pieces instead: `VerdictBadge`
+    and `StatusBadge` (`src/components/StatusBadge.tsx`), the `VERDICT` map in
+    `src/lib/verdict.ts`, and the named Tailwind colors (`text-accepted`,
+    `border-accepted/50`, ...).
   - `dashboard/frontend/dist/` is committed. After any change under
     `dashboard/frontend/src/`, run `npm run build` and keep the new `dist/` files.
     CI fails when `dist/` is stale.
