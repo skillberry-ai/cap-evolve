@@ -92,6 +92,9 @@ def summarize(run: Path) -> dict:
     opt_usd = sum(float(e.get("opt_cost_usd") or 0) for e in steps)
     opt_min = sum(float(e.get("optimizer_seconds") or 0) for e in steps) / 60
     fin = next((e for e in ev if e.get("kind") == "finalize"), {})
+    # the optimizer can exit non-zero (e.g. at its turn cap) after writing edits; the candidate is
+    # still evaluated, so this is recorded, not treated as a failed run
+    opt_errors = sum(1 for e in ev if e.get("kind") == "optimizer_error")
 
     block = (d / "reader_block.md").read_text(encoding="utf-8") if (d / "reader_block.md").exists() else None
     variant = _variant(block) if block is not None else "?"
@@ -123,7 +126,7 @@ def summarize(run: Path) -> dict:
         "delta": (opt - seed) if n else None,
         "delta_ci": bootstrap_ci(deltas, resamples=RESAMPLES, seed=0) if n else None,
         "val_seed": val_seed, "val_cand": val_cand, "accepted": [bool(e.get("accept")) for e in steps],
-        "best_id": fin.get("best_id"), "opt_usd": opt_usd, "opt_minutes": opt_min,
+        "best_id": fin.get("best_id"), "opt_usd": opt_usd, "opt_minutes": opt_min, "optimizer_errors": opt_errors,
         "models": models, "block_in_instructions": block_in_instructions,
         "skill_shape": skill_shape(text), "per_task": per_task,
         "valid": not problems, "problems": problems,
@@ -158,7 +161,7 @@ def _row(s: dict) -> str:
     delta = "—" if s["delta"] is None else f"{100 * s['delta']:+.1f}"
     return (f"| {s['variant']} | [{s['run_id']}](https://github.com/skillberry-ai/cap-evolve/actions/runs/{s['run_id']}) "
             f"| {s['iterations']} | {_pct(s['test_seed'])} | {_pct(s['test_opt'])} "
-            f"| {delta} [{_pct(lo)}, {_pct(hi)}] | {val} | {acc} | {s['opt_usd']:.2f} | {s['opt_minutes']:.0f} "
+            f"| {delta} [{_pct(lo)}, {_pct(hi)}] | {val} | {acc} | {s['opt_usd']:.2f} | {s['opt_minutes']:.0f}{' (' + str(s['optimizer_errors']) + ' opt err)' if s['optimizer_errors'] else ''} "
             f"| {sh['chars']} / {sh['numbered_rules']} / {sh['code_examples']} / {'yes' if sh['grader_contract'] else 'no'} "
             f"| {','.join(s['models']) or '—'} | {'✅' if s['valid'] else '❌ ' + '; '.join(s['problems'])} |")
 
