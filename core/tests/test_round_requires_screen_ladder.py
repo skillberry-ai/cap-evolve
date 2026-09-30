@@ -76,12 +76,34 @@ def _staged_run_dir(tmp_path, *, n=24):
 _JUSTIFY = ["--single-candidate-justification", "screen-ladder test: single candidate by design"]
 
 
-def test_round_refuses_an_unscreened_candidate(tmp_path):
+def test_round_screens_an_unscreened_candidate_itself_before_full_val(tmp_path):
+    """#437: screening is round.py's DEFAULT step, not something the driver must remember —
+    an unscreened candidate is screened by round.py before any full-val rollout is offered."""
     run_dir, project, work = _staged_run_dir(tmp_path)
     p = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
               "--project", str(project), "--candidates", "cand_1", "--n-trials", "1", *_JUSTIFY])
-    assert p.returncode != 0, f"round.py ran full val on an unscreened candidate: {p.stdout}"
-    assert "screen.py" in p.stdout
+    assert p.returncode == 0, p.stdout + p.stderr
+    out = json.loads(p.stdout)
+    assert (run_dir.root / "screens" / "cand_1__screen1.json").exists()
+    assert out["screen_stage"]["cand_1"]["auto"] is True
+    assert out["screen_stage"]["cand_1"]["rationale"], "subset.rationale must be recorded"
+
+    events = [json.loads(ln) for ln in
+              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    kinds = [(e["kind"], e.get("tag")) for e in events]
+    # The screen event lands BEFORE the compliance record that admits it to full val.
+    assert kinds.index(("screen", "cand_1")) < kinds.index(("agent_optimize_compliance", "cand_1"))
+    compliance = [e for e in events if e.get("kind") == "agent_optimize_compliance"]
+    assert compliance[0]["screened_before_fullval"] is True
+    assert compliance[0]["auto_screened"] is True
+
+    from cap_evolve import graph
+    statuses = [(n["id"], n["status"]) for n in graph.read_nodes(run_dir)]
+    assert statuses == [("cand_1", "screened"), ("cand_1", "gated")] or \
+        statuses == [("cand_1", "screened")], statuses  # killed ⇒ never gated
+    if out["candidates"]:
+        gated = graph.read_nodes(run_dir)[-1]
+        assert gated["subset"]["rationale"] and gated["parents"] == ["cur"]
 
 
 def test_skip_screen_ladder_records_the_deliberate_override(tmp_path):
@@ -210,17 +232,18 @@ def test_repeated_bare_skip_screen_ladder_is_refused_without_override(tmp_path):
                      "--project", str(project), "--candidates", tag, "--n-trials", "1",
                      *_JUSTIFY, *extra])
 
-    # A round refused for having NO skip flag at all still logs a compliance event; it must not
-    # count as the run's first bare skip.
-    assert rnd("cand_1").returncode == 2
+    # A round with NO skip flag at all (auto-screened since #437) still logs a compliance event;
+    # it must not count as the run's first bare skip.
+    import shutil
+    from cap_evolve.skillcheck import seed_capability_dir
+    shutil.copytree(seed_capability_dir(tmp_path / "_src0", level=24), work / "cand_0")
+    assert rnd("cand_0").returncode == 0
     p1 = rnd("cand_1", "--skip-screen-ladder")
     assert p1.returncode == 0, f"the first bare skip in a run must pass: {p1.stdout}"
 
     from cap_evolve import harness
     harness.record_iteration(run_dir, work / "cand_1", "cand_1", parent_id="cur",
                              accepted=False, reason="test", val=0.5, parent_val=0.5)
-    import shutil
-    from cap_evolve.skillcheck import seed_capability_dir
     shutil.copytree(seed_capability_dir(tmp_path / "_src2", level=24), work / "cand_2")
 
     refused = rnd("cand_2", "--skip-screen-ladder")

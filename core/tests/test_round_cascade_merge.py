@@ -1,0 +1,217 @@
+"""#435/#437/#438: round.py's DEFAULT per-round cascade, end to end, zero-API.
+
+Three siblings off the seed: cand_1 fixes fn_a (t0,t1), cand_2 fixes fn_b (t2,t3) — disjoint —
+and cand_3 breaks everything. With NO screen/merge flags, one ``round.py`` call must:
+
+  1. screen all three itself (the driver never calls screen.py);
+  2. drop cand_3 on its screen kill — no full-val rollout for it;
+  3. build merge_cand_1_cand_2 (2 parents), screen it, and see it keep both parents' gains;
+  4. gate ONLY the merge on full val (its parents are inside it, never gated twice);
+  5. record it all in graph.jsonl, so a later commit with no --parents keeps both parents.
+
+This is exactly run v18's waste (unscreened full-val gates + hand-built unions paying a second
+full gate), fixed by the default path rather than by a flag the driver must remember.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+SCRIPTS = REPO / "skills" / "algorithms" / "agent-optimize" / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+
+BASE = "def fn_a(x):\n    return x\n\n\ndef fn_b(x):\n    return x\n"
+FIX_A = BASE.replace("def fn_a(x):\n    return x", 'def fn_a(x):\n    return x + "MARK_A"')
+FIX_B = BASE.replace("def fn_b(x):\n    return x", 'def fn_b(x):\n    return x + "MARK_B"')
+BROKEN = BASE + "\n\nBROKEN = True\n"
+
+ADAPTER = '''
+from pathlib import Path
+from cap_evolve.adapter import CapabilityAdapter
+from cap_evolve.trials import run_trials_pool
+from cap_evolve.types import Task, Rollout, Score
+
+NEEDS = {"t0": "MARK_A", "t1": "MARK_A", "t2": "MARK_B", "t3": "MARK_B"}
+
+class Adapter(CapabilityAdapter):
+    def tasks(self, split):
+        return [Task(id=f"t{i}") for i in range(8)]
+
+    def run_target(self, task, ctx, *, seed=0):
+        return Rollout(task_id=task.id,
+                       output=(Path(ctx) / "tools" / "tools.py").read_text(encoding="utf-8"))
+
+    def run_trials(self, tasks, ctx, *, n_trials, base_seed):
+        return run_trials_pool(lambda t, s: self.run_target(t, ctx, seed=s), tasks,
+                               n_trials=n_trials, base_seed=base_seed)
+
+    def score(self, task, rollout):
+        src = rollout.output or ""
+        need = NEEDS.get(task.id)
+        ok = "BROKEN" not in src and (need is None or need in src)
+        r = 1.0 if ok else 0.0
+        return Score(task_id=task.id, reward=r, feedback="ok" if ok else f"needs {need}",
+                     trial_rewards=[r])
+'''
+
+
+def _env():
+    return dict(os.environ, CAPEVOLVE_CORE=str(REPO / "core"),
+                CAPEVOLVE_SKILLS_DIR=str(REPO / "skills"))
+
+
+def _cap(root: Path, name: str, tools: str) -> Path:
+    d = root / name
+    (d / "tools").mkdir(parents=True, exist_ok=True)
+    (d / "tools" / "tools.py").write_text(tools, encoding="utf-8")
+    (d / "policy").mkdir(parents=True, exist_ok=True)
+    (d / "policy" / "policy.md").write_text("base policy\n", encoding="utf-8")
+    return d
+
+
+def _setup(tmp_path: Path):
+    import importlib.util
+
+    from cap_evolve import Budget, RunDir, harness
+
+    project = tmp_path / "project"
+    (project / "adapters").mkdir(parents=True)
+    (project / "adapters" / "adapter.py").write_text(ADAPTER, encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("cascade_adapter",
+                                                  project / "adapters" / "adapter.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="ci", budget=Budget(max_iterations=10))
+    harness.ensure_splits(mod.Adapter(), run_dir, seed=0,
+                          split_ids={"val": [f"t{i}" for i in range(8)], "train": [], "test": []})
+    harness.baseline(mod.Adapter(), _cap(tmp_path, "seed_cap", BASE), run_dir=run_dir)
+    work = run_dir.root / "work"
+    for tag, src in (("cand_1", FIX_A), ("cand_2", FIX_B), ("cand_3", BROKEN)):
+        _cap(work, tag, src)
+    return run_dir, project
+
+
+def _full_val_tags(run_dir) -> set[str]:
+    tags = set()
+    for f in (run_dir.root / "rollouts" / "val").glob("*.json"):
+        parts = f.name.split("__")
+        if len(parts) >= 3 and not any(p.startswith("screen") for p in parts[1:-1]):
+            tags.add("__".join(parts[1:-1]))
+    return tags - {"seed"}
+
+
+def test_default_round_screens_kills_merges_and_gates_the_merge_once(tmp_path):
+    from cap_evolve import graph
+
+    run_dir, project = _setup(tmp_path)
+    p = subprocess.run([sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+                        "--project", str(project), "--candidates", "cand_1,cand_2,cand_3",
+                        "--n-trials", "1", "--concurrency", "1"],
+                       capture_output=True, text=True, env=_env())
+    assert p.returncode == 0, p.stdout + p.stderr
+    out = json.loads(p.stdout)
+
+    # 1-2. every sibling screened by round.py itself; the harmful one killed, never gated.
+    assert {t: s["auto"] for t, s in out["screen_stage"].items()} == \
+        {"cand_1": True, "cand_2": True, "cand_3": True}
+    assert out["screen_killed"] == ["cand_3"]
+
+    # 3. the disjoint survivors were merged, and the merge screened before any gate.
+    merge = "merge_cand_1_cand_2"
+    m = next(x for x in out["merge_stage"]["merges"] if x["tag"] == merge)
+    assert m["parents"] == ["cand_1", "cand_2"] and m["qualifies"] is True
+    assert m["screen"]["decision"] == "promote" and m["screen"]["auto"] is True
+    assert out["merge_stage"]["subsumed"] == {"cand_1": merge, "cand_2": merge}
+
+    # 4. full val paid for exactly one candidate: the merge (plus the null controls).
+    assert [r["tag"] for r in out["candidates"]] == [merge]
+    assert out["candidates"][0]["reward"] == 1.0
+    assert {t for t in _full_val_tags(run_dir) if not t.startswith("ctl_")} == {merge}
+
+    events = [json.loads(ln) for ln in run_dir.events_path.read_text().splitlines() if ln.strip()]
+    kinds = [(e["kind"], e.get("tag")) for e in events]
+    batch = next(i for i, e in enumerate(events) if e["kind"] == "agent_optimize_round_batch")
+    assert kinds.index(("screen", merge)) < batch, "the merge must be screened before gating"
+    assert events[batch]["gated"] == [merge] and events[batch]["screen_killed"] == ["cand_3"]
+
+    # 5. graph.jsonl: real DAG structure, one transition per state change.
+    dag = graph.build_dag(run_dir)
+    assert dag[merge]["parents"] == ["cand_1", "cand_2"]
+    assert dag[merge]["edit_kind"] == "merge" and dag[merge]["status"] == "gated"
+    assert dag[merge]["subset"]["rationale"].startswith("pairwise merge of screen survivors")
+    assert [n["status"] for n in graph.read_nodes(run_dir) if n["id"] == merge] == \
+        ["proposed", "screened", "gated"]
+    for parent in ("cand_1", "cand_2"):
+        assert dag[parent]["status"] == "superseded" and dag[parent]["merged_into"] == merge
+        assert dag[parent]["parents"] == ["seed"]
+    assert dag["cand_3"]["status"] == "screened" and dag["cand_3"]["screen"]["decision"] == "kill"
+    assert set(dag["cand_1"]["children"]) >= {merge}
+
+    # The terminal commit needs no --parents: the node round.py built already has both.
+    c = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
+                        "--candidate-id", merge, "--from-dir", str(run_dir.root / "work" / merge),
+                        "--decision", "accept", "--val", "1.0", "--note", "merge accepted",
+                        "--missing-handover-justification", "fixture: handover not under test"],
+                       capture_output=True, text=True, env=_env())
+    assert c.returncode == 0, c.stdout + c.stderr
+    final = graph.latest_node(run_dir, merge)
+    assert final["status"] == "accepted" and final["parents"] == ["cand_1", "cand_2"]
+    assert final["edit_kind"] == "merge"
+    step = [json.loads(ln) for ln in run_dir.events_path.read_text().splitlines()
+            if ln.strip() and json.loads(ln).get("kind") == "step"][-1]
+    assert step["merge_of"] == ["cand_1", "cand_2"], "dashboard multi-parent edge"
+
+
+def test_no_merge_gates_every_survivor_alone(tmp_path):
+    run_dir, project = _setup(tmp_path)
+    p = subprocess.run([sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+                        "--project", str(project), "--candidates", "cand_1,cand_2,cand_3",
+                        "--n-trials", "1", "--concurrency", "1", "--no-merge"],
+                       capture_output=True, text=True, env=_env())
+    assert p.returncode == 0, p.stdout + p.stderr
+    out = json.loads(p.stdout)
+    assert out["merge_stage"] is None
+    assert sorted(r["tag"] for r in out["candidates"]) == ["cand_1", "cand_2"]
+
+
+def test_merge_that_loses_a_parents_gain_is_not_gated_and_parents_are():
+    """integrate.py's rule (gains do not compose), applied with the screens already paid."""
+    import round as rnd
+
+    a = {"paired": {"ids": ["t0", "t1"], "deltas": [1.0, 1.0]}}
+    b = {"paired": {"ids": ["t2"], "deltas": [1.0]}}
+    lost_a = {"paired": {"ids": ["t0", "t1", "t2"], "deltas": [1.0, 0.0, 1.0]}}
+    assert rnd.keeps_parent_gain(lost_a, b) and not rnd.keeps_parent_gain(lost_a, a)
+    assert not rnd.keeps_parent_gain(lost_a, {"paired": {"ids": ["t9"], "deltas": [0.0]}})
+
+    merges = [
+        {"tag": "m_ab", "parents": ["a", "b"], "qualifies": False, "screen": {"mean_delta": .9}},
+        {"tag": "m_ac", "parents": ["a", "c"], "qualifies": True, "screen": {"mean_delta": .5}},
+        {"tag": "m_bc", "parents": ["b", "c"], "qualifies": True, "screen": {"mean_delta": .4}},
+    ]
+    chosen, covered = rnd.choose_merges(merges)
+    assert chosen == ["m_ac"] and covered == {"a": "m_ac", "c": "m_ac"}  # b gated alone
+
+
+def test_build_merge_dir_refuses_a_same_lines_collision(tmp_path):
+    import merge
+
+    base = _cap(tmp_path, "base", BASE)
+    a = _cap(tmp_path, "a", FIX_A)
+    b = _cap(tmp_path, "b", FIX_A.replace("MARK_A", "OTHER"))
+    res = merge.build_merge_dir(base, a, b, tmp_path / "out")
+    assert res["built"] is False and res["conflicts"][0]["file"] == "tools/tools.py"
+    assert not (tmp_path / "out").exists()
+
+    (a / "policy" / "policy.md").write_text("base policy\nrule A\n", encoding="utf-8")
+    res = merge.build_merge_dir(base, a, _cap(tmp_path, "b2", FIX_B), tmp_path / "out")
+    assert res["built"], res
+    merged = (tmp_path / "out" / "tools" / "tools.py").read_text()
+    assert "MARK_A" in merged and "MARK_B" in merged
+    assert "rule A" in (tmp_path / "out" / "policy" / "policy.md").read_text()

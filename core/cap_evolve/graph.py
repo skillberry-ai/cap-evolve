@@ -16,8 +16,18 @@ DAG"): one JSON object per line —
     cluster_ids: [str]         which diagnose() cluster(s) this targets (Phase 3+)
     edit_kind: "prompt" | "code" | "merge"
     micro_tests: [str]         micro-test ids this was designed to pass (Phase 2+)
-    subset: {task_ids, rationale, tier} | None   screen.py's subset, if any ran
-    status: "accepted" | "rejected"              (Phase 1 only records terminal steps)
+    subset: {task_ids, rationale, tier} | None   screen.py's subset and WHY those tasks;
+                               ``None`` on a gated node means the screen was skipped, and
+                               such a node carries ``screen_skip_justification``
+    status: one per STATE TRANSITION, append-only (last record per id wins):
+            "screened"   round.py ran (or found) a screen for it; ``screen.decision``
+                         says kill/promote
+            "proposed"   round.py built a pairwise merge node (2 parents), not yet screened
+            "superseded" screened but NOT gated on its own: a parent whose bytes a
+                         better-screening merge carries (``merged_into``), or a merge that
+                         lost a parent's screened gain (``reason``)
+            "gated"      round.py ran the full-val gate; ``gate`` is its table row
+            "accepted" | "rejected"   the terminal commit (commit.py / record_iteration)
     val_mean: float | None
     screen: {...} | None       merged screen.py tier records, if any ran
     gate: {...} | None         the round.py gate-table row, if one exists
@@ -38,9 +48,9 @@ def _screens_dir(run_dir) -> Path:
 def collect_screen_info(run_dir, tag: str) -> dict | None:
     """Merge every ``screens/<tag>__screenN.json`` tier for ``tag`` into one summary.
 
-    Returns ``None`` when no screen ever ran for this candidate — the common
-    case today, since screening stays opt-in until #434 Phase 3 makes it the
-    default on-ramp.
+    Returns ``None`` when no screen ever ran for this candidate (a deterministic
+    algorithm's step, or an agent-optimize candidate gated under an explicit
+    ``--skip-screen-*`` override — ``round.py`` screens every other one, #437).
     """
     d = _screens_dir(run_dir)
     if not d.is_dir():
@@ -61,6 +71,7 @@ def collect_screen_info(run_dir, tag: str) -> dict | None:
                   for t in tiers],
         "decision": last.get("decision"),
         "subset_ids": subset_ids,
+        "rationale": (last.get("subset") or {}).get("rationale"),
         "last_tier": last.get("tier"),
     }
 
@@ -91,39 +102,58 @@ def gate_row(run_dir, candidate_id: str) -> dict | None:
     return None
 
 
-def append_node(run_dir, *, node_id: str, parents: list[str], status: str,
+def latest_node(run_dir, node_id: str) -> dict | None:
+    """The most recent record for ``node_id`` in ``graph.jsonl``, or ``None``."""
+    found = None
+    for n in read_nodes(run_dir):
+        if n.get("id") == node_id:
+            found = n
+    return found
+
+
+def append_node(run_dir, *, node_id: str, parents: list[str] | None, status: str,
                  val_mean: float | None = None, edit_kind: str | None = None,
                  cluster_ids: list[str] | None = None,
                  micro_tests: list[str] | None = None,
                  note: str | None = None, gate: dict | None = None,
-                 screen: dict | None = None) -> dict:
-    """Append one candidate node to ``$R/graph.jsonl``.
+                 screen: dict | None = None, **extra) -> dict:
+    """Append one state transition of a candidate node to ``$R/graph.jsonl``.
 
     ``gate``/``screen`` default to a fresh lookup via :func:`gate_row` /
     :func:`collect_screen_info` when not supplied — callers with the data
     already in hand (``round.py``'s in-memory table) may pass it directly to
     avoid re-reading disk.
+
+    Fields a later transition does not know (``cluster_ids``/``edit_kind``/
+    ``micro_tests``, and ``parents`` when passed as ``None``) carry forward from
+    this node's previous record, so the terminal ``commit.py`` write does not erase
+    what ``round.py`` recorded when it screened or built the node. ``extra`` keys
+    (e.g. ``merged_into``, ``screen_skip_justification``) are written when not None.
     """
+    prior = latest_node(run_dir, node_id) or {}
+    parents = list(parents) if parents else list(prior.get("parents") or ["seed"])
     if gate is None:
         gate = gate_row(run_dir, node_id)
     if screen is None:
         screen = collect_screen_info(run_dir, node_id)
     subset = None
     if screen and screen.get("subset_ids"):
-        subset = {"task_ids": screen["subset_ids"], "rationale": None,
+        subset = {"task_ids": screen["subset_ids"], "rationale": screen.get("rationale"),
                   "tier": screen.get("last_tier")}
     rec = {
         "id": node_id,
-        "parents": list(parents),
-        "cluster_ids": cluster_ids or [],
-        "edit_kind": edit_kind or ("merge" if len(parents) > 1 else "code"),
-        "micro_tests": micro_tests or [],
+        "parents": parents,
+        "cluster_ids": cluster_ids or prior.get("cluster_ids") or [],
+        "edit_kind": edit_kind or ("merge" if len(parents) > 1
+                                   else prior.get("edit_kind") or "code"),
+        "micro_tests": micro_tests or prior.get("micro_tests") or [],
         "subset": subset,
         "status": status,
         "val_mean": val_mean,
         "screen": screen,
         "gate": gate,
         "note": note,
+        **{k: v for k, v in extra.items() if v is not None},
     }
     path = run_dir.root / GRAPH_FILENAME
     with path.open("a", encoding="utf-8") as f:

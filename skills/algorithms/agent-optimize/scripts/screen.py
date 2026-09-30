@@ -109,6 +109,10 @@ def main(argv=None) -> int:
                         "when this is set. The kill/promote decision and audit trail are "
                         "unchanged — this only changes WHICH tasks are screened, never "
                         "whether a screen can accept (it still can't).")
+    p.add_argument("--rationale", default=None,
+                   help="WHY this subset — which cluster/tasks the edit targets and what the "
+                        "rest of the subset guards (#437). Recorded as subset.rationale in the "
+                        "screen record and graph.jsonl; defaults to the selector's own note.")
     p.add_argument("--n-trials", type=int, default=1,
                    help="trials per screened task (1 is the point; >1 is not a gate)")
     p.add_argument("--workers", type=int, default=None,
@@ -162,6 +166,8 @@ def main(argv=None) -> int:
         sub = select_screen_subset(parent.per_task, k=k, seed=seed,
                                    holdout_frac=args.holdout_frac,
                                    broken_ids=[b.strip() for b in broken])
+    if args.rationale and args.rationale.strip():
+        sub["rationale"] = args.rationale.strip()
 
     # Rungs are cumulative: never re-run a task an earlier rung already screened.
     prior_tags = _screen_tags(run_dir, tag)

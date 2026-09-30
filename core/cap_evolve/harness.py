@@ -1778,6 +1778,18 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
     node with no separate plumbing per caller. ``parents`` defaults to ``[parent_id]``
     (an edit); pass 2+ ids for a merge node (#438's job to populate, not this one's).
     """
+    # A merge node round.py already recorded with 2+ parents keeps them even when the
+    # committer did not repeat ``--parents`` (#438). A single-parent edit keeps the
+    # commit-time parent, which is what the step event below records.
+    if not parents:
+        try:
+            prior = graph_mod.latest_node(run_dir, cid) or {}
+        except Exception:  # noqa: BLE001 — a log read must never break a run
+            prior = {}
+        if len(prior.get("parents") or []) > 1:
+            parents = prior["parents"]
+    if parents and len(parents) > 1:
+        extra.setdefault("merge_of", list(parents))  # the dashboard's multi-parent edge
     run_dir.update_spent(iterations=1, accepted=None if indecisive else accepted,
                          best_val=val if accepted and val is not None else None)
     run_dir.log_event("step", candidate=cid, accept=accepted, reason=reason,

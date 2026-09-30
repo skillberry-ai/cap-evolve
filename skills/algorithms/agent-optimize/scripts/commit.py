@@ -589,8 +589,10 @@ def main(argv=None) -> int:
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
+    # None (not [parent_id]) when --parents is omitted, so record_iteration keeps the 2
+    # parents round.py already recorded for a merge node it built (#438).
     parents = ([p.strip() for p in args.parents.split(",") if p.strip()]
-               if args.parents else [parent_id])
+               if args.parents else None)
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
         run_dir.set_best(args.candidate_id)

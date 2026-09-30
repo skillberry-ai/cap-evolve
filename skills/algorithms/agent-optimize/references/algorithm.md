@@ -193,6 +193,18 @@ exactly those ids, with the same audit trail under `$R/screens/`. It can still o
 accept, for the same reason the heuristic path can't: a subset you picked because it targets the
 edit is biased toward that edit, which is excellent triage and an invalid basis for acceptance.
 
+Inside a round the same choice goes in `round.py --plan <file>`, a JSON file you write (e.g.
+`$R/work/plan.json`), one entry per tag, every key optional:
+
+```json
+{"cand_1": {"ids": "8,14,22", "rationale": "cluster c3 timeout-before-tool-call + 2 passing canaries",
+            "cluster_ids": ["c3"], "edit_kind": "code"}}
+```
+
+`ids`/`rationale` become that tag's screen subset and its `subset.rationale` in `graph.jsonl`;
+`cluster_ids` also stop two alternative fixes of the SAME cluster being merged. A tag with no
+entry is screened on `--screen-tier` (default 1) and gets the heuristic's own rationale.
+
 On **train** there is no screen/gate ceremony to bypass at all: `evaluate.py --split train --ids
 <your subset>` (`cap_evolve.harness.evaluate_candidate`'s `ids` parameter, exposed on the CLI)
 runs exactly the ids you name and nothing else, under a tag you control. Iterate on it as many
@@ -278,7 +290,20 @@ candidates, N≥3, one cluster each. Bundle only *independent* parts within one 
 files, different rules — so a rejected bundle can be resubmitted as its surviving part next round;
 `regressed`/`regressions` say which part to drop.
 
-**Gating N Bucket-A siblings does not mean paying full val N times.** Screen every sibling first
+**Gating N Bucket-A siblings does not mean paying full val N times.** Since #437/#438 this is
+`round.py`'s default: one call screens every sibling, drops kills, builds each disjoint
+survivor pair with `merge.build_merge_dir` (no measurement of its own — the merge is judged by
+the same screen), screens the merge on both parents' tasks plus fresh whole-suite canaries, and
+gates a merge INSTEAD of its parents only when it kept each parent's own screened gain (else the
+parents are gated alone). Each survivor is paid for at full val once. Every transition is a
+`graph.jsonl` node (`screened`/`proposed`/`superseded`/`gated`, then the commit). The table's
+`screen_stage` gives each tag's subset, rationale and decision; `screen_killed` is never gated
+(commit each `--reject-basis screen_kill`); `merge_stage.merges[]` lists every pair built, its
+screen, `qualifies`, and `not_gated_because` for any merge not chosen, and `skipped_pairs` every
+pair refused as an edit collision or a same-cluster pair. Commit a gated merge without
+`--parents` — its node already has both; its parents (`superseded`, `merged_into`) need no commit
+of their own. `--no-merge` gates every survivor alone. The manual path
+below still works for pairs outside one round. Screen every sibling first
 (SKILL.md step 3, cheap subset, kill-only) — that is the whole point of `screen.py` existing before
 step 4 — then run `scripts/merge_search.py` on the disjoint SCREEN-SURVIVORS (its own module
 docstring: "the missing piece is simply DECIDING which survivors are safe to try merging and
@@ -821,9 +846,9 @@ branch directories rather than assuming both live under `work/`). A built merge 
 `$R/work/merge_<a>_<b>`, gated by `round.py` with no special-casing; on accept, commit with
 `commit.py --parents <a>,<b>` so `graph.jsonl` records both ancestors instead of one.
 
-Deliberately NOT in this slice, left for a follow-up: calling `merge.py` automatically each
-round whenever 2+ branches are live, and a policy for which pairs among many live branches are
-worth trying — the caller still has to name the two tags.
+Within one round the automatic pass above now covers this (every disjoint survivor pair,
+selected by a greedy matching on screen Δ). Still manual: pairs ACROSS rounds (an earlier
+accept with a current survivor) — name the two tags here.
 
 ## Caveats
 

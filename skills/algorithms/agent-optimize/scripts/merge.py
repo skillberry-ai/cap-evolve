@@ -25,9 +25,10 @@ gates through the exact same cascade as any hand-authored edit. On accept, commi
 (`--parents` already exists — see `commit.py`/`core/cap_evolve/graph.py`, #434/#446) rather than
 the single `parent` an ordinary edit gets.
 
-Deferred (see the PR for #586): calling this automatically each round whenever 2+ branches are
-live, and a policy for WHICH pairs among many live branches are worth trying (this script still
-requires the caller to name the two tags).
+Within a round this is now automatic (#438): `round.py` calls `build_merge_dir` below on every
+pair of disjoint screen-survivors, screens each merge, and gates a merge in place of its parents
+only when it kept both parents' screened gains. This CLI remains for pairs `round.py` cannot see
+— e.g. an accepted candidate from an earlier iteration with a current-round survivor.
 
     python merge.py --run-dir R --project P --a cand_7 --b old_accepted_3 --base seed \\
         --targets cand_7:1,2 --targets old_accepted_3:5,9 \\
@@ -67,6 +68,101 @@ def _resolve_branch_dir(run_dir, tag: str) -> Path:
         return cand_dir
     raise FileNotFoundError(
         f"tag {tag!r} not found under work/ or candidates/ for run {run_dir.root}")
+
+
+def _capability_files(root: Path, ignore: set[str]) -> dict[str, Path]:
+    """{relative path: file} under ``root``, skipping framework memory / caches."""
+    out = {}
+    for f in root.rglob("*"):
+        rel = f.relative_to(root)
+        if f.is_file() and not (set(rel.parts) & ignore):
+            out[rel.as_posix()] = f
+    return out
+
+
+def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> dict:
+    """Build the pairwise merge of two branch tips WITHOUT measuring it (#438).
+
+    The measurement-free half of this script's primitive, for ``round.py``'s automatic
+    merge pass: every file is 3-way merged against ``base_dir`` (the round's parent) —
+    a file only one branch changed is taken from that branch, a ``.py`` both changed goes
+    through ``funcmerge.py`` (per-function, the same engine ``integrate.py`` uses), any
+    other file both changed through ``git merge-file``. Any collision is refused, never
+    forced: ``{"built": False, "conflicts": [...]}``. The merge is then judged by the SAME
+    screen -> gate cascade as any candidate, which is what replaces ``integrate.py``'s own
+    per-step taskeval measurement here (N+1 subset evals at ``--n`` trials each would
+    cost more than the screen it feeds).
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    import _bootstrap  # noqa: F401
+    from cap_evolve.harness import _SNAPSHOT_IGNORE
+    import funcmerge
+
+    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__"}
+    base_f, a_f, b_f = (_capability_files(d, ignore) for d in (base_dir, a_dir, b_dir))
+
+    def read(files, rel):
+        return files[rel].read_bytes() if rel in files else None
+
+    changed_a = {r for r in set(base_f) | set(a_f) if read(base_f, r) != read(a_f, r)}
+    changed_b = {r for r in set(base_f) | set(b_f) if read(base_f, r) != read(b_f, r)}
+    plan: dict[str, bytes | None] = {}
+    conflicts, merged_files = [], []
+    for rel in sorted(changed_a | changed_b):
+        a_bytes, b_bytes = read(a_f, rel), read(b_f, rel)
+        if rel not in changed_b or a_bytes == b_bytes:
+            plan[rel] = a_bytes
+            continue
+        if rel not in changed_a:
+            plan[rel] = b_bytes
+            continue
+        if a_bytes is None or b_bytes is None or rel not in base_f:
+            conflicts.append({"file": rel, "why": "added or deleted by both branches"})
+            continue
+        merged_files.append(rel)
+        if rel.endswith(".py"):
+            with tempfile.TemporaryDirectory() as td:
+                out = Path(td) / "merged.py"
+                p = subprocess.run(
+                    [sys.executable, str(HERE / "funcmerge.py"), "--base", str(base_f[rel]),
+                     "--out", str(out), "--inputs", str(a_f[rel]), str(b_f[rel]),
+                     "--union-pure-insertions", "--json", str(Path(td) / "r.json")],
+                    capture_output=True, text=True)
+                if p.returncode == 0 and out.exists():
+                    plan[rel] = out.read_bytes()
+                    continue
+                try:
+                    rep = json.loads((Path(td) / "r.json").read_text(encoding="utf-8"))
+                    why = rep.get("conflicts") or rep.get("error")
+                except (OSError, ValueError):
+                    why = (p.stderr or p.stdout)[-300:]
+            conflicts.append({"file": rel, "why": f"funcmerge: {why}"})
+            continue
+        text, clean = funcmerge.merge3(base_f[rel].read_text(encoding="utf-8"),
+                                       a_bytes.decode("utf-8"), b_bytes.decode("utf-8"))
+        if clean:
+            plan[rel] = text.encode("utf-8")
+        else:
+            conflicts.append({"file": rel, "why": "both branches edited the same lines"})
+    result = {"changed": {"a": sorted(changed_a), "b": sorted(changed_b)},
+              "three_way_merged": merged_files, "conflicts": conflicts,
+              "built": not conflicts}
+    if conflicts:
+        return result
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    shutil.copytree(base_dir, out_dir, ignore=shutil.ignore_patterns("__pycache__"))
+    for rel, data in plan.items():
+        dst = out_dir / rel
+        if data is None:
+            dst.unlink(missing_ok=True)
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_bytes(data)
+    return result
 
 
 def build_parser() -> argparse.ArgumentParser:
