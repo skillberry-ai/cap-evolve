@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Regenerate the DATA/SUMMARIES blocks in ui/heatmap_v4_t_e1.html from
+"""Regenerate the DATA/SUMMARIES blocks in ui/heatmap_v4_t.html from
 results/v4/v4_t_e1/results.json.
 
 Usage: python3 scripts/build_v4_t_heatmap.py [--check]
-  --check   exit 1 if regenerating would change heatmap_v4_t_e1.html, instead of writing it.
+  --check   exit 1 if regenerating would change heatmap_v4_t.html, instead of writing it.
 """
 import json
 import re
@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS_JSON = ROOT / "results" / "v4" / "v4_t_e1" / "results.json"
-HEATMAP_HTML = ROOT / "ui" / "heatmap_v4_t_e1.html"
+HEATMAP_HTML = ROOT / "ui" / "heatmap_v4_t.html"
 
 DATA_START_RE = re.compile(r"^const DATA = \[\n", re.MULTILINE)
 DATA_END_RE = re.compile(r"^\];\n", re.MULTILINE)
@@ -91,7 +91,7 @@ def regenerate(results, check_only):
 
     start_m = DATA_START_RE.search(html)
     if not start_m:
-        print("ERROR: could not find 'const DATA = [' in heatmap_v4_t_e1.html", file=sys.stderr)
+        print("ERROR: could not find 'const DATA = [' in heatmap_v4_t.html", file=sys.stderr)
         return 2
     end_m = DATA_END_RE.search(html, start_m.end())
     if not end_m:
@@ -103,7 +103,7 @@ def regenerate(results, check_only):
 
     s_m = SUMMARY_RE.search(new_html)
     if not s_m:
-        print("ERROR: could not find 'const SUMMARIES =' block in heatmap_v4_t_e1.html", file=sys.stderr)
+        print("ERROR: could not find 'const SUMMARIES =' block in heatmap_v4_t.html", file=sys.stderr)
         return 2
     new_html = (
         new_html[: s_m.start()]
@@ -114,14 +114,14 @@ def regenerate(results, check_only):
     )
 
     if new_html == html:
-        print("heatmap_v4_t_e1.html DATA/SUMMARIES blocks already up to date.")
+        print("heatmap_v4_t.html DATA/SUMMARIES blocks already up to date.")
         return 0
     if check_only:
-        print("heatmap_v4_t_e1.html is STALE relative to results/v4/v4_t_e1/results.json.", file=sys.stderr)
+        print("heatmap_v4_t.html is STALE relative to results/v4/v4_t_e1/results.json.", file=sys.stderr)
         return 1
 
     HEATMAP_HTML.write_text(new_html)
-    print(f"Regenerated heatmap_v4_t_e1.html from {len(results['task_ledger'])} tasks.")
+    print(f"Regenerated heatmap_v4_t.html from {len(results['task_ledger'])} tasks.")
     return 0
 
 
