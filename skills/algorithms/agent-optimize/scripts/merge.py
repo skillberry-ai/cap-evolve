@@ -101,7 +101,10 @@ def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> 
     from cap_evolve.harness import _SNAPSHOT_IGNORE
     import funcmerge
 
-    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__"}
+    # DIAGNOSIS.json is per-candidate optimizer metadata (#611), not capability bytes: each
+    # sibling writes its own, so 3-way merging it would collide on EVERY pair. It is combined
+    # from the parents below instead.
+    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__", "DIAGNOSIS.json"}
     base_f, a_f, b_f = (_capability_files(d, ignore) for d in (base_dir, a_dir, b_dir))
 
     def read(files, rel):
@@ -162,7 +165,42 @@ def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> 
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_bytes(data)
+    result["diagnosis_clusters"] = _write_merged_diagnosis(a_dir, b_dir, out_dir)
     return result
+
+
+def _write_merged_diagnosis(a_dir: Path, b_dir: Path, out_dir: Path) -> list[str]:
+    """The merge's DIAGNOSIS.json = both parents' diagnoses combined (#611).
+
+    A merge targets exactly what its parents targeted, so its clusters are their clusters
+    (tasks unioned per id) and its edits are both parents' edits — which is what commit.py's
+    #611 precondition reads. The copied-in round parent's diagnosis is REMOVED, never kept:
+    it describes a different candidate and would satisfy the precondition with the wrong
+    clusters. Neither parent having one leaves no file, so the commit asks for a reason.
+    """
+    target = out_dir / "DIAGNOSIS.json"
+    target.unlink(missing_ok=True)
+    clusters: dict[str, dict] = {}
+    edits: list = []
+    for d in (a_dir, b_dir):
+        try:
+            diag = json.loads((d / "DIAGNOSIS.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(diag, dict):
+            continue
+        for c in diag.get("clusters") or []:
+            if not (isinstance(c, dict) and c.get("id")):
+                continue
+            cur = clusters.setdefault(str(c["id"]), {**c, "tasks": []})
+            cur["tasks"] = sorted({*cur["tasks"], *(str(t) for t in c.get("tasks") or [])})
+        edits += [e for e in diag.get("edits") or [] if isinstance(e, dict)]
+    if clusters:
+        target.write_text(json.dumps({
+            "candidate": out_dir.name,
+            "headline": f"pairwise merge of {a_dir.name} + {b_dir.name}",
+            "clusters": list(clusters.values()), "edits": edits}, indent=2), encoding="utf-8")
+    return list(clusters)
 
 
 def build_parser() -> argparse.ArgumentParser:

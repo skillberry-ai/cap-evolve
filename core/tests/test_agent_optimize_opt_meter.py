@@ -53,7 +53,9 @@ def _commit(rd, cfg, work, cid, decision, extra=()):
                CLAUDE_CONFIG_DIR=str(cfg), CAPEVOLVE_HOST_METER="1")
     p = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(rd.root),
                         "--candidate-id", cid, "--from-dir", str(work), "--decision", decision,
-                        "--missing-handover-justification", "fixture", *extra],
+                        "--missing-handover-justification", "fixture",
+                        "--missing-diagnosis-justification", "fixture: not under test here",
+                        *extra],
                        capture_output=True, text=True, env=env, cwd=str(SCRIPTS))
     assert p.returncode == 0, p.stdout + p.stderr
     evs = [json.loads(ln) for ln in rd.events_path.read_text().splitlines() if ln.strip()]
@@ -104,7 +106,8 @@ def test_unhosted_commit_is_unchanged(tmp_path):
     env.pop("CAPEVOLVE_HOST_METER", None)
     p = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(rd.root),
                         "--candidate-id", "c", "--from-dir", str(work), "--decision", "accept",
-                        "--missing-handover-justification", "fixture"],
+                        "--missing-handover-justification", "fixture",
+                        "--missing-diagnosis-justification", "fixture: not under test here"],
                        capture_output=True, text=True, env=env, cwd=str(SCRIPTS))
     assert p.returncode == 0, p.stdout + p.stderr
     ev = [json.loads(ln) for ln in rd.events_path.read_text().splitlines()

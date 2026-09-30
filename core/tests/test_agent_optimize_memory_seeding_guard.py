@@ -82,7 +82,8 @@ def test_commit_seeds_missing_memory_files_into_a_bare_cp_workdir(tmp_path):
          "--candidate-id", "cand_1", "--from-dir", str(work),
          "--decision", "reject", "--val", "0.5333333333333333",
          "--note", "regression guard for the memory-seeding fix",
-         "--missing-handover-justification", "fixture: journal handover not under test"],
+         "--missing-handover-justification", "fixture: journal handover not under test",
+         "--missing-diagnosis-justification", "fixture: diagnosis not under test"],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(CORE)})
     assert p.returncode == 0, f"commit.py failed: {p.stdout}\n{p.stderr}"

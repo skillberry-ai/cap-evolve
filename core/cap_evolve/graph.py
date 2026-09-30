@@ -116,13 +116,18 @@ def append_node(run_dir, *, node_id: str, parents: list[str] | None, status: str
                  cluster_ids: list[str] | None = None,
                  micro_tests: list[str] | None = None,
                  note: str | None = None, gate: dict | None = None,
-                 screen: dict | None = None, **extra) -> dict:
+                 screen: dict | None = None, subset: dict | None = None,
+                 **extra) -> dict:
     """Append one state transition of a candidate node to ``$R/graph.jsonl``.
 
     ``gate``/``screen`` default to a fresh lookup via :func:`gate_row` /
     :func:`collect_screen_info` when not supplied — callers with the data
     already in hand (``round.py``'s in-memory table) may pass it directly to
     avoid re-reading disk.
+
+    ``subset`` is the fallback task subset when no screen ran — e.g. the tasks of the
+    DIAGNOSIS.json clusters an agent-optimize edit targeted (#611). A screen.py subset,
+    when one exists, always wins: it is what was actually measured.
 
     Fields a later transition does not know (``cluster_ids``/``edit_kind``/
     ``micro_tests``, and ``parents`` when passed as ``None``) carry forward from
@@ -136,7 +141,6 @@ def append_node(run_dir, *, node_id: str, parents: list[str] | None, status: str
         gate = gate_row(run_dir, node_id)
     if screen is None:
         screen = collect_screen_info(run_dir, node_id)
-    subset = None
     if screen and screen.get("subset_ids"):
         subset = {"task_ids": screen["subset_ids"], "rationale": screen.get("rationale"),
                   "tier": screen.get("last_tier")}

@@ -170,12 +170,13 @@ estimate, not proof (`--veto-regressions` restores the old no-regression veto; s
 `footprint` before the delta; `unresolved` is no evidence** — `references/algorithm.md`, "Measuring only
 what the edit reaches". `phases/gate/scripts/run.py` inspects the same gate but books no decision.
 
-**5. Write the handover, THEN commit.** Append one `## Iteration <cid>` entry below
-`work/$TAG/JOURNAL.md`'s marker (never `$R/JOURNAL.md`, framework-owned): what, why, what the
-numbers said — the only thing the NEXT round reads. `commit.py` refuses a decision with no
-matching entry (`--missing-handover-justification "<reason>"` is the escape hatch). Then
+**5. Handover + DIAGNOSIS.json, THEN commit.** Add one `## Iteration <cid>` entry below
+`work/$TAG/JOURNAL.md`'s marker (not `$R/JOURNAL.md`): what, why, what the
+numbers said — the only thing the NEXT round reads. `work/$TAG/DIAGNOSIS.json` maps
+edits→clusters→tasks. `commit.py` refuses without either
+(`--missing-handover-justification`/`--missing-diagnosis-justification`). Then
 commit, so `best_id`, stall and the audit log stay real. `--decision reject` keeps the old
-best; it snapshots the candidate, logs the event and advances `iterations` + stall:
+best; it snapshots, logs and advances `iterations` + stall:
 
 ```bash
 python "$A/commit.py" --run-dir "$R" --candidate-id "$TAG" --from-dir "$R/work/$TAG" \

@@ -50,6 +50,9 @@ def _staged(tmp_path, cid="cand_1"):
     work = run_dir.root / "work" / cid
     work.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(run_dir.root / "candidates" / "seed", work)
+    # commit.py requires a real DIAGNOSIS.json (#611); not what these tests are about.
+    (work / "DIAGNOSIS.json").write_text(json.dumps(
+        {"candidate": cid, "clusters": [{"id": "A", "tasks": ["t0"]}]}), encoding="utf-8")
     return run_dir, work
 
 

@@ -91,9 +91,19 @@ def _setup(tmp_path: Path):
     harness.ensure_splits(mod.Adapter(), run_dir, seed=0,
                           split_ids={"val": [f"t{i}" for i in range(8)], "train": [], "test": []})
     harness.baseline(mod.Adapter(), _cap(tmp_path, "seed_cap", BASE), run_dir=run_dir)
+    # The round parent's snapshot carries its OWN (stale) diagnosis — a merge must not inherit it.
+    (run_dir.candidate_dir("seed") / "DIAGNOSIS.json").write_text(json.dumps(
+        {"clusters": [{"id": "OLD", "tasks": ["t7"]}], "edits": []}), encoding="utf-8")
     work = run_dir.root / "work"
-    for tag, src in (("cand_1", FIX_A), ("cand_2", FIX_B), ("cand_3", BROKEN)):
-        _cap(work, tag, src)
+    for tag, src, cl, tasks in (("cand_1", FIX_A, "A", ["t0", "t1"]),
+                                ("cand_2", FIX_B, "B", ["t2", "t3"]),
+                                ("cand_3", BROKEN, "C", ["t4"])):
+        d = _cap(work, tag, src)
+        # #611: every candidate carries its own diagnosis — which differs per sibling, so a
+        # naive 3-way merge of this file would collide on EVERY pair.
+        (d / "DIAGNOSIS.json").write_text(json.dumps(
+            {"candidate": tag, "clusters": [{"id": cl, "tasks": tasks}],
+             "edits": [{"id": f"E_{tag}", "clusters": [cl]}]}), encoding="utf-8")
     return run_dir, project
 
 
@@ -151,18 +161,28 @@ def test_default_round_screens_kills_merges_and_gates_the_merge_once(tmp_path):
         assert dag[parent]["status"] == "superseded" and dag[parent]["merged_into"] == merge
         assert dag[parent]["parents"] == ["seed"]
     assert dag["cand_3"]["status"] == "screened" and dag["cand_3"]["screen"]["decision"] == "kill"
+    # No --plan: cluster_ids came from each candidate's own DIAGNOSIS.json (#611's parser).
+    assert dag["cand_1"]["cluster_ids"] == ["A"] and dag[merge]["cluster_ids"] == ["A", "B"]
     assert set(dag["cand_1"]["children"]) >= {merge}
 
-    # The terminal commit needs no --parents: the node round.py built already has both.
+    # #611 interaction: the merge's DIAGNOSIS.json is its parents' diagnoses combined, never
+    # the round parent's stale one and never a 3-way-merge collision.
+    diag = json.loads((run_dir.root / "work" / merge / "DIAGNOSIS.json").read_text())
+    assert [c["id"] for c in diag["clusters"]] == ["A", "B"]
+    assert [e["id"] for e in diag["edits"]] == ["E_cand_1", "E_cand_2"]
+
+    # The terminal commit needs no --parents (the node round.py built already has both) and NO
+    # --missing-diagnosis-justification: the auto-merge satisfies #611's precondition itself.
     c = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
                         "--candidate-id", merge, "--from-dir", str(run_dir.root / "work" / merge),
                         "--decision", "accept", "--val", "1.0", "--note", "merge accepted",
                         "--missing-handover-justification", "fixture: handover not under test"],
                        capture_output=True, text=True, env=_env())
     assert c.returncode == 0, c.stdout + c.stderr
+    assert json.loads(c.stdout)["diagnosis_recorded"] is True
     final = graph.latest_node(run_dir, merge)
     assert final["status"] == "accepted" and final["parents"] == ["cand_1", "cand_2"]
-    assert final["edit_kind"] == "merge"
+    assert final["edit_kind"] == "merge" and final["cluster_ids"] == ["A", "B"]
     step = [json.loads(ln) for ln in run_dir.events_path.read_text().splitlines()
             if ln.strip() and json.loads(ln).get("kind") == "step"][-1]
     assert step["merge_of"] == ["cand_1", "cand_2"], "dashboard multi-parent edge"

@@ -257,6 +257,35 @@ def _has_screen_record(run_dir: RunDir, candidate_id: str) -> bool:
     return screens_dir.is_dir() and any(screens_dir.glob(f"{candidate_id}__screen*.json"))
 
 
+def _diagnosis_targets(src: Path) -> tuple[list[str], dict | None]:
+    """``(cluster_ids, subset)`` this edit targeted, read from ``<from-dir>/DIAGNOSIS.json``.
+
+    ``([], None)`` when the file is missing, unparseable, or an empty template — i.e. no
+    cluster with both an ``id`` and at least one task (#611). ``cluster_ids`` are the clusters
+    the edits name (all clusters when no edit names one); ``subset`` is those clusters' tasks.
+    These feed the ``graph.jsonl`` node, whose ``cluster_ids``/``subset`` were empty on every
+    entry of a real run because nothing ever passed them.
+    """
+    try:
+        diag = json.loads((src / "DIAGNOSIS.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [], None
+    if not isinstance(diag, dict) or not isinstance(diag.get("clusters"), list):
+        return [], None
+    tasks_by = {str(c["id"]): [str(t) for t in c["tasks"]]
+                for c in diag["clusters"]
+                if isinstance(c, dict) and c.get("id") and isinstance(c.get("tasks"), list)
+                and c["tasks"]}
+    if not tasks_by:
+        return [], None
+    named = [str(cid) for e in (diag.get("edits") or []) if isinstance(e, dict)
+             for cid in (e.get("clusters") or []) if str(cid) in tasks_by]
+    cluster_ids = list(dict.fromkeys(named)) or list(tasks_by)
+    task_ids = sorted({t for cid in cluster_ids for t in tasks_by[cid]})
+    return cluster_ids, {"task_ids": task_ids, "rationale": "DIAGNOSIS.json clusters",
+                         "tier": None}
+
+
 def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     """This candidate's row from ``round.py``'s persisted table, if one exists.
 
@@ -380,6 +409,13 @@ def main(argv=None) -> int:
                         "one (#588). Say why the optimizer never got to write it (e.g. an infra "
                         "failure). Without it, commit.py refuses rather than silently booking "
                         "the framework's synthesized stub.")
+    p.add_argument("--missing-diagnosis-justification", default=None,
+                   help="required when this candidate's <from-dir>/DIAGNOSIS.json is missing or "
+                        "an empty template (no cluster with an id AND tasks) — the escape hatch "
+                        "for committing without one (#611). Say why no diagnosis exists (e.g. an "
+                        "infra failure before the optimizer wrote it). Without it, commit.py "
+                        "refuses: the graph.jsonl node's cluster_ids/subset and the dashboard's "
+                        "diagnosis view come from this file.")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -586,6 +622,27 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
+    # Precondition (#611), same shape as the JOURNAL.md one above: DIAGNOSIS.json is the only
+    # source of which failure cluster(s) this edit targeted and on which tasks. A real run
+    # committed 0/17 candidates with one, so every graph.jsonl node carried empty
+    # cluster_ids/subset and the dashboard's diagnosis view rendered nothing. Refuse rather
+    # than silently book an unmapped change; a named escape hatch, logged as a warning.
+    cluster_ids, diag_subset = _diagnosis_targets(src)
+    if not provisional and not cluster_ids and not args.missing_diagnosis_justification:
+        print(json.dumps({
+            "error": f"no real DIAGNOSIS.json found for {args.candidate_id!r} — commit.py "
+                     "refuses to record this decision without one",
+            "why": "DIAGNOSIS.json maps this change to the failure cluster(s) it targets and "
+                   "the task subset it was aimed at; graph.jsonl's cluster_ids/subset and the "
+                   "dashboard's diagnosis view are built from it. A missing or empty-template "
+                   "file (no cluster with an id AND tasks) leaves both empty.",
+            "fix": "write <from-dir>/DIAGNOSIS.json (schema in <from-dir>/PROCESS.md) with at "
+                   "least one cluster {id, tasks: [...]} and edits naming the clusters they "
+                   "target, and re-run commit.py, or pass --missing-diagnosis-justification "
+                   "\"<reason>\" if you are deliberately committing without one.",
+        }, indent=2))
+        return 2
+
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
@@ -648,6 +705,12 @@ def main(argv=None) -> int:
             "entry, justified as: "
             f"{args.missing_handover_justification!r} — the run-level JOURNAL.md will carry "
             "only a framework-synthesized stub for this round.")
+    if not provisional and not cluster_ids and args.missing_diagnosis_justification:
+        warnings.append(
+            f"missing diagnosis: {args.candidate_id!r} was committed with NO real "
+            "DIAGNOSIS.json, justified as: "
+            f"{args.missing_diagnosis_justification!r} — its graph.jsonl node carries no "
+            "cluster_ids and the dashboard shows no diagnosis for it.")
     if bypassed_screen_and_gate:
         warnings.append(
             f"screen+gate bypass: {args.candidate_id!r} was rejected via driver_judgement "
@@ -670,6 +733,7 @@ def main(argv=None) -> int:
                                  parent_val=parent_val,
                                  indecisive=indecisive, memory_skill=memory_skill,
                                  parents=parents, edit_kind=args.edit_kind,
+                                 cluster_ids=cluster_ids, subset=diag_subset,
                                  opt_cost_usd=args.optimizer_usd or None,
                                  opt_tokens=args.optimizer_tokens or None,
                                  optimizer_seconds=args.optimizer_seconds or None,
@@ -717,6 +781,7 @@ def main(argv=None) -> int:
                       "gate_verdict": gate_verdict,
                       "overrode_gate": overrode_gate,
                       "handover_recorded": handover,
+                      "diagnosis_recorded": bool(cluster_ids),
                       "warnings": warnings,
                       "best_id": run_dir.best_id, "spent": spent.to_dict(),
                       "stop": stop, "stop_reason": reason}, indent=2))

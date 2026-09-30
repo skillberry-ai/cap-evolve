@@ -399,6 +399,15 @@ def load_plan(path: str | None) -> dict:
     return plan
 
 
+def cluster_ids_for(run_dir, plan: dict, tag: str) -> list[str]:
+    """The diagnose clusters ``tag`` targets: ``--plan``'s, else its own DIAGNOSIS.json (#611),
+    read by the SAME parser commit.py's precondition uses, so the two can never disagree."""
+    import commit
+
+    return list((plan.get(tag) or {}).get("cluster_ids")
+                or commit._diagnosis_targets(run_dir.root / "work" / tag)[0])
+
+
 def latest_screen(run_dir, tag: str) -> dict | None:
     """The newest ``screens/<tag>__screenN.json`` payload (highest tier), or ``None``."""
     d = run_dir.root / "screens"
@@ -507,8 +516,7 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
     screens = {t: latest_screen(run_dir, t) for t in survivors}
     merges, skipped = [], []
     for a, b in itertools.combinations(sorted(survivors), 2):
-        ca = set((plan.get(a) or {}).get("cluster_ids") or [])
-        cb = set((plan.get(b) or {}).get("cluster_ids") or [])
+        ca, cb = set(cluster_ids_for(run_dir, plan, a)), set(cluster_ids_for(run_dir, plan, b))
         if ca & cb:
             skipped.append({"pair": [a, b], "reason": f"same diagnose cluster(s) "
                             f"{sorted(ca & cb)} — alternative fixes, not complementary ones"})
@@ -1010,7 +1018,7 @@ def _main(argv=None) -> int:
         if payload is None:
             continue
         graph.append_node(run_dir, node_id=t, parents=[best], status="screened", gate={},
-                          cluster_ids=(plan.get(t) or {}).get("cluster_ids"),
+                          cluster_ids=cluster_ids_for(run_dir, plan, t),
                           edit_kind=(plan.get(t) or {}).get("edit_kind"))
         if payload.get("decision") == "kill":
             killed.append(t)

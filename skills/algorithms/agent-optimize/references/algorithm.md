@@ -11,6 +11,7 @@
 - [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
 - [Provisional candidates](#provisional-candidates-sequential-evidence-not-compounded-edits)
 - [JOURNAL.md write protocol](#journalmd--the-append-only-handover-and-its-write-protocol)
+- [DIAGNOSIS.json](#diagnosisjson--which-cluster-each-change-targets-on-which-tasks)
 - [Parallelism](#parallelism-fan-out-on-the-cheap-steps-stay-serial-where-state-moves)
 - [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
 - [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
@@ -476,6 +477,21 @@ The write protocol:
 new `## Iteration` entry exists for that candidate, unless you pass
 `--missing-handover-justification "<reason>"`. Write the entry before calling `commit.py`, not
 after.
+
+## DIAGNOSIS.json — which cluster each change targets, on which tasks
+
+Write `$R/work/$TAG/DIAGNOSIS.json` as part of every candidate, while you edit — not after
+(schema at the bottom of `work/$TAG/PROCESS.md`): each cluster this round targets as
+`{id, name, detail, tasks: [...]}` (from step 1's diagnose `clusters`), and each edit as
+`{id, title, files, clusters: [<cluster ids>]}`. It is the ONLY record of which root cause a change
+targets and which tasks it aims at: `commit.py` copies the edits' clusters into the candidate's
+`graph.jsonl` `cluster_ids` and those clusters' tasks into its `subset` (a `screen.py` subset, when
+one ran, wins — it is what was measured), and the dashboard's diagnosis view renders the file.
+
+`commit.py` enforces it as a precondition (#611), exactly like the handover: it refuses an
+accept/reject/inconclusive when the file is missing or an empty template (no cluster with an `id`
+AND tasks), unless you pass `--missing-diagnosis-justification "<reason>"`. A merge candidate writes
+the union of its parents' targeted clusters.
 
 This is a general convention for ANY continuous-session algorithm (one long-running optimizer
 subprocess spanning many rounds, as opposed to the deterministic loops' fresh per-iteration
