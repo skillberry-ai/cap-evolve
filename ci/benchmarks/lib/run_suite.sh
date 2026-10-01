@@ -1022,9 +1022,15 @@ if meta.get("tier") != reuse_tier:
 if str(meta.get("empty_seed", "0")) != empty_seed:
     raise SystemExit(f"::error:: the kept run has SB_EMPTY_SEED={meta.get('empty_seed')}, this run "
                      f"asks for {empty_seed} — reusing it would silently swap the seed")
-for k in ("train", "val"):
-    if set(map(str, prior.get(k, []))) != set(map(str, want[k])):
-        raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
+if set(map(str, prior.get("train", []))) != set(map(str, want["train"])):
+    raise SystemExit("::error:: the kept run's train split differs from this tier's split_ids.json")
+# val-hard follow-up to #606: val may be NEW tasks taken from the kept run's TEST split; their seed
+# val rollouts are then written from the seed's stored test rows (rescore_run.py --target-split).
+pv, wv = set(map(str, prior.get("val", []))), set(map(str, want["val"]))
+if not wv <= pv | set(map(str, prior.get("test", []))):
+    raise SystemExit("::error:: this tier's val has ids in neither the kept run's val nor its test split")
+if wv != pv:
+    print(f">>> val: {len(wv & pv)} kept-run val ids + {len(wv - pv)} ids from the kept run's test split", file=sys.stderr)
 # exp #606: the test split may be a SUBSET of the kept run's; the seed's test result is then
 # re-aggregated over just those tasks (rescore_run.py --test-subset).
 pt, wt = set(map(str, prior.get("test", []))), set(map(str, want["test"]))
@@ -1040,7 +1046,7 @@ PY
   RESCORED="$WORK/reused_seed_run"
   rm -rf "$RESCORED" && mkdir -p "$RESCORED" && cp -a "$PRIOR" "$RESCORED/run_suite" || exit 1
   "$PY" "$REPO/ci/benchmarks/spreadsheetbench/utils/rescore_run.py" "$RESCORED/run_suite" \
-        --metric "$SB_REWARD_METRIC" --test-subset "$PROJ/inputs/split_ids.json" >&2 || { echo "::error:: could not re-score the kept run" >&2; exit 1; }
+        --metric "$SB_REWARD_METRIC" --target-split "$PROJ/inputs/split_ids.json" >&2 || { echo "::error:: could not re-score the kept run" >&2; exit 1; }
   REUSE_YAML="reuse_baseline:     \"$RESCORED/run_suite\""
 fi
 

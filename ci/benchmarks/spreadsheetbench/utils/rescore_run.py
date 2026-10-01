@@ -92,7 +92,44 @@ def _split(rd: RunDir, tag: str, split: str, stored: dict | None, metric: str) -
     raise SystemExit(f"::error:: no {split} result to re-score for tag {tag!r}: no rollouts and no stored result")
 
 
-def rescore(run_dir: Path, metric: str, test_ids: set[str] | None = None) -> dict:
+def _swap_seed_val(run_dir: Path, rd, val_ids: set[str], test_rows: dict[str, dict], metric: str) -> dict:
+    """Make the seed's val split exactly ``val_ids`` (val-hard follow-up to #606).
+
+    Ids already in the kept run's val keep their real seed val rollouts. Ids that were in the kept
+    run's TEST split get a seed val rollout written from the seed's stored, re-scored test row: the
+    same empty seed, the same model and settings, measured once. Seed val rollouts for ids that
+    left val are removed, so reuse_baseline copies exactly the new val."""
+    vdir = run_dir / "rollouts" / "val"
+    vdir.mkdir(parents=True, exist_ok=True)
+    have = {f.name.split("__")[0] for f in vdir.glob("*__seed__t*.json")}
+    missing = val_ids - have - set(test_rows)
+    if missing:
+        raise SystemExit(f"::error:: no seed val rollout and no seed test row for {sorted(missing)}")
+    for f in vdir.glob("*__seed__t*.json"):
+        if f.name.split("__")[0] not in val_ids:
+            f.unlink()
+    written = 0
+    for tid in sorted(val_ids - have):
+        pt = test_rows[tid]
+        errored = not int((pt.get("raw") or {}).get("valid_trials", 1))
+        rec = {"input": {}, "rollout": {"task_id": tid, "error": "infra (copied from seed test row)" if errored else None,
+                                        "metadata": {"copied_from": "seed test row of the kept run (val-hard)"}},
+               "score": {"task_id": tid, "reward": float(pt.get("reward") or 0.0),
+                         "feedback": pt.get("feedback", ""), "n": int(pt.get("n") or 1), "stderr": 0.0,
+                         "trial_rewards": pt.get("trial_rewards") or [float(pt.get("reward") or 0.0)],
+                         "raw": {"reward_metric": metric}, "metrics": pt.get("metrics") or []}}
+        (vdir / f"{tid}__seed__t0.json").write_text(json.dumps(rec, default=str), encoding="utf-8")
+        written += 1
+    val = split_result_from_rollouts(rd, "seed", "val").to_dict()
+    baseline_p = run_dir / "baseline.json"
+    baseline = json.loads(baseline_p.read_text(encoding="utf-8"))
+    baseline["val"] = val
+    baseline_p.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
+    return {"val": val["reward"], "val_n": len(val_ids), "val_copied_from_test": written}
+
+
+def rescore(run_dir: Path, metric: str, test_ids: set[str] | None = None,
+            val_ids: set[str] | None = None) -> dict:
     for f in sorted((run_dir / "rollouts").glob("*/*.json")):
         _rescore_rollout(f, metric)
     rd = RunDir.open(run_dir)
@@ -115,6 +152,9 @@ def rescore(run_dir: Path, metric: str, test_ids: set[str] | None = None) -> dic
         # stored seed result is then the only record, and is re-scored from its metrics.
         stored = (final.get("seed") or {}).get("test") or final.get("test_baseline")
         test = _split(rd, "FINAL" if seed_is_best else "FINAL_seed", "test", stored, metric)
+        if val_ids is not None:
+            out.update(_swap_seed_val(run_dir, rd, val_ids,
+                                      {str(pt["task_id"]): pt for pt in test.get("per_task") or []}, metric))
         if test_ids is not None:
             # exp #606: a probe tier tests on a SUBSET of the kept run's test split, so the reused
             # seed test score must be the one measured on exactly those tasks.
@@ -130,12 +170,16 @@ def rescore(run_dir: Path, metric: str, test_ids: set[str] | None = None) -> dic
         final["reward_metric"] = metric
         final_p.write_text(json.dumps(final, indent=2), encoding="utf-8")
         out["test"] = test["reward"]
-    if test_ids is not None:
+    if test_ids is not None or val_ids is not None:
         splits_p = run_dir / "splits.json"
         splits = json.loads(splits_p.read_text(encoding="utf-8"))
-        splits["test"] = sorted(test_ids)
+        if val_ids is not None:
+            splits["val"] = sorted(val_ids)
+        if test_ids is not None:
+            splits["test"] = sorted(test_ids)
         splits_p.write_text(json.dumps(splits, indent=2), encoding="utf-8")
-        out["test_n"] = len(test_ids)
+        if test_ids is not None:
+            out["test_n"] = len(test_ids)
     return out
 
 
@@ -146,12 +190,18 @@ def main() -> None:
                     choices=["soft_restriction", "hard_restriction", "soft_no_recalc", "hard_no_recalc"])
     ap.add_argument("--test-subset", type=Path, default=None,
                     help="split_ids.json whose `test` ids the seed test result is restricted to")
+    ap.add_argument("--target-split", type=Path, default=None,
+                    help="split_ids.json: restrict test to its `test` ids AND make the seed's val its `val` "
+                         "ids (new val ids come from the seed's stored test rows)")
     args = ap.parse_args()
-    test_ids = None
+    test_ids = val_ids = None
     if args.test_subset:
         test_ids = set(map(str, json.loads(args.test_subset.read_text(encoding="utf-8"))["test"]))
+    if args.target_split:
+        target = json.loads(args.target_split.read_text(encoding="utf-8"))
+        test_ids, val_ids = set(map(str, target["test"])), set(map(str, target["val"]))
     print(json.dumps({"rescored": str(args.run_dir), "metric": args.metric,
-                      **rescore(args.run_dir, args.metric, test_ids)}))
+                      **rescore(args.run_dir, args.metric, test_ids, val_ids)}))
 
 
 if __name__ == "__main__":

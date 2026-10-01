@@ -58,7 +58,9 @@ def test_queued_dispatches_are_never_cancelled():
 
 def test_probe_split_shares_train_val_and_subsets_test():
     s, parent = _j(PROBE / "split_ids.json"), _j(PARENT / "split_ids.json")
-    assert sorted(s["train"]) == sorted(parent["train"]) and sorted(s["val"]) == sorted(parent["val"])
+    assert sorted(s["train"]) == sorted(parent["train"])
+    # val-hard: 40 val ids drawn from the parent's TEST split, disjoint from the probe test subset
+    assert len(s["val"]) == 40 and set(s["val"]) <= set(parent["test"]) and not set(s["val"]) & set(s["test"])
     assert len(s["test"]) == len(set(s["test"])) == 100 and set(s["test"]) <= set(parent["test"])
 
 
@@ -71,8 +73,11 @@ def test_probe_tasks_cover_the_split_exactly():
 
 def test_subset_digest_and_baseline_are_pinned():
     src, s = _j(PROBE / "subset_source.json"), _j(PROBE / "split_ids.json")
-    for k in ("train", "val", "test"):
+    for k in ("train", "test"):
         assert hashlib.sha256("\n".join(sorted(s[k])).encode()).hexdigest() == src["sha256_sorted_ids"][k]
+    vh = _j(PROBE / "val_hard_source.json")
+    assert hashlib.sha256("\n".join(sorted(s["val"])).encode()).hexdigest() == vh["sha256_sorted_ids"]["val"]
+    assert vh["seed"] == 607 and vh["groups"]["mixed"] == 31 and abs(vh["val_seed_reward"] - 0.40) < 1e-9
     assert src["seed"] == 606 and sum(src["counts_by_type"].values()) == 100
     assert src["slot_run_id"] == "36622615059" and src["seed_test_n_scored_on_subset"] == 100
     assert not set(src["parent_test_unscored"]) & set(s["test"]), "every subset task must be paired"
@@ -133,8 +138,8 @@ def test_run_suite_rejects_unknown_reader_and_missing_file():
 
 
 def test_reuse_allows_a_parent_tier_and_a_test_subset_only():
-    assert '"${SB_REUSE_FROM_TIER:-$TIER}"' in RS and '--test-subset "$PROJ/inputs/split_ids.json"' in RS
-    assert 'for k in ("train", "val"):' in RS and "if not wt <= pt:" in RS
+    assert '"${SB_REUSE_FROM_TIER:-$TIER}"' in RS and '--target-split "$PROJ/inputs/split_ids.json"' in RS
+    assert "if not wv <= pv | set(" in RS and "if not wt <= pt:" in RS
 
 
 def test_run_suite_records_optimizer_models_and_instructions():
@@ -257,3 +262,23 @@ def test_compare_is_paired_on_common_tasks_and_averages_repeats(tmp_path):
     b = [rep.summarize(_artifact(tmp_path, "b1", {"x": 0, "y": 1, "z": 1}, {"x": 0, "y": 0, "z": 0}))]
     c = rep.compare(a, b)
     assert c["n_tasks"] == 2 and c["diff"] == pytest.approx(0.25)  # x: 0.5-0, y: 1-1
+
+
+def test_target_split_moves_new_val_ids_from_the_seed_test_rows(tmp_path):
+    rd = _run(tmp_path, {"a": 1.0, "b": 0.0, "c": 1.0, "d": 0.0})
+    vdir = rd / "rollouts" / "val"
+    (vdir / "v__seed__t0.json").write_text(json.dumps({"input": {}, "rollout": {"task_id": "v", "error": None},
+                                                       "score": {"task_id": "v", "reward": 1.0, "metrics": []}}))
+    s = _j(rd / "splits.json"); s["val"] = ["v"]; (rd / "splits.json").write_text(json.dumps(s))
+    out = _load("rescore_run").rescore(rd, "hard_no_recalc", test_ids={"a", "b"}, val_ids={"c", "d"})
+    assert out["val"] == 0.5 and out["val_copied_from_test"] == 2 and out["test"] == 0.5
+    assert sorted(f.name for f in vdir.glob("*__seed__*")) == ["c__seed__t0.json", "d__seed__t0.json"]
+    splits = _j(rd / "splits.json")
+    assert splits["val"] == ["c", "d"] and splits["test"] == ["a", "b"]
+    assert _j(rd / "baseline.json")["val"]["reward"] == 0.5
+
+
+def test_target_split_rejects_a_val_id_with_no_seed_record(tmp_path):
+    rd = _run(tmp_path, {"a": 1.0})
+    with pytest.raises(SystemExit):
+        _load("rescore_run").rescore(rd, "hard_no_recalc", test_ids={"a"}, val_ids={"zz"})
