@@ -146,7 +146,10 @@ jobs:
           python3 ci/benchmarks/lib/sync_models.py --validate --repo .
 
       - name: Commit
-        if: ${{ inputs.apply != false }}
+        # Scheduled runs have no inputs, and GitHub coerces both an absent input and `false` to 0,
+        # so `inputs.apply != false` was false on every scheduled run: each sync computed the new
+        # pickers and then skipped this step. Commit on schedule, or when a dispatch asks to apply.
+        if: ${{ github.event_name == 'schedule' || inputs.apply }}
         run: |
           set -euo pipefail
           if git diff --quiet -- .github/workflows/benchmarks.yml ci/benchmarks/lib/run_suite.sh; then
