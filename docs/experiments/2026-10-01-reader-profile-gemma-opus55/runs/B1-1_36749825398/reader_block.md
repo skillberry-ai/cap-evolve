@@ -1,0 +1,3 @@
+## THE READER (who consumes what you edit)
+At runtime these capabilities are read by `rits/google/gemma-4-31B-it` — capability tier: **frontier**. The reader is a top-tier model: strong long-context reasoning, reliable instruction-following, and a tendency to OVER-comply. Prefer concise policy that explains the WHY over piling on ALL-CAPS MUSTs; soften brittle imperatives; trust multi-step reasoning; keep few-shot examples minimal. Over-constraining HURTS this reader.
+Optimize your edits for THIS reader's capability level, not for your own. When the reader is weaker than you, prefer explicit rules, worked examples, and code enforcement over terse prose you would personally infer.

@@ -1,0 +1,48 @@
+{
+  "runs": [
+    {
+      "run_id": "36815053131",
+      "variant": "B",
+      "iterations": 3,
+      "sha": "daf23e7f",
+      "n_tasks": 100,
+      "test_seed": 0.43,
+      "test_opt": 0.73,
+      "delta": 0.3,
+      "delta_ci": [
+        0.19,
+        0.4
+      ],
+      "val_seed": 0.45,
+      "val_cand": [
+        0.825,
+        0.875,
+        0.875
+      ],
+      "accepted": [
+        true,
+        true,
+        false
+      ],
+      "best_id": "cand_0002",
+      "opt_usd": 22.144214,
+      "opt_minutes": 84.65,
+      "optimizer_errors": 0,
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "block_in_instructions": true,
+      "skill_shape": {
+        "chars": 9395,
+        "numbered_rules": 8,
+        "bullets": 20,
+        "code_examples": 1,
+        "worked_examples": 4,
+        "grader_contract": true
+      },
+      "valid": true,
+      "problems": []
+    }
+  ],
+  "compare": {}
+}
