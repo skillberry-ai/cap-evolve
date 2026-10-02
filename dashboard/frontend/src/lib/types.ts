@@ -632,22 +632,25 @@ export type PromptMap = Record<string, PromptMapFile>
 export interface Cluster {
   id: string
   name: string
-  detail: string
+  detail?: string
   tasks: string[]
-  scope: string
-  latent: boolean
-  tag: string
+  scope?: string
+  latent?: boolean
+  tag?: string
+  /** Compact schema (#625): the edit shipped for this cluster, inline, as a string. */
+  edit?: string
+  evidence?: string
 }
 
 /** Optimizer edit (from graph.nodes[].diagnosis.edits). */
 export interface Edit {
   id: string
   title: string
-  files: string[]
-  lever: string
+  files?: string[]
+  lever?: string
   clusters: string[]
-  blast_radius: string
-  verified: string
+  blast_radius?: string
+  verified?: string
 }
 
 /** Skipped edit (from graph.nodes[].diagnosis.skipped). */
@@ -656,24 +659,24 @@ export interface SkippedEdit {
   reason: string
 }
 
-/** Optimizer diagnosis (from graph.nodes[].diagnosis). */
+/** Optimizer diagnosis (from graph.nodes[].diagnosis) — the raw DIAGNOSIS.json.
+ *  Two shapes occur in real runs (#625): the documented one with a top-level `edits[]`,
+ *  and the compact one optimizers actually write — `clusters[].edit` as a string, no
+ *  `edits`, `skipped` as a `{task: reason}` map. Read edits/skipped via lib/diagnosis.ts. */
 export interface Diagnosis {
-  candidate: string
+  candidate?: string
   headline: string
   clusters: Cluster[]
-  edits: Edit[]
-  skipped: SkippedEdit[]
-  techniques: string[]
+  edits?: Edit[]
+  skipped?: SkippedEdit[] | Record<string, string>
+  techniques?: string[]
+  note?: string
   /** Validation warnings from the harness (advisory only). */
   warnings?: string[]
 }
 
-/** Per-task outcome classification (from graph.nodes[].outcomes). */
-export interface Outcomes {
-  fixed: string[]
-  broke: string[]
-  still_failing: string[]
-  still_passing: string[]
-  /** Tasks that were targeted in the optimizer's diagnosis. */
-  targeted?: string[]
-}
+/** Per-task outcome vs the parent (from graph.nodes[].outcomes — dashboard.py's
+ *  `_compute_outcomes`): a `{task_id: status}` map. */
+export type OutcomeStatus = 'fixed' | 'broke' | 'still_failing' | 'still_passing'
+export type Outcomes = Record<string, OutcomeStatus>
+

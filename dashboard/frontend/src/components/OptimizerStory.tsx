@@ -1,4 +1,5 @@
 import type { GraphNode, GateDecision, PerIterationCost } from '../lib/types'
+import { diagnosisEdits } from '../lib/diagnosis'
 
 interface OptimizerStoryProps {
   nodes: GraphNode[]
@@ -101,7 +102,7 @@ export function OptimizerStory({ nodes, gates, perIteration, onIterationClick }:
                       {diagnosis.headline || 'No headline'}
                       {diagnosis.clusters.length > 0 && (
                         <span className="ml-2 text-[var(--muted)]">
-                          ({diagnosis.clusters.length} clusters, {diagnosis.edits.length} edits)
+                          ({diagnosis.clusters.length} clusters, {diagnosisEdits(diagnosis).length} edits)
                         </span>
                       )}
                     </div>
