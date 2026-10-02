@@ -673,6 +673,7 @@ def _cmd_run(argv):
         # run print TWO json documents, so `cap-evolve run | jq` could not parse it.
         if _stderr_is_usable():
             print(json.dumps(status), file=sys.stderr, flush=True)
+            print(dashboard_launch.banner(status), file=sys.stderr, flush=True)
     # How the candidate will be DELIVERED (spec `intervention:`). Checked here, before any
     # step runs: for an out-of-process intervention a dead stack makes every candidate's
     # deployment fail, and since that is correctly per-candidate infra noise, the run
@@ -1098,6 +1099,8 @@ def _cmd_dashboard(argv):
         args.base, mode="auto", port=args.port, open_browser=not args.no_open
     )
     print(json.dumps(status))
+    if _stderr_is_usable():
+        print(dashboard_launch.banner(status), file=sys.stderr, flush=True)
     return 0 if status.get("dashboard") not in (None, "error", "skipped") else 1
 
 

@@ -14,6 +14,18 @@ def test_health(tmp_base):
     assert r.json()["ok"] is True
 
 
+def test_health_identity_card_matches_launcher(tmp_base):
+    """The launcher reuses/reaps by this card (#628); its ``code`` must equal what
+    cap_evolve.dashboard_launch.code_stamp() computes for the same installed package."""
+    import os
+    from cap_evolve import dashboard_launch
+    h = _client(tmp_base).get("/api/health").json()
+    assert h["app"] == "cap-evolve-dashboard"
+    assert h["pid"] == os.getpid()
+    assert h["base_dir"] == str(tmp_base.resolve())
+    assert h["code"] == dashboard_launch.code_stamp()
+
+
 def test_list_runs_endpoint(tmp_base, make_run):
     make_run("run_a", events=BASE_EVENTS,
              baseline={"val": {"reward": 0.25}, "best_id": "seed"})
