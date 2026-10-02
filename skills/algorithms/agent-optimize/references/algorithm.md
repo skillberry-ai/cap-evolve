@@ -219,6 +219,32 @@ under-measured candidate, and a deliberately-chosen subset's `coverage` reads 1.
 (its denominator IS the subset) — the exact blind spot the guard cannot see through. The full-val
 eval stays the whole split every round, same as the heuristic-screened path always required.
 
+### Pre-gate check: a validity check you wrote is a refusal, not a signal (#632)
+
+Some edits change the very target they are scored against. When a scorer builds its expected
+state by replaying the gold actions through the CANDIDATE's own tools, a guard that makes a gold
+call raise moves the target: one task spuriously "fixed", another broken. In one real run, a
+gold-replay script the agent wrote (gold through the candidate's tools vs the pristine ones)
+flagged "4 of 30 val tasks differ" BEFORE the gate. The agent read that as expected and paid the
+300-rollout gate anyway. Later it carried the same guard into a bundle and paid a second gate.
+
+Register any such check once:
+
+```bash
+python "$A/round.py" ... --pregate-check "python $R/work/replay_gold.py"
+```
+
+From then on `round.py` runs `CMD <candidate_dir>` on every tag, and on every merge it builds,
+before any screen or eval. You do not need to pass the flag again: it is stored in
+`$R/work/pregate_check.json`. A candidate fails on a nonzero exit, or on a nonzero
+`N of M … differ` summary line, because `replay_gold.py` as written exits 0 either way. One
+failing tag refuses the whole round (rc 2) and names it. The refusal also lists every tag an
+earlier round already disqualified (`known_invalid_earlier_in_run`), so a bundle that carries one
+of them points at it. A merge that fails is skipped before its screen. The check runs on the
+bytes, not on provenance, which is why a hand-built bundle cannot slip through. To book a refused
+tag, use `commit.py --decision reject --reject-basis driver_judgement
+--bypassed-gate-justification "pre-gate check failed: …"`.
+
 ### `phases/gate` is an inspection front-end, not the round's gate
 
 `phases/gate/scripts/run.py --mode paired` reaches the *same* paired gate off the *same* persisted

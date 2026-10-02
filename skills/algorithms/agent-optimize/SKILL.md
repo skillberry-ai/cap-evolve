@@ -217,11 +217,12 @@ python "$A/round.py" --run-dir "$R" --project "$P" \
 ```
 
 Read `screen_stage`/`screen_killed`/`merge_stage` first (`algorithm.md`, "Gating N Bucket-A siblings").
+Wrote a gold-replay check? Register it: `--pregate-check`.
 
-`--concurrency` is the gate's *measurement* concurrency, deliberately low by default; `round.py`
-refuses one too hot to resolve its own verdict — never raise it to buy wall clock. Read
-`noise_floor_from_control` FIRST: a candidate inside that band is not evidence, whatever its verdict.
-`round.py` never commits — which part of a bundle to keep is your call.
+`--concurrency` (gate load) is low by default; `round.py` refuses one too hot to
+resolve its verdict — never raise it to buy wall clock. Read
+`noise_floor_from_control` FIRST: inside that band is no evidence, whatever the verdict.
+It never commits; which part of a bundle to keep is your call.
 
 Four invariants, to state before every fan-out (the reasoning, and where fan-out pays best, are under
 *Parallelism* in [`references/algorithm.md`](references/algorithm.md)):

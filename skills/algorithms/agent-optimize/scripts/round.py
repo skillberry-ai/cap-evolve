@@ -408,6 +408,70 @@ def cluster_ids_for(run_dir, plan: dict, tag: str) -> list[str]:
                 or commit._diagnosis_targets(run_dir.root / "work" / tag)[0])
 
 
+# --------------------------------------------------------------------------------------------
+# Pre-gate validity check (#632). run_full's own work/replay_gold.py (gold actions replayed
+# through the candidate's tools vs the pristine ones) flagged cand_13 4/30 BEFORE its gate; the
+# agent read that as "expected", paid the 300-rollout gate, then carried the same guard into the
+# bundle cand_15 and paid a second one. A benchmark-specific check like that is the agent's to
+# write, so round.py cannot ship it — but once registered it is run here on EVERY tag's bytes
+# (and every merge's) before any screen or eval, and a failure refuses the round. Running it on
+# the bytes, not on provenance, is what catches a bundle that carries a known-invalid edit.
+# --------------------------------------------------------------------------------------------
+
+#: A nonzero diff count on the summary line replay_gold.py prints ("4 of 30 val tasks differ
+#: from pristine under gold replay") counts as a failure even at exit 0 — that script, as
+#: written in both real runs, never exits nonzero, so exit code alone would pass cand_13.
+_DIFF_SUMMARY = re.compile(r"^\s*(\d+)\s+of\s+\d+\b.*\bdiffer", re.M | re.I)
+
+
+def _pregate_check_path(run_dir) -> Path:
+    return run_dir.root / "work" / "pregate_check.json"
+
+
+def resolve_pregate_check(run_dir, cmd: str | None) -> str | None:
+    """The run's registered pre-gate check command, registering ``cmd`` when given.
+
+    Sticky: once registered it applies to every later round without the flag, so a check the
+    agent wrote in round 6 cannot be forgotten in round 8 (cand_15's exact failure).
+    """
+    path = _pregate_check_path(run_dir)
+    if cmd and cmd.strip():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"cmd": cmd.strip()}, indent=2), encoding="utf-8")
+        return cmd.strip()
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("cmd") or None
+    except (OSError, ValueError):
+        return None
+
+
+def run_pregate_check(cmd: str, cand_dir: Path) -> str | None:
+    """Run ``cmd <cand_dir>``. ``None`` = valid; else the failure output (the reason)."""
+    import shlex
+
+    p = subprocess.run([*shlex.split(cmd), str(cand_dir)], capture_output=True, text=True)
+    out = ((p.stdout or "") + (p.stderr or "")).strip()
+    m = _DIFF_SUMMARY.search(p.stdout or "")
+    if p.returncode != 0 or (m and int(m.group(1)) > 0):
+        return f"rc={p.returncode}: {out[-800:]}"
+    return None
+
+
+def known_invalid(run_dir) -> list[str]:
+    """Tags an earlier round's pre-gate check already disqualified in this run."""
+    if not run_dir.events_path.exists():
+        return []
+    tags = []
+    for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if rec.get("kind") == "agent_optimize_pregate_invalid" and rec.get("tag") not in tags:
+            tags.append(rec.get("tag"))
+    return tags
+
+
 def latest_screen(run_dir, tag: str) -> dict | None:
     """The newest ``screens/<tag>__screenN.json`` payload (highest tier), or ``None``."""
     d = run_dir.root / "screens"
@@ -502,7 +566,8 @@ def choose_merges(merges: list[dict]) -> tuple[list[str], dict[str, str]]:
 
 
 def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: dict,
-                concurrency: int | None, max_parallel: int) -> dict:
+                concurrency: int | None, max_parallel: int,
+                pregate_cmd: str | None = None) -> dict:
     """Build, screen and select pairwise merges among this round's screen survivors (#438)."""
     import itertools
 
@@ -526,6 +591,15 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
         if not built["built"]:
             skipped.append({"pair": [a, b], "reason": "edit collision",
                             "conflicts": built["conflicts"]})
+            continue
+        # #632: two valid parents can still compose into an invalid merge — check before its
+        # screen spends a rollout, same as the round's own candidates.
+        bad = pregate_cmd and run_pregate_check(pregate_cmd, work / tag)
+        if bad:
+            run_dir.log_event("agent_optimize_pregate_invalid", tag=tag, parents=[a, b],
+                              output=bad)
+            skipped.append({"pair": [a, b], "reason": "merge fails the pre-gate check",
+                            "pregate_output": bad})
             continue
         harness.ensure_framework_memory(work / tag, run_dir)
         union = sorted(set((screens[a] or {}).get("subset", {}).get("ids") or [])
@@ -824,6 +898,12 @@ def build_parser() -> argparse.ArgumentParser:
                         "--skip-screen-ladder — and a candidate has no screen.py record (#585). Say why the SAME reasoning genuinely holds for this "
                         "candidate. Without it, round.py refuses rather than paying full val "
                         "on a copy-pasted excuse.")
+    p.add_argument("--pregate-check", default=None,
+                   help="command run as `CMD <candidate_dir>` on every tag (and every merge) "
+                        "before any screen or eval (#632) — e.g. `python $R/work/replay_gold.py`. "
+                        "Nonzero exit, or a nonzero 'N of M ... differ' summary line, refuses "
+                        "the round. Registered in $R/work/pregate_check.json on first use and "
+                        "applied to every later round without the flag.")
     p.add_argument("--single-candidate-justification", default=None,
                    help=f"required (or --afford-check-file) when --candidates has fewer than "
                         f"{MIN_SIBLINGS} tags — free text, e.g. \"diagnose surfaced only one "
@@ -897,6 +977,34 @@ def _main(argv=None) -> int:
     # nothing charged.
     JUSTIFICATION, JUSTIFICATION_SOURCE = sibling_justification(
         len(tags), args.single_candidate_justification, args.afford_check_file)
+
+    # #632: the registered pre-gate check (e.g. gold replay) is a HARD precondition, run on
+    # every tag's bytes before any screen or eval is paid for. One invalid tag refuses the
+    # whole round, the same idiom as the screen-ladder refusal below.
+    PREGATE = resolve_pregate_check(run_dir, args.pregate_check)
+    if PREGATE:
+        prior_invalid = known_invalid(run_dir)
+        invalid = {t: r for t in tags if (r := run_pregate_check(PREGATE, work / t))}
+        for t, r in invalid.items():
+            run_dir.log_event("agent_optimize_pregate_invalid", tag=t, output=r,
+                              iteration=int(run_dir.spent.iterations))
+        if invalid:
+            print(json.dumps({
+                "error": f"candidate(s) {sorted(invalid)} fail the run's pre-gate check "
+                         f"({PREGATE!r}) — refused before any screen or full-val eval",
+                "invalid": invalid,
+                "known_invalid_earlier_in_run": prior_invalid,
+                "why": "a nonzero gold-replay diff means the edit changes the target it is "
+                       "scored against (cand_13 in run_full: 4/30 differ, one task spuriously "
+                       "'fixed', one broken), so its score is not evidence about the edit. "
+                       "A bundle carrying such an edit fails for the same reason — check "
+                       "whether it contains any tag in known_invalid_earlier_in_run.",
+                "fix": "drop the invalid edit (or the invalid component from the bundle) and "
+                       "re-run; book a dropped tag with commit.py --decision reject "
+                       "--reject-basis driver_judgement --bypassed-gate-justification "
+                       "\"pre-gate check failed: <output>\".",
+            }, indent=2))
+            return 2
 
     # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
     # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them
@@ -1028,7 +1136,7 @@ def _main(argv=None) -> int:
     MERGE = None
     if not args.no_merge and len(survivors) >= 2 and all(screened_by_tag[t] for t in survivors):
         MERGE = merge_stage(run_dir, project, best, survivors, plan, args.concurrency,
-                            args.max_parallel)
+                            args.max_parallel, pregate_cmd=PREGATE)
         for m in MERGE["merges"]:
             node_parents[m["tag"]] = m["parents"]
         tags = [t for t in survivors if t not in MERGE["subsumed"]] + MERGE["chosen"]
