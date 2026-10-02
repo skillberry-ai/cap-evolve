@@ -89,7 +89,10 @@ Each run directory holds:
    test gap. The highest val of the experiment (97.4) gave an ordinary test score (72.2).
 3. **Accepted rounds are what matter.** The two runs that accepted all 3 rounds reached 81 and 74, against
    about 69 after 1 round.
-4. **The val ceiling blocks later rounds.** When round 1 already scores about 0.95 or more on 40 val tasks,
+4. **The val ceiling blocks later rounds.** *Corrected by the follow-up #622
+   ([../2026-10-02-val-hard-gemma-opus55/](../2026-10-02-val-hard-gemma-opus55/)): with a harder val, later
+   rounds were still rejected about as often (8 of 12 accepted, against 9 of 12), and the test was unchanged.
+   The ceiling was not the real limit; the optimizer's later proposals were.* The original observation follows. When round 1 already scores about 0.95 or more on 40 val tasks,
    the paired gate cannot detect a further gain, and it rejects rounds 2–3. The test still has room to
    improve: the best run reached 81 of 100.
 5. **Opus 5.5 cost:** $3.6–8 and 10–32 min per round, against $11–14 and 41–49 min for Opus 5 in #538.

@@ -1,0 +1,390 @@
+{
+  "rule": "mixed(1-2 of 3 #538 champions pass) + regress(seed pass, 0/3) + 5 allfail + 2 easy, seed 607",
+  "runs": [
+    "36466624841",
+    "36523096755",
+    "36622615059"
+  ],
+  "seed": 607,
+  "pool": 176,
+  "groups": {
+    "mixed": 31,
+    "regress": 2,
+    "allfail": 20,
+    "easy": 123
+  },
+  "val_by_type": {
+    "Cell-Level Manipulation": 25,
+    "Sheet-Level Manipulation": 15
+  },
+  "val_seed_reward": 0.4,
+  "val_538_champion_mean": 0.45,
+  "original_val_538_seed_reward": null,
+  "sha256_sorted_ids": {
+    "train": "c5eb753031aad2d58b60509c6b14ae202027bbe9577b2a9067aff8333da6cb27",
+    "val": "8eadf17b7158cf4e88e38851f29eae2f5de88cb3421cd691fe70f3130e31ea78",
+    "test": "9b1e372c7df278ce032340dd00ecace51e4da6a340314eca93ec2feb9a3eea21"
+  },
+  "per_task": {
+    "11276": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "12307": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "183-8": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "188-39": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "1925": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "203-15": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "279-23": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "28-7": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "290-1": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "304-35": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "374-31": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "38074": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "409-45": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "41978": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "45707": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "45896": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "45944": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "469-9": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "486-17": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "48975": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "50521": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "50682": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "50811": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "50971": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "51680": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "524-31": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "52541": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        1.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "52575": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "534-26": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "535-20": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "547-43": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Sheet-Level Manipulation"
+    },
+    "56921": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "57354": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "58687": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "59129": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "59160": {
+      "seed": 0.0,
+      "champions_538": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "59358": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "59511": {
+      "seed": 1.0,
+      "champions_538": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "9111": {
+      "seed": 1.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    },
+    "9391": {
+      "seed": 0.0,
+      "champions_538": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "type": "Cell-Level Manipulation"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "run_id": 36887407126,
+  "run_url": "https://github.com/skillberry-ai/cap-evolve/actions/runs/36887407126",
+  "bench": "spreadsheetbench",
+  "tier": "full_verified_probe",
+  "event": "workflow_dispatch",
+  "source": "manual (exp/val-hard-gate)",
+  "pr": null,
+  "branch": "exp/val-hard-gate",
+  "sha": "0091876713f51ea23fab89266103dea5c2e3931f",
+  "date": "2026-10-02T03:57:14Z",
+  "iterations": 3,
+  "trials": 1,
+  "agent_model": "ibm-rits/google/gemma-4-31B-it",
+  "optimizer_model": "ibm-ete-int/aws/claude-opus-5-5",
+  "gate_k_se": 0.2,
+  "algorithm": "hill-climb-all",
+  "reader_variant": "B",
+  "warm_seed": false,
+  "reward_metric": "hard_no_recalc",
+  "conclusion": "success"
+}

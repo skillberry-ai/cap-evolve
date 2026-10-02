@@ -1,0 +1,217 @@
+<!--
+  Capability file: the agent's FIRST USER MESSAGE. Placeholders are filled in per task and are
+  load-bearing — {instruction} {spreadsheet_path} {spreadsheet_content} {instruction_type}
+  {answer_position} {output_path} must all survive; {max_turns} is optional. A literal brace is
+  written {{ or }}. This comment is stripped before the agent sees the message.
+-->
+Solve the following spreadsheet manipulation task. It is described by six fields:
+
+- **instruction** — what to do. It is written as a question from a spreadsheet user, so it often
+  asks "what formula should I use". What is graded is the resulting cell **values**, never a
+  formula string (see the CONTRACT below).
+- **spreadsheet_path** — the input workbook. Read it; never modify it in place.
+- **spreadsheet_content** — a `pandas.read_excel(...).head()` preview of each sheet, plus the
+  sheet's true `[data extent]` and the size of the target range. The printed rows are a sample;
+  the data extent is the whole sheet.
+- **instruction_type** — `Cell-Level Manipulation`: `answer_position` is the exact set of cells
+  that is graded. `Sheet-Level Manipulation`: `answer_position` is the **maximum** range you may
+  modify, and the expected answer often fills only part of it.
+- **answer_position** — the graded cell(s)/range. It bounds *where* you may write; the
+  **instruction** says *what* goes where. When the instruction names a more specific place (e.g.
+  "put the result starting at I3, with headers"), follow the instruction — do not spread your
+  answer over the whole range just because the range is bigger.
+- **output_path** — write the finished workbook to this exact path.
+
+### instruction
+{instruction}
+
+### spreadsheet_path
+{spreadsheet_path}
+
+### spreadsheet_content
+{spreadsheet_content}
+
+### instruction_type
+{instruction_type}
+
+### answer_position
+{answer_position}
+
+### output_path
+{output_path}
+
+## CONTRACT — what makes an answer correct
+
+The grader opens your file with `openpyxl.load_workbook(output_path, data_only=True)` and
+compares the **stored values** in `answer_position` to the expected workbook. It does **not**
+recalculate formulas and it does **not** read anything you write in prose.
+
+1. Every graded cell holds a **literal computed value**, never a string beginning with `=`. A
+   formula written by openpyxl has no cached value and reads back as empty, so it scores zero
+   however correct it is — including when the instruction asks for a "formula".
+2. Values are **correctly typed**: numbers as `int`/`float` (never `"1,234"`, `"$5.00"`,
+   `"12%"`), dates as `datetime` objects, text as the exact string. Never an Excel error marker
+   such as `#N/A`. Numbers are compared rounded to 2 decimals.
+3. Every cell the expected answer fills is filled, and every cell inside `answer_position` that
+   the instruction does **not** ask you to change or clear still holds its **original input
+   value**. Already-filled target cells are usually the asker's worked example — reproduce them,
+   don't overwrite them.
+4. Content the instruction never mentions — other sheets, other populated columns, formatting —
+   still holds what it held in the input. Filling an empty helper cell is harmless; overwriting
+   or blanking data that was already there is not.
+
+## HOW TO WORK — you have up to {max_turns} rounds
+
+Each reply must be **exactly one ```python fenced code block** and nothing else. Its stdout is
+returned to you; if it raises, you get the traceback and can fix it. Only the first block in a
+reply is run, so never write ahead or imagine what a print will show — wait for the real output. Work through these three
+phases in order.
+
+**Phase 1 — INSPECT (1–2 rounds; do not skip).** Never write your answer from the preview alone.
+Load the input and `print` what you need to be certain about:
+
+```python
+import openpyxl
+wb  = openpyxl.load_workbook("<spreadsheet_path>", data_only=True)   # stored values
+wbf = openpyxl.load_workbook("<spreadsheet_path>")                   # formulas as written
+for s in wb.worksheets:
+    print(s.title, s.max_row, s.max_column)
+    print("  row 1:", [(c.column_letter, c.value) for c in s[1]][:30])  # letters as in Sheet!C:C
+    # A sheet named as the wanted result is the spec: print it whole and copy its layout.
+    if any(k in s.title.lower() for k in ("desired", "expected", "sample", "example", "wanted")):
+        for row in s.iter_rows(max_row=60, max_col=20, values_only=True):
+            print("  ", row)
+ws, wsf = wb["<sheet>"], wbf["<sheet>"]
+# The target cells: what is already there, and any formula that documents the intent.
+for addr in ["<every NON-EMPTY cell of answer_position — an example may sit at the bottom>"]:
+    print(addr, repr(ws[addr].value), type(ws[addr].value).__name__, "| formula:", repr(wsf[addr].value))
+# The neighbours that define the computation: headers, axis labels, key columns.
+for r in range(1, 12):
+    print(r, [ws.cell(r, c).value for c in range(1, 13)])
+```
+
+Then state, in a comment, the reading you have settled on and the evidence for it — an existing
+formula, an axis label, or an already-filled target cell your computation must reproduce. If two
+readings of the instruction are possible, the one that matches the cells already in the file is
+the right one. Write that comment as a short mapping, one line per output column:
+
+```python
+# target col <- its header       <- source (sheet!letter 'header')  <- evidence
+# C  'Role'      <- Staff!E 'Role'     (target header; the prose said "name")
+# F  dates       <- Log!C 'End date'   (user formula reads Log!C:C; F2 cached serial = an End date)
+```
+
+Fill it from what you printed: a column letter in the user's formula is the openpyxl letter you
+printed in `row 1:` (`C` is the 3rd column), and a destination header names its content even when
+the prose paraphrases it. If an existing target value is a 5-digit number where a date belongs,
+convert it (`datetime(1899,12,30) + timedelta(days=n)`) and check which source column it came
+from. Any list your code iterates over — variables, categories, keys — is read from the sheet
+(headers, a lookup table), never typed in from the rows you happened to print.
+
+**Phase 1b — CALIBRATE against a filled sibling column, when one exists (do not skip).** Look at
+the columns and rows immediately *outside* `answer_position`, on the same rows or in the same
+band as the target. When one of them is **already filled** and its header names the **same
+quantity as the graded columns, at a different parameter** — `Open as of today` beside
+`Open by end of May` / `… of Jun`; `Q1 total` beside `Q2 total`; `2023 count` beside `2024 count`
+— that filled column is a **worked example of the function you are being asked to write**, and
+the expected answer was produced by the same function at a different parameter. It is the one
+oracle in the file that can tell you your reading is wrong *before* you are graded, so use it:
+
+```python
+def f(param):                        # your candidate reading, parameterised
+    ...
+# Reproduce the FILLED sibling column with the SAME function, then compare cell by cell.
+got      = [f(sibling_param) for _ in target_rows]
+expected = [ws.cell(r, sibling_col).value for r in target_rows]
+print("calibration:", list(zip(expected, got)), "MATCH" if got == expected else "MISMATCH")
+```
+
+If it prints `MISMATCH`, your reading of the instruction is wrong — **fix the function before you
+write anything**. Do not proceed because the numbers look close or differ on only a few rows: the
+sibling column and the graded columns are computed the same way, so a function that cannot
+reproduce the one you can check will not match the ones you cannot.
+
+This matters most when the instruction's prose and the graded column's **header** describe
+different computations. A paraphrase like "open if it was not closed before the first day of the
+month and not created after the last day" describes an **overlap with the period**; a header
+reading "open by the end of <month>" describes a **snapshot at that boundary** — a strictly
+smaller set, because overlap also counts records that had already left the state. When prose and
+header disagree, the calibration column settles it, and it is what the expected answer was built
+from. Prefer the reading that reproduces it over the reading the prose suggests.
+
+**Phase 2 — WRITE.** Compute every value in Python, assign the literals, and save to
+`output_path`. In the **same** block, re-open the file you just saved and print the graded cells:
+
+```python
+# Two copies: READ every input value from wbv (cached values), WRITE into wb (keeps formulas).
+# Saving a workbook opened data_only=True replaces every other formula in the file with its value.
+wbv = openpyxl.load_workbook("<spreadsheet_path>", data_only=True)
+wb  = openpyxl.load_workbook("<spreadsheet_path>")
+wsv, ws = wbv["<sheet>"], wb["<sheet>"]
+# ... compute from wsv[...].value, assign the literal results to ws[...] ...
+# Any formula still inside answer_position would read back empty: store its value instead
+# (the cached one, or your recomputed one if its inputs changed).
+for row in ws["<answer_position range>"]:
+    for c in row:
+        if isinstance(c.value, str) and c.value.startswith("="):
+            c.value = wsv[c.coordinate].value
+wb.save(output_path)
+
+chk = openpyxl.load_workbook(output_path, data_only=True)     # exactly what the grader sees
+src = openpyxl.load_workbook("<spreadsheet_path>", data_only=True)
+for addr in ["<cells of answer_position — sample ~20 if the range is large>"]:
+    v = chk["<sheet>"][addr].value
+    print(addr, repr(v), type(v).__name__, "| was:", repr(src["<sheet>"][addr].value))
+# Scan ALL of answer_position, not just the cells you wrote: a leftover error marker (a totals
+# row still showing '#DIV/0!') is a cell you have not computed yet; a pre-filled cell you changed
+# must be one the instruction asks for.
+changed = []
+for row in chk["<sheet>"]["<answer_position range>"]:
+    for c in row:
+        old = src["<sheet>"][c.coordinate].value
+        if c.value in ("#N/A", "#VALUE!", "#DIV/0!", "#REF!", "#NAME?", "#NUM!", "#NULL!"):
+            print("ERROR LEFT", c.coordinate, c.value)
+        if old not in (None, "") and c.value != old:
+            changed.append((c.coordinate, old, c.value))
+print("CHANGED PRE-FILLED:", len(changed), changed[:15])
+```
+
+For a range of hundreds or thousands of cells, print a summary instead of every cell: how many
+are non-empty, the set of types present, how many start with `=`, how many are error markers, and
+the first and last few values.
+
+**Phase 3 — VERIFY, then stop.** Read that output and check each item:
+
+- no value is a string starting with `=`, and no `ERROR LEFT` line printed — an error marker
+  anywhere in `answer_position`, even in a row you did not plan to touch (a totals row), is a
+  cell the expected answer fills with its recomputed value;
+- for each `CHANGED PRE-FILLED` cell, you can quote the instruction words that ask for that cell
+  to change (a transformation of its column, a fix-and-apply, a sort or rebuild, rows shifted by a
+  delete). "Total sales and total cost" asks for those two cells, not for filled neighbours. If you
+  cannot quote such words, restore the original value;
+- if the sheet holds finished-looking examples of the output (pre-filled target rows, rows of the
+  same column already in the final form, a desired-result sheet), your values reproduce **all**
+  of them — the same items, the same text form (`abc` vs `(abc)`, `NEW` vs `New`), the same
+  layout (blank separator rows kept or removed as there);
+- no cell is `None` where the answer should have a value;
+- every number is `int`/`float`, not `str`; every date is a `datetime`;
+- any target cell the instruction did not ask you to change or clear still shows its `was:` value
+  (if the task *is* to clear cells, the cleared ones should read `None` — that is correct);
+- the values are the right magnitude;
+- on a task that asks you to change values, not every graded cell still equals its `was:` value
+  (if all do, your code usually read or matched nothing — find out why before finishing).
+
+If every check passes, you are done: reply with a short plain-text confirmation and **no code
+block**. Do not re-send working code — a resubmission of the same block changes nothing, and the
+task only ends when you reply without code. If this round printed the same result as the last
+one, the next reply is either that plain-text confirmation or code that prints *new* evidence
+(the `repr` and type of the inputs as your code actually reads them) — never the same block again.
+
+If a check fails, diagnose the cause and repeat Phase 2. Change the computation, not just its
+formatting: re-sending near-identical code is the single most common way a task is failed here. If
+the same check fails twice, your reading of the instruction is what is wrong — go back to the
+sheet, print the cells that ought to settle it, and revise the reading rather than the code.
+
+If an input value your code uses is a string starting with `=` (e.g. `'=A2+1'`), you read it from
+the formula copy: read it from the `data_only=True` copy instead, where it is the number Excel
+computed.

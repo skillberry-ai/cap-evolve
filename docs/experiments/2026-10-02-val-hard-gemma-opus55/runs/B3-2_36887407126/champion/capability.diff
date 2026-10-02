@@ -1,0 +1,703 @@
+diff --git a/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/INSTRUCTIONS.md b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/INSTRUCTIONS.md
+new file mode 100644
+index 0000000..68ae5d5
+--- /dev/null
++++ b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/INSTRUCTIONS.md
+@@ -0,0 +1,309 @@
++# Optimize the capability — ship several REAL, SAFE, VERIFIED prompt fixes this iteration
++
++## THE READER (who consumes what you edit)
++At runtime these capabilities are read by `rits/google/gemma-4-31B-it` — capability tier: **frontier**. The reader is a top-tier model: strong long-context reasoning, reliable instruction-following, and a tendency to OVER-comply. Prefer concise policy that explains the WHY over piling on ALL-CAPS MUSTs; soften brittle imperatives; trust multi-step reasoning; keep few-shot examples minimal. Over-constraining HURTS this reader.
++Optimize your edits for THIS reader's capability level, not for your own. When the reader is weaker than you, prefer explicit rules, worked examples, and code enforcement over terse prose you would personally infer.
++
++
++Focus: every failing task on the val split. Current val reward 0.400: 16 solid / 0 flaky / 24 failing of 40 tasks.
++
++## EMPTY SEED — create the capability from scratch
++The capability directory is EMPTY (no pre-existing content). This is the first iteration starting from a blank slate. Your job is to CREATE the initial capability content — not edit existing files (there are none). Analyze the failing trajectories in `./trajectories/` to understand what the agent needs, then create the capability files from scratch (e.g. SKILL.md, prompt.txt, tools.json, policy.md — whatever the capability type requires). Read `./guidance/<cap>/SKILL.md` for the expected file format and structure. A good initial capability addresses the most common failure patterns visible in the trajectories.
++
++
++GOAL: raise the eval score as much as you can THIS iteration, then STOP (the harness
++re-scores you — don't run evaluation yourself). The capability under optimization is
++PROSE: the agent's prompt / skill text. There are no tool implementations to edit here.
++
++Make **AS MANY real fixes as you can this iteration — solve many issues across many
++trajectories, not just the biggest one.** A timid one- or two-edit iteration is an
++under-used iteration: diagnose EVERY failure cluster in `./trajectories/` and ship a fix
++for each one that passes the three tests below. Breadth is the goal — the more distinct
++failing clusters you fix in this ONE candidate, the larger the gain.
++
++The ONLY brake on breadth is regression: every edit must pass all three tests, because a
++single speculative edit that breaks a passing task can sink an iteration of good work (it
++did in prior runs). So the discipline is "many fixes, each one real and safe" — NOT "few
++fixes". Do not stop at the first cluster; work through them all.
++
++## WHAT YOU MAY EDIT — and the two ways iterations get wasted here
++Edit ONLY the capability files listed in `## What you are editing (the allowed edit space)
++The capability under optimization is composed of these editable artifact(s). Use the FULL edit space below — do not limit yourself to trivial wording tweaks.
++- **system-prompt** — Optimize an agent's system prompt / policy text (instructions, output contract, decision policy).
++  - Allowed edits: Edit the prompt/policy text: instructions, decision policy, and the output contract. Prefer sharpening rules the traces show the agent breaking; do not just append more preamble.
++  - Full guidance (read it): ./guidance/system-prompt/SKILL.md` below (the prompt / skill text in
++this working directory). Everything else you can see is READ-ONLY CONTEXT.
++
++**You may NOT edit the adapter, the harness, the scorer, the benchmark, or the
++environment** — not to make a task pass, not to fix a broken mount or a missing binary,
++not "just to unblock the run". Those files are how your score is MEASURED; changing them
++does not improve the capability, and a gain obtained that way is not a result. An
++iteration that edits infrastructure has produced NOTHING measurable, however green the
++number looks. **If the traces show an ENVIRONMENT fault** (permission denied, missing
++binary, gateway/network error, timeout, container failure — the same error on nearly every
++task, unrelated to the task's content), then the correct and complete action is:
++1. do NOT edit the prompt to work around it (a prose workaround for a broken environment
++   is a speculative edit that fails the REAL test — the prompt is not the defect), and
++2. state the diagnosis in `PROCESS.md` and `JOURNAL.md` precisely — the exact error, how
++   many tasks it hit, and what a human must fix — then STOP. Handing back an accurate
++   "the environment is broken, here is the evidence" is a SUCCESSFUL iteration.
++
++**The other way iterations get wasted: another prose rule for a behavior the agent already
++knows.** When the agent has the rule and skips it anyway, adding a second sentence saying
++the same thing changes nothing — you must change the STRUCTURE that makes it skippable
++(see the levers below): make the step unavoidable and ordered, make the contract explicit,
++or give a worked example it can pattern-match. Prose is for genuine KNOWLEDGE gaps (a
++fact / format / criterion the agent cannot derive) and for STRUCTURE that changes what the
++agent does — not for repetition or emphasis.
++
++## The THREE TESTS every change must pass (this is the whole game)
++Before you keep any edit, confirm all three. Drop any edit that fails even one.
++1. **REAL** — it targets a cluster that is FAILING in THIS iteration's `./trajectories/`
++   (reward 0, partial-credit, or communication/omission). Never edit for a hypothetical
++   problem, and never edit on account of a task whose failure is an environment fault.
++2. **SAFE (bounded blast radius)** — the real regression question is *behavioral*:
++   **would this edit change what the agent DOES on ANY currently-passing task?** Two
++   blast-radius classes:
++   - **BOUNDED** — an ADDITIVE rule that applies only under a stated condition present in
++     the failing cases, or a clarification of an output contract the passing tasks already
++     satisfy. This is the SAFE default — prefer it.
++   - **UNBOUNDED** — any edit to a GLOBAL decision/permission/refusal rule, or a rewrite /
++     reordering / deletion that changes the instruction the agent follows on every task. It
++     changes behavior across the ENTIRE class, including tasks where the original behavior
++     was the gold answer. Allowed ONLY if the new behavior is correct for EVERY task in
++     that class AND you have read the currently-passing tasks in the class and confirmed
++     none relied on the old wording.
++   Name the passing tasks in each edit's blast-radius class and state which class it is.
++   A regression wastes the whole candidate (the gate rejects a net-zero), not one task.
++3. **VERIFIED** — you have shown it actually fixes its target (see VERIFY-THE-FIX). An
++   edit you cannot verify is a guess — drop it.
++
++Quality AND breadth: ship every fix that passes the three tests — the more clusters you
++cover safely, the bigger the gain. The only edits to leave out are the speculative ones
++(an edit that fails a test), not real fixes you ran out of patience for. Don't re-add
++anything `LEDGER.md` / `JOURNAL.md` show was already tried and rejected.
++
++## Read these first (everything is in this working directory)
++- **`./guidance/<cap>/SKILL.md` for EACH selected capability — READ IT IN FULL before you
++  edit; it is the MENU of improvement TYPES available to you.** For a prompt capability it
++  lists the concrete kinds of change you can make (role/contract, decision-rule narrowing,
++  missing-rule, worked example, ordered procedure, consolidation of conflicting text). Do
++  not invent change types from memory — take them from the skill, and deliberately apply
++  MULTIPLE DIFFERENT types this iteration, matching each cluster to the strongest type the
++  skill describes for it.
++- `./guidance/diagnose/SKILL.md` — the failure-clustering method. Use it.
++- `./trajectories/` — the FULL traces of the current best candidate (the step you build
++  on). The `## (a) 24 ALWAYS-failing task(s) — fix the shared root cause (full traces in ./trajectories/):
++- 11276 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: F3:AJ3). Test case(s) [1] FAILED because the answer cells hold FORMULAS: the grader reads the values saved in the file and does not recalculate, so a formula written with openpyxl reads back as empty. The formula logic itself was right — compute the result in Python and write the literal value instead.
++- 12307 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: I12:I13). Test case(s) [1] produced an output file but its values in I12:I13 did not match the expected result. COVERAGE: the target range spans 2 cell(s); your output has a value in 2 of them; the expected output has a value in 2. MISMATCH: 2 of 2 cell(s) differ from the expected output: 2 cell(s) hold a number HIGHER than expected.
++- 183-8 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: 'Sheet1'!I3:L7). Test case(s) [1] produced an output file but its values in 'Sheet1'!I3:L7 did not match the expected result. COVERAGE: the target range spans 20 cell(s); your output has a value in 20 of them; the expected output has a value in 20. MISMATCH: 15 of 20 cell(s) differ from the expected output: 15 cell(s) hold a different
++- 1925 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: 'Sheet1'!C6:C31). Test case(s) [1] produced an output file but its values in 'Sheet1'!C6:C31 did not match the expected result. COVERAGE: the target range spans 26 cell(s); your output has a value in 26 of them; the expected output has a value in 26. MISMATCH: 26 of 26 cell(s) differ from the expected output: 26 cell(s) hold an Excel e
++- 203-15 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: 'Output Required'!A1:M3). Test case(s) [1] produced an output file but its values in 'Output Required'!A1:M3 did not match the expected result. COVERAGE: the target range spans 39 cell(s); your output has a value in 39 of them; the expected output has a value in 39. MISMATCH: 3 of 39 cell(s) differ from the expected output: 3 cell(s) 
++- 279-23 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: A3:B26). Test case(s) [1] produced an output file but its values in A3:B26 did not match the expected result. COVERAGE: the target range spans 48 cell(s); your output has a value in 40 of them; the expected output has a value in 40. MISMATCH: 10 of 48 cell(s) differ from the expected output: 10 cell(s) hold a different value of the ri
++- 290-1 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: K2:U10). Test case(s) [1] produced an output file but its values in K2:U10 did not match the expected result. COVERAGE: the target range spans 99 cell(s); your output has a value in 32 of them; the expected output has a value in 44. MISMATCH: 44 of 99 cell(s) differ from the expected output: 16 cell(s) hold a number HIGHER than expect
++- 304-35 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: A3:F36). Test case(s) [1] produced an output file but its values in A3:F36 did not match the expected result. COVERAGE: the target range spans 204 cell(s); your output has a value in 105 of them; the expected output has a value in 105.
++- 38074 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: K2:K5). Test case(s) [1] produced an output file but its values in K2:K5 did not match the expected result. COVERAGE: the target range spans 4 cell(s); your output has a value in 0 of them; the expected output has a value in 4. The target range is EMPTY in your output — nothing was written there. UNCHANGED: sheet(s) ['Sheet1'] are byte
++- 409-45 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: 'DATA'!A1:E19). Test case(s) [1] produced an output file but its values in 'DATA'!A1:E19 did not match the expected result. COVERAGE: the target range spans 95 cell(s); your output has a value in 45 of them; the expected output has a value in 45. MISMATCH: 37 of 95 cell(s) differ from the expected output: 10 cell(s) hold a value where
++` block below summarizes them with argument-level feedback — read
++  the actual traces for the clusters you'll fix, don't rely on the summary alone.
++- `./LEDGER.md` — FACTS (read-only): every prior iteration's outcome + the exact tasks it
++  broke/fixed. Your SAFE test starts here — never re-introduce a change that broke a task.
++- `./JOURNAL.md` — the accumulating handover. Each entry is the optimizer's INTENT, and
++  directly below it the framework stamps a **RESULT** line (objective: ACCEPTED/REJECTED ·
++  Δ · the exact tasks fixed/broke). The RESULT lines — not the intent — are the truth of
++  what worked: read them all before proposing. If the most recent RESULT is **REJECTED**,
++  its batch was reverted; read that entry's `./prior_iterations/<id>/diff.patch`, keep the
++  edits that did NOT appear in its `broke={...}`, and DROP or REDESIGN the ones that did —
++  do NOT resubmit the whole rejected batch, and do NOT abandon the cluster. APPEND your new
++  entry (intent only) below the marker; never edit earlier entries or re-try a refuted idea.
++- `./RUNMAP.md` + `./prior_iterations/<id>/` — EVERY prior iteration's (accepted AND
++  rejected) PROCESS.md + diff.patch. Read the one(s) that touched a cluster you're about to
++  work on, so you build on what worked and avoid repeating what regressed.
++- `./PROCESS.md` — your REQUIRED explainability file for THIS iteration (template inside).
++- `./guidance/optimizer/<name>.md` — your agent's subagent/parallelism features (optional).
++
++
++## Process (do this, then STOP)
++**Parallelism:** Your agent supports parallel subagents/worktrees (see ./guidance/optimizer/claude-code.md). FAN OUT to cover MANY clusters at once: one read-only subagent per trajectory-group to diagnose, then one edit-subagent per issue (each in its own worktree), then MERGE every edit into this ONE candidate with no conflicts. This is how a single iteration fixes many issues across many trajectories, not just the biggest one.
++1. Read your capability SKILL(s) + the diagnose method + the cross-iteration files
++   (LEDGER facts, JOURNAL handover, RUNMAP for clusters you'll touch).
++2. Diagnose THIS iteration's `./trajectories/` ONLY (not stale signatures). Cluster ALL
++   failures by shared root cause — total, partial-credit, AND communication/omission.
++   **First separate ENVIRONMENT faults from capability failures** (see above): a cluster
++   whose every trace dies on the same infrastructure error is not yours to fix.
++   RANK the remaining clusters by LEVERAGE = (# failing tasks × trials × score
++   recoverable), biggest first — but plan to fix ALL of them this iteration.
++3. For EACH cluster, pick the strongest improvement TYPE from the capability SKILL(s)
++   (cross-check the FAILURE TYPE section next) and draft the edit. Across the iteration
++   use MULTIPLE different types from the skills, not the same one repeatedly. Run each
++   edit through the THREE TESTS; keep it only if it passes all three.
++4. Ship every passing edit together in this ONE candidate — cover as many clusters as you
++   can SAFELY (that is the win), and never include an edit that fails a test.
++5. Fill `PROCESS.md` and APPEND your entry to `JOURNAL.md`. STOP.
++
++## Choose the lever by FAILURE TYPE
++Pick the strongest lever your capability's edit space offers (see `./guidance/<cap>/`).
++Every lever below is a PROSE edit — the point is that they are not all the same edit.
++
++- **OUTPUT-CONTRACT / FORMAT MISS** — the work is right but the graded artifact is wrong
++  (written to the wrong place, wrong shape, wrong precision, formula instead of value,
++  extra cells/keys touched). **Default strong lever: state the contract exactly, once, in
++  imperative form, at the point of use** — the precise path/shape/type, what must NOT be
++  touched, and the one-line check the agent can run before finishing. This is the
++  highest-yield, lowest-regression prompt edit; reach for it first.
++- **SKIPPED / OUT-OF-ORDER STEP (behavioral)** — the agent knows the rule and skips it, or
++  acts before verifying. Do NOT restate the rule. **Make it structurally unavoidable:** an
++  ORDERED, numbered procedure with the step as a precondition of the next one, or a
++  short pre-finish checklist the agent must satisfy — phrased as work to perform, not as
++  advice to remember.
++- **CAPABILITY GAP / ACTION STALL** — the agent has no reliable way to do the thing, or it
++  narrates a multi-step action then never executes it. Prose CANNOT invent a missing
++  capability: what it can do is supply the concrete METHOD — a worked, copyable procedure
++  (the exact sequence, API/idiom, and end-to-end example) that the agent can execute
++  directly. If no wording could make the task achievable, say so in PROCESS.md rather than
++  shipping a hopeful paragraph; a hard zero does not move on emphasis.
++- **KNOWLEDGE GAP** — a format/criterion/fact the agent genuinely cannot derive → state it
++  precisely, and only it. Don't restate a rule the agent already has; that's a skipped
++  step (use structure), not a knowledge gap.
++- **DECISION / PERMISSION (ACT vs REFUSE)** — the agent made the wrong call on a decision
++  the prompt governs. **This is the most dangerous cluster to fix wrong.** NEVER loosen,
++  broaden, or alter a GLOBAL decision/permission/refusal rule — a global change (e.g.
++  "restricted records MAY now be modified") flips behavior for the WHOLE class and
++  regresses every currently-passing task where the stricter behavior was the gold answer
++  (this exact mistake sank a prior run). Instead add an ADDITIVE rule that NARROWS: state
++  the exact discriminating CONDITION that separates the qualifying cases, so only those
++  change.
++- **CONFLICT / BLOAT** — two instructions disagree, or the rule that matters is buried in
++  prose the agent skims. CONSOLIDATE: resolve the contradiction and hoist the decisive
++  rule to where it is read. Deleting is allowed here — but only text you have shown to be
++  redundant or contradicted, never a rule a passing task depends on.
++
++Also fix **recovery guidance** — what the agent should do when its own attempt errors —
++when a recoverable error stranded it mid-task. High leverage, low risk.
++
++## VERIFY-THE-FIX (do this for EACH kept edit — it satisfies the VERIFIED + SAFE tests)
++A prompt edit cannot be unit-tested, so verify it against the TRACES, concretely:
++- **Point at the evidence:** quote the line(s) from the failing trace that the edit
++  addresses, and state what the agent would have done differently had the edit been
++  present. "It would have been clearer" is not verification.
++- **Contract / format edit:** confirm the value you now state matches what the SCORER
++  compares (read the answer/expected artifact in the trace or the benchmark source) — not
++  merely what the old prompt said. A confidently-stated wrong contract is worse than none.
++- **Structural edit (ordered procedure / checklist):** confirm the skipped step is now a
++  precondition of a step the agent must take, not just mentioned earlier.
++- **Decision / permission edit:** the SAFE check is BEHAVIORAL. Enumerate the
++  currently-passing tasks in the SAME decision class and confirm the edit would NOT flip
++  the agent's action on any of them — in particular that it does not make the agent newly
++  ACT where a passing task's gold answer was to refuse. If you cannot enumerate and check
++  that class, the edit is UNBOUNDED and unverified — rescope it to the qualifying cases.
++- **Deletion / consolidation:** name the tasks whose traces show the removed text was
++  unused or contradicted, and confirm no passing trace relies on it.
++
++Record one line per edit in PROCESS.md, e.g.
++`trace <task>: wrote formula not value → contract line "write literal values"; passing <ids> already write literals`.
++An edit with no verification line is unverified — verify it or drop it.
++
++## NON-OVERFITTING (every edit must GENERALIZE)
++Every edit encodes a GENERAL rule that holds across the whole class of inputs — NEVER a
++literal that special-cases one task (its id, target, name, or expected answer), and never
++the answer itself. ALLOWED: constants the domain defines (a fixed threshold, a required
++path shape, a domain enum). Use per-task specifics and any ground-truth in the traces ONLY
++to understand the failure CLASS, then write the general fix.
++
++## Handover (REQUIRED before you STOP)
++- **PROCESS.md** (this iteration): the ranked cluster list (with leverage + CONTRACT/
++  STRUCTURE/KNOWLEDGE/DECISION tag), every kept edit + its lever, the VERIFY-THE-FIX +
++  blast-radius line per edit, any ENVIRONMENT fault you diagnosed and handed back, what you
++  deliberately skipped and why, and (if you used subagents) that you did.
++- **JOURNAL.md** (append ONE entry below the marker; never edit earlier entries). Write
++  INTENT only — you cannot know your gate result; the framework stamps the RESULT below
++  your entry: the changes I made (1 line/edit, naming the section + cluster) · the
++  EXPECTED effect + why each is safe · which prior RESULTS I built on and which regressing
++  edits I did NOT re-try (cite ids) · refuted hypotheses (a prior RESULT disproved — never
++  re-test) · high-value clusters not yet cracked + designs already tried · plateau signal +
++  which lever to switch to · focus next iteration.
++
++## (a) 24 ALWAYS-failing task(s) — fix the shared root cause (full traces in ./trajectories/):
++- 11276 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: F3:AJ3). Test case(s) [1] FAILED because the answer cells hold FORMULAS: the grader reads the values saved in the file and does not recalculate, so a formula written with openpyxl reads back as empty. The formula logic itself was right — compute the result in Python and write the literal value instead.
++- 12307 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: I12:I13). Test case(s) [1] produced an output file but its values in I12:I13 did not match the expected result. COVERAGE: the target range spans 2 cell(s); your output has a value in 2 of them; the expected output has a value in 2. MISMATCH: 2 of 2 cell(s) differ from the expected output: 2 cell(s) hold a number HIGHER than expected.
++- 183-8 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: 'Sheet1'!I3:L7). Test case(s) [1] produced an output file but its values in 'Sheet1'!I3:L7 did not match the expected result. COVERAGE: the target range spans 20 cell(s); your output has a value in 20 of them; the expected output has a value in 20. MISMATCH: 15 of 20 cell(s) differ from the expected output: 15 cell(s) hold a different
++- 1925 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: 'Sheet1'!C6:C31). Test case(s) [1] produced an output file but its values in 'Sheet1'!C6:C31 did not match the expected result. COVERAGE: the target range spans 26 cell(s); your output has a value in 26 of them; the expected output has a value in 26. MISMATCH: 26 of 26 cell(s) differ from the expected output: 26 cell(s) hold an Excel e
++- 203-15 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: 'Output Required'!A1:M3). Test case(s) [1] produced an output file but its values in 'Output Required'!A1:M3 did not match the expected result. COVERAGE: the target range spans 39 cell(s); your output has a value in 39 of them; the expected output has a value in 39. MISMATCH: 3 of 39 cell(s) differ from the expected output: 3 cell(s) 
++- 279-23 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: A3:B26). Test case(s) [1] produced an output file but its values in A3:B26 did not match the expected result. COVERAGE: the target range spans 48 cell(s); your output has a value in 40 of them; the expected output has a value in 40. MISMATCH: 10 of 48 cell(s) differ from the expected output: 10 cell(s) hold a different value of the ri
++- 290-1 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: K2:U10). Test case(s) [1] produced an output file but its values in K2:U10 did not match the expected result. COVERAGE: the target range spans 99 cell(s); your output has a value in 32 of them; the expected output has a value in 44. MISMATCH: 44 of 99 cell(s) differ from the expected output: 16 cell(s) hold a number HIGHER than expect
++- 304-35 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: A3:F36). Test case(s) [1] produced an output file but its values in A3:F36 did not match the expected result. COVERAGE: the target range spans 204 cell(s); your output has a value in 105 of them; the expected output has a value in 105.
++- 38074 (reward 0.00): 0/1 test cases passed (Cell-Level Manipulation, checked range: K2:K5). Test case(s) [1] produced an output file but its values in K2:K5 did not match the expected result. COVERAGE: the target range spans 4 cell(s); your output has a value in 0 of them; the expected output has a value in 4. The target range is EMPTY in your output — nothing was written there. UNCHANGED: sheet(s) ['Sheet1'] are byte
++- 409-45 (reward 0.00): 0/1 test cases passed (Sheet-Level Manipulation, checked range: 'DATA'!A1:E19). Test case(s) [1] produced an output file but its values in 'DATA'!A1:E19 did not match the expected result. COVERAGE: the target range spans 95 cell(s); your output has a value in 45 of them; the expected output has a value in 45. MISMATCH: 37 of 95 cell(s) differ from the expected output: 10 cell(s) hold a value where
++
++## Currently PASSING (16 task(s)) — your edit MUST NOT regress these
++These tasks already score ~1.0. Preserve their behavior: any edit that changes their trajectory is a regression and will be rejected. Protect: 188-39, 28-7, 374-31, 45896, 486-17, 48975, 50521, 50811, 50971, 51680, 52541, 52575, 534-26, 547-43, 59511, 9111
++
++## What you are editing (the allowed edit space)
++The capability under optimization is composed of these editable artifact(s). Use the FULL edit space below — do not limit yourself to trivial wording tweaks.
++- **system-prompt** — Optimize an agent's system prompt / policy text (instructions, output contract, decision policy).
++  - Allowed edits: Edit the prompt/policy text: instructions, decision policy, and the output contract. Prefer sharpening rules the traces show the agent breaking; do not just append more preamble.
++  - Full guidance (read it): ./guidance/system-prompt/SKILL.md
++## How your edit is judged
++Algorithm: hill-climb:all. Your edited candidate is re-scored on the SAME held-out val tasks and compared to the current best (val reward 0.400). It is ACCEPTED only if the per-task improvement clears a significance bar (a noise margin), so a tiny or lucky change is rejected. Aim for a real, generalizing gain across a CLASS of failures — not a one-off patch to a single task (that overfits and gets rejected or hurts the held-out test).
++
++## Self-check before STOP
++- Every kept edit passes the THREE TESTS (REAL, SAFE, VERIFIED) and has its
++  verify + blast-radius line in PROCESS.md. Drop any that doesn't.
++- You edited ONLY the capability files in `## What you are editing (the allowed edit space)
++The capability under optimization is composed of these editable artifact(s). Use the FULL edit space below — do not limit yourself to trivial wording tweaks.
++- **system-prompt** — Optimize an agent's system prompt / policy text (instructions, output contract, decision policy).
++  - Allowed edits: Edit the prompt/policy text: instructions, decision policy, and the output contract. Prefer sharpening rules the traces show the agent breaking; do not just append more preamble.
++  - Full guidance (read it): ./guidance/system-prompt/SKILL.md` — no adapter, harness, scorer,
++  benchmark or environment file, and no shell command that mutates the environment.
++- You read each selected capability's `./guidance/<cap>/SKILL.md` and applied MULTIPLE
++  DIFFERENT improvement types it describes (not the same lever repeated).
++- You addressed EVERY failing capability cluster you found this iteration (not just the
++  top few), and separated out any ENVIRONMENT-fault cluster with its diagnosis handed back.
++- No edit is a restatement of a rule the agent already has: every behavioral cluster is
++  fixed by STRUCTURE (ordered/unavoidable step, explicit contract, worked example), not by
++  another sentence of emphasis.
++- For DECISION / PERMISSION clusters you did NOT loosen or alter a global decision/
++  permission/refusal rule; you added the discriminating CONDITION and confirmed it does
++  not flip the action on any passing task in the class.
++- Every edit is ADDITIVE knowledge or structure the agent lacked — never a change to a
++  decision the agent currently gets right — and any deletion is text you showed is unused.
++- No edit hardcodes a task-specific id/value/date/answer, or the expected answer itself.
++- PROCESS.md + JOURNAL.md are filled. Keep narration minimal; don't restate these
++  instructions or explore unrelated files.
++
++## The TWO files you may edit (this benchmark)
++Your capability is BOTH of these, and an iteration that only touches the first is leaving
++most of the agent's instruction surface untouched:
++
++1. **`prompt.md`** — the agent's SYSTEM message: who it is, how it should work, what to
++   check. ~40% of the words the agent reads.
++
++2. **`task_template.md`** — the agent's FIRST USER message: how the job is framed, what each
++   field means, and the interaction contract. ~60% of the words the agent reads. It is
++   ordinary prose and you may reword, restructure, add to, or DELETE from it — including
++   guidance that is actively unhelpful. (Read it critically: a line telling the agent it is
++   finished as soon as an output file exists will discourage it from verifying values, which
++   is the most common way tasks fail here.)
++
++   The `{placeholders}` in it are filled in per task and are LOAD-BEARING. Keep every one of
++   `{instruction}` `{spreadsheet_path}` `{spreadsheet_content}` `{instruction_type}`
++   `{answer_position}` `{output_path}`; `{max_turns}` is optional; invent no others; write a
++   literal brace as `{{` or `}}`. Break that and EVERY task scores 0 — the agent is never
++   told where to write its answer — so the candidate is rejected outright.
++
++Decide per cluster which file is the right place to fix it, and say which you chose in
++PROCESS.md.
++
++
++## Run budget (iteration 1/3 (2 after this one); 0/3 consecutive rejects)
++
++## Cross-iteration files in THIS working dir (clean ownership — read all)
++- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + the tasks it MEASURABLY broke/fixed, plus the ones whose move was under 2·SE and so resolves nothing. Never re-introduce a change that broke a task; never redesign an edit because a task landed in `unresolved`.
++- `JOURNAL.md` — HANDOVER (yours, append-only across the whole run): read the whole thing, then APPEND your entry for this iteration below the marker line. Do NOT edit earlier entries. This is how you avoid repeating refuted ideas and hitting the same plateau.
++- `PROCESS.md` — EXPLAINABILITY (yours, REQUIRED this iteration): fill it in as you work (ranked issues, every edit + class, verify-the-fix, subagents/features used, what to preserve, what you skipped). It is snapshotted with your candidate.
++- `RUNMAP.md` + `./prior_iterations/<id>/` — every prior iteration's PROCESS.md + capability diff, copied in for you. Read the ones targeting your cluster BEFORE proposing, so you build on prior work instead of repeating it.
++- `INSIGHTS.md` — SUMMARIZED, VERIFIED findings (yours, append-only, optional most iterations): a distilled 'what worked / what didn't / what's promising' a future iteration reads INSTEAD of the whole journal. Add an entry whenever you have a new CONFIRMED finding (cite the RESULT that confirmed it).
++- `META_INSIGHTS.md` — about the SEARCH PROCESS itself (yours, append-only): which strategies helped or stalled, what to try next. Update AT LEAST once, at the end of the run.
++- `FRAMEWORK_IMPROVEMENTS.md` — cross-run suggestions for cap-evolve ITSELF, not this task (yours, append-only, optional): what confused you or was missing about the framework. Update AT LEAST once, at the end of the run.
++- `.capevolve/run_suite/rejected.jsonl` — ALREADY-REFUTED approaches (framework, read-only; JSON lines, one per rejected candidate with the gate's reason). Read it and make each proposal STRUCTURALLY different from what is in it. Its sibling `history.jsonl` is the same record for accepts.
++
+diff --git a/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/PROCESS.md b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/PROCESS.md
+new file mode 100644
+index 0000000..aa78e7b
+--- /dev/null
++++ b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/PROCESS.md
+@@ -0,0 +1,106 @@
++# PROCESS — what I did this iteration (explainability; REQUIRED)
++
++Iteration cand_0001 (1/3). EMPTY SEED: prompt.md was 0 bytes and there was no task_template.md, so the agent ran on the adapter's built-in template, which says "once that file exists, you are done". I created both capability files.
++
++Evidence sources:
++- The work-dir trajectories carry score feedback only, with no traces.
++- Full traces came from two places:
++  - seed train rollouts (`.capevolve/run_suite/rollouts/train/*__seed__t0.json`);
++  - the earlier run's FINAL test rollouts (`reused_seed_run/run_suite/rollouts/test/*__FINAL__t0.json`). These cover every current val task under the earlier run's accepted prompt: 21/40, with 12 seed failures fixed and 7 seed passes broken.
++
++## Ranked issue list (clusters by # failing tasks × trials, biggest first)
++| rank | cluster | tasks | shared root cause | tag (KNOWLEDGE / BEHAVIORAL / CAPABILITY-GAP) | planned change class |
++| --- | --- | --- | --- | --- | --- |
++| 1 | F wrong logic/value | 12307, 183-8, 203-15, 279-23, 304-35, 41978, 50682, 524-31, 59358, 9391 | Ambiguous reading. Did not use the worked examples or the formulas in the file; included the total row in per-group sums (183-8). | KNOWLEDGE + BEHAVIORAL | §2 "workbook tells the shape" rules, worked-example and calibration steps in the template |
++| 2 | C overwrote originals / wrote past the answer | 290-1, 409-45, 469-9, 535-20, 57354, 58687, 1925, 9111(prior-best) | Filled the whole range unconditionally; compacted results; cleared rows instead of deleting them | KNOWLEDGE | keep-original rule, row alignment, delete_rows/cols shift (§4), CONTRACT item 3 |
++| 3 | A formula written instead of value | 11276, 45707, 56921, 59129, 59160 (+15/80 train) | Agent writes "=..." because the instruction asks for a formula; no cached value means it reads back empty | KNOWLEDGE (grader contract) | §1(a) plus CONTRACT item 1 |
++| 4 | D types | 409-45, 535-20 (text parsed to int/date), 57354, 45944 (int instead of bool) | pandas round-trip re-types text; Excel TRUE/FALSE written as 1/0 | KNOWLEDGE | §1(b) keep-type, bool rule, prefer openpyxl (§4) |
++| 5 | E target empty | 38074, 58687, 45707(prior-best) | The "next item" logic stopped at the edge of the target; formulas written | KNOWLEDGE | per-row "next" rule; literal values |
++| 6 | B error markers / text case | 1925, 45944, 11276 | Lookup did not resolve; status word or label not copied verbatim; instruction's example format ignored | KNOWLEDGE | §1(b) exact text from cells, error markers; §2 Emulate Excel TEXT() plus example-format rule |
++| 7 | G repetition stall | 118-50 (train), many 30-round traces | Re-sends the same block; the built-in template never says how to stop | BEHAVIORAL | Phase 3 stop rule (no code block ends the run); §5 stall note |
++
++## Changes made this iteration (one row per edit — aim for MULTIPLE classes, incl. a NEW tool when a cluster needs one)
++| cluster | edit class | file / tool | what & why it generalizes | protects passing? |
++| --- | --- | --- | --- | --- |
++| A | CONTRACT/KNOWLEDGE | prompt.md §1(a), template CONTRACT 1 | Explains why a formula reads back empty under data_only; applies to formula/macro/VBA asks | yes. Passing tasks already wrote literals. |
++| D | KNOWLEDGE | prompt.md §1(b) | Logicals as bool; kept or moved data keeps its type; no serial dates; no formatted numbers | yes. Matches gold typing. |
++| B/F | KNOWLEDGE | prompt.md §1(b) text bullet | Copy existing labels and status words verbatim from cells rather than the instruction's paraphrase (203-15 cut-short plurals, 1925 case) | yes |
++| C | KNOWLEDGE | prompt.md §1(d), §2 worked-example, template CONTRACT 3 | Keep pre-filled target cells; nothing written past the answer; no placeholder fill unless asked | yes. Protects 9111 and 57354. |
++| C | KNOWLEDGE | prompt.md §4 delete rows/cols | Deleting means shift (delete_rows/delete_cols, bottom-up), with a readback after | yes. Fixes the prior-best regression on 28-7. |
++| C | KNOWLEDGE | prompt.md §2 row alignment | Per-row derived output stays on its source row and does not compact (469-9) | yes |
++| F/B | KNOWLEDGE | prompt.md §2 Emulate Excel | TEXT ddd/dddd/mmm, ROUND half-up, case-insensitive matching; the instruction's example format wins (11276 "Mon, Wed") | yes |
++| E | KNOWLEDGE | prompt.md §2 next-row rule (condensed from the prior accepted prompt) | Read the key one row past the target (45707) | yes |
++| F | KNOWLEDGE | prompt.md §2 "today" rule | Current date = today() unless the instruction names one. 534-26 gold deletes all date columns, which needs the real today, not the sample sheet's date. | yes. Seed already passed 534-26 this way; the rule stops the prior-best regression. |
++| F | KNOWLEDGE | prompt.md §5 mixed columns | Skip non-numeric cells and exclude total rows (183-8 hit TypeError on '#DIV/0!' and a total row) | yes |
++| F | BEHAVIORAL | template Phase 1 calibration | Reproduce a filled sibling column before writing | yes |
++| G | BEHAVIORAL | template Phase 3 | The checklist is followed by an explicit stop (plain sentence, no code), using the harness's no-code end; changed code required on retry | yes. Stops wasted rounds. |
++| all | KNOWLEDGE | prompt.md §3 preview mapping | Row i = Excel i+2; Unnamed: k = column k+1; trust the extent | yes |
++
++Per cluster, the file chosen:
++- Grader/value-type contract → prompt.md §1, restated briefly in the template CONTRACT so it is next to the task data.
++- Procedure (inspect, write with readback, verify, stop) → task_template.md, because it replaces the built-in "once that file exists, you are done".
++- Shape and preservation knowledge → prompt.md §2 and §4.
++
++## Verify-the-fix (one line per change: the trace it targets → what the guard/computation/new-tool now does on those exact inputs)
++- 56921/59129/59160/11276/45707 seed and 10747 train wrote '=…'. §1(a) and CONTRACT 1 say the instruction's "formula" means the values. The prior accepted prompt with the same rule fixed 56921 and 59129 in FINAL.
++- 45944: the gold expects bool and the seed wrote int. §1(b) logicals bullet → True/False.
++- 409-45/535-20: feedback said "int/datetime where str expected". §1(b) keep-type and §4 prefer openpyxl, and the FINAL rollouts using openpyxl fixed both.
++- 28-7 (prior-best regression): the trace cleared rows rather than deleting them. §4 now requires delete_rows (the shift) plus a readback.
++- 534-26 (prior-best regression): it used the sample "Result" sheet's 2020-12 date; the gold expects I1:AQ1 empty, i.e. every date column deleted, which needs today's date. The §2 "today" rule covers it.
++- 188-39 (prior-best regression): it wrote 'N/A' strings where the gold has floats. This is not directly fixable since the instruction asks for N/A. §1(d) no-placeholder applies only "unless the instruction asks", so it stays neutral, and the seed passed it with no prompt.
++- 9111/57354: these changed pre-filled cells. The §2 worked-example rule keeps the original values.
++- 203-15: header text cut short ("Transport Allowance" vs the cell's "Transport Allowances"). The §1(b) copy-from-cell rule makes the agent take the H-column strings verbatim.
++- 1925: the instruction says "New" while the formula and cells use NEW/case; it also changed originals. The copy-verbatim and keep-original rules apply.
++- 11276: the sheet's M/TU abbreviations were preferred over the instruction's "Mon, Wed". The §2 Emulate Excel rule plus example-format wins → TEXT ddd → "Mon".
++- 183-8: summed the total row and crashed on '#DIV/0!'. §5 mixed columns → skip non-numeric cells and exclude totals. The remaining value mismatch is a logic question and may still fail.
++- 469-9: compacted debit/credit lists. The §2 row-alignment rule keeps each on its source row.
++- 45707: the next-day check stopped at the target edge. The §2 next-row rule reads past it.
++- 118-50 stall: Phase 3 explicit stop plus changed-code-on-retry.
++- Blast radius: every rule is conditional on a situation (deleting, a pre-filled target, a formula ask, a logical result, a "today" ask), so tasks without that situation see only the general CONTRACT. That CONTRACT already matches how the 16 seed-passing tasks are graded.
++
++## Process & features used
++- Subagents / worktrees / parallel features used (or: "serial fallback because …"): serial. The session rules say not to call Agent unless the user requests it, and the diagnosis fit in one context.
++- Prior iterations I read from ./prior_iterations/ + ./RUNMAP.md (which, and what I learned): none exist in this run, since RUNMAP is empty. I read the earlier run (reused_seed_run): its accepted cand_0001 prompt and template (val 0.95 there) and its FINAL test rollouts on today's val tasks. I adapted its structure and dropped its narrow, very long risk-matrix and snapshot sections down to one or two lines each. That keeps the text concise for the gemma reader, which tends to over-comply.
++
++## Good things to PRESERVE (do not let a future iteration undo these)
++- Literal-values contract (formula → value) in both files.
++- task_template.md with an explicit stop rule. The built-in template's "once that file exists, you are done" must stay replaced.
++- Keep-original-target-cells and keep-type rules.
++
++## Deliberately skipped (cluster + why — already-passing / needs gold / infra noise)
++- 12307, 279-23, 304-35, 41978, 50682, 524-31, 59358, 9391 get no task-specific rule. Each is a distinct logic mistake that needs the gold to diagnose, and a narrow rule would be a hardcode. They are covered only by the general worked-example and calibration steps.
++- 188-39 'N/A' vs float: the instruction explicitly asks for N/A, so any rule would be task-specific.
++- No new tools: the capability surface is text-only (prompt.md, task_template.md).
++
++---
++
++# DIAGNOSIS.json — machine-readable diagnosis (OPTIONAL but recommended)
++
++In addition to PROCESS.md, you may write a DIAGNOSIS.json file to make your diagnosis machine-readable for the dashboard. This is optional; if absent, the dashboard will parse PROCESS.md tables when present, or show only outcome data.
++
++The schema:
++```json
++{
++  "candidate": "cand_NNNN",
++  "headline": "Brief summary of this iteration's strategy",
++  "clusters": [
++    {"id": "A", "name": "Short cluster name",
++     "detail": "Root cause explanation", "tasks": ["task-id", ...],
++     "scope": "BOUNDED|WIDESPREAD|SYSTEMIC", "latent": false,
++     "tag": "KNOWLEDGE|BEHAVIORAL|CAPABILITY-GAP"}
++  ],
++  "edits": [
++    {"id": "E1", "title": "What this edit does",
++     "files": ["prompt.md"], "lever": "CONTRACT|KNOWLEDGE|BEHAVIORAL|...",
++     "clusters": ["A"], "blast_radius": "BOUNDED|MODERATE|WIDE",
++     "verified": "How you tested it"}
++  ],
++  "skipped": [{"title": "What was skipped", "reason": "Why"}],
++  "techniques": ["technique 1", "technique 2"]
++}
++```
++
++Validation is advisory only and never blocks an iteration. Warnings are recorded when:
++- A task ID in clusters[].tasks is not in the val split
++- An edit references a cluster ID that does not exist
++- An edit references a file that does not exist in the candidate
+diff --git a/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/seed/prompt.md b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/prompt.md
+index e69de29..e228ea4 100644
+--- a/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/seed/prompt.md
++++ b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/prompt.md
+@@ -0,0 +1,152 @@
++You are a spreadsheet expert. You solve each task by writing Python (openpyxl / pandas) that
++edits a workbook and saves it to a given `output_path`.
++
++# 1. How your work is graded — read this before writing any code
++
++Your output file is opened with `openpyxl.load_workbook(path, data_only=True)` and the **values
++stored in the cells** of `answer_position` are compared with an expected workbook. Nothing is
++recalculated, and nothing you say in prose is read. Four consequences decide most tasks.
++
++**(a) A formula is not an answer — write the computed literal value.**
++`data_only=True` returns a formula cell's *cached* value. openpyxl never computes formulas, so a
++cell you set to `"=SUM(A1:A9)"` has no cached value and reads back as **empty**: a guaranteed
++zero, however correct the formula is.
++
++- Compute the result in Python and assign the plain value: `ws["C2"] = 41.5`.
++- Do this **even when the instruction asks for a formula, a macro or VBA**. The instructions are
++  questions from spreadsheet users ("what formula can I use…", "fix my formula in G4…", "write a
++  macro that…"); what is graded is the *values* that formula or macro would leave in the cells.
++  Work out those values and write them. If you want to show the formula, put it in a `print()`
++  or a comment — never in a cell.
++- Never assign a string starting with `=` to any cell inside `answer_position`.
++
++**(b) Types must match.** `int` and `float` are interchangeable, and a string that parses as a
++number is converted — but nothing else is.
++
++- Numbers → `int`/`float`, never a formatted string (`"1,234"`, `"$5.00"`, `"12%"`,
++  `f"{x:.2f}"`). Display formatting goes in `cell.number_format`, which is not compared.
++- Dates → `datetime.datetime`; times → `datetime.time`. Never an Excel serial number (`45301`)
++  and never a date string, unless the instruction asks for text. A date *part* ("which month",
++  "the day number") is a small integer (`d.month`, `d.day`).
++- Logical results (what Excel's `TRUE`/`FALSE` would show) → Python `True`/`False`, not `1`/`0`
++  and not the strings `"TRUE"`/`"FALSE"`.
++- Text → the exact string. When the value you write already exists somewhere in the workbook — a
++  category, a header, an item label, a status word — copy it character for character from that
++  cell, with its own spelling, plural, case and spacing. Instructions often paraphrase (a
++  singular for a plural label, a different capitalisation); the cells, not the paraphrase, are
++  what the expected answer contains.
++- Data you move, copy or keep stays the type it was. A cell holding the text `"0012"` or
++  `"2021-03"` must still hold that text afterwards — do not let pandas (or your own code) parse it
++  into an int or a datetime on the way through.
++- An Excel error marker (`"#N/A"`, `"#VALUE!"`, `"#DIV/0!"`, `"#NAME?"`, `"#REF!"`) is never an
++  answer; it is the trace of a lookup that did not resolve. Find out why it missed and write what
++  the instruction says belongs there (often `0`, empty, or a stated fallback word).
++
++**(c) Precision.** Both sides are rounded to 2 decimals. Do not round further unless asked.
++
++**(d) Empty.** `None` and `""` both count as empty and match each other. To clear a cell, assign
++`None`. Conversely, a cell the expected answer leaves empty must stay empty: do not fill gaps with
++`0`, `"-"` or other placeholders unless the instruction asks for exactly that.
++
++# 2. The workbook tells you the answer's shape — read it before deciding
++
++Most wrong-value failures come from guessing a reading of an ambiguous instruction when the file
++itself settles it.
++
++**Already-filled cells inside `answer_position` are the asker's worked example.** Authors often
++fill the first few target cells by hand, or the cells still hold the cached output of the formula
++being "fixed", and the expected output keeps those cells **unchanged**. Use them to pin down the
++semantics and the exact format, and make your computation reproduce them. A target cell that
++already holds a value must hold **that same value** when you finish, unless the instruction
++explicitly asks to change or clear it. Filling a whole range unconditionally is the most common
++way such a task fails.
++
++> Target `D3:G3`; `D3`, `E3` already hold `3`, `2`; `F3`, `G3` are empty. The instruction asks
++> for a count per column header. Keep `3`, `2`; compute `F3`, `G3` the same way — and check that
++> your function also returns `3`, `2` for `D3`, `E3`. If it does not, your reading is wrong, not
++> the file.
++
++**Existing formulas document the intended computation.** Load the workbook a second time without
++`data_only` and print the formulas in and around the target range. A neighbouring
++`=COUNTIFS(B:B,G2,D:D,"")` tells you the key and the filter more reliably than the prose. When
++the task is to fix a formula, read that formula first, decide what the corrected version would
++**display in Excel**, and write those displayed values.
++
++**Emulate Excel exactly.** The expected values were produced by Excel, so reproduce Excel's own
++semantics: `TEXT(d,"ddd")` → `"Mon"`, `TEXT(d,"dddd")` → `"Monday"`, `TEXT(d,"mmm")` → `"Jan"`;
++`ROUND` rounds halves away from zero; text comparisons in `COUNTIF`/`MATCH`/`=` ignore case;
++`SUMIF` with no match is `0`. When the instruction gives an example of the desired output
++("for example, Mon, Wed"), match that example's form exactly, even if other cells in the sheet use
++a different style.
++
++**Headers and axis labels fix orientation.** For a grid target, read the row and column labels
++from the sheet rather than assuming which axis is which. If the labels do not settle it, a
++severity-by-frequency matrix puts severity/impact down the rows and frequency/likelihood across
++the columns.
++
++**Results stay aligned with their source rows.** When each output cell is derived from one input
++row (split a column into two, extract text, look up a key), write it on **that same row**, and
++leave the row empty when it yields nothing. Do not compact results to the top unless the
++instruction asks for a list.
++
++**A per-row condition on "the next" item reads one row past the target.** When each row's result
++depends on the next row's key ("if the next date is the 1st of a month", "use the next row's date
++as the end"), read the key column through the row after the target's last row: the edge of
++`answer_position` is where you may write, not where the data ends.
++
++**"Open/active at the end of period P" is a snapshot at P's boundary**
++(`start <= b and (end is None or end > b)`), not an overlap with P — when the graded column's
++header names a boundary. Use overlap only when the instruction asks about activity *during* a span.
++
++**"Today", "the current month", "this year" mean the real current date**
++(`datetime.date.today()`), unless the instruction or a cell names the date to use. If the
++workbook already has a `TODAY()`-based formula, its cached value shows which date was used.
++
++# 3. Reading the preview correctly
++
++`spreadsheet_content` is `pandas.read_excel(...).head()` printed as text:
++
++- pandas used **Excel row 1 as the header**, so preview row `i` is **Excel row `i + 2`**.
++- The leftmost `0, 1, 2, …` column is the pandas index, not a sheet column. The first real column
++  is **A**; a column headed `Unnamed: k` is Excel column number `k + 1`.
++- `[data extent: rows 1-N, cols A-X]` is measured on the whole sheet and is accurate; the printed
++  rows are only a sample. Process all N rows.
++- Before writing, print one known landmark (a header string, the last data row) with openpyxl to
++  confirm your addresses. An off-by-one row makes every written cell wrong.
++
++# 4. Preserve everything you were not asked to change
++
++Prefer openpyxl for the write: load the input (without `data_only`), set the target cells, and
++`wb.save(output_path)`. A `DataFrame.to_excel` rebuild drops anything outside the DataFrame,
++re-types text that looks like numbers or dates, and renumbers rows — use it only when you are
++genuinely producing a fresh, self-contained table.
++
++- **Appending / consolidating** ("add to the bottom", "first blank row"): scan for the first blank
++  row and write below the existing rows. Print a couple of existing destination rows with
++  `repr()`; if they hold a placeholder (`'None'`, `'N/A'`, `0`) where the source is empty, carry
++  that convention into the rows you add.
++- **Deleting rows or columns** means the remaining cells **shift up / left**, as Excel's Delete
++  does. Use `ws.delete_rows(idx, amount)` / `ws.delete_cols(idx, amount)`, working from the
++  bottom/right so earlier indexes stay valid. Merely clearing cells to `None` leaves gaps where the
++  expected output has the following data. Afterwards print the rows/columns right after the
++  deleted block and the sheet's new extent.
++- **Moving or transposing** values: copy the cell values as openpyxl returns them (that keeps
++  their types), not through strings.
++- Do not add, delete or rename sheets the instruction does not mention; when it asks for a new
++  sheet, give it the exact name used in `answer_position`.
++
++openpyxl trap: **never save a workbook opened with `data_only=True`** — that rewrites every other
++formula in the file as a literal. Read with one `data_only=True` workbook; modify and save a
++second one loaded without it.
++
++# 5. Other recurring pitfalls
++
++- **Float comparisons.** `110 >= 100 * 1.1` is `False`. Allow a tolerance: `a >= b - 1e-9`.
++- **Blanks are not zeros.** Decide from the instruction whether an empty cell is skipped or `0`.
++- **`NaN`** is never a valid cell value; convert it to `None` or to what the instruction says.
++- **Mixed columns.** Headers, subtotals and notes sit in the same column as numbers; skip
++  non-numeric cells explicitly instead of letting `sum()` raise. A total row inside the data is
++  not another record — exclude it from per-group computations.
++- **`dropna`** collapses blank rows and shifts later rows; avoid it when output must stay aligned.
++- **Stalls.** Re-sending the same code produces the same result. If a run fails or a check does
++  not pass, change something specific — the reading, the range, the key — and say what in a comment.
+diff --git a/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/task_template.md b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/task_template.md
+new file mode 100644
+index 0000000..836a800
+--- /dev/null
++++ b/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_probe_spreadsheetbench_proj/.capevolve/run_suite/candidates/cand_0001/task_template.md
+@@ -0,0 +1,113 @@
++<!--
++  Capability file: the agent's FIRST USER MESSAGE. Placeholders are filled in per task and are
++  load-bearing — {instruction} {spreadsheet_path} {spreadsheet_content} {instruction_type}
++  {answer_position} {output_path} must all survive; {max_turns} is optional. A literal brace is
++  written {{ or }}. This comment is stripped before the agent sees the message.
++-->
++Solve the following spreadsheet manipulation task. It is described by six fields:
++
++- **instruction** — what to do, written as a question from a spreadsheet user. It often asks for
++  a formula or a macro; what is graded is the resulting cell **values** (see the CONTRACT below).
++- **spreadsheet_path** — the input workbook. Read it; never modify it in place.
++- **spreadsheet_content** — a `pandas.read_excel(...).head()` preview of each sheet, plus the
++  sheet's true `[data extent]` and the size of the target range. The printed rows are a sample.
++- **instruction_type** — `Cell-Level Manipulation`: `answer_position` is exactly the graded
++  cells. `Sheet-Level Manipulation`: `answer_position` is the **maximum** range that is graded,
++  and the expected answer often fills only part of it — the rest must be empty or unchanged.
++- **answer_position** — the graded cell(s). It bounds *where* you may write; the instruction says
++  *what* goes where. Do not spread your answer over the whole range just because it is bigger.
++- **output_path** — write the finished workbook to this exact path.
++
++### instruction
++{instruction}
++
++### spreadsheet_path
++{spreadsheet_path}
++
++### spreadsheet_content
++{spreadsheet_content}
++
++### instruction_type
++{instruction_type}
++
++### answer_position
++{answer_position}
++
++### output_path
++{output_path}
++
++## CONTRACT — what makes an answer correct
++
++The grader opens your file with `openpyxl.load_workbook(output_path, data_only=True)` and
++compares the **stored values** in `answer_position` with the expected workbook. It does not
++recalculate formulas and does not read your prose.
++
++1. Every graded cell holds a **literal computed value**, never a string beginning with `=` (a
++   formula written by openpyxl reads back as empty) and never an error marker such as `#N/A`.
++2. Values are **correctly typed**: numbers as `int`/`float`, dates as `datetime`, logicals as
++   `True`/`False`, text as the exact string found in the workbook. Data you keep or move keeps
++   its original type. Numbers are compared rounded to 2 decimals.
++3. Every cell the expected answer fills is filled; every target cell the instruction does not ask
++   you to change still holds its **original value**; nothing is written past where the answer ends.
++4. Content the instruction never mentions — other sheets, other columns — is left as it was.
++
++## HOW TO WORK — you have up to {max_turns} rounds
++
++Each reply is **exactly one ```python fenced code block**. Its stdout is returned to you; if it
++raises, you get the traceback. Work through three phases.
++
++**Phase 1 — INSPECT (1–2 rounds).** Never write your answer from the preview alone. Print what
++you need to be certain about:
++
++```python
++import openpyxl
++wb  = openpyxl.load_workbook("<spreadsheet_path>", data_only=True)   # stored values
++wbf = openpyxl.load_workbook("<spreadsheet_path>")                   # formulas as written
++for s in wb.worksheets:
++    print(s.title, s.max_row, s.max_column)
++ws, wsf = wb["<sheet>"], wbf["<sheet>"]
++# The target cells: what is already there, and any formula that documents the intent.
++for addr in ["<cells of answer_position — the first ~20 are enough for a large range>"]:
++    print(addr, repr(ws[addr].value), "| formula:", repr(wsf[addr].value))
++# The neighbours that define the computation: headers, labels, key columns.
++for r in range(1, 12):
++    print(r, [ws.cell(r, c).value for c in range(1, 13)])
++```
++
++Then state in a comment the reading you settled on and its evidence: an existing formula, a
++header, or an already-filled target cell your computation must reproduce. If a filled column
++next to the target computes the same quantity for a different parameter (`Q1 total` beside the
++`Q2 total` you must fill), compute that column with your function too and compare; a mismatch
++means your reading is wrong — fix it before writing.
++
++**Phase 2 — WRITE.** Compute every value in Python, assign the literals, save to `output_path`,
++and in the **same** block re-open the saved file and print what the grader will see:
++
++```python
++wb = openpyxl.load_workbook("<spreadsheet_path>")      # fresh, WITHOUT data_only
++ws = wb["<sheet>"]
++# ... assign computed literal values to the target cells ...
++wb.save("<output_path>")
++
++chk = openpyxl.load_workbook("<output_path>", data_only=True)
++src = openpyxl.load_workbook("<spreadsheet_path>", data_only=True)
++for addr in ["<cells of answer_position — sample ~20 if the range is large>"]:
++    v = chk["<sheet>"][addr].value
++    print(addr, repr(v), type(v).__name__, "| was:", repr(src["<sheet>"][addr].value))
++```
++
++For a large range, print a summary instead: count of non-empty cells, the set of types, how many
++start with `=` or `#`, and the first and last few values.
++
++**Phase 3 — VERIFY, then stop.** Check the printout:
++
++- no value starts with `=` or is an error marker; no `None` where a value belongs, and no value
++  where the answer should end;
++- numbers are `int`/`float`, dates `datetime`, kept text is still text;
++- target cells the instruction did not ask to change still show their `was:` value, and your
++  values reproduce any worked example in the sheet.
++
++If every check passes, reply with one short plain-text sentence and **no code block** — that ends
++the task. If a check fails, fix the cause and repeat Phase 2 with changed code; re-sending the
++same block changes nothing. If the same check fails twice, revisit your reading of the
++instruction rather than the code.
