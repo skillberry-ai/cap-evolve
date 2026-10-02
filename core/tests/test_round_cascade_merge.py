@@ -131,6 +131,7 @@ def test_default_round_screens_kills_merges_and_gates_the_merge_once(tmp_path):
     assert {t: s["auto"] for t, s in out["screen_stage"].items()} == \
         {"cand_1": True, "cand_2": True, "cand_3": True}
     assert out["screen_killed"] == ["cand_3"]
+    assert out["dominated"] == {}, "disjoint siblings are never subsets of each other (#633)"
 
     # 3. the disjoint survivors were merged, and the merge screened before any gate.
     merge = "merge_cand_1_cand_2"
@@ -235,3 +236,61 @@ def test_build_merge_dir_refuses_a_same_lines_collision(tmp_path):
     merged = (tmp_path / "out" / "tools" / "tools.py").read_text()
     assert "MARK_A" in merged and "MARK_B" in merged
     assert "rule A" in (tmp_path / "out" / "policy" / "policy.md").read_text()
+
+
+FIX_AB = FIX_A.replace("def fn_b(x):\n    return x", 'def fn_b(x):\n    return x + "MARK_B"')
+
+
+def test_diff_contained_is_strict_literal_containment(tmp_path):
+    """#633: subset -> True; related-but-different, disjoint, identical -> False."""
+    import merge
+
+    base = _cap(tmp_path, "base", BASE)
+    a, ab = _cap(tmp_path, "a", FIX_A), _cap(tmp_path, "ab", FIX_AB)
+    assert merge.diff_contained(base, a, ab)
+    assert not merge.diff_contained(base, ab, a)                        # superset, not subset
+    # Same function, different edit, plus more: related, NOT contained.
+    other = _cap(tmp_path, "other", FIX_AB.replace("MARK_A", "OTHER_A"))
+    assert not merge.diff_contained(base, a, other)
+    b = _cap(tmp_path, "b", FIX_B)
+    assert not merge.diff_contained(base, a, b) and not merge.diff_contained(base, b, a)
+    assert not merge.diff_contained(base, a, _cap(tmp_path, "a2", FIX_A))  # identical
+    # Containment across files: A edits only the policy, B edits the policy the same way + code.
+    (a / "tools" / "tools.py").write_text(BASE, encoding="utf-8")
+    (a / "policy" / "policy.md").write_text("base policy\nrule A\n", encoding="utf-8")
+    (ab / "policy" / "policy.md").write_text("base policy\nrule A\n", encoding="utf-8")
+    assert merge.diff_contained(base, a, ab)
+
+
+def test_strict_subset_sibling_is_not_gated(tmp_path):
+    """#633: cand_1 (fn_a) is a literal subset of cand_2 (fn_a + fn_b) — only cand_2 is gated."""
+    from cap_evolve import graph
+
+    run_dir, project = _setup(tmp_path)
+    (run_dir.root / "work" / "cand_2" / "tools" / "tools.py").write_text(FIX_AB, encoding="utf-8")
+    p = subprocess.run([sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+                        "--project", str(project), "--candidates", "cand_1,cand_2,cand_3",
+                        "--n-trials", "1", "--concurrency", "1"],
+                       capture_output=True, text=True, env=_env())
+    assert p.returncode == 0, p.stdout + p.stderr
+    out = json.loads(p.stdout)
+    assert out["dominated"] == {"cand_1": "cand_2"}
+    assert [r["tag"] for r in out["candidates"]] == ["cand_2"]
+    assert {t for t in _full_val_tags(run_dir) if not t.startswith("ctl_")} == {"cand_2"}
+    assert graph.build_dag(run_dir)["cand_1"]["dominated_by"] == "cand_2"
+    assert graph.latest_node(run_dir, "cand_1")["status"] == "superseded"
+
+
+def test_related_but_not_subset_sibling_is_still_gated(tmp_path):
+    """Same function as a sibling, but a DIFFERENT edit to it: not a subset, gated normally."""
+    run_dir, project = _setup(tmp_path)
+    (run_dir.root / "work" / "cand_2" / "tools" / "tools.py").write_text(
+        FIX_AB.replace("MARK_A", "OTHER_A"), encoding="utf-8")
+    p = subprocess.run([sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+                        "--project", str(project), "--candidates", "cand_1,cand_2,cand_3",
+                        "--n-trials", "1", "--concurrency", "1", "--no-merge"],
+                       capture_output=True, text=True, env=_env())
+    assert p.returncode == 0, p.stdout + p.stderr
+    out = json.loads(p.stdout)
+    assert out["dominated"] == {}
+    assert sorted(r["tag"] for r in out["candidates"]) == ["cand_1", "cand_2"]

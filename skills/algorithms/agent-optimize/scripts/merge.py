@@ -80,6 +80,58 @@ def _capability_files(root: Path, ignore: set[str]) -> dict[str, Path]:
     return out
 
 
+def _read(files: dict[str, Path], rel: str) -> bytes | None:
+    return files[rel].read_bytes() if rel in files else None
+
+
+def _changed_files(base_dir: Path, a_dir: Path, b_dir: Path):
+    """(base_f, a_f, b_f, changed_a, changed_b): each branch's capability files and the
+    relative paths it changed against ``base_dir``."""
+    import _bootstrap  # noqa: F401
+    from cap_evolve.harness import _SNAPSHOT_IGNORE
+
+    # DIAGNOSIS.json is per-candidate optimizer metadata (#611), not capability bytes: each
+    # sibling writes its own, so 3-way merging it would collide on EVERY pair. It is combined
+    # from the parents in build_merge_dir instead.
+    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__", "DIAGNOSIS.json"}
+    base_f, a_f, b_f = (_capability_files(d, ignore) for d in (base_dir, a_dir, b_dir))
+    changed_a = {r for r in set(base_f) | set(a_f) if _read(base_f, r) != _read(a_f, r)}
+    changed_b = {r for r in set(base_f) | set(b_f) if _read(base_f, r) != _read(b_f, r)}
+    return base_f, a_f, b_f, changed_a, changed_b
+
+
+def diff_contained(base_dir: Path, a_dir: Path, b_dir: Path) -> bool:
+    """Is A's edit (vs ``base_dir``) a STRICT subset of B's? (#633)
+
+    Literal containment, no judgement: every file A changed, B changed too, and 3-way merging
+    A into B (``funcmerge.merge3``, the engine ``build_merge_dir`` uses) is a clean no-op —
+    i.e. B already carries every one of A's hunks. Strict: B is not byte-identical to A.
+    Conservative by construction: an overlapping-but-different hunk conflicts or changes B,
+    so it reads as NOT contained and A is gated as before.
+    """
+    import funcmerge
+
+    base_f, a_f, b_f, changed_a, changed_b = _changed_files(base_dir, a_dir, b_dir)
+    if not changed_a or not changed_a <= changed_b:
+        return False
+    if all(_read(a_f, r) == _read(b_f, r) for r in changed_b):
+        return False  # identical edits, not a strict subset
+    for rel in changed_a:
+        a_bytes, b_bytes = _read(a_f, rel), _read(b_f, rel)
+        if a_bytes == b_bytes:
+            continue
+        if a_bytes is None or b_bytes is None or rel not in base_f:
+            return False
+        try:
+            text, clean = funcmerge.merge3(base_f[rel].read_text(encoding="utf-8"),
+                                           a_bytes.decode("utf-8"), b_bytes.decode("utf-8"))
+        except UnicodeDecodeError:
+            return False
+        if not clean or text.encode("utf-8") != b_bytes:
+            return False
+    return True
+
+
 def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> dict:
     """Build the pairwise merge of two branch tips WITHOUT measuring it (#438).
 
@@ -97,25 +149,13 @@ def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> 
     import subprocess
     import tempfile
 
-    import _bootstrap  # noqa: F401
-    from cap_evolve.harness import _SNAPSHOT_IGNORE
     import funcmerge
 
-    # DIAGNOSIS.json is per-candidate optimizer metadata (#611), not capability bytes: each
-    # sibling writes its own, so 3-way merging it would collide on EVERY pair. It is combined
-    # from the parents below instead.
-    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__", "DIAGNOSIS.json"}
-    base_f, a_f, b_f = (_capability_files(d, ignore) for d in (base_dir, a_dir, b_dir))
-
-    def read(files, rel):
-        return files[rel].read_bytes() if rel in files else None
-
-    changed_a = {r for r in set(base_f) | set(a_f) if read(base_f, r) != read(a_f, r)}
-    changed_b = {r for r in set(base_f) | set(b_f) if read(base_f, r) != read(b_f, r)}
+    base_f, a_f, b_f, changed_a, changed_b = _changed_files(base_dir, a_dir, b_dir)
     plan: dict[str, bytes | None] = {}
     conflicts, merged_files = [], []
     for rel in sorted(changed_a | changed_b):
-        a_bytes, b_bytes = read(a_f, rel), read(b_f, rel)
+        a_bytes, b_bytes = _read(a_f, rel), _read(b_f, rel)
         if rel not in changed_b or a_bytes == b_bytes:
             plan[rel] = a_bytes
             continue
