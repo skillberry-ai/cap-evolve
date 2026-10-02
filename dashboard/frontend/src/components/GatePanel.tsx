@@ -137,12 +137,17 @@ export function GatePanel({
       ) : (
         <Card className="overflow-hidden">
           <div className="scroll-x">
-            <table className="w-full min-w-[900px] text-left text-[12px]">
+            <table className="w-full min-w-[1080px] text-left text-[12px]">
               <thead className="eyebrow border-b border-border">
                 <tr>
                   <Th>iter</Th>
                   <Th>candidate</Th>
                   <Th>verdict</Th>
+                  <Th>
+                    <span title="Top: Δ̄ vs the ±k·SE bar. Bottom: Δ vs null controls vs the ±noise floor. Shaded band = inside the bar.">
+                      gate (Δ̄ vs k·SE · Δ ctl vs noise)
+                    </span>
+                  </Th>
                   <Th right>val</Th>
                   <Th right>parent val</Th>
                   <Th right>Δ̄</Th>
@@ -160,6 +165,9 @@ export function GatePanel({
                     <Td className="font-mono">{r.candidate}</Td>
                     <Td>
                       <VerdictBadge verdict={r.verdict} />
+                    </Td>
+                    <Td>
+                      <GateBar row={r} />
                     </Td>
                     <Td right>{num(r.val, 3)}</Td>
                     <Td right className="text-muted">
@@ -253,6 +261,83 @@ export function GatePanel({
         </Card>
       )}
     </div>
+  )
+}
+
+const BAR_W = 160
+const TRACK_H = 9
+const VERDICT_FILL: Partial<Record<GateDecision['verdict'], string>> = {
+  accept: 'var(--accepted)',
+  reject: 'var(--rejected)',
+}
+
+/**
+ * Δ̄ drawn against the k·SE bar (top track) and the Δ vs null controls drawn against the
+ * evidence bar — the noise floor (bottom track), on one zero-centred scale per row. The
+ * shaded band is ±bar: a fill that ends inside it did not clear the threshold.
+ * ponytail: per-row scale so a +0.003 step stays readable next to a +0.27 one; the
+ * numeric columns carry the cross-row comparison.
+ */
+function GateBar({ row: r }: { row: GateDecision }) {
+  if (r.delta == null) return <span className="text-muted">—</span>
+  const tracks = [
+    { label: 'Δ̄', v: r.delta, bar: r.threshold, barName: 'k·SE' },
+    { label: 'Δ ctl', v: r.control_relative_delta, bar: r.evidence_bar, barName: 'noise floor' },
+  ].filter((t) => t.v != null) as { label: string; v: number; bar: number | null; barName: string }[]
+  const span =
+    Math.max(...tracks.flatMap((t) => [Math.abs(t.v), t.bar ?? 0]), 1e-9) * 1.15
+  const x = (v: number) => BAR_W / 2 + (v / span) * (BAR_W / 2)
+  const fill = VERDICT_FILL[r.verdict] ?? 'var(--indecisive)'
+  const h = tracks.length * (TRACK_H + 3)
+  const label = tracks
+    .map((t) => `${t.label} ${num(t.v, 4, true)}${t.bar != null ? ` vs ${t.barName} ${num(t.bar)}` : ''}`)
+    .join('; ')
+  return (
+    <svg width={BAR_W} height={h} role="img" aria-label={label} className="block">
+      <title>{label}</title>
+      {tracks.map((t, i) => {
+        const y = i * (TRACK_H + 3)
+        return (
+          <g key={t.label} data-track={t.label}>
+            <rect x={0} y={y} width={BAR_W} height={TRACK_H} fill="var(--surface-2)" />
+            {t.bar != null && (
+              <rect
+                data-band
+                x={x(-t.bar)}
+                y={y}
+                width={x(t.bar) - x(-t.bar)}
+                height={TRACK_H}
+                fill="var(--muted)"
+                opacity={0.25}
+              />
+            )}
+            <rect
+              data-fill
+              x={Math.min(x(0), x(t.v))}
+              y={y + 1.5}
+              width={Math.max(Math.abs(x(t.v) - x(0)), 1)}
+              height={TRACK_H - 3}
+              fill={fill}
+              opacity={i === 0 ? 1 : 0.6}
+            />
+            {t.bar != null &&
+              [t.bar, -t.bar].map((b) => (
+                <line
+                  key={b}
+                  data-threshold
+                  x1={x(b)}
+                  x2={x(b)}
+                  y1={y - 1}
+                  y2={y + TRACK_H + 1}
+                  stroke="var(--muted-strong)"
+                  strokeWidth={1.5}
+                />
+              ))}
+            <line x1={x(0)} x2={x(0)} y1={y} y2={y + TRACK_H} stroke="var(--border-strong)" />
+          </g>
+        )
+      })}
+    </svg>
   )
 }
 

@@ -218,6 +218,36 @@ describe('GatePanel', () => {
     expect(screen.queryByText('±9.9999')).not.toBeInTheDocument()
   })
 
+  // Real rows from reduce_run() on run_full: cand_2 (accept) and cand_13 (reject).
+  it('draws Δ̄ against the k·SE bar and the control Δ against the noise floor', () => {
+    const accept = row({
+      candidate: 'cand_2', verdict: 'accept', val: 0.7533, parent_val: 0.4867,
+      delta: 0.26666666666666666, stderr: 0.055983, n: 30, k_se: 0.2,
+      threshold: 0.011196605944406973, control_relative_delta: 0.26333333333333336,
+      evidence_bar: 0.06,
+    })
+    const reject = row({
+      candidate: 'cand_13', verdict: 'reject', val: 0.8067, parent_val: 0.8267, delta: -0.02,
+      stderr: 0.052391, n: 30, k_se: 0.2, threshold: 0.010478220433273767,
+      control_relative_delta: -0.011666666666666667, evidence_bar: 0.03,
+    })
+    const noData = row({ candidate: 'cand_1', verdict: 'reject' })
+    render(<GatePanel summary={summary({ gate_decisions: [accept, reject, noData] })} />)
+    const a = screen.getByRole('img', { name: /Δ̄ \+0\.2667 vs k·SE 0\.0112; Δ ctl \+0\.2633 vs noise floor 0\.0600/ })
+    const r = screen.getByRole('img', { name: /Δ̄ -0\.0200 vs k·SE 0\.0105; Δ ctl -0\.0117 vs noise floor 0\.0300/ })
+    expect(screen.getAllByRole('img')).toHaveLength(2) // no bar for a row with no Δ̄
+    const fill = (svg: Element, i: number) => svg.querySelectorAll('[data-fill]')[i]
+    expect(fill(a, 0).getAttribute('fill')).toBe('var(--accepted)')
+    expect(fill(r, 0).getAttribute('fill')).toBe('var(--rejected)')
+    // ±bar markers on both tracks; the accept fill extends right of zero past +k·SE.
+    expect(a.querySelectorAll('[data-threshold]')).toHaveLength(4)
+    const thr = Number(a.querySelector('[data-threshold]')!.getAttribute('x1'))
+    const f = fill(a, 0)
+    expect(Number(f.getAttribute('x')) + Number(f.getAttribute('width'))).toBeGreaterThan(thr)
+    // The reject fill sits left of zero (x < centre).
+    expect(Number(fill(r, 0).getAttribute('x'))).toBeLessThan(80)
+  })
+
   it('omits the newer fields on an older row that lacks them instead of crashing', () => {
     render(<GatePanel summary={summary({ gate_decisions: [row()] })} />)
     expect(screen.queryByText('stable')).not.toBeInTheDocument()
