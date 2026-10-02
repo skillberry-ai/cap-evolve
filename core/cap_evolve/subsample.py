@@ -58,7 +58,32 @@ import math
 import random
 
 __all__ = ["select_screen_subset", "screen_decision", "screen_savings",
-           "paired_deltas_on", "full_val_ceiling"]
+           "paired_deltas_on", "full_val_ceiling", "screening_economics",
+           "TIER_FRAC", "MIN_K", "SCREEN_BREAKEVEN_CEILING"]
+
+#: Rung → fraction of val screened (``scripts/screen.py --tier``). Tier 3 is "almost full val"
+#: for the rare case where full val is very large; the real gate is still a separate full-val
+#: eval. Lives here, not in screen.py, so :func:`screening_economics` — computed at baseline
+#: time, before any skill script runs — prices the SAME rung screen.py will actually fire.
+TIER_FRAC = {1: 0.25, 2: 0.5, 3: 0.75}
+
+#: Absolute floor on subset width, independent of the fraction. Was 3, and 3 is
+#: MEASURED to be too narrow: on a 12-task val, tier 1 = round(0.25·12) = 3, and the
+#: run in docs/RESULTS.md produced a screen that reported ``fixed: ["44"]`` on a 3-task
+#: subset when full val showed task 44 was never fixed — a false positive on a third of
+#: the evidence. 6 is the smallest width where the paired SE over {-1,0,+1} deltas is
+#: not dominated by a single task. It only binds on small val splits; a 100-task val
+#: still screens at the 25% fraction.
+MIN_K = 6
+
+#: Above this tier-1 ``breakeven_kill_rate``, subset screening is STRUCTURALLY uneconomical on
+#: a run: the screen would have to prove more than one candidate in four harmful merely to
+#: recover its own rollouts. The screen is biased against kills by design (module docstring),
+#: and the documented record is 1 kill in 11 screens (docs/RESULTS.md: 0/8 and 1/3) — so a
+#: break-even above this is not reachable on any evidence we have. Deliberately generous to
+#: screening (above the ~0.09 observed kill rate) because the screen also buys what the kill
+#: arithmetic does not count: round.py's merge stage (#438) only runs on screened survivors.
+SCREEN_BREAKEVEN_CEILING = 0.25
 
 
 def _valid(pt: dict) -> bool:
@@ -291,6 +316,26 @@ def screen_savings(*, fired: int, val_n: int, n_trials: int, decision: str) -> d
         # narrow val makes the ladder uneconomic instead of discovering it in the ledger.
         "breakeven_kill_rate": (round(fired / full, 4) if full else None),
     }
+
+
+def screening_economics(val_n: int, n_trials: int) -> dict:
+    """Does a tier-1 screen pay for itself on THIS split at THIS trial count? Computed once.
+
+    Issue #631: whether skipping the screen is justified was re-litigated in free text every
+    round, and an agent that always skips can always vary the wording. But the economics are
+    not a judgement — they are :func:`screen_savings`' own ``breakeven_kill_rate`` for the
+    tier-1 rung screen.py fires (``max(MIN_K, 25% of val)`` tasks at 1 trial, capped at val),
+    against the full-val eval it would replace (``val_n × n_trials``). Both inputs are frozen
+    at baseline, so the answer is too.
+    """
+    val_n, n_trials = max(0, int(val_n)), max(1, int(n_trials))
+    fired = min(val_n, max(MIN_K, int(round(TIER_FRAC[1] * val_n))))
+    be = screen_savings(fired=fired, val_n=val_n, n_trials=n_trials,
+                        decision="promote")["breakeven_kill_rate"]
+    return {"screening_structurally_uneconomical": be is None or be > SCREEN_BREAKEVEN_CEILING,
+            "tier1_fired": fired, "full_val_rollouts": val_n * n_trials,
+            "breakeven_kill_rate": be, "ceiling": SCREEN_BREAKEVEN_CEILING,
+            "val_n": val_n, "n_trials": n_trials}
 
 
 def full_val_ceiling(parent_per_task: list, cand_per_task: list, subset_ids: list,

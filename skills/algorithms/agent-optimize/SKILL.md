@@ -148,9 +148,8 @@ Only the candidate pays, for the subset. `decision` is `kill` or `promote`
 — **never accept** — kills only on proven harm. **Check the arithmetic before trusting a screen:**
 `savings.breakeven_kill_rate` (`fired / full_val_rollouts`) is the fraction it must kill to pay for itself;
 `savings.net_rollouts` books what it cost. Screen only when that break-even sits below your observed kill
-rate — on a small val the tier-1 floor makes it unreachable, skip, but not by rote (#585) — and read a screen as
-evidence about the tasks the edit targeted, never as a gate decision. A skip needs
-`--skip-screen-justification`, logged as `subset: null` in `$R/graph.jsonl`.
+rate; it is evidence about the targeted tasks, not a gate decision. Baseline freezes this as
+`screening_structurally_uneconomical` (#631). If false, skips beyond `max_screen_skips` (default 1) are refused.
 
 **4. Honest gate on FULL val.** Before this step, confirm every addressable diagnosed cluster
 for the round is folded in or deferred (with why) — "Bucketing edits before spending",
@@ -217,6 +216,7 @@ python "$A/round.py" --run-dir "$R" --project "$P" \
 ```
 
 Read `screen_stage`/`screen_killed`/`merge_stage` first (`algorithm.md`, "Gating N Bucket-A siblings").
+`--no-merge` past `max_merge_skips` (default 1) is refused (#630).
 
 `--concurrency` is the gate's *measurement* concurrency, deliberately low by default; `round.py`
 refuses one too hot to resolve its own verdict — never raise it to buy wall clock. Read
