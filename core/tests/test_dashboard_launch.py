@@ -88,11 +88,127 @@ def test_maybe_launch_reports_error_when_every_port_in_range_is_taken(monkeypatc
     fall back to the first (also-taken) port — that fallback used to print a URL
     that actually served a stale, unrelated dashboard."""
     monkeypatch.setattr(dl, "is_available", lambda: True)
-    monkeypatch.setattr(dl, "_free_port", lambda start, tries=25: (_ for _ in ()).throw(
+    monkeypatch.setattr(dl, "pick_port", lambda base, start, tries=25: (_ for _ in ()).throw(
         RuntimeError(f"no free port in [{start}, {start + tries})")))
     out = dl.maybe_launch("/runs", mode="auto")
     assert out["dashboard"] == "error"
     assert "no free port" in out["reason"]
+
+
+# --- #628: reuse / skip-live / reap-orphan port selection -------------------------
+# A real subprocess plays a dashboard server: it answers /api/health with whatever
+# card we give it plus its own pid, exactly like capevolve_dashboard.app does.
+_FAKE_DASH = r"""
+import json, os, sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
+card = json.loads(sys.argv[1])
+if card.pop("with_pid", True):
+    card["pid"] = os.getpid()
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = json.dumps(card).encode()
+        self.send_response(200); self.send_header("Content-Length", str(len(body)))
+        self.end_headers(); self.wfile.write(body)
+    def log_message(self, *a): pass
+srv = HTTPServer(("127.0.0.1", 0), H)
+print(srv.server_address[1], flush=True)
+srv.serve_forever()
+"""
+
+
+def _fake_dashboard(card: dict):
+    import json
+    import subprocess
+    proc = subprocess.Popen([sys.executable, "-c", _FAKE_DASH, json.dumps(card)],
+                            stdout=subprocess.PIPE, text=True)
+    return proc, int(proc.stdout.readline())
+
+
+def _card(base, **kw):
+    return {"ok": True, "app": "cap-evolve-dashboard", "base_dir": str(base), **kw}
+
+
+def test_live_dashboard_for_another_base_is_skipped_never_reaped(tmp_path):
+    """Another session's dashboard (its base exists) is ambiguous -> left alone; with
+    nothing else in range we report an error rather than kill it."""
+    other = tmp_path / "other_session"
+    other.mkdir()
+    proc, port = _fake_dashboard(_card(other, code="X"))
+    try:
+        try:
+            dl.pick_port(tmp_path / "mine", port, tries=1)
+            raise AssertionError("should have raised")
+        except RuntimeError as e:
+            assert "none provably orphaned" in str(e)
+        assert proc.poll() is None, "a live session's dashboard was killed"
+    finally:
+        proc.kill()
+
+
+def test_live_dashboard_for_same_base_and_code_is_reused(tmp_path, monkeypatch):
+    monkeypatch.setattr(dl, "code_stamp", lambda: "X")
+    proc, port = _fake_dashboard(_card(tmp_path.resolve(), code="X"))
+    try:
+        assert dl.pick_port(tmp_path, port, tries=1) == (port, True)
+        assert proc.poll() is None
+    finally:
+        proc.kill()
+
+
+def test_same_base_but_stale_code_is_not_reused_or_killed(tmp_path, monkeypatch):
+    """Old backend code under a fresh frontend is the #575 "broken dashboard" illusion:
+    never attach to it; it still serves a live base, so never kill it either."""
+    monkeypatch.setattr(dl, "code_stamp", lambda: "NEW")
+    proc, port = _fake_dashboard(_card(tmp_path.resolve(), code="OLD"))
+    try:
+        try:
+            dl.pick_port(tmp_path, port, tries=1)
+            raise AssertionError("should have raised")
+        except RuntimeError:
+            pass
+        assert proc.poll() is None
+    finally:
+        proc.kill()
+
+
+def test_orphan_whose_base_dir_is_gone_is_reaped(tmp_path):
+    gone = tmp_path / "deleted_base"           # never created: nothing can be served
+    proc, port = _fake_dashboard(_card(gone))
+    try:
+        assert dl.pick_port(tmp_path, port, tries=1) == (port, False)
+        assert proc.wait(timeout=5) is not None, "orphan was not reaped"
+    finally:
+        proc.kill()
+
+
+def test_reapable_is_conservative(tmp_path):
+    gone = str(tmp_path / "gone")
+    assert dl._reapable({"pid": 4242, "base_dir": gone})
+    assert not dl._reapable({"base_dir": gone})                    # old server: no pid
+    assert not dl._reapable({"pid": 1, "base_dir": gone})          # never init
+    assert not dl._reapable({"pid": 4242, "base_dir": str(tmp_path)})  # base exists
+    assert not dl._reapable({"pid": 4242, "base_dir": "rel/gone"})  # relative: cwd unknown
+
+
+def test_unidentified_listener_is_never_reaped(tmp_path):
+    """No pid in the card (pre-#628 servers) -> unprovable -> left running."""
+    proc, port = _fake_dashboard(_card(tmp_path / "gone", with_pid=False))
+    try:
+        try:
+            dl.pick_port(tmp_path, port, tries=1)
+            raise AssertionError("should have raised")
+        except RuntimeError:
+            pass
+        assert proc.poll() is None
+    finally:
+        proc.kill()
+
+
+def test_banner_names_url_and_base(tmp_path):
+    b = dl.banner({"dashboard": "http://127.0.0.1:7999", "base_dir": str(tmp_path),
+                   "reused": True})
+    assert "http://127.0.0.1:7999" in b and str(tmp_path) in b and "reusing" in b
+    assert "NOT running" in dl.banner({"dashboard": "error", "reason": "no free port"})
 
 
 def test_maybe_launch_never_raises_on_spawn_error(monkeypatch):

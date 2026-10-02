@@ -654,6 +654,27 @@ def _baseline_train(adapter, run_dir: RunDir, *, n_trials: int, ks=(1, 2)) -> tu
     return result, None
 
 
+def freeze_screening_economics(run_dir: RunDir, n_trials: int) -> dict:
+    """Freeze ``screening_structurally_uneconomical`` (+ its arithmetic) into state.json, once.
+
+    Issue #631. ``baseline`` calls this with the trial count the seed was scored at — the
+    full-val trial count every later gate is paired against. Later callers (agent-optimize's
+    round.py, on a run dir that predates this or came through ``reuse_baseline``) call it too
+    and get the FROZEN answer back: never recomputed from a per-round ``--n-trials``, which
+    the optimizer controls and could lower to make screening look uneconomical.
+    """
+    from .subsample import screening_economics
+
+    eco = screening_economics(len(run_dir.read_splits().val), n_trials)
+    flag = eco.pop("screening_structurally_uneconomical")
+    stored, wrote = run_dir.freeze_state(screening_structurally_uneconomical=flag,
+                                         screening_economics=eco)
+    if wrote:
+        run_dir.log_event("screening_economics", **stored)
+    return {"screening_structurally_uneconomical": stored["screening_structurally_uneconomical"],
+            **stored["screening_economics"]}
+
+
 def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=(1, 2)) -> SplitResult:
     """Snapshot the seed capability as candidate ``seed``, score it on val AND train, set best.
 
@@ -692,6 +713,7 @@ def baseline(adapter, seed_dir: Path, *, run_dir: RunDir, n_trials: int = 1, ks=
                       **({"train": train_result.reward} if train_result is not None else {}),
                       **({"train_note": train_note} if train_note else {}))
     run_dir.update_spent(best_val=result.reward)
+    freeze_screening_economics(run_dir, n_trials)
     # The baseline is the number every later delta is measured against, so a
     # partially-evaluated one poisons the whole run rather than a single iteration.
     # Nothing downstream can detect this after the fact — baseline.json looks like a
@@ -1102,6 +1124,9 @@ _PROCESS_SEED = (
     "done and is snapshotted with the candidate, so anyone — and the next iteration via "
     "./prior_iterations/ — can see your reasoning. Be concrete.\n\n"
     "## Ranked issue list (clusters by # failing tasks × trials, biggest first)\n"
+    "Re-cluster ALL of the current champion's failures every round, not just last round's. "
+    "agent-optimize's commit.py refuses a header-only table "
+    "(--missing-ranked-issues-justification is the escape hatch).\n"
     "| rank | cluster | tasks | shared root cause | tag (KNOWLEDGE / BEHAVIORAL / CAPABILITY-GAP) | planned change class |\n"
     "| --- | --- | --- | --- | --- | --- |\n\n"
     "## Changes made this iteration (one row per edit — aim for MULTIPLE classes, incl. a NEW tool when a cluster needs one)\n"

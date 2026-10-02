@@ -138,16 +138,27 @@ paying full val directly — e.g. `"spend.py: break-even unreachable on this spl
 no third way in: a full-val eval that never went through `screen.py` and never justified
 skipping it will not run.
 
-A justification is a per-candidate judgment, not boilerplate (#585). `round.py` compares
-`--skip-screen-justification` against every earlier skip reason in this run
-(`difflib` ratio ≥ 0.75); a near-duplicate on an unscreened candidate is **refused** — exit 2,
-nothing spent, no compliance event logged — unless you also pass
-`--duplicate-skip-justification "<why the SAME reasoning genuinely holds for THIS candidate>"`,
-which is recorded on the `agent_optimize_compliance` event next to
-`justification_near_duplicate_of`. A first-time (novel) skip reason passes on its own. The
-bare `--skip-screen-ladder` gets the same treatment: the first one in a run passes, every later
-one is refused without `--duplicate-skip-justification`. If you
-find yourself reaching for the same excuse again, screen instead: tier 1 is ~6-25 rollouts.
+**Skipping is arithmetic, not argument (#631).** #585/#613 refused skip reasons that were
+near-duplicate TEXT of an earlier one. A real run got past that by rewording every round while
+the strategy stayed the same: 12 of 16 candidates went unscreened, each with a different
+justification. So the check now runs on a number that can't be reworded:
+
+- At baseline, `harness.freeze_screening_economics` computes screen.py's own tier-1
+  `breakeven_kill_rate` (`max(MIN_K, 25% of val)` rollouts against `val_n × num_trials`). It writes
+  `screening_structurally_uneconomical` (break-even > `SCREEN_BREAKEVEN_CEILING` = 0.25) and the
+  arithmetic behind it into `state.json`, **once**. A round's own `--n-trials` never recomputes it.
+- `true` (a tiny val, where the screen costs about as much as full val): skipping is unrestricted,
+  bare or justified.
+- `false` (any val of reasonable size, e.g. 30 × 10 trials gives a break-even of 0.027): screening
+  is mandatory. At most `max_screen_skips` distinct candidates per run (capevolve.yaml, default 1)
+  may go to full val unscreened. The count is read fresh from the `agent_optimize_compliance` events
+  in `events.jsonl`. Once the budget is spent, `round.py` exits 2 before spending anything. **There is
+  no override flag**, because a fresh justification is exactly what got gamed. The way through is to
+  drop the skip flag and let `round.py` screen the candidate. Re-gating a candidate that was already
+  charged costs no extra budget.
+
+Justification text is still recorded, along with `justification_near_duplicate_of` (difflib ratio
+≥ 0.75), as audit evidence. It is never enforced. `--duplicate-skip-justification` has been removed.
 
 ### The break-even, and when the ladder cannot pay for itself
 
@@ -329,7 +340,18 @@ parents are gated alone). Each survivor is paid for at full val once. Every tran
 screen, `qualifies`, and `not_gated_because` for any merge not chosen, and `skipped_pairs` every
 pair refused as an edit collision or a same-cluster pair. Commit a gated merge without
 `--parents` — its node already has both; its parents (`superseded`, `merged_into`) need no commit
-of their own. `--no-merge` gates every survivor alone. The manual path
+of their own. `--no-merge` gates every survivor alone. It is priced on the same terms as a screen skip
+(#630: 7 of 9 rounds of a real run passed it, so `merge_stage` never ran and the optimizer hand-built
+the union that was declined, paying a third full-val gate for it). The flag only counts when a
+merge *applied*: 2+ screened survivors with at least one cluster-disjoint pair, which is
+`mergeable_pairs`, the same rule `merge_stage` uses. In that case `round.py` logs
+`merge_compliance_warning` (`reason: no_merge_with_eligible_pairs`, `realtime: true`) and a stderr
+WARNING right away, rather than only at finalize. It also spends one of the run's
+`max_merge_skips` (capevolve.yaml, default 1), counted from the `agent_optimize_round_batch` events.
+Once that budget is spent, the round is refused with no override flag, before any compliance
+event or graph transition is written. To recover, re-run without the flag: the screens are already
+on disk, and a pair that collides at build time costs nothing. A round where no merge applied
+spends nothing. The manual path
 below still works for pairs outside one round. Screen every sibling first
 (SKILL.md step 3, cheap subset, kill-only) — that is the whole point of `screen.py` existing before
 step 4 — then run `scripts/merge_search.py` on the disjoint SCREEN-SURVIVORS (its own module
@@ -518,6 +540,15 @@ one ran, wins — it is what was measured), and the dashboard's diagnosis view r
 accept/reject/inconclusive when the file is missing or an empty template (no cluster with an `id`
 AND tasks), unless you pass `--missing-diagnosis-justification "<reason>"`. A merge candidate writes
 the union of its parents' targeted clusters.
+
+Two more preconditions (#634), same escape-hatch shape. (1) `work/$TAG/PROCESS.md`'s "Ranked
+issue list" must have at least one data row — the round's re-survey of ALL current failures, so the
+search does not narrow onto 1-2 stubborn tasks — unless you pass
+`--missing-ranked-issues-justification "<reason>"`. (2) If this DIAGNOSIS.json's targeted tasks
+overlap (Jaccard ≥ 0.5) those of an earlier candidate the gate REJECTED (`inconclusive` and
+`--reject-basis infra` do not count), `commit.py` lists the refuted priors and refuses unless you
+pass `--retry-justification "<one line: what is different this time>"`. Check JOURNAL.md's
+RESULT lines before building a near-variant of a refuted idea. Merge candidates are exempt from both.
 
 This is a general convention for ANY continuous-session algorithm (one long-running optimizer
 subprocess spanning many rounds, as opposed to the deterministic loops' fresh per-iteration

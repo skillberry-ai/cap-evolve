@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -19,9 +20,17 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="cap-evolve dashboard", version="0.1.0")
     app.state.base_dir = base
 
+    # Identity card for the launcher (cap_evolve.dashboard_launch): ``app``/``pid`` let
+    # it recognise its own listeners, ``base_dir`` + ``code`` let it REUSE one that
+    # already serves this base with this code instead of leaking a new server per run.
+    # ``code`` must match dashboard_launch.code_stamp(): package dir @ newest .py mtime.
+    pkg = Path(__file__).resolve().parent
+    code = f"{pkg}@{max(f.stat().st_mtime_ns for f in pkg.glob('*.py'))}"
+
     @app.get("/api/health")
     def health():
-        return {"ok": True, "base_dir": str(base)}
+        return {"ok": True, "app": "cap-evolve-dashboard", "pid": os.getpid(),
+                "base_dir": str(base.resolve()), "code": code}
 
     @app.get("/api/runs")
     def get_runs():

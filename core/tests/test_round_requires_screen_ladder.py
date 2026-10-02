@@ -26,7 +26,7 @@ sys.path.insert(0, str(CORE))
 sys.path.insert(0, str(SCRIPTS))
 
 
-def _project(tmp: Path, *, n: int) -> Path:
+def _project(tmp: Path, *, n: int, num_trials: int = 1, extra: str = "") -> Path:
     project = tmp / "project"
     (project / "adapters").mkdir(parents=True, exist_ok=True)
     (project / "adapters" / "adapter.py").write_text(
@@ -35,8 +35,8 @@ def _project(tmp: Path, *, n: int) -> Path:
         f"    def __init__(self):\n        super().__init__(n={n})\n",
         encoding="utf-8")
     (project / "capevolve.yaml").write_text(
-        "num_trials: 1\ngate_mode: paired\ngate_k_se: 1.0\n"
-        'stop_condition: "reach val mean >= 0.9, or stop after $5 or 30 minutes"\n',
+        f"num_trials: {num_trials}\ngate_mode: paired\ngate_k_se: 1.0\n"
+        'stop_condition: "reach val mean >= 0.9, or stop after $5 or 30 minutes"\n' + extra,
         encoding="utf-8")
     return project
 
@@ -48,12 +48,12 @@ def _run(argv, env=None):
     return subprocess.run([sys.executable, *argv], capture_output=True, text=True, env=e)
 
 
-def _staged_run_dir(tmp_path, *, n=24):
+def _staged_run_dir(tmp_path, *, n=24, num_trials=1, extra=""):
     from cap_evolve import RunDir, harness
     from cap_evolve.skillcheck import SyntheticAdapter, seed_capability_dir
 
     adapter = SyntheticAdapter(n=n)
-    project = _project(tmp_path, n=n)
+    project = _project(tmp_path, n=n, num_trials=num_trials, extra=extra)
     run_dir = RunDir.create(tmp_path / ".capevolve", ts="chk")
     harness.ensure_splits(adapter, run_dir, seed=0)
 
@@ -144,123 +144,128 @@ def test_round_proceeds_once_the_candidate_has_a_screen_record(tmp_path):
     assert p.returncode == 0, f"round.py refused a screened candidate: {p.stdout}"
 
 
-def test_near_duplicate_skip_justification_is_refused_without_override(tmp_path):
-    """issue #585 (reopened): boilerplate skip_justification text copy-pasted round after round
-    ("consistent with cand_1/2/...", "...consistent with prior rounds", "...per prior rounds
-    cand_2-...") is refused on an unscreened candidate unless --duplicate-skip-justification
-    records why; a first-time or genuinely fresh justification still passes on its own.
-    """
-    run_dir, project, work = _staged_run_dir(tmp_path)
+# --- #631: the screen-skip budget is a COUNT against frozen arithmetic, not a text check ------
 
-    p1 = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
-               "--project", str(project), "--candidates", "cand_1", "--n-trials", "1",
-               "--skip-screen-justification",
-               "30-task val makes the tier-1 screen floor unreachable; consistent with cand_1.",
-               *_JUSTIFY])
-    assert p1.returncode == 0, p1.stdout
+def _round(run_dir, project, tag, *extra):
+    return _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+                 "--project", str(project), "--candidates", tag, "--n-trials", "1",
+                 *_JUSTIFY, *extra])
 
-    from cap_evolve import harness
-    harness.record_iteration(run_dir, work / "cand_1", "cand_1", parent_id="cur",
-                             accepted=False, reason="test", val=0.5, parent_val=0.5)
+
+def _new_cand(tmp_path, work, tag):
     import shutil
     from cap_evolve.skillcheck import seed_capability_dir
-    shutil.copytree(seed_capability_dir(tmp_path / "_src2", level=24), work / "cand_2")
+    shutil.copytree(seed_capability_dir(tmp_path / f"_src_{tag}", level=24), work / tag)
 
-    # Round 2: near-identical boilerplate, same template with the candidate list tacked on.
-    round2 = [str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
-              "--project", str(project), "--candidates", "cand_2", "--n-trials", "1",
-              "--skip-screen-justification",
-              "30-task val makes the tier-1 screen floor unreachable, per prior rounds cand_1.",
-              *_JUSTIFY]
-    refused = _run(round2)
-    assert refused.returncode == 2, f"near-duplicate skip was not refused: {refused.stdout}"
+
+def _compliance(run_dir):
+    return [e for e in (json.loads(ln) for ln in
+                        run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip())
+            if e.get("kind") == "agent_optimize_compliance"]
+
+
+def test_screening_economics_is_screen_py_breakeven_arithmetic():
+    from cap_evolve.subsample import screening_economics
+
+    # The issue's own run: val 30 x 10 trials — tier 1 fires max(6, 8) = 8 of 300.
+    e = screening_economics(30, 10)
+    assert (e["tier1_fired"], e["full_val_rollouts"], e["breakeven_kill_rate"]) == (8, 300, 0.0267)
+    assert e["screening_structurally_uneconomical"] is False
+    # docs/RESULTS.md's val 12 x 1: the 6-task floor is half the split, break-even 0.5.
+    assert screening_economics(12, 1)["screening_structurally_uneconomical"] is True
+    # A 6-task val: tier 1 IS the whole split at 1 trial; at 10 trials it is a tenth of it.
+    assert screening_economics(6, 1)["breakeven_kill_rate"] == 1.0
+    assert screening_economics(6, 10)["screening_structurally_uneconomical"] is False
+
+
+def test_baseline_freezes_screening_economics_once(tmp_path):
+    from cap_evolve import RunDir, harness
+    from cap_evolve.skillcheck import SyntheticAdapter, seed_capability_dir
+
+    adapter = SyntheticAdapter(n=24)
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="eco")
+    harness.ensure_splits(adapter, run_dir, seed=0)
+    harness.baseline(adapter, seed_capability_dir(tmp_path / "seed", level=3), run_dir=run_dir,
+                     n_trials=10)
+    state = json.loads(run_dir.state_path.read_text(encoding="utf-8"))
+    assert state["screening_structurally_uneconomical"] is False
+    assert state["screening_economics"]["n_trials"] == 10
+    # A later caller with a lower trial count (e.g. a round's own --n-trials 1, which the
+    # optimizer controls) gets the FROZEN answer back, never a recomputed one.
+    again = harness.freeze_screening_economics(run_dir, 1)
+    assert again["screening_structurally_uneconomical"] is False and again["n_trials"] == 10
+
+
+def test_screen_skip_budget_hard_blocks_with_no_override(tmp_path):
+    # 6-task val at num_trials 10: tier 1 fires 6 of 60, break-even 0.1 — screening pays, so it
+    # is mandatory and max_screen_skips (default 1) is enforced. The round itself runs at
+    # --n-trials 1, which must NOT flip the frozen verdict.
+    run_dir, project, work = _staged_run_dir(tmp_path, num_trials=10)
+    p1 = _round(run_dir, project, "cand_1", "--skip-screen-justification", "pure additive tool")
+    assert p1.returncode == 0, p1.stdout + p1.stderr
+    state = json.loads(run_dir.state_path.read_text(encoding="utf-8"))
+    assert state["screening_structurally_uneconomical"] is False
+    assert state["screening_economics"]["breakeven_kill_rate"] == 0.1
+    # Re-gating the SAME already-charged candidate does not spend the budget a second time.
+    assert _round(run_dir, project, "cand_1", "--skip-screen-ladder").returncode == 0
+
+    _new_cand(tmp_path, work, "cand_2")
+    n_before = len(_compliance(run_dir))
+    # A fresh, specific, never-seen-before reason is refused all the same: it is a count.
+    fresh = ("cand_2 bundles a 4-way diff touching retrieval, prompt template, and two tool "
+             "schemas; a tier-1 subset cannot resolve interactions across that many surfaces.")
+    refused = _round(run_dir, project, "cand_2", "--skip-screen-justification", fresh)
+    assert refused.returncode == 2, refused.stdout
     err = json.loads(refused.stdout)
-    assert "near-duplicate of cand_1" in err["error"]
-    assert "--duplicate-skip-justification" in err["fix"]
-    events = [json.loads(ln) for ln in
-              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    assert [e["tag"] for e in events if e.get("kind") == "agent_optimize_compliance"] == [
-        "cand_1"], "a refused round must not log a compliance event"
-
-    override = "cand_2 is a one-line wording tweak of cand_1's prompt; same split-size fact holds"
-    p2 = _run([*round2, "--duplicate-skip-justification", override])
-    assert p2.returncode == 0, p2.stdout
-    assert "repeats cand_1" in p2.stderr, f"no near-duplicate note on stderr: {p2.stderr}"
-
-    events = [json.loads(ln) for ln in
-              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    compliance = [e for e in events if e.get("kind") == "agent_optimize_compliance"]
-    assert compliance[0]["justification_near_duplicate_of"] is None, (
-        "the first round's justification has nothing prior to duplicate")
-    assert compliance[-1]["justification_near_duplicate_of"] == "cand_1", (
-        f"round 2's boilerplate justification was not flagged as a near-duplicate: {compliance}")
-    assert compliance[-1]["duplicate_skip_justification"] == override
-
-    harness.record_iteration(run_dir, work / "cand_2", "cand_2", parent_id="cur",
-                             accepted=False, reason="test", val=0.5, parent_val=0.5)
-    shutil.copytree(seed_capability_dir(tmp_path / "_src3", level=24), work / "cand_3")
-
-    # Round 3: a genuinely fresh justification describing THIS candidate's own edit surface —
-    # must NOT be flagged as a near-duplicate of the boilerplate above.
-    p3 = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
-               "--project", str(project), "--candidates", "cand_3", "--n-trials", "1",
-               "--skip-screen-justification",
-               "cand_3 bundles a 4-way diff touching retrieval, prompt template, and two tool "
-               "schemas; screen.py's tier-1 subset is too small to resolve interaction effects "
-               "across that many changed surfaces, so going straight to full-val is deliberate "
-               "here, not rote.",
-               *_JUSTIFY])
-    assert p3.returncode == 0, p3.stdout
-    assert "near-duplicate" not in p3.stderr, f"fresh justification wrongly flagged: {p3.stderr}"
-
-    events = [json.loads(ln) for ln in
-              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    compliance = [e for e in events if e.get("kind") == "agent_optimize_compliance"]
-    assert compliance[-1]["justification_near_duplicate_of"] is None, (
-        f"fresh justification wrongly flagged as a near-duplicate: {compliance[-1]}")
+    assert "max_screen_skips=1" in err["error"] and "cand_1" in err["error"]
+    assert "no override flag" in err["why"]
+    assert err["screening_economics"]["screening_structurally_uneconomical"] is False
+    assert _round(run_dir, project, "cand_2", "--skip-screen-ladder").returncode == 2
+    assert len(_compliance(run_dir)) == n_before, "a refused skip must not log (or count) itself"
+    # The #613 override is gone: there is nothing to argue with.
+    gone = _round(run_dir, project, "cand_2", "--skip-screen-ladder",
+                  "--duplicate-skip-justification", "please")
+    assert gone.returncode == 2 and "unrecognized arguments" in gone.stderr
+    # The only way through is the screen itself — which round.py runs on its own.
+    ok = _round(run_dir, project, "cand_2")
+    assert ok.returncode == 0, ok.stdout + ok.stderr
+    last = _compliance(run_dir)[-1]
+    assert last["tag"] == "cand_2" and last["screened_before_fullval"] is True
+    assert last["screen_skips_used"] == 1 and last["max_screen_skips"] == 1
 
 
-def test_repeated_bare_skip_screen_ladder_is_refused_without_override(tmp_path):
-    """issue #585 loophole: a bare --skip-screen-ladder has no text to near-duplicate, so a
-    driver refused for a boilerplate reason could just drop the reason. The first bare skip in a
-    run passes; the 2nd+ is refused unless --duplicate-skip-justification records why.
-    """
+def test_max_screen_skips_is_configurable_per_benchmark(tmp_path):
+    run_dir, project, work = _staged_run_dir(tmp_path, num_trials=10, extra="max_screen_skips: 2\n")
+    assert _round(run_dir, project, "cand_1", "--skip-screen-ladder").returncode == 0
+    _new_cand(tmp_path, work, "cand_2")
+    assert _round(run_dir, project, "cand_2", "--skip-screen-ladder").returncode == 0
+    _new_cand(tmp_path, work, "cand_3")
+    refused = _round(run_dir, project, "cand_3", "--skip-screen-ladder")
+    assert refused.returncode == 2 and "max_screen_skips=2" in json.loads(refused.stdout)["error"]
+
+
+def test_structurally_uneconomical_benchmark_skips_stay_unrestricted(tmp_path):
+    # 6-task val at 1 trial: tier 1 would screen the whole split (break-even 1.0). The arithmetic
+    # settled it once, so skipping is unrestricted — bare, reworded or copy-pasted alike.
     run_dir, project, work = _staged_run_dir(tmp_path)
-
-    def rnd(tag, *extra):
-        return _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
-                     "--project", str(project), "--candidates", tag, "--n-trials", "1",
-                     *_JUSTIFY, *extra])
-
-    # A round with NO skip flag at all (auto-screened since #437) still logs a compliance event;
-    # it must not count as the run's first bare skip.
-    import shutil
-    from cap_evolve.skillcheck import seed_capability_dir
-    shutil.copytree(seed_capability_dir(tmp_path / "_src0", level=24), work / "cand_0")
-    assert rnd("cand_0").returncode == 0
-    p1 = rnd("cand_1", "--skip-screen-ladder")
-    assert p1.returncode == 0, f"the first bare skip in a run must pass: {p1.stdout}"
-
-    from cap_evolve import harness
-    harness.record_iteration(run_dir, work / "cand_1", "cand_1", parent_id="cur",
-                             accepted=False, reason="test", val=0.5, parent_val=0.5)
-    shutil.copytree(seed_capability_dir(tmp_path / "_src2", level=24), work / "cand_2")
-
-    refused = rnd("cand_2", "--skip-screen-ladder")
-    assert refused.returncode == 2, f"a repeated bare skip was not refused: {refused.stdout}"
-    err = json.loads(refused.stdout)
-    assert "bare --skip-screen-ladder" in err["error"] and "cand_1" in err["error"]
-    assert "--duplicate-skip-justification" in err["fix"]
-
-    override = "cand_2 only renames a tool argument; nothing a subset could discriminate"
-    p2 = rnd("cand_2", "--skip-screen-ladder", "--duplicate-skip-justification", override)
-    assert p2.returncode == 0, p2.stdout
-    events = [json.loads(ln) for ln in
-              run_dir.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
-    last = [e for e in events if e.get("kind") == "agent_optimize_compliance"][-1]
-    assert last["tag"] == "cand_2" and last["skip_screen_ladder"] is True
-    assert last["justification_near_duplicate_of"] == "cand_1"
-    assert last["duplicate_skip_justification"] == override
+    reasons = [["--skip-screen-justification",
+                "30-task val makes the tier-1 screen floor unreachable; consistent with cand_1."],
+               ["--skip-screen-justification",
+                "30-task val makes the tier-1 screen floor unreachable, per prior rounds cand_1."],
+               ["--skip-screen-ladder"]]
+    for i, flags in enumerate(reasons, start=1):
+        tag = f"cand_{i}"
+        if i > 1:
+            _new_cand(tmp_path, work, tag)
+        p = _round(run_dir, project, tag, *flags)
+        assert p.returncode == 0, f"{tag}: {p.stdout} {p.stderr}"
+    events = _compliance(run_dir)
+    assert [e["screening_structurally_uneconomical"] for e in events] == [True, True, True]
+    assert [e["screen_skips_used"] for e in events] == [1, 2, 3]
+    # Similarity is still RECORDED (audit evidence), just never enforced.
+    assert events[1]["justification_near_duplicate_of"] == "cand_1"
+    state = json.loads(run_dir.state_path.read_text(encoding="utf-8"))
+    assert state["screening_structurally_uneconomical"] is True
 
 
 def test_round_records_max_parallel_and_warns_on_drift(tmp_path):

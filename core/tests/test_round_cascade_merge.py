@@ -200,6 +200,68 @@ def test_no_merge_gates_every_survivor_alone(tmp_path):
     assert sorted(r["tag"] for r in out["candidates"]) == ["cand_1", "cand_2"]
 
 
+def _sibling(run_dir, tag, src, cluster, tasks):
+    d = _cap(run_dir.root / "work", tag, src)
+    (d / "DIAGNOSIS.json").write_text(json.dumps(
+        {"candidate": tag, "clusters": [{"id": cluster, "tasks": tasks}],
+         "edits": [{"id": f"E_{tag}", "clusters": [cluster]}]}), encoding="utf-8")
+
+
+def test_repeated_no_merge_with_eligible_pairs_is_hard_blocked(tmp_path):
+    """#630: 7/9 rounds of a real run passed --no-merge with disjoint, screened survivors, so
+    merge_stage never ran once. The first such decline is allowed but announced IN REAL TIME;
+    past max_merge_skips (default 1) it is refused, with no override flag."""
+    run_dir, project = _setup(tmp_path)
+
+    def rnd(cands, *extra):
+        return subprocess.run(
+            [sys.executable, str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root),
+             "--project", str(project), "--candidates", cands, "--n-trials", "1",
+             "--concurrency", "1", "--single-candidate-justification", "merge-budget test",
+             *extra], capture_output=True, text=True, env=_env())
+
+    def events(kind):
+        return [e for e in (json.loads(ln) for ln in run_dir.events_path.read_text().splitlines()
+                            if ln.strip()) if e.get("kind") == kind]
+
+    p1 = rnd("cand_1,cand_2", "--no-merge")
+    assert p1.returncode == 0, p1.stdout + p1.stderr
+    assert "WARNING: --no-merge declined merging [['cand_1', 'cand_2']]" in p1.stderr
+    warn = events("merge_compliance_warning")
+    assert len(warn) == 1 and warn[0]["realtime"] is True and warn[0]["refused"] is False
+    assert warn[0]["reason"] == "no_merge_with_eligible_pairs"
+    assert warn[0]["disjoint_pairs"] == [["cand_1", "cand_2"]]
+    assert json.loads(p1.stdout)["merge_skip"]["merge_skips_used"] == 1
+    # Re-running the SAME round (a re-gate) does not spend the budget a second time.
+    assert rnd("cand_1,cand_2", "--no-merge").returncode == 0
+
+    _sibling(run_dir, "cand_4", FIX_A, "D", ["t0", "t1"])
+    _sibling(run_dir, "cand_5", FIX_B, "E", ["t2", "t3"])
+    n_batches = len(events("agent_optimize_round_batch"))
+    n_compliance = len(events("agent_optimize_compliance"))
+    refused = rnd("cand_4,cand_5", "--no-merge")
+    assert refused.returncode == 2, refused.stdout + refused.stderr
+    err = json.loads(refused.stdout)
+    assert "max_merge_skips=1" in err["error"] and "no override flag" in err["why"]
+    assert events("merge_compliance_warning")[-1]["refused"] is True
+    # Refused before any compliance event or round batch, so it is never itself counted.
+    assert len(events("agent_optimize_round_batch")) == n_batches
+    assert len(events("agent_optimize_compliance")) == n_compliance
+
+    # Obeying is free: the screens are on disk, and the default path merges them.
+    ok = rnd("cand_4,cand_5")
+    assert ok.returncode == 0, ok.stdout + ok.stderr
+    assert json.loads(ok.stdout)["merge_stage"]["chosen"] == ["merge_cand_4_cand_5"]
+
+    # A round where no merge APPLIED (same-cluster alternatives) spends nothing and is not
+    # refused even with the budget gone.
+    _sibling(run_dir, "cand_6", FIX_A, "F", ["t0", "t1"])
+    _sibling(run_dir, "cand_7", FIX_B, "F", ["t2", "t3"])
+    same = rnd("cand_6,cand_7", "--no-merge")
+    assert same.returncode == 0, same.stdout + same.stderr
+    assert json.loads(same.stdout)["merge_skip"] is None
+
+
 def test_merge_that_loses_a_parents_gain_is_not_gated_and_parents_are():
     """integrate.py's rule (gains do not compose), applied with the screens already paid."""
     import round as rnd

@@ -304,6 +304,22 @@ class RunDir:
             self._write_state(st)
             return Budget.from_dict(b)
 
+    def freeze_state(self, **fields) -> tuple[dict, bool]:
+        """Write ``fields`` into state.json ONCE (locked RMW); an existing value always wins.
+
+        For facts computed from frozen inputs (the split, the baseline's trial count) that a
+        later caller must read back rather than recompute under different arguments. Returns
+        (the stored values of ``fields``' keys, whether this call wrote them).
+        """
+        with _file_lock(self._state_lock):
+            st = self._read_state()
+            wrote = not all(k in st for k in fields)
+            if wrote:
+                for k, v in fields.items():
+                    st.setdefault(k, v)
+                self._write_state(st)
+            return {k: st[k] for k in fields}, wrote
+
     def budget_exhausted(self) -> tuple[bool, str]:
         b, s = self.budget, self.spent
         if b.stop_at_reward and s.best_val >= b.stop_at_reward - 1e-9:

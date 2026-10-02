@@ -443,6 +443,8 @@ def _live_round(c: Checker, tmp: Path) -> None:
                                        "--optimizer-usd", "0.25",
                                        "--missing-handover-justification",
                                        "check.py smoke test, not journal semantics",
+                                       "--missing-ranked-issues-justification",
+                                       "check.py smoke test, not ranked-issue semantics",
                                        "--missing-diagnosis-justification",
                                        "check.py smoke test, not diagnosis semantics"])
     if cm:
@@ -459,6 +461,8 @@ def _live_round(c: Checker, tmp: Path) -> None:
                                         "--decision", "reject", "--note", "no gain",
                                         "--missing-handover-justification",
                                         "check.py smoke test, not journal semantics",
+                                       "--missing-ranked-issues-justification",
+                                       "check.py smoke test, not ranked-issue semantics",
                                        "--missing-diagnosis-justification",
                                        "check.py smoke test, not diagnosis semantics"])
     if rj:
@@ -558,6 +562,7 @@ def _tag_collision(c: Checker, tmp: Path) -> None:
             "--candidate-id", "dup", "--from-dir", str(work),
             "--decision", "reject", "--note", "first",
             "--missing-handover-justification", "check.py smoke test, not journal semantics",
+            "--missing-ranked-issues-justification", "check.py smoke test, not ranked-issue semantics",
             "--missing-diagnosis-justification", "check.py smoke test, not diagnosis semantics"]
     first = _run(c, "commit.py (first use of a tag)", argv)
     c.check(bool(first) and first.get("decision") == "reject",
@@ -642,10 +647,9 @@ def _round_control(c: Checker, tmp: Path) -> None:
     r2 = _run(c, "round.py --gate-against control",
               [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
                "--candidates", "cand_y", "--n-trials", "1", "--k-se", "1.0",
+               # A 2nd skip in this run is unrestricted: a 6-task val makes screening
+               # structurally uneconomical (#631), so no max_screen_skips budget applies.
                "--gate-against", "control", "--skip-screen-ladder",
-               # A 2nd bare skip in this run is refused without a reason (#585); this check is
-               # about gate mechanics, not that guard.
-               "--duplicate-skip-justification", "check.py: gate mechanics, not the ladder",
                "--single-candidate-justification", "check.py: single-candidate gate mechanics"])
     if r2:
         ref = (r2.get("gated_against") or {})
@@ -658,7 +662,6 @@ def _round_control(c: Checker, tmp: Path) -> None:
               [str(HERE / "round.py"), "--run-dir", R, "--project", str(project),
                "--candidates", "cand_y", "--n-trials", "1", "--gate-against", "control",
                "--no-control", "--skip-screen-ladder",
-               "--duplicate-skip-justification", "check.py: gate mechanics, not the ladder",
                "--single-candidate-justification", "check.py: single-candidate gate mechanics"],
               expect_rc=2)
     c.check(bool(r3) and "control" in json.dumps(r3),

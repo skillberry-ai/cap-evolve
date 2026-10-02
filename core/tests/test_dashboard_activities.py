@@ -391,3 +391,19 @@ def test_outcomes_from_fixed_broke_lists():
         # t3 and t4 should be inferred from parent's per_task
         assert outcomes.get("t3") == "still_failing"
         assert outcomes.get("t4") == "still_passing"
+
+
+def test_prompt_map_headings_only_for_markdown_files():
+    """#626: `#` comments in non-markdown files must not become headings."""
+    from cap_evolve import dashboard
+
+    with tempfile.TemporaryDirectory() as d:
+        cand = Path(d) / "cand"
+        (cand / "tools").mkdir(parents=True)
+        (cand / "tools" / "tools.py").write_text(
+            "# helper module\nimport os\n\n# Step 1: load\n## not a heading either\nx = 1\n")
+        (cand / "policy.md").write_text("# Policy\n\ntext\n\n## Refunds\n")
+        pmap = dashboard._compute_prompt_map(cand, None, [])
+
+    assert pmap["tools/tools.py"]["headings"] == []
+    assert pmap["policy.md"]["headings"] == [[1, 1, "Policy"], [5, 2, "Refunds"]]

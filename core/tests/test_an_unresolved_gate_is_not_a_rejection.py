@@ -80,6 +80,7 @@ def _commit(run_dir, work, *extra, cid="cand_2", decision="inconclusive", val="0
          "--decision", decision, "--val", val,
          "--note", "verdict flipped between control replicates; not resolvable this round",
          "--missing-handover-justification", "fixture: journal handover not under test",
+         "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test",
          *extra, *force],
         capture_output=True, text=True,
