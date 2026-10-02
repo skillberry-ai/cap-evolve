@@ -206,15 +206,22 @@ def _read_trajectory(agent_dir: Path) -> Any:
 
 
 def _extract_cost_tokens(result_path: Path) -> tuple[float, int]:
-    """Extract cost and token count from a trial result.json."""
+    """Extract cost and token count from a trial result.json.
+
+    Harbor nests these under ``stats`` (``stats.cost_usd``,
+    ``stats.n_input_tokens``/``n_cache_tokens``/``n_output_tokens``) rather than
+    at the top level -- confirmed against a real trial's result.json, where the
+    top-level keys this used to read don't exist at all, so cost/tokens silently
+    came back as 0.0/0 for every trial regardless of what the agent reported.
+    """
     try:
         data = json.loads(result_path.read_text(encoding="utf-8"))
-        cost = float(data.get("cost_usd", 0) or data.get("cost", 0) or 0)
+        stats = data.get("stats") or {}
+        cost = float(stats.get("cost_usd") or data.get("cost_usd") or 0)
         tokens = int(
-            data.get("tokens", 0)
-            or data.get("total_tokens", 0)
-            or data.get("input_tokens", 0) + data.get("output_tokens", 0)
-            or 0
+            (stats.get("n_input_tokens") or 0)
+            + (stats.get("n_output_tokens") or 0)
+            + (stats.get("n_cache_tokens") or 0)
         )
         return cost, tokens
     except (json.JSONDecodeError, ValueError, TypeError):
