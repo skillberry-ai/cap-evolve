@@ -174,7 +174,7 @@ what the edit reaches". `phases/gate/scripts/run.py` inspects the same gate but 
 `work/$TAG/JOURNAL.md`'s marker (not `$R/JOURNAL.md`): what, why, what the
 numbers said — the only thing the NEXT round reads. `work/$TAG/DIAGNOSIS.json` maps
 edits→clusters→tasks. `commit.py` refuses without either
-(`--missing-handover-justification`/`--missing-diagnosis-justification`). Then
+(or on a blank PROCESS.md ranked list / bare retry of a refuted idea). Then
 commit, so `best_id`, stall and the audit log stay real. `--decision reject` keeps the old
 best; it snapshots, logs and advances `iterations` + stall:
 

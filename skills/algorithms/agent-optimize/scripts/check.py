@@ -443,6 +443,8 @@ def _live_round(c: Checker, tmp: Path) -> None:
                                        "--optimizer-usd", "0.25",
                                        "--missing-handover-justification",
                                        "check.py smoke test, not journal semantics",
+                                       "--missing-ranked-issues-justification",
+                                       "check.py smoke test, not ranked-issue semantics",
                                        "--missing-diagnosis-justification",
                                        "check.py smoke test, not diagnosis semantics"])
     if cm:
@@ -459,6 +461,8 @@ def _live_round(c: Checker, tmp: Path) -> None:
                                         "--decision", "reject", "--note", "no gain",
                                         "--missing-handover-justification",
                                         "check.py smoke test, not journal semantics",
+                                       "--missing-ranked-issues-justification",
+                                       "check.py smoke test, not ranked-issue semantics",
                                        "--missing-diagnosis-justification",
                                        "check.py smoke test, not diagnosis semantics"])
     if rj:
@@ -558,6 +562,7 @@ def _tag_collision(c: Checker, tmp: Path) -> None:
             "--candidate-id", "dup", "--from-dir", str(work),
             "--decision", "reject", "--note", "first",
             "--missing-handover-justification", "check.py smoke test, not journal semantics",
+            "--missing-ranked-issues-justification", "check.py smoke test, not ranked-issue semantics",
             "--missing-diagnosis-justification", "check.py smoke test, not diagnosis semantics"]
     first = _run(c, "commit.py (first use of a tag)", argv)
     c.check(bool(first) and first.get("decision") == "reject",

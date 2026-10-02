@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -47,7 +48,7 @@ from pathlib import Path
 # cap_evolve imports below; not "unused" — deleting it breaks standalone runs.
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, graph, harness
 
 import meter
 
@@ -286,6 +287,67 @@ def _diagnosis_targets(src: Path) -> tuple[list[str], dict | None]:
                          "tier": None}
 
 
+def _ranked_issue_rows(src: Path) -> int:
+    """Data rows in ``<from-dir>/PROCESS.md``'s "Ranked issue list" table (#634).
+
+    Scoped to that section only (up to the next ``## `` heading): the dashboard's
+    ``harness._parse_process_md_tables`` regex can run past a header-only table into the
+    "Changes made" table below it, which would count a blank ranked list as filled. A row
+    counts when any cell after ``rank`` has text — a bare ``| 1 | | |`` is still blank.
+    """
+    try:
+        text = (src / "PROCESS.md").read_text(encoding="utf-8")
+    except OSError:
+        return 0
+    m = re.search(r"^##\s+Ranked issue list[^\n]*\n(.*?)(?=^##\s|\Z)", text,
+                  re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    if not m:
+        return 0
+    rows = [ln.strip() for ln in m.group(1).splitlines() if ln.strip().startswith("|")]
+    body = [r for r in rows[1:] if not re.fullmatch(r"[|\s:-]+", r)]  # drop header + separator
+    return sum(1 for r in body if any(c.strip() for c in r.strip("|").split("|")[1:]))
+
+
+#: Jaccard overlap of targeted task ids at/above which a new candidate counts as a retry of
+#: an earlier refuted one (#634). ponytail: task-set overlap only — a retry aimed at different
+#: tasks with the same idea slips through; add a mechanism/edit-text comparison if that bites.
+RETRY_OVERLAP = 0.5
+
+
+def _refuted_retries(run_dir: RunDir, candidate_id: str, task_ids: list[str]) -> list[dict]:
+    """Earlier REJECTED candidates whose own DIAGNOSIS.json targeted (nearly) these tasks (#634).
+
+    A ``reject`` is the gate measuring an edit flat or negative; ``inconclusive`` (unresolved,
+    re-measure under a fresh tag) and ``--reject-basis infra`` (missing data, no judgement) are
+    not refutations and never count. The prior's targets come from its SNAPSHOT's
+    DIAGNOSIS.json, the same reader as this candidate's own (``_diagnosis_targets``).
+    """
+    new = set(task_ids)
+    if not new:
+        return []
+    try:
+        lines = run_dir.events_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    hits, seen = [], {str(candidate_id)}
+    for line in lines:
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        cid = str(ev.get("candidate"))
+        if ev.get("kind") != "reject" or ev.get("reject_basis") == "infra" or cid in seen:
+            continue
+        seen.add(cid)
+        _, sub = _diagnosis_targets(run_dir.candidate_dir(cid))
+        old = set(sub["task_ids"]) if sub else set()
+        overlap = len(new & old) / len(new | old)
+        if overlap >= RETRY_OVERLAP:
+            hits.append({"candidate": cid, "overlap": round(overlap, 2),
+                         "shared_task_ids": sorted(new & old), "note": ev.get("note")})
+    return hits
+
+
 def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     """This candidate's row from ``round.py``'s persisted table, if one exists.
 
@@ -416,6 +478,16 @@ def main(argv=None) -> int:
                         "infra failure before the optimizer wrote it). Without it, commit.py "
                         "refuses: the graph.jsonl node's cluster_ids/subset and the dashboard's "
                         "diagnosis view come from this file.")
+    p.add_argument("--missing-ranked-issues-justification", default=None,
+                   help="required when this candidate's <from-dir>/PROCESS.md 'Ranked issue "
+                        "list' table has no data rows (header-only) — the escape hatch for "
+                        "committing without one (#634). Say why the full remaining-failure "
+                        "landscape was not re-surveyed this round. Without it, commit.py refuses.")
+    p.add_argument("--retry-justification", default=None,
+                   help="required when this candidate's DIAGNOSIS.json targets (nearly) the same "
+                        "tasks as an earlier candidate the gate REJECTED (#634). One line: what is "
+                        "different this time, beyond cosmetic variation. Without it, commit.py "
+                        "refuses rather than book a re-try of a refuted idea.")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -643,6 +715,48 @@ def main(argv=None) -> int:
         }, indent=2))
         return 2
 
+    # Precondition (#634), same shape again: the "Ranked issue list" is the round's survey of
+    # the FULL remaining-failure landscape. A real run left it header-only on most candidates
+    # and tunnel-visioned on 1-2 stubborn tasks while ~13 others sat unresolved. A merge
+    # proposes nothing new (it combines already-surveyed parents), so it is exempt.
+    is_merge = len([x for x in (args.parents or "").split(",") if x.strip()]) > 1 or \
+        len((graph.latest_node(run_dir, args.candidate_id) or {}).get("parents") or []) > 1
+    ranked_rows = _ranked_issue_rows(src)
+    ranked_missing = not provisional and not is_merge and not ranked_rows
+    if ranked_missing and not args.missing_ranked_issues_justification:
+        print(json.dumps({
+            "error": f"PROCESS.md's 'Ranked issue list' is empty for {args.candidate_id!r} — "
+                     "commit.py refuses to record this decision without it",
+            "why": "the ranked list is how each round re-surveys ALL current failures (clusters "
+                   "by # failing tasks x trials) instead of fixating on 1-2 known-stubborn "
+                   "tasks; a header-only table means no survey happened.",
+            "fix": "fill <from-dir>/PROCESS.md's '## Ranked issue list' table with one row per "
+                   "failure cluster in the current champion's val failures, and re-run "
+                   "commit.py, or pass --missing-ranked-issues-justification \"<reason>\" if "
+                   "you are deliberately committing without one.",
+        }, indent=2))
+        return 2
+
+    # Precondition (#634): re-submitting an idea the gate already refuted, with cosmetic
+    # variation ("cancel reason guard v2" after v1 failed), spends a full gate re-discovering
+    # the same result. Same task targets as an earlier reject => say what is different.
+    retry_of = ([] if provisional or is_merge
+                else _refuted_retries(run_dir, args.candidate_id,
+                                      (diag_subset or {}).get("task_ids") or []))
+    if retry_of and not args.retry_justification:
+        print(json.dumps({
+            "error": f"{args.candidate_id!r} targets the same tasks as earlier candidate(s) the "
+                     "gate already REJECTED — commit.py refuses a retry without saying what "
+                     "is different this time",
+            "refuted_priors": retry_of,
+            "why": "a flat/negative result on these tasks is already measured; a near-variant "
+                   "of the same component re-discovers it at the cost of a full gate.",
+            "fix": "pass --retry-justification \"<one line: what is different this time>\" "
+                   "(a different mechanism or root cause, not a rewording), or retarget "
+                   "DIAGNOSIS.json at clusters from a fresh ranked issue list.",
+        }, indent=2))
+        return 2
+
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
@@ -681,6 +795,8 @@ def main(argv=None) -> int:
                       reject_basis=args.reject_basis,
                       bypassed_screen_and_gate=bypassed_screen_and_gate,
                       bypassed_gate_justification=args.bypassed_gate_justification,
+                      retry_of=[h["candidate"] for h in retry_of] or None,
+                      retry_justification=args.retry_justification if retry_of else None,
                       verdict=args.decision,
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
@@ -711,6 +827,15 @@ def main(argv=None) -> int:
             "DIAGNOSIS.json, justified as: "
             f"{args.missing_diagnosis_justification!r} — its graph.jsonl node carries no "
             "cluster_ids and the dashboard shows no diagnosis for it.")
+    if ranked_missing:
+        warnings.append(
+            f"missing ranked issues: {args.candidate_id!r} was committed with a header-only "
+            "PROCESS.md 'Ranked issue list', justified as: "
+            f"{args.missing_ranked_issues_justification!r}")
+    if retry_of:
+        warnings.append(
+            f"refuted retry: {args.candidate_id!r} re-targets the tasks of rejected "
+            f"{[h['candidate'] for h in retry_of]}, justified as: {args.retry_justification!r}")
     if bypassed_screen_and_gate:
         warnings.append(
             f"screen+gate bypass: {args.candidate_id!r} was rejected via driver_judgement "
@@ -782,6 +907,7 @@ def main(argv=None) -> int:
                       "overrode_gate": overrode_gate,
                       "handover_recorded": handover,
                       "diagnosis_recorded": bool(cluster_ids),
+                      "ranked_issue_rows": ranked_rows,
                       "warnings": warnings,
                       "best_id": run_dir.best_id, "spent": spent.to_dict(),
                       "stop": stop, "stop_reason": reason}, indent=2))

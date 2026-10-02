@@ -493,6 +493,15 @@ accept/reject/inconclusive when the file is missing or an empty template (no clu
 AND tasks), unless you pass `--missing-diagnosis-justification "<reason>"`. A merge candidate writes
 the union of its parents' targeted clusters.
 
+Two more preconditions (#634), same escape-hatch shape. (1) `work/$TAG/PROCESS.md`'s "Ranked
+issue list" must have at least one data row — the round's re-survey of ALL current failures, so the
+search does not narrow onto 1-2 stubborn tasks — unless you pass
+`--missing-ranked-issues-justification "<reason>"`. (2) If this DIAGNOSIS.json's targeted tasks
+overlap (Jaccard ≥ 0.5) those of an earlier candidate the gate REJECTED (`inconclusive` and
+`--reject-basis infra` do not count), `commit.py` lists the refuted priors and refuses unless you
+pass `--retry-justification "<one line: what is different this time>"`. Check JOURNAL.md's
+RESULT lines before building a near-variant of a refuted idea. Merge candidates are exempt from both.
+
 This is a general convention for ANY continuous-session algorithm (one long-running optimizer
 subprocess spanning many rounds, as opposed to the deterministic loops' fresh per-iteration
 optimizer workdir): the framework re-seeds the same file at the same two points

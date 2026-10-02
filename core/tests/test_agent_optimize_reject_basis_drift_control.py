@@ -31,6 +31,7 @@ def _commit_with_basis(run_dir, work, basis: str):
          "--reject-basis", basis,
          "--note", "the drift-controlled comparison disagreed with the raw parent-relative one",
          "--missing-handover-justification", "fixture: journal handover not under test",
+         "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test"],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
