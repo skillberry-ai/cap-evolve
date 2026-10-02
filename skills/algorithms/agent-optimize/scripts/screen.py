@@ -40,23 +40,12 @@ import _bootstrap  # noqa: F401
 
 from cap_evolve import RunDir, harness
 from cap_evolve.check import load_adapter
+# TIER_FRAC (rung → fraction of val) and MIN_K (absolute subset floor) live in subsample.py so
+# the baseline-time screening_economics (#631) prices exactly the rung this script fires.
 from cap_evolve.subsample import (
-    full_val_ceiling, paired_deltas_on, screen_decision, screen_savings,
+    MIN_K, TIER_FRAC, full_val_ceiling, paired_deltas_on, screen_decision, screen_savings,
     select_screen_subset,
 )
-
-#: Rung → fraction of val screened. Tier 3 is "almost full val" for the rare case
-#: where full val is very large; the real gate is still a separate full-val eval.
-TIER_FRAC = {1: 0.25, 2: 0.5, 3: 0.75}
-
-#: Absolute floor on subset width, independent of the fraction. Was 3, and 3 is
-#: MEASURED to be too narrow: on a 12-task val, tier 1 = round(0.25·12) = 3, and the
-#: run in docs/RESULTS.md produced a screen that reported ``fixed: ["44"]`` on a 3-task
-#: subset when full val showed task 44 was never fixed — a false positive on a third of
-#: the evidence. 6 is the smallest width where the paired SE over {-1,0,+1} deltas is
-#: not dominated by a single task. It only binds on small val splits; a 100-task val
-#: still screens at the 25% fraction.
-MIN_K = 6
 
 
 def _screen_tags(run_dir: RunDir, tag: str) -> list[str]:

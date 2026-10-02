@@ -49,6 +49,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 import gate_check
 
 from cap_evolve import RunDir, harness
+from cap_evolve.specfile import spec_for_run
 
 #: Gate measurement concurrency. The default is deliberately low; the ceiling is where the
 #: measured degradation is established (~0.08 at the arm level above 25, ~0.03 at 8), so above
@@ -66,14 +67,25 @@ MAX_RESOLVING_CONCURRENCY = 25
 #: inside that gap.
 JUSTIFICATION_SIMILARITY_THRESHOLD = 0.75
 
+#: issues #630/#631: run-wide budgets for declining a step of the default cascade. Wording-based
+#: checks (#585/#613's near-duplicate detector) were defeated by an optimizer that held the SAME
+#: strategy — always skip — while varying the sentence every round (12/16 candidates unscreened,
+#: 7/9 rounds `--no-merge`). A count cannot be reworded. Each budget is how many times a run may
+#: decline that step WHEN IT APPLIED; once spent, round.py refuses with no override flag, because
+#: whether the step pays is arithmetic (the frozen screening_economics; a merge costs one subset
+#: screen and saves a full-val gate), not a judgement to re-argue every round. Per-benchmark
+#: overrides live in capevolve.yaml (`max_screen_skips`, `max_merge_skips`).
+DEFAULT_MAX_SCREEN_SKIPS = 1
+DEFAULT_MAX_MERGE_SKIPS = 1
+
 HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
 
 
-def _compliance_events(run_dir) -> list[dict]:
-    """Every earlier ``agent_optimize_compliance`` event in this run. Read straight from
-    ``events.jsonl`` — the file ``log_event`` appends to — so this sees every earlier round of
-    THIS run, not just this process's own candidates.
+def _events(run_dir, kind: str) -> list[dict]:
+    """Every earlier ``kind`` event in this run. Read straight from ``events.jsonl`` — the file
+    ``log_event`` appends to — so this sees every earlier round of THIS run, not just this
+    process's own candidates, and needs no state file of its own.
     """
     if not run_dir.events_path.exists():
         return []
@@ -85,9 +97,37 @@ def _compliance_events(run_dir) -> list[dict]:
             rec = json.loads(line)
         except ValueError:
             continue
-        if rec.get("kind") == "agent_optimize_compliance":
+        if rec.get("kind") == kind:
             out.append(rec)
     return out
+
+
+def _compliance_events(run_dir) -> list[dict]:
+    return _events(run_dir, "agent_optimize_compliance")
+
+
+def _prior_screen_skips(run_dir) -> set[str]:
+    """Tags that already went to full val UNSCREENED under a skip flag (#631's budget unit).
+
+    Distinct tags, so re-gating a candidate already charged does not charge it again. A
+    candidate refused for having no skip flag is logged too, and is not a skip.
+    """
+    return {rec.get("tag") for rec in _compliance_events(run_dir)
+            if not rec.get("screened_before_fullval")
+            and (rec.get("skip_screen_ladder") or (rec.get("skip_justification") or "").strip())}
+
+
+def _prior_merge_skips(run_dir) -> set[tuple]:
+    """Rounds that passed ``--no-merge`` while a merge applied (#630's budget unit), keyed by
+    candidate set so re-running the same round does not charge it twice."""
+    return {tuple(sorted(rec.get("candidates") or []))
+            for rec in _events(run_dir, "agent_optimize_round_batch")
+            if rec.get("no_merge") and rec.get("merge_eligible_pairs")}
+
+
+def _budget(spec: dict, key: str, default: int) -> int:
+    v = spec.get(key)
+    return default if v is None else max(0, int(v))
 
 
 def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
@@ -95,18 +135,6 @@ def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
     return [(rec.get("tag"), rec["skip_justification"].strip())
             for rec in _compliance_events(run_dir)
             if (rec.get("skip_justification") or "").strip()]
-
-
-def _prior_bare_skip(run_dir):
-    """Tag of the latest earlier unscreened candidate that went through on a bare
-    ``--skip-screen-ladder`` (no justification text), else ``None``. Only events carrying
-    ``skip_screen_ladder`` count — a candidate REFUSED for having no skip flag at all is logged
-    too, and must not read as a bare skip.
-    """
-    bare = [rec.get("tag") for rec in _compliance_events(run_dir)
-            if rec.get("skip_screen_ladder") and not rec.get("screened_before_fullval")
-            and not (rec.get("skip_justification") or "").strip()]
-    return bare[-1] if bare else None
 
 
 def _near_duplicate_justification(justification, prior):
@@ -515,11 +543,28 @@ def dominated_siblings(base_dir: Path, work: Path, tags: list[str]) -> dict[str,
             } if len(tags) >= 2 else {}
 
 
+def mergeable_pairs(run_dir, plan: dict, survivors: list[str]) -> tuple[list, list]:
+    """(pairs merge_stage tries to build, pairs it skips as same-cluster alternatives).
+
+    The ONE definition of "a merge applied this round", shared by merge_stage and #630's
+    --no-merge budget, so the budget can never count a pair the merge stage would not try.
+    """
+    import itertools
+
+    pairs, skipped = [], []
+    for a, b in itertools.combinations(sorted(survivors), 2):
+        ca, cb = set(cluster_ids_for(run_dir, plan, a)), set(cluster_ids_for(run_dir, plan, b))
+        if ca & cb:
+            skipped.append({"pair": [a, b], "reason": f"same diagnose cluster(s) "
+                            f"{sorted(ca & cb)} — alternative fixes, not complementary ones"})
+        else:
+            pairs.append((a, b, ca, cb))
+    return pairs, skipped
+
+
 def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: dict,
                 concurrency: int | None, max_parallel: int) -> dict:
     """Build, screen and select pairwise merges among this round's screen survivors (#438)."""
-    import itertools
-
     import merge as merge_mod
     from cap_evolve import graph
 
@@ -528,13 +573,9 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
     parent_per_task = harness.split_result_from_rollouts(run_dir, best, "val").per_task or []
     seed = int(run_dir.read_splits().seed)
     screens = {t: latest_screen(run_dir, t) for t in survivors}
-    merges, skipped = [], []
-    for a, b in itertools.combinations(sorted(survivors), 2):
-        ca, cb = set(cluster_ids_for(run_dir, plan, a)), set(cluster_ids_for(run_dir, plan, b))
-        if ca & cb:
-            skipped.append({"pair": [a, b], "reason": f"same diagnose cluster(s) "
-                            f"{sorted(ca & cb)} — alternative fixes, not complementary ones"})
-            continue
+    merges = []
+    pairs, skipped = mergeable_pairs(run_dir, plan, survivors)
+    for a, b, ca, cb in pairs:
         tag = f"merge_{a}_{b}"
         built = merge_mod.build_merge_dir(base_dir, work / a, work / b, work / tag)
         if not built["built"]:
@@ -817,16 +858,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
     p.add_argument("--skip-screen-ladder", action="store_true",
-                   help="run full-val on a candidate with no screen.py record for it (NOT "
-                        "recommended — see the compliance check above). An explicit, recorded "
-                        "choice, the same idiom as --allow-high-concurrency. Prefer "
+                   help="run full-val on a candidate with no screen.py record for it. Unless "
+                        "the run's frozen screening_structurally_uneconomical is true, each "
+                        "such candidate spends the run-wide max_screen_skips budget "
+                        f"(capevolve.yaml, default {DEFAULT_MAX_SCREEN_SKIPS}); once spent it is "
+                        "refused, with no override (#631). Prefer "
                         "--skip-screen-justification, which records WHY.")
     p.add_argument("--skip-screen-justification", default=None,
                    help="same effect as --skip-screen-ladder (run full-val on a candidate with "
                         "no screen.py record), but records WHY screening was skipped on the "
                         "compliance event instead of just the bare choice — e.g. "
                         "'spend.py: break-even unreachable on this split size' or 'pure "
-                        "additive READ tool, screening cost exceeds expected savings'.")
+                        "additive READ tool, screening cost exceeds expected savings'. Spends "
+                        "the same max_screen_skips budget: the reason is recorded, it never "
+                        "buys an extra skip.")
     p.add_argument("--plan", default=None,
                    help="JSON file {tag: {ids, rationale, cluster_ids, edit_kind}} (every key "
                         "optional): the screen subset each candidate plausibly touches and WHY, "
@@ -836,13 +881,12 @@ def build_parser() -> argparse.ArgumentParser:
                    help="screen.py rung for the automatic screen of a tag with no --plan ids")
     p.add_argument("--no-merge", action="store_true",
                    help="skip the automatic pairwise merge of disjoint screen survivors; "
-                        "every survivor is gated alone")
-    p.add_argument("--duplicate-skip-justification", default=None,
-                   help="required when --skip-screen-justification is a near-duplicate of an "
-                        "earlier skip reason in this run — or on the 2nd+ bare "
-                        "--skip-screen-ladder — and a candidate has no screen.py record (#585). Say why the SAME reasoning genuinely holds for this "
-                        "candidate. Without it, round.py refuses rather than paying full val "
-                        "on a copy-pasted excuse.")
+                        "every survivor is gated alone. When a merge APPLIED (2+ screened "
+                        "survivors on disjoint clusters) this logs merge_compliance_warning "
+                        "immediately and spends the run-wide max_merge_skips budget "
+                        f"(capevolve.yaml, default {DEFAULT_MAX_MERGE_SKIPS}); once spent it is "
+                        "refused, with no override (#630). A round where no merge applied "
+                        "spends nothing.")
     p.add_argument("--single-candidate-justification", default=None,
                    help=f"required (or --afford-check-file) when --candidates has fewer than "
                         f"{MIN_SIBLINGS} tags — free text, e.g. \"diagnose surfaced only one "
@@ -935,45 +979,50 @@ def _main(argv=None) -> int:
     # from re-reading every round's prose by hand.
     near_dup_of = _near_duplicate_justification(
         args.skip_screen_justification, _prior_skip_justifications(run_dir))
-    # A bare --skip-screen-ladder (no reason) has no text to compare, so without this a driver
-    # refused below would just drop the reason next time. The 2nd+ bare skip in a run counts as
-    # a duplicate of the earlier one — same refusal, same override.
-    bare_skip = args.skip_screen_ladder and not (args.skip_screen_justification or "").strip()
-    if bare_skip:
-        near_dup_of = _prior_bare_skip(run_dir)
     screened_by_tag = {t: screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
                        for t in tags}
     unscreened = [t for t in tags if not screened_by_tag[t]]
-    # issue #585 (reopened): flagging alone changed nothing — run_v18_fromscratch_20260930 reused
-    # one boilerplate skip reason for 17/17 candidates, all flagged, all paid 300-rollout full
-    # val with zero screens. A REPEATED (near-duplicate) skip reason on an unscreened candidate
-    # is now refused — before any spend and before its compliance event is logged, so a refused
-    # attempt never becomes a "prior" itself — unless --duplicate-skip-justification says why
-    # reusing that reasoning is genuinely right this time (the same true fact CAN hold for
-    # several candidates in a row). A first-time (novel) skip reason still passes on its own.
-    if unscreened and near_dup_of and not (args.duplicate_skip_justification or "").strip():
+    # issue #631: a skip is priced by arithmetic, not argued in prose. The near-duplicate TEXT
+    # refusal (#585/#613) was defeated by rewording every round while the strategy — always
+    # skip — held constant, so similarity is now only RECORDED (justification_near_duplicate_of,
+    # above), never enforced. Enforcement is the frozen screening_economics plus a COUNT:
+    #   * structurally uneconomical (tier-1 break-even > SCREEN_BREAKEVEN_CEILING, i.e. a tiny
+    #     val) — the arithmetic already settled it once, so a skip is unrestricted;
+    #   * otherwise screening is mandatory, and at most max_screen_skips distinct candidates
+    #     per run may reach full val unscreened. Past that it is refused — before any spend and
+    #     before any compliance event, so a refused attempt is never itself counted — with
+    #     deliberately NO override flag: a fresh justification is exactly what was gamed.
+    spec = spec_for_run(run_dir, project)
+    ECONOMICS = harness.freeze_screening_economics(run_dir, int(spec.get("num_trials") or 1))
+    UNECONOMICAL = bool(ECONOMICS["screening_structurally_uneconomical"])
+    MAX_SCREEN_SKIPS = _budget(spec, "max_screen_skips", DEFAULT_MAX_SCREEN_SKIPS)
+    prior_skips = _prior_screen_skips(run_dir)
+    screen_skips_used = len(prior_skips | (set(unscreened) if skip_justified else set()))
+    if skip_justified and unscreened and not UNECONOMICAL \
+            and screen_skips_used > MAX_SCREEN_SKIPS:
         print(json.dumps({
-            "error": f"candidate(s) {unscreened} skip screen.py with "
-                     + ("a bare --skip-screen-ladder (no reason), repeating "
-                        f"{near_dup_of}'s bare skip" if bare_skip else
-                        "a --skip-screen-justification that is a near-duplicate of "
-                        f"{near_dup_of}'s") + " earlier in this run",
-            "why": "a skip reason reused round after round is boilerplate, not a per-candidate "
-                   "judgment (issue #585): screen.py's tier-1 subset costs ~6-25 rollouts vs "
-                   "full val's hundreds, and most unscreened candidates are rejected by full "
-                   "val anyway.",
-            "fix": "run screen.py --tier 1 on these tags first, or pass "
-                   "--duplicate-skip-justification \"<why the SAME reasoning genuinely holds "
-                   "for THIS candidate>\" to override deliberately (recorded on the compliance "
-                   "event).",
+            "error": f"candidate(s) {unscreened} would reach full val unscreened, but this run "
+                     f"already spent its max_screen_skips={MAX_SCREEN_SKIPS} budget on "
+                     f"{sorted(prior_skips)} (this round would make it {screen_skips_used})",
+            "why": "screening is NOT structurally uneconomical on this run (frozen at baseline: "
+                   f"a tier-1 screen fires {ECONOMICS['tier1_fired']} rollouts against "
+                   f"{ECONOMICS['full_val_rollouts']} for full val, break-even kill rate "
+                   f"{ECONOMICS['breakeven_kill_rate']} <= {ECONOMICS['ceiling']}), so a skip is "
+                   "a cost, not a judgement call (#631). There is no override flag: the budget "
+                   "is a count, and no wording of a justification changes a count.",
+            "fix": "drop --skip-screen-ladder/--skip-screen-justification: round.py then screens "
+                   "these tags itself (tier 1), kills proven harm, and gates the survivors. To "
+                   "allow more skips on this benchmark, raise max_screen_skips in capevolve.yaml "
+                   "— a recorded per-benchmark decision, not a per-round one.",
+            "screening_economics": ECONOMICS,
         }, indent=2))
         return 2
     if near_dup_of:
-        print(f"NOTE: this skip repeats {near_dup_of}'s earlier in this run — allowed, recorded "
-              "as justification_near_duplicate_of on the compliance event.", file=sys.stderr)
+        print(f"NOTE: this skip repeats {near_dup_of}'s earlier in this run — recorded as "
+              "justification_near_duplicate_of on the compliance event.", file=sys.stderr)
 
     # #437: the screen is the DEFAULT step, run here rather than left for the driver to
-    # remember. Only a skip flag (and #585's refusal of a repeated one, above) bypasses it.
+    # remember. Only a skip flag (within #631's skip budget, above) bypasses it.
     plan = load_plan(args.plan)
     auto_screened: dict[str, dict] = {}
     if unscreened and not skip_justified:
@@ -986,6 +1035,61 @@ def _main(argv=None) -> int:
             auto_screened[t] = r
             screened_by_tag[t] = not r.get("rc") and latest_screen(run_dir, t) is not None
         unscreened = [t for t in unscreened if not screened_by_tag[t]]
+
+    # Screen KILLS leave the gate set: a kill is proven harm on the subset, and paying full val
+    # to confirm it is the waste the screen exists to stop.
+    screen_payloads = {t: latest_screen(run_dir, t) if screened_by_tag[t] else None for t in tags}
+    killed = [t for t in tags if (screen_payloads[t] or {}).get("decision") == "kill"]
+    survivors = [t for t in tags if t not in killed]
+    # #633: a survivor whose diff is a STRICT subset of a sibling survivor's (same round, same
+    # parent) is never gated on its own — purely structural, no eval spent to learn it. Taken
+    # out BEFORE #630's merge-eligibility count, so a (subset, superset) pair is never charged
+    # to max_merge_skips; its graph.jsonl transition is written below, after every refusal.
+    dominated = dominated_siblings(run_dir.candidate_dir(best), work, survivors)
+    survivors = [t for t in survivors if t not in dominated]
+
+    # #630: --no-merge, priced like a screen skip. A merge APPLIED this round when merge_stage
+    # would have run and found a pair to build — its own trigger condition and its own pair
+    # rule (mergeable_pairs). Declining one is announced IMMEDIATELY (merge_compliance_warning,
+    # stderr, the table's merge_skip) rather than once at finalize, when it can no longer change
+    # anything, and counted; past max_merge_skips it is refused with no override — before any
+    # compliance event or graph.jsonl transition, so a refused attempt leaves only its warning.
+    # Obeying is free: the screens are on disk, and a pair that collides at build time is
+    # skipped by merge_stage for zero rollouts. (An unscreened survivor means no merge applied,
+    # so the screen budget above and this one never charge the same round twice.)
+    merge_applies = len(survivors) >= 2 and all(screened_by_tag[t] for t in survivors)
+    eligible_pairs = ([[a, b] for a, b, _, _ in mergeable_pairs(run_dir, plan, survivors)[0]]
+                      if merge_applies else [])
+    MERGE_SKIP = None
+    if args.no_merge and eligible_pairs:
+        max_merge_skips = _budget(spec, "max_merge_skips", DEFAULT_MAX_MERGE_SKIPS)
+        prior_merge_skips = _prior_merge_skips(run_dir)
+        merge_skips_used = len(prior_merge_skips | {tuple(sorted(tags))})
+        refused = merge_skips_used > max_merge_skips
+        MERGE_SKIP = {"reason": "no_merge_with_eligible_pairs", "realtime": True,
+                      "candidates": list(tags), "disjoint_pairs": eligible_pairs,
+                      "merge_skips_used": len(prior_merge_skips) if refused else merge_skips_used,
+                      "max_merge_skips": max_merge_skips, "refused": refused,
+                      "iteration": int(run_dir.spent.iterations)}
+        run_dir.log_event("merge_compliance_warning", **MERGE_SKIP)
+        if refused:
+            print(json.dumps({
+                "error": f"--no-merge declines merging screened, cluster-disjoint survivors "
+                         f"{eligible_pairs}, and this run already spent its "
+                         f"max_merge_skips={max_merge_skips} budget",
+                "why": "a merge costs one subset screen and gates two survivors' bytes once "
+                       "instead of twice; hand-building the same union later pays a THIRD "
+                       "full-val gate (#630). There is no override flag: the budget is a count.",
+                "fix": "re-run this exact command without --no-merge — the screens are already "
+                       "on disk, so nothing is re-screened. To allow more on this benchmark, "
+                       "raise max_merge_skips in capevolve.yaml.",
+            }, indent=2))
+            return 2
+        print(f"WARNING: --no-merge declined merging {eligible_pairs} "
+              f"({merge_skips_used}/{max_merge_skips} of this run's max_merge_skips); "
+              "the next such round is refused. Logged as merge_compliance_warning.",
+              file=sys.stderr)
+
     for t in tags:
         run_dir.log_event("agent_optimize_compliance", tag=t,
                           screened_before_fullval=screened_by_tag[t],
@@ -993,7 +1097,9 @@ def _main(argv=None) -> int:
                           skip_screen_ladder=bool(args.skip_screen_ladder),
                           skip_justification=args.skip_screen_justification,
                           justification_near_duplicate_of=near_dup_of,
-                          duplicate_skip_justification=args.duplicate_skip_justification,
+                          screening_structurally_uneconomical=UNECONOMICAL,
+                          screen_skips_used=screen_skips_used,
+                          max_screen_skips=MAX_SCREEN_SKIPS,
                           iteration=int(run_dir.spent.iterations))
 
     # Made a hard refusal, not a logged fact: issue #420 item 4 found that EVERY candidate
@@ -1024,38 +1130,30 @@ def _main(argv=None) -> int:
         }, indent=2))
         return 2
 
-    # Screen results -> graph.jsonl, and screen KILLS leave the gate set: a kill is proven harm
-    # on the subset, and paying full val to confirm it is the waste the screen exists to stop.
+    # Screen results -> graph.jsonl (kills were already taken out of `survivors`, above).
     from cap_evolve import graph
 
     input_tags = list(tags)
-    screen_stage, killed = {}, []
+    screen_stage = {}
     node_parents = {t: [best] for t in tags}
     for t in tags:
-        payload = latest_screen(run_dir, t) if screened_by_tag[t] else None
+        payload = screen_payloads[t]
         screen_stage[t] = screen_summary(payload, auto=t in auto_screened)
         if payload is None:
             continue
         graph.append_node(run_dir, node_id=t, parents=[best], status="screened", gate={},
                           cluster_ids=cluster_ids_for(run_dir, plan, t),
                           edit_kind=(plan.get(t) or {}).get("edit_kind"))
-        if payload.get("decision") == "kill":
-            killed.append(t)
-    survivors = [t for t in tags if t not in killed]
 
-    # #633: a survivor whose diff is a STRICT subset of a sibling survivor's (same round, same
-    # parent) is never gated on its own — purely structural, no eval spent to learn it.
-    dominated = dominated_siblings(run_dir.candidate_dir(best), work, survivors)
     for t, sup in dominated.items():
         graph.append_node(run_dir, node_id=t, parents=[best], status="superseded", gate={},
                           dominated_by=sup,
                           reason=f"its diff is a strict subset of sibling {sup}'s, which is "
                                  "gated instead")
-    survivors = [t for t in survivors if t not in dominated]
 
     # #438: pairwise merges of disjoint survivors, each screened, BEFORE any full-val gate.
     MERGE = None
-    if not args.no_merge and len(survivors) >= 2 and all(screened_by_tag[t] for t in survivors):
+    if not args.no_merge and merge_applies:
         MERGE = merge_stage(run_dir, project, best, survivors, plan, args.concurrency,
                             args.max_parallel)
         for m in MERGE["merges"]:
@@ -1088,12 +1186,14 @@ def _main(argv=None) -> int:
                       single_candidate_justification_source=JUSTIFICATION_SOURCE,
                       gated=list(tags), screen_killed=killed, dominated=dominated,
                       merge_candidates=[m["tag"] for m in (MERGE or {}).get("merges", [])],
-                      merges_gated=(MERGE or {}).get("chosen", []))
+                      merges_gated=(MERGE or {}).get("chosen", []),
+                      no_merge=bool(args.no_merge), merge_eligible_pairs=eligible_pairs)
     CASCADE = {
         "screen_stage": screen_stage,
         "screen_killed": killed,
         "dominated": dominated,
         "merge_stage": MERGE,
+        "merge_skip": MERGE_SKIP,
         "gated": list(tags),
         "reading": ("every candidate is screened first (round.py runs screen.py itself unless a "
                     "skip flag is passed), screen kills are never gated, disjoint survivors are "

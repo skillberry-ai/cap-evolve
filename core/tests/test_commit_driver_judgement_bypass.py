@@ -38,6 +38,7 @@ def _commit(run_dir, candidate_id, from_dir, decision, val=None, extra=()):
            "--candidate-id", candidate_id, "--from-dir", str(from_dir),
            "--decision", decision, "--note", f"{decision} via test",
            "--missing-handover-justification", "fixture: journal handover not under test",
+         "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test"]
     if val is not None:
         cmd += ["--val", str(val)]

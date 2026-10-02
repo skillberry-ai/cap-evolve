@@ -2697,9 +2697,11 @@ def _compute_prompt_map(cand_dir: Path, parent_dir: Path | None, diff_rows: list
             "touched": [],
         }
         
-        # Extract headings (skip those in fenced code blocks)
+        # Extract headings (skip those in fenced code blocks). Markdown only:
+        # in .py/.sh/.yaml etc. a leading `#` is a comment, not a heading (#626).
+        is_md = Path(filename).suffix.lower() in (".md", ".markdown")
         in_fence = False
-        for i, line in enumerate(lines, 1):
+        for i, line in enumerate(lines if is_md else [], 1):
             stripped = line.strip()
             # Track fenced code blocks
             if stripped.startswith("```"):

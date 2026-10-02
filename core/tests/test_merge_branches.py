@@ -233,6 +233,7 @@ def test_merged_candidate_gates_and_commits_with_two_parents(tmp_path):
          # is testing the --parents plumbing, not the journal discipline, so the same escape
          # hatch used by test_graph_jsonl.py/test_agent_optimize_provisional.py applies here.
          "--missing-handover-justification", "fixture: journal handover not under test",
+         "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test"],
         capture_output=True, text=True, env=_env())
     assert commit.returncode == 0, f"commit.py failed: {commit.stdout}\n{commit.stderr}"

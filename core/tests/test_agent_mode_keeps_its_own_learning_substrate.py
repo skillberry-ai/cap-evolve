@@ -53,6 +53,10 @@ def _staged(tmp_path, cid="cand_1"):
     # commit.py requires a real DIAGNOSIS.json (#611); not what these tests are about.
     (work / "DIAGNOSIS.json").write_text(json.dumps(
         {"candidate": cid, "clusters": [{"id": "A", "tasks": ["t0"]}]}), encoding="utf-8")
+    # ...and a filled PROCESS.md "Ranked issue list" (#634); also not what these are about.
+    (work / "PROCESS.md").write_text(
+        "## Ranked issue list\n| rank | cluster | tasks |\n| --- | --- | --- |\n"
+        "| 1 | A | t0 |\n", encoding="utf-8")
     return run_dir, work
 
 
@@ -181,7 +185,9 @@ def test_a_stale_handover_carried_over_from_the_last_round_is_not_reported_as_wr
     work2 = run_dir.root / "work" / "cand_2"     # round 2: cloned, and NOT updated
     shutil.copytree(work, work2)
     out = _commit(run_dir, work2, "--missing-handover-justification",
-                  "fixture: round 2 deliberately left the journal stale", cid="cand_2")
+                  "fixture: round 2 deliberately left the journal stale",
+                  "--retry-justification", "fixture: cloned diagnosis, retry not under test",
+                  cid="cand_2")
 
     journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
     assert "duplicate handover" in journal, (

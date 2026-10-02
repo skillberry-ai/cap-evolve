@@ -56,12 +56,14 @@ describe('DiagnosisFlow', () => {
     techniques: ['replayed rollouts', 'synthetic test cases'],
   }
 
+  // dashboard.py's _compute_outcomes shape: {task_id: status}
   const mockOutcomes: Outcomes = {
-    fixed: ['task1', 'task2'],
-    broke: ['task4'],
-    still_failing: ['task3'],
-    still_passing: ['task5', 'task6'],
-    targeted: ['task1', 'task2', 'task3'],
+    task1: 'fixed',
+    task2: 'fixed',
+    task4: 'broke',
+    task3: 'still_failing',
+    task5: 'still_passing',
+    task6: 'still_passing',
   }
 
   it('renders diagnosis headline', () => {
@@ -133,5 +135,58 @@ describe('DiagnosisFlow', () => {
     expect(screen.getByText('Validation Warnings')).toBeInTheDocument()
     expect(screen.getByText(/Unknown task ID: task99/)).toBeInTheDocument()
     expect(screen.getByText(/Edit E3 references missing cluster C/)).toBeInTheDocument()
+  })
+
+  // #625: the compact shape optimizers really write — verbatim from
+  // .capevolve/run_full/candidates/cand_11/DIAGNOSIS.json (trimmed to 2 clusters/2 skips):
+  // clusters[].edit is a string, no top-level edits/techniques, skipped is a {task: reason} map.
+  const realDiagnosis: Diagnosis = {
+    headline: '24+44+18 fixes',
+    clusters: [
+      {
+        id: 'M',
+        name: 'free bags dropped at booking',
+        tasks: ['24'],
+        tag: 'KNOWLEDGE (policy told agent to copy only nonfree_baggages)',
+        edit: 'quote_booking returns total_baggages; policy copy it + use free allowance',
+        evidence: '24 cand_6 t0,t3,t7: quote free_baggages 1, told user 1 free bag, booked total_baggages=0',
+      },
+      {
+        id: 'N',
+        name: 'segment durations summed',
+        tasks: ['44'],
+        tag: 'RULE-VIOLATION -> computed field',
+        edit: 'get_user_reservations max_flight_duration_hours + explicit per-flight rule with example',
+        evidence: "44 cand_6 t0,t2: 'NM1VX1 total 6.0h -> no change'; gold upgrades it (3.0+3.0)",
+      },
+    ],
+    skipped: {
+      '23': 'judge flakiness, db_match 1',
+      '39': 'gold conflicts with 44',
+    },
+  }
+
+  it('renders the real compact DIAGNOSIS.json shape without crashing (#625)', () => {
+    render(
+      <DiagnosisFlow
+        diagnosis={realDiagnosis}
+        outcomes={{ '24': 'fixed', '44': 'still_failing', '7': 'broke', '2': 'still_passing' }}
+      />,
+    )
+    expect(screen.getByText('Tasks (2)')).toBeInTheDocument()
+    expect(screen.getByText('1 not predicted')).toBeInTheDocument()
+    expect(screen.getByText('free bags dropped at booking')).toBeInTheDocument()
+    expect(
+      screen.getByText('quote_booking returns total_baggages; policy copy it + use free allowance'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/booked total_baggages=0/)).toBeInTheDocument()
+    expect(screen.getByText('Edits (2)')).toBeInTheDocument()
+    expect(screen.getByText('Skipped edits (2)')).toBeInTheDocument()
+    expect(screen.getByText('gold conflicts with 44')).toBeInTheDocument()
+  })
+
+  it('renders a cluster-only diagnosis with no edit strings (#625)', () => {
+    render(<DiagnosisFlow diagnosis={{ headline: 'h', clusters: [{ id: 'P', name: 'p', tasks: ['1'] }] }} />)
+    expect(screen.getByText('Edits (0)')).toBeInTheDocument()
   })
 })

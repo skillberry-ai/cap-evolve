@@ -9,6 +9,14 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Fixed
+- **Leaked dashboard servers exhausted the port range, so a run got no live dashboard at
+  all** (#628). Every run spawned a new server on a new port and none ever exited, so 25
+  orphans filled `[7878, 7903)`. The launcher now reuses a server that already serves the same
+  base dir with the same dashboard code, scans 100 ports instead of 25, and, only when the
+  range is full, reaps a listener that is provably dead: it identifies itself as a cap-evolve
+  dashboard over `/api/health`, reports its pid, and serves a base dir that no longer exists.
+  It never kills anything ambiguous. A bound dashboard prints a banner with its URL and the
+  base dir it serves.
 - **The dashboard's Process tab was empty (a 404) in every static export** (#525). Two defects,
   both needed to break it. The iframe loaded `/api/runs/<id>/process-html`, a route only the
   live backend has; on GitHub Pages the absolute path resolved outside `/cap-evolve/`. And

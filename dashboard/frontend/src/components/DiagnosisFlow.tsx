@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { Diagnosis, Outcomes } from '../lib/types'
+import { diagnosisEdits, diagnosisSkipped } from '../lib/diagnosis'
 
 interface DiagnosisFlowProps {
   diagnosis: Diagnosis
@@ -9,7 +10,9 @@ interface DiagnosisFlowProps {
 export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
-  const { clusters, edits, skipped } = diagnosis
+  const { clusters } = diagnosis
+  const edits = useMemo(() => diagnosisEdits(diagnosis), [diagnosis])
+  const skipped = diagnosisSkipped(diagnosis)
 
   // Build connection map: task -> clusters, cluster -> edits
   const taskToClusters = useMemo(() => {
@@ -35,14 +38,9 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
   }, [edits])
 
   // Get task status from outcomes
-  const getTaskStatus = (taskId: string) => {
-    if (!outcomes) return 'unknown'
-    if (outcomes.fixed.includes(taskId)) return 'fixed'
-    if (outcomes.broke.includes(taskId)) return 'broke'
-    if (outcomes.still_failing.includes(taskId)) return 'still_failing'
-    if (outcomes.still_passing.includes(taskId)) return 'still_passing'
-    return 'unknown'
-  }
+  const getTaskStatus = (taskId: string) => outcomes?.[taskId] ?? 'unknown'
+  const tasksWith = (status: string) =>
+    Object.keys(outcomes ?? {}).filter(t => outcomes![t] === status)
 
   const getTaskColor = (status: string) => {
     switch (status) {
@@ -94,15 +92,15 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
   }
 
   // Tally counts
-  const parentFailing = outcomes ? outcomes.fixed.length + outcomes.still_failing.length : 0
+  const parentFailingTasks = [...tasksWith('fixed'), ...tasksWith('still_failing')]
+  const parentFailing = parentFailingTasks.length
   const totalClusters = clusters.length
   const totalEdits = edits.length
-  const fixed = outcomes?.fixed.length || 0
-  const broke = outcomes?.broke.length || 0
-  const regressions = broke
-  const unpredictedRegressions = outcomes
-    ? outcomes.broke.filter(t => !outcomes.targeted?.includes(t)).length
-    : 0
+  const fixed = tasksWith('fixed').length
+  const brokeTasks = tasksWith('broke')
+  const regressions = brokeTasks.length
+  // "predicted" = the regressed task sits in one of the diagnosis's clusters
+  const unpredictedRegressions = brokeTasks.filter(t => !taskToClusters.has(t)).length
 
   return (
     <div className="space-y-4">
@@ -184,8 +182,7 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
             Tasks ({parentFailing})
           </h3>
           <div className="space-y-2">
-            {outcomes &&
-              [...outcomes.fixed, ...outcomes.still_failing].map(taskId => {
+            {parentFailingTasks.map(taskId => {
                 const status = getTaskStatus(taskId)
                 const highlighted = isHighlighted(taskId, 'task')
                 return (
@@ -241,6 +238,9 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
                   {cluster.tag && (
                     <div className="text-[10px] text-[var(--muted)] mt-1 uppercase">{cluster.tag}</div>
                   )}
+                  {cluster.detail && (
+                    <div className="text-[11px] text-[var(--muted)] mt-1">{cluster.detail}</div>
+                  )}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
                     {cluster.tasks.map(t => (
                       <span
@@ -282,11 +282,16 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
                     </span>
                     <span className="text-xs flex-1">{edit.title}</span>
                   </div>
-                  <div className="text-[10px] text-[var(--muted)] mt-1">
-                    {edit.lever} · {edit.blast_radius}
-                  </div>
+                  {(edit.lever || edit.blast_radius) && (
+                    <div className="text-[10px] text-[var(--muted)] mt-1">
+                      {[edit.lever, edit.blast_radius].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                  {edit.verified && (
+                    <div className="text-[11px] text-[var(--muted)] mt-1">{edit.verified}</div>
+                  )}
                   <div className="flex gap-1 mt-1.5 flex-wrap">
-                    {edit.files.map(f => (
+                    {(edit.files ?? []).map(f => (
                       <span
                         key={f}
                         className="px-1.5 py-0.5 text-[9px] font-mono bg-[var(--surface)] rounded"
@@ -313,7 +318,7 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
       </div>
 
       {/* Skipped edits */}
-      {skipped && skipped.length > 0 && (
+      {skipped.length > 0 && (
         <div className="mt-6">
           <h3 className="text-sm font-semibold mb-3 text-[var(--muted-strong)]">
             Skipped edits ({skipped.length})
@@ -330,6 +335,10 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {diagnosis.note && (
+        <div className="text-xs text-[var(--muted)]">Note: {diagnosis.note}</div>
       )}
 
       {/* Techniques */}

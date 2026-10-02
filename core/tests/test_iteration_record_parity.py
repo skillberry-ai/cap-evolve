@@ -129,6 +129,10 @@ def _run_agent_optimize(tmp_path):
         # ...and a real DIAGNOSIS.json, which commit.py also requires (#611).
         (work / "DIAGNOSIS.json").write_text(json.dumps(
             {"candidate": cid, "clusters": [{"id": "A", "tasks": ["t0"]}]}), encoding="utf-8")
+        # ...and a filled PROCESS.md "Ranked issue list" (#634).
+        (work / "PROCESS.md").write_text(
+            "## Ranked issue list\n| rank | cluster | tasks |\n| --- | --- | --- |\n"
+            "| 1 | A | t0 |\n", encoding="utf-8")
         out = subprocess.run(
             [sys.executable, str(AGENT_COMMIT), "--run-dir", str(run_dir.root),
              "--candidate-id", cid, "--from-dir", str(work), "--decision", decision,

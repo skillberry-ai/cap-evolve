@@ -62,6 +62,7 @@ def _commit(run_dir, work, *extra, cid="cand_2", decision="inconclusive", val="0
          "--candidate-id", cid, "--from-dir", str(work),
          "--decision", decision, "--val", val, "--note", "test",
          "--missing-handover-justification", "fixture: journal handover not under test",
+         "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test", *extra],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
