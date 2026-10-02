@@ -2355,8 +2355,10 @@ def reduce_run(run_dir) -> dict:
             eval_start_t = eval_start_ev["t"]
             eval_end_t = eval_ev["t"]
             
-            # Optimize span: from last eval end (or run start) to this eval_start
-            opt_start = last_eval_end_by_iter.get(it - 1, started_t)
+            # Optimize span: from last eval end (or run start) to this eval_start.
+            # Clamped: in a parallel batch the previous iteration's eval can end AFTER
+            # this one's eval_start, which produced end < start (a negative-width bar).
+            opt_start = min(last_eval_end_by_iter.get(it - 1, started_t), eval_start_t)
             activities.append({
                 "id": f"iter-{it}-opt",
                 "type": "optimize",
@@ -2380,7 +2382,31 @@ def reduce_run(run_dir) -> dict:
                 "error": False,
             })
             last_eval_end_by_iter[it] = eval_end_t
-        
+
+        # Growth rounds (scripts/grow.py): extra val trials bought on this SAME
+        # candidate, evaluated under tag "<cid>__grow<N>". Without these the timeline
+        # showed a silent gap where hours of eval spend actually happened.
+        for (tag, split), gs in eval_start_events.items():
+            m = re.fullmatch(re.escape(cid) + r"__grow(\d+)", tag or "")
+            if split != "val" or not m:
+                continue
+            ge = next((e for e in events if e.get("kind") == "evaluate"
+                       and e.get("tag") == tag and e.get("split") == "val"), None)
+            if not ge:
+                continue
+            activities.append({
+                "id": f"iter-{it}-grow{m.group(1)}",
+                "type": "grow",
+                "lane": "evaluator",
+                "iteration": it,
+                "candidate": cid,
+                "growth_round": int(m.group(1)),
+                "reward": ge.get("reward"),
+                "start": round(gs["t"] - started_t, 2),
+                "end": round(ge["t"] - started_t, 2),
+                "error": False,
+            })
+
         # Gate marker (point event at step time)
         step_ev = next((e for e in events if e.get("kind") in _STEP_KINDS 
                        and _step_candidate(e) == cid), None)

@@ -607,13 +607,17 @@ export type StreamEvent =
 /** Activity on the run timeline (from summary.activities). */
 export interface Activity {
   id: string
-  type: 'seed' | 'optimize' | 'evaluate' | 'gate' | 'final_eval' | 'finalize'
-  lane: 'phase' | 'iteration' | 'optimizer' | 'evaluator' | 'milestone' | 'chart'
+  /** `grow` = a provisional candidate's extra val trials (tag `<cid>__grow<N>`). */
+  type: 'seed' | 'optimize' | 'evaluate' | 'grow' | 'gate' | 'final_eval' | 'finalize'
+  lane: 'phase' | 'iteration' | 'optimizer' | 'evaluator' | 'milestone' | 'gate' | 'finalize' | 'chart'
   iteration: number | null
   candidate: string | null
   start: number
   end: number
   error: boolean
+  split?: string
+  growth_round?: number
+  reward?: number | null
 }
 
 /** Prompt map metadata for a capability file (from graph.nodes[].prompt_map). */

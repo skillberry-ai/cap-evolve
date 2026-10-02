@@ -110,6 +110,47 @@ def test_activities_spans_match_per_iteration_times():
         assert abs(opt_duration - iter_data["optimizer_seconds"]) < 5.0
 
 
+def test_activities_include_growth_rounds_and_parallel_spans_never_negative():
+    """Shape of run_full's cand_16 (provisional -> __grow1/__grow2 -> reject) plus a
+    parallel batch where iter 2's eval starts before iter 1's eval ends."""
+    from cap_evolve import dashboard
+
+    ev = lambda tag, t0, t1, r: [
+        {"kind": "eval_start", "split": "val", "tag": tag, "t": t0},
+        {"kind": "evaluate", "split": "val", "tag": tag, "reward": r, "stderr": 0.05,
+         "cost_usd": 1.0, "tokens": 10, "seconds": t1 - t0, "t": t1},
+    ]
+    step = lambda cid, t, accept: {"kind": "step", "candidate": cid, "accept": accept,
+                                   "reason": "x", "val": 0.8, "parent": "seed", "t": t}
+    events = [
+        {"kind": "splits", "train": 4, "val": 2, "test": 2, "seed": 0, "t": 0.0},
+        *ev("seed", 0.0, 100.0, 0.5),
+        {"kind": "baseline", "val": 0.5, "stderr": 0.0, "t": 100.0},
+        *ev("cand_1", 300.0, 900.0, 0.8),
+        *ev("cand_2", 500.0, 800.0, 0.7),   # parallel: starts before cand_1 ends
+        step("cand_1", 950.0, True), step("cand_2", 960.0, False),
+        {"kind": "provisional", "candidate": "cand_3", "val": 0.8, "t": 1500.0},
+        *ev("cand_3", 1000.0, 1400.0, 0.8),
+        *ev("cand_3__grow1", 1510.0, 2000.0, 0.82),
+        {"kind": "provisional_grow", "candidate": "cand_3", "growth_round": 1, "t": 2001.0},
+        *ev("cand_3__grow2", 2010.0, 2500.0, 0.83),
+        {"kind": "provisional_grow", "candidate": "cand_3", "growth_round": 2, "t": 2501.0},
+        step("cand_3", 2600.0, False),
+    ]
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=events)
+        acts = dashboard.reduce_run(rd)["summary"]["activities"]
+
+    grows = sorted((a for a in acts if a["type"] == "grow"), key=lambda a: a["growth_round"])
+    assert [(a["candidate"], a["growth_round"], a["start"], a["end"]) for a in grows] == [
+        ("cand_3", 1, 1510.0, 2000.0), ("cand_3", 2, 2010.0, 2500.0)]
+    assert grows[0]["iteration"] == next(a["iteration"] for a in acts
+                                         if a["type"] == "evaluate" and a["candidate"] == "cand_3")
+    for a in acts:
+        assert a["end"] >= a["start"], a
+
+
 def test_activities_handles_final_evaluations():
     """Final test and train evaluations should be included in activities."""
     from cap_evolve import dashboard
