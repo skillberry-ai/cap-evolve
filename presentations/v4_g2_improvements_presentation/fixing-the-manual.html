@@ -1,0 +1,1259 @@
+<title>Fixing the Manual — G2 shared bundle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,500;0,72,600;1,72,400;1,72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper: #eef1f0;
+    --paper-raised: #e2e7e5;
+    --ink: #171b1f;
+    --ink-soft: #4b535a;
+    --hair: #c7cec9;
+    --accent: #b5791e;
+    --accent-ink: #171b1f;
+    --diff-add-bg: #dcf0e2;
+    --diff-add-ink: #1e6b3f;
+    --diff-add-mark: #3fae6a;
+    --diff-rem-bg: #f6dede;
+    --diff-rem-ink: #8a2b2b;
+    --diff-rem-mark: #c64545;
+    --panel: #14181c;
+    --panel-ink: #d9dedb;
+    --panel-hair: #2b3238;
+    --shadow: rgba(20,24,20,0.08);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper: #10141a;
+      --paper-raised: #171d24;
+      --ink: #e7ebe8;
+      --ink-soft: #a3adaa;
+      --hair: #2c3339;
+      --accent: #e0a949;
+      --accent-ink: #10141a;
+      --diff-add-bg: #103824;
+      --diff-add-ink: #7fd9a1;
+      --diff-add-mark: #57d68d;
+      --diff-rem-bg: #3a1717;
+      --diff-rem-ink: #ed9a9a;
+      --diff-rem-mark: #e5686b;
+      --panel: #0a0d10;
+      --panel-ink: #c7cec9;
+      --panel-hair: #23292d;
+      --shadow: rgba(0,0,0,0.4);
+    }
+  }
+
+  :root[data-theme="dark"]{
+    --paper: #10141a;
+    --paper-raised: #171d24;
+    --ink: #e7ebe8;
+    --ink-soft: #a3adaa;
+    --hair: #2c3339;
+    --accent: #e0a949;
+    --accent-ink: #10141a;
+    --diff-add-bg: #103824;
+    --diff-add-ink: #7fd9a1;
+    --diff-add-mark: #57d68d;
+    --diff-rem-bg: #3a1717;
+    --diff-rem-ink: #ed9a9a;
+    --diff-rem-mark: #e5686b;
+    --panel: #0a0d10;
+    --panel-ink: #c7cec9;
+    --panel-hair: #23292d;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .deck{
+    height: 100vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+  .deck::-webkit-scrollbar{ display:none; }
+
+  section.slide{
+    min-height: 100vh;
+    width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(28px, 6vw, 88px);
+    position: relative;
+  }
+
+  .folio{
+    position: absolute;
+    top: clamp(20px, 4vw, 40px);
+    left: clamp(28px, 6vw, 88px);
+    right: clamp(28px, 6vw, 88px);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .folio .n{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
+
+  /* ---------- Cover ---------- */
+  .cover{
+    max-width: 980px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .eyebrow{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  .cover h1{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(2.6rem, 6.5vw, 5.2rem);
+    line-height: 1.02;
+    margin: 0 0 22px;
+    text-wrap: balance;
+    max-width: 14ch;
+  }
+  .cover .lede{
+    font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+    color: var(--ink-soft);
+    max-width: 62ch;
+    line-height: 1.55;
+    margin: 0 0 44px;
+  }
+  .cover .lede strong{ color: var(--ink); font-weight: 600; }
+
+  table.roster{
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 760px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+  }
+  table.roster th{
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    padding: 0 14px 10px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  table.roster td{
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  table.roster td.task{ font-family: "IBM Plex Sans", sans-serif; font-weight: 500; white-space: normal; }
+  table.roster tr:last-child td{ border-bottom: none; }
+  .score-move{ font-variant-numeric: tabular-nums; display:flex; align-items:center; gap:6px; }
+  .score-move .before{ color: var(--diff-rem-mark); }
+  .score-move .after{ color: var(--diff-add-mark); }
+  .score-move .arrow{ color: var(--ink-soft); }
+
+  .score-cap{
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--diff-rem-mark);
+    white-space: nowrap;
+  }
+  .score-cap .lock{ font-size: 0.85em; }
+  .score-cap .sep{ color: var(--ink-soft); font-weight: 400; }
+  table.roster tr.split td{ border-bottom: none; padding-bottom: 2px; }
+  table.roster tr.split + tr td{ padding-top: 2px; color: var(--ink-soft); font-size: 0.86rem; }
+
+  .scrollhint{
+    margin-top: 40px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scrollhint .chev{ animation: bob 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .scrollhint .chev{ animation: none; } }
+  @keyframes bob{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(4px); } }
+
+  /* ---------- Item slides ---------- */
+  .item{
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) 1fr;
+    gap: clamp(28px, 4vw, 64px);
+    align-items: start;
+  }
+  @media (max-width: 860px){
+    .item{ grid-template-columns: 1fr; }
+  }
+
+  .item-left{ padding-top: 46px; }
+  .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
+  .tag{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    padding: 4px 9px;
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+  }
+  .tag.muted{
+    color: var(--diff-rem-mark);
+    border-color: var(--diff-rem-mark);
+    background: var(--diff-rem-bg);
+  }
+  .item h2{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+    line-height: 1.08;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .item .taskname{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin: 0 0 26px;
+  }
+  .score-badge{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 28px;
+  }
+  .score-badge .before{ color: var(--diff-rem-mark); }
+  .score-badge .after{ color: var(--diff-add-mark); }
+  .score-badge .arrow{ color: var(--ink-soft); font-size: 1.1rem; }
+  .score-badge .cap{
+    display:block;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .request{
+    margin: 0 0 24px;
+    padding: 13px 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--paper-raised);
+    border-radius: 0 5px 5px 0;
+  }
+  .request .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .request p{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.08rem;
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0;
+  }
+  .request .note{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .block{ margin-bottom: 22px; }
+  .block h3{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+  .block p{
+    font-size: 1.01rem;
+    line-height: 1.6;
+    color: var(--ink);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .diffpanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+  }
+  .diffpanel + .diffpanel{ margin-top: 18px; }
+  .diff-tab{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-hair);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--panel-ink);
+  }
+  .diff-tab .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); flex-shrink:0; }
+  .diff-tab .reward{
+    margin-left: auto;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .diff-tab .reward.bad{ color: var(--diff-rem-mark); }
+  .diff-tab .reward.good{ color: var(--diff-add-mark); }
+  .diff-lines{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    padding: 4px 0;
+    overflow-x: auto;
+  }
+  .diff-lines .row{
+    display: flex;
+    padding: 3px 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-lines .row .mark{
+    width: 1.4em;
+    flex-shrink: 0;
+    user-select: none;
+    opacity: 0.85;
+  }
+  .row.rem{ background: var(--diff-rem-bg); color: var(--diff-rem-ink); }
+  .row.rem .mark{ color: var(--diff-rem-mark); }
+  .row.add{ background: var(--diff-add-bg); color: var(--diff-add-ink); }
+  .row.add .mark{ color: var(--diff-add-mark); }
+  .row.ctx{ color: var(--panel-ink); opacity: 0.6; }
+  .row.ctx .mark{ color: var(--panel-ink); }
+  .row.call{ color: var(--panel-ink); }
+  .row.call .mark{ color: var(--accent); }
+  .diff-note{
+    padding: 10px 16px 14px;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    opacity: 0.75;
+    border-top: 1px dashed var(--panel-hair);
+  }
+
+  /* ---------- Closing ---------- */
+  .closing{
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .closing h2{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+    line-height: 1.28;
+    margin: 0 0 32px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .closing .attn{ color: var(--accent); font-style: normal; }
+  .recap{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 40px;
+  }
+  @media (max-width: 760px){ .recap{ grid-template-columns: 1fr 1fr; } }
+  .recap .card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 14px 14px 16px;
+    background: var(--paper-raised);
+  }
+  .recap .card .k{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .recap .card .move{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .recap .card .move .before{ color: var(--diff-rem-mark); }
+  .recap .card .move .after{ color: var(--diff-add-mark); }
+  .closing .evidence-note{
+    margin-top: 28px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 66ch;
+  }
+
+  /* ---------- Locked-ceiling slides ---------- */
+  .ceilings{
+    display: flex;
+    gap: 14px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .ceiling-card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 12px 16px;
+    background: var(--paper-raised);
+    min-width: 190px;
+  }
+  .ceiling-card .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .ceiling-card .task{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .ceiling-card .val{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--diff-rem-mark);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .ceiling-card .val .lock{ font-size: 1rem; }
+  .ceiling-card .sub{
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .tracepanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+    padding: 22px 22px 20px;
+  }
+  .trace-step{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    padding: 10px 14px;
+    border: 1px solid var(--panel-hair);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.02);
+  }
+  .trace-step .k{
+    display:block;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .trace-arrow{
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: "IBM Plex Mono", monospace;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .trace-fork{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  @media (max-width: 520px){ .trace-fork{ grid-template-columns: 1fr; } }
+  .trace-branch{
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .trace-branch.blocked{
+    border: 1px dashed var(--panel-hair);
+    color: var(--ink-soft);
+    opacity: 0.7;
+  }
+  .trace-branch.blocked .k{ color: var(--diff-rem-mark); text-decoration: line-through; }
+  .trace-branch.reached{
+    border: 1px solid var(--accent);
+    background: rgba(224,169,73,0.08);
+    color: var(--panel-ink);
+  }
+  .trace-branch.reached .k{ color: var(--accent); }
+  .trace-branch .k{
+    display:block;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .diff-note.stark{
+    border-top: 1px dashed var(--panel-hair);
+    font-style: italic;
+  }
+
+  /* ---------- Nav ---------- */
+  .navdots{
+    position: fixed;
+    right: clamp(14px, 3vw, 32px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 20;
+  }
+  .navdots button{
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-soft);
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .navdots button:hover{ transform: scale(1.25); }
+  .navdots button:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .navdots button[aria-current="true"]{
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 640px){
+    .navdots{ display:none; }
+  }
+
+  /* ---------- Candidate trajectory strip (G2 deck) ---------- */
+  .traj{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:stretch;
+    margin: 14px 0 4px;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  .traj .step{
+    border:1px solid var(--hair);
+    border-radius:4px;
+    padding:7px 10px;
+    background:var(--paper-raised);
+    min-width:62px;
+    text-align:center;
+  }
+  .traj .step .c{
+    display:block; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:3px;
+  }
+  .traj .step .v{ display:block; font-size:0.92rem; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .traj .step.lo{ border-color:var(--diff-rem-mark); background:var(--diff-rem-bg); }
+  .traj .step.lo .v{ color:var(--diff-rem-ink); }
+  .traj .step.hi{ border-color:var(--diff-add-mark); background:var(--diff-add-bg); }
+  .traj .step.hi .v{ color:var(--diff-add-ink); }
+  .traj .step.best{ outline:2px solid var(--accent); outline-offset:1px; }
+  .traj-note{
+    font-family:"IBM Plex Mono", monospace; font-size:0.7rem; color:var(--ink-soft);
+    letter-spacing:0.02em; margin:2px 0 0;
+  }
+  .verdict{
+    display:flex; gap:10px; align-items:flex-start;
+    border-left:3px solid var(--accent); background:var(--paper-raised);
+    padding:14px 16px; margin:16px 0 0; border-radius:0 4px 4px 0;
+  }
+  .verdict .vk{
+    font-family:"IBM Plex Mono", monospace; font-size:0.64rem; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--accent); white-space:nowrap; padding-top:2px;
+  }
+  .verdict p{ margin:0; font-size:0.92rem; line-height:1.5; color:var(--ink); }
+  .status-ok{ color:var(--diff-add-mark); font-weight:600; }
+  .status-no{ color:var(--diff-rem-mark); font-weight:600; }
+</style>
+
+<div class="deck" id="deck" tabindex="0">
+
+  <section class="slide" id="s0">
+    <div class="folio"><span>Skill audit &middot; v4 G2 shared&#8209;bundle arm</span><span class="n">i</span></div>
+    <div class="cover">
+      <p class="eyebrow">Diagnostic report &middot; cand_0004</p>
+      <h1>Fixing the manual</h1>
+      <p class="lede">The same five phenomena as the T2 audit, re&#8209;run against a <strong>single shared bundle</strong> &mdash; <code>cand_0004</code>, the winner of the global&#8209;scope optimization arm. This matters because it is the bundle you would actually ship: one set of eight files, optimized against all 34 tasks at once, rather than 21 separate per&#8209;task bundles that have to be merged afterwards. <strong>Four of the five findings reproduce here, in one artifact.</strong> The fifth again does not move, for the same reason as before &mdash; a bug in the routing code, not the manual. One finding comes back changed, and that change is the most useful thing in this deck: G2 reached a perfect score on it <em>without ever removing the wrong instruction</em>.</p>
+      <table class="roster">
+        <thead>
+          <tr><th>Item</th><th>Task</th><th>Score</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>01</td><td class="task">A bare ID isn&rsquo;t a failed message</td><td><span class="score-move"><span class="before">20%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr><td>02</td><td class="task">The fetch tool doesn&rsquo;t read folders</td><td><span class="score-move"><span class="before">79%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr><td>03</td><td class="task">Four rules, one contradiction</td><td><span class="score-move"><span class="before">79%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr><td>04</td><td class="task">Long doesn&rsquo;t mean timeout &mdash; <em>masked, not fixed</em></td><td><span class="score-move"><span class="before">96%</span><span class="arrow">&rarr;</span><span class="after">100%</span></span></td></tr>
+          <tr class="split"><td>05</td><td class="task">The router decided before anyone else got a vote &mdash; icinga&#8209;010</td><td><span class="score-cap"><span class="lock">&#128274;</span>capped 55.1%</span></td></tr>
+          <tr><td></td><td class="task">&mdash; and icinga&#8209;013, same bug</td><td><span class="score-cap"><span class="lock">&#128274;</span>capped 60.8%</span></td></tr>
+        </tbody>
+      </table>
+      <p class="scrollhint"><span class="chev">&darr;</span> every score is a real harbor trial from <code>run_optimize_fix_20260925_082813</code> &mdash; seed vs. cand_0004, five trials each</p>
+    </div>
+  </section>
+
+  <section class="slide" id="s1">
+    <div class="folio"><span>cloud&#8209;024&#8209;guid&#8209;to&#8209;account</span><span class="n">01</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">orchestrator.md</span></div>
+        <h2>A bare ID isn&rsquo;t a failed message</h2>
+        <p class="taskname">cloud-024-guid-to-account</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">20%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The test request &mdash; the entire message, verbatim</div>
+          <p>&ldquo;jbfsq&rdquo;</p>
+          <div class="note">Nothing else attached. No verb, no question mark.</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>Unchanged from the T2 audit: a raw provision GUID arrives on its own, the coordinator has no rule for that shape of message, and it falls back on generic manners &mdash; asking what the user would like to investigate instead of looking the ID up.</p>
+        </div>
+        <div class="block">
+          <h3>What G2 wrote instead</h3>
+          <p>The global optimizer reached the same conclusion independently, and went further than T2 did: as well as the rule, it added a <strong>shape&#8209;to&#8209;tool table</strong> covering six identifier forms, and an explicit statement of what a correct answer must contain &mdash; sandbox name, owner, account id.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>orchestrator.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>### A bare identifier is NOT ambiguous &mdash;</div>
+            <div class="row add"><span class="mark">+</span>resolve it, never ask what it means</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>A message that consists only of an identifier</div>
+            <div class="row add"><span class="mark">+</span>(no verb, no question) is a request to identify</div>
+            <div class="row add"><span class="mark">+</span>that thing. Look it up FIRST. Never answer a bare</div>
+            <div class="row add"><span class="mark">+</span>identifier with a clarifying question or a menu of</div>
+            <div class="row add"><span class="mark">+</span>things you could investigate.</div>
+          </div>
+          <div class="diff-note">Followed by a six&#8209;row table mapping each ID shape &mdash; 5&#8209;char GUID, <code>sandboxNNNN</code>, <code>pool&#8209;XX&#8209;NNN</code>, 12&#8209;digit AWS id, email, hostname &mdash; to the tool that resolves it.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>orchestrator.md &mdash; and what counts as an answer</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>Report the identity facts the lookup returned &mdash;</div>
+            <div class="row add"><span class="mark">+</span>the sandbox name, the owner, and the account id.</div>
+            <div class="row add"><span class="mark">+</span>A bare identifier can only be read as "what is</div>
+            <div class="row add"><span class="mark">+</span>this?", so identifying it *is* the answer.</div>
+          </div>
+          <div class="diff-note">Also added: <em>&ldquo;Pick the row by exact field match, never the first row returned&rdquo;</em> &mdash; neighbouring sandboxes have adjacent account ids.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s1e">
+    <div class="folio"><span>cloud&#8209;024&#8209;guid&#8209;to&#8209;account &middot; the actual trial</span><span class="n">02</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0004 &middot; run_optimize_fix_20260925_082813</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">20%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>Fixed on the first candidate, and it held</h3>
+          <p>This task was repaired by <code>cand_0001</code> and stayed repaired through the winning bundle. The one dip &mdash; <code>cand_0003</code> at 0.640 &mdash; is a candidate that was tried and rejected; the trajectory below is every iteration the arm produced.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.200</span></span><span class="step hi"><span class="c">c01</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c02</span><span class="v">1.000</span></span><span class="step"><span class="c">c03</span><span class="v">0.640</span></span><span class="step hi best"><span class="c">c04</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c05</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c06</span><span class="v">1.000</span></span></div>
+        <p class="traj-note">val split, mean of 5 trials &middot; outlined box = cand_0004, the shipped bundle</p>
+        <div class="block">
+          <h3>Zero variance on both ends</h3>
+          <p>All five seed trials returned the identical canned reply and made <strong>no tool call at all</strong>. All five cand_0004 trials called the right tool and answered. This is not a lucky rollout on either side.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val<span class="reward bad">reward 0.20</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>message: &ldquo;jbfsq&rdquo; &mdash; tool_calls: 0</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;I didn&rsquo;t quite catch that &mdash; could you clarify</div>
+            <div class="row rem"><span class="mark">&#10007;</span>what you&rsquo;d like to investigate?&rdquo;</div>
+            <div class="row rem"><span class="mark">&#10007;</span>{{choices}} Look up a provision or user /</div>
+            <div class="row rem"><span class="mark">&#10007;</span>Investigate cloud costs / Check a failed job / &hellip;</div>
+          </div>
+          <div class="diff-note">reward-detail.json: <code>actual: []</code> &middot; unmatched_expected <code>query_aws_account_db</code> &middot; required_missed <em>sandbox&#8209;name, owner, account&#8209;id</em> (3 of 3). Trial &hellip;__X4sw5o2.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0004 &middot; val<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aws_account_db()</div>
+            <div class="row add"><span class="mark">&#10003;</span>&ldquo;jbfsq&rdquo; is assigned to sandbox2291 (AWS account</div>
+            <div class="row add"><span class="mark">&#10003;</span>419283746501), owned by rrivers. Environment type</div>
+            <div class="row add"><span class="mark">&#10003;</span>ocp4-cluster-cnv, currently in use.</div>
+            <div class="row ctx"><span class="mark">&middot;</span>Catalog: agd-v2.ocp4-cluster-cnv.prod</div>
+          </div>
+          <div class="diff-note">required_missed <em>empty</em> &mdash; all three identity facts present. Same seed, same tool, same fields; one new section in orchestrator.md. Trial &hellip;__uT9KyPS.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s2">
+    <div class="folio"><span>platform&#8209;007&#8209;directory&#8209;path&#8209;fetch</span><span class="n">03</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">aap2_agent.md</span><span class="tag">babylon_agent.md</span><span class="tag">shared_context.md</span></div>
+        <h2>The fetch tool doesn&rsquo;t read folders</h2>
+        <p class="taskname">platform-007-directory-path-fetch</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">79%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The request &mdash; this task&rsquo;s question shape</div>
+          <p>&ldquo;The workload roles live under <code>ansible/roles_ocp_workloads</code> &mdash; find the task file for the <code>ocp4_workload_pipelines_operator</code> role and report its retry settings.&rdquo;</p>
+          <div class="note">You&rsquo;re told the tree, not the file. That gap is what the agent guessed its way through.</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>Unchanged: the tool reads exactly one file, but its description advertised &ldquo;files and directories,&rdquo; so the agent opened folders like documents.</p>
+        </div>
+        <div class="block">
+          <h3>What G2 wrote instead</h3>
+          <p>Rather than only correcting the prose, G2 wrote the tool&rsquo;s <strong>literal return contract &mdash; including its exact error string</strong> &mdash; into both specialist files, and added a shared rule making <code>search_github_repo</code> mandatory and first whenever the question names a tree.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md + babylon_agent.md &mdash; I/O contract</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>Fetch file or directory contents from a GitHub repo</div>
+            <div class="row add"><span class="mark">+</span>**fetch_github_file** &mdash; {path, content, type}.</div>
+            <div class="row add"><span class="mark">+</span>Files ONLY. A directory path returns</div>
+            <div class="row add"><span class="mark">+</span>{"error": "No such file or directory at the</div>
+            <div class="row add"><span class="mark">+</span>specified ref."} &mdash; it does not return a listing.</div>
+          </div>
+          <div class="diff-note">Written identically into both files, because either specialist can be the one holding the question.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>### GitHub Paths: Search for the Tree,</div>
+            <div class="row add"><span class="mark">+</span>Fetch Only the Leaf</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>Only ever pass fetch_github_file a path you have</div>
+            <div class="row add"><span class="mark">+</span>seen returned verbatim by search_github_repo &hellip;</div>
+            <div class="row add"><span class="mark">+</span>never probe your way down a tree one level at a</div>
+            <div class="row add"><span class="mark">+</span>time &mdash; every probe fails.</div>
+            <div class="row add"><span class="mark">+</span>When the question names a tree &hellip; search_github_repo</div>
+            <div class="row add"><span class="mark">+</span>is mandatory and must come FIRST.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s2e">
+    <div class="folio"><span>platform&#8209;007&#8209;directory&#8209;path&#8209;fetch &middot; the actual trial</span><span class="n">04</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0004 &middot; the fix is visible in the call order</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">79%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>This one you can read off the tool calls alone</h3>
+          <p>Both trials reach the same correct answer about the retry settings. The difference is entirely in <em>how</em>: the seed burns its first call opening a directory, discovers that doesn&rsquo;t work, then searches and fetches. cand_0004 searches first and fetches once. Same destination, one wasted round removed &mdash; and the grader scores the route, not just the answer.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.790</span></span><span class="step hi"><span class="c">c01</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c02</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c03</span><span class="v">1.000</span></span><span class="step hi best"><span class="c">c04</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c05</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c06</span><span class="v">1.000</span></span></div>
+        <p class="traj-note">val split, mean of 5 trials &middot; repaired at cand_0001, never regressed</p>
+        <div class="block">
+          <h3>Why the seed still scored 79%</h3>
+          <p>Because it recovers. The agent is not stuck &mdash; it is paying a round, every single time, for an instruction that told it something untrue about the tool.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val<span class="reward bad">reward 0.70</span></div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&#10007;</span>fetch_github_file(path=".../pipelines_operator/tasks")</div>
+            <div class="row ctx"><span class="mark">&larr;</span>error: No such file or directory at the specified ref.</div>
+            <div class="row call"><span class="mark">&rarr;</span>search_github_repo(search="ocp4_workload_pipelines_operator")</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path=".../tasks/main.yml")</div>
+            <div class="row ctx"><span class="mark">&middot;</span>3 calls &mdash; answer correct, route wrong</div>
+          </div>
+          <div class="diff-note">The directory call is the first thing it does, exactly as the old description modelled. Trial &hellip;__t1.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0004 &middot; val<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>search_github_repo(search="roles_ocp_workloads/</div>
+            <div class="row call"><span class="mark">&nbsp;</span>  ocp4_workload_pipelines_operator/tasks")</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(path=".../tasks/main.yml")</div>
+            <div class="row add"><span class="mark">&#10003;</span>retries 40, delay 15s &rarr; max wait 600s (10 min)</div>
+            <div class="row ctx"><span class="mark">&middot;</span>2 calls &mdash; tree first, then the leaf</div>
+          </div>
+          <div class="diff-note">Search for the tree, fetch only the leaf &mdash; the rule, executed literally. Trial &hellip;__t0.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s3">
+    <div class="folio"><span>platform&#8209;004&#8209;events&#8209;then&#8209;config</span><span class="n">05</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">shared_context.md</span><span class="tag">aap2_agent.md</span></div>
+        <h2>Four rules, one contradiction</h2>
+        <p class="taskname">platform-004-events-then-config</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">79%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The request &mdash; a question with its own step order</div>
+          <p>&ldquo;Find how many events failed, read one job&rsquo;s log, <em>then</em> read the config.&rdquo;</p>
+          <div class="note">The question states an order. The manual&rsquo;s own shortcuts quietly overrode it whenever a job ID was supplied.</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>A supplied job ID triggered a &ldquo;go straight to the log&rdquo; shortcut, which reordered the user&rsquo;s own list of steps &mdash; so the breadth&#8209;first step was deferred past the round budget and never answered.</p>
+        </div>
+        <div class="block">
+          <h3>What G2 wrote instead</h3>
+          <p>Two complementary rules: the question&rsquo;s stated order is binding, <em>and</em> stop as soon as every asked&#8209;for fact is in hand. Together they fix the under&#8209;answer without creating an over&#8209;investigation in its place.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>### Follow the order the question gives you</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>Breadth-first steps &mdash; how many failed, what else</div>
+            <div class="row add"><span class="mark">+</span>was affected &mdash; come BEFORE the narrow ones</div>
+            <div class="row add"><span class="mark">+</span>whenever the question lists them first. Do not defer</div>
+            <div class="row add"><span class="mark">+</span>a listed step because the earlier answer already</div>
+            <div class="row add"><span class="mark">+</span>looked complete: a step deferred past your budget is</div>
+            <div class="row add"><span class="mark">+</span>worth nothing.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; closing the shortcut</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>A supplied job ID does NOT reorder the question's</div>
+            <div class="row add"><span class="mark">+</span>own list of steps.</div>
+          </div>
+          <div class="diff-note">Paired with <em>&ldquo;Answer as soon as the asked&#8209;for facts are in hand&rdquo;</em> in shared_context.md &mdash; the brake that keeps the order rule from turning into endless investigation.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s3e">
+    <div class="folio"><span>platform&#8209;004&#8209;events&#8209;then&#8209;config &middot; the actual trial</span><span class="n">06</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The actual run</h2>
+        <p class="taskname">seed vs. cand_0004 &middot; run_optimize_fix_20260925_082813</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">79%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>The missing step is literally a missing call</h3>
+          <p>The seed makes two tool calls and the verifier records one <code>query_aap2</code> call it expected and never saw &mdash; the breadth&#8209;first step. cand_0004 makes four, in the order the question asked for, and nothing is unmatched.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.787</span></span><span class="step hi"><span class="c">c01</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c02</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c03</span><span class="v">1.000</span></span><span class="step hi best"><span class="c">c04</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c05</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c06</span><span class="v">1.000</span></span></div>
+        <p class="traj-note">val split, mean of 5 trials &middot; four of five seed trials scored 0.733; one got lucky at 1.000</p>
+        <div class="block">
+          <h3>What it cost in the answer</h3>
+          <p>One required fact &mdash; the failing <em>role</em> &mdash; was missing from the seed&rsquo;s report, because the step that would have surfaced it was the one that got deferred.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val<span class="reward bad">reward 0.73</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(&hellip;)</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(&hellip;)</div>
+            <div class="row rem"><span class="mark">&#10007;</span>query_aap2 &mdash; expected, never called</div>
+            <div class="row rem"><span class="mark">&#10007;</span>required_missed: role</div>
+            <div class="row ctx"><span class="mark">&middot;</span>tool_calls 0.50 &middot; answer 0.83</div>
+          </div>
+          <div class="diff-note">Ends by offering the user four things it <em>could</em> check next &mdash; one of which is the step the question already asked for. Trial &hellip;__JxWry2C.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0004 &middot; val<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_aap2(&hellip;) &nbsp;&middot;&nbsp; query_aap2(&hellip;)</div>
+            <div class="row call"><span class="mark">&rarr;</span>fetch_github_file(&hellip;) &nbsp;&middot;&nbsp; query_aap2(&hellip;)</div>
+            <div class="row add"><span class="mark">&#10003;</span>unmatched_expected: none</div>
+            <div class="row add"><span class="mark">&#10003;</span>required_missed: none &mdash; 3 of 3, counts 1 of 1</div>
+            <div class="row ctx"><span class="mark">&middot;</span>tool_calls 1.00 &middot; answer 1.00</div>
+          </div>
+          <div class="diff-note">Four calls in the question&rsquo;s own order. Trial &hellip;__payXqum.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4">
+    <div class="folio"><span>platform&#8209;008&#8209;log&#8209;does&#8209;not&#8209;say</span><span class="n">07</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">shared_context.md</span><span class="tag muted">aap2_agent.md &mdash; wrong line left in place</span></div>
+        <h2>Long doesn&rsquo;t mean timeout &mdash; and G2 never said so</h2>
+        <p class="taskname">platform-008-log-does-not-say</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed</span><span class="before">96%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The request &mdash; this task&rsquo;s question shape</div>
+          <p>&ldquo;Why did this job fail?&rdquo;</p>
+          <div class="note">Job 90408 on the west controller. The log simply stops &mdash; no error line, no PLAY RECAP, zero failed events. There is nothing in the evidence to name as a cause.</div>
+        </div>
+        <div class="block">
+          <h3>The finding that changed</h3>
+          <p>T2 fixed this by <strong>deleting the false rule</strong>: <code>Short = auth/config error. Long = timeout.</code> G2 scored 100% here too &mdash; but it never touched that line. It is still in <code>aap2_agent.md</code>, word for word, at line 366 of the shipped bundle.</p>
+        </div>
+        <div class="block">
+          <h3>What G2 did instead</h3>
+          <p>It built a reporting contract around the defect: a long, explicit set of rules on partitioning what evidence does and does not establish, and on never nominating a &ldquo;most likely cause&rdquo; after saying you cannot establish one. The guess is caught on the way out rather than prevented at the source.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md:366 &mdash; unchanged from seed</div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>5. **Timing** &mdash; how long did the failing</div>
+            <div class="row rem"><span class="mark">!</span>   operation take? Short = auth/config error.</div>
+            <div class="row rem"><span class="mark">!</span>   Long = timeout.</div>
+          </div>
+          <div class="diff-note">Present in the seed, <strong>present in cand_0004</strong>, deleted by T2 and by the T4 merge. G2 is the only one of the three optimized bundles that still ships it.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; the compensating contract</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>Partition what the absence does and does not</div>
+            <div class="row add"><span class="mark">+</span>establish &mdash; and write the second half.</div>
+            <div class="row add"><span class="mark">+</span>"The log does not establish a root cause."</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>If the evidence does not establish a cause, do not</div>
+            <div class="row add"><span class="mark">+</span>then nominate a "most likely cause" as a</div>
+            <div class="row add"><span class="mark">+</span>consolation prize &mdash; it contradicts your own answer.</div>
+          </div>
+        </div>
+        <div class="verdict">
+          <span class="vk">Recommendation</span>
+          <p>Delete <code>aap2_agent.md:366</code> regardless. A perfect score here does not mean the instruction became true &mdash; only that a later rule usually catches its consequence.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4e">
+    <div class="folio"><span>platform&#8209;008&#8209;log&#8209;does&#8209;not&#8209;say &middot; the actual trial</span><span class="n">08</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>The seed names the shortcut it followed</h2>
+        <p class="taskname">seed t3 vs. cand_0004 &middot; the agent&rsquo;s own words</p>
+        <div class="score-badge">
+          <span><span class="cap">Seed t3</span><span class="before">80%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0004</span><span class="after">100%</span></span>
+        </div>
+        <div class="block">
+          <h3>Why this case is weaker evidence than T2&rsquo;s &mdash; and still the most useful</h3>
+          <p>Only <strong>one of five</strong> seed trials failed here (0.80; the other four scored 1.000), where the T2 arm measured the same seed bundle at 80% on average. Same bytes, different luck. That is exactly why G2 never removed the line: the aggregate signal it optimizes against barely registered a defect that fires on one trial in five of a single task.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.960</span></span><span class="step hi"><span class="c">c01</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c02</span><span class="v">1.000</span></span><span class="step lo"><span class="c">c03</span><span class="v">0.960</span></span><span class="step hi best"><span class="c">c04</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c05</span><span class="v">1.000</span></span><span class="step hi"><span class="c">c06</span><span class="v">1.000</span></span></div>
+        <p class="traj-note">val split, mean of 5 trials &middot; the seed&rsquo;s 0.960 is four 1.000s and one 0.800</p>
+        <div class="block">
+          <h3>The one failing trial is unambiguous</h3>
+          <p>It missed exactly one required fact &mdash; <code>no&#8209;root&#8209;cause</code>, the statement that the log does not establish a cause &mdash; and said in its own confidence note that its conclusion came from <em>duration</em>. That is the rule on the previous slide, firing.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; val t3<span class="reward bad">reward 0.80</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>10 tool calls &mdash; tool_calls 1.00, investigation fine</div>
+            <div class="row rem"><span class="mark">&#10007;</span>required_missed: no-root-cause</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&ldquo;Root cause assessment is based on duration</div>
+            <div class="row rem"><span class="mark">&#10007;</span>pattern&rdquo;  &mdash; the agent&rsquo;s own confidence note</div>
+            <div class="row ctx"><span class="mark">&middot;</span>answer 0.75</div>
+          </div>
+          <div class="diff-note">The failure is not the investigation &mdash; it is the inference. It had the evidence that the log says nothing, and named a cause anyway. Trial &hellip;__uJhpTYq.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0004 &middot; val<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>8 calls &mdash; query_aap2 &times;3, splunk &times;2, catalog, &hellip;</div>
+            <div class="row add"><span class="mark">&#10003;</span>required_missed: none &mdash; 3 of 3</div>
+            <div class="row add"><span class="mark">&#10003;</span>States plainly what the log does not establish,</div>
+            <div class="row add"><span class="mark">&#10003;</span>then lists what would settle it</div>
+            <div class="row ctx"><span class="mark">&middot;</span>answer 1.00</div>
+          </div>
+          <div class="diff-note">The reporting contract caught it. The instruction that caused it is still upstream, unmodified. Trial &hellip;__G3PMSiZ.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4b">
+    <div class="folio"><span>icinga&#8209;010 &amp; icinga&#8209;013 &middot; 1/2</span><span class="n">09</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">classify_fast() &mdash; routing code</span><span class="tag muted">icinga_agent.md &mdash; never loaded</span></div>
+        <h2>The router picked a specialist before anyone else got a vote</h2>
+        <p class="taskname">icinga-010-stuck-anarchysubjects &nbsp;+&nbsp; icinga-013-acknowledged-not-an-issue</p>
+
+        <div class="ceilings">
+          <div class="ceiling-card">
+            <div class="cap">icinga&#8209;010&#8209;stuck&#8209;anarchysubjects</div>
+            <div class="task">best of 6 candidates</div>
+            <div class="val"><span class="lock">&#128274;</span>55.1%</div>
+            <div class="sub">tool_calls stuck at <strong>0.25</strong> in every candidate &mdash; seed included</div>
+          </div>
+          <div class="ceiling-card">
+            <div class="cap">icinga&#8209;013&#8209;acknowledged&#8209;not&#8209;an&#8209;issue</div>
+            <div class="task">best of 6 candidates</div>
+            <div class="val"><span class="lock">&#128274;</span>60.8%</div>
+            <div class="sub">tool_calls stuck at <strong>0.00</strong> &mdash; zero tool calls, in every candidate</div>
+          </div>
+        </div>
+
+        <div class="request">
+          <div class="cap">The two literal triggers, quoted verbatim</div>
+          <p>icinga&#8209;010&rsquo;s instruction: &ldquo;&hellip;on host <code>babylon&#8209;ocp&#8209;prod&#8209;us&#8209;east&#8209;1</code>.&rdquo; icinga&#8209;013&rsquo;s forwarded alert: service &ldquo;<code>Babylon Schema YAML Diff</code>.&rdquo;</p>
+          <div class="note">Both strings happen to contain &ldquo;babylon.&rdquo; Every question underneath is a plain Icinga lookup. That one substring is the entire trigger for the misroute.</div>
+        </div>
+
+        <div class="block">
+          <h3>Confirmed again, at a larger budget</h3>
+          <p>The T2 arm concluded this was unreachable by prompt editing. G2 is the stronger test of that claim: <strong>six candidates, all 34 tasks scored every iteration, ~$419 of optimization</strong> &mdash; and the Icinga tools were never once reached for either task.</p>
+        </div>
+      </div>
+      <div>
+        <div class="tracepanel">
+          <div class="trace-step"><span class="k">Incoming text</span>&ldquo;&hellip;host babylon&#8209;ocp&#8209;prod&#8209;us&#8209;east&#8209;1&hellip;&rdquo; &nbsp;/&nbsp; &ldquo;&hellip;Babylon Schema YAML Diff&hellip;&rdquo;</div>
+          <div class="trace-arrow">&darr;</div>
+          <div class="trace-step"><span class="k">classify_fast() &mdash; keyword match</span>regex <code>\bbabylon\b</code> fires on the raw alert text</div>
+          <div class="trace-arrow">&darr; forks here, before the coordinator ever runs &darr;</div>
+          <div class="trace-fork">
+            <div class="trace-branch blocked">
+              <span class="k">Never reached</span>orchestrator.md<br>icinga_agent.md<br><em>query_icinga tool</em>
+            </div>
+            <div class="trace-branch reached">
+              <span class="k">Reached instead</span>babylon_agent.md<br>&mdash; the wrong specialist for an Icinga question
+            </div>
+          </div>
+        </div>
+        <div class="verdict">
+          <span class="vk">Unchanged</span>
+          <p>No edit to any of the eight files reaches a decision made before any of them is loaded. This one needs an engineer, not an author.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4c">
+    <div class="folio"><span>icinga&#8209;010 &amp; icinga&#8209;013 &middot; the actual trials</span><span class="n">10</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">reward-detail.json</span></div>
+        <h2>Six candidates moved the prose. Not one moved the data.</h2>
+        <p class="taskname">seed and cand_0004, side by side &mdash; the unmatched calls are identical</p>
+        <div class="block">
+          <h3>icinga&#8209;010 &mdash; keeps trying the wrong door</h3>
+          <p>Seed and cand_0004 both call the Babylon specialist&rsquo;s tools repeatedly, and both leave the same <strong>three <code>query_icinga</code> calls unmatched</strong>. Identical <code>tool_calls</code> score of 0.25 in both. The optimizer could not improve it because the tool was never on the table.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.495</span></span><span class="step"><span class="c">c01</span><span class="v">0.551</span></span><span class="step lo"><span class="c">c02</span><span class="v">0.495</span></span><span class="step lo"><span class="c">c03</span><span class="v">0.495</span></span><span class="step best"><span class="c">c04</span><span class="v">0.551</span></span><span class="step lo"><span class="c">c05</span><span class="v">0.467</span></span><span class="step lo"><span class="c">c06</span><span class="v">0.467</span></span></div>
+        <p class="traj-note">icinga&#8209;010 &middot; six candidates, best 0.551 &mdash; and two candidates scored <em>below</em> seed</p>
+        <div class="block">
+          <h3>icinga&#8209;013 &mdash; the gain is pure writing</h3>
+          <p>Zero tool calls in <em>every</em> candidate, seed included. The 0.48&nbsp;&rarr;&nbsp;0.64 improvement is entirely the answer component (0.6&nbsp;&rarr;&nbsp;0.8): the agent got better at phrasing a conclusion it had no data for. That is the optimizer doing the only thing left available to it.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.512</span></span><span class="step lo"><span class="c">c01</span><span class="v">0.512</span></span><span class="step"><span class="c">c02</span><span class="v">0.608</span></span><span class="step"><span class="c">c03</span><span class="v">0.544</span></span><span class="step best"><span class="c">c04</span><span class="v">0.608</span></span><span class="step"><span class="c">c05</span><span class="v">0.640</span></span><span class="step"><span class="c">c06</span><span class="v">0.640</span></span></div>
+        <p class="traj-note">icinga&#8209;013 &middot; answer score rose, tool_calls never left 0.00</p>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;010 &middot; seed<span class="reward bad">reward 0.495</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_babylon_catalog &times;5, fetch_github_file,</div>
+            <div class="row call"><span class="mark">&rarr;</span>query_splunk &times;2 &mdash; 8 calls, none of them Icinga</div>
+            <div class="row rem"><span class="mark">&#10007;</span>unmatched: query_icinga, query_icinga, query_icinga</div>
+            <div class="row rem"><span class="mark">&#10007;</span>required_missed: no-suppression</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;010 &middot; cand_0004<span class="reward bad">reward 0.495</span></div>
+          <div class="diff-lines">
+            <div class="row call"><span class="mark">&rarr;</span>query_babylon_catalog &times;3, fetch_github_file,</div>
+            <div class="row call"><span class="mark">&rarr;</span>query_splunk &times;2 &mdash; 6 calls, none of them Icinga</div>
+            <div class="row rem"><span class="mark">&#10007;</span>unmatched: query_icinga, query_icinga, query_icinga</div>
+            <div class="row rem"><span class="mark">&#10007;</span>required_missed: no-suppression</div>
+          </div>
+          <div class="diff-note">Byte&#8209;for&#8209;byte the same verdict as the seed, six candidates later. Two fewer wasted calls; the same locked door.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga&#8209;013 &middot; cand_0004<span class="reward bad">reward 0.64</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>actual: [] &mdash; 0 tool calls, as in every candidate</div>
+            <div class="row rem"><span class="mark">&#10007;</span>unmatched: query_icinga &times;3 &nbsp;&middot;&nbsp; tool_calls 0.00</div>
+            <div class="row add"><span class="mark">&#10003;</span>answer 0.80 &mdash; reasons correctly from alert text</div>
+            <div class="row rem"><span class="mark">&#10007;</span>required_missed: ticket &mdash; RHDPSUP&#8209;8812 lives in a</div>
+            <div class="row rem"><span class="mark">&#10007;</span>comment this agent can never fetch</div>
+          </div>
+        </div>
+        <div class="diff-note stark" style="margin-top:4px; border-top:1px dashed var(--hair); color: var(--ink-soft); padding-top:16px;">Both tasks, both arms, every candidate: the ceiling is the router, not the writing.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s5">
+    <div class="folio"><span>Closing &middot; the unified set</span><span class="n">xi</span></div>
+    <div class="closing">
+      <h2>One bundle carries <span class="attn">three</span> of the four manual fixes.<br>The fourth it <span class="attn">masked</span> instead of removing &mdash; and the fifth is still <span class="attn">not a manual problem at all</span>.</h2>
+      <div class="recap">
+        <div class="card"><div class="k">01 &middot; cloud-024</div><div class="move"><span class="before">20%</span> &rarr; <span class="after">100%</span></div></div>
+        <div class="card"><div class="k">02 &middot; platform-007</div><div class="move"><span class="before">79%</span> &rarr; <span class="after">100%</span></div></div>
+        <div class="card"><div class="k">03 &middot; platform-004</div><div class="move"><span class="before">79%</span> &rarr; <span class="after">100%</span></div></div>
+        <div class="card"><div class="k">04 &middot; platform-008</div><div class="move"><span class="before">96%</span> &rarr; <span class="after">100%</span></div></div>
+      </div>
+      <p class="evidence-note">Every figure above is a real harbor trial from <code>run_optimize_fix_20260925_082813</code> &mdash; <code>agent.jsonl</code> transcripts and <code>reward-detail.json</code> verdicts, seed vs. <code>cand_0004</code>, five trials each, validation split. Scores are the mean of those five. The bundle itself is <code>artifacts/v4/v4_g_e1/best/</code>.</p>
+      <div class="verdict" style="margin-top:26px;">
+        <span class="vk">What to upstream</span>
+        <p><span class="status-ok">Take as&#8209;is &mdash;</span> the bare&#8209;identifier rule and its shape table (<code>orchestrator.md</code>); the <code>fetch_github_file</code> I/O contract plus &ldquo;search for the tree, fetch only the leaf&rdquo; (<code>aap2_agent.md</code>, <code>babylon_agent.md</code>, <code>shared_context.md</code>); the question&#8209;order and stop&#8209;when&#8209;answered pair (<code>shared_context.md</code>, <code>aap2_agent.md</code>).<br><br><span class="status-no">Add, because G2 did not &mdash;</span> delete <code>Short = auth/config error. Long = timeout.</code> from <code>aap2_agent.md:366</code>. T2 and the T4 merge both removed it; G2 shipped it and compensated downstream. The instruction is still false either way.<br><br><span class="status-no">Not an edit &mdash;</span> <code>classify_fast()</code> routes on a bare <code>babylon</code> substring before any file is loaded. Six candidates and ~$419 of global optimization never reached the Icinga tools for icinga&#8209;010 or icinga&#8209;013.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="navdots" id="navdots" aria-label="Slide navigation"></nav>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var dotsWrap = document.getElementById('navdots');
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i+1) + ' of ' + slides.length);
+    b.addEventListener('click', function(){
+      s.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    });
+    dotsWrap.appendChild(b);
+  });
+
+  function reduceMotion(){
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function setActive(){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){
+      if (s.offsetTop <= mid) idx = i;
+    });
+    Array.prototype.forEach.call(dotsWrap.children, function(b, i){
+      b.setAttribute('aria-current', i === idx ? 'true' : 'false');
+    });
+  }
+
+  deck.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  deck.addEventListener('keydown', function(e){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){ if (s.offsetTop <= mid) idx = i; });
+    if (e.key === 'ArrowDown' || e.key === 'PageDown'){
+      e.preventDefault();
+      var next = slides[Math.min(idx + 1, slides.length - 1)];
+      next.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp'){
+      e.preventDefault();
+      var prev = slides[Math.max(idx - 1, 0)];
+      prev.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    }
+  });
+})();
+</script>
