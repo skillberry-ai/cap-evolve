@@ -142,7 +142,7 @@ on:
           - "ibm-rits/openai/gpt-oss-120b-a100"
           - "ibm-rits/moonshotai/Kimi-K2.7-Code"
       optimizer_model:
-        description: "Optimization model — the Claude Code optimizer's model. \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh), UNVERIFIED whether lite-rits speaks the Anthropic Messages API shape the claude-code CLI expects."
+        description: "Optimization model — the Claude Code optimizer's model. \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS; the claude-code CLI reaches it through a per-job Anthropic Messages proxy, since lite-rits cannot serve /v1/messages (see ci/benchmarks/lib/rits_messages_proxy.sh)."
         type: choice
         default: "ibm-ete-int/claude-opus-4-8"
         options:

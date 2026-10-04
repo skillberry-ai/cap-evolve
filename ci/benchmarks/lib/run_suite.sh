@@ -198,8 +198,8 @@ OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE";
 # ANTHROPIC_AUTH_TOKEN from the process environment — overriding them here, once, before
 # either is invoked, is what makes an OPTIMIZER_MODEL on ibm-ete, or ibm-rits, actually
 # reach that provider rather than silently keep talking to the ibm-ete-int gateway with a
-# model id it doesn't recognise. NOT yet verified that lite-rits (ibm-rits) speaks the
-# Anthropic Messages API the CLI expects — see the PR description.
+# model id it doesn't recognise. lite-rits (ibm-rits) does NOT serve the Anthropic Messages
+# API the CLI expects; an ibm-rits optimizer is re-pointed at a private proxy just below.
 #
 # This export is process-wide and OUTLIVES this block, which matters for the skillsbench/
 # rfe-creator arms below: their in-sandbox agent also ultimately shells out to `claude`,
@@ -211,6 +211,18 @@ OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE";
 # _gateway_env() and templates/adapters/rfe_creator/adapter.py's _harness_env().
 export ANTHROPIC_BASE_URL="$OPTIMIZER_API_BASE"
 export ANTHROPIC_AUTH_TOKEN="$OPTIMIZER_API_KEY"
+# An ibm-rits OPTIMIZER cannot use lite-rits for this: the claude CLI needs /v1/messages, and
+# lite-rits answers that route with HTTP 500 (see rits_messages_proxy.sh). Start a private
+# Anthropic-to-OpenAI proxy for the job, which re-points the two vars above at itself. This
+# does not touch the agent's path: an ibm-rits AGENT keeps calling lite-rits's
+# /chat/completions, which works.
+if [ "$RESOLVED_PROVIDER" = "ibm-rits" ]; then
+  # shellcheck source=ci/benchmarks/lib/rits_messages_proxy.sh
+  . "$LIB_DIR/rits_messages_proxy.sh"
+  start_rits_messages_proxy "$OPTIMIZER_MODEL_WIRE" "$OPTIMIZER_API_KEY" || exit 1
+  # Kept for the artifacts; the proxy log holds requests and errors, never the key.
+  trap 'cp "$RITS_PROXY_DIR/proxy.log" "$OUT/rits-messages-proxy.log" 2>/dev/null; stop_rits_messages_proxy' EXIT
+fi
 # NB: OPTIMIZER_MODEL itself is NEVER reassigned to the wire form here — it stays the
 # CI-facing "ibm-ete-int/…"/"ibm-ete/…"/"ibm-rits/…"-prefixed alias, used for the
 # progress line below and metrics.py's provenance display further down. resolve_provider
