@@ -92,29 +92,36 @@ def test_resolve_provider_agrees_with_wire_model(alias, wire):
 
 
 def _require_specs(agent: str, optimizer: str) -> list[str]:
-    """Run ci_setup's real require-spec assembly, capturing what check_entitlement receives."""
+    """Run ci_setup's real `check_listed` for each gateway-routed role, capturing the
+    `--require ROLE=MODEL` spec it hands to check_models.py.
+
+    `check_listed` is lifted verbatim out of ci_setup.sh. `curl` is stubbed to answer the
+    /models call with 200, and CAPEVOLVE_PY is a stub that records its `--require` value
+    instead of running the real checker. RITS candidates are not passed to check_listed by
+    select_provider at all; see test_rits_is_still_never_entitlement_listed.
+    """
     src = CI_SETUP.read_text(encoding="utf-8")
-    # TWO fragments, with the stub between them: `check_entitlement` is defined BETWEEN
-    # classify_provider and the loop, so one contiguous slice would redefine the stub with the
-    # real function (which then tries to curl the gateway). Also stop at the `done` that closes
-    # the loop — ending at the inner `esac` leaves the `for` unterminated.
-    a0 = src.index("  classify_provider() {")
-    a1 = src.index("\n", src.index('PF_OPTIMIZER_PROVIDER="$(classify_provider'))
-    b0 = src.index("  providers_seen=")
-    b1 = src.index("\n  done", b0) + len("\n  done")
-    classify, loop = src[a0:a1], src[b0:b1]
+    m = re.search(r"^  check_listed\(\) \{.*?^  \}$", src, re.S | re.M)
+    assert m, "check_listed() not found in ci_setup.sh"
     script = textwrap.dedent(f"""
         set -uo pipefail
         . {RESOLVE}
-        PF_AGENT="{agent}"
-        PF_OPTIMIZER="{optimizer}"
         IBM_ETE_INT_API_BASE=x; IBM_ETE_INT_API_KEY=x
         IBM_ETE_API_BASE=x;     IBM_ETE_API_KEY=x
         IBM_RITS_API_BASE=x;    IBM_RITS_API_KEY=x
-    """) + classify + """
-        check_entitlement() { shift 3; for a in "$@"; do echo "$a"; done; }
-    """ + loop
-    p = _sh(script, {f"IBM_{x}": "x" for x in ()})
+        LIB_DIR=/nonexistent
+        curl() {{ printf 200; }}
+        fakepy() {{ echo "$4" >&3; }}
+        CAPEVOLVE_PY=fakepy
+    """) + m.group(0) + textwrap.dedent(f"""
+        for pair in "agent {agent}" "optimizer {optimizer}"; do
+          set -- $pair
+          p="$(provider_of "$2")"
+          [ "$p" = ibm-rits ] && continue
+          check_listed "$1" "$p" "$2" 1 >/dev/null
+        done 3>&1
+    """)
+    p = _sh(script)
     assert p.returncode == 0, f"assembly failed: {p.stderr}"
     return [l for l in p.stdout.splitlines() if "=" in l]
 
@@ -130,14 +137,19 @@ def test_the_entitlement_check_receives_wire_ids_not_aliases():
 
 
 def test_the_default_dispatch_would_pass_its_own_entitlement_check():
-    """The default optimizer is an ibm-ete-int alias, so a no-input dispatch hit this too."""
+    """The default optimizer is a plain catalog name; every provider it can fall back to is
+    checked with that provider's wire id, never with the CI alias."""
     src = CI_SETUP.read_text(encoding="utf-8")
     default = re.search(r'PF_OPTIMIZER="\$\{OPTIMIZER_MODEL:-([^}"]+)\}"', src).group(1)
-    assert default.startswith("ibm-"), f"unexpected default shape: {default}"
-    specs = _require_specs("ibm-ete-int/aws/gpt-oss-120b", default)
-    assert not [s for s in specs if s.startswith("optimizer=ibm-")], (
-        f"the default optimizer is still checked as an alias: {specs}"
-    )
+    cands = _sh(f'. {RESOLVE}\ncatalog_candidates "{default}"\n')
+    assert cands.returncode == 0, f"default {default!r} is not in model_catalog.txt: {cands.stderr}"
+    candidates = cands.stdout.split()
+    assert candidates and all(c.startswith("ibm-") for c in candidates), candidates
+    for c in candidates:
+        specs = _require_specs("ibm-ete-int/aws/gpt-oss-120b", c)
+        assert not [s for s in specs if s.startswith("optimizer=ibm-")], (
+            f"the default optimizer is still checked as an alias: {specs}"
+        )
 
 
 def test_a_wire_id_actually_satisfies_check_models(tmp_path):
@@ -157,9 +169,13 @@ def test_a_wire_id_actually_satisfies_check_models(tmp_path):
 def test_rits_is_still_never_entitlement_listed():
     """lite-rits's /v1/models is empty by design; listing it would abort every RITS run."""
     src = CI_SETUP.read_text(encoding="utf-8")
-    assert re.search(r"ibm-rits\)\s*:\s*;;", src), (
-        "the ibm-rits arm no longer skips the entitlement listing"
+    # select_provider only calls check_listed for a non-RITS candidate, and check_listed itself
+    # returns early for any provider that is not an ete gateway.
+    assert re.search(r'\[ "\$provider" != "ibm-rits" \][^\n]*\\\n\s*&& ! check_listed', src), (
+        "select_provider no longer skips the entitlement listing for RITS"
     )
+    body = re.search(r"^  check_listed\(\) \{.*?^  \}$", src, re.S | re.M).group(0)
+    assert re.search(r"\*\)\s*return 0\s*;;", body), "check_listed no longer returns early for RITS"
 
 
 def test_shell_libs_stay_valid():

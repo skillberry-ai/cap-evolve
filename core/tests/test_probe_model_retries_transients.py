@@ -260,11 +260,13 @@ def test_a_hung_endpoint_cannot_exceed_the_preflight_budget():
 
 
 def test_both_roles_are_still_probed_concurrently():
-    """Worst-case wall time stays ONE probe, not two."""
+    """Worst-case wall time stays ONE role's probes, not both. Each role's probes now run inside
+    select_provider, which walks the provider order (RITS, ibm-ete-int, ibm-ete)."""
     src = CI_SETUP.read_text(encoding="utf-8")
-    assert re.search(r'probe_model agent "\$PF_AGENT" &\s*pid_agent=\$!', src), src[-2000:]
-    assert re.search(r'probe_model optimizer "\$PF_OPTIMIZER" &\s*pid_optimizer=\$!', src)
+    assert re.search(r'select_provider agent "\$PF_AGENT" &\s*pid_agent=\$!', src), src[-2000:]
+    assert re.search(r'select_provider optimizer "\$PF_OPTIMIZER" &\s*pid_optimizer=\$!', src)
     assert 'wait "$pid_agent"' in src and 'wait "$pid_optimizer"' in src
+    assert re.search(r'probe_model "\$role" "\$c"', src), "select_provider no longer probes each candidate"
 
 
 def test_a_run_without_the_provider_secrets_still_skips_gracefully():
