@@ -69,6 +69,10 @@ curl() {
     budget) echo '{"error":"litellm.RateLimitError: Budget has been exceeded!"}' > "$out"; printf 429 ;;
     deny)   echo '{"error":"team not allowed to access model"}' > "$out"; printf 401 ;;
     bad)    echo '{"error":"unsupported parameter"}' > "$out"; printf 400 ;;
+    unauth) echo '{"error":"invalid api key"}' > "$out"; printf 401 ;;
+    forbid) echo '{"error":"forbidden"}' > "$out"; printf 403 ;;
+    gone)   echo '{"error":"model deployment not found"}' > "$out"; printf 404 ;;
+    rate)   echo '{"error":"rate limit reached, slow down"}' > "$out"; printf 429 ;;
     down)   : > "$out"; printf 000; return 28 ;;
   esac
 }
@@ -123,6 +127,21 @@ check "a call-time entitlement refusal falls back" "$RC:$GOT:$SKIPPED" "0:ibm-et
 set_all_secrets; both_listed; SCN_INT=bad; SCN_EXT=ok
 run_case claude-opus-5
 check "a 400 on ibm-ete-int keeps ibm-ete-int" "$RC:$GOT" "0:ibm-ete-int/aws/claude-opus-5"
+
+# 7b. Any other non-200 answer means this provider cannot serve the model: fall back, and name
+# the HTTP code. (A 429 WITHOUT "budget" is a rate limit, not the budget case above.)
+for pair in "unauth 401" "forbid 403" "gone 404" "rate 429"; do
+  set -- $pair
+  set_all_secrets; both_listed; SCN_INT="$1"; SCN_EXT=ok
+  run_case claude-opus-5
+  check "HTTP $2 on ibm-ete-int falls back to ibm-ete" "$RC:$GOT:$SKIPPED" "0:ibm-ete/aws/claude-opus-5:ibm-ete-int:http-$2"
+done
+
+# 7c. A pinned id that gets such an answer continues with a warning, as before this change.
+set_all_secrets; both_listed; SCN_INT=gone
+run_case ibm-ete-int/aws/claude-opus-5
+check "a pinned id with HTTP 404 continues (no fallback for pinned ids)" "$RC:$GOT" "0:ibm-ete-int/aws/claude-opus-5"
+check "a pinned id with HTTP 404 never contacts another provider" "$(grep -c '^EXT' "$CALLS")" "0"
 
 # 8. Secrets missing for ibm-ete-int -> skipped without a call.
 set_all_secrets; both_listed; SCN_EXT=ok; unset IBM_ETE_INT_API_KEY

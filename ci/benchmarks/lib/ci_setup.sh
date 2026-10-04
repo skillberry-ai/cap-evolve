@@ -286,8 +286,9 @@ echo "claude-code optimizer: $(command -v claude) ($(claude --version 2>/dev/nul
 #
 # PROVIDER ORDER. A plain model name (see ci/benchmarks/model_catalog.txt) has a list of
 # candidate CI ids, one per provider, tried in the catalog's order: RITS (no budget), then
-# ibm-ete-int, then ibm-ete. The preflight below keeps the FIRST candidate that is listed, gets a
-# 200 from a real completion, and is not over budget, and exports it as
+# ibm-ete-int, then ibm-ete. The preflight below keeps the FIRST candidate that is listed and gets
+# a 200 from a real completion (or a 400, which blames our probe, not the provider), and exports
+# it as
 # AGENT_MODEL_RESOLVED / OPTIMIZER_MODEL_RESOLVED so the whole run uses that one provider. A
 # prefixed id pins its provider: one candidate, no fallback, and the same hard failures as
 # before. The choice is made ONCE, here; a budget that runs out mid-run still fails that run.
@@ -452,16 +453,25 @@ if command -v curl >/dev/null; then
     fi
     echo "gateway preflight: $role='$model' -> $RESOLVED_API_BASE; completion probe HTTP $code (attempt $attempt/$probe_attempts)"
     rm -f "$probe"
-    # Still unreachable after the retries (000 / 5xx). A pinned gateway id goes ahead with a
-    # warning, as before; a plain name tries the next provider instead.
-    case "$code" in 000|5??) return 12 ;; esac
-    return 0
+    # PROBE_LAST_CODE lets select_provider name the HTTP code in its skip reason.
+    PROBE_LAST_CODE="$code"
+    # 200 is usable. 400 is kept too: the model is listed, so a 400 means our probe's own
+    # parameters are wrong, and another provider would reject them the same way.
+    # 000 / 5xx: still unreachable after the retries (12). Any other answer (401, 403, 404, a 429
+    # without "budget", ...) means this provider cannot serve the model right now (14). For both,
+    # a pinned gateway id goes ahead with a warning, as before; a plain name tries the next
+    # provider instead.
+    case "$code" in
+      200|400) return 0 ;;
+      000|5??) return 12 ;;
+    esac
+    return 14
   }
 
   # select_provider <role> <requested-id> — walk the candidates for one role and record the
   # first usable one in $PF_DIR/<role>.{model,provider,skipped}. Aborts (exit 1) when none is.
   # Reason codes from probe_model: 10 over budget, 11 not entitled, 12 unreachable, 13 RITS
-  # failed.
+  # failed, 14 another non-200 answer (named by its HTTP code, e.g. "http-404").
   select_provider() {
     local role="$1" requested="$2" pinned=0 cands c provider rc reason skipped=""
     if is_pinned "$requested"; then
@@ -491,6 +501,11 @@ if command -v curl >/dev/null; then
                 echo "::warning:: $role model '$c' did not answer the probe; continuing because it is pinned"
               else
                 reason="unreachable"
+              fi ;;
+          14) if [ "$pinned" = 1 ]; then
+                echo "::warning:: $role model '$c' probe answered HTTP $PROBE_LAST_CODE; continuing because it is pinned"
+              else
+                reason="http-$PROBE_LAST_CODE"
               fi ;;
           10) reason="over-budget" ;;
           11) reason="not-entitled" ;;

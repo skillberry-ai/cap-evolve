@@ -264,8 +264,9 @@ model gemma-4-31B-it  ibm-rits/google/gemma-4-31B-it
 - **Where to see the choice:** the job summary has a "Model providers" table. The run record
   (`records/<run>.json` on `benchmark-history`) has `agent_provider`, `optimizer_provider`,
   the `*_requested` names, and `*_provider_skipped` with the reason for each skipped provider
-  (`over-budget`, `not-listed`, `not-entitled`, `unreachable`, `no-secrets`, and
-  `probe-failed` for a RITS model that does not answer 200).
+  (`over-budget`, `not-listed`, `not-entitled`, `unreachable`, `no-secrets`, `http-<code>`
+  for any other non-200 answer such as 401, 404 or a rate-limit 429, and `probe-failed` for a
+  RITS model that does not answer 200).
 - **Editing the catalog:** list two ids under one name only when they are the same model,
   served the same way. The same name is not enough: `ibm-ete-int`'s `rits/google/gemma-4-31B`
   is the base model, and RITS's `google/gemma-4-31B-it` is the instruction-tuned one.
