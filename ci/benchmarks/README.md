@@ -232,6 +232,49 @@ whatever ids are listed. Pick ids with headroom (baseline not already saturated)
 Requires `IBM_ETE_INT_API_BASE`/`IBM_ETE_INT_API_KEY` (and, for an `ibm-ete/*` or
 `ibm-rits/*` model, that provider's own pair — see below) set as repo secrets.
 
+### Model providers and their order
+
+**Rule: use RITS when it can serve the model, then `ibm-ete-int`, and `ibm-ete` only as the
+last choice.** RITS has no budget. `ibm-ete-int` is the team's main gateway. `ibm-ete` is a
+second gateway with its own budget; use it only when `ibm-ete-int` cannot serve the model or is
+over budget (as on 2026-09-30, run 36711181652, #538).
+
+The rule lives in one file, [`model_catalog.txt`](model_catalog.txt):
+
+```text
+order ibm-rits ibm-ete-int ibm-ete
+model claude-opus-5   ibm-ete-int/aws/claude-opus-5   ibm-ete/aws/claude-opus-5
+model gemma-4-31B-it  ibm-rits/google/gemma-4-31B-it
+```
+
+- **Plain name** (the first entries in both dropdowns, e.g. `claude-opus-5`): the preflight in
+  `ci_setup.sh` tries the providers in `order`. It skips a provider that has no entry for the
+  model or no secrets. For each remaining one it checks the gateway's `/models` listing (not
+  for RITS) and sends one real completion. It keeps the first provider that lists the model,
+  answers, and is not over budget. A 400 answer means our probe is wrong, not the provider, so
+  it does not move on. The defaults (`gpt-oss-120b`, `claude-opus-4-8`) are plain names, so
+  PR-label runs get the fallback too.
+- **Prefixed id** (e.g. `ibm-ete/aws/claude-opus-5`): pins that provider. No fallback, and the
+  same hard failures as before. Use it when an experiment must stay on one gateway.
+- **One provider per run.** The choice is made once, before the run starts, and exported as
+  `AGENT_MODEL_RESOLVED`/`OPTIMIZER_MODEL_RESOLVED`. `run_suite.sh`, the slot key and the run
+  record all use the chosen prefixed id. If a budget runs out in the middle of a run, that run
+  still fails; it does not switch gateways halfway, so baseline and candidates are never
+  measured on different gateways.
+- **Where to see the choice:** the job summary has a "Model providers" table. The run record
+  (`records/<run>.json` on `benchmark-history`) has `agent_provider`, `optimizer_provider`,
+  the `*_requested` names, and `*_provider_skipped` with the reason for each skipped provider
+  (`over-budget`, `not-listed`, `not-entitled`, `unreachable`, `no-secrets`, and
+  `probe-failed` for a RITS model that does not answer 200).
+- **Editing the catalog:** list two ids under one name only when they are the same model,
+  served the same way. The same name is not enough: `ibm-ete-int`'s `rits/google/gemma-4-31B`
+  is the base model, and RITS's `google/gemma-4-31B-it` is the instruction-tuned one.
+  `gpt-oss-120b` on RITS (`openai/gpt-oss-120b-a100`) is a separate name, so the default agent
+  keeps its history; merge the two only after a side-by-side run. `sync_models.py` warns about
+  catalog ids a gateway no longer serves and puts the catalog names first in the dropdowns,
+  but never edits the catalog. `sync_models.py --validate` (run by `ci.yml`) fails when a
+  plain dropdown entry is missing from the catalog.
+
 ### ibm-rits (skillberry-1 lite-rits proxy)
 
 A second provider, reached only through an `ibm-rits/<vendor>/<model>` model id in either
@@ -275,14 +318,10 @@ Requires `IBM_ETE_API_BASE`/`IBM_ETE_API_KEY` as repo secrets. Use an `ibm-ete/<
 id in `agent_model`/`optimizer_model` — `resolve_provider.sh` strips the `ibm-ete/` prefix
 and sends `<model>` on the wire verbatim.
 
-The `agent_model`/`optimizer_model` dropdowns ship with **zero seeded `ibm-ete/*`
-options** — the catalog isn't reliably queryable yet (currently budget-capped), and
-hand-typing a guessed model-id spelling risks the exact prefix/case-drift failure
-`check_models.py`'s docstring documents. `sync-model-lists.yml` populates real entries
-automatically the first time it successfully polls this gateway; until then, dispatching
-an `ibm-ete/*` model requires typing the exact id `workflow_dispatch` will still accept
-only if it's already one of the enumerated `options:` — i.e. not at all, until the sync
-workflow adds it.
+The `ibm-ete/*` dropdown entries come from `sync-model-lists.yml`, which polls this gateway's
+`/models`; nobody types them by hand, because a guessed spelling risks the prefix/case-drift
+failure `check_models.py`'s docstring documents. Under the provider order above, `ibm-ete` is
+the last choice for a plain name.
 
 ### Adding a fourth provider
 
@@ -290,11 +329,12 @@ Every provider follows the same shape: a CI-only dropdown prefix (e.g. `ibm-newp
 a secret pair named `IBM_<NAME>_API_BASE`/`IBM_<NAME>_API_KEY`, and a case arm in
 `resolve_provider.sh` (`ci/benchmarks/lib/resolve_provider.sh`) that strips the prefix (or
 rewrites it, if the provider needs a different wire-level id shape than its CI prefix, the
-way `ibm-rits/*` does) and returns that provider's credentials. `ci_setup.sh`'s
-`classify_provider`/`check_entitlement` and `sync_models.py`'s `--models PREFIX=PATH`
-polling both key off this same prefix, so a new provider needs no changes to their
-matching logic — only a new case arm and, if it should be polled automatically, a new
-`fetch_one` call in `sync-model-lists.yml`.
+way `ibm-rits/*` does) and returns that provider's credentials. Add the prefix to
+`provider_of`/`provider_has_creds` in the same file, to `PROVIDERS` in `sync_models.py`, and
+to the `order` line in `model_catalog.txt` at the place it should be tried. `ci_setup.sh`'s
+`check_listed`/`select_provider` and `sync_models.py`'s `--models PREFIX=PATH` polling key off
+this same prefix. If it should be polled automatically, add a `fetch_one` call in
+`sync-model-lists.yml`.
 
 > **Note:** GitHub only exposes `workflow_dispatch` (and evaluates `pull_request`
 > workflows) from the **default branch**, so `benchmarks.yml` becomes triggerable

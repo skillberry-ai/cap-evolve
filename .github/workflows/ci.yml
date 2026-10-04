@@ -11,6 +11,8 @@
 #   4. docs-links      — checks relative links/images in Markdown resolve (offline), and
 #                        that every documented `cap-evolve <sub>` exists in the CLI (#203)
 #   5. spellcheck      — codespell over README + docs
+#   6. test-ci-lib     — pytest + shell tests for ci/benchmarks/lib, and a check that the
+#                        benchmark model pickers match ci/benchmarks/model_catalog.txt
 #
 # No shared-workflow delegation needed: this is repo-specific CI.
 # ============================================================================
@@ -48,6 +50,40 @@ jobs:
 
       - name: Run pytest (dashboard backend)
         run: python -m pytest dashboard/backend/tests -q
+
+  test-ci-lib:
+    # The benchmark CI's own helpers (ci/benchmarks/lib): provider choice (RITS, then
+    # ibm-ete-int, then ibm-ete), model-picker sync, entitlement checks, run records. No
+    # gateway, no secrets: curl is faked in the shell tests.
+    name: Test benchmark CI helpers
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run pytest (ci/benchmarks/lib)
+        run: python -m pytest ci/benchmarks/lib -q
+
+      - name: Run shell tests (ci/benchmarks/lib/test_*.sh)
+        run: |
+          set -e
+          for t in ci/benchmarks/lib/test_*.sh; do
+            echo "::group::$t"
+            bash "$t"
+            echo "::endgroup::"
+          done
+
+      - name: Validate model pickers against model_catalog.txt
+        run: python ci/benchmarks/lib/sync_models.py --repo . --validate
 
   build-dashboard:
     name: Build Dashboard (frontend)

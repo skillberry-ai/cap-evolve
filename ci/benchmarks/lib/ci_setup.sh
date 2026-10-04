@@ -283,78 +283,64 @@ echo "claude-code optimizer: $(command -v claude) ($(claude --version 2>/dev/nul
 # request instead of publishing a static model_list), so running check_models.py against it
 # would be a guaranteed false failure, not a weaker check — skip straight to a completion
 # probe, which is the only signal lite-rits can actually give.
+#
+# PROVIDER ORDER. A plain model name (see ci/benchmarks/model_catalog.txt) has a list of
+# candidate CI ids, one per provider, tried in the catalog's order: RITS (no budget), then
+# ibm-ete-int, then ibm-ete. The preflight below keeps the FIRST candidate that is listed, gets a
+# 200 from a real completion, and is not over budget, and exports it as
+# AGENT_MODEL_RESOLVED / OPTIMIZER_MODEL_RESOLVED so the whole run uses that one provider. A
+# prefixed id pins its provider: one candidate, no fallback, and the same hard failures as
+# before. The choice is made ONCE, here; a budget that runs out mid-run still fails that run.
 if command -v curl >/dev/null; then
-  PF_AGENT="${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}"
-  PF_OPTIMIZER="${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}"
+  PF_AGENT="${AGENT_MODEL:-gpt-oss-120b}"
+  PF_OPTIMIZER="${OPTIMIZER_MODEL:-claude-opus-4-8}"
   # shellcheck source=ci/benchmarks/lib/resolve_provider.sh
   . "$LIB_DIR/resolve_provider.sh"
 
-  classify_provider() {
-    case "$1" in
-      ibm-ete-int/*) echo "ibm-ete-int" ;;
-      ibm-ete/*)     echo "ibm-ete" ;;
-      ibm-rits/*)    echo "ibm-rits" ;;
-      *) echo "ci_setup: '$1' has no recognized provider prefix (expected ibm-ete-int/, ibm-ete/, or ibm-rits/)" >&2; exit 1 ;;
-    esac
-  }
-  PF_AGENT_PROVIDER="$(classify_provider "$PF_AGENT")"
-  PF_OPTIMIZER_PROVIDER="$(classify_provider "$PF_OPTIMIZER")"
-
-  # 1. ENTITLEMENT — is each SELECTED *gateway* model served to this key at all? Only
+  # 1. ENTITLEMENT — is this candidate *gateway* model served to this key at all? Only
   # gateway-routed models are checkable this way; an "ibm-rits/*" model has no /models listing
-  # to confirm against, so it is simply skipped (its absence from a gateway's list is expected,
-  # not a fault).
+  # to confirm against (lite-rits's /v1/models is always empty by design), so the caller skips
+  # this for RITS and relies on the completion probe alone.
   # NB: check_models.py takes a pre-fetched /models JSON file plus --require ROLE=MODEL_ID
-  # pairs (see check_models.py's own docstring); it has no --base/--key mode. check_entitlement
-  # below still does its own curl fetch per provider, preserving the exact behavior the old
-  # single-gateway block had, just parameterized over which provider's base/key to hit and
-  # which role(s) actually resolved to it.
-  check_entitlement() {
-    local provider="$1" base="$2" key="$3"
-    shift 3
-    local require_args=()
-    for spec in "$@"; do require_args+=(--require "$spec"); done
-    echo "::group::Entitlement check — $provider"
+  # pairs (see check_models.py's own docstring); it has no --base/--key mode.
+  # Returns 0 when listed (or when the listing itself is unavailable — that is a warning, as
+  # before), 1 when NOT listed. A pinned id that is not listed aborts here with
+  # check_models.py's full diagnosis, exactly as the old single-provider check did.
+  check_listed() {
+    local role="$1" provider="$2" model="$3" pinned="$4" base key
+    case "$provider" in
+      ibm-ete-int) base="$IBM_ETE_INT_API_BASE"; key="$IBM_ETE_INT_API_KEY" ;;
+      ibm-ete)     base="$IBM_ETE_API_BASE";     key="$IBM_ETE_API_KEY" ;;
+      *) return 0 ;;
+    esac
     # /models is an `llm_api_routes` call. The richer /model/info and /key/info are NOT: these
     # virtual keys are route-scoped and answer both with 403 "not allowed to call this route",
     # which is also the real reason the old preflight logged a mystery HTTP 403.
-    local models="/tmp/capevolve_models_${provider}.$$.json"
+    local models="/tmp/capevolve_models_${provider}.$$_${role}.json"
     local mcode
     mcode="$(curl -sS -m 30 -o "$models" -w '%{http_code}' \
       "$base/models" \
-      -H "Authorization: Bearer $key" 2>/dev/null || echo 000)"
-    if [ "$mcode" = "200" ]; then
-      if ! "$CAPEVOLVE_PY" "$LIB_DIR/check_models.py" "$models" "${require_args[@]}"; then
-        rm -f "$models"; echo "::endgroup::"; exit 1
-      fi
-    else
-      echo "::warning:: $provider /models returned HTTP $mcode — cannot verify model entitlement"
+      -H "Authorization: Bearer $key" 2>/dev/null)" || true
+    case "$mcode" in ''|*[!0-9]*) mcode=000 ;; esac
+    if [ "$mcode" != "200" ]; then
+      echo "::warning:: $provider /models returned HTTP $mcode — cannot verify $role model entitlement"
+      rm -f "$models"; return 0
     fi
-    rm -f "$models"
-    echo "::endgroup::"
-  }
-
-  # Dedupe first (agent and optimizer may share a provider) so each provider's
-  # ::group::/::endgroup:: block is emitted exactly once and stays contiguous — piping the
-  # loop's output through `sort -u` instead would reorder lines WITHIN a block and corrupt
-  # the group markers, so dedupe the provider list, not the output.
-  providers_seen=""
-  for provider in "$PF_AGENT_PROVIDER" "$PF_OPTIMIZER_PROVIDER"; do
-    case " $providers_seen " in *" $provider "*) continue ;; esac
-    providers_seen="$providers_seen $provider"
-    require_args=()
     # WIRE ids, not the CI aliases. The gateway's own `GET /models` listing spells models the
     # way it serves them, so requiring "ibm-ete-int/aws/claude-opus-5" made every ibm-ete*
-    # model look unserved and aborted preflight (run 36300445911). wire_model does the same
-    # rewrite the completion probe already relies on, without needing the provider's secrets.
-    [ "$PF_AGENT_PROVIDER" = "$provider" ] && require_args+=("agent=$(wire_model "$PF_AGENT")")
-    [ "$PF_OPTIMIZER_PROVIDER" = "$provider" ] && require_args+=("optimizer=$(wire_model "$PF_OPTIMIZER")")
-    case "$provider" in
-      ibm-ete-int) check_entitlement ibm-ete-int "$IBM_ETE_INT_API_BASE" "$IBM_ETE_INT_API_KEY" "${require_args[@]}" ;;
-      ibm-ete)     check_entitlement ibm-ete     "$IBM_ETE_API_BASE"     "$IBM_ETE_API_KEY"     "${require_args[@]}" ;;
-      ibm-rits) : ;;  # lite-rits's /v1/models is always empty by design — never entitlement-listed
-    esac
-  done
+    # model look unserved and aborted preflight (run 36300445911).
+    if [ "$pinned" = 1 ]; then
+      echo "::group::Entitlement check — $role on $provider"
+      if ! "$CAPEVOLVE_PY" "$LIB_DIR/check_models.py" "$models" --require "$role=$(wire_model "$model")"; then
+        rm -f "$models"; echo "::endgroup::"; exit 1
+      fi
+      echo "::endgroup::"
+    elif ! "$CAPEVOLVE_PY" "$LIB_DIR/check_models.py" "$models" --require "$role=$(wire_model "$model")" >/dev/null 2>&1; then
+      rm -f "$models"; return 1
+    fi
+    rm -f "$models"
+    return 0
+  }
 
   # 2. BUDGET/ENTITLEMENT at call time — one real completion per SELECTED model, against
   # whichever provider actually serves it. Listing a gateway model is necessary but not
@@ -427,18 +413,17 @@ if command -v curl >/dev/null; then
       case "$code" in ''|*[!0-9]*) code=000 ;; esac
       echo "$role model probe attempt $attempt/$probe_attempts -> HTTP $code ($RESOLVED_API_BASE)"
       # DEFINITIVE answers, decided on the FIRST response and never retried: a live service has
-      # already told us the run cannot work. Retrying would burn the backoff to reach the same
-      # conclusion and, worse, would dress a decision up as flakiness.
+      # already told us the run cannot work ON THIS PROVIDER. Retrying would burn the backoff to
+      # reach the same conclusion and, worse, would dress a decision up as flakiness. These
+      # RETURN a reason code instead of exiting: select_provider decides whether the next
+      # provider in the order gets a try (plain name) or the run aborts (pinned id).
       if [ "$code" = "429" ] && grep -qi 'budget' "$probe" 2>/dev/null; then
-        echo "::error:: $role model gateway ($RESOLVED_API_BASE) is OVER BUDGET (HTTP 429 budget_exceeded) — aborting."
-        echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the gateway budget."
-        head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+        echo "$role model gateway ($RESOLVED_API_BASE) is OVER BUDGET (HTTP 429 budget_exceeded) for '$model'"
+        head -c 300 "$probe" 2>/dev/null; echo; rm -f "$probe"; return 10
       fi
       if grep -qi 'not allowed to access model' "$probe" 2>/dev/null; then
-        echo "::error:: gateway REFUSED $role model '$model' at call time (HTTP $code):"
-        echo "::error:: the key's team is not entitled to it, so every rollout would fail and the"
-        echo "::error:: suite would publish a fake 0.000. Pick a model this key can call."
-        head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+        echo "gateway REFUSED $role model '$model' at call time (HTTP $code): the key's team is not entitled to it"
+        head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; return 11
       fi
       [ "$code" = "200" ] && break
       # 000 = connect failure or timeout, 5xx = the upstream itself stumbling. Everything else
@@ -460,26 +445,118 @@ if command -v curl >/dev/null; then
       attempt=$(( attempt + 1 ))
     done
     if [ "$code" != "200" ] && [ "$RESOLVED_PROVIDER" = "ibm-rits" ]; then
-      echo "::error:: RITS probe for $role model '$model' failed (HTTP $code) against $RESOLVED_API_BASE:"
-      echo "::error:: lite-rits may be down, or this model id is not in its scraped rits.json."
-      echo "::error:: gave up after $attempt attempt(s); last observed HTTP $code."
-      head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; exit 1
+      echo "RITS probe for $role model '$model' failed (HTTP $code) against $RESOLVED_API_BASE:"
+      echo "lite-rits may be down, or this model id is not in its scraped rits.json."
+      echo "gave up after $attempt attempt(s); last observed HTTP $code."
+      head -c 600 "$probe" 2>/dev/null; echo; rm -f "$probe"; return 13
     fi
     echo "gateway preflight: $role='$model' -> $RESOLVED_API_BASE; completion probe HTTP $code (attempt $attempt/$probe_attempts)"
     rm -f "$probe"
+    # Still unreachable after the retries (000 / 5xx). A pinned gateway id goes ahead with a
+    # warning, as before; a plain name tries the next provider instead.
+    case "$code" in 000|5??) return 12 ;; esac
+    return 0
   }
-  # Run both probes concurrently — each hits a different role's endpoint (often a
+
+  # select_provider <role> <requested-id> — walk the candidates for one role and record the
+  # first usable one in $PF_DIR/<role>.{model,provider,skipped}. Aborts (exit 1) when none is.
+  # Reason codes from probe_model: 10 over budget, 11 not entitled, 12 unreachable, 13 RITS
+  # failed.
+  select_provider() {
+    local role="$1" requested="$2" pinned=0 cands c provider rc reason skipped=""
+    if is_pinned "$requested"; then
+      pinned=1; cands="$requested"
+    else
+      cands="$(catalog_candidates "$requested")" || {
+        echo "::error:: $role model '$requested' is not a prefixed id and not a plain name in ci/benchmarks/model_catalog.txt"
+        exit 1
+      }
+      echo "provider order: $role '$requested' candidates: $(printf '%s ' $cands)"
+    fi
+    for c in $cands; do
+      provider="$(provider_of "$c")"
+      reason=""
+      if [ "$pinned" = 0 ] && ! provider_has_creds "$provider"; then
+        reason="no-secrets"
+      elif [ "$provider" != "ibm-rits" ] && provider_has_creds "$provider" \
+          && ! check_listed "$role" "$provider" "$c" "$pinned"; then
+        reason="not-listed"
+      else
+        # `|| rc=$?`, not `; rc=$?`: this script runs under `set -e`, which would end it on the
+        # first non-zero reason code before the next provider got a try.
+        rc=0; probe_model "$role" "$c" || rc=$?
+        case "$rc" in
+          0) ;;
+          12) if [ "$pinned" = 1 ]; then
+                echo "::warning:: $role model '$c' did not answer the probe; continuing because it is pinned"
+              else
+                reason="unreachable"
+              fi ;;
+          10) reason="over-budget" ;;
+          11) reason="not-entitled" ;;
+          *)  reason="probe-failed" ;;
+        esac
+      fi
+      if [ -z "$reason" ]; then
+        printf '%s\n' "$c" > "$PF_DIR/$role.model"
+        printf '%s\n' "$provider" > "$PF_DIR/$role.provider"
+        printf '%s\n' "${skipped# }" > "$PF_DIR/$role.skipped"
+        echo "provider order: $role '$requested' -> '$c' (provider $provider${skipped:+; skipped:$skipped})"
+        return 0
+      fi
+      echo "provider order: $role '$requested' — $provider skipped ($reason)"
+      skipped="$skipped $provider:$reason"
+      if [ "$pinned" = 1 ]; then
+        case "$reason" in
+          over-budget)
+            echo "::error:: $role model '$c' is pinned to $provider, which is OVER BUDGET — aborting."
+            echo "::error:: every rollout would score 0.000 as INFRASTRUCTURE_ERROR. Raise/reset the budget,"
+            echo "::error:: or dispatch the plain model name so CI can fall back to the next provider." ;;
+          not-entitled)
+            echo "::error:: gateway REFUSED pinned $role model '$c': the key's team is not entitled to it, so"
+            echo "::error:: every rollout would fail and the suite would publish a fake 0.000." ;;
+          *)
+            echo "::error:: pinned $role model '$c' failed its preflight probe ($reason) — aborting." ;;
+        esac
+        exit 1
+      fi
+    done
+    echo "::error:: no provider can serve $role model '$requested' (tried:$skipped)."
+    echo "::error:: every rollout would fail and the suite would publish a fake 0.000 — aborting."
+    exit 1
+  }
+  # Select both roles concurrently — each hits a different role's endpoint (often a
   # different provider entirely, gateway vs. RITS) and neither depends on the other's
-  # result, so the worst-case wall time is one 60s timeout instead of two. Backgrounding a
+  # result, so the worst-case wall time is one role's probes instead of both. Backgrounding a
   # shell function still lets `exit 1` inside it end just that subshell; `wait "$pid"`
-  # below recovers that as a normal nonzero status, so a probe failure still aborts this
-  # script exactly as it did when the calls were sequential.
-  probe_model agent "$PF_AGENT" & pid_agent=$!
-  probe_model optimizer "$PF_OPTIMIZER" & pid_optimizer=$!
+  # below recovers that as a normal nonzero status, so a failure still aborts this script.
+  # The subshells cannot set variables here, so each writes its choice under $PF_DIR.
+  PF_DIR="$(mktemp -d "${TMPDIR:-/tmp}/capevolve_provider.XXXXXX")"
+  select_provider agent "$PF_AGENT" & pid_agent=$!
+  select_provider optimizer "$PF_OPTIMIZER" & pid_optimizer=$!
   fail=0
   wait "$pid_agent" || fail=1
   wait "$pid_optimizer" || fail=1
-  [ "$fail" = 0 ] || exit 1
+  [ "$fail" = 0 ] || { rm -rf "$PF_DIR"; exit 1; }
+  AGENT_MODEL_RESOLVED="$(cat "$PF_DIR/agent.model")"
+  OPTIMIZER_MODEL_RESOLVED="$(cat "$PF_DIR/optimizer.model")"
+  AGENT_PROVIDER="$(cat "$PF_DIR/agent.provider")"
+  OPTIMIZER_PROVIDER="$(cat "$PF_DIR/optimizer.provider")"
+  AGENT_PROVIDER_SKIPPED="$(cat "$PF_DIR/agent.skipped")"
+  OPTIMIZER_PROVIDER_SKIPPED="$(cat "$PF_DIR/optimizer.skipped")"
+  rm -rf "$PF_DIR"
+  echo "provider choice: agent '$PF_AGENT' -> '$AGENT_MODEL_RESOLVED'; optimizer '$PF_OPTIMIZER' -> '$OPTIMIZER_MODEL_RESOLVED'"
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    {
+      echo "### Model providers"
+      echo ""
+      echo "| role | requested | runs on | provider | skipped |"
+      echo "|---|---|---|---|---|"
+      echo "| agent | \`$PF_AGENT\` | \`$AGENT_MODEL_RESOLVED\` | $AGENT_PROVIDER | ${AGENT_PROVIDER_SKIPPED:--} |"
+      echo "| optimizer | \`$PF_OPTIMIZER\` | \`$OPTIMIZER_MODEL_RESOLVED\` | $OPTIMIZER_PROVIDER | ${OPTIMIZER_PROVIDER_SKIPPED:--} |"
+      echo ""
+    } >> "$GITHUB_STEP_SUMMARY"
+  fi
 fi
 
 # Export for later workflow steps (no-op locally).
@@ -492,6 +569,16 @@ if [ -n "${GITHUB_ENV:-}" ]; then
     if [ -n "${HARBOR_NPM_CACHE:-}" ]; then echo "HARBOR_NPM_CACHE=$HARBOR_NPM_CACHE"; fi
     if [ -n "${SPREADSHEETBENCH_DATA_DIR:-}" ]; then echo "SPREADSHEETBENCH_DATA_DIR=$SPREADSHEETBENCH_DATA_DIR"; fi
     if [ -n "${RFE_CREATOR_SRC:-}" ]; then echo "RFE_CREATOR_SRC=$RFE_CREATOR_SRC"; fi
+    # The provider the preflight chose. run_suite.sh and the runmeta step prefer these over the
+    # dispatch's own AGENT_MODEL/OPTIMIZER_MODEL, which may be a plain catalog name.
+    if [ -n "${AGENT_MODEL_RESOLVED:-}" ]; then
+      echo "AGENT_MODEL_RESOLVED=$AGENT_MODEL_RESOLVED"
+      echo "OPTIMIZER_MODEL_RESOLVED=$OPTIMIZER_MODEL_RESOLVED"
+      echo "AGENT_PROVIDER=$AGENT_PROVIDER"
+      echo "OPTIMIZER_PROVIDER=$OPTIMIZER_PROVIDER"
+      echo "AGENT_PROVIDER_SKIPPED=$AGENT_PROVIDER_SKIPPED"
+      echo "OPTIMIZER_PROVIDER_SKIPPED=$OPTIMIZER_PROVIDER_SKIPPED"
+    fi
     echo "PATH=$HOME/.local/bin:$PATH"
   } >> "$GITHUB_ENV"
 fi

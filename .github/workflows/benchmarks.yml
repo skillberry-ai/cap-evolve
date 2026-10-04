@@ -25,10 +25,15 @@
 #   - ibm-ete-int/<model>       IBM_ETE_INT_API_BASE / IBM_ETE_INT_API_KEY
 #   - ibm-ete/<model>           IBM_ETE_API_BASE / IBM_ETE_API_KEY
 #   - ibm-rits/<vendor>/<model> IBM_RITS_API_BASE / IBM_RITS_API_KEY
-# Every agent_model/optimizer_model dropdown entry below carries one of these three
-# prefixes. ibm-ete currently ships with zero seeded options — its catalog is
-# budget-capped and unverified; sync-model-lists.yml populates real entries once it's
-# queryable, so no guessed model-id spellings ever land in the dropdown by hand.
+# Each agent_model/optimizer_model dropdown has two kinds of entry:
+#   - PLAIN names first (e.g. "claude-opus-5"), from ci/benchmarks/model_catalog.txt. The
+#     preflight in ci_setup.sh tries the providers in the catalog's order — ibm-rits (no
+#     budget), then ibm-ete-int, then ibm-ete — and the run uses the first one that serves the
+#     model and has budget. The job summary and the run record show which one it was.
+#   - PREFIXED ids after them (e.g. "ibm-ete/aws/claude-opus-5"). These pin one provider, with
+#     no fallback; use them when an experiment must stay on one gateway.
+# sync-model-lists.yml keeps the prefixed ids in step with what each gateway key serves; the
+# plain names come only from the hand-edited catalog.
 # ============================================================================
 
 name: Benchmarks
@@ -60,10 +65,35 @@ on:
         type: string
         default: ""
       agent_model:
-        description: "Evaluation model — the agent under test. \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh). Independent of optimizer_model — any pairing is valid."
+        description: "Evaluation model — the agent under test. A plain name (listed first, from ci/benchmarks/model_catalog.txt) runs on the first provider that serves it and has budget: ibm-rits, then ibm-ete-int, then ibm-ete. A prefixed id pins one provider with no fallback: \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS via skillberry-1's lite-rits proxy (see resolve_provider.sh). Independent of optimizer_model — any pairing is valid."
         type: choice
-        default: "ibm-ete-int/aws/gpt-oss-120b"
+        default: "gpt-oss-120b"
         options:
+          - "claude-opus-5-5"
+          - "claude-opus-5"
+          - "claude-opus-4-8"
+          - "claude-opus-4-7"
+          - "claude-opus-4-6"
+          - "claude-sonnet-5"
+          - "claude-sonnet-4-6"
+          - "claude-haiku-4-5"
+          - "gpt-5.5"
+          - "gpt-5.4"
+          - "gpt-5-mini"
+          - "gpt-oss-120b"
+          - "gemini-2.5-pro"
+          - "gemini-2.5-flash"
+          - "gemini-3-pro-preview"
+          - "gemini-3.1-pro-preview"
+          - "gemma-4-31B-it"
+          - "Qwen3-8B"
+          - "Qwen2.5-72B-Instruct"
+          - "Qwen3-30B-A3B-Thinking-2507"
+          - "llama-3-3-70b-instruct"
+          - "Mistral-Small-3.2-24B-Instruct"
+          - "DeepSeek-V3.2"
+          - "gpt-oss-120b-a100"
+          - "Kimi-K2.7-Code"
           - "ibm-ete-int/aws/claude-haiku-4-5"
           - "ibm-ete-int/aws/claude-opus-4-7"
           - "ibm-ete-int/aws/claude-opus-4-8"
@@ -142,10 +172,35 @@ on:
           - "ibm-rits/openai/gpt-oss-120b-a100"
           - "ibm-rits/moonshotai/Kimi-K2.7-Code"
       optimizer_model:
-        description: "Optimization model — the Claude Code optimizer's model. \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS; the claude-code CLI reaches it through a per-job Anthropic Messages proxy, since lite-rits cannot serve /v1/messages (see ci/benchmarks/lib/rits_messages_proxy.sh)."
+        description: "Optimization model — the Claude Code optimizer's model. A plain name (listed first, from ci/benchmarks/model_catalog.txt) runs on the first provider that serves it and has budget: ibm-rits, then ibm-ete-int, then ibm-ete. A prefixed id pins one provider with no fallback: \"ibm-ete-int/<model>\" or \"ibm-ete/<model>\" = one of the two ete-litellm gateways; \"ibm-rits/<vendor>/<model>\" = RITS; the claude-code CLI reaches it through a per-job Anthropic Messages proxy, since lite-rits cannot serve /v1/messages (see ci/benchmarks/lib/rits_messages_proxy.sh)."
         type: choice
-        default: "ibm-ete-int/claude-opus-4-8"
+        default: "claude-opus-4-8"
         options:
+          - "claude-opus-5-5"
+          - "claude-opus-5"
+          - "claude-opus-4-8"
+          - "claude-opus-4-7"
+          - "claude-opus-4-6"
+          - "claude-sonnet-5"
+          - "claude-sonnet-4-6"
+          - "claude-haiku-4-5"
+          - "gpt-5.5"
+          - "gpt-5.4"
+          - "gpt-5-mini"
+          - "gpt-oss-120b"
+          - "gemini-2.5-pro"
+          - "gemini-2.5-flash"
+          - "gemini-3-pro-preview"
+          - "gemini-3.1-pro-preview"
+          - "gemma-4-31B-it"
+          - "Qwen3-8B"
+          - "Qwen2.5-72B-Instruct"
+          - "Qwen3-30B-A3B-Thinking-2507"
+          - "llama-3-3-70b-instruct"
+          - "Mistral-Small-3.2-24B-Instruct"
+          - "DeepSeek-V3.2"
+          - "gpt-oss-120b-a100"
+          - "Kimi-K2.7-Code"
           - "ibm-ete-int/aws/claude-haiku-4-5"
           - "ibm-ete-int/aws/claude-opus-4-7"
           - "ibm-ete-int/aws/claude-opus-4-8"
@@ -498,8 +553,10 @@ jobs:
       # and `grow.py` exists to buy replication only where a candidate looks promising.
       # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
       NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
-      AGENT_MODEL: ${{ github.event.inputs.agent_model || 'ibm-ete-int/aws/gpt-oss-120b' }}
-      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'ibm-ete-int/claude-opus-4-8' }}
+      # Plain catalog names by default, so a PR-label run also gets provider fallback. The
+      # provider actually used is chosen by ci_setup.sh and exported as *_MODEL_RESOLVED.
+      AGENT_MODEL: ${{ github.event.inputs.agent_model || 'gpt-oss-120b' }}
+      OPTIMIZER_MODEL: ${{ github.event.inputs.optimizer_model || 'claude-opus-4-8' }}
       # Smoke defaults to a $50/iteration cap (fast regression, generous headroom);
       # full stays unlimited by default. An explicit `optimizer_usd_per_iter`
       # dispatch input overrides this for whichever tier(s) run in that dispatch.
@@ -653,8 +710,14 @@ jobs:
             "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "iterations": ${ITERATIONS:-3},
             "trials": ${NUM_TRIALS:-10},
-            "agent_model": "${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}",
-            "optimizer_model": "${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}",
+            "agent_model": "${AGENT_MODEL_RESOLVED:-${AGENT_MODEL:-gpt-oss-120b}}",
+            "optimizer_model": "${OPTIMIZER_MODEL_RESOLVED:-${OPTIMIZER_MODEL:-claude-opus-4-8}}",
+            "agent_model_requested": "${AGENT_MODEL:-gpt-oss-120b}",
+            "optimizer_model_requested": "${OPTIMIZER_MODEL:-claude-opus-4-8}",
+            "agent_provider": "${AGENT_PROVIDER:-}",
+            "optimizer_provider": "${OPTIMIZER_PROVIDER:-}",
+            "agent_provider_skipped": "${AGENT_PROVIDER_SKIPPED:-}",
+            "optimizer_provider_skipped": "${OPTIMIZER_PROVIDER_SKIPPED:-}",
             "gate_k_se": $gate_k_se,
             "algorithm": "${ALGORITHM:-hill-climb-all}",
             "warm_seed": $warm_json,

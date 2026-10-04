@@ -57,7 +57,9 @@ from pathlib import Path
 
 WORKFLOW = Path(".github/workflows/benchmarks.yml")
 RUN_SUITE = Path("ci/benchmarks/lib/run_suite.sh")
+CATALOG = Path("ci/benchmarks/model_catalog.txt")
 PICKERS = ("agent_model", "optimizer_model")
+PROVIDERS = ("ibm-rits", "ibm-ete-int", "ibm-ete")
 
 EXIT_OK, EXIT_DRIFT, EXIT_DECISION = 0, 1, 2
 
@@ -65,6 +67,62 @@ EXIT_OK, EXIT_DRIFT, EXIT_DECISION = 0, 1, 2
 def _prefix(model_id: str) -> str:
     """The CI provider tag a served/option model id carries, e.g. 'ibm-ete-int'."""
     return model_id.split("/", 1)[0]
+
+
+def _is_plain(model_id: str) -> bool:
+    """A plain catalog name ("claude-opus-5") rather than a provider-pinned CI id."""
+    return _prefix(model_id) not in PROVIDERS
+
+
+def parse_catalog(text: str) -> tuple[list[str], list[tuple[str, list[str]]], list[str]]:
+    """(provider order, [(plain name, [ci ids])] in file order, errors) for model_catalog.txt.
+
+    The same format resolve_provider.sh reads with `while read`: one `order ...` line, then one
+    `model <name> <id> ...` line per model; `#` lines and blank lines are ignored.
+    """
+    order: list[str] = []
+    models: list[tuple[str, list[str]]] = []
+    errors: list[str] = []
+    seen: set[str] = set()
+    for n, raw in enumerate(text.splitlines(), 1):
+        parts = raw.split()
+        if not parts or parts[0].startswith("#"):
+            continue
+        if parts[0] == "order":
+            order = parts[1:]
+            unknown = [p for p in order if p not in PROVIDERS]
+            if unknown or sorted(order) != sorted(PROVIDERS):
+                errors.append(f"line {n}: order must list each of {', '.join(PROVIDERS)} once, got {' '.join(order)}")
+        elif parts[0] == "model":
+            if len(parts) < 3:
+                errors.append(f"line {n}: a model line needs a name and at least one CI id")
+                continue
+            name, ids = parts[1], parts[2:]
+            if not _is_plain(name) or "/" in name:
+                errors.append(f"line {n}: plain name {name!r} must not contain '/' or a provider prefix")
+            if name in seen:
+                errors.append(f"line {n}: {name!r} is listed twice")
+            seen.add(name)
+            providers = [_prefix(i) for i in ids]
+            for i, p in zip(ids, providers):
+                if p not in PROVIDERS:
+                    errors.append(f"line {n}: {name}: {i!r} has no provider prefix")
+            if len(set(providers)) != len(providers):
+                errors.append(f"line {n}: {name}: more than one id for the same provider")
+            models.append((name, ids))
+        else:
+            errors.append(f"line {n}: unknown line kind {parts[0]!r}")
+    if not order:
+        errors.append("no `order` line")
+    return order, models, errors
+
+
+def read_catalog(repo: Path) -> tuple[list[str], list[tuple[str, list[str]]], list[str]] | None:
+    """parse_catalog() of the repo's catalog, or None when the repo has no catalog file."""
+    path = repo / CATALOG
+    if not path.exists():
+        return None
+    return parse_catalog(path.read_text(encoding="utf-8"))
 
 
 def _bare_id(model_id: str) -> str:
@@ -190,6 +248,23 @@ def sync(repo: Path, models: list[str], polled_prefixes: set[str], write: bool,
     rs_text = rs_path.read_text(encoding="utf-8") if rs_path.exists() else ""
     rep.append(f"gateway serves {len(models)} model(s)")
 
+    # ---- the catalog of plain names. Never edited here: only a person can confirm that two ids
+    # are the same model. This only reports catalog ids a polled gateway no longer serves.
+    catalog = read_catalog(repo)
+    catalog_names: list[str] = []
+    if catalog is not None:
+        _, cat_models, cat_errors = catalog
+        if cat_errors:
+            return EXIT_DECISION, rep + [f"::error:: {CATALOG}: {e}" for e in cat_errors]
+        catalog_names = [name for name, _ in cat_models]
+        served = set(models)
+        for name, ids in cat_models:
+            gone = [i for i in ids if _prefix(i) in polled_prefixes and i not in served]
+            for i in gone:
+                rep.append(f"  ::warning:: {CATALOG}: {name} -> {i} is NOT served by this key; fix or remove it by hand")
+            if gone and len(gone) == len(ids):
+                rep.append(f"  ::warning:: {CATALOG}: {name} has no served provider left")
+
     # ---- defaults FIRST. A default outside its own options is an invalid workflow, so if we
     # cannot end up with a valid file we must not write the options either.
     wanted = {"agent_model": agent_default, "optimizer_model": optimizer_default}
@@ -199,13 +274,17 @@ def sync(repo: Path, models: list[str], polled_prefixes: set[str], write: bool,
     for picker, override in wanted.items():
         cur = current_default(text, picker)
         if override:
-            if override not in models:
-                blockers.append(f"::error:: requested {picker} default {override!r} is not served by this key")
+            if override not in models and override not in catalog_names:
+                blockers.append(f"::error:: requested {picker} default {override!r} is not served by this key"
+                                f" and is not a plain name in {CATALOG}")
                 continue
             if override != cur:
                 text = rewrite_default(text, picker, override)
                 rs_text = rewrite_run_suite_default(rs_text, rs_var[picker], override)
                 rep.append(f"  {picker}: default {cur!r} -> {override!r} (and {rs_var[picker]} fallback)")
+        elif cur and _is_plain(cur) and catalog is not None and cur not in catalog_names:
+            blockers.append(f"::error:: {picker} default {cur!r} is a plain name that {CATALOG} does not list;"
+                            f" add it there or pass --{picker.replace('_model','')}-default")
         elif cur and _prefix(cur) in polled_prefixes and cur not in models:
             # Retained on purpose — see "HOW AN UNSERVED DEFAULT IS HANDLED" above. It must stay
             # in `options` too or the workflow is invalid. Scoped to defaults whose own prefix was
@@ -226,10 +305,17 @@ def sync(repo: Path, models: list[str], polled_prefixes: set[str], write: bool,
     # never polled (e.g. ibm-rits — hand-curated, never entitlement-listed), plus THAT picker's
     # own retained default if it is unserved. Retaining the default globally would offer an
     # unusable model in the other picker too.
+    # Plain catalog names come FIRST, in the catalog's own order (it is grouped by vendor), so the
+    # dispatch dialog leads with the names that get provider fallback. With no catalog file, any
+    # plain options already present are kept as they are.
     def opts_for(picker: str) -> list[str]:
         extra = keep.get(picker)
-        unpolled_kept = {o for o in current_options(text, picker) if _prefix(o) not in polled_prefixes}
-        return sorted(unpolled_kept | set(models) | ({extra} if extra else set()), key=lambda s: (s.lower(), s))
+        current = current_options(text, picker)
+        plain = catalog_names if catalog is not None else [o for o in current if _is_plain(o)]
+        unpolled_kept = {o for o in current if not _is_plain(o) and _prefix(o) not in polled_prefixes}
+        pinned = sorted(unpolled_kept | set(models) | ({extra} if extra and not _is_plain(extra) else set()),
+                        key=lambda s: (s.lower(), s))
+        return list(plain) + pinned
 
     changed = rs_text != (rs_path.read_text(encoding="utf-8") if rs_path.exists() else "")
     for picker in PICKERS:
@@ -269,8 +355,13 @@ def sync(repo: Path, models: list[str], polled_prefixes: set[str], write: bool,
     return EXIT_OK, rep
 
 
-def validate(workflow_text: str, run_suite_text: str) -> tuple[bool, list[str]]:
+def validate(workflow_text: str, run_suite_text: str,
+             catalog_text: str | None = None) -> tuple[bool, list[str]]:
     """Assert every picker default is among its own options — no repo or gateway needed.
+
+    With ``catalog_text`` (model_catalog.txt), also assert the catalog parses and that every
+    plain-name option is a catalog name: a plain name the catalog does not list would pass the
+    dispatch dialog and then fail at the preflight.
 
     A ``default:`` outside its ``options:`` is an INVALID workflow: actionlint rejects it and
     the dispatch dialog cannot honour it. Kept here rather than inline in the workflow so the
@@ -282,6 +373,13 @@ def validate(workflow_text: str, run_suite_text: str) -> tuple[bool, list[str]]:
     """
     del run_suite_text
     rep, bad = [], False
+    names: set[str] | None = None
+    if catalog_text is not None:
+        _, cat_models, cat_errors = parse_catalog(catalog_text)
+        for e in cat_errors:
+            rep.append(f"::error:: {CATALOG}: {e}")
+        bad = bool(cat_errors)
+        names = {name for name, _ in cat_models}
     for picker in PICKERS:
         opts, dflt = current_options(workflow_text, picker), current_default(workflow_text, picker)
         if dflt not in opts:
@@ -289,6 +387,11 @@ def validate(workflow_text: str, run_suite_text: str) -> tuple[bool, list[str]]:
             bad = True
         else:
             rep.append(f"  {picker}: {len(opts)} options, default {dflt!r} OK")
+        if names is not None:
+            for o in opts:
+                if _is_plain(o) and o not in names:
+                    rep.append(f"::error:: {picker} option {o!r} is a plain name that {CATALOG} does not list")
+                    bad = True
     return not bad, rep
 
 
@@ -311,7 +414,9 @@ def main(argv: list[str]) -> int:
         wf_text = (Path(a.repo) / WORKFLOW).read_text(encoding="utf-8")
         rs_path = Path(a.repo) / RUN_SUITE
         rs_text = rs_path.read_text(encoding="utf-8") if rs_path.exists() else ""
-        ok, report = validate(wf_text, rs_text)
+        cat_path = Path(a.repo) / CATALOG
+        cat_text = cat_path.read_text(encoding="utf-8") if cat_path.exists() else None
+        ok, report = validate(wf_text, rs_text, cat_text)
         for line in report:
             print(line)
         return EXIT_OK if ok else EXIT_DECISION

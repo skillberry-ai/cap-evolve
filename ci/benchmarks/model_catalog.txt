@@ -1,0 +1,61 @@
+# model_catalog.txt — which provider serves each model, and in what order CI tries them.
+#
+# A benchmark dispatch may name a model in two ways:
+#   * a PLAIN name from this file (e.g. "claude-opus-5"). ci_setup.sh's preflight tries the
+#     providers in `order`, skips one that has no entry for the model or no secrets, and keeps
+#     the first provider that serves the model and has budget. The whole run uses that one.
+#   * a PREFIXED id (e.g. "ibm-ete/aws/claude-opus-5"). It pins that provider: no fallback.
+#
+# Why this order: RITS has no budget, so it is always the cheapest place to run. ibm-ete-int is
+# the team's main gateway. ibm-ete is the second gateway, used only when ibm-ete-int cannot
+# serve the model or is over its budget (as on 2026-09-30, run 36711181652).
+#
+# RULES FOR EDITING (see ci/benchmarks/README.md, "Model providers"):
+#   * List two ids under one name ONLY when they are the same model. The same name is NOT
+#     enough. ibm-ete-int's "rits/google/gemma-4-31B" is the BASE Gemma model, while RITS's
+#     "google/gemma-4-31B-it" is the instruction-tuned one the SpreadsheetBench results use, so
+#     they are not merged. Two ete gateways serving the same wire id are the same deployment
+#     type and may be merged; GPT-5.5 was checked on both (#538: test 38.6 on each).
+#   * A different serving stack can change scores. RITS's "openai/gpt-oss-120b-a100" and
+#     ibm-ete-int's "aws/gpt-oss-120b" share weights but are kept apart, so the default agent
+#     keeps its benchmark history. Merge them only after a side-by-side run.
+#   * sync_models.py checks every id here against the gateways' /models listings and reports
+#     ids that are no longer served. It never edits this file.
+#
+# Format: `order <provider> ...` once, then one `model <plain-name> <ci-id> [<ci-id> ...]` per
+# model. The order of ids on a line does not matter; `order` decides.
+
+order ibm-rits ibm-ete-int ibm-ete
+
+# ---- Claude (optimizer and agent). RITS serves no Claude model. ----
+model claude-opus-5-5     ibm-ete-int/aws/claude-opus-5-5
+model claude-opus-5       ibm-ete-int/aws/claude-opus-5       ibm-ete/aws/claude-opus-5
+model claude-opus-4-8     ibm-ete-int/claude-opus-4-8         ibm-ete/claude-opus-4-8
+model claude-opus-4-7     ibm-ete-int/aws/claude-opus-4-7     ibm-ete/aws/claude-opus-4-7
+model claude-opus-4-6     ibm-ete-int/claude-opus-4-6         ibm-ete/claude-opus-4-6
+model claude-sonnet-5     ibm-ete-int/aws/claude-sonnet-5     ibm-ete/aws/claude-sonnet-5
+model claude-sonnet-4-6   ibm-ete-int/claude-sonnet-4-6       ibm-ete/claude-sonnet-4-6
+model claude-haiku-4-5    ibm-ete-int/aws/claude-haiku-4-5    ibm-ete/aws/claude-haiku-4-5
+
+# ---- OpenAI ----
+model gpt-5.5             ibm-ete-int/azure/gpt-5.5           ibm-ete/azure/gpt-5.5
+model gpt-5.4             ibm-ete-int/azure/gpt-5.4           ibm-ete/azure/gpt-5.4
+model gpt-5-mini          ibm-ete-int/Azure/gpt-5-mini-2025-08-07  ibm-ete/Azure/gpt-5-mini-2025-08-07
+model gpt-oss-120b        ibm-ete-int/aws/gpt-oss-120b
+
+# ---- Google ----
+model gemini-2.5-pro          ibm-ete-int/gemini-2.5-pro              ibm-ete/gemini-2.5-pro
+model gemini-2.5-flash        ibm-ete-int/gemini-2.5-flash            ibm-ete/gemini-2.5-flash
+model gemini-3-pro-preview    ibm-ete-int/gcp/gemini-3-pro-preview    ibm-ete/gcp/gemini-3-pro-preview
+model gemini-3.1-pro-preview  ibm-ete-int/gcp/gemini-3.1-pro-preview  ibm-ete/gcp/gemini-3.1-pro-preview
+
+# ---- Open-weight models on RITS ----
+model gemma-4-31B-it                  ibm-rits/google/gemma-4-31B-it
+model Qwen3-8B                        ibm-rits/Qwen/Qwen3-8B
+model Qwen2.5-72B-Instruct            ibm-rits/Qwen/Qwen2.5-72B-Instruct
+model Qwen3-30B-A3B-Thinking-2507     ibm-rits/Qwen/Qwen3-30B-A3B-Thinking-2507
+model llama-3-3-70b-instruct          ibm-rits/meta-llama/llama-3-3-70b-instruct
+model Mistral-Small-3.2-24B-Instruct  ibm-rits/mistralai/Mistral-Small-3.2-24B-Instruct-2506
+model DeepSeek-V3.2                   ibm-rits/deepseek-ai/DeepSeek-V3.2
+model gpt-oss-120b-a100               ibm-rits/openai/gpt-oss-120b-a100
+model Kimi-K2.7-Code                  ibm-rits/moonshotai/Kimi-K2.7-Code

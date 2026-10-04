@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # resolve_provider.sh — map a CI model id to the provider that actually serves it.
 #
-# Three providers coexist on this runner, and every agent_model/optimizer_model id must
-# carry one of these three CI-only prefixes (there is no bare-id fallback: the dropdowns
-# are the only source of these ids in normal use, and every dropdown entry carries one):
+# Three providers coexist on this runner. An agent_model/optimizer_model id is either a PLAIN
+# name from ci/benchmarks/model_catalog.txt (the provider is chosen by the order there — see
+# "Plain model names" below), or carries one of these three CI-only prefixes, which pins it:
 #
 #   * ibm-ete-int/<model>  — the original ete-litellm gateway
 #     (https://ete-litellm.ai-models.vpc-int.res.ibm.com), IBM_ETE_INT_API_BASE /
@@ -57,8 +57,90 @@ wire_model() {
   esac
 }
 
+# ---- Plain model names and the provider order (ci/benchmarks/model_catalog.txt) ----------
+#
+# A dispatch may also name a model WITHOUT a provider prefix ("claude-opus-5"). Such a plain
+# name is looked up in model_catalog.txt, which lists the CI ids that serve it and the order
+# providers are tried in (RITS, then ibm-ete-int, then ibm-ete). ci_setup.sh's preflight walks
+# that order with live probes and exports the winner as AGENT_MODEL_RESOLVED /
+# OPTIMIZER_MODEL_RESOLVED, so every later step sees an ordinary prefixed id.
+#
+# pin_model below is the probe-free fallback for a caller that runs WITHOUT that preflight (a
+# laptop run, or a runner without curl): it takes the first provider in order whose secrets are
+# set. It cannot see budgets, so CI never relies on it.
+CAPEVOLVE_MODEL_CATALOG="${CAPEVOLVE_MODEL_CATALOG:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/model_catalog.txt}"
+
+# provider_of <ci-model-id> -> "ibm-ete-int" | "ibm-ete" | "ibm-rits"; non-zero for a plain name.
+provider_of() {
+  case "$1" in
+    ibm-ete-int/*) printf '%s\n' ibm-ete-int ;;
+    ibm-ete/*)     printf '%s\n' ibm-ete ;;
+    ibm-rits/*)    printf '%s\n' ibm-rits ;;
+    *) return 1 ;;
+  esac
+}
+
+# is_pinned <id> — true for a prefixed id, which pins its provider and never falls back.
+is_pinned() { provider_of "$1" >/dev/null; }
+
+# provider_has_creds <provider> — true when that provider's IBM_<NAME>_API_BASE/KEY are both set.
+provider_has_creds() {
+  case "$1" in
+    ibm-ete-int) [ -n "${IBM_ETE_INT_API_BASE:-}" ] && [ -n "${IBM_ETE_INT_API_KEY:-}" ] ;;
+    ibm-ete)     [ -n "${IBM_ETE_API_BASE:-}" ]     && [ -n "${IBM_ETE_API_KEY:-}" ] ;;
+    ibm-rits)    [ -n "${IBM_RITS_API_BASE:-}" ]    && [ -n "${IBM_RITS_API_KEY:-}" ] ;;
+    *) return 1 ;;
+  esac
+}
+
+# catalog_candidates <plain-name> -> the CI ids that serve it, one per line, in provider order.
+# Non-zero, with a message on stderr, when the name is not in the catalog.
+catalog_candidates() {
+  local name="$1" kind rest order="" ids="" p id
+  if [ ! -r "$CAPEVOLVE_MODEL_CATALOG" ]; then
+    echo "catalog_candidates: model catalog not found at $CAPEVOLVE_MODEL_CATALOG" >&2
+    return 1
+  fi
+  while read -r kind rest; do
+    case "$kind" in
+      order) order="$rest" ;;
+      model)
+        # shellcheck disable=SC2086  # deliberate split of "<name> <id> <id> ..."
+        set -- $rest
+        if [ "${1:-}" = "$name" ]; then shift; ids="$*"; fi
+        ;;
+    esac
+  done < "$CAPEVOLVE_MODEL_CATALOG"
+  if [ -z "$ids" ]; then
+    echo "'$name' has no recognized provider prefix (expected ibm-ete-int/, ibm-ete/, or ibm-rits/) and is not a plain model name in $CAPEVOLVE_MODEL_CATALOG" >&2
+    return 1
+  fi
+  for p in $order; do
+    for id in $ids; do
+      [ "$(provider_of "$id" || true)" = "$p" ] && printf '%s\n' "$id"
+    done
+  done
+  return 0
+}
+
+# pin_model <id> -> a prefixed CI id. A prefixed id comes back unchanged; a plain name becomes
+# its first candidate whose provider has secrets set (or simply its first candidate, so that
+# resolve_provider then fails naming the missing secret instead of a vague "no provider").
+pin_model() {
+  local model="$1" cands c
+  if is_pinned "$model"; then printf '%s\n' "$model"; return 0; fi
+  cands="$(catalog_candidates "$model")" || return 1
+  for c in $cands; do
+    if provider_has_creds "$(provider_of "$c")"; then printf '%s\n' "$c"; return 0; fi
+  done
+  printf '%s\n' "${cands%%$'\n'*}"
+}
+
 resolve_provider() {
   local model="${1:?resolve_provider: model id required}"
+  if ! is_pinned "$model"; then
+    model="$(pin_model "$model")" || { echo "resolve_provider: see the error above" >&2; exit 1; }
+  fi
   case "$model" in
     ibm-ete-int/*)
       RESOLVED_MODEL="$(wire_model "$model")"

@@ -296,3 +296,114 @@ def test_cli_models_flag_requires_prefix_equals_path(tmp_path, monkeypatch):
     monkeypatch.chdir(r)
     rc = sm.main(["--repo", str(r), "--models", "no-equals-sign-here"])
     assert rc == sm.EXIT_DECISION
+
+
+# ---- model_catalog.txt: plain names and the provider order ------------------------------------
+
+CATALOG = """\
+# comment
+order ibm-rits ibm-ete-int ibm-ete
+model claude-opus-4-8  ibm-ete-int/claude-opus-4-8  ibm-ete/claude-opus-4-8
+model gemma-4-31B-it   ibm-rits/google/gemma-4-31B-it
+"""
+
+
+def _catalog_repo(tmp_path: Path, catalog: str = CATALOG) -> Path:
+    r = _repo(tmp_path)
+    (r / sm.CATALOG).write_text(catalog)
+    return r
+
+
+def test_parse_catalog_reads_order_and_models():
+    order, models, errors = sm.parse_catalog(CATALOG)
+    assert errors == []
+    assert order == ["ibm-rits", "ibm-ete-int", "ibm-ete"]
+    assert models[0] == ("claude-opus-4-8", ["ibm-ete-int/claude-opus-4-8", "ibm-ete/claude-opus-4-8"])
+
+
+@pytest.mark.parametrize("bad, needle", [
+    ("model x ibm-ete-int/a\n", "no `order` line"),
+    ("order ibm-rits ibm-ete\nmodel x ibm-ete/a\n", "order must list each"),
+    ("order ibm-rits ibm-ete-int ibm-ete\nmodel x aws/a\n", "no provider prefix"),
+    ("order ibm-rits ibm-ete-int ibm-ete\nmodel x ibm-ete/a ibm-ete/b\n", "same provider"),
+    ("order ibm-rits ibm-ete-int ibm-ete\nmodel x ibm-ete/a\nmodel x ibm-ete-int/a\n", "listed twice"),
+    ("order ibm-rits ibm-ete-int ibm-ete\nmodel ibm-ete/x ibm-ete/a\n", "must not contain"),
+])
+def test_parse_catalog_rejects_mistakes(bad, needle):
+    _, _, errors = sm.parse_catalog(bad)
+    assert any(needle in e for e in errors), errors
+
+
+def test_the_real_catalog_parses_and_every_id_is_a_picker_option():
+    _, models, errors = sm.parse_catalog((REPO / sm.CATALOG).read_text())
+    assert errors == []
+    wf = (REPO / sm.WORKFLOW).read_text()
+    opts = set(sm.current_options(wf, "agent_model"))
+    names = [n for n, _ in models]
+    assert set(names) <= opts
+    for name, ids in models:
+        for i in ids:
+            assert i in wf, f"{name}: {i} is not an option in benchmarks.yml"
+
+
+def test_validate_passes_on_the_real_workflow_and_catalog():
+    ok, problems = sm.validate((REPO / sm.WORKFLOW).read_text(), (REPO / sm.RUN_SUITE).read_text(),
+                               (REPO / sm.CATALOG).read_text())
+    assert ok, problems
+
+
+def test_validate_rejects_a_plain_option_the_catalog_does_not_list():
+    wf = WF.replace('          - "ibm-ete-int/aws/gpt-oss-120b"\n', '          - "not-in-catalog"\n          - "ibm-ete-int/aws/gpt-oss-120b"\n', 1)
+    ok, problems = sm.validate(wf, RS, CATALOG)
+    assert not ok
+    assert any("not-in-catalog" in p for p in problems)
+
+
+def test_sync_puts_catalog_names_first_in_catalog_order(tmp_path):
+    r = _catalog_repo(tmp_path)
+    code, _ = sm.sync(r, _models("ibm-ete-int/aws/gpt-oss-120b", "ibm-ete-int/claude-opus-4-8"),
+                      {"ibm-ete-int"}, write=True)
+    assert code == sm.EXIT_OK
+    opts = sm.current_options((r / sm.WORKFLOW).read_text(), "agent_model")
+    assert opts[:2] == ["claude-opus-4-8", "gemma-4-31B-it"]
+    assert "ibm-ete-int/aws/gpt-oss-120b" in opts and "ibm-rits/google/gemma-4-31B-it" in opts
+
+
+def test_sync_drops_a_plain_option_removed_from_the_catalog(tmp_path):
+    r = _catalog_repo(tmp_path)
+    wf = r / sm.WORKFLOW
+    wf.write_text(WF.replace('          - "ibm-ete-int/aws/gpt-oss-120b"\n', '          - "retired-name"\n          - "ibm-ete-int/aws/gpt-oss-120b"\n'))
+    sm.sync(r, _models("ibm-ete-int/aws/gpt-oss-120b", "ibm-ete-int/claude-opus-4-8"), {"ibm-ete-int"}, write=True)
+    assert "retired-name" not in sm.current_options(wf.read_text(), "agent_model")
+
+
+def test_sync_warns_about_a_catalog_id_that_is_no_longer_served(tmp_path):
+    r = _catalog_repo(tmp_path)
+    _, rep = sm.sync(r, _models("ibm-ete-int/aws/gpt-oss-120b"), {"ibm-ete-int"}, write=False)
+    assert any("claude-opus-4-8 -> ibm-ete-int/claude-opus-4-8 is NOT served" in line for line in rep)
+    # ibm-ete was not polled, so its catalog id is not reported.
+    assert not any("ibm-ete/claude-opus-4-8" in line for line in rep)
+
+
+def test_sync_never_edits_the_catalog(tmp_path):
+    r = _catalog_repo(tmp_path)
+    sm.sync(r, _models("ibm-ete-int/aws/gpt-oss-120b"), {"ibm-ete-int"}, write=True)
+    assert (r / sm.CATALOG).read_text() == CATALOG
+
+
+def test_sync_accepts_a_plain_catalog_name_as_the_new_default(tmp_path):
+    r = _catalog_repo(tmp_path)
+    code, _ = sm.sync(r, _models("ibm-ete-int/aws/gpt-oss-120b", "ibm-ete-int/claude-opus-4-8"),
+                      {"ibm-ete-int"}, write=True, optimizer_default="claude-opus-4-8")
+    assert code == sm.EXIT_OK
+    text = (r / sm.WORKFLOW).read_text()
+    assert sm.current_default(text, "optimizer_model") == "claude-opus-4-8"
+    assert 'OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-claude-opus-4-8}"' in (r / sm.RUN_SUITE).read_text()
+
+
+def test_sync_refuses_a_bad_catalog(tmp_path):
+    r = _catalog_repo(tmp_path, "model x ibm-ete/a\n")
+    code, rep = sm.sync(r, _models("ibm-ete-int/aws/gpt-oss-120b"), {"ibm-ete-int"}, write=True)
+    assert code == sm.EXIT_DECISION
+    assert any("no `order` line" in line for line in rep)
+    assert (r / sm.WORKFLOW).read_text() == WF

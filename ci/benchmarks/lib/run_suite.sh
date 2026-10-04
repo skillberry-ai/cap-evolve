@@ -46,9 +46,9 @@ _discard_dir() {
 }
 
 ITER="${ITERATIONS:-3}"
-AGENT_MODEL="${AGENT_MODEL:-ibm-ete-int/aws/gpt-oss-120b}"
+AGENT_MODEL="${AGENT_MODEL:-gpt-oss-120b}"
 NUM_TRIALS="${NUM_TRIALS:-10}"
-OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-ibm-ete-int/claude-opus-4-8}"
+OPTIMIZER_MODEL="${OPTIMIZER_MODEL:-claude-opus-4-8}"
 GATE_K_SE="${GATE_K_SE:-1.0}"
 # Raw native trajectories (tau2's own results.json, via adapter._sim_save_path). ON for the
 # tau2 legs, whose adapters write them and where a failed rollout is only readable from the
@@ -189,6 +189,16 @@ mkdir -p "$OUT/optimized"
 # error.
 # shellcheck source=ci/benchmarks/lib/resolve_provider.sh
 . "$LIB_DIR/resolve_provider.sh"
+# A model may be a PLAIN catalog name (ci/benchmarks/model_catalog.txt). ci_setup.sh's preflight
+# picks its provider with live probes (RITS, then ibm-ete-int, then ibm-ete) and exports the
+# result; use it, so this run talks to exactly the provider that was checked. Without that
+# preflight (a laptop run), pin_model takes the first provider in order whose secrets are set.
+# Either way AGENT_MODEL/OPTIMIZER_MODEL hold a prefixed id from here on, which is what the
+# slot key, the progress lines and run.json record.
+AGENT_MODEL="${AGENT_MODEL_RESOLVED:-$AGENT_MODEL}"
+OPTIMIZER_MODEL="${OPTIMIZER_MODEL_RESOLVED:-$OPTIMIZER_MODEL}"
+AGENT_MODEL="$(pin_model "$AGENT_MODEL")" || exit 1
+OPTIMIZER_MODEL="$(pin_model "$OPTIMIZER_MODEL")" || exit 1
 resolve_provider "$AGENT_MODEL"
 AGENT_MODEL_WIRE="$RESOLVED_MODEL"; AGENT_API_BASE="$RESOLVED_API_BASE"; AGENT_API_KEY="$RESOLVED_API_KEY"
 resolve_provider "$OPTIMIZER_MODEL"
