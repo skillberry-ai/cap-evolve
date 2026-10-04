@@ -1,0 +1,1035 @@
+<title>What the Bundle Bought — G2 outcome</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,500;0,72,600;1,72,400;1,72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper: #eef1f0;
+    --paper-raised: #e2e7e5;
+    --ink: #171b1f;
+    --ink-soft: #4b535a;
+    --hair: #c7cec9;
+    --accent: #b5791e;
+    --accent-ink: #171b1f;
+    --diff-add-bg: #dcf0e2;
+    --diff-add-ink: #1e6b3f;
+    --diff-add-mark: #3fae6a;
+    --diff-rem-bg: #f6dede;
+    --diff-rem-ink: #8a2b2b;
+    --diff-rem-mark: #c64545;
+    --panel: #14181c;
+    --panel-ink: #d9dedb;
+    --panel-hair: #2b3238;
+    --shadow: rgba(20,24,20,0.08);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper: #10141a;
+      --paper-raised: #171d24;
+      --ink: #e7ebe8;
+      --ink-soft: #a3adaa;
+      --hair: #2c3339;
+      --accent: #e0a949;
+      --accent-ink: #10141a;
+      --diff-add-bg: #103824;
+      --diff-add-ink: #7fd9a1;
+      --diff-add-mark: #57d68d;
+      --diff-rem-bg: #3a1717;
+      --diff-rem-ink: #ed9a9a;
+      --diff-rem-mark: #e5686b;
+      --panel: #0a0d10;
+      --panel-ink: #c7cec9;
+      --panel-hair: #23292d;
+      --shadow: rgba(0,0,0,0.4);
+    }
+  }
+
+  :root[data-theme="dark"]{
+    --paper: #10141a;
+    --paper-raised: #171d24;
+    --ink: #e7ebe8;
+    --ink-soft: #a3adaa;
+    --hair: #2c3339;
+    --accent: #e0a949;
+    --accent-ink: #10141a;
+    --diff-add-bg: #103824;
+    --diff-add-ink: #7fd9a1;
+    --diff-add-mark: #57d68d;
+    --diff-rem-bg: #3a1717;
+    --diff-rem-ink: #ed9a9a;
+    --diff-rem-mark: #e5686b;
+    --panel: #0a0d10;
+    --panel-ink: #c7cec9;
+    --panel-hair: #23292d;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .deck{
+    height: 100vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+  .deck::-webkit-scrollbar{ display:none; }
+
+  section.slide{
+    min-height: 100vh;
+    width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(28px, 6vw, 88px);
+    position: relative;
+  }
+
+  .folio{
+    position: absolute;
+    top: clamp(20px, 4vw, 40px);
+    left: clamp(28px, 6vw, 88px);
+    right: clamp(28px, 6vw, 88px);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .folio .n{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
+
+  /* ---------- Cover ---------- */
+  .cover{
+    max-width: 980px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .eyebrow{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  .cover h1{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(2.6rem, 6.5vw, 5.2rem);
+    line-height: 1.02;
+    margin: 0 0 22px;
+    text-wrap: balance;
+    max-width: 14ch;
+  }
+  .cover .lede{
+    font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+    color: var(--ink-soft);
+    max-width: 62ch;
+    line-height: 1.55;
+    margin: 0 0 44px;
+  }
+  .cover .lede strong{ color: var(--ink); font-weight: 600; }
+
+  table.roster{
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 760px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+  }
+  table.roster th{
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    padding: 0 14px 10px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  table.roster td{
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  table.roster td.task{ font-family: "IBM Plex Sans", sans-serif; font-weight: 500; white-space: normal; }
+  table.roster tr:last-child td{ border-bottom: none; }
+  .score-move{ font-variant-numeric: tabular-nums; display:flex; align-items:center; gap:6px; }
+  .score-move .before{ color: var(--diff-rem-mark); }
+  .score-move .after{ color: var(--diff-add-mark); }
+  .score-move .arrow{ color: var(--ink-soft); }
+
+  .score-cap{
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--diff-rem-mark);
+    white-space: nowrap;
+  }
+  .score-cap .lock{ font-size: 0.85em; }
+  .score-cap .sep{ color: var(--ink-soft); font-weight: 400; }
+  table.roster tr.split td{ border-bottom: none; padding-bottom: 2px; }
+  table.roster tr.split + tr td{ padding-top: 2px; color: var(--ink-soft); font-size: 0.86rem; }
+
+  .scrollhint{
+    margin-top: 40px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scrollhint .chev{ animation: bob 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .scrollhint .chev{ animation: none; } }
+  @keyframes bob{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(4px); } }
+
+  /* ---------- Item slides ---------- */
+  .item{
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) 1fr;
+    gap: clamp(28px, 4vw, 64px);
+    align-items: start;
+  }
+  @media (max-width: 860px){
+    .item{ grid-template-columns: 1fr; }
+  }
+
+  .item-left{ padding-top: 46px; }
+  .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
+  .tag{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    padding: 4px 9px;
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+  }
+  .tag.muted{
+    color: var(--diff-rem-mark);
+    border-color: var(--diff-rem-mark);
+    background: var(--diff-rem-bg);
+  }
+  .item h2{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+    line-height: 1.08;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .item .taskname{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin: 0 0 26px;
+  }
+  .score-badge{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 28px;
+  }
+  .score-badge .before{ color: var(--diff-rem-mark); }
+  .score-badge .after{ color: var(--diff-add-mark); }
+  .score-badge .arrow{ color: var(--ink-soft); font-size: 1.1rem; }
+  .score-badge .cap{
+    display:block;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .request{
+    margin: 0 0 24px;
+    padding: 13px 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--paper-raised);
+    border-radius: 0 5px 5px 0;
+  }
+  .request .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .request p{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.08rem;
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0;
+  }
+  .request .note{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .block{ margin-bottom: 22px; }
+  .block h3{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+  .block p{
+    font-size: 1.01rem;
+    line-height: 1.6;
+    color: var(--ink);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .diffpanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+  }
+  .diffpanel + .diffpanel{ margin-top: 18px; }
+  .diff-tab{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-hair);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--panel-ink);
+  }
+  .diff-tab .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); flex-shrink:0; }
+  .diff-tab .reward{
+    margin-left: auto;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .diff-tab .reward.bad{ color: var(--diff-rem-mark); }
+  .diff-tab .reward.good{ color: var(--diff-add-mark); }
+  .diff-lines{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    padding: 4px 0;
+    overflow-x: auto;
+  }
+  .diff-lines .row{
+    display: flex;
+    padding: 3px 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-lines .row .mark{
+    width: 1.4em;
+    flex-shrink: 0;
+    user-select: none;
+    opacity: 0.85;
+  }
+  .row.rem{ background: var(--diff-rem-bg); color: var(--diff-rem-ink); }
+  .row.rem .mark{ color: var(--diff-rem-mark); }
+  .row.add{ background: var(--diff-add-bg); color: var(--diff-add-ink); }
+  .row.add .mark{ color: var(--diff-add-mark); }
+  .row.ctx{ color: var(--panel-ink); opacity: 0.6; }
+  .row.ctx .mark{ color: var(--panel-ink); }
+  .row.call{ color: var(--panel-ink); }
+  .row.call .mark{ color: var(--accent); }
+  .diff-note{
+    padding: 10px 16px 14px;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    opacity: 0.75;
+    border-top: 1px dashed var(--panel-hair);
+  }
+
+  /* ---------- Closing ---------- */
+  .closing{
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .closing h2{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+    line-height: 1.28;
+    margin: 0 0 32px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .closing .attn{ color: var(--accent); font-style: normal; }
+  .recap{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 40px;
+  }
+  @media (max-width: 760px){ .recap{ grid-template-columns: 1fr 1fr; } }
+  .recap .card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 14px 14px 16px;
+    background: var(--paper-raised);
+  }
+  .recap .card .k{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .recap .card .move{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .recap .card .move .before{ color: var(--diff-rem-mark); }
+  .recap .card .move .after{ color: var(--diff-add-mark); }
+  .closing .evidence-note{
+    margin-top: 28px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 66ch;
+  }
+
+  /* ---------- Locked-ceiling slides ---------- */
+  .ceilings{
+    display: flex;
+    gap: 14px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .ceiling-card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 12px 16px;
+    background: var(--paper-raised);
+    min-width: 190px;
+  }
+  .ceiling-card .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .ceiling-card .task{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .ceiling-card .val{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--diff-rem-mark);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .ceiling-card .val .lock{ font-size: 1rem; }
+  .ceiling-card .sub{
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .tracepanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+    padding: 22px 22px 20px;
+  }
+  .trace-step{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    padding: 10px 14px;
+    border: 1px solid var(--panel-hair);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.02);
+  }
+  .trace-step .k{
+    display:block;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .trace-arrow{
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: "IBM Plex Mono", monospace;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .trace-fork{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  @media (max-width: 520px){ .trace-fork{ grid-template-columns: 1fr; } }
+  .trace-branch{
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .trace-branch.blocked{
+    border: 1px dashed var(--panel-hair);
+    color: var(--ink-soft);
+    opacity: 0.7;
+  }
+  .trace-branch.blocked .k{ color: var(--diff-rem-mark); text-decoration: line-through; }
+  .trace-branch.reached{
+    border: 1px solid var(--accent);
+    background: rgba(224,169,73,0.08);
+    color: var(--panel-ink);
+  }
+  .trace-branch.reached .k{ color: var(--accent); }
+  .trace-branch .k{
+    display:block;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .diff-note.stark{
+    border-top: 1px dashed var(--panel-hair);
+    font-style: italic;
+  }
+
+  /* ---------- Nav ---------- */
+  .navdots{
+    position: fixed;
+    right: clamp(14px, 3vw, 32px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 20;
+  }
+  .navdots button{
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-soft);
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .navdots button:hover{ transform: scale(1.25); }
+  .navdots button:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .navdots button[aria-current="true"]{
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 640px){
+    .navdots{ display:none; }
+  }
+
+  /* ---------- Candidate trajectory strip (G2 deck) ---------- */
+  .traj{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:stretch;
+    margin: 14px 0 4px;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  .traj .step{
+    border:1px solid var(--hair);
+    border-radius:4px;
+    padding:7px 10px;
+    background:var(--paper-raised);
+    min-width:62px;
+    text-align:center;
+  }
+  .traj .step .c{
+    display:block; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:3px;
+  }
+  .traj .step .v{ display:block; font-size:0.92rem; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .traj .step.lo{ border-color:var(--diff-rem-mark); background:var(--diff-rem-bg); }
+  .traj .step.lo .v{ color:var(--diff-rem-ink); }
+  .traj .step.hi{ border-color:var(--diff-add-mark); background:var(--diff-add-bg); }
+  .traj .step.hi .v{ color:var(--diff-add-ink); }
+  .traj .step.best{ outline:2px solid var(--accent); outline-offset:1px; }
+  .traj-note{
+    font-family:"IBM Plex Mono", monospace; font-size:0.7rem; color:var(--ink-soft);
+    letter-spacing:0.02em; margin:2px 0 0;
+  }
+  .verdict{
+    display:flex; gap:10px; align-items:flex-start;
+    border-left:3px solid var(--accent); background:var(--paper-raised);
+    padding:14px 16px; margin:16px 0 0; border-radius:0 4px 4px 0;
+  }
+  .verdict .vk{
+    font-family:"IBM Plex Mono", monospace; font-size:0.64rem; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--accent); white-space:nowrap; padding-top:2px;
+  }
+  .verdict p{ margin:0; font-size:0.92rem; line-height:1.5; color:var(--ink); }
+  .status-ok{ color:var(--diff-add-mark); font-weight:600; }
+  .status-no{ color:var(--diff-rem-mark); font-weight:600; }
+
+  /* ---------- Outcome-assessment deck ---------- */
+  .statgrid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin:22px 0 6px; }
+  .stat{ border:1px solid var(--hair); border-radius:5px; padding:16px 18px; background:var(--paper-raised); }
+  .stat .big{ font-family:"Newsreader",serif; font-size:clamp(1.9rem,3.4vw,2.9rem); line-height:1; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .stat .big.up{ color:var(--diff-add-ink); }
+  .stat .big.down{ color:var(--diff-rem-ink); }
+  .stat .lbl{ font-family:"IBM Plex Mono",monospace; font-size:0.66rem; letter-spacing:0.09em; text-transform:uppercase; color:var(--ink-soft); margin-top:9px; display:block; line-height:1.45; }
+  .bars{ margin:18px 0 4px; }
+  .bar{ display:grid; grid-template-columns:132px 1fr 72px; align-items:center; gap:12px; margin-bottom:9px; font-family:"IBM Plex Mono",monospace; font-size:0.76rem; }
+  .bar .lbl{ color:var(--ink-soft); text-align:right; }
+  .bar .track{ background:var(--paper-raised); border:1px solid var(--hair); border-radius:3px; height:19px; position:relative; overflow:hidden; }
+  .bar .fill{ position:absolute; left:0; top:0; bottom:0; background:var(--accent); opacity:0.78; }
+  .bar .fill.mut{ background:var(--ink-soft); opacity:0.42; }
+  .bar .fill.good{ background:var(--diff-add-mark); opacity:0.75; }
+  .bar .v{ font-variant-numeric:tabular-nums; color:var(--ink); }
+  table.ledger{ border-collapse:collapse; width:100%; font-family:"IBM Plex Mono",monospace; font-size:0.78rem; margin-top:8px; }
+  table.ledger th{ text-align:left; font-weight:500; color:var(--ink-soft); text-transform:uppercase; font-size:0.63rem; letter-spacing:0.08em; padding:0 10px 8px 0; border-bottom:1px solid var(--hair); }
+  table.ledger td{ padding:8px 10px 8px 0; border-bottom:1px solid var(--hair); color:var(--ink); white-space:nowrap; }
+  table.ledger td.t{ font-family:"IBM Plex Sans",sans-serif; white-space:normal; }
+  table.ledger tr:last-child td{ border-bottom:none; }
+  table.ledger td.up{ color:var(--diff-add-mark); font-variant-numeric:tabular-nums; }
+  table.ledger td.dn{ color:var(--diff-rem-mark); font-variant-numeric:tabular-nums; }
+  table.ledger td.num{ font-variant-numeric:tabular-nums; }
+</style>
+
+<div class="deck" id="deck" tabindex="0">
+
+  <section class="slide" id="a0">
+    <div class="folio"><span>Outcome assessment &middot; v4 G2 arm</span><span class="n">i</span></div>
+    <div class="cover">
+      <p class="eyebrow">What the optimization bought</p>
+      <h1>What the bundle bought</h1>
+      <p class="lede">The companion deck shows <em>which</em> instructions G2 rewrote. This one asks whether it was worth it. One shared bundle, six scored iterations, all 34 tasks re&#8209;measured every time: the mean reward went from <strong>0.849 to 0.943</strong> and the number of tasks scoring a perfect 1.000 went from <strong>12 to 21</strong>. That is the headline. The useful part is its shape &mdash; where the gain came from, what it cost, the three tasks it made worse, and the two it could never touch. The last page is the comparison that actually decides how to use this: <strong>the same per&#8209;task gains, merged instead of jointly optimized, net out to zero.</strong></p>
+      <table class="roster">
+        <thead><tr><th>Measure</th><th>Seed</th><th>cand_0004</th></tr></thead>
+        <tbody>
+          <tr><td class="task">All&#8209;34 mean reward</td><td>0.8488</td><td><span class="score-move"><span class="after">0.9434</span></span></td></tr>
+          <tr><td class="task">Tasks at a perfect 1.000</td><td>12 of 34</td><td><span class="score-move"><span class="after">21 of 34</span></span></td></tr>
+          <tr><td class="task">Regression tranche (30 tasks)</td><td>0.8573</td><td><span class="score-move"><span class="after">0.9441</span></span></td></tr>
+          <tr><td class="task">Challenge tranche (4 tasks)</td><td>0.7852</td><td><span class="score-move"><span class="after">0.9381</span></span></td></tr>
+          <tr class="split"><td class="task">Tasks improved / held / regressed</td><td colspan="2">22 improved &middot; 9 held &middot; 3 regressed</td></tr>
+        </tbody>
+      </table>
+      <p class="scrollhint"><span class="chev">&darr;</span> all figures are validation&#8209;split, five trials per task, from <code>run_optimize_fix_20260925_082813</code></p>
+    </div>
+  </section>
+
+  <section class="slide" id="a1">
+    <div class="folio"><span>The headline</span><span class="n">01</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">results.json</span><span class="tag">34 tasks &times; 5 trials &times; 7 bundles</span></div>
+        <h2>+0.095 mean reward, and nine more tasks at a perfect score</h2>
+        <p class="taskname">seed &rarr; cand_0004, all 34 tasks</p>
+        <div class="statgrid">
+          <div class="stat"><span class="big up">+0.095</span><span class="lbl">all&#8209;34 mean<br>0.8488 &rarr; 0.9434</span></div>
+          <div class="stat"><span class="big up">+9</span><span class="lbl">tasks reaching<br>a perfect 1.000</span></div>
+          <div class="stat"><span class="big up">+0.153</span><span class="lbl">challenge tranche<br>the hardest 4 tasks</span></div>
+        </div>
+        <div class="block">
+          <h3>Most of it arrives on the first candidate</h3>
+          <p>The first accepted bundle captures <strong>0.079 of the 0.095</strong> &mdash; 83% of the total gain in one iteration. The five that follow trade places within about a point of each other. Read that as the cheap wins being genuinely cheap, and the rest being hard.</p>
+        </div>
+        <div class="traj"><span class="step lo"><span class="c">seed</span><span class="v">0.849</span></span><span class="step"><span class="c">c01</span><span class="v">0.927</span></span><span class="step"><span class="c">c02</span><span class="v">0.935</span></span><span class="step"><span class="c">c03</span><span class="v">0.911</span></span><span class="step best"><span class="c">c04</span><span class="v">0.943</span></span><span class="step"><span class="c">c05</span><span class="v">0.938</span></span><span class="step hi"><span class="c">c06</span><span class="v">0.952</span></span></div>
+        <p class="traj-note">all&#8209;34 mean per candidate &middot; outlined = cand_0004, the accepted best</p>
+        <div class="verdict">
+          <span class="vk">Read with care</span>
+          <p><code>cand_0006</code> scored <strong>higher</strong> (0.9521) but was rejected: against its parent the paired delta was not resolvable at five trials per task. <code>best_id</code> tracks the best <em>accepted</em> bundle, so the shippable artifact is cand_0004 &mdash; and the real ceiling of this arm is probably a little above 0.943, not below it.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>mean reward by tranche</div>
+          <div class="bars">
+            <div class="bar"><span class="lbl">seed &middot; all 34</span><div class="track"><div class="fill mut" style="width:84.9%"></div></div><span class="v">0.8488</span></div><div class="bar"><span class="lbl">cand_0004 &middot; all 34</span><div class="track"><div class="fill good" style="width:94.3%"></div></div><span class="v">0.9434</span></div>
+            <div style="height:8px"></div>
+            <div class="bar"><span class="lbl">seed &middot; regression</span><div class="track"><div class="fill mut" style="width:85.7%"></div></div><span class="v">0.8573</span></div><div class="bar"><span class="lbl">cand_0004 &middot; regression</span><div class="track"><div class="fill good" style="width:94.4%"></div></div><span class="v">0.9441</span></div>
+            <div style="height:8px"></div>
+            <div class="bar"><span class="lbl">seed &middot; challenge</span><div class="track"><div class="fill mut" style="width:78.5%"></div></div><span class="v">0.7852</span></div><div class="bar"><span class="lbl">cand_0004 &middot; challenge</span><div class="track"><div class="fill good" style="width:93.8%"></div></div><span class="v">0.9381</span></div>
+          </div>
+          <div class="diff-note">The challenge tranche &mdash; four tasks designed to be below 1.000 &mdash; gained the most (+0.153). That is the opposite of what overfitting to easy tasks would look like.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>distribution of outcomes, 34 tasks</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">&#10003;</span>22 improved</div>
+            <div class="row ctx"><span class="mark">&middot;</span>&nbsp;9 held (7 already perfect, 2 already capped)</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&nbsp;3 regressed &mdash; see page 04</div>
+          </div>
+          <div class="diff-note">No task fell below 0.55. The worst single outcome in the bundle is a previously&#8209;perfect task dropping to 0.720.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a2">
+    <div class="folio"><span>Where the gain came from</span><span class="n">02</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">per-task deltas</span></div>
+        <h2>Eight tasks carry most of the improvement</h2>
+        <p class="taskname">largest seed &rarr; cand_0004 gains</p>
+        <div class="block">
+          <h3>These are defects, not difficulty</h3>
+          <p>Every one of the top four is a task where the manual was actively wrong or silent, not one where the work was hard. <code>cloud&#8209;024</code> alone moves 0.800 &mdash; it was answering a bare GUID with a clarifying question. That is the pattern the companion deck documents case by case.</p>
+        </div>
+        <div class="block">
+          <h3>And they were cheap to find</h3>
+          <p>Six of these eight were already at their final value by <code>cand_0001</code> &mdash; the first accepted bundle. The optimizer did not need six iterations to see them; it needed one.</p>
+        </div>
+        <div class="verdict">
+          <span class="vk">For the dev team</span>
+          <p>The size of the <code>cloud&#8209;024</code> gain is the argument for auditing the manual as a product surface. A single missing rule about message shape cost 80 points on a task the system was otherwise fully capable of.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>top gains, seed &rarr; cand_0004</div>
+          <table class="ledger">
+            <thead><tr><th>Task</th><th>Seed</th><th>cand_0004</th><th>&Delta;</th></tr></thead>
+            <tbody>
+              <tr><td class="t">cloud-024-guid-to-account</td><td class="num">0.200</td><td class="num">1.000</td><td class="up">+0.800</td></tr>
+              <tr><td class="t">platform-003-tojson-dict-literal-rca</td><td class="num">0.560</td><td class="num">0.930</td><td class="up">+0.370</td></tr>
+              <tr><td class="t">platform-019-anarchysubject-state</td><td class="num">0.660</td><td class="num">1.000</td><td class="up">+0.340</td></tr>
+              <tr><td class="t">platform-022-job-on-no-controller</td><td class="num">0.665</td><td class="num">0.965</td><td class="up">+0.300</td></tr>
+              <tr><td class="t">platform-031-helm-url-not-a-timeout</td><td class="num">0.642</td><td class="num">0.877</td><td class="up">+0.235</td></tr>
+              <tr><td class="t">platform-004-events-then-config</td><td class="num">0.787</td><td class="num">1.000</td><td class="up">+0.213</td></tr>
+              <tr><td class="t">platform-007-directory-path-fetch</td><td class="num">0.790</td><td class="num">1.000</td><td class="up">+0.210</td></tr>
+              <tr><td class="t">cost-029-no-cost-rows-for-guid</td><td class="num">0.800</td><td class="num">1.000</td><td class="up">+0.200</td></tr>
+            </tbody>
+          </table>
+          <div class="diff-note">Four of these eight &mdash; cloud&#8209;024, platform&#8209;004, platform&#8209;007 and (via its reporting contract) platform&#8209;008 &mdash; are the cases walked through in the companion deck.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a3">
+    <div class="folio"><span>What it cost</span><span class="n">03</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">cost_time &middot; events.jsonl</span></div>
+        <h2>$419 and 50 hours, three quarters of it spent proposing</h2>
+        <p class="taskname">6 scored iterations &times; 170 rollouts each</p>
+        <div class="statgrid">
+          <div class="stat"><span class="big">$419</span><span class="lbl">total, 6 iterations<br>floor &mdash; metering gap</span></div>
+          <div class="stat"><span class="big">50.5h</span><span class="lbl">wall clock<br>36h eval + 14h optimizer</span></div>
+          <div class="stat"><span class="big">75%</span><span class="lbl">of spend is the optimizer<br>$313 of $419</span></div>
+        </div>
+        <div class="block">
+          <h3>Scoring is the cheap half</h3>
+          <p>Evaluating a candidate across all 34 tasks &mdash; 170 rollouts &mdash; costs about <strong>$25</strong>. Proposing the next candidate costs <strong>$29&ndash;61</strong>. The expensive resource is the optimizer&rsquo;s reasoning, not the benchmark.</p>
+        </div>
+        <div class="block">
+          <h3>What that buys per point</h3>
+          <p>+0.095 mean reward for $419 averages <strong>$4.4 per 0.001 of mean reward</strong> &mdash; but the gain is heavily front&#8209;loaded: <code>cand_0001</code> alone delivered 83% of it. Its own cost is one of the three the runner failed to meter, so the true cost&#8209;per&#8209;point of that first iteration cannot be stated &mdash; only that it was the cheapest by far in reward terms.</p>
+        </div>
+        <div class="verdict">
+          <span class="vk">Caveat</span>
+          <p>Eval cost is a <em>floor</em>. The runner reported exactly <code>0.0</code> cost for the baseline, cand_0001 and cand_0002 &mdash; a metering gap tracked as cap&#8209;evolve issue #562. The $419 is real spend that was captured; the true figure is higher.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>per-iteration, from events.jsonl</div>
+          <table class="ledger">
+            <thead><tr><th>Stage</th><th>Val</th><th>Accept?</th><th>Eval$</th><th>Opt$</th></tr></thead>
+            <tbody>
+              <tr><td class="t">cand_0001</td><td class="num">0.9274</td><td class="up">accept</td><td class="num">&mdash;*</td><td class="num">&mdash;*</td></tr>
+              <tr><td class="t">cand_0002</td><td class="num">0.9353</td><td class="dn">reject</td><td class="num">&mdash;*</td><td class="num">&mdash;*</td></tr>
+              <tr><td class="t">cand_0003</td><td class="num">0.9109</td><td class="dn">reject</td><td class="num">28.9</td><td class="num">60.8</td></tr>
+              <tr><td class="t">cand_0004</td><td class="num">0.9434</td><td class="up">accept &rarr; best</td><td class="num">25.2</td><td class="num">28.8</td></tr>
+              <tr><td class="t">cand_0005</td><td class="num">0.9376</td><td class="dn">reject</td><td class="num">24.1</td><td class="num">44.5</td></tr>
+              <tr><td class="t">cand_0006</td><td class="num">0.9521</td><td class="dn">reject</td><td class="num">27.1</td><td class="num">50.5</td></tr>
+              <tr><td class="t"><strong>total</strong></td><td class="num"></td><td></td><td class="num"><strong>105.3</strong></td><td class="num"><strong>313.4</strong></td></tr>
+            </tbody>
+          </table>
+          <div class="diff-note">*metered as <code>0.0</code> by the runner &mdash; issue #562. Only two of six iterations were accepted; <code>cand_0004</code>&rsquo;s parent is <code>cand_0001</code>, not cand_0003.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>how the run ended</div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>budget: max_iterations 15, stall 6, max_usd 1000</div>
+            <div class="row ctx"><span class="mark">&middot;</span>actual: 6 iterations, stall 2, $419 of $1000</div>
+            <div class="row rem"><span class="mark">!</span>cand_0007 proposed, never scored</div>
+          </div>
+          <div class="diff-note">The run stopped without a budget trigger &mdash; an interruption, not a designed stop. Every number in this deck is therefore a <strong>mid&#8209;flight snapshot</strong> of an arm that had 9 iterations of budget left.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a4">
+    <div class="folio"><span>What it broke</span><span class="n">04</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">3 regressions</span></div>
+        <h2>Three tasks got worse, and all three had been perfect</h2>
+        <p class="taskname">the cost of optimizing one bundle against everything at once</p>
+        <div class="block">
+          <h3>This is the structural risk of shared-bundle optimization</h3>
+          <p>A rule added for one task is loaded by every task. When the aggregate improves, a few individual tasks can still pay for it &mdash; and because they were already at 1.000, they had nothing to gain and everything to lose.</p>
+        </div>
+        <div class="block">
+          <h3>Why the optimizer accepted it anyway</h3>
+          <p>It is scored on the mean. Trading 0.280 on one task for gains across twenty&#8209;two is a clear win by that measure. Whether it is a win for <em>you</em> depends on whether <code>platform&#8209;018</code> matters more than the average task &mdash; a judgement the reward function cannot make.</p>
+        </div>
+        <div class="verdict">
+          <span class="vk">Worth knowing</span>
+          <p><code>platform&#8209;018</code> is the one task that regresses under <strong>every</strong> optimized bundle &mdash; 0.720 here, and 0.028 under the per&#8209;task merge. It is unusually sensitive to other tasks&rsquo; edits, and it is the task to watch in any future arm.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>regressions, seed &rarr; cand_0004</div>
+          <table class="ledger">
+            <thead><tr><th>Task</th><th>Seed</th><th>cand_0004</th><th>&Delta;</th></tr></thead>
+            <tbody>
+              <tr><td class="t">platform-018-find-jobs-window</td><td class="num">1.000</td><td class="num">0.720</td><td class="dn">&minus;0.280</td></tr>
+              <tr><td class="t">platform-005-wrong-owner-trap</td><td class="num">1.000</td><td class="num">0.888</td><td class="dn">&minus;0.112</td></tr>
+              <tr><td class="t">cloud-027-azure-pool-database-trap</td><td class="num">1.000</td><td class="num">0.910</td><td class="dn">&minus;0.090</td></tr>
+            </tbody>
+          </table>
+          <div class="diff-note">Net arithmetic: the three regressions cost 0.482 of summed reward; the twenty&#8209;two improvements return 3.699. The trade is roughly <strong>8:1</strong> in the bundle&rsquo;s favour.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>for contrast &mdash; the per-task merge (T4)</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">&#10003;</span>G2 &nbsp; 3 of 12 perfect tasks regressed, none below 0.72</div>
+            <div class="row rem"><span class="mark">&#10007;</span>T4 &nbsp; 5 of 12 regressed &mdash; platform-018 to 0.028,</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;platform-020 to 0.340, cost-028 to 0.400</div>
+          </div>
+          <div class="diff-note">Joint scoring does not prevent regressions &mdash; it bounds them. Nothing was ever measuring the merged bundle until after it was assembled.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a5">
+    <div class="folio"><span>What it could not reach</span><span class="n">05</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">classify_fast() &mdash; code</span><span class="tag muted">no prompt edit applies</span></div>
+        <h2>Seven tasks stay under 0.9, and two of them are not about the manual</h2>
+        <p class="taskname">the residual, after six iterations</p>
+        <div class="block">
+          <h3>The hard floor</h3>
+          <p><code>icinga&#8209;010</code> and <code>icinga&#8209;013</code> are capped by a routing bug: <code>classify_fast()</code> matches a bare <code>babylon</code> substring and hands an Icinga question to the Babylon specialist before any file loads. Across all six candidates the <code>query_icinga</code> tool was <strong>never once reached</strong> &mdash; tool_calls fixed at 0.25 and 0.00 respectively.</p>
+        </div>
+        <div class="block">
+          <h3>What that implies about the remaining headroom</h3>
+          <p>Of the 0.057 still missing from a perfect mean, roughly <strong>0.024 sits in those two tasks alone</strong> and is unreachable by editing any of the eight files. The honest ceiling for prompt work on this task set is therefore closer to <strong>0.975</strong> than to 1.000.</p>
+        </div>
+        <div class="verdict">
+          <span class="vk">Priority</span>
+          <p>Fixing <code>classify_fast()</code> is worth more than another optimization arm. It is a bounded code change that unlocks a ceiling no amount of writing can lift &mdash; and this arm, at $419 and six iterations, is the strongest available evidence of that.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>still below 0.9 at cand_0004</div>
+          <table class="ledger">
+            <thead><tr><th>Task</th><th>cand_0004</th><th>Why</th></tr></thead>
+            <tbody>
+              <tr><td class="t">icinga-010-stuck-anarchysubjects</td><td class="dn">0.551</td><td>router &mdash; code</td></tr>
+              <tr><td class="t">icinga-013-acknowledged-not-an-issue</td><td class="dn">0.608</td><td>router &mdash; code</td></tr>
+              <tr><td class="t">platform-018-find-jobs-window</td><td class="dn">0.720</td><td>regressed from 1.000</td></tr>
+              <tr><td class="t">platform-031-helm-url-not-a-timeout</td><td class="num">0.877</td><td>challenge tranche</td></tr>
+              <tr><td class="t">platform-005-wrong-owner-trap</td><td class="num">0.888</td><td>regressed from 1.000</td></tr>
+              <tr><td class="t">platform-001-ee-entrypoint-rca</td><td class="num">0.892</td><td>improved, +0.140</td></tr>
+              <tr><td class="t">platform-034-rate-limit-not-an-outage</td><td class="num">0.892</td><td>challenge tranche</td></tr>
+            </tbody>
+          </table>
+          <div class="diff-note">Two code&#8209;capped, two regressed, two challenge&#8209;tranche by design, one still improving. Only the middle pair are candidates for more prompt work.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga tool reachability, all 6 candidates</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&#10007;</span>icinga-010 &middot; tool_calls 0.25 in seed and in every</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&nbsp;&nbsp;candidate &mdash; 3 query_icinga calls unmatched, always</div>
+            <div class="row rem"><span class="mark">&#10007;</span>icinga-013 &middot; tool_calls 0.00 &mdash; zero tool calls made,</div>
+            <div class="row rem"><span class="mark">&#10007;</span>&nbsp;&nbsp;in every candidate including the seed</div>
+            <div class="row ctx"><span class="mark">&middot;</span>icinga-013's 0.48&rarr;0.64 gain is answer-score only:</div>
+            <div class="row ctx"><span class="mark">&middot;</span>better phrasing of a conclusion it had no data for</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a6">
+    <div class="folio"><span>Why this bundle, not the merge</span><span class="n">06</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">G2 vs T4</span><span class="tag">the decision this deck exists for</span></div>
+        <h2>The same gains, merged instead of jointly optimized, net out to zero</h2>
+        <p class="taskname">one shared bundle vs. a static union of 21 per-task bundles</p>
+        <div class="block">
+          <h3>The comparison</h3>
+          <p>T2 optimized each task alone and raised 21 of them. T4 merged those 21 bundles into one. On the 28 tasks unaffected by a harness tool outage, that merged bundle scores <strong>0.862</strong> &mdash; against an unoptimized seed of <strong>0.860</strong>. Every per&#8209;task gain, bought at $437 and 39 hours, is consumed by the merge. G2, at comparable spend, reaches <strong>0.951</strong>.</p>
+        </div>
+        <div class="block">
+          <h3>Why</h3>
+          <p>G2 was scored on all 34 tasks every iteration, so it could never accept an edit that helped one task and broke another &mdash; the aggregate priced that in immediately. The merge was never scored until after it was assembled, and it triples the always&#8209;loaded instruction text with rules written for other tasks.</p>
+        </div>
+        <div class="verdict">
+          <span class="vk">Recommendation</span>
+          <p>Treat the per&#8209;task arm as a <strong>defect&#8209;finding instrument</strong> and the global arm as the <strong>shipping path</strong>. T2 found the four manual defects in the companion deck; G2 is the artifact to upstream. Merging per&#8209;task bundles is not a substitute for optimizing one.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>mean reward, 28 outage-free tasks</div>
+          <div class="bars">
+            <div class="bar"><span class="lbl">T1 seed</span><div class="track"><div class="fill mut" style="width:86.0%"></div></div><span class="v">0.8601</span></div><div class="bar"><span class="lbl">T4 merge &middot; e1</span><div class="track"><div class="fill mut" style="width:86.2%"></div></div><span class="v">0.8623</span></div><div class="bar"><span class="lbl">T4 merge &middot; e2</span><div class="track"><div class="fill mut" style="width:86.6%"></div></div><span class="v">0.8663</span></div><div class="bar"><span class="lbl">G2 cand_0004</span><div class="track"><div class="fill good" style="width:95.1%"></div></div><span class="v">0.9512</span></div>
+          </div>
+          <div class="diff-note">Six tasks are excluded because a simulated tool backend was unavailable during one sweep or the other, which moves scores for reasons unrelated to any bundle. Including them: seed 0.849, T4 0.836/0.848, G2 0.943 &mdash; same conclusion.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>and what each arm cost</div>
+          <table class="ledger">
+            <thead><tr><th>Arm</th><th>Spend</th><th>Wall</th><th>Mean (28)</th></tr></thead>
+            <tbody>
+              <tr><td class="t">T2 per-task &rarr; T4 merge</td><td class="num">$437</td><td class="num">39.1h</td><td class="num">0.862</td></tr>
+              <tr><td class="t">G2 shared bundle</td><td class="num">$419</td><td class="num">50.5h</td><td class="up">0.951</td></tr>
+            </tbody>
+          </table>
+          <div class="diff-note">Comparable spend, 30% more wall clock, and the entire difference in outcome. G2 also stopped early &mdash; it had nine iterations of budget left.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a7">
+    <div class="folio"><span>Closing</span><span class="n">vii</span></div>
+    <div class="closing">
+      <h2>The gain is real, it is <span class="attn">front&#8209;loaded</span>, and it is bounded by something no edit can reach.<br>One bundle, <span class="attn">+0.095</span> mean reward, <span class="attn">nine</span> more perfect tasks &mdash; and a routing bug still holding two of them down.</h2>
+      <div class="recap">
+        <div class="card"><div class="k">all&#8209;34 mean</div><div class="move"><span class="before">0.849</span> &rarr; <span class="after">0.943</span></div></div>
+        <div class="card"><div class="k">perfect tasks</div><div class="move"><span class="before">12</span> &rarr; <span class="after">21</span></div></div>
+        <div class="card"><div class="k">challenge tranche</div><div class="move"><span class="before">0.785</span> &rarr; <span class="after">0.938</span></div></div>
+        <div class="card"><div class="k">vs. merged T4</div><div class="move"><span class="before">0.862</span> &rarr; <span class="after">0.951</span></div></div>
+      </div>
+      <p class="evidence-note">All figures validation&#8209;split, five trials per task, 34 tasks per candidate, from <code>run_optimize_fix_20260925_082813</code>. <code>cand_0004</code> is <code>artifacts/v4/v4_g_e1/best/</code>. The 28&#8209;task comparison on page 06 excludes six tasks affected by a simulated&#8209;tool outage during the T4 sweeps; the full&#8209;34 figures are given in that page&rsquo;s note and support the same conclusion. No held&#8209;out test split was completed for this arm &mdash; read every number as validation, and the run itself as a mid&#8209;flight snapshot that stopped with nine iterations of budget unspent.</p>
+      <div class="verdict" style="margin-top:24px;">
+        <span class="vk">Three asks</span>
+        <p><strong>1. Upstream cand_0004&rsquo;s edits</strong> &mdash; the bare&#8209;identifier rule, the <code>fetch_github_file</code> I/O contract, the question&#8209;order pair, and the absence/negative&#8209;finding reporting contract. These are the gain.<br><br><strong>2. Delete <code>aap2_agent.md:366</code></strong> &mdash; <code>Short = auth/config error. Long = timeout.</code> G2 never removed it and compensated downstream instead; T2 and T4 both removed it. The instruction is false regardless of the score.<br><br><strong>3. Fix <code>classify_fast()</code></strong> &mdash; worth more than another arm. It caps two tasks at 0.55 and 0.61 and is the single largest piece of unreachable headroom on this task set.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<nav class="navdots" id="navdots" aria-label="Slide navigation"></nav>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var dotsWrap = document.getElementById('navdots');
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i+1) + ' of ' + slides.length);
+    b.addEventListener('click', function(){
+      s.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    });
+    dotsWrap.appendChild(b);
+  });
+
+  function reduceMotion(){
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function setActive(){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){
+      if (s.offsetTop <= mid) idx = i;
+    });
+    Array.prototype.forEach.call(dotsWrap.children, function(b, i){
+      b.setAttribute('aria-current', i === idx ? 'true' : 'false');
+    });
+  }
+
+  deck.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  deck.addEventListener('keydown', function(e){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){ if (s.offsetTop <= mid) idx = i; });
+    if (e.key === 'ArrowDown' || e.key === 'PageDown'){
+      e.preventDefault();
+      var next = slides[Math.min(idx + 1, slides.length - 1)];
+      next.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp'){
+      e.preventDefault();
+      var prev = slides[Math.max(idx - 1, 0)];
+      prev.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    }
+  });
+})();
+</script>
