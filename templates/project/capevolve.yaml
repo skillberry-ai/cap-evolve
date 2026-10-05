@@ -17,6 +17,17 @@ optimizer_max_turns: 0                   # 0 = off; per-iteration WORK cap passe
 optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap passed to the agent CLI
 #   (claude-code → --max-budget-usd N, enforced by the CLI itself). Optimizers without a
 #   native $ cap (e.g. ibm-bob) ignore it — bound those via optimizer_max_turns / max_optimizer_usd.
+# Optional per-decision-role model override (cap_evolve.model_routing.resolve_model).
+# Absent/omitted = every role falls back to optimizer_model above, unchanged. Only set
+# the roles you want to route differently (e.g. a cheap model for mechanical steps):
+# model_routing:
+#   plan: ""
+#   root_cause: ""
+#   propose: ""
+#   implement: ""
+#   evaluation_analysis: ""
+#   merge: ""
+#   synthesis: ""
 
 # --- consuming (runtime) LLM the capabilities are optimized FOR --------------
 # The model the AGENT UNDER TEST reads these capabilities with at runtime — DISTINCT

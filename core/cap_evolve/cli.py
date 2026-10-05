@@ -715,8 +715,18 @@ def _cmd_run(argv):
     # shows in the dashboard. Rows without a json_flag (mock/offline) ignore it.
     opt_cmd = (f"{sys.executable} {skill_run('run-optimizer')} --name {optimizer_name} "
                f"--json --workdir {{workdir}} --prompt {{prompt}}")
-    if spec.get("optimizer_model"):
-        opt_cmd += f" --model {spec['optimizer_model']}"
+    # The optimizer invocation proposes capability edits, so it resolves the "propose"
+    # routing role (#665 ws5) instead of reading optimizer_model directly. A spec with no
+    # model_routing block (every config today) resolves identically to the old
+    # `spec.get("optimizer_model")` check — same flag, same value, same no-op when unset.
+    from .model_routing import ModelRoutingError as _ModelRoutingError
+    from .model_routing import resolve_model as _resolve_model
+    try:
+        propose_model = _resolve_model("propose", spec)
+    except _ModelRoutingError:
+        propose_model = None
+    if propose_model:
+        opt_cmd += f" --model {propose_model}"
     # Per-iteration optimizer cap: run-optimizer maps --budget to the registry row's
     # budget_flag_template (e.g. claude-code → --max-turns N), bounding each step's cost.
     if spec.get("optimizer_max_turns"):
@@ -868,6 +878,16 @@ def _cmd_run(argv):
     except Exception:  # noqa: BLE001 — provenance is best-effort, never fatal
         pass
 
+    # Record which model the optimizer invocation (the "propose" role, #665 ws5)
+    # resolved to, so a run is self-describing about model routing the same way it is
+    # about spec/project/algorithm above. Best-effort: telemetry never blocks a run.
+    if propose_model:
+        try:
+            from .model_routing import record_model_selection as _record_model_selection
+            _record_model_selection(_RunDir.open(workdir / run_dir), "propose", propose_model)
+        except Exception:  # noqa: BLE001
+            pass
+
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.
     if args.resume:
@@ -911,8 +931,10 @@ def _cmd_run(argv):
             host_script = skills_dir / "algorithms" / "agent-optimize" / "scripts" / "host.py"
             host_cmd = [py, str(host_script), "--run-dir", str(workdir / run_dir),
                        "--project", str(proj_abs), "--agent", args.agent_driver]
-            if spec.get("optimizer_model"):
-                host_cmd += ["--model", str(spec["optimizer_model"])]
+            # Same "propose" role resolution as the deterministic opt_cmd above (#665
+            # ws5) — resolved once, earlier in this function.
+            if propose_model:
+                host_cmd += ["--model", propose_model]
             if spec.get("optimizer_max_turns"):
                 host_cmd += ["--budget", str(int(spec["optimizer_max_turns"]))]
             if spec.get("max_optimizer_usd"):
