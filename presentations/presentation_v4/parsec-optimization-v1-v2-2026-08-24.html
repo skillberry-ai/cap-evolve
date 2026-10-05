@@ -479,7 +479,7 @@
 
       <div style="max-width: 940px; margin: 0.4em auto 0;">
       <svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" role="img"
-           aria-label="Two pillars support a bridge deck. Left pillar: Task & Reward Extraction (Rubrica) — extracts tasks and rewards from trajectories. Right pillar: Simulation Harness — stands in for the real backends. On top of the pillars, a bridge deck holds Parsec, the SUT, at its center; the deck itself is Harbor, the runner infrastructure. Above the bridge, a dashed frame labels Optimization by cap-evolve — the layer that iterates once the bridge stands.">
+           aria-label="Two pillars support a bridge deck. Left pillar: Rubrica (Task & Reward Extraction) — extracts tasks and rewards from trajectories, across v1, v2, and v4. Right pillar: Simulation Harness — stands in for the real backends. On top of the pillars, a bridge deck holds Parsec, the SUT, at its center; the deck itself is Harbor, the runner infrastructure. Above the bridge, a dashed frame labels Optimization by cap-evolve — the layer that iterates once the bridge stands.">
         <defs>
           <marker id="arrow-up-metaphor" viewBox="0 0 10 10" refX="5" refY="0" markerWidth="10" markerHeight="10" orient="auto">
             <path d="M0,10 L5,0 L10,10 z" fill="#C0432B"/>
@@ -489,18 +489,18 @@
         <!-- ground line -->
         <line x1="30" y1="530" x2="870" y2="530" stroke="#1A1D2A" stroke-width="2"/>
 
-        <!-- LEFT PILLAR: Task & Reward Extraction (product name: Rubrica) -->
+        <!-- LEFT PILLAR: Rubrica (Task & Reward Extraction) -->
         <rect x="90" y="280" width="180" height="240" fill="#FFFFFF" stroke="#2D6E7E" stroke-width="2.5" rx="6"/>
         <text x="180" y="316" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle" letter-spacing="0.15em">STAND 1</text>
-        <text x="180" y="352" font-family="ui-serif, Georgia, serif" font-size="18" font-weight="700" fill="#1A1D2A" text-anchor="middle">Task &amp; Reward</text>
-        <text x="180" y="374" font-family="ui-serif, Georgia, serif" font-size="18" font-weight="700" fill="#1A1D2A" text-anchor="middle">Extraction</text>
         <a href="https://github.ibm.com/kaegis/rubrica" target="_blank" rel="noopener">
-          <text x="180" y="393" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#2D6E7E" text-anchor="middle" letter-spacing="0.15em" text-decoration="underline">RUBRICA</text>
+          <text x="180" y="358" font-family="ui-serif, Georgia, serif" font-size="22" font-weight="700" fill="#2D6E7E" text-anchor="middle" text-decoration="underline">Rubrica</text>
         </a>
-        <line x1="120" y1="406" x2="240" y2="406" stroke="#D9D2BE" stroke-width="1"/>
-        <text x="180" y="426" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#3E4252" text-anchor="middle">from trajectories</text>
-        <text x="180" y="452" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v1: 130 traces &rarr; 30 tasks</text>
-        <text x="180" y="472" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v2: 10 authored scenarios</text>
+        <text x="180" y="378" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#6C7080" text-anchor="middle" letter-spacing="0.08em">TASK &amp; REWARD EXTRACTION</text>
+        <line x1="120" y1="400" x2="240" y2="400" stroke="#D9D2BE" stroke-width="1"/>
+        <text x="180" y="420" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" fill="#3E4252" text-anchor="middle">from trajectories</text>
+        <text x="180" y="444" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v1: 130 traces &rarr; 30 tasks</text>
+        <text x="180" y="462" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v2: 10 authored scenarios</text>
+        <text x="180" y="480" font-family="ui-monospace, Menlo, monospace" font-size="10" fill="#6C7080" text-anchor="middle">v4: 34-task multi-agent</text>
 
         <!-- RIGHT PILLAR: Simulation Harness -->
         <rect x="630" y="280" width="180" height="240" fill="#FFFFFF" stroke="#2D6E7E" stroke-width="2.5" rx="6"/>
