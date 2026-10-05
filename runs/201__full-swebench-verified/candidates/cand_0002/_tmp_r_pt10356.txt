@@ -1,0 +1,611 @@
+### USER/TASK:
+Please solve this issue: Consider MRO when obtaining marks for classes
+When using pytest markers in two baseclasses `Foo` and `Bar`, inheriting from both of those baseclasses will lose the markers of one of those classes. This behavior is present in pytest 3-6, and I think it may as well have been intended. I am still filing it as a bug because I am not sure if this edge case was ever explicitly considered.
+
+If it is widely understood that all markers are part of a single attribute, I guess you could say that this is just expected behavior as per MRO. However, I'd argue that it would be more intuitive to attempt to merge marker values into one, possibly deduplicating marker names by MRO.
+
+```python
+import itertools
+import pytest
+
+class BaseMeta(type):
+    @property
+    def pytestmark(self):
+        return (
+            getattr(self, "_pytestmark", []) +
+            list(itertools.chain.from_iterable(getattr(x, "_pytestmark", []) for x in self.__mro__))
+        )
+
+    @pytestmark.setter
+    def pytestmark(self, value):
+        self._pytestmark = value
+
+
+class Base(object):
+    # Without this metaclass, foo and bar markers override each other, and test_dings
+    # will only have one marker
+    # With the metaclass, test_dings will have both
+    __metaclass__ = BaseMeta
+
+@pytest.mark.foo
+class Foo(Base):
+    pass
+
+
+@pytest.mark.bar
+class Bar(Base):
+    pass
+
+class TestDings(Foo, Bar):
+    def test_dings(self):
+        # This test should have both markers, foo and bar.
+        # 
+### step 3 CMD:
+ls -la
+--- RC=0 
+--- OUT:
+-rw-r--r--.  1 root root  5701 Sep 10  2025 AUTHORS
+-rw-r--r--.  1 root root   230 Sep 10  2025 CHANGELOG.rst
+-rw-r--r--.  1 root root   475 Sep 10  2025 CITATION
+-rw-r--r--.  1 root root  3720 Sep 10  2025 CODE_OF_CONDUCT.md
+-rw-r--r--.  1 root root 19851 Sep 10  2025 CONTRIBUTING.rst
+-rw-r--r--.  1 root root  1091 Sep 10  2025 LICENSE
+-rw-r--r--.  1 root root  1953 Sep 10  2025 OPENCOLLECTIVE.rst
+-rw-r--r--.  1 root root  5628 Sep 10  2025 README.rst
+-rw-r--r--.  1 root root  6453 Sep 10  2025 RELEASING.rst
+-rw-r--r--.  1 root root  2385 Sep 10  2025 TIDELIFT.rst
+drwxrwxrwx.  2 root root   137 Sep 10  2025 bench
+drwxrwxrwx.  2 root root  4096 Sep 10  2025 changelog
+-rw-r--r--.  1 root root   133 Sep 10  2025 codecov.yml
+drwxrwxrwx.  3 root root    16 Sep 10  2025 doc
+drwxrwxrwx.  2 root root    27 Sep 10  2025 extra
+-rw-r--r--.  1 root root  3910 Sep 10  2025 pyproject.toml
+drwxrwxrwx.  2 root root  4096 Sep 10  2025 scripts
+-rw-r--r--.  1 root root  2601 Sep 10  2025 setup.cfg
+-rw-r--r--.  1 root root    69 Sep 10  2025 setup.py
+drwxrwxrwx.  4 root root    35 Sep 10  2025 src
+drwxrwxrwx. 10 root root  4096 Sep 10  2025 testing
+-rw-r--r--.  1 root root  5397 Sep 10  2025 tox.ini
+
+### step 4 CMD:
+grep -R "pytestmark" -n src || true
+--- RC=0 
+--- OUT:
+src/_pytest/config/__init__.py:354:    known_marks: set[str] = {m.name for m in getattr(method, "pytestmark", [])}
+src/_pytest/mark/structures.py:360:    mark_list = getattr(obj, "pytestmark", [])
+src/_pytest/mark/structures.py:389:    # Always reassign name to avoid updating pytestmark in a reference that
+src/_pytest/mark/structures.py:391:    obj.pytestmark = [*get_unpacked_marks(obj), mark]
+src/_pytest/terminal.py:1345:        # Folding reports with global pytestmark variable.
+src/_pytest/terminal.py:1351:            and "pytestmark" not in keywords
+
+### step 5 CMD:
+sed -n '1,240p' src/_pytest/mark/structures.py
+--- RC=0 
+--- OUT:
+s.
+    _param_ids_generated: Optional[Sequence[str]] = attr.ib(default=None, repr=False)
+
+    def __init__(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        kwargs: Mapping[str, Any],
+        param_ids_from: Optional["Mark"] = None,
+        param_ids_generated: Optional[Sequence[str]] = None,
+        *,
+        _ispytest: bool = False,
+    ) -> None:
+        """:meta private:"""
+        check_ispytest(_ispytest)
+        # Weirdness to bypass frozen=True.
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "args", args)
+        object.__setattr__(self, "kwargs", kwargs)
+        object.__setattr__(self, "_param_ids_from", param_ids_from)
+        object.__setattr__(self, "_param_ids_generated", param_ids_generated)
+
+    def _has_param_ids(self) -> bool:
+        return "ids" in self.kwargs or len(self.args) >= 4
+
+    def combined_with(self, other: "Mark") -> "Mark":
+        """Return a new Mark which is a combination of this
+        Mark and another Mark.
+
+        Combines by appending args and merging kwargs.
+
+        :param Mark other: The mark to combine with.
+        :rtype: Mark
+        """
+        assert self.name == other.name
+
+
+### step 6 CMD:
+sed -n '240,520p' src/_pytest/mark/structures.py
+--- RC=0 
+--- OUT:
+rator."""
+        if args and not kwargs:
+            func = args[0]
+            is_class = inspect.isclass(func)
+            if len(args) == 1 and (istestfunc(func) or is_class):
+                store_mark(func, self.mark)
+                return func
+        return self.with_args(*args, **kwargs)
+
+
+def get_unpacked_marks(obj: object) -> Iterable[Mark]:
+    """Obtain the unpacked marks that are stored on an object."""
+    mark_list = getattr(obj, "pytestmark", [])
+    if not isinstance(mark_list, list):
+        mark_list = [mark_list]
+    return normalize_mark_list(mark_list)
+
+
+def normalize_mark_list(
+    mark_list: Iterable[Union[Mark, MarkDecorator]]
+) -> Iterable[Mark]:
+    """
+    Normalize an iterable of Mark or MarkDecorator objects into a list of marks
+    by retrieving the `mark` attribute on MarkDecorator instances.
+
+    :param mark_list: marks to normalize
+    :returns: A new list of the extracted Mark objects
+    """
+    for mark in mark_list:
+        mark_obj = getattr(mark, "mark", mark)
+        if not isinstance(mark_obj, Mark):
+            raise TypeError(f"got {repr(mark_obj)} instead of Mark")
+        yield mark_obj
+
+
+def store_mark(obj, mark: Mark) -> None:
+    "
+### step 7 CMD:
+sed -n '1,240p' src/_pytest/config/__init__.py
+--- RC=0 
+--- OUT:
+redirect remaining output
+        # to devnull to avoid another BrokenPipeError at shutdown
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        return 1  # Python exits with error code 1 on EPIPE
+
+
+class cmdline:  # compatibility namespace
+    main = staticmethod(main)
+
+
+def filename_arg(path: str, optname: str) -> str:
+    """Argparse type validator for filename arguments.
+
+    :path: Path of filename.
+    :optname: Name of the option.
+    """
+    if os.path.isdir(path):
+        raise UsageError(f"{optname} must be a filename, given: {path}")
+    return path
+
+
+def directory_arg(path: str, optname: str) -> str:
+    """Argparse type validator for directory arguments.
+
+    :path: Path of directory.
+    :optname: Name of the option.
+    """
+    if not os.path.isdir(path):
+        raise UsageError(f"{optname} must be a directory, given: {path}")
+    return path
+
+
+# Plugins that cannot be disabled via "-p no:X" currently.
+essential_plugins = (
+    "mark",
+    "main",
+    "runner",
+    "fixtures",
+    "helpconfig",  # Provides -p.
+)
+
+default_plugins = essential_plugins + (
+    "python",
+    "terminal",
+    "debugging",
+    "unittest",
+
+### step 8 CMD:
+grep -R "pytestmark" -n testing || true
+--- RC=0 
+--- OUT:
+afunc.py:972:            pytestmark = pytest.mark.parametrize("x", [1,2])
+testing/python/metafunc.py:976:                pytestmark = pytest.mark.parametrize("y", [3,4])
+testing/test_collection.py:875:            pytestmark = pytest.mark.kw
+testing/test_collection.py:877:                pytestmark = pytest.mark.kw
+testing/test_collection.py:893:            pytestmark = pytest.mark.foo
+testing/test_collection.py:895:                pytestmark = pytest.mark.bar
+testing/test_collection.py:897:                test_method.pytestmark = pytest.mark.baz
+testing/test_mark.py:478:                pytestmark = pytest.mark.a
+testing/test_mark.py:594:                class pytestmark(object):
+testing/test_mark.py:713:            pytestmark = pytest.mark.skipif(True, reason='skip all')
+testing/test_skipping.py:149:                pytestmark = pytest.mark.skipif("config._hackxyz")
+testing/test_skipping.py:970:            pytestmark = pytest.mark.skipif("True")
+testing/test_skipping.py:1022:            pytestmark = pytest.mark.skip("Folding")
+testing/test_unittest.py:439:def test_module_level_pytestmark(pytester: Pytester) -> None:
+testing/test_unittest.py:444:        pytestmark = pytest.mark.xfail
+
+### step 9 CMD:
+sed -n '1,240p' testing/test_collection.py
+--- RC=0 
+--- OUT:
+s1",
+        ),
+    )
+    def test__in_venv(self, pytester: Pytester, fname: str) -> None:
+        """Directly test the virtual env detection function"""
+        bindir = "Scripts" if sys.platform.startswith("win") else "bin"
+        # no bin/activate, not a virtualenv
+        base_path = pytester.mkdir("venv")
+        assert _in_venv(base_path) is False
+        # with bin/activate, totally a virtualenv
+        bin_path = base_path.joinpath(bindir)
+        bin_path.mkdir()
+        bin_path.joinpath(fname).touch()
+        assert _in_venv(base_path) is True
+
+    def test_custom_norecursedirs(self, pytester: Pytester) -> None:
+        pytester.makeini(
+            """
+            [pytest]
+            norecursedirs = mydir xyz*
+        """
+        )
+        tmp_path = pytester.path
+        ensure_file(tmp_path / "mydir" / "test_hello.py").write_text(
+            "def test_1(): pass"
+        )
+        ensure_file(tmp_path / "xyz123" / "test_2.py").write_text("def test_2(): 0/0")
+        ensure_file(tmp_path / "xy" / "test_ok.py").write_text("def test_3(): pass")
+        rec = pytester.inline_run()
+        rec.assertoutcome(passed=1)
+        rec = pytester.inline_run("xyz123/test_2.py")
+
+### step 10 CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: src/_pytest/mark/structures.py
+@@
+ def get_unpacked_marks(obj: object) - Iterable[Mark]:
+     """Obtain the unpacked marks that are stored on an object."""
+-    mark_list = getattr(obj, "pytestmark", [])
+-    if not isinstance(mark_list, list):
+-        mark_list = [mark_list]
+-    return normalize_mark_list(mark_list)
++    # For classes, consider the full MRO so markers applied on base
++    # classes are not lost when inheriting from multiple bases. Collect
++    # marks in MRO order and deduplicate by mark name (first occurrence
++    # wins, preserving MRO precedence).
++    if inspect.isclass(obj):
++        seen: Set[str] = set()
++        marks: List[Mark] = []
++        for cls in obj.__mro__:
++            mark_list = getattr(cls, "pytestmark", None)
++            if mark_list is None:
++                continue
++            if not isinstance(mark_list, list):
++                mark_list = [mark_list]
++            for mark in normalize_mark_list(mark_list):
++                if mark.name in seen:
++                    continue
++                seen.add(mark.name)
++                marks.append(mark)
++        return marks
++
++    mark_list = getattr(obj, "pytestmark", [])
++    if not isinstance(mark_list, list):
++        mark_list = [mark_list]
++    return normalize_mark_list(mark_list)
+*** End Patch
+PATCH
+--- RC=128 
+--- OUT:
+error: unrecognized input
+
+### step 11 CMD:
+nl -ba src/_pytest/mark/structures.py | sed -n '360,440p'
+--- RC=0 
+--- OUT:
+..,
+   412	            *conditions: Union[str, bool],
+   413	            reason: str = ...,
+   414	        ) -> MarkDecorator:
+   415	            ...
+   416	
+   417	    class _XfailMarkDecorator(MarkDecorator):
+   418	        @overload  # type: ignore[override,misc,no-overload-impl]
+   419	        def __call__(self, arg: Markable) -> Markable:
+   420	            ...
+   421	
+   422	        @overload
+   423	        def __call__(
+   424	            self,
+   425	            condition: Union[str, bool] = ...,
+   426	            *conditions: Union[str, bool],
+   427	            reason: str = ...,
+   428	            run: bool = ...,
+   429	            raises: Union[Type[BaseException], Tuple[Type[BaseException], ...]] = ...,
+   430	            strict: bool = ...,
+   431	        ) -> MarkDecorator:
+   432	            ...
+   433	
+   434	    class _ParametrizeMarkDecorator(MarkDecorator):
+   435	        def __call__(  # type: ignore[override]
+   436	            self,
+   437	            argnames: Union[str, Sequence[str]],
+   438	            argvalues: Iterable[Union[ParameterSet, Sequence[object], object]],
+   439	            *,
+   440	            indirect: Union[bool, Sequence[str]] = ...,
+
+### step 12 CMD:
+nl -ba src/_pytest/mark/structures.py | sed -n '320,380p'
+--- RC=0 
+--- OUT:
+(istestfunc(func) or is_class):
+   353	                store_mark(func, self.mark)
+   354	                return func
+   355	        return self.with_args(*args, **kwargs)
+   356	
+   357	
+   358	def get_unpacked_marks(obj: object) -> Iterable[Mark]:
+   359	    """Obtain the unpacked marks that are stored on an object."""
+   360	    mark_list = getattr(obj, "pytestmark", [])
+   361	    if not isinstance(mark_list, list):
+   362	        mark_list = [mark_list]
+   363	    return normalize_mark_list(mark_list)
+   364	
+   365	
+   366	def normalize_mark_list(
+   367	    mark_list: Iterable[Union[Mark, MarkDecorator]]
+   368	) -> Iterable[Mark]:
+   369	    """
+   370	    Normalize an iterable of Mark or MarkDecorator objects into a list of marks
+   371	    by retrieving the `mark` attribute on MarkDecorator instances.
+   372	
+   373	    :param mark_list: marks to normalize
+   374	    :returns: A new list of the extracted Mark objects
+   375	    """
+   376	    for mark in mark_list:
+   377	        mark_obj = getattr(mark, "mark", mark)
+   378	        if not isinstance(mark_obj, Mark):
+   379	            raise TypeError(f"got {repr(mark_obj)} instead of Mark")
+   380	        yield mark_obj
+
+### step 13 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('src/_pytest/mark/structures.py')
+s=p.read_text()
+start='def get_unpacked_marks(obj: object) -> Iterable[Mark]:\n'
+if start not in s:
+    print('start not found')
+else:
+    idx = s.index(start)
+    # find the next function def 'def normalize_mark_list'
+    nxt='def normalize_mark_list('
+    j = s.index(nxt, idx)
+    new_func='''def get_unpacked_marks(obj: object) -> Iterable[Mark]:
+    """Obtain the unpacked marks that are stored on an object."""
+    # For classes, consider the full MRO so markers applied on base
+    # classes are not lost when inheriting from multiple bases. Collect
+    # marks in MRO order and deduplicate by mark name (first occurrence
+    # wins, preserving MRO precedence).
+    if inspect.isclass(obj):
+        seen: Set[str] = set()
+        marks: List[Mark] = []
+        for cls in obj.__mro__:
+            mark_list = getattr(cls, "pytestmark", None)
+            if mark_list is None:
+                continue
+            if not isinstance(mark_list, list):
+                mark_list = [mark_list]
+            for mark in normalize_mark_list(mark_list):
+                if mark.name in seen:
+                    continue
+                seen.add(mark.name)
+                marks.append(mark)
+        return marks
+
+    mark_list = getattr(obj, "pytestmark", [])
+    if not isinstance(mark_list, list):
+        mark_list = [mark_list]
+    return normalize_mark_list(mark_list)
+'''
+    new_s = s[:idx] + new_func + s[j:]
+    p.write_text(new_s)
+    print('patched')
+PY
+--- RC=0 
+--- OUT:
+patched
+
+### step 14 CMD:
+git add -A && git commit -m "Consider MRO when obtaining marks for classes: gather marks from class MRO and dedupe by name" || true
+--- RC=0 
+--- OUT:
+[main e5366c663] Consider MRO when obtaining marks for classes: gather marks from class MRO and dedupe by name
+ 1 file changed, 20 insertions(+), 2 deletions(-)
+
+### step 15 CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix
+--- RC=0 
+--- OUT:
+{
+  "changed": [],
+  "runner": null,
+  "results": []
+}
+
+### step 16 CMD:
+pytest -q testing/test_collection.py::TestCollector::test_getparent_and_accessors -q
+--- RC=127 
+--- OUT:
+/bin/sh: 1: pytest: not found
+
+### step 17 CMD:
+grep -n "MarkGenerator" -n src || true
+--- RC=0 
+--- OUT:
+grep: src: Is a directory
+
+### step 18 CMD:
+grep -R "MARK_GEN" -n src || true
+--- RC=0 
+--- OUT:
+src/_pytest/mark/__init__.py:16:from .structures import MARK_GEN
+src/_pytest/mark/__init__.py:32:    "MARK_GEN",
+src/_pytest/mark/__init__.py:253:    config.stash[old_mark_config_key] = MARK_GEN._config
+src/_pytest/mark/__init__.py:254:    MARK_GEN._config = config
+src/_pytest/mark/__init__.py:266:    MARK_GEN._config = config.stash.get(old_mark_config_key, None)
+src/_pytest/mark/structures.py:61:        mark = MARK_GEN.skip(reason=reason)
+src/_pytest/mark/structures.py:63:        mark = MARK_GEN.xfail(reason=reason, run=False)
+src/_pytest/mark/structures.py:550:MARK_GEN = MarkGenerator(_ispytest=True)
+src/_pytest/nodes.py:349:        from _pytest.mark import MARK_GEN
+src/_pytest/nodes.py:354:            marker_ = getattr(MARK_GEN, marker)
+src/_pytest/python.py:64:from _pytest.mark import MARK_GEN
+src/_pytest/python.py:267:                res.add_marker(MARK_GEN.xfail(run=False, reason=reason))
+src/pytest/__init__.py:32:from _pytest.mark import MARK_GEN as mark
+
+### step 19 CMD:
+sed -n '520,740p' src/_pytest/mark/structures.py
+--- RC=0 
+--- OUT:
+citly implementing some of the methods
+    # below and use the collections.abc fallback, but that would be slow.
+
+    def __contains__(self, key: object) -> bool:
+        return (
+            key in self._markers
+            or self.parent is not None
+            and key in self.parent.keywords
+        )
+
+    def update(  # type: ignore[override]
+        self,
+        other: Union[Mapping[str, Any], Iterable[Tuple[str, Any]]] = (),
+        **kwds: Any,
+    ) -> None:
+        self._markers.update(other)
+        self._markers.update(kwds)
+
+    def __delitem__(self, key: str) -> None:
+        raise ValueError("cannot delete key in keywords dict")
+
+    def __iter__(self) -> Iterator[str]:
+        # Doesn't need to be fast.
+        yield from self._markers
+        if self.parent is not None:
+            for keyword in self.parent.keywords:
+                # self._marks and self.parent.keywords can have duplicates.
+                if keyword not in self._markers:
+                    yield keyword
+
+    def __len__(self) -> int:
+        # Doesn't need to be fast.
+        return sum(1 for keyword in self)
+
+    def __repr__(self) -> str:
+        return f"<NodeKeywords for node {self.node}>"
+
+### step 20 CMD:
+python - << 'PY'
+from _pytest.mark import MARK_GEN
+from _pytest.mark.structures import get_unpacked_marks
+
+@MARK_GEN.foo
+class Foo:
+    pass
+
+@MARK_GEN.bar
+class Bar:
+    pass
+
+class TestDings(Foo, Bar):
+    def test_dings(self):
+        pass
+
+marks = list(get_unpacked_marks(TestDings))
+print([m.name for m in marks])
+PY
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ModuleNotFoundError: No module named '_pytest'
+
+### step 21 CMD:
+PYTHONPATH=src python - << 'PY'
+from _pytest.mark import MARK_GEN
+from _pytest.mark.structures import get_unpacked_marks
+
+@MARK_GEN.foo
+class Foo:
+    pass
+
+@MARK_GEN.bar
+class Bar:
+    pass
+
+class TestDings(Foo, Bar):
+    def test_dings(self):
+        pass
+
+marks = list(get_unpacked_marks(TestDings))
+print([m.name for m in marks])
+PY
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/testbed/src/_pytest/mark/__init__.py", line 9, in <module>
+    import attr
+ModuleNotFoundError: No module named 'attr'
+
+### step 22 CMD:
+git --no-pager show HEAD -- src/_pytest/mark/structures.py
+--- RC=0 
+--- OUT:
+_unpacked_marks(obj: object) -> Iterable[Mark]:
+     """Obtain the unpacked marks that are stored on an object."""
++    # For classes, consider the full MRO so markers applied on base
++    # classes are not lost when inheriting from multiple bases. Collect
++    # marks in MRO order and deduplicate by mark name (first occurrence
++    # wins, preserving MRO precedence).
++    if inspect.isclass(obj):
++        seen: Set[str] = set()
++        marks: List[Mark] = []
++        for cls in obj.__mro__:
++            mark_list = getattr(cls, "pytestmark", None)
++            if mark_list is None:
++                continue
++            if not isinstance(mark_list, list):
++                mark_list = [mark_list]
++            for mark in normalize_mark_list(mark_list):
++                if mark.name in seen:
++                    continue
++                seen.add(mark.name)
++                marks.append(mark)
++        return marks
++
+     mark_list = getattr(obj, "pytestmark", [])
+     if not isinstance(mark_list, list):
+         mark_list = [mark_list]
+     return normalize_mark_list(mark_list)
+-
+-
+ def normalize_mark_list(
+     mark_list: Iterable[Union[Mark, MarkDecorator]]
+ ) -> Iterable[Mark]:
+
+### step 23 CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+--- RC=-1 action was not executed
+--- OUT:
+

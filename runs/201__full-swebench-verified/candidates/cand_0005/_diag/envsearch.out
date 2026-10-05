@@ -1,0 +1,8 @@
+== pylint-dev__pylint-4661 (reward=0.0)
+   [17] python - << 'PY'
+import importlib, os, sys
+from importlib import reload
+
+def get_pylint_home():
+    import pylint.config as config
+    return config.PYLINT_HOME

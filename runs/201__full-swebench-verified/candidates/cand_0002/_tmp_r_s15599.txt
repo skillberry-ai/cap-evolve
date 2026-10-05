@@ -1,0 +1,1058 @@
+### USER/TASK:
+Please solve this issue: Mod(3*i, 2) unchanged
+`Mod(3*i, 2)` should reduce to `Mod(i, 2)` (as reported in [this post](https://stackoverflow.com/questions/53302669/sympify-does-not-simplify-remainder-as-expected)) and will do so with a change something like this:
+```diff
+diff --git a/sympy/core/mod.py b/sympy/core/mod.py
+index eae2563..b1ff867 100644
+--- a/sympy/core/mod.py
++++ b/sympy/core/mod.py
+@@ -123,9 +123,11 @@ def doit(p, q):
+             for arg in p.args:
+                 both_l[isinstance(arg, cls)].append(arg)
+
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
++            was = non_mod_l[:]
++            non_mod_l = [cls(x, q) for x in non_mod_l]
++            changed = was != non_mod_l
++            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
+                 # finding distributive term
+-                non_mod_l = [cls(x, q) for x in non_mod_l]
+                 mod = []
+                 non_mod = []
+                 for j in non_mod_l:
+diff --git a/sympy/core/tests/test_arit.py b/sympy/core/tests/test_arit.py
+index 3bf9be5..4396663 100644
+--- a/sympy/core/tests/test_arit.py
++++ b/sympy/core/tests/test_arit.py
+@@ -1626,6 +1626,7 @@ def test_Mod():
+     i = Symbol('i', integer=True)
+     assert (3*i*x) % (2*i*y) == i*Mod(3*x, 2*y)
+     assert Mod(4*i, 4) == 0
++    assert Mod(3*i, 2) == Mod(i, 2)
+
+     # issue 8677
+     n = Symbol('n', integer=True, positive=True)
+```
+
+Returns correct result to Mod(3*i, 2).
+modified the mod.
+### step 3 CMD:
+ls -la
+--- RC=0 
+--- OUT:
+ Sep 10  2025 .travis.yml
+-rw-r--r--.  1 root root 29841 Sep 10  2025 AUTHORS
+-rw-r--r--.  1 root root  3271 Sep 10  2025 CODE_OF_CONDUCT.md
+-rw-r--r--.  1 root root   625 Sep 10  2025 CONTRIBUTING.md
+-rw-r--r--.  1 root root  4942 Sep 10  2025 LICENSE
+-rw-r--r--.  1 root root   332 Sep 10  2025 MANIFEST.in
+-rw-r--r--.  1 root root   756 Sep 10  2025 PULL_REQUEST_TEMPLATE.md
+-rw-r--r--.  1 root root 10167 Sep 10  2025 README.rst
+-rw-r--r--.  1 root root  5706 Sep 10  2025 azure-pipelines.yml
+drwxrwxrwx.  2 root root  4096 Sep 10  2025 bin
+-rw-r--r--.  1 root root  2682 Sep 10  2025 conftest.py
+drwxrwxrwx.  3 root root    21 Sep 10  2025 data
+drwxrwxrwx.  7 root root   146 Sep 10  2025 doc
+drwxr-xr-x.  6 root root   103 Sep 10  2025 examples
+-rw-r--r--.  1 root root  4408 Sep 10  2025 github_deploy_key.enc
+-rw-r--r--.  1 root root 11199 Sep 10  2025 isympy.py
+drwxrwxrwx.  2 root root   141 Sep 10  2025 release
+-rwxr-xr-x.  1 root root 13581 Sep 10  2025 setup.py
+-rw-r--r--.  1 root root    49 Sep 10  2025 setupegg.py
+drwxrwxrwx. 42 root root  4096 Sep 10  2025 sympy
+drwxr-xr-x.  2 root root   154 Sep 10  2025 sympy.egg-info
+-rw-r--r--.  1 root root  2200 Sep 10  2025 tox.ini.sample
+
+### step 4 CMD:
+nl -ba sympy/core/mod.py | sed -n '1,240p'
+--- RC=0 
+--- OUT:
+f p.could_extract_minus_sign() and q.could_extract_minus_sign():
+   183	            G, p, q = [-i for i in (G, p, q)]
+   184	
+   185	        # check again to see if p and q can now be handled as numbers
+   186	        rv = doit(p, q)
+   187	        if rv is not None:
+   188	            return rv*G
+   189	
+   190	        # put 1.0 from G on inside
+   191	        if G.is_Float and G == 1:
+   192	            p *= G
+   193	            return cls(p, q, evaluate=False)
+   194	        elif G.is_Mul and G.args[0].is_Float and G.args[0] == 1:
+   195	            p = G.args[0]*p
+   196	            G = Mul._from_args(G.args[1:])
+   197	        return G*cls(p, q, evaluate=(p, q) != (pwas, qwas))
+   198	
+   199	    def _eval_is_integer(self):
+   200	        from sympy.core.logic import fuzzy_and, fuzzy_not
+   201	        p, q = self.args
+   202	        if fuzzy_and([p.is_integer, q.is_integer, fuzzy_not(q.is_zero)]):
+   203	            return True
+   204	
+   205	    def _eval_is_nonnegative(self):
+   206	        if self.args[1].is_positive:
+   207	            return True
+   208	
+   209	    def _eval_is_nonpositive(self):
+   210	        if self.args[1].is_negative:
+   211	            return True
+
+### step 5 CMD:
+git status --porcelain; git rev-parse --abbrev-ref HEAD || true; sed -n '1,240p' sympy/core/mod.py | sed -n '120,150p'
+--- RC=0 
+--- OUT:
+master
+        elif isinstance(p, Mul):
+            # separating into modulus and non modulus
+            both_l = non_mod_l, mod_l = [], []
+            for arg in p.args:
+                both_l[isinstance(arg, cls)].append(arg)
+
+            if mod_l and all(inner.args[1] == q for inner in mod_l):
+                # finding distributive term
+                non_mod_l = [cls(x, q) for x in non_mod_l]
+                mod = []
+                non_mod = []
+                for j in non_mod_l:
+                    if isinstance(j, cls):
+                        mod.append(j.args[0])
+                    else:
+                        non_mod.append(j)
+                prod_mod = Mul(*mod)
+                prod_non_mod = Mul(*non_mod)
+                prod_mod1 = Mul(*[i.args[0] for i in mod_l])
+                net = prod_mod1*prod_mod
+                return prod_non_mod*cls(net, q)
+
+        # XXX other possibilities?
+
+        # extract gcd; any further simplification should be done by the user
+        G = gcd(p, q)
+        if G != 1:
+            p, q = [
+                gcd_terms(i/G, clear=False, fraction=False) for i in (p, q)]
+        pwas, qwas = p, q
+
+
+### step 6 CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: sympy/core/mod.py
+@@
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
+-                # finding distributive term
+-                non_mod_l = [cls(x, q) for x in non_mod_l]
++            was = non_mod_l[:]
++            non_mod_l = [cls(x, q) for x in non_mod_l]
++            changed = was != non_mod_l
++            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
++                # finding distributive term
+*** End Patch
+PATCH
+--- RC=128 
+--- OUT:
+error: unrecognized input
+
+### step 7 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('sympy/core/mod.py')
+s=p.read_text()
+old='''            if mod_l and all(inner.args[1] == q for inner in mod_l):
+                # finding distributive term
+                non_mod_l = [cls(x, q) for x in non_mod_l]
+                mod = []
+                non_mod = []
+                for j in non_mod_l:
+                    if isinstance(j, cls):
+                        mod.append(j.args[0])
+                    else:
+                        non_mod.append(j)
+                prod_mod = Mul(*mod)
+                prod_non_mod = Mul(*non_mod)
+                prod_mod1 = Mul(*[i.args[0] for i in mod_l])
+                net = prod_mod1*prod_mod
+                return prod_non_mod*cls(net, q)
+'''
+new='''            was = non_mod_l[:] 
+            non_mod_l = [cls(x, q) for x in non_mod_l]
+            changed = was != non_mod_l
+            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
+                # finding distributive term
+                mod = []
+                non_mod = []
+                for j in non_mod_l:
+                    if isinstance(j, cls):
+                        mod.append(j.args[0])
+                    else:
+                        non_mod.append(j)
+                prod_mod = Mul(*mod)
+                prod_non_mod = Mul(*non_mod)
+                prod_mod1 = Mul(*[i.args[0] for i in mod_l])
+                net = prod_mod1*prod_mod
+                return prod_non_mod*cls(net, q)
+'''
+if old in s:
+    s=s.replace(old,new,1)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+--- RC=0 
+--- OUT:
+patched
+
+### step 8 CMD:
+git add -A && git commit -m "Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))" || git --no-pager diff --staged
+--- RC=0 
+--- OUT:
+[master 76a5974ef] Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+### step 9 CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix
+--- RC=0 
+--- OUT:
+{
+  "changed": [],
+  "runner": "bin/test",
+  "results": []
+}
+
+### step 10 CMD:
+pytest -q sympy/core/tests/test_arit.py::test_Mod -q
+--- RC=127 
+--- OUT:
+/bin/sh: 1: pytest: not found
+
+### step 11 CMD:
+python -m pytest -q sympy/core/tests/test_arit.py::test_Mod -q
+--- RC=1 
+--- OUT:
+/opt/miniconda3/bin/python: No module named pytest
+
+### step 12 CMD:
+ls -la bin; sed -n '1,240p' bin/test
+--- RC=0 
+--- OUT:
+, help="Number of times to rerun the specified tests",
+                  type='int')
+parser.set_usage("test [options ...] [tests ...]")
+parser.epilog = """\
+"options" are any of the options above. "tests" are 0 or more glob strings of \
+tests to run. If no test arguments are given, all tests will be run.\
+"""
+
+options, args = parser.parse_args()
+
+# Check this again here to give a better error message
+if options.split:
+    sp = re.compile(r'([0-9]+)/([1-9][0-9]*)')
+    if not sp.match(options.split):
+        parser.error("option --split: must be of the form a/b where a and b "
+            "are integers, not %r" % options.split)
+
+if not options.cache:
+    os.environ['SYMPY_USE_CACHE'] = 'no'
+if options.types:
+    os.environ['SYMPY_GROUND_TYPES'] = options.types
+
+import sympy
+
+ok = sympy.test(*args, verbose=options.verbose, kw=options.kw,
+    tb=options.tb, pdb=options.pdb, colors=options.colors,
+    force_colors=options.force_colors, sort=options.sort,
+    seed=options.seed, slow=options.slow, timeout=options.timeout,
+    subprocess=options.subprocess, enhance_asserts=options.enhance_asserts,
+    split=options.split, rerun=options.rerun)
+
+if ok:
+    sys.exit(0)
+else:
+    sys.exit(1)
+
+### step 13 CMD:
+bin/test sympy/core/tests/test_arit.py::test_Mod -q
+--- RC=2 
+--- OUT:
+Usage: test [options ...] [tests ...]
+
+test: error: no such option: -q
+
+### step 14 CMD:
+bin/test sympy/core/tests/test_arit.py::test_Mod
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "/testbed/sympy/__init__.py", line 19, in <module>
+    import mpmath
+ModuleNotFoundError: No module named 'mpmath'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/testbed/bin/test", line 105, in <module>
+    import sympy
+  File "/testbed/sympy/__init__.py", line 21, in <module>
+    raise ImportError("SymPy now depends on mpmath as an external library. "
+ImportError: SymPy now depends on mpmath as an external library. See https://docs.sympy.org/latest/install.html#mpmath for more information.
+
+### step 15 CMD:
+sed -n '1,240p' sympy/__init__.py
+--- RC=0 
+--- OUT:
+ys
+
+
+def __sympy_debug():
+    # helper function so we don't import os globally
+    import os
+    debug_str = os.getenv('SYMPY_DEBUG', 'False')
+    if debug_str in ('True', 'False'):
+        return eval(debug_str)
+    else:
+        raise RuntimeError("unrecognized value for SYMPY_DEBUG: %s" %
+                           debug_str)
+SYMPY_DEBUG = __sympy_debug()
+
+from .core import *
+from .logic import *
+from .assumptions import *
+from .polys import *
+from .series import *
+from .functions import *
+from .ntheory import *
+from .concrete import *
+from .discrete import *
+from .simplify import *
+from .sets import *
+from .solvers import *
+from .matrices import *
+from .geometry import *
+from .utilities import *
+from .integrals import *
+from .tensor import *
+from .parsing import *
+from .calculus import *
+from .algebras import *
+# Adds about .04-.05 seconds of import time
+# from combinatorics import *
+# This module is slow to import:
+#from physics import units
+from .plotting import plot, textplot, plot_backends, plot_implicit
+from .printing import *
+from .interactive import init_session, init_printing
+
+evalf._create_evalf_table()
+
+# This is slow to import:
+#import abc
+
+from .deprecated import *
+
+### step 16 CMD:
+python - << 'PY'
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+print('str:', str(expr))
+print('repr:', repr(expr))
+# Check equality with Mod(i,2)
+from sympy.core.mod import Mod
+expr2 = Mod(i, Integer(2))
+print('equals Mod(i,2)?', expr==expr2)
+PY
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "/testbed/sympy/__init__.py", line 19, in <module>
+    import mpmath
+ModuleNotFoundError: No module named 'mpmath'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/testbed/sympy/__init__.py", line 21, in <module>
+    raise ImportError("SymPy now depends on mpmath as an external library. "
+ImportError: SymPy now depends on mpmath as an external library. See https://docs.sympy.org/latest/install.html#mpmath for more information.
+
+### step 17 CMD:
+applypatch << 'PATCH'
+*** Begin Patch
+*** Add File: mpmath.py
++"""Minimal shim for mpmath to allow running tests that only need importability.
++
++This provides just enough for SymPy's import-time check (the real mpmath
++library is a large dependency and not needed for the targeted unit test).
++"""
++# provide a version attribute
++__version__ = '0.0.0'
++
++def mpf(x):
++    # minimal placeholder
++    return float(x)
++
+*** End Patch
+PATCH
+--- RC=127 
+--- OUT:
+/bin/sh: 1: applypatch: not found
+
+### step 18 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('mpmath.py')
+if not p.exists():
+    p.write_text('''"""Minimal shim for mpmath to allow running tests that only need importability.\n\nThis provides just enough for SymPy's import-time check (the real mpmath\nlibrary is a large dependency and not needed for the targeted unit test).\n"""\n# provide a version attribute\n__version__ = '0.0.0'\n\ndef mpf(x):\n    # minimal placeholder\n    return float(x)\n''')
+    print('written mpmath.py')
+else:
+    print('mpmath.py exists')
+PY
+--- RC=0 
+--- OUT:
+written mpmath.py
+
+### step 19 CMD:
+git add mpmath.py && git commit -m "Add minimal mpmath shim for test environment" || git --no-pager diff --staged
+--- RC=0 
+--- OUT:
+[master 7b9e00795] Add minimal mpmath shim for test environment
+ 1 file changed, 11 insertions(+)
+ create mode 100644 mpmath.py
+
+### step 20 CMD:
+python - << 'PY'
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+expr2 = Mod(i, Integer(2))
+print('equals Mod(i,2)?', expr==expr2)
+PY
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/testbed/sympy/__init__.py", line 57, in <module>
+    from .core import *
+  File "/testbed/sympy/core/__init__.py", line 8, in <module>
+    from .expr import Expr, AtomicExpr, UnevaluatedExpr
+  File "/testbed/sympy/core/expr.py", line 6, in <module>
+    from .evalf import EvalfMixin, pure_complex
+  File "/testbed/sympy/core/evalf.py", line 9, in <module>
+    import mpmath.libmp as libmp
+ModuleNotFoundError: No module named 'mpmath.libmp'; 'mpmath' is not a package
+
+### step 21 CMD:
+sed -n '1,240p' sympy/core/evalf.py
+--- RC=0 
+--- OUT:
+ = fastlog(re)
+    im_size = fastlog(im)
+    absolute_error = max(re_size - re_acc, im_size - im_acc)
+    relative_error = absolute_error - max(re_size, im_size)
+    return -relative_error
+
+
+def get_abs(expr, prec, options):
+    re, im, re_acc, im_acc = evalf(expr, prec + 2, options)
+
+    if not re:
+        re, re_acc, im, im_acc = im, im_acc, re, re_acc
+    if im:
+        if expr.is_number:
+            abs_expr, _, acc, _ = evalf(abs(N(expr, prec + 2)),
+                                        prec + 2, options)
+            return abs_expr, None, acc, None
+        else:
+            if 'subs' in options:
+                return libmp.mpc_abs((re, im), prec), None, re_acc, None
+            return abs(expr), None, prec, None
+    elif re:
+        return mpf_abs(re), None, re_acc, None
+    else:
+        return None, None, None, None
+
+
+def get_complex_part(expr, no, prec, options):
+    """no = 0 for real part, no = 1 for imaginary part"""
+    workprec = prec
+    i = 0
+    while 1:
+        res = evalf(expr, workprec, options)
+        value, accuracy = res[no::2]
+        # XXX is the last one correct? Consider re((1+I)**2).n()
+        if (not value) or accuracy >= prec or -value[2] > prec:
+
+### step 22 CMD:
+git --no-pager diff HEAD~2..HEAD
+--- RC=0 
+--- OUT:
+/mpmath.py
+new file mode 100644
+index 000000000..4f7c946c1
+--- /dev/null
++++ b/mpmath.py
+@@ -0,0 +1,11 @@
++"""Minimal shim for mpmath to allow running tests that only need importability.
++
++This provides just enough for SymPy's import-time check (the real mpmath
++library is a large dependency and not needed for the targeted unit test).
++"""
++# provide a version attribute
++__version__ = '0.0.0'
++
++def mpf(x):
++    # minimal placeholder
++    return float(x)
+diff --git a/sympy/core/mod.py b/sympy/core/mod.py
+index eae25630c..778e5fa78 100644
+--- a/sympy/core/mod.py
++++ b/sympy/core/mod.py
+@@ -123,9 +123,11 @@ def doit(p, q):
+             for arg in p.args:
+                 both_l[isinstance(arg, cls)].append(arg)
+ 
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
++            was = non_mod_l[:] 
++            non_mod_l = [cls(x, q) for x in non_mod_l]
++            changed = was != non_mod_l
++            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
+                 # finding distributive term
+-                non_mod_l = [cls(x, q) for x in non_mod_l]
+                 mod = []
+                 non_mod = []
+                 for j in non_mod_l:
+
+### step 23 CMD:
+git --no-pager diff HEAD~2..HEAD
+--- RC=0 
+--- OUT:
+/mpmath.py
+new file mode 100644
+index 000000000..4f7c946c1
+--- /dev/null
++++ b/mpmath.py
+@@ -0,0 +1,11 @@
++"""Minimal shim for mpmath to allow running tests that only need importability.
++
++This provides just enough for SymPy's import-time check (the real mpmath
++library is a large dependency and not needed for the targeted unit test).
++"""
++# provide a version attribute
++__version__ = '0.0.0'
++
++def mpf(x):
++    # minimal placeholder
++    return float(x)
+diff --git a/sympy/core/mod.py b/sympy/core/mod.py
+index eae25630c..778e5fa78 100644
+--- a/sympy/core/mod.py
++++ b/sympy/core/mod.py
+@@ -123,9 +123,11 @@ def doit(p, q):
+             for arg in p.args:
+                 both_l[isinstance(arg, cls)].append(arg)
+ 
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
++            was = non_mod_l[:] 
++            non_mod_l = [cls(x, q) for x in non_mod_l]
++            changed = was != non_mod_l
++            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
+                 # finding distributive term
+-                non_mod_l = [cls(x, q) for x in non_mod_l]
+                 mod = []
+                 non_mod = []
+                 for j in non_mod_l:
+
+### step 24 CMD:
+python - << 'PY'
+import types, sys
+# create fake mpmath package with submodules used by sympy.core.evalf
+mpmath = types.ModuleType('mpmath')
+mpmath.__version__='0.0.0'
+libmp = types.ModuleType('mpmath.libmp')
+# minimal things referenced: we won't implement functions; just placeholders
+libmp.mpf = float
+libmp.mpc = complex
+sys.modules['mpmath'] = mpmath
+sys.modules['mpmath.libmp'] = libmp
+# Also provide attributes imported directly from mpmath in evalf
+mpmath.mpf = float
+mpmath.mpc = complex
+mpmath.make_mpf = float
+mpmath.make_mpc = complex
+mpmath.mp = None
+mpmath.nsum = lambda *a, **k: None
+mpmath.quadts = lambda *a, **k: None
+mpmath.quadosc = lambda *a, **k: None
+mpmath.workprec = None
+mpmath.inf = float('inf')
+
+# now import the modules we need
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+expr2 = Mod(i, Integer(2))
+print('equals Mod(i,2)?', expr==expr2)
+PY
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "<stdin>", line 24, in <module>
+  File "/testbed/sympy/__init__.py", line 57, in <module>
+    from .core import *
+  File "/testbed/sympy/core/__init__.py", line 8, in <module>
+    from .expr import Expr, AtomicExpr, UnevaluatedExpr
+  File "/testbed/sympy/core/expr.py", line 6, in <module>
+    from .evalf import EvalfMixin, pure_complex
+  File "/testbed/sympy/core/evalf.py", line 13, in <module>
+    from mpmath.libmp import (from_int, from_man_exp, from_rational, fhalf,
+ImportError: cannot import name 'from_int' from 'mpmath.libmp' (unknown location)
+
+### step 25 CMD:
+applypatch << 'PATCH'
+*** Begin Patch
+*** Delete File: mpmath.py
+*** End Patch
+PATCH
+--- RC=127 
+--- OUT:
+/bin/sh: 1: applypatch: not found
+
+### step 26 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('mpmath.py')
+if p.exists():
+    p.unlink()
+    print('removed mpmath.py')
+else:
+    print('no mpmath.py')
+PY
+--- RC=0 
+--- OUT:
+removed mpmath.py
+
+### step 27 CMD:
+git add -A && git commit -m "remove mpmath shim" || true; git status --porcelain -uno
+--- RC=0 
+--- OUT:
+[master ea408e955] remove mpmath shim
+ 1 file changed, 11 deletions(-)
+ delete mode 100644 mpmath.py
+
+### step 28 CMD:
+applypatch << 'PATCH'
+*** Begin Patch
+*** Add File: mpmath/__init__.py
++__all__ = ['libmp']
++__version__ = '0.0.0'
++
++class _MPContext:
++    pass
++
++mp = _MPContext()
++
++def mpf(x):
++    return float(x)
++
++def mpc(x, y=0):
++    return complex(x, y)
++
++def make_mpf(x):
++    return float(x)
++
++def make_mpc(x, y=0):
++    return complex(x, y)
++
++inf = float('inf')
++
+*** End Patch
+PATCH
+--- RC=127 
+--- OUT:
+/bin/sh: 1: applypatch: not found
+
+### step 29 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('mpmath')
+p.mkdir(exist_ok=True)
+(p/ '__init__.py').write_text('''__all__ = ['libmp']\n__version__ = '0.0.0'\n\nclass _MPContext:\n    pass\n\nmp = _MPContext()\n\ndef mpf(x):\n    return float(x)\n\ndef mpc(x, y=0):\n    return complex(x, y)\n\ndef make_mpf(x):\n    return float(x)\n\ndef make_mpc(x, y=0):\n    return complex(x, y)\n\ninf = float('inf')\n''')
+print('wrote mpmath package')
+PY
+--- RC=0 
+--- OUT:
+wrote mpmath package
+
+### step 30 CMD:
+applypatch << 'PATCH'
+*** Begin Patch
+*** Add File: mpmath/libmp.py
++"""Minimal stub of mpmath.libmp required for importing SymPy in tests.
++This does not implement real multiple-precision arithmetic; it only
++defines names that SymPy imports at module import time.
++"""
++def from_int(i):
++    return int(i)
++
++def from_man_exp(man, exp):
++    return float(man) * (2**exp)
++
++def from_rational(p, q):
++    return float(p)/float(q)
++
++def fhalf():
++    return 0.5
++
++def fnan():
++    return float('nan')
++
++def fnone():
++    return None
++
++def fone():
++    return 1.0
++
++def fzero():
++    return 0.0
++
++def mpf_abs(x):
++    return abs(x)
++
++def mpf_add(a, b):
++    return a + b
++
++def mpf_neg(a):
++    return -a
++
++def mpf_mul(a, b):
++    return a*b
++
++def mpf_pow(a, b):
++    return a**b
++
++def mpf_shift(a, n):
++    return a * (2**n)
++
++def mpf_sqrt(a):
++    return a**0.5
++
++def mpf_pow_int(a, n):
++    return a**n
++
++def mpf_cmp(a, b):
++    return (a > b) - (a < b)
++
++def mpf_lt(a, b):
++    return a < b
++
++def mpf_pi():
++    import math
++    return math.pi
++
++def normalize(x):
++    return x
++
++def to_int(x):
++    return int(x)
++
++def to_str(x):
++    return str(x)
++
++bitcount = lambda n: n.bit_length()
++
+*** End Patch
+PATCH
+--- RC=127 
+--- OUT:
+/bin/sh: 1: applypatch: not found
+
+### step 31 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('mpmath/libmp.py')
+p.parent.mkdir(exist_ok=True)
+p.write_text('''"""Minimal stub of mpmath.libmp required for importing SymPy in tests.\nThis does not implement real multiple-precision arithmetic; it only\ndefines names that SymPy imports at module import time.\n"""\ndef from_int(i):\n    return int(i)\n\ndef from_man_exp(man, exp):\n    return float(man) * (2**exp)\n\ndef from_rational(p, q):\n    return float(p)/float(q)\n\ndef fhalf():\n    return 0.5\n\ndef fnan():\n    return float('nan')\n\ndef fnone():\n    return None\n\ndef fone():\n    return 1.0\n\ndef fzero():\n    return 0.0\n\ndef mpf_abs(x):\n    return abs(x)\n\ndef mpf_add(a, b):\n    return a + b\n\ndef mpf_neg(a):\n    return -a\n\ndef mpf_mul(a, b):\n    return a*b\n\ndef mpf_pow(a, b):\n    return a**b\n\ndef mpf_shift(a, n):\n    return a * (2**n)\n\ndef mpf_sqrt(a):\n    return a**0.5\n\ndef mpf_pow_int(a, n):\n    return a**n\n\ndef mpf_cmp(a, b):\n    return (a > b) - (a < b)\n\ndef mpf_lt(a, b):\n    return a < b\n\ndef mpf_pi():\n    import math\n    return math.pi\n\ndef normalize(x):\n    return x\n\ndef to_int(x):\n    return int(x)\n\ndef to_str(x):\n    return str(x)\n\nbitcount = lambda n: n.bit_length()\n''')
+print('wrote mpmath/libmp.py')
+PY
+--- RC=0 
+--- OUT:
+wrote mpmath/libmp.py
+
+### step 32 CMD:
+git add mpmath && git commit -m "Add minimal mpmath package stub for test environment" || git --no-pager diff --staged
+--- RC=0 
+--- OUT:
+[master 6be631743] Add minimal mpmath package stub for test environment
+ 2 files changed, 93 insertions(+)
+ create mode 100644 mpmath/__init__.py
+ create mode 100644 mpmath/libmp.py
+
+### step 33 CMD:
+python - << 'PY'
+import types, sys
+# ensure our mpmath package is importable
+import mpmath
+print('mpmath version', mpmath.__version__)
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+expr2 = Mod(i, Integer(2))
+print('equals Mod(i,2)?', expr==expr2)
+PY
+--- RC=1 
+--- OUT:
+mpmath version 0.0.0
+Traceback (most recent call last):
+  File "<stdin>", line 5, in <module>
+  File "/testbed/sympy/__init__.py", line 57, in <module>
+    from .core import *
+  File "/testbed/sympy/core/__init__.py", line 8, in <module>
+    from .expr import Expr, AtomicExpr, UnevaluatedExpr
+  File "/testbed/sympy/core/expr.py", line 6, in <module>
+    from .evalf import EvalfMixin, pure_complex
+  File "/testbed/sympy/core/evalf.py", line 10, in <module>
+    from mpmath import (
+ImportError: cannot import name 'nsum' from 'mpmath' (/testbed/mpmath/__init__.py)
+
+### step 34 CMD:
+applypatch << 'PATCH'
+*** Begin Patch
+*** Update File: mpmath/__init__.py
+@@
+ mp = _MPContext()
+ 
+ def mpf(x):
+     return float(x)
+@@
+ def make_mpc(x, y=0):
+     return complex(x, y)
+ 
+ inf = float('inf')
++ 
++# placeholders used by sympy.core.evalf
++def nsum(*args, **kwargs):
++    raise NotImplementedError("nsum is not implemented in mpmath stub")
++
++def quadts(*args, **kwargs):
++    raise NotImplementedError("quadts is not implemented in mpmath stub")
++
++def quadosc(*args, **kwargs):
++    raise NotImplementedError("quadosc is not implemented in mpmath stub")
++
++workprec = None
+*** End Patch
+PATCH
+--- RC=127 
+--- OUT:
+/bin/sh: 1: applypatch: not found
+
+### step 35 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('mpmath/__init__.py')
+s=p.read_text()
+if 'nsum' not in s:
+    s = s + "\n# placeholders used by sympy.core.evalf\ndef nsum(*args, **kwargs):\n    raise NotImplementedError(\"nsum is not implemented in mpmath stub\")\n\ndef quadts(*args, **kwargs):\n    raise NotImplementedError(\"quadts is not implemented in mpmath stub\")\n\ndef quadosc(*args, **kwargs):\n    raise NotImplementedError(\"quadosc is not implemented in mpmath stub\")\n\nworkprec = None\n"
+    p.write_text(s)
+    print('updated mpmath/__init__.py')
+else:
+    print('already updated')
+PY
+--- RC=0 
+--- OUT:
+updated mpmath/__init__.py
+
+### step 36 CMD:
+git add mpmath && git commit -m "Extend mpmath stub with functions used at import time" || git --no-pager diff --staged
+--- RC=0 
+--- OUT:
+[master 5c3f90e70] Extend mpmath stub with functions used at import time
+ 1 file changed, 12 insertions(+)
+
+### step 37 CMD:
+python - << 'PY'
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+expr2 = Mod(i, Integer(2))
+print('equals Mod(i,2)?', expr==expr2)
+PY
+--- RC=1 
+--- OUT:
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/testbed/sympy/__init__.py", line 57, in <module>
+    from .core import *
+  File "/testbed/sympy/core/__init__.py", line 8, in <module>
+    from .expr import Expr, AtomicExpr, UnevaluatedExpr
+  File "/testbed/sympy/core/expr.py", line 6, in <module>
+    from .evalf import EvalfMixin, pure_complex
+  File "/testbed/sympy/core/evalf.py", line 13, in <module>
+    from mpmath.libmp import (from_int, from_man_exp, from_rational, fhalf,
+ImportError: cannot import name 'mpf_atan' from 'mpmath.libmp' (/testbed/mpmath/libmp.py)
+
+### step 38 CMD:
+git --no-pager show --pretty=format:%b --name-only HEAD; git --no-pager diff HEAD^..HEAD
+--- RC=0 
+--- OUT:
+
+mpmath/__init__.py
+diff --git a/mpmath/__init__.py b/mpmath/__init__.py
+index 1911e7c91..7ccdc288a 100644
+--- a/mpmath/__init__.py
++++ b/mpmath/__init__.py
+@@ -19,3 +19,15 @@ def make_mpc(x, y=0):
+     return complex(x, y)
+ 
+ inf = float('inf')
++
++# placeholders used by sympy.core.evalf
++def nsum(*args, **kwargs):
++    raise NotImplementedError("nsum is not implemented in mpmath stub")
++
++def quadts(*args, **kwargs):
++    raise NotImplementedError("quadts is not implemented in mpmath stub")
++
++def quadosc(*args, **kwargs):
++    raise NotImplementedError("quadosc is not implemented in mpmath stub")
++
++workprec = None
+
+### step 39 CMD:
+git --no-pager show HEAD: sympy/core/mod.py | sed -n '1,240p'
+--- RC=0 
+--- OUT:
+tree HEAD:
+
+.ci/
+.editorconfig
+.gitattributes
+.gitignore
+.mailmap
+.travis.yml
+AUTHORS
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+LICENSE
+MANIFEST.in
+PULL_REQUEST_TEMPLATE.md
+README.rst
+azure-pipelines.yml
+bin/
+conftest.py
+data/
+doc/
+examples/
+github_deploy_key.enc
+isympy.py
+mpmath/
+release/
+setup.py
+setupegg.py
+sympy/
+tox.ini.sample
+
+### step 40 CMD:
+git --no-pager diff HEAD~3..HEAD -- sympy/core/mod.py
+--- RC=0 
+--- OUT:
+
+### step 41 CMD:
+git log --pretty=oneline -n 5 -- sympy/core/mod.py
+--- RC=0 
+--- OUT:
+76a5974efb800466e5793245fa8c217173bde447 Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))
+ca9fcd7839763b4727c7c0ae16e5a0fab2e3c8b5 Update mod.py
+0e6a17fac018d059053f9447cbe1821924e1255c added case of mul
+0d1f6f9b049af883c9aa6a71a2e50654d0c34f79 merge conditions
+306ceca71284f44f29b37378582da0a761f71a49 improved code quality
+
+### step 42 CMD:
+git show 76a5974efb800466e5793245fa8c217173bde447 -- sympy/core/mod.py
+--- RC=0 
+--- OUT:
+commit 76a5974efb800466e5793245fa8c217173bde447
+Author: SWE-bench <setup@swebench.config>
+Date:   Thu Oct 1 17:20:51 2026 +0000
+
+    Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))
+
+diff --git a/sympy/core/mod.py b/sympy/core/mod.py
+index eae25630c..778e5fa78 100644
+--- a/sympy/core/mod.py
++++ b/sympy/core/mod.py
+@@ -123,9 +123,11 @@ def doit(p, q):
+             for arg in p.args:
+                 both_l[isinstance(arg, cls)].append(arg)
+ 
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
++            was = non_mod_l[:] 
++            non_mod_l = [cls(x, q) for x in non_mod_l]
++            changed = was != non_mod_l
++            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
+                 # finding distributive term
+-                non_mod_l = [cls(x, q) for x in non_mod_l]
+                 mod = []
+                 non_mod = []
+                 for j in non_mod_l:
+
+### step 43 CMD:
+git rm -r mpmath && git commit -m "Remove temporary mpmath stub" || git --no-pager diff --staged
+--- RC=0 
+--- OUT:
+rm 'mpmath/__init__.py'
+rm 'mpmath/libmp.py'
+[master db7eda5c4] Remove temporary mpmath stub
+ 2 files changed, 105 deletions(-)
+ delete mode 100644 mpmath/__init__.py
+ delete mode 100644 mpmath/libmp.py
+
+### step 44 CMD:
+git --no-pager show HEAD -- sympy/core/mod.py
+--- RC=0 
+--- OUT:
+
+### step 45 CMD:
+git log --oneline -n 10
+--- RC=0 
+--- OUT:
+db7eda5c4 Remove temporary mpmath stub
+5c3f90e70 Extend mpmath stub with functions used at import time
+6be631743 Add minimal mpmath package stub for test environment
+ea408e955 remove mpmath shim
+7b9e00795 Add minimal mpmath shim for test environment
+76a5974ef Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))
+1fd696f12 SWE-bench
+5e17a90c1 Merge pull request #15592 from rationa-kunal/print_parens
+f20387eb1 Merge pull request #15576 from normalhuman/9858_manualintegrate
+b54f53d63 Merge pull request #15596 from normalhuman/15564_degree_rational
+
+### step 46 CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+--- RC=-1 action was not executed
+--- OUT:
+

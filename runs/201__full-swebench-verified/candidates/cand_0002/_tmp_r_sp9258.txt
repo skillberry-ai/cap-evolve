@@ -1,0 +1,526 @@
+### USER/TASK:
+Please solve this issue: [RFE] Support union types specification using | (vertical bar/pipe)
+Please add a support for specifying multiple types acceptable for a parameter/attribute/variable.
+Use case:
+Imagine that there is a function that accepts both `bytes` and `str`. The docstring would look like:
+
+``` restructuredtext
+def foo(text):
+    """Bar
+
+    :param text: a text
+    :type text: bytes | str
+
+    """
+```
+
+Such a syntax is already supported by e.g. [PyCharm](https://www.jetbrains.com/pycharm/help/type-hinting-in-pycharm.html).
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected behavior, the actual buggy behavior, and any test cases or reproduction steps mentioned. If the issue describes multiple cases or edge cases, list every one — you must handle ALL of them, not just the primary case.
+
+### 2. Explore the relevant code
+Search the codebase to find the files and functions involved in the bug. Read enough surrounding context — related functions, callers, type definitions, and test files — to fully understand the affected code paths before making any changes.
+
+### 3. Identify the root cause
+Before editing an
+### step 3 CMD:
+ls -la
+--- RC=0 
+--- OUT:
+ 279683 Sep 10  2025 CHANGES
+-rw-r--r--.  1 root root  42125 Sep 10  2025 CHANGES.old
+-rw-r--r--.  1 root root   3530 Sep 10  2025 CODE_OF_CONDUCT
+-rw-r--r--.  1 root root    591 Sep 10  2025 CONTRIBUTING.rst
+-rw-r--r--.  1 root root  24754 Sep 10  2025 EXAMPLES
+-rw-r--r--.  1 root root   8998 Sep 10  2025 LICENSE
+-rw-r--r--.  1 root root    842 Sep 10  2025 MANIFEST.in
+-rw-r--r--.  1 root root   1760 Sep 10  2025 Makefile
+-rw-r--r--.  1 root root   4396 Sep 10  2025 README.rst
+drwxr-xr-x.  2 root root    154 Sep 10  2025 Sphinx.egg-info
+-rw-r--r--.  1 root root    874 Sep 10  2025 babel.cfg
+-rw-r--r--.  1 root root    704 Sep 10  2025 bindep.txt
+drwxrwxrwx. 10 root root   4096 Sep 10  2025 doc
+-rw-r--r--.  1 root root   1894 Sep 10  2025 karma.conf.js
+-rw-r--r--.  1 root root  45178 Sep 10  2025 package-lock.json
+-rw-r--r--.  1 root root    485 Sep 10  2025 package.json
+-rw-r--r--.  1 root root   1717 Sep 10  2025 setup.cfg
+-rw-r--r--.  1 root root   8491 Sep 10  2025 setup.py
+drwxrwxrwx. 20 root root   4096 Sep 10  2025 sphinx
+drwxrwxrwx.  5 root root   4096 Sep 10  2025 tests
+-rw-r--r--.  1 root root   2129 Sep 10  2025 tox.ini
+drwxrwxrwx.  2 root root    187 Sep 10  2025 utils
+
+### step 4 CMD:
+grep -R "\:type" -n sphinx | sed -n '1,200p'
+--- RC=0 
+--- OUT:
+(n=a[t],o=i&&!Array.isArray(n)?[]:i||S.isPlainObject(n)?n:{},i=!1,a[t]=S.extend(l,o,r)):void 0!==r&&(a[t]=r));return a},S.extend({expando:"jQuery"+(f+Math.random()).replace(/\D/g,""),isReady:!0,error:function(e){throw new Error(e)},noop:function(){},isPlainObject:function(e){var t,n;return!(!e||"[object Object]"!==o.call(e))&&(!(t=r(e))||"function"==typeof(n=v.call(t,"constructor")&&t.constructor)&&a.call(n)===l)},isEmptyObject:function(e){var t;for(t in e)return!1;return!0},globalEval:function(e,t,n){b(e,{nonce:t&&t.nonce},n)},each:function(e,t){var n,r=0;if(p(e)){for(n=e.length;r<n;r++)if(!1===t.call(e[r],r,e[r]))break}else for(r in e)if(!1===t.call(e[r],r,e[r]))break;return e},makeArray:function(e,t){var n=t||[];return null!=e&&(p(Object(e))?S.merge(n,"string"==typeof e?[e]:e):u.call(n,e)),n},inArray:function(e,t,n){return null==t?-1:i.call(t,e,n)},merge:function(e,t){for(var n=+t.length,r=0,i=e.length;r<n;r++)e[i++]=t[r];return e.length=i,e},grep:function(e,t,n){for(var r=[],i=0,o=e.length,a=!n;i<o;i++)!t(e[i],i)!==a&&r.push(e[i]);return r},map:function(e,t,n){var r,i,o=0,a=[];if(p(e))for(r=e.length;o<r;o++)null!=(i=t(e[o],o,n))&&a.push(i);else for(o in e)null!=(i=t(e[o],o,n))&
+### step 5 CMD:
+grep -R "\|" -n sphinx | sed -n '1,200p'
+--- RC=0 
+--- OUT:
+6:
+sphinx/__main__.py:7:    :copyright: Copyright 2007-2021 by the Sphinx team, see AUTHORS.
+sphinx/__main__.py:8:    :license: BSD, see LICENSE for details.
+sphinx/__main__.py:9:"""
+sphinx/__main__.py:10:
+sphinx/__main__.py:11:import sys
+sphinx/__main__.py:12:
+sphinx/__main__.py:13:from sphinx.cmd.build import main
+sphinx/__main__.py:14:
+sphinx/__main__.py:15:sys.exit(main(sys.argv[1:]))
+sphinx/addnodes.py:1:"""
+sphinx/addnodes.py:2:    sphinx.addnodes
+sphinx/addnodes.py:3:    ~~~~~~~~~~~~~~~
+sphinx/addnodes.py:4:
+sphinx/addnodes.py:5:    Additional docutils nodes.
+sphinx/addnodes.py:6:
+sphinx/addnodes.py:7:    :copyright: Copyright 2007-2021 by the Sphinx team, see AUTHORS.
+sphinx/addnodes.py:8:    :license: BSD, see LICENSE for details.
+sphinx/addnodes.py:9:"""
+sphinx/addnodes.py:10:
+sphinx/addnodes.py:11:from typing import TYPE_CHECKING, Any, Dict, List, Sequence
+sphinx/addnodes.py:12:
+sphinx/addnodes.py:13:from docutils import nodes
+sphinx/addnodes.py:14:from docutils.nodes import Element
+sphinx/addnodes.py:15:
+sphinx/addnodes.py:16:if TYPE_CHECKING:
+sphinx/addnodes.py:17:    from sphinx.application import Sphinx
+sphinx/addnodes.py:18:
+sphinx/addnodes.py:19:
+sphinx/addnodes.py
+### step 6 CMD:
+nl -ba sphinx/util/docfields.py | sed -n '1,240p'
+--- RC=0 
+--- OUT:
+ fieldname = nodes.field_name('', self.label)
+    87	        if fieldarg:
+    88	            fieldname += nodes.Text(' ')
+    89	            fieldname.extend(self.make_xrefs(self.rolename, domain,
+    90	                                             fieldarg, nodes.Text, env=env))
+    91	
+    92	        if len(content) == 1 and (
+    93	                isinstance(content[0], nodes.Text) or
+    94	                (isinstance(content[0], nodes.inline) and len(content[0]) == 1 and
+    95	                 isinstance(content[0][0], nodes.Text))):
+    96	            content = self.make_xrefs(self.bodyrolename, domain,
+    97	                                      content[0].astext(), contnode=content[0], env=env)
+    98	        fieldbody = nodes.field_body('', nodes.paragraph('', '', *content))
+    99	        return nodes.field('', fieldname, fieldbody)
+   100	
+   101	
+   102	class GroupedField(Field):
+   103	    """
+   104	    A doc field that is grouped; i.e., all fields of that type will be
+   105	    transformed into one field with its body being a bulleted list.  It always
+   106	    has an argument.  The argument can be linked using the given *rolename*.
+   107	    GroupedField shoul
+### step 7 CMD:
+nl -ba sphinx/util/docfields.py | sed -n '240,520p'
+--- RC=0 
+--- OUT:
+          groupindices[typename] = len(entries)
+   323	                    group = (typedesc, [])
+   324	                    entries.append(group)
+   325	                new_entry = typedesc.make_entry(fieldarg, [translatable_content])
+   326	                group[1].append(new_entry)
+   327	            else:
+   328	                new_entry = typedesc.make_entry(fieldarg, [translatable_content])
+   329	                entries.append((typedesc, new_entry))
+   330	
+   331	        # step 2: all entries are collected, construct the new field list
+   332	        new_list = nodes.field_list()
+   333	        for entry in entries:
+   334	            if isinstance(entry, nodes.field):
+   335	                # pass-through old field
+   336	                new_list += entry
+   337	            else:
+   338	                fieldtype, items = entry
+   339	                fieldtypes = types.get(fieldtype.name, {})
+   340	                env = self.directive.state.document.settings.env
+   341	                new_list += fieldtype.make_field(fieldtypes, self.directive.domain,
+   342	                                                 items, env=env)
+   343	
+   344	        node.replace_self(new_list)
+
+### step 8 CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix
+--- RC=0 
+--- OUT:
+{
+  "changed": [],
+  "runner": null,
+  "results": []
+}
+
+### step 9 CMD:
+grep -R "\|" -n tests | sed -n '1,200p'
+--- RC=0 
+--- OUT:
+WqP2ficUg3tBUx6/UOjHQAwRC4rj87BoSV2mEy+0OX
+tests/certs/cert.pem:46:fyy+ER/BeHYly5v+hpjVojVKeqysk5CKttZM+cOibT2SzLLYf0InNqZRQRJco+nL
+tests/certs/cert.pem:47:QNR0hVo/Lz6Mf1gF2ywf9bXSF3+XECU4K6sVm4QpFbJNm+fHqJBuh1LXHRrcTAsP
+tests/certs/cert.pem:48:LM6PBnd3P5QTcr/G0s/tYMPmero9YHZUO8FMvMVoI2K8k6/duG/EbBaNzriRI1OM
+tests/certs/cert.pem:49:PpZGCWxbJfyApnzc5lGAG4zJnV/wpOyNhKJuW9N1fr2oEwPpJlS3VzrgeKcY
+tests/certs/cert.pem:50:-----END CERTIFICATE-----
+tests/conftest.py:1:"""
+tests/conftest.py:2:    pytest config for sphinx/tests
+tests/conftest.py:3:    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/conftest.py:4:
+tests/conftest.py:5:    :copyright: Copyright 2007-2021 by the Sphinx team, see AUTHORS.
+tests/conftest.py:6:    :license: BSD, see LICENSE for details.
+tests/conftest.py:7:"""
+tests/conftest.py:8:
+tests/conftest.py:9:import os
+tests/conftest.py:10:import shutil
+tests/conftest.py:11:
+tests/conftest.py:12:import docutils
+tests/conftest.py:13:import pytest
+tests/conftest.py:14:
+tests/conftest.py:15:import sphinx
+tests/conftest.py:16:from sphinx.testing import comparer
+tests/conftest.py:17:from sphinx.testing.path import path
+tests/conftest.py:18:
+tests/conftest.py:19:pytest_plugins = 'sphinx.tes
+### step 10 CMD:
+pytest -q tests/test_util_docfields.py -q
+--- RC=127 
+--- OUT:
+/bin/sh: 1: pytest: not found
+
+### step 11 CMD:
+grep -R "\|" -n tests | sed -n '1,200p'
+--- RC=0 
+--- OUT:
+BVUZm1iw7N7uZu/SF3hailxS+1
+tests/certs/cert.pem:45:3KChItWu3ZOIjlmDIkaJ9kWqP2ficUg3tBUx6/UOjHQAwRC4rj87BoSV2mEy+0OX
+tests/certs/cert.pem:46:fyy+ER/BeHYly5v+hpjVojVKeqysk5CKttZM+cOibT2SzLLYf0InNqZRQRJco+nL
+tests/certs/cert.pem:47:QNR0hVo/Lz6Mf1gF2ywf9bXSF3+XECU4K6sVm4QpFbJNm+fHqJBuh1LXHRrcTAsP
+tests/certs/cert.pem:48:LM6PBnd3P5QTcr/G0s/tYMPmero9YHZUO8FMvMVoI2K8k6/duG/EbBaNzriRI1OM
+tests/certs/cert.pem:49:PpZGCWxbJfyApnzc5lGAG4zJnV/wpOyNhKJuW9N1fr2oEwPpJlS3VzrgeKcY
+tests/certs/cert.pem:50:-----END CERTIFICATE-----
+tests/conftest.py:1:"""
+tests/conftest.py:2:    pytest config for sphinx/tests
+tests/conftest.py:3:    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests/conftest.py:4:
+tests/conftest.py:5:    :copyright: Copyright 2007-2021 by the Sphinx team, see AUTHORS.
+tests/conftest.py:6:    :license: BSD, see LICENSE for details.
+tests/conftest.py:7:"""
+tests/conftest.py:8:
+tests/conftest.py:9:import os
+tests/conftest.py:10:import shutil
+tests/conftest.py:11:
+tests/conftest.py:12:import docutils
+tests/conftest.py:13:import pytest
+tests/conftest.py:14:
+tests/conftest.py:15:import sphinx
+tests/conftest.py:16:from sphinx.testing import comparer
+tests/conftest.py:17:from sphinx.testing.path import pat
+### step 12 CMD:
+grep -R "bytes | str" -n || true
+--- RC=0 
+--- OUT:
+
+### step 13 CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: sphinx/util/docfields.py
+@@
+-                if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
+-                    typename = fieldtype[0].astext()
+-                    par.extend(self.make_xrefs(self.typerolename, domain, typename,
+-                                               addnodes.literal_emphasis, env=env))
++                if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
++                    typename = fieldtype[0].astext()
++                    # support union types specified with a vertical bar, e.g.
++                    # ``bytes | str``. Split and create separate xrefs for each
++                    # part, joining them with ' | '.  This mirrors support in
++                    # some IDEs and makes multiple acceptable types linkable.
++                    if '|' in typename:
++                        parts = [p.strip() for p in typename.split('|') if p.strip()]
++                        for i, part in enumerate(parts):
++                            if i:
++                                par += nodes.Text(' | ')
++                            par.extend(self.make_xrefs(self.typerolename, domain,
++                                                       part, addnodes.literal_emphasis,
++                                                       env=env))
++                    else:
++                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
++                                                   addnodes.literal_emphasis, env=env))
+*** End Patch
+PATCH
+--- RC=128 
+--- OUT:
+error: unrecognized input
+
+### step 14 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('sphinx/util/docfields.py')
+s=p.read_text()
+old='''                if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
+                    typename = fieldtype[0].astext()
+                    par.extend(self.make_xrefs(self.typerolename, domain, typename,
+                                               addnodes.literal_emphasis, env=env))
+'''
+new='''                if len(fieldtype) == 1 and isinstance(fieldtype[0], nodes.Text):
+                    typename = fieldtype[0].astext()
+                    # support union types specified with a vertical bar, e.g.
+                    # ``bytes | str``. Split and create separate xrefs for each
+                    # part, joining them with ' | '.  This mirrors support in
+                    # some IDEs and makes multiple acceptable types linkable.
+                    if '|' in typename:
+                        parts = [p.strip() for p in typename.split('|') if p.strip()]
+                        for i, part in enumerate(parts):
+                            if i:
+                                par += nodes.Text(' | ')
+                            par.extend(self.make_xrefs(self.typerolename, domain,
+                                                       part, addnodes.literal_emphasis,
+                                                       env=env))
+                    else:
+                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
+                                                   addnodes.literal_emphasis, env=env))
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+--- RC=0 
+--- OUT:
+patched
+
+### step 15 CMD:
+git add -A && git commit -m "Support union types with '|' in doc field type parsing" || true
+--- RC=0 
+--- OUT:
+[master a4f76f110] Support union types with '|' in doc field type parsing
+ 1 file changed, 15 insertions(+), 2 deletions(-)
+
+### step 16 CMD:
+python -m pyflakes sphinx/util/docfields.py || true
+--- RC=0 
+--- OUT:
+/opt/miniconda3/bin/python: No module named pyflakes
+
+### step 17 CMD:
+python - << 'PY'
+import importlib,sys
+try:
+    import sphinx.util.docfields as m
+    print('import ok')
+except Exception as e:
+    print('import failed:',e)
+    sys.exit(1)
+PY
+--- RC=1 
+--- OUT:
+import failed: No module named 'docutils'
+
+### step 18 CMD:
+git --no-pager diff HEAD~1..HEAD
+--- RC=0 
+--- OUT:
+                      addnodes.literal_emphasis, env=env))
++                    # support union types specified with a vertical bar, e.g.
++                    # ``bytes | str``. Split and create separate xrefs for each
++                    # part, joining them with ' | '.  This mirrors support in
++                    # some IDEs and makes multiple acceptable types linkable.
++                    if '|' in typename:
++                        parts = [p.strip() for p in typename.split('|') if p.strip()]
++                        for i, part in enumerate(parts):
++                            if i:
++                                par += nodes.Text(' | ')
++                            par.extend(self.make_xrefs(self.typerolename, domain,
++                                                       part, addnodes.literal_emphasis,
++                                                       env=env))
++                    else:
++                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
++                                                   addnodes.literal_emphasis, env=env))
+                 else:
+                     par += fieldtype
+                 par += nodes.Text(')')
+
+--- RC=0 
+--- OUT:
+Tool call error:
+
+<error>
+No tool calls found in the response. Every response MUST include at least one tool call.
+</error>
+
+Here is general guidance on how to submit correct toolcalls:
+
+Every response needs to use the 'bash' tool at least once to execute commands.
+
+Call the bash tool with your command as the argument:
+- Tool: bash
+- Arguments: {"command": "your_command_here"}
+
+If you want to end the task, please issue the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+without any other command.
+### step 19 CMD:
+git --no-pager diff HEAD~1..HEAD
+--- RC=0 
+--- OUT:
+                      addnodes.literal_emphasis, env=env))
++                    # support union types specified with a vertical bar, e.g.
++                    # ``bytes | str``. Split and create separate xrefs for each
++                    # part, joining them with ' | '.  This mirrors support in
++                    # some IDEs and makes multiple acceptable types linkable.
++                    if '|' in typename:
++                        parts = [p.strip() for p in typename.split('|') if p.strip()]
++                        for i, part in enumerate(parts):
++                            if i:
++                                par += nodes.Text(' | ')
++                            par.extend(self.make_xrefs(self.typerolename, domain,
++                                                       part, addnodes.literal_emphasis,
++                                                       env=env))
++                    else:
++                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
++                                                   addnodes.literal_emphasis, env=env))
+                 else:
+                     par += fieldtype
+                 par += nodes.Text(')')
+
+--- RC=0 
+--- OUT:
+Tool call error:
+
+<error>
+No tool calls found in the response. Every response MUST include at least one tool call.
+</error>
+
+Here is general guidance on how to submit correct toolcalls:
+
+Every response needs to use the 'bash' tool at least once to execute commands.
+
+Call the bash tool with your command as the argument:
+- Tool: bash
+- Arguments: {"command": "your_command_here"}
+
+If you want to end the task, please issue the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+without any other command.
+### step 20 CMD:
+git --no-pager diff HEAD~1..HEAD
+--- RC=0 
+--- OUT:
+                      addnodes.literal_emphasis, env=env))
++                    # support union types specified with a vertical bar, e.g.
++                    # ``bytes | str``. Split and create separate xrefs for each
++                    # part, joining them with ' | '.  This mirrors support in
++                    # some IDEs and makes multiple acceptable types linkable.
++                    if '|' in typename:
++                        parts = [p.strip() for p in typename.split('|') if p.strip()]
++                        for i, part in enumerate(parts):
++                            if i:
++                                par += nodes.Text(' | ')
++                            par.extend(self.make_xrefs(self.typerolename, domain,
++                                                       part, addnodes.literal_emphasis,
++                                                       env=env))
++                    else:
++                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
++                                                   addnodes.literal_emphasis, env=env))
+                 else:
+                     par += fieldtype
+                 par += nodes.Text(')')
+
+--- RC=0 
+--- OUT:
+Tool call error:
+
+<error>
+No tool calls found in the response. Every response MUST include at least one tool call.
+</error>
+
+Here is general guidance on how to submit correct toolcalls:
+
+Every response needs to use the 'bash' tool at least once to execute commands.
+
+Call the bash tool with your command as the argument:
+- Tool: bash
+- Arguments: {"command": "your_command_here"}
+
+If you want to end the task, please issue the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+without any other command.
+### step 21 CMD:
+git --no-pager diff HEAD~1..HEAD
+--- RC=0 
+--- OUT:
+                      addnodes.literal_emphasis, env=env))
++                    # support union types specified with a vertical bar, e.g.
++                    # ``bytes | str``. Split and create separate xrefs for each
++                    # part, joining them with ' | '.  This mirrors support in
++                    # some IDEs and makes multiple acceptable types linkable.
++                    if '|' in typename:
++                        parts = [p.strip() for p in typename.split('|') if p.strip()]
++                        for i, part in enumerate(parts):
++                            if i:
++                                par += nodes.Text(' | ')
++                            par.extend(self.make_xrefs(self.typerolename, domain,
++                                                       part, addnodes.literal_emphasis,
++                                                       env=env))
++                    else:
++                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
++                                                   addnodes.literal_emphasis, env=env))
+                 else:
+                     par += fieldtype
+                 par += nodes.Text(')')
+
+--- RC=0 
+--- OUT:
+Tool call error:
+
+<error>
+No tool calls found in the response. Every response MUST include at least one tool call.
+</error>
+
+Here is general guidance on how to submit correct toolcalls:
+
+Every response needs to use the 'bash' tool at least once to execute commands.
+
+Call the bash tool with your command as the argument:
+- Tool: bash
+- Arguments: {"command": "your_command_here"}
+
+If you want to end the task, please issue the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`
+without any other command.
+### step 22 CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix && git --no-pager diff HEAD~1..HEAD
+--- RC=0 
+--- OUT:
+                      addnodes.literal_emphasis, env=env))
++                    # support union types specified with a vertical bar, e.g.
++                    # ``bytes | str``. Split and create separate xrefs for each
++                    # part, joining them with ' | '.  This mirrors support in
++                    # some IDEs and makes multiple acceptable types linkable.
++                    if '|' in typename:
++                        parts = [p.strip() for p in typename.split('|') if p.strip()]
++                        for i, part in enumerate(parts):
++                            if i:
++                                par += nodes.Text(' | ')
++                            par.extend(self.make_xrefs(self.typerolename, domain,
++                                                       part, addnodes.literal_emphasis,
++                                                       env=env))
++                    else:
++                        par.extend(self.make_xrefs(self.typerolename, domain, typename,
++                                                   addnodes.literal_emphasis, env=env))
+                 else:
+                     par += fieldtype
+                 par += nodes.Text(')')
+
+### step 23 CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+--- RC=-1 action was not executed
+--- OUT:
+

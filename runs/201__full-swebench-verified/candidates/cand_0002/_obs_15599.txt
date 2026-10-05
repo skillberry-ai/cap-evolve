@@ -1,0 +1,240 @@
+
+===== [3] rc= CMD: ls -la
+
+
+===== [4] rc= CMD: nl -ba sympy/core/mod.py | sed -n '1,240p'
+
+
+===== [5] rc= CMD: git status --porcelain; git rev-parse --abbrev-ref HEAD || true; sed -n '1,240p' sympy/core/mod.py | sed -n '120,150p'
+
+
+===== [6] rc= CMD: git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: sympy/core/mod.py
+@@
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
+-                # finding distributive term
+-     
+
+
+===== [7] rc= CMD: python - << 'PY'
+from pathlib import Path
+p=Path('sympy/core/mod.py')
+s=p.read_text()
+old='''            if mod_l and all(inner.args[1] == q for inner in mod_l):
+                # finding distributive
+
+
+===== [8] rc= CMD: git add -A && git commit -m "Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))" || git --no-pager diff --staged
+
+
+===== [9] rc= CMD: python /harbor/skills/candidate/tools/tools.py verify-fix
+
+
+===== [10] rc= CMD: pytest -q sympy/core/tests/test_arit.py::test_Mod -q
+
+
+===== [11] rc= CMD: python -m pytest -q sympy/core/tests/test_arit.py::test_Mod -q
+
+
+===== [12] rc= CMD: ls -la bin; sed -n '1,240p' bin/test
+
+
+===== [13] rc= CMD: bin/test sympy/core/tests/test_arit.py::test_Mod -q
+
+
+===== [14] rc= CMD: bin/test sympy/core/tests/test_arit.py::test_Mod
+
+
+===== [15] rc= CMD: sed -n '1,240p' sympy/__init__.py
+
+
+===== [16] rc= CMD: python - << 'PY'
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+print('st
+
+
+===== [17] rc= CMD: applypatch << 'PATCH'
+*** Begin Patch
+*** Add File: mpmath.py
++"""Minimal shim for mpmath to allow running tests that only need importability.
++
++This provides just enough for SymPy's import-time chec
+
+
+===== [18] rc= CMD: python - << 'PY'
+from pathlib import Path
+p=Path('mpmath.py')
+if not p.exists():
+    p.write_text('''"""Minimal shim for mpmath to allow running tests that only need importability.\n\nThis provides ju
+
+
+===== [19] rc= CMD: git add mpmath.py && git commit -m "Add minimal mpmath shim for test environment" || git --no-pager diff --staged
+
+
+===== [20] rc= CMD: python - << 'PY'
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+expr2 = M
+
+
+===== [21] rc= CMD: sed -n '1,240p' sympy/core/evalf.py
+
+
+===== [22] rc= CMD: git --no-pager diff HEAD~2..HEAD
+
+
+===== [23] rc= CMD: git --no-pager diff HEAD~2..HEAD
+
+
+===== [24] rc= CMD: python - << 'PY'
+import types, sys
+# create fake mpmath package with submodules used by sympy.core.evalf
+mpmath = types.ModuleType('mpmath')
+mpmath.__version__='0.0.0'
+libmp = types.ModuleType('mpmath
+
+
+===== [25] rc= CMD: applypatch << 'PATCH'
+*** Begin Patch
+*** Delete File: mpmath.py
+*** End Patch
+PATCH
+
+
+===== [26] rc= CMD: python - << 'PY'
+from pathlib import Path
+p=Path('mpmath.py')
+if p.exists():
+    p.unlink()
+    print('removed mpmath.py')
+else:
+    print('no mpmath.py')
+PY
+
+
+===== [27] rc= CMD: git add -A && git commit -m "remove mpmath shim" || true; git status --porcelain -uno
+
+
+===== [28] rc= CMD: applypatch << 'PATCH'
+*** Begin Patch
+*** Add File: mpmath/__init__.py
++__all__ = ['libmp']
++__version__ = '0.0.0'
++
++class _MPContext:
++    pass
++
++mp = _MPContext()
++
++def mpf(x):
++    return float(
+
+
+===== [29] rc= CMD: python - << 'PY'
+from pathlib import Path
+p=Path('mpmath')
+p.mkdir(exist_ok=True)
+(p/ '__init__.py').write_text('''__all__ = ['libmp']\n__version__ = '0.0.0'\n\nclass _MPContext:\n    pass\n\nmp = _MP
+
+
+===== [30] rc= CMD: applypatch << 'PATCH'
+*** Begin Patch
+*** Add File: mpmath/libmp.py
++"""Minimal stub of mpmath.libmp required for importing SymPy in tests.
++This does not implement real multiple-precision arithmetic;
+
+
+===== [31] rc= CMD: python - << 'PY'
+from pathlib import Path
+p=Path('mpmath/libmp.py')
+p.parent.mkdir(exist_ok=True)
+p.write_text('''"""Minimal stub of mpmath.libmp required for importing SymPy in tests.\nThis does not 
+
+
+===== [32] rc= CMD: git add mpmath && git commit -m "Add minimal mpmath package stub for test environment" || git --no-pager diff --staged
+
+
+===== [33] rc= CMD: python - << 'PY'
+import types, sys
+# ensure our mpmath package is importable
+import mpmath
+print('mpmath version', mpmath.__version__)
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symb
+
+
+===== [34] rc= CMD: applypatch << 'PATCH'
+*** Begin Patch
+*** Update File: mpmath/__init__.py
+@@
+ mp = _MPContext()
+ 
+ def mpf(x):
+     return float(x)
+@@
+ def make_mpc(x, y=0):
+     return complex(x, y)
+ 
+ inf = float('
+
+
+===== [35] rc= CMD: python - << 'PY'
+from pathlib import Path
+p=Path('mpmath/__init__.py')
+s=p.read_text()
+if 'nsum' not in s:
+    s = s + "\n# placeholders used by sympy.core.evalf\ndef nsum(*args, **kwargs):\n    raise
+
+
+===== [36] rc= CMD: git add mpmath && git commit -m "Extend mpmath stub with functions used at import time" || git --no-pager diff --staged
+
+
+===== [37] rc= CMD: python - << 'PY'
+from sympy.core.mod import Mod
+from sympy.core.symbol import Symbol
+from sympy import Integer
+
+i = Symbol('i', integer=True)
+expr = Mod(3*i, Integer(2))
+print('expr:', expr)
+expr2 = M
+
+
+===== [38] rc= CMD: git --no-pager show --pretty=format:%b --name-only HEAD; git --no-pager diff HEAD^..HEAD
+
+
+===== [39] rc= CMD: git --no-pager show HEAD: sympy/core/mod.py | sed -n '1,240p'
+
+
+===== [40] rc= CMD: git --no-pager diff HEAD~3..HEAD -- sympy/core/mod.py
+
+
+===== [41] rc= CMD: git log --pretty=oneline -n 5 -- sympy/core/mod.py
+
+
+===== [42] rc= CMD: git show 76a5974efb800466e5793245fa8c217173bde447 -- sympy/core/mod.py
+
+
+===== [43] rc= CMD: git rm -r mpmath && git commit -m "Remove temporary mpmath stub" || git --no-pager diff --staged
+
+
+===== [44] rc= CMD: git --no-pager show HEAD -- sympy/core/mod.py
+
+
+===== [45] rc= CMD: git log --oneline -n 10
+
+
+===== [46] rc= CMD: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+

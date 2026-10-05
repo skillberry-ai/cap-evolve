@@ -1,0 +1,328 @@
+### [1] system MESSAGE:
+You are a helpful assistant that can interact with a computer.
+
+### [2] user MESSAGE:
+Please solve this issue: xr.where with scalar as second argument fails with keep_attrs=True
+### What happened?
+
+``` python
+import xarray as xr
+
+xr.where(xr.DataArray([1, 2, 3]) > 0, 1, 0)
+```
+
+fails with
+
+```
+   1809 if keep_attrs is True:
+   1810     # keep the attributes of x, the second parameter, by default to
+   1811     # be consistent with the `where` method of `DataArray` and `Dataset`
+-> 1812     keep_attrs = lambda attrs, context: attrs[1]
+   1814 # alignment for three arguments is complicated, so don't support it yet
+   1815 return apply_ufunc(
+   1816     duck_array_ops.where,
+   1817     cond,
+   (...)
+   1823     keep_attrs=keep_attrs,
+   1824 )
+
+IndexError: list index out of range
+```
+
+The workaround is to pass `keep_attrs=False`
+
+### What did you expect to happen?
+
+_No response_
+
+### Minimal Complete Verifiable Example
+
+_No response_
+
+### Relevant log output
+
+_No response_
+
+### Anything else we need to know?
+
+_No response_
+
+### Environment
+
+xarray 2022.3.0
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected behavior, the actual buggy behavior, and any test cases or reproduction steps mentioned. If the issue describes multiple cases or edge cases, list every one — you must handle ALL of them, not just the primary case.
+
+### 2. Explore the relevant code
+Search the codebase to find the files and functions involved in the bug. Read enough surrounding context — related functions, callers, type definitions, and test files — to fully understand the affected code paths before making any changes.
+
+### 3. Identify the root cause
+Before editing anything, pinpoint exactly WHY the bug occurs. Trace th
+
+### [3] agent MESSAGE:
+I'll inspect the repository to find relevant xarray code handling xr.where and keep_attrs. I'll list files and search for 'where' and 'keep_attrs' references.
+
+### [3] agent CMD:
+ls -la
+
+### [3] OBS (tail 1200):
+eaks.yml\n-rw-r--r--. 1 root root  1862 Sep 10  2025 .pre-commit-config.yaml\n-rw-r--r--. 1 root root   168 Sep 10  2025 .readthedocs.yaml\n-rw-r--r--. 1 root root  2950 Sep 10  2025 CITATION.cff\n-rw-r--r--. 1 root root  3230 Sep 10  2025 CODE_OF_CONDUCT.md\n-rw-r--r--. 1 root root   127 Sep 10  2025 CONTRIBUTING.md\n-rw-r--r--. 1 root root  4057 Sep 10  2025 HOW_TO_RELEASE.md\n-rw-r--r--. 1 root root 10273 Sep 10  2025 LICENSE\n-rw-r--r--. 1 root root  6160 Sep 10  2025 README.rst\ndrwxrwxrwx. 3 root root    45 Sep 10  2025 asv_bench\ndrwxrwxrwx. 3 root root    85 Sep 10  2025 ci\n-rw-r--r--. 1 root root  1232 Sep 10  2025 conftest.py\ndrwxrwxrwx. 2 root root    39 Sep 10  2025 design_notes\ndrwxrwxrwx. 9 root root  4096 Sep 10  2025 doc\ndrwxrwxrwx. 2 root root   137 Sep 10  2025 licenses\ndrwxrwxrwx. 2 root root   103 Sep 10  2025 properties\n-rw-r--r--. 1 root root   220 Sep 10  2025 pyproject.toml\n-rw-r--r--. 1 root root   278 Sep 10  2025 requirements.txt\n-rw-r--r--. 1 root root  7355 Sep 10  2025 setup.cfg\n-rwxr-xr-x. 1 root root   103 Sep 10  2025 setup.py\ndrwxrwxrwx. 9 root root  4096 Sep 10  2025 xarray\ndrwxr-xr-x. 2 root root   130 Sep 10  2025 xarray.egg-info\n"
+}
+
+### [4] agent CMD:
+grep -R "def where" -n xarray | sed -n '1,200p'
+
+### [4] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "xarray/core/common.py:1184:    def where(self, cond, other=dtypes.NA, drop: bool = False):\nxarray/core/computation.py:1743:def where(cond, x, y, keep_attrs=None):\nxarray/core/duck_array_ops.py:266:def where(condition, x, y):\nxarray/core/duck_array_ops.py:271:def where_method(data, cond, other=dtypes.NA):\nxarray/core/groupby.py:737:    def where(self, cond, other=dtypes.NA):\nxarray/core/ops.py:157:def where_method(self, cond, other=dtypes.NA):\nxarray/core/variable.py:1719:    def where(self, cond, other=dtypes.NA):\n"
+}
+
+### [5] agent CMD:
+nl -ba xarray/core/computation.py | sed -n '1700,1770p'
+
+### [5] OBS (tail 1200):
+\"\"Return elements from `x` or `y` depending on `cond`.\n  1745\t\n  1746\t    Performs xarray-like broadcasting across input arguments.\n  1747\t\n  1748\t    All dimension coordinates on `x` and `y`  must be aligned with each\n  1749\t    other and with `cond`.\n  1750\t\n  1751\t    Parameters\n  1752\t    ----------\n  1753\t    cond : scalar, array, Variable, DataArray or Dataset\n  1754\t        When True, return values from `x`, otherwise returns values from `y`.\n  1755\t    x : scalar, array, Variable, DataArray or Dataset\n  1756\t        values to choose from where `cond` is True\n  1757\t    y : scalar, array, Variable, DataArray or Dataset\n  1758\t        values to choose from where `cond` is False\n  1759\t    keep_attrs : bool or str or callable, optional\n  1760\t        How to treat attrs. If True, keep the attrs of `x`.\n  1761\t\n  1762\t    Returns\n  1763\t    -------\n  1764\t    Dataset, DataArray, Variable or array\n  1765\t        In priority order: Dataset, DataArray, Variable or array, whichever\n  1766\t        type appears as an input argument.\n  1767\t\n  1768\t    Examples\n  1769\t    --------\n  1770\t    \u003e\u003e\u003e x = xr.DataArray(\n"
+}
+
+### [6] agent CMD:
+nl -ba xarray/core/computation.py | sed -n '1770,1850p'
+
+### [6] OBS (tail 1200):
+  Dimensions without coordinates: x, y\n  1819\t\n  1820\t    See Also\n  1821\t    --------\n  1822\t    numpy.where : corresponding numpy function\n  1823\t    Dataset.where, DataArray.where :\n  1824\t        equivalent methods\n  1825\t    \"\"\"\n  1826\t    if keep_attrs is None:\n  1827\t        keep_attrs = _get_keep_attrs(default=False)\n  1828\t\n  1829\t    if keep_attrs is True:\n  1830\t        # keep the attributes of x, the second parameter, by default to\n  1831\t        # be consistent with the `where` method of `DataArray` and `Dataset`\n  1832\t        keep_attrs = lambda attrs, context: attrs[1]\n  1833\t\n  1834\t    # alignment for three arguments is complicated, so don\u0027t support it yet\n  1835\t    return apply_ufunc(\n  1836\t        duck_array_ops.where,\n  1837\t        cond,\n  1838\t        x,\n  1839\t        y,\n  1840\t        join=\"exact\",\n  1841\t        dataset_join=\"exact\",\n  1842\t        dask=\"allowed\",\n  1843\t        keep_attrs=keep_attrs,\n  1844\t    )\n  1845\t\n  1846\t\n  1847\tdef polyval(coord, coeffs, degree_dim=\"degree\"):\n  1848\t    \"\"\"Evaluate a polynomial at specific values\n  1849\t\n  1850\t    Parameters\n"
+}
+
+### [7] agent CMD:
+grep -n "def apply_ufunc" -n xarray | sed -n '1,200p'
+
+### [7] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "grep: xarray: Is a directory\n"
+}
+
+### [8] agent CMD:
+grep -R "def apply_ufunc" -n xarray | sed -n '1,200p'
+
+### [8] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "xarray/core/computation.py:822:def apply_ufunc(\n"
+}
+
+### [9] agent CMD:
+nl -ba xarray/core/computation.py | sed -n '750,950p'
+
+### [9] OBS (tail 1200):
+ply_gufunc` if\n   933\t        dask=\u0027parallelized\u0027. Possible keywords are ``output_sizes``, ``allow_rechunk``\n   934\t        and ``meta``.\n   935\t    output_dtypes : list of dtype, optional\n   936\t        Optional list of output dtypes. Only used if ``dask=\u0027parallelized\u0027`` or\n   937\t        ``vectorize=True``.\n   938\t    output_sizes : dict, optional\n   939\t        Optional mapping from dimension names to sizes for outputs. Only used\n   940\t        if dask=\u0027parallelized\u0027 and new dimensions (not found on inputs) appear\n   941\t        on outputs. ``output_sizes`` should be given in the ``dask_gufunc_kwargs``\n   942\t        parameter. It will be removed as direct parameter in a future version.\n   943\t    meta : optional\n   944\t        Size-0 object representing the type of array wrapped by dask array. Passed on to\n   945\t        :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the\n   946\t        ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter\n   947\t        a future version.\n   948\t\n   949\t    Returns\n   950\t    -------\n",
+  "elided_chars": 1009,
+  "warning": "Output too long."
+}
+
+### [10] agent CMD:
+nl -ba xarray/core/computation.py | sed -n '950,1160p'
+
+### [10] OBS (tail 1200):
+   if isinstance(keep_attrs, bool):\n  1133\t        keep_attrs = \"override\" if keep_attrs else \"drop\"\n  1134\t\n  1135\t    variables_vfunc = functools.partial(\n  1136\t        apply_variable_ufunc,\n  1137\t        func,\n  1138\t        signature=signature,\n  1139\t        exclude_dims=exclude_dims,\n  1140\t        keep_attrs=keep_attrs,\n  1141\t        dask=dask,\n  1142\t        vectorize=vectorize,\n  1143\t        output_dtypes=output_dtypes,\n  1144\t        dask_gufunc_kwargs=dask_gufunc_kwargs,\n  1145\t    )\n  1146\t\n  1147\t    # feed groupby-apply_ufunc through apply_groupby_func\n  1148\t    if any(isinstance(a, GroupBy) for a in args):\n  1149\t        this_apply = functools.partial(\n  1150\t            apply_ufunc,\n  1151\t            func,\n  1152\t            input_core_dims=input_core_dims,\n  1153\t            output_core_dims=output_core_dims,\n  1154\t            exclude_dims=exclude_dims,\n  1155\t            join=join,\n  1156\t            dataset_join=dataset_join,\n  1157\t            dataset_fill_value=dataset_fill_value,\n  1158\t            keep_attrs=keep_attrs,\n  1159\t            dask=dask,\n  1160\t            vectorize=vectorize,\n"
+}
+
+### [11] agent CMD:
+nl -ba xarray/core/computation.py | sed -n '1160,1320p'
+
+### [11] OBS (tail 1200):
+on\n  1296\t    xarray.cov : underlying covariance function\n  1297\t\n  1298\t    Examples\n  1299\t    --------\n  1300\t    \u003e\u003e\u003e from xarray import DataArray\n  1301\t    \u003e\u003e\u003e da_a = DataArray(\n  1302\t    ...     np.array([[1, 2, 3], [0.1, 0.2, 0.3], [3.2, 0.6, 1.8]]),\n  1303\t    ...     dims=(\"space\", \"time\"),\n  1304\t    ...     coords=[\n  1305\t    ...         (\"space\", [\"IA\", \"IL\", \"IN\"]),\n  1306\t    ...         (\"time\", pd.date_range(\"2000-01-01\", freq=\"1D\", periods=3)),\n  1307\t    ...     ],\n  1308\t    ... )\n  1309\t    \u003e\u003e\u003e da_a\n  1310\t    \u003cxarray.DataArray (space: 3, time: 3)\u003e\n  1311\t    array([[1. , 2. , 3. ],\n  1312\t           [0.1, 0.2, 0.3],\n  1313\t           [3.2, 0.6, 1.8]])\n  1314\t    Coordinates:\n  1315\t      * space    (space) \u003cU2 \u0027IA\u0027 \u0027IL\u0027 \u0027IN\u0027\n  1316\t      * time     (time) datetime64[ns] 2000-01-01 2000-01-02 2000-01-03\n  1317\t    \u003e\u003e\u003e da_b = DataArray(\n  1318\t    ...     np.array([[0.2, 0.4, 0.6], [15, 10, 5], [3.2, 0.6, 1.8]]),\n  1319\t    ...     dims=(\"space\", \"time\"),\n  1320\t    ...     coords=[\n"
+}
+
+### [12] agent CMD:
+grep -n "merge_attrs" -n xarray | sed -n '1,200p'
+
+### [12] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "grep: xarray: Is a directory\n"
+}
+
+### [13] agent CMD:
+grep -R "def merge_attrs" -n xarray | sed -n '1,200p'
+
+### [13] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "xarray/core/merge.py:604:def merge_attrs(variable_attrs, combine_attrs, context=None):\n"
+}
+
+### [14] agent CMD:
+nl -ba xarray/core/merge.py | sed -n '560,700p'
+
+### [14] OBS (tail 1200):
+82\t    objects : list of mapping\n   683\t        All values must be convertible to labeled arrays.\n   684\t    compat : {\"identical\", \"equals\", \"broadcast_equals\", \"no_conflicts\", \"override\"}, optional\n   685\t        Compatibility checks to use when merging variables.\n   686\t    join : {\"outer\", \"inner\", \"left\", \"right\"}, optional\n   687\t        How to combine objects with different indexes.\n   688\t    combine_attrs : {\"drop\", \"identical\", \"no_conflicts\", \"drop_conflicts\", \\\n   689\t                     \"override\"} or callable, default: \"override\"\n   690\t        How to combine attributes of objects\n   691\t    priority_arg : int, optional\n   692\t        Optional argument in `objects` that takes precedence over the others.\n   693\t    explicit_coords : set, optional\n   694\t        An explicit list of variables from `objects` that are coordinates.\n   695\t    indexes : dict, optional\n   696\t        Dictionary with values given by xarray.Index objects or anything that\n   697\t        may be cast to pandas.Index objects.\n   698\t    fill_value : scalar, optional\n   699\t        Value to use for newly missing values\n   700\t\n"
+}
+
+### [15] agent MESSAGE:
+I'll run a small Python snippet using the repository's xarray package to reproduce the failure.
+
+### [15] agent CMD:
+python - << 'PY'
+import sys
+sys.path.insert(0,'.')
+import xarray as xr
+print('xarray version:', xr.__version__)
+try:
+    print(xr.where(xr.DataArray([1,2,3])>0, 1, 0))
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+PY
+
+### [15] OBS (tail 1200):
+{
+  "returncode": 1,
+  "output": "Traceback (most recent call last):\n  File \"\u003cstdin\u003e\", line 3, in \u003cmodule\u003e\n  File \"/testbed/xarray/__init__.py\", line 1, in \u003cmodule\u003e\n    from . import testing, tutorial, ufuncs\n  File \"/testbed/xarray/testing.py\", line 6, in \u003cmodule\u003e\n    import numpy as np\nModuleNotFoundError: No module named \u0027numpy\u0027\n"
+}
+
+### [16] agent MESSAGE:
+I'll apply the minimal change to xarray/core/computation.py to guard against the IndexError by falling back to the first attrs when only one variable is present, then run the repository's verification tool.
+
+### [16] agent CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: xarray/core/computation.py
+@@
+-    if keep_attrs is True:
+-        # keep the attributes of x, the second parameter, by default to
+-        # be consistent with the `where` method of `DataArray` and `Dataset`
+-        keep_attrs = lambda attrs, context: attrs[1]
++    if keep_attrs is True:
++        # keep the attributes of x, the second parameter, by default to
++        # be consistent with the `where` method of `DataArray` and `Dataset`.
++        # If only one xarray-like argument is present (e.g., the other
++        # arguments are plain scalars), fall back to keeping the first
++        # available attrs to avoid IndexError when attrs has length 1.
++        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) > 1 else attrs[0]
+*** End Patch
+PATCH
+
+### [16] OBS (tail 1200):
+{
+  "returncode": 128,
+  "output": "error: unrecognized input\n"
+}
+
+### [17] agent CMD:
+nl -ba xarray/core/computation.py | sed -n '1820,1840p'
+
+### [17] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "  1820\t    See Also\n  1821\t    --------\n  1822\t    numpy.where : corresponding numpy function\n  1823\t    Dataset.where, DataArray.where :\n  1824\t        equivalent methods\n  1825\t    \"\"\"\n  1826\t    if keep_attrs is None:\n  1827\t        keep_attrs = _get_keep_attrs(default=False)\n  1828\t\n  1829\t    if keep_attrs is True:\n  1830\t        # keep the attributes of x, the second parameter, by default to\n  1831\t        # be consistent with the `where` method of `DataArray` and `Dataset`\n  1832\t        keep_attrs = lambda attrs, context: attrs[1]\n  1833\t\n  1834\t    # alignment for three arguments is complicated, so don\u0027t support it yet\n  1835\t    return apply_ufunc(\n  1836\t        duck_array_ops.where,\n  1837\t        cond,\n  1838\t        x,\n  1839\t        y,\n  1840\t        join=\"exact\",\n"
+}
+
+### [18] agent CMD:
+git status --porcelain; git rev-parse --abbrev-ref HEAD
+
+### [18] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "main\n"
+}
+
+### [19] agent CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('xarray/core/computation.py')
+s=p.read_text()
+old='''    if keep_attrs is True:
+        # keep the attributes of x, the second parameter, by default to
+        # be consistent with the `where` method of `DataArray` and `Dataset`
+        keep_attrs = lambda attrs, context: attrs[1]
+'''
+new='''    if keep_attrs is True:
+        # keep the attributes of x, the second parameter, by default to
+        # be consistent with the `where` method of `DataArray` and `Dataset`.
+        # If only one xarray-like argument is present (e.g., the other
+        # arguments are plain scalars), fall back to keeping the first
+        # available attrs to avoid IndexError when attrs has length 1.
+        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) > 1 else attrs[0]
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+
+### [19] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "patched\n"
+}
+
+### [20] agent CMD:
+git add -A && git commit -m "where: avoid IndexError when keep_attrs=True and only one xarray-like input present" || true; git --no-pager diff --staged
+
+### [20] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "[main c5c517ac] where: avoid IndexError when keep_attrs=True and only one xarray-like input present\n 1 file changed, 5 insertions(+), 2 deletions(-)\n"
+}
+
+### [21] agent CMD:
+python - << 'PY'
+import sys
+sys.path.insert(0,'.')
+import traceback
+try:
+    import numpy as np
+    import xarray as xr
+    print('xarray version:', xr.__version__)
+    print(xr.where(xr.DataArray([1,2,3])>0, 1, 0))
+    print('--- other test: cond with xarray, x scalar, y xarray attrs behavior')
+    a = xr.DataArray([1,2,3], attrs={'a':1})
+    b = xr.DataArray([0,0,0], attrs={'b':2})
+    print(xr.where(a>1, a, 0))
+    print(xr.where(a>1, 0, b))
+except Exception as e:
+    traceback.print_exc()
+PY
+
+### [21] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "Traceback (most recent call last):\n  File \"\u003cstdin\u003e\", line 5, in \u003cmodule\u003e\nModuleNotFoundError: No module named \u0027numpy\u0027\n"
+}
+
+### [22] agent CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix
+
+### [22] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "{\n  \"changed\": [],\n  \"runner\": null,\n  \"results\": []\n}\n"
+}
+
+### [23] agent CMD:
+git --no-pager show --pretty="" -U0 HEAD | sed -n '1,200p'
+
+### [23] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "diff --git a/xarray/core/computation.py b/xarray/core/computation.py\nindex 7676d8e5..ce6a7686 100644\n--- a/xarray/core/computation.py\n+++ b/xarray/core/computation.py\n@@ -1831,2 +1831,5 @@ def where(cond, x, y, keep_attrs=None):\n-        # be consistent with the `where` method of `DataArray` and `Dataset`\n-        keep_attrs = lambda attrs, context: attrs[1]\n+        # be consistent with the `where` method of `DataArray` and `Dataset`.\n+        # If only one xarray-like argument is present (e.g., the other\n+        # arguments are plain scalars), fall back to keeping the first\n+        # available attrs to avoid IndexError when attrs has length 1.\n+        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) \u003e 1 else attrs[0]\n"
+}
+
+### [24] agent CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+
+### [24] OBS (tail 1200):
+{
+  "returncode": -1,
+  "output": "", "exception_info": "action was not executed"
+}

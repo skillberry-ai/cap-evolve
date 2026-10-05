@@ -1,0 +1,12 @@
+component: phase
+name: diagnose
+summary: Turn rollouts/scores into a reflective dataset + failure clusters (the textual gradient).
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: [scores, traces]
+provides: [reflective_dataset]
+compatible_with:
+  capabilities: ["*"]
+  optimizers: ["*"]
+  algorithms: ["*"]

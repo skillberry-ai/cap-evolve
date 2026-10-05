@@ -1,0 +1,256 @@
+=== pydata__xarray-6992 steps=15
+reward=0.0
+
+--- [2] TASK ---
+Please solve this issue: index refactor: more `_coord_names` than `_variables` on Dataset
+### What happened?
+
+`xr.core.dataset.DataVariables` assumes that everything that is in `ds._dataset._variables` and not in `self._dataset._coord_names` is a "data variable". However, since the index refactor we can end up with more `_coord_names` than `_variables` which breaks a number of stuff (e.g. the repr).
+
+### What did you expect to happen?
+
+Well it seems this assumption is now wrong.
+
+### Minimal Complete Verifiable Example
+
+```Python
+ds = xr.Dataset(coords={"a": ("x", [1, 2, 3]), "b": ("x", ['a', 'b', 'c'])})
+ds.set_index(z=['a', 'b']).reset_index("z", drop=True)
+```
+
+
+### MVCE confirmation
+
+- [ ] Minimal example — the example is as focused as reasonably possible to demonstrate the underlying issue in xarray.
+- [ ] Complete example — the example is self-contained, including all data and the text of any traceback.
+- [ ] Verifiable example — the example copy & pastes into an IPython prompt or [Binder notebook](https://mybinder.org/v2/gh/pydata/xarray/main?urlpath=lab/tree/doc/examples/blank_template.ipynb), returning the result.
+- [ ] New issue — a search of GitHub Issues suggests this is not a duplicate.
+
+### Relevant log output
+
+```Python
+ValueError: __len__() should return >= 0
+```
+
+
+### Anything else we need to know?
+
+The error comes from here
+
+https://github.com/pydata/xarray/blob/63ba862d03c8d0cd8b44d2071bc360e9fed4519d/xarray/core/dataset.py#L368
+
+Bisected to #5692 - which probably does not help too much.
+
+
+### Environment
+
+<details>
+
+
+
+</details>
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected beha
+
+--- [3] AGENT MSG ---
+I'll inspect the repository to find the relevant files and reproduce the issue. I'll list files and search for references to DataVariables and dataset._coord_names. Then I'll run tests related to dataset or dataset.DataVariables to reproduce the failure. I'll start by listing files and searching the code.
+
+--- [3] CMD ---
+ls -la
+
+--- [3] OBS rc=0 ---
+
+
+--- [4] AGENT MSG ---
+I'll search for DataVariables and the line referenced in the issue.
+
+--- [4] CMD ---
+nl -ba xarray/core/dataset.py | sed -n '1,260p'
+
+--- [4] OBS rc=0 ---
+
+
+--- [5] CMD ---
+nl -ba xarray/core/dataset.py | sed -n '260,560p'
+
+--- [5] OBS rc=0 ---
+   return len(self._dataset._variables) - len(self._dataset._coord_names)
+   369	
+   370	    def __contains__(self, key: Hashable) -> bool:
+   371	        return key in self._dataset._variables and key not in self._dataset._coord_names
+   372	
+   373	    def __getitem__(self, key: Hashable) -> DataArray:
+   374	        if key not in self._dataset._coord_names:
+   375	            return cast("DataArray", self._dataset[key])
+   376	        raise KeyError(key)
+   377	
+   378	    def __repr__(self) -> str:
+   379	        return formatting.data_vars_repr(self)
+   380	
+   381	    @property
+   382	  
+...
+       float64 42.21
+   546	        time            datetime64[ns] 2014-09-08
+   547	        reference_time  datetime64[ns] 2014-09-05
+   548	    Data variables:
+   549	        temperature     float64 7.182
+   550	        precipitation   float64 8.326
+   551	    Attributes:
+   552	        description:  Weather related data.
+   553	    """
+   554	
+   555	    _attrs: dict[Hashable, Any] | None
+   556	    _cache: dict[str, Any]
+   557	    _coord_names: set[Hashable]
+   558	    _dims: dict[Hashable, int]
+   559	    _encoding: dict[Hashable, Any] | None
+   560	    _close: Callable[[], None] | 
+
+--- [6] AGENT MSG ---
+I'll modify DataVariables.__len__ to compute length by counting items in _variables that are not in _coord_names, matching __iter__. I'll run targeted tests.
+
+--- [6] CMD ---
+git status --porcelain; git rev-parse --abbrev-ref HEAD || true
+
+--- [6] OBS rc=0 ---
+
+
+--- [7] AGENT MSG ---
+I'll open the file to edit and change __len__ implementation.
+
+--- [7] CMD ---
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: xarray/core/dataset.py
+@@
+     def __len__(self) -> int:
+-        return len(self._dataset._variables) - len(self._dataset._coord_names)
++        # There can be more coord names than variables (e.g., after index
++        # manipulations). Compute the number of data variables by counting
++        # variables that are not coordinate names to match __iter__ and
++        # avoid negative lengths.
++        return sum(
++            1 for key in self._dataset._variables if key not in self._dataset._coord_names
++        )
+*** End Patch
+PATCH
+
+--- [7] OBS rc=128 ---
+
+
+--- [8] CMD ---
+nl -ba xarray/core/dataset.py | sed -n '350,390p'
+
+--- [8] OBS rc=0 ---
+
+
+--- [9] AGENT MSG ---
+I'll use sed to replace the specific line.
+
+--- [9] CMD ---
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: xarray/core/dataset.py
+@@
+-    def __len__(self) -\u003e int:
+-        return len(self._dataset._variables) - len(self._dataset._coord_names)
++    def __len__(self) -\u003e int:
++        # There can be more coord names than variables (e.g., after index
++        # manipulations). Compute the number of data variables by counting
++        # variables that are not coordinate names to match __iter__ and
++        # avoid negative lengths.
++        return sum(
++            1 for key in self._dataset._variables if key not in self._dataset._coord_names
++        )
+*** End Patch
+PATCH
+
+--- [9] OBS rc=128 ---
+
+
+--- [10] CMD ---
+python - << 'PY'
+from pathlib import Path
+p=Path('xarray/core/dataset.py')
+s=p.read_text()
+old='''    def __len__(self) -> int:
+        return len(self._dataset._variables) - len(self._dataset._coord_names)
+'''
+new='''    def __len__(self) -> int:
+        # There can be more coord names than variables (e.g., after index
+        # manipulations). Compute the number of data variables by counting
+        # variables that are not coordinate names to match __iter__ and
+        # avoid negative lengths.
+        return sum(
+            1 for key in self._dataset._variables if key not in self._dataset._coord_names
+        )
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+
+--- [10] OBS rc=0 ---
+
+
+--- [11] CMD ---
+git add -A && git commit -m "DataVariables.__len__: count non-coordinate variables instead of subtracting coord names to avoid negative lengths" || true; git --no-pager show --name-only --pretty="" HEAD
+
+--- [11] OBS rc=0 ---
+
+
+--- [12] AGENT MSG ---
+I'll run the provided minimal example in a small script to reproduce and check.
+
+--- [12] CMD ---
+python - << 'PY'
+import xarray as xr
+import pandas as pd
+
+ds = xr.Dataset(coords={"a": ("x", [1, 2, 3]), "b": ("x", ['a', 'b', 'c'])})
+print('initial vars:', ds._variables.keys())
+print('coord names:', ds._coord_names)
+
+ds = ds.set_index(z=['a', 'b']).reset_index('z', drop=True)
+print('after ops vars:', ds._variables.keys())
+print('coord names:', ds._coord_names)
+print('data_vars:', list(ds.data_vars))
+print('len data_vars:', len(ds.data_vars))
+print(ds)
+PY
+
+--- [12] OBS rc=1 ---
+
+
+--- [13] AGENT MSG ---
+Tests can't run without dependencies installed in this environment. However unit tests can be run via the helper script tools.py verify-fix to run relevant tests. I'll run that.
+
+--- [13] CMD ---
+python /harbor/skills/candidate/tools/tools.py verify-fix
+
+--- [13] OBS rc=0 ---
+
+
+--- [14] CMD ---
+git --no-pager show HEAD^..HEAD
+
+--- [14] OBS rc=0 ---
+
+
+--- [15] CMD ---
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+
+--- [15] OBS rc=-1 ---
+

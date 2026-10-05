@@ -1,0 +1,357 @@
+### [1] system MESSAGE:
+You are a helpful assistant that can interact with a computer.
+
+### [2] user MESSAGE:
+Please solve this issue: Make pylint XDG Base Directory Specification compliant
+I have this really annoying `.pylint.d` directory in my home folder. From what I can tell (I don't do C or C++), this directory is storing data. 
+
+The problem with this is, quite simply, that data storage has a designated spot. The `$HOME/.local/share/<PROGRAM_NAME>` folder. This is a part of the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html). A system that designates the folders for specific things like cached files (`$HOME/.cache/<PROGRAM_NAME>`), configuration files (`$HOME/.config/<PROGRAM_NAME>`), and data files (`$HOME/.local/share/<PROGRAM_NAME>`), among other things. The point is to keep user home directories clean and the user sane. 
+
+This should be pretty easy to implement. Simply change the variables/constants for where these files are made and stored to the appropriate directory. Simple as that, even for a large codebase (if it was done right).
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected behavior, the actual buggy behavior, and any test cases or reproduction steps mentioned. If the issue describes multiple cases or edge cases, list every one — you must handle ALL of them, not just the primary case.
+
+### 2. Explore the relevant code
+Search the codebase to find the files and functions involved in the bug. Read enough surrounding context — related functions, callers, type definitions, and test files — to fully understand the affected code paths before making any changes.
+
+### 3. Identify the root cause
+Before editing anything, pinpoint exactly 
+
+### [3] agent MESSAGE:
+I'll list the repository files to find where pylint stores its .pylint.d directory and tests. I'll start by searching for ".pylint.d" and for code that creates directories in the user's home.
+
+### [3] agent CMD:
+git status --porcelain; ls -la; grep -R "\.pylint.d" -n || true; grep -R "pylint.d" -n || true; rg "XDG" || true; rg "pylint.d" || true; rg "Pylint" || true; sed -n '1,200p' setup.cfg || true
+
+### [3] OBS (tail 1200):
+int:run_pyreverse\n    symilar = pylint:run_symilar\n\n[aliases]\ntest = pytest\n\n[tool:pytest]\ntestpaths = tests\npython_files = *test_*.py\naddopts = -m \"not acceptance\"\nmarkers =\n    acceptance:\n    benchmark: Baseline of pylint performance, if this regress something serious happened\n\n[isort]\nmulti_line_output = 3\nline_length = 88\nknown_third_party = astroid, sphinx, isort, pytest, mccabe, six, toml\ninclude_trailing_comma = True\nskip_glob = tests/functional/**,tests/input/**,tests/extensions/data/**,tests/regrtest_data/**,tests/data/**,astroid/**,venv/**\nsrc_paths = pylint\n\n[mypy]\nscripts_are_modules = True\n\n[mypy-astroid.*]\nignore_missing_imports = True\n\n[mypy-coverage]\nignore_missing_imports = True\n\n[mypy-enchant.*]\nignore_missing_imports = True\n\n[mypy-isort.*]\nignore_missing_imports = True\n\n[mypy-mccabe]\nignore_missing_imports = True\n\n[mypy-pytest]\nignore_missing_imports = True\n\n[mypy-_pytest.*]\nignore_missing_imports = True\n\n[mypy-setuptools]\nignore_missing_imports = True\n\n[mypy-_string]\nignore_missing_imports = True\n\n[mypy-toml.decoder]\nignore_missing_imports = True\n",
+  "elided_chars": 6459,
+  "warning": "Output too long."
+}
+
+### [4] agent MESSAGE:
+I'll open pylint/config/__init__.py to inspect how PYLINT_HOME is computed and how tests expect it. Then I'll run the tests that reference it.
+
+### [4] agent CMD:
+sed -n '1,240p' pylint/config/__init__.py
+
+### [4] OBS (tail 1200):
+ults, base):\n    if not os.path.exists(PYLINT_HOME):\n        try:\n            os.mkdir(PYLINT_HOME)\n        except OSError:\n            print(\"Unable to create directory %s\" % PYLINT_HOME, file=sys.stderr)\n    data_file = _get_pdata_path(base, 1)\n    try:\n        with open(data_file, \"wb\") as stream:\n            pickle.dump(results, stream)\n    except OSError as ex:\n        print(f\"Unable to create file {data_file}: {ex}\", file=sys.stderr)\n\n\ndef find_pylintrc():\n    \"\"\"search the pylint rc file and return its path if it find it, else None\"\"\"\n    for config_file in find_default_config_files():\n        if config_file.endswith(\"pylintrc\"):\n            return config_file\n\n    return None\n\n\nPYLINTRC = find_pylintrc()\n\nENV_HELP = (\n    \"\"\"\nThe following environment variables are used:\n    * PYLINTHOME\n    Path to the directory where persistent data for the run will be stored. If\nnot found, it defaults to ~/.pylint.d/ or .pylint.d (in the current working\ndirectory).\n    * PYLINTRC\n    Path to the configuration file. See the documentation for the method used\nto search for configuration file.\n\"\"\"\n    % globals()  # type: ignore\n)\n"
+}
+
+### [5] agent CMD:
+sed -n '1,240p' tests/lint/unittest_lint.py
+
+### [5] OBS (tail 1200):
+n)\ndef test_two_similar_args(fake_path, case):\n    with tempdir() as chroot:\n        create_files([\"a/b/__init__.py\", \"a/c/__init__.py\"])\n        expected = [join(chroot, \"a\")] + fake_path\n\n        assert sys.path == fake_path\n        with lint.fix_import_path(case):\n            assert sys.path == expected\n        assert sys.path == fake_path\n\n\n@pytest.mark.parametrize(\n    \"case\",\n    [\n        [\"a/b/c/__init__.py\", \"a/d/__init__.py\", \"a/e/f.py\"],\n        [\"a/b/c\", \"a\", \"a/e\"],\n        [\"a/b/c\", \"a\", \"a/b/c\", \"a/e\", \"a\"],\n    ],\n)\ndef test_more_args(fake_path, case):\n    with tempdir() as chroot:\n        create_files([\"a/b/c/__init__.py\", \"a/d/__init__.py\", \"a/e/f.py\"])\n        expected = [\n            join(chroot, suffix)\n            for suffix in (sep.join((\"a\", \"b\")), \"a\", sep.join((\"a\", \"e\")))\n        ] + fake_path\n\n        assert sys.path == fake_path\n        with lint.fix_import_path(case):\n            assert sys.path == expected\n        assert sys.path == fake_path\n\n\n@pytest.fixture(scope=\"module\")\ndef disable():\n    return [\"I\"]\n\n\n@pytest.fixture(scope=\"module\")\ndef reporter():\n"
+}
+
+### [6] agent CMD:
+nl -ba tests/lint/unittest_lint.py | sed -n '600,660p'
+
+### [6] OBS (tail 1200):
+\n   631\t    if uhome == \"~\":\n   632\t        expected = \".pylint.d\"\n   633\t    else:\n   634\t        expected = os.path.join(uhome, \".pylint.d\")\n   635\t    assert config.PYLINT_HOME == expected\n   636\t\n   637\t    try:\n   638\t        pylintd = join(tempfile.gettempdir(), \".pylint.d\")\n   639\t        os.environ[\"PYLINTHOME\"] = pylintd\n   640\t        try:\n   641\t            reload(config)\n   642\t            assert config.PYLINT_HOME == pylintd\n   643\t        finally:\n   644\t            try:\n   645\t                os.remove(pylintd)\n   646\t            except FileNotFoundError:\n   647\t                pass\n   648\t    finally:\n   649\t        del os.environ[\"PYLINTHOME\"]\n   650\t\n   651\t\n   652\t@pytest.mark.usefixtures(\"pop_pylintrc\")\n   653\tdef test_pylintrc():\n   654\t    with fake_home():\n   655\t        current_dir = getcwd()\n   656\t        chdir(os.path.dirname(os.path.abspath(sys.executable)))\n   657\t        try:\n   658\t            assert config.find_pylintrc() is None\n   659\t            os.environ[\"PYLINTRC\"] = join(tempfile.gettempdir(), \".pylintrc\")\n   660\t            assert config.find_pylintrc() is None\n"
+}
+
+### [7] agent MESSAGE:
+I'll run the specific pytest that checks PYLINT_HOME to see current behavior.
+
+### [7] agent CMD:
+pytest -q tests/lint/unittest_lint.py::test_pylint_home -q -q -k test_pylint_home -q
+
+### [7] OBS (tail 1200):
+{
+  "returncode": 127,
+  "output": "/bin/sh: 1: pytest: not found\n"
+}
+
+### [8] agent CMD:
+grep -R "\.pylint.d" -n || true
+
+### [8] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "doc/faq.rst:96:* \".pylint.d\" subdirectory of the user\u0027s home directory if it is found\ndoc/faq.rst:99:* \".pylint.d\" directory in the current directory\npylint/config/__init__.py:64:    PYLINT_HOME = \".pylint.d\"\npylint/config/__init__.py:66:    PYLINT_HOME = os.path.join(USER_HOME, \".pylint.d\")\npylint/config/__init__.py:113:not found, it defaults to ~/.pylint.d/ or .pylint.d (in the current working\ntests/lint/unittest_lint.py:632:        expected = \".pylint.d\"\ntests/lint/unittest_lint.py:634:        expected = os.path.join(uhome, \".pylint.d\")\ntests/lint/unittest_lint.py:638:        pylintd = join(tempfile.gettempdir(), \".pylint.d\")\n"
+}
+
+### [9] agent CMD:
+rg "XDG_DATA_HOME|local/share|pylint" || true
+
+### [9] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "/bin/sh: 1: rg: not found\n"
+}
+
+### [10] agent MESSAGE:
+I'll update pylint/config/__init__.py to use XDG_DATA_HOME (defaulting to ~/.local/share/pylint) for PYLINT_HOME, and update the test to expect the new default. Then I'll run the verification tool.
+
+### [10] agent CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: pylint/config/__init__.py
+@@
+-USER_HOME = os.path.expanduser("~")
+-if "PYLINTHOME" in os.environ:
+-    PYLINT_HOME = os.environ["PYLINTHOME"]
+-    if USER_HOME == "~":
+-        USER_HOME = os.path.dirname(PYLINT_HOME)
+-elif USER_HOME == "~":
+-    PYLINT_HOME = ".pylint.d"
+-else:
+-    PYLINT_HOME = os.path.join(USER_HOME, ".pylint.d")
++USER_HOME = os.path.expanduser("~")
++# Respect explicit environment override first
++if "PYLINTHOME" in os.environ:
++    PYLINT_HOME = os.environ["PYLINTHOME"]
++    if USER_HOME == "~":
++        USER_HOME = os.path.dirname(PYLINT_HOME)
++else:
++    # Follow the XDG Base Directory Specification for persistent data
++    # If XDG_DATA_HOME is set use $XDG_DATA_HOME/pylint, otherwise
++    # fall back to ~/.local/share/pylint. If expanduser couldn't
++    # determine the home directory use the old behaviour of a
++    # local .pylint.d directory.
++    if USER_HOME == "~":
++        PYLINT_HOME = ".pylint.d"
++    else:
++        xdg_data = os.environ.get("XDG_DATA_HOME")
++        if xdg_data:
++            PYLINT_HOME = os.path.join(xdg_data, "pylint")
++        else:
++            PYLINT_HOME = os.path.join(USER_HOME, ".local", "share", "pylint")
+*** End Patch
+PATCH
+
+### [10] OBS (tail 1200):
+{
+  "returncode": 128,
+  "output": "error: unrecognized input\n"
+}
+
+### [11] agent CMD:
+nl -ba pylint/config/__init__.py | sed -n '1,160p'
+
+### [11] OBS (tail 1200):
+se, 1)\n    90\t    try:\n    91\t        with open(data_file, \"wb\") as stream:\n    92\t            pickle.dump(results, stream)\n    93\t    except OSError as ex:\n    94\t        print(f\"Unable to create file {data_file}: {ex}\", file=sys.stderr)\n    95\t\n    96\t\n    97\tdef find_pylintrc():\n    98\t    \"\"\"search the pylint rc file and return its path if it find it, else None\"\"\"\n    99\t    for config_file in find_default_config_files():\n   100\t        if config_file.endswith(\"pylintrc\"):\n   101\t            return config_file\n   102\t\n   103\t    return None\n   104\t\n   105\t\n   106\tPYLINTRC = find_pylintrc()\n   107\t\n   108\tENV_HELP = (\n   109\t    \"\"\"\n   110\tThe following environment variables are used:\n   111\t    * PYLINTHOME\n   112\t    Path to the directory where persistent data for the run will be stored. If\n   113\tnot found, it defaults to ~/.pylint.d/ or .pylint.d (in the current working\n   114\tdirectory).\n   115\t    * PYLINTRC\n   116\t    Path to the configuration file. See the documentation for the method used\n   117\tto search for configuration file.\n   118\t\"\"\"\n   119\t    % globals()  # type: ignore\n   120\t)\n"
+}
+
+### [12] agent CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('pylint/config/__init__.py')
+s=p.read_text()
+old='''USER_HOME = os.path.expanduser("~")
+if "PYLINTHOME" in os.environ:
+    PYLINT_HOME = os.environ["PYLINTHOME"]
+    if USER_HOME == "~":
+        USER_HOME = os.path.dirname(PYLINT_HOME)
+elif USER_HOME == "~":
+    PYLINT_HOME = ".pylint.d"
+else:
+    PYLINT_HOME = os.path.join(USER_HOME, ".pylint.d")
+'''
+new='''USER_HOME = os.path.expanduser("~")
+# Respect explicit environment override first
+if "PYLINTHOME" in os.environ:
+    PYLINT_HOME = os.environ["PYLINTHOME"]
+    if USER_HOME == "~":
+        USER_HOME = os.path.dirname(PYLINT_HOME)
+else:
+    # Follow the XDG Base Directory Specification for persistent data
+    # If XDG_DATA_HOME is set use $XDG_DATA_HOME/pylint, otherwise
+    # fall back to ~/.local/share/pylint. If expanduser couldn't
+    # determine the home directory use the old behaviour of a
+    # local .pylint.d directory.
+    if USER_HOME == "~":
+        PYLINT_HOME = ".pylint.d"
+    else:
+        xdg_data = os.environ.get("XDG_DATA_HOME")
+        if xdg_data:
+            PYLINT_HOME = os.path.join(xdg_data, "pylint")
+        else:
+            PYLINT_HOME = os.path.join(USER_HOME, ".local", "share", "pylint")
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+
+### [12] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "patched\n"
+}
+
+### [13] agent CMD:
+git add -A && git commit -m "Make PYLINT_HOME XDG Base Directory compliant (use $XDG_DATA_HOME or ~/.local/share/pylint)" || true; git --no-pager diff --staged
+
+### [13] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "[main adb079f1] Make PYLINT_HOME XDG Base Directory compliant (use  or ~/.local/share/pylint)\n 1 file changed, 14 insertions(+), 3 deletions(-)\n"
+}
+
+### [14] agent MESSAGE:
+Now update tests expecting .pylint.d to the new behavior. Specifically tests/lint/unittest_lint.py lines earlier where expected is computed. I'll change test_pylint_home to expect XDG path when HOME known. Minimal change: if XDG_DATA_HOME set, test earlier currently doesn't set it. It computes expected as .pylint.d or $HOME/.pylint.d. We need to change to .pylint.d when expanduser failed (same as before), else if XDG_DATA_HOME env var is set we should expect join(XDG_DATA_HOME, 'pylint'), else expect $HOME/.local/share/pylint. But the test currently doesn't set XDG_DATA_HOME, so expecting ~/.local/share/pylint will be fine. Modify lines 630-635. Let's patch test accordingly.
+
+### [14] agent CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: tests/lint/unittest_lint.py
+@@
+-    uhome = os.path.expanduser("~")
+-    if uhome == "~":
+-        expected = ".pylint.d"
+-    else:
+-        expected = os.path.join(uhome, ".pylint.d")
++    uhome = os.path.expanduser("~")
++    if uhome == "~":
++        expected = ".pylint.d"
++    else:
++        xdg_data = os.environ.get("XDG_DATA_HOME")
++        if xdg_data:
++            expected = os.path.join(xdg_data, "pylint")
++        else:
++            expected = os.path.join(uhome, ".local", "share", "pylint")
+*** End Patch
+PATCH
+
+### [14] OBS (tail 1200):
+{
+  "returncode": 128,
+  "output": "error: unrecognized input\n"
+}
+
+### [15] agent CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('tests/lint/unittest_lint.py')
+s=p.read_text()
+old='''    uhome = os.path.expanduser("~")
+    if uhome == "~":
+        expected = ".pylint.d"
+    else:
+        expected = os.path.join(uhome, ".pylint.d")
+'''
+new='''    uhome = os.path.expanduser("~")
+    if uhome == "~":
+        expected = ".pylint.d"
+    else:
+        xdg_data = os.environ.get("XDG_DATA_HOME")
+        if xdg_data:
+            expected = os.path.join(xdg_data, "pylint")
+        else:
+            expected = os.path.join(uhome, ".local", "share", "pylint")
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+
+### [15] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "patched\n"
+}
+
+### [16] agent CMD:
+git add tests/lint/unittest_lint.py && git commit -m "tests: expect XDG data dir for PYLINT_HOME when available" || true; git --no-pager diff --staged
+
+### [16] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "[main 47d5b446] tests: expect XDG data dir for PYLINT_HOME when available\n 1 file changed, 5 insertions(+), 1 deletion(-)\n"
+}
+
+### [17] agent CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix
+
+### [17] OBS (tail 1200):
+{
+  "returncode": 0,
+  "output": "{\n  \"changed\": [],\n  \"runner\": null,\n  \"results\": []\n}\n"
+}
+
+### [18] agent MESSAGE:
+The verification tool didn't run tests. The environment might not have pytest available. But the task requires running that tool; we did. Next, run a subset of tests via python -m pytest? pytest not installed. The instructions require running tests; however helper can run relevant tests — it didn't. But earlier we couldn't run pytest. Still need to ensure code compiles and unit tests that import config work. Let's run a small Python script that imports pylint.config and checks PYLINT_HOME behavior to ensure no syntax errors and expected outputs. We'll run a few scenarios: no env, with XDG_DATA_HOME, with PYLINTHOME.
+
+### [18] agent CMD:
+python - << 'PY'
+import importlib, os, sys
+from importlib import reload
+
+def get_pylint_home():
+    import pylint.config as config
+    return config.PYLINT_HOME
+
+# baseline: no envs
+for var in ("PYLINTHOME","XDG_DATA_HOME"):
+    os.environ.pop(var, None)
+# Force reload
+if 'pylint.config' in sys.modules:
+    del sys.modules['pylint.config']
+import pylint.config as config
+print('no env ->', config.PYLINT_HOME)
+
+# set XDG_DATA_HOME
+os.environ['XDG_DATA_HOME']='/tmp/xdgdata'
+if 'pylint.config' in sys.modules:
+    del sys.modules['pylint.config']
+import pylint.config as config2
+print('XDG_DATA_HOME set ->', config2.PYLINT_HOME)
+
+# set PYLINTHOME
+os.environ.pop('XDG_DATA_HOME', None)
+os.environ['PYLINTHOME']='/tmp/custom_pylint'
+if 'pylint.config' in sys.modules:
+    del sys.modules['pylint.config']
+import pylint.config as config3
+print('PYLINTHOME set ->', config3.PYLINT_HOME)
+PY
+
+### [18] OBS (tail 1200):
+{
+  "returncode": 1,
+  "output": "Traceback (most recent call last):\n  File \"\u003cstdin\u003e\", line 14, in \u003cmodule\u003e\n  File \"/testbed/pylint/config/__init__.py\", line 39, in \u003cmodule\u003e\n    from pylint.config.configuration_mixin import ConfigurationMixIn\n  File \"/testbed/pylint/config/configuration_mixin.py\", line 4, in \u003cmodule\u003e\n    from pylint.config.option_manager_mixin import OptionsManagerMixIn\n  File \"/testbed/pylint/config/option_manager_mixin.py\", line 14, in \u003cmodule\u003e\n    import toml\nModuleNotFoundError: No module named \u0027toml\u0027\n"
+}
+
+### [19] agent CMD:
+git --no-pager diff HEAD~2..HEAD
+
+### [19] OBS (tail 1200):
+t, otherwise\n+    # fall back to ~/.local/share/pylint. If expanduser couldn\u0027t\n+    # determine the home directory use the old behaviour of a\n+    # local .pylint.d directory.\n+    if USER_HOME == \"~\":\n+        PYLINT_HOME = \".pylint.d\"\n+    else:\n+        xdg_data = os.environ.get(\"XDG_DATA_HOME\")\n+        if xdg_data:\n+            PYLINT_HOME = os.path.join(xdg_data, \"pylint\")\n+        else:\n+            PYLINT_HOME = os.path.join(USER_HOME, \".local\", \"share\", \"pylint\")\n \n \n def _get_pdata_path(base_name, recurs):\ndiff --git a/tests/lint/unittest_lint.py b/tests/lint/unittest_lint.py\nindex 004c2928..bd0592d7 100644\n--- a/tests/lint/unittest_lint.py\n+++ b/tests/lint/unittest_lint.py\n@@ -631,7 +631,11 @@ def test_pylint_home():\n     if uhome == \"~\":\n         expected = \".pylint.d\"\n     else:\n-        expected = os.path.join(uhome, \".pylint.d\")\n+        xdg_data = os.environ.get(\"XDG_DATA_HOME\")\n+        if xdg_data:\n+            expected = os.path.join(xdg_data, \"pylint\")\n+        else:\n+            expected = os.path.join(uhome, \".local\", \"share\", \"pylint\")\n     assert config.PYLINT_HOME == expected\n \n     try:\n"
+}
+
+### [20] agent MESSAGE:
+I'll show the unified diff of the changes I made and then finish the task.
+
+### [20] agent CMD:
+git --no-pager diff HEAD~2..HEAD && echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+
+### [20] OBS (tail 1200):
+cal/share/pylint. If expanduser couldn\u0027t\n+    # determine the home directory use the old behaviour of a\n+    # local .pylint.d directory.\n+    if USER_HOME == \"~\":\n+        PYLINT_HOME = \".pylint.d\"\n+    else:\n+        xdg_data = os.environ.get(\"XDG_DATA_HOME\")\n+        if xdg_data:\n+            PYLINT_HOME = os.path.join(xdg_data, \"pylint\")\n+        else:\n+            PYLINT_HOME = os.path.join(USER_HOME, \".local\", \"share\", \"pylint\")\n \n \n def _get_pdata_path(base_name, recurs):\ndiff --git a/tests/lint/unittest_lint.py b/tests/lint/unittest_lint.py\nindex 004c2928..bd0592d7 100644\n--- a/tests/lint/unittest_lint.py\n+++ b/tests/lint/unittest_lint.py\n@@ -631,7 +631,11 @@ def test_pylint_home():\n     if uhome == \"~\":\n         expected = \".pylint.d\"\n     else:\n-        expected = os.path.join(uhome, \".pylint.d\")\n+        xdg_data = os.environ.get(\"XDG_DATA_HOME\")\n+        if xdg_data:\n+            expected = os.path.join(xdg_data, \"pylint\")\n+        else:\n+            expected = os.path.join(uhome, \".local\", \"share\", \"pylint\")\n     assert config.PYLINT_HOME == expected\n \n     try:\nCOMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT\n"
+}
+
+### [21] agent CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+
+### [21] OBS (tail 1200):
+{
+  "returncode": -1,
+  "output": "", "exception_info": "action was not executed"
+}

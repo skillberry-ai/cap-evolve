@@ -1,0 +1,169 @@
+########## [  1 system] ##########
+You are a helpful assistant that can interact with a computer.
+
+########## [  2 user] ##########
+Please solve this issue: pk setup for MTI to parent get confused by multiple OneToOne references.
+Description
+
+class Document(models.Model):
+	pass
+class Picking(Document):
+	document_ptr = models.OneToOneField(Document, on_delete=models.CASCADE, parent_link=True, related_name='+')
+	origin = models.OneToOneField(Document, related_name='picking', on_delete=models.PROTECT)
+produces django.core.exceptions.ImproperlyConfigured: Add parent_link=True to appname.Picking.origin.
+class Picking(Document):
+	origin = models.OneToOneField(Document, related_name='picking', on_delete=models.PROTECT)
+	document_ptr = models.OneToOneField(Document, on_delete=models.CASCADE, parent_link=True, related_name='+')
+Works
+First issue is that order seems to matter?
+Even if ordering is required "by design"(It shouldn't be we have explicit parent_link marker) shouldn't it look from top to bottom like it does with managers and other things?
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected behavior, the actual buggy behavior, and any test cases or reproduction steps mentioned. If the issue describes multiple cases or edge cases, list every one — you must handle ALL of them, not just the primary case.
+
+### 2. Explore the relevant code
+Search the codebase to find the files and functions involved in the bug. Read enough surrounding context — related functions, callers, type definitions, and test files — to fully understand the affected code paths before making any changes.
+
+### 3. Identify the root cause
+Before editing anything, pinpoint exactly WHY the bug occurs. Trace the code path from input to incorrect output. Ask yourself:
+- Wha
+...[10010 chars total]...
+ever, you can prefix any action with `MY_ENV_VAR=MY_VALUE cd /path/to/working/dir && ...` or write/load environment variables from files
+- Submit your changes and finish your work by issuing the following command: `echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT`.
+  Do not combine it with any other command. <important>After this command, you cannot continue working on this task.</important>
+
+Example of a CORRECT response:
+<example_response>
+I need to understand the structure of the repository first. Let me check what files are in the current directory to get a better understanding of the codebase.
+
+[Makes bash tool call with {"command": "ls -la"} as arguments]
+</example_response>
+
+<system_information>
+Linux 5.14.0-570.117.1.el9_6.x86_64 #1 SMP PREEMPT_DYNAMIC Wed May 20 21:38:20 EDT 2026 x86_64
+</system_information>
+
+## Useful command examples
+
+### Create a new file:
+
+```bash
+cat <<'EOF' > newfile.py
+import numpy as np
+hello = "world"
+print(hello)
+EOF
+```
+
+### Edit files with sed:```bash
+# Replace all occurrences
+sed -i 's/old_string/new_string/g' filename.py
+
+# Replace only first occurrence
+sed -i 's/old_string/new_string/' filename.py
+
+# Replace first occurrence on line 1
+sed -i '1s/old_string/new_string/' filename.py
+
+# Replace all occurrences in lines 1-10
+sed -i '1,10s/old_string/new_string/g' filename.py
+```
+
+### View file content:
+
+```bash
+# View specific lines with numbers
+nl -ba filename.py | sed -n '10,20p'
+```
+
+### Any other command you want to run
+
+```bash
+anything
+```
+
+########## [  3 agent] ##########
+I'll inspect the repository to find the Django model field handling code that determines parent_link behavior, search for tests referencing MTI and OneToOne parent_link, and run tests. I'll start by listing files.
+
+########## [  4 agent] ##########
+Search for code handling OneToOneField parent_link detection. Likely in django/db/models/base.py or fields/related_descriptors or one-to-one field. I'll search for parent_link usage.
+
+########## [  5 agent] ##########
+
+
+########## [  6 agent] ##########
+
+
+########## [  7 agent] ##########
+
+
+########## [  8 agent] ##########
+
+
+########## [  9 agent] ##########
+
+
+########## [ 10 agent] ##########
+I'll modify django/db/models/base.py to prefer OneToOneFields with parent_link=True when collecting parent_links, so explicit parent_link markers aren't order-dependent. Then I'll run the test runner for the modified files.
+
+########## [ 11 agent] ##########
+I need to create a failing test reproducing the issue or inspect Options setup where it selects the first parent link for pk. The problem occurs in Options.__init__ where it picks next(iter(self.parents.values())) which relies on insertion order of parents dict. parent_links built in ModelBase may depend on order. We should ensure ModelBase collects parent_links in deterministic way: when multiple OneToOneField to same parent model exist, but one is parent_link True, choose that. Currently parent_links maps make_model_tuple(related) to field; if multiple fields mapped, last wins due to iteration order over bases reversed([new_class] + parents). But in the given scenario, two OneToOneFields in same class referencing Document: document_ptr with parent_link True and origin without. But origin defined earlier vs later affects which becomes parent link because mapping overwritten. The fix: when adding to parent_links, if a key exists and existing field has parent_link False and new field has parent_link True, prefer new field; if existing has parent_link True and new is False, keep existing. Or if both have parent_link set, raise an error? The aim: prefer explicit parent_link. So edit loop where parent_links[make_model_tuple(related)] = field to check.
+
+Let's implement minimal change in django/db/models/base.py line ~203-208.
+
+Make logic:
+
+key = make_model_tuple(related)
+existing = parent_links.get(key)
+if existing is None:
+    parent_links[key]=field
+else:
+    # prefer field with parent_link True
+    existing_parent = getattr(existing.remote_field,'parent_link', False)
+    new_parent = getattr(field.remote_field,'parent_link', False)
+    if not existing_parent and new_parent:
+        parent_links[key]=field
+
+This preserves previous behavior otherwise.
+
+Implement change and run tests for tests relevant. Use tools to run verify-fix later.
+
+Proceed to edit file.
+
+########## [ 12 agent] ##########
+
+
+########## [ 13 agent] ##########
+The git apply failed due to patch format. I'll use python to replace lines or use sed to insert. I'll craft a small awk/perl to replace the snippet.
+
+########## [ 14 agent] ##########
+
+
+########## [ 15 agent] ##########
+Run the test verifier tool to run relevant tests.
+
+########## [ 16 agent] ##########
+
+
+########## [ 17 agent] ##########
+Run full test suite might be heavy; better run specific tests that relate to model inheritance. I'll run tests/model_inheritance/tests.py. Use Django test runner. Running all tests may be large; but required by instructions: run full test suite for package or directory modified. We modified django/db/models/base.py — the package is django.db.models. Running tests for tests probably invokes entire suite. The helper earlier returned empty results. I'll run pytest or runtests.py. There's a tests/runtests.py script. Let's run a subset: tests/model_inheritance/tests.py - but runtests.py takes labels. The test runner might accept --pattern. Simpler: run python tests/runtests.py model_inheritance - see help.
+
+########## [ 18 agent] ##########
+
+
+########## [ 19 agent] ##########
+The test environment missing dependencies; the harness likely won't run full Django test suite. However instructions require running tests for modified module; but helper tool earlier 'verify-fix' reported nothing changed. Given constraints, we must at least run a small sanity check: try to import Django from local path to ensure no syntax errors. I'll run a simple Python snippet importing django and loading the module path. Set PYTHONPATH=. and try import django.db.models.base to ensure our file parses.
+
+########## [ 20 agent] ##########
+
+
+########## [ 21 agent] ##########
+
+

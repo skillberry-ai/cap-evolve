@@ -1,0 +1,275 @@
+
+######## django__django-10554 r=0.0
+(no diff output seen)
+
+######## django__django-12325 r=0.0
+From 82accd2564e07d3ad02ac016f516ea9818931cae Mon Sep 17 00:00:00 2001
+From: SWE-bench <setup@swebench.config>
+Date: Thu, 1 Oct 2026 16:56:30 +0000
+Subject: [PATCH] Prefer explicit parent_link=True when collecting OneToOne
+ parent links to avoid order-dependent selection
+
+
+diff --git a/django/db/models/base.py b/django/db/models/base.py
+index 8ea6c05ef9..2a84bdb870 100644
+--- a/django/db/models/base.py
++++ b/django/db/models/base.py
+@@ -204,7 +204,19 @@ class ModelBase(type):
+             for field in base._meta.local_fields:
+                 if isinstance(field, OneToOneField):
+                     related = resolve_relation(new_class, field.remote_field.model)
+-                    parent_links[make_model_tuple(related)] = field
++                    key = make_model_tuple(related)
++                    # If multiple OneToOneFields point to the same related model,
++                    # prefer the one explicitly marked as parent_link=True. This
++                    # avoids the parent-link selection being dependent on the
++                    # attribute definition order.
++                    existing = parent_links.get(key)
++                    if existing is None:
++                        parent_links[key] = field
++                    else:
++                        existing_parent = getattr(existing.remote_field, 'parent_link', False)
++                        new_parent = getattr(field.remote_field, 'parent_link', False)
++                        if not existing_parent and new_parent:
++                            parent_links[key] = field
+ 
+         # Track fields inherited from base models.
+         inherited_attributes = set()
+
+
+######## django__django-14376 r=0.0
+diff --git a/django/db/backends/mysql/base.py b/django/db/backends/mysql/base.py
+index 2c62182d31..8b28a60485 100644
+--- a/django/db/backends/mysql/base.py
++++ b/django/db/backends/mysql/base.py
+@@ -200,9 +200,9 @@ class DatabaseWrapper(BaseDatabaseWrapper):
+         if settings_dict['USER']:
+             kwargs['user'] = settings_dict['USER']
+         if settings_dict['NAME']:
+-            kwargs['db'] = settings_dict['NAME']
++            kwargs['database'] = settings_dict['NAME']
+         if settings_dict['PASSWORD']:
+-            kwargs['passwd'] = settings_dict['PASSWORD']
++            kwargs['password'] = settings_dict['PASSWORD']
+         if settings_dict['HOST'].startswith('/'):
+             kwargs['unix_socket'] = settings_dict['HOST']
+         elif settings_dict['HOST']:
+
+
+######## django__django-15280 r=0.0
+(no diff output seen)
+
+######## django__django-15629 r=0.0
+(no diff output seen)
+
+######## django__django-15741 r=0.0
+(no diff output seen)
+
+######## django__django-16667 r=0.0
+(no diff output seen)
+
+######## matplotlib__matplotlib-22871 r=0.0
+(no diff output seen)
+
+######## pydata__xarray-6461 r=0.0
+(no diff output seen)
+
+######## pydata__xarray-6992 r=0.0
+commit f368e9cf71b95473f163b3abe528f0548f580fbb
+Author: SWE-bench <setup@swebench.config>
+Date:   Thu Oct 1 17:10:01 2026 +0000
+
+    DataVariables.__len__: count non-coordinate variables instead of subtracting coord names to avoid negative lengths
+
+diff --git a/xarray/core/dataset.py b/xarray/core/dataset.py
+index 620f32f8..79160354 100644
+--- a/xarray/core/dataset.py
++++ b/xarray/core/dataset.py
+@@ -365,7 +365,13 @@ class DataVariables(Mapping[Any, "DataArray"]):
+         )
+ 
+     def __len__(self) -> int:
+-        return len(self._dataset._variables) - len(self._dataset._coord_names)
++        # There can be more coord names than variables (e.g., after index
++        # manipulations). Compute the number of data variables by counting
++        # variables that are not coordinate names to match __iter__ and
++        # avoid negative lengths.
++        return sum(
++            1 for key in self._dataset._variables if key not in self._dataset._coord_names
++        )
+ 
+     def __contains__(self, key: Hashable) -> bool:
+         return key in self._dataset._variables and key not in self._dataset._coord_names
+
+
+######## pylint-dev__pylint-4661 r=0.0
+(no diff output seen)
+
+######## pylint-dev__pylint-4970 r=0.0
+(no diff output seen)
+
+######## pytest-dev__pytest-10356 r=0.0
+commit e5366c663636105cd21aef249867d665e6d3d0fc
+Author: SWE-bench <setup@swebench.config>
+Date:   Thu Oct 1 17:17:40 2026 +0000
+
+    Consider MRO when obtaining marks for classes: gather marks from class MRO and dedupe by name
+
+diff --git a/src/_pytest/mark/structures.py b/src/_pytest/mark/structures.py
+index 800a25c92..d0927af4e 100644
+--- a/src/_pytest/mark/structures.py
++++ b/src/_pytest/mark/structures.py
+@@ -357,12 +357,30 @@ class MarkDecorator:
+ 
+ def get_unpacked_marks(obj: object) -> Iterable[Mark]:
+     """Obtain the unpacked marks that are stored on an object."""
++    # For classes, consider the full MRO so markers applied on base
++    # classes are not lost when inheriting from multiple bases. Collect
++    # marks in MRO order and deduplicate by mark name (first occurrence
++    # wins, preserving MRO precedence).
++    if inspect.isclass(obj):
++        seen: Set[str] = set()
++        marks: List[Mark] = []
++        for cls in obj.__mro__:
++            mark_list = getattr(cls, "pytestmark", None)
++            if mark_list is None:
++                continue
++            if not isinstance(mark_list, list):
++                mark_list = [mark_list]
++            for mark in normalize_mark_list(mark_list):
++                if mark.name in seen:
++                    continue
++                seen.add(mark.name)
++                marks.append(mark)
++        return marks
++
+     mark_list = getattr(obj, "pytestmark", [])
+     if not isinstance(mark_list, list):
+         mark_list = [mark_list]
+     return normalize_mark_list(mark_list)
+-
+-
+ def normalize_mark_list(
+     mark_list: Iterable[Union[Mark, MarkDecorator]]
+ ) -> Iterable[Mark]:
+
+
+######## pytest-dev__pytest-5787 r=0.0
+(no diff output seen)
+
+######## sphinx-doc__sphinx-8638 r=0.0
+(no diff output seen)
+
+######## sphinx-doc__sphinx-9258 r=0.0
+(no diff output seen)
+
+######## sympy__sympy-15599 r=0.0
+commit 76a5974efb800466e5793245fa8c217173bde447
+Author: SWE-bench <setup@swebench.config>
+Date:   Thu Oct 1 17:20:51 2026 +0000
+
+    Fix Mod distributive simplification to handle scalar factors (Mod(3*i,2) -> Mod(i,2))
+
+diff --git a/sympy/core/mod.py b/sympy/core/mod.py
+index eae25630c..778e5fa78 100644
+--- a/sympy/core/mod.py
++++ b/sympy/core/mod.py
+@@ -123,9 +123,11 @@ def doit(p, q):
+             for arg in p.args:
+                 both_l[isinstance(arg, cls)].append(arg)
+ 
+-            if mod_l and all(inner.args[1] == q for inner in mod_l):
++            was = non_mod_l[:] 
++            non_mod_l = [cls(x, q) for x in non_mod_l]
++            changed = was != non_mod_l
++            if changed or mod_l and all(inner.args[1] == q for inner in mod_l):
+                 # finding distributive term
+-                non_mod_l = [cls(x, q) for x in non_mod_l]
+                 mod = []
+                 non_mod = []
+                 for j in non_mod_l:
+
+
+######## sympy__sympy-17139 r=0.0
+(no diff output seen)
+
+######## sympy__sympy-17630 r=0.0
+diff --git a/sympy/matrices/expressions/blockmatrix.py b/sympy/matrices/expressions/blockmatrix.py
+index 95302a05ca..f36abff5c3 100644
+--- a/sympy/matrices/expressions/blockmatrix.py
++++ b/sympy/matrices/expressions/blockmatrix.py
+@@ -164,7 +164,25 @@ def structurally_equal(self, other):
+     def _blockmul(self, other):
+         if (isinstance(other, BlockMatrix) and
+                 self.colblocksizes == other.rowblocksizes):
+-            return BlockMatrix(self.blocks*other.blocks)
++            # Perform block-wise multiplication. The underlying DenseMatrix
++            # multiplication can collapse ZeroMatrix entries to the scalar
++            # zero which breaks later code that expects matrix blocks.
++            # Convert any scalar zeros back to ZeroMatrix instances with
++            # the appropriate block shape.
++            prod = self.blocks * other.blocks
++            from sympy import S
++            from sympy.matrices import Matrix as DenseMatrix
++
++            M = DenseMatrix(prod)  # make a mutable copy
++            for i in range(M.rows):
++                for j in range(M.cols):
++                    if M[i, j] == S.Zero:
++                        # resulting block (i, j) should have shape
++                        # self.rowblocksizes[i] x other.colblocksizes[j]
++                        r = self.rowblocksizes[i]
++                        c = other.colblocksizes[j]
++                        M[i, j] = ZeroMatrix(r, c)
++            return BlockMatrix(M)
+ 
+         return self * other
+ 
+
+
+######## sympy__sympy-18211 r=0.0
+(no diff output seen)
+
+######## sympy__sympy-21612 r=0.0
+commit d41a7fe966d684ea2e95e33b113f6332bab8404a
+Author: SWE-bench <setup@swebench.config>
+Date:   Thu Oct 1 16:59:01 2026 +0000
+
+    latex: preserve denominator grouping when inverting fractions to avoid flattening divisions
+
+diff --git a/sympy/parsing/latex/_parse_latex_antlr.py b/sympy/parsing/latex/_parse_latex_antlr.py
+index 2e4a45ad20..12b10d980f 100644
+--- a/sympy/parsing/latex/_parse_latex_antlr.py
++++ b/sympy/parsing/latex/_parse_latex_antlr.py
+@@ -382,7 +382,29 @@ def convert_frac(frac):
+ 
+     expr_top = convert_expr(frac.upper)
+     expr_bot = convert_expr(frac.lower)
+-    inverse_denom = sympy.Pow(expr_bot, -1, evaluate=False)
++
++    # Invert the denominator. If the denominator is a product or a power
++    # we need to invert its factors/exponent rather than creating a nested
++    # Pow which can lead to incorrect flattening of divisions, e.g. when
++    # inverting a fraction like 1/c**2.  See issue where
++    # \frac{\frac{a^3+b}{c}}{\frac{1}{c^2}} was parsed incorrectly.
++    def _invert(e):
++        # invert a Mul by inverting each factor
++        if isinstance(e, sympy.Mul):
++            inv_args = []
++            for f in e.args:
++                if isinstance(f, sympy.Pow):
++                    inv_args.append(sympy.Pow(f.base, -f.exp, evaluate=False))
++                else:
++                    inv_args.append(sympy.Pow(f, -1, evaluate=False))
++            return sympy.Mul(*inv_args, evaluate=False)
++        # invert a Pow by negating its exponent
++        if isinstance(e, sympy.Pow):
++            return sympy.Pow(e.base, -e.exp, evaluate=False)
++        # fallback
++        return sympy.Pow(e, -1, evaluate=False)
++
++    inverse_denom = _invert(expr_bot)
+     if expr_top == 1:
+         return inverse_denom
+     else:
+

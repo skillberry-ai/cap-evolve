@@ -1,0 +1,293 @@
+=== pydata__xarray-6461 steps=24
+reward=0.0
+
+--- [2] TASK ---
+Please solve this issue: xr.where with scalar as second argument fails with keep_attrs=True
+### What happened?
+
+``` python
+import xarray as xr
+
+xr.where(xr.DataArray([1, 2, 3]) > 0, 1, 0)
+```
+
+fails with
+
+```
+   1809 if keep_attrs is True:
+   1810     # keep the attributes of x, the second parameter, by default to
+   1811     # be consistent with the `where` method of `DataArray` and `Dataset`
+-> 1812     keep_attrs = lambda attrs, context: attrs[1]
+   1814 # alignment for three arguments is complicated, so don't support it yet
+   1815 return apply_ufunc(
+   1816     duck_array_ops.where,
+   1817     cond,
+   (...)
+   1823     keep_attrs=keep_attrs,
+   1824 )
+
+IndexError: list index out of range
+```
+
+The workaround is to pass `keep_attrs=False`
+
+### What did you expect to happen?
+
+_No response_
+
+### Minimal Complete Verifiable Example
+
+_No response_
+
+### Relevant log output
+
+_No response_
+
+### Anything else we need to know?
+
+_No response_
+
+### Environment
+
+xarray 2022.3.0
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected behavior, the actual buggy behavior, and any test cases or reproduction steps mentioned. If the issue describes multiple cases or edge cases, list every one — you must handle ALL of them, not just the primary case.
+
+### 2. Explore the relevant code
+Search the codebase to find the files and functions involved in the bug. Read enough surrounding context — related functions, callers, type definitions, and test files — to fully understand the affected code paths before making any changes.
+
+### 3. Identify the root cause
+Before editing anything, pinpoint exactly WHY the bug occurs. Trace th
+
+--- [3] AGENT MSG ---
+I'll inspect the repository to find relevant xarray code handling xr.where and keep_attrs. I'll list files and search for 'where' and 'keep_attrs' references.
+
+--- [3] CMD ---
+ls -la
+
+--- [3] OBS rc=0 ---
+
+
+--- [4] CMD ---
+grep -R "def where" -n xarray | sed -n '1,200p'
+
+--- [4] OBS rc=0 ---
+
+
+--- [5] CMD ---
+nl -ba xarray/core/computation.py | sed -n '1700,1770p'
+
+--- [5] OBS rc=0 ---
+
+
+--- [6] CMD ---
+nl -ba xarray/core/computation.py | sed -n '1770,1850p'
+
+--- [6] OBS rc=0 ---
+
+
+--- [7] CMD ---
+grep -n "def apply_ufunc" -n xarray | sed -n '1,200p'
+
+--- [7] OBS rc=0 ---
+
+
+--- [8] CMD ---
+grep -R "def apply_ufunc" -n xarray | sed -n '1,200p'
+
+--- [8] OBS rc=0 ---
+
+
+--- [9] CMD ---
+nl -ba xarray/core/computation.py | sed -n '750,950p'
+
+--- [9] OBS rc=0 ---
+rgs)`` on unlabeled arrays
+   851	        (``.data``) that returns an array or tuple of arrays. If multiple
+   852	        arguments with non-matching dimensions are supplied, this function is
+   853	        expected to vectorize (broadcast) over axes of positional arguments in
+   854	        the style of NumPy universal functions [1]_ (if this is not the case,
+   855	        set ``vectorize=True``). If this function returns multiple outputs, you
+   856	        must set ``output_core_dims`` as well.
+   857	    *args : Dataset, DataArray, DataArrayGroupBy, DatasetGroupBy, Variable, numpy.ndarra
+...
+' and new dimensions (not found on inputs) appear
+   941	        on outputs. ``output_sizes`` should be given in the ``dask_gufunc_kwargs``
+   942	        parameter. It will be removed as direct parameter in a future version.
+   943	    meta : optional
+   944	        Size-0 object representing the type of array wrapped by dask array. Passed on to
+   945	        :py:func:`dask.array.apply_gufunc`. ``meta`` should be given in the
+   946	        ``dask_gufunc_kwargs`` parameter . It will be removed as direct parameter
+   947	        a future version.
+   948	
+   949	    Returns
+   950	    ---
+
+--- [10] CMD ---
+nl -ba xarray/core/computation.py | sed -n '950,1160p'
+
+--- [10] OBS rc=0 ---
+
+
+--- [11] CMD ---
+nl -ba xarray/core/computation.py | sed -n '1160,1320p'
+
+--- [11] OBS rc=0 ---
+
+
+--- [12] CMD ---
+grep -n "merge_attrs" -n xarray | sed -n '1,200p'
+
+--- [12] OBS rc=0 ---
+
+
+--- [13] CMD ---
+grep -R "def merge_attrs" -n xarray | sed -n '1,200p'
+
+--- [13] OBS rc=0 ---
+
+
+--- [14] CMD ---
+nl -ba xarray/core/merge.py | sed -n '560,700p'
+
+--- [14] OBS rc=0 ---
+
+
+--- [15] AGENT MSG ---
+I'll run a small Python snippet using the repository's xarray package to reproduce the failure.
+
+--- [15] CMD ---
+python - << 'PY'
+import sys
+sys.path.insert(0,'.')
+import xarray as xr
+print('xarray version:', xr.__version__)
+try:
+    print(xr.where(xr.DataArray([1,2,3])>0, 1, 0))
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+PY
+
+--- [15] OBS rc=1 ---
+
+
+--- [16] AGENT MSG ---
+I'll apply the minimal change to xarray/core/computation.py to guard against the IndexError by falling back to the first attrs when only one variable is present, then run the repository's verification tool.
+
+--- [16] CMD ---
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: xarray/core/computation.py
+@@
+-    if keep_attrs is True:
+-        # keep the attributes of x, the second parameter, by default to
+-        # be consistent with the `where` method of `DataArray` and `Dataset`
+-        keep_attrs = lambda attrs, context: attrs[1]
++    if keep_attrs is True:
++        # keep the attributes of x, the second parameter, by default to
++        # be consistent with the `where` method of `DataArray` and `Dataset`.
++        # If only one xarray-like argument is present (e.g., the other
++        # arguments are plain scalars), fall back to keeping the first
++        # available attrs to avoid IndexError when attrs has length 1.
++        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) > 1 else attrs[0]
+*** End Patch
+PATCH
+
+--- [16] OBS rc=128 ---
+
+
+--- [17] CMD ---
+nl -ba xarray/core/computation.py | sed -n '1820,1840p'
+
+--- [17] OBS rc=0 ---
+
+
+--- [18] CMD ---
+git status --porcelain; git rev-parse --abbrev-ref HEAD
+
+--- [18] OBS rc=0 ---
+
+
+--- [19] CMD ---
+python - << 'PY'
+from pathlib import Path
+p=Path('xarray/core/computation.py')
+s=p.read_text()
+old='''    if keep_attrs is True:
+        # keep the attributes of x, the second parameter, by default to
+        # be consistent with the `where` method of `DataArray` and `Dataset`
+        keep_attrs = lambda attrs, context: attrs[1]
+'''
+new='''    if keep_attrs is True:
+        # keep the attributes of x, the second parameter, by default to
+        # be consistent with the `where` method of `DataArray` and `Dataset`.
+        # If only one xarray-like argument is present (e.g., the other
+        # arguments are plain scalars), fall back to keeping the first
+        # available attrs to avoid IndexError when attrs has length 1.
+        keep_attrs = lambda attrs, context: attrs[1] if len(attrs) > 1 else attrs[0]
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+
+--- [19] OBS rc=0 ---
+
+
+--- [20] CMD ---
+git add -A && git commit -m "where: avoid IndexError when keep_attrs=True and only one xarray-like input present" || true; git --no-pager diff --staged
+
+--- [20] OBS rc=0 ---
+
+
+--- [21] CMD ---
+python - << 'PY'
+import sys
+sys.path.insert(0,'.')
+import traceback
+try:
+    import numpy as np
+    import xarray as xr
+    print('xarray version:', xr.__version__)
+    print(xr.where(xr.DataArray([1,2,3])>0, 1, 0))
+    print('--- other test: cond with xarray, x scalar, y xarray attrs behavior')
+    a = xr.DataArray([1,2,3], attrs={'a':1})
+    b = xr.DataArray([0,0,0], attrs={'b':2})
+    print(xr.where(a>1, a, 0))
+    print(xr.where(a>1, 0, b))
+except Exception as e:
+    traceback.print_exc()
+PY
+
+--- [21] OBS rc=0 ---
+
+
+--- [22] CMD ---
+python /harbor/skills/candidate/tools/tools.py verify-fix
+
+--- [22] OBS rc=0 ---
+
+
+--- [23] CMD ---
+git --no-pager show --pretty="" -U0 HEAD | sed -n '1,200p'
+
+--- [23] OBS rc=0 ---
+
+
+--- [24] CMD ---
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+
+--- [24] OBS rc=-1 ---
+

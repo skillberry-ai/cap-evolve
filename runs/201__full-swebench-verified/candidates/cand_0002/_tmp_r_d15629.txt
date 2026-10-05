@@ -1,0 +1,735 @@
+### USER/TASK:
+Please solve this issue: Errors with db_collation – no propagation to foreignkeys
+Description
+
+		(last modified by typonaut)
+
+Using db_collation with a pk that also has referenced fks in other models causes foreign key constraint errors in MySQL.
+With the following models:
+class Account(models.Model):
+	id = ShortUUIDField(primary_key=True, db_collation='utf8_bin', db_index=True, max_length=22) 
+	…
+class Address(models.Model):
+	id = ShortUUIDField(primary_key=True, db_collation='utf8_bin', db_index=True, max_length=22)
+	account = models.OneToOneField(Account, on_delete=models.CASCADE)
+	…
+class Profile(models.Model):
+	id = ShortUUIDField(primary_key=True, db_collation='utf8_bin', db_index=True, max_length=22)
+	…
+	account = models.ForeignKey('Account', verbose_name=_('account'), null=True, blank=True, on_delete=models.CASCADE)
+	…
+etc
+Where Account.id has been changed from models.BigAutoField if makemigrations is run then it produces sqlmigrate output like this:
+ALTER TABLE `b_manage_account` MODIFY `id` varchar(22) COLLATE `utf8_bin`;
+ALTER TABLE `b_manage_address` MODIFY `account_id` varchar(22) NOT NULL;
+ALTER TABLE `b_manage_profile` MODIFY `account_id` varchar(22) NULL;
+ALTER TABLE `b_manage_address` ADD CONSTRAINT `b_manage_address_account_id_7de0ae37_fk` FOREIGN KEY (`account_id`) REFERENCES `b_manage_account` (`id`);
+ALTER TABLE `b_manage_profile` ADD CONSTRAINT `b_manage_profile_account_id_ec864dcc_fk` FOREIGN KEY (`account_id`) REFERENCES `b_manage_account` (`id`);
+With
+### step 3 CMD:
+ls -la
+--- RC=0 
+--- OUT:
+root root   385 Sep 10  2025 .readthedocs.yml
+drwxrwxrwx.   2 root root    20 Sep 10  2025 .tx
+-rw-r--r--.   1 root root 40198 Sep 10  2025 AUTHORS
+-rw-r--r--.   1 root root  1115 Sep 10  2025 CONTRIBUTING.rst
+drwxr-xr-x.   2 root root   154 Sep 10  2025 Django.egg-info
+-rw-r--r--.   1 root root   369 Sep 10  2025 Gruntfile.js
+-rw-r--r--.   1 root root   236 Sep 10  2025 INSTALL
+-rw-r--r--.   1 root root  1552 Sep 10  2025 LICENSE
+-rw-r--r--.   1 root root 14383 Sep 10  2025 LICENSE.python
+-rw-r--r--.   1 root root   276 Sep 10  2025 MANIFEST.in
+-rw-r--r--.   1 root root  2122 Sep 10  2025 README.rst
+drwxrwxrwx.  18 root root  4096 Sep 10  2025 django
+drwxrwxrwx.  13 root root  4096 Sep 10  2025 docs
+drwxrwxrwx.   2 root root    70 Sep 10  2025 extras
+drwxrwxrwx.   4 root root    48 Sep 10  2025 js_tests
+-rw-r--r--.   1 root root   362 Sep 10  2025 package.json
+-rw-r--r--.   1 root root   219 Sep 10  2025 pyproject.toml
+drwxrwxrwx.   2 root root    58 Sep 10  2025 scripts
+-rw-r--r--.   1 root root  2276 Sep 10  2025 setup.cfg
+-rw-r--r--.   1 root root  1633 Sep 10  2025 setup.py
+drwxrwxrwx. 215 root root  8192 Sep 10  2025 tests
+-rw-r--r--.   1 root root  1702 Sep 10  2025 tox.ini
+
+### step 4 CMD:
+grep -R "db_collation" -n django || true
+--- RC=0 
+--- OUT:
+/__init__.py:1130:            *self._check_db_collation(databases),
+django/db/models/fields/__init__.py:1158:    def _check_db_collation(self, databases):
+django/db/models/fields/__init__.py:1165:                self.db_collation is None
+django/db/models/fields/__init__.py:1187:        db_params["collation"] = self.db_collation
+django/db/models/fields/__init__.py:1215:        if self.db_collation:
+django/db/models/fields/__init__.py:1216:            kwargs["db_collation"] = self.db_collation
+django/db/models/fields/__init__.py:2336:    def __init__(self, *args, db_collation=None, **kwargs):
+django/db/models/fields/__init__.py:2338:        self.db_collation = db_collation
+django/db/models/fields/__init__.py:2344:            *self._check_db_collation(databases),
+django/db/models/fields/__init__.py:2347:    def _check_db_collation(self, databases):
+django/db/models/fields/__init__.py:2354:                self.db_collation is None
+django/db/models/fields/__init__.py:2371:        db_params["collation"] = self.db_collation
+django/db/models/fields/__init__.py:2400:        if self.db_collation:
+django/db/models/fields/__init__.py:2401:            kwargs["db_collation"] = self.db_collation
+
+### step 5 CMD:
+sed -n '1,240p' django/db/models/fields/__init__.py
+--- RC=0 
+--- OUT:
+que
+        self.blank, self.null = blank, null
+        self.remote_field = rel
+        self.is_relation = self.remote_field is not None
+        self.default = default
+        self.editable = editable
+        self.serialize = serialize
+        self.unique_for_date = unique_for_date
+        self.unique_for_month = unique_for_month
+        self.unique_for_year = unique_for_year
+        if isinstance(choices, collections.abc.Iterator):
+            choices = list(choices)
+        self.choices = choices
+        self.help_text = help_text
+        self.db_index = db_index
+        self.db_column = db_column
+        self._db_tablespace = db_tablespace
+        self.auto_created = auto_created
+
+        # Adjust the appropriate creation counter, and save our local copy.
+        if auto_created:
+            self.creation_counter = Field.auto_creation_counter
+            Field.auto_creation_counter -= 1
+        else:
+            self.creation_counter = Field.creation_counter
+            Field.creation_counter += 1
+
+        self._validators = list(validators)  # Store for deconstruction later
+
+        self._error_messages = error_messages  # Store for deconstruction later
+
+    def __str__(self):
+
+### step 6 CMD:
+sed -n '240,520p' django/db/models/fields/__init__.py
+--- RC=0 
+--- OUT:
+               ):
+                    break
+                if self.max_length is not None and isinstance(value, str):
+                    choice_max_length = max(choice_max_length, len(value))
+
+            # Special case: choices=['ab']
+            if isinstance(choices_group, str):
+                break
+        else:
+            if self.max_length is not None and choice_max_length > self.max_length:
+                return [
+                    checks.Error(
+                        "'max_length' is too small to fit the longest value "
+                        "in 'choices' (%d characters)." % choice_max_length,
+                        obj=self,
+                        id="fields.E009",
+                    ),
+                ]
+            return []
+
+        return [
+            checks.Error(
+                "'choices' must be an iterable containing "
+                "(actual value, human readable name) tuples.",
+                obj=self,
+                id="fields.E005",
+            )
+        ]
+
+    def _check_db_index(self):
+        if self.db_index not in (None, True, False):
+            return [
+                checks.Error(
+                    "'db_index' must be None, True or F
+### step 7 CMD:
+grep -R "collate" -n django | sed -n '1,200p'
+--- RC=0 
+--- OUT:
+django/db/backends/base/features.py:289:    collate_as_index_expression = False
+django/db/backends/base/schema.py:90:    sql_alter_column_collate = "ALTER COLUMN %(column)s TYPE %(type)s%(collation)s"
+django/db/backends/base/schema.py:283:            yield self._collate_sql(collation)
+django/db/backends/base/schema.py:1187:            self.sql_alter_column_collate
+django/db/backends/base/schema.py:1191:                "collation": " " + self._collate_sql(new_collation)
+django/db/backends/base/schema.py:1679:    def _collate_sql(self, collation):
+django/db/backends/mysql/features.py:46:    collate_as_index_expression = True
+django/db/backends/mysql/schema.py:12:    sql_alter_column_collate = "MODIFY %(column)s %(type)s%(collation)s"
+django/db/backends/oracle/schema.py:22:    sql_alter_column_collate = "MODIFY %(column)s %(type)s%(collation)s"
+django/db/backends/sqlite3/schema.py:554:    def _collate_sql(self, collation):
+django/db/models/indexes.py:219:        if connection and connection.features.collate_as_index_expression:
+
+### step 8 CMD:
+sed -n '1,260p' django/db/backends/base/schema.py
+--- RC=0 
+--- OUT:
+            "to_column": self.quote_name(to_column),
+                    }
+                elif self.connection.features.supports_foreign_keys:
+                    self.deferred_sql.append(
+                        self._create_fk_sql(
+                            model, field, "_fk_%(to_table)s_%(to_column)s"
+                        )
+                    )
+            # Add the SQL to our big list.
+            column_sqls.append(
+                "%s %s"
+                % (
+                    self.quote_name(field.column),
+                    definition,
+                )
+            )
+            # Autoincrement SQL (for backends with post table definition
+            # variant).
+            if field.get_internal_type() in (
+                "AutoField",
+                "BigAutoField",
+                "SmallAutoField",
+            ):
+                autoinc_sql = self.connection.ops.autoinc_sql(
+                    model._meta.db_table, field.column
+                )
+                if autoinc_sql:
+                    self.deferred_sql.extend(autoinc_sql)
+        constraints = [
+            constraint.constraint_sql(model, self)
+            for constraint in model._meta.constraints
+
+### step 9 CMD:
+sed -n '260,620p' django/db/backends/base/schema.py
+--- RC=0 
+--- OUT:
+ld,
+                    field_db_params,
+                    include_default,
+                )
+            ),
+            params,
+        )
+
+    def skip_default(self, field):
+        """
+        Some backends don't accept default values for certain columns types
+        (i.e. MySQL longtext and longblob).
+        """
+        return False
+
+    def skip_default_on_alter(self, field):
+        """
+        Some backends don't accept default values for certain columns types
+        (i.e. MySQL longtext and longblob) in the ALTER COLUMN statement.
+        """
+        return False
+
+    def prepare_default(self, value):
+        """
+        Only used for backends which have requires_literal_defaults feature
+        """
+        raise NotImplementedError(
+            "subclasses of BaseDatabaseSchemaEditor for backends which have "
+            "requires_literal_defaults must provide a prepare_default() method"
+        )
+
+    def _column_default_sql(self, field):
+        """
+        Return the SQL to use in a DEFAULT clause. The resulting string should
+        contain a '%s' placeholder for a default value.
+        """
+        return "%s"
+
+    @staticmethod
+    def _effective_default(field):
+
+### step 10 CMD:
+grep -n "def alter_field" -n django -R || true
+--- RC=0 
+--- OUT:
+django/db/backends/base/schema.py:700:    def alter_field(self, model, old_field, new_field, strict=False):
+django/db/backends/oracle/schema.py:75:    def alter_field(self, model, old_field, new_field, strict=False):
+django/db/backends/sqlite3/schema.py:123:    def alter_field(self, model, old_field, new_field, strict=False):
+django/db/migrations/state.py:243:    def alter_field(self, app_label, model_name, name, field, preserve_default):
+
+### step 11 CMD:
+sed -n '640,820p' django/db/backends/base/schema.py
+--- RC=0 
+--- OUT:
+   model._meta.db_table,
+                        old_field.column,
+                    )
+                )
+            for fk_name in fk_names:
+                fks_dropped.add((old_field.column,))
+                self.execute(self._delete_fk_sql(model, fk_name))
+        # Has unique been removed?
+        if old_field.unique and (
+            not new_field.unique or self._field_became_primary_key(old_field, new_field)
+        ):
+            # Find the unique constraint for this field
+            meta_constraint_names = {
+                constraint.name for constraint in model._meta.constraints
+            }
+            constraint_names = self._constraint_names(
+                model,
+                [old_field.column],
+                unique=True,
+                primary_key=False,
+                exclude=meta_constraint_names,
+            )
+            if strict and len(constraint_names) != 1:
+                raise ValueError(
+                    "Found wrong number (%s) of unique constraints for %s.%s"
+                    % (
+                        len(constraint_names),
+                        model._meta.db_table,
+                        old_field.column,
+                    )
+
+### step 12 CMD:
+sed -n '820,1240p' django/db/backends/base/schema.py
+--- RC=0 
+--- OUT:
+
+            self.execute(
+                self._rename_field_sql(
+                    model._meta.db_table, old_field, new_field, new_type
+                )
+            )
+            # Rename all references to the renamed column.
+            for sql in self.deferred_sql:
+                if isinstance(sql, Statement):
+                    sql.rename_column_references(
+                        model._meta.db_table, old_field.column, new_field.column
+                    )
+        # Next, start accumulating actions to do
+        actions = []
+        null_actions = []
+        post_actions = []
+        # Type suffix change? (e.g. auto increment).
+        old_type_suffix = old_field.db_type_suffix(connection=self.connection)
+        new_type_suffix = new_field.db_type_suffix(connection=self.connection)
+        # Collation change?
+        old_collation = old_db_params.get("collation")
+        new_collation = new_db_params.get("collation")
+        if old_collation != new_collation:
+            # Collation change handles also a type change.
+            fragment = self._alter_column_collation_sql(
+                model, new_field, new_type, new_collation
+            )
+            actions.appen
+### step 13 CMD:
+grep -n "_related_non_m2m_objects" -n django -R || true
+--- RC=0 
+--- OUT:
+django/db/backends/base/schema.py:46:def _related_non_m2m_objects(old_field, new_field):
+django/db/backends/base/schema.py:63:        yield from _related_non_m2m_objects(
+django/db/backends/base/schema.py:837:            for _old_rel, new_rel in _related_non_m2m_objects(old_field, new_field):
+django/db/backends/base/schema.py:1030:            rels_to_update.extend(_related_non_m2m_objects(old_field, new_field))
+django/db/backends/base/schema.py:1036:            rels_to_update.extend(_related_non_m2m_objects(old_field, new_field))
+django/db/backends/oracle/schema.py:8:    _related_non_m2m_objects,
+django/db/backends/oracle/schema.py:166:            for _, rel in _related_non_m2m_objects(new_temp_field, new_field):
+
+### step 14 CMD:
+sed -n '960,1120p' django/db/backends/base/schema.py
+--- RC=0 
+--- OUT:
+,
+                "changes": changes_sql,
+            }
+            self.execute(sql, params)
+        # Reset connection if required
+        if self.connection.features.connection_persists_old_columns:
+            self.connection.close()
+
+    def _alter_column_null_sql(self, model, old_field, new_field):
+        """
+        Hook to specialize column null alteration.
+
+        Return a (sql, params) fragment to set a column to null or non-null
+        as required by new_field, or None if no changes are required.
+        """
+        if (
+            self.connection.features.interprets_empty_strings_as_nulls
+            and new_field.empty_strings_allowed
+        ):
+            # The field is nullable in the database anyway, leave it alone.
+            return
+        else:
+            new_db_params = new_field.db_parameters(connection=self.connection)
+            sql = (
+                self.sql_alter_column_null
+                if new_field.null
+                else self.sql_alter_column_not_null
+            )
+            return (
+                sql
+                % {
+                    "column": self.quote_name(new_field.column),
+                    "type": new_db_params["type"],
+
+### step 15 CMD:
+sed -n '1,260p' django/db/backends/mysql/schema.py
+--- RC=0 
+--- OUT:
+_field.get_internal_type() == "ForeignKey":
+            constraint_names = self._constraint_names(
+                model, [first_field.column], index=True
+            )
+            if not constraint_names:
+                self.execute(
+                    self._create_index_sql(model, fields=[first_field], suffix="")
+                )
+        return super()._delete_composed_index(model, fields, *args)
+
+    def _set_field_new_type_null_status(self, field, new_type):
+        """
+        Keep the null property of the old field. If it has changed, it will be
+        handled separately.
+        """
+        if field.null:
+            new_type += " NULL"
+        else:
+            new_type += " NOT NULL"
+        return new_type
+
+    def _alter_column_type_sql(self, model, old_field, new_field, new_type):
+        new_type = self._set_field_new_type_null_status(old_field, new_type)
+        return super()._alter_column_type_sql(model, old_field, new_field, new_type)
+
+    def _rename_field_sql(self, table, old_field, new_field, new_type):
+        new_type = self._set_field_new_type_null_status(old_field, new_type)
+        return super()._rename_field_sql(table, old_field, new_field, new_type)
+
+### step 16 CMD:
+git status --porcelain; git rev-parse --abbrev-ref HEAD || true
+--- RC=0 
+--- OUT:
+main
+
+### step 17 CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: django/db/backends/base/schema.py
+@@
+         # Type alteration on primary key? Then we need to alter the column
+         # referring to us.
+         rels_to_update = []
+         if drop_foreign_keys:
+             rels_to_update.extend(_related_non_m2m_objects(old_field, new_field))
+@@
+         # Handle our type alters on the other end of rels from the PK stuff above
+         for old_rel, new_rel in rels_to_update:
+             rel_db_params = new_rel.field.db_parameters(connection=self.connection)
+             rel_type = rel_db_params["type"]
+-            fragment, other_actions = self._alter_column_type_sql(
+-                new_rel.related_model, old_rel.field, new_rel.field, rel_type
+-            )
++            # If the referenced field changed collation, ensure the related
++            # FK column is altered with the same collation. Some backends
++            # (e.g. MySQL) require the column collation to match the PK it
++            # references otherwise adding FK constraints will fail. Compute
++            # the type-alter fragment and, if a collation changed on the
++            # referenced field, generate a collation-alter fragment too.
++            fragment, other_actions = self._alter_column_type_sql(
++                new_rel.related_model, old_rel.field, new_rel.field, rel_type
++            )
++            # If the to-field's collation changed, append a collation alter
++            # so the FK column gets the same collation.
++            old_rel_db_params = old_rel.field.db_parameters(connection=self.connection)
++            new_rel_db_params = new_rel.field.db_parameters(connection=self.connection)
++            old_rel_collation = old_rel_db_params.get("collation")
++            new_rel_collation = new_rel_db_params.get("collation")
++            if old_rel_collation != new_rel_collation:
++                collation_fragment, _ = self._alter_column_collation_sql(
++                    new_rel.related_model, new_rel.field, rel_type, new_rel_collation
++                )
++                # fragment is a (sql, params) tuple; ensure we execute the
++                # collation change in the same ALTER TABLE statement where
++                # possible by merging SQL fragments.
++                fragment = (fragment[0] + ", " + collation_fragment[0], fragment[1])
+*** End Patch
+PATCH
+--- RC=128 
+--- OUT:
+error: unrecognized input
+
+### step 18 CMD:
+nl -ba django/db/backends/base/schema.py | sed -n '980,1040p'
+--- RC=0 
+--- OUT:
+ if (
+  1021	            (not old_field.db_index or old_field.unique)
+  1022	            and new_field.db_index
+  1023	            and not new_field.unique
+  1024	        ):
+  1025	            self.execute(self._create_index_sql(model, fields=[new_field]))
+  1026	        # Type alteration on primary key? Then we need to alter the column
+  1027	        # referring to us.
+  1028	        rels_to_update = []
+  1029	        if drop_foreign_keys:
+  1030	            rels_to_update.extend(_related_non_m2m_objects(old_field, new_field))
+  1031	        # Changed to become primary key?
+  1032	        if self._field_became_primary_key(old_field, new_field):
+  1033	            # Make the new one
+  1034	            self.execute(self._create_primary_key_sql(model, new_field))
+  1035	            # Update all referencing columns
+  1036	            rels_to_update.extend(_related_non_m2m_objects(old_field, new_field))
+  1037	        # Handle our type alters on the other end of rels from the PK stuff above
+  1038	        for old_rel, new_rel in rels_to_update:
+  1039	            rel_db_params = new_rel.field.db_parameters(connection=self.connection)
+  1040	            rel_type = rel_db_params["type"]
+
+### step 19 CMD:
+nl -ba django/db/backends/base/schema.py | sed -n '1040,1108p'
+--- RC=0 
+--- OUT:
+database_default:
+  1084	            changes_sql, params = self._alter_column_default_sql(
+  1085	                model, old_field, new_field, drop=True
+  1086	            )
+  1087	            sql = self.sql_alter_column % {
+  1088	                "table": self.quote_name(model._meta.db_table),
+  1089	                "changes": changes_sql,
+  1090	            }
+  1091	            self.execute(sql, params)
+  1092	        # Reset connection if required
+  1093	        if self.connection.features.connection_persists_old_columns:
+  1094	            self.connection.close()
+  1095	
+  1096	    def _alter_column_null_sql(self, model, old_field, new_field):
+  1097	        """
+  1098	        Hook to specialize column null alteration.
+  1099	
+  1100	        Return a (sql, params) fragment to set a column to null or non-null
+  1101	        as required by new_field, or None if no changes are required.
+  1102	        """
+  1103	        if (
+  1104	            self.connection.features.interprets_empty_strings_as_nulls
+  1105	            and new_field.empty_strings_allowed
+  1106	        ):
+  1107	            # The field is nullable in the database anyway, leave it alone.
+  1108	            return
+
+### step 20 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('django/db/backends/base/schema.py')
+s=p.read_text()
+old='''            rel_type = rel_db_params["type"]
+            fragment, other_actions = self._alter_column_type_sql(
+                new_rel.related_model, old_rel.field, new_rel.field, rel_type
+            )
+            self.execute(
+                self.sql_alter_column
+                % {
+                    "table": self.quote_name(new_rel.related_model._meta.db_table),
+                    "changes": fragment[0],
+                },
+                fragment[1],
+            )
+            for sql, params in other_actions:
+                self.execute(sql, params)
+'''
+new='''            rel_type = rel_db_params["type"]
+            # If the referenced field changed collation, ensure the related
+            # FK column is altered with the same collation. Some backends
+            # (e.g. MySQL) require the column collation to match the PK it
+            # references otherwise adding FK constraints will fail. Compute
+            # the type-alter fragment and, if a collation changed on the
+            # referenced field, generate a collation-alter fragment too.
+            fragment, other_actions = self._alter_column_type_sql(
+                new_rel.related_model, old_rel.field, new_rel.field, rel_type
+            )
+            # If the to-field's collation changed, append a collation alter
+            # so the FK column gets the same collation.
+            old_rel_db_params = old_rel.field.db_parameters(connection=self.connection)
+            new_rel_db_params = new_rel.field.db_parameters(connection=self.connection)
+            old_rel_collation = old_rel_db_params.get("collation")
+            new_rel_collation = new_rel_db_params.get("collation")
+            if old_rel_collation != new_rel_collation:
+                collation_fragment, _ = self._alter_column_collation_sql(
+                    new_rel.related_model, new_rel.field, rel_type, new_rel_collation
+                )
+                # fragment is a (sql, params) tuple; ensure we execute the
+                # collation change in the same ALTER TABLE statement where
+                # possible by merging SQL fragments.
+                fragment = (fragment[0] + ", " + collation_fragment[0], fragment[1])
+            self.execute(
+                self.sql_alter_column
+                % {
+                    "table": self.quote_name(new_rel.related_model._meta.db_table),
+                    "changes": f
+--- RC=0 
+--- OUT:
+patched
+
+### step 21 CMD:
+git add -A && git commit -m "Propagate collation changes to related FK columns when altering PK/target field" || true
+--- RC=0 
+--- OUT:
+[main c59e7147ce] Propagate collation changes to related FK columns when altering PK/target field
+ 1 file changed, 20 insertions(+)
+
+### step 22 CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix
+--- RC=0 
+--- OUT:
+{
+  "changed": [],
+  "runner": "python tests/runtests.py",
+  "results": []
+}
+
+### step 23 CMD:
+git --no-pager show --pretty="" --name-only HEAD && git --no-pager diff HEAD~1 HEAD
+--- RC=0 
+--- OUT:
+er_actions = self._alter_column_type_sql(
+                 new_rel.related_model, old_rel.field, new_rel.field, rel_type
+             )
++            # If the to-field's collation changed, append a collation alter
++            # so the FK column gets the same collation.
++            old_rel_db_params = old_rel.field.db_parameters(connection=self.connection)
++            new_rel_db_params = new_rel.field.db_parameters(connection=self.connection)
++            old_rel_collation = old_rel_db_params.get("collation")
++            new_rel_collation = new_rel_db_params.get("collation")
++            if old_rel_collation != new_rel_collation:
++                collation_fragment, _ = self._alter_column_collation_sql(
++                    new_rel.related_model, new_rel.field, rel_type, new_rel_collation
++                )
++                # fragment is a (sql, params) tuple; ensure we execute the
++                # collation change in the same ALTER TABLE statement where
++                # possible by merging SQL fragments.
++                fragment = (fragment[0] + ", " + collation_fragment[0], fragment[1])
+             self.execute(
+                 self.sql_alter_column
+                 % {
+
+### step 24 CMD:
+grep -R "collation" -n tests | sed -n '1,200p'
+--- RC=0 
+--- OUT:
+ef test_db_collation(self):
+tests/invalid_models_tests/test_ordinary_fields.py:449:            field = models.CharField(max_length=100, db_collation="anything")
+tests/invalid_models_tests/test_ordinary_fields.py:453:            "%s does not support a database collation on CharFields."
+tests/invalid_models_tests/test_ordinary_fields.py:459:            [] if connection.features.supports_collation_on_charfield else [error]
+tests/invalid_models_tests/test_ordinary_fields.py:463:    def test_db_collation_required_db_features(self):
+tests/invalid_models_tests/test_ordinary_fields.py:465:            field = models.CharField(max_length=100, db_collation="anything")
+tests/invalid_models_tests/test_ordinary_fields.py:468:                required_db_features = {"supports_collation_on_charfield"}
+tests/invalid_models_tests/test_ordinary_fields.py:930:    def test_db_collation(self):
+tests/invalid_models_tests/test_ordinary_fields.py:932:            field = models.TextField(db_collation="anything")
+tests/invalid_models_tests/test_ordinary_fields.py:936:            "%s does not support a database collation on TextFields."
+tests/invalid_models_tests/test_ordinary_fields.py:942:            [] if c
+### step 25 CMD:
+sed -n '4598,4640p' tests/schema/tests.py
+--- RC=0 
+--- OUT:
+uage collations are not supported.")
+
+        with connection.schema_editor() as editor:
+            editor.create_model(Thing)
+
+        old_field = Thing._meta.get_field("when")
+        new_field = CharField(max_length=1, db_collation=collation, primary_key=True)
+        new_field.set_attributes_from_name("when")
+        new_field.model = Thing
+        with connection.schema_editor() as editor:
+            editor.alter_field(Thing, old_field, new_field, strict=True)
+        self.assertEqual(self.get_primary_key(Thing._meta.db_table), "when")
+        self.assertEqual(
+            self.get_column_collation(Thing._meta.db_table, "when"),
+            collation,
+        )
+        with connection.schema_editor() as editor:
+            editor.alter_field(Thing, new_field, old_field, strict=True)
+        self.assertEqual(self.get_primary_key(Thing._meta.db_table), "when")
+        self.assertIsNone(self.get_column_collation(Thing._meta.db_table, "when"))
+
+    @skipUnlessDBFeature(
+        "supports_collation_on_charfield", "supports_collation_on_textfield"
+    )
+    def test_alter_field_type_and_db_collation(self):
+        collation = connection.features.test_collations.get("non_default")
+
+### step 26 CMD:
+sed -n '4628,4648p' tests/schema/tests.py
+--- RC=0 
+--- OUT:
+            self.get_column_collation(Thing._meta.db_table, "when"),
+            collation,
+        )
+        with connection.schema_editor() as editor:
+            editor.alter_field(Thing, new_field, old_field, strict=True)
+        self.assertEqual(self.get_primary_key(Thing._meta.db_table), "when")
+        self.assertIsNone(self.get_column_collation(Thing._meta.db_table, "when"))
+
+    @skipUnlessDBFeature(
+        "supports_collation_on_charfield", "supports_collation_on_textfield"
+    )
+    def test_alter_field_type_and_db_collation(self):
+        collation = connection.features.test_collations.get("non_default")
+        if not collation:
+            self.skipTest("Language collations are not supported.")
+
+        with connection.schema_editor() as editor:
+            editor.create_model(Note)
+
+        old_field = Note._meta.get_field("info")
+        new_field = CharField(max_length=255, db_collation=collation)
+
+### step 27 CMD:
+sed -n '4648,4688p' tests/schema/tests.py
+--- RC=0 
+--- OUT:
+        self.assertEqual(columns["info"][0], "TextField")
+        self.assertIsNone(columns["info"][1][8])
+
+    @skipUnlessDBFeature(
+        "supports_collation_on_charfield",
+        "supports_non_deterministic_collations",
+    )
+    def test_ci_cs_db_collation(self):
+        cs_collation = connection.features.test_collations.get("cs")
+        ci_collation = connection.features.test_collations.get("ci")
+        try:
+            if connection.vendor == "mysql":
+                cs_collation = "latin1_general_cs"
+            elif connection.vendor == "postgresql":
+                cs_collation = "en-x-icu"
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "CREATE COLLATION IF NOT EXISTS case_insensitive "
+                        "(provider = icu, locale = 'und-u-ks-level2', "
+                        "deterministic = false)"
+                    )
+                    ci_collation = "case_insensitive"
+            # Create the table.
+            with connection.schema_editor() as editor:
+                editor.create_model(Author)
+            # Case-insensitive collation.
+            old_field = Author._meta.get_field("name")
+
+### step 28 CMD:
+python tests/runtests.py tests.schema.tests.TestSchemaAlter.test_alter_primary_key_db_collation -q -s || true
+--- RC=0 
+--- OUT:
+Traceback (most recent call last):
+  File "/testbed/tests/runtests.py", line 18, in <module>
+    import django
+ModuleNotFoundError: No module named 'django'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/testbed/tests/runtests.py", line 20, in <module>
+    raise RuntimeError(
+RuntimeError: Django module not found, reference tests/README.rst for instructions.
+
+### step 29 CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+--- RC=-1 action was not executed
+--- OUT:
+

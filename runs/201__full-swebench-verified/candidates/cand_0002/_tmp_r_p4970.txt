@@ -1,0 +1,607 @@
+### USER/TASK:
+Please solve this issue: Setting `min-similarity-lines` to `0` should stop pylint from checking duplicate code
+### Current problem
+
+Setting `min-similarity-lines` to `0` in the rcfile doesn't disable checking for duplicate code, it instead treats every line of code as duplicate and raises many errors.
+
+### Desired solution
+
+Setting `min-similarity-lines` to `0` should disable the duplicate code check.
+
+It works that way in many other linters (like flake8). Setting a numerical value in flake8 to `0` (e.g. `max-line-length`) disables that check.
+
+### Additional context
+
+#214 requests being able to disable `R0801`, but it is still open
+
+
+You are an expert software engineer tasked with fixing bugs in open-source repositories.
+
+You will receive a problem description from a GitHub issue. Your goal is to locate the bug in the source code, implement a minimal correct fix by editing the files, and verify the fix passes tests before producing your patch.
+
+## Workflow
+
+### 1. Understand the issue
+Read the problem statement thoroughly. Identify the expected behavior, the actual buggy behavior, and any test cases or reproduction steps mentioned. If the issue describes multiple cases or edge cases, list every one — you must handle ALL of them, not just the primary case.
+
+### 2. Explore the relevant code
+Search the codebase to find the files and functions involved in the bug. Read enough surrounding context — related functions, callers, type definitions, and test files — to fully understand
+### step 3 CMD:
+ls -la
+--- RC=0 
+--- OUT:
+ml
+-rw-r--r--.  1 root root  12590 Sep 10  2025 CONTRIBUTORS.txt
+-rw-r--r--.  1 root root 191572 Sep 10  2025 ChangeLog
+-rw-r--r--.  1 root root    140 Sep 10  2025 Dockerfile
+-rw-r--r--.  1 root root  17984 Sep 10  2025 LICENSE
+-rw-r--r--.  1 root root    234 Sep 10  2025 MANIFEST.in
+-rw-r--r--.  1 root root   5613 Sep 10  2025 README.rst
+drwxrwxrwx.  9 root root   4096 Sep 10  2025 doc
+drwxr-xr-x.  2 root root     63 Sep 10  2025 elisp
+drwxrwxrwx.  2 root root    116 Sep 10  2025 examples
+drwxrwxrwx. 11 root root   4096 Sep 10  2025 pylint
+drwxr-xr-x.  2 root root    134 Sep 10  2025 pylint.egg-info
+-rw-r--r--.  1 root root  11712 Sep 10  2025 pylintrc
+-rw-r--r--.  1 root root    295 Sep 10  2025 requirements_test.txt
+-rw-r--r--.  1 root root     96 Sep 10  2025 requirements_test_min.txt
+-rw-r--r--.  1 root root    181 Sep 10  2025 requirements_test_pre_commit.txt
+drwxrwxrwx.  2 root root     78 Sep 10  2025 script
+-rw-r--r--.  1 root root   3364 Sep 10  2025 setup.cfg
+-rw-r--r--.  1 root root     38 Sep 10  2025 setup.py
+-rw-r--r--.  1 root root   1363 Sep 10  2025 tbump.toml
+drwxrwxrwx. 17 root root   4096 Sep 10  2025 tests
+-rw-r--r--.  1 root root   2016 Sep 10  2025 tox.ini
+
+### step 4 CMD:
+grep -R "min-similarity" -n || true
+--- RC=0 
+--- OUT:
+ChangeLog:141:* Improved the Similarity checker performance. Fix issue with ``--min-similarity-lines`` used with ``--jobs``.
+examples/pylintrc:301:min-similarity-lines=4
+pylint/checkers/similar.py:737:            "min-similarity-lines",
+pylint/checkers/similar.py:803:        if optname == "min-similarity-lines":
+pylintrc:121:min-similarity-lines=4
+
+### step 5 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '1,260p'
+--- RC=0 
+--- OUT:
+rom astroid import nodes
+    69	
+    70	from pylint.checkers import BaseChecker, MapReduceMixin, table_lines_from_stats
+    71	from pylint.interfaces import IRawChecker
+    72	from pylint.reporters.ureports.nodes import Table
+    73	from pylint.utils import decoding_stream
+    74	
+    75	DEFAULT_MIN_SIMILARITY_LINE = 4
+    76	
+    77	REGEX_FOR_LINES_WITH_CONTENT = re.compile(r".*\w+")
+    78	
+    79	# Index defines a location in a LineSet stripped lines collection
+    80	Index = NewType("Index", int)
+    81	
+    82	# LineNumber defines a location in a LinesSet real lines collection (the whole file lines)
+    83	LineNumber = NewType("LineNumber", int)
+    84	
+    85	
+    86	# LineSpecifs holds characteristics of a line in a file
+    87	class LineSpecifs(NamedTuple):
+    88	    line_number: LineNumber
+    89	    text: str
+    90	
+    91	
+    92	# Links LinesChunk object to the starting indices (in lineset's stripped lines)
+    93	# of the different chunk of lines that are used to compute the hash
+    94	HashToIndex_T = Dict["LinesChunk", List[Index]]
+    95	
+    96	# Links index in the lineset's stripped lines to the real lines in the file
+    97	IndexToLines_T = Dict[Index, "Success
+### step 6 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '260,520p'
+--- RC=0 
+--- OUT:
+s_nb: int
+   345	    fst_lset: "LineSet"
+   346	    fst_file_start: LineNumber
+   347	    fst_file_end: LineNumber
+   348	    snd_lset: "LineSet"
+   349	    snd_file_start: LineNumber
+   350	    snd_file_end: LineNumber
+   351	
+   352	
+   353	class Similar:
+   354	    """finds copy-pasted lines of code in a project"""
+   355	
+   356	    def __init__(
+   357	        self,
+   358	        min_lines: int = DEFAULT_MIN_SIMILARITY_LINE,
+   359	        ignore_comments: bool = False,
+   360	        ignore_docstrings: bool = False,
+   361	        ignore_imports: bool = False,
+   362	        ignore_signatures: bool = False,
+   363	    ) -> None:
+   364	        self.min_lines = min_lines
+   365	        self.ignore_comments = ignore_comments
+   366	        self.ignore_docstrings = ignore_docstrings
+   367	        self.ignore_imports = ignore_imports
+   368	        self.ignore_signatures = ignore_signatures
+   369	        self.linesets: List["LineSet"] = []
+   370	
+   371	    def append_stream(self, streamid: str, stream: TextIO, encoding=None) -> None:
+   372	        """append a file to search for similarities"""
+   373	        if encoding is None:
+   374	            readlines = stream.readlin
+### step 7 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '520,1000p'
+--- RC=0 
+--- OUT:
+unctions = _get_functions([], tree)
+   604	        signature_lines = set(
+   605	            chain(
+   606	                *(
+   607	                    range(
+   608	                        func.lineno,
+   609	                        func.body[0].lineno if func.body else func.tolineno + 1,
+   610	                    )
+   611	                    for func in functions
+   612	                )
+   613	            )
+   614	        )
+   615	
+   616	    strippedlines = []
+   617	    docstring = None
+   618	    for lineno, line in enumerate(lines, start=1):
+   619	        line = line.strip()
+   620	        if ignore_docstrings:
+   621	            if not docstring:
+   622	                if line.startswith('"""') or line.startswith("'''"):
+   623	                    docstring = line[:3]
+   624	                    line = line[3:]
+   625	                elif line.startswith('r"""') or line.startswith("r'''"):
+   626	                    docstring = line[1:4]
+   627	                    line = line[4:]
+   628	            if docstring:
+   629	                if line.endswith(docstring):
+   630	                    docstring = None
+   631	                line = ""
+   632	        if ignore_imports:
+### step 8 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '700,860p'
+--- RC=0 
+--- OUT:
+835	        stats = self.stats
+   836	        for num, couples in self._compute_sims():
+   837	            msg = []
+   838	            lineset = start_line = end_line = None
+   839	            for lineset, start_line, end_line in couples:
+   840	                msg.append(f"=={lineset.name}:[{start_line}:{end_line}]")
+   841	            msg.sort()
+   842	
+   843	            if lineset:
+   844	                for line in lineset.real_lines[start_line:end_line]:
+   845	                    msg.append(line.rstrip())
+   846	
+   847	            self.add_message("R0801", args=(len(couples), "\n".join(msg)))
+   848	            duplicated += num * (len(couples) - 1)
+   849	        stats["nb_duplicated_lines"] = duplicated
+   850	        stats["percent_duplicated_lines"] = total and duplicated * 100.0 / total
+   851	
+   852	    def get_map_data(self):
+   853	        """Passthru override"""
+   854	        return Similar.get_map_data(self)
+   855	
+   856	    def reduce_map_data(self, linter, data):
+   857	        """Reduces and recombines data into a format that we can report on
+   858	
+   859	        The partner function of get_map_data()"""
+   860	        recombined = SimilarChecker(linter)
+
+### step 9 CMD:
+grep -n "_compute_sims" -n pylint/checkers/similar.py || true
+--- RC=0 
+--- OUT:
+393:        self._display_sims(self._compute_sims())
+395:    def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+836:        for num, couples in self._compute_sims():
+
+### step 10 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '360,420p'
+--- RC=0 
+--- OUT:
+nkLimits_T]]]:
+   396	        """compute similarities in appended files"""
+   397	        no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+   398	
+   399	        for commonality in self._iter_sims():
+   400	            num = commonality.cmn_lines_nb
+   401	            lineset1 = commonality.fst_lset
+   402	            start_line_1 = commonality.fst_file_start
+   403	            end_line_1 = commonality.fst_file_end
+   404	            lineset2 = commonality.snd_lset
+   405	            start_line_2 = commonality.snd_file_start
+   406	            end_line_2 = commonality.snd_file_end
+   407	
+   408	            duplicate = no_duplicates[num]
+   409	            couples: Set[LinesChunkLimits_T]
+   410	            for couples in duplicate:
+   411	                if (lineset1, start_line_1, end_line_1) in couples or (
+   412	                    lineset2,
+   413	                    start_line_2,
+   414	                    end_line_2,
+   415	                ) in couples:
+   416	                    break
+   417	            else:
+   418	                duplicate.append(
+   419	                    {
+   420	                        (lineset1, start_line_1, end_line_1),
+
+### step 11 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '420,520p'
+--- RC=0 
+--- OUT:
+in_linesets[0]
+   497	                index_2 = indices_in_linesets[1]
+   498	                all_couples[
+   499	                    LineSetStartCouple(index_1, index_2)
+   500	                ] = CplSuccessiveLinesLimits(
+   501	                    copy.copy(index_to_lines_1[index_1]),
+   502	                    copy.copy(index_to_lines_2[index_2]),
+   503	                    effective_cmn_lines_nb=self.min_lines,
+   504	                )
+   505	
+   506	        remove_successives(all_couples)
+   507	
+   508	        for cml_stripped_l, cmn_l in all_couples.items():
+   509	            start_index_1 = cml_stripped_l.fst_lineset_index
+   510	            start_index_2 = cml_stripped_l.snd_lineset_index
+   511	            nb_common_lines = cmn_l.effective_cmn_lines_nb
+   512	
+   513	            com = Commonality(
+   514	                cmn_lines_nb=nb_common_lines,
+   515	                fst_lset=lineset1,
+   516	                fst_file_start=cmn_l.first_file.start,
+   517	                fst_file_end=cmn_l.first_file.end,
+   518	                snd_lset=lineset2,
+   519	                snd_file_start=cmn_l.second_file.start,
+   520	                snd_file_end=cmn_l.second_file.end,
+
+### step 12 CMD:
+grep -n "class LinesChunk" -n pylint/checkers/similar.py || true
+--- RC=0 
+--- OUT:
+125:class LinesChunk:
+
+### step 13 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '120,164p'
+--- RC=0 
+--- OUT:
+d
+   134	        """The name of the file from which the LinesChunk object is generated """
+   135	
+   136	        self._index: Index = Index(num_line)
+   137	        """The index in the stripped lines that is the starting of consecutive lines"""
+   138	
+   139	        self._hash: int = sum(hash(lin) for lin in lines)
+   140	        """The hash of some consecutive lines"""
+   141	
+   142	    def __eq__(self, o: Any) -> bool:
+   143	        if not isinstance(o, LinesChunk):
+   144	            return NotImplemented
+   145	        return self._hash == o._hash
+   146	
+   147	    def __hash__(self) -> int:
+   148	        return self._hash
+   149	
+   150	    def __repr__(self) -> str:
+   151	        return (
+   152	            f"<LinesChunk object for file {self._fileid} ({self._index}, {self._hash})>"
+   153	        )
+   154	
+   155	    def __str__(self) -> str:
+   156	        return (
+   157	            f"LinesChunk object for file {self._fileid}, starting at line {self._index} \n"
+   158	            f"Hash is {self._hash}"
+   159	        )
+   160	
+   161	
+   162	class SuccessiveLinesLimits:
+   163	    """
+   164	    A class to handle the numbering of begin and end of successive lines.
+
+### step 14 CMD:
+grep -R "R0801" -n tests || true
+--- RC=0 
+--- OUT:
+tests/lint/unittest_lint.py:471:    linter.set_option("disable", "R0801")
+
+### step 15 CMD:
+grep -R "min_similarity_lines" -n || true
+--- RC=0 
+--- OUT:
+pylint/checkers/similar.py:789:            min_lines=self.config.min_similarity_lines,
+pylint/checkers/similar.py:804:            self.min_lines = self.config.min_similarity_lines
+
+### step 16 CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: pylint/checkers/similar.py
+@@
+     def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+         """compute similarities in appended files"""
++        # If min_lines is set to 0 or less, treat the similarity check as disabled.
++        # Returning an empty list prevents any duplicate-code messages from being
++        # emitted. This matches the expectation that setting
++        # `min-similarity-lines=0` in configuration disables the check.
++        if self.min_lines <= 0:
++            return []
+*** End Patch
+PATCH
+--- RC=128 
+--- OUT:
+error: unrecognized input
+
+### step 17 CMD:
+nl -ba pylint/checkers/similar.py | sed -n '392,404p'
+--- RC=0 
+--- OUT:
+   392	        """start looking for similarities and display results on stdout"""
+   393	        self._display_sims(self._compute_sims())
+   394	
+   395	    def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+   396	        """compute similarities in appended files"""
+   397	        no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+   398	
+   399	        for commonality in self._iter_sims():
+   400	            num = commonality.cmn_lines_nb
+   401	            lineset1 = commonality.fst_lset
+   402	            start_line_1 = commonality.fst_file_start
+   403	            end_line_1 = commonality.fst_file_end
+   404	            lineset2 = commonality.snd_lset
+
+### step 18 CMD:
+git apply -p0 << 'PATCH'
+*** Begin Patch
+*** Update File: pylint/checkers/similar.py
+@@
+-    def _compute_sims(self) -\u003e List[Tuple[int, Set[LinesChunkLimits_T]]]:
+-        """compute similarities in appended files"""
+-        no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
++    def _compute_sims(self) -\u003e List[Tuple[int, Set[LinesChunkLimits_T]]]:
++        """compute similarities in appended files"""
++        # If min_lines is set to 0 or less, treat the similarity check as disabled.
++        # Returning an empty list prevents any duplicate-code messages from being
++        # emitted. This matches the expectation that setting
++        # `min-similarity-lines=0` in configuration disables the check.
++        if self.min_lines <= 0:
++            return []
++
++        no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+*** End Patch
+PATCH
+--- RC=128 
+--- OUT:
+error: unrecognized input
+
+### step 19 CMD:
+python - << 'PY'
+from pathlib import Path
+p=Path('pylint/checkers/similar.py')
+s=p.read_text()
+old='''    def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+        """compute similarities in appended files"""
+        no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+'''
+new='''    def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+        """compute similarities in appended files"""
+        # If min_lines is set to 0 or less, treat the similarity check as disabled.
+        # Returning an empty list prevents any duplicate-code messages from being
+        # emitted. This matches the expectation that setting
+        # `min-similarity-lines=0` in configuration disables the check.
+        if self.min_lines <= 0:
+            return []
+
+        no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+'''
+if old in s:
+    s=s.replace(old,new)
+    p.write_text(s)
+    print('patched')
+else:
+    print('pattern not found')
+PY
+--- RC=0 
+--- OUT:
+patched
+
+### step 20 CMD:
+git add -A && git commit -m "similar: treat min-similarity-lines<=0 as disabling duplicate check" || true
+--- RC=0 
+--- OUT:
+[main 14586c83] similar: treat min-similarity-lines<=0 as disabling duplicate check
+ 1 file changed, 7 insertions(+)
+
+### step 21 CMD:
+python /harbor/skills/candidate/tools/tools.py verify-fix || true
+--- RC=0 
+--- OUT:
+{
+  "changed": [],
+  "runner": null,
+  "results": []
+}
+
+### step 22 CMD:
+pytest -q
+--- RC=127 
+--- OUT:
+/bin/sh: 1: pytest: not found
+
+### step 23 CMD:
+python - << 'PY'
+import importlib, sys
+try:
+    importlib.import_module('pylint.checkers.similar')
+    print('import ok')
+except Exception as e:
+    print('import failed:', repr(e))
+    sys.exit(1)
+PY
+--- RC=1 
+--- OUT:
+import failed: ModuleNotFoundError("No module named 'toml'")
+
+### step 24 CMD:
+git --no-pager show HEAD --pretty=format:%b%n --name-only -1 || true
+--- RC=0 
+--- OUT:
+
+
+pylint/checkers/similar.py
+
+### step 25 CMD:
+git --no-pager show HEAD --pretty=email --name-only --patch
+--- RC=0 
+--- OUT:
+From 14586c83a5b4a99eabf3d73bda2f2ce51651648b Mon Sep 17 00:00:00 2001
+From: SWE-bench <setup@swebench.config>
+Date: Thu, 1 Oct 2026 17:20:54 +0000
+Subject: [PATCH] similar: treat min-similarity-lines<=0 as disabling duplicate
+ check
+
+
+pylint/checkers/similar.py
+
+### step 26 CMD:
+grep -R "similar" -n tests || true
+--- RC=0 
+--- OUT:
+nput/similar_lines_b.py:1:""" The sister file of similar_lines_a, another file designed to have lines of
+tests/input/similar_lines_b.py:2:similarity when compared to its sister file
+tests/input/similar_lines_b.py:16:    def similar_function_5_lines(self, similar):  # line same #1
+tests/input/similar_lines_b.py:32:    def similar_function_3_lines(self, tellus):  # line same #1
+tests/input/w0801_same.py:1:"""test code similarities
+tests/lint/unittest_lint.py:207:def test_two_similar_args(fake_path, case):
+tests/lint/unittest_lint.py:465:    should_not = {"design", "format", "metrics", "miscellaneous", "similarities"}
+tests/lint/unittest_lint.py:469:def test_disable_similar(linter: PyLinter) -> None:
+tests/lint/unittest_lint.py:472:    assert not ("similarities" in [c.name for c in linter.prepare_checkers()])
+tests/lint/unittest_lint.py:480:    for cname in ("design", "metrics", "similarities"):
+tests/test_check_parallel.py:32:        os.path.join(os.path.dirname(__file__), "input", "similar1")
+tests/test_check_parallel.py:325:                "input.similar1": {  # module is the only change from previous
+tests/test_self.py:299:            # We expect similarities to fail and an error
+
+### step 27 CMD:
+nl -ba tests/checkers/unittest_similar.py | sed -n '1,260p'
+--- RC=0 
+--- OUT:
+) as ex:
+   218	        similar.Run([SIMILAR_CLS_B, SIMILAR_CLS_A])
+   219	    assert ex.value.code == 0
+   220	    assert (
+   221	        output.getvalue().strip()
+   222	        == (
+   223	            f'''
+   224	15 similar lines in 2 files
+   225	=={SIMILAR_CLS_A}:[1:18]
+   226	=={SIMILAR_CLS_B}:[1:18]
+   227	       def parent_method(
+   228	           self,
+   229	           *,
+   230	           a="",
+   231	           b=None,
+   232	           c=True,
+   233	       ):
+   234	           """Overridden method example."""
+   235	
+   236	           def _internal_func(
+   237	               arg1: int = 1,
+   238	               arg2: str = "2",
+   239	               arg3: int = 3,
+   240	               arg4: bool = True,
+   241	           ):
+   242	               pass
+   243	
+   244	
+   245	7 similar lines in 2 files
+   246	=={SIMILAR_CLS_A}:[20:27]
+   247	=={SIMILAR_CLS_B}:[20:27]
+   248	               self,
+   249	               *,
+   250	               a=None,
+   251	               b=False,
+   252	               c="",
+   253	           ):
+   254	               pass
+   255	TOTAL lines=54 duplicates=22 percent=40.74
+   256	'''
+   257	        ).strip()
+   258	    )
+   259	
+   260	
+
+### step 28 CMD:
+nl -ba tests/checkers/unittest_similar.py | sed -n '260,520p'
+--- RC=0 
+--- OUT:
+ ultricies, quis",
+   478	            "class Commodo:",
+   479	            "def similar_function_3_lines(self, tellus):",
+   480	            "agittis = 10",
+   481	            "tellus *= 300",
+   482	            'laoreet = "commodo "',
+   483	            "return agittis, tellus, laoreet",
+   484	        ),
+   485	    )
+   486	
+   487	    data = []
+   488	
+   489	    # Manually perform a 'map' type function
+   490	    for source_fname in source_streams:
+   491	        sim = similar.SimilarChecker(linter)
+   492	        with open(source_fname, encoding="utf-8") as stream:
+   493	            sim.append_stream(source_fname, stream)
+   494	        # The map bit, can you tell? ;)
+   495	        data.extend(sim.get_map_data())
+   496	
+   497	    assert len(expected_linelists) == len(data)
+   498	    for source_fname, expected_lines, lineset_obj in zip(
+   499	        source_streams, expected_linelists, data
+   500	    ):
+   501	        assert source_fname == lineset_obj.name
+   502	        # There doesn't seem to be a faster way of doing this, yet.
+   503	        lines = (linespec.text for linespec in lineset_obj.stripped_lines)
+   504	        assert tuple(expected_lines) == tuple(lines)
+
+### step 29 CMD:
+git --no-pager diff --staged || true
+--- RC=0 
+--- OUT:
+
+### step 30 CMD:
+git --no-pager diff HEAD~1..HEAD -- pylint/checkers/similar.py
+--- RC=0 
+--- OUT:
+diff --git a/pylint/checkers/similar.py b/pylint/checkers/similar.py
+index c65b1c89..07b23542 100644
+--- a/pylint/checkers/similar.py
++++ b/pylint/checkers/similar.py
+@@ -394,6 +394,13 @@ class Similar:
+ 
+     def _compute_sims(self) -> List[Tuple[int, Set[LinesChunkLimits_T]]]:
+         """compute similarities in appended files"""
++        # If min_lines is set to 0 or less, treat the similarity check as disabled.
++        # Returning an empty list prevents any duplicate-code messages from being
++        # emitted. This matches the expectation that setting
++        # `min-similarity-lines=0` in configuration disables the check.
++        if self.min_lines <= 0:
++            return []
++
+         no_duplicates: Dict[int, List[Set[LinesChunkLimits_T]]] = defaultdict(list)
+ 
+         for commonality in self._iter_sims():
+
+### step 31 CMD:
+echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+--- RC=-1 action was not executed
+--- OUT:
+

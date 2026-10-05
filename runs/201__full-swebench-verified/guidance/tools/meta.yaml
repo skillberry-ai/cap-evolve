@@ -1,0 +1,11 @@
+component: capability
+name: tools
+summary: Optimize an agent's own tool surface — docs, parameter schema/API, tool code, composing tools that call existing tools, adding/removing tools.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  optimizers: ["*"]
+  algorithms: ["*"]

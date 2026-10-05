@@ -1,0 +1,2585 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.5106382978723404,
+    "stderr": 0.07370428968378201,
+    "pass_k": {
+      "1": 0.5106382978723404
+    },
+    "pass_at_k": {
+      "1": 0.5106382978723404
+    },
+    "per_task": [
+      {
+        "task_id": "astropy__astropy-13453",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-10554",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11555",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12039",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12276",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12325",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12708",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13121",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13401",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13410",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13569",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13809",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14007",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14376",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14580",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15103",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15280",
+        "reward": 0.0,
+        "feedback": "Rollout did not complete (RuntimeError: Failed to pull image for pod hb-django-django-15280-ddxtexh-env: Back-off pulling image \"image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15280\": ErrImagePull: unable to pull image or OCI artifact: pull image err: initializing source docker://image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15280:latest: reading manifest latest in image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15280: manifest unknown; artifact err: get manifest: build image source: reading manifest latest in image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15280: manifest unknown). This may be an infrastructure issue, not an agent failure.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [],
+        "raw": {
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15380",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15629",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15741",
+        "reward": 0.0,
+        "feedback": "Rollout did not complete (RuntimeError: Failed to pull image for pod hb-django-django-15741-eezeg9z-env: Back-off pulling image \"image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15741\": ErrImagePull: unable to pull image or OCI artifact: pull image err: initializing source docker://image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15741:latest: reading manifest latest in image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15741: manifest unknown; artifact err: get manifest: build image source: reading manifest latest in image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-django-django-15741: manifest unknown). This may be an infrastructure issue, not an agent failure.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [],
+        "raw": {
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15851",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15863",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15930",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16032",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16485",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16667",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "matplotlib__matplotlib-22871",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "matplotlib__matplotlib-24637",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pydata__xarray-6461",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pydata__xarray-6992",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pylint-dev__pylint-4661",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pylint-dev__pylint-4970",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pytest-dev__pytest-10356",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pytest-dev__pytest-5787",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-25232",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-7910",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-8035",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-8475",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-8595",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-8638",
+        "reward": 0.0,
+        "feedback": "Rollout did not complete (RuntimeError: Failed to pull image for pod hb-sphinx-doc-sphinx-8638-nodfzbu-env: Back-off pulling image \"image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-sphinx-doc-sphinx-8638\": ErrImagePull: unable to pull image or OCI artifact: pull image err: initializing source docker://image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-sphinx-doc-sphinx-8638:latest: reading manifest latest in image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-sphinx-doc-sphinx-8638: manifest unknown; artifact err: get manifest: build image source: reading manifest latest in image-registry.openshift-image-registry.svc:5000/cap-evolve-skillberry/hb-build-sphinx-doc-sphinx-8638: manifest unknown). This may be an infrastructure issue, not an agent failure.",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [],
+        "raw": {
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 0,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-9258",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-9367",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-12096",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-13480",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-15599",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-17139",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-17630",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-18211",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-21612",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-24213",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 1906.2861471176147,
+    "cost_source": {},
+    "n_tasks": 50,
+    "n_scored": 47
+  },
+  "best_id": "seed",
+  "train": {
+    "split": "train",
+    "reward": 0.6,
+    "stderr": 0.04923659639173309,
+    "pass_k": {
+      "1": 0.6
+    },
+    "pass_at_k": {
+      "1": 0.6
+    },
+    "per_task": [
+      {
+        "task_id": "astropy__astropy-12907",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "astropy__astropy-8707",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11133",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11211",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11292",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11299",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11333",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11490",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11551",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11603",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-11815",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12273",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12304",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12308",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12419",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12663",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-12965",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13089",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13128",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13343",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13344",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13449",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13670",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13820",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13821",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-13933",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14011",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14034",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14140",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14155",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14349",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14351",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14539",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14672",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14752",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14771",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-14855",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15022",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15098",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15128",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15277",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15278",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15382",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15499",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15561",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-15987",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16116",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16256",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16333",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16560",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16612",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16662",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-16901",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-17084",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "django__django-9296",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "matplotlib__matplotlib-13989",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "matplotlib__matplotlib-23412",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "matplotlib__matplotlib-24870",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "matplotlib__matplotlib-25775",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pallets__flask-5014",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "psf__requests-1724",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "psf__requests-2931",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pydata__xarray-3677",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pydata__xarray-4094",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pydata__xarray-4629",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pylint-dev__pylint-4604",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pylint-dev__pylint-6903",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pylint-dev__pylint-7080",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pytest-dev__pytest-10051",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pytest-dev__pytest-7205",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-10908",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-13124",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-14053",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-14496",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-25102",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-25931",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "scikit-learn__scikit-learn-26194",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-7454",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-7985",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-8548",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sphinx-doc__sphinx-9281",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-11618",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-12481",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-13551",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-14711",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-14976",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-15976",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-16450",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-16597",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-18199",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-18698",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-19040",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-19346",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-19783",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-19954",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-20438",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-22456",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-23262",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-24066",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sympy__sympy-24443",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0).",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 4132.330791950226,
+    "cost_source": {},
+    "n_tasks": 100,
+    "n_scored": 100
+  }
+}
