@@ -31,6 +31,7 @@ from . import footprint as footprint_mod
 from . import gate as gate_mod
 from . import graph as graph_mod
 from . import integrity
+from . import optimizer_profile
 from .cache import hash_candidate_dir
 from .memory import MemorySkill
 from .loop import SplitResult, aggregate_scores, has_valid_trials
@@ -839,6 +840,8 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
     """
     def _run(workdir: Path, instructions: str) -> dict | None:
         prompt_path = workdir / "INSTRUCTIONS.md"
+        # Off unless CAPEVOLVE_OPTIMIZER_PROFILE is set (the weak-optimizer experiments, #538).
+        instructions = optimizer_profile.apply_to_instructions(instructions)
         prompt_path.write_text(instructions, encoding="utf-8")
         cmd = [c.format(workdir=str(workdir), prompt=str(prompt_path)) for c in cmd_template]
         env = dict(os.environ)
@@ -2197,8 +2200,15 @@ def _copy_step_trajectories(adapter, run_dir: RunDir, workdir: Path, split: str,
             if dst.exists():
                 shutil.rmtree(dst)
             dst.mkdir(parents=True, exist_ok=True)
+            digest = optimizer_profile.enabled("digest_trajectories")
             for f in files:
-                shutil.copyfile(f, dst / f.name)
+                if digest:
+                    obj = json.loads(f.read_text(encoding="utf-8"))
+                    (dst / f.name).write_text(
+                        json.dumps(optimizer_profile.digest_trajectory(obj), indent=1),
+                        encoding="utf-8")
+                else:
+                    shutil.copyfile(f, dst / f.name)
             return True
         except Exception as e:  # noqa: BLE001
             run_dir.log_event("optimizer_context_warning",
@@ -2747,6 +2757,9 @@ def run_step(
     opt_report = None
     opt_cost_usd, opt_tokens = 0.0, 0
     _opt_t0 = time.time()
+    _profile = optimizer_profile.features()
+    if _profile:
+        run_dir.log_event("optimizer_profile", candidate=cid, features=sorted(_profile))
     try:
         opt_report = optimizer(workdir, instructions)  # mutates workdir in place
         if isinstance(opt_report, dict):

@@ -38,6 +38,15 @@ _LEGACY_ALIASES = {
 }
 
 
+def _profile_extra_disallowed(name: str) -> list[str]:
+    """Tools the optimizer profile (CAPEVOLVE_OPTIMIZER_PROFILE) adds to the CLI's deny list."""
+    try:
+        from cap_evolve import optimizer_profile
+    except ImportError:
+        return []
+    return optimizer_profile.extra_disallowed_tools(name)
+
+
 def _registry_path() -> Path:
     """``optimizers/registry.yaml`` — sibling of the ``run-optimizer`` skill dir."""
     env = os.environ.get("CAPEVOLVE_OPTIMIZER_REGISTRY")
@@ -472,6 +481,16 @@ def main(argv=None) -> int:
     usd_budget_flag = str(row.get("usd_budget_flag", "")).strip()
     if args.usd_budget is not None and usd_budget_flag and str(row.get("offline", "")).lower() != "true":
         cmd += shlex.split(usd_budget_flag.replace("{usd}", f"{float(args.usd_budget):g}"))
+
+    # Weak-optimizer experiments (#538): CAPEVOLVE_OPTIMIZER_PROFILE=no_subagents denies
+    # Claude Code's sub-agent tool. Appended to the row's own --disallowedTools list (the flag
+    # takes several values), so the row's existing denials stay.
+    extra_deny = _profile_extra_disallowed(name)
+    if extra_deny and "--disallowedTools" in cmd:
+        i = cmd.index("--disallowedTools") + 1
+        cmd[i + 1:i + 1] = extra_deny
+    elif extra_deny:
+        cmd += ["--disallowedTools", *extra_deny]
 
     if not cmd:
         print(json.dumps({"optimizer": name, "error":
