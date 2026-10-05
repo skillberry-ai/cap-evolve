@@ -7,10 +7,10 @@ Framework: [Reveal.js 5.1](https://revealjs.com) (vendored, offline-safe).
 
 ```bash
 # Simplest — open directly in a browser
-open presentation/index.html         # macOS
+open management_review_presentation/index.html         # macOS
 
 # Or serve locally (recommended)
-python3 -m http.server 8000 -d presentation
+python3 -m http.server 8000 -d management_review_presentation
 # → http://localhost:8000
 ```
 
@@ -71,7 +71,7 @@ line. Grep for `⚠` or `TO CONFIRM` in `index.html`. Current placeholders:
 ## File layout
 
 ```
-presentation/
+management_review_presentation/
 ├── README.md                        # this file
 ├── index.html                       # the deck — all slides inline
 └── reveal/                          # vendored Reveal.js 5.1

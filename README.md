@@ -45,7 +45,9 @@ bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; s
 | [`docs/`](docs/) | the design record — specs and implementation plans for parsec v4, plus its intake handoff; describes decisions, not code, so it lives here rather than on `parsec-intake_v4` |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
 | [`ui/heatmap_v4_t.html`](ui/heatmap_v4_t.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
-| [`presentations/presentation/`](presentations/presentation/) | hand-authored, not generated: a Reveal.js deck covering both v1 and v2 together for an IBM/Red Hat audience, with its own local copy of the reveal.js library so it renders standalone |
+| [`presentations/management_review_presentation/`](presentations/management_review_presentation/) | hand-authored, not generated: the general cap-evolve pitch/roadmap deck (Reveal.js, vendored) — Parsec is one roadmap thread in it, not its subject |
+| [`presentations/parsec_optimization_presentation/`](presentations/parsec_optimization_presentation/) | hand-authored, not generated: the Parsec v1+v2 PoC deck (Reveal.js, vendored) for an IBM/Red Hat audience |
+| [`presentations/presentation_v4/`](presentations/presentation_v4/) | fork of the Parsec deck above, being extended with v4 — cover slide updated so far, rest of the deck still v1/v2 only |
 
 No `insights/`, `evidence/`, `handoffs/`, or `proposals/` here — those are
 `skillsbench-history` directories for a scope (87 skillsbench tasks, multiple transfer-eval
