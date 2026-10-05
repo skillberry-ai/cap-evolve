@@ -492,7 +492,7 @@ jobs:
     # where the coarse label check above passes but no leg matches exactly (e.g. a
     # 'benchmark-smoke-typo' label), which would otherwise be an empty-matrix error.
     if: needs.plan.outputs.has_legs == 'true'
-    runs-on: [self-hosted, ibm-vpc]
+    runs-on: [self-hosted, ibm-vpc, skillberry-1]
     # GitHub's default 360min job timeout is too tight for a whole-set tier (a benchmark's
     # full task list x trials x iterations, and some benchmarks run a container per task);
     # self-hosted runners aren't GH-minute-billed, so a generous ceiling just prevents a
