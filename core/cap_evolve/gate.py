@@ -328,7 +328,11 @@ def _verdict(
         dominance from measurement noise alone does not count. See
         ``_objective_state`` / ``selection.dominates``, which this reuses rather than
         reimplementing. Requires ``metrics_candidate``/``metrics_current`` for any
-        objective beyond ``reward``.
+        objective beyond ``reward``, with the key present on BOTH sides (one side
+        missing raises ``ParetoObjectiveError`` rather than reading it as 0.0), and
+        requires ``metrics_stderr_candidate``/``metrics_stderr_current`` for that same
+        key on both sides too — without a real SE, a non-reward objective has no
+        noise floor and pure float noise could flip the verdict.
 
     ``coverage`` is the fraction of val tasks that produced a real measurement
     (``SplitResult.coverage``). Below ``min_coverage`` the gate REFUSES TO JUDGE and
@@ -460,13 +464,32 @@ def _verdict(
                 reward_threshold = k_se * reward_se
                 states[name] = _objective_state(reward_delta, reward_se, k_se)
                 continue
-            cand_v = float((metrics_candidate or {}).get(name, 0.0))
-            cur_v = float((metrics_current or {}).get(name, 0.0))
+            mc, mcur = metrics_candidate or {}, metrics_current or {}
+            if name not in mc or name not in mcur:
+                # _resolve_pareto_objectives only checks the UNION of both sides, so a
+                # key present on one side and absent on the other still passes that
+                # check. Reading it as 0.0 here would fabricate a fake delta — refuse
+                # instead (same "refuse, don't silently degrade" rule as the fallback
+                # chain above).
+                raise ParetoObjectiveError(
+                    f"pareto gate: objective {name!r} is missing from "
+                    f"metrics_candidate or metrics_current (present: "
+                    f"candidate={name in mc}, current={name in mcur}) — refusing to "
+                    "treat the missing side as 0.0")
+            cand_v, cur_v = float(mc[name]), float(mcur[name])
             raw_delta = cand_v - cur_v
             signed_delta = raw_delta if obj["direction"] == "maximize" else -raw_delta
-            se = math.sqrt(
-                float((metrics_stderr_candidate or {}).get(name, 0.0)) ** 2 +
-                float((metrics_stderr_current or {}).get(name, 0.0)) ** 2)
+            msc, mscur = metrics_stderr_candidate or {}, metrics_stderr_current or {}
+            if name not in msc or name not in mscur:
+                # Without a real stderr, _objective_state falls back to a fixed
+                # epsilon — fine for reward (SE is always derivable from the paired/
+                # independent samples) but for cost/latency/tokens that silently lets
+                # pure float noise flip the verdict. Refuse rather than lower the bar.
+                raise ParetoObjectiveError(
+                    f"pareto gate: objective {name!r} has no stderr supplied via "
+                    "metrics_stderr_candidate/metrics_stderr_current — refusing to "
+                    "fall back to a float-noise epsilon bar for a non-reward objective")
+            se = math.sqrt(float(msc[name]) ** 2 + float(mscur[name]) ** 2)
             states[name] = _objective_state(signed_delta, se, k_se)
 
         # Reuse selection.dominates rather than reimplementing dominance: encode each

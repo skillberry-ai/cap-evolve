@@ -85,14 +85,16 @@ def test_pareto_frontier_keeps_mutual_tradeoff():
 def test_pareto_accept_dominates_on_both_objectives():
     d = decide(0.5, 0.8, mode="pareto",
                candidate_stderr=0.0, current_stderr=0.0,
-               metrics_candidate={"cost": 1.0}, metrics_current={"cost": 2.0})
+               metrics_candidate={"cost": 1.0}, metrics_current={"cost": 2.0},
+               metrics_stderr_candidate={"cost": 0.0}, metrics_stderr_current={"cost": 0.0})
     assert d.accept, d.reason
 
 
 def test_pareto_reject_dominated_by_current():
     d = decide(0.5, 0.2, mode="pareto",
                candidate_stderr=0.0, current_stderr=0.0,
-               metrics_candidate={"cost": 2.0}, metrics_current={"cost": 1.0})
+               metrics_candidate={"cost": 2.0}, metrics_current={"cost": 1.0},
+               metrics_stderr_candidate={"cost": 0.0}, metrics_stderr_current={"cost": 0.0})
     assert not d.accept, d.reason
 
 
@@ -101,7 +103,8 @@ def test_pareto_accept_tradeoff_non_dominated():
     # real win on reward -> accept (this is the "frontier of trade-offs" case).
     d = decide(0.5, 0.9, mode="pareto",
                candidate_stderr=0.0, current_stderr=0.0,
-               metrics_candidate={"cost": 5.0}, metrics_current={"cost": 1.0})
+               metrics_candidate={"cost": 5.0}, metrics_current={"cost": 1.0},
+               metrics_stderr_candidate={"cost": 0.0}, metrics_stderr_current={"cost": 0.0})
     assert d.accept, d.reason
 
 
@@ -120,7 +123,8 @@ def test_pareto_reject_nominal_only_noise_not_cleared():
 def test_pareto_reject_all_ties_no_real_difference():
     d = decide(0.5, 0.5, mode="pareto",
                candidate_stderr=0.0, current_stderr=0.0,
-               metrics_candidate={"cost": 1.0}, metrics_current={"cost": 1.0})
+               metrics_candidate={"cost": 1.0}, metrics_current={"cost": 1.0},
+               metrics_stderr_candidate={"cost": 0.0}, metrics_stderr_current={"cost": 0.0})
     assert not d.accept, d.reason
 
 
@@ -129,7 +133,8 @@ def test_pareto_reject_all_ties_no_real_difference():
 def test_pareto_falls_back_to_latency_when_cost_missing():
     d = decide(0.5, 0.8, mode="pareto",
                candidate_stderr=0.0, current_stderr=0.0,
-               metrics_candidate={"latency": 1.0}, metrics_current={"latency": 2.0})
+               metrics_candidate={"latency": 1.0}, metrics_current={"latency": 2.0},
+               metrics_stderr_candidate={"latency": 0.0}, metrics_stderr_current={"latency": 0.0})
     assert d.accept, d.reason
     assert "latency" in d.reason
 
@@ -137,7 +142,8 @@ def test_pareto_falls_back_to_latency_when_cost_missing():
 def test_pareto_falls_back_to_tokens_when_cost_and_latency_missing():
     d = decide(0.5, 0.8, mode="pareto",
                candidate_stderr=0.0, current_stderr=0.0,
-               metrics_candidate={"tokens": 1.0}, metrics_current={"tokens": 2.0})
+               metrics_candidate={"tokens": 1.0}, metrics_current={"tokens": 2.0},
+               metrics_stderr_candidate={"tokens": 0.0}, metrics_stderr_current={"tokens": 0.0})
     assert d.accept, d.reason
     assert "tokens" in d.reason
 
@@ -155,6 +161,27 @@ def test_pareto_refuses_unknown_explicit_objective_without_fallback():
                objectives=[{"name": "reward", "direction": "maximize"},
                            {"name": "memory_mb", "direction": "minimize"}],
                metrics_candidate={}, metrics_current={})
+
+
+def test_pareto_refuses_noise_accept_when_cost_stderr_missing():
+    """Reproduces the review finding: a tie-on-reward candidate with a scalar cost
+    delta of pure float noise (no tracked stderr for cost) must NOT be accepted —
+    the gate must refuse rather than let the epsilon fallback treat $0.0000001 as a
+    real win."""
+    with pytest.raises(ParetoObjectiveError):
+        decide(0.500, 0.501, mode="pareto",
+               candidate_stderr=0.2, current_stderr=0.2,
+               metrics_candidate={"cost": 0.9999999}, metrics_current={"cost": 1.0})
+
+
+def test_pareto_refuses_when_objective_key_missing_from_one_side():
+    """``cost`` present only in metrics_candidate (absent from metrics_current) must
+    not be read as 0.0 on the missing side — that fabricates a huge fake delta."""
+    with pytest.raises(ParetoObjectiveError):
+        decide(0.5, 0.5, mode="pareto",
+               candidate_stderr=0.0, current_stderr=0.0,
+               metrics_candidate={"cost": 1.0}, metrics_current={},
+               metrics_stderr_candidate={"cost": 0.0}, metrics_stderr_current={"cost": 0.0})
 
 
 # ---- backward compatibility: default/old modes unchanged -------------------
