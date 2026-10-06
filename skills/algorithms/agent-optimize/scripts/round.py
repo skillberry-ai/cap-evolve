@@ -891,10 +891,16 @@ def build_parser() -> argparse.ArgumentParser:
                    help="comma-separated tags that already exist under $R/work/")
     p.add_argument("--n-trials", type=int, required=True)
     p.add_argument("--k-se", type=float, default=1.0)
-    # choices= imported from gate_check.py, never repeated here: this value is forwarded to it
-    # verbatim, so a value only one side accepts empties the whole round table (run 33492876620
-    # round 3, `--mode val` — the caller meant `--split val`, which is the default anyway).
-    p.add_argument("--mode", default="paired", choices=gate_check.GATE_MODES)
+    # choices= derived from gate_check.py's GATE_MODES, minus "pareto": this value is forwarded
+    # to _gate() verbatim and a value only one side accepts empties the whole round table (run
+    # 33492876620 round 3, `--mode val` — the caller meant `--split val`, which is the default
+    # anyway). "pareto" is excluded on purpose, not an oversight: _gate() never forwards
+    # --objectives/--metrics-* to gate_check.py, so `--mode pareto` here would pass argparse
+    # and then always crash gate_check.py at runtime. round.py's batched cascade also assumes
+    # one scalar delta per candidate, which pareto mode doesn't produce — a pareto-gated
+    # candidate is gated by hand via gate_check.py directly, same as any driver_judgement call.
+    ROUND_MODES = [m for m in gate_check.GATE_MODES if m != "pareto"]
+    p.add_argument("--mode", default="paired", choices=ROUND_MODES)
     p.add_argument("--split", default="val")
     p.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
                    help="rollout concurrency per eval process (total = this x n_tags). Default "
