@@ -1,0 +1,127 @@
+[
+  {
+    "id": "case-001-model-signature-verification-at-serving",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-002-autoscaling-support-for-elastic-ray-clus",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-003-experiment-tracking-integration-for-ml-w",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-004-command-line-interface-cli-for-ray-clust",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-005-responses-api-observability-integration",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-006-reliable-multi-turn-stateful-tool-callin",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-007-allow-project-and-workbench-environment",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-008-add-in-ability-to-registerdeploy-an-exte",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-009-notebook-image-preview-for-nvidia-rubin",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-010-llamastack-support-for-claude-code-agent",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-011-mlflow-prompt-template-integration-in-ge",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-012-mlflow-observability-bridge-for-rhoai-mo",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-013-update-universal-workbench-image-with-rl",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-014-maintain-rayjobs-via-the-codeflare-sdk",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-015-ga-readiness-for-the-responses-api",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-016-red-hat-openshift-ai-rhoai-operator-rena",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-017-clone-rename-llama-stack-to-remove-meta",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-018-autogluon-as-a-supported-model-serving-r",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-019-add-mlflow-integration-for-experiment-tr",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-020-mlflow-experiment-tracking-integration-f",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-021-model-registry-version-compare",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-022-sticky-session-routing-redis-llm-d",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-023-align-kfp-sdk-with-pipeline-server",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-024-make-guardrails-enterprise-ready",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  },
+  {
+    "id": "case-025-pipeline-run-diagnostics-bundle-qe",
+    "tag": "repr",
+    "agent": "aws/claude-haiku-4-5"
+  }
+]

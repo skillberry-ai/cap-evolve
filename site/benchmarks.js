@@ -1,15 +1,30 @@
 const RAW = "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history";
 const GH_API = "https://api.github.com/repos/skillberry-ai/cap-evolve";
-// Tier is matched GENERICALLY: the workflow's TIERS list grows (smoke, pilot, full, …) and
-// hardcoding it here silently hides new tiers from the live panel — a `pilot` run was
-// invisible while it was executing. The bench allowlist stays explicit so unrelated jobs
-// ("plan legs", "aggregate history") never match.
-const JOB_RE = /^([a-z][a-z0-9-]*) \/ (tau2|swebench|skillsbench|spreadsheetbench)$/;
+// Tier is matched GENERICALLY: the workflow's TIERS list grows (smoke, pilot, full,
+// full_verified, …) and hardcoding it here silently hides new tiers from the live panel — a
+// `pilot` run was invisible while it was executing. The character class must therefore admit
+// every shape a tier name can take, UNDERSCORE INCLUDED: `full_verified` fails `[a-z0-9-]*`,
+// which would have reproduced the exact pilot bug for it.
+//
+// Bench is matched GENERICALLY too, not against a hardcoded list: enumerating benches here
+// silently hid the two tau2-airline arms from this panel entirely.
+const JOB_RE = /^([a-z][a-z0-9_-]*) \/ ([a-z][a-z0-9_-]*)$/;
+// The arms are internal leg names; the picker calls them tau2-custom + intervention.
+const BENCH_LABEL = {
+  tau2_custom_direct: "tau2-custom (direct)",
+  tau2_custom_blackbox: "tau2-custom (blackbox)",
+};
+const benchLabel = (b) => BENCH_LABEL[b] || b;
 // ?fixture — read the committed local eyeball fixture instead of the live feed (see
 // site/benchmarks.fixture.json). Local-only affordance for exercising the filter cascade
 // through many reload cycles; the default path is unchanged.
+//
+// benchmarks.json/meta.json are same-origin: pages.yml renders them fresh from
+// benchmark-history's records/ on every deploy, they're never committed to that branch
+// (an ever-growing aggregate rewritten in full on every run — see pages.yml for why).
+// RAW is still used below for live/ (in-progress run data a once-per-run deploy can't serve).
 const FEED = new URLSearchParams(location.search).has("fixture")
-  ? "benchmarks.fixture.json" : `${RAW}/benchmarks.json`;
+  ? "benchmarks.fixture.json" : "benchmarks.json";
 let RECORDS = [], sortKey = "date", sortDir = -1;
 
 const $ = (s) => document.querySelector(s);
@@ -98,11 +113,11 @@ function renderRunning(items) {
   list.innerHTML = sorted.map((it) => {
     if (!it.live) {
       return `<li><span class="badge badge-amber">queued</span>
-        <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a></li>`;
+        <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(benchLabel(it.bench))}</a></li>`;
     }
     const dataBase = encodeURIComponent(`${RAW}/live/${it.runId}__${it.tier}-${it.bench}/data`);
     return `<li><span class="badge badge-accent">live</span>
-      <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(it.bench)}</a>
+      <a href="${esc(it.jobUrl)}" target="_blank" rel="noopener">${esc(it.tier)} / ${esc(benchLabel(it.bench))}</a>
       <span class="elapsed" data-started="${esc(it.startedAt)}"></span>
       — <a href="./dashboard-ui/index.html?dataBase=${dataBase}#/runs/run_suite" target="_blank" rel="noopener">Watch live</a></li>`;
   }).join("");
@@ -167,7 +182,7 @@ async function load() {
   try {
     const [recs, meta] = await Promise.all([
       fetch(`${FEED}?t=${Date.now()}`).then((r) => r.json()),
-      fetch(`${RAW}/meta.json?t=${Date.now()}`).then((r) => r.json()).catch(() => null),
+      fetch(`meta.json?t=${Date.now()}`).then((r) => r.json()).catch(() => null),
     ]);
     RECORDS = Array.isArray(recs) ? recs : [];
     const zh = $("#date-zone");
@@ -249,7 +264,7 @@ function render() {
     empty.hidden = false;
     empty.innerHTML = RECORDS.length
       ? "No runs match the current filters — try widening the time range."
-      : "No runs recorded yet — trigger the suite (add a <code>benchmark-smoke</code> label to a PR, or Actions → Benchmarks).";
+      : "No runs recorded yet — trigger the suite (add a <code>benchmark-smoke-&lt;bench&gt;</code> label to a PR, or Actions → Benchmarks).";
   } else {
     empty.hidden = true;
   }
@@ -267,9 +282,17 @@ function render() {
     const optUsd = r.suite ? `$${fmt(r.suite.optimizer_usd, 4)}` : "—";
     const latency = r.suite && (r.suite.eval_seconds != null || r.suite.optimizer_seconds != null)
       ? fmtDuration((r.suite.eval_seconds ?? 0) + (r.suite.optimizer_seconds ?? 0)) : "—";
-    const ui = r.has_ui
-      ? `<a href="./benchmark-ui/runs/${encodeURIComponent(r.run_id)}__${esc(r.tier || "smoke")}-${encodeURIComponent(r.bench)}/ui/index.html#/runs/run_suite" target="_blank" rel="noopener">Open UI</a>`
-      : `<span class="muted">—</span>`;
+    // `report_url` points at a rendered drill-down page on the site (level 2:
+    // a heatmap/summary; level 3, where it exists, is linked from there on) —
+    // additive alongside `has_ui`'s CapEvolve UI snapshot link, not a replacement.
+    const uiParts = [];
+    if (r.has_ui) {
+      uiParts.push(`<a href="./benchmark-ui/runs/${encodeURIComponent(r.run_id)}__${esc(r.tier || "smoke")}-${encodeURIComponent(r.bench)}/ui/index.html#/runs/run_suite" target="_blank" rel="noopener">Open UI</a>`);
+    }
+    if (r.report_url) {
+      uiParts.push(`<a href="${esc(r.report_url)}" target="_blank" rel="noopener">Report ↗</a>`);
+    }
+    const ui = uiParts.length ? uiParts.join(" · ") : `<span class="muted">—</span>`;
     // Source column: link to the PR when set, else to `summary_url` when set
     // (per-run detail page for local/manual runs). Backward compatible: records
     // without `pr` or `summary_url` render as plain text.

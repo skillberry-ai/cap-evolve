@@ -1,0 +1,5 @@
+{
+  "train": ["jax-computing-basics"],
+  "val": ["jax-computing-basics"],
+  "test": ["jax-computing-basics"]
+}

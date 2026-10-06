@@ -22,6 +22,9 @@ const COLOR: Record<GraphNode['status'], string> = {
   // judge it, so it never sets the running-best stair.
   indecisive: 'var(--indecisive)',
   failed: 'var(--failed)',
+  // Never plotted here — a screen node has no `val` and this chart filters those out —
+  // but the map must stay exhaustive over NodeStatus.
+  screened: 'var(--muted)',
 }
 
 /** Per-iteration val scatter under the amber cumulative-best stair. */

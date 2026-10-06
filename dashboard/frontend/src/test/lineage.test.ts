@@ -43,11 +43,45 @@ describe('layoutLineage', () => {
 
   it('builds parent→child edges and marks spine edges', () => {
     const { edges } = layoutLineage(GRAPH)
-    expect(edges).toContainEqual({ from: 'seed', to: 'c1', onSpine: true })
-    expect(edges).toContainEqual({ from: 'c1', to: 'c2', onSpine: false })
+    expect(edges).toContainEqual({ from: 'seed', to: 'c1', onSpine: true, merge: false })
+    expect(edges).toContainEqual({ from: 'c1', to: 'c2', onSpine: false, merge: false })
   })
 
   it('handles an empty / best-less graph without throwing', () => {
     expect(layoutLineage({ root: 'seed', best_id: null, nodes: [] }).nodes).toEqual([])
+  })
+})
+
+describe('layoutLineage merge edges', () => {
+  // seed -> c1 -> c3; seed -> c2 (sibling); c4 merges c1 (parent) and c2 (merge_of)
+  const MERGE_GRAPH: RunGraph = {
+    root: 'seed',
+    best_id: 'c4',
+    nodes: [
+      node({ id: 'seed', status: 'seed', val: 0.2, iteration: 0 }),
+      node({ id: 'c1', parent: 'seed', status: 'accepted', val: 0.5, iteration: 1 }),
+      node({ id: 'c2', parent: 'seed', status: 'accepted', val: 0.4, iteration: 1 }),
+      node({ id: 'c4', parent: 'c1', merge_of: ['c1', 'c2'], status: 'accepted', val: 0.8, iteration: 2 }),
+    ],
+  }
+
+  it('draws a second incoming edge for each merge_of id, distinct from the derive edge', () => {
+    const { edges } = layoutLineage(MERGE_GRAPH)
+    const derive = edges.find((e) => e.from === 'c1' && e.to === 'c4' && !e.merge)
+    const merge = edges.find((e) => e.from === 'c2' && e.to === 'c4' && e.merge)
+    expect(derive).toBeTruthy()
+    expect(merge).toBeTruthy()
+  })
+
+  it('does not duplicate an edge when merge_of repeats the normal parent', () => {
+    const { edges } = layoutLineage(MERGE_GRAPH)
+    const fromC1 = edges.filter((e) => e.from === 'c1' && e.to === 'c4')
+    expect(fromC1).toHaveLength(1)
+  })
+
+  it('a merge edge is never marked onSpine', () => {
+    const { edges } = layoutLineage(MERGE_GRAPH)
+    const merge = edges.find((e) => e.merge)!
+    expect(merge.onSpine).toBe(false)
   })
 })

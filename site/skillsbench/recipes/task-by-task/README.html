@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>READ — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from recipes/task-by-task/README.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/recipes/task-by-task/README.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/recipes/task-by-task/README.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="task-by-task-experiment-recipes">Task-by-task experiment — recipes</h1>
+<p>One cap-evolve project per SkillsBench task: single-task split (train=val=test=[that
+task]), <code>num_trials=10</code> for a tight paired standard error, small per-task budget. Sourced
+from <code>intake_skillbench_c2</code> (43 tasks) and <code>intake_skillbench_c3</code> (44 tasks) — the two
+worktrees split the 87-task fleet with no task overlap between them.</p>
+<ul>
+<li><strong><code>&lt;task&gt;/capevolve.&lt;task&gt;.yaml</code></strong> + <strong><code>split_ids.&lt;task&gt;.json</code></strong> — the task-specific
+  recipe and split. This is what changes per task.</li>
+<li><strong><code>_shared/</code></strong> — <code>adapters/adapter.py</code>, <code>adapters/anthropic_env.py</code>,
+  <code>optimizer/INSTRUCTIONS.md</code>, <code>PROJECT.md</code>. Byte-identical across every one of the 87
+  project dirs (verified via md5sum before dropping the duplicates) — copy <code>_shared/</code>
+  alongside any per-task dir to reconstruct a runnable <code>.capevolve/project_&lt;task&gt;/</code>.</li>
+</ul>
+<h2 id="selecting-which-run-backs-each-task">Selecting which run backs each task</h2>
+<p>Several tasks in <code>c2</code> were retried multiple times (<code>_v1</code> through <code>_v5</code>) after
+infrastructure issues (<code>LOCK_TIMEOUT</code>, <code>STALE_cand_data</code>, <code>OLD_ANTHROPIC_KEY</code>,
+<code>infra_broken_uvx</code>, <code>CORRUPTED_batch3</code>). For each task, the harvest picked the
+highest-numbered run <em>not</em> tagged with one of those failure suffixes (falling back to the
+highest-numbered run overall if every attempt failed). <code>c3</code> had two tasks
+(<code>fix-build-agentops</code>, <code>setup-fuzzing-py</code>) with a pre-bugswarm-patch <code>INFRA_BROKEN</code> attempt
+alongside a later clean one — the clean one was picked. See
+<code>../../artifacts/task-by-task/MANIFEST.json</code> for the exact <code>(task, source worktree, run
+dir, best_id, iterations spent)</code> used for every one of the 87 tasks.</p>
+<p>To rerun a task: copy its <code>capevolve.&lt;task&gt;.yaml</code> + <code>split_ids.&lt;task&gt;.json</code> and <code>_shared/</code>
+into a fresh <code>.capevolve/project_&lt;task&gt;/</code>, drop in a <code>seed_capability/</code> (see
+<code>../../artifacts/task-by-task/&lt;task&gt;/seed/</code>), point <code>runner_repo_path</code> at a local
+<code>vendor/skillsbench</code> checkout, and run <code>cap-evolve run capevolve.&lt;task&gt;.yaml</code>.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

@@ -64,7 +64,11 @@ of the screen and `regressions` out of the gate to know which part to drop.
   +0.176 val): a precondition that refuses the illegal write and returns a recovery-oriented error
   changes behaviour deterministically, where a policy sentence changes it only probabilistically.
   Prose is the right form when the agent *lacks* a decision criterion; code is the right form when it
-  has one and violates it.
+  has one and violates it. The lever generalises past tools: for a skill-package capability, the
+  equivalent move is consolidating a skipped multi-step procedure into one bundled script the agent
+  must run rather than improvise; for a system-prompt-only capability with no owned execution surface,
+  it's a structural, checklisted rule (a numbered step the agent must confirm it completed) rather than
+  a soft suggestion — still weaker than code, but the same shift from probabilistic to checkable.
 
 ## Confirmation-without-execution: the agent narrates the change instead of making it
 
@@ -85,9 +89,11 @@ exactly the case the edit-form table sends to code rather than to prose.
 The fix is structural — make *confirmed by the user* and *mutation executed* the SAME action, so
 no code path can reach one without the other. In practice: one call that takes the approved
 change and performs it, sharing the body with whatever the confirmation path already does, and
-`remove` the primitives that let the two come apart. Then check the fix FIRES on the failing
-trajectory: re-run the new body on that trajectory's own arguments. Ship nothing whose only
-change is a sentence telling the agent to act.
+`remove` the primitives that let the two come apart. For a skill-package capability the equivalent
+fix is consolidating the confirm-step and the execute-step into one bundled script and deleting the
+now-redundant standalone instruction, so there's no code path that reaches "confirmed" without also
+reaching "executed." Then check the fix FIRES on the failing trajectory: re-run the new body on that
+trajectory's own arguments. Ship nothing whose only change is a sentence telling the agent to act.
 
 ## Guard closure: a guard that forbids the harmless option can force the harmful one
 

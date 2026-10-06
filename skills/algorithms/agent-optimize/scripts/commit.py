@@ -37,7 +37,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import sys
+import time
 from pathlib import Path
 
 # Imported for its side effect ONLY: seeds sys.path so `cap_evolve` resolves when
@@ -45,7 +48,9 @@ from pathlib import Path
 # cap_evolve imports below; not "unused" — deleting it breaks standalone runs.
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, graph, harness
+
+import meter
 
 
 def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
@@ -150,6 +155,22 @@ def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     # the whole finding: cand_1 was rejected against the parent's STORED reward (Δ 0.0333 vs
     # threshold 0.0440) while the control-relative comparison ACCEPTED it (Δ 0.0556 vs 0.0341).
     # Recording only the booked verdict hides that the decision was reference-dependent.
+    # What this candidate TRADED, from the round table's `movement` (gate_check's shared
+    # `harness.movement`). On the step record because that is what LEDGER/RUNMAP, the dashboard
+    # graph, the TUI and ci/benchmarks/lib/metrics.py all read — and because `r3_decide` was
+    # booked ACCEPT in run 36175707483 with "BROKE vs both controls [33722]" recorded nowhere
+    # but its own prose. Its sealed-split composition was 54 improved / 17 regressed, every
+    # sampled regression a 1.000 → 0.000, and nothing in the run's machine-readable record said
+    # a single task had been destroyed. Written only when the table HAS the movement (an older
+    # table, or a `gate_check`-only round, has none) — a missing measurement stays missing.
+    _mv = entry.get("movement") or {}
+    if _mv:
+        out["broke"] = list(_mv.get("broke") or [])
+        out["fixed"] = list(_mv.get("fixed") or [])
+        # Explicit counts, not derived by every reader: `0` here is a real measured claim
+        # ("broke nothing"), which is why the lists above are written even when empty.
+        out["n_broke"] = len(out["broke"])
+        out["n_fixed"] = len(out["fixed"])
     ctl = entry.get("control_relative") or {}
     if ctl:
         out["control_relative_verdict"] = ctl.get("verdict")
@@ -226,6 +247,128 @@ def _prior_decision(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
+def _has_screen_record(run_dir: RunDir, candidate_id: str) -> bool:
+    """Has ``screen.py`` ever written a ``<candidate_id>__screenN.json`` record?
+
+    Same check ``round.py`` makes before it will run a full-val gate at all — read here so
+    ``commit.py`` can tell a candidate that went through the screen ladder (and never reached
+    the gate for some other reason, e.g. a screen kill) from one that bypassed BOTH.
+    """
+    screens_dir = run_dir.root / "screens"
+    return screens_dir.is_dir() and any(screens_dir.glob(f"{candidate_id}__screen*.json"))
+
+
+def _diagnosis_targets(src: Path) -> tuple[list[str], dict | None]:
+    """``(cluster_ids, subset)`` this edit targeted, read from ``<from-dir>/DIAGNOSIS.json``.
+
+    ``([], None)`` when the file is missing, unparseable, or an empty template — i.e. no
+    cluster with both an ``id`` and at least one task (#611). ``cluster_ids`` are the clusters
+    the edits name (all clusters when no edit names one); ``subset`` is those clusters' tasks.
+    These feed the ``graph.jsonl`` node, whose ``cluster_ids``/``subset`` were empty on every
+    entry of a real run because nothing ever passed them.
+    """
+    try:
+        diag = json.loads((src / "DIAGNOSIS.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [], None
+    if not isinstance(diag, dict) or not isinstance(diag.get("clusters"), list):
+        return [], None
+    tasks_by = {str(c["id"]): [str(t) for t in c["tasks"]]
+                for c in diag["clusters"]
+                if isinstance(c, dict) and c.get("id") and isinstance(c.get("tasks"), list)
+                and c["tasks"]}
+    if not tasks_by:
+        return [], None
+    named = [str(cid) for e in (diag.get("edits") or []) if isinstance(e, dict)
+             for cid in (e.get("clusters") or []) if str(cid) in tasks_by]
+    cluster_ids = list(dict.fromkeys(named)) or list(tasks_by)
+    task_ids = sorted({t for cid in cluster_ids for t in tasks_by[cid]})
+    return cluster_ids, {"task_ids": task_ids, "rationale": "DIAGNOSIS.json clusters",
+                         "tier": None}
+
+
+#: Dashboard badge taxonomy for a candidate's self-reported edit classification (#665
+#: workstream 4). Advisory only — an unrecognized/missing value just renders as "—",
+#: never refuses a commit, since DIAGNOSIS.json's authoring is owned by SKILL.md
+#: (a different workstream) and this field is optional.
+CHANGE_TYPES = ("PROMPT_EDIT", "TOOL_CODE_EDIT", "VALIDATOR_ADD", "MIXED")
+
+
+def _diagnosis_change_type(src: Path) -> str | None:
+    """``change_type`` this edit self-reports, read from ``<from-dir>/DIAGNOSIS.json``.
+
+    ``None`` when the file is missing/unparseable or the field is absent/not one of
+    ``CHANGE_TYPES`` — optional and nullable, so an old DIAGNOSIS.json without it
+    (or any run that predates this field) just shows no badge."""
+    try:
+        diag = json.loads((src / "DIAGNOSIS.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    ct = diag.get("change_type") if isinstance(diag, dict) else None
+    return ct if isinstance(ct, str) and ct in CHANGE_TYPES else None
+
+
+def _ranked_issue_rows(src: Path) -> int:
+    """Data rows in ``<from-dir>/PROCESS.md``'s "Ranked issue list" table (#634).
+
+    Scoped to that section only (up to the next ``## `` heading): the dashboard's
+    ``harness._parse_process_md_tables`` regex can run past a header-only table into the
+    "Changes made" table below it, which would count a blank ranked list as filled. A row
+    counts when any cell after ``rank`` has text — a bare ``| 1 | | |`` is still blank.
+    """
+    try:
+        text = (src / "PROCESS.md").read_text(encoding="utf-8")
+    except OSError:
+        return 0
+    m = re.search(r"^##\s+Ranked issue list[^\n]*\n(.*?)(?=^##\s|\Z)", text,
+                  re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    if not m:
+        return 0
+    rows = [ln.strip() for ln in m.group(1).splitlines() if ln.strip().startswith("|")]
+    body = [r for r in rows[1:] if not re.fullmatch(r"[|\s:-]+", r)]  # drop header + separator
+    return sum(1 for r in body if any(c.strip() for c in r.strip("|").split("|")[1:]))
+
+
+#: Jaccard overlap of targeted task ids at/above which a new candidate counts as a retry of
+#: an earlier refuted one (#634). ponytail: task-set overlap only — a retry aimed at different
+#: tasks with the same idea slips through; add a mechanism/edit-text comparison if that bites.
+RETRY_OVERLAP = 0.5
+
+
+def _refuted_retries(run_dir: RunDir, candidate_id: str, task_ids: list[str]) -> list[dict]:
+    """Earlier REJECTED candidates whose own DIAGNOSIS.json targeted (nearly) these tasks (#634).
+
+    A ``reject`` is the gate measuring an edit flat or negative; ``inconclusive`` (unresolved,
+    re-measure under a fresh tag) and ``--reject-basis infra`` (missing data, no judgement) are
+    not refutations and never count. The prior's targets come from its SNAPSHOT's
+    DIAGNOSIS.json, the same reader as this candidate's own (``_diagnosis_targets``).
+    """
+    new = set(task_ids)
+    if not new:
+        return []
+    try:
+        lines = run_dir.events_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    hits, seen = [], {str(candidate_id)}
+    for line in lines:
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        cid = str(ev.get("candidate"))
+        if ev.get("kind") != "reject" or ev.get("reject_basis") == "infra" or cid in seen:
+            continue
+        seen.add(cid)
+        _, sub = _diagnosis_targets(run_dir.candidate_dir(cid))
+        old = set(sub["task_ids"]) if sub else set()
+        overlap = len(new & old) / len(new | old)
+        if overlap >= RETRY_OVERLAP:
+            hits.append({"candidate": cid, "overlap": round(overlap, 2),
+                         "shared_task_ids": sorted(new & old), "note": ev.get("note")})
+    return hits
+
+
 def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     """This candidate's row from ``round.py``'s persisted table, if one exists.
 
@@ -257,6 +400,22 @@ def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
 def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
     row = _gate_row(run_dir, candidate_id)
     return row.get("verdict") if row else None
+
+
+def _control_relative_verdict(run_dir: RunDir, candidate_id: str) -> dict:
+    """This candidate's drift-corrected verdict — ``round.py``'s ``control_relative``
+    comparison against the round's own null-control replicate(s), read back from the same
+    row ``_gate_row``/``_gate_verdict`` use. Distinct from the raw ``verdict`` (against the
+    STORED parent reward, which can carry drift since the parent was last measured).
+
+    ``stable`` is ``row["verdict_stable"]`` when the round had 2+ control replicates to check
+    the verdict against (``round.py``'s two-seed-block agreement check); ``None`` when the
+    round had only one, in which case there is nothing to check stability against and the
+    single verdict stands on its own.
+    """
+    row = _gate_row(run_dir, candidate_id) or {}
+    ctl = row.get("control_relative") or {}
+    return {"verdict": ctl.get("verdict"), "stable": row.get("verdict_stable")}
 
 
 def _has_grown(run_dir: RunDir, candidate_id: str) -> bool:
@@ -308,15 +467,48 @@ def main(argv=None) -> int:
     # that asserts a full-val paired gate actually ran.
     p.add_argument("--reject-basis", default=None,
                    choices=["gate", "screen_kill", "ceiling", "budget", "infra",
-                            "micro_test_fail", "driver_judgement"],
+                            "micro_test_fail", "driver_judgement", "drift_control"],
                    help="what evidence the reject rests on: gate=full-val paired gate ran AND "
                         "rejected; screen_kill=screen proved harm; ceiling=arithmetic proof no "
                         "accept was reachable, so full val was never paid; budget=screen "
                         "evidence plus a budget call; infra=missing data, not a judgement; "
                         "micro_test_fail=microcase.py proved the candidate's own targeted "
                         "mechanism does not fire, before any rollout was spent (#436); "
-                        "driver_judgement=the gate ACCEPTED and you are overriding it (say why "
-                        "in --note)")
+                        "drift_control=the raw parent-relative gate ACCEPTED, but round.py's "
+                        "drift-corrected control_relative comparison (vs a same-round "
+                        "null-control replicate) says reject and is verdict-stable — a "
+                        "structured disagreement, not a one-off override; "
+                        "driver_judgement=the gate ACCEPTED and you are overriding it for any "
+                        "OTHER reason (say why in --note)")
+    p.add_argument("--bypassed-gate-justification", default=None,
+                   help="required alongside --reject-basis driver_judgement when this "
+                        "candidate has NEITHER a full-val gate row NOR a screen.py record — "
+                        "the 'skip screen AND skip the gate entirely' escape hatch. Say why "
+                        "no measurement was ever run for it (e.g. an infra failure before any "
+                        "rollout, or a deliberate drop before evaluating it at all).")
+    p.add_argument("--missing-handover-justification", default=None,
+                   help="required when this candidate's <from-dir>/JOURNAL.md has no new "
+                        "'## Iteration' entry for it — the escape hatch for committing without "
+                        "one (#588). Say why the optimizer never got to write it (e.g. an infra "
+                        "failure). Without it, commit.py refuses rather than silently booking "
+                        "the framework's synthesized stub.")
+    p.add_argument("--missing-diagnosis-justification", default=None,
+                   help="required when this candidate's <from-dir>/DIAGNOSIS.json is missing or "
+                        "an empty template (no cluster with an id AND tasks) — the escape hatch "
+                        "for committing without one (#611). Say why no diagnosis exists (e.g. an "
+                        "infra failure before the optimizer wrote it). Without it, commit.py "
+                        "refuses: the graph.jsonl node's cluster_ids/subset and the dashboard's "
+                        "diagnosis view come from this file.")
+    p.add_argument("--missing-ranked-issues-justification", default=None,
+                   help="required when this candidate's <from-dir>/PROCESS.md 'Ranked issue "
+                        "list' table has no data rows (header-only) — the escape hatch for "
+                        "committing without one (#634). Say why the full remaining-failure "
+                        "landscape was not re-surveyed this round. Without it, commit.py refuses.")
+    p.add_argument("--retry-justification", default=None,
+                   help="required when this candidate's DIAGNOSIS.json targets (nearly) the same "
+                        "tasks as an earlier candidate the gate REJECTED (#634). One line: what is "
+                        "different this time, beyond cosmetic variation. Without it, commit.py "
+                        "refuses rather than book a re-try of a refuted idea.")
     p.add_argument("--optimizer-usd", type=float, default=0.0)
     p.add_argument("--optimizer-tokens", type=int, default=0)
     p.add_argument("--optimizer-seconds", type=float, default=0.0)
@@ -334,6 +526,10 @@ def main(argv=None) -> int:
     p.add_argument("--edit-kind", default=None, choices=["prompt", "code", "merge"],
                    help="graph.jsonl node kind; defaults to 'merge' when --parents has "
                         "2+ ids, else 'code'.")
+    p.add_argument("--change-type", default=None, choices=list(CHANGE_TYPES),
+                   help="dashboard badge for this edit's self-reported classification "
+                        "(#665). Optional: when omitted, read from <from-dir>/"
+                        "DIAGNOSIS.json's own 'change_type' field, else no badge is shown.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -341,6 +537,12 @@ def main(argv=None) -> int:
     if not src.is_dir():
         print(json.dumps({"error": f"--from-dir does not exist: {src}"}, indent=2))
         return 2
+
+    # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
+    # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them.
+    # This is snapshotted below (`run_dir.snapshot`), so guaranteeing it here also guarantees
+    # every future candidate_dir built by copying THIS snapshot forward.
+    harness.ensure_framework_memory(src, run_dir)
 
     if not args.force:
         prior = _prior_decision(run_dir, args.candidate_id)
@@ -402,11 +604,29 @@ def main(argv=None) -> int:
     # "the gate rejected it" makes events.jsonl assert a judgement no measurement supports.
     gate_verdict = _gate_verdict(run_dir, args.candidate_id)
     overrode_gate = bool(args.decision == "reject" and gate_verdict == "accept")
+    # ``gate_verdict is None`` means no round table has a row for this candidate at all — no
+    # gate ever ran. ``--reject-basis gate`` asserts a gate rejection happened; with no gate
+    # row to back that up, that assertion is exactly as unsupported as the accept/inconclusive
+    # cases above (found by review — the original check only handled the two DECIDED verdicts
+    # and let the "nothing to attribute to" case slip through the same door it was built to
+    # close).
+    if args.reject_basis == "gate" and gate_verdict is None:
+        print(json.dumps({
+            "error": f"--reject-basis gate, but no round table has a gate row for "
+                     f"{args.candidate_id} at all — nothing to attribute the rejection to",
+            "gate_verdict": None,
+            "fix": "pass --reject-basis driver_judgement and say in --note why you are "
+                   "rejecting without a gate measurement (e.g. a micro-test failure, an "
+                   "infra error, or a deliberate drop before ever evaluating it)",
+        }, indent=2))
+        return 2
     if args.reject_basis == "gate" and gate_verdict in ("accept", "inconclusive"):
         verb = ("ACCEPTED" if gate_verdict == "accept"
                 else "could not resolve (verdict: inconclusive)")
-        fix = ("pass --reject-basis driver_judgement and say in --note why you are overriding "
-               "the gate — e.g. a task you care about regressed"
+        fix = ("pass --reject-basis drift_control if round.py's control_relative comparison "
+               "against a same-round null-control replicate also says reject and is "
+               "verdict-stable, or --reject-basis driver_judgement and say in --note why you "
+               "are overriding the gate for some OTHER reason"
                if gate_verdict == "accept" else
                "book it as --decision inconclusive (charges the iteration, not the stall) and "
                "re-measure under a FRESH tag; or, if you are choosing to drop the edit anyway, "
@@ -418,12 +638,158 @@ def main(argv=None) -> int:
             "fix": fix,
         }, indent=2))
         return 2
+    # `--reject-basis drift_control`: the raw parent-relative gate accepted, but round.py's
+    # control_relative comparison — the SAME round's byte-identical null-control replicate(s),
+    # which removes drift since the parent was last measured — says reject and the verdict is
+    # stable across whichever replicate is the reference. A real, structured disagreement
+    # between the two comparisons (confirmed live: the driver had to fall back to
+    # driver_judgement and hand-explain this exact situation in --note before this basis
+    # existed), so it gets its own name rather than folding into the unstructured override.
+    if args.reject_basis == "drift_control":
+        ctl = _control_relative_verdict(run_dir, args.candidate_id)
+        if ctl["verdict"] != "reject":
+            print(json.dumps({
+                "error": f"--reject-basis drift_control, but round.py's control_relative "
+                         f"verdict for {args.candidate_id} is {ctl['verdict']!r}, not 'reject'",
+                "control_relative": ctl,
+                "fix": "pass --reject-basis driver_judgement instead and say why in --note, "
+                       "or re-check work/round_*.json — this basis asserts the drift-corrected "
+                       "comparison itself rejected",
+            }, indent=2))
+            return 2
+        if ctl["stable"] is False:
+            print(json.dumps({
+                "error": f"--reject-basis drift_control, but {args.candidate_id}'s verdict is "
+                         "NOT stable across the round's control replicates (verdict_stable: "
+                         "false) — it flips depending on which byte-identical replicate is the "
+                         "reference, so it is not evidence either way",
+                "control_relative": ctl,
+                "fix": "book it as --decision inconclusive instead and re-measure under a "
+                       "FRESH tag",
+            }, indent=2))
+            return 2
+
+    # The bare `driver_judgement` escape hatch: a candidate that never had a full-val gate
+    # (gate_verdict is None, same condition `--reject-basis gate` above refuses on) AND never
+    # had a screen.py record either has skipped the ENTIRE screen-then-gate structure — not an
+    # override of a verdict that ran, but a candidate no measurement ever touched. Confirmed
+    # live: a candidate was committed exactly this way, via `--reject-basis driver_judgement`
+    # with no compliance or screen event on record for it at all. That is legitimate only when
+    # said so explicitly, not as commit.py's silent default path.
+    bypassed_screen_and_gate = bool(
+        args.reject_basis == "driver_judgement" and gate_verdict is None
+        and not _has_screen_record(run_dir, args.candidate_id))
+    if bypassed_screen_and_gate and not args.bypassed_gate_justification:
+        print(json.dumps({
+            "error": f"--reject-basis driver_judgement for {args.candidate_id!r}, but it has "
+                     "no full-val gate row AND no screen.py record — this is the "
+                     "skip-screen-and-skip-gate escape hatch",
+            "why": "driver_judgement is for overriding a gate verdict that DID run (see its "
+                   "help text). Rejecting a candidate that was never screened OR gated needs "
+                   "its own recorded reason, not a bare override.",
+            "fix": "pass --bypassed-gate-justification \"<reason>\" explaining why neither "
+                   "screen.py nor a full-val gate ran for this candidate before this commit "
+                   "(e.g. an infra failure before any rollout, or a deliberate drop before "
+                   "evaluating it at all).",
+        }, indent=2))
+        return 2
+
+    # Precondition (#588): JOURNAL.md is the ONLY channel that carries a round's own
+    # reasoning — not just its measured outcome — into the NEXT round, and the append step
+    # was skipped often enough that a real ``optimizer_context_warning`` fired on some of a
+    # run's most information-dense rounds, even though ``_reconcile_journal`` already
+    # synthesizes a stub from ``--note`` as a fallback. A synthesized stub is strictly worse
+    # than the optimizer's own entry, so hard-refuse here rather than let the fallback paper
+    # over a skipped step — same shape as the screen-then-gate bypass above: a named escape
+    # hatch that gets logged, not a silent default path. Does not apply to ``provisional``,
+    # which books no iteration and never touches JOURNAL.md (see module docstring).
+    handover = bool(harness.pending_handover(src, run_dir, args.candidate_id))
+    if not provisional and not handover and not args.missing_handover_justification:
+        print(json.dumps({
+            "error": f"no JOURNAL.md handover found for {args.candidate_id!r} — commit.py "
+                     "refuses to record this decision without one",
+            "why": "the run-level JOURNAL.md is how the NEXT round learns what this one "
+                   "tried and why; an empty handover breaks that even though the framework "
+                   "can synthesize a stub from --note as a fallback.",
+            "fix": f"append your entry to <from-dir>/JOURNAL.md as a "
+                   f"'## Iteration {args.candidate_id} — <headline>' block (below the marker "
+                   "line) and re-run commit.py, or pass --missing-handover-justification "
+                   "\"<reason>\" if you are deliberately committing without one (e.g. an "
+                   "infra failure before the optimizer had a chance to write it).",
+        }, indent=2))
+        return 2
+
+    # Precondition (#611), same shape as the JOURNAL.md one above: DIAGNOSIS.json is the only
+    # source of which failure cluster(s) this edit targeted and on which tasks. A real run
+    # committed 0/17 candidates with one, so every graph.jsonl node carried empty
+    # cluster_ids/subset and the dashboard's diagnosis view rendered nothing. Refuse rather
+    # than silently book an unmapped change; a named escape hatch, logged as a warning.
+    cluster_ids, diag_subset = _diagnosis_targets(src)
+    change_type = args.change_type or _diagnosis_change_type(src)
+    if not provisional and not cluster_ids and not args.missing_diagnosis_justification:
+        print(json.dumps({
+            "error": f"no real DIAGNOSIS.json found for {args.candidate_id!r} — commit.py "
+                     "refuses to record this decision without one",
+            "why": "DIAGNOSIS.json maps this change to the failure cluster(s) it targets and "
+                   "the task subset it was aimed at; graph.jsonl's cluster_ids/subset and the "
+                   "dashboard's diagnosis view are built from it. A missing or empty-template "
+                   "file (no cluster with an id AND tasks) leaves both empty.",
+            "fix": "write <from-dir>/DIAGNOSIS.json (schema in <from-dir>/PROCESS.md) with at "
+                   "least one cluster {id, tasks: [...]} and edits naming the clusters they "
+                   "target, and re-run commit.py, or pass --missing-diagnosis-justification "
+                   "\"<reason>\" if you are deliberately committing without one.",
+        }, indent=2))
+        return 2
+
+    # Precondition (#634), same shape again: the "Ranked issue list" is the round's survey of
+    # the FULL remaining-failure landscape. A real run left it header-only on most candidates
+    # and tunnel-visioned on 1-2 stubborn tasks while ~13 others sat unresolved. A merge
+    # proposes nothing new (it combines already-surveyed parents), so it is exempt.
+    is_merge = len([x for x in (args.parents or "").split(",") if x.strip()]) > 1 or \
+        len((graph.latest_node(run_dir, args.candidate_id) or {}).get("parents") or []) > 1
+    ranked_rows = _ranked_issue_rows(src)
+    ranked_missing = not provisional and not is_merge and not ranked_rows
+    if ranked_missing and not args.missing_ranked_issues_justification:
+        print(json.dumps({
+            "error": f"PROCESS.md's 'Ranked issue list' is empty for {args.candidate_id!r} — "
+                     "commit.py refuses to record this decision without it",
+            "why": "the ranked list is how each round re-surveys ALL current failures (clusters "
+                   "by # failing tasks x trials) instead of fixating on 1-2 known-stubborn "
+                   "tasks; a header-only table means no survey happened.",
+            "fix": "fill <from-dir>/PROCESS.md's '## Ranked issue list' table with one row per "
+                   "failure cluster in the current champion's val failures, and re-run "
+                   "commit.py, or pass --missing-ranked-issues-justification \"<reason>\" if "
+                   "you are deliberately committing without one.",
+        }, indent=2))
+        return 2
+
+    # Precondition (#634): re-submitting an idea the gate already refuted, with cosmetic
+    # variation ("cancel reason guard v2" after v1 failed), spends a full gate re-discovering
+    # the same result. Same task targets as an earlier reject => say what is different.
+    retry_of = ([] if provisional or is_merge
+                else _refuted_retries(run_dir, args.candidate_id,
+                                      (diag_subset or {}).get("task_ids") or []))
+    if retry_of and not args.retry_justification:
+        print(json.dumps({
+            "error": f"{args.candidate_id!r} targets the same tasks as earlier candidate(s) the "
+                     "gate already REJECTED — commit.py refuses a retry without saying what "
+                     "is different this time",
+            "refuted_priors": retry_of,
+            "why": "a flat/negative result on these tasks is already measured; a near-variant "
+                   "of the same component re-discovers it at the cost of a full gate.",
+            "fix": "pass --retry-justification \"<one line: what is different this time>\" "
+                   "(a different mechanism or root cause, not a rewording), or retarget "
+                   "DIAGNOSIS.json at clusters from a fresh ranked issue list.",
+        }, indent=2))
+        return 2
 
     # The parent this candidate was gated against — ``gate_check --current`` defaults to
     # ``best_id``, so read it BEFORE ``set_best`` moves it.
     parent_id = run_dir.best_id or "seed"
+    # None (not [parent_id]) when --parents is omitted, so record_iteration keeps the 2
+    # parents round.py already recorded for a merge node it built (#438).
     parents = ([p.strip() for p in args.parents.split(",") if p.strip()]
-               if args.parents else [parent_id])
+               if args.parents else None)
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
         run_dir.set_best(args.candidate_id)
@@ -438,33 +804,69 @@ def main(argv=None) -> int:
     # `provisional` decision never reaches record_iteration and would otherwise carry none.
     gate = _round_gate_numbers(run_dir, args.candidate_id)
     parent_val = gate.pop("parent_val", None)
+    # #610: under host.py the proposer's spend is METERED, not guessed — the delta since this
+    # session's previous checkpoint, read from claude-code's own session log (see meter.py).
+    # A metered figure replaces the agent's self-report; USD is not knowable mid-session, so
+    # host.py attributes it per candidate once the session's real total exists.
+    metered = (meter.checkpoint(run_dir.root, time.time())
+               if os.environ.get("CAPEVOLVE_HOST_METER") == "1" else None)
+    meter_field = {}
+    if metered is not None:
+        args.optimizer_tokens = metered["tokens"]
+        args.optimizer_seconds = round(metered["seconds"], 3)
+        meter_field["opt_meter"] = metered["meter"]
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
+                      bypassed_screen_and_gate=bypassed_screen_and_gate,
+                      bypassed_gate_justification=args.bypassed_gate_justification,
+                      retry_of=[h["candidate"] for h in retry_of] or None,
+                      retry_justification=args.retry_justification if retry_of else None,
                       verdict=args.decision,
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None,
-                      **gate)
+                      **meter_field, **gate)
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
                          optimizer_seconds=args.optimizer_seconds)
-    # Did the agent write the INTENT half of its handover? ``_reconcile_journal`` (inside
-    # record_iteration) folds ``<workdir>/JOURNAL.md`` into the run-level journal and silently
-    # substitutes "(no handover written by the optimizer)" when there is none — which is what
-    # every round of runs 32971129203 and 33046360451 recorded, because nothing asked the agent
-    # for one. Read it BEFORE booking, and report the answer so a forgotten handover is
-    # correctable while rounds remain rather than discovered when the run is over.
-    # ``pending_handover``, not ``_journal_tail``: a working copy cloned from the last round
-    # still holds THAT round's entry, and _reconcile_journal's dedup guard books the placeholder
-    # rather than the same entry twice — so the plain tail reports "recorded" for exactly the
-    # round whose handover went missing.
-    handover = bool(harness.pending_handover(src, run_dir, args.candidate_id))
+    # ``handover`` was already computed (and, absent a justification, enforced) above. Did the
+    # agent write the INTENT half of its handover? ``_reconcile_journal`` (inside
+    # record_iteration) folds ``<workdir>/JOURNAL.md`` into the run-level journal and, when
+    # ``handover`` is False here, synthesizes an entry from ``--note`` instead of the silent
+    # "(no handover written by the optimizer)" placeholder that every round of runs 32971129203
+    # and 33046360451 recorded — see harness._reconcile_journal.
     reason = args.note or args.decision
     if indecisive:
         reason = f"indecisive (gate): {reason}"
     warnings: list[str] = []
+    if not provisional and not handover and args.missing_handover_justification:
+        warnings.append(
+            f"missing handover: {args.candidate_id!r} was committed with NO JOURNAL.md "
+            "entry, justified as: "
+            f"{args.missing_handover_justification!r} — the run-level JOURNAL.md will carry "
+            "only a framework-synthesized stub for this round.")
+    if not provisional and not cluster_ids and args.missing_diagnosis_justification:
+        warnings.append(
+            f"missing diagnosis: {args.candidate_id!r} was committed with NO real "
+            "DIAGNOSIS.json, justified as: "
+            f"{args.missing_diagnosis_justification!r} — its graph.jsonl node carries no "
+            "cluster_ids and the dashboard shows no diagnosis for it.")
+    if ranked_missing:
+        warnings.append(
+            f"missing ranked issues: {args.candidate_id!r} was committed with a header-only "
+            "PROCESS.md 'Ranked issue list', justified as: "
+            f"{args.missing_ranked_issues_justification!r}")
+    if retry_of:
+        warnings.append(
+            f"refuted retry: {args.candidate_id!r} re-targets the tasks of rejected "
+            f"{[h['candidate'] for h in retry_of]}, justified as: {args.retry_justification!r}")
+    if bypassed_screen_and_gate:
+        warnings.append(
+            f"screen+gate bypass: {args.candidate_id!r} was rejected via driver_judgement "
+            "with NO screen.py record and NO full-val gate row — justified as: "
+            f"{args.bypassed_gate_justification!r}")
     # `provisional` books the decision event above but stops here: the iteration is not over
     # (the SAME candidate gets a real accept/reject/inconclusive commit later, once `grow.py`
     # has re-gated it at a pooled n), so the stall counter, LEDGER.md and JOURNAL.md must not
@@ -482,6 +884,8 @@ def main(argv=None) -> int:
                                  parent_val=parent_val,
                                  indecisive=indecisive, memory_skill=memory_skill,
                                  parents=parents, edit_kind=args.edit_kind,
+                                 cluster_ids=cluster_ids, subset=diag_subset,
+                                 change_type=change_type,
                                  opt_cost_usd=args.optimizer_usd or None,
                                  opt_tokens=args.optimizer_tokens or None,
                                  optimizer_seconds=args.optimizer_seconds or None,
@@ -519,15 +923,8 @@ def main(argv=None) -> int:
             # evaluated. Same reasoning as the deterministic hill-climb's own indecisive branch.
             _record_memory(run_dir, args.candidate_id, accepted=accepted,
                            reason=reason, val=args.val, parent_val=parent_val)
-        if not handover:
-            warnings.append(
-                "no handover recorded for this round: the run-level JOURNAL.md now reads "
-                "'(no handover written by the optimizer)' for "
-                f"{args.candidate_id}, so the next round can see WHICH tasks moved but not what "
-                "you tried or why. Before the next commit.py, write your entry to "
-                "<from-dir>/JOURNAL.md as a '## Iteration <candidate> — <headline>' block "
-                "(changes made, expected effect, hypotheses prior RESULT lines already refuted, "
-                "focus next).")
+        # (missing-handover warning, if any, was already appended above — the precondition
+        # earlier already refused the commit unless a justification was given.)
     spent = run_dir.spent
     run_dir.record_spend_warnings()
     stop, reason = run_dir.budget_exhausted()
@@ -536,6 +933,8 @@ def main(argv=None) -> int:
                       "gate_verdict": gate_verdict,
                       "overrode_gate": overrode_gate,
                       "handover_recorded": handover,
+                      "diagnosis_recorded": bool(cluster_ids),
+                      "ranked_issue_rows": ranked_rows,
                       "warnings": warnings,
                       "best_id": run_dir.best_id, "spent": spent.to_dict(),
                       "stop": stop, "stop_reason": reason}, indent=2))

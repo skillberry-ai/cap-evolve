@@ -37,7 +37,7 @@ skills/_registry/manifest.json — phases + capabilities + algorithms + optimize
 interventions + orchestrate.
 - phases: intake, implement-and-check, baseline, evaluate, diagnose, gate, finalize, report
 - capabilities: system-prompt, skill-package, tools, mcp-tool
-- interventions: spa (how a candidate is DELIVERED to the model under test, vs what is edited)
+- interventions: blackbox (how a candidate is DELIVERED to the model under test, vs what is edited)
 - memory: wiki (which cross-iteration memory scheme, selected via `memory_skill` —
   md-files is the built-in default and needs no skill dir; wiki is the weakness-graph
   format extracted from evograph)

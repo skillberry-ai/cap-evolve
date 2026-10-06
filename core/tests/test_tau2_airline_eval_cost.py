@@ -13,6 +13,8 @@ import sys
 import types
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
 ADAPTER = REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py"
 
@@ -41,8 +43,10 @@ def _load_adapter_module():
         ("tau2.utils.llm_utils", llm_utils),
     ):
         sys.modules.setdefault(name, mod)
+    # other examples ship their own ``gateway`` module; make sure ours is the one imported
+    sys.modules.pop("gateway", None)
 
-    spec = importlib.util.spec_from_file_location("_tau2_airline_adapter_cost", ADAPTER)
+    spec =importlib.util.spec_from_file_location("_tau2_airline_adapter_cost", ADAPTER)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -180,3 +184,56 @@ def test_sim_to_rollout_reports_real_tokens_and_unpriced_cost_for_gptoss():
     assert rollout.cost_usd == 0.0
     assert rollout.tokens == 800_000, "real token usage must reach the Rollout"
     assert rollout.metadata["cost_source"] == "unpriced"
+    assert rollout.metadata["cost_measured"] is False
+
+
+# --- #609: target-model pricing registry -------------------------------------------------
+
+def _gateway():
+    _load_adapter_module()  # puts adapters/ on sys.path and evicts a foreign ``gateway``
+    import gateway
+    return gateway
+
+
+def test_known_model_is_billed_at_its_real_in_out_rates():
+    """aws/gpt-oss-120b used to be registered at $0/token; it must now bill 0.15/0.60 per
+    1M from the call's own prompt/completion split, via the same litellm lookup tau2 uses."""
+    litellm = pytest.importorskip("litellm")
+    gw = _gateway()
+    gw.register_cost("openai/aws/gpt-oss-120b", "aws/gpt-oss-120b")
+    resp = litellm.ModelResponse(model="aws/gpt-oss-120b",
+                                 usage={"prompt_tokens": 1_000_000, "completion_tokens": 1_000_000,
+                                        "total_tokens": 2_000_000})
+    assert litellm.completion_cost(completion_response=resp) == pytest.approx(0.15 + 0.60)
+    assert gw.is_priced("openai/aws/gpt-oss-120b")
+
+
+def test_unknown_model_stays_zero_but_is_flagged_unmeasured():
+    litellm = pytest.importorskip("litellm")
+    gw = _gateway()
+    gw.register_cost("aws/some-unlisted-model")
+    resp = litellm.ModelResponse(model="aws/some-unlisted-model",
+                                 usage={"prompt_tokens": 1000, "completion_tokens": 1000,
+                                        "total_tokens": 2000})
+    assert litellm.completion_cost(completion_response=resp) == 0.0
+    assert not gw.is_priced("aws/some-unlisted-model")
+
+
+def test_rollout_says_whether_its_cost_was_measured(monkeypatch):
+    mod = _load_adapter_module()
+    monkeypatch.delenv("TAU2_AGENT_MODEL", raising=False)
+    monkeypatch.delenv("TAU2_USER_MODEL", raising=False)
+    _, _, meta = mod._cost_and_tokens(_Sim(0.5, 0.0, [_Msg(cost=0.5, usage=_USAGE)]))
+    assert (meta["cost_source"], meta["cost_measured"], meta["unpriced_models"]) == ("tau2", True, [])
+
+    # the real run's shape: priced agent, unpriced user simulator -> a lower bound
+    monkeypatch.setenv("TAU2_USER_MODEL", "aws/claude-sonnet-5")
+    cost, _, meta = mod._cost_and_tokens(_Sim(0.5, 0.0, [_Msg(cost=0.5, usage=_USAGE)]))
+    assert cost == 0.5
+    assert meta["cost_source"] == "partial_models" and meta["cost_measured"] is False
+    assert meta["unpriced_models"] == ["openai/aws/claude-sonnet-5"]
+
+    monkeypatch.setenv("TAU2_AGENT_MODEL", "aws/claude-sonnet-5")
+    _, _, meta = mod._cost_and_tokens(_Sim(0.0, 0.0, [_Msg(cost=0.0, usage=_USAGE)]))
+    assert meta["cost_source"] == "unpriced", "a $0 from an unlisted model is not 'free'"
+    assert meta["cost_measured"] is False

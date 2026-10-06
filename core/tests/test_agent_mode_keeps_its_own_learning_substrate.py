@@ -50,6 +50,13 @@ def _staged(tmp_path, cid="cand_1"):
     work = run_dir.root / "work" / cid
     work.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(run_dir.root / "candidates" / "seed", work)
+    # commit.py requires a real DIAGNOSIS.json (#611); not what these tests are about.
+    (work / "DIAGNOSIS.json").write_text(json.dumps(
+        {"candidate": cid, "clusters": [{"id": "A", "tasks": ["t0"]}]}), encoding="utf-8")
+    # ...and a filled PROCESS.md "Ranked issue list" (#634); also not what these are about.
+    (work / "PROCESS.md").write_text(
+        "## Ranked issue list\n| rank | cluster | tasks |\n| --- | --- | --- |\n"
+        "| 1 | A | t0 |\n", encoding="utf-8")
     return run_dir, work
 
 
@@ -75,7 +82,8 @@ def _jsonl(path: Path) -> list[dict]:
 
 def test_a_rejected_round_lands_in_the_memory_the_dashboard_publishes(tmp_path):
     run_dir, work = _staged(tmp_path)
-    _commit(run_dir, work)
+    _commit(run_dir, work, "--missing-handover-justification",
+            "fixture: journal handover not under test")
 
     rejected = _jsonl(Path(run_dir.rejected_path))
     assert rejected, (
@@ -90,7 +98,9 @@ def test_a_rejected_round_lands_in_the_memory_the_dashboard_publishes(tmp_path):
 
 def test_an_accepted_round_lands_in_history(tmp_path):
     run_dir, work = _staged(tmp_path, cid="cand_2")
-    _commit(run_dir, work, cid="cand_2", decision="accept", val="0.54")
+    _commit(run_dir, work, "--missing-handover-justification",
+            "fixture: journal handover not under test", cid="cand_2", decision="accept",
+            val="0.54")
 
     hist = _jsonl(Path(run_dir.history_path))
     assert hist, "an accepted round left no lineage in history.jsonl"
@@ -122,18 +132,35 @@ def test_a_handover_the_agent_wrote_is_folded_into_the_run_journal(tmp_path):
     assert "RESULT (framework, measured)" in journal, "the framework RESULT half is missing"
 
 
-def test_a_missing_handover_is_reported_back_to_the_agent(tmp_path):
+def test_a_missing_handover_is_refused_by_default(tmp_path):
     """``commit.py`` is the only thing the agent runs every round, so it is the only place a
-    forgotten handover can be surfaced while there are still rounds left to fix it. Silence is
-    what produced three straight rounds of "(no handover written by the optimizer)"."""
+    forgotten handover can be caught while there are still rounds left to fix it (#588):
+    a warning nobody has to read is what produced three straight rounds of "(no handover
+    written by the optimizer)" — refusing the commit is what actually stops that."""
     run_dir, work = _staged(tmp_path)
-    out = _commit(run_dir, work)
+    p = subprocess.run(
+        [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
+         "--candidate-id", "cand_1", "--from-dir", str(work),
+         "--decision", "reject", "--val", "0.4967",
+         "--note", "compute-not-hardcode replay + over-write contract"],
+        capture_output=True, text=True,
+        env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
+    assert p.returncode != 0, f"commit.py booked a round with no JOURNAL.md handover: {p.stdout}"
+    assert "JOURNAL.md" in p.stdout and "missing-handover-justification" in p.stdout
+
+
+def test_a_missing_handover_proceeds_with_a_justification_and_is_reported(tmp_path):
+    """The escape hatch (mirrors ``--bypassed-gate-justification``): the commit is booked, but
+    the operator sees exactly why the journal is about to carry only a synthesized stub."""
+    run_dir, work = _staged(tmp_path)
+    out = _commit(run_dir, work, "--missing-handover-justification",
+                  "infra failure before the optimizer could write one")
 
     assert out.get("handover_recorded") is False, (
         f"commit.py did not report that the round booked no handover: {out}")
     warns = " ".join(out.get("warnings") or [])
     assert "JOURNAL.md" in warns, (
-        f"nothing told the agent where to write its handover next round: {out}")
+        f"nothing told the operator this round proceeded with no handover: {out}")
 
 
 def test_the_handover_flag_is_true_when_one_was_written(tmp_path):
@@ -157,7 +184,10 @@ def test_a_stale_handover_carried_over_from_the_last_round_is_not_reported_as_wr
 
     work2 = run_dir.root / "work" / "cand_2"     # round 2: cloned, and NOT updated
     shutil.copytree(work, work2)
-    out = _commit(run_dir, work2, cid="cand_2")
+    out = _commit(run_dir, work2, "--missing-handover-justification",
+                  "fixture: round 2 deliberately left the journal stale",
+                  "--retry-justification", "fixture: cloned diagnosis, retry not under test",
+                  cid="cand_2")
 
     journal = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
     assert "duplicate handover" in journal, (

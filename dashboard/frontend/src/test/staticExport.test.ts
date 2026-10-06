@@ -53,19 +53,37 @@ describe('gateRowsFromNodes', () => {
     expect(rows[0].reason).toContain('paired')
   })
 
-  it('reads SE, n and the bar out of the reason — and never the bar as the SE', () => {
+  it('reads SE, n and the bar from the structured gate_* node fields', () => {
     const [r] = gateRowsFromNodes([
       nodes[0],
-      { ...nodes[1], reason: 'paired \u0394\u0304=+0.0460 > 0.2\u00b7SE=0.0062 (SE=0.0308, n=50)' },
+      {
+        ...nodes[1],
+        gate_delta: 0.046, gate_stderr: 0.0308, gate_n: 50, gate_k_se: 0.2,
+        gate_threshold: 0.0062, control_relative_delta: 0.05, verdict_stable: true,
+        overrode_gate: false,
+      },
     ])
-    expect(r.stderr).toBe(0.0308) // the standalone SE, NOT the 0.2\u00b7SE bar
+    expect(r.stderr).toBe(0.0308)
     expect(r.k_se).toBe(0.2)
     expect(r.threshold).toBe(0.0062)
     expect(r.n).toBe(50)
     expect(r.delta).toBe(0.046)
+    expect(r.control_relative_delta).toBe(0.05)
+    expect(r.verdict_stable).toBe(true)
   })
 
-  it('leaves a statistic the reason never carried empty rather than inventing it', () => {
+  it('never regexes numbers out of the reason prose (#612)', () => {
+    const [r] = gateRowsFromNodes([
+      nodes[0],
+      { ...nodes[1], reason: 'paired Δ̄=+0.0460 > 0.2·SE=0.0062 (SE=0.0308, n=50)' },
+    ])
+    expect(r.stderr).toBeNull()
+    expect(r.n).toBeNull()
+    expect(r.threshold).toBeNull()
+    expect(r.delta).toBeCloseTo(0.046, 6) // val - parent_val, not the prose
+  })
+
+  it('leaves a statistic the node never carried empty rather than inventing it', () => {
     const [r] = gateRowsFromNodes([nodes[0], { ...nodes[1], reason: 'accepted' }])
     expect(r.stderr).toBeNull()
     expect(r.n).toBeNull()

@@ -9,6 +9,9 @@ it under ``data/<slug>.json`` with no backend.
 Trajectories / rollouts are intentionally skipped (emitted as empty lists), and
 the ``rollouts`` subtree is pruned from the Files tree to keep the export small.
 
+One file is not JSON: the run's own ``dashboard.html`` (the Process tab) is copied
+unchanged to ``data/<slug>.html``, because the tab renders it as a full document.
+
 Usage:
     python -m capevolve_dashboard.export_static \
         --base /path/to/.capevolve --run-id run_full --out /path/to/ui/data
@@ -54,6 +57,27 @@ class Exporter:
         )
         self.written.append(name)
 
+    def _emit_process_html(self, rid: str, rp: Path) -> bool:
+        """Copy the run's own ``dashboard.html`` unchanged to ``<slug>.html``.
+
+        The live server serves it raw from ``/api/runs/<id>/process-html``; the static SPA
+        reads the same slug with an ``.html`` extension. It is not wrapped in JSON and not
+        cut at the 256 KiB ``/file`` cap -- a cut page is a broken page. Returns whether
+        the file was written, so the caller can set the tab's flag from it.
+
+        No ``redact()`` pass here, unlike ``/file``: ``write_dashboard`` builds the page
+        only from ``reduce_run`` + ``build_diffs`` output, which are redacted already. A
+        second pass would also break the page's own script (``key = ...`` looks like a
+        secret to ``_INLINE_KV_RE``).
+        """
+        src = dashboard._safe_subpath(rp, "dashboard.html")
+        if src is None or not src.is_file():
+            return False
+        name = f"{slug(f'/api/runs/{rid}/process-html')}.html"
+        (self.out / name).write_bytes(src.read_bytes())
+        self.written.append(name)
+        return True
+
     def export(self) -> None:
         rid = self.run_id
         rp = self.run_path
@@ -67,6 +91,12 @@ class Exporter:
         reduced = dashboard.reduce_run(rd)
         graph = reduced["graph"]
         nodes = graph.get("nodes", [])
+        # The Process tab's payload. Written BEFORE the detail, because the detail's
+        # ``process_html`` flag must say what this export ships, not what the run dir had.
+        caps = reduced.get("summary", {}).get("capabilities")
+        shipped = self._emit_process_html(rid, rp)
+        if isinstance(caps, dict):
+            caps["process_html"] = shipped
         detail = {"run_id": rid, "path": str(rp), **reduced}
         self._emit(f"/api/runs/{rid}", detail)
 
@@ -154,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
 
     exp = Exporter(Path(args.base), args.run_id, Path(args.out))
     exp.export()
-    print(f"wrote {len(exp.written)} JSON files to {exp.out}")
+    print(f"wrote {len(exp.written)} files to {exp.out}")
     return 0
 
 

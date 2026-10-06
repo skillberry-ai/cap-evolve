@@ -1,0 +1,5 @@
+{
+  "train": ["glm-lake-mendota"],
+  "val": ["glm-lake-mendota"],
+  "test": ["glm-lake-mendota"]
+}

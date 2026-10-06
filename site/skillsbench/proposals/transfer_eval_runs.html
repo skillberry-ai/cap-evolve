@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>transfer_eval_ru — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from proposals/transfer_eval_runs.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/proposals/transfer_eval_runs.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/proposals/transfer_eval_runs.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="zero-shot-skill-transfer-traintest-task-list">Zero-shot skill transfer — train/test task list</h1>
+<p><strong>Status: not run.</strong> This is a reference list of the 8 planned transfer-eval
+fold-runs from <a href="train_test_split_proposal.html">train_test_split_proposal.md</a>,
+for whoever runs them later. Nothing has been submitted.</p>
+<h2 id="what-this-is">What this is</h2>
+<p>For each row: take the <strong>winning skill</strong> from the <em>train</em> task's completed
+run and drop it unmodified into the <em>test</em> task's project (as
+<code>seed_capability/</code>), then run cap-evolve with <code>--max-iterations 0</code> (baseline-only
+mode — no optimizer loop) to score that skill zero-shot on the test task's own
+val/test split. Compares against the test task's own native seed baseline
+(from <code>results.json</code>).</p>
+<p>Groups 1 and 2 from the proposal (highest priority). For group 1
+(macroeconomic-analysis, 3-way LOO), all three tasks' winning skills are
+identically named <code>xlsx</code>, so each combined-train fold was split into two
+separate directed single-source transfers rather than merging skills under
+one name.</p>
+<h2 id="priority-1-finance-economics-macroeconomic-analysis">Priority 1 — finance-economics / macroeconomic-analysis</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>train (skill source)</th>
+<th>test (target)</th>
+<th>project dir already built</th>
+<th>worktree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>shock-analysis-demand</td>
+<td>shock-analysis-supply</td>
+<td><code>.capevolve/project_shock-analysis-supply_from_shock-analysis-demand</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>shock-analysis-demand</td>
+<td>weighted-gdp-calc</td>
+<td><code>.capevolve/project_weighted-gdp-calc_from_shock-analysis-demand</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>shock-analysis-supply</td>
+<td>shock-analysis-demand</td>
+<td><code>.capevolve/project_shock-analysis-demand_from_shock-analysis-supply</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>shock-analysis-supply</td>
+<td>weighted-gdp-calc</td>
+<td><code>.capevolve/project_weighted-gdp-calc_from_shock-analysis-supply</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>5</td>
+<td>weighted-gdp-calc</td>
+<td>shock-analysis-demand</td>
+<td><code>.capevolve/project_shock-analysis-demand_from_weighted-gdp-calc</code></td>
+<td>c2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>weighted-gdp-calc</td>
+<td>shock-analysis-supply</td>
+<td><code>.capevolve/project_shock-analysis-supply_from_weighted-gdp-calc</code></td>
+<td>c2</td>
+</tr>
+</tbody>
+</table>
+<p>Own-skill baselines for comparison (from <code>results.json</code>):
+shock-analysis-demand seed=0.0 / final_test=0.9;
+shock-analysis-supply seed=0.0 / final_test=0.2;
+weighted-gdp-calc seed=0.8 / best=1.0 (KILLED_ceiling, no final_test recorded).</p>
+<h2 id="priority-2-mathematics-or-formal-reasoning-mathematical-optimization">Priority 2 — mathematics-or-formal-reasoning / mathematical-optimization</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>train (skill source)</th>
+<th>test (target)</th>
+<th>project dir already built</th>
+<th>worktree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7</td>
+<td>exam-block-sequencing</td>
+<td>paratransit-routing</td>
+<td><code>.capevolve/project_paratransit-routing_from_exam-block-sequencing</code></td>
+<td>c3</td>
+</tr>
+<tr>
+<td>8</td>
+<td>paratransit-routing</td>
+<td>exam-block-sequencing</td>
+<td><code>.capevolve/project_exam-block-sequencing_from_paratransit-routing</code></td>
+<td>c3</td>
+</tr>
+</tbody>
+</table>
+<p>Own-skill baselines: exam-block-sequencing seed=0.1 / best=1.0 (KILLED_ceiling);
+paratransit-routing seed=0.0 / best=1.0 (KILLED_ceiling). Both hit the reward
+ceiling on their own skill — for the transfer, "success" is not hitting 1.0
+again, it's whether the <em>other</em> task's skill lifts these off their low seed at
+all.</p>
+<h2 id="how-to-run-one-later">How to run one later</h2>
+<p>From inside the relevant worktree (<code>c2</code> for #1-6, <code>c3</code> for #7-8), with
+<code>scripts/ccc/run_ccc_experiment.sh</code> available (either from PR #412 once
+merged, or a local untracked copy — see <code>HANDOFF_CCC.md</code>/<code>CCC_PODMAN_SETUP.md</code>
+under <a href="../../../docs/how-to/ccc/">docs/how-to/ccc/</a>):</p>
+<pre><code class="language-bash">bsub -q normal -M 64G -n 4 -W 2:00 -m &lt;dedicated_host&gt; \
+    -J capevolve_transfer_&lt;train&gt;_to_&lt;test&gt; \
+    -oo &lt;logdir&gt;/%J.stdout -eo &lt;logdir&gt;/%J.stderr \
+    bash scripts/ccc/run_ccc_experiment.sh \
+        --suite-id transfer_eval_v1 \
+        --run-ts transfer_&lt;train&gt;_to_&lt;test&gt;_v1 \
+        --max-iterations 0 \
+        --spec &quot;.capevolve/project_&lt;test&gt;_from_&lt;train&gt;/capevolve.&lt;test&gt;.yaml&quot; \
+        --project &quot;.capevolve/project_&lt;test&gt;_from_&lt;train&gt;&quot;
+</code></pre>
+<p>Notes:
+- <code>-m &lt;dedicated_host&gt;</code> is required — podman graphroot is per-user, not
+  per-pid, so packing two of these on the same host corrupts state. Pick 8
+  distinct hosts (check free capacity with <code>bhosts -w</code>).
+- <code>-q normal</code> — the only submittable non-idle queue on this cluster
+  (<code>x86_1h</code> does not exist here).
+- Record results under <code>results.json</code> with a distinct <code>source:</code> tag
+  (e.g. <code>source: transfer-eval-v1</code>), per the convention in <code>C4_HANDOFF.md</code>.
+- Kill by exact job ID only if something needs stopping — never a wildcard
+  bkill, since sibling sessions share the UID.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

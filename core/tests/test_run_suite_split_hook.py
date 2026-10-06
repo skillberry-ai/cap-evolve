@@ -168,7 +168,7 @@ def _agent_provenance_block() -> str:
     start = src.index("# AGENT_MODEL (env")
     end = src.index("IDS_CSV=", start)
     block = src[start:end]
-    assert '"$PY" - "$BASE/tasks.json" "$AGENT_MODEL" "$BENCH/$TIER"' in block
+    assert '"$PY" - "$BASE/tasks.json" "$AGENT_MODEL_WIRE" "$BENCH/$TIER"' in block
     return block
 
 
@@ -182,7 +182,7 @@ def _run_agent_provenance(tmp_path: Path, tasks: list[dict], agent_model: str):
         BASE={base}
         BENCH=spreadsheetbench
         TIER=pilot
-        AGENT_MODEL={agent_model}
+        AGENT_MODEL_WIRE={agent_model}
     """) + _agent_provenance_block()
     return subprocess.run(["bash", "-c", script], capture_output=True, text=True)
 

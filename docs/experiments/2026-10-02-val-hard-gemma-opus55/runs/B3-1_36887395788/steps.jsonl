@@ -1,0 +1,4 @@
+{"phase": "iterate", "iter": 1, "candidate": "cand_0001", "accepted": true, "reward": 0.675, "optimizer_usd": 20.377736, "optimizer_seconds": 2406.99, "eval_usd": 0.0, "eval_seconds": 845.54, "n_broke": 5, "n_fixed": 16}
+{"phase": "iterate", "iter": 2, "candidate": "cand_0002", "accepted": true, "reward": 0.7, "optimizer_usd": 6.442913, "optimizer_seconds": 1103.05, "eval_usd": 0.0, "eval_seconds": 728.73, "n_broke": 3, "n_fixed": 4}
+{"phase": "iterate", "iter": 3, "candidate": "cand_0003", "accepted": false, "reward": 0.7, "optimizer_usd": 9.7317, "optimizer_seconds": 2082.49, "eval_usd": 0.0, "eval_seconds": 1371.21, "n_broke": 3, "n_fixed": 3}
+{"phase": "finalize", "iter": null, "candidate": "cand_0002", "accepted": null, "reward": 0.74, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 1419.57}

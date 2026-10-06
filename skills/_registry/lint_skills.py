@@ -87,7 +87,7 @@ def lint(skills_root: Path) -> tuple[dict[str, list[str]], dict[str, list[str]],
     errors: dict[str, list[str]] = {}
     advisories: dict[str, list[str]] = {}
     # rglob, not */*/: a component may GROUP its skills one level deeper
-    # (interventions/llm-proxies/spa). A fixed depth would silently stop linting it,
+    # (interventions/llm-proxies/blackbox). A fixed depth would silently stop linting it,
     # which is exactly what the anti-vacuity guard below exists to catch.
     skills = sorted(p for p in skills_root.rglob("SKILL.md") if "_registry" not in p.parts)
     for skill_md in skills:

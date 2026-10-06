@@ -1,0 +1,5 @@
+{
+  "train": ["financial-modeling-qa"],
+  "val": ["financial-modeling-qa"],
+  "test": ["financial-modeling-qa"]
+}

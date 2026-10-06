@@ -117,6 +117,33 @@ def test_transcript_with_string_message_system_line_does_not_crash_reduce_run():
     assert "After the bad line" in hs["transcript_turns"][1]["text"]
 
 
+def test_transcript_line_that_is_a_bare_json_string_does_not_crash():
+    """``_read_jsonl`` parses each line with ``json.loads``, which happily accepts a
+    bare string (e.g. a truncated/garbled write leaving just a JSON-quoted fragment)
+    as valid JSON — but not a dict. Every consumer (``_transcript_turn`` here, and
+    events.jsonl's readers) calls ``.get()`` on each parsed line unconditionally, so a
+    non-dict line used to raise the same 'str' object has no attribute 'get' crash
+    #455 fixed for a string *message*, just one level up: a string *line*."""
+    rd, dashboard = _make_run()
+    hdir = rd.root / "host"
+    hdir.mkdir()
+    lines = [
+        json.dumps({"type": "assistant", "timestamp": "2026-09-03T12:00:00Z",
+                    "message": {"content": [{"type": "text", "text": "Before the bad line."}]}}),
+        json.dumps("just a bare string, not an object"),
+        json.dumps({"type": "assistant", "timestamp": "2026-09-03T12:00:02Z",
+                    "message": {"content": [{"type": "text", "text": "After the bad line."}]}}),
+    ]
+    (hdir / "transcript.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    reduced = dashboard.reduce_run(rd)  # must not raise
+    hs = reduced["summary"]["host_session"]
+    assert hs["transcript_total_lines"] == 2  # the bare-string line is not a record
+    assert len(hs["transcript_turns"]) == 2
+    assert "Before the bad line" in hs["transcript_turns"][0]["text"]
+    assert "After the bad line" in hs["transcript_turns"][1]["text"]
+
+
 def test_oversized_transcript_is_not_parsed_just_pointed_at():
     """A multi-megabyte transcript must never be read into memory whole and rendered —
     the section links out to the real path instead."""

@@ -27,6 +27,7 @@ cap-evolve check && cap-evolve run
 | [`skillsbench/`](../templates/adapters/skillsbench/) | SkillsBench | Shared Agent Skills | BenchFlow `bench eval run` | `bench` CLI, Docker |
 | [`swe_bench/`](../templates/adapters/swe_bench/) | SWE-bench / Lite | Coding-agent prompt | HuggingFace + Docker harness | `swebench`, `datasets`, Docker |
 | [`spreadsheetbench/`](../templates/adapters/spreadsheetbench/) | SpreadsheetBench | Spreadsheet-agent system prompt | fetched dataset + Docker/Jupyter harness | `pandas`, `openpyxl`, `docker`, `tornado`, `requests`; LibreOffice (optional) |
+| [`rfe_creator/`](../templates/adapters/rfe_creator/) | RFE-Creator | 7 Claude Code skills (RFE pipeline) | fetched dataset + agent-eval-harness | `pyyaml`, `agent-eval-harness`, `claude` CLI |
 
 The first two are **generic** — point them at your data with env vars, no code
 edits. The last four are **worked benchmark adapters** you copy and run.

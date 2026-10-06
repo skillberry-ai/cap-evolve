@@ -1,0 +1,125 @@
+--- a/prompt.md
++++ b/prompt.md
+@@ -25,13 +25,64 @@
+ # 2. Work in this order
+ 
+-1. **INSPECT.** Load the workbook and print the actual cells you will read from and write to,
+-   addressed by real Excel coordinates. Confirm your anchors (header row, key column, first data
+-   row) hold what you expect before computing anything.
++1. **READ.** Run the reading block in section 3. Getting the inputs wrong is now the most common way
++   this task is failed, and no amount of correct arithmetic afterwards can recover from it.
+ 2. **SOLVE.** Compute the values and save the workbook to output_path.
+-3. **CHECK.** Run the verification block in section 4.
++3. **CHECK.** Run the verification block in section 5.
+ 4. **FINISH.** Only once the CHECK prints all-clear, reply with no code block at all. That ends the
+    task. Do not keep writing code after a clean CHECK.
+ 
+-# 3. What to write, and where
++# 3. READ — the workbook does not say what you assume it says
++
++Load it TWICE. `load_workbook(path)` gives you a cell's formula TEXT; `load_workbook(path,
++data_only=True)` gives you the value Excel last computed for it. Read your inputs from the
++`data_only` copy and make your edits on the plain copy:
++
++```python
++import openpyxl
++wb    = openpyxl.load_workbook(INPUT_PATH)                  # edit + save THIS one
++wsv   = openpyxl.load_workbook(INPUT_PATH, data_only=True)[SHEET]   # read values from THIS one
++ws    = wb[SHEET]
++
++for a1 in ["C5", "E31", "H2"]:            # every cell you intend to read or key off
++    print(a1, "formula:", repr(ws[a1].value), "| value:", repr(wsv[a1].value))
++
++col = [wsv[f"G{r}"].value for r in range(2, 40)]          # a column you will filter on
++print("distinct:", sorted({(repr(v), type(v).__name__) for v in col})[:20])
++```
++
++- **A formula is not a number.** `ws["E31"].value` can come back as the string
++  `'=SUM(C5)/(C19+C20)'`. Using that string as a value, or as a lookup key, silently poisons every
++  number you derive from it. The number you wanted is in the `data_only` copy. If the `data_only`
++  cell is `None` while the plain copy shows a formula, Excel never stored a result for it — compute
++  it yourself from the cells that formula references.
++- **Never save the `data_only` workbook.** Saving it would replace every other formula in the file
++  with a static number. It is for reading only.
++- **Match on the values that are actually there, not on the spelling in the instruction.** The
++  instruction quotes criteria in prose ("marked as 'open'", "the year 2015"); the cells hold
++  whatever someone typed. Compare text with `str(v).strip().lower()` on BOTH sides, and compare a
++  key that looks numeric with `str(v).strip()` on both sides too — the same year is stored as the
++  number `2014` in one column and the text `'2014'` in another, and `2014 == '2014'` is False. An
++  equality test you did not first check against printed distinct values is a guess.
++- **`''` is not `None`.** An empty-string cell is a value that was found, not a missed lookup. In a
++  numeric column it counts as zero. A test written as `if v is not None` treats `''` as present; a
++  test written as `if v` treats `0` as absent. Print `repr()` and decide which you meant.
++- **Blank header cells and merged cells shift nothing.** Read anchors by their literal A1 address,
++  never by counting along from the first non-empty cell you see.
++
++## Cells already filled inside the target range ARE the specification
++
++If any cell of `answer_position` already holds a value, it is a worked example of the answer, put
++there to show you the intended rule — not a leftover to preserve or overwrite. Reproduce it with
++your own code BEFORE you compute the rest:
++
++- if your code returns a different value for that cell than the file already holds, your rule is
++  wrong — change the rule, not the cell;
++- pre-filled `0`s tell you what an empty or unmatched source is supposed to become;
++- a pre-filled formula, even a broken one, names the cells the answer is meant to reference.
++
++The same applies to a parallel column or summary row computed the same way elsewhere in the sheet:
++its `data_only` value is a free, authoritative test of your logic.
++
++# 4. What to write, and where
+ 
+ - `answer_position` is the boundary of what you may change, not a quota to fill. A cell inside it
+@@ -48,7 +99,10 @@
+   object for dates, `str` only for genuine text. The grader compares types as well as values, so
+   the text `"2021-12-04"` does not match a real date cell.
+-- If the instruction states a precision or rendering ("two decimals", "as a percentage", "as an
+-  integer"), that requirement holds even when an inline example looks rounded. Satisfy both: match
+-  the example's wording AND the stated precision.
++- **A format clause governs the digits; an inline example only shows the layout.** When the
++  instruction states a rendering ("with .00 decimal", "nine decimal places", "two decimals", "as a
++  percentage") and also shows an example whose digits disagree with it, the clause wins and the
++  example tells you only where the text and symbols sit. Do not resolve the disagreement by calling
++  the wording ambiguous and copying the example: `"an integer percentage (e.g. 67% WIN RATE) with
++  .00 decimal"` means `66.67% WIN RATE`, keeping the example's `%` and trailing words.
+ - The preview you are given was produced by pandas with row 1 consumed as the header, and its row
+   labels are 0-based. So preview row `i` is Excel row `i + 2`, and pandas column position `j` is
+@@ -57,16 +111,12 @@
+   to use to confirm it holds what you expect.
+ - If a computation yields nothing for a cell (a lookup missed, a key is absent), that is a BUG to
+-  find, not a blank to write. Print the unmatched key rather than swallowing it in
+-  `except: continue`.
+-- When the workbook already contains a worked example of the answer — a pre-filled sample row
+-  inside the target range, or a summary column computed the same way — reproduce it with your own
+-  code first. If your number disagrees with the workbook's own, your logic is wrong, not the file's.
++  find, not a blank to write. Print the unmatched key and the `repr()` of what the source cell
++  actually holds, rather than swallowing it in `except: continue`.
+ 
+-# 4. The CHECK block — re-derive, do not just print
++# 5. The CHECK block — re-derive and reconcile, do not just print
+ 
+-Printing the values you wrote proves nothing. The most common way to fail here is a check whose
+-output visibly contained the bug — a leading `None`, twelve identical numbers, seven `NaN`s in a
+-17-cell target — and was read as success. So address cells by their literal A1 names, never by the
+-same row/column index you used to write:
++Printing the values you wrote proves nothing: a check can print the expected NUMBER of cells, all
++non-empty, all of the right type, on a completely wrong answer. So the check has two halves — the
++cells you touched, and one value reconciled against something you did not compute:
+ 
+ ```python
+@@ -84,10 +134,25 @@
+ print("EMPTY:", len(empty), empty[:20])   # only cells meant to be empty may appear
+ print("CHANGED:", len(moved), moved[:20]) # must be exactly the cells the instruction asked for
++
++# RECONCILE — one value, checked against a number you did not compute:
++ref = openpyxl.load_workbook(INPUT_PATH, data_only=True)[SHEET]["H2"].value   # the file's own answer
++print("RECONCILE F2:", repr(ws_out["F2"].value), "vs reference", repr(ref))
+ ```
+ 
+-Read that output against the instruction and against the preview you were given: a value that
+-contradicts a number visible in the preview is wrong even though it printed without error. If any
+-line is wrong, your next block must be DIAGNOSTIC — print the source cells and the intermediate
+-lookups — followed by a corrected write.
++For the reference, use — in this order of preference — a cached formula result elsewhere in the
++sheet that answers the same question, a cell of `answer_position` that was already 
+... (truncated)

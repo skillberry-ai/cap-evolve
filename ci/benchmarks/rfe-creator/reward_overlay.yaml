@@ -1,0 +1,23 @@
+# Overlay merged onto opendatahub-io/rfe-creator's own eval.yaml by fetch_data.sh, at run
+# time — NOT vendoring that upstream file (it is public but unlicensed; see
+# ci/benchmarks/rfe-creator/README.md). This overlay is this repo's own original content:
+# a runner model downgrade for CI cost, plus the weighted-reward formula that turns the
+# eval's judge scores into the single scalar cap-evolve optimizes.
+models:
+  skill: aws/claude-haiku-4-5
+  subagent: aws/claude-haiku-4-5
+
+reward:
+  formula: weighted
+  gate: false
+  weights:
+    rfe_quality: 3.0
+    revision_quality: 2.0
+    files_exist: 1.0
+    frontmatter_valid: 1.0
+    run_report_exists: 1.0
+    recommendation_consistency: 1.0
+    revision_flag_consistency: 1.0
+    pipeline_flow: 1.0
+    architecture_context_used: 1.0
+    revision_coverage: 1.0

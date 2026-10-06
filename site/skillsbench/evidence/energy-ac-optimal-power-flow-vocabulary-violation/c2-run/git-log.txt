@@ -1,0 +1,5 @@
+a5b1eca iter 4: reject candidate cand_0004 (val 0.800, Δ -0.100)
+ddf3806 iter 3: ACCEPT candidate cand_0003 (val 0.900, Δ +0.400)
+718b5d8 iter 2: reject candidate cand_0002 (val 0.300, Δ -0.200)
+eb7b9cd iter 1: ACCEPT candidate cand_0001 (val 0.500, Δ +0.100)
+a1c9d04 seed: baseline candidate

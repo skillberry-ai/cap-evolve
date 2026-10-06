@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>READ — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/exam-block-sequencing/README.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/README.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/README.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="evidence-cap-evolve-evolves-real-code-not-just-prose">Evidence: cap-evolve evolves real code, not just prose</h1>
+<p><strong>Claim:</strong> the <code>skill-package</code> capability doesn't just reword <code>SKILL.md</code> — it can write
+an entire working program from scratch when that's the highest-leverage fix, and iterate
+on that program's algorithm across accepted candidates.</p>
+<p><strong>Task:</strong> SkillsBench <code>exam-block-sequencing</code> (category: mathematics-or-formal-reasoning /
+mathematical-optimization). Run: <code>run_task_exam-block-sequencing_v1_KILLED_ceiling_reached_1.0</code>
+in the <code>intake_skillbench_c3</code> worktree (a real <code>store: git</code> repo — every accepted iteration
+is a commit).</p>
+<h2 id="reward-trajectory">Reward trajectory</h2>
+<table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Val reward</th>
+<th>Δ</th>
+<th>What changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>seed</td>
+<td>0.1</td>
+<td>—</td>
+<td>prose only, no script</td>
+</tr>
+<tr>
+<td><code>cand_0001</code></td>
+<td>0.9</td>
+<td>+0.8</td>
+<td><strong>new script created</strong></td>
+</tr>
+<tr>
+<td><code>cand_0002</code> (final/best)</td>
+<td>1.0</td>
+<td>+0.1</td>
+<td>script refined</td>
+</tr>
+</tbody>
+</table>
+<p>Status: <code>KILLED_ceiling</code> (stopped because val hit 1.0 — no ceiling headroom left).
+Source: <code>results.json</code> (canonical ledger, this branch's <code>results/</code>), row <code>task:
+"exam-block-sequencing"</code>.</p>
+<h2 id="what-the-seed-actually-contained">What the seed actually contained</h2>
+<p><code>seed/</code> here holds the two <code>SKILL.md</code> files from the seed candidate — that's it. No
+<code>scripts/</code> directory exists anywhere under seed. Verify: <code>find seed/ -iname '*.py'</code>
+returns nothing.</p>
+<h2 id="iteration-1-cand_0001-val-01-09-a-script-written-from-nothing">Iteration 1 — cand_0001 (val 0.1 → 0.9): a script written from nothing</h2>
+<p>The optimizer's own log (<code>history.jsonl</code>, <code>candidate_id: cand_0001</code>):</p>
+<blockquote>
+<p>"NEW SCRIPT <code>ordered-window-sequencing-mip/scripts/solve_sequencing.py</code> — data-driven
+heuristic (feasible front-loaded init → restarted 2-swap simulated annealing +
+steepest descent on the EXACT objective incl. the active-pattern four-slot <code>z</code>
+overlap) that writes schedule.csv/metrics.json/formulation.md/report.md and
+round-trip re-verifies. Cluster: 'no output file written'."</p>
+</blockquote>
+<p><code>cand_0001/ordered-window-sequencing-mip/scripts/solve_sequencing.py</code> — <strong>465 lines</strong>,
+a genuine heuristic solver (feasible front-loaded initializer, restarted 2-swap
+simulated annealing then steepest descent on the exact scheduling objective).
+<code>diffs/seed-to-0001.diff</code> is the full file as a diff against nothing (<code>/dev/null</code>),
+i.e. proof it is 100% new content, not an edit of a pre-existing file.</p>
+<h2 id="iteration-2-cand_0002-val-09-10-the-algorithm-itself-improved">Iteration 2 — cand_0002 (val 0.9 → 1.0): the algorithm itself improved</h2>
+<p>The log calls this out explicitly as <strong>script-only</strong>, no prose touched
+(<code>history.jsonl</code>, <code>candidate_id: cand_0002</code>):</p>
+<blockquote>
+<p>"SCRIPT <code>ordered-window-sequencing-mip/scripts/solve_sequencing.py</code>: enlarged the
+local-search neighborhood from 2-swap-only to <strong>2-swap + or-opt(1) relocation</strong> in
+both the SA proposal (50/50) and the steepest-descent polish; added
+<code>build_feasible</code> (O(3) front-loading check via the 3 late positions) + <code>relocate</code>
+helper... Objective evaluator + output contract + round-trip audit UNCHANGED."</p>
+</blockquote>
+<p><code>cand_0002/.../scripts/solve_sequencing.py</code> grew to <strong>549 lines</strong>. <code>diffs/0001-to-0002.diff</code>
+shows the real change: two new functions (<code>build_feasible</code>, <code>relocate</code>) and a widened
+search neighborhood, e.g.:</p>
+<pre><code class="language-diff">-def greedy_descent(obj, perm, swap_ok, deadline):
+-    &quot;&quot;&quot;Steepest-descent 2-swap polish on a permutation.&quot;&quot;&quot;
++def build_feasible(inst):
++    &quot;&quot;&quot;Return (feasible(perm), late_pos): the front-loading feasibility predicate.
++    ...
+</code></pre>
+<h2 id="independent-confirmation-git-history">Independent confirmation: git history</h2>
+<p><code>git-log.txt</code> (<code>git log --stat</code> on the run's own git store) shows both accept commits,
+each touching the script alongside the SKILL.md files:</p>
+<pre><code>commit 861b0f7e... iter 2: ACCEPT candidate cand_0002 (val 1.000, Δ +0.100)
+ .../scripts/solve_sequencing.py                    | 549 +++++++++++++++++++++
+ .../__pycache__/solve_sequencing.cpython-312.pyc   | Bin 0 -&gt; 31867 bytes
+
+commit 31f57519... iter 1: ACCEPT candidate cand_0001 (val 0.900, Δ +0.800)
+ .../scripts/solve_sequencing.py                    | 465 +++++++++++++++++++++
+</code></pre>
+<p>The <code>__pycache__/solve_sequencing.cpython-312.pyc</code> on the cand_0002 commit (not carried
+into this evidence bundle, since compiled bytecode isn't meaningful evidence on its own —
+but its <em>presence</em> in the original commit is) is the tell that the script wasn't just
+written and left alone: it was actually <strong>imported/executed by a Python interpreter</strong>
+as part of scoring that candidate.</p>
+<h2 id="bottom-line">Bottom line</h2>
+<p>Reward moved in lockstep with the code, not with wording: 0.1 (no script) → 0.9 (new
+465-line solver) → 1.0 (549-line solver, richer search neighborhood). No <code>policy.json</code>
+restricted this run, and the optimizer's own change-log explicitly distinguishes
+"script-only" edits from prose edits — this wasn't an accident of a documentation pass
+touching a file it didn't need to.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

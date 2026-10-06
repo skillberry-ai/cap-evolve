@@ -50,6 +50,19 @@ def _fmt_duration(v) -> str:
     return f"{m}m{s:02d}s" if m else f"{s}s"
 
 
+def _fmt_traded(n_fixed, n_broke) -> str:
+    """``+3 fixed / -1 broke`` — what a step's reward alone cannot tell you.
+
+    ``—`` when the step recorded no movement AND when it recorded none happening: a row
+    reading "0 fixed / 0 broke" on every unchanged candidate costs a reader more attention
+    than it returns, and the rows that matter are the ones with a number in them.
+    """
+    f, b = n_fixed or 0, n_broke or 0
+    if not f and not b:
+        return "—"
+    return f"+{f} fixed / -{b} broke"
+
+
 def _infra_task(pt: dict) -> bool:
     """True if this task's reward≈0 is an infrastructure error (majority trials errored
     with mean≈0), not a real capability result — so it can be flagged, not counted as 0."""
@@ -62,6 +75,47 @@ def _infra_task(pt: dict) -> bool:
     if et is not None and nt:
         return int(et) * 2 > int(nt)
     return True
+
+
+def _secondary_metrics(pt: dict) -> dict:
+    """``{name: value}`` of a per-task score's NON-primary metrics (primary == reward)."""
+    return {m["name"]: m.get("value") for m in (pt.get("metrics") or [])
+            if m.get("name") and not m.get("primary")}
+
+
+def _secondary_metrics_section(final: dict) -> list[str]:
+    """Every metric the adapter recorded, per candidate and split, from final.json's bookend.
+
+    Only rendered when some task reports a secondary metric, so benchmarks without any keep
+    exactly the report they had.
+    """
+    names: list[str] = []
+    has_secondary = False
+    cells: list[tuple[str, str, int, dict]] = []
+    for side in ("seed", "best"):
+        for split in ("train", "val", "test"):
+            vals: dict[str, list[float]] = {}
+            pts = [pt for pt in (((final.get(side) or {}).get(split) or {}).get("per_task") or [])
+                   if not _infra_task(pt)]
+            for pt in pts:
+                for m in pt.get("metrics") or []:
+                    if not m.get("name") or not isinstance(m.get("value"), (int, float)):
+                        continue
+                    has_secondary |= not m.get("primary")
+                    if m["name"] not in names:
+                        names.append(m["name"])
+                    vals.setdefault(m["name"], []).append(float(m["value"]))
+            if vals:
+                cells.append((side, split, len(pts), {k: sum(v) / len(v) for k, v in vals.items()}))
+    if not has_secondary:
+        return []
+    out = ["", "### Metrics by candidate and split", "",
+           "| candidate | split | n | " + " | ".join(f"`{n}`" for n in names) + " |",
+           "|---|---|--:|" + "--:|" * len(names)]
+    for side, split, n, means in cells:
+        vals_txt = " | ".join(f"{means[k]:.4f}" if k in means else "—" for k in names)
+        out.append(f"| {side} | {split} | {n} | {vals_txt} |")
+    return out
 
 
 def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
@@ -135,6 +189,15 @@ def iteration_rows(run_dir: str, best_id: str | None = None) -> list[dict]:
                 "optimizer_seconds": ev.get("optimizer_seconds"),
                 "eval_usd": e_usd if e_usd is not None else cev.get("cost_usd"),
                 "eval_seconds": e_secs if e_secs is not None else cev.get("seconds"),
+                # WHAT the step traded, not just its mean: the val tasks it broke and fixed
+                # (``harness.movement``, recorded on the step event). A reward alone cannot
+                # distinguish a candidate that improved 3 tasks from one that improved 4 and
+                # destroyed 1 — run 36175707483's champion was the second kind, accepted on a
+                # positive net, and the suite report had no way to say so. ``None`` for a run
+                # that recorded no movement, which is every run predating the field: absent
+                # must stay absent rather than render as "0 broke".
+                "n_broke": ev.get("n_broke"),
+                "n_fixed": ev.get("n_fixed"),
             })
         elif kind == "evaluate" and ev.get("tag") == "FINAL" and ev.get("split") == "test":
             rows.append({
@@ -263,13 +326,17 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
         rb = b.get("reward")
         ro = o.get("reward")
         infra = _infra_task(o) or _infra_task(b)
-        rows.append({
+        row = {
             "bench": bench, "tier": tier, "task": tid,
             "reward_baseline": rb, "reward_opt": ro,
             "reward_delta": (round(ro - rb, 6) if isinstance(rb, (int, float)) and isinstance(ro, (int, float)) and not infra else None),
             "opt_infra": infra,
             "run_dir": str(rd),
-        })
+        }
+        mb, mo = _secondary_metrics(b), _secondary_metrics(o)
+        if mb or mo:
+            row["metrics_baseline"], row["metrics_opt"] = mb, mo
+        rows.append(row)
     if jsonl_path:
         with open(jsonl_path, "w", encoding="utf-8") as f:
             for r in rows:
@@ -340,6 +407,8 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
     else:
         out.append("**Suite:** (no aggregate reward — run may have failed; check logs.)")
 
+    out.extend(_secondary_metrics_section(final))
+
     # ---- render: per-iteration latency/cost timeline ----
     out.append("")
     out.append("### Iterations")
@@ -347,20 +416,47 @@ def suite_report(run_dir: str, bench: str, tier: str, agent: str, iters, jsonl_p
     if not steps:
         out.append("(no iteration events found — run may have failed before logging any.)")
     else:
-        out.append("| phase | iter | candidate | accepted | reward | optimizer $ | optimizer time | eval $ | eval time |")
-        out.append("|---|:--:|---|:--:|---|---|---|---|---|")
+        # The `traded` column only exists when the run RECORDED per-task movement. Every run in
+        # published history predates the field, and a column of dashes across all of them would
+        # be a worse report than no column — so it appears exactly when there is something in it.
+        traded = any(s.get("n_broke") is not None or s.get("n_fixed") is not None
+                     for s in steps)
+        head = "| phase | iter | candidate | accepted | reward |"
+        rule = "|---|:--:|---|:--:|---|"
+        if traded:
+            head += " traded |"
+            rule += "---|"
+        out.append(head + " optimizer $ | optimizer time | eval $ | eval time |")
+        out.append(rule + "---|---|---|---|")
         opt_usd_t = opt_s_t = eval_usd_t = eval_s_t = 0.0
         for s in steps:
             acc = "—" if s["accepted"] is None else ("✅" if s["accepted"] else "❌")
-            out.append(f"| {s['phase']} | {s['iter'] if s['iter'] is not None else '—'} | "
-                       f"`{s['candidate']}` | {acc} | {_fmt(s['reward'])} | "
-                       f"{_fmt(s['optimizer_usd'], '$')} | {_fmt_duration(s['optimizer_seconds'])} | "
-                       f"{_fmt(s['eval_usd'], '$')} | {_fmt_duration(s['eval_seconds'])} |")
+            row = (f"| {s['phase']} | {s['iter'] if s['iter'] is not None else '—'} | "
+                   f"`{s['candidate']}` | {acc} | {_fmt(s['reward'])} |")
+            if traded:
+                row += f" {_fmt_traded(s.get('n_fixed'), s.get('n_broke'))} |"
+            out.append(row +
+                       f" {_fmt(s['optimizer_usd'], '$')} | {_fmt_duration(s['optimizer_seconds'])} |"
+                       f" {_fmt(s['eval_usd'], '$')} | {_fmt_duration(s['eval_seconds'])} |")
             opt_usd_t += s["optimizer_usd"] or 0
             opt_s_t += s["optimizer_seconds"] or 0
             eval_usd_t += s["eval_usd"] or 0
             eval_s_t += s["eval_seconds"] or 0
         out.append("")
+        # An ACCEPTED candidate that destroyed a previously-solved task is the one row a reader
+        # must not have to hunt for in a column, so it is also stated in prose. This is the
+        # whole finding of #543: the gate decides on the mean and is indifferent to
+        # composition, so the trade has to be visible to be examined.
+        churn = [s for s in steps if s.get("accepted") and (s.get("n_broke") or 0) > 0]
+        if churn:
+            out.append("> **Accepted candidates that broke a previously-solved val task:** "
+                       + "; ".join(f"`{s['candidate']}` "
+                                   f"{_fmt_traded(s.get('n_fixed'), s.get('n_broke'))}"
+                                   for s in churn)
+                       + ". The gate decides on the MEAN paired Δ, so a net-positive trade is "
+                         "accepted by design — these are the trades it made, not gate failures. "
+                         "Set `gate_max_broke` to veto them instead.")
+            out.append("")
         # These sum the rows, INCLUDING the `unattributed` one, so they now reconcile with the
         # run's own meters instead of reporting only the share some phase happened to claim.
         # Agent mode runs ONE optimizer process for the whole loop, so no per-round optimizer

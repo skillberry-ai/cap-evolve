@@ -48,8 +48,9 @@ def _adapter():
 class RaisingLiveAdapter:
     """Wraps a real adapter; ``live()`` raises for the first ``fail_times`` calls
     AFTER ``skip`` calls (simulating an adapter's live()/rollout setup blowing up),
-    then delegates. ``skip`` lets the baseline's own evaluate_candidate call (which
-    happens before any run_step under test) go through cleanly."""
+    then delegates. ``skip`` lets baseline's own evaluate_candidate calls (val AND
+    train, both full-split and distinct under this fixture's ratios — the calls
+    that happen before any run_step under test) go through cleanly."""
 
     def __init__(self, inner, fail_times: int, skip: int = 0):
         self._inner = inner
@@ -113,7 +114,7 @@ def test_a_single_live_error_is_indecisive_and_the_run_continues(tmp_path):
     an unmeasured candidate is missing data, not a rejection (test_infra_errors_not_zeros)."""
     from cap_evolve.memory import RejectedMemory
     inner = _adapter()
-    adapter = RaisingLiveAdapter(inner, fail_times=1, skip=1)
+    adapter = RaisingLiveAdapter(inner, fail_times=1, skip=2)
     rd, base = _fresh_run(tmp_path, adapter, "single_error")
     best_before, stall_before = rd.best_id, rd.spent.stall
     rejected = RejectedMemory(tmp_path / "single_error" / "rejected.jsonl")
@@ -146,7 +147,7 @@ def test_n_consecutive_live_errors_abort_loudly_as_an_infra_failure(tmp_path):
     """A truly broken adapter/environment must not look like N rejected candidates."""
     from cap_evolve import harness
     inner = _adapter()
-    adapter = RaisingLiveAdapter(inner, fail_times=99, skip=1)  # never recovers
+    adapter = RaisingLiveAdapter(inner, fail_times=99, skip=2)  # never recovers
     rd, base = _fresh_run(tmp_path, adapter, "always_broken")
 
     for _ in range(harness._MAX_CONSECUTIVE_EVAL_ERRORS - 1):
@@ -159,7 +160,7 @@ def test_n_consecutive_live_errors_abort_loudly_as_an_infra_failure(tmp_path):
 
 def test_a_success_after_failures_resets_the_streak(tmp_path):
     inner = _adapter()
-    adapter = RaisingLiveAdapter(inner, fail_times=1, skip=1)
+    adapter = RaisingLiveAdapter(inner, fail_times=1, skip=2)
     rd, base = _fresh_run(tmp_path, adapter, "resets")
 
     _step(rd, adapter, base, _good_edit)  # fails once, streak -> 1

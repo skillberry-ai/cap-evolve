@@ -1,0 +1,5 @@
+{
+  "train": ["crystallographic-wyckoff-position-analysis"],
+  "val": ["crystallographic-wyckoff-position-analysis"],
+  "test": ["crystallographic-wyckoff-position-analysis"]
+}

@@ -291,7 +291,14 @@ def test_run_suite_pins_the_instructions_file_absolutely():
     assert 'optimizer_instructions_file: "${OPT_INSTRUCTIONS:-}"' in sh
     arm = sh.split("  spreadsheetbench)", 1)[1].split("\n  *)", 1)[0]
     assert 'OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"' in arm
-    assert sh.count("OPT_INSTRUCTIONS=") == 1, "only the spreadsheetbench arm sets it"
+    # EVERY setter must pin that same absolute path, not just this one. More than one arm ships
+    # its own optimizer instructions now (the skillberry tau2 arms do), and the failure #252
+    # describes belongs to whichever arm writes a RELATIVE value — so assert the shape of every
+    # assignment rather than that there is only one.
+    setters = [ln.strip() for ln in sh.splitlines() if ln.strip().startswith("OPT_INSTRUCTIONS=")]
+    assert setters, "nothing sets OPT_INSTRUCTIONS any more"
+    assert set(setters) == {'OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"'}, (
+        f"every arm must pin the absolute $PROJ path (#252); saw {sorted(set(setters))}")
     # $PROJ is absolute (built from $REPO), so the pinned value is absolute.
     assert 'PROJ="$WORK/.capevolve/project"' in sh and 'WORK="$REPO/ci/benchmarks/' in sh
 

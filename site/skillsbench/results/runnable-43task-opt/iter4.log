@@ -1,0 +1,11 @@
+{
+  "iter": 4,
+  "candidate": "cand_0004",
+  "parent": "cand_0002",
+  "status": "HUNG",
+  "optimizer_partial_cost_usd": 4.35,
+  "optimizer_partial_tokens": 52574,
+  "optimizer_seconds_before_hang": 800,
+  "hang_duration_min": 109,
+  "note": "Optimizer wedged after ~13 min of normal token growth. No file writes, no token growth for 1h 49min. Killed under 90-min-stall rule. Iter 4 never scored."
+}

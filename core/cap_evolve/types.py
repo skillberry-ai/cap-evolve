@@ -30,6 +30,8 @@ NON_CAPABILITY_FILES = frozenset({
     "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
     # per-agent always-on instructions files: injection appends a pointer block to them
     "CLAUDE.md", "AGENTS.md", "GEMINI.md",
+    # per-candidate planning record written by persist_evaluation_plan — bookkeeping, not capability
+    "evaluation_plan.json",
 })
 
 #: Read-context / vcs dirs that are never the edit surface. This covers everything

@@ -1,20 +1,80 @@
 import { useMemo, useState } from 'react'
-import type { GraphNode, RunSummaryDetail } from '../lib/types'
+import type { GraphNode, RunSummaryDetail, ScreenRow } from '../lib/types'
 import { Card } from './ui/Card'
 import { VerdictBadge } from './StatusBadge'
 import { cn } from '../lib/cn'
 
+/** A screen's per-task rewards, read as a synthetic column — same shape as a full-val
+ *  node's `per_task`, so it renders identically and reuses the "not run" hatched cell
+ *  for every task outside its subset. `kind: 'screen'` keeps it out of anything that
+ *  treats a column as a gated candidate (Candidates table, lineage tree, gate log). */
+function screenToNode(s: ScreenRow): GraphNode {
+  // Per-cell delta vs the screen's own reference, from `paired.deltas` — the number the
+  // screen actually decided on. Prefixed onto the existing per-task feedback (if any)
+  // rather than replacing it, so nothing recorded is lost.
+  const deltas = s.delta_by_task ?? {}
+  const feedback: Record<string, string> = {}
+  for (const [tid, fb] of Object.entries(s.feedback ?? {})) feedback[tid] = fb
+  for (const [tid, d] of Object.entries(deltas)) {
+    const line = `Δ vs ${s.reference ?? 'reference'}: ${d > 0 ? '+' : ''}${d.toFixed(3)}`
+    feedback[tid] = feedback[tid] ? `${line} — ${feedback[tid]}` : line
+  }
+  return {
+    id: s.screen_tag,
+    parent: s.reference ?? null,
+    children: [],
+    status: 'screened',
+    val: null,
+    // The screen's own aggregate — its mean_delta/se, NOT a mean of per_task (that
+    // would silently compute a different, unweighted number for the same decision).
+    stderr: s.se,
+    per_task: s.per_task ?? {},
+    feedback,
+    fixed: s.fixed,
+    broke: s.regressed,
+    kind: 'screen',
+    reason: s.mean_delta == null ? s.rationale ?? null
+      : `subset Δ̄ ${s.mean_delta > 0 ? '+' : ''}${s.mean_delta.toFixed(4)}` +
+        (s.se != null ? ` ± ${s.se.toFixed(4)}` : '') +
+        ` → ${s.decision ?? '—'}${s.inconclusive ? ' (inconclusive)' : ''}`,
+  }
+}
+
 /** Reward → cell class. `null` (never run) is visually distinct from 0 (ran, failed):
  *  a hatched empty cell, not a dark red one. Missing must never read as measured. */
-function cellFor(v: number | null | undefined) {
+export function cellFor(v: number | null | undefined) {
   // Solid token colours only. A Tailwind opacity modifier over a `var()` colour silently
   // produces no declaration in this setup, which is how "fail" cells rendered invisible
   // and made a failing task look like a task that never ran.
+  // The exact reward is rendered as visible text (not just colour) so two cells of the
+  // same verdict but different scores (e.g. two "partial"s) aren't visually identical.
+  const glyph = v == null ? '·' : v.toFixed(2)
   if (v == null) return { cls: 'bg-surface-3 border border-dashed border-border-strong',
-                          label: 'not run', glyph: '·' }
-  if (v >= 0.999) return { cls: 'bg-accepted', label: 'pass', glyph: '' }
-  if (v <= 0.001) return { cls: 'bg-rejected', label: 'fail', glyph: '' }
-  return { cls: 'bg-accent', label: 'partial', glyph: '' }
+                          label: 'not run', glyph }
+  if (v >= 0.999) return { cls: 'bg-accepted', label: 'pass', glyph }
+  if (v <= 0.001) return { cls: 'bg-rejected', label: 'fail', glyph }
+  return { cls: 'bg-accent', label: 'partial', glyph }
+}
+
+/** Round-robin colours for the thin band that groups same-round columns — cycles so an
+ *  arbitrary number of rounds still reads as alternating, not one repeated pair. Solid
+ *  tokens only (no opacity modifier): a Tailwind opacity modifier over one of this
+ *  project's `var()` colours silently produces no declaration (see `cellFor` above) —
+ *  harmless here since the band is a 6px strip, not a wash over the column body. */
+const ROUND_BAND_CLASSES = ['bg-primary', 'bg-accent', 'bg-indecisive']
+
+/** Consecutive columns sharing the same (non-null) `round_id` collapse into one group,
+ *  so the header can render a single spanning band over candidates round.py gated
+ *  together. A column with no `round_id` (not gated via round.py) is its own group. */
+function groupByRound(cols: GraphNode[]): { round_id: string | null; cols: GraphNode[] }[] {
+  const groups: { round_id: string | null; cols: GraphNode[] }[] = []
+  for (const n of cols) {
+    const rid = n.round_id ?? null
+    const last = groups[groups.length - 1]
+    if (last && rid != null && last.round_id === rid) last.cols.push(n)
+    else groups.push({ round_id: rid, cols: [n] })
+  }
+  return groups
 }
 
 /**
@@ -25,25 +85,48 @@ function cellFor(v: number | null | undefined) {
  * are the candidates in iteration order, and the seed column is the baseline to read
  * across from. Works for every algorithm: it needs only per-task rewards, and an
  * algorithm that evaluates a SUBSET (agent-optimize) simply leaves the rest "not run".
+ *
+ * `selectedId` narrows the rows to exactly the task ids present in that candidate's own
+ * `per_task` — the same sparse map that already means "not run" for an absent key, so no
+ * separate subset/screen field is needed to know what a candidate actually touched. No
+ * selection (or a candidate with no per_task) falls back to the full task universe.
  */
 export function TaskMatrix({
   summary,
   nodes,
+  selectedId,
+  screens,
 }: {
   summary: RunSummaryDetail
   nodes: GraphNode[]
+  selectedId?: string | null
+  /** agent-optimize's cheap screens — subset evals that ran BEFORE full val, and would
+   *  otherwise never appear here since they earn no graph node of their own. */
+  screens?: ScreenRow[]
 }) {
   const [hover, setHover] = useState<{ task: string; node: GraphNode } | null>(null)
 
-  const cols = useMemo(
-    () =>
-      nodes
-        .filter((n) => Object.keys(n.per_task ?? {}).length > 0)
-        .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0)),
-    [nodes],
+  const cols = useMemo(() => {
+    const candidateCols = nodes
+      .filter((n) => Object.keys(n.per_task ?? {}).length > 0)
+      .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0))
+    const screenCols = (screens ?? [])
+      .filter((s) => Object.keys(s.per_task ?? {}).length > 0)
+      .map(screenToNode)
+    return [...candidateCols, ...screenCols]
+  }, [nodes, screens])
+
+  const selectedNode = useMemo(
+    () => (selectedId ? cols.find((n) => n.id === selectedId) : undefined),
+    [cols, selectedId],
   )
+  const selectedTaskIds = selectedNode ? Object.keys(selectedNode.per_task ?? {}) : null
 
   const rows = useMemo(() => {
+    if (selectedTaskIds && selectedTaskIds.length > 0) {
+      const mean = (t: string) => selectedNode!.per_task?.[t] ?? -1
+      return [...selectedTaskIds].sort((a, b) => mean(a) - mean(b))
+    }
     const ids = new Set(summary.tasks ?? [])
     for (const n of cols) for (const t of Object.keys(n.per_task ?? {})) ids.add(t)
     const mean = (t: string) => {
@@ -51,7 +134,7 @@ export function TaskMatrix({
       return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : -1
     }
     return [...ids].sort((a, b) => mean(a) - mean(b))
-  }, [summary.tasks, cols])
+  }, [summary.tasks, cols, selectedTaskIds, selectedNode])
 
   if (cols.length === 0 || rows.length === 0) {
     return (
@@ -66,9 +149,21 @@ export function TaskMatrix({
   }
 
   const churn = findChurn(cols)
+  const roundGroups = useMemo(() => groupByRound(cols), [cols])
+  const hasRounds = roundGroups.some((g) => g.round_id != null)
 
   return (
     <div className="space-y-4">
+      {selectedTaskIds && selectedTaskIds.length > 0 && (
+        <Card className="border-primary/40 bg-primary-soft">
+          <p className="p-3.5 text-[12px] leading-relaxed text-muted-strong">
+            Showing <span className="font-medium text-foreground">{selectedTaskIds.length}</span>{' '}
+            task(s) — the subset <span className="font-mono">{selectedId}</span> was actually
+            evaluated on. Select a different candidate, or deselect it, to see the full task
+            universe.
+          </p>
+        </Card>
+      )}
       {churn.length > 0 && (
         <Card className="border-accent/40 bg-accent/[0.04]">
           <p className="p-3.5 text-[12px] leading-relaxed text-muted-strong">
@@ -85,6 +180,22 @@ export function TaskMatrix({
         <div className="scroll-x">
           <table className="border-separate border-spacing-[2px] text-[11px]">
             <thead>
+              {hasRounds && (
+                <tr>
+                  <th className="sticky left-0 z-10 bg-surface" />
+                  {roundGroups.map((g, i) => (
+                    <th
+                      key={g.round_id ?? `solo-${i}`}
+                      colSpan={g.cols.length}
+                      title={g.round_id ? `gated together by round.py: ${g.round_id}` : undefined}
+                      className={cn(
+                        'h-1.5 rounded-[2px] p-0',
+                        g.round_id ? ROUND_BAND_CLASSES[i % ROUND_BAND_CLASSES.length] : '',
+                      )}
+                    />
+                  ))}
+                </tr>
+              )}
               <tr>
                 <th className="sticky left-0 z-10 bg-surface pr-2 text-left font-normal text-muted">
                   task
@@ -115,6 +226,8 @@ export function TaskMatrix({
                   {cols.map((n) => {
                     const v = n.per_task?.[t]
                     const c = cellFor(v)
+                    const fixed = n.fixed?.includes(t)
+                    const broke = n.broke?.includes(t)
                     return (
                       <td key={n.id} className="p-0">
                         <button
@@ -123,10 +236,23 @@ export function TaskMatrix({
                           onFocus={() => setHover({ task: t, node: n })}
                           onMouseLeave={() => setHover(null)}
                           onBlur={() => setHover(null)}
-                          aria-label={`${t} on ${n.id}: ${c.label}${v != null ? ` (${v.toFixed(3)})` : ''}`}
+                          aria-label={`${t} on ${n.id}: ${c.label}${v != null ? ` (${v.toFixed(3)})` : ''}${
+                            fixed ? ' — fixed vs parent' : broke ? ' — broke vs parent' : ''
+                          }`}
                           className={cn(
-                            'flex h-6 w-7 cursor-pointer items-center justify-center rounded-[3px]',
-                            'text-[9px] text-muted transition-transform duration-150 hover:scale-110',
+                            'relative flex h-6 w-7 cursor-pointer items-center justify-center rounded-[3px]',
+                            // Solid ring colour, no opacity modifier (see ROUND_BAND_CLASSES
+                            // above for why one silently renders nothing in this setup).
+                            // fixed/broke and :hover both set the same --tw-ring-color custom
+                            // property, so a hover utility on top of a fixed/broke ring class
+                            // would win by pseudo-class specificity and hide the marker on the
+                            // exact interaction used to inspect it — one ring colour per state
+                            // (fixed/broke takes priority; hover only applies otherwise).
+                            'text-[9px] text-muted transition-shadow duration-150',
+                            (fixed || broke) && 'ring-1 ring-inset',
+                            fixed && 'ring-accepted',
+                            broke && 'ring-rejected',
+                            !fixed && !broke && 'hover:ring-2 hover:ring-border-strong',
                             c.cls,
                           )}
                         >
@@ -153,27 +279,36 @@ export function TaskMatrix({
           <span>rows worst-mean first</span>
         </div>
 
-        {hover && (
-          <div className="border-t border-border bg-surface-2 px-3.5 py-2.5 text-[12px]">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono">{hover.task}</span>
-              <span className="text-muted">on</span>
-              <span className="font-mono">{hover.node.id}</span>
-              <VerdictBadge verdict={hover.node.status} />
-              <span className="tnum text-muted">
-                reward{' '}
-                <span className="text-foreground">
-                  {hover.node.per_task?.[hover.task]?.toFixed(3) ?? '—'}
+        {/* Fixed min-height, always in flow: a cell's detail used to be inserted only on
+            hover, and its height varied with feedback length — growing/shrinking the card
+            shifted every element below it as the mouse moved across the grid ("jumping").
+            Reserving the height up front (and never conditionally unmounting) keeps the
+            layout stable regardless of which cell is hovered. */}
+        <div className="min-h-[64px] border-t border-border bg-surface-2 px-3.5 py-2.5 text-[12px]">
+          {hover ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono">{hover.task}</span>
+                <span className="text-muted">on</span>
+                <span className="font-mono">{hover.node.id}</span>
+                <VerdictBadge verdict={hover.node.status} />
+                <span className="tnum text-muted">
+                  reward{' '}
+                  <span className="text-foreground">
+                    {hover.node.per_task?.[hover.task]?.toFixed(3) ?? '—'}
+                  </span>
                 </span>
-              </span>
-            </div>
-            {hover.node.feedback?.[hover.task] && (
-              <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted-strong">
-                {hover.node.feedback[hover.task]}
-              </p>
-            )}
-          </div>
-        )}
+              </div>
+              {hover.node.feedback?.[hover.task] && (
+                <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted-strong">
+                  {hover.node.feedback[hover.task]}
+                </p>
+              )}
+            </>
+          ) : (
+            <span className="text-muted">Hover a cell for its reward and feedback.</span>
+          )}
+        </div>
       </Card>
     </div>
   )
@@ -219,6 +354,21 @@ function ColumnSummary({ cols, nTasks }: { cols: GraphNode[]; nTasks: number }) 
               )}
               {!!n.fixed?.length && <span className="tnum text-accepted">fixed {n.fixed.join(' ')}</span>}
               {!!n.broke?.length && <span className="tnum text-rejected">broke {n.broke.join(' ')}</span>}
+              {/* A screen's decision was made on Δ̄ vs its reference, not on the raw
+                  subset mean above — show the number it actually decided on. A real
+                  candidate's `reason` is the gate/agent's own accept-or-reject note —
+                  equally worth showing, and previously hidden here for every non-screen
+                  column even though the node already carries it. */}
+              {n.reason && (
+                <span
+                  className="tnum text-muted"
+                  title={n.kind === 'screen'
+                    ? "This screen's own aggregate — the statistic it actually gated on."
+                    : 'The gate/agent note recorded for this decision.'}
+                >
+                  {n.reason}
+                </span>
+              )}
             </li>
           )
         })}
@@ -245,6 +395,88 @@ export function findChurn(nodes: GraphNode[]): { a: string; b: string }[] {
     }
   }
   return out.slice(0, 4)
+}
+
+/**
+ * Sealed test — per task, seed vs the shipped candidate (#575).
+ *
+ * `finalize()` scores BOTH the seed and the best candidate on the held-out test split
+ * and persists a `per_task` list for each, but until now the reducer only read their
+ * aggregate reward — the per-task breakdown was computed and then discarded. This
+ * mirrors the val TaskMatrix above (same cell colours/legend) so seed and sealed-test
+ * results are visible the same way val results already are, just for the two columns
+ * that exist on test: seed and best.
+ */
+export function SealedTestMatrix({ summary }: { summary: RunSummaryDetail }) {
+  const seedPer = summary.test_baseline_per_task
+  const bestPer = summary.test_per_task
+  if (!seedPer && !bestPer) return null
+
+  const ids = new Set([...Object.keys(seedPer ?? {}), ...Object.keys(bestPer ?? {})])
+  const rows = [...ids].sort()
+  const cols: { id: string; per: Record<string, number> | null | undefined }[] = [
+    { id: 'seed', per: seedPer },
+    { id: summary.best_id ?? 'best', per: bestPer },
+  ]
+
+  if (rows.length === 0) return null
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col gap-4 p-3.5">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Sealed test — per task</h3>
+          <span className="text-[11px] text-muted">scored once, on data the optimizer never saw</span>
+        </div>
+        <div className="scroll-x">
+          <table className="border-separate border-spacing-[2px] text-[11px]">
+            <thead>
+              <tr>
+                <th className="pr-2 text-left font-normal text-muted">task</th>
+                {cols.map((c) => (
+                  <th key={c.id} className="px-0.5 pb-1 text-center font-mono text-[10px] text-muted">
+                    {c.id}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((t) => (
+                <tr key={t}>
+                  <th scope="row" className="max-w-[190px] truncate pr-2 text-left font-mono font-normal text-muted-strong" title={t}>
+                    {t}
+                  </th>
+                  {cols.map((c) => {
+                    const v = c.per?.[t]
+                    const cell = cellFor(v)
+                    return (
+                      <td key={c.id} className="p-0">
+                        <div
+                          title={`${t} on ${c.id}: ${cell.label}${v != null ? ` (${v.toFixed(3)})` : ''}`}
+                          className={cn(
+                            'flex h-6 w-7 items-center justify-center rounded-[3px] text-[9px] text-muted',
+                            cell.cls,
+                          )}
+                        >
+                          {cell.glyph}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-[11px] text-muted">
+          <Legend cls="bg-accepted">pass (1.0)</Legend>
+          <Legend cls="bg-accent">partial</Legend>
+          <Legend cls="bg-rejected">fail (0.0)</Legend>
+          <Legend cls="bg-surface-3 border border-dashed border-border-strong">not run</Legend>
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 function Legend({ cls, children }: { cls: string; children: React.ReactNode }) {

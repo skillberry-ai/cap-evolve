@@ -46,9 +46,11 @@ adapter poisons every number measured afterwards.
 ## Reusing a prior baseline (`--reuse-baseline PRIOR_RUN_DIR`)
 Re-scoring the seed is wasteful when the split + seed are unchanged.
 `--reuse-baseline <prior run_* dir>` (spec key `reuse_baseline`) copies that run's
-`splits.json`, `baseline.json`, seed snapshot and seed val rollouts into the fresh
-run dir and skips the baseline eval; the copied `test_used` flag is reset so this
-run can still finalize on test exactly once. `--resume` is the same-run variant:
+`splits.json`, `baseline.json`, seed snapshot and seed val and train rollouts into the
+fresh run dir and skips the baseline eval; the copied `test_used` flag is reset so this
+run can still finalize on test exactly once. The prior run's sealed seed **test** score
+is carried over as a result (`reused_seed_test.json`, never as test rollouts), and
+finalize uses it instead of re-scoring the seed while the seed bytes are unchanged. `--resume` is the same-run variant:
 reopen an existing run dir, skip the eval when `baseline.json` is already there.
 Budget flags (`--max-iterations`, `--stall`, `--max-usd`, …) are accepted here
 because the run dir owns the budget and later phases read it from there.

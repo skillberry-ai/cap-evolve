@@ -55,4 +55,24 @@
     <lastmod>2026-07-28</lastmod>
     <priority>0.6</priority>
   </url>
+  <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/skillsbench/index.html</loc>
+    <lastmod>2026-09-08</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/skillsbench/results/task-by-task-87/summary.html</loc>
+    <lastmod>2026-09-08</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/skillsbench/results/transfer-eval-8fold/summary.html</loc>
+    <lastmod>2026-09-08</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://skillberry-ai.github.io/cap-evolve/skillsbench/results/runnable-43task-opt/summary.html</loc>
+    <lastmod>2026-09-08</lastmod>
+    <priority>0.6</priority>
+  </url>
 </urlset>

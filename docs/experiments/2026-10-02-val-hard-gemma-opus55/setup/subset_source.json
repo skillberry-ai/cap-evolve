@@ -1,0 +1,44 @@
+{
+  "seed": 606,
+  "parent": "full_verified",
+  "metric": "hard_no_recalc",
+  "slot_run_id": "36622615059",
+  "parent_split_sha256": {
+    "test": "54608b02b59450fbf59569bc342eff58b1cbb5fcd43ce4c0b9935b8f85e379dd",
+    "train": "c5eb753031aad2d58b60509c6b14ae202027bbe9577b2a9067aff8333da6cb27",
+    "val": "8ac6ed589014d2f05b2b234ba9081b008fd5addcb8a1ba705d9e3b7f65d140d4"
+  },
+  "parent_test_by_type": {
+    "Cell-Level Manipulation": 193,
+    "Sheet-Level Manipulation": 87
+  },
+  "parent_test_unscored": [
+    "191-40",
+    "496-34",
+    "531-18",
+    "73-45"
+  ],
+  "counts_by_type": {
+    "Cell-Level Manipulation": 70,
+    "Sheet-Level Manipulation": 30
+  },
+  "counts_by_stratum": {
+    "Cell-Level Manipulation | seed fail": 46,
+    "Cell-Level Manipulation | seed pass": 24,
+    "Sheet-Level Manipulation | seed fail": 11,
+    "Sheet-Level Manipulation | seed pass": 19
+  },
+  "counts": {
+    "train": 80,
+    "val": 40,
+    "test": 100
+  },
+  "sha256_sorted_ids": {
+    "train": "c5eb753031aad2d58b60509c6b14ae202027bbe9577b2a9067aff8333da6cb27",
+    "val": "8ac6ed589014d2f05b2b234ba9081b008fd5addcb8a1ba705d9e3b7f65d140d4",
+    "test": "9b1e372c7df278ce032340dd00ecace51e4da6a340314eca93ec2feb9a3eea21"
+  },
+  "seed_test_reward_on_subset": 0.43,
+  "seed_test_n_scored_on_subset": 100,
+  "seed_test_reward_on_parent": 0.43478260869565216
+}

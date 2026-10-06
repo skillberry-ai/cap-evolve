@@ -63,6 +63,19 @@ It reports rather than books: booking an accept after ``measure.py`` sealed agai
 
 That check runs AFTER the seal on purpose — the abandoned round's evals outlived the agent by
 14 minutes, so a pre-seal check would have found an empty ``work/``.
+
+**A heartbeat, for when THIS process dies rather than the CLI it launches.** Everything above
+covers the hosted CLI stopping short while host.py itself stays alive to notice. Nothing here
+covers host.py's own OS process dying — the machine sleeping, the terminal it ran in closing —
+which is a distinct failure `watchdog.py` (this dir) exists to catch from outside: it reads
+``host/heartbeat.json``, written every ``HEARTBEAT_INTERVAL_SECONDS`` while a CLI invocation is
+in flight, and relaunches host.py against the same run dir when the heartbeat goes stale and no
+process still holds its pid. Re-running host.py is already safe to do by hand (``commit.py``
+refuses to double-book a decided candidate, ``_seal`` is idempotent) — the watchdog only
+automates noticing and doing that, using ``host/launch_args.json`` (written on every launch) to
+reconstruct the original command line. It is a process supervisor, not a resume of a hung
+turn: see the briefing's Unattended section for why a turn that ends with work outstanding can
+never be resumed from inside the conversation.
 """
 
 from __future__ import annotations
@@ -72,10 +85,13 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
+from datetime import datetime
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
+import meter
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
@@ -120,10 +136,180 @@ def _backgrounding_near_misses(permission_denials) -> list[dict]:
     return [d for d in permission_denials if _looks_like_a_detach_attempt(d)]
 
 
+#: The concurrent-background-task cap the driver prompt asks the agent to respect (see the
+#: briefing's "Unattended" section). Kept as a name here, not just a literal, so the detector
+#: below and the number stated in the briefing cannot drift apart silently.
+_BACKGROUND_CONCURRENCY_CAP = 2
+
+#: ``task_updated``/``task_notification`` status values that mean the background task was
+#: evicted rather than finishing or being stopped deliberately one at a time.
+_KILLED_STATUSES = {"killed", "stopped", "cancelled", "canceled"}
+
+#: Keys, in preference order, that might carry an event's timestamp across CLI versions —
+#: schema-tolerant like ``_looks_like_a_detach_attempt`` above, rather than committing to one.
+_TS_KEYS = ("timestamp", "ts", "time", "t")
+
+#: Real ``claude-code`` stream-json wraps these as ``type: "system", subtype: "task_updated"``
+#: (see core/tests/test_budget_cost.py) — not a bare ``type: "task_updated"``. Accept both so a
+#: future/alternate CLI shape that DOES put it on ``type`` still matches.
+_TASK_LIFECYCLE_SUBTYPES = ("task_updated", "task_notification")
+
+#: Simultaneous kills a few ms apart (processing order, not the same tick of the clock) are
+#: still the same eviction instant, not coincidence — group anything within this window.
+_MASS_KILL_CLUSTER_MS = 50
+
+
+def _is_task_lifecycle_event(ev: dict) -> bool:
+    t = ev.get("type")
+    if t in _TASK_LIFECYCLE_SUBTYPES:
+        return True
+    return t == "system" and ev.get("subtype") in _TASK_LIFECYCLE_SUBTYPES
+
+
+def _event_timestamp(ev: dict):
+    for key in _TS_KEYS:
+        if key in ev:
+            return ev[key]
+    return None
+
+
+def _event_status(ev: dict) -> str:
+    # ``patch`` is where the real CLI puts ``task_updated``'s status
+    # (core/tests/test_budget_cost.py); the rest are schema-tolerant fallbacks.
+    for holder in (ev, ev.get("patch"), ev.get("task"), ev.get("data")):
+        if isinstance(holder, dict) and holder.get("status"):
+            return str(holder["status"]).lower()
+    return ""
+
+
+def _timestamp_to_epoch_ms(ts):
+    """Normalize a timestamp of unknown shape (ISO string, epoch seconds, epoch ms) to a
+    single comparable scale so near-simultaneous events can be clustered by real elapsed time
+    instead of by exact value.
+    """
+    if isinstance(ts, bool):
+        return None
+    if isinstance(ts, (int, float)):
+        # Epoch seconds vs epoch ms are ambiguous from the number alone; ms-scale epoch
+        # values are always > 1e12 for any real timestamp, seconds-scale never are.
+        return float(ts) if abs(ts) >= 1e12 else float(ts) * 1000
+    if isinstance(ts, str):
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp() * 1000
+        except ValueError:
+            return None
+    return None
+
+
+def _mass_kill_events(transcript_path: Path, *, cap: int = _BACKGROUND_CONCURRENCY_CAP
+                       ) -> list[dict]:
+    """Background ``task_updated``/``task_notification`` events killed at the SAME instant.
+
+    Confirmed live on a real run: 5 simultaneous background tasks (a diagnose fan-out, one per
+    failure cluster — exactly the pattern SKILL.md's "Diagnosis fans out freely" line
+    encouraged before this fix) were all evicted, and their `task_updated`/`task_notification`
+    events carried the identical millisecond timestamp. That is a session-level ceiling on
+    concurrent background tasks, not a per-task timeout and not a network failure (independently
+    verified healthy at the time) — tasks cannot all finish naturally at the same millisecond, so
+    more than `cap` of them dying at nearly the same instant is the fingerprint of that eviction
+    rather than coincidence. Timestamps are clustered within `_MASS_KILL_CLUSTER_MS` rather than
+    compared for bit-identical equality, because harness-recorded timestamps for one eviction can
+    differ by a few ms depending on write order.
+
+    The driver prompt already tells the agent to stay under the cap; this makes the violation
+    detectable after the fact too, because a prompt instruction to a headless agent is not a
+    guarantee it was followed.
+    """
+    if not transcript_path.is_file():
+        return []
+    seen: list = []  # (epoch_ms, raw_ts, task_id)
+    try:
+        with transcript_path.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except Exception:  # noqa: BLE001 — a torn line carries no task state
+                    continue
+                if not isinstance(ev, dict) or not _is_task_lifecycle_event(ev):
+                    continue
+                if _event_status(ev) not in _KILLED_STATUSES:
+                    continue
+                raw_ts = _event_timestamp(ev)
+                if raw_ts is None:
+                    continue
+                epoch_ms = _timestamp_to_epoch_ms(raw_ts)
+                if epoch_ms is None:
+                    continue
+                task_id = ev.get("task_id") or ev.get("id") or (ev.get("task") or {}).get("id")
+                seen.append((epoch_ms, raw_ts, task_id))
+    except OSError:
+        return []
+
+    seen.sort(key=lambda e: e[0])
+    clusters: list = []
+    for epoch_ms, raw_ts, task_id in seen:
+        if clusters and epoch_ms - clusters[-1][-1][0] <= _MASS_KILL_CLUSTER_MS:
+            clusters[-1].append((epoch_ms, raw_ts, task_id))
+        else:
+            clusters.append([(epoch_ms, raw_ts, task_id)])
+
+    out = []
+    for cluster in clusters:
+        # Dedupe by task_id: the same task can emit both a task_updated AND a
+        # task_notification for one kill, which must count as one task, not two.
+        ids = list(dict.fromkeys(tid for *_, tid in cluster if tid is not None))
+        unidentified = sum(1 for *_, tid in cluster if tid is None)
+        count = len(ids) + unidentified
+        if count > cap:
+            out.append({"timestamp": cluster[0][1], "count": count,
+                        "task_ids": ids + [None] * unidentified})
+    return out
+
+
 # 4h. Long enough for a full-val eval on the slowest benchmark in this repo
 # (spreadsheetbench full: one Docker container per task x trials), while still bounding a
 # genuinely hung command instead of waiting forever.
 BASH_TIMEOUT_MS = 4 * 60 * 60 * 1000
+#: How often, while a CLI invocation is in flight, host.py touches ``host/heartbeat.json``.
+#: ``watchdog.py`` treats anything older than a few multiples of this as evidence the
+#: process died rather than just being between writes.
+HEARTBEAT_INTERVAL_SECONDS = 60
+
+
+def _write_heartbeat(run_dir: Path, *, pid: int) -> None:
+    """Best-effort liveness marker for ``watchdog.py``. Never raises: a missed write is not
+    worth failing an otherwise-healthy run over, and the watchdog already tolerates a
+    heartbeat a few intervals stale.
+    """
+    path = run_dir / "host" / "heartbeat.json"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"pid": pid, "ts": time.time()}), encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        pass
+
+
+def _heartbeat_loop(run_dir: Path, pid: int, stop: threading.Event) -> None:
+    while not stop.wait(HEARTBEAT_INTERVAL_SECONDS):
+        _write_heartbeat(run_dir, pid=pid)
+
+
+def _save_launch_args(run_dir: Path, argv: list[str]) -> None:
+    """Persist this invocation's CLI args so ``watchdog.py`` can reconstruct the exact
+    command line on a relaunch, without a human remembering ``--agent``/``--model``/etc.
+    """
+    try:
+        path = run_dir / "host" / "launch_args.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"argv": argv, "python": sys.executable}, indent=2),
+                        encoding="utf-8")
+    except OSError:
+        pass
 #: Measurement concurrency handed to the agent when the spec names none. Matches ``round.py``'s
 #: own default and its refusal bound; see the concurrency note in the briefing.
 GATE_CONCURRENCY = 8
@@ -524,6 +710,15 @@ Three consequences worth being explicit about:
    once) and the report phase, as SKILL.md's "Stop & seal" section shows. A run with no
    finalize has no result. If you are running out of budget, stop optimizing and seal —
    sealing what you have beats one more candidate.
+
+   `measure.py` is the *last* long-running eval you launch — it opens the sealed test split
+   (`eval_start(split=test, tag=FINAL)`), and this seal is single-use. Rule 3 below applies
+   here MOST of all: stay in the foreground until it exits. Ending your turn while it is
+   still running does not just lose the number — the abandoned attempt's partial rollouts
+   then make even a RETRY refuse (`begin_test_attempt` sees test already has rollouts on it),
+   so the seal is wasted, not merely delayed. Measured on three separate runs: an
+   `eval_start(split=test, tag=FINAL)` with no matching `evaluate` and no `final.json` ever
+   written.
 2. **A null result is a valid outcome, honestly reported.** If nothing beat the baseline
    through the gate, say so and seal anyway. Do not lower the gate, gate on a screen
    subset, or present a screen `promote` as an accept to manufacture a gain.
@@ -539,6 +734,18 @@ Three consequences worth being explicit about:
    turn that launched the work is still the turn that collects it**: stay blocked until the
    result is in your hands, read it, and act on it before that turn ends. Delegate the work,
    never the waiting.
+
+   **Cap concurrent background Bash calls at 2, for any purpose.** Diagnosis fanning out
+   across several failure clusters, a screen batch, a backgrounded eval — whatever put it
+   there, never have more than 2 `run_in_background` Bash calls in flight at the same time.
+   This is not advisory housekeeping: a real run's transcript showed 5 simultaneous
+   background tasks (a diagnose fan-out, one per failure cluster) whose `task_updated`/
+   `task_notification` events were ALL stamped `killed`/`stopped` at the identical millisecond
+   — a session-level ceiling on concurrent background tasks evicting everything
+   backgrounded at once, not a per-task timeout and not the network. When it fires, the
+   whole round's diagnostic work is destroyed and the run finalizes on `best_id=seed` with
+   real budget still unspent. Before starting background call #3, `TaskStop` one of the 2
+   already running or wait for one to finish first.
 
    Waiting is safe: one Bash call may run for {hours} hours, a ceiling raised for precisely
    this reason, so a long eval does not need backgrounding to survive. If something really
@@ -634,11 +841,73 @@ def _unbooked_rounds(run_dir: Path) -> list[dict]:
     return found
 
 
+def _dangling_eval(run_dir: Path) -> dict | None:
+    """The last ``eval_start`` with no matching ``evaluate`` for the same (split, tag).
+
+    ``harness.py``'s own docstring names the invariant: "an eval_start with no evaluate
+    after it is an evaluation that never returned." Measured on three separate runs: the
+    driver issued ``eval_start(split=test, tag=FINAL)`` (the sealed test eval `measure.py`/
+    `finalize.py` opens with — see ``harness.finalize``) near the end of its turns and the
+    process exited before the matching ``evaluate`` was ever logged — no ``final.json``, no
+    error, just a Bash call that outlived the turn that launched it. Reported here so the
+    host's run summary (and the `incomplete` diagnosis) can say which eval was abandoned
+    instead of the operator diffing rollout files by hand.
+
+    Not benchmark-specific: split/tag are read straight off the events, whatever adapter or
+    algorithm wrote them.
+    """
+    starts: dict[tuple, dict] = {}
+    try:
+        with (run_dir / "events.jsonl").open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    ev = json.loads(line)
+                except Exception:  # noqa: BLE001 — a torn line carries no eval state
+                    continue
+                if not isinstance(ev, dict):
+                    continue
+                kind = ev.get("kind")
+                key = (ev.get("split"), ev.get("tag"))
+                if kind == "eval_start":
+                    starts[key] = ev
+                elif kind == "evaluate":
+                    starts.pop(key, None)
+    except OSError:
+        return None
+    if not starts:
+        return None
+    # Last one issued, by event time — an earlier dangling start that a later retry of the
+    # SAME (split, tag) resolved is not itself abandoned; only the most recent open one is.
+    last = max(starts.values(), key=lambda e: e.get("t") or 0)
+    return last
+
+
+def _log_eval_abandoned(run_dir: Path, dangling_eval: dict) -> None:
+    """Flag a dangling ``eval_start`` in ``events.jsonl`` so the run's audit log names it
+    instead of leaving it discoverable only by hand-diffing eval_start/evaluate pairs."""
+    try:
+        from cap_evolve import RunDir as _RunDir
+
+        _RunDir.open(run_dir).log_event(
+            "eval_abandoned", split=dangling_eval.get("split"),
+            tag=dangling_eval.get("tag"), started_at=dangling_eval.get("t"))
+    except Exception:  # noqa: BLE001 — flagging the gap must not crash a run report
+        pass
+
+
 def _seal(run_dir: Path, project: Path, spec: dict, *, timeout: float | None) -> dict:
-    """Ensure the run has a sealed test number. Idempotent.
+    """Ensure the run has a sealed test number AND the full seed-vs-best bookend
+    (train + val + test, both candidates) that ``harness.finalize`` now always writes
+    into ``final.json``. Idempotent.
 
     Returns ``{"sealed": bool, "seal": "agent"|"host"|"failed", ...}``. ``agent`` means
     final.json was already there when the host looked — the normal, desired outcome.
+
+    The bookend guarantee lives in ``harness.finalize`` itself (called from ``measure.py``
+    below, and from every other path that ever produces ``final.json``), not here — this
+    function only guarantees that SOMETHING calls it. Doing it there rather than here
+    means the same guarantee, and the same "reuse rollouts already on disk instead of
+    re-measuring" dedup, apply to a run the agent sealed itself, not only to this fallback.
     """
     final = run_dir / "final.json"
     if final.exists():
@@ -780,6 +1049,9 @@ def _agent_env(model: str | None) -> dict:
         # agent must remember is the form that already failed.
         "PATH": os.pathsep.join([str(Path(sys.executable).parent),
                                  os.environ.get("PATH", "")]).rstrip(os.pathsep),
+        # #610: tells commit.py this is a hosted session, so it meters each decision's
+        # optimizer tokens/seconds from this session's log (meter.py) instead of leaving null.
+        "CAPEVOLVE_HOST_METER": "1",
     }
     if model:
         env["CAPEVOLVE_OPTIMIZER_MODEL"] = model
@@ -837,6 +1109,14 @@ def main(argv=None) -> int:
         # is the path most likely to be sitting on an abandoned round. Reporting it only on
         # the full host path would hide it from exactly the reader who came looking.
         out["unbooked_rounds"] = _unbooked_rounds(run_dir)
+        # Checked regardless of whether test sealed: `_dangling_eval` already drops any
+        # (split, tag) pair that got its matching `evaluate`, so a successful test seal only
+        # ever clears the (test, FINAL) entry. A dangling VAL eval_start from an earlier
+        # round's gate — issue #587 — is a different (split, tag) key and survives a clean
+        # seal untouched; gating this check on `sealed` hid exactly that case.
+        out["dangling_eval"] = _dangling_eval(run_dir)
+        if out["dangling_eval"] is not None:
+            _log_eval_abandoned(run_dir, out["dangling_eval"])
         print(json.dumps({"run_dir": str(run_dir), "seal_only": True, **out}, indent=2))
         return 0 if out["sealed"] else 1
 
@@ -851,6 +1131,12 @@ def main(argv=None) -> int:
                    "(one row per shell-invokable agent CLI — no new code needed)",
         }, indent=2))
         return 2
+
+    # So `watchdog.py` can relaunch this exact invocation without a human reconstructing
+    # the flags. Not saved for --prompt-only (a render-and-exit probe, never actually
+    # relaunchable) or --seal-only (handled above, before this line is even reached).
+    if not args.prompt_only:
+        _save_launch_args(run_dir, list(argv if argv is not None else sys.argv[1:]))
 
     # The agent needs write access to BOTH the run dir and the project; their common parent
     # is the natural workdir, and it is where the staged guidance + native skills land.
@@ -965,6 +1251,11 @@ def main(argv=None) -> int:
             pass
 
         started = time.time()
+        stop_hb = threading.Event()
+        _write_heartbeat(run_dir, pid=os.getpid())
+        hb_thread = threading.Thread(target=_heartbeat_loop, args=(run_dir, os.getpid(), stop_hb),
+                                     daemon=True)
+        hb_thread.start()
         try:
             proc = subprocess.run(cmd, capture_output=True, text=True, timeout=args.timeout,
                                   env={**_child_env(), **agent_env})
@@ -972,6 +1263,8 @@ def main(argv=None) -> int:
         except subprocess.TimeoutExpired:
             proc = None
             timed_out = True
+        finally:
+            stop_hb.set()
         seconds = time.time() - started
 
         payload: dict = {}
@@ -1027,6 +1320,11 @@ def main(argv=None) -> int:
                          timed_out=timed_out, stop_reason=stop_reason, num_turns=num_turns,
                          is_error=is_error, terminal_reason=terminal_reason,
                          permission_denials=permission_denials, attempt=attempt)
+            # #610: the session's real USD exists only now; split it over the decisions
+            # commit.py metered during it, so per-candidate optimizer cost is recorded.
+            attribution = meter.attribute_usd(run_dir, usd)
+            if attribution is not None:
+                rd.log_event("opt_cost_attribution", **attribution)
             # Book only what the agent did not already attribute to a round during THIS
             # invocation. `seconds` is booked too: without it the run recorded
             # `optimizer_seconds: 0.0` for a loop that ran for hours, so metrics.py's
@@ -1069,6 +1367,23 @@ def main(argv=None) -> int:
     # exited — on run 32814848187 its table landed 14 minutes later, during measure.py — so a
     # check made before sealing would have found an empty work/ and reported nothing.
     unbooked = _unbooked_rounds(run_dir)
+
+    # Also after the seal: `_seal` may itself have just closed the open eval (e.g. the agent's
+    # FINAL attempt was still running and finished during measure.py, same as an unbooked
+    # round above). Only an eval still open AFTER the seal attempt is genuinely abandoned.
+    #
+    # Checked unconditionally, NOT only when the seal failed (#587). `_dangling_eval` already
+    # drops any (split, tag) pair with a matching `evaluate`, so a successful test seal only
+    # ever resolves the (test, FINAL) key it wrote. A round's full-val `eval_start` for a
+    # candidate — opened, then abandoned when the driver's session ended on a genuine
+    # voluntary stop (`stop_reason: success`, real `num_turns`), not a background-task kill —
+    # is a different (split, tag) key entirely and survives test sealing cleanly untouched;
+    # gating this check on `seal.get("sealed")` let that candidate's eval vanish with no
+    # `eval_abandoned` event and no warning, while the run finalized as if nothing was
+    # outstanding.
+    dangling_eval = _dangling_eval(run_dir)
+    if dangling_eval is not None:
+        _log_eval_abandoned(run_dir, dangling_eval)
 
     # An agent that stopped with rounds left is a DEFECT, not a finished run — and it must not
     # read as completion. Measured: one run booked 1 of 3 rounds with a higher-scoring
@@ -1147,6 +1462,13 @@ def main(argv=None) -> int:
                       + (f" after {num_turns} turns" if num_turns else "")
                       + evidence + " — " + fix)
 
+    if dangling_eval is not None:
+        note = (f"the agent opened an eval (split={dangling_eval.get('split')!r}, "
+                f"tag={dangling_eval.get('tag')!r}) and its turn/process ended before the "
+                "matching evaluate ever logged — that eval was abandoned mid-flight, not "
+                "backgrounded successfully; logged as eval_abandoned in events.jsonl")
+        incomplete = f"{incomplete}; {note}" if incomplete else note
+
     out = {
         "run_dir": str(run_dir),
         "agent": args.agent,
@@ -1160,6 +1482,7 @@ def main(argv=None) -> int:
         "rounds_booked": rounds_done,
         "rounds_budget": rounds_budget,
         "unbooked_rounds": unbooked,
+        "dangling_eval": dangling_eval,
         "incomplete": incomplete,
         "seconds": round(seconds, 3),
         "usd": usd,
@@ -1171,6 +1494,7 @@ def main(argv=None) -> int:
         "context": context,
         "optimizer": payload,
         "backgrounding_near_misses": _backgrounding_near_misses(permission_denials),
+        "background_mass_kills": _mass_kill_events(prompt_path.parent / "transcript.jsonl"),
         **seal,
     }
     if proc is not None and proc.returncode != 0:
@@ -1188,6 +1512,18 @@ def main(argv=None) -> int:
               f"{[d.get('tool_name') for d in out['backgrounding_near_misses']]}) and was "
               "denied by the permission system — see backgrounding_near_misses in this run's "
               "output and the briefing's Unattended section", file=sys.stderr)
+    if out["background_mass_kills"]:
+        # The driver prompt already tells the agent to cap background Bash calls at
+        # _BACKGROUND_CONCURRENCY_CAP; this is what it looks like when that was violated
+        # anyway and the harness evicted everything at once. Distinct from both warnings
+        # above: nothing here was denied — the tasks ran, then died together mid-round.
+        worst = max(out["background_mass_kills"], key=lambda m: m["count"])
+        print("::warning::agent-optimize: the harness killed "
+              f"{worst['count']} background tasks at the identical timestamp "
+              f"({worst['timestamp']!r}) — a session-level concurrent-background-task "
+              "eviction, not a per-task timeout. The round's diagnostic/eval work in flight "
+              "was lost; see background_mass_kills in this run's output and the briefing's "
+              "background-concurrency-cap note", file=sys.stderr)
     # The run's worth is its sealed number, so that — not the agent's exit code — decides
     # ours. An agent that ran out of turns after three honest rounds produced a result; one
     # that exited 0 without sealing did not.

@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 
 from . import compare, runs, trajectories
 from . import memory as _memory
@@ -19,9 +20,17 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="cap-evolve dashboard", version="0.1.0")
     app.state.base_dir = base
 
+    # Identity card for the launcher (cap_evolve.dashboard_launch): ``app``/``pid`` let
+    # it recognise its own listeners, ``base_dir`` + ``code`` let it REUSE one that
+    # already serves this base with this code instead of leaking a new server per run.
+    # ``code`` must match dashboard_launch.code_stamp(): package dir @ newest .py mtime.
+    pkg = Path(__file__).resolve().parent
+    code = f"{pkg}@{max(f.stat().st_mtime_ns for f in pkg.glob('*.py'))}"
+
     @app.get("/api/health")
     def health():
-        return {"ok": True, "base_dir": str(base)}
+        return {"ok": True, "app": "cap-evolve-dashboard", "pid": os.getpid(),
+                "base_dir": str(base.resolve()), "code": code}
 
     @app.get("/api/runs")
     def get_runs():
@@ -79,6 +88,16 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail="path escapes run dir")
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="file not found")
+
+    @app.get("/api/runs/{run_id}/process-html")
+    def get_process_html(run_id: str):
+        """The optimizer's own self-rendered ``dashboard.html`` (see cli's ``dashboard
+        --export``) -- served raw so it renders as a real document in an iframe, not
+        truncated/escaped through the generic (256KB-capped, text-only) ``/file`` route."""
+        path = _resolve_or_404(run_id) / "dashboard.html"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="no process html for this run")
+        return HTMLResponse(path.read_text(encoding="utf-8"))
 
     @app.get("/api/runs/{run_id}/git/log")
     def get_git_log(run_id: str):

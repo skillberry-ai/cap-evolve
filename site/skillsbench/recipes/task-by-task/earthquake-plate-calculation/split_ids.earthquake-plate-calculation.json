@@ -1,0 +1,5 @@
+{
+  "train": ["earthquake-plate-calculation"],
+  "val": ["earthquake-plate-calculation"],
+  "test": ["earthquake-plate-calculation"]
+}

@@ -17,6 +17,7 @@ to it, set credentials in a `.env`, and run `cap-evolve check && cap-evolve run`
 | [`skillsbench/`](skillsbench/) | [SkillsBench](https://github.com/benchflow-ai/skillsbench) | Shared Agent Skills | BenchFlow `bench eval run` |
 | [`swe_bench/`](swe_bench/) | [SWE-bench / Lite](https://github.com/swe-bench/SWE-bench) | Coding-agent prompt | HuggingFace + Docker harness |
 | [`spreadsheetbench/`](spreadsheetbench/) | [SpreadsheetBench](https://github.com/RUCKBReasoning/SpreadsheetBench) | Spreadsheet-agent system prompt | Fetched dataset + Docker/Jupyter harness |
+| [`rfe_creator/`](rfe_creator/) | [RFE-Creator](https://github.com/opendatahub-io/rfe-creator) | 7 Claude Code skills (RFE create/review/split/submit pipeline) | Fetched dataset + [agent-eval-harness](https://github.com/opendatahub-io/agent-eval-harness) |
 
 The first two are **generic** — point them at your data with env vars, no code
 edits. The last four are **worked benchmark adapters** you copy and run.

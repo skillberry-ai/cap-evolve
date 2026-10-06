@@ -13,7 +13,7 @@ import {
 import { AlertTriangle, GitCompareArrows } from 'lucide-react'
 import { api } from '../lib/api'
 import type { CompareRow } from '../lib/types'
-import { pct, signedPct, usd, deltaTone } from '../lib/format'
+import { pct, signedPct, usd, compactNum, deltaTone } from '../lib/format'
 import { AppShell } from '../components/AppShell'
 import { Card } from '../components/ui/Card'
 import { Skeleton } from '../components/ui/Skeleton'
@@ -172,7 +172,17 @@ function RunRow({ run, color }: { run: CompareRow; color: string }) {
       <td className={cn('tnum py-2 pr-4', TONE[tone])}>{signedPct(run.delta_pct)}</td>
       <td className="tnum py-2 pr-4">{pct(run.test_reward)}</td>
       <td className="tnum py-2 pr-4">{run.iterations}</td>
-      <td className="tnum py-2">{usd(run.total_usd)}</td>
+      <td className="tnum py-2">
+        {run.cost_metered === false ? (
+          <span
+            title="this runner reports no per-call cost — $0 would be a guess, not a measurement"
+          >
+            {compactNum(run.tokens)} <span className="text-muted">tokens (unmetered)</span>
+          </span>
+        ) : (
+          usd(run.total_usd)
+        )}
+      </td>
     </tr>
   )
 }

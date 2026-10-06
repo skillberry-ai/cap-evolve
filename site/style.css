@@ -550,6 +550,14 @@ table code {
 
 .muted { color: var(--muted); font-weight: 400; }
 
+/* external links out to GitHub from rendered skillsbench-history docs */
+.doc a.ext-link::after { content: " ↗"; }
+
+/* signed deltas in generated heatmap tables */
+.delta-pos { color: var(--success-ink); font-weight: 650; }
+.delta-neg { color: var(--danger); font-weight: 650; }
+.delta-zero { color: var(--muted); }
+
 /* ─────────────────────── footer ─────────────────────── */
 
 .footer { border-top: 1px solid var(--border); padding: 2.5rem 1.5rem; color: var(--muted); font-size: 0.86rem; }

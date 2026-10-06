@@ -1,0 +1,5 @@
+{
+  "train": ["exoplanet-detection-period"],
+  "val": ["exoplanet-detection-period"],
+  "test": ["exoplanet-detection-period"]
+}

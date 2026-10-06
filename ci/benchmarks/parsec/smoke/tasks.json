@@ -1,0 +1,27 @@
+[
+  {
+    "id": "traces_parsec-aap2-0037",
+    "tag": "perfect-solve",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0023",
+    "tag": "trajectory-match",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0074",
+    "tag": "high-assert",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0047",
+    "tag": "gate-failed",
+    "agent": "aws/claude-sonnet-4-5"
+  },
+  {
+    "id": "traces_parsec-aap2-0048",
+    "tag": "gate-failed",
+    "agent": "aws/claude-sonnet-4-5"
+  }
+]

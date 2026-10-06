@@ -43,6 +43,9 @@ from cap_evolve.gate import decide
 from cap_evolve.loop import SplitResult
 from cap_evolve.specfile import spec_for_run
 
+import merge_rejects
+import merge_search
+
 
 def _num(sr: SplitResult | None) -> dict:
     if sr is None:
@@ -172,6 +175,21 @@ def main(argv=None) -> int:
 
     run_dir = RunDir.open(Path(args.run_dir))
     project = Path(args.project)
+
+    # Compliance signal (SKILL.md: merge disjoint-cluster accepted candidates before any
+    # end-of-run measurement) — see merge_search.check_merge_compliance's own docstring.
+    # Never blocks; just makes an ignored requirement visible in events.jsonl/dashboard.
+    merge_warning = merge_search.check_merge_compliance(run_dir)
+    if merge_warning:
+        run_dir.log_event("merge_compliance_warning", **merge_warning)
+
+    # Same signal, one step earlier: 3+ REJECTED candidates whose own recorded evidence was
+    # zero-regression and non-negative-delta, with disjoint targets, never tried together —
+    # see merge_rejects.check_rejects_compliance's own docstring.
+    rejects_warning = merge_rejects.check_rejects_compliance(run_dir)
+    if rejects_warning:
+        run_dir.log_event("merge_rejects_compliance_warning", **rejects_warning)
+
     spec = spec_for_run(run_dir, project)
     n_trials = args.n_trials or int(spec.get("num_trials") or 1)
     k_se = args.k_se if args.k_se is not None else float(spec.get("gate_k_se") or 1.0)
@@ -238,11 +256,15 @@ def main(argv=None) -> int:
                                               n_trials=n_trials, tag=tag,
                                               workers=args.workers), False
 
-        s, s_reused = _train("seed", "MEASURE_seed")
+        # Tags match the ones `evaluate_candidate`/`harness.finalize` use elsewhere
+        # ("seed" and the candidate's own id) — not a "MEASURE_*" alias — so this eval
+        # and `finalize`'s own train+val bookend (below, via measure.py's test section)
+        # see the SAME rollouts on disk and never pay for the same measurement twice.
+        s, s_reused = _train("seed", "seed")
         if best_id == "seed":
             b, b_reused = s, s_reused
         else:
-            b, b_reused = _train(best_id, "MEASURE_best")
+            b, b_reused = _train(best_id, best_id)
         row = _compare(s, b, split="train", k_se=k_se, mode=mode)
         row["rollouts_reused"] = {"seed": s_reused, "best": b_reused}
         rows.append(row)

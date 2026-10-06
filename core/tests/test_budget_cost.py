@@ -1,12 +1,25 @@
 """Tests for role-based spend tracking, optimizer-cost capture, soft spend
 warnings, budget enforcement on total spend, and the pre-run cost estimate."""
 
+import importlib.util
 import json
+from pathlib import Path
+
+import pytest
 
 from cap_evolve import RunDir
 from cap_evolve.rundir import Budget, Spent
 from cap_evolve.harness import _parse_optimizer_cost, optimizer_from_command
 from cap_evolve import cli, pricing, harness
+
+_REPO = Path(__file__).resolve().parents[2]
+_RUN_OPTIMIZER_SCRIPTS = _REPO / "skills" / "optimizers" / "run-optimizer" / "scripts"
+import sys as _sys  # noqa: E402
+if str(_RUN_OPTIMIZER_SCRIPTS) not in _sys.path:
+    _sys.path.insert(0, str(_RUN_OPTIMIZER_SCRIPTS))  # so run.py's `import _bootstrap` resolves
+_spec = importlib.util.spec_from_file_location("run_optimizer_run", _RUN_OPTIMIZER_SCRIPTS / "run.py")
+run_optimizer_run = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(run_optimizer_run)
 
 
 # ---- Spent / Budget round-trip + total ------------------------------------
@@ -73,6 +86,155 @@ def test_parse_optimizer_cost_absent():
     assert _parse_optimizer_cost(json.dumps({"cost": {"total_cost_usd": None, "tokens": None}})) is None
 
 
+# ---- run-optimizer's own parse_cost must scan the WHOLE JSONL stream, not just
+# the last line: a session that ends on a trailing system event (e.g. a
+# `task_notification` after a background tool was killed) has no cost on its last
+# line even though an earlier `result` message reported real spend. Reading only
+# the last line silently books $0 for a session that actually cost money.
+
+def test_parse_cost_finds_result_before_trailing_system_events():
+    stream = "\n".join(json.dumps(o) for o in [
+        {"type": "assistant", "message": {"content": []}},
+        {"type": "result", "subtype": "success", "total_cost_usd": 3.65,
+         "usage": {"input_tokens": 100, "output_tokens": 50}},
+        {"type": "assistant", "message": {"content": []}},
+        {"type": "result", "subtype": "success", "total_cost_usd": 3.86,
+         "usage": {"input_tokens": 150, "output_tokens": 80}},
+        {"type": "system", "subtype": "task_updated", "patch": {"status": "killed"}},
+        {"type": "system", "subtype": "task_notification", "status": "stopped"},
+    ])
+    out = run_optimizer_run.parse_cost(stream)
+    assert out["usd"] == 3.86  # the LAST result before the trailing system noise
+    assert out["tokens"] == 230
+
+
+def test_parse_cost_no_result_at_all():
+    stream = "\n".join(json.dumps(o) for o in [
+        {"type": "system", "subtype": "task_updated"},
+        {"type": "system", "subtype": "task_notification"},
+    ])
+    out = run_optimizer_run.parse_cost(stream)
+    assert out["usd"] is None
+
+
+# ---- issue #562: `tokens` must be the FULL session total the CLI actually
+# billed for — input + output + cache_read + cache_creation — not just
+# input+output. A realistic Claude Code `--output-format json` result: most of
+# a headless session's tokens are cache reads/writes (heavy prompt caching on
+# a long agentic loop), so ignoring them under-reports tokens by 1-2 orders of
+# magnitude while `total_cost_usd` (which the CLI bills including cache) stays
+# correct — this is exactly what made $/token look 90-130x too high.
+
+def test_parse_cost_includes_cache_tokens_in_total():
+    result_event = {
+        "type": "result", "subtype": "success", "is_error": False,
+        "duration_ms": 245000, "num_turns": 14,
+        "session_id": "sess_fixture_562",
+        "total_cost_usd": 1.2345,
+        "usage": {
+            "input_tokens": 1200,
+            "output_tokens": 3400,
+            "cache_creation_input_tokens": 8000,
+            "cache_read_input_tokens": 150000,
+        },
+    }
+    out = run_optimizer_run.parse_cost(json.dumps(result_event))
+    assert out["usd"] == 1.2345
+    # Old formula (input+output only) would have said 4600 — off by >35x.
+    assert out["tokens"] == 1200 + 3400 + 8000 + 150000 == 162600
+    assert out["cache_read_tokens"] == 150000
+    assert out["cache_creation_tokens"] == 8000
+
+
+def test_parse_cost_camelcase_cache_fields():
+    """Some CLIs' per-model usage blocks use camelCase; parse_cost must check both."""
+    result_event = {"total_cost_usd": 0.5,
+                     "usage": {"input_tokens": 100, "output_tokens": 200,
+                               "cacheReadInputTokens": 5000,
+                               "cacheCreationInputTokens": 900}}
+    out = run_optimizer_run.parse_cost(json.dumps(result_event))
+    assert out["tokens"] == 100 + 200 + 5000 + 900
+    assert out["cache_read_tokens"] == 5000
+    assert out["cache_creation_tokens"] == 900
+
+
+def test_parse_cost_no_cache_fields_unaffected():
+    """A session with no cache activity (or a CLI that never reports it) keeps
+    the old input+output behavior — no regression for the common case."""
+    result_event = {"total_cost_usd": 0.1,
+                     "usage": {"input_tokens": 100, "output_tokens": 50}}
+    out = run_optimizer_run.parse_cost(json.dumps(result_event))
+    assert out["tokens"] == 150
+    assert out["cache_read_tokens"] is None
+    assert out["cache_creation_tokens"] is None
+
+
+def test_parse_cost_total_tokens_fallback_still_works():
+    """A CLI reporting only `total_tokens` (no input/output/cache breakdown) still
+    works via the fallback path."""
+    out = run_optimizer_run.parse_cost(json.dumps(
+        {"total_cost_usd": 0.2, "usage": {"total_tokens": 999}}))
+    assert out["tokens"] == 999
+
+
+def test_parse_cost_cumulative_result_survives_compaction_event():
+    """A multi-turn session where an earlier turn's context got compacted mid-
+    session: Claude Code's cumulative `usage`/`total_cost_usd` on the terminal
+    `result` event already reflects the whole session (compaction trims what's
+    resent as context, not the running billed-usage counter) — parse_cost must
+    trust that cumulative terminal figure rather than only the last visible
+    turn's tokens."""
+    stream = "\n".join(json.dumps(o) for o in [
+        {"type": "assistant", "message": {"content": []}},
+        {"type": "system", "subtype": "compact_boundary",
+         "compact_metadata": {"trigger": "auto", "pre_tokens": 180000}},
+        {"type": "assistant", "message": {"content": []}},
+        # Cumulative for the WHOLE session, including the pre-compaction turns —
+        # bigger than any single visible turn's usage would be on its own.
+        {"type": "result", "subtype": "success", "total_cost_usd": 9.6,
+         "usage": {"input_tokens": 4000, "output_tokens": 6000,
+                    "cache_creation_input_tokens": 20000,
+                    "cache_read_input_tokens": 450000}},
+    ])
+    out = run_optimizer_run.parse_cost(stream)
+    assert out["tokens"] == 4000 + 6000 + 20000 + 450000 == 480000
+    assert out["cache_read_tokens"] == 450000
+    assert out["cache_creation_tokens"] == 20000
+
+
+def test_dollar_per_token_now_consistent_across_structurally_similar_calls():
+    """Reproduces the issue's exact symptom: with the old input+output-only
+    `tokens`, two structurally similar calls (same skill/model, both cache-heavy)
+    give wildly different $/token — 100x and 130x a fixed illustrative per-token
+    price — purely because their cache-token share differs. With the corrected
+    full-session `tokens`, both recompute to the SAME $/token."""
+    price_per_token = 0.00002  # illustrative fixed blended rate
+
+    # cand_0003: 200,000 total tokens billed, only 2,000 of them input+output.
+    cand_0003 = {"total_cost_usd": price_per_token * 200_000,
+                 "usage": {"input_tokens": 800, "output_tokens": 1200,
+                           "cache_creation_input_tokens": 8000,
+                           "cache_read_input_tokens": 190000}}
+    # cand_0004: same input+output (2,000) but a bigger cache share -> 260,000 total.
+    cand_0004 = {"total_cost_usd": price_per_token * 260_000,
+                 "usage": {"input_tokens": 800, "output_tokens": 1200,
+                           "cache_creation_input_tokens": 8000,
+                           "cache_read_input_tokens": 250000}}
+
+    out3 = run_optimizer_run.parse_cost(json.dumps(cand_0003))
+    out4 = run_optimizer_run.parse_cost(json.dumps(cand_0004))
+
+    old_ratio_3 = cand_0003["total_cost_usd"] / (800 + 1200)   # old (broken) tokens
+    old_ratio_4 = cand_0004["total_cost_usd"] / (800 + 1200)
+    assert old_ratio_3 == pytest.approx(price_per_token * 100)   # 100x too high
+    assert old_ratio_4 == pytest.approx(price_per_token * 130)   # 130x too high — varies call to call
+
+    new_ratio_3 = out3["usd"] / out3["tokens"]
+    new_ratio_4 = out4["usd"] / out4["tokens"]
+    assert new_ratio_3 == pytest.approx(price_per_token)
+    assert new_ratio_4 == pytest.approx(price_per_token)  # bug resolved: fixed and equal
+
+
 # ---- optimizer cost must survive a non-zero optimizer exit ----------------
 
 def test_optimizer_from_command_recovers_cost_on_nonzero_exit(tmp_path, monkeypatch):
@@ -116,6 +278,19 @@ def test_estimate_calls_and_cost(tmp_path):
     assert out["cost_usd"]["optimizer_usd"] > 0
 
 
+def test_estimate_prices_model_routing_propose_override(tmp_path):
+    # model_routing.propose overrides optimizer_model for the optimizer's cost role
+    # (#666), so the estimate must price the routed model, not optimizer_model.
+    base_spec = {"num_trials": 3, "max_iterations": 4, "optimizer_model": "claude-opus-4-8"}
+    base_out = cli._estimate_core(base_spec, tmp_path)
+
+    routed_spec = {**base_spec, "model_routing": {"propose": "claude-haiku-4"}}
+    routed_out = cli._estimate_core(routed_spec, tmp_path)
+
+    assert routed_out["spec_summary"]["optimizer_model"] == "claude-haiku-4"
+    assert routed_out["cost_usd"]["optimizer_usd"] < base_out["cost_usd"]["optimizer_usd"]
+
+
 def test_estimate_calibrates_from_prior_run(tmp_path):
     # A prior run with real spend → estimate calibrates instead of using the table.
     proj = tmp_path / "project"; proj.mkdir()
@@ -126,3 +301,36 @@ def test_estimate_calibrates_from_prior_run(tmp_path):
     out = cli._estimate_core(spec, proj)
     assert out["cost_usd"]["source"] == "calibrated from prior runs"
     assert out["calibration"]["usd_per_metric_call"] == 0.1
+
+
+def _project_with_val(tmp_path, n_val: int):
+    """A project whose val split resolves to exactly ``n_val`` tasks, via split_ids_file
+    (the cheapest way to give ``_val_size`` a known answer with no real adapter)."""
+    proj = tmp_path / "project"
+    proj.mkdir()
+    ids_file = proj / "splits.json"
+    ids_file.write_text(json.dumps({"val": list(range(n_val))}), encoding="utf-8")
+    return proj, str(ids_file)
+
+
+def test_estimate_agent_mode_is_not_priced_as_a_fixed_iteration_loop(tmp_path):
+    """orchestration_mode: agent — rounds are not fixed by max_iterations, so the
+    estimate must not multiply metric calls by it, and optimizer_calls (a fixed
+    per-iteration count) is undefined here."""
+    proj, ids_file = _project_with_val(tmp_path, n_val=5)
+    spec = {"num_trials": 3, "max_iterations": 10, "orchestration_mode": "agent",
+            "split_ids_file": ids_file}
+    out = cli._estimate_core(spec, proj)
+    assert out["calls"]["optimizer_calls"] is None
+    assert out["calls"]["metric_calls_per_round"] == 5 * 3   # val * trials, NOT * iters
+    assert "metric_calls" not in out["calls"]
+    assert out["note"]
+
+
+def test_estimate_deterministic_mode_unchanged_by_agent_mode_branch(tmp_path):
+    """Regression guard: the same spec (minus orchestration_mode) still prices as
+    val * trials * max_iterations, exactly as before the agent-mode branch existed."""
+    proj, ids_file = _project_with_val(tmp_path, n_val=5)
+    spec = {"num_trials": 3, "max_iterations": 10, "split_ids_file": ids_file}
+    out = cli._estimate_core(spec, proj)
+    assert out["calls"] == {"metric_calls": 5 * 3 * 10, "optimizer_calls": 10}

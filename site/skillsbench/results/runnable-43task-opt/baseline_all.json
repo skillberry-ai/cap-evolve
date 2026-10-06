@@ -1,0 +1,795 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.13953488372093023,
+    "stderr": 0.051057533482475694,
+    "pass_k": {
+      "1": 0.13953488372093023,
+      "2": 0.10852713178294575
+    },
+    "pass_at_k": {
+      "1": 0.13953488372093023,
+      "2": 0.17054263565891475
+    },
+    "per_task": [
+      {
+        "task_id": "3d-scan-calc",
+        "reward": 0.6666666666666666,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.33333333333333337,
+        "trial_rewards": [
+          0.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 1,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "adaptive-cruise-control",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "citation-check",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "court-form-filling",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 2 verifier test(s) failed:\n  - ::TestRequiredContent::test_content_present: The test failed in the call phase due to an assertion error\n  - ::TestEmptyFields::test_field_empty: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "dapt-intrusion-detection",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "data-to-d3",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 10 verifier test(s) failed:\n  - ::test_output_structure_and_files: The test failed in the call phase due to an assertion error\n  - ::test_output_structure_and_files: The test failed in the call phase due to an assertion error\n  - ::test_output_structure_and_files: The test failed in the call phase due to an assertion error\n  - ::test_bubble_chart_rendering\n  - ::test_data_table\n  - ::test_tooltips_non_etf_and_etf\n  - ::test_interactive_linking\n  - ::test_market_cap_formatting\n  - ::test_sector_clustering\n  - ::test_legend_completeness",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "drone-planning-control",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "dynamic-object-aware-egomotion",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "edit-pdf",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::test_labels_not_covered: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "energy-ac-optimal-power-flow",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "energy-market-pricing",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "enterprise-information-search",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "exceltable-in-ppt",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "financial-modeling-qa",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "flood-risk-analysis",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestFloodDetection::test_correct_stations_and_flood_days: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "grid-dispatch-operator",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "hvac-control",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "invoice-fraud-detection",
+        "reward": 0.3333333333333333,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestOutputs::test_content: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.33333333333333337,
+        "trial_rewards": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "jax-computing-basics",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "jpg-ocr-stat",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "lake-warming-attribution",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 2 verifier test(s) failed:\n  - ::TestLakeWarmingAttribution::test_trend_result: The test failed in the call phase due to an assertion error\n  - ::TestLakeWarmingAttribution::test_dominant_factor: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "multilingual-video-dubbing",
+        "reward": 0.3333333333333333,
+        "feedback": "Task reward: 0.000. 1 verifier test(s) failed:\n  - ::TestProfessionalMastering::test_metric_08_speech_naturalness: The test failed in the call phase due to an assertion error",
+        "n": 3,
+        "stderr": 0.33333333333333337,
+        "trial_rewards": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "offer-letter-generator",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "organize-messy-files",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "paper-anonymizer",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pddl-airport-planning",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pdf-excel-diff",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 1,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "pptx-reference-formatting",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "protein-expression-analysis",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "python-scala-translation",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "r2r-mpc-control",
+        "reward": 1.0,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "reserves-at-risk-calc",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sales-pivot-analysis",
+        "reward": 0.0,
+        "feedback": "Task reward: 0.000. 10 verifier test(s) failed:\n  - ::TestPivotTableConfiguration::test_pivot_row_is_state\n  - ::TestPivotTableConfiguration::test_pivot_uses_correct_aggregation\n  - ::TestPivotTableConfiguration::test_pivot_col_field\n  - ::TestSourceDataSheet::test_source_data_has_required_column\n  - ::TestSourceDataContent::test_source_data_has_reasonable_row_count\n  - ::TestSourceDataContent::test_quarter_values_are_valid\n  - ::TestSourceDataContent::test_state_values_are_valid\n  - ::TestDataTransformationCorrectness::test_pivot_cache_has_fields\n  - ::TestDataTransformationCorrectness::test_total_equals_earners_times_median_income\n  - ::TestDataTransformationCorrectness::test_sa2_codes_from_income_file_present",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "sec-financial-report",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "shock-analysis-demand",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "shock-analysis-supply",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "simpo-code-reproduction",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "spring-boot-jakarta-migration",
+        "reward": 0.0,
+        "feedback": "Rollout did not complete for an infrastructure reason (no verifier reward for spring-boot-jakarta-migration under /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c1/.capevolve/run_runnable_iter7_v1/bench_jobs/seed/seed2 (rc=1). tail: sandbox\nRunning verifier...\nverifier crashed: verifier exited with rc=1; no reward file found at /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c1/.capevolve/run_runnable_iter7_v1/bench_jobs/seed/seed2/2026-07-30__17-59-54/spring-boot-jakarta-migration__b8eb13f6/verifier/reward.txt or /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-worktrees/intake_skillbench_c1/.capevolve/run_runnable_iter7_v1/bench_jobs/seed/seed2/2026-07-30__17-59-54/spring-boot-jakarta-migration__b8eb13f6/verifier/reward.json\n[ERR] spring-boot-jakarta-migration (tools=38) (verifier crashed: verifier exited with rc=1; no\u2026)\n  \u2192 end_turn, 50 total tool calls\nProcess terminated\nDiscovered 1 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 1.0}\n[PASS] syzkaller-ppdev-syzlang (tools=50)\nProcess terminated\nAgent prompt exceeded wall-clock budget 1800s\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 0.0}\n[FAIL] shock-analysis-demand (tools=54) (Agent prompt exceeded wall-clock budget 1800s)\n  \u2192 end_turn, 95 total tool calls\nProcess terminated\nDiscovered 0 pytest plugins from sandbox\nRunning verifier...\nRewards: {'reward': 0.0}\n[FAIL] shock-analysis-supply (tools=95)\n7 tasks (16%) hit agent wall-clock timeout \u2014 check agent_timeout_info in result.json for diagnostics\n1 tasks (2%) had verifier errors \u2014 check verifier scripts for bugs\nJob complete: 6/43 (14.0%), errors=0, idle_timeouts=0, time=81.5min\n). Uncontrollable noise, not a skill defect; do not optimize against it.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": true,
+          "errored_trials": 3,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "syzkaller-ppdev-syzlang",
+        "reward": 0.6666666666666666,
+        "feedback": "Task fully solved (all verifier tests passed; reward 1.0).",
+        "n": 3,
+        "stderr": 0.33333333333333337,
+        "trial_rewards": [
+          0.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "threejs-structure-parser",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "threejs-to-obj",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "weighted-gdp-calc",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "xlsx-recover-data",
+        "reward": 0.0,
+        "feedback": "Task scored 0.000 (not all verifier tests passed). No per-test CTRF breakdown was available; inspect ./trajectories/ for the agent transcript and the produced files to see which skill behavior was missing.",
+        "n": 3,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "n_trials": 3
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 0.0,
+    "tokens": 0,
+    "seconds": 14521.987039089203
+  },
+  "best_id": "seed"
+}

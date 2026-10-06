@@ -37,6 +37,7 @@ Ask instead for evidence that does not depend on load:
 | the agent's next action changed after it fired | no | proving the mechanism works |
 | a direct call with the exact bad payload now succeeds / still refuses | no | proving repair logic, deterministically |
 | the delivered docstring text contains the keys | no | proving the description reaches the model |
+| the bundled script's self-check passes on the fixture input, or the checklisted step is now present in the output where it wasn't before | no | the skill-package / system-prompt analogue of a firing guard |
 | count of clarification turns before the first write | barely | proving a behavioural prose change |
 | per-task pass rate | **yes, heavily** | almost nothing, at fan-out load |
 
@@ -120,7 +121,8 @@ python "$A/integrate.py" --base "$R/work/<parent>" --branches "$R/work/t7" "$R/w
        --out "$R/work/cand_merged" --tasks <targets> --canary-auto "$R/<baseline-per-task>.json" \
        --n <num_trials> --conc <low> --floor <measured-null-delta>
 python "$A/round.py" --run-dir "$R" --project "$P" --candidates cand_merged \
-       --n-trials <num_trials> --k-se <gate_k_se>
+       --n-trials <num_trials> --k-se <gate_k_se> \
+       --single-candidate-justification "merged branches gated as one candidate"
 ```
 
 `funcmerge.py` is the merge engine `integrate.py` drives per step; call it directly only to inspect

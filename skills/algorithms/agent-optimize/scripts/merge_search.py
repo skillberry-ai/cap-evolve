@@ -142,14 +142,20 @@ def find_disjoint_pairs(base_src: str, survivor_srcs: dict[str, str]) -> dict:
             "disjoint_pairs": disjoint, "overlapping_pairs": overlapping}
 
 
-def _integrate(run_dir: Path, project: Path, work: Path, base_dir: Path, a: str, b: str,
+def _integrate(run_dir: Path, project: Path, work: Path, base_dir: Path, a_dir: Path, b_dir: Path,
                tasks: list[str], canary: list[str], canary_auto: str, canary_floor: float,
                n: int, conc: int, base_seed: int, floor: float, file_: str, prose: str,
                out_tag: str) -> dict:
+    """Merge two branches, given their SOURCE DIRECTORIES directly rather than tags implicitly
+    rooted under ``work/`` — the generalization ``merge.py`` (#586) needs to merge a branch
+    that lives under ``candidates/`` (already committed) with one still under ``work/``
+    (an uncommitted survivor), which is exactly what "any two live branch tips" means.
+    ``merge_search.py``'s own call site below is unaffected: it simply passes ``work / a``.
+    """
     json_out = work / f".{out_tag}_integrate.json"
     cmd = [sys.executable, str(HERE / "integrate.py"),
            "--base", str(base_dir), "--project", str(project),
-           "--branches", str(work / a), str(work / b),
+           "--branches", str(a_dir), str(b_dir),
            "--out", str(work / out_tag), "--tasks", ",".join(tasks),
            "--n", str(n), "--conc", str(conc), "--base-seed", str(base_seed),
            "--floor", str(floor), "--file", file_, "--prose", prose,
@@ -169,6 +175,64 @@ def _integrate(run_dir: Path, project: Path, work: Path, base_dir: Path, a: str,
         except Exception:  # noqa: BLE001
             pass
     return {"error": (p.stderr or p.stdout)[-1200:], "rc": p.returncode}
+
+
+def check_merge_compliance(run_dir) -> dict | None:
+    """Audit signal, not an enforcement: did this run merge disjoint-cluster accepted
+    candidates before finalizing?
+
+    SKILL.md requires the optimizer to run this script on its accepted candidates before
+    any end-of-run measurement, whenever 2+ of them target disjoint task clusters — the
+    exact shape this script exists to combine (module docstring above). Nothing in the
+    framework can force the agent to actually do that (host.py owns no algorithm
+    decisions), so this is the same kind of code-level compliance signal
+    ``round.py``'s ``agent_optimize_compliance`` event already logs for the screen
+    ladder: it never blocks, it only makes the omission visible in ``events.jsonl`` and
+    the dashboard's activity log.
+
+    Reads ``graph.jsonl`` for ``status == "accepted"`` nodes and each one's target task
+    ids — its own ``cluster_ids`` if a caller has populated that field, else the same
+    ``mechanisms.jsonl`` fallback this script's own ``main()`` uses to pick merge targets
+    (`_mechanisms_targets`). Two or more accepted candidates whose target sets are
+    pairwise DISJOINT, with no ``edit_kind == "merge"`` node anywhere in the graph, means
+    the run's "best" is whichever single cluster's fix happened to score highest, never a
+    combination of them.
+
+    Returns ``None`` when there is nothing to flag (fewer than 2 accepted candidates with
+    known targets, none of their target sets are disjoint, or a merge was already
+    attempted this run), else a dict of fields for ``RunDir.log_event``.
+    """
+    import _bootstrap  # noqa: F401
+    from cap_evolve import graph as graph_mod
+
+    nodes = graph_mod.read_nodes(run_dir)
+    accepted = [n for n in nodes if n.get("status") == "accepted"]
+
+    targets: dict[str, list[str]] = {}
+    for n in accepted:
+        tag = n.get("id")
+        if not tag:
+            continue
+        ids = n.get("cluster_ids") or _mechanisms_targets(run_dir.root, tag)
+        if ids:
+            targets[tag] = sorted(set(ids))
+    if len(targets) < 2:
+        return None
+
+    disjoint_pairs = [[a, b] for a, b in itertools.combinations(sorted(targets), 2)
+                      if not (set(targets[a]) & set(targets[b]))]
+    if not disjoint_pairs:
+        return None
+
+    if any(n.get("edit_kind") == "merge" for n in nodes):
+        return None  # a merge was attempted this run — nothing to flag
+
+    return {
+        "reason": "merge_skipped_with_multiple_clusters",
+        "accepted_candidates": sorted(targets),
+        "targets": targets,
+        "disjoint_pairs": disjoint_pairs,
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -262,7 +326,7 @@ def main(argv=None) -> int:
             continue
         union_tasks = sorted(set(targets[a]) | set(targets[b]))
         out_tag = f"merge_{a}_{b}"
-        result = _integrate(run_dir, project, work, base_dir, a, b, union_tasks,
+        result = _integrate(run_dir, project, work, base_dir, work / a, work / b, union_tasks,
                             [i.strip() for i in args.canary.split(",") if i.strip()],
                             canary_auto, args.canary_floor, args.n, args.conc,
                             args.base_seed, args.floor, args.file, args.prose, out_tag)
@@ -297,9 +361,17 @@ def main(argv=None) -> int:
         "skipped_no_targets": skipped_no_targets,
         "merges": merges,
         "ready_for_gate": ready_for_gate,
+        # round.py refuses --candidates below its MIN_SIBLINGS (3) without a recorded reason
+        # (see round.py's SingleCandidateUnjustified). A merged survivor gated alone is exactly
+        # SKILL.md's documented screen-then-merge case, not an omission, so this command
+        # supplies that justification itself rather than printing a command the driver would
+        # have to edit before it runs.
         "next": (f"python round.py --run-dir {run_dir} --project {project} "
-                 f"--candidates {','.join(ready_for_gate)} --n-trials {args.n} "
-                 "— gates each merge through the SAME cascade as any candidate"
+                 f"--candidates {','.join(ready_for_gate)} --n-trials {args.n}"
+                 + (" --single-candidate-justification "
+                    "\"screen-then-merge: gating the merged survivor(s) alone per SKILL.md's "
+                    "bucket A\"" if len(ready_for_gate) < 3 else "")
+                 + " — gates each merge through the SAME cascade as any candidate"
                  if ready_for_gate else
                  "no merge candidate was built — see merges[].reason / merges[].result.error"),
     }

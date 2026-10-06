@@ -5,7 +5,8 @@ name: Prune benchmark-history
 # Run this on demand to delete anything older than N days once the branch grows too large.
 # Note: this deletes files in a new commit — it does not rewrite git history, so it
 # does not reclaim .git object storage. It only changes what benchmark-history currently
-# serves (records/, runs/, benchmarks.json, meta.json).
+# serves (records/, runs/) — benchmarks.json/meta.json are rendered fresh from records/
+# at Pages-deploy time (pages.yml) and are not persisted here.
 
 on:
   workflow_dispatch:
@@ -56,10 +57,8 @@ jobs:
             echo "deleted $deleted record(s)"
             echo "### Prune summary" >> "$GITHUB_STEP_SUMMARY"
             echo "cutoff: $cutoff (older than ${DAYS}d) — deleted $deleted record(s)" >> "$GITHUB_STEP_SUMMARY"
-            python3 ci/benchmarks/lib/record.py aggregate _hist/records \
-              --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --out _hist
             cd _hist
-            git add records benchmarks.json meta.json
+            git add records
             [ -d runs ] && git add runs
             git commit -m "bench: prune records older than ${DAYS}d ($deleted deleted)" || { echo "nothing to commit"; exit 0; }
             if git push origin benchmark-history; then echo "pushed"; exit 0; fi

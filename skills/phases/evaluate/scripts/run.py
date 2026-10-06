@@ -27,7 +27,18 @@ def main(argv=None) -> int:
     p.add_argument("--ks", default=None,
                    help="comma-separated k values for pass^k/pass@k "
                         "(default: 1..n-trials, so the k you paid for is reported)")
+    p.add_argument("--ids", default=None,
+                   help="comma-separated task ids to restrict this eval to (default: the "
+                        "whole split). For agent-optimize: evaluate on train freely, on any "
+                        "subset you chose yourself — by your own trajectory-similarity "
+                        "clustering, or any other method — cap_evolve.harness.evaluate_candidate "
+                        "already supports it. Use a tag unique to this subset eval (a fresh "
+                        "candidate dir name), never one a full-split eval also writes to. NEVER "
+                        "pass this for the full-val accept gate: a subset result's coverage "
+                        "looks like 1.0 to gate_check.py, exactly the case its coverage guard "
+                        "cannot see through.")
     args = p.parse_args(argv)
+    ids = [i.strip() for i in args.ids.split(",") if i.strip()] if args.ids else None
 
     # ks defaults to every k the trials can support. The harness default is (1, 2),
     # which silently drops pass^3 from a --n-trials 3 run — the exact reliability
@@ -51,7 +62,7 @@ def main(argv=None) -> int:
     cand_dir = cand if cand.exists() else run_dir.candidate_dir(args.candidate)
     result = harness.evaluate_candidate(adapter, cand_dir, run_dir=run_dir,
                                         split=args.split, n_trials=args.n_trials,
-                                        ks=ks, tag=cand_dir.name)
+                                        ks=ks, tag=cand_dir.name, ids=ids)
     print(json.dumps(result.to_dict(), indent=2))
     return 0
 

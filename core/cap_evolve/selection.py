@@ -111,13 +111,36 @@ def _pick_softmax(candidates, params, rng) -> list[dict]:
     return [chosen] + [c for c in ranked if c is not chosen]
 
 
+def dominates(a: dict, b: dict, directions: dict[str, str] | None = None) -> bool:
+    """True iff vector ``a`` Pareto-dominates vector ``b``.
+
+    ``a``/``b`` map an objective/task key -> value; missing keys default to ``0.0``
+    (matches the previous inline per-task behaviour). ``directions`` maps a key to
+    ``"maximize"`` (default, if omitted) or ``"minimize"`` — a bare per-task reward
+    vector (every caller before this function existed) wants every key maximized,
+    which is exactly what omitting ``directions`` gives.
+
+    Dominance: ``a`` is >= ``b`` (direction-adjusted) on every shared key, and > on
+    at least one.
+    """
+    directions = directions or {}
+    keys = set(a) | set(b)
+
+    def norm(v: float, k) -> float:
+        return v if directions.get(k, "maximize") == "maximize" else -v
+
+    ge_all = all(norm(a.get(k, 0.0), k) >= norm(b.get(k, 0.0), k) for k in keys)
+    gt_any = any(norm(a.get(k, 0.0), k) > norm(b.get(k, 0.0), k) for k in keys)
+    return ge_all and gt_any
+
+
 def pareto_frontier(candidates: list[dict]) -> list[dict]:
     """Per-task Pareto frontier (gepa): candidates not dominated on all tasks.
 
     Each candidate needs ``per_task`` = list of ``{task_id, reward}``. A dominates B
-    if A >= B on every task and > on at least one. Candidates without ``per_task``
-    fall back to the global best. (This is the same definition the old
-    ``loop.pareto_frontier`` used, lifted here so there is ONE implementation.)
+    if A >= B on every task and > on at least one (``dominates``, above). Candidates
+    without ``per_task`` fall back to the global best. (This is the same definition
+    the old ``loop.pareto_frontier`` used, lifted here so there is ONE implementation.)
     """
     usable = [c for c in candidates if c.get("per_task")]
     if not usable:
@@ -129,16 +152,7 @@ def pareto_frontier(candidates: list[dict]) -> list[dict]:
     vecs = [(c, vec(c)) for c in usable]
     front = []
     for c, cv in vecs:
-        dominated = False
-        for other, ov in vecs:
-            if other is c:
-                continue
-            keys = set(cv) | set(ov)
-            ge_all = all(ov.get(k, 0.0) >= cv.get(k, 0.0) for k in keys)
-            gt_any = any(ov.get(k, 0.0) > cv.get(k, 0.0) for k in keys)
-            if ge_all and gt_any:
-                dominated = True
-                break
+        dominated = any(dominates(ov, cv) for other, ov in vecs if other is not c)
         if not dominated:
             front.append(c)
     return front or [max(candidates, key=lambda c: c.get("val", 0.0))]

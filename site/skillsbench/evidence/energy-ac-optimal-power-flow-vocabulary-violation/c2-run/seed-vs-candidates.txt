@@ -1,0 +1,17 @@
+# seed_capability sub-packages (the task's fixed vocabulary)
+
+$ ls .capevolve/project_energy-ac-optimal-power-flow/seed_capability/
+ac-branch-pi-model
+casadi-ipopt-nlp
+power-flow-data
+
+$ ls candidates/seed/
+ac-branch-pi-model
+casadi-ipopt-nlp
+power-flow-data
+
+# per-candidate top-level sub-packages
+cand_0001: ac-branch-pi-model casadi-ipopt-nlp power-flow-data 
+cand_0002: ac-branch-pi-model casadi-ipopt-nlp fuzzy-match pdf power-flow-data xlsx 
+cand_0003: ac-branch-pi-model casadi-ipopt-nlp fuzzy-match power-flow-data 
+cand_0004: ac-branch-pi-model casadi-ipopt-nlp fuzzy-match power-flow-data 

@@ -27,9 +27,19 @@ The candidate **graph** schema (``reduced["graph"]``)::
          "cost_usd", "tokens", "seconds", "optimizer_seconds", "runner_seconds",
          "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far",
          "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
-         "gate_resolvable_effect_size"?, "screened": bool | None}
+         "gate_resolvable_effect_size"?, "screened": bool | None,
+         "cluster_ids"?: [...], "subset"?: {"task_ids": [...], "tier": int | None},
+         "micro_tests"?: [...], "round_id"?: str | None,
+         "change_type"?: str | None}  # optimizer's self-reported edit classification
+                                       # (PROMPT_EDIT/TOOL_CODE_EDIT/VALIDATOR_ADD/MIXED/...),
+                                       # optional, absent on runs that predate it (#665)
      ],
      "root": "seed", "best_id": "..."}
+
+``cluster_ids``/``subset``/``micro_tests`` are a courtesy copy from ``graph.jsonl`` (see
+``graph.py``) when that candidate has a node there — the events-based reconstruction above has
+no other source for which diagnose() cluster an edit targeted or which task subset a cheap
+screen ran on, only whether one ran at all (``screened``).
 
 The ``gate_*`` keys are present when the algorithm's commit step RECORDED that number on its
 accept/reject event — under either naming convention on disk: the prefixed ``gate_delta`` a
@@ -42,7 +52,8 @@ the ``screened_before_fullval`` value read generically off any event that carrie
 The **summary** schema (``reduced["summary"]``)::
 
     {"run_id", "baseline_val", "best_val", "delta_pct", "test_reward", "test_sealed",
-     "test_pass_k", "counts": {accepted, rejected, failed, seed, total},
+     "test_pass_k", "train_reward", "train_baseline_reward", "train_delta", "train_equals_val",
+     "counts": {accepted, rejected, failed, seed, total},
      "frontier": int, "tasks": [task_id, ...],
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
      "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
@@ -54,6 +65,12 @@ candidate-graph node — detected by ``_is_control_event``: the documented ``ctl
 PREFIX convention (agent-optimize's ``ctl_null_i<N>`` plus its ``r<k>``/``a<k>`` replicates),
 or an explicit ``role: "control"`` / truthy ``is_control`` field on the event. They also appear
 in ``evaluations`` with ``kind: "control"``, so a control is never in neither place.
+
+``diagnoses`` is NOT a second copy of per-candidate diagnoses (#611): it is a flat list of
+run-level ``{"kind", "candidate", "text"}`` annotations — ``diagnose``/``optimizer_error``
+events plus a ``diagnosis_parse_warning`` for every candidate whose DIAGNOSIS.json/PROCESS.md
+yielded no diagnosis. The canonical per-candidate diagnosis content (clusters/edits) lives
+ONLY on ``graph.nodes[i].diagnosis``.
 
 Optional panels degrade silently: when per-task data / diffs / finalize are missing
 the renderer hides the panel rather than crashing.
@@ -68,6 +85,8 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+
+from . import graph as graph_mod
 
 # ---------------------------------------------------------------------------
 # Secret redaction
@@ -181,9 +200,15 @@ def _read_jsonl(path: Path | None) -> list[dict]:
             line = line.strip()
             if line:
                 try:
-                    out.append(json.loads(line))
+                    rec = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                # A line that decodes to valid JSON but not an object (e.g. a bare
+                # string) is not a record any caller here can use — every caller
+                # treats each line as a dict (``ev.get(...)``); skip it like a
+                # malformed line rather than handing callers a non-dict to crash on.
+                if isinstance(rec, dict):
+                    out.append(rec)
     return out
 
 
@@ -210,6 +235,55 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     per = {pt["task_id"]: pt["reward"] for pt in sr.to_dict().get("per_task", [])}
     fb = {pt["task_id"]: pt.get("feedback", "") for pt in sr.to_dict().get("per_task", [])}
     return per, fb
+
+
+def _compute_outcomes(per_task: dict, parent_per_task: dict | None, fixed: list = None, broke: list = None) -> dict:
+    """Classify each task's outcome vs its parent: fixed, broke, still_failing, still_passing.
+    
+    Returns a dict mapping task_id to outcome string. Used for the diagnosis flow view.
+    When per_task data is missing but fixed/broke lists are available, builds outcomes from those.
+    """
+    outcomes = {}
+    
+    # If we have per_task data, use it for detailed classification
+    if per_task:
+        for task_id, reward in per_task.items():
+            if parent_per_task and task_id in parent_per_task:
+                parent_reward = parent_per_task[task_id]
+                if reward > parent_reward:
+                    outcomes[task_id] = "fixed"
+                elif reward < parent_reward:
+                    outcomes[task_id] = "broke"
+                elif reward == 0 or reward < 0.5:  # still failing (binary 0/1 rewards)
+                    outcomes[task_id] = "still_failing"
+                else:
+                    outcomes[task_id] = "still_passing"
+            else:
+                # No parent comparison available
+                if reward == 0 or reward < 0.5:
+                    outcomes[task_id] = "still_failing"
+                else:
+                    outcomes[task_id] = "still_passing"
+    
+    # If per_task is missing but we have fixed/broke lists, build outcomes from those
+    elif (fixed or broke) and parent_per_task:
+        # Mark fixed tasks
+        for task_id in (fixed or []):
+            outcomes[task_id] = "fixed"
+        
+        # Mark broke tasks
+        for task_id in (broke or []):
+            outcomes[task_id] = "broke"
+        
+        # Infer still_failing and still_passing from parent's per_task
+        for task_id, parent_reward in parent_per_task.items():
+            if task_id not in outcomes:
+                if parent_reward == 0 or parent_reward < 0.5:
+                    outcomes[task_id] = "still_failing"
+                else:
+                    outcomes[task_id] = "still_passing"
+    
+    return outcomes
 
 
 def _val_per_task_file(root: Path) -> dict:
@@ -354,7 +428,15 @@ _ALGO_MARKERS = (
 #: ``skillopt_step`` is the one kind deliberately absent, and for a different reason —
 #: it is not a legacy record but epoch DETAIL logged alongside a ``step`` for the same
 #: candidate on the same (current) runs, so it never carried a graph anyone needs.
-_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional")
+#:
+#: ``inconclusive`` is commit.py's third booking kind (``accept``/``reject``/
+#: ``inconclusive``) and carries the SAME audit fields (``gate_verdict``,
+#: ``overrode_gate``, ``reject_basis``) that ``accept``/``reject`` do. Leaving it out
+#: made the carry-forward block below never see them: the ``inconclusive`` event was
+#: skipped outright, and the ``step`` event ``record_iteration`` writes right after it
+#: carries none of those fields itself. ``indecisive_ids`` (above) still keeps its
+#: status out of "accepted"/"rejected" — it was never validly judged either way.
+_STEP_KINDS = ("step", "gepa_val_gate", "accept", "reject", "provisional", "inconclusive")
 
 #: Kinds whose presence means "this candidate was accepted" without an ``accept`` field.
 _ACCEPT_KINDS = ("accept",)
@@ -530,11 +612,15 @@ def _spend_metered(total_usd: float, paid_calls: int) -> bool:
     return not (paid_calls > 0 and total_usd == 0.0)
 
 
-def _eval_busy(ev: dict) -> str:
+def _eval_busy(ev: dict, progress: dict | None = None) -> str:
     """"scoring <tag> on <split> (N rollouts)" — what an open ``eval_start`` is doing.
 
     Only facts the event carries; a field the event omits is left out rather than
-    guessed at, so the sentence never over-claims.
+    guessed at, so the sentence never over-claims. ``progress`` (#589) is the latest
+    ``eval_progress`` heartbeat logged since ``ev``, if any — it appends the
+    completed/total rollout count (and running mean, once one is available) so the
+    once-dark stretch between ``eval_start`` and ``evaluate`` shows real numbers
+    instead of just "still going".
     """
     split = ev.get("split") or "a split"
     tag = ev.get("tag")
@@ -543,11 +629,38 @@ def _eval_busy(ev: dict) -> str:
     if tag == "FINAL":
         who = "the best candidate"
     scale = f" ({int(n)} rollouts)" if isinstance(n, (int, float)) and n else ""
-    return f"scoring {who} on the {split} split{scale}"
+    busy = f"scoring {who} on the {split} split{scale}"
+    if progress:
+        done, total = progress.get("completed"), progress.get("total")
+        if isinstance(done, (int, float)) and isinstance(total, (int, float)) and total:
+            busy += f" — {int(done)}/{int(total)} rollouts done"
+            rm = progress.get("running_mean")
+            if isinstance(rm, (int, float)):
+                busy += f", running mean {rm:.3f}"
+    return busy
+
+
+def _heartbeat_pid_alive(pid) -> bool:
+    """Same liveness check `watchdog.py` uses, duplicated rather than imported: `core`
+    (this module) must not depend on a `skills/` script, so a 3-line stdlib check is
+    cheaper than a shared util module for it.
+    """
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
 
 
 def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
-                   has_candidates: bool, has_baseline: bool) -> tuple[str, str]:
+                   has_candidates: bool, has_baseline: bool,
+                   heartbeat: dict | None = None) -> tuple[str, str]:
     """``(status, reason)`` for a run — the six outcomes an operator must tell apart.
 
     ``completed`` (finalize sealed the test) · ``budget_exhausted`` (a cap was hit and
@@ -568,6 +681,14 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     reports an outcome for a run that has not reached one. So the timestamps are read
     first, and "nothing evaluated" is only a failure once the log has actually stopped
     moving (or a cap/convergence already ended the run).
+
+    ``heartbeat`` (``host/heartbeat.json``, written by `agent-optimize`'s ``host.py`` while
+    an agent invocation is in flight) is a second, independent liveness signal on top of
+    events: an unattended `host.py` that dies mid-turn (machine sleep, closed terminal)
+    leaves events silent with no distinguishing event to explain it, which otherwise reads
+    identically to "still mid-eval" until the wide `EVAL_STALE_AFTER_SECONDS` window also
+    expires. A confirmed-dead heartbeat pid turns that "interrupted" into an explicit
+    "needs relaunch" reason instead of a bare "died, was killed, or ...".
     """
     kinds = [str(e.get("kind") or "") for e in events]
     if not events:
@@ -594,10 +715,14 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     # expected and gets the wider window. `open_eval` is the event itself, so the reason
     # string can name what the run is busy with instead of inferring it.
     open_eval = None
+    open_eval_progress = None  # latest eval_progress heartbeat logged since open_eval (#589)
     for e in reversed(events):
         k = str(e.get("kind") or "")
         if k == "evaluate":
             break
+        if k == "eval_progress" and open_eval_progress is None:
+            open_eval_progress = e
+            continue
         if k == "eval_start":
             open_eval = e
             break
@@ -609,7 +734,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
         if alive:
             # The phase that produces the very first number has not returned yet. That
             # is progress, not an outcome, and must never be reported as one.
-            return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+            return "running", (f"{_eval_busy(open_eval, open_eval_progress)}; last event {silent:.0f}s ago"
                                if open_eval else
                                "the seed's baseline is still being scored — no candidate "
                                f"has been evaluated yet; last event {silent:.0f}s ago")
@@ -624,7 +749,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
             # It started measuring and never came back. "failed — nothing ran" would be
             # wrong about the one thing that is certain: something did run.
             return "interrupted", (
-                f"{_eval_busy(open_eval)} and never returned — silent for "
+                f"{_eval_busy(open_eval, open_eval_progress)} and never returned — silent for "
                 f"{silent / 60.0:.0f} min, so {why}")
         return "failed", f"{why}; silent for {silent / 60.0:.0f} min"
     if agent_mode and has_baseline and not has_candidates and not (alive and open_eval):
@@ -642,7 +767,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
             "phase script)")
 
     if alive:
-        return "running", (f"{_eval_busy(open_eval)}; last event {silent:.0f}s ago"
+        return "running", (f"{_eval_busy(open_eval, open_eval_progress)}; last event {silent:.0f}s ago"
                            if open_eval else f"last event {silent:.0f}s ago")
     if stopped:
         return "stalled", f"algorithm stopped ({stopped}) without finalizing the test split"
@@ -650,6 +775,14 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
         return "budget_exhausted", f"{exhausted}; test split never sealed"
     if silent is None:
         return "interrupted", "events carry no timestamps — cannot tell if it is still alive"
+
+    heartbeat_pid = (heartbeat or {}).get("pid")
+    heartbeat_dead = heartbeat is not None and not _heartbeat_pid_alive(heartbeat_pid)
+    if heartbeat_dead:
+        return "interrupted", (
+            f"stalled — no activity in {silent / 60.0:.0f}m and host.py's pid ({heartbeat_pid}) "
+            "is gone: it died mid-turn rather than stopping cleanly. Needs relaunch — re-run "
+            "host.py against this run dir, or point watchdog.py at it")
     return "interrupted", (
         f"no finalize and no event for {silent / 60.0:.0f} min — the run died, was "
         "killed, or is still being written by a process that is no longer logging")
@@ -777,6 +910,7 @@ _NARRATIVE_FILES = (
 _CONFIG_KEY_GROUPS = {
     "capabilities": "Capability", "capability_path": "Capability",
     "capability_sources": "Capability", "actions": "Capability",
+    "intervention": "Delivery", "skill_name": "Delivery", "protected_paths": "Delivery",
     "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
     "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
     "optimizer_usd_per_iter": "Algorithm & optimizer",
@@ -796,7 +930,7 @@ _CONFIG_KEY_GROUPS = {
     "metric_directions": "Metrics & display",
     "github_integration": "GitHub",
 }
-_CONFIG_GROUP_ORDER = ("Capability", "Algorithm & optimizer", "Data & splits",
+_CONFIG_GROUP_ORDER = ("Capability", "Delivery", "Algorithm & optimizer", "Data & splits",
                         "Budget & gate", "Memory", "Metrics & display", "GitHub", "Other")
 
 #: A file this big gets size + path only in the Config tab's file tree — never an
@@ -887,7 +1021,9 @@ def _read_config(root: Path) -> dict:
         except OSError:
             spec = {}
     groups: dict[str, list] = {}
-    for k, v in spec.items():
+    # `intervention` absent means direct, so render that rather than nothing: two runs of one
+    # capability can differ only in how it was delivered.
+    for k, v in {"intervention": "direct", **spec}.items():
         groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
     spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
 
@@ -1064,10 +1200,55 @@ def _read_host_session(root: Path) -> dict:
     return out
 
 
+#: Mirrors host.py's own _BACKGROUND_CONCURRENCY_CAP (PR #558) — kept in sync by hand
+#: since host.py's output JSON (where this is computed) is never persisted to the run
+#: dir, only printed to stdout/stderr by whatever launched it. Reading
+#: host/transcript.jsonl directly (already persisted, already read by
+#: ``_read_host_session`` above) reproduces the same signal for the dashboard.
+_BACKGROUND_CONCURRENCY_CAP = 2
+_KILLED_STATUSES = {"killed", "stopped", "cancelled", "canceled"}
+_TS_KEYS = ("timestamp", "ts", "time", "t")
+
+
+def _background_mass_kills(root: Path) -> list[dict]:
+    """Background ``task_updated``/``task_notification`` events killed at the same
+    instant — the fingerprint of the harness's session-level concurrent-background-task
+    eviction (host.py's ``_mass_kill_events``, PR #558), read straight from
+    ``host/transcript.jsonl`` since host.py itself never writes this to disk."""
+    tf = _safe_subpath(root, "host", "transcript.jsonl")
+    if tf is None or not tf.is_file():
+        return []
+    groups: dict = {}
+    for ev in _read_jsonl(tf):
+        if ev.get("type") not in ("task_updated", "task_notification"):
+            continue
+        status = ""
+        for holder in (ev, ev.get("task"), ev.get("data")):
+            if isinstance(holder, dict) and holder.get("status"):
+                status = str(holder["status"]).lower()
+                break
+        if status not in _KILLED_STATUSES:
+            continue
+        ts = next((ev[k] for k in _TS_KEYS if k in ev), None)
+        if ts is None:
+            continue
+        task_id = ev.get("task_id") or ev.get("id") or (ev.get("task") or {}).get("id")
+        groups.setdefault(ts, []).append(task_id)
+    return [{"timestamp": ts, "count": len(ids), "task_ids": ids}
+            for ts, ids in groups.items() if len(ids) > _BACKGROUND_CONCURRENCY_CAP]
+
+
 def reduce_run(run_dir) -> dict:
     """Fold the run dir into ``{"graph": ..., "summary": ...}`` (redacted)."""
     root = Path(run_dir.root)
     events = _read_jsonl(_safe_subpath(root, "events.jsonl"))
+    # #610: agent-mode USD per candidate, split by host.py from the session's real total
+    # once it ends (the decision events themselves can only carry metered tokens/seconds).
+    opt_usd_attributed: dict = {}
+    for e in events:
+        if e.get("kind") == "opt_cost_attribution":
+            for _cid, _usd in (e.get("by_candidate") or {}).items():
+                opt_usd_attributed[_cid] = opt_usd_attributed.get(_cid, 0.0) + float(_usd)
     baseline = _read_json(_safe_subpath(root, "baseline.json"))
     final = _read_json(_safe_subpath(root, "final.json"))
 
@@ -1102,11 +1283,13 @@ def reduce_run(run_dir) -> dict:
             algorithm, algorithm_source = from_spec, "capevolve.yaml"
         elif has_wiki:
             algorithm, algorithm_source = "evograph", "run-dir wiki/"
-    # Candidates the gate REFUSED TO JUDGE (low coverage, or an integrity tamper).
-    # These are neither accepted nor rejected: the edit was never validly measured.
+    # Candidates the gate REFUSED TO JUDGE (low coverage, an integrity tamper, or
+    # commit.py's own ``--decision inconclusive`` — the verdict flipped across control
+    # replicates, so the measurement itself could not resolve it). All three are
+    # neither accepted nor rejected: the edit was never validly judged.
     indecisive_ids = {
         _step_candidate(e) for e in events
-        if e.get("kind") in ("step_indecisive", "tamper_detected")
+        if e.get("kind") in ("step_indecisive", "tamper_detected", "inconclusive")
     } - {None}
 
     # --- nodes: start with the seed -------------------------------------
@@ -1174,6 +1357,31 @@ def reduce_run(run_dir) -> dict:
             if tag:
                 screened_by_tag[str(tag)] = bool(ev.get("screened_before_fullval"))
 
+    # optimizer_context_warning: the driver's own handover file (JOURNAL.md, or
+    # whatever an algorithm uses) came back empty/malformed, so the note attached to
+    # this candidate is framework-reconstructed after the fact, not the optimizer's
+    # live reasoning. Read generically off ANY event of this kind — not tied to
+    # agent-optimize, since any driver's handover can go missing the same way.
+    context_warning_by_tag: dict = {}
+    for ev in events:
+        if ev.get("kind") == "optimizer_context_warning":
+            tag = ev.get("candidate") or ev.get("tag")
+            if tag:
+                context_warning_by_tag[str(tag)] = {
+                    "what": ev.get("what"), "error": ev.get("error"),
+                }
+
+    # agent_optimize_round_batch: one event per round.py invocation naming every candidate
+    # tag it gated together, so candidates committed serially (and possibly across a stall
+    # or a later iteration bump) still know they were measured in the SAME round. Read
+    # generically off any event carrying "batch_id" + "candidates" — round.py is the first
+    # emitter, but nothing here is tied to its name.
+    round_id_by_tag: dict = {}
+    for ev in events:
+        if ev.get("batch_id") and isinstance(ev.get("candidates"), list):
+            for tag in ev["candidates"]:
+                round_id_by_tag[str(tag)] = str(ev["batch_id"])
+
     best = baseline_val if baseline_val is not None else 0.0
     it = 0
     last_accepted = "seed"
@@ -1220,6 +1428,13 @@ def reduce_run(run_dir) -> dict:
         if not per and cid in per_task_file:
             per = per_task_file[cid]["per_task"]
             fb = per_task_file[cid]["feedback"] or fb
+        # Also check the evaluate event itself for per_task data
+        if not per:
+            vev_check = val_eval.get(cid) or {}
+            if vev_check.get("per_task"):
+                per_task_list = vev_check["per_task"]
+                per = {pt["task_id"]: pt["reward"] for pt in per_task_list if isinstance(pt, dict)}
+                fb = {pt["task_id"]: pt.get("feedback", "") for pt in per_task_list if isinstance(pt, dict)}
         if not per:
             # A candidate killed on a cheap screen has per-task rewards only under its
             # SCREEN tag (``<cid>__screenN``) and over a subset of val. Showing those is
@@ -1270,6 +1485,14 @@ def reduce_run(run_dir) -> dict:
         # The eval that produced this candidate's val is the only record of what it cost.
         vev = val_eval.get(cid) or {}
         movement = per_task_file.get(cid) or {}
+        # The STEP's own recorded movement wins over ``val_per_task.json``. That file is
+        # optional and hand-written — nothing in the framework produces it — so until the gate
+        # started recording broke/fixed on the step event these two columns were empty on every
+        # real run, including run 36175707483, whose accepted champion broke a task against both
+        # of its controls. Presence, not truthiness: ``broke: []`` from a step that measured both
+        # sides is the real claim "broke nothing", and must not fall back to the file.
+        if ev.get("broke") is not None or ev.get("fixed") is not None:
+            movement = {"fixed": ev.get("fixed") or [], "broke": ev.get("broke") or []}
         node = {
             "id": cid,
             "parent": parent if parent in (None,) or True else parent,
@@ -1284,8 +1507,16 @@ def reduce_run(run_dir) -> dict:
             "tokens": ev.get("tokens") or vev.get("tokens") or 0,
             # Per-iteration optimizer cost/tokens (RITS runner cost is often $0/null,
             # but the optimizer agent CLI reports opt_cost_usd / opt_tokens per step).
-            "opt_cost_usd": ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd"),
+            "opt_cost_usd": (ev.get("opt_cost_usd") or ev.get("optimizer_cost_usd")
+                             or opt_usd_attributed.get(cid)),
             "opt_tokens": ev.get("opt_tokens") or ev.get("optimizer_tokens") or 0,
+            # Cache-read/-creation tokens (issue #575 D.3): separate from opt_tokens on
+            # purpose — folding them in would hide the cache hit rate opt_tokens is
+            # supposed to explain. Nullable: absent (not 0) on every run recorded before
+            # the optimizer CLI's usage.cache_read_input_tokens/cache_creation_input_tokens
+            # were captured (see #562, which owns that capture).
+            "opt_cache_read_tokens": ev.get("cache_read_tokens") or ev.get("optimizer_cache_read_tokens"),
+            "opt_cache_creation_tokens": ev.get("cache_creation_tokens") or ev.get("optimizer_cache_creation_tokens"),
             "seconds": (ev.get("runner_seconds") or vev.get("seconds") or 0.0)
                        + (ev.get("optimizer_seconds") or 0.0),
             "optimizer_seconds": ev.get("optimizer_seconds") or 0.0,
@@ -1302,11 +1533,25 @@ def reduce_run(run_dir) -> dict:
             "fixed": movement.get("fixed") or [],
             "broke": movement.get("broke") or [],
             "parent_val": parent_val,
+            # Per-task outcomes: classify each task's result vs parent for UI display
+            "outcomes": _compute_outcomes(
+                per, 
+                nodes.get(parent, {}).get("per_task") if parent else None,
+                fixed=movement.get("fixed"),
+                broke=movement.get("broke")
+            ),
             "best_so_far": best,
             # Cheap-screen compliance for this candidate tag, when ANY event recorded it —
             # looked up generically by tag below (see ``screened_by_tag``), not tied to the
             # agent-optimize algorithm that happens to be the first emitter.
             "screened": screened_by_tag.get(cid),
+            # Which round.py invocation gated this candidate, when one did — nodes sharing
+            # this id were evaluated together, not sequentially, and the UI groups them.
+            "round_id": round_id_by_tag.get(cid),
+            # optimizer reasoning for this round was NOT captured live — the note shown
+            # is reconstructed after the fact. Generic across drivers (see
+            # ``context_warning_by_tag`` above).
+            "context_warning": context_warning_by_tag.get(cid),
         }
         # Structured gate numbers, when the algorithm recorded them instead of leaving them
         # to be regexed out of a reason string (agent-optimize's commit.py reads them back
@@ -1315,7 +1560,12 @@ def reduce_run(run_dir) -> dict:
         for _gk in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se", "gate_threshold",
                     "gate_resolvable_effect_size",
                     "gate_mode", "gate_table", "control_relative_verdict",
-                    "control_relative_delta", "evidence_bar"):
+                    "control_relative_delta", "evidence_bar", "gate_verdict",
+                    "overrode_gate", "reject_basis",
+                    # commit.py's driver_judgement escape hatch: a candidate rejected via
+                    # --reject-basis driver_judgement with NO screen.py record and NO
+                    # full-val gate row (PR #557) — a compliance WARNING, not an outcome.
+                    "bypassed_screen_and_gate", "bypassed_gate_justification"):
             _v = ev.get(_gk)
             # Version skew, not a hypothetical: older commit.py revisions wrote these on the
             # accept/reject event UNPREFIXED (``delta``/``stderr``/``n``/...), current ones write
@@ -1326,10 +1576,51 @@ def reduce_run(run_dir) -> dict:
                 _v = ev.get(_GATE_FIELD_ALIASES.get(_gk, ""))
             if _v is not None:
                 node[_gk] = _v
+        # ``verdict_stable`` (does the drift-controlled verdict agree across EVERY
+        # control replicate, not just on average?) is not on the event itself — it lives
+        # in the round's own gate table (``work/<gate_table>.json``, referenced by the
+        # ``gate_table`` field above), keyed by candidate tag. Read it from there so the
+        # UI can show "stable" vs "split" rather than nothing at all.
+        if node.get("gate_table"):
+            _gt = _read_json(_safe_subpath(root, "work", str(node["gate_table"])))
+            for _c in (_gt.get("candidates") or []):
+                if isinstance(_c, dict) and _c.get("tag") == cid and "verdict_stable" in _c:
+                    node["verdict_stable"] = _c["verdict_stable"]
+                    break
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")
         if merge_of:
             node["merge_of"] = merge_of
+        # Optimizer's self-reported classification (PROMPT_EDIT/TOOL_CODE_EDIT/
+        # VALIDATOR_ADD/MIXED/...), when commit.py recorded one — optional/nullable,
+        # absent on runs that predate this field (#665 workstream 4).
+        if ev.get("change_type"):
+            node["change_type"] = ev["change_type"]
+        # A candidate commonly emits TWO step-kind events for the same cid — e.g.
+        # agent-optimize's ``reject`` (which carries gate_verdict/overrode_gate/
+        # reject_basis) followed by its own ``step`` (which carries none of those). Each
+        # rebuilds ``node`` from scratch, so without this the second event silently threw
+        # the first one's evidence away — the exact fields #3 exists to surface. Carry
+        # forward any of the earlier record's gate/override fields the new one didn't
+        # itself set, rather than losing them to whichever event happened to come last.
+        if cid in nodes:
+            for _carry in ("gate_delta", "gate_stderr", "gate_n", "gate_k_se",
+                           "gate_threshold", "gate_resolvable_effect_size", "gate_mode",
+                           "gate_table", "control_relative_verdict",
+                           "control_relative_delta", "evidence_bar", "gate_verdict",
+                           "overrode_gate", "reject_basis", "verdict_stable",
+                           "bypassed_screen_and_gate", "bypassed_gate_justification",
+                           "change_type"):
+                if _carry not in node and _carry in nodes[cid]:
+                    node[_carry] = nodes[cid][_carry]
+            # Same problem, different shape: ``fixed``/``broke`` are ALWAYS set above (to []
+            # when absent), so the "not in node" test can never rescue them. agent-optimize
+            # emits ``reject``-then-``step`` for one cid and only the first carries the round
+            # table's movement — so without this the second event silently erased exactly the
+            # lists this exists to surface.
+            for _mv in ("fixed", "broke"):
+                if not node.get(_mv) and nodes[cid].get(_mv):
+                    node[_mv] = nodes[cid][_mv]
         # Last write wins if the same cid appears twice (e.g. gepa local-gate then
         # val-gate); keep the richer (val-bearing) record.
         if cid in nodes and nodes[cid].get("val") is not None and val is None:
@@ -1339,6 +1630,47 @@ def reduce_run(run_dir) -> dict:
             nodes[cid] = node
         if accepted:
             last_accepted = cid
+    
+    # --- read DIAGNOSIS.json for each candidate -------------------------
+    # A read/parse failure here used to be swallowed, so a run whose optimizer never
+    # wrote a diagnosis (#611: 0/17 candidates) looked identical to one with nothing to
+    # show. Never fatal, but always visible: the warning rides on the node's own
+    # ``diagnosis.warnings`` (which DiagnosisFlow renders) AND on ``summary.diagnoses``.
+    def _diag_warning(nid: str, n: dict, msg: str) -> None:
+        n["diagnosis"] = {"candidate": nid, "headline": "", "clusters": [], "edits": [],
+                          "skipped": [], "techniques": [], "warnings": [msg]}
+        diagnoses.append({"kind": "diagnosis_parse_warning", "candidate": nid, "text": msg})
+
+    for nid, n in nodes.items():
+        if nid == "seed":
+            continue
+        cand_dir = _safe_subpath(root, "candidates", nid)
+        if cand_dir and cand_dir.exists():
+            diag_path = cand_dir / "DIAGNOSIS.json"
+            if diag_path.exists():
+                try:
+                    diag_content = diag_path.read_text(encoding="utf-8")
+                    n["diagnosis"] = json.loads(diag_content)
+                except Exception as e:  # noqa: BLE001
+                    _diag_warning(nid, n, f"DIAGNOSIS.json unreadable: {str(e)[:200]}")
+            else:
+                # Fallback: try parsing PROCESS.md tables
+                process_path = cand_dir / "PROCESS.md"
+                if process_path.exists():
+                    try:
+                        from . import harness
+                        process_text = process_path.read_text(encoding="utf-8")
+                        parsed = harness._parse_process_md_tables(process_text)
+                        if parsed:
+                            parsed["candidate"] = nid
+                            n["diagnosis"] = parsed
+                        else:
+                            _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md's "
+                                          "'Ranked issue list' / 'Changes made' tables have "
+                                          "no data rows — no diagnosis was recorded")
+                    except Exception as e:  # noqa: BLE001
+                        _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md could not "
+                                      f"be parsed: {str(e)[:200]}")
 
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():
@@ -1405,6 +1737,16 @@ def reduce_run(run_dir) -> dict:
         intake_tokens = sp.intake_tokens
         tokens = sp.runner_tokens + sp.optimizer_tokens + sp.intake_tokens
 
+    # Cache-read/-creation token totals (#575 D.3). Summed only from nodes that actually
+    # recorded a value — an all-absent run reports None ("not recorded"), never a
+    # confident 0, same rule as opt_cost_usd above.
+    _cache_read_vals = [n.get("opt_cache_read_tokens") for n in nodes.values()
+                        if n.get("opt_cache_read_tokens") is not None]
+    _cache_creation_vals = [n.get("opt_cache_creation_tokens") for n in nodes.values()
+                            if n.get("opt_cache_creation_tokens") is not None]
+    cache_read_tokens = sum(int(v) for v in _cache_read_vals) if _cache_read_vals else None
+    cache_creation_tokens = sum(int(v) for v in _cache_creation_vals) if _cache_creation_vals else None
+
     test = final.get("test") or {}
     test_reward = test.get("reward")
     try:
@@ -1426,6 +1768,10 @@ def reduce_run(run_dir) -> dict:
             "optimizer_usd": n.get("opt_cost_usd"),  # nullable
             "optimizer_seconds": round(n.get("optimizer_seconds") or 0.0, 2),
             "optimizer_tokens": int(n.get("opt_tokens") or 0),
+            # Nullable (see the node's own comment above): absent means not captured
+            # yet, not zero cache reuse.
+            "optimizer_cache_read_tokens": n.get("opt_cache_read_tokens"),
+            "optimizer_cache_creation_tokens": n.get("opt_cache_creation_tokens"),
             # Runner cost is nullable: only surface a real number, not a synthetic 0.
             "runner_usd": (float(runner_cost) if runner_cost else None),
             "runner_seconds": round(n.get("runner_seconds") or 0.0, 2),
@@ -1441,14 +1787,22 @@ def reduce_run(run_dir) -> dict:
             "tokens": int(intake_ev.get("tokens") or intake_tokens or 0),
             "output_summary": intake_ev.get("output_summary") or "",
             "implemented": list(intake_ev.get("implemented") or []),
+            # An "intake" event exists ⇒ <project>/intake.json was written and its
+            # numbers (however small) were actually recorded.
+            "recorded": True,
         }
     else:
+        # No event at all. Intake usually runs as part of the SAME conversational
+        # agent session that drives the whole run (see orchestrate SKILL.md: "one
+        # continuous agent"), not a separately-spawned, cost-measurable CLI call —
+        # so $0 here is "never metered", never a confirmed "spent nothing".
         intake = {
             "usd": round(intake_usd, 4),
             "seconds": round(intake_secs, 2),
             "tokens": int(intake_tokens),
             "output_summary": "",
             "implemented": [],
+            "recorded": False,
         }
 
     # Consuming-LLM profile (the runtime model the capabilities are optimized FOR;
@@ -1512,6 +1866,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": (base_val_obj.get("cost_usd") or 0.0),
             "seconds": (base_val_obj.get("seconds") or 0.0),
             "tokens": int(base_val_obj.get("tokens") or 0),
+            "cost_source": base_val_obj.get("cost_source") or {},
         })
 
     # candidates (one per candidate node that earned a full val score)
@@ -1534,6 +1889,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": float(n.get("cost_usd") or 0.0),
             "seconds": float(n.get("runner_seconds") or 0.0),
             "tokens": int(n.get("tokens") or 0),
+            "cost_source": n.get("cost_source") or {},
         })
 
     # null-control replicates. They have no graph node (evaluate-only), so the loop above
@@ -1550,6 +1906,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": float(c.get("cost_usd") or 0.0),
             "seconds": float(c.get("seconds") or 0.0),
             "tokens": int(c.get("tokens") or 0),
+            "cost_source": c.get("cost_source") or {},
         })
 
     # test (the sealed test eval, from final.json)
@@ -1569,6 +1926,7 @@ def reduce_run(run_dir) -> dict:
             "cost_usd": float(test_obj.get("cost_usd") or 0.0),
             "seconds": float(test_obj.get("seconds") or 0.0),
             "tokens": int(test_obj.get("tokens") or 0),
+            "cost_source": test_obj.get("cost_source") or {},
         })
 
     # --- gate decisions (accept / reject / INDECISIVE, with Δ̄, SE, n) -----
@@ -1629,7 +1987,8 @@ def reduce_run(run_dir) -> dict:
         # round measured one. Without these a reader cannot tell that a rejection was
         # reference-dependent — the finding run 32971129203 turned on.
         for _key in ("gate_mode", "control_relative_verdict", "control_relative_delta",
-                     "evidence_bar"):
+                     "evidence_bar", "gate_verdict", "overrode_gate", "reject_basis",
+                     "verdict_stable"):
             if n.get(_key) is not None:
                 row[_key] = n.get(_key)
         gate_decisions.append(row)
@@ -1657,6 +2016,22 @@ def reduce_run(run_dir) -> dict:
         if kind == "evaluate":
             tag, split = ev.get("tag") or "?", ev.get("split") or "?"
             is_base = tag == "seed" and split == "val"
+            note = (f"reward {ev['reward']:.3f}" if isinstance(ev.get("reward"), (int, float))
+                    else "")
+            # A $0 next to real tokens reads as broken unless the adapter's own
+            # attribution (Rollout.metadata["cost_source"]) is surfaced alongside it —
+            # e.g. an unmetered RITS/proxy target model prices every call at 0.0.
+            cs_counts = ev.get("cost_source_counts") or {}
+            unpriced = cs_counts.get("unpriced", 0) + cs_counts.get("partial_messages", 0)
+            if unpriced and not (ev.get("cost_usd") or 0.0):
+                note = (f"{note + ' — ' if note else ''}unpriced: the target model's "
+                        f"provider returned no per-message cost for {unpriced} rollout(s) "
+                        f"({int(ev.get('tokens') or 0):,} tokens recorded instead)")
+            elif cs_counts.get("partial_models"):
+                # e.g. the agent under test is priced but the user simulator is not.
+                note = (f"{note + ' — ' if note else ''}partially priced: "
+                        f"{cs_counts['partial_models']} rollout(s) include an unpriced "
+                        f"model, so this cost is a lower bound")
             ledger.append({
                 "phase": _phase_for(ev), "split": split,
                 "kind": "baseline_eval" if is_base else ("test_eval" if split == "test"
@@ -1667,8 +2042,7 @@ def reduce_run(run_dir) -> dict:
                 "candidate": tag,
                 "usd": ev.get("cost_usd"), "seconds": ev.get("seconds") or 0.0,
                 "tokens": int(ev.get("tokens") or 0),
-                "note": (f"reward {ev['reward']:.3f}" if isinstance(ev.get("reward"), (int, float))
-                         else ""),
+                "note": note,
             })
         elif kind in _STEP_KINDS:
             cid = _step_candidate(ev)
@@ -1677,6 +2051,9 @@ def reduce_run(run_dir) -> dict:
             usd = ev.get("opt_cost_usd")
             if usd is None:
                 usd = ev.get("optimizer_cost_usd")
+            if usd is None:
+                # Once per candidate: its accept and step records are both _STEP_KINDS.
+                usd = opt_usd_attributed.pop(cid, None)
             truncated = cid in opt_error_ids
             ledger.append({
                 "phase": "optimize", "kind": "optimizer_call", "split": None,
@@ -1832,8 +2209,25 @@ def reduce_run(run_dir) -> dict:
             (v for k, v in screen_files.items() if str(v.get("tag")) == tag), {})
         sub = d.get("subset") or {}
         paired = d.get("paired") or {}
+        # Fall back to screen.py's OWN naming convention (``<tag>__screen<tier>``), never
+        # to the bare candidate tag: a screen node's id must stay distinct from its
+        # candidate's, or a candidate that was screened THEN went to full val collides
+        # with its own screen in anything keyed by this id (the Tasks matrix column list,
+        # the graph). This only fires when no ``screens/<x>.json`` matched (``d`` empty).
+        screen_tag = str(d.get("screen_tag") or f"{tag}__screen{e.get('tier') or ''}")
+        # The screen's own rollouts (rollouts/val/<task>__<screen_tag>__t*.json) are the
+        # candidate's ACTUAL per-task reward on the subset it ran — the same canonical
+        # rollout->per-task reconstruction a full-val node uses, so a screen shows up in
+        # the Tasks matrix identically to any other scored node instead of being
+        # invisible there.
+        per_task, per_task_fb = _per_task_from_rollouts(run_dir, screen_tag, "val")
+        # Per-task delta vs the screen's own reference candidate (``current``), straight
+        # from ``paired.deltas`` — the number the screen actually decided on.
+        delta_ids = [str(x) for x in (paired.get("ids") or [])]
+        delta_vals = paired.get("deltas") or []
+        delta_by_task = {tid: v for tid, v in zip(delta_ids, delta_vals) if isinstance(v, (int, float))}
         screens.append({
-            "candidate": tag, "screen_tag": d.get("screen_tag") or tag,
+            "candidate": tag, "screen_tag": screen_tag,
             "tier": e.get("tier"), "decision": e.get("decision"),
             "inconclusive": bool(e.get("inconclusive")),
             "mean_delta": e.get("mean_delta"), "se": e.get("se"), "n": e.get("n"),
@@ -1847,6 +2241,10 @@ def reduce_run(run_dir) -> dict:
             "pool_n": sub.get("pool_n"),
             "rationale": e.get("rationale") or sub.get("rationale"),
             "t": e.get("t"),
+            "reference": d.get("current"),
+            "per_task": per_task,
+            "feedback": per_task_fb,
+            "delta_by_task": delta_by_task,
         })
     if screens:
         algo_extra["screens"] = screens
@@ -1858,10 +2256,52 @@ def reduce_run(run_dir) -> dict:
     # from SKILL.md prose.
     compliance = [{"candidate": e.get("tag"), "iteration": e.get("iteration"),
                    "screened_before_fullval": bool(e.get("screened_before_fullval")),
+                   # WHY screening was skipped, when it was (round.py's
+                   # --skip-screen-justification, PR #557) — None when screened, or when
+                   # skipped via the bare --skip-screen-ladder with no reason recorded.
+                   "skip_justification": e.get("skip_justification"),
                    "t": e.get("t")}
                   for e in events if e.get("kind") == "agent_optimize_compliance"]
     if compliance:
         algo_extra["compliance"] = compliance
+
+    # agent_optimize_round_batch: sibling-count enforcement (PR #559). Every round.py
+    # invocation logs one of these naming its candidates; below MIN_SIBLINGS (3) it also
+    # carries why (an explicit justification or an auto-detected budget block).
+    round_batches = [{
+        "batch_id": e.get("batch_id"), "candidates": list(e.get("candidates") or []),
+        "n_candidates": e.get("n_candidates") if e.get("n_candidates") is not None
+                        else len(e.get("candidates") or []),
+        "single_candidate_justification": e.get("single_candidate_justification"),
+        "single_candidate_justification_source": e.get("single_candidate_justification_source"),
+        "t": e.get("t"),
+    } for e in events if e.get("kind") == "agent_optimize_round_batch"]
+    if round_batches:
+        algo_extra["round_batches"] = round_batches
+
+    # merge_rejects: 3+ safe-but-rejected disjoint candidates never tried together
+    # (PR #560) — an audit signal, mirroring merge_search.py's accepted-candidate one.
+    # Only the LATEST warning matters (a later, satisfied state re-fires None from the
+    # script, but events.jsonl only ever gets a row when the warning actually fired).
+    merge_rejects_warnings = [e for e in events if e.get("kind") == "merge_rejects_compliance_warning"]
+    merge_rejects_proposals = [{
+        "rejects": list(e.get("rejects") or []), "tag": e.get("tag"),
+        "built": bool(e.get("built")), "targets": list(e.get("targets") or []), "t": e.get("t"),
+    } for e in events if e.get("kind") == "merge_rejects_propose"]
+    if merge_rejects_warnings:
+        group = merge_rejects_warnings[-1].get("safe_reject_candidates") or []
+        # "Acted on" = a later --propose touched any of the flagged candidates, not
+        # necessarily every one of them — a driver may have combined a subset.
+        acted_on = any(set(p["rejects"]) & set(group) for p in merge_rejects_proposals)
+        algo_extra["merge_rejects_warning"] = {
+            "safe_reject_candidates": group,
+            "evidence": merge_rejects_warnings[-1].get("evidence") or {},
+            "targets": merge_rejects_warnings[-1].get("targets") or {},
+            "t": merge_rejects_warnings[-1].get("t"),
+            "acted_on": acted_on,
+        }
+    if merge_rejects_proposals:
+        algo_extra["merge_rejects_proposals"] = merge_rejects_proposals
 
     evograph = _read_evograph(root)
     if evograph:
@@ -1874,12 +2314,179 @@ def reduce_run(run_dir) -> dict:
         algo_extra["parallel"] = [{k: v for k, v in e.items()
                                    if k not in _LOG_DROP_FIELDS} for e in par]
 
+    background_mass_kills = _background_mass_kills(root)
+
+    # --- activities: timeline bars and markers for the UI ---------------
+    # One entry per activity (optimize, evaluate, gate, final_eval, finalize) that can be
+    # drawn on a timeline. Built from events, using relative timestamps (t - started_t).
+    activities: list[dict] = []
+    ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
+    started_t = min(ts) if ts else 0.0
+    
+    # Track the end time of the last val eval for each iteration to compute optimize spans
+    last_eval_end_by_iter: dict[int, float] = {}
+    
+    # Build a map of eval_start events by (tag, split)
+    eval_start_events = {}
+    for e in events:
+        if e.get("kind") == "eval_start":
+            key = (e.get("tag"), e.get("split"))
+            eval_start_events[key] = e
+    
+    # Seed evaluation (baseline)
+    seed_eval_start = eval_start_events.get(("seed", "val"))
+    seed_eval_ev = next((e for e in events if e.get("kind") == "evaluate" 
+                         and e.get("tag") == "seed" and e.get("split") == "val"), None)
+    if seed_eval_start and seed_eval_ev:
+        activities.append({
+            "id": "seed-eval",
+            "type": "seed",
+            "lane": "evaluator",
+            "iteration": 0,
+            "candidate": "seed",
+            "start": round(seed_eval_start["t"] - started_t, 2),
+            "end": round(seed_eval_ev["t"] - started_t, 2),
+            "error": False,
+        })
+        last_eval_end_by_iter[0] = seed_eval_ev["t"]
+    
+    # Per-iteration activities (optimize, evaluate, gate)
+    for n in sorted((x for x in nodes.values() if (x.get("iteration") or 0) > 0),
+                    key=lambda x: x.get("iteration") or 0):
+        it = n.get("iteration")
+        cid = n["id"]
+        
+        # Find the eval_start and evaluate events for this candidate
+        eval_start_ev = eval_start_events.get((cid, "val"))
+        eval_ev = val_eval.get(cid)
+        
+        if eval_start_ev and eval_ev:
+            eval_start_t = eval_start_ev["t"]
+            eval_end_t = eval_ev["t"]
+            
+            # Optimize span: from last eval end (or run start) to this eval_start.
+            # Clamped: in a parallel batch the previous iteration's eval can end AFTER
+            # this one's eval_start, which produced end < start (a negative-width bar).
+            opt_start = min(last_eval_end_by_iter.get(it - 1, started_t), eval_start_t)
+            activities.append({
+                "id": f"iter-{it}-opt",
+                "type": "optimize",
+                "lane": "optimizer",
+                "iteration": it,
+                "candidate": cid,
+                "start": round(opt_start - started_t, 2),
+                "end": round(eval_start_t - started_t, 2),
+                "error": n.get("status") == "failed",
+            })
+            
+            # Evaluate span
+            activities.append({
+                "id": f"iter-{it}-eval",
+                "type": "evaluate",
+                "lane": "evaluator",
+                "iteration": it,
+                "candidate": cid,
+                "start": round(eval_start_t - started_t, 2),
+                "end": round(eval_end_t - started_t, 2),
+                "error": False,
+            })
+            last_eval_end_by_iter[it] = eval_end_t
+
+        # Growth rounds (scripts/grow.py): extra val trials bought on this SAME
+        # candidate, evaluated under tag "<cid>__grow<N>". Without these the timeline
+        # showed a silent gap where hours of eval spend actually happened.
+        for (tag, split), gs in eval_start_events.items():
+            m = re.fullmatch(re.escape(cid) + r"__grow(\d+)", tag or "")
+            if split != "val" or not m:
+                continue
+            ge = next((e for e in events if e.get("kind") == "evaluate"
+                       and e.get("tag") == tag and e.get("split") == "val"), None)
+            if not ge:
+                continue
+            activities.append({
+                "id": f"iter-{it}-grow{m.group(1)}",
+                "type": "grow",
+                "lane": "evaluator",
+                "iteration": it,
+                "candidate": cid,
+                "growth_round": int(m.group(1)),
+                "reward": ge.get("reward"),
+                "start": round(gs["t"] - started_t, 2),
+                "end": round(ge["t"] - started_t, 2),
+                "error": False,
+            })
+
+        # Gate marker (point event at step time)
+        step_ev = next((e for e in events if e.get("kind") in _STEP_KINDS 
+                       and _step_candidate(e) == cid), None)
+        if step_ev and step_ev.get("t"):
+            activities.append({
+                "id": f"iter-{it}-gate",
+                "type": "gate",
+                "lane": "gate",
+                "iteration": it,
+                "candidate": cid,
+                "start": round(step_ev["t"] - started_t, 2),
+                "end": round(step_ev["t"] - started_t, 2),
+                "error": False,
+            })
+    
+    # Final evaluations (test, train)
+    for split in ("test", "train"):
+        # Find eval_start and evaluate events for final evaluations
+        # Final test uses tag="FINAL", final train uses tag=best_id
+        final_eval_start = None
+        final_eval_ev = None
+        
+        # Try FINAL tag first (test split)
+        if split == "test":
+            final_eval_start = eval_start_events.get(("FINAL", split))
+            final_eval_ev = next((e for e in events if e.get("kind") == "evaluate" 
+                                and e.get("split") == split and e.get("tag") == "FINAL"), None)
+        
+        # For train split, the tag is the best candidate's id
+        if split == "train" and best_id:
+            final_eval_start = eval_start_events.get((best_id, split))
+            final_eval_ev = next((e for e in events if e.get("kind") == "evaluate" 
+                                and e.get("split") == split and e.get("tag") == best_id), None)
+        
+        if final_eval_start and final_eval_ev:
+            activities.append({
+                "id": f"final-{split}",
+                "type": "final_eval",
+                "lane": "evaluator",
+                "iteration": None,
+                "candidate": best_id,
+                "split": split,
+                "start": round(final_eval_start["t"] - started_t, 2),
+                "end": round(final_eval_ev["t"] - started_t, 2),
+                "error": False,
+            })
+    
+    # Finalize marker
+    finalize_ev = next((e for e in events if e.get("kind") == "finalize"), None)
+    if finalize_ev and finalize_ev.get("t"):
+        activities.append({
+            "id": "finalize",
+            "type": "finalize",
+            "lane": "finalize",
+            "iteration": None,
+            "candidate": best_id,
+            "start": round(finalize_ev["t"] - started_t, 2),
+            "end": round(finalize_ev["t"] - started_t, 2),
+            "error": False,
+        })
+
     # --- capabilities: which panels this run has real data for -----------
     # The UI is algorithm-agnostic: it renders the generic panels always and asks this
     # map before mounting an extra one. An absent signal means the panel is omitted —
     # never rendered empty, never faked.
     capabilities = {
-        "per_task": any(n.get("per_task") for n in nodes.values()),
+        "activities": bool(activities),
+        "per_task": (any(n.get("per_task") for n in nodes.values())
+                     or any(s.get("per_task") for s in screens)),
+        # Sealed test (and seed-on-test) per-task rewards, when finalize() persisted them.
+        "test_per_task": bool(test.get("per_task")),
         "lineage": len(nodes) > 1,
         "gate": bool(gate_decisions),
         "cost": bool(ledger),
@@ -1900,16 +2507,28 @@ def reduce_run(run_dir) -> dict:
         "host_transcript": bool(host_session),
         "controls": bool(controls),
         "screened": any(n.get("screened") is not None for n in nodes.values()),
+        "context_warnings": any(n.get("context_warning") for n in nodes.values()),
+        "screen_gate_bypass": any(n.get("bypassed_screen_and_gate") for n in nodes.values()),
+        "round_batches": "round_batches" in algo_extra,
+        "background_mass_kills": bool(background_mass_kills),
+        "merge_rejects": "merge_rejects_warning" in algo_extra,
         # A free-form (agent-driven) run has no deterministic step loop: candidates
         # arrive from an agent's own decisions, so iteration numbers are not a schedule.
         "freeform": algorithm in ("evograph", "agent-optimize"),
+        # dashboard.html regenerated BY THE OPTIMIZER mid-run (``cap-evolve dashboard
+        # --export``, see agent-optimize's SKILL.md) -- a self-contained snapshot of its
+        # own reasoning so far, distinct from this live view and from the report phase's
+        # end-of-run copy.
+        "process_html": (root / "dashboard.html").is_file(),
     }
 
     now = _now()
+    heartbeat = _read_json(_safe_subpath(root, "host/heartbeat.json")) or None
     status, status_reason = _derive_status(
         events=events, now=now, budget=(run_dir.budget if sp is not None else None),
         spent=sp, agent_mode=(_orchestration_mode(root) == "agent"),
-        has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None)
+        has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None,
+        heartbeat=heartbeat)
     ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
 
     # Elapsed wall time. For a finished run that is first event → last event. For a run
@@ -1936,6 +2555,7 @@ def reduce_run(run_dir) -> dict:
         # Where the identity came from: a distinguishing event kind, the run dir's own
         # evograph wiki, or the project spec. None ⇒ the UI shows "not recorded".
         "algorithm_source": algorithm_source,
+        "activities": activities,
         "capabilities": capabilities,
         "status": status,
         "status_reason": status_reason,
@@ -1978,6 +2598,29 @@ def reduce_run(run_dir) -> dict:
                                 else final.get("test_baseline_reward"),
         "test_delta": final.get("test_delta"),
         "test_sealed": sealed,
+        # Sealed-test per-task rewards for the best candidate and for the seed, so the
+        # test split can be shown the same way the val TaskMatrix already shows val
+        # (#575): per finalize()'s payload, ``test`` is the best candidate's SplitResult
+        # and ``test_baseline`` is the seed's — both carry their own ``per_task`` list,
+        # previously read only for their aggregate reward/n_tasks above.
+        "test_per_task": {pt["task_id"]: pt["reward"] for pt in test.get("per_task", [])} or None,
+        "test_baseline_per_task": {
+            pt["task_id"]: pt["reward"]
+            for pt in (final.get("test_baseline") or {}).get("per_task", [])
+        } or None,
+        # The full bookend `finalize` now writes into final.json (seed/best × train/val/
+        # test): surfaced here as a couple of scalars rather than the raw nested shape,
+        # matching how test_reward/test_baseline_reward are already flattened above.
+        # `train` is a dict when measured, or a {"status": "..."} note when skipped
+        # (empty split / identical to val) — only the measured case has a "reward".
+        "train_reward": ((final.get("best") or {}).get("train") or {}).get("reward"),
+        "train_baseline_reward": ((final.get("seed") or {}).get("train") or {}).get("reward"),
+        "train_delta": (round(((final.get("best") or {}).get("train") or {}).get("reward")
+                              - ((final.get("seed") or {}).get("train") or {}).get("reward"), 6)
+                        if isinstance(((final.get("best") or {}).get("train") or {}).get("reward"), (int, float))
+                        and isinstance(((final.get("seed") or {}).get("train") or {}).get("reward"), (int, float))
+                        else None),
+        "train_equals_val": final.get("train_equals_val"),
         "counts": counts,
         "frontier": frontier,
         "tasks": tasks,
@@ -1993,6 +2636,11 @@ def reduce_run(run_dir) -> dict:
         "tokens": tokens,
         "tokens_by_role": {"runner": tokens - opt_tokens - int(intake_tokens),
                            "optimizer": opt_tokens, "intake": int(intake_tokens)},
+        # Cache-read/-creation tokens the optimizer CLI reused/wrote (#575 D.3), kept
+        # SEPARATE from `tokens` on purpose (see the per-node comment above) — folding
+        # them in would hide the cache hit rate they exist to explain.
+        "cache_read_tokens": cache_read_tokens,
+        "cache_creation_tokens": cache_creation_tokens,
         "per_iteration": per_iteration,
         "evaluations": evaluations,
         "intake": intake,
@@ -2000,6 +2648,10 @@ def reduce_run(run_dir) -> dict:
         "budget": (run_dir.budget.to_dict() if sp is not None else None),
         "spent": (sp.to_dict() if sp is not None else None),
         "budget_warnings": [e for e in events if e.get("kind") == "budget_warning"],
+        # Background-task mass-kill (PR #558): 2+ background Bash calls the harness
+        # evicted at the identical millisecond, destroying whatever they were doing.
+        # Never persisted by host.py itself — recomputed here from host/transcript.jsonl.
+        "background_mass_kills": background_mass_kills,
         "gate_warnings": gate_warnings,
         "diagnoses": diagnoses,
         "git_log": _git_log(root),
@@ -2008,11 +2660,144 @@ def reduce_run(run_dir) -> dict:
         "host_session": host_session,
     }
 
+    # Copy over the fields only graph.jsonl carries (cluster_ids / screened subset task
+    # ids / micro_tests) -- a courtesy enrichment of the events-reconstructed nodes above,
+    # not a second source of truth (graph.py's own docstring). Missing/empty on runs that
+    # predate #446 or never wrote a node for this id.
+    for gnode in graph_mod.read_nodes(run_dir):
+        nid = gnode.get("id")
+        n = nodes.get(nid)
+        if not n:
+            continue
+        if gnode.get("cluster_ids"):
+            n["cluster_ids"] = gnode["cluster_ids"]
+        if gnode.get("subset"):
+            n["subset"] = gnode["subset"]
+        if gnode.get("micro_tests"):
+            n["micro_tests"] = gnode["micro_tests"]
+        if gnode.get("change_type") and not n.get("change_type"):
+            n["change_type"] = gnode["change_type"]
+    
+    # Compute prompt_map for each node with capability files
+    cand_root = _safe_subpath(root, "candidates")
+    if cand_root and cand_root.exists():
+        for nid, n in nodes.items():
+            parent = n.get("parent")
+            cdir = _safe_subpath(cand_root, nid)
+            pdir = _safe_subpath(cand_root, parent) if parent else None
+            if cdir and cdir.exists():
+                # Get diff rows for this node if available (used to identify add/rem lines)
+                diff_rows = []
+                if pdir and pdir.exists():
+                    import difflib
+                    cf, pf = _read_dir_files(cdir), _read_dir_files(pdir)
+                    for path in set(cf) | set(pf):
+                        a = pf.get(path, "").splitlines()
+                        b = cf.get(path, "").splitlines()
+                        if a != b:
+                            diff_rows.extend(difflib.unified_diff(a, b, lineterm="", n=0))
+                
+                prompt_map = _compute_prompt_map(cdir, pdir, diff_rows)
+                if prompt_map:
+                    n["prompt_map"] = prompt_map
+
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
     return redact({"graph": graph, "summary": summary})
 
 
 # ---------------------------------------------------------------------------
+
+
+def _compute_prompt_map(cand_dir: Path, parent_dir: Path | None, diff_rows: list) -> dict:
+    """Compute prompt_map for a candidate's capability files.
+    
+    Returns {filename: {lines, bytes, headings, add, rem, touched}} for each file.
+    Headings skip those inside fenced code blocks.
+    """
+    import re
+    
+    prompt_map = {}
+    if not cand_dir or not cand_dir.exists():
+        return prompt_map
+    
+    # Read candidate files
+    cand_files = _read_dir_files(cand_dir)
+    
+    for filename, content in cand_files.items():
+        lines = content.splitlines()
+        file_map = {
+            "lines": len(lines),
+            "bytes": len(content.encode("utf-8")),
+            "headings": [],
+            "add": [],
+            "rem": [],
+            "touched": [],
+        }
+        
+        # Extract headings (skip those in fenced code blocks). Markdown only:
+        # in .py/.sh/.yaml etc. a leading `#` is a comment, not a heading (#626).
+        is_md = Path(filename).suffix.lower() in (".md", ".markdown")
+        in_fence = False
+        for i, line in enumerate(lines if is_md else [], 1):
+            stripped = line.strip()
+            # Track fenced code blocks
+            if stripped.startswith("```"):
+                in_fence = not in_fence
+                continue
+            # Extract headings only outside fenced blocks
+            if not in_fence and stripped.startswith("#"):
+                match = re.match(r"^(#{1,6})\s+(.+)$", stripped)
+                if match:
+                    level = len(match.group(1))
+                    text = match.group(2).strip()
+                    file_map["headings"].append([i, level, text])
+        
+        # Extract add/rem line numbers from diff if available
+        if diff_rows and parent_dir and parent_dir.exists():
+            parent_files = _read_dir_files(parent_dir)
+            if filename in parent_files:
+                import difflib
+                a = parent_files[filename].splitlines()
+                b = lines
+                
+                # Track line numbers in new file
+                new_line = 0
+                for line in difflib.unified_diff(a, b, lineterm="", n=0):
+                    if line.startswith("@@"):
+                        # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
+                        match = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+                        if match:
+                            new_line = int(match.group(1))
+                    elif line.startswith("+") and not line.startswith("+++"):
+                        file_map["add"].append(new_line)
+                        new_line += 1
+                    elif line.startswith("-") and not line.startswith("---"):
+                        # Removal: mark the position in new file where lines were removed
+                        file_map["rem"].append(new_line)
+                    elif not line.startswith("\\"):  # Skip "\ No newline" markers
+                        new_line += 1
+                
+                # Identify touched sections (headings with changes in their range)
+                if file_map["add"] or file_map["rem"]:
+                    changed_lines = set(file_map["add"] + file_map["rem"])
+                    for i, (line_num, level, text) in enumerate(file_map["headings"]):
+                        # Find the range for this heading (until next same-or-higher level heading)
+                        start = line_num
+                        end = len(lines) + 1
+                        for j in range(i + 1, len(file_map["headings"])):
+                            next_line, next_level, _ = file_map["headings"][j]
+                            if next_level <= level:
+                                end = next_line
+                                break
+                        # Check if any changed lines fall in this range
+                        if any(start <= ln < end for ln in changed_lines):
+                            file_map["touched"].append([text, start])
+        
+        prompt_map[filename] = file_map
+    
+    return prompt_map
+
+
 # Diff view (candidate vs parent) — computed from candidate dirs
 # ---------------------------------------------------------------------------
 
@@ -2297,6 +3082,7 @@ td.r,th.r{text-align:right}
 .b-accepted{background:#1f3a23;color:var(--ok)} .b-rejected{background:#3a2f12;color:var(--warn)}
 .b-failed{background:#31173a;color:var(--fail)} .b-seed{background:#22262f;color:var(--muted2)}
 .b-indecisive{background:#152a3f;color:var(--idk)}
+.b-bypass{background:#2a1f3a;color:var(--accent)}
 .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);
 border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
 .banner{display:flex;gap:10px;border:1px solid var(--line);border-left:3px solid var(--warn);
@@ -2463,6 +3249,16 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       'Read it as a sanity check only.'}));
   }
   if(sp&&sp.warning)s.append($('div',{class:'banner',text:sp.warning}));
+  // Background-task mass-kill (PR #558): 2+ backgrounded Bash calls the harness evicted
+  // at the identical millisecond — a compliance WARNING distinct from an outcome, so it
+  // gets the 'bad' banner treatment (No holdout above uses the same class).
+  (S.background_mass_kills||[]).forEach(mk=>{
+    s.append($('div',{class:'banner bad',html:
+      `<b>Background task mass-kill.</b> ${mk.count} background tasks were evicted at the `+
+      `identical timestamp <code>${mk.timestamp}</code> — the harness's concurrent-`+
+      `background-task ceiling, not ${mk.count} tasks coincidentally finishing at once. `+
+      `Task ids: ${(mk.task_ids||[]).join(', ')}.`}));
+  });
   if(sp)s.append($('p',{class:'muted num',style:'margin:10px 0 0',
     text:`splits · train ${sp.train??'—'} · val ${sp.val??'—'} · test ${sp.test??'—'}`+
          (sp.seed!=null?` · seed ${sp.seed}`:'')+
@@ -3072,7 +3868,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
 /* ---------- 10e. agent-optimize internals — screens/compliance/minibatch/gepa/skillopt/parallel (#433) ---------- */
 (function(){
   const C=S.capabilities||{}, AE=S.algo_extra||{};
-  if(!(C.screens||C.compliance||C.minibatch||C.gepa||C.skillopt||C.parallel))return;
+  if(!(C.screens||C.compliance||C.minibatch||C.gepa||C.skillopt||C.parallel||
+       C.round_batches||C.merge_rejects))return;
   const s=sec('agent-optimize internals');
   s.append($('p',{class:'muted',style:'margin:0 0 12px',text:
     "Signals the algorithm computed about its own process — which subset of tasks a cheap screen "+
@@ -3083,13 +3880,57 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(C.compliance){
     s.append(h3('Screen-before-full-val compliance'));
     const t=$('table');
-    t.append($('tr',{},$('th',{text:'candidate'}),$('th',{class:'r',text:'iteration'}),$('th',{text:'screened before full-val'})));
+    t.append($('tr',{},$('th',{text:'candidate'}),$('th',{class:'r',text:'iteration'}),
+      $('th',{text:'screened before full-val'}),$('th',{text:'why skipped'})));
     (AE.compliance||[]).forEach(r=>t.append($('tr',{},
       $('td',{},$('code',{text:r.candidate})),
       $('td',{class:'r num',text:r.iteration}),
       $('td',{},$('span',{class:'badge '+(r.screened_before_fullval?'b-accepted':'b-rejected'),
-        text:r.screened_before_fullval?'✓ yes':'✗ no'})))));
+        text:r.screened_before_fullval?'✓ yes':'✗ no'})),
+      $('td',{class:'muted',style:'font-size:11px',text:r.skip_justification||'—'}))));
     s.append(t);
+  }
+
+  if(C.round_batches){
+    s.append(h3('Round batches — sibling-count enforcement'));
+    s.append($('p',{class:'muted',style:'margin:0 0 8px;font-size:11.5px',text:
+      'agent-optimize\'s default is N≥ 3 sibling candidates per round.py invocation; '+
+      'fewer requires a recorded reason (an explicit justification, or an unaffordable budget '+
+      'detected from spend.py).'}));
+    const t=$('table');
+    t.append($('tr',{},$('th',{text:'batch'}),$('th',{class:'r',text:'siblings'}),
+      $('th',{text:'candidates'}),$('th',{text:'why < 3'})));
+    (AE.round_batches||[]).forEach(r=>{
+      const below3=r.n_candidates<3;
+      t.append($('tr',{},
+        $('td',{},$('code',{text:r.batch_id||'—'})),
+        $('td',{class:'r num',text:r.n_candidates},
+          below3?$('span',{class:'badge b-rejected',style:'margin-left:6px',text:'<3'}):null),
+        $('td',{class:'muted',style:'font-size:11px',text:(r.candidates||[]).join(', ')}),
+        $('td',{class:'muted',style:'font-size:11px',text:below3?
+          `${r.single_candidate_justification||'—'} (${r.single_candidate_justification_source||'unrecorded'})`
+          :'—'})));
+    });
+    s.append(t);
+  }
+
+  if(C.merge_rejects){
+    s.append(h3('Merge opportunity — safe-but-rejected candidates'));
+    const w=AE.merge_rejects_warning;
+    const box=$('div',{class:'dead',style:'border-left-color:'+(w.acted_on?'var(--ok)':'var(--warn)')});
+    box.append($('div',{style:'display:flex;flex-wrap:wrap;gap:8px;align-items:center'},
+      $('span',{text:w.safe_reject_candidates.length+' disjoint safe rejects never tried together: '}),
+      ...w.safe_reject_candidates.map(cid=>$('code',{style:'margin-right:4px',text:cid})),
+      $('span',{class:'badge '+(w.acted_on?'b-accepted':'b-rejected'),
+        text:w.acted_on?'✓ merge proposed':'✗ unmerged'})));
+    box.append($('div',{class:'muted num',style:'font-size:11px;margin-top:4px',text:
+      'each individually zero-regression with a non-negative gate Δ — run merge_rejects.py '+
+      '--propose on a disjoint subset to combine them.'}));
+    s.append(box);
+    (AE.merge_rejects_proposals||[]).forEach(p=>{
+      s.append($('div',{class:'muted',style:'font-size:11px;margin:4px 0 0',text:
+        'proposed: '+p.tag+' = '+p.rejects.join(' + ')+(p.built?' (built)':' (failed)')}));
+    });
   }
 
   if(C.screens){
@@ -3162,8 +4003,20 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     // rather than printing "—" for a delta both halves of which are known.
     const pv=n.parent_val!=null?n.parent_val:(n.parent&&byId[n.parent]?byId[n.parent].val:null);
     const dlt=pv!=null&&n.val!=null?(n.val-pv):null;
+    const idCell=$('td',{},n.id===S.best_id?'★ '+n.id:n.id);
+    // screen+gate bypass (PR #557): a compliance WARNING (never measured), distinct from
+    // the accepted/rejected OUTCOME ring the status badge already shows — a different
+    // color (b-bypass) so it never reads as a second verdict.
+    if(n.bypassed_screen_and_gate){
+      const bad=$('span',{class:'badge b-bypass',style:'margin-left:6px',text:'⚠ bypass'});
+      bad.addEventListener('mousemove',e=>showTip(e,
+        'screen+gate bypass: rejected via driver_judgement with no screen.py record and no '+
+        'full-val gate row.\njustification: '+(n.bypassed_gate_justification||'—')));
+      bad.addEventListener('mouseleave',hideTip);
+      idCell.append(bad);
+    }
     const cells=[
-      $('td',{},n.id===S.best_id?'★ '+n.id:n.id),
+      idCell,
       $('td',{},$('span',{class:'badge b-'+n.status,text:n.status})),
       $('td',{class:'r num',text:fmt(n.val)}),
       $('td',{class:'r num',text:dlt==null?'—':(dlt>0?'+':'')+dlt.toFixed(3)}),

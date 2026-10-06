@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>train_test_split_propos — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from proposals/train_test_split_proposal.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/proposals/train_test_split_proposal.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/proposals/train_test_split_proposal.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="traintest-split-by-shared-skill-proposal-not-yet-executed">Train/test split by shared skill — proposal (not yet executed)</h1>
+<p>Goal: for subcategory groups that plausibly share a domain skill, evolve the skill on
+train task(s) with full ground-truth reward access (legitimate — that's what cap-evolve
+is for), freeze it, and apply it zero-shot to the held-out test task(s) in the same group.
+Report the test task's reward under the frozen transferred skill vs. its own seed baseline.</p>
+<h2 id="selection-filter-applied">Selection filter applied</h2>
+<p>A group is only useful for this experiment if at least one member shows <code>best &gt; seed</code>
+by a real margin — i.e. cap-evolve's optimizer actually added something beyond the
+generic seed_capability. Groups where every member was already saturated at seed=1.0
+(no optimization happened at all) test nothing about cap-evolve's contribution — they'd
+just test whether the generic seed skill transfers, which is a different (still valid,
+but different) question. Two groups have <strong>zero usable signal on either side</strong>
+(all members NO_SIGNAL) and are excluded outright.</p>
+<p>Legend: <strong>train</strong> = has real optimizer lift (best &gt; seed + 0.1). <strong>test†</strong> = seed
+already saturated (1.0) — transfer has no room to show a lift, low information as a
+test target. <strong>test‡</strong> = NO_SIGNAL (seed=0 and best=0) — good test target precisely
+<em>because</em> it's currently unsolved; a transferred skill lifting it off zero would be a
+strong positive result.</p>
+<h2 id="excluded-no-signal-anywhere">Excluded — no signal anywhere</h2>
+<table>
+<thead>
+<tr>
+<th>group</th>
+<th>tasks</th>
+<th>why excluded</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>natural-science / seismology</td>
+<td>earthquake-phase-association, seismic-phase-picking</td>
+<td>both NO_SIGNAL — no train candidate exists</td>
+</tr>
+<tr>
+<td>software-engineering / build-repair</td>
+<td>fix-build-agentops, fix-build-google-auto</td>
+<td>both NO_SIGNAL — no train candidate exists</td>
+</tr>
+</tbody>
+</table>
+<h2 id="recommended-priority-order-for-piloting">Recommended priority order for piloting</h2>
+<ol>
+<li><strong>finance-economics / macroeconomic-analysis</strong> — all 3 members have real lift, full 3-way leave-one-out is informative in every fold.</li>
+<li><strong>mathematics-or-formal-reasoning / mathematical-optimization</strong> — both members have real lift, both non-saturated seeds.</li>
+<li><strong>cybersecurity / vulnerability-analysis</strong> — 2 lift tasks + 1 NO_SIGNAL test‡ target (interesting: can transfer rescue a currently-unsolved task?).</li>
+<li><strong>cybersecurity / fuzzing</strong> — 2 lift tasks, modest margins, decent 2-fold swap.</li>
+<li>Everything else below — usable but mostly one lift-task facing an already-saturated test†, so the test side carries little information (transfer literally can't score higher than the ceiling it's already at).</li>
+</ol>
+<h2 id="full-fold-plan">Full fold plan</h2>
+<h3 id="finance-economics-macroeconomic-analysis-3-way-loo-priority-1">finance-economics / macroeconomic-analysis (3-way LOO) — priority 1</h3>
+<ul>
+<li>train {shock-analysis-supply, weighted-gdp-calc} → test shock-analysis-demand (train)</li>
+<li>train {shock-analysis-demand, weighted-gdp-calc} → test shock-analysis-supply (train)</li>
+<li>train {shock-analysis-demand, shock-analysis-supply} → test weighted-gdp-calc (train)</li>
+</ul>
+<h3 id="mathematics-or-formal-reasoning-mathematical-optimization-2-way-swap-priority-2">mathematics-or-formal-reasoning / mathematical-optimization (2-way swap) — priority 2</h3>
+<ul>
+<li>train exam-block-sequencing → test paratransit-routing (train)</li>
+<li>train paratransit-routing → test exam-block-sequencing (train)</li>
+</ul>
+<h3 id="cybersecurity-vulnerability-analysis-3-way-loo-priority-3">cybersecurity / vulnerability-analysis (3-way LOO) — priority 3</h3>
+<ul>
+<li>train {fix-erlang-ssh-cve, software-dependency-audit} → test fix-druid-loophole-cve (test‡)</li>
+<li>train {fix-druid-loophole-cve(no signal, skip as train), software-dependency-audit} → <strong>not valid</strong>, fix-druid-loophole-cve can't be a train source</li>
+<li>Effectively only 1 usable fold: train {fix-erlang-ssh-cve, software-dependency-audit} → test fix-druid-loophole-cve. (Could also do fix-erlang↔software-dependency-audit swap as a secondary fold, both are real train candidates.)</li>
+<li>train fix-erlang-ssh-cve → test software-dependency-audit (train)</li>
+<li>train software-dependency-audit → test fix-erlang-ssh-cve (train)</li>
+</ul>
+<h3 id="cybersecurity-fuzzing-2-way-swap-priority-4">cybersecurity / fuzzing (2-way swap) — priority 4</h3>
+<ul>
+<li>train setup-fuzzing-py → test syzkaller-ppdev-syzlang (train)</li>
+<li>train syzkaller-ppdev-syzlang → test setup-fuzzing-py (train)</li>
+</ul>
+<h3 id="natural-science-hydrology-1-usable-train-2-saturated-test">natural-science / hydrology (1 usable train, 2 saturated test†)</h3>
+<ul>
+<li>train lake-warming-attribution → test flood-risk-analysis (test†), test glm-lake-mendota (test†)</li>
+</ul>
+<h3 id="office-white-collar-spreadsheet-workflow-2-usable-train-1-saturated-test">office-white-collar / spreadsheet-workflow (2 usable train, 1 saturated test†)</h3>
+<ul>
+<li>train sales-pivot-analysis → test pdf-excel-diff (train, small lift), test powerlifting-coef-calc (test†)</li>
+<li>train pdf-excel-diff → test sales-pivot-analysis (train)</li>
+</ul>
+<h3 id="media-content-production-video-processing-2-usable-train-1-saturated-test">media-content-production / video-processing (2 usable train, 1 saturated test†)</h3>
+<ul>
+<li>train video-silence-remover → test multilingual-video-dubbing (train), test mario-coin-counting (test†)</li>
+<li>train multilingual-video-dubbing → test video-silence-remover (train)</li>
+</ul>
+<h3 id="software-engineering-performance-optimization-1-usable-train-2-saturated-test-1-no_signal-test">software-engineering / performance-optimization (1 usable train, 2 saturated test†, 1 NO_SIGNAL test‡)</h3>
+<ul>
+<li>train react-performance-debugging → test fix-visual-stability (test‡), test llm-prefix-cache-replay (test†), test parallel-tfidf-search (test†)</li>
+</ul>
+<h3 id="finance-economics-financial-modeling-1-usable-train-1-no_signal-test-directional-only">finance-economics / financial-modeling (1 usable train, 1 NO_SIGNAL test‡) — directional only</h3>
+<ul>
+<li>train xlsx-recover-data → test financial-modeling-qa (test‡)</li>
+</ul>
+<h3 id="office-white-collar-presentation-editing-1-usable-train-1-saturated-test">office-white-collar / presentation-editing (1 usable train, 1 saturated test†)</h3>
+<ul>
+<li>train exceltable-in-ppt → test pptx-reference-formatting (test†)</li>
+</ul>
+<h3 id="industrial-physical-systems-control-systems-1-usable-train-1-saturated-test">industrial-physical-systems / control-systems (1 usable train, 1 saturated test†)</h3>
+<ul>
+<li>train r2r-mpc-control → test hvac-control (test†)</li>
+</ul>
+<h3 id="mathematics-or-formal-reasoning-formal-planning-1-usable-train-1-saturated-test">mathematics-or-formal-reasoning / formal-planning (1 usable train, 1 saturated test†)</h3>
+<ul>
+<li>train pddl-airport-planning → test pddl-tpp-planning (test†)</li>
+</ul>
+<h3 id="media-content-production-3d-content-1-usable-train-1-saturated-test">media-content-production / 3d-content (1 usable train, 1 saturated test†)</h3>
+<ul>
+<li>train threejs-structure-parser → test threejs-to-obj (test†)</li>
+</ul>
+<h3 id="natural-science-astronomy-not-recommended">natural-science / astronomy — not recommended</h3>
+<p>All 3 saturated at seed=1.0. No optimizer lift anywhere in the group; would only test
+generic seed-skill transfer, not cap-evolve's contribution. Skip unless the generic-skill
+question becomes interesting on its own.</p>
+<h3 id="office-white-collar-document-editing-not-recommended">office-white-collar / document-editing — not recommended</h3>
+<p>offer-letter-generator saturated; paper-anonymizer shows no net lift (best == seed).
+No train candidate with real signal.</p>
+<h2 id="not-yet-executed">Not yet executed</h2>
+<p>Per instruction, this is the design only — no runs have been started. Suggested first
+pilot: macroeconomic-analysis (priority 1) plus mathematical-optimization (priority 2),
+6 fold-runs total, before deciding whether to scale to the full list.</p>
+<h2 id="flat-traintest-table-one-row-per-category">Flat train/test table — one row per category</h2>
+<p>Derived mechanically from <code>results.json</code>: group by (category, subcategory); drop any
+task with <code>seed == 1.0</code> (already saturated, no room to show a transfer effect — listed
+separately below); a group needs ≥2 remaining tasks to produce a split at all (fewer
+than that has no partner and is listed as unassigned below). For groups with more than
+2 remaining tasks, train gets ~60–75% (tasks with the larger <code>best - seed</code> lift go to
+train; the rest to test). For exactly 2 remaining tasks it's a straight 1 train / 1 test.</p>
+<table>
+<thead>
+<tr>
+<th>category / subcategory</th>
+<th>train tasks</th>
+<th>test tasks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cybersecurity / fuzzing</td>
+<td>syzkaller-ppdev-syzlang</td>
+<td>setup-fuzzing-py</td>
+</tr>
+<tr>
+<td>cybersecurity / vulnerability-analysis</td>
+<td>software-dependency-audit, fix-erlang-ssh-cve</td>
+<td>fix-druid-loophole-cve</td>
+</tr>
+<tr>
+<td>finance-economics / financial-modeling</td>
+<td>xlsx-recover-data</td>
+<td>financial-modeling-qa</td>
+</tr>
+<tr>
+<td>finance-economics / macroeconomic-analysis</td>
+<td>shock-analysis-demand, shock-analysis-supply</td>
+<td>weighted-gdp-calc</td>
+</tr>
+<tr>
+<td>mathematics-or-formal-reasoning / mathematical-optimization</td>
+<td>paratransit-routing</td>
+<td>exam-block-sequencing</td>
+</tr>
+<tr>
+<td>media-content-production / video-processing</td>
+<td>video-silence-remover</td>
+<td>multilingual-video-dubbing</td>
+</tr>
+<tr>
+<td>natural-science / seismology*</td>
+<td>earthquake-phase-association</td>
+<td>seismic-phase-picking</td>
+</tr>
+<tr>
+<td>office-white-collar / spreadsheet-workflow</td>
+<td>sales-pivot-analysis</td>
+<td>pdf-excel-diff</td>
+</tr>
+<tr>
+<td>software-engineering / build-repair*</td>
+<td>fix-build-agentops</td>
+<td>fix-build-google-auto</td>
+</tr>
+<tr>
+<td>software-engineering / performance-optimization</td>
+<td>react-performance-debugging</td>
+<td>fix-visual-stability</td>
+</tr>
+</tbody>
+</table>
+<p>* Neither task in this group ever showed real lift (both <code>best == seed == 0.0</code>,
+NO_SIGNAL). The train/test assignment here is arbitrary — there's no evidence either
+task's skill is worth transferring. Kept in the table for completeness rather than
+silently dropped; treat as low-confidence.</p>
+<h3 id="excluded-baseline-already-10-21-tasks">Excluded — baseline already 1.0 (21 tasks)</h3>
+<p>No room to show a transfer lift (already at the reward ceiling with just the seed
+skill). Not assigned to train or test in any category.</p>
+<p>dapt-intrusion-detection, econ-detrending-correlation, 3d-scan-calc, hvac-control,
+pddl-tpp-planning, threejs-to-obj, mario-coin-counting, exoplanet-detection-period,
+gravitational-wave-detection, mars-clouds-clustering, radar-vital-signs,
+flood-risk-analysis, glm-lake-mendota, protein-expression-analysis, citation-check,
+offer-letter-generator, pptx-reference-formatting, powerlifting-coef-calc,
+dialogue-parser, llm-prefix-cache-replay, parallel-tfidf-search</p>
+<h3 id="not-assigned-to-any-category-44-tasks">Not assigned to any category (44 tasks)</h3>
+<p>Each is the only non-saturated task left in its subcategory after the baseline=1.0
+filter above — no partner to pair with for a train/test split.</p>
+<p>suricata-custom-exfil, invoice-fraud-detection, reserves-at-risk-calc,
+sec-financial-report, energy-ac-optimal-power-flow, ada-bathroom-plan-repair,
+r2r-mpc-control, manufacturing-codebook-normalization, dynamic-object-aware-egomotion,
+energy-market-pricing, grid-dispatch-operator, manufacturing-equipment-maintenance,
+manufacturing-fjsp-optimization, drone-planning-control, energy-unit-commitment,
+adaptive-cruise-control, travel-planning, civ6-adjacency-optimizer,
+pddl-airport-planning, lean4-proof, bike-rebalance, threejs-structure-parser,
+crystallographic-wyckoff-position-analysis, earthquake-plate-calculation,
+lake-warming-attribution, lab-unit-harmonization, quantum-numerical-simulation,
+enterprise-information-search, organize-messy-files, paper-anonymizer,
+court-form-filling, jpg-ocr-stat, edit-pdf, latex-formula-extraction,
+exceltable-in-ppt, python-scala-translation, tictoc-unnecessary-abort-detection,
+data-to-d3, debug-trl-grpo, flink-query, jax-computing-basics,
+spring-boot-jakarta-migration, azure-bgp-oscillation-route-leak,
+simpo-code-reproduction</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

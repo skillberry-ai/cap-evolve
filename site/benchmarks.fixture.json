@@ -17,6 +17,7 @@
     "optimizer_model": "claude-opus-4-8",
     "conclusion": "success",
     "has_ui": true,
+    "report_url": "https://skillberry-ai.github.io/cap-evolve/skillsbench/index.html",
     "suite": {
       "reward_base": 0.0,
       "reward_opt": 0.5,

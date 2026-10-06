@@ -200,6 +200,37 @@ def test_render_html_shows_per_iteration_latency():
         assert "S.per_iteration" in text
 
 
+# ---- #589: eval_progress heartbeat surfaces in the live status reason ----------
+
+def test_eval_progress_enriches_running_status_reason(tmp_path):
+    """While a split is mid-flight (an open ``eval_start``), the status reason must
+    show the latest ``eval_progress`` heartbeat's real numbers instead of just
+    'still going' — the whole point of #589's heartbeat existing at all."""
+    import time
+    from cap_evolve import dashboard
+    now = time.time()
+    evs = [
+        {"kind": "splits", "train": 4, "val": 300, "test": 2, "seed": 0, "t": now - 100},
+        {"kind": "eval_start", "split": "val", "tag": "seed", "n_tasks": 300,
+         "n_trials": 1, "workers": 8, "rollouts": 300, "t": now - 90},
+        {"kind": "eval_progress", "split": "val", "tag": "seed",
+         "completed": 142, "total": 300, "t": now - 30},
+    ]
+    rd = _mk_run(tmp_path, events=evs)
+    r = dashboard.reduce_run(rd)
+    assert r["summary"]["status"] == "running"
+    assert "142/300 rollouts done" in r["summary"]["status_reason"]
+
+
+def test_eval_busy_omits_progress_when_none_seen_yet():
+    """No ``eval_progress`` heartbeat has landed yet — the message must not
+    fabricate one."""
+    from cap_evolve.dashboard import _eval_busy
+    ev = {"split": "val", "tag": "seed", "rollouts": 300}
+    assert "rollouts done" not in _eval_busy(ev, None)
+    assert "scoring the seed on the val split (300 rollouts)" == _eval_busy(ev, None)
+
+
 def test_dashboard_degrades_without_rollouts_or_finalize():
     """No rollouts, no finalize, no candidate dirs → still reduces + renders."""
     from cap_evolve import dashboard
@@ -589,6 +620,46 @@ def test_optimizer_spend_recorded_only_in_state_json_is_attributed(tmp_path):
     assert abs(L["unattributed_usd"]) < 0.001, L
     recon = [r for r in L["rows"] if r["kind"] == "optimizer_reconciliation"]
     assert len(recon) == 1 and abs(recon[0]["usd"] - 4.8) < 1e-6
+
+
+def test_reduce_run_enriches_nodes_from_graph_jsonl():
+    """graph.jsonl (#446) carries cluster_ids/subset/micro_tests that events.jsonl alone
+    cannot -- the reducer must copy them onto the matching node, additively (#446 follow-up:
+    wire the candidate DAG's extra fields into the dashboard)."""
+    from cap_evolve import dashboard, graph
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        graph.append_node(rd, node_id="cand_0001", parents=["seed"], status="accepted",
+                           val_mean=0.75, cluster_ids=["missing_tool_call"],
+                           micro_tests=["mt_1"])
+        (rd.root / "screens").mkdir()
+        (rd.root / "screens" / "cand_0001__screen1.json").write_text(json.dumps(
+            {"tag": "cand_0001", "tier": 1, "subset": {"ids": ["t1", "t2"]},
+             "decision": "promote", "mean_delta": 0.1, "se": 0.02}), encoding="utf-8")
+        graph.append_node(rd, node_id="cand_0001", parents=["seed"], status="accepted",
+                           val_mean=0.75, cluster_ids=["missing_tool_call"],
+                           micro_tests=["mt_1"])  # re-append: last write wins, subset now set
+
+        nodes = {n["id"]: n for n in dashboard.reduce_run(rd)["graph"]["nodes"]}
+        assert nodes["cand_0001"]["cluster_ids"] == ["missing_tool_call"]
+        assert nodes["cand_0001"]["micro_tests"] == ["mt_1"]
+        assert nodes["cand_0001"]["subset"]["task_ids"] == ["t1", "t2"]
+        # cand_0002 has no graph.jsonl node at all -- enrichment must not fabricate one.
+        assert "cluster_ids" not in nodes["cand_0002"]
+        assert "subset" not in nodes["cand_0002"]
+
+
+def test_process_html_capability_reflects_dashboard_html_presence():
+    """The optimizer regenerates ``dashboard.html`` mid-run (``cap-evolve dashboard
+    --export``); the live UI's "Process" tab is gated on this flag, not on the algorithm."""
+    from cap_evolve.dashboard import reduce_run, write_dashboard
+
+    with tempfile.TemporaryDirectory() as d:
+        rd = _mk_run(Path(d), events=_BASE_EVENTS, baseline=_BASELINE)
+        assert reduce_run(rd)["summary"]["capabilities"]["process_html"] is False
+        write_dashboard(rd)
+        assert reduce_run(rd)["summary"]["capabilities"]["process_html"] is True
 
 
 def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):

@@ -31,7 +31,7 @@ REPO = Path(__file__).resolve().parents[2]
 SKILLS = REPO / "skills"
 
 # rglob, not */*/: a component may GROUP its skills one level deeper
-# (interventions/llm-proxies/spa), and a fixed depth would silently undercount.
+# (interventions/llm-proxies/blackbox), and a fixed depth would silently undercount.
 SKILL_MDS = sorted(p for p in SKILLS.rglob("SKILL.md") if "_registry" not in p.parts)
 ALGO_DIRS = sorted(p.parent for p in SKILL_MDS if p.parent.parent.name == "algorithms")
 

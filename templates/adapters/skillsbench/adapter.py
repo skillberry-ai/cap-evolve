@@ -17,6 +17,12 @@ SETUP:
        ANTHROPIC_BASE_URL=https://api.anthropic.com
        ANTHROPIC_AUTH_TOKEN=sk-ant-…
 
+     Running alongside a DIFFERENT optimizer model (a caller may already export
+     ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN process-wide for that model) — use the
+     dedicated agent-only pair instead, which takes priority:
+       SKILLSBENCH_AGENT_BASE_URL=...
+       SKILLSBENCH_AGENT_API_KEY=...
+
   4. Optional env vars:
        SKILLSBENCH_MODEL=claude-sonnet-4-6        # the in-sandbox agent model (as your gateway names it)
        SKILLSBENCH_AGENT=claude                   # agent kind bench runs
@@ -116,10 +122,19 @@ def _gateway_env() -> dict[str, str]:
     Always includes the Anthropic-compatible vars (Claude models). Also mirrors them
     onto OpenAI-compatible vars so an OpenAI-family model (e.g. aws/gpt-oss-120b)
     served by the same gateway can run — bench routes such models via OPENAI_API_KEY.
+
+    SKILLSBENCH_AGENT_BASE_URL/SKILLSBENCH_AGENT_API_KEY win over ANTHROPIC_BASE_URL/
+    ANTHROPIC_AUTH_TOKEN when set. A caller that also runs an optimizer model (e.g.
+    cap-evolve's own run_suite.sh, invoking `claude` for OPTIMIZER_MODEL) may already have
+    ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN exported process-wide for THAT model — those
+    dedicated vars let the sandboxed agent get its own credentials instead of silently
+    inheriting the optimizer's (this adapter's subprocess only sees what's passed via
+    --agent-env below, not the parent process env, so the .env file's plain
+    ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN keys are shadowed by setdefault() in that case).
     """
     _load_env()
-    base = os.environ.get("ANTHROPIC_BASE_URL")
-    token = os.environ.get("ANTHROPIC_AUTH_TOKEN")
+    base = os.environ.get("SKILLSBENCH_AGENT_BASE_URL") or os.environ.get("ANTHROPIC_BASE_URL")
+    token = os.environ.get("SKILLSBENCH_AGENT_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
     missing = [
         v
         for v, x in (("ANTHROPIC_BASE_URL", base), ("ANTHROPIC_AUTH_TOKEN", token))

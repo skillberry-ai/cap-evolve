@@ -1,0 +1,400 @@
+task,phase,run,tag,n_trials,mean_reward,trial_rewards,notes
+exceltable-in-ppt,baseline-10task,run_baseline,seed,3,0.000,"[0.000,0.000,0.000]",
+financial-modeling-qa,baseline-10task,run_baseline,seed,3,0.000,"[0.000,0.000,0.000]",
+invoice-fraud-detection,baseline-10task,run_baseline,seed,3,1.000,"[1.000,1.000,1.000]",
+offer-letter-generator,baseline-10task,run_baseline,seed,3,0.000,"[0.000,0.000,0.000]",
+sales-pivot-analysis,baseline-10task,run_baseline,seed,3,0.000,"[0.000,0.000,0.000]",
+weighted-gdp-calc,baseline-10task,run_baseline,seed,3,0.000,"[0.000,0.000,0.000]",
+xlsx-recover-data,baseline-10task,run_baseline,seed,3,0.000,"[0.000,0.000,0.000]",
+3d-scan-calc,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,1.000,"[1.000]",
+ada-bathroom-plan-repair,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+adaptive-cruise-control,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,1.000,"[1.000]",
+azure-bgp-oscillation-route-leak,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+bike-rebalance,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+citation-check,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+civ6-adjacency-optimizer,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+court-form-filling,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,1.000,"[1.000]",
+crystallographic-wyckoff-position-analysis,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+dapt-intrusion-detection,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+data-to-d3,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+debug-trl-grpo,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+dialogue-parser,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+drone-planning-control,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+dynamic-object-aware-egomotion,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+earthquake-phase-association,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+earthquake-plate-calculation,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+econ-detrending-correlation,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+edit-pdf,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+energy-ac-optimal-power-flow,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+energy-market-pricing,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+energy-unit-commitment,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+enterprise-information-search,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+exam-block-sequencing,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+exceltable-in-ppt,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+exoplanet-detection-period,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+financial-modeling-qa,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+fix-build-agentops,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+fix-build-google-auto,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+fix-druid-loophole-cve,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+fix-erlang-ssh-cve,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+fix-visual-stability,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+flink-query,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+flood-risk-analysis,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+glm-lake-mendota,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+gravitational-wave-detection,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+grid-dispatch-operator,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+hvac-control,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,1.000,"[1.000]",
+invoice-fraud-detection,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+jax-computing-basics,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+jpg-ocr-stat,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+lab-unit-harmonization,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+lake-warming-attribution,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+latex-formula-extraction,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+lean4-proof,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+llm-prefix-cache-replay,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+manufacturing-codebook-normalization,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+manufacturing-equipment-maintenance,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+manufacturing-fjsp-optimization,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+mario-coin-counting,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+mars-clouds-clustering,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+multilingual-video-dubbing,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,1.000,"[1.000]",
+offer-letter-generator,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+organize-messy-files,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+paper-anonymizer,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+parallel-tfidf-search,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+paratransit-routing,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+pddl-airport-planning,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+pddl-tpp-planning,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+pdf-excel-diff,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+powerlifting-coef-calc,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+pptx-reference-formatting,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+protein-expression-analysis,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+python-scala-translation,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+quantum-numerical-simulation,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+r2r-mpc-control,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+radar-vital-signs,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+react-performance-debugging,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+reserves-at-risk-calc,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+sales-pivot-analysis,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+sec-financial-report,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+seismic-phase-picking,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+setup-fuzzing-py,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+shock-analysis-demand,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+shock-analysis-supply,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+simpo-code-reproduction,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+software-dependency-audit,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+spring-boot-jakarta-migration,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+suricata-custom-exfil,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+syzkaller-ppdev-syzlang,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,1.000,"[1.000]",
+threejs-structure-parser,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+threejs-to-obj,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+tictoc-unnecessary-abort-detection,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+travel-planning,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+video-silence-remover,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+weighted-gdp-calc,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+xlsx-recover-data,all87-broken-wiring,run_all87_iter7_v2_KILLED_11pct_errors,seed,1,0.000,"[0.000]",infra-error class (excluded from runnable subset)
+3d-scan-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,1.000,"[1.000,1.000,1.000]",
+3d-scan-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,1.000,"[1.000,1.000,1.000]",
+3d-scan-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,1.000,"[1.000,1.000,1.000]",
+3d-scan-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.667,"[0.000,1.000,1.000]",
+adaptive-cruise-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.333,"[0.000,0.000,1.000]",
+adaptive-cruise-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.667,"[0.000,1.000,1.000]",
+adaptive-cruise-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.667,"[1.000,0.000,1.000]",
+adaptive-cruise-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,1.000,"[1.000,1.000,1.000]",
+citation-check,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+citation-check,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+citation-check,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+citation-check,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+court-form-filling,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.667,"[1.000,0.000,1.000]",
+court-form-filling,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.667,"[1.000,0.000,1.000]",
+court-form-filling,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,1.000,"[1.000,1.000,1.000]",
+court-form-filling,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+dapt-intrusion-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+dapt-intrusion-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+dapt-intrusion-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+dapt-intrusion-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+data-to-d3,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+data-to-d3,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+data-to-d3,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+data-to-d3,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+drone-planning-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+drone-planning-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+drone-planning-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+drone-planning-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+dynamic-object-aware-egomotion,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+dynamic-object-aware-egomotion,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+dynamic-object-aware-egomotion,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+dynamic-object-aware-egomotion,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+edit-pdf,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.333,"[0.000,0.000,1.000]",
+edit-pdf,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,1.000,"[1.000,1.000,1.000]",
+edit-pdf,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,1.000,"[1.000,1.000,1.000]",
+edit-pdf,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+energy-ac-optimal-power-flow,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+energy-ac-optimal-power-flow,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+energy-ac-optimal-power-flow,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+energy-ac-optimal-power-flow,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+energy-market-pricing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+energy-market-pricing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+energy-market-pricing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+energy-market-pricing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+enterprise-information-search,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+enterprise-information-search,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+enterprise-information-search,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+enterprise-information-search,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+exceltable-in-ppt,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+exceltable-in-ppt,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+exceltable-in-ppt,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+exceltable-in-ppt,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+financial-modeling-qa,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+financial-modeling-qa,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+financial-modeling-qa,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+financial-modeling-qa,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+flood-risk-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+flood-risk-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.333,"[0.000,1.000,0.000]",
+flood-risk-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+flood-risk-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+grid-dispatch-operator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+grid-dispatch-operator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+grid-dispatch-operator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+grid-dispatch-operator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+hvac-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,1.000,"[1.000,1.000,1.000]",
+hvac-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.333,"[0.000,1.000,0.000]",
+hvac-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.667,"[1.000,0.000,1.000]",
+hvac-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,1.000,"[1.000,1.000,1.000]",
+invoice-fraud-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.333,"[0.000,0.000,1.000]",
+invoice-fraud-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.333,"[0.000,0.000,1.000]",
+invoice-fraud-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+invoice-fraud-detection,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.333,"[1.000,0.000,0.000]",
+jax-computing-basics,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+jax-computing-basics,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+jax-computing-basics,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+jax-computing-basics,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+jpg-ocr-stat,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+jpg-ocr-stat,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+jpg-ocr-stat,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+jpg-ocr-stat,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+lake-warming-attribution,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+lake-warming-attribution,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+lake-warming-attribution,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+lake-warming-attribution,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+multilingual-video-dubbing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.667,"[0.000,1.000,1.000]",
+multilingual-video-dubbing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.667,"[1.000,0.000,1.000]",
+multilingual-video-dubbing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.333,"[0.000,0.000,1.000]",
+multilingual-video-dubbing,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.333,"[1.000,0.000,0.000]",
+offer-letter-generator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+offer-letter-generator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+offer-letter-generator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+offer-letter-generator,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+organize-messy-files,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+organize-messy-files,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+organize-messy-files,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+organize-messy-files,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+paper-anonymizer,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+paper-anonymizer,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+paper-anonymizer,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+paper-anonymizer,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+pddl-airport-planning,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+pddl-airport-planning,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+pddl-airport-planning,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+pddl-airport-planning,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+pdf-excel-diff,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+pdf-excel-diff,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+pdf-excel-diff,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+pdf-excel-diff,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+pptx-reference-formatting,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+pptx-reference-formatting,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+pptx-reference-formatting,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+pptx-reference-formatting,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+protein-expression-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,1.000,"[1.000,1.000,1.000]",
+protein-expression-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,1.000,"[1.000,1.000,1.000]",
+protein-expression-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,1.000,"[1.000,1.000,1.000]",
+protein-expression-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,1.000,"[1.000,1.000,1.000]",
+python-scala-translation,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+python-scala-translation,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+python-scala-translation,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+python-scala-translation,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+r2r-mpc-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+r2r-mpc-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.333,"[0.000,0.000,1.000]",
+r2r-mpc-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.333,"[1.000,0.000,0.000]",
+r2r-mpc-control,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,1.000,"[1.000,1.000,1.000]",
+reserves-at-risk-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+reserves-at-risk-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+reserves-at-risk-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+reserves-at-risk-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+sales-pivot-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+sales-pivot-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+sales-pivot-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.333,"[0.000,1.000,0.000]",
+sales-pivot-analysis,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+sec-financial-report,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+sec-financial-report,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+sec-financial-report,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+sec-financial-report,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-demand,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-demand,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-demand,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-demand,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-supply,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-supply,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-supply,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+shock-analysis-supply,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+simpo-code-reproduction,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+simpo-code-reproduction,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+simpo-code-reproduction,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+simpo-code-reproduction,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+spring-boot-jakarta-migration,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+spring-boot-jakarta-migration,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+spring-boot-jakarta-migration,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+spring-boot-jakarta-migration,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+syzkaller-ppdev-syzlang,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,1.000,"[1.000,1.000,1.000]",
+syzkaller-ppdev-syzlang,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,1.000,"[1.000,1.000,1.000]",
+syzkaller-ppdev-syzlang,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.333,"[0.000,0.000,1.000]",
+syzkaller-ppdev-syzlang,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.667,"[0.000,1.000,1.000]",
+threejs-structure-parser,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+threejs-structure-parser,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+threejs-structure-parser,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+threejs-structure-parser,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+threejs-to-obj,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+threejs-to-obj,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+threejs-to-obj,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+threejs-to-obj,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+weighted-gdp-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+weighted-gdp-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+weighted-gdp-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+weighted-gdp-calc,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+xlsx-recover-data,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0001,3,0.000,"[0.000,0.000,0.000]",
+xlsx-recover-data,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0002,3,0.000,"[0.000,0.000,0.000]",
+xlsx-recover-data,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,cand_0003,3,0.000,"[0.000,0.000,0.000]",
+xlsx-recover-data,runnable-43task-opt,run_runnable_iter7_v1_KILLED_iter4_optimizer_hung_2h,seed,3,0.000,"[0.000,0.000,0.000]",
+edit-pdf,task-by-task-43-b1,run_task_edit-pdf_v1,seed,10,0.900,"[1.000,0.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+edit-pdf,task-by-task-43-b1,run_task_edit-pdf_v1,cand_0001,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000]",
+edit-pdf,task-by-task-43-b1,run_task_edit-pdf_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+court-form-filling,task-by-task-43-b1,run_task_court-form-filling_v1,seed,10,0.300,"[0.000,0.000,0.000,1.000,0.000,0.000,1.000,0.000,0.000,1.000]",
+court-form-filling,task-by-task-43-b1,run_task_court-form-filling_v1,cand_0001,10,0.100,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,1.000,0.000,0.000]",
+court-form-filling,task-by-task-43-b1,run_task_court-form-filling_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+adaptive-cruise-control,task-by-task-43-b1,run_task_adaptive-cruise-control_v1,seed,10,0.700,"[0.000,1.000,1.000,1.000,0.000,1.000,0.000,1.000,1.000,1.000]",
+adaptive-cruise-control,task-by-task-43-b1,run_task_adaptive-cruise-control_v1,cand_0001,10,0.700,"[1.000,1.000,1.000,0.000,1.000,0.000,1.000,0.000,1.000,1.000]",
+adaptive-cruise-control,task-by-task-43-b1,run_task_adaptive-cruise-control_v1,cand_0002,10,0.900,"[1.000,0.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+adaptive-cruise-control,task-by-task-43-b1,run_task_adaptive-cruise-control_v1,cand_0003,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+adaptive-cruise-control,task-by-task-43-b1,run_task_adaptive-cruise-control_v1,cand_0004,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+hvac-control,task-by-task-43-b1,run_task_hvac-control_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+r2r-mpc-control,task-by-task-43-b1,run_task_r2r-mpc-control_v1,seed,10,0.300,"[1.000,0.000,0.000,0.000,0.000,1.000,1.000,0.000,0.000,0.000]",
+r2r-mpc-control,task-by-task-43-b1,run_task_r2r-mpc-control_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+r2r-mpc-control,task-by-task-43-b1,run_task_r2r-mpc-control_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+3d-scan-calc,task-by-task-43-b1,run_task_3d-scan-calc_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",saturated at baseline
+syzkaller-ppdev-syzlang,task-by-task-43-b1,run_task_syzkaller-ppdev-syzlang_v1,seed,10,0.700,"[1.000,0.000,1.000,1.000,0.000,1.000,1.000,0.000,1.000,1.000]",
+syzkaller-ppdev-syzlang,task-by-task-43-b1,run_task_syzkaller-ppdev-syzlang_v1,cand_0001,10,0.900,"[0.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+syzkaller-ppdev-syzlang,task-by-task-43-b1,run_task_syzkaller-ppdev-syzlang_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+multilingual-video-dubbing,task-by-task-43-b1,run_task_multilingual-video-dubbing_v1,seed,10,0.700,"[0.000,0.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000]",
+multilingual-video-dubbing,task-by-task-43-b1,run_task_multilingual-video-dubbing_v1,cand_0001,10,0.900,"[0.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+multilingual-video-dubbing,task-by-task-43-b1,run_task_multilingual-video-dubbing_v1,cand_0002,10,0.900,"[1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000,1.000,1.000]",
+multilingual-video-dubbing,task-by-task-43-b1,run_task_multilingual-video-dubbing_v1,cand_0003,10,0.900,"[0.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+multilingual-video-dubbing,task-by-task-43-b1,run_task_multilingual-video-dubbing_v1,cand_0004,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+flood-risk-analysis,task-by-task-43-b1,run_task_flood-risk-analysis_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",saturated at baseline
+invoice-fraud-detection,task-by-task-43-b1,run_task_invoice-fraud-detection_v1,seed,10,0.300,"[0.000,0.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000,0.000]",
+invoice-fraud-detection,task-by-task-43-b1,run_task_invoice-fraud-detection_v1,cand_0001,10,0.200,"[0.000,1.000,0.000,0.000,0.000,1.000,0.000,0.000,0.000,0.000]",
+invoice-fraud-detection,task-by-task-43-b1,run_task_invoice-fraud-detection_v1,cand_0002,10,0.400,"[0.000,0.000,1.000,1.000,0.000,0.000,0.000,1.000,0.000,1.000]",
+invoice-fraud-detection,task-by-task-43-b1,run_task_invoice-fraud-detection_v1,cand_0003,10,0.200,"[0.000,0.000,1.000,0.000,0.000,1.000,0.000,0.000,0.000,0.000]",
+invoice-fraud-detection,task-by-task-43-b1,run_task_invoice-fraud-detection_v1,cand_0004,10,0.200,"[1.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,1.000,0.000]",
+financial-modeling-qa,task-by-task-43-b2,run_task_financial-modeling-qa_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",v7 rerun
+financial-modeling-qa,task-by-task-43-b2,run_task_financial-modeling-qa_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+financial-modeling-qa,task-by-task-43-b2,run_task_financial-modeling-qa_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+sec-financial-report,task-by-task-43-b2,run_task_sec-financial-report_v1,seed,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000]",v7 rerun
+sec-financial-report,task-by-task-43-b2,run_task_sec-financial-report_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+sec-financial-report,task-by-task-43-b2,run_task_sec-financial-report_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+drone-planning-control,task-by-task-43-b2,run_task_drone-planning-control_v1,seed,10,0.847,"[1.000,1.000,1.000,0.733,0.967,1.000,0.000,1.000,1.000,0.767]",v7 rerun
+drone-planning-control,task-by-task-43-b2,run_task_drone-planning-control_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+drone-planning-control,task-by-task-43-b2,run_task_drone-planning-control_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+grid-dispatch-operator,task-by-task-43-b2,run_task_grid-dispatch-operator_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+grid-dispatch-operator,task-by-task-43-b2,run_task_grid-dispatch-operator_v1,cand_0001,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000]",
+grid-dispatch-operator,task-by-task-43-b2,run_task_grid-dispatch-operator_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+jax-computing-basics,task-by-task-43-b2,run_task_jax-computing-basics_v1,seed,10,0.500,"[1.000,0.000,1.000,0.000,0.000,1.000,1.000,0.000,1.000,0.000]",v7 rerun
+jax-computing-basics,task-by-task-43-b2,run_task_jax-computing-basics_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+jax-computing-basics,task-by-task-43-b2,run_task_jax-computing-basics_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+threejs-to-obj,task-by-task-43-b2,run_task_threejs-to-obj_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",v7 rerun
+paper-anonymizer,task-by-task-43-b2,run_task_paper-anonymizer_v1,seed,10,0.400,"[0.000,0.000,0.000,0.000,1.000,0.000,1.000,0.000,1.000,1.000]",v7 rerun
+paper-anonymizer,task-by-task-43-b2,run_task_paper-anonymizer_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+paper-anonymizer,task-by-task-43-b2,run_task_paper-anonymizer_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+pddl-airport-planning,task-by-task-43-b2,run_task_pddl-airport-planning_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+pddl-airport-planning,task-by-task-43-b2,run_task_pddl-airport-planning_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+pddl-airport-planning,task-by-task-43-b2,run_task_pddl-airport-planning_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+python-scala-translation,task-by-task-43-b2,run_task_python-scala-translation_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",v7 rerun
+python-scala-translation,task-by-task-43-b2,run_task_python-scala-translation_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+python-scala-translation,task-by-task-43-b2,run_task_python-scala-translation_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+offer-letter-generator,task-by-task-43-b2,run_task_offer-letter-generator_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",v7 rerun
+offer-letter-generator,task-by-task-43-b2,run_task_offer-letter-generator_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+offer-letter-generator,task-by-task-43-b2,run_task_offer-letter-generator_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+citation-check,task-by-task-43-b3,run_task_citation-check_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",saturated at baseline
+dapt-intrusion-detection,task-by-task-43-b3,run_task_dapt-intrusion-detection_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",saturated at baseline
+data-to-d3,task-by-task-43-b3,run_task_data-to-d3_v1,seed,10,0.500,"[1.000,1.000,1.000,1.000,0.000,0.000,0.000,0.000,0.000,1.000]",candidate hit 1.0 ceiling
+data-to-d3,task-by-task-43-b3,run_task_data-to-d3_v1,cand_0001,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000]",candidate hit 1.0 ceiling
+data-to-d3,task-by-task-43-b3,run_task_data-to-d3_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+dynamic-object-aware-egomotion,task-by-task-43-b3,run_task_dynamic-object-aware-egomotion_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",candidate hit 1.0 ceiling
+dynamic-object-aware-egomotion,task-by-task-43-b3,run_task_dynamic-object-aware-egomotion_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+energy-ac-optimal-power-flow,task-by-task-43-b3,run_task_energy-ac-optimal-power-flow_v1,seed,10,0.400,"[1.000,1.000,0.000,0.000,1.000,0.000,1.000,0.000,0.000,0.000]",
+energy-ac-optimal-power-flow,task-by-task-43-b3,run_task_energy-ac-optimal-power-flow_v1,cand_0001,10,0.500,"[0.000,1.000,0.000,0.000,0.000,1.000,1.000,1.000,1.000,0.000]",
+energy-ac-optimal-power-flow,task-by-task-43-b3,run_task_energy-ac-optimal-power-flow_v1,cand_0002,10,0.300,"[0.000,0.000,0.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000]",
+energy-ac-optimal-power-flow,task-by-task-43-b3,run_task_energy-ac-optimal-power-flow_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000]",
+energy-ac-optimal-power-flow,task-by-task-43-b3,run_task_energy-ac-optimal-power-flow_v1,cand_0004,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000]",
+energy-market-pricing,task-by-task-43-b3,run_task_energy-market-pricing_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+energy-market-pricing,task-by-task-43-b3,run_task_energy-market-pricing_v1,cand_0001,10,0.500,"[1.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000,0.000,1.000]",
+energy-market-pricing,task-by-task-43-b3,run_task_energy-market-pricing_v1,cand_0002,10,0.700,"[1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000,0.000,0.000]",
+energy-market-pricing,task-by-task-43-b3,run_task_energy-market-pricing_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000]",
+energy-market-pricing,task-by-task-43-b3,run_task_energy-market-pricing_v1,cand_0004,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000]",
+enterprise-information-search,task-by-task-43-b3,run_task_enterprise-information-search_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",candidate hit 1.0 ceiling
+enterprise-information-search,task-by-task-43-b3,run_task_enterprise-information-search_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+enterprise-information-search,task-by-task-43-b3,run_task_enterprise-information-search_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+enterprise-information-search,task-by-task-43-b3,run_task_enterprise-information-search_v1,cand_0003,4,1.000,"[1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+exceltable-in-ppt,task-by-task-43-b3,run_task_exceltable-in-ppt_v1,seed,10,0.900,"[1.000,1.000,1.000,0.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+exceltable-in-ppt,task-by-task-43-b3,run_task_exceltable-in-ppt_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+jpg-ocr-stat,task-by-task-43-b3,run_task_jpg-ocr-stat_v1,seed,10,0.800,"[1.000,1.000,1.000,0.000,0.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+jpg-ocr-stat,task-by-task-43-b3,run_task_jpg-ocr-stat_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+lake-warming-attribution,task-by-task-43-b3,run_task_lake-warming-attribution_v1,seed,10,0.100,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,1.000,0.000,0.000]",candidate hit 1.0 ceiling
+lake-warming-attribution,task-by-task-43-b3,run_task_lake-warming-attribution_v1,cand_0001,10,0.600,"[0.000,0.000,1.000,0.000,1.000,1.000,1.000,1.000,1.000,0.000]",candidate hit 1.0 ceiling
+lake-warming-attribution,task-by-task-43-b3,run_task_lake-warming-attribution_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+organize-messy-files,task-by-task-43-b3,run_task_organize-messy-files_v1,seed,10,0.500,"[1.000,0.000,1.000,0.000,1.000,0.000,0.000,0.000,1.000,1.000]",
+organize-messy-files,task-by-task-43-b3,run_task_organize-messy-files_v1,cand_0001,10,0.600,"[1.000,0.000,1.000,1.000,1.000,0.000,0.000,1.000,0.000,1.000]",
+organize-messy-files,task-by-task-43-b3,run_task_organize-messy-files_v1,cand_0002,10,0.600,"[1.000,0.000,1.000,0.000,1.000,1.000,1.000,0.000,0.000,1.000]",
+organize-messy-files,task-by-task-43-b3,run_task_organize-messy-files_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,0.000,1.000,1.000,1.000,1.000,1.000]",
+organize-messy-files,task-by-task-43-b3,run_task_organize-messy-files_v1,cand_0004,10,0.900,"[1.000,1.000,1.000,0.000,1.000,1.000,1.000,1.000,1.000,1.000]",
+pdf-excel-diff,task-by-task-43-b3,run_task_pdf-excel-diff_v1,seed,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000]",candidate hit 1.0 ceiling
+pdf-excel-diff,task-by-task-43-b3,run_task_pdf-excel-diff_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+pdf-excel-diff,task-by-task-43-b3,run_task_pdf-excel-diff_v1,cand_0002,6,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+pptx-reference-formatting,task-by-task-43-b3,run_task_pptx-reference-formatting_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",saturated at baseline
+protein-expression-analysis,task-by-task-43-b3,run_task_protein-expression-analysis_v1,seed,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",saturated at baseline
+reserves-at-risk-calc,task-by-task-43-b3,run_task_reserves-at-risk-calc_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+reserves-at-risk-calc,task-by-task-43-b3,run_task_reserves-at-risk-calc_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+reserves-at-risk-calc,task-by-task-43-b3,run_task_reserves-at-risk-calc_v1,cand_0002,10,0.300,"[0.000,0.000,0.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000]",
+reserves-at-risk-calc,task-by-task-43-b3,run_task_reserves-at-risk-calc_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000]",
+reserves-at-risk-calc,task-by-task-43-b3,run_task_reserves-at-risk-calc_v1,cand_0004,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000]",
+sales-pivot-analysis,task-by-task-43-b3,run_task_sales-pivot-analysis_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",candidate hit 1.0 ceiling
+sales-pivot-analysis,task-by-task-43-b3,run_task_sales-pivot-analysis_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+shock-analysis-demand,task-by-task-43-b3,run_task_shock-analysis-demand_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+shock-analysis-demand,task-by-task-43-b3,run_task_shock-analysis-demand_v1,cand_0001,10,0.400,"[0.000,0.000,0.000,0.000,0.000,1.000,1.000,1.000,1.000,0.000]",
+shock-analysis-demand,task-by-task-43-b3,run_task_shock-analysis-demand_v1,cand_0002,10,0.300,"[0.000,0.000,0.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000]",
+shock-analysis-demand,task-by-task-43-b3,run_task_shock-analysis-demand_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000]",
+shock-analysis-demand,task-by-task-43-b3,run_task_shock-analysis-demand_v1,cand_0004,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000]",
+shock-analysis-supply,task-by-task-43-b3,run_task_shock-analysis-supply_v1,seed,10,0.100,"[0.000,0.000,0.000,1.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+shock-analysis-supply,task-by-task-43-b3,run_task_shock-analysis-supply_v1,cand_0001,10,0.600,"[0.000,0.000,1.000,0.000,1.000,1.000,1.000,1.000,1.000,0.000]",
+shock-analysis-supply,task-by-task-43-b3,run_task_shock-analysis-supply_v1,cand_0002,10,0.300,"[0.000,0.000,0.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000]",
+shock-analysis-supply,task-by-task-43-b3,run_task_shock-analysis-supply_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000]",
+shock-analysis-supply,task-by-task-43-b3,run_task_shock-analysis-supply_v1,cand_0004,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000]",
+simpo-code-reproduction,task-by-task-43-b3,run_task_simpo-code-reproduction_v1,seed,10,0.800,"[1.000,0.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000,1.000]",
+simpo-code-reproduction,task-by-task-43-b3,run_task_simpo-code-reproduction_v1,cand_0001,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000]",
+simpo-code-reproduction,task-by-task-43-b3,run_task_simpo-code-reproduction_v1,cand_0002,10,0.300,"[0.000,0.000,0.000,0.000,1.000,0.000,1.000,1.000,0.000,0.000]",
+simpo-code-reproduction,task-by-task-43-b3,run_task_simpo-code-reproduction_v1,cand_0003,10,0.900,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,1.000]",
+simpo-code-reproduction,task-by-task-43-b3,run_task_simpo-code-reproduction_v1,cand_0004,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000]",
+spring-boot-jakarta-migration,task-by-task-43-b3,run_task_spring-boot-jakarta-migration_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+spring-boot-jakarta-migration,task-by-task-43-b3,run_task_spring-boot-jakarta-migration_v1,cand_0001,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+spring-boot-jakarta-migration,task-by-task-43-b3,run_task_spring-boot-jakarta-migration_v1,cand_0002,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+spring-boot-jakarta-migration,task-by-task-43-b3,run_task_spring-boot-jakarta-migration_v1,cand_0003,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+spring-boot-jakarta-migration,task-by-task-43-b3,run_task_spring-boot-jakarta-migration_v1,cand_0004,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",
+threejs-structure-parser,task-by-task-43-b3,run_task_threejs-structure-parser_v1,seed,10,0.500,"[0.000,0.000,1.000,0.000,1.000,1.000,1.000,1.000,0.000,0.000]",candidate hit 1.0 ceiling
+threejs-structure-parser,task-by-task-43-b3,run_task_threejs-structure-parser_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+threejs-structure-parser,task-by-task-43-b3,run_task_threejs-structure-parser_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+threejs-structure-parser,task-by-task-43-b3,run_task_threejs-structure-parser_v1,cand_0003,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+weighted-gdp-calc,task-by-task-43-b3,run_task_weighted-gdp-calc_v1,seed,10,0.800,"[1.000,1.000,1.000,1.000,1.000,1.000,0.000,1.000,0.000,1.000]",candidate hit 1.0 ceiling
+weighted-gdp-calc,task-by-task-43-b3,run_task_weighted-gdp-calc_v1,cand_0001,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+weighted-gdp-calc,task-by-task-43-b3,run_task_weighted-gdp-calc_v1,cand_0002,7,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling
+xlsx-recover-data,task-by-task-43-b3,run_task_xlsx-recover-data_v1,seed,10,0.000,"[0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000]",candidate hit 1.0 ceiling
+xlsx-recover-data,task-by-task-43-b3,run_task_xlsx-recover-data_v1,cand_0001,10,0.700,"[1.000,1.000,1.000,1.000,0.000,0.000,1.000,1.000,1.000,0.000]",candidate hit 1.0 ceiling
+xlsx-recover-data,task-by-task-43-b3,run_task_xlsx-recover-data_v1,cand_0002,10,1.000,"[1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000]",candidate hit 1.0 ceiling

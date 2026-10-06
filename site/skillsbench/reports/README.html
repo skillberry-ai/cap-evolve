@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>READ — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from reports/README.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../"><img src="../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../getting-started.html">Get started</a>
+      <a href="../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../results.html">Results</a>
+      <a href="../../benchmarks.html">Benchmarks</a>
+      <a href="../../architecture.html">Architecture</a>
+      <a href="../../agent-orchestration.html">Agent mode</a>
+      <a href="../../harbor.html">Harbor</a>
+      <a href="../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/reports/README.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/reports/README.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="reports-per-task-reports-level-3">reports/ — per-task reports (level 3)</h1>
+<p>One file per task answering: <strong>what did we change, what worked, what didn't, and what can we
+(or can't) learn from this task.</strong> These are the bottom level of a three-level drill-down:</p>
+<table>
+<thead>
+<tr>
+<th>level</th>
+<th>what</th>
+<th>where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>headline numbers for the whole sweep, next to other benchmarks</td>
+<td>the <code>task-by-task</code> row on the dashboard (<code>benchmark-history</code>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>per-task scores across candidates, as a heatmap</td>
+<td><a href="../ui/heatmap.html"><code>ui/heatmap.html</code></a></td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td><strong>why a task moved, and what it teaches</strong></td>
+<td><strong><code>reports/task-by-task/&lt;task&gt;.md</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p>When a task's story outgrows one file — it needs journals, diffs, run reports, or side-by-side
+run comparison — it graduates to a full bundle in <a href="../evidence/"><code>evidence/</code></a>, and its report
+becomes the short version plus a pointer. <a href="task-by-task/shock-analysis-demand.html"><code>shock-analysis-demand</code></a>
+is the worked example of that split.</p>
+<h2 id="the-auto-block">The auto block</h2>
+<p>Each report opens with a block delimited by <code>&lt;!-- BEGIN:auto --&gt;</code> / <code>&lt;!-- END:auto --&gt;</code>. That
+block is <strong>generated</strong> from <code>results/results.json</code> and <code>artifacts/task-by-task/MANIFEST.json</code> by
+<a href="../scripts/build_task_reports.py"><code>scripts/build_task_reports.py</code></a> — status, category, source
+run, the candidate score table, and links to whatever material exists for that task.</p>
+<p>Everything below the block is hand-written and the script never touches it. So:</p>
+<pre><code class="language-bash">python3 scripts/build_task_reports.py           # create missing reports, refresh auto blocks
+python3 scripts/build_task_reports.py --check    # exit 1 if any auto block is stale (CI-friendly)
+python3 scripts/build_task_reports.py --stats     # coverage: how many reports, how many analysed
+</code></pre>
+<p><strong>Do not hand-edit inside the auto block</strong> — edits there are overwritten on the next run. This
+split exists because transcribed numbers drift: it is what produced the heatmap's 63/87-vs-64/87
+disagreement and <code>summary.md</code>'s wrong 0.825 mean best. Numbers stay derived; narrative stays human.</p>
+<h2 id="status">Status</h2>
+<p>87 reports, one per task. Not all are written — and that is deliberate rather than pending:</p>
+<ul>
+<li><strong>21 tasks were already at 1.0 on seed.</strong> Their report says so and stops. There is nothing to
+  learn about the optimizer from a task it never got to touch, and padding these would be inventing
+  content.</li>
+<li><strong>4 of the 10 NO_SIGNAL tasks are infrastructure failures</strong> (the container built, the agent
+  recorded no <code>tool_calls</code>). Their 0.0 is an absence of measurement, not a measurement of failure,
+  and their reports say that. The infra-vs-genuine split is transcribed from
+  <a href="../results/task-by-task-87/summary.html"><code>results/task-by-task-87/summary.md</code></a> — it cannot be
+  derived from the data, and it must not be inferred from <code>MANIFEST</code> run-dir names
+  (<code>seismic-phase-picking</code> is an infra failure whose run dir says <code>DONE</code>).</li>
+<li><strong>3 are written as worked exemplars</strong> — see below.</li>
+<li><strong>The rest carry <code>_Not yet analysed._</code></strong> markers. Filling them in is ordinary follow-on work;
+  the 52 tasks with a <code>best/PROCESS.md</code> have most of the raw material already written by the
+  optimizer itself.</li>
+</ul>
+<p>Run <code>--stats</code> for the current count.</p>
+<h2 id="where-the-material-comes-from">Where the material comes from</h2>
+<table>
+<thead>
+<tr>
+<th>source</th>
+<th>covers</th>
+<th>what it gives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>results/results.json</code></td>
+<td>87/87</td>
+<td>per-candidate val rewards, status, held-out test, delta</td>
+</tr>
+<tr>
+<td><code>artifacts/task-by-task/MANIFEST.json</code></td>
+<td>87/87</td>
+<td>originating run dir, best candidate id, iteration count</td>
+</tr>
+<tr>
+<td><code>artifacts/task-by-task/&lt;task&gt;/seed/</code></td>
+<td>87/87</td>
+<td>the seed skill package</td>
+</tr>
+<tr>
+<td><code>artifacts/task-by-task/&lt;task&gt;/best/PROCESS.md</code></td>
+<td><strong>52/87</strong></td>
+<td>the optimizer's own write-up: per-trial ground truth, ranked failure clusters with root causes, the kept edit, and what it deliberately skipped</td>
+</tr>
+<tr>
+<td><code>artifacts/task-by-task/&lt;task&gt;/best/</code></td>
+<td>52/87</td>
+<td>the winning skill package — diff against <code>seed/</code> to see the change</td>
+</tr>
+<tr>
+<td><code>results/task-by-task-43/per-task-logs/&lt;task&gt;.md</code></td>
+<td>43/87</td>
+<td>per-trial reward vectors, from the earlier 43-task sweep</td>
+</tr>
+<tr>
+<td><code>evidence/&lt;task&gt;*/</code></td>
+<td>2/87</td>
+<td>full bundle: journals, diffs, run reports</td>
+</tr>
+</tbody>
+</table>
+<p><code>best/PROCESS.md</code> is the highest-value input and the reason these reports are mostly
+consolidation rather than fresh analysis. <code>best/INSTRUCTIONS.md</code> also exists for those 52 tasks
+but is near-identical boilerplate across all of them — low value, skip it.</p>
+<h2 id="two-cautions-when-writing-one">Two cautions when writing one</h2>
+<p><strong>Say which run a number came from.</strong> Several tasks were run more than once, and the numbers
+differ a lot. <code>shock-analysis-supply</code> has best-val of 0.9, 0.3 and 0.667 across three runs, and
+<code>results.json</code> records the lowest. The 43-task per-task-logs are a <em>different run</em> from the
+87-task sweep, so their numbers will legitimately disagree with the auto block above them.</p>
+<p><strong>A rejected candidate is not a regression.</strong> A rejected candidate reverts to the champion, so a
+low score on a later candidate does not undo an earlier accepted fix. A candidate sequence reading
+<code>0.667, 0.4, 0.0, 0.0</code> is one accepted fix followed by three reverted experiments — not decay. The
+<code>best</code> column is the one that means anything.</p>
+<h2 id="exemplars">Exemplars</h2>
+<p>Three reports are written out in full, chosen because each shows a different thing:</p>
+<ul>
+<li><strong><a href="task-by-task/shock-analysis-supply.html"><code>shock-analysis-supply</code></a></strong> — run-to-run variance.
+  Three runs, best-val 0.9 / 0.3 / 0.667, with the recorded number being the worst. Also the
+  clearest instance of "a read-but-ignored instruction needs an executable gate, not better
+  wording," and of the optimizer correctly <em>refusing</em> to re-attempt a refuted lever.</li>
+<li><strong><a href="task-by-task/flink-query.html"><code>flink-query</code></a></strong> — a real, oracle-verified fix found once
+  (0.9) and lost on re-run (0.2), where the re-run pulled the same wrong lever five times.</li>
+<li><strong><a href="task-by-task/shock-analysis-demand.html"><code>shock-analysis-demand</code></a></strong> — the same lost-fix
+  pattern with the mechanism <em>proven</em>: the re-run's seed is diffed against the prior run's
+  winning skill to show the fix was never merged back. Pairs with its
+  <a href="../evidence/shock-analysis-demand-optimizer-regression/">evidence bundle</a>.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

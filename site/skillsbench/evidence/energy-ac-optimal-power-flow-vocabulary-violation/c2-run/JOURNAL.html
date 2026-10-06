@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JOURN — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/JOURNAL.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../"><img src="../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../getting-started.html">Get started</a>
+      <a href="../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../results.html">Results</a>
+      <a href="../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../architecture.html">Architecture</a>
+      <a href="../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../harbor.html">Harbor</a>
+      <a href="../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/JOURNAL.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/JOURNAL.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="journal-optimizer-handover-append-only-whole-run">JOURNAL — optimizer handover (append-only, whole run)</h1>
+<p>YOU (the optimizer) own this file. It is the running, accumulating handover across ALL iterations — accepted AND rejected — and it is NEVER reset. Each iteration you APPEND one new entry at the bottom (under the marker line); you do NOT edit or delete earlier entries. Read the whole journal before proposing, so you build on EVERY prior attempt (not just the last accepted one) and never re-test a refuted idea.</p>
+<p>You CANNOT know your own gate result while you write — the harness scores you AFTER you stop and stamps a <strong>RESULT</strong> line (outcome + Δ + the EXACT tasks you broke/fixed) right below your entry. So do NOT write 'what worked' as a guess. To learn what actually worked, READ the framework RESULT lines of prior entries (and LEDGER.md): an entry whose RESULT says <code>rejected</code> with <code>broke={...}</code> tells you which specific edits to drop or redesign — its diff.patch is in ./prior_iterations/<id>/.</p>
+<p>Append your entry for THIS iteration below the marker, using this shape (INTENT only — the framework appends the RESULT):</p>
+<pre><code>## Iteration &lt;your candidate id&gt; — &lt;one-line headline of what you tried&gt;
+- Changes I made (1 line per edit; name the file/tool + cluster it targets):
+- Per change, the EXPECTED effect + why it's safe (which failing task it should fix;
+  why no passing task changes behavior):
+- Building on prior RESULTS: which prior entries' broke/fixed I used, and what I
+  did NOT re-try because a prior RESULT showed it regressed (cite ids):
+- Refuted hypotheses (a prior RESULT proved this is NOT the fix — never re-test):
+- High-value clusters still NOT cracked (and the guard/tool designs already tried):
+- Plateau signal (are the last few RESULTs flat/negative? if so, which LEVER to switch
+  to — e.g. a NEW composite tool instead of another guard, or prompt instead of code):
+- Focus next iteration:
+</code></pre>
+<h2 id="iteration-cand_0001-bundle-a-verified-acopf-report-builder-fix-lossesprecision-reporting-rules">Iteration cand_0001 — bundle a verified ACOPF report-builder + fix losses/precision reporting rules</h2>
+<ul>
+<li>Changes I made:</li>
+<li>NEW SCRIPT <code>ac-branch-pi-model/scripts/build_report.py</code> — assembles report.json from a solved point; sets <code>total_losses_MW = total_generation_MW − total_load_MW</code> and writes vm/va/pg/qg at full precision; reuses <code>branch_flows.py</code> for feasibility + top-10 loading. (clusters: losses + power-balance)</li>
+<li>BODY <code>ac-branch-pi-model/SKILL.md</code> — added "Assembling the ACOPF report.json" section (run build_report.py, execute intent) + explicit losses-definition &amp; full-precision rules for hand-built reports.</li>
+<li>BODY <code>casadi-ipopt-nlp/SKILL.md</code> — added "Reporting a solved solution" subsection (losses = gen − load; full precision) + failure-mode bullet + pointer to build_report.py, for when the agent builds the report inside its solve script.</li>
+<li>Expected effect + why safe:</li>
+<li>Fixes <code>test_internal_consistency_losses</code> (t3,t5): they reported branch-only losses 423.88 vs gen−load 425.12 (Δ1.24&gt;1.0). Definition is now explicit + scripted. Fixes <code>test_power_balance_acopf</code> (t2): over-rounded voltages → mismatch&gt;1MW; full precision removes it.</li>
+<li>SAFE: all edits additive; passing trials t0,t1,t4,t6 ALREADY report losses=425.12 at full precision, so the script/prose produce identical-quality output — no behavior change on them. Only ac-branch-pi-model + casadi-ipopt-nlp edited (both already used by this task); power-flow-data untouched. No hardcoded values — general to any MATPOWER net.</li>
+<li>VERIFIED end-to-end: solved the real 300-bus net with casadi/IPOPT, ran build_report.py, ran the ACTUAL verifier → 22 passed, 1 skipped, 1 deselected (slow benchmark, known-pass); both previously-failing tests now pass.</li>
+<li>Building on prior RESULTS: none (baseline only).</li>
+<li>Refuted hypotheses: none yet.</li>
+<li>High-value clusters still NOT cracked: verifier-side 240s timeouts (t7,t8,t9) — the verifier re-solves the full ACOPF in-test; not fixable via skills (score feedback labels it uncontrollable noise). If it persists it caps achievable reward at ~0.7.</li>
+<li>Plateau signal: n/a (first iteration).</li>
+<li>Focus next iteration: if losses/precision clusters are ACCEPTED, remaining loss is purely the infra timeouts; otherwise re-examine whether the agent adopts build_report.py (may need a stronger body directive or moving the report step earlier in the solve skill).</li>
+</ul>
+<blockquote>
+<p><strong>RESULT (framework, objective):</strong> ACCEPTED (new champion) · val=0.500 Δ=+0.100 · fixed={—} · broke={—}.</p>
+</blockquote>
+<!-- cand_0001: ACCEPTED val=0.500 Δ=+0.100 -->
+
+<h2 id="iteration-cand_0002-ship-the-intended-shared-office-skills-a-general-reference-key-reconciliation-rule-fix-invoice-fraud-null-po">Iteration cand_0002 — ship the intended shared office skills + a general reference-key reconciliation rule (fix invoice-fraud null-PO)</h2>
+<ul>
+<li>Changes I made (all additive; the 3 ACOPF skills untouched):</li>
+<li>NEW <code>pdf/</code>, <code>xlsx/</code>, <code>fuzzy-match/</code> — copied the canonical shared office skills into the
+    candidate. The adapter deploys every sub-dir with a SKILL.md and strips the task's own
+    skills, so office task draws (t5–t9) previously ran with NO relevant skill support.</li>
+<li><code>fuzzy-match/SKILL.md</code> — added "Reconciling records against reference tables": normalize
+    entity suffixes before matching; <strong>an unresolved/malformed foreign key not found in the
+    reference table is reported as <code>null</code>, never echoed raw</strong>; apply criteria strictly in
+    priority order (checks needing the reference row run only after the key resolves).</li>
+<li>Per-change expected effect + why safe:</li>
+<li>Fixes t9 (invoice-fraud-detection <code>::TestOutputs::test_content</code>): the agent output
+    <code>po_number:"PO-INVALID"</code> for Invalid-PO rows; GT expects <code>null</code> (all 5 Invalid-PO rows are
+    null). Everything else in its report already matched GT counts/fields. The new null-key
+    convention produces the asserted-on result. VERIFIED: ran corrected logic on the real
+    invoices.pdf/vendors.xlsx/purchase_orders.csv → actual verifier assertions PASS 50/50.</li>
+<li>SAFE: fuzzy-match/pdf/xlsx descriptions are entity-matching / file-type scoped → they do
+    NOT trigger on ACOPF, so t1 and the timeout draws are unchanged. The null-key rule is
+    conditional on "output schema requires a reference id that must exist" → t5–t8 (field
+    diffs / form fills) don't hit it, so passing office tasks don't regress. No hardcoded
+    filenames/values/answers; the <code>PO-\d+</code> regex is explicitly labelled illustrative.</li>
+<li>Building on prior RESULTS: cand_0001 (ACCEPTED, ACOPF losses/precision) — kept its ACOPF
+  skills fully intact. From the reference office-skills run (examples/skillsbench/run_full)
+  rejected.jsonl: cand_0007 shipped a full deterministic invoice-fraud helper SCRIPT and was
+  REJECTED (Δ=+0.000, saturated 0.714 baseline) → I did NOT re-try a task-specific end-to-end
+  fraud script; encoded the fix as general reconciliation prose in the fuzzy-match skill.</li>
+<li>Refuted hypotheses: task-specific deterministic fraud script does not clear the gate
+  (ref-run cand_0007) — avoid re-testing; and it overfits the held-out gate.</li>
+<li>High-value clusters still NOT cracked: ACOPF verifier-side 240s timeouts (t0,t2,t3,t4) —
+  verifier re-solves the ACOPF in-test on limited CPUs; not fixable via skills (flagged
+  uncontrollable). These cap achievable reward regardless of edits.</li>
+<li>Plateau signal: n/a (2nd iteration). If this is REJECTED because the office draws re-sample
+  away, the lever to switch to is making the office skills' triggering/scope even tighter, or
+  verifying whether the gate's val set is stable across iterations.</li>
+<li>Focus next iteration: confirm the office skills deploy and are consulted; if the null-PO
+  prose doesn't reliably flip the agent, consider a SMALL general reconciliation helper (not a
+  task-specific end-to-end script) under fuzzy-match/scripts with execute intent.</li>
+</ul>
+<blockquote>
+<p><strong>RESULT (framework, objective):</strong> REJECTED (champion unchanged) · val=0.300 Δ=-0.200 · fixed={—} · broke={—}. — its WHOLE batch was reverted; re-introduce only the edits that did NOT break a task above, dropping/redesigning the ones that did.</p>
+</blockquote>
+<!-- cand_0002: rejected val=0.300 Δ=-0.200 -->
+
+<h2 id="iteration-cand_0003-surgical-single-tightly-scoped-fuzzy-match-reconciliation-skill-fix-invoice-fraud-null-po-without-the-pdf-package-that-sank-cand_0002">Iteration cand_0003 — surgical, single tightly-scoped fuzzy-match reconciliation skill (fix invoice-fraud null-PO) WITHOUT the pdf package that sank cand_0002</h2>
+<ul>
+<li>Changes I made:</li>
+<li>NEW <code>fuzzy-match/SKILL.md</code> (single skill) — reconcile transactional records against
+    authoritative reference tables (approved-vendor lists, PO registers, customer masters).
+    Core rule: an <strong>unresolved/malformed/absent foreign key is reported as <code>null</code>, never the
+    raw string</strong>; plus normalize-before-match, strict priority order, and difflib/rapidfuzz
+    how-to. Targets the t9 invoice-fraud cluster.</li>
+<li>I did NOT add <code>pdf/</code> or <code>xlsx/</code> this time (see below).</li>
+<li>Expected effect + why safe:</li>
+<li>Fixes t9 <code>::TestOutputs::test_content</code>: agent wrote <code>po_number:"PO-INVALID"</code> for an
+    Invalid-PO row; GT (and the task prompt: "if the PO is missing, set it to null") expects
+    <code>null</code>. Assertion failed <code>'PO-INVALID' == None</code> on page 4. The null-key convention
+    produces exactly the asserted result; everything else in t9's report already matched GT.
+    VERIFIED: reproduced the validate-then-membership rule → PO-INVALID/malformed/absent → None,
+    valid keys preserved.</li>
+<li>SAFE: description front-loaded to invoice/reference-table reconciliation + fuzzy
+    vendor-name matching + foreign-key validation → matches t9's wording, NOT the employee-diff
+    tasks (t5/t8 "deleted/modified employees between two files") nor the PDF-form tasks
+    (t6/t7). Null-key rule is conditional (only when a foreign key fails to resolve) so it is
+    inert even if loaded elsewhere. ACOPF skills + trials (t0–t4) untouched. No hardcoded
+    filenames/values/answers; the <code>PO-\d+</code> regex is explicitly labelled illustrative.</li>
+<li>Building on prior RESULTS: cand_0001 (ACCEPTED — ACOPF losses/precision) kept fully intact.
+  cand_0002 (REJECTED, val 0.300) added <code>pdf/</code> AND <code>fuzzy-match/</code>; I attribute the regression
+  to the broad <code>pdf/</code> trigger firing on the PASSING PDF-form tasks (t6/t7) — so I dropped
+  <code>pdf/</code>/<code>xlsx/</code> and shipped ONLY the reconciliation skill, with a TIGHTER trigger than
+  cand_0002's generic "matching entity names across datasets" (which risked the employee-diff
+  tasks). This is the minimal-blast-radius version of the same cluster fix.</li>
+<li>Refuted hypotheses (do NOT re-test): full task-specific deterministic fraud SCRIPT (ref-run
+  cand_0007, rejected — overfits gate); adding broad <code>pdf/</code>/<code>xlsx/</code> packages alongside the
+  fix (cand_0002, val −0.200 — regresses passing office tasks).</li>
+<li>High-value clusters still NOT cracked: ACOPF verifier 240s timeouts (t0,t2,t3,t4) — verifier
+  re-solves the ACOPF in-test on limited CPUs; not fixable via skills. Caps reward ~0.6.</li>
+<li>Plateau signal: cand_0002 was the first negative; this iteration switches LEVER from
+  "add many office skills" to "one tightly-scoped skill, minimal blast radius". If this is
+  also rejected, the office-skill direction is likely futile (office tasks pass without skills)
+  and the plateau is the uncontrollable ACOPF-timeout noise floor.</li>
+<li>Focus next iteration: if this is REJECTED with broke={} again, treat the val as
+  noise-dominated (4/10 uncontrollable) and stop chasing t9 via skills; if it fixed t9 but
+  didn't clear the bar, the null-PO rule may not reliably trigger — consider whether the skill
+  is being consulted at all before adding more surface.</li>
+</ul>
+<blockquote>
+<p><strong>RESULT (framework, objective):</strong> ACCEPTED (new champion) · val=0.900 Δ=+0.400 · fixed={—} · broke={—}.</p>
+</blockquote>
+<!-- cand_0003: ACCEPTED val=0.900 Δ=+0.400 -->
+
+<h2 id="iteration-cand_0004-reinforce-the-null-po-convention-with-a-runnable-finalizer-worked-example-fix-flaky-invoice-fraud-t7">Iteration cand_0004 — reinforce the null-PO convention with a RUNNABLE finalizer + worked example (fix flaky invoice-fraud t7)</h2>
+<ul>
+<li>Changes I made (1 line/edit):</li>
+<li>NEW SCRIPT <code>fuzzy-match/scripts/nullify_unresolved_keys.py</code> — general report finalizer:
+    nulls any reference-key field whose value isn't in a supplied valid-key set (<code>--set field=@file</code>
+    or comma-list); leaves matches untouched. Targets the invoice-fraud null-PO cluster.</li>
+<li>BODY <code>fuzzy-match/SKILL.md</code> — added a worked example (<code>reason="Invalid PO"</code> WITH <code>po_number=null</code>
+    vs the wrong leaked-placeholder row) and a "Finalize the output" step directing the agent to RUN
+    the finalizer as the LAST step (execute intent, "do not reimplement"), warning that inline
+    null-checks are easy to botch.</li>
+<li>Expected effect + why safe:</li>
+<li>Fixes t7 <code>::TestOutputs::test_content</code> → <code>assert 'PO-INVALID' == None</code> on page 4. The trace shows
+    the agent classified reason correctly but wrote a botched inline null-check
+    (<code>po if po != "PO-INVALID" or True else po</code> — a no-op) so the raw placeholder leaked. Running the
+    deterministic finalizer as a final pass produces the GT-passing null. VERIFIED by running the
+    script on a reproduced report → page 4 → null, valid PO preserved, existing null preserved.</li>
+<li>SAFE: only <code>fuzzy-match</code> is touched; the 9 passing trials this draw (file-org, ACC, retrieval,
+    Three.js — confirmed via their prompts) never load it. Finalizer only nulls non-valid values, so
+    it is a no-op on a correct report. No task-specific filename/value/answer hardcoded.</li>
+<li>Building on prior RESULTS: built on cand_0003 (ACCEPTED, 0.900) — kept its null-PO prose and
+  reinforced it with code (prose alone proved flaky). Did NOT re-add <code>pdf/</code>/<code>xlsx/</code> (cand_0002
+  REJECTED −0.200).</li>
+<li>Refuted hypotheses (not re-tested): full end-to-end task-specific fraud SCRIPT (ref-run cand_0007,
+  rejected/overfit) — my script is a general finalizer, not that; broad <code>pdf/</code>/<code>xlsx/</code> packages
+  (cand_0002 −0.200).</li>
+<li>High-value clusters still NOT cracked: none addressable this draw — the val is a resampled mixed
+  pool and only the invoice-fraud task fails; the flakiness is the botched inline null-check.</li>
+<li>Plateau signal: champion has been flat at the invoice-fraud cluster since cand_0003; this switches
+  the LEVER from prose to a runnable script to make the good behavior consistent.</li>
+<li>Focus next iteration: if still flaky, the agent may not adopt the finalizer — consider directing
+  the WHOLE reconciliation output through a bundled step earlier, or check whether fuzzy-match is
+  consulted at all on the invoice draw.</li>
+</ul>
+<blockquote>
+<p><strong>RESULT (framework, objective):</strong> REJECTED (champion unchanged) · val=0.800 Δ=-0.100 · fixed={—} · broke={—}. — its WHOLE batch was reverted; re-introduce only the edits that did NOT break a task above, dropping/redesigning the ones that did.</p>
+</blockquote>
+<!-- cand_0004: rejected val=0.800 Δ=-0.100 -->
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

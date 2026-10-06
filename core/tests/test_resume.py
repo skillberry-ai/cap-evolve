@@ -186,3 +186,27 @@ def test_baseline_resume_skips_eval(tmp_path):
     assert second["resumed"] is True
     assert second["run_dir"] == first["run_dir"]
     assert second["baseline_val"] == first["baseline_val"]
+
+
+def test_baseline_materializes_guidance_for_every_declared_capability(tmp_path):
+    """A run in EITHER orchestration_mode goes through this one baseline phase (see
+    cli.py's ``sequence``), so this is where ``guidance/<cap>/SKILL.md`` must land for a
+    driving agent to read directly — agent mode has no per-iteration optimizer subprocess
+    to piggyback the deterministic path's materialization on."""
+    project = tmp_path / ".capevolve" / "project"
+    (project / "adapters").mkdir(parents=True)
+    shutil.copy(EXAMPLE / "adapter.py", project / "adapters" / "adapter.py")
+    (project / "capevolve.yaml").write_text(
+        "capabilities: [system-prompt]\n", encoding="utf-8")
+    seed = tmp_path / "seed_capability"
+    shutil.copytree(EXAMPLE / "capability", seed)
+    base = tmp_path / ".capevolve"
+    common = ["--base", str(base), "--project", str(project),
+              "--capability", str(seed), "--run-ts", "g1"]
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    r = subprocess.run([sys.executable, str(BASELINE_RUN), *common],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0, r.stderr
+    run_dir = Path(json.loads(r.stdout)["run_dir"])
+    assert (run_dir / "guidance" / "system-prompt" / "SKILL.md").exists()
+    assert (run_dir / "guidance" / "diagnose" / "SKILL.md").exists()

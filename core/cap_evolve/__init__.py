@@ -13,6 +13,7 @@ cap_evolve <command>`` and parse the JSON it prints.
 from __future__ import annotations
 
 import faulthandler as _faulthandler
+import logging as _logging
 import os as _os
 
 # Dump a native traceback to stderr if this process dies on a fatal signal.
@@ -29,6 +30,17 @@ if not _os.environ.get("CAPEVOLVE_NO_FAULTHANDLER"):
         _faulthandler.enable()
     except Exception:  # noqa: BLE001 — e.g. stderr replaced by a non-file object
         pass
+
+# #589: "no debug/verbose logging mode exists anywhere" — CAPEVOLVE_LOG_LEVEL (or
+# `cap-evolve run --log-level`, which just sets this env var for the phase/algorithm
+# subprocesses it spawns) turns on cap_evolve's stdlib `logging` calls (e.g. the
+# per-task/per-trial detail in harness.evaluate_candidate). Left unset, this is a
+# no-op: Python's own default (WARNING to stderr) is unchanged, so a host embedding
+# cap_evolve gets no surprise output unless it opts in.
+_LOG_LEVEL_NAME = _os.environ.get("CAPEVOLVE_LOG_LEVEL", "").strip().upper()
+if _LOG_LEVEL_NAME:
+    _logging.basicConfig(level=getattr(_logging, _LOG_LEVEL_NAME, _logging.INFO),
+                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 from .adapter import CapabilityAdapter, stub_methods
 from .cache import EvalCache, hash_candidate_dir

@@ -1,0 +1,47 @@
+# cap-evolve run spec — TASK-BY-TASK variant for econ-detrending-correlation.
+# Seed skills = the task's OWN environment/skills/ (copied into seed_capability/).
+# Single-task split (train=val=test=[econ-detrending-correlation]) with num_trials=10 for tight paired-SE.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]
+capability_path: seed_capability
+actions: [edit]
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 50.0
+runner_repo_path: ../../vendor/skillsbench
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+split_ids_file: split_ids.econ-detrending-correlation.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 10
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+# 1 task * 10 trials * 3 evals (baseline + 2 iters) = 30 rollouts.
+# Runner ~$0.30/rollout = ~$9. Optimizer 2 * ~$15 = ~$30. Total ~$50 headroom $150.
+max_iterations: 2
+stall: 0
+max_metric_calls: 0
+max_usd: 150.0
+max_optimizer_usd: 80.0
+
+# --- iteration store --------------------------------------------------------
+store: git

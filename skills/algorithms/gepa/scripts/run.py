@@ -54,6 +54,12 @@ def main(argv=None) -> int:
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--no-regression", action="store_true",
                    help="reject candidates that break a previously-passing val task")
+    p.add_argument("--gate-max-broke", type=int, default=None,
+                   help="OPT-IN composition veto (unset = off, today's behaviour): reject an "
+                        "otherwise-accepted candidate that BREAKS more than N val tasks it "
+                        "was passing, naming the ids. The gate decides on the MEAN paired "
+                        "delta, so a net-positive candidate is accepted however many "
+                        "previously-solved tasks it destroys -- with 0 here, none may be.")
     p.add_argument("--resume", action="store_true",
                    help="reconstruct the pool/frontier from the run dir and continue the "
                         "search instead of restarting from the seed")
@@ -85,6 +91,13 @@ def main(argv=None) -> int:
     seed_val = SplitResult.from_dict(
         json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
+    # The gate's kwargs. ``gate_max_broke`` is added ONLY when set, so the dict every run so
+    # far passed is byte-identical and the accept/reject decision cannot have moved.
+    gate_kwargs = ({"k_se": args.k_se} if args.gate_mode == "auto"
+                   else {"mode": args.gate_mode, "k_se": args.k_se})
+    if args.gate_max_broke is not None:
+        gate_kwargs["gate_max_broke"] = int(args.gate_max_broke)
+
     result = gepa.gepa_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, seed_val=seed_val,
         max_metric_calls=args.max_metric_calls, max_iterations=args.max_iterations,
@@ -92,8 +105,7 @@ def main(argv=None) -> int:
         component_selector=args.component_selector,
         selection_strategy=args.selection_strategy,
         max_merges=args.max_merges, merge_cadence=args.merge_cadence,
-        gate_kwargs=({"k_se": args.k_se} if args.gate_mode == "auto"
-                     else {"mode": args.gate_mode, "k_se": args.k_se}),
+        gate_kwargs=gate_kwargs,
         no_regression=args.no_regression, seed=args.seed, store=store,
         resume=args.resume, ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),
         protected_patterns=harness.parse_protected_paths(args.protected_paths),

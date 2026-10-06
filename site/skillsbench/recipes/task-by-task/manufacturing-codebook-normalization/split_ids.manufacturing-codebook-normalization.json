@@ -1,0 +1,5 @@
+{
+  "train": ["manufacturing-codebook-normalization"],
+  "val": ["manufacturing-codebook-normalization"],
+  "test": ["manufacturing-codebook-normalization"]
+}

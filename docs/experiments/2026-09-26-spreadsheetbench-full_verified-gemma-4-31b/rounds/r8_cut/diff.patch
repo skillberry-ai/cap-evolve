@@ -1,0 +1,24 @@
+--- a/task_template.md
++++ b/task_template.md
+@@ -77,21 +77,4 @@
+ ```
+ 
+-`ws[a1].value` returns a cell's formula as TEXT — `'=SUM(C5)/(C19+C20)'`, not a number. Anything you
+-derive from that string is wrong from the start. The computed number lives in the `data_only` copy.
+-Never save the `data_only` workbook: doing so freezes every other formula in the file into a static
+-number.
+-
+-Before writing any `==` test, print what the column actually contains:
+-
+-```python
+-vals = [wsv[f"G{{r}}"].value for r in range(2, 40)]
+-print("distinct:", sorted({{(repr(v), type(v).__name__) for v in vals}})[:20])
+-```
+-
+-Years, ids and codes are stored as numbers in one column and as text in another, so `2014 == '2014'`
+-is False; text criteria differ in case and trailing spaces. Compare both sides normalised —
+-`str(a).strip().lower() == str(b).strip().lower()` — and note that `''` is a present, empty value
+-(zero in a numeric column), not a failed lookup.
+-
+ ## How to produce the output file
+ 

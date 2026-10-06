@@ -1,0 +1,5 @@
+{
+  "train": ["paper-anonymizer"],
+  "val": ["paper-anonymizer"],
+  "test": ["paper-anonymizer"]
+}

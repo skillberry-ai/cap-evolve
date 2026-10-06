@@ -19,17 +19,19 @@ run dir  --metrics.py-->  metrics.jsonl + steps.jsonl
                                     |
                      records/<run_id>__<tier>-<bench>.json   on the benchmark-history branch
                                     |
-                          record.py aggregate
+                       (Pages deploy clones benchmark-history, runs record.py aggregate)
                                     |
-                       benchmarks.json + meta.json           on the benchmark-history branch
-                                    |
-                    site/benchmarks.js fetches it from raw.githubusercontent
+                       benchmarks.json + meta.json           rendered into the Pages artifact,
+                                    |                          NOT committed to the branch
+                    site/benchmarks.js fetches it same-origin from the deployed site
 ```
 
-The page reads `benchmarks.json` **straight from the `benchmark-history` branch** with a
-cache-buster (`site/benchmarks.js`, line 1). So **a push to that branch is live immediately — no
-Pages deploy is needed.** A Pages deploy is only needed for the optional per-run "Open UI"
-snapshot (see the last section).
+`benchmarks.json`/`meta.json` are rendered fresh from `records/` **at Pages-deploy time**
+(`.github/workflows/pages.yml`) — they are never committed to `benchmark-history`. So **a push to
+that branch is NOT enough on its own**: `pages.yml` only auto-runs off the *Benchmarks* workflow
+completing, and a manual publish bypasses that trigger entirely. After pushing your record (step
+5), you must also trigger **Actions → Deploy GitHub Pages → Run workflow** (`workflow_dispatch`)
+before the new row shows up on the page.
 
 ## Step 1 — collect the run dir
 
@@ -131,28 +133,30 @@ correct a record (idempotent).
 git clone --depth 1 --branch benchmark-history \
   git@github.com:skillberry-ai/cap-evolve.git /tmp/hist
 cp /tmp/pub/30987147147__pilot-spreadsheetbench.json /tmp/hist/records/
-python3 ci/benchmarks/lib/record.py aggregate /tmp/hist/records \
-  --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --out /tmp/hist
 cd /tmp/hist
-git add records benchmarks.json meta.json
+git add records
 git commit -m "bench: record run 30987147147 (manual publish)"
 git push origin benchmark-history
 ```
 
-Never hand-edit `benchmarks.json` or `meta.json` — `aggregate` regenerates both from every file in
-`records/`, so editing the aggregate is always lost on the next run. Edit or add a record instead.
+Only `records/` (and `runs/`, for the optional UI snapshot) get committed here — `benchmarks.json`/
+`meta.json` are no longer persisted on this branch at all; they're rendered fresh from `records/` at
+Pages-deploy time, so there's nothing to hand-edit or regenerate locally. Adding the record file is
+the entire publish step.
 
 CI treats this branch as single-writer (`concurrency: benchmark-history-write`). A manual push while
 a benchmarks run is finishing can lose the race; if `git push` is rejected, delete `/tmp/hist` and
 redo this step rather than force-pushing.
 
-## Step 6 — verify
+## Step 6 — trigger a Pages deploy, then verify
 
-Reload <https://skillberry-ai.github.io/cap-evolve/benchmarks.html>. The new row should appear
-immediately, with a real base→opt reward rather than `—`. To check the data without the browser:
+Trigger **Actions → Deploy GitHub Pages → Run workflow** (`workflow_dispatch`) — this is the step
+that actually renders your new record into `benchmarks.json`. Once it completes, reload
+<https://skillberry-ai.github.io/cap-evolve/benchmarks.html>; the new row should appear, with a real
+base→opt reward rather than `—`. To check the data without the browser:
 
 ```bash
-curl -s "https://raw.githubusercontent.com/skillberry-ai/cap-evolve/benchmark-history/benchmarks.json" \
+curl -s "https://skillberry-ai.github.io/cap-evolve/benchmarks.json" \
   | python3 -c "import json,sys;print([(r['run_id'],r['tier'],r['bench'],r['suite']) for r in json.load(sys.stdin)][:3])"
 ```
 
@@ -171,9 +175,9 @@ cp -R /tmp/pub/ui_shell/. /tmp/hist/runs/30987147147__pilot-spreadsheetbench/ui/
 cp -R /tmp/pub/ui/data    /tmp/hist/runs/30987147147__pilot-spreadsheetbench/ui/data
 ```
 
-Then set `"has_ui": true` in the record (or rebuild it with `record.py build --has-ui`), re-run
-`aggregate`, commit, push, and trigger **Actions → Pages → Run workflow** so the deploy folds
-`runs/**` into `benchmark-ui/runs/**`.
+Then set `"has_ui": true` in the record (or rebuild it with `record.py build --has-ui`), commit,
+push, and trigger **Actions → Deploy GitHub Pages → Run workflow** so the deploy both folds
+`runs/**` into `benchmark-ui/runs/**` and renders the updated record into `benchmarks.json`.
 
 ## Repairing a record that is already published
 
@@ -186,7 +190,7 @@ python3 ci/benchmarks/utils/rebuild_record.py /tmp/pub/run_suite/final.json \
   /tmp/hist/records/<run_id>__<tier>-<bench>.json
 ```
 
-Then re-run `aggregate`, commit and push (steps 5–6). It is idempotent, so running it on an
+Then commit, push, and trigger a Pages deploy (steps 5–6). It is idempotent, so running it on an
 already-correct record changes nothing.
 
 ## Related

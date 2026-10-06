@@ -195,6 +195,28 @@ def main(argv=None) -> int:
                 cap_path = cand
         result = harness.baseline(adapter, cap_path, run_dir=run_dir, n_trials=args.n_trials)
 
+        # Materialize ./guidance/<cap>/SKILL.md (+ diagnose + capability_sources) into the
+        # RUN dir itself, once, here — regardless of orchestration_mode. Deterministic mode
+        # already gets these per-iteration into the optimizer subprocess's workdir
+        # (harness._inject_optimizer_context); agent mode has no such per-iteration step to
+        # piggyback on, so without this a driving agent gets no capability-specific edit-menu
+        # guidance unless it happens to go through agent-optimize/scripts/host.py. Re-reads
+        # the spec rather than reusing `full_spec` above: that read is wrapped in its own
+        # best-effort try/except and may not have completed.
+        try:
+            from cap_evolve.specfile import read_yaml as _read_yaml
+            guidance_spec_path = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
+            guidance_spec = _read_yaml(guidance_spec_path.read_text(encoding="utf-8"))
+            harness.stage_capability_guidance(
+                run_dir, run_dir.root,
+                capabilities=guidance_spec.get("capabilities"),
+                capability_sources=guidance_spec.get("capability_sources"),
+                project_dir=Path(args.project),
+            )
+        except Exception as e:  # noqa: BLE001 — guidance is a nicety, baseline is the point
+            run_dir.log_event("optimizer_context_warning", what="guidance (baseline)",
+                              error=str(e)[:300])
+
         # Headroom: the budget decision this phase exists to make. Saturated => every
         # later Δ chases noise; floor => usually a broken adapter, not a hard task.
         # Emitted, not just advised, so `cap-evolve run` / orchestrate can stop on it

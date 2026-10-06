@@ -10,9 +10,18 @@
 #
 # dest_dir defaults to $CAPEVOLVE_CI_CACHE/spreadsheetbench-data (or ~/.cache/capevolve-ci/…).
 # SPREADSHEETBENCH_VARIANT selects which dataset to fetch (default sample_200):
-#   sample_200 — the 200-task curated sample used by the smoke tier (~19MB).
-#   full_912   — the full 912-task set self-reported leaderboards are computed over
-#                (used by the full tier, ~91MB).
+#   sample_200   — the 200-task curated sample used by the smoke tier (~19MB).
+#   full_912     — the original 912-task set self-reported leaderboards are computed over
+#                  (used by the full tier, ~91MB). THREE graded cases per task.
+#   verified_400 — the 400-task verified re-release (~15MB), which recent skill-evolution
+#                  work evaluates on (used by the full_verified tier). ONE graded case per task,
+#                  under different filenames (`_init`/`_golden`; five tasks ship bare
+#                  `initial.xlsx`/`golden.xlsx`) — the adapter reads the layout off disk.
+#
+#                  NOT a filter of full_912: its 400 ids all appear there, but 226 of the
+#                  instructions were rewritten, 4 answer_positions changed, and 61 golden
+#                  workbooks differ. Deriving it by subsetting the 912 archive would score
+#                  the OLD benchmark while claiming comparability.
 # On success, prints the path to the extracted dataset root to stdout.
 set -euo pipefail
 CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}"
@@ -28,8 +37,12 @@ case "$VARIANT" in
     URL="https://raw.githubusercontent.com/RUCKBReasoning/SpreadsheetBench/main/data/spreadsheetbench_912_v0.1.tar.gz"
     INNER="all_data_912_v0.1"
     ;;
+  verified_400)
+    URL="https://raw.githubusercontent.com/RUCKBReasoning/SpreadsheetBench/main/data/spreadsheetbench_verified_400.tar.gz"
+    INNER="spreadsheetbench_verified_400"
+    ;;
   *)
-    echo "::error:: unknown SPREADSHEETBENCH_VARIANT: $VARIANT (want sample_200|full_912)" >&2
+    echo "::error:: unknown SPREADSHEETBENCH_VARIANT: $VARIANT (want sample_200|full_912|verified_400)" >&2
     exit 1
     ;;
 esac
@@ -56,7 +69,8 @@ mv "$tmp/$INNER" "$OUT"
 
 # Normalize modes for the sandbox container. `tar` preserves the modes STORED in the
 # archive, and the upstream 912 archive stores its top-level dir as `drwx------` (the
-# 200-task sample stores 0755). The adapter bind-mounts that top-level dir AT /mnt/data
+# 200-task sample and the verified 400 store 0755 — but this runs unconditionally, because
+# the extracting shell's umask can narrow any of them). The adapter bind-mounts that top-level dir AT /mnt/data
 # inside a container running as uid 1000, so a non-traversable root makes every path under
 # the mount unreachable — reads included — and a whole run scores 0.000 with 50 EACCES
 # tracebacks (run 30691123806: $77 and ~3h). a+rX adds traverse/read only, never write:

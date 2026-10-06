@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Benchmark runs — cap-evolve</title>
-  <meta name="description" content="Every ci/benchmarks execution (tau2 · swebench · skillsbench), on PRs and manual runs — a sortable, filterable log of reward, eval/optimizer cost, and models, each measured against that run's own freshly-computed baseline.">
+  <meta name="description" content="Every ci/benchmarks execution (tau2 · swebench · skillsbench · rfe-creator), on PRs and manual runs — a sortable, filterable log of reward, eval/optimizer cost, and models, each measured against that run's own freshly-computed baseline.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/benchmarks.html">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="cap-evolve">
@@ -24,7 +24,7 @@
   <!-- dark-first: default dark, honor an explicit saved choice. Applied pre-paint (no FOUC) + enables JS-gated reveal -->
   <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
   <!-- bump the ?v=... string on every style.css edit so browsers ignore their cached copy -->
-  <link rel="stylesheet" href="style.css?v=20260822">
+  <link rel="stylesheet" href="style.css?v=20260908a">
 </head>
 <body>
 
@@ -56,7 +56,7 @@
   <div class="reveal">
     <h1>Benchmark runs</h1>
     <p class="lead">
-      Every <code>ci/benchmarks</code> execution (tau2 · swebench · skillsbench), on PRs and manual
+      Every <code>ci/benchmarks</code> execution (tau2 · swebench · skillsbench · rfe-creator), on PRs and manual
       runs. Each row is one benchmark in one run, measured against that run's own
       freshly-computed baseline (all of a tier's tasks are optimized together, in one run —
       nothing is pre-frozen or reused across runs); the <strong>Type</strong> column marks the
@@ -70,6 +70,9 @@
     <p>
       See the hand-verified canonical numbers on the <a href="results.html">Results</a> page; this
       is the raw CI log. Failed/cancelled runs are shown too, so infra breakage is visible.
+      SkillsBench rows with a <strong>Report ↗</strong> link in the UI column drill down to a
+      rendered heatmap and (where it exists) per-task detail — start from the
+      <a href="skillsbench/index.html">SkillsBench experiments</a> hub.
     </p>
   </div>
 
@@ -140,7 +143,7 @@
     <tbody id="rows"></tbody>
   </table>
   <p id="empty" class="muted" hidden>No runs recorded yet — trigger the suite (add a
-    <code>benchmark-smoke</code> label to a PR, or Actions → Benchmarks).</p>
+    <code>benchmark-smoke-&lt;bench&gt;</code> label to a PR, or Actions → Benchmarks).</p>
   <p id="error" class="muted" hidden>Couldn't load benchmark history.</p>
 
 </main>
@@ -164,7 +167,7 @@
   </div>
 </footer>
 
-<script src="benchmarks.js?v=20260907b"></script>
+<script src="benchmarks.js?v=20260908a"></script>
 <script src="js/site.js?v=20260822" defer></script>
 </body>
 </html>

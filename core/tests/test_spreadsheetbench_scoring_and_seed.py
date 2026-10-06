@@ -78,9 +78,12 @@ def test_reward_follows_the_selected_metric_and_both_are_always_recorded():
     """Verified against the adapter source: score() must pick reward by SCORING and keep BOTH
     metrics, so either number is recoverable from any past run without re-running it."""
     src = (ADAPTER_DIR / "adapter.py").read_text(encoding="utf-8")
-    assert 'reward=hard if SCORING == "hard" else soft' in src
-    assert '"name": "soft_restriction"' in src and '"name": "hard_restriction"' in src
-    assert '"primary": SCORING == "soft"' in src and '"primary": SCORING == "hard"' in src
+    assert 'reward = hard if SCORING == "hard" else soft' in src
+    assert 'reward = hard_nr if SCORING == "hard" else soft_nr' in src
+    for name in ("soft_restriction", "hard_restriction", "soft_no_recalc", "hard_no_recalc"):
+        assert f'"name": "{name}"' in src
+    assert '"primary": REWARD_RECALC and SCORING == "hard"' in src
+    assert '"primary": not REWARD_RECALC and SCORING == "hard"' in src
     # hard must remain all-or-nothing over the test cases.
     assert "hard = 1.0 if all(test_results) else 0.0" in src
 
@@ -128,13 +131,21 @@ def test_run_suite_threads_both_knobs_with_previous_behaviour_as_default():
     # The .env the adapter actually reads must carry it too, not just the exported shell var.
     assert "SPREADSHEETBENCH_SCORING=${SB_SCORING:-soft}" in sh
     # And the committed-overrides channel must be wired, since these have no workflow input.
-    assert 'load_overrides "$REPO/ci/benchmarks/$BENCH/$TIER/overrides.env"' in sh
+    assert 'load_overrides "$REPO/ci/benchmarks/$BENCH_DIR/$TIER/overrides.env"' in sh
 
 
 def test_gate_strictness_is_already_a_dispatch_input():
-    """No code needed for the gate — recorded here so nobody adds a redundant knob."""
+    """No code needed for the gate — recorded here so nobody adds a redundant knob.
+
+    The env line no longer carries a `|| '1.0'` fallback (issue #544): that fallback forced
+    GATE_K_SE into the environment on every dispatch, which permanently blocked a tier's
+    overrides.env from correcting it (load_overrides.sh never overrides an already-set key).
+    A blank dispatch now leaves GATE_K_SE unset; the literal 1.0 fallback moved to run_suite.sh,
+    which runs after load_overrides.sh."""
     wf = WORKFLOW.read_text(encoding="utf-8")
-    assert "gate_k_se:" in wf and "GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}" in wf
+    assert "gate_k_se:" in wf
+    assert "GATE_K_SE: ${{ github.event.inputs.gate_k_se }}" in wf
+    assert "GATE_K_SE: ${{ github.event.inputs.gate_k_se || '1.0' }}" not in wf
 
 
 def test_the_workflow_is_untouched_by_this_feature():
@@ -190,8 +201,11 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
     pinned here: a tier acquiring a config silently is how a run's numbers stop meaning what
     the reader thinks they mean.
 
-    spreadsheetbench pilot+full optimize the HARD score, to be comparable with published work
-    that reports a benchmark's native hard score (soft >= hard by construction).
+    spreadsheetbench pilot+full+full_verified optimize the HARD score, to be comparable with
+    published work that reports a benchmark's native hard score (soft >= hard by construction).
+    On `full_verified` the two metrics coincide anyway — the verified 400-task release grades ONE
+    case per task — but it is pinned so the reported metric name matches `full`'s and so a
+    future multi-case release cannot silently loosen this tier to partial credit.
 
     The pilot ALSO sets `SB_WARM_SEED=1`, and that is exactly the kind of deviation this test
     exists to make loud. Learning was not cumulative across runs: pilot 30799393875 learned
@@ -212,14 +226,22 @@ def test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys():
         for p in sorted((REPO / "ci" / "benchmarks").glob("*/*/overrides.env"))
     }
     assert shipped == {
-        "ci/benchmarks/spreadsheetbench/full/overrides.env": {"SB_SCORING": "hard"},
+        "ci/benchmarks/spreadsheetbench/full/overrides.env": {
+            "SB_SCORING": "hard", "GATE_K_SE": "0.2",
+        },
+        "ci/benchmarks/spreadsheetbench/full_verified/overrides.env": {
+            "SB_SCORING": "hard", "GATE_K_SE": "0.2",
+        },
         "ci/benchmarks/spreadsheetbench/pilot/overrides.env": {
-            "SB_SCORING": "hard", "SB_WARM_SEED": "1",
+            "SB_SCORING": "hard", "SB_WARM_SEED": "1", "GATE_K_SE": "0.2",
         },
         "ci/benchmarks/swebench/full/overrides.env": {
             "SWEBENCH_ADAPTER": "harbor",
         },
     }, "a tier gained or changed a committed override — say which and why in the PR"
+    # issue #544: these three tiers set SB_SCORING=hard, which makes per-task reward Bernoulli
+    # and widens the acceptance gate's SE, so they pair it with a stricter GATE_K_SE=0.2 — now
+    # possible because GATE_K_SE is no longer forced into the environment by the workflow.
 
 
 def test_the_full_tier_stays_pristine_so_the_headline_is_from_scratch():
@@ -230,9 +252,14 @@ def test_the_full_tier_stays_pristine_so_the_headline_is_from_scratch():
 
 
 def test_the_shipped_overrides_do_not_pretend_to_set_workflow_owned_vars():
-    """The workflow always sets GATE_K_SE/NUM_TRIALS/ITERATIONS/AGENT_MODEL, and the loader
-    lets the environment win — so putting them here would look configured but do nothing."""
-    workflow_owned = {"GATE_K_SE", "NUM_TRIALS", "ITERATIONS", "AGENT_MODEL",
+    """The workflow always sets NUM_TRIALS/ITERATIONS/AGENT_MODEL (a non-empty default or a
+    tier-computed fallback baked into the env line itself), and the loader lets the
+    environment win — so putting them here would look configured but do nothing.
+
+    GATE_K_SE is deliberately NOT in this set (issue #544): its workflow env line has no
+    fallback of its own, so a blank dispatch leaves it unset for overrides.env to fill in —
+    see test_exactly_the_expected_tiers_ship_overrides_and_only_with_known_keys above."""
+    workflow_owned = {"NUM_TRIALS", "ITERATIONS", "AGENT_MODEL",
                       "OPTIMIZER_MODEL", "SPLIT_SEED", "TIER", "ALGORITHM_FOCUS"}
     for p in sorted((REPO / "ci" / "benchmarks").glob("*/*/overrides.env")):
         keys = {l.split("=", 1)[0] for l in p.read_text(encoding="utf-8").splitlines()

@@ -1,0 +1,2 @@
+{"phase": "iterate", "iter": 1, "candidate": "cand_0001", "accepted": true, "reward": 0.85, "optimizer_usd": 5.007372, "optimizer_seconds": 892.57, "eval_usd": 0.0, "eval_seconds": 944.19, "n_broke": 1, "n_fixed": 17}
+{"phase": "finalize", "iter": null, "candidate": "cand_0001", "accepted": null, "reward": 0.69, "optimizer_usd": 0.0, "optimizer_seconds": 0.0, "eval_usd": 0.0, "eval_seconds": 2603.44}

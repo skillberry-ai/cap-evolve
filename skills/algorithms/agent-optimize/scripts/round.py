@@ -18,6 +18,11 @@ and all three are round-level bookkeeping the driver was doing by hand:
   3. **The gate must stay serial.** ``set_best`` mutates run state, so gating is done after all
      evals land, one candidate at a time, re-reading ``best_id`` each time.
 
+In front of the gate sits the default cascade (#437/#438, see ``merge_stage``): every candidate
+is screened here unless a skip flag says why not, screen kills are never gated, disjoint
+survivors are pairwise-merged and each merge screened, and every survivor is gated once. Each
+step appends a ``graph.jsonl`` transition (#435).
+
 This script does NOT commit. It prints the table; the driver reads it, decides, and calls
 ``commit.py`` — because choosing which part of a bundled edit to keep is a judgement that
 belongs to the driver, and ``regressions`` is the input to it.
@@ -26,6 +31,7 @@ belongs to the driver, and ``regressions`` is the input to it.
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import os
 import re
@@ -43,6 +49,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 import gate_check
 
 from cap_evolve import RunDir, harness
+from cap_evolve.specfile import spec_for_run
 
 #: Gate measurement concurrency. The default is deliberately low; the ceiling is where the
 #: measured degradation is established (~0.08 at the arm level above 25, ~0.03 at 8), so above
@@ -50,8 +57,103 @@ from cap_evolve import RunDir, harness
 DEFAULT_CONCURRENCY = 8
 MAX_RESOLVING_CONCURRENCY = 25
 
+#: issue #585: --skip-screen-justification stopped being a fresh per-candidate judgment and
+#: became copy-pasted boilerplate ("consistent with cand_1/2/...", "...consistent with prior
+#: rounds", "...per prior rounds cand_2-...") — every candidate from the second on skipped the
+#: cheap screen and paid full-val (300 rollouts) instead of 8-25, and full-val rejected most of
+#: them anyway. Measured on the issue's own examples with difflib.SequenceMatcher: real boilerplate
+#: variants (same template, different candidate list tacked on) score 0.80-0.99; a justification
+#: describing THIS candidate's actual edit surface scores 0.09-0.3 against them. 0.75 sits well
+#: inside that gap.
+JUSTIFICATION_SIMILARITY_THRESHOLD = 0.75
+
+#: issues #630/#631: run-wide budgets for declining a step of the default cascade. Wording-based
+#: checks (#585/#613's near-duplicate detector) were defeated by an optimizer that held the SAME
+#: strategy — always skip — while varying the sentence every round (12/16 candidates unscreened,
+#: 7/9 rounds `--no-merge`). A count cannot be reworded. Each budget is how many times a run may
+#: decline that step WHEN IT APPLIED; once spent, round.py refuses with no override flag, because
+#: whether the step pays is arithmetic (the frozen screening_economics; a merge costs one subset
+#: screen and saves a full-val gate), not a judgement to re-argue every round. Per-benchmark
+#: overrides live in capevolve.yaml (`max_screen_skips`, `max_merge_skips`).
+DEFAULT_MAX_SCREEN_SKIPS = 1
+DEFAULT_MAX_MERGE_SKIPS = 1
+
 HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
+
+
+def _events(run_dir, kind: str) -> list[dict]:
+    """Every earlier ``kind`` event in this run. Read straight from ``events.jsonl`` — the file
+    ``log_event`` appends to — so this sees every earlier round of THIS run, not just this
+    process's own candidates, and needs no state file of its own.
+    """
+    if not run_dir.events_path.exists():
+        return []
+    out = []
+    for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if rec.get("kind") == kind:
+            out.append(rec)
+    return out
+
+
+def _compliance_events(run_dir) -> list[dict]:
+    return _events(run_dir, "agent_optimize_compliance")
+
+
+def _prior_screen_skips(run_dir) -> set[str]:
+    """Tags that already went to full val UNSCREENED under a skip flag (#631's budget unit).
+
+    Distinct tags, so re-gating a candidate already charged does not charge it again. A
+    candidate refused for having no skip flag is logged too, and is not a skip.
+    """
+    return {rec.get("tag") for rec in _compliance_events(run_dir)
+            if not rec.get("screened_before_fullval")
+            and (rec.get("skip_screen_ladder") or (rec.get("skip_justification") or "").strip())}
+
+
+def _prior_merge_skips(run_dir) -> set[tuple]:
+    """Rounds that passed ``--no-merge`` while a merge applied (#630's budget unit), keyed by
+    candidate set so re-running the same round does not charge it twice."""
+    return {tuple(sorted(rec.get("candidates") or []))
+            for rec in _events(run_dir, "agent_optimize_round_batch")
+            if rec.get("no_merge") and rec.get("merge_eligible_pairs")}
+
+
+def _budget(spec: dict, key: str, default: int) -> int:
+    v = spec.get(key)
+    return default if v is None else max(0, int(v))
+
+
+def _prior_skip_justifications(run_dir) -> list[tuple[str, str]]:
+    """(tag, skip_justification) for every earlier compliance event with a non-empty one."""
+    return [(rec.get("tag"), rec["skip_justification"].strip())
+            for rec in _compliance_events(run_dir)
+            if (rec.get("skip_justification") or "").strip()]
+
+
+def _near_duplicate_justification(justification, prior):
+    """Tag of the most similar prior justification, if its similarity clears
+    ``JUSTIFICATION_SIMILARITY_THRESHOLD``, else ``None``.
+
+    ``difflib.SequenceMatcher`` (stdlib, no new dependency — CONTRIBUTING.md's zero-runtime-deps
+    rule) rather than an embedding model: the issue's own evidence is literal copy-pasted
+    sentences, which a character-level ratio catches directly and cheaply.
+    """
+    if not justification or not justification.strip():
+        return None
+    best_tag, best_ratio = None, 0.0
+    for tag, prior_just in prior:
+        ratio = difflib.SequenceMatcher(None, justification.strip().lower(),
+                                         prior_just.lower()).ratio()
+        if ratio > best_ratio:
+            best_tag, best_ratio = tag, ratio
+    return best_tag if best_ratio >= JUSTIFICATION_SIMILARITY_THRESHOLD else None
 
 
 def _all_tables(run_dir) -> list[tuple[int, int, Path]]:
@@ -258,13 +360,7 @@ def reusable_controls(run_dir, best: str, measurement: dict, want: int) -> dict 
     return None
 
 
-def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
-              concurrency: int | None) -> dict:
-    """Run the evaluate phase for one tag in its own process."""
-    cmd = [sys.executable, str(SKILLS / "phases" / "evaluate" / "scripts" / "run.py"),
-           "--run-dir", str(run_dir), "--project", str(project),
-           "--candidate", str(Path(run_dir) / "work" / tag),
-           "--split", split, "--n-trials", str(n_trials)]
+def _eval_env(concurrency: int | None) -> dict:
     env = dict(os.environ)
     if concurrency:
         # Canonical, benchmark-neutral name. A runner whose knob predates this convention gets it
@@ -274,11 +370,336 @@ def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
         for name in [n.strip() for n in
                      os.environ.get("CAPEVOLVE_CONCURRENCY_ENV", "").split(",") if n.strip()]:
             env[name] = str(concurrency)
-    p = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    return env
+
+
+def _run_json(cmd: list[str], tag: str, concurrency: int | None) -> dict:
+    p = subprocess.run(cmd, capture_output=True, text=True, env=_eval_env(concurrency))
     try:
         return {"tag": tag, "rc": p.returncode, **json.loads(p.stdout)}
     except Exception:  # noqa: BLE001
         return {"tag": tag, "rc": p.returncode, "error": (p.stderr or p.stdout)[-800:]}
+
+
+def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
+              concurrency: int | None) -> dict:
+    """Run the evaluate phase for one tag in its own process."""
+    cmd = [sys.executable, str(SKILLS / "phases" / "evaluate" / "scripts" / "run.py"),
+           "--run-dir", str(run_dir), "--project", str(project),
+           "--candidate", str(Path(run_dir) / "work" / tag),
+           "--split", split, "--n-trials", str(n_trials)]
+    return _run_json(cmd, tag, concurrency)
+
+
+# --------------------------------------------------------------------------------------------
+# The default cascade in front of the full-val gate (#437, #438):
+#
+#   screen every candidate  ->  drop screen kills  ->  pairwise-merge disjoint survivors
+#   ->  screen each merge   ->  gate each survivor ONCE, inside the best merge that carries it
+#
+# Run v18 (17 iterations) is why this is code and not SKILL.md prose: 0/17 candidates were
+# screened (the same boilerplate --skip-screen-justification every time), merge.py was never
+# called once, and three hand-built sibling unions each paid a second full 300-rollout gate.
+# A driver no longer has to REMEMBER either step; skipping the screen is the thing that now
+# needs a flag, and every step writes a graph.jsonl transition so a skipped one is visible.
+# --------------------------------------------------------------------------------------------
+
+
+def load_plan(path: str | None) -> dict:
+    """``--plan`` JSON: ``{tag: {ids, rationale, cluster_ids, edit_kind}}``, every key optional.
+
+    ``ids`` is the screen subset THIS edit plausibly touches (list or comma string) and
+    ``rationale`` says why; ``cluster_ids`` are the diagnose() clusters it targets, used to
+    skip merging two alternative fixes of the same cluster. A tag with no entry is screened
+    on screen.py's tier heuristic, which writes its own rationale.
+    """
+    if not path:
+        return {}
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    plan = {}
+    for tag, e in (raw or {}).items():
+        e = dict(e or {})
+        for key in ("ids", "cluster_ids"):
+            v = e.get(key)
+            if isinstance(v, str):
+                e[key] = [i.strip() for i in v.split(",") if i.strip()]
+        plan[str(tag)] = e
+    return plan
+
+
+def cluster_ids_for(run_dir, plan: dict, tag: str) -> list[str]:
+    """The diagnose clusters ``tag`` targets: ``--plan``'s, else its own DIAGNOSIS.json (#611),
+    read by the SAME parser commit.py's precondition uses, so the two can never disagree."""
+    import commit
+
+    return list((plan.get(tag) or {}).get("cluster_ids")
+                or commit._diagnosis_targets(run_dir.root / "work" / tag)[0])
+
+
+# --------------------------------------------------------------------------------------------
+# Pre-gate validity check (#632). run_full's own work/replay_gold.py (gold actions replayed
+# through the candidate's tools vs the pristine ones) flagged cand_13 4/30 BEFORE its gate; the
+# agent read that as "expected", paid the 300-rollout gate, then carried the same guard into the
+# bundle cand_15 and paid a second one. A benchmark-specific check like that is the agent's to
+# write, so round.py cannot ship it — but once registered it is run here on EVERY tag's bytes
+# (and every merge's) before any screen or eval, and a failure refuses the round. Running it on
+# the bytes, not on provenance, is what catches a bundle that carries a known-invalid edit.
+# --------------------------------------------------------------------------------------------
+
+#: A nonzero diff count on the summary line replay_gold.py prints ("4 of 30 val tasks differ
+#: from pristine under gold replay") counts as a failure even at exit 0 — that script, as
+#: written in both real runs, never exits nonzero, so exit code alone would pass cand_13.
+_DIFF_SUMMARY = re.compile(r"^\s*(\d+)\s+of\s+\d+\b.*\bdiffer", re.M | re.I)
+
+
+def _pregate_check_path(run_dir) -> Path:
+    return run_dir.root / "work" / "pregate_check.json"
+
+
+def resolve_pregate_check(run_dir, cmd: str | None) -> str | None:
+    """The run's registered pre-gate check command, registering ``cmd`` when given.
+
+    Sticky: once registered it applies to every later round without the flag, so a check the
+    agent wrote in round 6 cannot be forgotten in round 8 (cand_15's exact failure).
+    """
+    path = _pregate_check_path(run_dir)
+    if cmd and cmd.strip():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"cmd": cmd.strip()}, indent=2), encoding="utf-8")
+        return cmd.strip()
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("cmd") or None
+    except (OSError, ValueError):
+        return None
+
+
+def run_pregate_check(cmd: str, cand_dir: Path) -> str | None:
+    """Run ``cmd <cand_dir>``. ``None`` = valid; else the failure output (the reason)."""
+    import shlex
+
+    p = subprocess.run([*shlex.split(cmd), str(cand_dir)], capture_output=True, text=True)
+    out = ((p.stdout or "") + (p.stderr or "")).strip()
+    m = _DIFF_SUMMARY.search(p.stdout or "")
+    if p.returncode != 0 or (m and int(m.group(1)) > 0):
+        return f"rc={p.returncode}: {out[-800:]}"
+    return None
+
+
+def known_invalid(run_dir) -> list[str]:
+    """Tags an earlier round's pre-gate check already disqualified in this run."""
+    if not run_dir.events_path.exists():
+        return []
+    tags = []
+    for line in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if rec.get("kind") == "agent_optimize_pregate_invalid" and rec.get("tag") not in tags:
+            tags.append(rec.get("tag"))
+    return tags
+
+
+def latest_screen(run_dir, tag: str) -> dict | None:
+    """The newest ``screens/<tag>__screenN.json`` payload (highest tier), or ``None``."""
+    d = run_dir.root / "screens"
+    files = sorted(d.glob(f"{tag}__screen*.json")) if d.is_dir() else []
+    for f in reversed(files):
+        try:
+            return json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+    return None
+
+
+def _screen(run_dir: Path, project: Path, tag: str, *, ids: list[str] | None, tier: int,
+            rationale: str | None, concurrency: int | None) -> dict:
+    """screen.py on one tag, in its own process (same apply()-isolation reason as evals)."""
+    cmd = [sys.executable, str(HERE / "screen.py"), "--run-dir", str(run_dir),
+           "--project", str(project), "--candidate", str(Path(run_dir) / "work" / tag),
+           "--tag", tag]
+    cmd += ["--ids", ",".join(ids)] if ids else ["--tier", str(tier)]
+    if rationale:
+        cmd += ["--rationale", rationale]
+    return _run_json(cmd, tag, concurrency)
+
+
+def screen_summary(payload: dict | None, auto: bool) -> dict | None:
+    if not payload:
+        return None
+    sub = payload.get("subset") or {}
+    return {"decision": payload.get("decision"), "mean_delta": payload.get("mean_delta"),
+            "se": payload.get("se"), "n": payload.get("n"), "tier": payload.get("tier"),
+            "subset_ids": sub.get("ids"), "rationale": sub.get("rationale"),
+            "fired": (payload.get("savings") or {}).get("fired", len(payload.get("fired_ids")
+                                                                      or [])),
+            "auto": auto}
+
+
+def _paired(payload: dict) -> dict[str, float]:
+    pair = payload.get("paired") or {}
+    return dict(zip([str(i) for i in pair.get("ids") or []], pair.get("deltas") or []))
+
+
+def keeps_parent_gain(merge_payload: dict, parent_payload: dict) -> bool:
+    """Does the merge keep what ``parent`` showed on ITS OWN screened tasks?
+
+    ``integrate.py``'s rule — verified per-branch gains do not compose, so measure after
+    each addition — applied with the screens already paid for: on the tasks both screens
+    measured, the merge's summed paired delta must be at least the parent's. Both deltas are
+    against the same round parent, so they are directly comparable. No common task means no
+    evidence the merge kept the gain, so the answer is no (the parent is then gated alone).
+    """
+    m, p = _paired(merge_payload), _paired(parent_payload)
+    common = set(m) & set(p)
+    return bool(common) and sum(m[i] for i in common) >= sum(p[i] for i in common) - 1e-9
+
+
+def merge_canaries(parent_per_task: list, union_ids: list[str], seed: int) -> list[str]:
+    """Fresh regression canaries for a merge screen, drawn from the WHOLE suite.
+
+    per-task-fanout.md's rule: a canary set that only covers what the branches aimed at
+    cannot catch what the merge hit by accident. Tasks the parent passes that neither
+    parent's screen covered, seeded, about a third of the union's size (screen.py's own
+    holdout fraction).
+    """
+    import random
+
+    taken = set(union_ids)
+    passing = sorted(str(pt.get("task_id")) for pt in parent_per_task or []
+                     if str(pt.get("task_id")) not in taken
+                     and float(pt.get("reward") or 0.0) >= 1.0 - 1e-9)
+    n = min(len(passing), max(1, round(0.34 * len(union_ids))))
+    return sorted(random.Random(seed).sample(passing, n)) if n else []
+
+
+def choose_merges(merges: list[dict]) -> tuple[list[str], dict[str, str]]:
+    """Which built+screened merges to gate: each survivor is gated ONCE, in one artifact.
+
+    A merge qualifies when its screen promoted AND it kept both parents' screened gains
+    (``keeps_parent_gain``). Qualifying merges are taken greedily by screen mean Δ, each only
+    if neither parent is already inside a chosen one — a matching, so no survivor's bytes
+    are paid for twice at full val. Returns (chosen merge tags, {parent: merge it is in}).
+    """
+    ok = sorted((m for m in merges if m.get("qualifies")),
+                key=lambda m: (-(m["screen"].get("mean_delta") or 0.0), m["tag"]))
+    chosen, covered = [], {}
+    for m in ok:
+        a, b = m["parents"]
+        if a in covered or b in covered:
+            continue
+        chosen.append(m["tag"])
+        covered[a] = covered[b] = m["tag"]
+    return chosen, covered
+
+
+def dominated_siblings(base_dir: Path, work: Path, tags: list[str]) -> dict[str, str]:
+    """{tag: sibling whose diff strictly contains it} among this round's tags (#633).
+
+    A literal strict subset of a sibling's edit, against the same round parent, cannot show
+    an effect its superset does not also carry, so paying it a full-val gate of its own is
+    waste. Strict containment is acyclic, so a chain A < B < C keeps only C.
+    """
+    import merge as merge_mod
+
+    return {a: b for a in tags for b in tags
+            if a != b and merge_mod.diff_contained(base_dir, work / a, work / b)
+            } if len(tags) >= 2 else {}
+
+
+def mergeable_pairs(run_dir, plan: dict, survivors: list[str]) -> tuple[list, list]:
+    """(pairs merge_stage tries to build, pairs it skips as same-cluster alternatives).
+
+    The ONE definition of "a merge applied this round", shared by merge_stage and #630's
+    --no-merge budget, so the budget can never count a pair the merge stage would not try.
+    """
+    import itertools
+
+    pairs, skipped = [], []
+    for a, b in itertools.combinations(sorted(survivors), 2):
+        ca, cb = set(cluster_ids_for(run_dir, plan, a)), set(cluster_ids_for(run_dir, plan, b))
+        if ca & cb:
+            skipped.append({"pair": [a, b], "reason": f"same diagnose cluster(s) "
+                            f"{sorted(ca & cb)} — alternative fixes, not complementary ones"})
+        else:
+            pairs.append((a, b, ca, cb))
+    return pairs, skipped
+
+
+def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: dict,
+                concurrency: int | None, max_parallel: int,
+                pregate_cmd: str | None = None) -> dict:
+    """Build, screen and select pairwise merges among this round's screen survivors (#438)."""
+    import merge as merge_mod
+    from cap_evolve import graph
+
+    work = run_dir.root / "work"
+    base_dir = run_dir.candidate_dir(best)
+    parent_per_task = harness.split_result_from_rollouts(run_dir, best, "val").per_task or []
+    seed = int(run_dir.read_splits().seed)
+    screens = {t: latest_screen(run_dir, t) for t in survivors}
+    merges = []
+    pairs, skipped = mergeable_pairs(run_dir, plan, survivors)
+    for a, b, ca, cb in pairs:
+        tag = f"merge_{a}_{b}"
+        built = merge_mod.build_merge_dir(base_dir, work / a, work / b, work / tag)
+        if not built["built"]:
+            skipped.append({"pair": [a, b], "reason": "edit collision",
+                            "conflicts": built["conflicts"]})
+            continue
+        # #632: two valid parents can still compose into an invalid merge — check before its
+        # screen spends a rollout, same as the round's own candidates.
+        bad = pregate_cmd and run_pregate_check(pregate_cmd, work / tag)
+        if bad:
+            run_dir.log_event("agent_optimize_pregate_invalid", tag=tag, parents=[a, b],
+                              output=bad)
+            skipped.append({"pair": [a, b], "reason": "merge fails the pre-gate check",
+                            "pregate_output": bad})
+            continue
+        harness.ensure_framework_memory(work / tag, run_dir)
+        union = sorted(set((screens[a] or {}).get("subset", {}).get("ids") or [])
+                       | set((screens[b] or {}).get("subset", {}).get("ids") or []))
+        canary = merge_canaries(parent_per_task, union, seed)
+        rationale = (f"pairwise merge of screen survivors {a} + {b}: union of both parents' "
+                     f"screened tasks {union} + {len(canary)} fresh whole-suite regression "
+                     f"canaries {canary} the parent passes")
+        graph.append_node(run_dir, node_id=tag, parents=[a, b], status="proposed",
+                          edit_kind="merge", cluster_ids=sorted(ca | cb), gate={},
+                          note=rationale, merged_files=built["three_way_merged"])
+        merges.append({"tag": tag, "parents": [a, b], "ids": sorted(set(union) | set(canary)),
+                       "rationale": rationale, "cluster_ids": sorted(ca | cb)})
+
+    with ThreadPoolExecutor(max_workers=max(1, max_parallel)) as pool:
+        results = list(pool.map(
+            lambda m: _screen(run_dir.root, project, m["tag"], ids=m["ids"], tier=1,
+                              rationale=m["rationale"], concurrency=concurrency), merges))
+    for m, res in zip(merges, results):
+        payload = latest_screen(run_dir, m["tag"]) if not res.get("rc") else None
+        m["screen"] = screen_summary(payload, auto=True) or {"error": res.get("error")}
+        m["qualifies"] = bool(payload and payload.get("decision") == "promote"
+                              and all(screens[p] and keeps_parent_gain(payload, screens[p])
+                                      for p in m["parents"]))
+        graph.append_node(run_dir, node_id=m["tag"], parents=m["parents"], status="screened",
+                          gate={})
+    chosen, covered = choose_merges(merges)
+    for m in merges:
+        if m["tag"] in chosen:
+            continue
+        m["not_gated_because"] = (
+            "merge screen did not run" if "error" in m["screen"] else
+            "merge screen killed it" if m["screen"].get("decision") == "kill" else
+            "lost a parent's screened gain (composition cost) — its parents are gated alone"
+            if not m["qualifies"] else
+            "both parents already carried by a better-screening merge")
+        if m["screen"].get("decision") != "kill":
+            graph.append_node(run_dir, node_id=m["tag"], parents=m["parents"],
+                              status="superseded", gate={}, reason=m["not_gated_because"])
+    for parent, tag in covered.items():
+        graph.append_node(run_dir, node_id=parent, parents=[best], status="superseded",
+                          gate={}, merged_into=tag,
+                          reason=f"its bytes are gated inside {tag}, never twice")
+    return {"merges": merges, "skipped_pairs": skipped, "chosen": chosen,
+            "subsumed": covered}
 
 
 class GateCheckFailed(RuntimeError):
@@ -360,6 +781,108 @@ def assert_rows_were_judged(rows: list[dict]) -> None:
             "back, so these rows would publish as 'no movement' for candidates nothing judged")
 
 
+#: Minimum sibling candidates a round is expected to carry. Below this, going serial requires
+#: a recorded reason — either an explicit justification or an auto-detected budget block from
+#: spend.py — never a silent default. See `sibling_justification`.
+MIN_SIBLINGS = 3
+
+
+class SingleCandidateUnjustified(RuntimeError):
+    """Fewer than MIN_SIBLINGS candidates with no recorded reason why.
+
+    Audited runs (`.capevolve/run_20260928_v13_.../events.jsonl`,
+    `.capevolve/run_20260924_v7_.../events.jsonl`) showed every single round proposing exactly
+    one candidate, never the N>=3 SKILL.md step 2 already recommends — because the guidance was
+    prose an agent could always skip under time pressure, and it always did. This is the
+    edit-form table applied to the skill itself: where the agent has the criterion (can I
+    afford 3?) and violates it regardless, the form that works is a guard in the code, not a
+    fourth restatement in prose (issue tracked from PR #522 onward). The guard does not make 1
+    candidate impossible — narrow_scope rounds and unaffordable budgets are real — it makes
+    going serial require a REASON on the record, in events.jsonl, so it is auditable.
+    """
+
+    def __init__(self, n: int):
+        super().__init__(
+            f"{n} candidate(s) passed via --candidates, below the default MIN_SIBLINGS="
+            f"{MIN_SIBLINGS}. agent-optimize's default is N>=3 sibling candidates per round "
+            "(SKILL.md step 2) because every audited run that skipped this ran serially every "
+            "round and paid for it in wall clock. Fix ONE of: "
+            "(1) propose 3 siblings and pass --candidates cand_1,cand_2,cand_3; "
+            "(2) pass --single-candidate-justification \"<why only 1 this round>\" (e.g. "
+            "\"diagnose surfaced only one well-evidenced cluster this round\"); "
+            "(3) pass --afford-check-file <path to spend.py's JSON output with --n-siblings "
+            f"{MIN_SIBLINGS}> when it reports affordable: false — the block is then read "
+            "automatically as the justification.")
+
+
+def sibling_justification(n_candidates: int, explicit: str | None,
+                          afford_check_file: str | None) -> tuple[str | None, str | None]:
+    """Resolve why this round runs below MIN_SIBLINGS, or raise if it cannot.
+
+    Returns ``(justification, source)`` — both ``None`` when ``n_candidates`` already meets
+    the default and no justification was needed. ``source`` is ``"explicit"`` or
+    ``"afford_unaffordable"``, recorded on the round_batch event so a later audit can tell an
+    agent's own reasoning from an automatically-detected budget block.
+    """
+    if n_candidates >= MIN_SIBLINGS:
+        return None, None
+    if explicit and explicit.strip():
+        return explicit.strip(), "explicit"
+    if afford_check_file:
+        try:
+            data = json.loads(Path(afford_check_file).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise SingleCandidateUnjustified(n_candidates) from exc
+        afford = data.get("afford", data) if isinstance(data, dict) else {}
+        if isinstance(afford, dict) and afford.get("affordable") is False:
+            blockers = afford.get("blockers") or ["no blockers listed"]
+            return (f"spend.py reports {MIN_SIBLINGS} siblings unaffordable: "
+                    + "; ".join(str(b) for b in blockers)), "afford_unaffordable"
+    raise SingleCandidateUnjustified(n_candidates)
+
+
+def _write_table(run_dir, work: Path, stem: str, attempt: int, out: dict) -> None:
+    """Persist the round table as well as printing it.
+
+    Until the table was persisted the ONLY copy lived on stdout, so whether a round's verdict
+    survived depended on the driver remembering to redirect (run 32814848187). Per-iteration
+    name for the same reason ``control_tag`` is per-iteration, and a same-iteration re-run gets
+    a suffix rather than overwriting. The name comes from the SAME attempt index the control
+    tags were built from, so the table and the rollouts it cites cannot disagree.
+    """
+    try:
+        work.mkdir(parents=True, exist_ok=True)
+        table = work / f"{stem}.json"
+        n = attempt
+        while table.exists():  # belt-and-braces: never overwrite a sibling attempt's table
+            n += 1
+            table = work / f"round_i{int(run_dir.spent.iterations)}.r{n}.json"
+        table.write_text(json.dumps(out, indent=2), encoding="utf-8")
+        out["table_path"] = str(table)
+    except OSError as exc:  # noqa: BLE001 — the printed table is still the primary output
+        out["table_write_error"] = str(exc)
+
+
+def _next_steps(killed: list[str], merge: dict | None, dominated: dict | None = None) -> str:
+    steps = ["read regressions, then commit.py --decision accept|reject|inconclusive per gated "
+             "candidate — `inconclusive` for any row whose `verdict` is inconclusive, so the "
+             "round is not recorded as refuting an edit it could not judge"]
+    if killed:
+        steps.append(f"commit each screen kill {killed} with --decision reject --reject-basis "
+                     "screen_kill (it was never gated)")
+    if merge and merge.get("chosen"):
+        steps.append(f"a gated merge {merge['chosen']} needs no --parents: graph.jsonl already "
+                     "records both; its parents "
+                     f"{sorted(merge['subsumed'])} are inside it and need no commit of their "
+                     "own (graph status `superseded`, `merged_into`)")
+    if dominated:
+        steps.append(f"{sorted(dominated)} were not gated: each one's diff is a strict subset of "
+                     f"a sibling's ({dominated}, graph status `superseded`, `dominated_by`). If "
+                     "its superset is rejected, the subset may still be worth gating alone in a "
+                     "later round")
+    return "; ".join(steps)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="round")
     p.add_argument("--run-dir", required=True)
@@ -409,9 +932,51 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
     p.add_argument("--skip-screen-ladder", action="store_true",
-                   help="run full-val on a candidate with no screen.py record for it (NOT "
-                        "recommended — see the compliance check above). An explicit, recorded "
-                        "choice, the same idiom as --allow-high-concurrency.")
+                   help="run full-val on a candidate with no screen.py record for it. Unless "
+                        "the run's frozen screening_structurally_uneconomical is true, each "
+                        "such candidate spends the run-wide max_screen_skips budget "
+                        f"(capevolve.yaml, default {DEFAULT_MAX_SCREEN_SKIPS}); once spent it is "
+                        "refused, with no override (#631). Prefer "
+                        "--skip-screen-justification, which records WHY.")
+    p.add_argument("--skip-screen-justification", default=None,
+                   help="same effect as --skip-screen-ladder (run full-val on a candidate with "
+                        "no screen.py record), but records WHY screening was skipped on the "
+                        "compliance event instead of just the bare choice — e.g. "
+                        "'spend.py: break-even unreachable on this split size' or 'pure "
+                        "additive READ tool, screening cost exceeds expected savings'. Spends "
+                        "the same max_screen_skips budget: the reason is recorded, it never "
+                        "buys an extra skip.")
+    p.add_argument("--plan", default=None,
+                   help="JSON file {tag: {ids, rationale, cluster_ids, edit_kind}} (every key "
+                        "optional): the screen subset each candidate plausibly touches and WHY, "
+                        "and the diagnose() clusters it targets. A tag with no entry is screened "
+                        "on screen.py's --tier heuristic. Recorded on graph.jsonl.")
+    p.add_argument("--screen-tier", type=int, default=1, choices=[1, 2, 3],
+                   help="screen.py rung for the automatic screen of a tag with no --plan ids")
+    p.add_argument("--no-merge", action="store_true",
+                   help="skip the automatic pairwise merge of disjoint screen survivors; "
+                        "every survivor is gated alone. When a merge APPLIED (2+ screened "
+                        "survivors on disjoint clusters) this logs merge_compliance_warning "
+                        "immediately and spends the run-wide max_merge_skips budget "
+                        f"(capevolve.yaml, default {DEFAULT_MAX_MERGE_SKIPS}); once spent it is "
+                        "refused, with no override (#630). A round where no merge applied "
+                        "spends nothing.")
+    p.add_argument("--pregate-check", default=None,
+                   help="command run as `CMD <candidate_dir>` on every tag (and every merge) "
+                        "before any screen or eval (#632) — e.g. `python $R/work/replay_gold.py`. "
+                        "Nonzero exit, or a nonzero 'N of M ... differ' summary line, refuses "
+                        "the round. Registered in $R/work/pregate_check.json on first use and "
+                        "applied to every later round without the flag.")
+    p.add_argument("--single-candidate-justification", default=None,
+                   help=f"required (or --afford-check-file) when --candidates has fewer than "
+                        f"{MIN_SIBLINGS} tags — free text, e.g. \"diagnose surfaced only one "
+                        "cluster this round\". Recorded on the agent_optimize_round_batch "
+                        "event so going serial is auditable, not silent.")
+    p.add_argument("--afford-check-file", default=None,
+                   help=f"path to spend.py's JSON output (run with --n-siblings {MIN_SIBLINGS}). "
+                        "When it reports afford.affordable: false, that block is read as the "
+                        "auto-detected justification for fewer than "
+                        f"{MIN_SIBLINGS} candidates — no hand-typed reason needed.")
     return p
 
 
@@ -421,6 +986,9 @@ def main(argv=None) -> int:
     except GateCheckFailed as exc:
         # A traceback would be loud enough, but the driver reads this output to decide what to do
         # next, so say it in the words the skill uses: the round is not booked, re-gating is free.
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except SingleCandidateUnjustified as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
@@ -466,20 +1034,181 @@ def _main(argv=None) -> int:
         print(json.dumps({"error": f"tags not found under {work}: {missing}"}, indent=2))
         return 2
 
+    # Default N>=3 sibling candidates per round, ENFORCED rather than merely recommended
+    # (SKILL.md step 2) — see SingleCandidateUnjustified's docstring for why. Resolved before
+    # any work-dir mutation or spend below, so an unjustified serial round fails fast with
+    # nothing charged.
+    JUSTIFICATION, JUSTIFICATION_SOURCE = sibling_justification(
+        len(tags), args.single_candidate_justification, args.afford_check_file)
+
+    # #632: the registered pre-gate check (e.g. gold replay) is a HARD precondition, run on
+    # every tag's bytes before any screen or eval is paid for. One invalid tag refuses the
+    # whole round, the same idiom as the screen-ladder refusal below.
+    PREGATE = resolve_pregate_check(run_dir, args.pregate_check)
+    if PREGATE:
+        prior_invalid = known_invalid(run_dir)
+        invalid = {t: r for t in tags if (r := run_pregate_check(PREGATE, work / t))}
+        for t, r in invalid.items():
+            run_dir.log_event("agent_optimize_pregate_invalid", tag=t, output=r,
+                              iteration=int(run_dir.spent.iterations))
+        if invalid:
+            print(json.dumps({
+                "error": f"candidate(s) {sorted(invalid)} fail the run's pre-gate check "
+                         f"({PREGATE!r}) — refused before any screen or full-val eval",
+                "invalid": invalid,
+                "known_invalid_earlier_in_run": prior_invalid,
+                "why": "a nonzero gold-replay diff means the edit changes the target it is "
+                       "scored against (cand_13 in run_full: 4/30 differ, one task spuriously "
+                       "'fixed', one broken), so its score is not evidence about the edit. "
+                       "A bundle carrying such an edit fails for the same reason — check "
+                       "whether it contains any tag in known_invalid_earlier_in_run.",
+                "fix": "drop the invalid edit (or the invalid component from the bundle) and "
+                       "re-run; book a dropped tag with commit.py --decision reject "
+                       "--reject-basis driver_judgement --bypassed-gate-justification "
+                       "\"pre-gate check failed: <output>\".",
+            }, indent=2))
+            return 2
+
+    # Defensive: a workdir built by a bare `cp -r` (SKILL.md step 2's own documented pattern)
+    # never gets LEDGER.md/JOURNAL.md/RUNMAP.md/PROCESS.md unless its source already had them
+    # — this guarantees them regardless of how each tag's dir came to exist.
+    for t in tags:
+        harness.ensure_framework_memory(work / t, run_dir)
+
     # Compliance instrumentation (issue #401): log, per candidate, whether screen.py was
     # invoked for it BEFORE this full-val eval — a distinct, auditable event rather than
     # something only inferable (or not) from SKILL.md prose. `screen.py` writes
     # `<run_dir>/screens/<tag>__screenN.json`; its absence means this candidate skipped
     # straight to full-val, which the dashboard can now show as its own event kind.
     screens_dir = run_dir.root / "screens"
-    unscreened = []
+    skip_justified = bool(args.skip_screen_ladder or args.skip_screen_justification)
+    # issue #585: the justification text itself is compared against every earlier round's, so a
+    # copy-pasted "reason" is visible on the recorded event rather than only inferable (or not)
+    # from re-reading every round's prose by hand.
+    near_dup_of = _near_duplicate_justification(
+        args.skip_screen_justification, _prior_skip_justifications(run_dir))
+    screened_by_tag = {t: screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
+                       for t in tags}
+    unscreened = [t for t in tags if not screened_by_tag[t]]
+    # issue #631: a skip is priced by arithmetic, not argued in prose. The near-duplicate TEXT
+    # refusal (#585/#613) was defeated by rewording every round while the strategy — always
+    # skip — held constant, so similarity is now only RECORDED (justification_near_duplicate_of,
+    # above), never enforced. Enforcement is the frozen screening_economics plus a COUNT:
+    #   * structurally uneconomical (tier-1 break-even > SCREEN_BREAKEVEN_CEILING, i.e. a tiny
+    #     val) — the arithmetic already settled it once, so a skip is unrestricted;
+    #   * otherwise screening is mandatory, and at most max_screen_skips distinct candidates
+    #     per run may reach full val unscreened. Past that it is refused — before any spend and
+    #     before any compliance event, so a refused attempt is never itself counted — with
+    #     deliberately NO override flag: a fresh justification is exactly what was gamed.
+    spec = spec_for_run(run_dir, project)
+    ECONOMICS = harness.freeze_screening_economics(run_dir, int(spec.get("num_trials") or 1))
+    UNECONOMICAL = bool(ECONOMICS["screening_structurally_uneconomical"])
+    MAX_SCREEN_SKIPS = _budget(spec, "max_screen_skips", DEFAULT_MAX_SCREEN_SKIPS)
+    prior_skips = _prior_screen_skips(run_dir)
+    screen_skips_used = len(prior_skips | (set(unscreened) if skip_justified else set()))
+    if skip_justified and unscreened and not UNECONOMICAL \
+            and screen_skips_used > MAX_SCREEN_SKIPS:
+        print(json.dumps({
+            "error": f"candidate(s) {unscreened} would reach full val unscreened, but this run "
+                     f"already spent its max_screen_skips={MAX_SCREEN_SKIPS} budget on "
+                     f"{sorted(prior_skips)} (this round would make it {screen_skips_used})",
+            "why": "screening is NOT structurally uneconomical on this run (frozen at baseline: "
+                   f"a tier-1 screen fires {ECONOMICS['tier1_fired']} rollouts against "
+                   f"{ECONOMICS['full_val_rollouts']} for full val, break-even kill rate "
+                   f"{ECONOMICS['breakeven_kill_rate']} <= {ECONOMICS['ceiling']}), so a skip is "
+                   "a cost, not a judgement call (#631). There is no override flag: the budget "
+                   "is a count, and no wording of a justification changes a count.",
+            "fix": "drop --skip-screen-ladder/--skip-screen-justification: round.py then screens "
+                   "these tags itself (tier 1), kills proven harm, and gates the survivors. To "
+                   "allow more skips on this benchmark, raise max_screen_skips in capevolve.yaml "
+                   "— a recorded per-benchmark decision, not a per-round one.",
+            "screening_economics": ECONOMICS,
+        }, indent=2))
+        return 2
+    if near_dup_of:
+        print(f"NOTE: this skip repeats {near_dup_of}'s earlier in this run — recorded as "
+              "justification_near_duplicate_of on the compliance event.", file=sys.stderr)
+
+    # #437: the screen is the DEFAULT step, run here rather than left for the driver to
+    # remember. Only a skip flag (within #631's skip budget, above) bypasses it.
+    plan = load_plan(args.plan)
+    auto_screened: dict[str, dict] = {}
+    if unscreened and not skip_justified:
+        with ThreadPoolExecutor(max_workers=max(1, args.max_parallel)) as pool:
+            res = list(pool.map(lambda t: _screen(
+                Path(args.run_dir), project, t, ids=(plan.get(t) or {}).get("ids"),
+                tier=args.screen_tier, rationale=(plan.get(t) or {}).get("rationale"),
+                concurrency=args.concurrency), unscreened))
+        for t, r in zip(unscreened, res):
+            auto_screened[t] = r
+            screened_by_tag[t] = not r.get("rc") and latest_screen(run_dir, t) is not None
+        unscreened = [t for t in unscreened if not screened_by_tag[t]]
+
+    # Screen KILLS leave the gate set: a kill is proven harm on the subset, and paying full val
+    # to confirm it is the waste the screen exists to stop.
+    screen_payloads = {t: latest_screen(run_dir, t) if screened_by_tag[t] else None for t in tags}
+    killed = [t for t in tags if (screen_payloads[t] or {}).get("decision") == "kill"]
+    survivors = [t for t in tags if t not in killed]
+    # #633: a survivor whose diff is a STRICT subset of a sibling survivor's (same round, same
+    # parent) is never gated on its own — purely structural, no eval spent to learn it. Taken
+    # out BEFORE #630's merge-eligibility count, so a (subset, superset) pair is never charged
+    # to max_merge_skips; its graph.jsonl transition is written below, after every refusal.
+    dominated = dominated_siblings(run_dir.candidate_dir(best), work, survivors)
+    survivors = [t for t in survivors if t not in dominated]
+
+    # #630: --no-merge, priced like a screen skip. A merge APPLIED this round when merge_stage
+    # would have run and found a pair to build — its own trigger condition and its own pair
+    # rule (mergeable_pairs). Declining one is announced IMMEDIATELY (merge_compliance_warning,
+    # stderr, the table's merge_skip) rather than once at finalize, when it can no longer change
+    # anything, and counted; past max_merge_skips it is refused with no override — before any
+    # compliance event or graph.jsonl transition, so a refused attempt leaves only its warning.
+    # Obeying is free: the screens are on disk, and a pair that collides at build time is
+    # skipped by merge_stage for zero rollouts. (An unscreened survivor means no merge applied,
+    # so the screen budget above and this one never charge the same round twice.)
+    merge_applies = len(survivors) >= 2 and all(screened_by_tag[t] for t in survivors)
+    eligible_pairs = ([[a, b] for a, b, _, _ in mergeable_pairs(run_dir, plan, survivors)[0]]
+                      if merge_applies else [])
+    MERGE_SKIP = None
+    if args.no_merge and eligible_pairs:
+        max_merge_skips = _budget(spec, "max_merge_skips", DEFAULT_MAX_MERGE_SKIPS)
+        prior_merge_skips = _prior_merge_skips(run_dir)
+        merge_skips_used = len(prior_merge_skips | {tuple(sorted(tags))})
+        refused = merge_skips_used > max_merge_skips
+        MERGE_SKIP = {"reason": "no_merge_with_eligible_pairs", "realtime": True,
+                      "candidates": list(tags), "disjoint_pairs": eligible_pairs,
+                      "merge_skips_used": len(prior_merge_skips) if refused else merge_skips_used,
+                      "max_merge_skips": max_merge_skips, "refused": refused,
+                      "iteration": int(run_dir.spent.iterations)}
+        run_dir.log_event("merge_compliance_warning", **MERGE_SKIP)
+        if refused:
+            print(json.dumps({
+                "error": f"--no-merge declines merging screened, cluster-disjoint survivors "
+                         f"{eligible_pairs}, and this run already spent its "
+                         f"max_merge_skips={max_merge_skips} budget",
+                "why": "a merge costs one subset screen and gates two survivors' bytes once "
+                       "instead of twice; hand-building the same union later pays a THIRD "
+                       "full-val gate (#630). There is no override flag: the budget is a count.",
+                "fix": "re-run this exact command without --no-merge — the screens are already "
+                       "on disk, so nothing is re-screened. To allow more on this benchmark, "
+                       "raise max_merge_skips in capevolve.yaml.",
+            }, indent=2))
+            return 2
+        print(f"WARNING: --no-merge declined merging {eligible_pairs} "
+              f"({merge_skips_used}/{max_merge_skips} of this run's max_merge_skips); "
+              "the next such round is refused. Logged as merge_compliance_warning.",
+              file=sys.stderr)
+
     for t in tags:
-        screened = screens_dir.is_dir() and any(screens_dir.glob(f"{t}__screen*.json"))
         run_dir.log_event("agent_optimize_compliance", tag=t,
-                          screened_before_fullval=screened,
+                          screened_before_fullval=screened_by_tag[t],
+                          auto_screened=t in auto_screened and screened_by_tag[t],
+                          skip_screen_ladder=bool(args.skip_screen_ladder),
+                          skip_justification=args.skip_screen_justification,
+                          justification_near_duplicate_of=near_dup_of,
+                          screening_structurally_uneconomical=UNECONOMICAL,
+                          screen_skips_used=screen_skips_used,
+                          max_screen_skips=MAX_SCREEN_SKIPS,
                           iteration=int(run_dir.spent.iterations))
-        if not screened:
-            unscreened.append(t)
 
     # Made a hard refusal, not a logged fact: issue #420 item 4 found that EVERY candidate
     # in a whole run skipped screen.py, even the ones (`cand_scope`, harmful;
@@ -489,19 +1218,57 @@ def _main(argv=None) -> int:
     # it a warning would just be a third restatement of the same prose SKILL.md already
     # carried. `--skip-screen-ladder` is the deliberate, recorded override (e.g. a
     # candidate whose val is small enough that screening buys nothing).
-    if unscreened and not args.skip_screen_ladder:
+    # Since #437 round.py screens every such candidate itself, so reaching this means that
+    # automatic screen FAILED (e.g. the parent has no val rollouts to pair against).
+    if unscreened and not skip_justified:
         print(json.dumps({
             "error": f"candidate(s) {unscreened} went straight to a full-val eval without a "
-                     "screen.py record under $R/screens/",
+                     "screen.py record under $R/screens/ — round.py's automatic screen failed",
+            "screen_errors": {t: (auto_screened.get(t) or {}).get("error") for t in unscreened},
             "why": "screen.py triages a candidate on a cheap val SUBSET before this full-val "
                    "eval is paid — see its own docstring. Skipping it because it is optional "
                    "is the exact failure issue #420 item 4 found: every candidate paid full "
                    "val, including ones a quarter-price screen would have killed.",
             "fix": "run screen.py --tier 1 (then --tier 2 if it promotes) on each of these "
-                   "tags first, or pass --skip-screen-ladder to record the deliberate choice "
-                   "to skip it.",
+                   "tags first, or pass --skip-screen-justification \"<reason>\" to record WHY "
+                   "screening was skipped (e.g. break-even unreachable on this split size per "
+                   "spend.py, or a zero-risk additive edit where screening costs more than it "
+                   "could save) — or the bare --skip-screen-ladder if you don't want a reason "
+                   "recorded.",
         }, indent=2))
         return 2
+
+    # Screen results -> graph.jsonl (kills were already taken out of `survivors`, above).
+    from cap_evolve import graph
+
+    input_tags = list(tags)
+    screen_stage = {}
+    node_parents = {t: [best] for t in tags}
+    for t in tags:
+        payload = screen_payloads[t]
+        screen_stage[t] = screen_summary(payload, auto=t in auto_screened)
+        if payload is None:
+            continue
+        graph.append_node(run_dir, node_id=t, parents=[best], status="screened", gate={},
+                          cluster_ids=cluster_ids_for(run_dir, plan, t),
+                          edit_kind=(plan.get(t) or {}).get("edit_kind"))
+
+    for t, sup in dominated.items():
+        graph.append_node(run_dir, node_id=t, parents=[best], status="superseded", gate={},
+                          dominated_by=sup,
+                          reason=f"its diff is a strict subset of sibling {sup}'s, which is "
+                                 "gated instead")
+
+    # #438: pairwise merges of disjoint survivors, each screened, BEFORE any full-val gate.
+    MERGE = None
+    if not args.no_merge and merge_applies:
+        MERGE = merge_stage(run_dir, project, best, survivors, plan, args.concurrency,
+                            args.max_parallel, pregate_cmd=PREGATE)
+        for m in MERGE["merges"]:
+            node_parents[m["tag"]] = m["parents"]
+        tags = [t for t in survivors if t not in MERGE["subsumed"]] + MERGE["chosen"]
+    else:
+        tags = survivors
 
     # The null control is built here, not by the driver, so it cannot silently be skipped
     # or accidentally differ from the parent.
@@ -512,6 +1279,42 @@ def _main(argv=None) -> int:
     PRIOR_CTL = prior_attempt_controls(run_dir)
     CTL = control_tag(run_dir)
     MEASUREMENT = measurement_context(args.split, args.n_trials, args.concurrency)
+    # One shared identifier for every candidate THIS invocation gates, so the dashboard can
+    # group same-round candidates instead of showing them as if they had run sequentially
+    # (they are gated together but committed one at a time, serially, by the driver).
+    # Logged as its own event, decoupled from commit.py's per-candidate bookkeeping: by the
+    # time a later candidate in this same round is committed, `record_iteration` may already
+    # have advanced `spent.iterations` for an earlier one, so re-deriving this round's stem
+    # from a candidate's OWN commit-time iteration count would rename it out from under the
+    # candidates committed after the first. STEM is already unique per invocation
+    # (iteration + attempt), so it doubles as the batch id — no separate id needed.
+    run_dir.log_event("agent_optimize_round_batch", batch_id=STEM, candidates=input_tags,
+                      n_candidates=len(input_tags),
+                      single_candidate_justification=JUSTIFICATION,
+                      single_candidate_justification_source=JUSTIFICATION_SOURCE,
+                      gated=list(tags), screen_killed=killed, dominated=dominated,
+                      merge_candidates=[m["tag"] for m in (MERGE or {}).get("merges", [])],
+                      merges_gated=(MERGE or {}).get("chosen", []),
+                      no_merge=bool(args.no_merge), merge_eligible_pairs=eligible_pairs)
+    CASCADE = {
+        "screen_stage": screen_stage,
+        "screen_killed": killed,
+        "dominated": dominated,
+        "merge_stage": MERGE,
+        "merge_skip": MERGE_SKIP,
+        "gated": list(tags),
+        "reading": ("every candidate is screened first (round.py runs screen.py itself unless a "
+                    "skip flag is passed), screen kills are never gated, disjoint survivors are "
+                    "pairwise-merged and the merge screened, and each survivor is gated ONCE — "
+                    "inside the chosen merge that carries it, or alone"),
+    }
+    if not tags:
+        out = {"attempt": ATTEMPT, "batch_id": STEM, "candidates": [], "control": None,
+               "control_replicates": [], **CASCADE,
+               "next": _next_steps(killed, MERGE, dominated)}
+        _write_table(run_dir, work, STEM, ATTEMPT, out)
+        print(json.dumps(out, indent=2))
+        return 0
     ctl_tags: list[str] = []
     REUSED = None
     # Not under --gate-against control: that mode's whole premise is a control measured
@@ -614,6 +1417,13 @@ def _main(argv=None) -> int:
             "footprint": g.get("footprint"),
             "verdict": g.get("verdict"),
             "regressions": g.get("regressions"),
+            # What the candidate TRADED (gate_check's `movement`): the broke ids AND the fixed
+            # ids. Persisted so `commit.py` can put them on the step record instead of leaving
+            # the trade-off to the agent's prose — the gate decides on the mean and is
+            # indifferent to composition, so an accept can and does destroy solved tasks.
+            "movement": g.get("movement"),
+            "n_broke": g.get("n_broke"),
+            "n_fixed": g.get("n_fixed"),
             "eval_rc": ev.get("rc"),
             "eval_error": ev.get("error"),
             # True only for a control replicate this round read back instead of measuring.
@@ -740,6 +1550,7 @@ def _main(argv=None) -> int:
         # watching the stream saw two identical control evaluations and no statement that the
         # second had replaced the first.
         "attempt": ATTEMPT,
+        "batch_id": STEM,
         "attempt_reading": (
             f"RE-GATE: attempt {ATTEMPT} at iteration {int(run_dir.spent.iterations)}. Its "
             f"{len(PRIOR_CTL)} earlier control replicate(s) are pooled into `null_delta_...` "
@@ -887,37 +1698,18 @@ def _main(argv=None) -> int:
         # count attempt 0's replicates twice. The pooled view is reported separately.
         "control_replicates": ctl_rows,
         "pooled_control_replicates": pooled_rows if PRIOR_CTL else None,
-        "next": ("read regressions, then commit.py --decision accept|reject|inconclusive per "
-                 "candidate — `inconclusive` for any row whose `verdict` is inconclusive, so the "
-                 "round is not recorded as refuting an edit it could not judge"),
+        **CASCADE,
+        "next": _next_steps(killed, MERGE, dominated),
     }
-    # Persist the table as well as printing it. Until now the ONLY copy lived on stdout, so
-    # whether a round's verdict survived depended on the driver remembering to redirect —
-    # and on run 32814848187 the round that was abandoned was only reconstructible because
-    # the driver happened to have redirected it to a name someone guessed. A round's gate
-    # result is the run's evidence; it should not be optional.
-    #
-    # Per-iteration name for the same reason `control_tag` is per-iteration: a fixed name
-    # would let each round destroy the previous round's table. A same-iteration re-run gets a
-    # suffix rather than overwriting, since a re-gate is usually being COMPARED with the
-    # first one.
-    #
-    # The name comes from the SAME attempt index the control tags were built from, rather than
-    # from a second, independent probe of the directory. When the two derivations disagreed the
-    # table survived and the rollouts it cites did not, which is the whole defect this attempt
-    # index exists to close.
-    try:
-        work.mkdir(parents=True, exist_ok=True)
-        table = work / f"{STEM}.json"
-        n = ATTEMPT
-        while table.exists():  # belt-and-braces: never overwrite a sibling attempt's table
-            n += 1
-            table = work / f"round_i{int(run_dir.spent.iterations)}.r{n}.json"
-        table.write_text(json.dumps(out, indent=2), encoding="utf-8")
-        out["table_path"] = str(table)
-    except OSError as exc:  # noqa: BLE001 — the printed table is still the primary output
-        out["table_write_error"] = str(exc)
-
+    _write_table(run_dir, work, STEM, ATTEMPT, out)
+    # One "gated" transition per candidate the full-val gate judged (#435). A node gated with
+    # no screen carries the override that let it through, so `subset: null` is never silent.
+    for r in out["candidates"]:
+        graph.append_node(run_dir, node_id=r["tag"], parents=node_parents.get(r["tag"], [best]),
+                          status="gated", val_mean=r.get("reward"), gate=r,
+                          screen_skip_justification=(
+                              None if screened_by_tag.get(r["tag"], True) else
+                              args.skip_screen_justification or "--skip-screen-ladder"))
     print(json.dumps(out, indent=2))
     return 0
 

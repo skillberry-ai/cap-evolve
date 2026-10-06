@@ -1,0 +1,211 @@
+commit 861b0f7e77ace60d29cda4439dd098806a8f13b8
+Author: cap-evolve <cap-evolve@local>
+Date:   Tue Aug 25 22:24:28 2026 -0400
+
+    iter 2: ACCEPT candidate cand_0002 (val 1.000, Δ +0.100)
+
+ JOURNAL.md                                         |  36 ++
+ candidates/cand_0002/INSTRUCTIONS.md               | 198 ++++++++
+ candidates/cand_0002/PROCESS.md                    |  79 +++
+ .../mip-solver-and-solution-audit/SKILL.md         | 306 ++++++++++++
+ .../ordered-window-sequencing-mip/SKILL.md         | 323 ++++++++++++
+ .../__pycache__/solve_sequencing.cpython-312.pyc   | Bin 0 -> 31867 bytes
+ .../scripts/solve_sequencing.py                    | 549 +++++++++++++++++++++
+ events.jsonl                                       |   3 +
+ history.jsonl                                      |   1 +
+ state.json                                         |  14 +-
+ 10 files changed, 1502 insertions(+), 7 deletions(-)
+
+commit 31f575194fd6af1d41227c0fc2916372268f018d
+Author: cap-evolve <cap-evolve@local>
+Date:   Tue Aug 25 18:50:41 2026 -0400
+
+    iter 1: ACCEPT candidate cand_0001 (val 0.900, Δ +0.800)
+
+ JOURNAL.md                                         |  34 ++
+ candidates/cand_0001/INSTRUCTIONS.md               | 198 +++++++++
+ candidates/cand_0001/PROCESS.md                    |  37 ++
+ .../mip-solver-and-solution-audit/SKILL.md         | 306 ++++++++++++++
+ .../ordered-window-sequencing-mip/SKILL.md         | 323 ++++++++++++++
+ .../scripts/solve_sequencing.py                    | 465 +++++++++++++++++++++
+ events.jsonl                                       |   3 +
+ history.jsonl                                      |   1 +
+ state.json                                         |  17 +-
+ 9 files changed, 1376 insertions(+), 8 deletions(-)
+
+commit 3f36bcf7bdae847aa2959ae243c5c78c370d7d17
+Author: cap-evolve <cap-evolve@local>
+Date:   Tue Aug 25 15:13:49 2026 -0400
+
+    seed: baseline candidate
+
+ .gitignore                                         |    2 +
+ baseline.json                                      |   46 +
+ .../exam-block-sequencing__2fb09602/config.json    |   90 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__90273741/config.json    |   90 ++
+ .../trajectory/acp_trajectory.jsonl                |   50 +
+ .../seed/seed2/2026-08-25__11-05-42/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   87 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__5bc3ec8d/config.json    |   90 ++
+ .../exam-block-sequencing__5bc3ec8d/prompts.json   |    3 +
+ .../exam-block-sequencing__5bc3ec8d/result.json    |  152 +++
+ .../exam-block-sequencing__5bc3ec8d/results.jsonl  |    1 +
+ .../exam-block-sequencing__5bc3ec8d/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__5bc3ec8d/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              | 1099 ++++++++++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   87 ++
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../seed/seed2/2026-08-25__11-05-42/results.jsonl  |    1 +
+ .../seed/seed2/2026-08-25__11-05-42/summary.json   |   85 ++
+ .../seed2/2026-08-25__11-05-42/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed2/summary.json                 |   85 ++
+ .../seed/seed3/2026-08-25__11-34-43/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   60 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__4c00908d/config.json    |   90 ++
+ .../exam-block-sequencing__4c00908d/prompts.json   |    3 +
+ .../exam-block-sequencing__4c00908d/result.json    |  155 +++
+ .../exam-block-sequencing__4c00908d/results.jsonl  |    1 +
+ .../exam-block-sequencing__4c00908d/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__4c00908d/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              |  790 ++++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   60 ++
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../seed/seed3/2026-08-25__11-34-43/results.jsonl  |    1 +
+ .../seed/seed3/2026-08-25__11-34-43/summary.json   |   85 ++
+ .../seed3/2026-08-25__11-34-43/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed3/summary.json                 |   85 ++
+ .../seed/seed4/2026-08-25__12-05-06/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   58 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__25c9100b/config.json    |   90 ++
+ .../exam-block-sequencing__25c9100b/prompts.json   |    3 +
+ .../exam-block-sequencing__25c9100b/result.json    |  146 +++
+ .../exam-block-sequencing__25c9100b/results.jsonl  |    1 +
+ .../exam-block-sequencing__25c9100b/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__25c9100b/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              |  689 ++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   58 ++
+ .../verifier/ctrf.json                             |   47 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   17 +
+ .../seed/seed4/2026-08-25__12-05-06/results.jsonl  |    1 +
+ .../seed/seed4/2026-08-25__12-05-06/summary.json   |   83 ++
+ .../seed4/2026-08-25__12-05-06/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed4/summary.json                 |   83 ++
+ .../seed/seed5/2026-08-25__12-34-41/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   87 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__be3b99ee/config.json    |   90 ++
+ .../exam-block-sequencing__be3b99ee/prompts.json   |    3 +
+ .../exam-block-sequencing__be3b99ee/result.json    |  154 +++
+ .../exam-block-sequencing__be3b99ee/results.jsonl  |    1 +
+ .../exam-block-sequencing__be3b99ee/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__be3b99ee/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              | 1080 +++++++++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   87 ++
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../seed/seed5/2026-08-25__12-34-41/results.jsonl  |    1 +
+ .../seed/seed5/2026-08-25__12-34-41/summary.json   |   85 ++
+ .../seed5/2026-08-25__12-34-41/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed5/summary.json                 |   85 ++
+ .../seed/seed6/2026-08-25__13-04-48/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   61 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__dde472a9/config.json    |   90 ++
+ .../exam-block-sequencing__dde472a9/prompts.json   |    3 +
+ .../exam-block-sequencing__dde472a9/result.json    |  155 +++
+ .../exam-block-sequencing__dde472a9/results.jsonl  |    1 +
+ .../exam-block-sequencing__dde472a9/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__dde472a9/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              |  778 ++++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   61 ++
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../seed/seed6/2026-08-25__13-04-48/results.jsonl  |    1 +
+ .../seed/seed6/2026-08-25__13-04-48/summary.json   |   85 ++
+ .../seed6/2026-08-25__13-04-48/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed6/summary.json                 |   85 ++
+ .../seed/seed7/2026-08-25__13-33-52/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   71 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__17890826/config.json    |   90 ++
+ .../exam-block-sequencing__17890826/prompts.json   |    3 +
+ .../exam-block-sequencing__17890826/result.json    |  155 +++
+ .../exam-block-sequencing__17890826/results.jsonl  |    1 +
+ .../exam-block-sequencing__17890826/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__17890826/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              |  952 +++++++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   71 ++
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../seed/seed7/2026-08-25__13-33-52/results.jsonl  |    1 +
+ .../seed/seed7/2026-08-25__13-33-52/summary.json   |   85 ++
+ .../seed7/2026-08-25__13-33-52/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed7/summary.json                 |   85 ++
+ .../seed/seed8/2026-08-25__14-03-56/adp.jsonl      |    1 +
+ .../agent/acp_trajectory.jsonl                     |   74 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__14d63472/config.json    |   90 ++
+ .../exam-block-sequencing__14d63472/prompts.json   |    3 +
+ .../exam-block-sequencing__14d63472/result.json    |  151 +++
+ .../exam-block-sequencing__14d63472/results.jsonl  |    1 +
+ .../exam-block-sequencing__14d63472/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__14d63472/timing.json    |    7 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              |  903 ++++++++++++++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   74 ++
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../seed/seed8/2026-08-25__14-03-56/results.jsonl  |    1 +
+ .../seed/seed8/2026-08-25__14-03-56/summary.json   |   85 ++
+ .../seed8/2026-08-25__14-03-56/verifiers.jsonl     |    1 +
+ bench_jobs/seed/seed8/summary.json                 |   85 ++
+ .../agent/acp_trajectory.jsonl                     |   21 +
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__08ccda56/config.json    |   90 ++
+ .../exam-block-sequencing__08ccda56/prompts.json   |    3 +
+ .../exam-block-sequencing__08ccda56/result.json    |  151 +++
+ .../exam-block-sequencing__08ccda56/results.jsonl  |    1 +
+ .../exam-block-sequencing__08ccda56/rewards.jsonl  |    1 +
+ .../exam-block-sequencing__08ccda56/timing.json    |    6 +
+ .../trainer/adp.jsonl                              |    1 +
+ .../trainer/atif.json                              |  263 +++++
+ .../trainer/verifiers.jsonl                        |    1 +
+ .../trajectory/acp_trajectory.jsonl                |   21 +
+ .../verifier/ctrf.json                             |   56 +
+ .../verifier/reward.txt                            |    1 +
+ .../verifier/test-stdout.txt                       |   88 ++
+ .../agent/install-stdout.txt                       |   14 +
+ .../exam-block-sequencing__93919785/config.json    |   90 ++
+ .../trajectory/acp_trajectory.jsonl                |   51 +
+ .../seed/mip-solver-and-solution-audit/SKILL.md    |  285 +++++
+ .../seed/ordered-window-sequencing-mip/SKILL.md    |  292 ++++++
+ events.jsonl                                       |    4 +
+ splits.json                                        |   13 +
+ state.json                                         |   24 +
+ 169 files changed, 13106 insertions(+)

@@ -1,0 +1,5 @@
+{
+  "train": ["pddl-airport-planning"],
+  "val": ["pddl-airport-planning"],
+  "test": ["pddl-airport-planning"]
+}

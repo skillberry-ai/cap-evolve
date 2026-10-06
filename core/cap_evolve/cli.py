@@ -590,7 +590,20 @@ def _cmd_run(argv):
     p.add_argument("--dashboard", choices=("auto", "report-only", "off"), default=None,
                    help="live dashboard: auto (default, launch at run start), report-only, or off")
     p.add_argument("--dashboard-port", type=int, default=None, help="dashboard server port (default 7878)")
+    p.add_argument("--agent-driver", default=None,
+                   help="agent mode only: after baseline, drive the agent-optimize loop "
+                        "unattended via skills/algorithms/agent-optimize/scripts/host.py "
+                        "instead of printing the handoff and returning. Value is the "
+                        "host agent (a row in optimizers/registry.yaml, e.g. claude-code). "
+                        "Opt-in: omit this flag to keep today's handoff-and-return behavior.")
+    p.add_argument("--log-level", choices=("DEBUG", "INFO", "WARNING", "ERROR"), default=None,
+                   help="verbose/debug logging for cap_evolve itself (per-task/per-trial "
+                        "detail on DEBUG), surfaced in each phase/algorithm subprocess's "
+                        "relayed stderr. Same as setting CAPEVOLVE_LOG_LEVEL; this flag just "
+                        "sets it for this run's child processes.")
     args = p.parse_args(argv)
+    if args.log_level:
+        os.environ["CAPEVOLVE_LOG_LEVEL"] = args.log_level
 
     skills_dir = Path(args.skills_dir) if args.skills_dir else _find_skills_dir()
     if not skills_dir:
@@ -660,6 +673,7 @@ def _cmd_run(argv):
         # run print TWO json documents, so `cap-evolve run | jq` could not parse it.
         if _stderr_is_usable():
             print(json.dumps(status), file=sys.stderr, flush=True)
+            print(dashboard_launch.banner(status), file=sys.stderr, flush=True)
     # How the candidate will be DELIVERED (spec `intervention:`). Checked here, before any
     # step runs: for an out-of-process intervention a dead stack makes every candidate's
     # deployment fail, and since that is correctly per-candidate infra noise, the run
@@ -701,8 +715,18 @@ def _cmd_run(argv):
     # shows in the dashboard. Rows without a json_flag (mock/offline) ignore it.
     opt_cmd = (f"{sys.executable} {skill_run('run-optimizer')} --name {optimizer_name} "
                f"--json --workdir {{workdir}} --prompt {{prompt}}")
-    if spec.get("optimizer_model"):
-        opt_cmd += f" --model {spec['optimizer_model']}"
+    # The optimizer invocation proposes capability edits, so it resolves the "propose"
+    # routing role (#665 ws5) instead of reading optimizer_model directly. A spec with no
+    # model_routing block (every config today) resolves identically to the old
+    # `spec.get("optimizer_model")` check — same flag, same value, same no-op when unset.
+    from .model_routing import ModelRoutingError as _ModelRoutingError
+    from .model_routing import resolve_model as _resolve_model
+    try:
+        propose_model = _resolve_model("propose", spec)
+    except _ModelRoutingError:
+        propose_model = None
+    if propose_model:
+        opt_cmd += f" --model {propose_model}"
     # Per-iteration optimizer cap: run-optimizer maps --budget to the registry row's
     # budget_flag_template (e.g. claude-code → --max-turns N), bounding each step's cost.
     if spec.get("optimizer_max_turns"):
@@ -711,7 +735,12 @@ def _cmd_run(argv):
     # usd_budget_flag (e.g. claude-code → --max-budget-usd N), enforced by the optimizer
     # CLI itself. Rows without one (e.g. ibm-bob) ignore it — bound those via
     # optimizer_max_turns and/or the cumulative max_optimizer_usd instead.
-    if spec.get("optimizer_usd_per_iter"):
+    # Every committed example quotes this as a bare number (0.0, 40.0), which YAML parses
+    # as int/float and bool(0.0) is correctly False — but a hand-written capevolve.yaml
+    # that quotes it as the STRING "0" hits the identical footgun #530 fixed one layer up
+    # in benchmarks.yml's `||` chain: bool("0") is True in Python, so a plain truthiness
+    # check would render an unintended near-zero --usd-budget instead of treating it as off.
+    if spec.get("optimizer_usd_per_iter") not in (None, "", 0, "0"):
         opt_cmd += f" --usd-budget {float(spec['optimizer_usd_per_iter'])}"
 
     # Algorithm semantics: the three hill-climb variants are one ``hill-climb``
@@ -842,9 +871,22 @@ def _cmd_run(argv):
         _RunDir.open(workdir / run_dir).log_event(
             "run_config", spec=str(spec_path), project=str(proj_abs),
             algorithm=algorithm_name, optimizer=str(optimizer_name),
-            orchestration_mode=orchestration_mode)
+            orchestration_mode=orchestration_mode,
+            # How the candidate was DELIVERED. Two runs of one capability can differ only in
+            # this, so a run dir that omits it cannot say which number is which.
+            intervention=str(intervention_rec.get("intervention") or _intervention.DIRECT))
     except Exception:  # noqa: BLE001 — provenance is best-effort, never fatal
         pass
+
+    # Record which model the optimizer invocation (the "propose" role, #665 ws5)
+    # resolved to, so a run is self-describing about model routing the same way it is
+    # about spec/project/algorithm above. Best-effort: telemetry never blocks a run.
+    if propose_model:
+        try:
+            from .model_routing import record_model_selection as _record_model_selection
+            _record_model_selection(_RunDir.open(workdir / run_dir), "propose", propose_model)
+        except Exception:  # noqa: BLE001
+            pass
 
     # Resume: explicit budget flags EXTEND the reopened run (e.g. bump max_iterations to
     # keep climbing past the original cap). Without an override the frozen budget stands.
@@ -880,6 +922,25 @@ def _cmd_run(argv):
     # primitives, and sealing by running the finalize phase script. cap-evolve run does
     # setup+baseline, then hands off here — no algorithm subprocess, no auto-finalize.
     if orchestration_mode == "agent":
+        if args.agent_driver:
+            # Opt-in only: without --agent-driver this branch is unreachable and behavior
+            # is byte-identical to before. host.py is the existing headless driver for
+            # this exact handoff (skills/algorithms/agent-optimize/scripts/host.py) —
+            # invoked the same way its own tests invoke it (subprocess, stdout is its
+            # one JSON document), so its output becomes this command's output as-is.
+            host_script = skills_dir / "algorithms" / "agent-optimize" / "scripts" / "host.py"
+            host_cmd = [py, str(host_script), "--run-dir", str(workdir / run_dir),
+                       "--project", str(proj_abs), "--agent", args.agent_driver]
+            # Same "propose" role resolution as the deterministic opt_cmd above (#665
+            # ws5) — resolved once, earlier in this function.
+            if propose_model:
+                host_cmd += ["--model", propose_model]
+            if spec.get("optimizer_max_turns"):
+                host_cmd += ["--budget", str(int(spec["optimizer_max_turns"]))]
+            if spec.get("max_optimizer_usd"):
+                host_cmd += ["--usd-budget", str(float(spec["max_optimizer_usd"]))]
+            proc = subprocess.run(host_cmd, cwd=str(workdir))
+            return done(proc.returncode)
         print(json.dumps({"mode": "agent", "run_dir": run_dir, "algorithm": algorithm_name,
                           "spec_path": str(spec_path), "dashboard": dash_url or "off",
                           "stop_condition": str(spec.get("stop_condition", "")),
@@ -1042,12 +1103,26 @@ def _cmd_dashboard(argv):
     p.add_argument("--base", default=".capevolve", help="dir containing run_* dirs")
     p.add_argument("--port", type=int, default=dashboard_launch.DEFAULT_PORT)
     p.add_argument("--no-open", action="store_true", help="don't open a browser")
+    p.add_argument("--export", metavar="RUN_DIR",
+                    help="write a self-contained dashboard.html for one run dir and exit "
+                         "(no server) -- the same artifact the report phase renders, so an "
+                         "optimizer agent can regenerate it mid-run as a process/reasoning "
+                         "artifact")
     args = p.parse_args(argv)
+
+    if args.export:
+        from . import dashboard
+        from .rundir import RunDir
+        out = dashboard.write_dashboard(RunDir.open(Path(args.export)))
+        print(json.dumps({"dashboard_html": str(out)}))
+        return 0
 
     status = dashboard_launch.maybe_launch(
         args.base, mode="auto", port=args.port, open_browser=not args.no_open
     )
     print(json.dumps(status))
+    if _stderr_is_usable():
+        print(dashboard_launch.banner(status), file=sys.stderr, flush=True)
     return 0 if status.get("dashboard") not in (None, "error", "skipped") else 1
 
 
@@ -1124,13 +1199,43 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     val = _val_size(spec, project)
     trials = int(spec.get("num_trials", 1) or 1)
     iters = int(spec.get("max_iterations", 10) or 10)
+    # The optimizer's cost is priced for the "propose" routing role (#665 ws5), matching
+    # how the actual optimizer invocation resolves its model (see opt_cmd above, ~line 725)
+    # instead of reading optimizer_model directly — same fallback when model_routing is absent.
+    from .model_routing import ModelRoutingError as _ModelRoutingError
+    from .model_routing import resolve_model as _resolve_model
+    try:
+        opt_model = _resolve_model("propose", spec)
+    except _ModelRoutingError:
+        opt_model = None
+    run_model = spec.get("runner_model") or spec.get("model")
+
+    # agent mode: the driving agent owns the loop under a free-text `stop_condition`.
+    # `max_iterations`/`stall` are informational-only ceilings there, not a fixed round
+    # count, so pricing this as iters x val x trials would silently price a free-form run
+    # as a fixed N-iteration deterministic one.
+    if str(spec.get("orchestration_mode") or "deterministic") == "agent":
+        metric_calls_per_round = (val * trials) if val is not None else None
+        cap = int(spec.get("max_metric_calls", 0) or 0)
+        if metric_calls_per_round is not None and cap:
+            metric_calls_per_round = min(metric_calls_per_round, cap)
+        return {
+            "spec_summary": {"val_tasks": val, "num_trials": trials, "max_iterations": iters,
+                             "optimizer_model": opt_model, "runner_model": run_model},
+            "calls": {"metric_calls_per_round": metric_calls_per_round, "optimizer_calls": None},
+            "budget": {k: spec.get(k) for k in ("max_usd", "max_optimizer_usd", "max_metric_calls")},
+            "dominant_cost_knob": "stop_condition (agent mode: rounds are not fixed by max_iterations)",
+            "note": ("orchestration_mode is 'agent': cost is driven by stop_condition and the "
+                     "driving agent's own judgement, not a fixed iteration count, so "
+                     "optimizer_calls cannot be priced up front — use "
+                     "`spend.py --run-dir <R>` for a live number mid-run."),
+        }
+
     metric_calls = (val * trials * iters) if val is not None else None
     cap = int(spec.get("max_metric_calls", 0) or 0)
     if metric_calls is not None and cap:
         metric_calls = min(metric_calls, cap)
     opt_calls = iters
-    opt_model = spec.get("optimizer_model")
-    run_model = spec.get("runner_model") or spec.get("model")
 
     out: dict = {
         "spec_summary": {"val_tasks": val, "num_trials": trials, "max_iterations": iters,

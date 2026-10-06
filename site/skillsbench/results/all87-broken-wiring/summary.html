@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>summa — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from results/all87-broken-wiring/summary.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/all87-broken-wiring/summary.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/all87-broken-wiring/summary.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="all87-broken-wiring-reveal-killed-at-seed0">all87 — broken wiring reveal (killed at seed0)</h1>
+<p><strong>Date:</strong> 2026-07-30 (LSF 1408890)
+<strong>Model (agent):</strong> claude-opus-4-6
+<strong>Optimizer:</strong> claude-opus-4-8 (never reached iter 1)
+<strong>Task set:</strong> all 87 SkillsBench tasks (attempted <code>capevolve.all87.yaml</code>)
+<strong>Run dir:</strong> <code>.capevolve/run_all87_iter7_v2_KILLED_11pct_errors/</code></p>
+<h2 id="what-this-run-was-for">What this run was for</h2>
+<p>First attempt at the full 87-task suite. Used to expose which tasks
+actually build+run on CCC rootless podman vs. which hit infrastructure
+failures. Killed mid-seed0 once the pattern was clear.</p>
+<h2 id="what-it-revealed">What it revealed</h2>
+<p>Of the 87 tasks (seed0 = 1 trial per task):</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Count</th>
+<th>%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Real verifier fail (agent ran, output rejected)</td>
+<td>46</td>
+<td>30.7%</td>
+</tr>
+<tr>
+<td><strong>PASS (agent ran, output accepted)</strong></td>
+<td><strong>10</strong></td>
+<td><strong>6.7%</strong></td>
+</tr>
+<tr>
+<td>Infra error: <code>compose_build</code> (image build failed)</td>
+<td>58</td>
+<td>38.7%</td>
+</tr>
+<tr>
+<td>Infra error: <code>install_rc127</code> (agent install failed)</td>
+<td>27</td>
+<td>18.0%</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>7</td>
+<td>4.7%</td>
+</tr>
+<tr>
+<td>Unknown</td>
+<td>2</td>
+<td>1.3%</td>
+</tr>
+<tr>
+<td><strong>Total rollouts (with retries)</strong></td>
+<td><strong>150</strong></td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Real pass-rate on tasks that could actually run: 10/56 = 17.9%.</strong>
+This is the number the paired-SE gate would score if we could get past
+the two dominant infra-error classes.</p>
+<h2 id="root-causes-of-the-infra-errors">Root causes of the infra errors</h2>
+<ul>
+<li><strong><code>python:3.12-slim</code> base image</strong> (~26 tasks): apt postinst chown/setuid
+  fails; our patched-ubuntu wrappers don't apply. Needs equivalent
+  patching for the slim Python base.</li>
+<li><strong>Task-level <code>docker-compose.yaml</code> with <code>networks:</code> block</strong>
+  (~14 tasks): conflicts with our forced <code>network_mode: host</code> (which we
+  use to skip aardvark-dns on compute nodes without systemd).</li>
+<li><strong>Exotic base images</strong> (~4 tasks): <code>jasonish/suricata</code>,
+  <code>gcr.io/oss-fuzz-base/*</code>, <code>bugswarm/cached-images</code>.</li>
+</ul>
+<h2 id="impact">Impact</h2>
+<p>The <strong>43 tasks</strong> that ran to a verifier verdict on seed0 became the
+<code>RUNNABLE subset</code> used in the next phase (<code>runnable-43task-opt/</code>), via
+<code>.capevolve/project/split_ids.runnable.json</code>.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

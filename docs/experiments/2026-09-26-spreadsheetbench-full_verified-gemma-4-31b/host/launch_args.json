@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "--run-dir",
+    "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_spreadsheetbench_proj/.capevolve/run_suite",
+    "--project",
+    "/vol/home/skillberry/.cache/capevolve-gh-runner/_work/cap-evolve/cap-evolve/ci/benchmarks/.work/suite_full_verified_spreadsheetbench_proj/.capevolve/project",
+    "--agent",
+    "claude-code",
+    "--model",
+    "aws/claude-opus-5",
+    "--budget",
+    "1350"
+  ],
+  "python": "/home/skillberry/.cache/capevolve-ci/venv/bin/python"
+}

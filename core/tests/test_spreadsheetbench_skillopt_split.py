@@ -111,12 +111,15 @@ def test_smoke_tier_still_has_no_committed_split():
 def test_no_other_benchmark_opted_into_a_committed_split():
     """The run_suite hook is behaviour-neutral only while no OTHER benchmark ships this file.
 
-    SpreadsheetBench deliberately ships two: `full` (the held-out comparison split) and
-    `pilot` (the measurement rig). Any third path here means another benchmark's tier just
+    SpreadsheetBench deliberately ships three: `full` (the held-out comparison split over the
+    original 912 tasks), `full_verified` (the same over the verified 400-task release, whose
+    80/40/280 sizes are what recent papers publish — see test_spreadsheetbench_full_verified_tier)
+    and `pilot` (the measurement rig). Any further path here means another benchmark's tier just
     changed meaning from FIT to held-out — which should be a deliberate decision, not a
     side effect, so this test is the place it gets noticed.
     """
     expected = {"ci/benchmarks/spreadsheetbench/full/split_ids.json",
+                "ci/benchmarks/spreadsheetbench/full_verified/split_ids.json",
                 "ci/benchmarks/spreadsheetbench/pilot/split_ids.json",
                 "ci/benchmarks/swebench/full/split_ids.json"}
     found = {p.relative_to(REPO).as_posix()

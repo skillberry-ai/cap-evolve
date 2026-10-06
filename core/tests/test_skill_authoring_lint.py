@@ -235,7 +235,7 @@ def test_discovery_is_dynamic_and_sees_every_skill():
     """The lint globs; it never reads a committed list that could go stale."""
     mod = _lint_module()
     # rglob: a component may group its skills one level deeper
-    # (interventions/llm-proxies/spa), and this test asserts the lint sees EVERY skill.
+    # (interventions/llm-proxies/blackbox), and this test asserts the lint sees EVERY skill.
     on_disk = {p.parent.relative_to(SKILLS).as_posix()
                for p in SKILLS.rglob("SKILL.md") if "_registry" not in p.parts}
     _, _, n = mod.lint(SKILLS)

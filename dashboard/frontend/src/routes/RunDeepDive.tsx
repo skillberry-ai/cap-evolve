@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
@@ -11,6 +11,7 @@ import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { RunHeader } from '../components/RunHeader'
 import { KpiStrip } from '../components/KpiStrip'
 import { BestCurveChart } from '../components/BestCurveChart'
+import { ParetoScatter, isMultiObjective } from '../components/ParetoScatter'
 import { CandidatesPanel } from '../components/CandidatesPanel'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
@@ -20,17 +21,20 @@ import { ConfigPanel } from '../components/ConfigPanel'
 import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
 import { CostLedger } from '../components/CostLedger'
 import { GatePanel } from '../components/GatePanel'
-import { TaskMatrix } from '../components/TaskMatrix'
+import { TaskMatrix, SealedTestMatrix } from '../components/TaskMatrix'
 import { LogStream } from '../components/LogStream'
 import {
   EvographPanel,
-  FreeformPanel,
   GepaPanel,
-  ScreensPanel,
+  RoundsTimeline,
   SkillOptPanel,
 } from '../components/AlgoPanels'
 import { FileTree } from '../components/FileTree'
+import { ProcessPanel } from '../components/ProcessPanel'
 import { GitDiff } from '../components/GitDiff'
+import { RunTimeline } from '../components/RunTimeline'
+import { OptimizerStory } from '../components/OptimizerStory'
+import { IterationDetail } from '../components/IterationDetail'
 import type { RunCapabilities, RunDetail } from '../lib/types'
 
 /**
@@ -71,12 +75,23 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
   tabs.push({ id: 'cost', label: 'Cost' })
   tabs.push({ id: 'logs', label: 'Logs' })
 
-  // Per-algorithm additions, behind a capability check.
-  if (c.freeform) tabs.push({ id: 'rounds', label: 'Agent rounds' })
-  if (c.screens) tabs.push({ id: 'screens', label: 'Screens' })
+  // Per-algorithm additions, behind a capability check. Rounds and screens are ONE
+  // tab: a round's screen(s), full-val gate, control-relative verdict and final
+  // decision are one decision trail, not two views cross-linked by candidate id.
+  if (c.freeform || c.screens) tabs.push({ id: 'rounds', label: 'Rounds' })
   if (c.gepa || c.minibatch) tabs.push({ id: 'gepa', label: 'GEPA' })
   if (c.skillopt || c.epochs) tabs.push({ id: 'skillopt', label: 'SkillOpt' })
   if (c.evograph) tabs.push({ id: 'evograph', label: 'Weakness graph' })
+  if (c.process_html) tabs.push({ id: 'process', label: 'Process' })
+
+  // Timeline and optimizer story tabs (when activities/diagnosis data available)
+  if (detail?.summary.activities && detail.summary.activities.length > 0) {
+    tabs.push({ id: 'timeline', label: 'Timeline' })
+  }
+  const hasDiagnosis = detail?.graph.nodes.some(n => n.diagnosis)
+  if (hasDiagnosis) {
+    tabs.push({ id: 'optimizer-story', label: 'Optimizer story' })
+  }
 
   if (c.diffs) tabs.push({ id: 'diffs', label: 'Diffs' })
   if (c.trajectories) tabs.push({ id: 'trajectories', label: 'Trajectories' })
@@ -89,6 +104,9 @@ export function buildTabs(caps: RunCapabilities | undefined, detail?: RunDetail)
 export function RunDeepDive() {
   const { id } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
+  // Shared with the Tasks tab so it can filter to whichever candidate the Candidates tab
+  // has selected, instead of always showing the full task universe.
+  const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['run', id],
@@ -163,7 +181,17 @@ export function RunDeepDive() {
               liveEvents={stream.status === 'live' ? stream.count : 0}
             />
             <KpiStrip summary={summary} />
-            <Tabs tabs={tabs}>{(active) => <TabBody active={active} data={data} runId={id!} />}</Tabs>
+            <Tabs tabs={tabs}>
+              {(active) => (
+                <TabBody
+                  active={active}
+                  data={data}
+                  runId={id!}
+                  selectedCandidate={selectedCandidate}
+                  onSelectCandidate={setSelectedCandidate}
+                />
+              )}
+            </Tabs>
           </div>
         )}
       </div>
@@ -171,7 +199,19 @@ export function RunDeepDive() {
   )
 }
 
-function TabBody({ active, data, runId }: { active: string; data: RunDetail; runId: string }) {
+function TabBody({
+  active,
+  data,
+  runId,
+  selectedCandidate,
+  onSelectCandidate,
+}: {
+  active: string
+  data: RunDetail
+  runId: string
+  selectedCandidate: string | null
+  onSelectCandidate: (id: string) => void
+}) {
   const s = data.summary
   const extra = s.algo_extra ?? {}
   switch (active) {
@@ -179,15 +219,33 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
       return (
         <div className="space-y-5">
           <BestCurveChart nodes={data.graph.nodes} />
+          {isMultiObjective(s) && <ParetoScatter nodes={data.graph.nodes} />}
           <PhasesTimeline detail={data} />
         </div>
       )
     case 'candidates':
-      return <CandidatesPanel graph={data.graph} summary={s} />
+      return (
+        <CandidatesPanel
+          graph={data.graph}
+          summary={s}
+          selectedId={selectedCandidate}
+          onSelectId={onSelectCandidate}
+        />
+      )
     case 'gate':
       return <GatePanel summary={s} nodes={data.graph.nodes} />
     case 'tasks':
-      return <TaskMatrix summary={s} nodes={data.graph.nodes} />
+      return (
+        <div className="space-y-4">
+          <TaskMatrix
+            summary={s}
+            nodes={data.graph.nodes}
+            selectedId={selectedCandidate}
+            screens={extra.screens}
+          />
+          <SealedTestMatrix summary={s} />
+        </div>
+      )
     case 'cost':
       // The ledger already accounts for every dollar by phase; CostPanel's by-role chart
       // restated the ledger and was dropped. Its per-iteration table is the only place
@@ -203,15 +261,69 @@ function TabBody({ active, data, runId }: { active: string; data: RunDetail; run
     case 'logs':
       return <LogStream log={s.log ?? []} />
     case 'rounds':
-      return <FreeformPanel summary={s} nodes={data.graph.nodes} />
-    case 'screens':
-      return <ScreensPanel screens={extra.screens ?? []} nodes={data.graph.nodes} />
+      return <RoundsTimeline summary={s} nodes={data.graph.nodes} screens={extra.screens ?? []} />
     case 'gepa':
       return <GepaPanel extra={extra} nodes={data.graph.nodes} />
     case 'skillopt':
       return <SkillOptPanel extra={extra} nodes={data.graph.nodes} />
     case 'evograph':
-      return <EvographPanel extra={extra} />
+      return <EvographPanel extra={extra} metered={s.cost?.metered !== false} />
+    case 'process':
+      return <ProcessPanel runId={runId} />
+    case 'timeline': {
+      // Check if we're showing iteration detail
+      const iterParam = new URLSearchParams(window.location.search).get('iteration')
+      if (iterParam) {
+        const iteration = parseInt(iterParam, 10)
+        const candidate = data.graph.nodes.find(n => n.iteration === iteration)
+        const parent = candidate?.parent ? data.graph.nodes.find(n => n.id === candidate.parent) : null
+        const gate = s.gate_decisions?.find(g => g.candidate === candidate?.id)
+        
+        if (candidate) {
+          return (
+            <IterationDetail
+              iteration={iteration}
+              candidate={candidate}
+              parent={parent || null}
+              gate={gate || null}
+              runId={runId}
+              onClose={() => {
+                const params = new URLSearchParams(window.location.search)
+                params.delete('iteration')
+                params.delete('tab')
+                window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`)
+                window.dispatchEvent(new PopStateEvent('popstate'))
+              }}
+            />
+          )
+        }
+      }
+      
+      return <RunTimeline summary={s} nodes={data.graph.nodes} onActivityClick={(activityId) => {
+        // Parse activity ID to extract iteration number
+        const match = activityId.match(/iter-(\d+)/)
+        if (match) {
+          const iteration = parseInt(match[1], 10)
+          const node = data.graph.nodes.find(n => n.iteration === iteration)
+          if (node) {
+            // Navigate to iteration detail view using search params
+            const params = new URLSearchParams(window.location.search)
+            params.set('iteration', iteration.toString())
+            params.set('tab', 'overview')
+            window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}${window.location.hash}`)
+            window.dispatchEvent(new PopStateEvent('popstate'))
+          }
+        }
+      }} />
+    }
+    case 'optimizer-story':
+      return (
+        <OptimizerStory
+          nodes={data.graph.nodes}
+          gates={s.gate_decisions ?? []}
+          perIteration={s.per_iteration ?? []}
+        />
+      )
     case 'diffs':
       return <IterationsDiff runId={runId} graph={data.graph} />
     case 'trajectories':

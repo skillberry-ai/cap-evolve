@@ -1,0 +1,128 @@
+--- a/prompt.md
++++ b/prompt.md
+@@ -105,21 +105,19 @@
+ "ambiguous", "I'll assume", or "fallback", stop and do this instead:
+ 
+-1. **Name both readings, in code, as two functions of the cell address.** Do not argue about which
+-   is more natural — implement both.
+-2. **Score each reading against something the file already fixed.** In order of preference: a
+-   pre-filled cell inside `answer_position`, a cached formula result elsewhere that answers the same
+-   question, a total or summary already in the sheet, or the parallel column.
+-3. **Print both scores and keep the reading that reproduces the file's own number.** If neither
+-   reproduces it, BOTH are wrong — do not pick the closer one; your ranges or your match test are
+-   off, so go back and print more cells.
++**Compute both candidate answers for ONE cell and print them side by side with the number the file
++already fixes.** One line, in the block you were going to write anyway:
+ 
+ ```python
+-def reading_a(r):  ...      # e.g. the window starts at THIS row:      B{r}:B12
+-def reading_b(r):  ...      # e.g. the window drops the first k matches
+-known = {"E2": wsv["E2"].value}                  # whatever the file already fixed
+-for a1, want in known.items():
+-    r = int(a1[1:])
+-    print(a1, "want", repr(want), "| A:", reading_a(r), "| B:", reading_b(r))
+-```
++print("E2 file:", repr(wsv["E2"].value), "| rowwindow:", med(b[0:]), "| dropfirst:", med(b[1:]))
++```
++
++Then keep the reading that reproduces the file's number. The figure to compare against, in order of
++preference: a pre-filled cell inside `answer_position`, a cached formula result elsewhere that answers
++the same question, a total or summary already in the sheet, or the parallel column. **If neither
++reading reproduces it, BOTH are wrong** — do not pick the closer one; your ranges or your match test
++are off, so print more cells.
++
++The point is not to write scaffolding. It is that one `print` comparing two numbers settles in a turn
++what a comment starting "usually" gets wrong for the rest of the task.
+ 
+ Three ambiguities are common enough to name outright:
+@@ -134,4 +132,17 @@
+   `calendar.monthrange(year, month)[1]`. Never write a literal 28, 30, 31, 365 or 52: February has
+   29 days in a leap year, and the one year the sheet names may be exactly that year.
++- **Which cell holds the single value the whole answer keys off.** When the instruction says "using
++  the year value shown", "for the selected name", "from the dropdown", there is usually more than one
++  cell that could plausibly be meant — a label's neighbour, a column of candidates, a header. Picking
++  the wrong one is invisible afterwards: every cell you write is then consistently wrong by the same
++  rule, and no check that compares your own numbers will notice. So print EVERY candidate with its
++  address before you choose:
++  ```python
++  for a1 in ["B1", "B3", "O3", "O11"]:
++      print(a1, repr(wsv[a1].value))
++  ```
++  and prefer the one adjacent to the label that names it (`A3 == "Year"` → `B3`) over one you inferred
++  from a column of similar-looking values. Then reconcile: if a pre-filled cell or a cached formula
++  disagrees with the answer that choice produces, you chose the wrong cell.
+ - **A named tool.** "Use COUNTIFS", "with an array formula", "via VBA" is a preference about method.
+   You are graded on cell values only, so reproduce what that tool would RETURN, by any means.
+@@ -169,4 +180,16 @@
+   unmatched row. What you may not do is leave the cell out because you are unsure, or reach for a
+   value that nothing in the file supports.
++- **A sequence you continue stops at the last row that has DATA, not at the end of the range.** When
++  you are filling a column by extending a pattern — numbering rows, lettering sub-items, carrying a
++  label down, propagating a group — the pattern must stop where the rows it describes stop. The range
++  you were given is routinely a row or two longer than the rows holding anything, and those trailing
++  cells are meant to stay empty; writing one more item of a perfectly correct sequence into one of
++  them is a wrong answer, worth exactly as much as a wrong number. So bound the loop by the data
++  before you write it:
++  ```python
++  rows = [r for r in range(2, 200) if wsv[f"B{r}"].value not in (None, "")]   # a column that is
++  print("filling rows", min(rows), "..", max(rows))                          # populated for every
++  ```                                                                        # real row
++  and if the last cell of your sequence lands on a row where every other column is empty, drop it.
+ 
+ # 6. The CHECK block — re-derive and reconcile, do not just print
+@@ -234,4 +257,45 @@
+ The task is not finished while any line of the check is still wrong.
+ 
+-Never re-send a code block identical to one you already ran. If you are about to repeat yourself you
+-have stopped making progress, and the information you need is in cells you have not printed yet.
++# 7. Every block must print something, or the turn is wasted
++
++The sandbox sends you back only what your code printed. So a block that computes and saves but prints
++nothing comes back as:
++
++```
++[Code executed successfully with no output]
++```
++
++That line tells you the code did not crash and NOTHING else — not what was written, not whether the
++lookup matched, not whether the file changed. It is the single most expensive thing that can happen in
++a turn, because the usual response to it is to send a slightly different version of the same block and
++get it again. Rollouts that hit it repeatedly are the ones that run out of turns having written a
++handful of cells.
++
++So, mechanically:
++
++- **End every block with a `print()` you can act on.** After a save, print the count of cells you
++  wrote and two or three of the actual values, read back from the saved file:
++  ```python
++  wb.save(OUT)
++  chk = openpyxl.load_workbook(OUT)[SHEET]
++  print("wrote", len(written), "cells |", [(a1, chk[a1].value) for a1 in written[:3]])
++  ```
++- **If a block comes back with no output, that is a bug in the block, not a result.** Do not re-send
++  it with a small change. Send a block that does nothing but PRINT the state you failed to look at:
++  the source cells with `repr()` and type, the lookup keys and how many matched, the length of the
++  list you built, and the first few target cells read back from the saved file. Then decide.
++- **Print your assumptions as you use them, not the conclusions.** `print("year", repr(year), "from
++  B3")` is worth more than `print("done")`, because the wrong cell for `year` is invisible in the
++  answer and obvious in the print.
++- **Never re-send a code block identical to one you already ran**, and treat a block that differs
++  only in a constant as identical. If you are about to repeat yourself you have stopped making
++  progress, and the information you need is in cells you have not printed yet.
++- **You have a limited number of turns.** If you are past the halfway point and the target cells are
++  still empty or unverified, stop refining and spend the next block writing the straightforward
++  version of the answer for EVERY cell your rule covers, then print it back. A complete answer you
++  can still see is worth more than a partial one you cannot.
++- **Printing the same correct answer twice is how a finished task fails.** The print exists so you can
++  READ it and then stop. If a block's output matches what the block before it printed, you are done —
++  the next reply must be no code block at all. Re-saving a file that is already right cannot improve
++  your score, and each repeat burns a turn you cannot get back. Compare this block's output to the
++  last one before writing anything: same output means finish, not refine.
+--- a/task_template.md
++++ b/task_template.md
+@@ -118,6 +118,11 @@
+ ## The interaction contract
+ 
+-You have up to {max_turns} rounds. Each reply is exactly ONE ```python fenced code block — nothing
+-outside t
+... (truncated)

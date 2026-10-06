@@ -1,0 +1,19 @@
+{
+  "source": "https://github.com/microsoft/SkillOpt/tree/79124b37e9a6371e13b753f8bcd7adb1e493ade1/data/spreadsheetbench_id_split",
+  "repo": "microsoft/SkillOpt",
+  "commit": "79124b37e9a6371e13b753f8bcd7adb1e493ade1",
+  "license": "MIT",
+  "dataset_source": "https://huggingface.co/datasets/KAKA22/SpreadsheetBench",
+  "dataset_file": "spreadsheetbench_verified_400.tar.gz",
+  "dataset_revision": "ab0b742b0fc95b946f212d80ac7771b5531272e4",
+  "counts": {
+    "train": 80,
+    "val": 40,
+    "test": 280
+  },
+  "sha256_sorted_ids": {
+    "train": "c5eb753031aad2d58b60509c6b14ae202027bbe9577b2a9067aff8333da6cb27",
+    "val": "8ac6ed589014d2f05b2b234ba9081b008fd5addcb8a1ba705d9e3b7f65d140d4",
+    "test": "54608b02b59450fbf59569bc342eff58b1cbb5fcd43ce4c0b9935b8f85e379dd"
+  }
+}

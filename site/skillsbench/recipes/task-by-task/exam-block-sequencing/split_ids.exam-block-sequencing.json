@@ -1,0 +1,5 @@
+{
+  "train": ["exam-block-sequencing"],
+  "val": ["exam-block-sequencing"],
+  "test": ["exam-block-sequencing"]
+}

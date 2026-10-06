@@ -1,0 +1,59 @@
+# cap-evolve run spec — RUNNABLE-SUBSET variant.
+# Filters to the 43 tasks that ran successfully in the killed all87_iter7_v2
+# seed0 (they build, agent installs, verifier runs). Excludes 44 tasks with
+# infrastructure failures (image build errors, agent install rc=127, timeouts
+# before any tool call).
+#
+# Rationale: run cap-evolve cleanly on the largest task set our CCC
+# environment currently supports. This is a superset of the original 10-task
+# office-doc setup and includes tasks from other domains — some in-domain
+# for the office skills (docx/pptx/xlsx/pdf), most out-of-domain but still
+# useful as baseline datapoints.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [skill-package]
+capability_path: seed_capability
+actions: [edit]
+capability_sources: []
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: claude-opus-4-8
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 50.0
+runner_repo_path: ../../vendor/skillsbench
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# The 43 tasks that ran successfully in the killed all87_iter7_v2 run.
+# Train == val (fit metric, per parent HANDOFF's pass-rate-parity option).
+split_ids_file: split_ids.runnable.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 3
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 0.2
+
+# --- budget -----------------------------------------------------------------
+# 43 tasks × 3 trials × 8 evaluations (baseline + 7 iters) = 1032 rollouts.
+# Runner = Sonnet 5 (~5× cheaper than Opus 4.6): ~$0.30/rollout ≈ $310.
+# Optimizer = Opus 4.8 (unchanged, per the 10-task setup): 7 × ~$50 = ~$350.
+# Cap total at $1500 for safety headroom.
+max_iterations: 7
+stall: 0
+max_metric_calls: 0
+max_usd: 1500.0
+max_optimizer_usd: 400.0
+
+# --- iteration store --------------------------------------------------------
+store: git

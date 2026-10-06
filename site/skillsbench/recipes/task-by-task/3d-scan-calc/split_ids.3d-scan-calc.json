@@ -1,0 +1,5 @@
+{
+  "train": ["3d-scan-calc"],
+  "val": ["3d-scan-calc"],
+  "test": ["3d-scan-calc"]
+}

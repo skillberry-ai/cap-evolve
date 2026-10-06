@@ -86,10 +86,12 @@ def test_an_agent_that_never_writes_code_is_cut_off():
 
 
 def test_replay_uses_the_writing_code_not_the_last_code():
-    replay = SRC.split("for idx in (2, 3):", 1)[1].split("return Rollout", 1)[0]
-    assert "solution_code.replace(input_file.name" in replay, \
-        "replaying a verification snippet would score 0 on cases 2 and 3"
-    assert "last_code.replace(input_file.name" not in replay
+    # The case list is read from disk (three copies on the 912 set, one on the verified 400 —
+    # see _case_indices), so the loop is over the dataset's own cases, not a literal (2, 3).
+    replay = SRC.split("for idx in _case_indices(local_dir, sid)[1:]:", 1)[1].split("return Rollout", 1)[0]
+    assert "_replay_code(solution_code, input_file.name" in replay, \
+        "replaying a verification snippet would score 0 on the other graded cases"
+    assert "_replay_code(last_code" not in replay
 
 
 def test_the_recorded_solution_is_the_writing_code():

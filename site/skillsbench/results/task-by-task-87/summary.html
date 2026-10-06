@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>summa — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from results/task-by-task-87/summary.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-87/summary.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/results/task-by-task-87/summary.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="skillsbench-task-by-task-87-aggregate-summary">SkillsBench task-by-task-87 — aggregate summary</h1>
+<p><em>Generated 2026-08-28 · 87 tasks · dedicated LSF host per task (CCC) or dedicated Docker container (Mac) · 10 trials per candidate · up to 4 iterations · Sonnet-5 agent + Opus-4.8 optimizer.</em></p>
+<h2 id="tldr">TL;DR</h2>
+<ul>
+<li><strong>Pass rate: 64/87 = 73.6%</strong> (task reaches val ≥ 1.0 or final_test ≥ 1.0).</li>
+<li><strong>Statistically indistinguishable from EvoSkill's 71.1%</strong>: +2.5 pp against a binomial
+  standard error of 4.73 pp — <strong>0.52 SE</strong> (two-proportion z = 0.36, p ≈ 0.72). Not a win.
+  See "Reading the comparison honestly" below before quoting any of these numbers.</li>
+<li><strong>NO_SIGNAL: 10</strong> tasks (scored 0.0 for both seed AND every optimizer candidate — cap-evolve had no lever).</li>
+<li><strong>Mean best</strong> over all 87: <strong>0.8422</strong>.</li>
+<li><strong>Median iterations spent</strong>: <strong>4.0</strong>.</li>
+</ul>
+<h2 id="two-cuts-evoskill-pass_rate-metric">Two cuts (EvoSkill pass_rate metric)</h2>
+<table>
+<thead>
+<tr>
+<th>cut</th>
+<th>denominator</th>
+<th>passes</th>
+<th>pass_rate</th>
+<th>vs EvoSkill 71.1%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. all tasks</td>
+<td>87</td>
+<td>64</td>
+<td><strong>73.6%</strong></td>
+<td>+2.5 pp (0.52 SE — noise)</td>
+</tr>
+<tr>
+<td>2. excl. 10 no-signal</td>
+<td>77</td>
+<td>64</td>
+<td><strong>83.1%</strong></td>
+<td>+12.0 pp (see caveat below)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reading-the-comparison-honestly">Reading the comparison honestly</h2>
+<p>Three things make the headline weaker than it looks. All three are reproducible from
+<code>results.json</code> in this directory.</p>
+<p><strong>1. The pass metric takes the better of two splits.</strong> The rule is <code>best(val) ≥ 1.0</code> <strong>OR</strong>
+<code>final_test ≥ 1.0</code>. Only 34 of 87 tasks have a <code>final_test</code> at all, and <strong>45 of the 64
+passes are val-only</strong>. Recomputing with test where available and val otherwise:</p>
+<blockquote>
+<p><strong>62/87 = 71.3%</strong> — versus EvoSkill's 71.1%. A tie, not a +2.5 pp lead.</p>
+</blockquote>
+<p>This matters because val overstates: <code>insights/pass_k_analysis.md</code> §1 lists val-1.0 tasks
+whose test reward collapsed (<code>energy-unit-commitment</code> 1.0 → 0.1, <code>organize-messy-files</code>
+0.9 → 0.0), and <code>handoffs/C4_HANDOFF.md</code> says outright <em>"Report test reward, not val."</em></p>
+<p><strong>2. <code>pass^5 = 67.1%</code> on raw data only</strong> — <em>below</em> EvoSkill's 71.1%. See
+<code>insights/pass_k_analysis.md</code> §3 for the pass^k derivation (tau-bench definition,
+all-of-k-succeed). Our 10 trials measure within-run trial noise; EvoSkill's 5 runs measure
+optimizer-outcome variance. These are not the same quantity.</p>
+<p><strong>3. Cut 2 is not apples-to-apples.</strong> Of the 10 NO_SIGNAL tasks dropped from the
+denominator, only 4 are infrastructure failures — the other 6 ran to completion and never
+moved off zero, which are genuine optimizer failures. <code>fix-visual-stability</code> is a
+benchmark-side broken <code>docker-compose.yml</code>. EvoSkill gets no equivalent courtesy, so
+"83.1%" is not a number to put beside their 71.1%.</p>
+<p><code>docs/RESULTS.md</code> on <code>main</code> states the house position on this comparison directly:
+<em>"</em><em>Not directly comparable to EvoSkills' 71.1%.</em><em> Different paradigm."</em> That remains the
+correct framing.</p>
+<blockquote>
+<p><strong>Known inconsistency:</strong> <code>ui/heatmap.html</code> renders <strong>63/87 = 72.4%</strong> for this same sweep.
+Its embedded <code>DATA</code> is a stale reduced copy of <code>results.json</code> missing <code>final_test</code>, so it
+cannot see <code>fix-erlang-ssh-cve</code> (the one task passing on test but not val). The heatmap is
+wrong, not this file. Regenerating it is tracked as follow-up work.</p>
+</blockquote>
+<h2 id="overall-stats-counts-by-status">Overall stats — counts by status</h2>
+<table>
+<thead>
+<tr>
+<th>status</th>
+<th>count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DONE</td>
+<td>35</td>
+</tr>
+<tr>
+<td>KILLED_saturated</td>
+<td>19</td>
+</tr>
+<tr>
+<td>KILLED_ceiling</td>
+<td>21</td>
+</tr>
+<tr>
+<td>KILLED_val_1.0</td>
+<td>2</td>
+</tr>
+<tr>
+<td>NO_SIGNAL</td>
+<td>10</td>
+</tr>
+<tr>
+<td><strong>TOTAL</strong></td>
+<td><strong>87</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="per-category-breakdown">Per-category breakdown</h2>
+<table>
+<thead>
+<tr>
+<th>category</th>
+<th>total</th>
+<th>eval</th>
+<th>no-signal</th>
+<th>pass</th>
+<th>pass_rate</th>
+<th>mean best</th>
+<th>EvoSkill</th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cybersecurity</td>
+<td>7</td>
+<td>6</td>
+<td>1</td>
+<td>4</td>
+<td>57%</td>
+<td>0.731</td>
+<td>76%</td>
+<td>−19 pp</td>
+</tr>
+<tr>
+<td>finance-economics</td>
+<td>9</td>
+<td>8</td>
+<td>1</td>
+<td>5</td>
+<td>56%</td>
+<td>0.733</td>
+<td>82%</td>
+<td>−26 pp</td>
+</tr>
+<tr>
+<td>industrial-physical-systems</td>
+<td>14</td>
+<td>14</td>
+<td>0</td>
+<td>12</td>
+<td>86%</td>
+<td>0.973</td>
+<td>64%</td>
+<td><strong>+22 pp</strong></td>
+</tr>
+<tr>
+<td>mathematics-or-formal-reasoning</td>
+<td>8</td>
+<td>8</td>
+<td>0</td>
+<td>8</td>
+<td>100%</td>
+<td>1.000</td>
+<td>n/a</td>
+<td>—</td>
+</tr>
+<tr>
+<td>media-content-production</td>
+<td>5</td>
+<td>5</td>
+<td>0</td>
+<td>5</td>
+<td>100%</td>
+<td>1.000</td>
+<td>69%</td>
+<td><strong>+31 pp</strong></td>
+</tr>
+<tr>
+<td>natural-science</td>
+<td>14</td>
+<td>11</td>
+<td>3</td>
+<td>10</td>
+<td>71%</td>
+<td>0.774</td>
+<td>84%</td>
+<td>−13 pp</td>
+</tr>
+<tr>
+<td>office-white-collar</td>
+<td>14</td>
+<td>14</td>
+<td>0</td>
+<td>11</td>
+<td>79%</td>
+<td>0.950</td>
+<td>73%</td>
+<td><strong>+6 pp</strong></td>
+</tr>
+<tr>
+<td>software-engineering</td>
+<td>16</td>
+<td>11</td>
+<td>5</td>
+<td>9</td>
+<td>56%</td>
+<td>0.675</td>
+<td>68%</td>
+<td>−12 pp</td>
+</tr>
+</tbody>
+</table>
+<h2 id="no_signal-tasks-10">NO_SIGNAL tasks (10)</h2>
+<p><strong>4 tasks where the container built but the agent produced empty tool_calls</strong> — cap-evolve harness ran, no agent activity recorded:
+- <code>earthquake-phase-association</code> [natural-science / seismology]
+- <code>fix-build-google-auto</code> [software-engineering / build-repair]
+- <code>fix-visual-stability</code> [software-engineering / performance-optimization]
+- <code>seismic-phase-picking</code> [natural-science / seismology]</p>
+<p><strong>6 tasks where cap-evolve ran to completion but no candidate moved off zero:</strong>
+- <code>financial-modeling-qa</code> [finance-economics]
+- <code>fix-build-agentops</code> [software-engineering / build-repair]
+- <code>fix-druid-loophole-cve</code> [software-engineering / cve-triage]
+- <code>python-scala-translation</code> [software-engineering / language-translation]
+- <code>quantum-numerical-simulation</code> [natural-science / physics]
+- <code>spring-boot-jakarta-migration</code> [software-engineering / migration]</p>
+<h2 id="sources">Sources</h2>
+<ul>
+<li><strong>c3-v1</strong> (44 tasks) — c3 worktree v1 runs (bucket-1/2/3 unblocks, freshest)</li>
+<li><strong>c1-v1</strong> (30 tasks) — c1 worktree v1 (original task-by-task-43)</li>
+<li><strong>c2-v2</strong> (6 tasks) — c2 worktree v2 reruns (previously contaminated 6 tasks)</li>
+<li><strong>c1-v5</strong> (4 tasks) — c1 worktree v5 rerun (post 2026-08-24 full-cache-cleared)</li>
+<li><strong>c1-tA</strong> (3 tasks) — c1 worktree Track A extension (iters 3–4)</li>
+<li><strong>mac-v2</strong> (7 tasks) — Boaz's Mac + Docker Desktop retry of the 7 CCC-blocked tasks</li>
+<li>Wins (2): <code>glm-lake-mendota</code> → 1.0, <code>offer-letter-generator</code> → 1.0</li>
+<li>Evaluated but low: <code>suricata-custom-exfil</code> → 0.67</li>
+<li>Still no signal (4): <code>earthquake-phase-association</code>, <code>fix-build-google-auto</code>, <code>fix-visual-stability</code>, <code>seismic-phase-picking</code></li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

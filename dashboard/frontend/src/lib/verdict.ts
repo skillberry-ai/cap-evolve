@@ -137,6 +137,14 @@ export const NODE_STATUS: Record<NodeStatus, Meta> = {
   rejected: VERDICT.reject,
   indecisive: VERDICT.indecisive,
   failed: { ...VERDICT['no measurement'], label: 'failed' },
+  screened: {
+    label: 'screen',
+    tone: 'text-muted',
+    ring: 'border-line',
+    Icon: CircleDashed,
+    blurb: 'A cheap subset screen, not a full val eval — its mean is a screening ' +
+      'statistic over the subset it ran, never a val score.',
+  },
 }
 
 /** CSS custom-property name for a node status, for SVG/chart fills. */

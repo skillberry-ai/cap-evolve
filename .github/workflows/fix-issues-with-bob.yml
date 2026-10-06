@@ -13,6 +13,25 @@ jobs:
   call-fix-issues:
     uses: skillberry-ai/skillberry-common/.github/workflows/fix-issues-with-bob.yml@main
     secrets: inherit
+    # Repo-specific guidance for Bob is in .bob/rules/. These inputs let Bob run
+    # the same tests and builds as ci.yml, and make the workflow re-run Bob until
+    # they pass (the PR is opened as a draft when they still fail).
+    with:
+      python_version: '3.11'
+      setup_command: >-
+        pip install -e "./core[dev]" -e "./dashboard/backend[dev]"
+        && cd dashboard/frontend && npm ci
+      verify_command: >-
+        python -m pytest core/tests -q
+        && python -m pytest dashboard/backend/tests -q
+        && python skills/_registry/lint_skills.py skills
+        && cd dashboard/frontend && npm run build && npm test
+      # 7 passes x 40 min plus checks stays under the 360-minute job limit.
+      timeout_minutes: 40
+      refine_passes: 6
+      # Source changes must come with test changes (CONTRIBUTING.md house rule).
+      code_paths: '^(core/cap_evolve|skills/[^/]+/[^/]+/scripts|dashboard/backend/capevolve_dashboard|dashboard/frontend/src/(components|routes|lib))/'
+      test_paths: '^(core/tests|dashboard/backend/tests|dashboard/frontend/src/test)/'
     permissions:
       issues: write
       pull-requests: write

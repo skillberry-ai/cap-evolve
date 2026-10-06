@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROCE — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/cand_0003/PROCESS.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../../"><img src="../../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../../getting-started.html">Get started</a>
+      <a href="../../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../../results.html">Results</a>
+      <a href="../../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../../architecture.html">Architecture</a>
+      <a href="../../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../../harbor.html">Harbor</a>
+      <a href="../../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/cand_0003/PROCESS.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/c2-run/cand_0003/PROCESS.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="process-what-i-did-this-iteration-explainability-required">PROCESS — what I did this iteration (explainability; REQUIRED)</h1>
+<h2 id="key-finding-the-val-task-is-a-mixed-pool-not-one-task">Key finding: the val "task" is a MIXED pool, not one task</h2>
+<p>The 10 trials named <code>energy-ac-optimal-power-flow</code> are actually different SkillsBench tasks:
+- t0,t1,t2,t3,t4 = the real ACOPF task; t5,t8 = employee-record diff; t6,t7 = PDF form-fill;
+  t9 = <strong>invoice-fraud-detection</strong>.
+- Outcomes (champion cand_0001): pass = t1,t5,t6,t7,t8; fail = t0,t2,t3,t4 (ACOPF verifier
+  240s timeouts — infra), t9 (real content failure). Mean reward 0.50.</p>
+<h2 id="ranked-issue-list-clusters-by-recoverable-score-biggest-first">Ranked issue list (clusters by recoverable score, biggest first)</h2>
+<table>
+<thead>
+<tr>
+<th>rank</th>
+<th>cluster</th>
+<th>trials</th>
+<th>shared root cause</th>
+<th>tag</th>
+<th>change class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Invoice-fraud: unresolved PO echoed instead of <code>null</code></td>
+<td>t9 (1/10)</td>
+<td>Agent wrote <code>po_number:"PO-INVALID"</code> for an Invalid-PO row; GT = <code>null</code>. Task says <em>"If the PO is missing, set it to null"</em> + <em>"Invalid PO: the PO number doesn't exist in purchase_orders.csv"</em>. Agent read "missing" as <em>blank on invoice</em> not <em>not-found-in-lookup</em>. <code>::TestOutputs::test_content</code> asserts <code>act["po_number"]==exp["po_number"]</code> → <code>'PO-INVALID'==None</code> fails on page 4.</td>
+<td>KNOWLEDGE (output convention)</td>
+<td>DESCRIPTION + BODY (new tightly-scoped skill)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>ACOPF verifier timeouts</td>
+<td>t0,t2,t3,t4 (4/10)</td>
+<td>Verifier re-solves the 300-bus ACOPF in-test; on 2 CPUs exceeds 240s → "no verifier reward (rc=0/1) … verifier timed out". Independent of agent/skills.</td>
+<td>INFRA NOISE</td>
+<td>SKIPPED (uncontrollable)</td>
+</tr>
+</tbody>
+</table>
+<p>t9 is otherwise fully correct (no vendor false-positives/negatives, all other pages match) —
+only the null-PO convention flips it.</p>
+<h2 id="change-made-this-iteration-one-surgical-edit">Change made this iteration (ONE surgical edit)</h2>
+<table>
+<thead>
+<tr>
+<th>cluster</th>
+<th>edit class</th>
+<th>file</th>
+<th>what &amp; why it generalizes</th>
+<th>protects passing?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>NEW SKILL (description + body)</td>
+<td><code>fuzzy-match/SKILL.md</code></td>
+<td>New tightly-scoped skill for reconciling transactional records against authoritative reference tables. Core rule: <strong>an unresolved foreign key (not in the lookup / malformed) is reported as <code>null</code>, never the raw string</strong> — with an illustrative (non-hardcoded) validate-then-membership snippet. Plus normalize-before-match and priority-order rules, and difflib/rapidfuzz how-to (the task explicitly says "use fuzzy matching"). General to any invoice/vendor/PO reconciliation — no task filename/value/answer hardcoded.</td>
+<td>Trigger scoped to invoice/reference-table reconciliation → does NOT fire on employee-diff (t5/t8) or PDF forms (t6/t7); ACOPF skills untouched (t0–t4).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="verify-the-fix">Verify-the-fix</h2>
+<ul>
+<li><strong>REAL</strong>: ties to <code>::TestOutputs::test_content</code> assertion <code>'PO-INVALID' == None</code> on page 4 (t9 trace, this iteration's trajectories).</li>
+<li><strong>VERIFIED</strong>: reproduced the rule on the Invalid-PO case — <code>PO-INVALID</code> / malformed / absent keys → <code>None</code>, valid keys preserved (matches GT page 4 = null). Frontmatter parses (YAML ok), name matches dir, desc 483 chars, 75-line body, zero links (no broken refs).</li>
+<li><strong>SAFE / blast radius</strong>: the description front-loads "reconcile invoices/transactions/line-items against approved-vendor lists, purchase-order registers, customer masters; fuzzy vendor-name matching; foreign-key validation" — it matches t9's wording ("approved vendors", "purchase orders", "fuzzy matching", "invoice fraud") but NOT "find deleted/modified employees between two spreadsheet versions" (t5/t8) or "fill this PDF form" (t6/t7). Even if it loaded on an employee diff, the null-key rule is conditional (only when a foreign key fails to resolve) and inert there. ACOPF trials (t0–t4) don't match the description at all.</li>
+</ul>
+<h2 id="building-on-prior-results">Building on prior RESULTS</h2>
+<ul>
+<li>Built on cand_0001 (ACCEPTED): kept all 3 ACOPF skills + <code>build_report.py</code> intact.</li>
+<li>cand_0002 (REJECTED, val 0.300) added <code>pdf/</code> AND <code>fuzzy-match/</code>. The <code>pdf/</code> package is a
+  broad trigger that fires on the passing PDF-form tasks (t6/t7) → the likely regressor.
+  I therefore did <strong>NOT</strong> re-add <code>pdf/</code> (or <code>xlsx/</code>), and shipped ONLY the reconciliation
+  skill, with a tighter trigger than cand_0002's generic "matching entity names across
+  datasets" so it won't pull in the employee-diff tasks.</li>
+</ul>
+<h2 id="deliberately-skipped">Deliberately skipped</h2>
+<ul>
+<li>t0/t2/t3/t4 ACOPF verifier timeouts — uncontrollable (verifier's own in-test solve exceeds
+  240s). No skill edit can change it. This caps achievable reward around 0.6.</li>
+<li>Did not add pdf/xlsx skill packages (refuted by cand_0002's rejection; passing office
+  tasks already succeed without them).</li>
+</ul>
+<h2 id="process-features-used">Process &amp; features used</h2>
+<ul>
+<li>Serial (single agent). Small diagnosis surface (1 addressable failure). Read all 10
+  trajectory ctrf metadata + the exact test_content assertion + the t9 task prompt + all
+  prior diffs/journal. No subagents needed.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

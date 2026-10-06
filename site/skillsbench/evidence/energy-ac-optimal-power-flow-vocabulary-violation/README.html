@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>READ — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/energy-ac-optimal-power-flow-vocabulary-violation/README.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../"><img src="../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../getting-started.html">Get started</a>
+      <a href="../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../results.html">Results</a>
+      <a href="../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../architecture.html">Architecture</a>
+      <a href="../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../harbor.html">Harbor</a>
+      <a href="../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/README.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/README.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="evidence-the-optimizer-invented-a-skill-outside-the-seed-vocabulary-and-the-gate-accepted-it">Evidence: the optimizer invented a skill outside the seed vocabulary, and the gate accepted it</h1>
+<p><strong>Claim:</strong> cap-evolve's skill-package optimizer is <strong>not constrained to a fixed skill
+vocabulary</strong>. Nothing in <code>skill-package/scripts/abstract.py</code> refuses an edit that creates
+a brand-new top-level sub-package, so the optimizer can widen a capability from N skills
+to N+1 skills between iterations. On SkillsBench <code>energy-ac-optimal-power-flow</code> it did
+exactly that — added a <code>fuzzy-match/</code> skill that has nothing to do with AC optimal power
+flow — the significance gate accepted the candidate on its val number, and the run's final
+scored number came out <strong>0.0 against the seed's 0.4</strong> (Δ = <strong>−0.4</strong>).</p>
+<p><strong>Run:</strong> <code>intake_skillbench_c2</code>, run dir
+<code>.capevolve/run_task_energy-ac-optimal-power-flow_v1_CORRUPTED_batch3/</code>
+(campaign: SkillsBench task-by-task, c2/c3/c4 worktrees). 4 iterations, optimizer spend
+$13.44 / 178,662 tokens (<code>c2-run/state.json</code>).</p>
+<h2 id="the-vocabulary-violation-in-the-runs-own-files">The vocabulary violation, in the run's own files</h2>
+<p>The task's seed capability has exactly <strong>three</strong> sub-packages
+(<code>c2-run/seed-vs-candidates.txt</code>, verbatim listings of both
+<code>.capevolve/project_energy-ac-optimal-power-flow/seed_capability/</code> and the run's own
+<code>candidates/seed/</code>):</p>
+<pre><code>ac-branch-pi-model  casadi-ipopt-nlp  power-flow-data
+</code></pre>
+<p>What each candidate actually shipped:</p>
+<table>
+<thead>
+<tr>
+<th>candidate</th>
+<th>top-level sub-packages</th>
+<th>gate</th>
+<th>val</th>
+<th>Δ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>seed</code></td>
+<td>ac-branch-pi-model, casadi-ipopt-nlp, power-flow-data</td>
+<td>—</td>
+<td>0.400</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>cand_0001</code></td>
+<td><em>(same three)</em></td>
+<td>ACCEPT</td>
+<td>0.500</td>
+<td>+0.100</td>
+</tr>
+<tr>
+<td><code>cand_0002</code></td>
+<td>+ <strong>fuzzy-match</strong>, <strong>pdf</strong>, <strong>xlsx</strong></td>
+<td>reject</td>
+<td>0.300</td>
+<td>−0.200</td>
+</tr>
+<tr>
+<td><code>cand_0003</code></td>
+<td>+ <strong>fuzzy-match</strong></td>
+<td><strong>ACCEPT</strong></td>
+<td>0.900</td>
+<td><strong>+0.400</strong></td>
+</tr>
+<tr>
+<td><code>cand_0004</code></td>
+<td>+ <strong>fuzzy-match</strong> (+ <code>scripts/nullify_unresolved_keys.py</code>)</td>
+<td>reject</td>
+<td>0.800</td>
+<td>−0.100</td>
+</tr>
+</tbody>
+</table>
+<p>(<code>c2-run/git-log.txt</code> — the run's own commit log — records the same five states.)</p>
+<p><code>cand_0003/fuzzy-match/</code> is <strong>not</strong> an edit to an existing skill. It is a whole new skill
+package with its own frontmatter and 75-line body (<code>c2-run/cand_0003/fuzzy-match/SKILL.md</code>,
+sha256 <code>110abc8b…</code>), whose description is:</p>
+<blockquote>
+<p>"Reconcile transactional records (invoices, transactions, line items) against
+authoritative reference tables — approved-vendor lists, purchase-order/order registers,
+customer masters … Use when detecting invoice or payment fraud …"</p>
+</blockquote>
+<p><code>cand_0004</code> then grew it further, adding executable code inside the invented skill
+(<code>c2-run/cand_0004/fuzzy-match/scripts/nullify_unresolved_keys.py</code>) — so the new
+sub-package was not a one-off text file but a lineage the optimizer kept building on.</p>
+<p>The optimizer states plainly that it is adding new skills. From <code>c2-run/JOURNAL.md</code>:</p>
+<ul>
+<li>cand_0002: <em>"NEW <code>pdf/</code>, <code>xlsx/</code>, <code>fuzzy-match/</code> — copied the canonical shared office
+  skills into the candidate."</em> and <em>"<code>fuzzy-match/SKILL.md</code> — added 'Reconciling records
+  against reference tables'…"</em></li>
+<li>cand_0003 (the accepted one): <em>"surgical, single tightly-scoped fuzzy-match
+  reconciliation skill … WITHOUT the pdf package that sank cand_0002"</em>, <em>"NEW
+  <code>fuzzy-match/SKILL.md</code> (single skill)"</em>.</li>
+<li>cand_0004: <em>"NEW SCRIPT <code>fuzzy-match/scripts/nullify_unresolved_keys.py</code>"</em>.</li>
+</ul>
+<p>Its <code>PROCESS.md</code> for the accepted iteration (<code>c2-run/cand_0003/PROCESS.md</code>) even labels the
+change class <strong>"NEW SKILL (description + body)"</strong> in its own change table. No refusal was
+recorded anywhere — the edit simply landed.</p>
+<h2 id="why-nothing-stopped-it-abstractpy">Why nothing stopped it (<code>abstract.py</code>)</h2>
+<p>Two mechanisms combine:</p>
+<ol>
+<li><code>_subpackages(capability_dir)</code> (line ~150) derives the skill vocabulary <strong>from whatever
+   is on disk right now</strong>: <em>"Immediate sub-directories that are themselves skill packages
+   (contain SKILL.md)"</em>. It is a discovery function, not a check against a declared set.
+   So the moment <code>fuzzy-match/SKILL.md</code> exists, <code>fuzzy-match</code> <strong>is</strong> a member of the
+   capability, and <code>validate()</code> happily validates it as one more sub-package.</li>
+<li>
+<p><code>apply()</code> (line ~234) checks only three things per edit: path containment (no <code>../</code>),
+   the edit <em>kind</em> against <code>policy.json</code>'s <code>allow</code> list, and — for a file that doesn't yet
+   exist — that <code>"add"</code> is allowed:</p>
+<p>if not exists and "add" not in allow:
+       refuse(e, f"creating '{rel}' needs the 'add' action")</p>
+</li>
+</ol>
+<p>There is no check on <em>where</em> the new path sits. <code>DEFAULT_POLICY</code> allows <code>add</code>, and this
+   run had <strong>no <code>policy.json</code> anywhere</strong> (verified: <code>find … -name policy.json</code> returns
+   nothing), so it ran on the default. <code>add</code>-ing <code>fuzzy-match/SKILL.md</code> was indistinguishable
+   to <code>apply()</code> from <code>add</code>-ing <code>ac-branch-pi-model/reference/notes.md</code>.</p>
+<p>Note that the existing knob is too coarse to fix this: dropping <code>"add"</code> from the policy
+would also forbid adding a new reference doc or script <em>inside</em> an existing skill — which
+is legitimate, in-vocabulary work (cand_0001's accepted win was exactly that: a new
+<code>ac-branch-pi-model/scripts/build_report.py</code>). A fixed-vocabulary invariant therefore has
+to be <strong>path-shaped</strong>, not action-shaped: refuse an <code>add</code> whose relative path introduces a
+new first path segment (equivalently, whose write would change the set returned by
+<code>_subpackages()</code>), while leaving adds under an existing sub-package alone.</p>
+<h2 id="what-the-gate-actually-did-weaker-than-accepted-on-val">What the gate actually did — weaker than "accepted on val"</h2>
+<p><code>c2-run/events.jsonl</code> shows the paired significance gate never ran a significance test at
+all. On <strong>every</strong> iteration it emitted:</p>
+<blockquote>
+<p><code>gate_warning</code> … <em>"combined/paired SE is 0 (likely n_trials=1 or identical trials) — the
+significance gate cannot distinguish noise from signal and is falling back to STRICT
+(accept any Δ&gt;0)."</em> (<code>context: n=1</code>)</p>
+</blockquote>
+<p>and accepted cand_0003 with reason <em>"paired Δ̄=+0.4000 &gt; 0 (SE=0 → STRICT fallback,
+warned; n=1)"</em>. So the out-of-vocabulary skill was admitted by an <strong>any-positive-delta</strong>
+rule, on a task whose seed val of 0.4 came from <code>[1,1,0,0,1,0,1,0,0,0]</code> across 10 trials
+with 3 of them errored on infrastructure (<code>c2-run/baseline.json</code>) — i.e. noise of the same
+magnitude as the Δ that let it in.</p>
+<h2 id="honest-scoping-of-the-test-collapsed-number">Honest scoping of the "test collapsed" number</h2>
+<p><code>c2-run/report.md</code> reports the headline:</p>
+<pre><code>- Best candidate: `cand_0003`
+- Baseline val: 0.4
+- **Held-out test (optimized skills): 0.0**
+- Held-out test (baseline `seed` skills): 0.4
+- **Test improvement (optimized − baseline): -0.4**
+</code></pre>
+<p><strong>But <code>report.md</code>'s claim that this is a "sealed split … held-out tasks the optimizer never
+saw" is wrong for this run, and the harness knew it.</strong> <code>c2-run/splits.json</code> puts the same
+single task in all three splits, and the very first line of <code>c2-run/events.jsonl</code> is:</p>
+<blockquote>
+<p><code>splits_warning</code>: <em>"test overlaps train/val (no-holdout fit) — the test number is NOT held
+out; report it as a fit metric"</em></p>
+</blockquote>
+<p>So the correct reading is <strong>not</strong> "textbook generalization failure on unseen tasks." It is:
+the champion the gate selected on val=0.9 re-scored <strong>0.0</strong> on a fresh 10-trial draw of the
+<em>same</em> task, while the untouched seed re-scored <strong>0.4</strong> on its own fresh draw. That is
+still a damning result for the accepted candidate — a 0.9 → 0.0 swing on identical task
+content means the val 0.9 was not a property of the skills — but it is best described as
+<strong>gate overfitting to a noisy val draw</strong>, not held-out-set overfitting. The vocabulary
+violation is the <em>mechanism</em> that made such a large spurious swing available: the optimizer
+was optimizing a skill (<code>fuzzy-match</code>) that is irrelevant to the task under test, so its
+apparent +0.4 could only ever have been draw noise.</p>
+<h2 id="open-question-1-what-does-corrupted_batch3-refer-to">Open question 1: what does <code>CORRUPTED_batch3</code> refer to?</h2>
+<p>The directory is named <code>…_v1_CORRUPTED_batch3</code>, so some earlier session flagged this batch
+before this investigation. Whether the flag was raised <em>for</em> the new-skill injection is
+unverified — but there is a separate, independently verifiable defect in the same run that
+is a much better fit for the label, and it also explains <em>why</em> the optimizer reached for
+<code>fuzzy-match</code> in the first place:</p>
+<p><strong>The trial trajectories are mislabelled.</strong> Every trial file is named and tagged
+<code>energy-ac-optimal-power-flow</code>, but the prompts inside belong to several different
+SkillsBench tasks. From <code>trial-mislabelling/trial-prompts.txt</code> (generated by reading
+<code>work/cand_0003/trajectories/energy-ac-optimal-power-flow__cand_0001__t*.json</code> and printing
+each trial's <code>input</code>, <code>rollout.task_id</code>, and first user message):</p>
+<table>
+<thead>
+<tr>
+<th>trial</th>
+<th><code>task_id</code> says</th>
+<th>prompt actually is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>t0–t4</td>
+<td>energy-ac-optimal-power-flow</td>
+<td>ACOPF ("As an operator-planner in an Independent System Operator…")</td>
+</tr>
+<tr>
+<td>t5, t8</td>
+<td>energy-ac-optimal-power-flow</td>
+<td><strong>HR employee-record diff</strong> ("identify differences between its old employee records and the current database … <code>/root/employ…</code>")</td>
+</tr>
+<tr>
+<td>t6</td>
+<td>energy-ac-optimal-power-flow</td>
+<td><strong>PDF edit/form-fill</strong> ("You are given a <code>PDF</code> file at <code>/root/input/input.pdf</code>…")</td>
+</tr>
+<tr>
+<td>t7</td>
+<td>energy-ac-optimal-power-flow</td>
+<td><strong>court-form fill</strong> ("Fill the California Small Claims Court form at <code>/root/sc100-blank.pdf</code>…")</td>
+</tr>
+<tr>
+<td>t9</td>
+<td>energy-ac-optimal-power-flow</td>
+<td><strong>invoice-fraud detection</strong> ("analyze the following files to find any potential invoice fraud … <code>/root/vendors.xlsx</code>, <code>/root/purchase_orders.csv</code>")</td>
+</tr>
+</tbody>
+</table>
+<p>Only 5 of the 10 "trials" of this task were this task. The other 5 were four unrelated
+office tasks.</p>
+<p>The optimizer diagnosed this itself, correctly, in <code>c2-run/cand_0003/PROCESS.md</code>:</p>
+<blockquote>
+<p><em>"## Key finding: the val 'task' is a MIXED pool, not one task — The 10 trials named
+<code>energy-ac-optimal-power-flow</code> are actually different SkillsBench tasks: t0,t1,t2,t3,t4 =
+the real ACOPF task; t5,t8 = employee-record diff; t6,t7 = PDF form-fill; t9 =
+invoice-fraud-detection."</em></p>
+</blockquote>
+<p>Given that pool, adding <code>fuzzy-match</code> was a <em>rational</em> response to the (corrupted) evidence
+in front of it: t9 was the one genuine content failure it could address. This makes the
+finding sharper rather than weaker — <strong>a data-integrity bug upstream propagated into a
+permanent, out-of-scope widening of the capability's skill set, precisely because no
+vocabulary invariant existed to stop it.</strong> A fixed-vocabulary constraint would have
+contained the blast radius of the mislabelling bug to "no accepted candidate," instead of
+"champion selected on an unrelated skill."</p>
+<p>All six <code>*_CORRUPTED_batch3</code> run dirs in <code>intake_skillbench_c2</code> show the same cross-task
+contamination in their journals (each run's <code>rollouts/</code> contain only its own task id, yet
+each journal reasons about other tasks' content), so the corruption is a property of the
+batch, not of this task. But <strong>only this run had a new-skill candidate become champion</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>run (<code>*_CORRUPTED_batch3</code>)</th>
+<th>seed vocabulary</th>
+<th>out-of-vocabulary sub-package in any candidate</th>
+<th>became champion?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>energy-ac-optimal-power-flow</td>
+<td>ac-branch-pi-model, casadi-ipopt-nlp, power-flow-data</td>
+<td><code>fuzzy-match</code> (cand_0002/3/4), <code>pdf</code>+<code>xlsx</code> (cand_0002)</td>
+<td><strong>YES — cand_0003</strong></td>
+</tr>
+<tr>
+<td>simpo-code-reproduction</td>
+<td>nlp-research-repo-package-installment, pdf</td>
+<td><code>fuzzy-match</code> (cand_0003)</td>
+<td>no (see below)</td>
+</tr>
+<tr>
+<td>shock-analysis-supply</td>
+<td>xlsx</td>
+<td><code>pdf</code> (cand_0004)</td>
+<td>no (rejected, Δ −0.100)</td>
+</tr>
+<tr>
+<td>energy-market-pricing</td>
+<td>dc-power-flow, economic-dispatch, locational-marginal-prices, power-flow-data</td>
+<td>none</td>
+<td>—</td>
+</tr>
+<tr>
+<td>reserves-at-risk-calc</td>
+<td>xlsx</td>
+<td>none</td>
+<td>—</td>
+</tr>
+<tr>
+<td>shock-analysis-demand</td>
+<td>xlsx</td>
+<td>none</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2 id="open-question-2-simpo-code-reproduction-is-a-second-occurrence-and-it-was-a-near-miss">Open question 2: <code>simpo-code-reproduction</code> is a second occurrence — and it was a near miss</h2>
+<p>Confirmed. <code>run_task_simpo-code-reproduction_v1_CORRUPTED_batch3</code> has a seed vocabulary of
+<code>{nlp-research-repo-package-installment, pdf}</code> and its <code>cand_0003</code> ships a third
+sub-package, <code>fuzzy-match/SKILL.md</code> (153 lines, sha256 <code>9996d842…</code>, copied here under
+<code>simpo-second-occurrence/</code>). Its journal is explicit that this is a cross-task port:</p>
+<blockquote>
+<p><em>"ADD <code>fuzzy-match/SKILL.md</code> (new skill in my candidate) = verbatim port of the
+invoice-fraud run's </em><em>ACCEPTED</em><em> cand_0002 fuzzy-match skill"</em></p>
+</blockquote>
+<p>and, on the same mislabelling defect:</p>
+<blockquote>
+<p><em>"t9 … its <code>task_id</code>/<code>input</code> say <code>simpo-code-reproduction</code> but its entire 46-step trace is
+an INVOICE-FRAUD task (invoices.pdf/vendors.xlsx/fraud_report.json) … The agent was fed
+the wrong prompt."</em></p>
+</blockquote>
+<p>The important detail: <code>cand_0003</code> was rejected with <strong>Δ = +0.000</strong> (<code>git log</code>:
+<code>8d5ec7a iter 3: reject candidate cand_0003 (val 0.900, Δ +0.000)</code>) — i.e. it was turned
+away by the STRICT fallback's <em>strict</em> inequality, <strong>not</strong> by any vocabulary rule. Had that
+noisy draw landed one trial higher, the same violation would have been accepted here too.
+Two runs out of six proposed an out-of-vocabulary skill; one was accepted; the other missed
+by a rounding-level margin.</p>
+<h2 id="why-this-belongs-in-evidence">Why this belongs in evidence</h2>
+<p>There is an ongoing effort to constrain the optimizer to a <strong>fixed vocabulary</strong> — edit
+prose/tools/references inside existing skills; never create or delete a skill. This bundle
+is the empirical justification, not a hypothetical:</p>
+<ol>
+<li><strong>The gap is real and reachable.</strong> <code>apply()</code> + <code>_subpackages()</code> place no vocabulary
+   constraint; the default policy allows <code>add</code>; the optimizer took the opening on its own
+   initiative, twice, without any prompt asking it to.</li>
+<li><strong>The gate cannot catch it.</strong> Skill-set widening is invisible to a scalar-reward gate.
+   Here the gate had degenerated to "accept any Δ&gt;0", and the accepted Δ (+0.4) was
+   indistinguishable from the noise floor of a task with 3/10 infra-errored trials.</li>
+<li><strong>The consequence was a champion built on an irrelevant skill.</strong> val 0.9 → re-scored
+   0.0 versus the untouched seed's 0.4. Whatever the split semantics, the selected artifact
+   was worse than doing nothing.</li>
+<li><strong>It converts upstream data bugs into permanent capability drift.</strong> The mislabelled-trial
+   defect could only produce an out-of-scope skill <em>because</em> out-of-scope skills were
+   creatable. The invariant is a containment boundary for classes of bug we haven't found yet.</li>
+</ol>
+<p>Suggested shape of the fix (not implemented here — this bundle is documentation only):
+refuse in <code>apply()</code> any <code>add</code> whose relative path's first segment is not already a member of
+<code>_subpackages()</code> (and any <code>remove</code> that would empty one), snapshotting the vocabulary at run
+start; surface it as a <code>refused</code> entry so the optimizer sees the boundary and re-plans.</p>
+<h2 id="bundle-contents">Bundle contents</h2>
+<ul>
+<li><code>c2-run/</code> — the full run's <code>JOURNAL.md</code>, <code>report.md</code>, <code>state.json</code>, <code>splits.json</code>,
+  <code>events.jsonl</code> (the <code>splits_warning</code> + all four <code>gate_warning</code>s + the <code>finalize</code> event),
+  <code>baseline.json</code> (per-trial rewards and the infra-noise feedback), and <code>git-log.txt</code>.</li>
+<li><code>c2-run/seed-vs-candidates.txt</code> — verbatim <code>ls</code> of the seed capability, the run's
+  <code>candidates/seed/</code>, and every candidate's top-level sub-packages. The primary proof.</li>
+<li><code>c2-run/cand_0003/fuzzy-match/SKILL.md</code> — the invented skill, exactly as accepted.</li>
+<li><code>c2-run/cand_0003/PROCESS.md</code> — the accepted iteration's own change table (labels itself
+  "NEW SKILL") and its "the val 'task' is a MIXED pool" finding.</li>
+<li><code>c2-run/cand_0004/fuzzy-match/</code> — the next iteration's expansion of the invented skill,
+  including the bundled <code>scripts/nullify_unresolved_keys.py</code>.</li>
+<li><code>trial-mislabelling/trial-prompts.txt</code> — per-trial <code>task_id</code> vs. actual prompt for all 10
+  trials, the evidence for open question 1.</li>
+<li><code>simpo-second-occurrence/</code> — the second run's <code>JOURNAL.md</code>, <code>report.md</code>, <code>state.json</code>,
+  <code>git-log.txt</code>, <code>seed-vs-candidates.txt</code>, and its own out-of-vocabulary
+  <code>fuzzy-match/SKILL.md</code>.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

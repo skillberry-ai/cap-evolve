@@ -1,0 +1,5 @@
+{
+  "train": ["multilingual-video-dubbing"],
+  "val": ["multilingual-video-dubbing"],
+  "test": ["multilingual-video-dubbing"]
+}

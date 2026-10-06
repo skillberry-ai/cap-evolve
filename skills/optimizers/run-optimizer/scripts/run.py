@@ -115,29 +115,54 @@ def parse_cost(stdout: str) -> dict:
         may carry ``total_cost_usd`` or ``usage``.
       * Gemini (`--output-format json``): ``total_cost_usd`` / ``usage`` if present.
 
-    Returns ``{usd: float|None, tokens: int|None, raw: <parsed-or-None>}``. Never
-    raises: a CLI that printed prose (no JSON) yields ``{usd: None, ...}`` and the
-    caller falls back to the prose-fed path unchanged.
+    ``tokens`` is the FULL session total actually billed by ``usd`` — input +
+    output + cache_read + cache_creation — not just input+output. Claude Code's
+    ``usage`` object carries ``cache_read_input_tokens`` / ``cache_creation_input_tokens``
+    (Anthropic Messages API field names; camelCase checked too for other CLIs)
+    alongside ``input_tokens`` / ``output_tokens``, and for a cache-heavy session
+    those cache fields dwarf input+output — omitting them is what made $/token
+    computed from the old ``tokens`` look 90-130x too high. ``total_cost_usd`` /
+    ``usage`` on Claude Code's terminal ``result`` event are cumulative for the
+    *whole* session (every API call billed so far, including ones behind a later
+    compaction — compaction trims what's resent as context, it doesn't erase
+    already-billed usage from the running counter), so scanning for that one
+    terminal event (below) already captures compacted-away turns; summing tokens
+    across it is not a per-turn re-aggregation.
+
+    Returns ``{usd: float|None, tokens: int|None, cache_read_tokens: int|None,
+    cache_creation_tokens: int|None, raw: <parsed-or-None>}``. Never raises: a CLI
+    that printed prose (no JSON) yields ``{usd: None, ...}`` and the caller falls
+    back to the prose-fed path unchanged.
     """
-    out = {"usd": None, "tokens": None, "raw": None}
+    out = {"usd": None, "tokens": None, "cache_read_tokens": None,
+           "cache_creation_tokens": None, "raw": None}
     if not stdout or not stdout.strip():
         return out
 
-    # Try whole-string JSON first, then last-nonempty-line (JSONL streams like codex).
+    # Try whole-string JSON first, then EVERY line of a JSONL stream (claude-code
+    # stream-json, codex --json). Scanning only the last non-empty line missed the
+    # cost when the stream's final lines are trailing system events (e.g. a
+    # `task_notification`/`task_updated` pair after a background tool was killed)
+    # rather than the CLI's own terminal `result` message — that message, carrying
+    # the session's cumulative `total_cost_usd`, can be several lines earlier. A
+    # run recorded $0.00 optimizer spend for a session whose transcript had real
+    # `result` events reporting $3.65 / $3.86, purely because the stream's last two
+    # lines were `task_updated`/`task_notification`, not `result` — this reproduces
+    # that exact case.
     objs: list = []
     text = stdout.strip()
     try:
         objs.append(json.loads(text))
     except Exception:
-        for line in reversed(text.splitlines()):
+        for line in text.splitlines():
             line = line.strip()
             if not line:
                 continue
             try:
                 objs.append(json.loads(line))
-                break
             except Exception:
                 continue
+        objs.reverse()  # scan newest-first, same preference order as before
     if not objs:
         return out
 
@@ -149,15 +174,33 @@ def parse_cost(stdout: str) -> dict:
                     out["usd"] = _coerce_float(obj[key])
             usage = obj.get("usage") or obj.get("token_usage") or {}
             if isinstance(usage, dict) and out["tokens"] is None:
-                tot = usage.get("total_tokens")
-                if tot is None:
-                    inp = usage.get("input_tokens") or usage.get("prompt_tokens")
-                    o = usage.get("output_tokens") or usage.get("completion_tokens")
-                    if inp is not None or o is not None:
-                        tot = (int(inp or 0) + int(o or 0))
+                inp = usage.get("input_tokens") or usage.get("prompt_tokens")
+                o = usage.get("output_tokens") or usage.get("completion_tokens")
+                cache_read = (usage.get("cache_read_input_tokens") or
+                              usage.get("cacheReadInputTokens"))
+                cache_create = (usage.get("cache_creation_input_tokens") or
+                                 usage.get("cacheCreationInputTokens"))
+                # Component fields present (Claude Code's usage object has no
+                # `total_tokens` at all) -> sum EVERYTHING actually billed, cache
+                # tokens included. `total_tokens` is only a fallback for a CLI
+                # that reports it with no input/output/cache breakdown.
+                if inp is not None or o is not None or cache_read is not None or cache_create is not None:
+                    tot = int(inp or 0) + int(o or 0) + int(cache_read or 0) + int(cache_create or 0)
+                else:
+                    tot = usage.get("total_tokens")
                 if tot is not None:
                     try:
                         out["tokens"] = int(tot)
+                    except (TypeError, ValueError):
+                        pass
+                if out["cache_read_tokens"] is None and cache_read is not None:
+                    try:
+                        out["cache_read_tokens"] = int(cache_read)
+                    except (TypeError, ValueError):
+                        pass
+                if out["cache_creation_tokens"] is None and cache_create is not None:
+                    try:
+                        out["cache_creation_tokens"] = int(cache_create)
                     except (TypeError, ValueError):
                         pass
             for v in obj.values():
@@ -169,8 +212,17 @@ def parse_cost(stdout: str) -> dict:
                     _scan(v)
 
     for o in objs:
+        found_usd_before, found_tokens_before = out["usd"], out["tokens"]
         _scan(o)
-        out["raw"] = o
+        # `raw` must be the object that actually SUPPLIED the cost/token figures — not
+        # just whichever object the loop happened to visit last. With multiple JSONL
+        # lines scanned newest-first, "last visited" is the OLDEST line once nothing
+        # more remains to find, which fed a stale/irrelevant object (e.g. a `system`
+        # `init` line) into `_stop_info()` downstream.
+        if out["raw"] is None and (out["usd"] != found_usd_before or out["tokens"] != found_tokens_before):
+            out["raw"] = o
+        if out["usd"] is not None and out["tokens"] is not None:
+            break
     return out
 
 
@@ -464,7 +516,12 @@ def main(argv=None) -> int:
             args.transcript, stdout, stderr, extra_keys=extra_keys)
     if want_json and json_flag:
         cost = parse_cost(stdout)
-        result["cost"] = {"total_cost_usd": cost["usd"], "tokens": cost["tokens"]}
+        result["cost"] = {
+            "total_cost_usd": cost["usd"],
+            "tokens": cost["tokens"],
+            "cache_read_tokens": cost["cache_read_tokens"],
+            "cache_creation_tokens": cost["cache_creation_tokens"],
+        }
         if cost["usd"] is None:
             # Headless output wasn't parseable — say so; the loop falls back to no-cost.
             result["cost"]["note"] = ("no total_cost_usd in optimizer output; "

@@ -17,13 +17,30 @@ const FILL: Record<GraphNode['status'], string> = {
   rejected: 'var(--rejected)',
   indecisive: 'var(--indecisive)',
   failed: 'var(--muted)',
+  // A screen never earns a real graph node (see TaskMatrix's synthetic column), so this
+  // is unreachable here — the map must stay exhaustive over NodeStatus regardless.
+  screened: 'var(--muted)',
 }
 
 /** Best-path-as-spine lineage: the winning chain reads as a flat amber line
- * across the top; off-spine candidates hang below with L-connectors. */
-export function LineageTree({ graph }: { graph: RunGraph }) {
+ * across the top; off-spine candidates hang below with L-connectors.
+ *
+ * Selection is controlled by the parent when `selectedId`/`onSelectId` are given, so the
+ * Tasks tab (a sibling of this panel, not a child) can react to the same click — falls
+ * back to local state so the panel still works standalone. */
+export function LineageTree({
+  graph,
+  selectedId,
+  onSelectId,
+}: {
+  graph: RunGraph
+  selectedId?: string | null
+  onSelectId?: (id: string) => void
+}) {
   const layout = layoutLineage(graph)
-  const [selected, setSelected] = useState<string | null>(graph.best_id)
+  const [localSelected, setLocalSelected] = useState<string | null>(graph.best_id)
+  const selected = selectedId !== undefined ? selectedId : localSelected
+  const setSelected = onSelectId ?? setLocalSelected
   const reduce = prefersReducedMotion()
 
   if (layout.nodes.length === 0) {
@@ -49,6 +66,7 @@ export function LineageTree({ graph }: { graph: RunGraph }) {
         <Legend color="var(--accepted)" label="accepted" />
         <Legend color="var(--rejected)" label="rejected" />
         <Legend color="var(--seed)" label="seed" />
+        <Legend color="var(--muted)" label="merge edge" dashed />
       </div>
 
       <div className="overflow-x-auto">
@@ -64,11 +82,12 @@ export function LineageTree({ graph }: { graph: RunGraph }) {
             const d = `M ${x1} ${y1} H ${(x1 + x2) / 2} V ${y2} H ${x2}`
             return (
               <motion.path
-                key={`${e.from}-${e.to}`}
+                key={`${e.from}-${e.to}-${e.merge ? 'merge' : 'derive'}`}
                 d={d}
                 fill="none"
-                stroke={e.onSpine ? 'var(--accent)' : 'var(--border)'}
+                stroke={e.onSpine ? 'var(--accent)' : e.merge ? 'var(--muted)' : 'var(--border)'}
                 strokeWidth={e.onSpine ? 2.5 : 1.5}
+                strokeDasharray={e.merge ? '4 3' : undefined}
                 initial={reduce ? false : { pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: reduce ? 0 : 0.4 }}
@@ -99,6 +118,7 @@ export function LineageTree({ graph }: { graph: RunGraph }) {
             <span className="font-medium">{sel.id}</span>
             <span className="capitalize text-muted">· {sel.status}</span>
             {sel.id === graph.best_id && <span className="text-accent">· champion</span>}
+            {sel.changeType && <ChangeTypeBadge changeType={sel.changeType} />}
           </div>
           <div className="tnum mt-1 text-muted">
             val <span className="text-foreground">{pct(sel.val)}</span>
@@ -117,6 +137,13 @@ export function LineageTree({ graph }: { graph: RunGraph }) {
             )}
           </div>
           {sel.reason && <div className="mt-1 text-xs text-muted">{sel.reason}</div>}
+          {(sel.subset || sel.clusterIds) && (
+            <div className="mt-1 text-xs text-muted">
+              {sel.subset && `screened on ${sel.subset.task_ids.length} task(s)${sel.subset.tier != null ? ` (tier ${sel.subset.tier})` : ''}`}
+              {sel.subset && sel.clusterIds && ' · '}
+              {sel.clusterIds && `clusters: ${sel.clusterIds.join(', ')}`}
+            </div>
+          )}
         </div>
       )}
     </Card>
@@ -168,16 +195,32 @@ function LineageNode({
   )
 }
 
+/** Small badge for a candidate's self-reported change_type (optional/nullable field —
+ * absent on runs that predate it or never set it, see GraphNode.change_type). */
+export function ChangeTypeBadge({ changeType }: { changeType: string }) {
+  return (
+    <span className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+      {changeType}
+    </span>
+  )
+}
+
 function shortId(id: string): string {
   if (id === 'seed') return 'seed'
   const m = id.match(/(\d+)$/)
   return m ? `#${parseInt(m[1], 10)}` : id.slice(0, 6)
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function Legend({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+      {dashed ? (
+        <svg width="12" height="4" aria-hidden>
+          <line x1={0} y1={2} x2={12} y2={2} stroke={color} strokeWidth={1.5} strokeDasharray="3 2" />
+        </svg>
+      ) : (
+        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+      )}
       {label}
     </span>
   )

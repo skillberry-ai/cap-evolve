@@ -10,11 +10,15 @@ export interface LaidNode {
   onSpine: boolean
   col: number // x slot (by depth from root)
   row: number // y slot (0 = spine, >0 = branch lanes)
+  subset?: { task_ids: string[]; tier: number | null } | null
+  clusterIds?: string[]
+  mergeOf?: string[]
+  changeType?: string | null
 }
 
 export interface LineageLayout {
   nodes: LaidNode[]
-  edges: { from: string; to: string; onSpine: boolean }[]
+  edges: { from: string; to: string; onSpine: boolean; merge: boolean }[]
   cols: number
   rows: number
 }
@@ -71,16 +75,32 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
       onSpine,
       col,
       row,
+      subset: n.subset,
+      clusterIds: n.cluster_ids,
+      mergeOf: n.merge_of,
+      changeType: n.change_type ?? null,
     }
   })
 
+  const byIdLaid = new Map(nodes.map((n) => [n.id, n]))
   const edges = nodes
     .filter((n) => n.parent && byId.has(n.parent))
     .map((n) => ({
       from: n.parent as string,
       to: n.id,
       onSpine: n.onSpine && spine.has(n.parent as string),
+      merge: false,
     }))
+  // merge_of: a second (or further) incoming edge from each co-parent, distinct from
+  // the normal derive edge above — never on the spine (a merge result's spine parent is
+  // `parent`, these are the extra lineage the spine doesn't follow).
+  for (const n of ordered) {
+    for (const mergeParent of n.merge_of ?? []) {
+      if (mergeParent !== n.parent && byIdLaid.has(mergeParent)) {
+        edges.push({ from: mergeParent, to: n.id, onSpine: false, merge: true })
+      }
+    }
+  }
 
   const cols = nodes.reduce((m, n) => Math.max(m, n.col), 0) + 1
   const rows = nodes.reduce((m, n) => Math.max(m, n.row), 0) + 1

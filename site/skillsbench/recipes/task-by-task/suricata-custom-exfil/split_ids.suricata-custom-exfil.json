@@ -1,0 +1,5 @@
+{
+  "train": ["suricata-custom-exfil"],
+  "val": ["suricata-custom-exfil"],
+  "test": ["suricata-custom-exfil"]
+}

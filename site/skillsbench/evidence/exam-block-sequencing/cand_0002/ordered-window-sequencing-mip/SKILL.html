@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKI — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/exam-block-sequencing/cand_0002/ordered-window-sequencing-mip/SKILL.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../../"><img src="../../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../../getting-started.html">Get started</a>
+      <a href="../../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../../results.html">Results</a>
+      <a href="../../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../../architecture.html">Architecture</a>
+      <a href="../../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../../harbor.html">Harbor</a>
+      <a href="../../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/cand_0002/ordered-window-sequencing-mip/SKILL.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/cand_0002/ordered-window-sequencing-mip/SKILL.md">view source on GitHub ↗</a>
+  </p>
+<hr />
+<p>name: ordered-window-sequencing-mip
+description: "Permutation and sequencing integer-programming formulations with ordered local-window variables, prefix/suffix continuity, and overlap penalties. Use when assigning exams, jobs, tasks, visits, blocks, or resources to ordered positions and costs depend on adjacent pairs, sliding triples, n-grams, short-horizon pressure, or overlapping local patterns."</p>
+<hr />
+<h1 id="ordered-window-sequencing-mips">Ordered-Window Sequencing MIPs</h1>
+<h2 id="bundled-solver-run-it-do-not-hand-roll-one">Bundled solver — run it, do not hand-roll one</h2>
+<p>For an ordered-window sequencing instance exposed as <code>instance.json</code> (block set,
+ordered slot list, window-start masks such as <code>eve_morn_start</code> /
+<code>other_b2b_start</code> / <code>triple_day_start</code> / <code>triple_24_start</code>, <code>large_blocks</code>,
+<code>early_slots</code>, and objective weights) plus ordered <code>pair_counts.csv</code> and
+<code>triplet_counts.csv</code>, do NOT commit the whole time budget to building an exact
+MIP. The exact linearization of these instances (local-window variables +
+prefix/suffix continuity + the four-slot overlap term) explodes to hundreds of
+thousands of binaries and usually does not solve inside the agent time budget;
+the single most common way these tasks score zero is that the solve never
+finishes and NO output file is written.</p>
+<p>When the task permits a heuristic, run the bundled solver instead of writing
+your own search:</p>
+<pre><code class="language-bash">python scripts/solve_sequencing.py --data /root/data --out /root/output --time-limit 240
+</code></pre>
+<p>It is fully data-driven from <code>instance.json</code> (no hardcoded answer): it builds a
+feasible front-loaded schedule, runs restarted feasibility-preserving 2-swap
+simulated annealing + steepest-descent on the EXACT objective (ordered tuples;
+the active-pattern four-slot overlap <code>z</code>), then writes <code>schedule.csv</code>,
+<code>metrics.json</code>, <code>formulation.md</code>, and <code>report.md</code>, and re-reads <code>schedule.csv</code>
+from disk to confirm the reported metrics match. Read <code>scripts/solve_sequencing.py</code>
+if you need to adapt the objective to a different instance; do not reimplement
+the overlap term from scratch. If you must build your own model, first write a
+feasible schedule and its recomputed metrics to disk, THEN try to improve them,
+so a partial run still produces valid outputs.</p>
+<h2 id="core-idea">Core idea</h2>
+<p>When a sequencing objective depends on neighboring ordered patterns, a plain
+item-position assignment model may be too weak or too easy to linearize
+incorrectly. Model the local ordered patterns that the objective scores, then
+link those patterns so they form one consistent sequence.</p>
+<p>Use this pattern for schedules, routes, job orders, block sequences, timetables,
+shift plans, and other ordered assignments where costs depend on adjacent pairs,
+sliding windows, or overlapping local events.</p>
+<h2 id="modeling-workflow">Modeling workflow</h2>
+<ol>
+<li>Identify the ordered positions: periods, route stops, sequence indices, slots,
+   machine positions, or service windows.</li>
+<li>Identify the items to place: jobs, exams, blocks, visits, tasks, resources, or
+   customer groups.</li>
+<li>Decide which binary variables match the objective structure:
+   - assignment variables for item-position placement;
+   - arc variables for predecessor-successor relationships;
+   - ordered-window variables for local patterns of length two or more.</li>
+<li>Add hard feasibility constraints before optimizing: each item appears exactly
+   as required, each required position is filled, invalid placements are blocked,
+   and local windows cannot contain repeated items unless repeats are allowed.</li>
+<li>Add auxiliary variables for adjacent pairs, sliding triples, longer windows,
+   or overlapping local patterns.</li>
+<li>Link auxiliary variables tightly to the primary sequence representation.</li>
+<li>Build named objective components and minimize the weighted sum defined by the
+   instance.</li>
+<li>Extract the final sequence and audit the objective independently.</li>
+</ol>
+<h2 id="preserve-ordered-tuple-data">Preserve ordered tuple data</h2>
+<p>Treat tuple-indexed costs or counts as ordered unless the task explicitly says
+they are unordered. A schedule induces direction through the order of positions.</p>
+<p>For a window beginning at position <code>t</code>, use the tuple in sequence order:</p>
+<pre><code class="language-python">pair_key = (item_at[t], item_at[next_t])
+triple_key = (item_at[t], item_at[next_t], item_at[next_next_t])
+</code></pre>
+<p>Do not sort, canonicalize, symmetrize, or aggregate tuple keys unless the task
+says the data are unordered:</p>
+<pre><code class="language-python"># Wrong for directed or ordered sequence costs unless explicitly allowed.
+key = tuple(sorted((a, b, c)))
+</code></pre>
+<p>Sorting tuple keys can turn a directed sequence objective into a different
+unordered objective.</p>
+<p>Before coding the objective, inspect the data schema and write down the tuple
+semantics you will use:</p>
+<ul>
+<li>If rows are keyed as <code>(i, j)</code> or <code>(i, j, k)</code>, the safe default is ordered.</li>
+<li>Do not add reverse pairs, sorted triples, or all permutations unless the
+  source explicitly says the table is symmetric or unordered.</li>
+<li>If the table contains both <code>(i, j)</code> and <code>(j, i)</code>, that does not by itself mean
+  both should be summed for one ordered window. It may simply be a complete
+  ordered table.</li>
+<li>If tuple rows are missing, decide from the task/data whether missing means
+  zero, invalid, or impossible before optimizing.</li>
+</ul>
+<p>For each objective component, implement one small evaluator expression that
+matches the component definition exactly:</p>
+<pre><code class="language-python">component = 0
+for start in eligible_starts:
+    key = tuple(item_at_position(start, offset) for offset in offsets)
+    component += weight_table.get(key, 0)
+</code></pre>
+<p>Use this evaluator as the reference for both optimization checks and final
+metrics.</p>
+<h2 id="assignment-linked-local-windows">Assignment-linked local windows</h2>
+<p>If using assignment variables,</p>
+<pre><code class="language-text">assign[i, t] = 1 if item i is assigned to ordered position t
+</code></pre>
+<p>then create a local-window indicator for each ordered tuple and eligible start
+position. For a length-3 window:</p>
+<pre><code class="language-text">window[i, j, k, t] = 1 if i, j, k occupy positions t, next(t), next(next(t))
+</code></pre>
+<p>A standard linearization is:</p>
+<pre><code class="language-python">window[i, j, k, t] &lt;= assign[i, t]
+window[i, j, k, t] &lt;= assign[j, next_t]
+window[i, j, k, t] &lt;= assign[k, next_next_t]
+window[i, j, k, t] &gt;= assign[i, t] + assign[j, next_t] + assign[k, next_next_t] - 2
+</code></pre>
+<p>Use the same pattern for adjacent pairs or longer local windows. Create only
+eligible starts when the task defines a start-position mask.</p>
+<h2 id="direct-ordered-window-model">Direct ordered-window model</h2>
+<p>Some sequencing problems are cleaner with ordered-window variables as the main
+sequence representation:</p>
+<pre><code class="language-text">W[t, a1, a2, ..., ar] = 1
+</code></pre>
+<p>meaning that the ordered tuple <code>(a1, a2, ..., ar)</code> starts at position <code>t</code>.
+This is useful when the objective primarily scores sliding windows and their
+overlaps.</p>
+<p>Typical constraint families are:</p>
+<ul>
+<li>exactly one selected window at each eligible start;</li>
+<li>each item appears the required number of times in each position role;</li>
+<li>local windows with repeated items are prohibited when the sequence is a
+  permutation;</li>
+<li>neighboring windows agree on their shared items.</li>
+</ul>
+<h2 id="prefixsuffix-continuity">Prefix/suffix continuity</h2>
+<p>Adjacent local windows must describe one consistent global sequence. For a
+length-<code>r</code> window, the suffix of the window at <code>t</code> should match the prefix of the
+window at <code>next(t)</code>.</p>
+<p>Generic continuity template:</p>
+<pre><code class="language-text">sum over a0 of W[t, a0, q1, ..., q_{r-1}]
+=
+sum over ar of W[next(t), q1, ..., q_{r-1}, ar]
+</code></pre>
+<p>for each shared ordered suffix/prefix <code>(q1, ..., q_{r-1})</code>.</p>
+<p>Use cyclic wraparound only when the source formulation or task definition makes
+the sequence cyclic. Otherwise handle the first and last positions with explicit
+boundary logic. Even in a cyclic model, reporting metrics may use only the start
+positions declared eligible by the instance.</p>
+<h2 id="overlap-penalties">Overlap penalties</h2>
+<p>If the objective penalizes two or more overlapping local patterns, introduce an
+overlap indicator or an equivalent linearization. Do not replace an ordered
+overlap rule with an unordered span count or with all combinations inside a
+larger window unless the task defines that rule.</p>
+<p>For two overlapping local patterns represented by <code>A</code> and <code>B</code>, use:</p>
+<pre><code class="language-python">overlap &lt;= A
+overlap &lt;= B
+overlap &gt;= A + B - 1
+</code></pre>
+<p>Then attach the instance-defined ordered cost to <code>overlap</code>. Keep the overlap
+term inside the optimized model whenever it is part of the objective. Optimizing
+a reduced model and adding the omitted high-order penalty afterward usually
+optimizes a different problem.</p>
+<p>When the prose mentions pressure, overlap, or "three in four" behavior, pause
+and distinguish these common but different definitions:</p>
+<ul>
+<li>all unordered triples contained in a four-position span;</li>
+<li>ordered triples whose positions have span at most four;</li>
+<li>pairs of adjacent active three-position windows sharing positions;</li>
+<li>explicit auxiliary variables from a source formulation.</li>
+</ul>
+<p>These are not interchangeable. Use only the definition implied by the supplied
+starts, successor rules, variables, or verifier-style wording.</p>
+<h2 id="active-pattern-overlap-rule">Active-pattern overlap rule</h2>
+<p>For overlap penalties, first ask: "What lower-order pattern must be active?"
+Do not infer an overlap term as "all combinations inside a wider window" unless the task explicitly defines it that way.</p>
+<p>Use this workflow:</p>
+<ol>
+<li>Build the active set of primitive ordered patterns.</li>
+<li>Check overlap through membership in that active set.</li>
+<li>Add only the cost specified for that overlapping pattern pair.</li>
+</ol>
+<p>Generic template:</p>
+<pre><code class="language-python">active = set()
+for start in eligible_starts:
+    active.add(tuple(item_at_position(start, offset) for offset in primitive_offsets))
+
+overlap_count = 0
+for extended_tuple in candidate_extended_tuples:
+    left = primitive_left(extended_tuple)
+    right = primitive_right(extended_tuple)
+    if left in active and right in active:
+        overlap_count += overlap_cost(extended_tuple, left, right)
+</code></pre>
+<p>Common wrong shortcut:</p>
+<pre><code class="language-python">for window in all_length_4_windows:
+    for triple in combinations(window, 3):
+        overlap_count += triplet_count[triple]
+</code></pre>
+<p>That shortcut is correct only when the objective explicitly says the overlap term is all triples contained in each length-4 window.</p>
+<p>Before implementing any overlap term, write down:</p>
+<ul>
+<li>primitive pattern;</li>
+<li>active-start set;</li>
+<li>overlap membership rule;</li>
+<li>overlap cost formula.</li>
+</ul>
+<h2 id="start-position-masks-and-boundary-rules">Start-position masks and boundary rules</h2>
+<p>Many sequencing objectives score only certain starts, such as same-shift starts,
+calendar-day starts, route-leg starts, or valid short-horizon starts. Keep these
+masks separate from the tuple weights.</p>
+<p>A reliable pattern is:</p>
+<pre><code class="language-python">for start in eligible_starts[component_name]:
+    ordered_tuple = tuple(item_at_position(start, offset) for offset in offsets)
+    component += weight_table.get(ordered_tuple, 0)
+</code></pre>
+<p>Do not infer additional boundary windows from prose. Use the starts, successor
+rules, and component definitions supplied by the instance.</p>
+<p>If the ordered positions are labeled, do not assume labels are contiguous
+integers unless the instance says so. Build a successor map from the declared
+ordered position list:</p>
+<pre><code class="language-python">ordered_positions = list(instance[&quot;all_positions&quot;])
+successor = {
+    pos: ordered_positions[idx + 1]
+    for idx, pos in enumerate(ordered_positions[:-1])
+}
+</code></pre>
+<p>Then evaluate windows by following the successor relation. This avoids mixing up
+slot labels with zero-based array positions.</p>
+<h2 id="objective-semantics-audit">Objective semantics audit</h2>
+<p>Before finalizing a model or heuristic, answer these questions in code comments
+or the formulation:</p>
+<ul>
+<li>What is the ordered sequence being produced?</li>
+<li>Are pair and tuple tables ordered, unordered, or explicitly symmetric?</li>
+<li>Which start positions are eligible for each component?</li>
+<li>What successor relation defines "next"?</li>
+<li>Are overlap terms all subsets, active overlapping windows, or explicit
+  variables?</li>
+<li>Are missing tuple rows zero or invalid?</li>
+</ul>
+<p>Then create a pure <code>evaluate(sequence, data)</code> function before writing outputs.
+The evaluator must depend only on input data and the final sequence, not solver
+variables. Use it to audit any solution found by a solver or local search.</p>
+<h2 id="common-mistakes">Common mistakes</h2>
+<ul>
+<li>Modeling unordered combinations when the objective is ordered.</li>
+<li>Sorting or symmetrizing tuple keys without permission.</li>
+<li>Summing both directions of a pair because both rows exist in the input.</li>
+<li>Summing every permutation of a triplet because the data table is complete.</li>
+<li>Counting every combination inside a larger horizon instead of the defined
+  sliding or overlapping windows.</li>
+<li>Confusing position labels with zero-based array indices.</li>
+<li>Creating window variables but forgetting no-repetition restrictions.</li>
+<li>Creating auxiliary variables without lower-bound linking constraints.</li>
+<li>Applying cyclic wraparound to reported metrics when only the model continuity
+  is cyclic.</li>
+<li>Dropping high-order objective terms to make the model smaller.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

@@ -564,7 +564,7 @@ layers:
    | cloud    | `parsec-sim-cloud`   | 8090 → 8086 |
 
    The published port numbers are not arbitrary — they are the single source
-   of truth in `scripts/v4_t2_e1/common/parsec_paths.py`'s `MCP_PORTS`, and
+   of truth in `scripts/parsec/v4_t2_e1/common/parsec_paths.py`'s `MCP_PORTS`, and
    every trial's `harbor run` invocation gets them injected as
    `PLATFORM_MCP_URL`/`GITHUB_MCP_URL`/`ICINGA_MCP_URL`/`COST_MCP_URL`/
    `CLOUD_MCP_URL` (see `adapter.py`'s `run_target()`).

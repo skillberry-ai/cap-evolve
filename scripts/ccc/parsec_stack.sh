@@ -61,7 +61,7 @@ SKILLS_DIR="$PARSEC_V4N/_run/skills"
 PARSEC_SIM_TRACE="${PARSEC_SIM_TRACE:-$PARSEC_V4N/_run/logs/parsec-trace/trace.jsonl}"
 
 # name:published_port:kind. The port numbers are the single source of truth in
-# scripts/v4_t2_e1/common/parsec_paths.py's MCP_PORTS — change them there.
+# scripts/parsec/v4_t2_e1/common/parsec_paths.py's MCP_PORTS — change them there.
 SERVICES=(
   "platform:8086:sim"
   "github:8087:sim"
@@ -72,7 +72,11 @@ SERVICES=(
 )
 
 SIM_INTERNAL_PORT=8086
-WAIT_BUDGET=60
+# 60s was too tight for parsec-live: `import mlflow` alone takes ~40-50s on
+# this GPFS-backed .venv (confirmed by timing it directly), leaving no room
+# for the rest of app startup. Simulators open their port in ~15s either way,
+# so raising this budget doesn't mask a real problem there.
+WAIT_BUDGET=180
 
 banner() {
   printf '\n============================================================\n'
@@ -190,6 +194,14 @@ start_sim() {
     fi
     "$CRI" rm -f "$cname" >/dev/null 2>&1 || true
   fi
+  # --entrypoint python bypasses the image's docker-entrypoint.sh, which
+  # execs `gosu harness "$@"` to drop root before running the app. This CCC
+  # user has no /etc/subuid entry, so rootless podman maps only UID 0 in the
+  # container's user namespace — gosu's setuid(1000) fails with "operation
+  # not permitted" (confirmed via a diagnostic container run). Running the
+  # app directly as root (which is itself mapped to this host user, not real
+  # root) is harmless here: it's a short-lived simulator container, not a
+  # multi-tenant service.
   "$CRI" run -d --name "$cname" \
     -p "127.0.0.1:$port:$SIM_INTERNAL_PORT" \
     -e "LLM_API_KEY=$LLM_API_KEY" \
@@ -199,7 +211,8 @@ start_sim() {
     -e "HARNESS_AUTOSTART_ENABLED=false" \
     -e "HARNESS_SESSIONS_IDLE_TIMEOUT_SECONDS=86400" \
     -v "$SKILLS_DIR:/app/skills-store:z" \
-    "$SIM_IMAGE" >/dev/null
+    --entrypoint python \
+    "$SIM_IMAGE" -m simulation_harness >/dev/null
   echo "started $name (container $cname, published port $port -> $SIM_INTERNAL_PORT)"
 }
 

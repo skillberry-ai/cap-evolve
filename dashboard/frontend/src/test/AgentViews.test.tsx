@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { FreeformPanel, ScreensPanel } from '../components/AlgoPanels'
+import { RoundsTimeline } from '../components/AlgoPanels'
 import { GatePanel } from '../components/GatePanel'
 import { KpiStrip } from '../components/KpiStrip'
 import { Compare } from '../routes/Compare'
@@ -28,22 +28,148 @@ const summary = (over: Partial<RunSummaryDetail> = {}): RunSummaryDetail =>
 const node = (over: Partial<GraphNode> = {}): GraphNode =>
   ({ id: 'cand_a', parent: 'seed', children: [], status: 'rejected', val: 0.5, ...over }) as GraphNode
 
-describe('FreeformPanel', () => {
-  it('explains the awaiting-agent state instead of rendering an empty table header', () => {
-    render(<FreeformPanel summary={summary()} nodes={[node({ id: 'seed', status: 'seed' })]} />)
+describe('RoundsTimeline', () => {
+  it('explains the awaiting-agent state instead of rendering an empty round list', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({ id: 'seed', status: 'seed' })]}
+        screens={[]}
+      />,
+    )
     expect(screen.getByText(/No candidate has been committed yet/)).toBeInTheDocument()
-    expect(screen.queryByText(/Round log/)).not.toBeInTheDocument()
   })
 
   it('shows which tasks each commit fixed and broke', () => {
     render(
-      <FreeformPanel
+      <RoundsTimeline
         summary={summary({ splits: { train: 4, val: 2, test: 2, seed: 0, no_holdout: false, warning: '' } })}
         nodes={[node({ reason: 'churn', fixed: ['t2'], broke: ['t1'] })]}
+        screens={[]}
       />,
     )
     expect(screen.getByText('fixed t2')).toBeInTheDocument()
     expect(screen.getByText('broke t1')).toBeInTheDocument()
+  })
+
+  it('surfaces an overridden gate — raw accept, control-relative reject, final reject', () => {
+    render(
+      <RoundsTimeline
+        summary={summary({
+          gate_decisions: [
+            {
+              iteration: 1, candidate: 'cand_a', verdict: 'reject', val: 0.45, parent: 'seed',
+              parent_val: 0.43, delta: 0.02, stderr: 0.02, n: 30, k_se: 0.2, threshold: 0.01,
+              reason: 'note', gate_verdict: 'accept', overrode_gate: true,
+              reject_basis: 'driver_judgement', control_relative_verdict: 'reject',
+              control_relative_delta: -0.01, verdict_stable: true, evidence_bar: 0.04,
+            },
+          ],
+        })}
+        nodes={[node({ id: 'cand_a', status: 'rejected', val: 0.45 })]}
+        screens={[]}
+      />,
+    )
+    expect(screen.getByText('overrode gate')).toBeInTheDocument()
+    expect(screen.getByText('stable')).toBeInTheDocument()
+    expect(screen.getByText('driver_judgement')).toBeInTheDocument()
+  })
+
+  it('flags a gate mean scored over a subset of the full val split', () => {
+    render(
+      <RoundsTimeline
+        summary={summary({
+          splits: { train: 4, val: 5, test: 2, seed: 0, no_holdout: false, warning: '' },
+          gate_decisions: [
+            {
+              iteration: 1, candidate: 'cand_a', verdict: 'accept', val: 0.6, parent: 'seed',
+              parent_val: 0.5, delta: 0.1, stderr: 0.02, n: 2, k_se: 0.2, threshold: 0.01,
+              reason: '',
+            },
+          ],
+        })}
+        nodes={[node({ id: 'cand_a', status: 'accepted', val: 0.6 })]}
+        screens={[]}
+      />,
+    )
+    expect(screen.getByText('subset')).toBeInTheDocument()
+  })
+
+  it('does not flag a subset when the gate scored the whole val split', () => {
+    render(
+      <RoundsTimeline
+        summary={summary({
+          splits: { train: 4, val: 2, test: 2, seed: 0, no_holdout: false, warning: '' },
+          gate_decisions: [
+            {
+              iteration: 1, candidate: 'cand_a', verdict: 'accept', val: 0.6, parent: 'seed',
+              parent_val: 0.5, delta: 0.1, stderr: 0.02, n: 2, k_se: 0.2, threshold: 0.01,
+              reason: '',
+            },
+          ],
+        })}
+        nodes={[node({ id: 'cand_a', status: 'accepted', val: 0.6 })]}
+        screens={[]}
+      />,
+    )
+    expect(screen.queryByText('subset')).not.toBeInTheDocument()
+  })
+
+  it('flags a round whose handover was not captured live', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({
+          id: 'cand_a',
+          context_warning: { what: 'JOURNAL.md', error: 'empty handover' },
+        })]}
+        screens={[]}
+      />,
+    )
+    expect(screen.getByText(/NOT captured live/)).toBeInTheDocument()
+  })
+})
+
+describe('RoundsTimeline screens', () => {
+  const screenRow = (over: Partial<ScreenRow> = {}): ScreenRow =>
+    ({
+      candidate: 'cand_a', screen_tag: 'cand_a__screen1', tier: 1, decision: 'promote',
+      inconclusive: true, mean_delta: 0.5, se: 0.5, n: 2, threshold: -0.5,
+      net_rollouts: -2, ids: ['t1', 't2'], holdout: ['t1'], informative: ['t2'],
+      fixed: ['t2'], regressed: ['t1'], pool_n: 2, t: 1, ...over,
+    })
+
+  it('shows the screen decision alongside its round', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({ id: 'cand_a', status: 'rejected', val: 0.5 })]}
+        screens={[screenRow()]}
+      />,
+    )
+    expect(screen.getByText('promote · inconclusive')).toBeInTheDocument()
+  })
+
+  it('flags a screen that predicted promote but whose candidate full val then rejected', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({ id: 'cand_a', status: 'rejected', val: 0.5 })]}
+        screens={[screenRow({ mean_delta: 0.5, inconclusive: false })]}
+      />,
+    )
+    expect(screen.getByText('≠ screen')).toBeInTheDocument()
+  })
+
+  it('does not flag a screen whose call agreed with the full-val verdict', () => {
+    render(
+      <RoundsTimeline
+        summary={summary()}
+        nodes={[node({ id: 'cand_a', status: 'accepted', val: 0.5 })]}
+        screens={[screenRow({ mean_delta: 0.5, inconclusive: false })]}
+      />,
+    )
+    expect(screen.queryByText('≠ screen')).not.toBeInTheDocument()
   })
 })
 
@@ -64,6 +190,69 @@ describe('GatePanel', () => {
   it('renders the rationale a decision did record', () => {
     render(<GatePanel summary={summary({ gate_decisions: [row({ reason: 'churn — broke t1' })] })} />)
     expect(screen.getByText(/churn — broke t1/)).toBeInTheDocument()
+  })
+
+  // Shapes copied from reduce_run() on run_v18_fromscratch_20260930 (cand_3, cand_1).
+  it('renders the structured SE / bar / control Δ / stability / override fields', () => {
+    const gated = row({
+      candidate: 'cand_3', verdict: 'accept', val: 0.6733, parent_val: 0.5333, delta: 0.14,
+      stderr: 0.036703, n: 30, k_se: 0.2, threshold: 0.007340644213641223,
+      resolvable_effect_size: 0.073406, gate_mode: 'parent', control_relative_verdict: 'accept',
+      control_relative_delta: 0.18000000000000002, evidence_bar: 0.0467, gate_verdict: 'accept',
+      overrode_gate: false, verdict_stable: true,
+      // A reason whose prose disagrees: the table must show the structured numbers.
+      reason: 'SE=9.9999, 0.5·SE=8.8888',
+    })
+    const overridden = row({
+      candidate: 'cand_1', verdict: 'reject', val: 0.63, gate_verdict: 'accept',
+      overrode_gate: true, reject_basis: 'driver_judgement',
+    })
+    render(<GatePanel summary={summary({ gate_decisions: [gated, overridden] })} />)
+    expect(screen.getByText('±0.0367')).toBeInTheDocument()
+    expect(screen.getByText('0.0073')).toBeInTheDocument()
+    expect(screen.getByText('k=0.2')).toBeInTheDocument()
+    expect(screen.getByText('+0.1800')).toBeInTheDocument()
+    expect(screen.getByText('bar 0.0467')).toBeInTheDocument()
+    expect(screen.getByText('stable')).toBeInTheDocument()
+    expect(screen.getByText('overrode gate (raw accept)')).toBeInTheDocument()
+    expect(screen.queryByText('±9.9999')).not.toBeInTheDocument()
+  })
+
+  // Real rows from reduce_run() on run_full: cand_2 (accept) and cand_13 (reject).
+  it('draws Δ̄ against the k·SE bar and the control Δ against the noise floor', () => {
+    const accept = row({
+      candidate: 'cand_2', verdict: 'accept', val: 0.7533, parent_val: 0.4867,
+      delta: 0.26666666666666666, stderr: 0.055983, n: 30, k_se: 0.2,
+      threshold: 0.011196605944406973, control_relative_delta: 0.26333333333333336,
+      evidence_bar: 0.06,
+    })
+    const reject = row({
+      candidate: 'cand_13', verdict: 'reject', val: 0.8067, parent_val: 0.8267, delta: -0.02,
+      stderr: 0.052391, n: 30, k_se: 0.2, threshold: 0.010478220433273767,
+      control_relative_delta: -0.011666666666666667, evidence_bar: 0.03,
+    })
+    const noData = row({ candidate: 'cand_1', verdict: 'reject' })
+    render(<GatePanel summary={summary({ gate_decisions: [accept, reject, noData] })} />)
+    const a = screen.getByRole('img', { name: /Δ̄ \+0\.2667 vs k·SE 0\.0112; Δ ctl \+0\.2633 vs noise floor 0\.0600/ })
+    const r = screen.getByRole('img', { name: /Δ̄ -0\.0200 vs k·SE 0\.0105; Δ ctl -0\.0117 vs noise floor 0\.0300/ })
+    expect(screen.getAllByRole('img')).toHaveLength(2) // no bar for a row with no Δ̄
+    const fill = (svg: Element, i: number) => svg.querySelectorAll('[data-fill]')[i]
+    expect(fill(a, 0).getAttribute('fill')).toBe('var(--accepted)')
+    expect(fill(r, 0).getAttribute('fill')).toBe('var(--rejected)')
+    // ±bar markers on both tracks; the accept fill extends right of zero past +k·SE.
+    expect(a.querySelectorAll('[data-threshold]')).toHaveLength(4)
+    const thr = Number(a.querySelector('[data-threshold]')!.getAttribute('x1'))
+    const f = fill(a, 0)
+    expect(Number(f.getAttribute('x')) + Number(f.getAttribute('width'))).toBeGreaterThan(thr)
+    // The reject fill sits left of zero (x < centre).
+    expect(Number(fill(r, 0).getAttribute('x'))).toBeLessThan(80)
+  })
+
+  it('omits the newer fields on an older row that lacks them instead of crashing', () => {
+    render(<GatePanel summary={summary({ gate_decisions: [row()] })} />)
+    expect(screen.queryByText('stable')).not.toBeInTheDocument()
+    expect(screen.queryByText(/overrode gate/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^bar \d/)).not.toBeInTheDocument()
   })
 })
 
@@ -134,34 +323,6 @@ describe('KpiStrip', () => {
     )
     expect(screen.getByText('$12.98')).toBeInTheDocument()
     expect(screen.queryByText('not reported')).not.toBeInTheDocument()
-  })
-})
-
-describe('ScreensPanel', () => {
-  const screenRow = (over: Partial<ScreenRow> = {}): ScreenRow =>
-    ({
-      candidate: 'cand_a', screen_tag: 'cand_a__screen1', tier: 1, decision: 'promote',
-      inconclusive: true, mean_delta: 0.5, se: 0.5, n: 2, threshold: -0.5,
-      net_rollouts: -2, ids: ['t1', 't2'], holdout: ['t1'], informative: ['t2'],
-      fixed: ['t2'], regressed: ['t1'], pool_n: 2, t: 1, ...over,
-    })
-
-  // The footer legend also contains the "≠ screen" glyph, so assert inside the row.
-  const flagsInRow = (container: HTMLElement) =>
-    [...container.querySelectorAll('tbody span')].some((e) => e.textContent === '≠ screen')
-
-  it('flags a screen whose promotion the full val eval did not reproduce', () => {
-    const { container } = render(
-      <ScreensPanel screens={[screenRow()]} nodes={[node({ status: 'rejected', val: 0.5 })]} />,
-    )
-    expect(screen.getByText('promote · inconclusive')).toBeInTheDocument()
-    expect(flagsInRow(container)).toBe(true)
-    expect(screen.getByText(/holdout t1/)).toBeInTheDocument()
-  })
-
-  it('does not claim a disagreement for a candidate that never reached a full val eval', () => {
-    const { container } = render(<ScreensPanel screens={[screenRow()]} nodes={[]} />)
-    expect(flagsInRow(container)).toBe(false)
   })
 })
 

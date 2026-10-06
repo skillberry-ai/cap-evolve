@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROCE — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/exam-block-sequencing/cand_0001/PROCESS.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../"><img src="../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../getting-started.html">Get started</a>
+      <a href="../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../results.html">Results</a>
+      <a href="../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../architecture.html">Architecture</a>
+      <a href="../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../harbor.html">Harbor</a>
+      <a href="../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/cand_0001/PROCESS.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/exam-block-sequencing/cand_0001/PROCESS.md">view source on GitHub ↗</a>
+  </p>
+<h1 id="process-what-i-did-this-iteration-explainability-required">PROCESS — what I did this iteration (explainability; REQUIRED)</h1>
+<h2 id="ranked-issue-list-clusters-by-failing-tasks-trials-biggest-first">Ranked issue list (clusters by # failing tasks × trials, biggest first)</h2>
+<table>
+<thead>
+<tr>
+<th>rank</th>
+<th>cluster</th>
+<th>tasks</th>
+<th>shared root cause</th>
+<th>tag</th>
+<th>planned change class</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>No output files written</td>
+<td>exam-block-sequencing (5 of 7 completed trials; t2,t5,t6,t7,t8)</td>
+<td>Agent commits the entire 1500s budget to an EXACT MIP (PySCIPOpt <code>.optimize()</code>) for a 24×24 permutation with a 24⁴ overlap term (~492k binaries per the passing trace). The solve never finishes, so <code>/root/output/schedule.csv</code> is never written. ALL 3 verifier tests then fail on <code>AssertionError: Missing schedule file</code>.</td>
+<td>BEHAVIORAL / CAPABILITY-GAP</td>
+<td>SCRIPT (bundled heuristic solver) + BODY (tractability triage + write-outputs-early)</td>
+</tr>
+</tbody>
+</table>
+<p>Note on the task label: the run summary called this task "flaky / infrastructure timeout" because the LAST trial (t9) happened to be a 2400s bench timeout. That is misleading — only 3/10 trials were infra timeouts (t0,t1,t9); 6/10 were REAL verifier failures and 1/10 passed (t4). The real, optimizable defect is the "no output written" cluster above, confirmed from the per-trial <code>verifier/test-stdout.txt</code> in <code>bench_jobs/</code>.</p>
+<p>Diagnosis evidence:
+- Passing trial t4: explicitly reasoned "exact linearization ~492k binaries, impractical; solve via heuristic which the task permits" → ran SA + 2-swap local search → obj 3993 ≤ allowed 4085 → wrote all outputs → PASSED (0 <code>.optimize()</code> calls).
+- Failing trials t2/t7: 16 PySCIPOpt mentions, <code>.optimize()</code> called, 24 "time limit" mentions in t7 → stuck in solver, never wrote <code>schedule.csv</code>.
+- Every trial (incl. the pass) burned the full 1500s agent budget (<code>timing.json</code>), so the differentiator is "did outputs get written", not solve time.
+- Oracle itself used <code>heuristic_direct_permutation_search</code> (oracle_metrics.json), objective 3966, <code>max_relative_gap</code> 0.03 → allowed objective ≈ 4085.</p>
+<h2 id="changes-made-this-iteration">Changes made this iteration</h2>
+<table>
+<thead>
+<tr>
+<th>cluster</th>
+<th>edit class</th>
+<th>file / tool</th>
+<th>what &amp; why it generalizes</th>
+<th>protects passing?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>SCRIPT (new)</td>
+<td><code>ordered-window-sequencing-mip/scripts/solve_sequencing.py</code></td>
+<td>Data-driven heuristic solver: reads <code>instance.json</code> + <code>pair_counts.csv</code> + <code>triplet_counts.csv</code>, builds a feasible front-loaded permutation, runs restarted feasibility-preserving 2-swap simulated-annealing + steepest-descent on the EXACT objective (ordered tuples; active-pattern four-slot <code>z</code> overlap), writes schedule.csv/metrics.json/formulation.md/report.md, and round-trip re-verifies. No hardcoded answer — all weights/masks/large/early rules come from <code>instance.json</code>, so it works on any instance of this family (held-out seeds).</td>
+<td>Yes — the ONLY passing trial (t4) already used a heuristic; this makes that winning behavior deterministic and always-writes-output.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>BODY (additive)</td>
+<td><code>ordered-window-sequencing-mip/SKILL.md</code></td>
+<td>Added "Bundled solver — run it" section: run <code>scripts/solve_sequencing.py</code> with a <code>--time-limit</code> instead of hand-rolling; if building your own model, write feasible outputs first then improve.</td>
+<td>Yes — additive; steers toward the behavior t4 already did.</td>
+</tr>
+<tr>
+<td>1</td>
+<td>BODY (additive)</td>
+<td><code>mip-solver-and-solution-audit/SKILL.md</code></td>
+<td>Added "Tractability triage and guaranteed outputs": estimate exact-model size first; if intractable and heuristics permitted, go heuristic immediately; write feasible outputs EARLY; always pass a solver time limit &lt; agent budget.</td>
+<td>Yes — additive; does not delete the existing solver-preference guidance, only adds a triage/early-output rule.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="verify-the-fix-trace-it-targets-what-the-change-does-on-those-exact-inputs">Verify-the-fix (trace it targets → what the change does on those exact inputs)</h2>
+<ul>
+<li>Targets <code>test_solution_is_feasible</code> / <code>test_objective_value_is_reported_correctly</code> / <code>test_verifier_objective_is_no_worse_than_oracle</code>, all failing with <code>Missing schedule file: /root/output/schedule.csv</code> in t2/t5/t6/t7/t8. Ran <code>scripts/solve_sequencing.py --data &lt;task data&gt; --out &lt;out&gt; --time-limit 240</code> on the REAL instance, then executed the REAL verifier <code>pytest verifier/test_outputs.py</code>: <strong>3 passed</strong> (objective 3999 ≤ allowed 4085). My <code>evaluate_perm</code>/<code>evaluate</code> matches the verifier's <code>evaluate_schedule</code> byte-for-byte (objective + all 6 components + feasibility) on the produced schedule.</li>
+<li>Robustness: 240s default budget gives ~48 restarts (best-of-N). At 120s (24 restarts) seeds 1/7/42/99 → 3968/4052/4065/4027, all ≤ 4085; 240s adds margin. Budget 240s ≪ 1500s agent budget, so outputs are always written well before the wall.</li>
+</ul>
+<h2 id="process-features-used">Process &amp; features used</h2>
+<ul>
+<li>Subagents / worktrees: serial — single task, single tight cluster; the leverage was one verified script, not fan-out. Used background bash tasks + Monitor to run 120–240s solves without blocking.</li>
+<li>Prior iterations read: none exist (seed baseline only; LEDGER/JOURNAL empty).</li>
+</ul>
+<h2 id="good-things-to-preserve">Good things to PRESERVE</h2>
+<ul>
+<li><code>ordered-window-sequencing-mip/scripts/solve_sequencing.py</code> and both body pointers. The exact objective evaluator (ordered tuples + active-pattern <code>z</code> overlap) is verified against the benchmark verifier — do not "simplify" the <code>z</code> term into all-triples-in-a-4-span.</li>
+<li>Keep the default <code>--time-limit</code> (240s) well under the agent budget; do not raise it near 1500s.</li>
+</ul>
+<h2 id="deliberately-skipped">Deliberately skipped</h2>
+<ul>
+<li>Objective-modeling/z-term prose clusters: NOT the failure here (failures were "no file", not "wrong z"). The script encodes the correct z, so no separate prose edit needed.</li>
+<li>The 3 infra-timeout trials (t0,t1,t9): genuine bench noise, not skill-fixable.</li>
+</ul>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>

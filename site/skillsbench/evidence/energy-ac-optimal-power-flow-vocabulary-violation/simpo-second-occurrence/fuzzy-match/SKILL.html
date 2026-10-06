@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SKI — SkillsBench — cap-evolve</title>
+  <meta name="description" content="Rendered from evidence/energy-ac-optimal-power-flow-vocabulary-violation/simpo-second-occurrence/fuzzy-match/SKILL.md on the skillsbench-history branch.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="../../../../../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>(function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('capevolve-theme')||'dark');}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();</script>
+  <link rel="stylesheet" href="../../../../../style.css?v=20260908a">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="../../../../../"><img src="../../../../../assets/logo-300.png" alt="" class="nav-brand-logo" aria-hidden="true"><span class="wordmark">cap<span class="wordmark-dot">·</span>evolve</span></a>
+    <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
+    </button>
+    <div class="nav-links" id="nav-links">
+      <a href="../../../../../getting-started.html">Get started</a>
+      <a href="../../../../../run-end-to-end.html">Run end-to-end</a>
+      <a href="../../../../../results.html">Results</a>
+      <a href="../../../../../benchmarks.html">Benchmarks</a>
+      <a href="../../../../../architecture.html">Architecture</a>
+      <a href="../../../../../agent-orchestration.html">Agent mode</a>
+      <a href="../../../../../harbor.html">Harbor</a>
+      <a href="../../../../index.html">SkillsBench</a>
+      <a class="gh" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/simpo-second-occurrence/fuzzy-match/SKILL.md">GitHub</a>
+      <button class="theme-toggle" type="button" aria-label="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main class="page-narrow doc">
+  <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
+    <a href="../../../../index.html">SkillsBench research</a> ·
+    <a class="ext-link" href="https://github.com/skillberry-ai/cap-evolve/blob/skillsbench-history/evidence/energy-ac-optimal-power-flow-vocabulary-violation/simpo-second-occurrence/fuzzy-match/SKILL.md">view source on GitHub ↗</a>
+  </p>
+<hr />
+<p>name: fuzzy-match
+description: A toolkit for fuzzy string matching and data reconciliation. Useful for matching entity names (companies, people) across different datasets where spelling variations, typos, or formatting differences exist.
+license: MIT</p>
+<hr />
+<h1 id="fuzzy-matching-guide">Fuzzy Matching Guide</h1>
+<h2 id="overview">Overview</h2>
+<p>This skill provides methods to compare strings and find the best matches using Levenshtein distance and other similarity metrics. It is essential when joining datasets on string keys that are not identical.</p>
+<p>When reconciling records against a reference/master table, a lookup key that is <strong>not present in the reference</strong> counts as <em>missing</em> — report it as <code>null</code>, even if the source row literally carried a value. Do not echo the raw source token. See <a href="#reporting-reconciled-keys-missing-vs-present">Reporting reconciled keys</a> below.</p>
+<h2 id="quick-start">Quick Start</h2>
+<pre><code class="language-python">from difflib import SequenceMatcher
+
+def similarity(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+print(similarity(&quot;Apple Inc.&quot;, &quot;Apple Incorporated&quot;))
+# Output: 0.7...
+</code></pre>
+<h2 id="python-libraries">Python Libraries</h2>
+<h3 id="difflib-standard-library">difflib (Standard Library)</h3>
+<p>The <code>difflib</code> module provides classes and functions for comparing sequences.</p>
+<h4 id="basic-similarity">Basic Similarity</h4>
+<pre><code class="language-python">from difflib import SequenceMatcher
+
+def get_similarity(str1, str2):
+    &quot;&quot;&quot;Returns a ratio between 0 and 1.&quot;&quot;&quot;
+    return SequenceMatcher(None, str1, str2).ratio()
+
+# Example
+s1 = &quot;Acme Corp&quot;
+s2 = &quot;Acme Corporation&quot;
+print(f&quot;Similarity: {get_similarity(s1, s2)}&quot;)
+</code></pre>
+<h4 id="finding-best-match-in-a-list">Finding Best Match in a List</h4>
+<pre><code class="language-python">from difflib import get_close_matches
+
+word = &quot;appel&quot;
+possibilities = [&quot;ape&quot;, &quot;apple&quot;, &quot;peach&quot;, &quot;puppy&quot;]
+matches = get_close_matches(word, possibilities, n=1, cutoff=0.6)
+print(matches)
+# Output: ['apple']
+</code></pre>
+<h3 id="rapidfuzz-recommended-for-performance">rapidfuzz (Recommended for Performance)</h3>
+<p>If <code>rapidfuzz</code> is available (pip install rapidfuzz), it is much faster and offers more metrics.</p>
+<pre><code class="language-python">from rapidfuzz import fuzz, process
+
+# Simple Ratio
+score = fuzz.ratio(&quot;this is a test&quot;, &quot;this is a test!&quot;)
+print(score)
+
+# Partial Ratio (good for substrings)
+score = fuzz.partial_ratio(&quot;this is a test&quot;, &quot;this is a test!&quot;)
+print(score)
+
+# Extraction
+choices = [&quot;Atlanta Falcons&quot;, &quot;New York Jets&quot;, &quot;New York Giants&quot;, &quot;Dallas Cowboys&quot;]
+best_match = process.extractOne(&quot;new york jets&quot;, choices)
+print(best_match)
+# Output: ('New York Jets', 100.0, 1)
+</code></pre>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="normalization-before-matching">Normalization before Matching</h3>
+<p>Always normalize strings before comparing to improve accuracy.</p>
+<pre><code class="language-python">import re
+
+def normalize(text):
+    # Convert to lowercase
+    text = text.lower()
+    # Remove special characters
+    text = re.sub(r'[^\w\s]', '', text)
+    # Normalize whitespace
+    text = &quot; &quot;.join(text.split())
+    # Common abbreviations
+    text = text.replace(&quot;limited&quot;, &quot;ltd&quot;).replace(&quot;corporation&quot;, &quot;corp&quot;)
+    return text
+
+s1 = &quot;Acme  Corporation, Inc.&quot;
+s2 = &quot;acme corp inc&quot;
+print(normalize(s1) == normalize(s2))
+</code></pre>
+<h3 id="entity-resolution">Entity Resolution</h3>
+<p>When matching a list of dirty names to a clean database:</p>
+<pre><code class="language-python">clean_names = [&quot;Google LLC&quot;, &quot;Microsoft Corp&quot;, &quot;Apple Inc&quot;]
+dirty_names = [&quot;google&quot;, &quot;Microsft&quot;, &quot;Apple&quot;]
+
+results = {}
+for dirty in dirty_names:
+    # simple containment check first
+    match = None
+    for clean in clean_names:
+        if dirty.lower() in clean.lower():
+            match = clean
+            break
+
+    # fallback to fuzzy
+    if not match:
+        matches = get_close_matches(dirty, clean_names, n=1, cutoff=0.6)
+        if matches:
+            match = matches[0]
+
+    results[dirty] = match
+</code></pre>
+<h3 id="reporting-reconciled-keys-missing-vs-present">Reporting reconciled keys (missing vs. present)</h3>
+<p>A key you looked up carries two <em>independent</em> facts: (1) whether it exists in the
+authoritative reference table, and (2) what value you report for it. These must not
+be conflated. If a key read from a source row is <strong>absent from the reference table</strong>,
+it is <em>missing</em> for reporting purposes — emit <code>None</code>/<code>null</code>, <strong>not</strong> the raw source
+token — even when the source literally carried a value such as <code>"INVALID"</code>, <code>"N/A"</code>,
+<code>"NONE"</code>, <code>"-"</code>, <code>"UNKNOWN"</code>, or any other placeholder. A value being <em>present in the
+source</em> does NOT make the key "found"; only presence in the reference table does.</p>
+<pre><code class="language-python"># reference_keys: the set (or dict keys) of keys that exist in the authoritative table.
+def report_key(source_key, reference_keys):
+    # Present in the source but absent from the reference =&gt; missing =&gt; null.
+    return source_key if source_key in reference_keys else None
+</code></pre>
+<p>Determine any <em>flag/reason</em> ("key not found" is itself a finding) from the same
+lookup, and then report the key's output value with <code>report_key(...)</code>. So a record
+flagged because its key is not in the reference table should report that key as
+<code>null</code>, regardless of what string the source contained.</p>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div>
+      <span class="wordmark" style="color:var(--ink);font-size:1.05rem;">cap<span class="wordmark-dot">·</span>evolve</span><br>
+      Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
+    </div>
+    <div>
+      <a href="https://github.com/skillberry-ai/cap-evolve">github.com/skillberry-ai/cap-evolve</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../../../js/site.js?v=20260822" defer></script>
+</body>
+</html>
