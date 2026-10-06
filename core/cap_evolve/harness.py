@@ -1830,7 +1830,10 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
             run_dir, node_id=cid,
             parents=list(parents) if parents else [parent_id or "seed"],
             edit_kind=edit_kind, status="accepted" if accepted else "rejected",
-            val_mean=val, note=reason, cluster_ids=cluster_ids, subset=subset)
+            val_mean=val, note=reason, cluster_ids=cluster_ids, subset=subset,
+            # Optimizer's self-reported edit classification (#665 workstream 4),
+            # optional/nullable — passed through from commit.py via **extra.
+            change_type=extra.get("change_type"))
     except Exception as e:  # noqa: BLE001 — a log write must never break a run
         run_dir.log_event("optimizer_context_warning", what="graph.jsonl", error=str(e)[:300])
 

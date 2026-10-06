@@ -29,7 +29,10 @@ The candidate **graph** schema (``reduced["graph"]``)::
          "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
          "gate_resolvable_effect_size"?, "screened": bool | None,
          "cluster_ids"?: [...], "subset"?: {"task_ids": [...], "tier": int | None},
-         "micro_tests"?: [...], "round_id"?: str | None}
+         "micro_tests"?: [...], "round_id"?: str | None,
+         "change_type"?: str | None}  # optimizer's self-reported edit classification
+                                       # (PROMPT_EDIT/TOOL_CODE_EDIT/VALIDATOR_ADD/MIXED/...),
+                                       # optional, absent on runs that predate it (#665)
      ],
      "root": "seed", "best_id": "..."}
 
@@ -1588,6 +1591,11 @@ def reduce_run(run_dir) -> dict:
             node["epoch"] = ev.get("epoch")
         if merge_of:
             node["merge_of"] = merge_of
+        # Optimizer's self-reported classification (PROMPT_EDIT/TOOL_CODE_EDIT/
+        # VALIDATOR_ADD/MIXED/...), when commit.py recorded one — optional/nullable,
+        # absent on runs that predate this field (#665 workstream 4).
+        if ev.get("change_type"):
+            node["change_type"] = ev["change_type"]
         # A candidate commonly emits TWO step-kind events for the same cid — e.g.
         # agent-optimize's ``reject`` (which carries gate_verdict/overrode_gate/
         # reject_basis) followed by its own ``step`` (which carries none of those). Each
@@ -1601,7 +1609,8 @@ def reduce_run(run_dir) -> dict:
                            "gate_table", "control_relative_verdict",
                            "control_relative_delta", "evidence_bar", "gate_verdict",
                            "overrode_gate", "reject_basis", "verdict_stable",
-                           "bypassed_screen_and_gate", "bypassed_gate_justification"):
+                           "bypassed_screen_and_gate", "bypassed_gate_justification",
+                           "change_type"):
                 if _carry not in node and _carry in nodes[cid]:
                     node[_carry] = nodes[cid][_carry]
             # Same problem, different shape: ``fixed``/``broke`` are ALWAYS set above (to []
@@ -2666,6 +2675,8 @@ def reduce_run(run_dir) -> dict:
             n["subset"] = gnode["subset"]
         if gnode.get("micro_tests"):
             n["micro_tests"] = gnode["micro_tests"]
+        if gnode.get("change_type") and not n.get("change_type"):
+            n["change_type"] = gnode["change_type"]
     
     # Compute prompt_map for each node with capability files
     cand_root = _safe_subpath(root, "candidates")

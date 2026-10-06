@@ -198,7 +198,7 @@ export TAU2_MAX_CONCURRENCY=15 TAU2_LLM_TIMEOUT=240 TAU2_LLM_RETRIES=2
 # 2) hard gate + agent-mode check+baseline (prints the handoff, scores val baseline)
 cap-evolve check e2e/tau2/.capevolve/project
 cap-evolve run --spec e2e/tau2/.capevolve/project/capevolve.yaml \
-               --project e2e/tau2/.capevolve/project --run-ts e2e --dashboard off
+               --project e2e/tau2/.capevolve/project --run-ts e2e
 # -> {"mode":"agent","run_dir":".capevolve/run_e2e","algorithm":"agent-optimize", ...}
 ```
 

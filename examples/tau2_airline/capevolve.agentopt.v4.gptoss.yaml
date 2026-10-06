@@ -9,7 +9,9 @@
 #   export TAU2_AGENT_MODEL=aws/gpt-oss-120b TAU2_USER_MODEL=aws/gpt-oss-120b
 #   export CAPEVOLVE_SKILLS_DIR="$PWD/skills" PYTHONPATH="$PWD/.capevolve/project/adapters"
 #   .venv-tau2/bin/cap-evolve run --spec .capevolve/project/capevolve.agentopt.v4.gptoss.yaml \
-#          --project .capevolve/project --dashboard off
+#          --project .capevolve/project
+# (dashboard defaults to live/auto now even for orchestration_mode: agent — #665 — pass
+# --dashboard off yourself if you don't want it)
 #
 # OPENAI_BASE_URL / OPENAI_API_KEY are REQUIRED: without gateway credentials every rollout
 # 401s, which reads as a bad capability rather than a bad config. TAU2_AGENT_MODEL /

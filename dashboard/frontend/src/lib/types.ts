@@ -287,6 +287,10 @@ export interface GraphNode {
   parent_val?: number | null
   epoch?: number
   merge_of?: string[]
+  /** Optimizer's self-reported classification of this edit (e.g. PROMPT_EDIT,
+   *  TOOL_CODE_EDIT, VALIDATOR_ADD, MIXED). Optional/nullable — absent on runs that
+   *  predate this field or never set it. */
+  change_type?: string | null
   best_so_far?: boolean
   /** Which diagnose() failure cluster(s) this edit targeted (graph.jsonl, #446). */
   cluster_ids?: string[]

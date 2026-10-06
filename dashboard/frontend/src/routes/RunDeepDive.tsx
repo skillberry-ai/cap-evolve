@@ -11,6 +11,7 @@ import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { RunHeader } from '../components/RunHeader'
 import { KpiStrip } from '../components/KpiStrip'
 import { BestCurveChart } from '../components/BestCurveChart'
+import { ParetoScatter, isMultiObjective } from '../components/ParetoScatter'
 import { CandidatesPanel } from '../components/CandidatesPanel'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
@@ -218,6 +219,7 @@ function TabBody({
       return (
         <div className="space-y-5">
           <BestCurveChart nodes={data.graph.nodes} />
+          {isMultiObjective(s) && <ParetoScatter nodes={data.graph.nodes} />}
           <PhasesTimeline detail={data} />
         </div>
       )

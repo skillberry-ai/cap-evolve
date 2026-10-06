@@ -287,6 +287,27 @@ def _diagnosis_targets(src: Path) -> tuple[list[str], dict | None]:
                          "tier": None}
 
 
+#: Dashboard badge taxonomy for a candidate's self-reported edit classification (#665
+#: workstream 4). Advisory only — an unrecognized/missing value just renders as "—",
+#: never refuses a commit, since DIAGNOSIS.json's authoring is owned by SKILL.md
+#: (a different workstream) and this field is optional.
+CHANGE_TYPES = ("PROMPT_EDIT", "TOOL_CODE_EDIT", "VALIDATOR_ADD", "MIXED")
+
+
+def _diagnosis_change_type(src: Path) -> str | None:
+    """``change_type`` this edit self-reports, read from ``<from-dir>/DIAGNOSIS.json``.
+
+    ``None`` when the file is missing/unparseable or the field is absent/not one of
+    ``CHANGE_TYPES`` — optional and nullable, so an old DIAGNOSIS.json without it
+    (or any run that predates this field) just shows no badge."""
+    try:
+        diag = json.loads((src / "DIAGNOSIS.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    ct = diag.get("change_type") if isinstance(diag, dict) else None
+    return ct if isinstance(ct, str) and ct in CHANGE_TYPES else None
+
+
 def _ranked_issue_rows(src: Path) -> int:
     """Data rows in ``<from-dir>/PROCESS.md``'s "Ranked issue list" table (#634).
 
@@ -505,6 +526,10 @@ def main(argv=None) -> int:
     p.add_argument("--edit-kind", default=None, choices=["prompt", "code", "merge"],
                    help="graph.jsonl node kind; defaults to 'merge' when --parents has "
                         "2+ ids, else 'code'.")
+    p.add_argument("--change-type", default=None, choices=list(CHANGE_TYPES),
+                   help="dashboard badge for this edit's self-reported classification "
+                        "(#665). Optional: when omitted, read from <from-dir>/"
+                        "DIAGNOSIS.json's own 'change_type' field, else no badge is shown.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -700,6 +725,7 @@ def main(argv=None) -> int:
     # cluster_ids/subset and the dashboard's diagnosis view rendered nothing. Refuse rather
     # than silently book an unmapped change; a named escape hatch, logged as a warning.
     cluster_ids, diag_subset = _diagnosis_targets(src)
+    change_type = args.change_type or _diagnosis_change_type(src)
     if not provisional and not cluster_ids and not args.missing_diagnosis_justification:
         print(json.dumps({
             "error": f"no real DIAGNOSIS.json found for {args.candidate_id!r} — commit.py "
@@ -859,6 +885,7 @@ def main(argv=None) -> int:
                                  indecisive=indecisive, memory_skill=memory_skill,
                                  parents=parents, edit_kind=args.edit_kind,
                                  cluster_ids=cluster_ids, subset=diag_subset,
+                                 change_type=change_type,
                                  opt_cost_usd=args.optimizer_usd or None,
                                  opt_tokens=args.optimizer_tokens or None,
                                  optimizer_seconds=args.optimizer_seconds or None,

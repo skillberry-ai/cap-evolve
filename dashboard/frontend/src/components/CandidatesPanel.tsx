@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Star } from 'lucide-react'
 import type { RunGraph, RunSummaryDetail } from '../lib/types'
-import { LineageTree } from './LineageTree'
+import { LineageTree, ChangeTypeBadge } from './LineageTree'
 import { VerdictBadge } from './StatusBadge'
 import { Card } from './ui/Card'
 import { duration, pct, usd } from '../lib/format'
@@ -118,6 +118,11 @@ export function CandidatesPanel({
                     )}
                     {n.epoch != null && (
                       <span className="ml-1.5 text-[10px] text-muted">epoch {n.epoch}</span>
+                    )}
+                    {n.change_type && (
+                      <span className="ml-1.5">
+                        <ChangeTypeBadge changeType={n.change_type} />
+                      </span>
                     )}
                   </td>
                   <td className="px-3 py-1.5">
