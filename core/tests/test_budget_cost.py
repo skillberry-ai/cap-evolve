@@ -278,6 +278,19 @@ def test_estimate_calls_and_cost(tmp_path):
     assert out["cost_usd"]["optimizer_usd"] > 0
 
 
+def test_estimate_prices_model_routing_propose_override(tmp_path):
+    # model_routing.propose overrides optimizer_model for the optimizer's cost role
+    # (#666), so the estimate must price the routed model, not optimizer_model.
+    base_spec = {"num_trials": 3, "max_iterations": 4, "optimizer_model": "claude-opus-4-8"}
+    base_out = cli._estimate_core(base_spec, tmp_path)
+
+    routed_spec = {**base_spec, "model_routing": {"propose": "claude-haiku-4"}}
+    routed_out = cli._estimate_core(routed_spec, tmp_path)
+
+    assert routed_out["spec_summary"]["optimizer_model"] == "claude-haiku-4"
+    assert routed_out["cost_usd"]["optimizer_usd"] < base_out["cost_usd"]["optimizer_usd"]
+
+
 def test_estimate_calibrates_from_prior_run(tmp_path):
     # A prior run with real spend → estimate calibrates instead of using the table.
     proj = tmp_path / "project"; proj.mkdir()

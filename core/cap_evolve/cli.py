@@ -1199,7 +1199,15 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     val = _val_size(spec, project)
     trials = int(spec.get("num_trials", 1) or 1)
     iters = int(spec.get("max_iterations", 10) or 10)
-    opt_model = spec.get("optimizer_model")
+    # The optimizer's cost is priced for the "propose" routing role (#665 ws5), matching
+    # how the actual optimizer invocation resolves its model (see opt_cmd above, ~line 725)
+    # instead of reading optimizer_model directly — same fallback when model_routing is absent.
+    from .model_routing import ModelRoutingError as _ModelRoutingError
+    from .model_routing import resolve_model as _resolve_model
+    try:
+        opt_model = _resolve_model("propose", spec)
+    except _ModelRoutingError:
+        opt_model = None
     run_model = spec.get("runner_model") or spec.get("model")
 
     # agent mode: the driving agent owns the loop under a free-text `stop_condition`.
