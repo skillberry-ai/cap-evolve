@@ -92,6 +92,24 @@ def test_branches_one_path_per_frontier_tip(tmp_path):
     assert branches == {("a", "b"), ("c",)}
 
 
+def test_branches_raises_on_parent_cycle_instead_of_hanging(tmp_path):
+    # A corrupted/hand-edited graph.jsonl could record a parent cycle (a -> b -> a).
+    # branches() must detect it via the same `seen`-set guard is_descendant() uses,
+    # not loop forever.
+    run_dir = _run_dir(tmp_path)
+    _add(run_dir, "a", ["b"], "accepted")
+    _add(run_dir, "b", ["a"], "accepted")
+    _add(run_dir, "c", ["a"], "accepted")  # the only frontier tip; its ancestry hits the cycle
+
+    cg = CandidateGraph.load(run_dir)
+    try:
+        cg.branches()
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("expected branches() to raise on a parent cycle")
+
+
 def test_load_on_run_with_no_graph_jsonl_is_empty(tmp_path):
     run_dir = _run_dir(tmp_path)
     cg = CandidateGraph.load(run_dir)

@@ -104,9 +104,10 @@ def estimate_branches(group: list[dict], all_groups: list[list[dict]],
         cause the single edit has to actually resolve; more of them bundled is more
         uncertainty about whether one edit covers all of them, worth hedging with
         another branch).
-      * a stakes bump of +1 when this slot alone accounts for >= ``HIGH_STAKES_SHARE``
-        of the WHOLE round's score_lost — a single big-ticket cluster is worth a second
-        implementation attempt even bundled alone.
+      * a stakes bump of +1 when this slot is the SOLE slot carrying >= ``HIGH_STAKES_SHARE``
+        of the WHOLE round's score_lost, by a clear margin over the runner-up — "the one
+        cluster carrying most of the damage this round, worth trying two implementation
+        approaches on", not every slot that happens to clear the threshold independently.
 
     ``max_cap`` only ever clamps the result DOWN; it is read from ``--max-branches-per-
     slot`` (a safety ceiling, see the module docstring) and is never added to or used as
@@ -116,12 +117,28 @@ def estimate_branches(group: list[dict], all_groups: list[list[dict]],
     by construction, which is exactly the "always N" bug this exists to avoid.
     """
     total_lost = sum(float(c.get("score_lost") or 0.0) for grp in all_groups for c in grp)
+    shares = [
+        (sum(float(c.get("score_lost") or 0.0) for c in grp) / total_lost) if total_lost > 0 else 0.0
+        for grp in all_groups
+    ]
     this_lost = sum(float(c.get("score_lost") or 0.0) for c in group)
     share = (this_lost / total_lost) if total_lost > 0 else 0.0
     # The share bump only means something when OTHER slots exist to compare against —
     # with a single slot in the whole round its "share" of the total is trivially 1.0,
     # which would make every lone cluster look high-stakes regardless of score_lost.
-    high_stakes = len(all_groups) > 1 and share >= HIGH_STAKES_SHARE
+    # It must also go to AT MOST ONE slot per round: two unrelated clusters that each
+    # independently clear HIGH_STAKES_SHARE (e.g. two slots splitting the damage ~50/50)
+    # are not "the one cluster carrying most of the damage" — require this slot's share
+    # to be the round's unique maximum, by a clear margin over the runner-up.
+    top = max(shares) if shares else 0.0
+    runner_up = sorted(shares, reverse=True)[1] if len(shares) > 1 else 0.0
+    is_sole_leader = share == top and shares.count(top) == 1
+    high_stakes = (
+        len(all_groups) > 1
+        and is_sole_leader
+        and top >= HIGH_STAKES_SHARE
+        and (runner_up <= 0 or top >= 1.5 * runner_up)
+    )
     raw = len(group) + (1 if high_stakes else 0)
     return max(1, min(raw, max_cap))
 

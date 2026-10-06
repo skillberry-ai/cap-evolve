@@ -106,12 +106,16 @@ class CandidateGraph:
         out = []
         for tip in self.frontier():
             lineage = [tip]
+            seen: set[str] = {tip}
             cur = tip
             while True:
                 parents = self.parents_of(cur)
                 if not parents or parents[0] not in self._nodes:
                     break
                 cur = parents[0]
+                if cur in seen:
+                    raise ValueError(f"candidate graph has a parent cycle at {cur!r}")
+                seen.add(cur)
                 lineage.append(cur)
             lineage.reverse()
             out.append(lineage)

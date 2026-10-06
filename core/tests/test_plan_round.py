@@ -102,6 +102,36 @@ def test_high_stakes_single_cluster_slot_gets_a_second_branch():
     assert plan_round.estimate_branches(alpha_group, groups) == 2  # 1 (count) + 1 (stakes)
 
 
+def test_two_unrelated_clusters_with_equal_score_lost_do_not_both_get_bumped():
+    """Regression for the double-bump bug: two unrelated clusters each independently
+    clearing HIGH_STAKES_SHARE (here, tied at 50/50) must NOT both get the stakes bump --
+    that gave 2+2=4 total branches, more than even the 5-overlapping-capped-at-3 case, and
+    is not "the ONE cluster carrying most of the damage" the bump is meant to reward."""
+    clusters = [
+        _cluster("alpha", ["1"], 0.5),
+        _cluster("beta", ["2"], 0.5),
+    ]
+    groups = plan_round.group_clusters(clusters)
+    assert len(groups) == 2
+    totals = sum(plan_round.estimate_branches(g, groups) for g in groups)
+    assert totals == 2  # 1 + 1, no bump on either side of the tie
+
+
+def test_high_stakes_bump_requires_a_clear_margin_over_the_runner_up():
+    """A unique leader that only narrowly beats the runner-up (no clear margin) should
+    not get the bump either -- it's not clearly "the one cluster carrying most of the
+    damage", just a slightly bigger slice."""
+    clusters = [
+        _cluster("alpha", ["1"], 0.50),
+        _cluster("beta", ["2"], 0.45),
+        _cluster("gamma", ["3"], 0.05),
+    ]
+    groups = plan_round.group_clusters(clusters)
+    assert len(groups) == 3
+    alpha_group = next(g for g in groups if g[0]["signature"] == "alpha")
+    assert plan_round.estimate_branches(alpha_group, groups) == 1  # no bump: too close to beta
+
+
 def test_max_branches_per_slot_only_clamps_down_never_up():
     clusters = [_cluster(f"shared surface {i}", ["t"], 0.1) for i in range(6)]
     # Make them all overlap (shared "shared surface" tokens) -> one big group of 6.
