@@ -89,8 +89,13 @@ github_integration: false    # mirror-only: mirror the algorithm's work items as
 stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold
+gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective; agent-optimize only, via gate_check.py --mode pareto)
 gate_k_se: 1.0
+# Optional, pareto gate_mode only (cap_evolve.gate.decide): the objectives to balance.
+# Omit for the default (reward maximize + cost minimize, with a cost->latency->tokens fallback).
+# objectives:
+#   - {name: reward, direction: maximize}
+#   - {name: cost, direction: minimize}
 
 # --- budget -----------------------------------------------------------------
 # Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a

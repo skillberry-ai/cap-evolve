@@ -31,7 +31,7 @@ from pathlib import Path
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
 from cap_evolve import RunDir, footprint, harness
-from cap_evolve.gate import decide
+from cap_evolve.gate import ParetoObjectiveError, decide
 from cap_evolve.loop import has_valid_trials
 
 EPS = 1e-9
@@ -108,7 +108,12 @@ def regressions(current, candidate) -> list[str]:
 # repeating it: on run 33492876620 round 3 the two disagreed (round.py had no `choices=` at
 # all), `--mode val` sailed through round.py, was rejected here, and emptied the entire
 # round table while `eval_rc` stayed 0. Two copies of a list is how that happens.
-GATE_MODES = ["paired", "significant", "strict", "threshold"]
+#
+# "pareto" (issue #665 ws3) is reachable only through THIS script + commit.py, not
+# round.py — round.py's own --mode stays restricted to the single-metric modes above
+# (its screen/merge machinery assumes one scalar delta), so a pareto-gated candidate is
+# always gated by hand, one at a time, same as any driver_judgement decision.
+GATE_MODES = ["paired", "significant", "strict", "threshold", "pareto"]
 
 
 def _frozen_coverage(run_dir, per_task, split: str = "val") -> float:
@@ -154,7 +159,40 @@ def build_parser() -> argparse.ArgumentParser:
                         "measured-and-passed. OFF by default — see regressions() for why.")
     p.add_argument("--allow-regression", action="store_true",
                    help="deprecated no-op: regressions no longer veto unless --veto-regressions")
+    p.add_argument("--objectives", default=None,
+                   help="--mode pareto only: JSON list of {name, direction}, e.g. "
+                        '\'[{"name":"reward","direction":"maximize"},'
+                        '{"name":"cost","direction":"minimize"}]\'. Default (omitted) = '
+                        "reward maximize + cost minimize, with cap_evolve.gate's own "
+                        "cost->latency->tokens fallback. Mirror capevolve.yaml's `objectives:` "
+                        "block when the project declares one.")
+    p.add_argument("--metrics-candidate", default=None,
+                   help="--mode pareto only: JSON dict of the candidate's non-reward objective "
+                        "values, e.g. '{\"cost\": 0.42}'. You source this yourself (e.g. the "
+                        "evaluate phase's own cost_usd, or multirep.py's pooled cost across "
+                        "independently-seeded blocks) — gate_check.py has no automatic "
+                        "per-candidate cost aggregator.")
+    p.add_argument("--metrics-current", default=None,
+                   help="--mode pareto only: same shape as --metrics-candidate, for the "
+                        "reference (--current) side.")
+    p.add_argument("--metrics-stderr-candidate", default=None,
+                   help="--mode pareto only: JSON dict of the SAME keys as --metrics-candidate, "
+                        "each value its measured standard error. Required for every non-reward "
+                        "objective — pareto mode refuses to fall back to a float-noise epsilon "
+                        "(cap_evolve.gate.ParetoObjectiveError).")
+    p.add_argument("--metrics-stderr-current", default=None,
+                   help="--mode pareto only: same shape as --metrics-stderr-candidate, for the "
+                        "reference (--current) side.")
     return p
+
+
+def _json_arg(raw: str | None, flag: str):
+    if raw is None:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(json.dumps({"error": f"{flag} is not valid JSON: {exc}"}, indent=2))
 
 
 def main(argv=None) -> int:
@@ -203,10 +241,24 @@ def main(argv=None) -> int:
     # vectors keep the SE they always had.
     se_floor = (harness.paired_se_floor(run_dir, args.candidate, cur_tags[0], fp, len(deltas))
                 if fp is not None and deltas else 0.0)
-    d = decide(cur.reward, cand.reward, split="val", mode=args.mode, k_se=args.k_se,
-               candidate_stderr=cand.stderr, current_stderr=cur.stderr,
-               threshold=args.threshold, paired_deltas=deltas,
-               paired_se_floor=se_floor, coverage=frozen_coverage, run_dir=run_dir)
+    try:
+        d = decide(cur.reward, cand.reward, split="val", mode=args.mode, k_se=args.k_se,
+                   candidate_stderr=cand.stderr, current_stderr=cur.stderr,
+                   threshold=args.threshold, paired_deltas=deltas,
+                   paired_se_floor=se_floor, coverage=frozen_coverage, run_dir=run_dir,
+                   objectives=_json_arg(args.objectives, "--objectives"),
+                   metrics_candidate=_json_arg(args.metrics_candidate, "--metrics-candidate"),
+                   metrics_current=_json_arg(args.metrics_current, "--metrics-current"),
+                   metrics_stderr_candidate=_json_arg(
+                       args.metrics_stderr_candidate, "--metrics-stderr-candidate"),
+                   metrics_stderr_current=_json_arg(
+                       args.metrics_stderr_current, "--metrics-stderr-current"))
+    except ParetoObjectiveError as exc:
+        # Refuse the same way the rest of this script refuses an unjudgeable candidate
+        # (no --current, no rollouts): a clean JSON error on stdout, rc 2 — never a
+        # traceback, and never a verdict gate.py did not actually reach.
+        print(json.dumps({"error": f"pareto gate: {exc}"}, indent=2))
+        return 2
 
     regs = regressions(cur, cand)
     # The full COMPOSITION of the change, from the framework's shared classifier: what this

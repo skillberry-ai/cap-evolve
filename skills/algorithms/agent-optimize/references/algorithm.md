@@ -6,7 +6,10 @@
 - [How honesty survives handing the agent the wheel](#how-honesty-survives-handing-the-agent-the-wheel)
 - [Subset screening](#subset-screening-where-the-cost-actually-goes-and-why-a-screen-may-not-accept)
 - [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
-- [Bucketing edits before spending](#bucketing-edits-before-spending)
+- [Branch planning: plan_round.py decides N](#branch-planning-plan_roundpy-decides-n-not-a-fixed-constant)
+- [Bucketing edits within a slot](#bucketing-edits-within-a-slot)
+- [Evaluation plans — staged, not ad hoc](#evaluation-plans--staged-not-ad-hoc)
+- [Model routing](#model-routing-one-model-for-every-step-is-the-gap-this-closes)
 - [Prioritizing clusters, and code over prose](#prioritizing-clusters-and-code-over-prose--ported-from-the-deterministic-optimizers-briefing)
 - [Sibling candidates by default](#why-n3-sibling-candidates-is-the-default-not-one-candidate-at-a-time)
 - [Provisional candidates](#provisional-candidates-sequential-evidence-not-compounded-edits)
@@ -15,6 +18,7 @@
 - [Parallelism](#parallelism-fan-out-on-the-cheap-steps-stay-serial-where-state-moves)
 - [The final measurement](#the-final-measurement-one-table-and-the-things-it-refuses-to-pretend)
 - [Gate as evidence, not a verdict](#gate-as-evidence-not-a-verdict)
+- [Pareto acceptance](#pareto-acceptance-gate_mode-pareto)
 - [Measuring only what the edit reaches](#measuring-only-what-the-edit-reaches)
 - [Composition, not just the mean](#composition-not-just-the-mean)
 - [Caveats](#caveats)
@@ -224,7 +228,7 @@ times as you find useful — different clustering, different candidate, differen
 before ever touching val; train carries none of the honesty machinery, so there is nothing to
 protect there.
 
-**Never pass `--ids` to the step 4 full-val gate eval.** That call is the one place the loop's
+**Never pass `--ids` to the step 6 full-val gate eval.** That call is the one place the loop's
 freedom stops: `gate_check.py`'s coverage guard (`min_coverage`) exists to catch an
 under-measured candidate, and a deliberately-chosen subset's `coverage` reads 1.0 by construction
 (its denominator IS the subset) — the exact blind spot the guard cannot see through. The full-val
@@ -316,15 +320,46 @@ report up to twice the optimizer spend it used, and a `max_usd` stop then fired 
 spent. Pass them when you can estimate your own cost for a round; a round you cannot price is
 better left unattributed than guessed, since the run total is right either way.
 
-## Bucketing edits before spending
+## Branch planning: plan_round.py decides N, not a fixed constant
 
-SKILL.md's step 2 sorts every proposed edit into one of two buckets *before* anything is spent,
-using the same test the edit-form table already applies (`references/edit-design-lessons.md`,
-"Form, not wording"): does the edit change behaviour deterministically, or only probabilistically?
+Before SKILL.md's step 2 existed, this document's own prior guidance (below, "Why N≥3 sibling
+candidates is the default") effectively picked the branch count by asserting a floor — which the
+forensic run on `run_20261003_184253` demonstrates is not the same as deciding it from evidence: a
+driver that reads "default N≥3" either pads a round to 3 regardless of what diagnose found, or
+(what actually happened eight times in a row) ignores the floor under time pressure and runs 1.
+Both are the same bug from opposite directions: the branch count was never a function of the
+round's own root-cause structure.
+
+`plan_round.py` (`cap_evolve.candidate_graph.CandidateGraph` plus its own grouping/estimation
+arithmetic) is the fix: it groups diagnose's clusters by implementation-surface overlap into
+slots, then estimates each slot's own branch count from `len(group)` (how many distinct root
+causes got bundled into one surface — more bundled is more hedging-worthy uncertainty) and a
+stakes bump when one slot alone carries most of the round's `score_lost`. Deliberately NOT an
+LLM call and NOT allowed to special-case "the answer is 3" (`estimate_branches`'s own docstring) —
+it is clustering arithmetic over already-deterministic diagnose output, so the SAME diagnosis
+always proposes the SAME plan, and the number of slots and branches genuinely varies: a round with
+one isolated, low-score_lost cluster proposes 1; a round where diagnose surfaced three largely
+unrelated failure surfaces proposes (at least) 3; a round where one cluster alone explains 40%+ of
+the round's loss, uniquely, over the runner-up proposes an extra branch on THAT slot specifically.
+`MIN_SIBLINGS=3` in `round.py` remains a separate, code-enforced floor for the *parallel batch*
+convenience path specifically — not a claim about what the right branch count is, which is now
+`plan_round.py`'s job. The two can legitimately disagree (plan says 1, `round.py`'s floor still
+asks for a justification to run fewer than 3 through its OWN batched machinery); SKILL.md's
+"Parallel round" section says which file to point `--single-candidate-justification` at when they
+do.
+
+## Bucketing edits within a slot
+
+Once `plan_round.py` has decided how many branches a slot is worth, SKILL.md's step 3 still sorts
+every edit *within* one of those branches, using the same test the edit-form table already applies
+(`references/edit-design-lessons.md`, "Form, not wording"): does the edit change behaviour
+deterministically, or only probabilistically? This is no longer how the branch COUNT is decided —
+`plan_round.py` already fixed that — it is how a single branch's own working copy is assembled.
 
 **Bucket A — atomic/risky.** Prose whose effect is probabilistic, or an edit targeting a cluster
-with no prior evidence. This keeps the section below's default unchanged: independent sibling
-candidates, N≥3, one cluster each. Bundle only *independent* parts within one sibling — different
+with no prior evidence. Each such edit stays its own branch — one cluster each — within the slot
+structure `plan_round.py` already proposed; the slot's `estimated_branches`, not a fixed N,
+decides how many branches exist. Bundle only *independent* parts within one branch — different
 files, different rules — so a rejected bundle can be resubmitted as its surviving part next round;
 `regressed`/`regressions` say which part to drop.
 
@@ -353,8 +388,8 @@ event or graph transition is written. To recover, re-run without the flag: the s
 on disk, and a pair that collides at build time costs nothing. A round where no merge applied
 spends nothing. The manual path
 below still works for pairs outside one round. Screen every sibling first
-(SKILL.md step 3, cheap subset, kill-only) — that is the whole point of `screen.py` existing before
-step 4 — then run `scripts/merge_search.py` on the disjoint SCREEN-SURVIVORS (its own module
+(SKILL.md step 5, cheap subset, kill-only) — that is the whole point of `screen.py` existing before
+step 6 — then run `scripts/merge_search.py` on the disjoint SCREEN-SURVIVORS (its own module
 docstring: "the missing piece is simply DECIDING which survivors are safe to try merging and
 DOING it, instead of leaving that to a driver under time pressure who defaults to the cheapest
 step"). `merge_search.py` was built for exactly this shape — prior real runs (run_agentoptv3,
@@ -375,7 +410,7 @@ round**, apply every fix to it, and pay for **exactly one** evaluation and one g
 bundle — no per-fix screen, no per-fix gate. `phases/evaluate/scripts/run.py` and
 `scripts/gate_check.py` need only a candidate dir and a tag to run; neither requires a
 `mechanisms.jsonl` entry or any other per-target attribution, so the exact commands SKILL.md's
-steps 3–4 already give run unchanged against the merged copy — no new script needed. This trades
+steps 5–6 already give run unchanged against the merged copy — no new script needed. This trades
 attribution (if the bundle regresses, nothing says which part) for cost, and that trade is sound
 **only** because each part already cleared its own independent low-risk classification going in —
 never because bundling itself is risk-free in general. A Bucket B bundle can still fail the gate as
@@ -391,7 +426,7 @@ own sibling candidate, gated alone. The line is the same one the form table alre
 structural REQUIRED slot or a code-level precondition on one side, a prose rule or conditional on
 the other — applied here to a bundling decision instead of a single edit's form.
 
-**A full-val gate (step 4) has a precondition: exhaust this round's cheap exploration first.**
+**A full-val gate (step 6) has a precondition: exhaust this round's cheap exploration first.**
 Before the round's first full-val gate, you must have read every cluster `diagnose.py` reported for
 this round and, for each one, either (a) designed an edit and folded it into the current Bucket
 A/B bundle, or (b) recorded in the round's plan why it is deliberately deferred (no safe fix known
@@ -401,6 +436,84 @@ buys one gate's worth of signal for a fraction of what the same gate could resol
 addressable cluster is folded in. This applies whatever the capability is (prompt, tools, or a
 skill package) and whatever the benchmark is: the check is "did I look at every cluster before
 paying," not anything specific to one edit surface.
+
+## Evaluation plans — staged, not ad hoc
+
+The forensic run's second-worst finding (after the serial branching): 7 of 8 candidates paid the
+full 90-rollout val gate even though each one's own hypothesis named ≤7 affected tasks, and 6 of
+those 7 screens the driver DID run first came back `inconclusive` — not because the candidate was a
+close call, but because the subset it was screened on was chosen ad hoc each time and happened to
+be too narrow or too noisy to resolve anything. Net rollout savings from screening were *negative*
+on 6 of 8 candidates: the screen cost more than it would have saved had it worked, and it provided
+no real information either way.
+
+`cap_evolve.evaluation_plan.build_evaluation_plan` is the fix: given the cluster (or
+`plan_round.py` slot) a candidate targets, it reads off `affected_tasks` (exactly the cluster's own
+failing tasks — nothing broader, because the hypothesis does not claim anything broader) and
+samples up to three `regression_sentinels` from `diagnose`'s `kept_good` list (currently-passing
+tasks NOT in the affected set, evenly spaced for stable coverage — a plain proxy, not a
+same-tool-surface match, since diagnose does not keep per-task tool-call data for PASSING tasks;
+upgrade this when it does). It assigns a `stage` — `STAGE_TARGETED_SMALL` while the affected set is
+small (≤10 tasks, the forensic run's own targeted edits topped out at 7), `STAGE_EXPANDED_CLUSTER`
+once the hypothesis itself claims a broader surface than that — and persists the whole record to
+`<candidate_dir>/evaluation_plan.json` (`persist_evaluation_plan`), the same one-JSON-file-per-
+candidate convention `DIAGNOSIS.json` already uses:
+
+```bash
+python -c "
+import json
+from pathlib import Path
+from cap_evolve import RunDir
+from cap_evolve.evaluation_plan import build_evaluation_plan, persist_evaluation_plan
+run_dir = RunDir.open(Path('$R'))
+cluster = json.load(open('$R/work/plan.json'))['slots'][0]      # the slot this candidate targets
+history = json.load(open('$R/work/diag_v.json'))                # for regression_sentinels (kept_good)
+plan = build_evaluation_plan(cluster, history=history)
+persist_evaluation_plan(run_dir, '$TAG', plan)
+print(json.dumps(plan.to_dict(), indent=2))
+"
+```
+
+The point is not a new statistical test — `screen.py`'s kill-only paired comparison is unchanged —
+it is that the SUBSET passed to `screen.py --ids` now has a reason that was computed from the
+cluster BEFORE the screen ran, rather than invented to make a disappointing screen look targeted
+after the fact. `screen.py`'s own staged ladder (tier 1 ~25% of val, tier 2 ~50%) is still there for
+the case an `EvaluationPlan` does not cover (`STAGE_BROAD_PARTIAL`): an `EvaluationPlan`'s
+`affected_tasks`/`regression_sentinels` and `screen.py`'s own heuristic subset are two different
+selection methods for the SAME kill-only mechanism ("Choosing your own subset" above), and a
+candidate with a plan uses the plan's ids, never both at once for the same stage.
+
+## Model routing: one model for every step is the gap this closes
+
+`cap_evolve.model_routing.resolve_model(role, spec)` resolves one of seven roles — `plan`,
+`root_cause`, `propose`, `implement`, `evaluation_analysis`, `merge`, `synthesis` — to a model id,
+falling back to the spec-wide `optimizer_model` when `capevolve.yaml` sets no `model_routing`
+override for that role (so a spec with no `model_routing` block behaves identically to before this
+existed, at every call site). `record_model_selection(run_dir, role, model)` appends the resolved
+choice to `events.jsonl` via the existing `log_event` audit path — no parallel telemetry:
+
+```bash
+python -c "
+from cap_evolve.model_routing import resolve_model, record_model_selection
+from cap_evolve.specfile import spec_for_run
+from cap_evolve import RunDir
+from pathlib import Path
+run_dir = RunDir.open(Path('$R')); spec = spec_for_run(run_dir, Path('$P'))
+model = resolve_model('root_cause', spec)   # or any of the other six roles
+record_model_selection(run_dir, 'root_cause', model); print(model)
+"
+```
+
+The gap this closes is not capability (an agent could always just use whatever model it is) but
+*visibility and intent*: a run where the SAME model does root-cause clustering, writes the
+candidate's prose edit, reasons about whether two candidates are safe to merge, AND writes the
+final report has made that choice silently, every time, win or lose. Calling `resolve_model`
+before each judgment call — and reporting which model it resolved to, in the step's own
+JOURNAL.md/report prose — is what SKILL.md's "Model routing" section asks for; it does not change
+which script runs next, only what you say about which model reasoned about it. A project that wants
+a cheap model for the purely mechanical `implement` role (applying an already-decided structural
+fix) and a strong one for `root_cause`/`merge` sets `model_routing` once in `capevolve.yaml`; a
+project that never touches the block gets the pre-#665 behavior exactly.
 
 ## Prioritizing clusters, and code over prose — ported from the deterministic optimizer's briefing
 
@@ -412,7 +525,7 @@ subprocess, so they land on you, the driving agent, directly):
 1. **Attack by leverage, not just by raw score.** `diagnose.py`'s clusters already sort by
    `score_lost` descending, which — since `score_lost` sums `(1 − reward)` over every trial in the
    cluster — already IS the leverage figure (failing tasks × trials × score recoverable), not a
-   proxy for it. SKILL.md's step 2 says to work that order; the reason is the same one the
+   proxy for it. SKILL.md's step 3 says to work that order; the reason is the same one the
    deterministic briefing states explicitly: the biggest visible cluster is not always the biggest
    *fixable* one, but score_lost is where the ceiling on any fix's payoff actually lives, so it is
    the right thing to exhaust before moving to a smaller cluster with a nicer-looking fix.
@@ -430,17 +543,23 @@ subprocess, so they land on you, the driving agent, directly):
    (real/safe/verified) the deterministic briefing enforces: REAL — it targets a cluster failing in
    the traces you just diagnosed, never a hypothetical one; SAFE — for a bounded in-body guard,
    confirm it does not fire on 1-2 currently-passing tasks that use the same surface (see SKILL.md's
-   step 2 "Verify before you gate"); for an UNBOUNDED edit — one that loosens or alters a global
+   step 3 "Verify before you gate"); for an UNBOUNDED edit — one that loosens or alters a global
    decision/permission/refusal rule — enumerate the passing tasks in that decision class and confirm
    none relied on the old behaviour, or replace it with a scoped discriminating-condition guard
    instead; VERIFIED — you ran the check, not just reasoned about it. An edit that fails any of the
-   three is dropped before it ever reaches step 3's screen, not after it burns a rollout.
+   three is dropped before it ever reaches step 5's screen, not after it burns a rollout.
 
 None of this changes what pays for a rollout or what the gate decides — `screen.py`/`gate_check.py`
 are unmoved — it only orders and filters what you propose before you spend, the same as Bucketing
 above.
 
 ## Why N≥3 sibling candidates is the default, not one candidate at a time
+
+**This section predates `plan_round.py` and states the economic ARGUMENT for parallelism, not the
+rule for choosing N any more** — see "Branch planning: plan_round.py decides N" above for what
+replaced the "default to N≥3" instruction specifically. The fixed-cost argument below is still
+true and is exactly why `plan_round.py`'s own estimate climbs with evidence (more bundled root
+causes, or one high-stakes cluster) rather than floors at a number nobody derived.
 
 A round pays fixed overhead regardless of how many candidates it gates: the null-control
 replicates (`--control-replicates 2` by default) plus, on the deterministic path, a baseline
@@ -450,8 +569,10 @@ observed directly in a live run, where two consecutive rounds each proposed one 
 both were rejected, at the same fixed cost as three or more addressed in parallel would have
 been. `round.py` already supports evaluating N candidates as parallel *processes* (each with its
 own adapter `apply()`), gating them serially — the mechanism was already there; only the default
-behavior of proposing one at a time was the gap. Default to N≥3, one failure cluster each, and
-drop to fewer only when `spend.py --n-siblings N` says the remaining budget cannot afford it.
+behavior of proposing one at a time was the gap. `round.py`'s own code-level floor
+(`MIN_SIBLINGS = 3`, see "Parallelism" below) still exists as a safety net against that specific
+regression; the content decision — HOW MANY branches this round's own evidence is worth — is
+`plan_round.py`'s.
 
 ## Provisional candidates: sequential evidence, not compounded edits
 
@@ -568,7 +689,7 @@ every round: append to `INSIGHTS.md` when a `commit.py` RESULT confirms a durabl
 finding worth a future round reading instead of re-deriving from the journal; append to
 `META_INSIGHTS.md` when the round reveals something about the SEARCH itself (a stall, a lever
 switch, screen vs. gate mismatch) rather than about the capability. `FRAMEWORK_IMPROVEMENTS.md` is
-step 6's — see SKILL.md.
+step 8's — see SKILL.md.
 
 ## Parallelism: fan out on the cheap steps, stay serial where state moves
 
@@ -609,8 +730,12 @@ cap-evolve's own state model dictates (see `docs/SUBAGENT_PATTERNS.md`):
   reason instead of requiring it to be retyped. Either way the reason is written onto the
   `agent_optimize_round_batch` event, so a serial round stays auditable rather than becoming
   the silent default again. This does not make 1 candidate impossible: a `narrow_scope`
-  round (this document, "Bucketing edits before spending") or a budget that genuinely cannot
-  afford 3 are both legitimate, and now both leave a record instead of an assumption.
+  round, a budget that genuinely cannot afford 3, or `plan_round.py` itself proposing fewer
+  than 3 branches from the round's own cluster structure (this document, "Branch planning:
+  plan_round.py decides N") are all legitimate, and now all leave a record instead of an
+  assumption — `plan_round.py`'s own JSON output is exactly what `--afford-check-file`-style
+  reasoning should cite as the `--single-candidate-justification` text when its estimate is
+  below `MIN_SIBLINGS`.
 
 Inside a single evaluation there are two further, composable sources of concurrency: an
 adapter's own `run_batch`/`run_trials` fast path (some adapters run their whole task
@@ -706,6 +831,63 @@ the numbers don't support, dressing noise-chasing in confident-sounding prose �
 bad math to motivated reasoning, which is harder to catch mechanically than a wrong formula was. The only
 mitigation available is the audit trail above: every override gets a human-readable justification citing
 real numbers, reviewable after the fact, the same way this repo's own run post-mortems already work.
+
+## Pareto acceptance: `gate_mode: pareto`
+
+Everything above this section is the single-metric gate: one scalar reward, one `Δ > k·SE` bar. It
+is the right test when reward is the only thing that matters, and wrong the moment a project also
+cares about cost, latency, or token spend — a candidate that is 40% cheaper and statistically tied
+on reward is a real win a reward-only gate is blind to, and the reverse (accepting a tiny reward
+gain that triples cost) is exactly the kind of trade the mean-only gate above (see "Composition,
+not just the mean") already warns never gets *examined* unless something forces it to be.
+
+```bash
+python "$A/gate_check.py" --run-dir "$R" --candidate "$TAG" --mode pareto --k-se <gate_k_se> \
+       --objectives '[{"name":"reward","direction":"maximize"},{"name":"cost","direction":"minimize"}]' \
+       --metrics-candidate '{"cost": <candidate_cost_usd>}' --metrics-current '{"cost": <parent_cost_usd>}' \
+       --metrics-stderr-candidate '{"cost": <candidate_cost_stderr>}' \
+       --metrics-stderr-current '{"cost": <parent_cost_stderr>}'
+```
+
+`cap_evolve.gate.decide(mode="pareto", objectives=...)` (issue #665 ws1, #667) is that something: a
+candidate is accepted iff it is **non-dominated** by the current best on every declared objective
+AND shows a real, noise-floor-clearing win on **at least one** of them. `objectives` defaults to
+`[{reward, maximize}, {cost, minimize}]` when a project sets `gate_mode: pareto` without declaring
+its own list, with a `cost` → `latency` → `tokens` fallback chain if `cost` has no value on this
+run. Every objective beyond `reward` needs a real measured value AND a real measured standard
+error on BOTH sides (`metrics_candidate`/`metrics_current` and their `_stderr_` counterparts) — a
+missing value or a missing SE raises `ParetoObjectiveError` rather than reading the gap as 0.0 or
+falling back to a float-noise epsilon. This is the same posture as the fallback-chain refusal just
+above it: refuse, never silently degrade to a weaker or fabricated comparison.
+
+Dominance reuses `selection.dominates` (the same per-objective 0/1-maximize-score encoding
+`selection.pareto_frontier` already used for per-instance selection, generalized here to an
+accept/reject call against exactly one reference rather than a whole pool) — there is still ONE
+dominance implementation in the codebase, not two that could drift. Reading the result is reading a
+**frontier state**, not a disguised boolean: `gate.reason` names each objective's `states` as
+`better`/`worse`/`tied` and the overall call as one of three things, not two —
+
+- `ACCEPT (non-dominated, real win on >=1 objective)` — the candidate is not significantly worse
+  on anything and significantly better on something. This includes a genuine TRADE (better on
+  cost, tied on reward) as well as a strict win on both.
+- `REJECT (dominated by current)` — the current best wins, significantly, on every objective; no
+  trade exists to make here.
+- `REJECT (no significant win on any objective)` — neither side dominates (there may be a nominal
+  trade), but nothing on the candidate's side clears its own noise floor, so there is no WIN to
+  accept on, only an unresolved tie.
+
+**Reachable only through `gate_check.py --mode pareto` + `commit.py`, not `round.py`.** `round.py`'s
+screen/merge/null-control cascade is built around one scalar delta end to end (a screen's
+kill/promote call, a merge's "did it keep each parent's gain", the control-relative verdict) — none
+of that machinery has a multi-objective form yet, and bolting pareto mode onto it is explicitly
+**not** part of this change (issue #665 ws3's scope is the SKILL.md loop and the two scripts it
+already names). A project with `objectives` declared gates every candidate by hand, one tag at a
+time, through `gate_check.py` directly — the same path `driver_judgement` decisions already use,
+just with a frontier reason instead of a `Δ > k·SE` one. `commit.py` needs no changes to record
+either mode's decision: both produce the same `accept`/`indecisive` fields it already reads.
+
+Without an `objectives` block in `capevolve.yaml`, none of this runs: `gate_mode` stays whatever it
+already was (`paired` by default) and every call site is byte-identical to before #667 landed.
 
 ## Measuring only what the edit reaches
 
@@ -846,10 +1028,15 @@ run that wants a no-regression champion, and both are off by default. What is no
 
 `merge_search.py` (#438) exists precisely because run_agentoptv3/run_agentoptv4 produced 3-6
 narrow, single-issue candidates per round and never combined them (see its own module
-docstring). SKILL.md's "Before finalizing" step makes running it, once 2+ accepted candidates
-target disjoint clusters, a REQUIRED step rather than an available tool nobody reaches for under
-time pressure — the same gap that let `screen.py` sit unused for a whole run before its own
-compliance event existed (#420 item 4).
+docstring) — and `run_20261003_184253` (issue #665) reproduced exactly this gap at the finalize
+boundary specifically: its `merge_compliance_warning` fired twice, naming two disjoint-cluster
+`accepted` candidates, and the run sealed with both still unmerged both times. SKILL.md's
+"Stop & seal" step makes running `merge_search.py`, once 2+ accepted candidates target disjoint
+clusters, a REQUIRED step — not advisory prose a driver can read past under time pressure, the
+same gap that let `screen.py` sit unused for a whole run before its own compliance event existed
+(#420 item 4). "Required" here means what it says: a run whose `events.jsonl` carries an
+unaddressed `merge_compliance_warning` at seal time is a protocol violation to report, not a soft
+miss to mention in passing.
 
 Practically: `--survivors` takes any tag under `$R/work/`, whether or not it individually cleared
 the gate — an `accepted` graph node works exactly like a screening survivor for this purpose, since

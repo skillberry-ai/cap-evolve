@@ -154,3 +154,151 @@ def test_agent_optimize_reference_pointers_are_not_empty_promises():
     if "sign test" in body:
         assert "sign test" in lessons, \
             "SKILL.md points at measured-lessons.md for the sign test; it is not there"
+
+
+# ---- #665 ws3: SKILL.md's rewritten loop must be mechanically followable -------
+
+AO_SCRIPTS = SKILLS / "algorithms/agent-optimize/scripts"
+AO_SKILL_MD = SKILLS / "algorithms/agent-optimize/SKILL.md"
+
+
+def _load_script(name: str, modname: str):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(modname, AO_SCRIPTS / name)
+    mod = importlib.util.module_from_spec(spec)
+    if str(AO_SCRIPTS) not in sys.path:
+        sys.path.insert(0, str(AO_SCRIPTS))
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_plan_round_output_shape_matches_what_skill_md_tells_the_driver_to_read():
+    """SKILL.md step 2 reads `plan_round.py`'s stdout for `slots[].{cluster_ids,affected_tasks,
+    estimated_branches}` and `total_estimated_branches`, and feeds that number straight into
+    `spend.py --n-siblings`. If `plan_round` ever renames or drops one of those keys, the step
+    is no longer followable as written."""
+    plan_round = _load_script("plan_round.py", "_ao_claims_plan_round")
+    clusters = [
+        {"signature": "timeout tool_a", "tasks": ["1", "2"], "score_lost": 1.2, "tag": "c1"},
+        {"signature": "wrong_field tool_b", "tasks": ["3"], "score_lost": 0.3, "tag": "c2"},
+    ]
+    out = plan_round.plan_round(clusters, candidate_graph=None, afford=None)
+    assert "slots" in out and "total_estimated_branches" in out, (
+        "SKILL.md step 2 reads these two top-level keys; plan_round() no longer returns one")
+    for slot in out["slots"]:
+        for key in ("cluster_ids", "affected_tasks", "estimated_branches", "hypothesis_stub"):
+            assert key in slot, f"SKILL.md step 2 reads slots[].{key}; a slot no longer has it"
+    assert out["total_estimated_branches"] == sum(s["estimated_branches"] for s in out["slots"]), \
+        "SKILL.md step 2 passes total_estimated_branches straight to spend.py --n-siblings"
+
+
+def test_model_routing_roles_match_the_table_skill_md_prints():
+    """SKILL.md's "Model routing" section prints a table naming exactly these seven roles
+    against `resolve_model`'s own `ROLES`. A role added or renamed in the module without
+    updating the table makes the table describe a role `resolve_model` doesn't accept, or
+    silently omits one it does."""
+    from cap_evolve.model_routing import ROLES
+
+    body = AO_SKILL_MD.read_text(encoding="utf-8")
+    for role in ROLES:
+        assert f"`{role}`" in body, (
+            f"model_routing.ROLES includes {role!r}; SKILL.md's Model routing table doesn't "
+            "name it")
+
+
+def test_gate_check_pareto_mode_is_reachable_as_skill_md_describes():
+    """SKILL.md's "Pareto acceptance" section calls `gate_check.py --mode pareto` with
+    `--objectives`/`--metrics-candidate`/`--metrics-current`/`--metrics-stderr-candidate`/
+    `--metrics-stderr-current`. All five flags, and the mode itself, must actually exist on
+    the script's parser — a prose instruction naming a flag the CLI refuses is the exact
+    "capability exists, behavior doesn't" gap this rewrite exists to close."""
+    gate_check = _load_script("gate_check.py", "_ao_claims_gate_check")
+    assert "pareto" in gate_check.GATE_MODES, \
+        "SKILL.md tells the driver to pass --mode pareto; gate_check.py does not accept it"
+    parser = gate_check.build_parser()
+    flags = {opt for a in parser._actions for opt in getattr(a, "option_strings", [])}
+    for flag in ("--objectives", "--metrics-candidate", "--metrics-current",
+                 "--metrics-stderr-candidate", "--metrics-stderr-current"):
+        assert flag in flags, f"SKILL.md's Pareto acceptance section names {flag}; gate_check.py lacks it"
+
+
+def test_gate_check_pareto_wiring_actually_reaches_gate_decide(tmp_path, monkeypatch):
+    """Not just a CLI flag: the pareto-mode values gate_check.py parses must reach
+    `cap_evolve.gate.decide`'s `objectives`/`metrics_*` kwargs, or the flags SKILL.md
+    documents would be accepted and silently ignored."""
+    gate_check = _load_script("gate_check.py", "_ao_claims_gate_check_wiring")
+    captured = {}
+
+    def _fake_decide(current_val, candidate_val, **kwargs):
+        captured.update(kwargs)
+        from cap_evolve.gate import GateDecision
+        return GateDecision(accept=True, reason="stub", delta=0.0)
+
+    monkeypatch.setattr(gate_check, "decide", _fake_decide)
+
+    class _Res:
+        reward, stderr, coverage = 0.5, 0.0, 1.0
+        per_task = [{"task_id": "1", "reward": 1.0}]
+
+    monkeypatch.setattr(gate_check.harness, "split_result_from_rollouts",
+                        lambda *a, **k: _Res())
+    monkeypatch.setattr(gate_check.harness, "_paired_deltas", lambda *a, **k: [])
+    monkeypatch.setattr(gate_check.harness, "movement",
+                        lambda *a, **k: {"broke": [], "fixed": [], "unresolved": []})
+    monkeypatch.setattr(gate_check, "regressions", lambda *a, **k: [])
+    monkeypatch.setattr(gate_check, "_frozen_coverage", lambda *a, **k: 1.0)
+
+    class _FakeRunDir:
+        best_id = "seed"
+        def read_splits(self):
+            class _S:
+                def ids(self, split):
+                    return []
+            return _S()
+        def candidate_dir(self, tag):
+            return tmp_path / tag
+
+    monkeypatch.setattr(gate_check.RunDir, "open", staticmethod(lambda p: _FakeRunDir()))
+
+    rc = gate_check.main([
+        "--run-dir", str(tmp_path), "--candidate", "cand_1", "--mode", "pareto",
+        "--no-footprint",
+        "--objectives", '[{"name": "reward", "direction": "maximize"}]',
+        "--metrics-candidate", '{"cost": 1.0}', "--metrics-current", '{"cost": 2.0}',
+        "--metrics-stderr-candidate", '{"cost": 0.1}', "--metrics-stderr-current", '{"cost": 0.1}',
+    ])
+    assert rc == 0
+    assert captured.get("objectives") == [{"name": "reward", "direction": "maximize"}]
+    assert captured.get("metrics_candidate") == {"cost": 1.0}
+    assert captured.get("metrics_current") == {"cost": 2.0}
+    assert captured.get("metrics_stderr_candidate") == {"cost": 0.1}
+    assert captured.get("metrics_stderr_current") == {"cost": 0.1}
+
+
+def test_evaluation_plan_stage_table_in_skill_md_matches_the_module_constants():
+    """SKILL.md's step 5 names every stage 0-5 by its constant. If `evaluation_plan.py` ever
+    renumbers or renames one, SKILL.md silently starts describing the wrong stage."""
+    from cap_evolve import evaluation_plan as ep
+
+    body = AO_SKILL_MD.read_text(encoding="utf-8")
+    expected = {
+        0: "STAGE_STATIC", 1: "STAGE_TARGETED_SMALL", 2: "STAGE_EXPANDED_CLUSTER",
+        3: "STAGE_REGRESSION", 4: "STAGE_BROAD_PARTIAL", 5: "STAGE_FULL",
+    }
+    for value, const_name in expected.items():
+        assert getattr(ep, const_name) == value, (
+            f"evaluation_plan.{const_name} is no longer {value}; SKILL.md's stage guidance is stale")
+        assert f"`{const_name}`" in body, (
+            f"SKILL.md doesn't name stage {value} ({const_name}) as documented")
+
+
+def test_merge_search_check_merge_compliance_is_the_function_skill_md_requires():
+    """SKILL.md's "Stop & seal" section makes an unaddressed `merge_compliance_warning` a
+    reportable violation, citing `measure.py`'s automatic `check_merge_compliance` call. Pin
+    that the function still exists under that name and is still what `measure.py` calls."""
+    merge_search = _load_script("merge_search.py", "_ao_claims_merge_search")
+    assert hasattr(merge_search, "check_merge_compliance")
+    measure_src = (AO_SCRIPTS / "measure.py").read_text(encoding="utf-8")
+    assert "check_merge_compliance" in measure_src, (
+        "SKILL.md says measure.py runs merge_search.check_merge_compliance at finalize time; "
+        "measure.py no longer calls it")
