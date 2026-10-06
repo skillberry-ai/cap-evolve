@@ -34,7 +34,7 @@ model claude-opus-4-8     ibm-ete-int/claude-opus-4-8         ibm-ete/claude-opu
 model claude-opus-4-7     ibm-ete-int/aws/claude-opus-4-7     ibm-ete/aws/claude-opus-4-7
 model claude-opus-4-6     ibm-ete-int/claude-opus-4-6         ibm-ete/claude-opus-4-6
 model claude-sonnet-5     ibm-ete-int/aws/claude-sonnet-5     ibm-ete/aws/claude-sonnet-5
-model claude-sonnet-4-6   ibm-ete-int/claude-sonnet-4-6       ibm-ete/claude-sonnet-4-6
+model claude-sonnet-4-6   ibm-ete-int/aws/claude-sonnet-4-6   ibm-ete/aws/claude-sonnet-4-6
 model claude-haiku-4-5    ibm-ete-int/aws/claude-haiku-4-5    ibm-ete/aws/claude-haiku-4-5
 
 # ---- OpenAI ----
