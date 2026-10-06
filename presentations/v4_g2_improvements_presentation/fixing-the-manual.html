@@ -629,6 +629,23 @@
   .verdict p{ margin:0; font-size:0.92rem; line-height:1.5; color:var(--ink); }
   .status-ok{ color:var(--diff-add-mark); font-weight:600; }
   .status-no{ color:var(--diff-rem-mark); font-weight:600; }
+
+  /* ---------- Appendix: per-file stat badge ---------- */
+  .filestat{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+    margin-bottom: 28px;
+  }
+  .filestat .size{ color: var(--ink-soft); }
+  .filestat .delta{ font-weight:600; }
+  .filestat .delta.add{ color: var(--diff-add-mark); }
+  .filestat .delta.rem{ color: var(--diff-rem-mark); }
+  .filestat.unchanged .size{ color: var(--ink); font-weight:600; }
 </style>
 
 <div class="deck" id="deck" tabindex="0">
@@ -1201,6 +1218,334 @@
       <div class="verdict" style="margin-top:26px;">
         <span class="vk">What to upstream</span>
         <p><span class="status-ok">Take as&#8209;is &mdash;</span> the bare&#8209;identifier rule and its shape table (<code>orchestrator.md</code>); the <code>fetch_github_file</code> I/O contract plus &ldquo;search for the tree, fetch only the leaf&rdquo; (<code>aap2_agent.md</code>, <code>babylon_agent.md</code>, <code>shared_context.md</code>); the question&#8209;order and stop&#8209;when&#8209;answered pair (<code>shared_context.md</code>, <code>aap2_agent.md</code>).<br><br><span class="status-no">Add, because G2 did not &mdash;</span> delete <code>Short = auth/config error. Long = timeout.</code> from <code>aap2_agent.md:366</code>. T2 and the T4 merge both removed it; G2 shipped it and compensated downstream. The instruction is still false either way.<br><br><span class="status-no">Not an edit &mdash;</span> <code>classify_fast()</code> routes on a bare <code>babylon</code> substring before any file is loaded. Six candidates and ~$419 of global optimization never reached the Icinga tools for icinga&#8209;010 or icinga&#8209;013.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="a0">
+    <div class="folio"><span>Appendix &middot; the eight files, end to end</span><span class="n">xii</span></div>
+    <div class="closing">
+      <h2>The ten slides above read task&#8209;first. These eight read <span class="attn">file&#8209;first</span> &mdash; every artifact in the shared bundle, seed next to <code>cand_0004</code>, in the order the orchestrator loads them.</h2>
+      <table class="roster" style="margin-top:8px;">
+        <thead><tr><th>Item</th><th>File</th><th>Seed &rarr; cand_0004</th></tr></thead>
+        <tbody>
+          <tr><td>i</td><td class="task">orchestrator.md</td><td>11.7KB &rarr; 18.1KB</td></tr>
+          <tr><td>ii</td><td class="task">shared_context.md</td><td>13.7KB &rarr; 31.6KB</td></tr>
+          <tr><td>iii</td><td class="task">aap2_agent.md</td><td>25.1KB &rarr; 47.2KB</td></tr>
+          <tr><td>iv</td><td class="task">babylon_agent.md</td><td>14.6KB &rarr; 16.6KB</td></tr>
+          <tr><td>v</td><td class="task">icinga_agent.md</td><td>16.4KB &rarr; 21.2KB</td></tr>
+          <tr><td>vi</td><td class="task">cost_agent.md</td><td>10.6KB &rarr; 11.6KB</td></tr>
+          <tr><td>vii</td><td class="task">security_agent.md</td><td>11.0KB &rarr; 11.5KB</td></tr>
+          <tr><td>viii</td><td class="task">ocpv_agent.md</td><td>6.2KB &rarr; 6.2KB &mdash; unchanged</td></tr>
+        </tbody>
+      </table>
+      <p class="evidence-note">Byte counts are the two files on disk, not a reward. Three of these eight &mdash; orchestrator.md, aap2_agent.md, shared_context.md &mdash; already appeared earlier in this deck as evidence for one specific task; the slides that follow cover what else changed in them, plus the five files that haven&rsquo;t appeared yet.</p>
+    </div>
+  </section>
+
+  <section class="slide" id="fo">
+    <div class="folio"><span>Appendix &middot; orchestrator.md</span><span class="n">xiii</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">orchestrator.md</span></div>
+        <h2>Routing told to recognize its own blind spot</h2>
+        <p class="taskname">top&#8209;level coordinator &middot; +96 / &minus;0 lines, pure addition</p>
+        <div class="filestat"><span class="size">11.7KB &rarr; 18.1KB</span><span class="delta add">+96</span><span class="delta rem">&minus;0</span></div>
+        <div class="block">
+          <h3>Already in this deck</h3>
+          <p>Slide 01 is this file&rsquo;s bare&#8209;identifier rule. Everything below is the other half of its growth &mdash; and it reads like a direct response to icinga&#8209;010 and icinga&#8209;013 (slides 09&#8211;10).</p>
+        </div>
+        <div class="block">
+          <h3>What it added</h3>
+          <p>A new section spelling out that an alert&rsquo;s object name &mdash; <code>babylon</code>, <code>aap2</code>, a cluster &mdash; describes <em>what</em> is monitored, not <em>which</em> agent to use, with a four&#8209;row collision table pairing each ambiguous request with its correct route and the reason.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>orchestrator.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>Those keywords describe WHAT is monitored,</div>
+            <div class="row add"><span class="mark">+</span>not WHICH agent to use. They must not pull</div>
+            <div class="row add"><span class="mark">+</span>the request away from investigate_icinga.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>orchestrator.md &mdash; the collision table, row 1</div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&middot;</span>&ldquo;Investigate the Icinga alert &lt;babylon&#8209;ish</div>
+            <div class="row ctx"><span class="mark">&middot;</span>name&gt; on host &lt;babylon&#8209;ish host&gt;&rdquo;</div>
+            <div class="row add"><span class="mark">+</span>&rarr; investigate_icinga</div>
+            <div class="row add"><span class="mark">+</span>Why: asking what the *alert* says, not about</div>
+            <div class="row add"><span class="mark">+</span>the Babylon resource</div>
+          </div>
+          <div class="diff-note">That is icinga&#8209;010&rsquo;s and icinga&#8209;013&rsquo;s literal trigger, almost verbatim.</div>
+        </div>
+        <div class="verdict">
+          <span class="vk">Still upstream of the bug</span>
+          <p><code>classify_fast()</code> picks <code>babylon_agent.md</code> on a bare <code>babylon</code> keyword match before <code>orchestrator.md</code> is ever loaded (slide 09) &mdash; this section can only help on a trial where the router happens to get it right.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fs">
+    <div class="folio"><span>Appendix &middot; shared_context.md</span><span class="n">xiv</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">shared_context.md</span></div>
+        <h2>The rule against reporting a fake zero</h2>
+        <p class="taskname">shared by all seven specialists &middot; +239 / &minus;3 lines &mdash; more than doubled, the largest growth of any file</p>
+        <div class="filestat"><span class="size">13.7KB &rarr; 31.6KB</span><span class="delta add">+239</span><span class="delta rem">&minus;3</span></div>
+        <div class="block">
+          <h3>Already in this deck, three times</h3>
+          <p>&ldquo;Search for the tree, fetch only the leaf&rdquo; (slide 02), the question&rsquo;s own step order (slide 03), and partitioning what an empty log does and doesn&rsquo;t establish (slide 04). This is the file every specialist inherits, and the one that grew the most.</p>
+        </div>
+        <div class="block">
+          <h3>What hasn&rsquo;t appeared yet</h3>
+          <p>A long guardrail against treating a tool&rsquo;s zero&#8209;value placeholder as a measurement: when a result set is empty, <code>total_cost: 0</code> and friends are the serializer&rsquo;s default, not a reading of &ldquo;no spend.&rdquo;</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>An empty result set is an ABSENCE, not a</div>
+            <div class="row add"><span class="mark">+</span>measured value. Never restate a tool&rsquo;s</div>
+            <div class="row add"><span class="mark">+</span>default scalar as a finding.</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>no &ldquo;total was 0&rdquo;, no &ldquo;$0.00&rdquo;, no &ldquo;0 hours&rdquo;</div>
+            <div class="row add"><span class="mark">+</span>&mdash; the simplest safe form never writes the</div>
+            <div class="row add"><span class="mark">+</span>number anywhere, including inside a sentence</div>
+            <div class="row add"><span class="mark">+</span>telling the reader not to use it.</div>
+          </div>
+          <div class="diff-note">cost_agent.md (two slides over) is this rule&rsquo;s one domain&#8209;specific instance.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fa">
+    <div class="folio"><span>Appendix &middot; aap2_agent.md</span><span class="n">xv</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">aap2_agent.md</span></div>
+        <h2>A fixed vocabulary for &ldquo;why did it fail&rdquo;</h2>
+        <p class="taskname">AAP2 job&#8209;diagnosis specialist &middot; +306 / &minus;15 lines &mdash; the largest file in the bundle</p>
+        <div class="filestat"><span class="size">25.1KB &rarr; 47.2KB</span><span class="delta add">+306</span><span class="delta rem">&minus;15</span></div>
+        <div class="block">
+          <h3>Already in this deck</h3>
+          <p>Slide 03 is this file&rsquo;s step&#8209;order fix. Slide 04 is the line it did <strong>not</strong> touch &mdash; <code>aap2_agent.md:366</code>, still saying &ldquo;Long = timeout.&rdquo; Everything below is new ground.</p>
+        </div>
+        <div class="block">
+          <h3>A fixed root&#8209;cause taxonomy</h3>
+          <p>Seven operational tokens (<code>platform_failure</code>, <code>dependency</code>, &hellip;) plus six fallbacks, with a rule to pick exactly one and classify by cause, not by the symptom word the user used.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; the taxonomy</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>`dependency` &mdash; something the run depends</div>
+            <div class="row add"><span class="mark">+</span>on is absent or no longer served</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>Exactly one. If your answer mentions two</div>
+            <div class="row add"><span class="mark">+</span>categories, you have hedged and produced</div>
+            <div class="row add"><span class="mark">+</span>no verdict.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>aap2_agent.md &mdash; the retry ban</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>&ldquo;transient&rdquo;, &ldquo;flake&rdquo;, &ldquo;just retry&rdquo; must not</div>
+            <div class="row add"><span class="mark">+</span>appear anywhere &mdash; not even inside a</div>
+            <div class="row add"><span class="mark">+</span>sentence that denies them.</div>
+            <div class="row ctx"><span class="mark">&middot;</span>&ldquo;retry&rdquo;, &ldquo;retries&rdquo;, &ldquo;attempts&rdquo; as bare</div>
+            <div class="row ctx"><span class="mark">&middot;</span>nouns are fine &mdash; that&rsquo;s how you report the count</div>
+          </div>
+          <div class="diff-note">Also new: a mandatory <code>get_job_events</code> leg whenever a question asks which task/role/host failed, and a rule to read a repo&rsquo;s <code>owner</code> off the job record rather than assume it.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fb">
+    <div class="folio"><span>Appendix &middot; babylon_agent.md</span><span class="n">xvi</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">babylon_agent.md</span></div>
+        <h2>&ldquo;No such record exists&rdquo; demoted to second guess</h2>
+        <p class="taskname">Babylon / AnarchySubject specialist &middot; +29 / &minus;4 lines</p>
+        <div class="filestat"><span class="size">14.6KB &rarr; 16.6KB</span><span class="delta add">+29</span><span class="delta rem">&minus;4</span></div>
+        <div class="block">
+          <h3>Already in this deck</h3>
+          <p>This file&rsquo;s <code>fetch_github_file</code> I/O&#8209;contract fix sits beside <code>aap2_agent.md</code>&rsquo;s in slide 02 &mdash; same tool, same wrong description, fixed with near&#8209;identical wording in both files.</p>
+        </div>
+        <div class="block">
+          <h3>What&rsquo;s new here specifically</h3>
+          <p>A false&#8209;negative escalation protocol: when the question asserts a record exists and a filtered query comes back empty, re&#8209;run with the narrowest identifier dropped but the cluster scope kept, and match locally &mdash; before ever telling the user &ldquo;no such record exists.&rdquo;</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>babylon_agent.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>treat an empty FILTERED result as a bad</div>
+            <div class="row add"><span class="mark">+</span>filter, not a missing record.</div>
+            <div class="row add"><span class="mark">+</span>Do NOT assert &ldquo;no such record exists&rdquo; &hellip;</div>
+            <div class="row add"><span class="mark">+</span>until you have run step 1 on the scope the</div>
+            <div class="row add"><span class="mark">+</span>user named.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>babylon_agent.md &mdash; Tips #3, rewritten</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>Never do an unfiltered list_anarchy_subjects</div>
+            <div class="row rem"><span class="mark">&minus;</span>without a guid parameter.</div>
+            <div class="row add"><span class="mark">+</span>Scope by cluster first, then narrow by GUID</div>
+            <div class="row add"><span class="mark">+</span>&mdash; and widen back if narrowing returns</div>
+            <div class="row add"><span class="mark">+</span>nothing.</div>
+          </div>
+        </div>
+        <div class="verdict">
+          <span class="vk">No actual&#8209;trial evidence here</span>
+          <p>Unlike slides 01&#8211;04, no task in this benchmark isolates this behavior cleanly enough to show seed vs. cand_0004 side by side.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fi">
+    <div class="folio"><span>Appendix &middot; icinga_agent.md</span><span class="n">xvii</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">icinga_agent.md</span></div>
+        <h2>Two repos become one, and the first move is a prohibition</h2>
+        <p class="taskname">Icinga / monitoring specialist &middot; +66 / &minus;19 lines</p>
+        <div class="filestat"><span class="size">16.4KB &rarr; 21.2KB</span><span class="delta add">+66</span><span class="delta rem">&minus;19</span></div>
+        <div class="block">
+          <h3>The repo collapse</h3>
+          <p>Seed named two repos, <code>monitoring-scripts</code> and <code>monitoring-config</code>. Neither exists &mdash; the real repo is <code>rhpds/rhdp-monitoring</code>. The fix doesn&rsquo;t just correct the name; it adds an explicit &ldquo;do not invent siblings&rdquo; prohibition.</p>
+        </div>
+        <div class="block">
+          <h3>Suppression, rewritten as a sentence</h3>
+          <p>&ldquo;Acknowledged: Yes/No&rdquo; becomes a mandatory <code>query_icinga</code>&#8209;first rule plus an instruction that an empty comment or downtime query is itself a finding, to be written as a full negative sentence &mdash; never a bare &ldquo;None.&rdquo;</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga_agent.md &mdash; the repo table, replaced</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>rhpds/monitoring-scripts &middot; rhpds/</div>
+            <div class="row rem"><span class="mark">&minus;</span>monitoring-config</div>
+            <div class="row add"><span class="mark">+</span>rhpds/rhdp-monitoring is the ONLY monitoring</div>
+            <div class="row add"><span class="mark">+</span>repository. Do not invent siblings.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>icinga_agent.md &mdash; absence as a sentence</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>**Acknowledged:** Yes/No</div>
+            <div class="row add"><span class="mark">+</span>&ldquo;**No comments** on this service&rdquo;, &ldquo;**No</div>
+            <div class="row add"><span class="mark">+</span>downtimes scheduled**&rdquo; &mdash; a bare &ldquo;None&rdquo; does</div>
+            <div class="row add"><span class="mark">+</span>not report the finding.</div>
+          </div>
+          <div class="diff-note">icinga&#8209;010 and icinga&#8209;013 (slides 09&#8211;10) never reach this file at all &mdash; the router sends them to <code>babylon_agent.md</code> before <code>investigate_icinga</code> is ever called. Every rule here only fires once the router gets it right.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fc">
+    <div class="folio"><span>Appendix &middot; cost_agent.md</span><span class="n">xviii</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">cost_agent.md</span></div>
+        <h2>Zero rows is not a cost of zero</h2>
+        <p class="taskname">AWS / Azure cost specialist &middot; +14 / &minus;0 lines, pure addition &mdash; nothing rewritten, only added</p>
+        <div class="filestat"><span class="size">10.6KB &rarr; 11.6KB</span><span class="delta add">+14</span><span class="delta rem">&minus;0</span></div>
+        <div class="block">
+          <h3>The rule</h3>
+          <p>All three cost tools return <code>total_cost: 0</code> when no rows match &mdash; that&rsquo;s &ldquo;no data,&rdquo; not &ldquo;zero spend.&rdquo; Report &ldquo;no cost rows returned for <code>&lt;identifier&gt;</code> over <code>&lt;window&gt;</code>&rdquo; instead, name which identifiers did and didn&rsquo;t return rows, and explain by mechanism &mdash; stale cache, window outside the data, wrong subscription, never provisioned &mdash; never by asserting the spend was genuinely zero.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cost_agent.md &mdash; new section</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>`total_cost` when `results` (or `breakdown`)</div>
+            <div class="row add"><span class="mark">+</span>is EMPTY is not a cost of zero.</div>
+            <div class="row add"><span class="mark">+</span></div>
+            <div class="row add"><span class="mark">+</span>Report &ldquo;no cost rows returned for &lt;id&gt; over</div>
+            <div class="row add"><span class="mark">+</span>&lt;window&gt;&rdquo; &mdash; not a $0 figure.</div>
+            <div class="row add"><span class="mark">+</span>Applies only when the collection is empty, not</div>
+            <div class="row add"><span class="mark">+</span>when rows are present.</div>
+          </div>
+          <div class="diff-note">The specialist instance of shared_context.md&rsquo;s general rule (previous slide) &mdash; almost certainly written in the same optimization pass.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fsec">
+    <div class="folio"><span>Appendix &middot; security_agent.md</span><span class="n">xix</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">security_agent.md</span></div>
+        <h2>One bullet, one tool swap</h2>
+        <p class="taskname">marketplace / security posture specialist &middot; +6 / &minus;0 lines &mdash; the smallest diff in the bundle</p>
+        <div class="filestat"><span class="size">11.0KB &rarr; 11.5KB</span><span class="delta add">+6</span><span class="delta rem">&minus;0</span></div>
+        <div class="block">
+          <h3>The swap</h3>
+          <p>Seed&rsquo;s default for &ldquo;what marketplace subscriptions?&rdquo; was <code>describe_marketplace</code>. Best replaces it with <code>query_marketplace_agreements</code> &mdash; pre&#8209;enriched, one call, carries <code>estimated_cost</code>/<code>auto_renew</code>/vendor &mdash; and keeps <code>describe_marketplace</code> only for live terms on a known agreement ID, or when the inventory call returns nothing.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>security_agent.md &mdash; the whole diff</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>&ldquo;What marketplace subscriptions?&rdquo; &rarr;</div>
+            <div class="row rem"><span class="mark">&minus;</span>describe_marketplace</div>
+            <div class="row add"><span class="mark">+</span>&ldquo;What marketplace subscriptions?&rdquo; &rarr;</div>
+            <div class="row add"><span class="mark">+</span>query_marketplace_agreements (default) &mdash;</div>
+            <div class="row add"><span class="mark">+</span>reserve describe_marketplace for live terms</div>
+            <div class="row add"><span class="mark">+</span>on a known agreement ID</div>
+          </div>
+          <div class="diff-note">The only change in the bundle that reads as a pure efficiency fix rather than a correctness fix &mdash; nothing it replaces was wrong, just a more roundabout path to the same fields.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="fp">
+    <div class="folio"><span>Appendix &middot; ocpv_agent.md</span><span class="n">xx</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag muted">ocpv_agent.md &mdash; untouched</span></div>
+        <h2>The one file nobody touched</h2>
+        <p class="taskname">OpenShift Virtualization specialist &middot; 0 bytes changed</p>
+        <div class="filestat unchanged"><span class="size">6,225B &mdash; identical, byte for byte</span></div>
+        <div class="block">
+          <h3>What didn&rsquo;t happen</h3>
+          <p>Across six candidates and ~$419 of global optimization &mdash; the same run behind slides 09&#8211;10 &mdash; not one edit landed in this file. Every one of the other seven files grew; this one is bit&#8209;for&#8209;bit the seed.</p>
+        </div>
+        <div class="block">
+          <h3>Why, probably</h3>
+          <p>G2 optimizes one shared bundle against all 34 tasks at once &mdash; a defect only gets written down if some task&rsquo;s gradient points at it. Either the OCPV&#8209;tagged tasks didn&rsquo;t exercise a wrong instruction hard enough to move the aggregate score, or the seed already answered them correctly. Nothing in this deck&rsquo;s five findings traces to OCPV &mdash; consistent with either reading, and this evidence alone can&rsquo;t tell them apart.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>ocpv_agent.md &mdash; diff</div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">$</span>diff seed/ocpv_agent.md best/ocpv_agent.md</div>
+            <div class="row ctx"><span class="mark">&middot;</span>(no output &mdash; files are identical)</div>
+          </div>
+          <div class="diff-note">6,225 bytes on both sides. Every other file in the bundle shows at least one added line.</div>
+        </div>
+        <div class="verdict">
+          <span class="vk">Not evidence of no bugs</span>
+          <p>Only evidence that none surfaced loudly enough, in this task set, to move a 34&#8209;task average.</p>
+        </div>
       </div>
     </div>
   </section>
