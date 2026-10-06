@@ -31,4 +31,8 @@ def test_round_mode_pareto_rejected_at_argparse_time():
     assert result.returncode == 2
     assert "invalid choice: 'pareto'" in result.stderr
     # Rejected modes still name the ones that ARE accepted, "pareto" absent from the list.
-    assert "paired, significant, strict, threshold" in result.stderr
+    # argparse's exact quoting of the choices list varies by Python version (3.11 vs 3.12+),
+    # so check each name individually rather than one literal substring.
+    for mode in ("paired", "significant", "strict", "threshold"):
+        assert mode in result.stderr
+    assert result.stderr.count("pareto") == 1  # only the rejected value itself, not in the choices list
