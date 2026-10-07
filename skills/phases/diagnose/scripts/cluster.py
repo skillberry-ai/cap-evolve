@@ -43,7 +43,8 @@ expect expects got produce produced output outputs task tasks agent step steps
 required require unexpected instead actual result results response correct bad
 should would did does done value values return returned reward score scored
 scoring trajectory grading grade graded because only just also however issue
-problem problems reason cause caused unable cannot able
+problem problems reason cause caused unable cannot able retry retried retries
+retrying attempt attempted attempts again
 """.split())
 
 _STOP = frozenset("""

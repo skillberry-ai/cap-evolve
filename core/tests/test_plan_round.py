@@ -160,6 +160,32 @@ def test_overlap_min_lowered_bundles_related_but_not_near_identical_clusters():
     assert len(unrelated) == 2  # genuinely disjoint vocabularies still don't bundle
 
 
+def test_generic_shared_token_alone_does_not_bundle_short_signatures():
+    """Review on #681: lowering OVERLAP_MIN to 0.3 means a single shared token now
+    clears the bar for 3-token signatures (1/3 = 0.333 >= 0.3) even when it is a
+    generic failure-handling word, not a shared implementation surface. Concrete
+    repro: "retry seat lock" and "retry refund amount" are unrelated failure
+    mechanisms (seat locking vs refund amount) that merely both involved a retry --
+    the raw ratio clears OVERLAP_MIN, but they must NOT bundle."""
+    a, b = frozenset("retry seat lock".split()), frozenset("retry refund amount".split())
+    assert len(a & b) / min(len(a), len(b)) >= plan_round.OVERLAP_MIN  # raw ratio clears it
+
+    groups = plan_round.group_clusters([
+        _cluster("retry seat lock", ["1"], 0.1),
+        _cluster("retry refund amount", ["2"], 0.1),
+    ])
+    assert len(groups) == 2  # must stay separate: "retry" alone isn't shared root cause
+
+    # The legitimate case this PR's lowered threshold exists for must still bundle --
+    # same 1/3 raw overlap, but "write" is a shared implementation surface, not a
+    # generic strategy word, so it is NOT filtered and the bundle still happens.
+    legit = plan_round.group_clusters([
+        _cluster("write payment flow", ["1"], 0.1),
+        _cluster("write seat error", ["2"], 0.1),
+    ])
+    assert len(legit) == 1
+
+
 def test_max_branches_per_slot_only_clamps_down_never_up():
     clusters = [_cluster(f"shared surface {i}", ["t"], 0.1) for i in range(6)]
     # Make them all overlap (shared "shared surface" tokens) -> one big group of 6.
