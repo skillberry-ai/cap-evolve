@@ -257,11 +257,21 @@ set +a
 banner "Phase 3: cap-evolve run"
 cd "$PROJECT_ROOT"
 
-# Cap-evolve writes to .capevolve/run_<run-ts>/ by default. Symlink that
-# under results/<suite>/<run>/run/ so the run's artifacts live under
-# the project tree without cap-evolve needing to know about our layout.
+# Cap-evolve writes its run dir under the PROJECT'S PARENT, not under
+# .capevolve/ directly (cli.py: workdir = proj_abs.parent.parent, base =
+# proj_abs.parent relative to workdir, run dir = base/run_<ts>). For a flat
+# layout (--project .capevolve/project) the project's parent IS .capevolve/,
+# so the two coincide and this bug was never visible; for every nested
+# per-task layout (v4_g2_e1/project, v4_t2_e1_<task>/project,
+# h4_<suite>_<task>/project) they do not, and the old hardcoded
+# "$PROJECT_ROOT/.capevolve/run_$RUN_TS" pointed at a path that was never
+# created — a dangling symlink, not a wrong one, so nothing failed loudly;
+# collect.py-style tooling reading results/<suite>/<run>/run/ would just find
+# nothing. Compute it the way cli.py does instead: resolve PROJECT_DIR and
+# take ITS parent.
+PROJECT_DIR_ABS="$(cd "$PROJECT_ROOT/$PROJECT_DIR" && pwd)"
 CE_RUN_DIRNAME="run_${RUN_TS}"
-CE_RUN_ABS="$PROJECT_ROOT/.capevolve/$CE_RUN_DIRNAME"
+CE_RUN_ABS="$(dirname "$PROJECT_DIR_ABS")/$CE_RUN_DIRNAME"
 LINK_TARGET="$OUT_DIR/run"
 ln -sfn "$CE_RUN_ABS" "$LINK_TARGET"
 
