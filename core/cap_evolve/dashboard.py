@@ -248,8 +248,15 @@ def _parse_process_md_skipped(process_text: str) -> list:
     if not m:
         return []
     rest = process_text[m.end():]
-    nxt = re.search(r"^(#+\s|[-*_]{3,}\s*$)", rest, re.MULTILINE)
-    section = rest[:nxt.start()] if nxt else rest
+    section = rest
+    for header in re.finditer(r"^(#+\s|[-*_]{3,}\s*$)", rest, re.MULTILINE):
+        header_line = rest[header.start():rest.find("\n", header.start())]
+        # A repeat of the SAME "Deliberately skipped" header (template artifact seen in
+        # real archived PROCESS.md files) is still part of this section, not the next one.
+        if re.match(r"^#+\s*Deliberately skipped\b", header_line, re.IGNORECASE):
+            continue
+        section = rest[:header.start()]
+        break
     out = []
     for line in section.splitlines():
         line = line.strip()

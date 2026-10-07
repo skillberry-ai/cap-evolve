@@ -100,3 +100,27 @@ def test_skipped_filled_from_process_md_section_na_entries_dropped():
     assert len(skipped) == 1
     assert skipped[0]["title"] == "wrong_write_action (rank 2)"
     assert "needs a separate lever" in skipped[0]["reason"]
+
+
+def test_parse_process_md_skipped_duplicate_header_keeps_both_bullets():
+    """A real archived PROCESS.md (run_20261003_184253_single-objective-v1/cand_3) has
+    the exact ``## Deliberately skipped`` header twice in sequence (template artifact),
+    each followed by its own bullet. The second occurrence of the SAME header must not
+    be treated as the start of "the next section" and truncate the first bullet away.
+    """
+    from cap_evolve.dashboard import _parse_process_md_skipped
+    text = (
+        "## Deliberately skipped (cluster + why — already-passing / needs gold / infra noise)\n"
+        "- wrong_write_action — already banked via cand_2; not re-targeted this round.\n"
+        "\n"
+        "## Deliberately skipped (cluster + why — already-passing / needs gold / infra noise)\n"
+        "- Teaching the agent the CORRECT write arguments (vs. just stopping blind "
+        "repetition) — deferred; needs per-task trace analysis of what argument was "
+        "actually wrong, a bigger and riskier lever than this round's prohibition.\n"
+        "\n"
+        "---\n"
+    )
+    skipped = _parse_process_md_skipped(text)
+    assert len(skipped) == 2
+    assert "wrong_write_action" in skipped[0]["reason"]
+    assert "CORRECT write arguments" in skipped[1]["reason"]
