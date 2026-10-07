@@ -11,7 +11,7 @@ const ROW_H = 76
 const PAD = 32
 const R = 18
 
-const FILL: Record<GraphNode['status'], string> = {
+export const FILL: Record<GraphNode['status'], string> = {
   seed: 'var(--seed)',
   accepted: 'var(--accepted)',
   rejected: 'var(--rejected)',

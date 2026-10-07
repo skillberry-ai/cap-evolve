@@ -1,9 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { Activity, RunSummaryDetail, GraphNode, GateDecision, PerIterationCost } from '../lib/types'
+import type { Activity, RunSummaryDetail, GraphNode, GateDecision, PerIterationCost, RunGraph } from '../lib/types'
+import { layoutLineage } from '../lib/lineage'
+import { FILL } from './LineageTree'
 
 interface RunTimelineProps {
   summary: RunSummaryDetail
   nodes: GraphNode[]
+  /** Full candidate graph (nodes + root/best_id), used to lay out the branch/merge
+   *  lane below the chart — reuses #669's lineage layout rather than reimplementing
+   *  DAG layout here. Omitted in a few older tests; the lane is simply skipped then. */
+  graph?: RunGraph
   onActivityClick?: (activityId: string) => void
 }
 
@@ -65,7 +71,7 @@ function placeNarrow(items: { cx: number; text: string; usd?: number }[]): Narro
   return out
 }
 
-export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProps) {
+export function RunTimeline({ summary, nodes, graph, onActivityClick }: RunTimelineProps) {
   const [hoveredActivity, setHoveredActivity] = useState<string | null>(null)
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null)
 
@@ -92,6 +98,26 @@ export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProp
   const nodeMap = useMemo(() => new Map<string, GraphNode>(nodes.map(n => [n.id, n])), [nodes])
   const gateMap = useMemo(() => new Map<string, GateDecision>(gates.map(g => [g.candidate, g])), [gates])
   const perIterMap = useMemo(() => new Map<string, PerIterationCost>(perIteration.map(p => [p.candidate, p])), [perIteration])
+
+  // --- branch/merge graph lane --------------------------------------------
+  // Reuses #669's lineage layout for branch-lane assignment and merge_of edges;
+  // this view just projects it onto the same time axis as the activity bars above,
+  // instead of the Lineage tab's depth-column x-axis.
+  const branchLayout = useMemo(() => (graph ? layoutLineage(graph) : null), [graph])
+  // Each candidate's x position: the time it was decided (gate), else evaluated,
+  // else when its optimizer call started. Falls back to run start (0) when a node
+  // (e.g. seed on older payloads) has no matching activity at all.
+  const candTime = useMemo(() => {
+    const priority: Record<Activity['type'], number> = { gate: 4, evaluate: 3, final_eval: 3, grow: 2, optimize: 1, seed: 0, finalize: 0 }
+    const best = new Map<string, { t: number; p: number }>()
+    for (const a of activities) {
+      if (!a.candidate) continue
+      const p = priority[a.type]
+      const cur = best.get(a.candidate)
+      if (!cur || p > cur.p) best.set(a.candidate, { t: span(a)[0], p })
+    }
+    return new Map([...best].map(([k, v]) => [k, v.t]))
+  }, [activities])
 
   // --- zoom / pan --------------------------------------------------------
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -153,13 +179,20 @@ export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProp
   const T1 = Math.max(elapsed * 1.01, 1)
   const x = (t: number) => PAD + ((W - PAD - Rr) * t) / T1
 
+  // Branch/merge lane: one row per lineage lane (0 when no `graph` was passed), each
+  // 20px tall, inserted between the gate diamonds and the val-score chart.
+  const branchRows = branchLayout?.rows ?? 0
+  const branchLaneH = 20
+  const branchAreaH = branchRows > 0 ? 10 + branchRows * branchLaneH : 0
+
   const rows = {
     phase: 8,
     iter: 38,
     optimizer: 74, // + two narrow-label rows below
     evaluator: 128, // + two narrow-label rows below
     milestone: 182,
-    chart: 222,
+    branches: 222,
+    chart: 222 + branchAreaH,
   }
   const bh = 24 // bar height
   const chartH = 110
@@ -279,6 +312,7 @@ export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProp
           {laneLabel(rows.optimizer, 'Optimizer')}
           {laneLabel(rows.evaluator, 'Evaluator')}
           {laneLabel(rows.milestone, 'Gate')}
+          {branchRows > 0 && laneLabel(rows.branches, 'Branches')}
           {laneLabel(rows.chart, 'Val score')}
           {[0, 0.25, 0.5, 0.75, 1].map(v => (
             <text key={v} x={L - 6} y={yv(v) + 3} textAnchor="end" className="text-[10.5px] fill-[var(--muted)]" fontFamily="var(--font-mono)">
@@ -475,6 +509,62 @@ export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProp
               )
             })}
 
+            {/* Branch/merge graph: same node/edge visual language as the Lineage tab
+                (#669 — accent spine, dashed muted merge_of edges), projected onto this
+                lane's own time axis instead of depth columns, so WHEN a branch/merge
+                happened lines up with the activity bars above it. */}
+            {branchLayout && branchRows > 0 && (() => {
+              const pos = new Map(branchLayout.nodes.map(n => [n.id, n]))
+              const nx = (id: string) => x(candTime.get(id) ?? 0)
+              const ny = (row: number) => rows.branches + 10 + row * branchLaneH + branchLaneH / 2
+              return (
+                <g>
+                  {branchLayout.edges.map(e => {
+                    const a = pos.get(e.from)
+                    const b = pos.get(e.to)
+                    if (!a || !b) return null
+                    const x1 = nx(a.id); const y1 = ny(a.row)
+                    const x2 = nx(b.id); const y2 = ny(b.row)
+                    return (
+                      <path
+                        key={`${e.from}-${e.to}-${e.merge ? 'merge' : 'derive'}`}
+                        d={`M${x1} ${y1}H${(x1 + x2) / 2}V${y2}H${x2}`}
+                        fill="none"
+                        stroke={e.onSpine ? 'var(--accent)' : e.merge ? 'var(--muted)' : 'var(--border)'}
+                        strokeWidth={e.onSpine ? 2 : 1.2}
+                        strokeDasharray={e.merge ? '4 3' : undefined}
+                      />
+                    )
+                  })}
+                  {branchLayout.nodes.map(n => {
+                    const cx = nx(n.id); const cy = ny(n.row)
+                    const actId = n.id === 'seed' ? 'seed' : `iter-${nodeMap.get(n.id)?.iteration ?? ''}`
+                    return (
+                      <g
+                        key={n.id}
+                        className="cursor-pointer"
+                        onMouseEnter={() => setHoveredActivity(actId)}
+                        onMouseLeave={() => setHoveredActivity(null)}
+                        onClick={() => handleActivityClick(actId)}
+                      >
+                        <title>{`${n.id} · ${n.status}${n.val != null ? ` · ${formatPercent(n.val)}` : ''}${n.mergeOf?.length ? `\nmerges ${[n.parent, ...n.mergeOf].filter(Boolean).join(' + ')}` : ''}`}</title>
+                        {n.id === graph?.best_id && <circle cx={cx} cy={cy} r={8} fill="none" stroke="var(--accent)" strokeWidth={1.5} opacity={0.6} />}
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={5}
+                          fill={n.id === graph?.best_id ? 'var(--accent)' : FILL[n.status]}
+                          stroke="var(--bg)"
+                          strokeWidth={1.5}
+                          style={{ filter: hoveredActivity === actId ? 'brightness(1.2)' : undefined }}
+                        />
+                      </g>
+                    )
+                  })}
+                </g>
+              )
+            })()}
+
             {/* Val score chart */}
             {(() => {
               let best = summary.baseline_val || 0
@@ -550,6 +640,14 @@ export function RunTimeline({ summary, nodes, onActivityClick }: RunTimelineProp
           <span className="w-3 h-3 rounded-full bg-[var(--accent)]" />
           best-so-far val
         </span>
+        {branchRows > 0 && (
+          <span className="inline-flex items-center gap-2">
+            <svg width="12" height="4" aria-hidden>
+              <line x1={0} y1={2} x2={12} y2={2} stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="3 2" />
+            </svg>
+            merge edge (branches lane)
+          </span>
+        )}
       </div>
     </div>
   )

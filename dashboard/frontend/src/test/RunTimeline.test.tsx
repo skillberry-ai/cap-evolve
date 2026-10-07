@@ -241,4 +241,51 @@ describe('RunTimeline', () => {
     const svg = document.querySelector('svg')
     expect(svg).toBeInTheDocument()
   })
+
+  // #676: a Timeline-tab DAG view of merges, reusing #669's layoutLineage/merge_of
+  // rather than reimplementing graph layout.
+  describe('branch/merge graph lane (graph prop)', () => {
+    const act = (id: string, type: Activity['type'], lane: Activity['lane'], iteration: number | null,
+      candidate: string | null, start: number, end: number): Activity =>
+      ({ id, type, lane, iteration, candidate, start, end, error: false })
+
+    // seed -> c1 (iter 1) ; seed -> c2 (iter 1, sibling) ; c3 merges c1 (parent) + c2 (merge_of)
+    const mergeSummary: RunSummaryDetail = {
+      baseline_val: 0.4,
+      best_val: 0.6,
+      delta_pct: 50,
+      test_reward: 0.6,
+      elapsed_seconds: 1000,
+      activities: [
+        act('seed-eval', 'seed', 'evaluator', 0, 'seed', 0, 10),
+        act('iter-1-eval', 'evaluate', 'evaluator', 1, 'c1', 10, 100),
+        act('iter-1-gate', 'gate', 'gate', 1, 'c1', 100, 100),
+        act('iter-2-eval', 'evaluate', 'evaluator', 1, 'c2', 10, 90),
+        act('iter-2-gate', 'gate', 'gate', 1, 'c2', 90, 90),
+        act('iter-3-eval', 'evaluate', 'evaluator', 2, 'c3', 100, 200),
+        act('iter-3-gate', 'gate', 'gate', 2, 'c3', 200, 200),
+      ],
+    }
+    const mergeNodes: GraphNode[] = [
+      { id: 'seed', parent: null, children: ['c1', 'c2'], status: 'seed', val: 0.4 },
+      { id: 'c1', parent: 'seed', children: ['c3'], status: 'accepted', val: 0.5, iteration: 1 },
+      { id: 'c2', parent: 'seed', children: ['c3'], status: 'accepted', val: 0.45, iteration: 1 },
+      { id: 'c3', parent: 'c1', children: [], status: 'accepted', val: 0.6, iteration: 2, merge_of: ['c1', 'c2'] },
+    ]
+    const mergeGraph = { root: 'seed', best_id: 'c3', nodes: mergeNodes }
+
+    it('skips the lane entirely when no graph prop is given', () => {
+      render(<RunTimeline summary={mergeSummary} nodes={mergeNodes} />)
+      expect(screen.queryByText('Branches')).not.toBeInTheDocument()
+    })
+
+    it('renders a branches lane with a dashed merge edge when a graph is given', () => {
+      render(<RunTimeline summary={mergeSummary} nodes={mergeNodes} graph={mergeGraph} />)
+      expect(screen.getByText('Branches')).toBeInTheDocument()
+      const dashedPaths = [...document.querySelectorAll('path')].filter(
+        p => p.getAttribute('stroke-dasharray') === '4 3',
+      )
+      expect(dashedPaths.length).toBeGreaterThan(0)
+    })
+  })
 })

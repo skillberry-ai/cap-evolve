@@ -301,7 +301,7 @@ function TabBody({
         }
       }
       
-      return <RunTimeline summary={s} nodes={data.graph.nodes} onActivityClick={(activityId) => {
+      return <RunTimeline summary={s} nodes={data.graph.nodes} graph={data.graph} onActivityClick={(activityId) => {
         // Parse activity ID to extract iteration number
         const match = activityId.match(/iter-(\d+)/)
         if (match) {
