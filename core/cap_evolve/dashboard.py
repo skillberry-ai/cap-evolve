@@ -24,6 +24,10 @@ The candidate **graph** schema (``reduced["graph"]``)::
     {"nodes": [
         {"id", "parent", "children": [...], "status": seed|accepted|rejected|failed,
          "val", "stderr", "per_task": {task_id: reward}, "feedback": {task_id: str},
+         "per_task_metrics"?: {task_id: {objective_name: value}},  # secondary objectives'
+                                       # per-task values (currently just "cost" = cost_usd),
+                                       # for a multi-objective (pareto gate_mode) run's Tasks
+                                       # tab — {} on every run with nothing priced per task (#676)
          "cost_usd", "tokens", "seconds", "optimizer_seconds", "runner_seconds",
          "iteration", "reason", "epoch"?, "merge_of"?, "best_so_far",
          "gate_delta"?, "gate_stderr"?, "gate_n"?, "gate_k_se"?, "gate_threshold"?,
@@ -58,7 +62,11 @@ The **summary** schema (``reduced["summary"]``)::
      "wall_clock_seconds", "optimizer_seconds", "runner_seconds",
      "cost": {optimizer_usd, runner_usd, total_usd}, "tokens": int,
      "gate_warnings": [...], "diagnoses": [...], "git_log": [...],
-     "controls": [{"tag", "reward", "stderr", "n", "iteration", "t"}, ...]}
+     "controls": [{"tag", "reward", "stderr", "n", "iteration", "t"}, ...],
+     "objectives"?: [{"name", "direction"}, ...]}  # declared multi-objective config, read
+                                                     # from capevolve.yaml's gate_mode/
+                                                     # objectives; None on a single-objective
+                                                     # run (#676)
 
 ``controls`` lists null-control replicate evaluations — evaluate-only measurements with no
 candidate-graph node — detected by ``_is_control_event``: the documented ``ctl_null`` TAG
@@ -222,19 +230,24 @@ def _read_json(path: Path | None) -> dict:
 
 
 def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
-    """(per_task_reward, feedback) for ``tag`` rebuilt from persisted rollouts.
+    """(per_task_reward, feedback, per_task_cost_usd) for ``tag`` rebuilt from persisted rollouts.
 
-    Uses the canonical core helper so scores match the loop exactly. Returns two
+    Uses the canonical core helper so scores match the loop exactly. Returns three
     dicts keyed by task id; empty if no rollouts were persisted for this tag.
+    ``cost`` (#676) is per-task mean cost_usd over its trials, absent for a task with
+    no priced trial — read by ``reduce_run`` for the Tasks tab's per-objective view.
     """
     try:
         from . import harness
         sr = harness.split_result_from_rollouts(run_dir, tag, split)
     except Exception:  # noqa: BLE001 — degrade: a missing/odd rollout shouldn't crash the report
-        return {}, {}
-    per = {pt["task_id"]: pt["reward"] for pt in sr.to_dict().get("per_task", [])}
-    fb = {pt["task_id"]: pt.get("feedback", "") for pt in sr.to_dict().get("per_task", [])}
-    return per, fb
+        return {}, {}, {}
+    rows = sr.to_dict().get("per_task", [])
+    per = {pt["task_id"]: pt["reward"] for pt in rows}
+    fb = {pt["task_id"]: pt.get("feedback", "") for pt in rows}
+    cost = {pt["task_id"]: (pt.get("raw") or {}).get("cost_usd") for pt in rows
+            if (pt.get("raw") or {}).get("cost_usd") is not None}
+    return per, fb, cost
 
 
 def _parse_process_md_skipped(process_text: str) -> list:
@@ -634,6 +647,91 @@ def _budget_exhausted(budget, spent) -> str | None:
             return f"{name} reached ({used:g} / {limit:g})"
     if budget.stall and spent.stall >= budget.stall:
         return f"stalled ({spent.stall} consecutive non-improving iterations)"
+    return None
+
+
+def _gate_mode_from_spec(root: Path) -> str | None:
+    """``gate_mode`` from the sibling project spec — same flat-key reader as
+    ``_algorithm_from_spec``/``_orchestration_mode`` (#676)."""
+    for spec in (_safe_subpath(root.parent, "project", "capevolve.yaml"),
+                 _safe_subpath(root, "capevolve.yaml")):
+        if spec is None or not spec.is_file():
+            continue
+        try:
+            for line in spec.read_text(encoding="utf-8").splitlines():
+                if line.startswith("gate_mode:"):
+                    val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
+                    if val:
+                        return val
+        except OSError:
+            continue
+    return None
+
+
+#: Mirrors ``gate.py``'s own ``_DEFAULT_PARETO_OBJECTIVES`` — used only as a fallback label
+#: set when ``gate_mode: pareto`` is declared but ``objectives:`` could not be parsed (e.g.
+#: no PyYAML and a multi-line block form — see ``_objectives_from_spec``).
+_DEFAULT_PARETO_OBJECTIVES = [
+    {"name": "reward", "direction": "maximize"},
+    {"name": "cost", "direction": "minimize"},
+]
+
+
+def _objectives_from_spec(root: Path) -> list[dict] | None:
+    """Declared ``objectives:`` list from the sibling project spec, or None (#676).
+
+    Hand-rolled rather than ``specfile.read_yaml``: that reader's zero-dependency
+    fallback (no PyYAML — core has zero hard runtime deps) only handles flat scalars
+    and one level of dict nesting, not a list of mappings. This parses only the one
+    shape ``objectives:`` uses in ``templates/project/capevolve.yaml``: a block list of
+    either ``- {name: x, direction: y}`` or multi-line ``- name: x`` / ``  direction: y``
+    items.
+    """
+    for spec in (_safe_subpath(root.parent, "project", "capevolve.yaml"),
+                 _safe_subpath(root, "capevolve.yaml")):
+        if spec is None or not spec.is_file():
+            continue
+        try:
+            lines = spec.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        objs: list[dict] = []
+        cur: dict = {}
+        in_block = False
+        for raw in lines:
+            line = raw.split("#", 1)[0].rstrip()
+            if not in_block:
+                if line.strip() == "objectives:":
+                    in_block = True
+                continue
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if not line[:1].isspace():
+                break  # dedented past the block
+            if stripped.startswith("- "):
+                if cur:
+                    objs.append(cur)
+                cur = {}
+                item = stripped[2:].strip()
+                if item.startswith("{") and item.endswith("}"):
+                    for part in item[1:-1].split(","):
+                        k, _, v = part.partition(":")
+                        if k.strip():
+                            cur[k.strip()] = v.strip().strip("'\"")
+                elif ":" in item:
+                    k, _, v = item.partition(":")
+                    cur[k.strip()] = v.strip().strip("'\"")
+            elif ":" in stripped:
+                k, _, v = stripped.partition(":")
+                cur[k.strip()] = v.strip().strip("'\"")
+            else:
+                break  # unrecognised shape — stop rather than guess
+        if cur:
+            objs.append(cur)
+        if objs:
+            return [{"name": o["name"], "direction": o.get("direction", "maximize")}
+                    for o in objs if o.get("name")]
     return None
 
 
@@ -1413,6 +1511,12 @@ def reduce_run(run_dir) -> dict:
 
     per_task_file = _val_per_task_file(root)
 
+    # #676: declared multi-objective config (pareto gate_mode), for the Tasks tab's
+    # per-objective view. None for every ordinary single-objective run.
+    objectives = _objectives_from_spec(root)
+    if objectives is None and _gate_mode_from_spec(root) == "pareto":
+        objectives = list(_DEFAULT_PARETO_OBJECTIVES)
+
     base_val_obj = baseline.get("val") or {}
     baseline_val = base_val_obj.get("reward")
     tasks = [pt["task_id"] for pt in base_val_obj.get("per_task", [])]
@@ -1453,10 +1557,13 @@ def reduce_run(run_dir) -> dict:
 
     # --- nodes: start with the seed -------------------------------------
     nodes: dict[str, dict] = {}
-    seed_per, seed_fb = _per_task_from_rollouts(run_dir, "seed", "val")
+    seed_per, seed_fb, seed_cost = _per_task_from_rollouts(run_dir, "seed", "val")
     if not seed_per:  # no rollouts persisted (synthetic logs) → fall back to baseline.json
         seed_per = {pt["task_id"]: pt["reward"] for pt in base_val_obj.get("per_task", [])}
         seed_fb = {pt["task_id"]: pt.get("feedback", "") for pt in base_val_obj.get("per_task", [])}
+        seed_cost = {pt["task_id"]: (pt.get("raw") or {}).get("cost_usd")
+                     for pt in base_val_obj.get("per_task", [])
+                     if (pt.get("raw") or {}).get("cost_usd") is not None}
     if not seed_per and "seed" in per_task_file:
         seed_per = per_task_file["seed"]["per_task"]
         seed_fb = per_task_file["seed"]["feedback"] or seed_fb
@@ -1464,6 +1571,10 @@ def reduce_run(run_dir) -> dict:
         "id": "seed", "parent": None, "children": [], "status": "seed",
         "val": baseline_val, "stderr": base_val_obj.get("stderr"),
         "per_task": seed_per, "feedback": seed_fb,
+        # #676: per-task secondary-objective values (currently just cost_usd), additive —
+        # absent/empty on every run that predates this or has no priced rollouts.
+        "per_task_metrics": ({tid: {"cost": c} for tid, c in seed_cost.items()}
+                              if seed_cost else {}),
         "cost_usd": (base_val_obj.get("cost_usd") or 0.0),
         "tokens": (base_val_obj.get("tokens") or 0),
         "seconds": (base_val_obj.get("seconds") or 0.0),
@@ -1583,7 +1694,7 @@ def reduce_run(run_dir) -> dict:
         val = ev.get("val")
         parent_val = ev.get("parent_val")
 
-        per, fb = _per_task_from_rollouts(run_dir, cid, "val")
+        per, fb, cost = _per_task_from_rollouts(run_dir, cid, "val")
         if not per and cid in per_task_file:
             per = per_task_file[cid]["per_task"]
             fb = per_task_file[cid]["feedback"] or fb
@@ -1662,6 +1773,9 @@ def reduce_run(run_dir) -> dict:
             "n_scored": val_n_scored.get(cid),
             "per_task": per,
             "feedback": fb,
+            # #676: per-task secondary-objective values (currently just cost_usd), additive —
+            # empty whenever no rollout for this candidate was priced.
+            "per_task_metrics": {tid: {"cost": c} for tid, c in cost.items()} if cost else {},
             "cost_usd": ev.get("cost_usd") or vev.get("cost_usd") or 0.0,
             "tokens": ev.get("tokens") or vev.get("tokens") or 0,
             # Per-iteration optimizer cost/tokens (RITS runner cost is often $0/null,
@@ -2391,7 +2505,7 @@ def reduce_run(run_dir) -> dict:
         # rollout->per-task reconstruction a full-val node uses, so a screen shows up in
         # the Tasks matrix identically to any other scored node instead of being
         # invisible there.
-        per_task, per_task_fb = _per_task_from_rollouts(run_dir, screen_tag, "val")
+        per_task, per_task_fb, _per_task_cost = _per_task_from_rollouts(run_dir, screen_tag, "val")
         # Per-task delta vs the screen's own reference candidate (``current``), straight
         # from ``paired.deltas`` — the number the screen actually decided on.
         delta_ids = [str(x) for x in (paired.get("ids") or [])]
@@ -2723,6 +2837,9 @@ def reduce_run(run_dir) -> dict:
     summary = {
         "run_id": root.name,
         "algorithm": algorithm,
+        # Declared multi-objective config (#676), for the Tasks tab's per-objective view.
+        # None for an ordinary single-objective run (today's dashboard, unchanged).
+        "objectives": objectives,
         # Where the identity came from: a distinguishing event kind, the run dir's own
         # evograph wiki, or the project spec. None ⇒ the UI shows "not recorded".
         "algorithm_source": algorithm_source,

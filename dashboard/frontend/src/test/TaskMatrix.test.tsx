@@ -4,7 +4,7 @@
  * agent-controlled — PR #469/#473).
  */
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { TaskMatrix } from '../components/TaskMatrix'
 import type { GraphNode, RunSummaryDetail } from '../lib/types'
 
@@ -97,5 +97,46 @@ describe('TaskMatrix', () => {
     // The round band header carries the batch id as a title/tooltip on the spanning cell.
     expect(screen.getByTitle(/gated together by round.py: round_i1/)).toBeInTheDocument()
     expect(screen.getByTitle(/gated together by round.py: round_i2/)).toBeInTheDocument()
+  })
+
+  // #676: a multi-objective (pareto) run shows every declared objective's per-task
+  // score and its delta vs the parent, not just reward.
+  describe('multi-objective (#676)', () => {
+    const moSummary = summary({
+      objectives: [
+        { name: 'reward', direction: 'maximize' },
+        { name: 'cost', direction: 'minimize' },
+      ],
+    })
+    const moSeed = node({
+      id: 'seed',
+      status: 'seed',
+      val: 0.5,
+      per_task: { t1: 1, t2: 0 },
+      per_task_metrics: { t1: { cost: 0.02 }, t2: { cost: 0.04 } },
+    })
+    const moCand = node({
+      id: 'cand_a',
+      parent: 'seed',
+      per_task: { t1: 1, t2: 1 },
+      per_task_metrics: { t1: { cost: 0.01 }, t2: { cost: 0.02 } },
+    })
+
+    it("shows a secondary objective's per-task value and its delta vs parent on hover", () => {
+      render(<TaskMatrix summary={moSummary} nodes={[moSeed, moCand]} />)
+      const cell = screen.getByLabelText(/t1 on cand_a:/)
+      fireEvent.mouseEnter(cell)
+      expect(screen.getByText('cost')).toBeInTheDocument()
+      expect(screen.getByText('0.010')).toBeInTheDocument()
+      // t1: cand_a cost 0.01 vs seed 0.02 -> delta -0.010 (an improvement, cost minimizes).
+      expect(screen.getByText('(-0.010)')).toBeInTheDocument()
+    })
+
+    it('renders exactly as before (no objective block) for a single-objective run', () => {
+      render(<TaskMatrix summary={summary()} nodes={[seed, fullCandidate]} />)
+      const cell = screen.getByLabelText(/t1 on cand_full:/)
+      fireEvent.mouseEnter(cell)
+      expect(screen.queryByText('cost')).not.toBeInTheDocument()
+    })
   })
 })

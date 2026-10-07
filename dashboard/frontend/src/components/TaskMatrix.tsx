@@ -106,6 +106,16 @@ export function TaskMatrix({
 }) {
   const [hover, setHover] = useState<{ task: string; node: GraphNode } | null>(null)
 
+  // #676: a run that declared more than one objective (pareto gate_mode) gets the
+  // extra per-objective-score-and-delta detail in the hover panel below; an ordinary
+  // single-objective run (objectives absent or length <= 1) renders exactly as before.
+  const objectives = useMemo(
+    () => (summary.objectives ?? []).filter((o) => o.name !== 'reward'),
+    [summary.objectives],
+  )
+  const isMultiObjective = (summary.objectives?.length ?? 0) > 1
+  const parentOf = (n: GraphNode) => nodes.find((p) => p.id === n.parent)
+
   const cols = useMemo(() => {
     const candidateCols = nodes
       .filter((n) => Object.keys(n.per_task ?? {}).length > 0)
@@ -297,8 +307,31 @@ export function TaskMatrix({
                   <span className="text-foreground">
                     {hover.node.per_task?.[hover.task]?.toFixed(3) ?? '—'}
                   </span>
+                  {isMultiObjective && (
+                    <ObjectiveDelta
+                      value={hover.node.per_task?.[hover.task]}
+                      parentValue={parentOf(hover.node)?.per_task?.[hover.task]}
+                      direction="maximize"
+                    />
+                  )}
                 </span>
               </div>
+              {isMultiObjective && objectives.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
+                  {objectives.map((obj) => {
+                    const value = hover.node.per_task_metrics?.[hover.task]?.[obj.name]
+                    if (value == null) return null
+                    const parentValue = parentOf(hover.node)?.per_task_metrics?.[hover.task]?.[obj.name]
+                    return (
+                      <span key={obj.name} className="tnum">
+                        {obj.name}{' '}
+                        <span className="text-foreground">{value.toFixed(3)}</span>
+                        <ObjectiveDelta value={value} parentValue={parentValue} direction={obj.direction} />
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
               {hover.node.feedback?.[hover.task] && (
                 <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted-strong">
                   {hover.node.feedback[hover.task]}
@@ -476,6 +509,29 @@ export function SealedTestMatrix({ summary }: { summary: RunSummaryDetail }) {
         </div>
       </div>
     </Card>
+  )
+}
+
+/** Δ vs parent for one objective's per-task value, signed so the colour reflects
+ *  whether that direction is an improvement — a cost INCREASE is red, a reward
+ *  increase is green (#676). `null` when either side is unmeasured. */
+function ObjectiveDelta({
+  value,
+  parentValue,
+  direction,
+}: {
+  value: number | null | undefined
+  parentValue: number | null | undefined
+  direction: string
+}) {
+  if (value == null || parentValue == null) return null
+  const raw = value - parentValue
+  const improved = direction === 'minimize' ? raw < 0 : raw > 0
+  const tie = Math.abs(raw) < 1e-9
+  return (
+    <span className={tie ? 'text-muted' : improved ? 'text-accepted' : 'text-rejected'}>
+      {' '}({raw > 0 ? '+' : ''}{raw.toFixed(3)})
+    </span>
   )
 }
 

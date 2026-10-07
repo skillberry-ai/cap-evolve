@@ -269,6 +269,10 @@ export interface GraphNode {
   val: number | null
   stderr?: number | null
   per_task?: Record<string, number>
+  /** Secondary objectives' per-task values for a multi-objective run (e.g. {t1: {cost:
+   *  0.02}}) — currently just "cost" (mean cost_usd over the task's trials). Empty/absent
+   *  on every single-objective run, or when nothing was priced per task (#676). */
+  per_task_metrics?: Record<string, Record<string, number>>
   feedback?: Record<string, string>
   /** Tasks this candidate fixed / broke vs its parent, when the run recorded the
    *  movement. Empty (not absent-as-zero) when nothing was recorded. */
@@ -395,6 +399,10 @@ export interface RunSummaryDetail {
   }
   frontier?: number
   tasks?: string[]
+  /** Declared multi-objective config (pareto gate_mode), read from capevolve.yaml.
+   *  Absent/null on an ordinary single-objective run — the Tasks tab renders exactly
+   *  as before whenever this is unset or has one entry (#676). */
+  objectives?: { name: string; direction: 'maximize' | 'minimize' | string }[] | null
   wall_clock_seconds?: number | null
   optimizer_seconds?: number | null
   runner_seconds?: number | null

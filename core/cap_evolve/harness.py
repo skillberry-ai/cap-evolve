@@ -352,6 +352,12 @@ def evaluate_candidate(
     per_task_metrics: dict[str, list] = {t.id: [] for t in tasks}  # per-trial metric catalogs
     per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
     per_task_errored_trials: dict[str, int] = {t.id: 0 for t in tasks}  # how many trials errored
+    # #676: per-task cost, for the dashboard's multi-objective Tasks view. Every rollout
+    # already carries its own cost_usd (Rollout.cost_usd) — the run-level evaluate() cost
+    # is just the sum of these over tasks/trials, so attributing it per task is free. Every
+    # trial counts (even an errored one spent real money), unlike per_task_trials above
+    # which only keeps valid rewards.
+    per_task_cost: dict[str, list[float]] = {t.id: [] for t in tasks}
     task_by_id = {t.id: t for t in tasks}
     run_acc = {"cost": 0.0, "tokens": 0, "cost_source": {}}  # RUNNER spend, summed over rollouts
     t0 = time.time()
@@ -397,6 +403,7 @@ def evaluate_candidate(
                 per_task_errored_trials[tid] += 1
             run_acc["cost"] += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
             run_acc["tokens"] += int(getattr(rollout, "tokens", 0) or 0)
+            per_task_cost[tid].append(float(getattr(rollout, "cost_usd", 0.0) or 0.0))
             # An adapter that cannot price its rollouts (e.g. an unmetered proxy
             # endpoint) tags this in metadata rather than silently reporting $0 as
             # "free" — count it so the eval record can say "unpriced", not "$0".
@@ -539,7 +546,10 @@ def evaluate_candidate(
             raw={"errored": per_task_errored[tid],
                  "errored_trials": per_task_errored_trials[tid],
                  "valid_trials": len(tr),
-                 "n_trials": n_trials},
+                 "n_trials": n_trials,
+                 # mean cost_usd over this task's trials (#676); None, not 0.0, when no
+                 # trial ran at all so a missing measurement never reads as free.
+                 "cost_usd": (mean(per_task_cost[tid]) if per_task_cost[tid] else None)},
             metrics=_aggregate_metrics(per_task_metrics[tid], mean(tr)),
         ))
 
@@ -588,12 +598,15 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     feedback: dict[str, str] = {}
     raw: dict[str, dict] = {}
     metrics_by_task: dict[str, list] = {}
+    cost_by_task: dict[str, list[float]] = {}  # #676: per-task cost, every trial counts
     if vdir.exists():
         for f in sorted(g for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
             rec = _json.loads(f.read_text(encoding="utf-8"))
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
             feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
+            cost_by_task.setdefault(tid, []).append(
+                float((rec.get("rollout") or {}).get("cost_usd") or 0.0))
             # carry the structured infra flag + trial counts forward across resume.
             # Each rollout file is one trial, so count an errored trial here and tally
             # the total trials seen — letting _is_infra_ignore reconstruct the
@@ -621,6 +634,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
                 metrics_by_task.setdefault(tid, []).append(sc.get("metrics") or [])
     for tid, r0 in raw.items():
         r0["valid_trials"] = len(by_task.get(tid, []))
+        r0["cost_usd"] = mean(cost_by_task[tid]) if cost_by_task.get(tid) else None
     scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
                     n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}),
                     metrics=_aggregate_metrics(metrics_by_task.get(t, []), mean(r)))
