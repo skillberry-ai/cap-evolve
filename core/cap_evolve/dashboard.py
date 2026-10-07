@@ -650,88 +650,33 @@ def _budget_exhausted(budget, spent) -> str | None:
     return None
 
 
-def _gate_mode_from_spec(root: Path) -> str | None:
-    """``gate_mode`` from the sibling project spec — same flat-key reader as
-    ``_algorithm_from_spec``/``_orchestration_mode`` (#676)."""
-    for spec in (_safe_subpath(root.parent, "project", "capevolve.yaml"),
-                 _safe_subpath(root, "capevolve.yaml")):
-        if spec is None or not spec.is_file():
-            continue
-        try:
-            for line in spec.read_text(encoding="utf-8").splitlines():
-                if line.startswith("gate_mode:"):
-                    val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
-                    if val:
-                        return val
-        except OSError:
-            continue
-    return None
-
-
 #: Mirrors ``gate.py``'s own ``_DEFAULT_PARETO_OBJECTIVES`` — used only as a fallback label
-#: set when ``gate_mode: pareto`` is declared but ``objectives:`` could not be parsed (e.g.
-#: no PyYAML and a multi-line block form — see ``_objectives_from_spec``).
+#: set when ``gate_mode: pareto`` is declared but ``objectives:`` is absent from the spec.
 _DEFAULT_PARETO_OBJECTIVES = [
     {"name": "reward", "direction": "maximize"},
     {"name": "cost", "direction": "minimize"},
 ]
 
 
-def _objectives_from_spec(root: Path) -> list[dict] | None:
-    """Declared ``objectives:`` list from the sibling project spec, or None (#676).
+def _objectives_from_run(run_dir, root: Path) -> list[dict] | None:
+    """Declared ``objectives:`` list from THIS run's actual spec, or None (#676/#682).
 
-    Hand-rolled rather than ``specfile.read_yaml``: that reader's zero-dependency
-    fallback (no PyYAML — core has zero hard runtime deps) only handles flat scalars
-    and one level of dict nesting, not a list of mappings. This parses only the one
-    shape ``objectives:`` uses in ``templates/project/capevolve.yaml``: a block list of
-    either ``- {name: x, direction: y}`` or multi-line ``- name: x`` / ``  direction: y``
-    items.
+    Resolved via ``specfile.spec_for_run`` — the same ``--spec`` variant (``run_config``
+    event) that ``_read_config`` already uses for the Config tab — rather than a second,
+    separately hand-rolled reader of a hardcoded ``project/capevolve.yaml``: that used to
+    make a variant-spec run's Config tab correctly show pareto objectives while this
+    field silently read the wrong (generic) file.
     """
-    for spec in (_safe_subpath(root.parent, "project", "capevolve.yaml"),
-                 _safe_subpath(root, "capevolve.yaml")):
-        if spec is None or not spec.is_file():
-            continue
-        try:
-            lines = spec.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            continue
-        objs: list[dict] = []
-        cur: dict = {}
-        in_block = False
-        for raw in lines:
-            line = raw.split("#", 1)[0].rstrip()
-            if not in_block:
-                if line.strip() == "objectives:":
-                    in_block = True
-                continue
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if not line[:1].isspace():
-                break  # dedented past the block
-            if stripped.startswith("- "):
-                if cur:
-                    objs.append(cur)
-                cur = {}
-                item = stripped[2:].strip()
-                if item.startswith("{") and item.endswith("}"):
-                    for part in item[1:-1].split(","):
-                        k, _, v = part.partition(":")
-                        if k.strip():
-                            cur[k.strip()] = v.strip().strip("'\"")
-                elif ":" in item:
-                    k, _, v = item.partition(":")
-                    cur[k.strip()] = v.strip().strip("'\"")
-            elif ":" in stripped:
-                k, _, v = stripped.partition(":")
-                cur[k.strip()] = v.strip().strip("'\"")
-            else:
-                break  # unrecognised shape — stop rather than guess
-        if cur:
-            objs.append(cur)
-        if objs:
-            return [{"name": o["name"], "direction": o.get("direction", "maximize")}
-                    for o in objs if o.get("name")]
+    from . import specfile
+    spec = specfile.spec_for_run(run_dir, _find_project_dir(root))
+    objs = spec.get("objectives")
+    if isinstance(objs, list) and objs:
+        parsed = [{"name": o["name"], "direction": o.get("direction", "maximize")}
+                  for o in objs if isinstance(o, dict) and o.get("name")]
+        if parsed:
+            return parsed
+    if spec.get("gate_mode") == "pareto":
+        return list(_DEFAULT_PARETO_OBJECTIVES)
     return None
 
 
@@ -1511,11 +1456,9 @@ def reduce_run(run_dir) -> dict:
 
     per_task_file = _val_per_task_file(root)
 
-    # #676: declared multi-objective config (pareto gate_mode), for the Tasks tab's
-    # per-objective view. None for every ordinary single-objective run.
-    objectives = _objectives_from_spec(root)
-    if objectives is None and _gate_mode_from_spec(root) == "pareto":
-        objectives = list(_DEFAULT_PARETO_OBJECTIVES)
+    # #676/#682: declared multi-objective config (pareto gate_mode), for the Tasks
+    # tab's per-objective view. None for every ordinary single-objective run.
+    objectives = _objectives_from_run(run_dir, root)
 
     base_val_obj = baseline.get("val") or {}
     baseline_val = base_val_obj.get("reward")
