@@ -2,9 +2,10 @@
 
 capevolve.yaml and meta.yaml are small, controlled documents — we don't want a YAML
 dependency just to read them. Uses PyYAML if present, else a minimal reader that
-handles: ``key: scalar``, ``key: [a, b]``, one level of nesting under ``key:``,
-``# comments``, and ``--- frontmatter ---`` blocks. Good enough for our schema;
-not a general YAML parser.
+handles: ``key: scalar``, ``key: [a, b]``, ``key: {a: b}``, one level of nesting under
+``key:``, a block sequence of mappings (``key:\\n  - a: 1\\n    b: 2`` or
+``key:\\n  - {a: 1, b: 2}`` — needed for ``objectives:``, #676), ``# comments``, and
+``--- frontmatter ---`` blocks. Good enough for our schema; not a general YAML parser.
 """
 
 from __future__ import annotations
@@ -19,6 +20,15 @@ def _coerce(val: str):
     if s.startswith("[") and s.endswith("]"):
         inner = s[1:-1].strip()
         return [_coerce(x) for x in _split_list(inner)] if inner else []
+    if s.startswith("{") and s.endswith("}"):
+        inner = s[1:-1].strip()
+        if not inner:
+            return {}
+        d = {}
+        for pair in _split_list(inner):
+            k, _, v = pair.partition(":")
+            d[k.strip()] = _coerce(v.strip())
+        return d
     if (s[0], s[-1]) in (('"', '"'), ("'", "'")):
         return s[1:-1]
     if s.lower() in ("true", "false"):
@@ -76,20 +86,63 @@ def read_yaml(text: str) -> dict:
     except Exception:
         pass
     data: dict = {}
-    stack = [(-1, data)]  # (indent, container)
+    # stack entries: (indent, container, kind) — kind is "map" (container is a dict,
+    # grown by "key: val" lines) or "seq" (container is a list, grown by "- " lines).
+    stack = [(-1, data, "map")]
+    # A `key:` line with a blank value doesn't yet know whether its child block is a
+    # nested mapping or a sequence — that is only decided by the NEXT line, so the
+    # placeholder {} written for it is held here (as (indent, parent, key)) and
+    # resolved (possibly replaced with a list) one line later. See #676: `objectives:`
+    # is a block sequence of mappings, which this used to have no representation for at
+    # all (every "- " line was silently dropped — ":" not in a bare "- name: reward"
+    # dash line was true, but the OLD key/value split on it still mangled the result).
+    pending: tuple | None = None
     for raw in text.splitlines():
         line = _strip_comment(raw).rstrip()
-        if not line.strip() or ":" not in line:
+        if not line.strip():
             continue
         indent = len(line) - len(line.lstrip())
-        key, _, val = line.strip().partition(":")
-        key = key.strip()
+        content = line.strip()
+
+        if pending is not None:
+            pend_indent, parent, key = pending
+            pending = None
+            if indent > pend_indent:
+                is_seq = content.startswith("- ") or content == "-"
+                container = [] if is_seq else {}
+                parent[key] = container
+                stack.append((pend_indent, container, "seq" if is_seq else "map"))
+
         while stack and indent <= stack[-1][0]:
             stack.pop()
-        container = stack[-1][1] if stack else data
-        if val.strip() == "":
+        _, container, kind = stack[-1] if stack else (-1, data, "map")
+
+        if kind == "seq" and (content.startswith("- ") or content == "-"):
+            rest = content[1:].strip()
+            if rest and ":" in rest and rest[0] not in "{[\"'":
+                k, _, v = rest.partition(":")
+                k, v = k.strip(), v.strip()
+                item: dict = {}
+                container.append(item)
+                # Siblings of `k` (more "key: val" lines of the SAME item) are
+                # indented past the dash itself — same depth `k` started at.
+                stack.append((indent, item, "map"))
+                if v == "":
+                    item[k] = {}
+                    pending = (indent, item, k)
+                else:
+                    item[k] = _coerce(v)
+            else:
+                container.append(_coerce(rest))
+            continue
+
+        if ":" not in content:
+            continue
+        key, _, val = content.partition(":")
+        key, val = key.strip(), val.strip()
+        if val == "":
             container[key] = {}
-            stack.append((indent, container[key]))
+            pending = (indent, container, key)
         else:
             container[key] = _coerce(val)
     return data
@@ -151,22 +204,17 @@ def resolve_instructions_file(spec: dict, project) -> tuple[Path, bool, str]:
     return path, False, warning
 
 
-def spec_for_run(run_dir, project: Path | None = None) -> dict:
-    """The spec THIS run was started with, read from the run dir first.
+def resolve_spec_path(run_dir, project: Path | None = None) -> Path | None:
+    """The spec file THIS run was actually started with, or ``None``.
 
-    Why this is not ``read_yaml(project / "capevolve.yaml")``: ``cap-evolve run --spec``
-    fully supports a non-default spec filename, and every agent-mode run of a variant
-    spec (``capevolve.agentopt.yaml``) hit the same silent failure — the readout scripts
-    guessed ``capevolve.yaml``, found a *different* spec (or none), and reported
-    ``predicates: []``. The entire re-read-your-constraints discipline then no-ops
-    without a word: an agent asks "may I spend?", is told there are no constraints, and
-    keeps going past a ceiling the spec did define.
-
-    ``cli._resolve_spec`` already logs the resolved path into the run dir as the
-    ``run_config`` event's ``spec`` field precisely so a finished run is self-describing.
-    Read that; fall back to ``project/capevolve.yaml`` only when it is absent (an older
-    run dir), and return ``{}`` rather than raising, so a malformed spec cannot block a
-    budget readout.
+    ``cap-evolve run --spec`` fully supports a non-default spec filename, and every
+    agent-mode run of a variant spec (``capevolve.agentopt.yaml``) hit the same silent
+    failure elsewhere — readers guessed ``capevolve.yaml``, found a *different* spec (or
+    none), and silently read the wrong (or no) config. ``cli._resolve_spec`` already logs
+    the resolved path into the run dir as the ``run_config`` event's ``spec`` field
+    precisely so a finished run is self-describing. Read that; fall back to
+    ``project/capevolve.yaml`` only when it is absent (an older run dir, or no
+    ``run_config`` event at all).
     """
     import json as _json
 
@@ -187,8 +235,21 @@ def spec_for_run(run_dir, project: Path | None = None) -> dict:
         candidates.append(Path(project) / "capevolve.yaml")
     for p in candidates:
         if p.is_file():
-            try:
-                return read_yaml(p.read_text(encoding="utf-8")) or {}
-            except Exception:  # noqa: BLE001
-                return {}
-    return {}
+            return p
+    return None
+
+
+def spec_for_run(run_dir, project: Path | None = None) -> dict:
+    """The spec THIS run was started with, read from the run dir first.
+
+    See ``resolve_spec_path`` for which file this is and why it is not simply
+    ``read_yaml(project / "capevolve.yaml")``. Returns ``{}`` rather than raising when
+    the resolved file is missing/malformed, so a bad spec cannot block a budget readout.
+    """
+    path = resolve_spec_path(run_dir, project)
+    if path is None:
+        return {}
+    try:
+        return read_yaml(path.read_text(encoding="utf-8")) or {}
+    except Exception:  # noqa: BLE001
+        return {}

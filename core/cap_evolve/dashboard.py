@@ -927,7 +927,7 @@ _CONFIG_KEY_GROUPS = {
     "gate_k_se": "Budget & gate", "no_regression": "Budget & gate",
     "memory_skill": "Memory",
     "metric_primary": "Metrics & display", "metrics_display": "Metrics & display",
-    "metric_directions": "Metrics & display",
+    "metric_directions": "Metrics & display", "objectives": "Metrics & display",
     "github_integration": "GitHub",
 }
 _CONFIG_GROUP_ORDER = ("Capability", "Delivery", "Algorithm & optimizer", "Data & splits",
@@ -997,27 +997,33 @@ def _read_project_files(project_dir: Path, skip: set) -> list[dict]:
     return out
 
 
-def _read_config(root: Path) -> dict:
+def _read_config(run_dir) -> dict:
     """The full run configuration, generically — every intake artifact on disk.
 
-    Reads the sibling ``project/`` dir's ``capevolve.yaml`` (the parsed spec, grouped
-    for display — see ``_CONFIG_KEY_GROUPS``), ``PROJECT.md`` (the intake-authored
-    narrative of what was resolved/defaulted), and every other file under the project
-    dir (adapters/, seed_capability/, split files, ...) as a generic listing/preview.
-    Returns ``{}`` when no project dir is found — the panel hides itself.
+    Reads the sibling ``project/`` dir's spec (the parsed spec, grouped for display —
+    see ``_CONFIG_KEY_GROUPS``), ``PROJECT.md`` (the intake-authored narrative of what
+    was resolved/defaulted), and every other file under the project dir (adapters/,
+    seed_capability/, split files, ...) as a generic listing/preview. Returns ``{}``
+    when no project dir is found — the panel hides itself.
+
+    The spec file is resolved via ``specfile.resolve_spec_path`` — THIS run's actual
+    ``--spec`` (``run_config`` event), not a hardcoded ``capevolve.yaml`` — so a variant
+    spec filename (e.g. ``capevolve.v2.multiobjective.yaml``) is the one actually read,
+    not whichever ``capevolve.yaml`` happens to sit next to it in the project dir (#676:
+    this is exactly how a real multi-objective run's ``objectives``/``gate_mode: pareto``
+    went missing from the Config tab — the project dir's generic ``capevolve.yaml`` has
+    neither, the variant spec the run was actually started with has both).
     """
+    root = Path(run_dir.root)
     project_dir = _find_project_dir(root)
     if project_dir is None:
         return {}
-    from .specfile import read_yaml
-    # Joined through _safe_subpath like every other path here: the spec is read (and its
-    # presence reported) only when it is proven inside the project dir, so a capevolve.yaml
-    # symlinked out of it is treated as absent rather than followed.
-    spec_file = _safe_subpath(project_dir, "capevolve.yaml")
+    from . import specfile
+    spec_file = specfile.resolve_spec_path(run_dir, project_dir)
     spec = {}
     if spec_file is not None:
         try:
-            spec = read_yaml(spec_file.read_text(encoding="utf-8")) or {}
+            spec = specfile.read_yaml(spec_file.read_text(encoding="utf-8")) or {}
         except OSError:
             spec = {}
     groups: dict[str, list] = {}
@@ -1035,14 +1041,16 @@ def _read_config(root: Path) -> dict:
         except OSError:
             project_md = None
 
-    files = _read_project_files(project_dir, {"capevolve.yaml", "PROJECT.md"})
+    skip = {"PROJECT.md"} | ({spec_file.name} if spec_file is not None else {"capevolve.yaml"})
+    files = _read_project_files(project_dir, skip)
     if not spec_groups and not project_md and not files:
         return {}
     return {
         "project_dir": str(project_dir),
-        # True ⇒ the project dir exists but has no capevolve.yaml. The section says so and still
-        # lists the artifacts that ARE there, instead of disappearing without explanation.
-        "spec_missing": spec_file is None or not spec_file.is_file(),
+        # True ⇒ no spec file could be resolved at all (neither the run's own recorded
+        # --spec nor project/capevolve.yaml). The section says so and still lists the
+        # artifacts that ARE there, instead of disappearing without explanation.
+        "spec_missing": spec_file is None,
         "spec_groups": spec_groups,
         "project_md": project_md,
         "files": files,
@@ -2307,7 +2315,7 @@ def reduce_run(run_dir) -> dict:
     if evograph:
         algo_extra["evograph"] = evograph
     narrative = _read_narrative(root, best_id)
-    config = _read_config(root)
+    config = _read_config(run_dir)
     host_session = _read_host_session(root)
     par = [e for e in events if e.get("kind") == "parallel"]
     if par:

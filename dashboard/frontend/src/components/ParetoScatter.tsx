@@ -17,7 +17,9 @@ import { Card } from './ui/Card'
  * multi-objective machinery that isn't there). `objectives` isn't a recognized
  * capevolve.yaml key yet (see dashboard.py's `_CONFIG_KEY_GROUPS`), so it currently
  * surfaces under the "Other" group — read generically across every group instead of
- * assuming where it lands. */
+ * assuming where it lands. Checks raw array length, not shape: `getObjectives` (lib/
+ * objectives.ts) additionally validates each entry's shape for display, which a plain
+ * string list (an older/looser spec) would fail — this check must not regress on that. */
 export function isMultiObjective(summary: RunSummaryDetail | undefined): boolean {
   const groups = summary?.config?.spec_groups ?? []
   for (const g of groups) {

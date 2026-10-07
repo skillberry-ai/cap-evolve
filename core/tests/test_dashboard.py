@@ -342,6 +342,38 @@ def test_config_reads_spec_groups_project_md_and_files():
         assert "future_input" in html
 
 
+def test_config_groups_objectives_and_pareto_gate_mode():
+    """#676: a multi-objective run's `objectives`/`gate_mode: pareto` must land in
+    'Metrics & display' / 'Budget & gate' (not fall through to 'Other') so the
+    dashboard's Config tab can surface them plainly. Uses the block-sequence
+    `objectives:` shape templates/project/capevolve.yaml documents (a real run's
+    project yaml, not a flat list) — this format used to be unparseable by the
+    tolerant YAML fallback (see test_specfile.py)."""
+    from cap_evolve import dashboard
+    with tempfile.TemporaryDirectory() as d:
+        base = Path(d)
+        _mk_project(base, extra_spec=(
+            "gate_mode:          pareto\n"
+            "objectives:\n"
+            "  - name: reward\n"
+            "    direction: maximize\n"
+            "  - name: cost\n"
+            "    direction: minimize\n"
+        ))
+        rd = _mk_run(base, events=_BASE_EVENTS, baseline=_BASELINE)
+        r = dashboard.reduce_run(rd)
+        cfg = r["summary"]["config"]
+
+        groups = {g["group"]: {i["key"]: i["value"] for i in g["items"]}
+                   for g in cfg["spec_groups"]}
+        # the second `gate_mode:` line in extra_spec overrides _mk_project's "paired"
+        assert groups["Budget & gate"]["gate_mode"] == "pareto"
+        assert groups["Metrics & display"]["objectives"] == [
+            {"name": "reward", "direction": "maximize"},
+            {"name": "cost", "direction": "minimize"},
+        ]
+
+
 def test_config_degrades_binary_and_oversized_files():
     from cap_evolve import dashboard
     with tempfile.TemporaryDirectory() as d:
