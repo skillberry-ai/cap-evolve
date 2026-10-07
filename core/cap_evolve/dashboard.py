@@ -612,6 +612,54 @@ def _spend_metered(total_usd: float, paid_calls: int) -> bool:
     return not (paid_calls > 0 and total_usd == 0.0)
 
 
+def _rollout_progress(run_dir, ev: dict, now: float) -> dict | None:
+    """Poll the filesystem for an in-flight eval's REAL progress (#676): how many of
+    the expected rollouts are actually on disk right now, and how long ago the
+    newest one was written. Re-read fresh on every call, no caching — same
+    "re-read the run dir" philosophy the rest of this module already uses.
+
+    The event log alone cannot show this: an adapter's ``run_batch``/``run_trials``
+    fast path (e.g. tau2) hands the WHOLE grid back in one call and logs nothing in
+    between (see ``_progress_emitter`` in harness.py, which only the per-rollout
+    serial/pool path can call), which is exactly the gap that left the dashboard
+    reporting an 8500s-old "last event" while rollout files on disk were updating
+    every few minutes.
+
+    Two sources, tried in order:
+      1. ``rollouts/<split>/<task>__<tag>__t*.json`` — written incrementally by the
+         serial/thread-pool path for adapters without a batch fast path.
+      2. ``native_sims/<tag>/<split>/results_*.json`` — tau2's own checkpoint file,
+         appended to after every simulation even while ``run_batch``/``run_trials``
+         is still one open Python call (every tau2 adapter in this repo writes it;
+         see ``templates/adapters/tau2_bench/adapter.py:_sim_save_path``).
+
+    Returns ``None`` when neither source has anything yet.
+    """
+    tag = ev.get("tag")
+    split = ev.get("split")
+    total = ev.get("rollouts")
+    if not tag or not split or not isinstance(total, (int, float)) or not total:
+        return None
+
+    vdir = _safe_subpath(run_dir.rollouts, split)
+    if vdir is not None and vdir.is_dir():
+        files = [f for f in vdir.glob(f"*__{tag}__t*.json") if f.is_file()]
+        if files:
+            mtime = max(f.stat().st_mtime for f in files)
+            return {"completed": len(files), "total": int(total), "age": max(0.0, now - mtime)}
+
+    sims_dir = _safe_subpath(Path(run_dir.root), "native_sims", tag, split)
+    if sims_dir is not None and sims_dir.is_dir():
+        result_files = [f for f in sims_dir.glob("results_*.json") if f.is_file()]
+        if result_files:
+            latest = max(result_files, key=lambda f: f.stat().st_mtime)
+            sims = _read_json(latest).get("simulations")
+            if isinstance(sims, list) and sims:
+                return {"completed": len(sims), "total": int(total),
+                        "age": max(0.0, now - latest.stat().st_mtime)}
+    return None
+
+
 def _eval_busy(ev: dict, progress: dict | None = None) -> str:
     """"scoring <tag> on <split> (N rollouts)" — what an open ``eval_start`` is doing.
 
@@ -660,7 +708,7 @@ def _heartbeat_pid_alive(pid) -> bool:
 
 def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
                    has_candidates: bool, has_baseline: bool,
-                   heartbeat: dict | None = None) -> tuple[str, str]:
+                   heartbeat: dict | None = None, run_dir=None) -> tuple[str, str]:
     """``(status, reason)`` for a run — the six outcomes an operator must tell apart.
 
     ``completed`` (finalize sealed the test) · ``budget_exhausted`` (a cap was hit and
@@ -730,11 +778,24 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
     fresh = silent is not None and silent < window
     alive = fresh and not exhausted and not stopped
 
+    # #676: the event log's last-event timestamp is the LAST MILESTONE
+    # (eval_start/evaluate/...), which stays dark for the whole duration of a
+    # run_batch/run_trials eval — hours, for a real full-val tau2 run — even while
+    # rollout/results files are being written to disk every few minutes. When an
+    # eval is open, poll disk for the real in-flight count/freshness so the reason
+    # string reflects genuine progress instead of a stale milestone age.
+    fs_progress = _rollout_progress(run_dir, open_eval, now) if (open_eval and run_dir is not None) else None
+    eval_progress = dict(fs_progress) if fs_progress else open_eval_progress
+    if fs_progress and isinstance((open_eval_progress or {}).get("running_mean"), (int, float)):
+        eval_progress["running_mean"] = open_eval_progress["running_mean"]
+    freshness = (f"last rollout written {fs_progress['age']:.0f}s ago" if fs_progress
+                 else (f"last event {silent:.0f}s ago" if silent is not None else None))
+
     if not has_baseline and not has_candidates:
         if alive:
             # The phase that produces the very first number has not returned yet. That
             # is progress, not an outcome, and must never be reported as one.
-            return "running", (f"{_eval_busy(open_eval, open_eval_progress)}; last event {silent:.0f}s ago"
+            return "running", (f"{_eval_busy(open_eval, eval_progress)}; {freshness}"
                                if open_eval else
                                "the seed's baseline is still being scored — no candidate "
                                f"has been evaluated yet; last event {silent:.0f}s ago")
@@ -767,7 +828,7 @@ def _derive_status(*, events: list, now: float, budget, spent, agent_mode: bool,
             "phase script)")
 
     if alive:
-        return "running", (f"{_eval_busy(open_eval, open_eval_progress)}; last event {silent:.0f}s ago"
+        return "running", (f"{_eval_busy(open_eval, eval_progress)}; {freshness}"
                            if open_eval else f"last event {silent:.0f}s ago")
     if stopped:
         return "stalled", f"algorithm stopped ({stopped}) without finalizing the test split"
@@ -2528,7 +2589,7 @@ def reduce_run(run_dir) -> dict:
         events=events, now=now, budget=(run_dir.budget if sp is not None else None),
         spent=sp, agent_mode=(_orchestration_mode(root) == "agent"),
         has_candidates=len(nodes) > 1, has_baseline=baseline_val is not None,
-        heartbeat=heartbeat)
+        heartbeat=heartbeat, run_dir=run_dir)
     ts = [float(e["t"]) for e in events if isinstance(e.get("t"), (int, float))]
 
     # Elapsed wall time. For a finished run that is first event → last event. For a run

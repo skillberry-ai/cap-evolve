@@ -231,6 +231,75 @@ def test_eval_busy_omits_progress_when_none_seen_yet():
     assert "scoring the seed on the val split (300 rollouts)" == _eval_busy(ev, None)
 
 
+# ---- #676: live in-flight rollout-progress status instead of stale milestone ---
+
+def test_rollout_files_on_disk_override_stale_milestone_status_reason(tmp_path):
+    """A candidate's eval is genuinely in flight -- rollout files are landing on disk
+    every few minutes -- but no ``eval_progress`` heartbeat was ever logged (the
+    serial/pool path can be slow to fire one, or an older run predates #589). The
+    dashboard must still report the real completed/total count and freshness by
+    polling the rollout files directly, not the stale ``eval_start`` timestamp
+    (#676)."""
+    import os
+    import time
+    from cap_evolve import dashboard
+    now = time.time()
+    evs = [
+        {"kind": "splits", "train": 4, "val": 10, "test": 2, "seed": 0, "t": now - 9000},
+        {"kind": "eval_start", "split": "val", "tag": "cand_3", "n_tasks": 10,
+         "n_trials": 1, "workers": 1, "rollouts": 10, "t": now - 8554},
+    ]
+    rd = _mk_run(tmp_path, events=evs)
+    vdir = rd.rollouts / "val"
+    vdir.mkdir(parents=True, exist_ok=True)
+    # Only 4 of the 10 expected rollouts have landed so far; the newest 23s ago.
+    for i, task in enumerate(["t0", "t1", "t2", "t3"]):
+        p = vdir / f"{task}__cand_3__t0.json"
+        p.write_text("{}", encoding="utf-8")
+        mtime = now - 23 if task == "t3" else now - (300 - i * 30)
+        os.utime(p, (mtime, mtime))
+
+    r = dashboard.reduce_run(rd)
+    assert r["summary"]["status"] == "running"
+    reason = r["summary"]["status_reason"]
+    assert "4/10 rollouts done" in reason
+    assert "last rollout written 23s ago" in reason
+    assert "8554s ago" not in reason  # the stale milestone age must not leak through
+
+
+def test_native_sims_checkpoint_overrides_stale_milestone_status_reason(tmp_path):
+    """The real-world case this issue was filed for: a tau2 adapter's
+    ``run_batch``/``run_trials`` fast path hands the whole grid back in ONE call, so
+    the harness's own per-rollout files (above) stay dark for the entire eval -- but
+    tau2 checkpoints its OWN ``native_sims/<tag>/<split>/results_*.json`` after every
+    simulation. The dashboard must fall back to that file when the harness's rollout
+    files are empty (#676)."""
+    import os
+    import time
+    from cap_evolve import dashboard
+    now = time.time()
+    evs = [
+        {"kind": "splits", "train": 4, "val": 90, "test": 2, "seed": 0, "t": now - 9000},
+        {"kind": "eval_start", "split": "val", "tag": "cand_3", "n_tasks": 90,
+         "n_trials": 1, "workers": 1, "rollouts": 90, "t": now - 8554},
+    ]
+    rd = _mk_run(tmp_path, events=evs)
+    sims_dir = rd.root / "native_sims" / "cand_3" / "val"
+    sims_dir.mkdir(parents=True, exist_ok=True)
+    results = sims_dir / "results_20260101_000000_123.json"
+    results.write_text(json.dumps({"simulations": [{"task_id": str(i)} for i in range(47)]}),
+                        encoding="utf-8")
+    mtime = now - 23
+    os.utime(results, (mtime, mtime))
+
+    r = dashboard.reduce_run(rd)
+    assert r["summary"]["status"] == "running"
+    reason = r["summary"]["status_reason"]
+    assert "47/90 rollouts done" in reason
+    assert "last rollout written 23s ago" in reason
+    assert "8554s ago" not in reason
+
+
 def test_dashboard_degrades_without_rollouts_or_finalize():
     """No rollouts, no finalize, no candidate dirs → still reduces + renders."""
     from cap_evolve import dashboard
