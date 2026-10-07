@@ -237,6 +237,74 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     return per, fb
 
 
+def _parse_process_md_skipped(process_text: str) -> list:
+    """Parse PROCESS.md's ``## Deliberately skipped`` bullet list into
+    ``[{"title", "reason"}, ...]``. Real DIAGNOSIS.json files written by agent-optimize
+    runs rarely carry their own ``skipped`` field (#676), so this is the only place that
+    information exists on disk for most candidates. A bullet reading "N/A"/"none" (the
+    documented way to say nothing was skipped) yields no entries — never a fabricated one.
+    """
+    m = re.search(r"^#+\s*Deliberately skipped\b.*$", process_text, re.IGNORECASE | re.MULTILINE)
+    if not m:
+        return []
+    rest = process_text[m.end():]
+    nxt = re.search(r"^(#+\s|[-*_]{3,}\s*$)", rest, re.MULTILINE)
+    section = rest[:nxt.start()] if nxt else rest
+    out = []
+    for line in section.splitlines():
+        line = line.strip()
+        if not line.startswith(("-", "*")) or re.match(r"^[-*_]{3,}$", line):
+            continue  # not a bullet, or a markdown horizontal rule (e.g. a "---" divider)
+        line = line[1:].strip()
+        if not line or re.match(r"^n/?a\b|^none\b", line, re.IGNORECASE):
+            continue
+        if ":" in line:
+            title, reason = line.split(":", 1)
+        else:
+            title, reason = "Skipped", line
+        out.append({"title": title.strip(), "reason": reason.strip()})
+    return out
+
+
+def _normalize_diagnosis(diag: dict, parent_per_task: dict | None) -> dict:
+    """Fill the gaps between what real DIAGNOSIS.json files write and the richer schema
+    SKILL.md documents (and the dashboard renders), WITHOUT inventing data (#676).
+
+    Real agent-optimize candidates write ``clusters: [{id, signature, tasks, score_lost}]``
+    and ``edits: [{clusters, file, change}]`` — missing the documented ``name``/``id``/
+    ``title``/``files``. Here we derive the missing fields from what IS on disk:
+    cluster.name/detail <- signature, edit.id <- a stable index, edit.title <- change,
+    edit.files <- [file]. ``latent`` (a cluster naming no task that was failing in the
+    parent) is computed from the parent's own per_task, when available — never guessed.
+    """
+    clusters = diag.get("clusters") or []
+    for c in clusters:
+        if not isinstance(c, dict):
+            continue
+        if not c.get("name"):
+            c["name"] = c.get("signature") or c.get("id") or "cluster"
+        if not c.get("detail") and c.get("signature"):
+            c["detail"] = c["signature"]
+        if c.get("latent") is None and parent_per_task:
+            tasks = c.get("tasks") or []
+            was_failing = any(parent_per_task.get(t, 1) < 1 for t in tasks)
+            if tasks:
+                c["latent"] = not was_failing
+
+    edits = diag.get("edits")
+    if isinstance(edits, list):
+        for i, e in enumerate(edits):
+            if not isinstance(e, dict):
+                continue
+            if not e.get("id"):
+                e["id"] = f"e{i + 1}"
+            if not e.get("title"):
+                e["title"] = e.get("change") or "edit"
+            if not e.get("files") and e.get("file"):
+                e["files"] = [e["file"]]
+    return diag
+
+
 def _compute_outcomes(per_task: dict, parent_per_task: dict | None, fixed: list = None, broke: list = None) -> dict:
     """Classify each task's outcome vs its parent: fixed, broke, still_failing, still_passing.
     
@@ -1716,30 +1784,42 @@ def reduce_run(run_dir) -> dict:
         cand_dir = _safe_subpath(root, "candidates", nid)
         if cand_dir and cand_dir.exists():
             diag_path = cand_dir / "DIAGNOSIS.json"
+            process_path = cand_dir / "PROCESS.md"
             if diag_path.exists():
                 try:
                     diag_content = diag_path.read_text(encoding="utf-8")
                     n["diagnosis"] = json.loads(diag_content)
                 except Exception as e:  # noqa: BLE001
                     _diag_warning(nid, n, f"DIAGNOSIS.json unreadable: {str(e)[:200]}")
-            else:
+            elif process_path.exists():
                 # Fallback: try parsing PROCESS.md tables
-                process_path = cand_dir / "PROCESS.md"
-                if process_path.exists():
+                try:
+                    from . import harness
+                    process_text = process_path.read_text(encoding="utf-8")
+                    parsed = harness._parse_process_md_tables(process_text)
+                    if parsed:
+                        parsed["candidate"] = nid
+                        n["diagnosis"] = parsed
+                    else:
+                        _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md's "
+                                      "'Ranked issue list' / 'Changes made' tables have "
+                                      "no data rows — no diagnosis was recorded")
+                except Exception as e:  # noqa: BLE001
+                    _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md could not "
+                                  f"be parsed: {str(e)[:200]}")
+            # Normalize + fill `skipped` from PROCESS.md's own section, for either source
+            # above (#676: real DIAGNOSIS.json files rarely carry name/id/title/skipped).
+            diag = n.get("diagnosis")
+            if isinstance(diag, dict) and not diag.get("warnings"):
+                parent_per_task = nodes.get(n.get("parent"), {}).get("per_task")
+                n["diagnosis"] = _normalize_diagnosis(diag, parent_per_task)
+                if not diag.get("skipped") and process_path.exists():
                     try:
-                        from . import harness
-                        process_text = process_path.read_text(encoding="utf-8")
-                        parsed = harness._parse_process_md_tables(process_text)
-                        if parsed:
-                            parsed["candidate"] = nid
-                            n["diagnosis"] = parsed
-                        else:
-                            _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md's "
-                                          "'Ranked issue list' / 'Changes made' tables have "
-                                          "no data rows — no diagnosis was recorded")
-                    except Exception as e:  # noqa: BLE001
-                        _diag_warning(nid, n, "no DIAGNOSIS.json, and PROCESS.md could not "
-                                      f"be parsed: {str(e)[:200]}")
+                        skipped = _parse_process_md_skipped(process_path.read_text(encoding="utf-8"))
+                        if skipped:
+                            diag["skipped"] = skipped
+                    except Exception:  # noqa: BLE001 — best effort, never fatal
+                        pass
 
     # --- wire parent → children edges -----------------------------------
     for nid, n in nodes.items():

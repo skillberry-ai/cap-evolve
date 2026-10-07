@@ -189,4 +189,34 @@ describe('DiagnosisFlow', () => {
     render(<DiagnosisFlow diagnosis={{ headline: 'h', clusters: [{ id: 'P', name: 'p', tasks: ['1'] }] }} />)
     expect(screen.getByText('Edits (0)')).toBeInTheDocument()
   })
+
+  // #676: the task column groups by root-cause cluster, plus catch-all groups for a
+  // failing task no cluster named and a regression no cluster predicted.
+  it('groups failing-not-in-any-cluster and unpredicted-regression tasks (#676)', () => {
+    const diag: Diagnosis = {
+      headline: 'h',
+      clusters: [{ id: 'A', name: 'cluster A', tasks: ['task1'] }],
+      edits: [],
+    }
+    const outcomes: Outcomes = {
+      task1: 'fixed',
+      task2: 'still_failing', // failing, not named by any cluster
+      task4: 'broke', // regression not named by any cluster
+    }
+    render(<DiagnosisFlow diagnosis={diag} outcomes={outcomes} />)
+    expect(screen.getByText('failing, not in any cluster')).toBeInTheDocument()
+    expect(screen.getByText('regressions (were passing)')).toBeInTheDocument()
+    expect(screen.getByText('task2')).toBeInTheDocument()
+    expect(screen.getByText('task4')).toBeInTheDocument()
+  })
+
+  it('marks a latent cluster (no currently-failing task) as a preventive fix (#676)', () => {
+    const diag: Diagnosis = {
+      headline: 'h',
+      clusters: [{ id: 'L', name: 'preventive cluster', tasks: ['task9'], latent: true }],
+      edits: [],
+    }
+    render(<DiagnosisFlow diagnosis={diag} outcomes={{ task9: 'still_passing' }} />)
+    expect(screen.getByText('latent')).toBeInTheDocument()
+  })
 })
