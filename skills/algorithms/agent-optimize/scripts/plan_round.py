@@ -36,7 +36,16 @@ from cap_evolve.specfile import spec_for_run
 #: literally diagnose/cluster.py's own OVERLAP_MIN threshold and formula
 #: (|A∩B| / min(|A|,|B|)), reproduced here (not imported) to avoid a cross-skill-directory
 #: import for one three-line formula; keep the two in sync if either threshold moves.
-OVERLAP_MIN = 0.5
+#:
+#: Issue #676: the first real multi-objective run's round 1 produced 3 small, narrow,
+#: single-lever candidates (one per cluster) because every pairwise overlap fell short of
+#: the old 0.5 bar, so three related-but-not-identically-worded root causes each got their
+#: own slot instead of being bundled into one substantial, coherently-combined candidate.
+#: Lowered to 0.3 so clusters that share SOME of their implementation surface (not half of
+#: it) still bundle — the user wants fewer, bigger, more-impactful candidates per round, not
+#: many tiny ones; see algorithm.md's "Bucketing edits within a slot" for the companion
+#: guidance change.
+OVERLAP_MIN = 0.3
 
 #: Safety CEILING on branches per slot, not a target — a slot's estimate climbs with its
 #: own cluster count/uncertainty (see ``estimate_branches``) and is only ever clamped

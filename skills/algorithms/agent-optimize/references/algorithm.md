@@ -8,6 +8,7 @@
 - [The constraint surface](#the-constraint-surface-free-text-stop_condition-parsed-and-re-read)
 - [Branch planning: plan_round.py decides N](#branch-planning-plan_roundpy-decides-n-not-a-fixed-constant)
 - [Bucketing edits within a slot](#bucketing-edits-within-a-slot)
+- [Round-level concurrency budgeting](#round-level-concurrency-budgeting)
 - [Evaluation plans — staged, not ad hoc](#evaluation-plans--staged-not-ad-hoc)
 - [Model routing](#model-routing-one-model-for-every-step-is-the-gap-this-closes)
 - [Prioritizing clusters, and code over prose](#prioritizing-clusters-and-code-over-prose--ported-from-the-deterministic-optimizers-briefing)
@@ -348,6 +349,21 @@ asks for a justification to run fewer than 3 through its OWN batched machinery);
 "Parallel round" section says which file to point `--single-candidate-justification` at when they
 do.
 
+**Issue #676: group_clusters' own threshold was too conservative to ever bundle a round into
+substantial candidates.** The forensic run on the first real multi-objective run's round 1 found
+3 clusters whose pairwise token overlap each fell short of the old `OVERLAP_MIN=0.5`, so each got
+its own slot and its own single-lever branch — a prose rule, a code guard, a prose clarification —
+even though all three addressed the same capability under the same round. `OVERLAP_MIN` is now
+`0.3`: clusters that share SOME of their implementation surface (not literally half of it) now
+bundle into one slot, whose hypothesis should normally become ONE substantial, coherently-combined
+candidate rather than one per cluster (see "Bucketing edits within a slot", Bucket A, below). This
+does not change `estimate_branches`'s own job — a slot's branch COUNT is still read from its
+evidence, never asserted — it changes which clusters land in the same slot to begin with, so there
+are fewer, bigger slots for `estimate_branches` to size. The target this serves is explicit: a
+LARGE improvement (the user's stated goal references a historical hill-climb result reaching >90%
+on train=val and test), which many tiny single-digit-percent single-lever edits are not shaped to
+reach even if every one of them is individually accepted.
+
 ## Bucketing edits within a slot
 
 Once `plan_round.py` has decided how many branches a slot is worth, SKILL.md's step 3 still sorts
@@ -357,11 +373,21 @@ deterministically, or only probabilistically? This is no longer how the branch C
 `plan_round.py` already fixed that — it is how a single branch's own working copy is assembled.
 
 **Bucket A — atomic/risky.** Prose whose effect is probabilistic, or an edit targeting a cluster
-with no prior evidence. Each such edit stays its own branch — one cluster each — within the slot
-structure `plan_round.py` already proposed; the slot's `estimated_branches`, not a fixed N,
-decides how many branches exist. Bundle only *independent* parts within one branch — different
-files, different rules — so a rejected bundle can be resubmitted as its surviving part next round;
-`regressed`/`regressions` say which part to drop.
+with no prior evidence. The default is still one cluster, one branch, within the slot structure
+`plan_round.py` already proposed — but when `plan_round.py` bundled *multiple* clusters into the
+SAME slot (its `cluster_count` > 1, or two slots independently name the same root files/
+mechanism), that bundling is evidence they share an implementation surface, and the slot's
+hypothesis should normally be ONE substantial edit addressing all of them together — a composite
+tool, a multi-rule policy rewrite, several related fixes applied as one coherent change — not N
+separate single-lever branches re-litigating the same grouping decision `plan_round.py` already
+made. This is issue #665's principle restated for Bucket A specifically: a candidate should
+normally represent a meaningful hypothesis with a reasonable chance of materially changing the
+objective, and three narrow prose tweaks to the same mechanism are rarely that — one bundled edit
+usually is. Split into separate branches only when the clusters' fixes are genuinely independent
+(different files, different rules, no shared mechanism) so a rejected bundle's surviving part can
+be resubmitted alone next round; `regressed`/`regressions` say which part to drop. The slot's
+`estimated_branches`, not a fixed N, still decides how many SIBLING variants of that one hypothesis
+to try — bundling more into each branch is orthogonal to how many branches a slot gets.
 
 **Gating N Bucket-A siblings does not mean paying full val N times.** Since #437/#438 this is
 `round.py`'s default: one call screens every sibling, drops kills, builds each disjoint
@@ -436,6 +462,27 @@ buys one gate's worth of signal for a fraction of what the same gate could resol
 addressable cluster is folded in. This applies whatever the capability is (prompt, tools, or a
 skill package) and whatever the benchmark is: the check is "did I look at every cluster before
 paying," not anything specific to one edit surface.
+
+## Round-level concurrency budgeting
+
+Issue #676: `round.py`'s own `--max-parallel` defaulted to a fixed 4 (SKILL.md's worked example
+passed 2), serializing every round regardless of how many candidates it actually had — a 2-3
+candidate round, the common case, was throttled for no reason tied to its own size. Separately, a
+human running 4 full-val evals BY HAND at once (independent processes, each opening its own
+`--concurrency` connections) hit real gateway contention/timeouts — the failure mode a low global
+cap looks like it should prevent, except `round.py`'s own cap was never the thing doing that.
+
+The fix is two changes working together, not one knob turned up: `--max-parallel` now defaults to
+*this round's own candidate count* — every tag passed to `--candidates` runs concurrently unless
+told otherwise — and `--concurrency` is no longer applied to each of them independently.
+`effective_concurrency()` divides a shared `--max-total-concurrency` budget (default 24) across
+however many evals are actually running at once (`budget // max_parallel`, never raised above what
+was asked, only ever scaled down), so N candidates in parallel means N shares of ONE ceiling, not N
+independent copies of `--concurrency` — exactly the shape of the 4-at-once contention, prevented by
+construction rather than by refusing to run more than a couple of candidates at a time. The
+budgeted value, not the raw `--concurrency` ask, is what gets recorded as `measurement_concurrency`
+(and compared across rounds by `parallel_drift_warning`), since that is what the gate actually ran
+at.
 
 ## Evaluation plans — staged, not ad hoc
 

@@ -57,6 +57,32 @@ from cap_evolve.specfile import spec_for_run
 DEFAULT_CONCURRENCY = 8
 MAX_RESOLVING_CONCURRENCY = 25
 
+#: Issue #676: round 1 of the abandoned multi-objective run defaulted to --max-parallel 2
+#: (SKILL.md's own worked example), serializing a 3-candidate round for no reason — the
+#: round only had 3 candidates, nowhere near enough to need throttling. Separately, a human
+#: running 4 full-val evals BY HAND (outside round.py) at once hit real gateway
+#: contention/timeouts. Both point at the same fix: --max-parallel should default to running
+#: every candidate THIS round actually has, not a fixed low number, while the TOTAL
+#: concurrent rollout requests across all of them stays under one shared ceiling — so N
+#: candidates each get budget/N connections instead of N independent copies of
+#: --concurrency (which is how the 4-at-once contention happened). ponytail: a flat number,
+#: not measured per-gateway; raise it once real headroom is measured.
+DEFAULT_TOTAL_CONCURRENCY_BUDGET = 24
+
+
+def effective_concurrency(concurrency: int | None, max_parallel: int, budget: int) -> int | None:
+    """Per-eval rollout concurrency when up to ``max_parallel`` evals run at once.
+
+    Divides the shared TOTAL budget across the evals actually running concurrently (the
+    ThreadPoolExecutor's own worker count), so ``max_parallel`` candidates never each
+    independently open ``concurrency`` connections for ``max_parallel * concurrency`` total
+    — the real-world failure mode this exists to prevent (#676). Never raises ``concurrency``
+    above what was asked; only ever scales it down to fit the shared budget.
+    """
+    if not concurrency:
+        return concurrency
+    return max(1, min(concurrency, budget // max(1, max_parallel)))
+
 #: issue #585: --skip-screen-justification stopped being a fresh per-candidate judgment and
 #: became copy-pasted boilerplate ("consistent with cand_1/2/...", "...consistent with prior
 #: rounds", "...per prior rounds cand_2-...") — every candidate from the second on skipped the
@@ -910,8 +936,20 @@ def build_parser() -> argparse.ArgumentParser:
                         "0.100 at conc 8, tasks moving 10/12 vs 5/12, arm-level |delta| 0.1167 "
                         "vs 0.0333. A gate at conc 25 cannot resolve any effect smaller than "
                         "0.08, which is larger than most real edits. Explore fast, gate slow.")
-    p.add_argument("--max-parallel", type=int, default=4,
-                   help="how many candidate evals run at once")
+    p.add_argument("--max-parallel", type=int, default=None,
+                   help="how many candidate evals run at once. Default: this round's own "
+                        "candidate count (every tag passed to --candidates runs concurrently) "
+                        "— never throttled down just because N is small. --concurrency is then "
+                        "scaled down per eval (see --max-total-concurrency) so this is NOT "
+                        "max_parallel independent copies of --concurrency.")
+    p.add_argument("--max-total-concurrency", type=int, default=DEFAULT_TOTAL_CONCURRENCY_BUDGET,
+                   help=f"shared ceiling on TOTAL concurrent rollout requests across every "
+                        f"simultaneously-running eval this invocation starts (default "
+                        f"{DEFAULT_TOTAL_CONCURRENCY_BUDGET}). --concurrency is divided across "
+                        "the --max-parallel evals actually running at once rather than applied "
+                        "to each independently, so running more candidates in parallel lowers "
+                        "each one's own concurrency instead of multiplying the total load (#676: "
+                        "4 full-val evals run by hand at once caused real gateway contention).")
     p.add_argument("--gate-against", choices=["parent", "control"], default="parent",
                    help="'control' pairs each candidate against THIS round's null control "
                         "instead of the stored parent rollouts. Use it whenever this round's "
@@ -1040,6 +1078,14 @@ def _main(argv=None) -> int:
         print(json.dumps({"error": f"tags not found under {work}: {missing}"}, indent=2))
         return 2
 
+    # #676: default to running every candidate THIS round has, never a fixed low number —
+    # the bottleneck was serializing small (2-3 candidate) rounds for no reason. An explicit
+    # --max-parallel is always honored verbatim.
+    if args.max_parallel is None:
+        args.max_parallel = max(1, len(tags))
+    EFFECTIVE_CONCURRENCY = effective_concurrency(
+        args.concurrency, args.max_parallel, args.max_total_concurrency)
+
     # Default N>=3 sibling candidates per round, ENFORCED rather than merely recommended
     # (SKILL.md step 2) — see SingleCandidateUnjustified's docstring for why. Resolved before
     # any work-dir mutation or spend below, so an unjustified serial round fails fast with
@@ -1144,7 +1190,7 @@ def _main(argv=None) -> int:
             res = list(pool.map(lambda t: _screen(
                 Path(args.run_dir), project, t, ids=(plan.get(t) or {}).get("ids"),
                 tier=args.screen_tier, rationale=(plan.get(t) or {}).get("rationale"),
-                concurrency=args.concurrency), unscreened))
+                concurrency=EFFECTIVE_CONCURRENCY), unscreened))
         for t, r in zip(unscreened, res):
             auto_screened[t] = r
             screened_by_tag[t] = not r.get("rc") and latest_screen(run_dir, t) is not None
@@ -1268,7 +1314,7 @@ def _main(argv=None) -> int:
     # #438: pairwise merges of disjoint survivors, each screened, BEFORE any full-val gate.
     MERGE = None
     if not args.no_merge and merge_applies:
-        MERGE = merge_stage(run_dir, project, best, survivors, plan, args.concurrency,
+        MERGE = merge_stage(run_dir, project, best, survivors, plan, EFFECTIVE_CONCURRENCY,
                             args.max_parallel, pregate_cmd=PREGATE)
         for m in MERGE["merges"]:
             node_parents[m["tag"]] = m["parents"]
@@ -1284,7 +1330,7 @@ def _main(argv=None) -> int:
     STEM = table_stem(run_dir)
     PRIOR_CTL = prior_attempt_controls(run_dir)
     CTL = control_tag(run_dir)
-    MEASUREMENT = measurement_context(args.split, args.n_trials, args.concurrency)
+    MEASUREMENT = measurement_context(args.split, args.n_trials, EFFECTIVE_CONCURRENCY)
     # One shared identifier for every candidate THIS invocation gates, so the dashboard can
     # group same-round candidates instead of showing them as if they had run sequentially
     # (they are gated together but committed one at a time, serially, by the driver).
@@ -1361,7 +1407,7 @@ def _main(argv=None) -> int:
     with ThreadPoolExecutor(max_workers=max(1, args.max_parallel)) as pool:
         evals = list(pool.map(
             lambda t: _evaluate(Path(args.run_dir), project, t, args.split,
-                                args.n_trials, args.concurrency), tags))
+                                args.n_trials, EFFECTIVE_CONCURRENCY), tags))
     if REUSED:
         # Reused replicates are gated exactly like measured ones (gate_check reads persisted
         # rollouts), so they join the row set here without an eval behind them.
@@ -1540,16 +1586,17 @@ def _main(argv=None) -> int:
         rewards = [r["reward"] for r in pooled_rows]
         null_delta = round(max(rewards) - min(rewards), 4)
     conc_warning = None
-    if args.concurrency and args.concurrency > 12:
+    if EFFECTIVE_CONCURRENCY and EFFECTIVE_CONCURRENCY > 12:
         conc_warning = (
-            f"GATE RAN AT CONCURRENCY {args.concurrency}. Measured on this benchmark, "
+            f"GATE RAN AT CONCURRENCY {EFFECTIVE_CONCURRENCY}. Measured on this benchmark, "
             "byte-identical code at identical seeds moves ~0.08 at the arm level above conc 25 "
             "and ~0.03 at conc 8. A verdict from this round can therefore not resolve an effect "
             "smaller than roughly 0.08. Re-run the gate at --concurrency 8 before believing an "
             "accept.")
 
     prior_settings = prior_round_settings(run_dir)
-    parallel_warning = parallel_drift_warning(prior_settings, args.concurrency, args.max_parallel)
+    parallel_warning = parallel_drift_warning(prior_settings, EFFECTIVE_CONCURRENCY,
+                                              args.max_parallel)
     out = {
         # Which gate of this iteration this is. On the live run nothing in the output
         # distinguished "second opinion on iteration 1" from "iteration 1", so an operator
@@ -1607,7 +1654,9 @@ def _main(argv=None) -> int:
                                       "no earlier round measured THIS parent's replicates under "
                                       "this same measurement context — a new parent has no "
                                       "established noise floor, so it must be measured")}),
-        "measurement_concurrency": args.concurrency,
+        "measurement_concurrency": EFFECTIVE_CONCURRENCY,
+        "requested_concurrency": args.concurrency,
+        "max_total_concurrency": args.max_total_concurrency,
         "concurrency_warning": conc_warning,
         "measurement_max_parallel": args.max_parallel,
         "parallel_warning": parallel_warning,

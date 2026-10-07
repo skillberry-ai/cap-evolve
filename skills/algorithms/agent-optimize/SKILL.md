@@ -230,7 +230,7 @@ own `evaluation_plan.json` into `--plan`:
 ```bash
 python "$A/round.py" --run-dir "$R" --project "$P" \
        --candidates cand_1,cand_2,cand_3 --plan "$R/work/plan.json" \
-       --n-trials <num_trials> --k-se <gate_k_se> --concurrency 8 --max-parallel 2
+       --n-trials <num_trials> --k-se <gate_k_se> --concurrency 8
 ```
 
 `$R/work/plan.json`: one entry per tag, `{"cand_1": {"ids": "8,14,22", "rationale": "<evaluation_plan.rationale>", "cluster_ids": ["c3"], "edit_kind": "code"}}`.

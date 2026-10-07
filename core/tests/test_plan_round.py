@@ -132,6 +132,34 @@ def test_high_stakes_bump_requires_a_clear_margin_over_the_runner_up():
     assert plan_round.estimate_branches(alpha_group, groups) == 1  # no bump: too close to beta
 
 
+def test_overlap_min_lowered_bundles_related_but_not_near_identical_clusters():
+    """Issue #676: round 1 of the first real multi-objective run produced 3 small,
+    single-lever candidates because 3 related clusters each fell short of the old
+    OVERLAP_MIN=0.5 and so each got its own slot. These three pairwise share exactly
+    1 of 3 tokens each (overlap 0.333) -- genuinely related (same "write" mechanism),
+    but nowhere near half-overlapping -- so they must bundle into one slot at the
+    lowered default while still NOT bundling at the old 0.5 bar."""
+    clusters = [
+        _cluster("write payment flow", ["1"], 0.1),
+        _cluster("write seat error", ["2"], 0.1),
+        _cluster("write baggage check", ["3"], 0.1),
+    ]
+    assert plan_round.OVERLAP_MIN < 0.5  # the lowering this test is for
+
+    groups = plan_round.group_clusters(clusters)  # default (lowered) OVERLAP_MIN
+    assert len(groups) == 1
+    assert len(groups[0]) == 3
+
+    old_threshold_groups = plan_round.group_clusters(clusters, overlap_min=0.5)
+    assert len(old_threshold_groups) == 3  # the old bar kept them apart -- this is the bug
+
+    unrelated = plan_round.group_clusters([
+        _cluster("payment method count violation", ["1"], 0.1),
+        _cluster("basic economy change never attempted", ["2"], 0.1),
+    ])
+    assert len(unrelated) == 2  # genuinely disjoint vocabularies still don't bundle
+
+
 def test_max_branches_per_slot_only_clamps_down_never_up():
     clusters = [_cluster(f"shared surface {i}", ["t"], 0.1) for i in range(6)]
     # Make them all overlap (shared "shared surface" tokens) -> one big group of 6.
