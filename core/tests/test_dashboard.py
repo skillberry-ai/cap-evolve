@@ -300,6 +300,47 @@ def test_native_sims_checkpoint_overrides_stale_milestone_status_reason(tmp_path
     assert "8554s ago" not in reason
 
 
+def test_rollout_progress_ignores_stale_files_from_prior_abandoned_attempt(tmp_path):
+    """Re-evaluating a tag REPLACES its files in place rather than clearing the
+    directory first (harness.py's ``rollout_overwrite_warning``). So a tag that was
+    fully evaluated once, abandoned/crashed, and is now being re-run from scratch
+    still has ALL of its old rollout files sitting on disk -- with old mtimes --
+    the instant the new ``eval_start`` fires. Those must not be misreported as the
+    new eval's progress; only files written since the new eval_start count."""
+    import os
+    import time
+    from cap_evolve import dashboard
+    now = time.time()
+    evs = [
+        {"kind": "splits", "train": 4, "val": 10, "test": 2, "seed": 0, "t": now - 9000},
+        {"kind": "eval_start", "split": "val", "tag": "cand_3", "n_tasks": 10,
+         "n_trials": 1, "workers": 1, "rollouts": 10, "t": now - 100},
+    ]
+    rd = _mk_run(tmp_path, events=evs)
+    vdir = rd.rollouts / "val"
+    vdir.mkdir(parents=True, exist_ok=True)
+    # Prior attempt's full 10/10 rollouts, written long BEFORE the new eval_start.
+    for task in [f"t{i}" for i in range(10)]:
+        p = vdir / f"{task}__cand_3__t0.json"
+        p.write_text("{}", encoding="utf-8")
+        os.utime(p, (now - 5000, now - 5000))
+
+    ev = evs[1]
+    progress = dashboard._rollout_progress(rd, ev, now)
+    assert progress is None  # all 10 files predate this eval_start -> no progress yet
+
+    # Two fresh rollouts land after the new eval_start: only those should count.
+    for task in ["t0", "t1"]:
+        os.utime(vdir / f"{task}__cand_3__t0.json", (now - 10, now - 10))
+    progress = dashboard._rollout_progress(rd, ev, now)
+    assert progress == {"completed": 2, "total": 10, "age": 10.0}
+
+    r = dashboard.reduce_run(rd)
+    reason = r["summary"]["status_reason"]
+    assert "2/10 rollouts done" in reason
+    assert "10/10 rollouts done" not in reason
+
+
 def test_dashboard_degrades_without_rollouts_or_finalize():
     """No rollouts, no finalize, no candidate dirs → still reduces + renders."""
     from cap_evolve import dashboard

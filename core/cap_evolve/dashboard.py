@@ -634,23 +634,38 @@ def _rollout_progress(run_dir, ev: dict, now: float) -> dict | None:
          see ``templates/adapters/tau2_bench/adapter.py:_sim_save_path``).
 
     Returns ``None`` when neither source has anything yet.
+
+    Re-evaluating a tag REPLACES its files in place rather than clearing the
+    directory first (see harness.py's ``rollout_overwrite_warning``), so a tag
+    that was previously evaluated (crashed/abandoned, then re-run) can have old
+    files already sitting on disk the instant ``ev`` (the currently open
+    ``eval_start``) fires. Both globs below are filtered to ``mtime >= ev["t"]``
+    so only files written since THIS eval started count as its progress --
+    otherwise a stale leftover from a prior attempt gets misreported as live
+    progress for an eval that has done zero work.
     """
     tag = ev.get("tag")
     split = ev.get("split")
     total = ev.get("rollouts")
     if not tag or not split or not isinstance(total, (int, float)) or not total:
         return None
+    try:
+        started = float(ev.get("t") or 0.0)
+    except (TypeError, ValueError):
+        started = 0.0
 
     vdir = _safe_subpath(run_dir.rollouts, split)
     if vdir is not None and vdir.is_dir():
-        files = [f for f in vdir.glob(f"*__{tag}__t*.json") if f.is_file()]
+        files = [f for f in vdir.glob(f"*__{tag}__t*.json")
+                 if f.is_file() and f.stat().st_mtime >= started]
         if files:
             mtime = max(f.stat().st_mtime for f in files)
             return {"completed": len(files), "total": int(total), "age": max(0.0, now - mtime)}
 
     sims_dir = _safe_subpath(Path(run_dir.root), "native_sims", tag, split)
     if sims_dir is not None and sims_dir.is_dir():
-        result_files = [f for f in sims_dir.glob("results_*.json") if f.is_file()]
+        result_files = [f for f in sims_dir.glob("results_*.json")
+                         if f.is_file() and f.stat().st_mtime >= started]
         if result_files:
             latest = max(result_files, key=lambda f: f.stat().st_mtime)
             sims = _read_json(latest).get("simulations")
