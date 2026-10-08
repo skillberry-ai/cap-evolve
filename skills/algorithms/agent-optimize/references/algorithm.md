@@ -105,13 +105,26 @@ Three design choices carry the honesty:
    excellent triage signal and an invalid basis for a decision. A subset `SplitResult`'s
    `coverage` is also 1.0 by construction (its denominator *is* the subset), so it would sail
    past the gate's low-coverage guard if it were ever handed over.
-3. **The bias runs toward promote, deliberately.** With k≈4 and one trial the delta vector is
-   coarse and the SE is large. A **false kill** discards a good edit and leaves no trace — the
-   run simply fails to improve and nothing says why. A **false promote** costs exactly one
-   full-val eval, after which the honest gate is correct anyway. So `screen_decision` kills
-   only on `Δ̄ + k·SE < 0` or a unanimous negative (SE legitimately 0), and everything else —
-   flat Δ̄ included — promotes with `inconclusive: true`. Lowering `--k-se` to make the screen
-   "decisive" is the one tuning knob that makes the algorithm worse.
+3. **Kill is a GROSS-failure check, not a significance test (issue #684 item 5 — deliberate
+   change).** The bias still runs toward promote: with k≈4 and one trial the delta vector is
+   coarse. A **false kill** discards a good edit and leaves no trace — the run simply fails to
+   improve and nothing says why. A **false promote** costs exactly one full-val eval, after
+   which the honest gate is correct anyway. The OLD rule killed on `Δ̄ + k·SE < 0`, which
+   *required* the subset to be statistically significant — and measured on a real run, tier-1
+   SEs (0.11-0.17) were always wider than the effects actually being chased (0.02-0.09), so the
+   rule could structurally never fire: **0 screen-kills across 7 candidates** in that run, 0/8 in
+   an earlier one, while screening's own rollouts cost more than they saved. Per GEPA's own
+   validated design (its minibatch gate is a cheap "did it beat the parent, yes/no" with no
+   significance test, because the EXPENSIVE full eval is the real decision point)
+   `screen_decision` now kills on `Δ̄ <= --gross-kill-threshold` (default
+   `cap_evolve.subsample.GROSS_KILL_DELTA = -0.15`), **regardless of SE**, and promotes
+   everything else — flat Δ̄ included, `inconclusive: true` only when it promoted a net-negative
+   subset that was not gross enough to kill. -0.15 sits above the ~0.10 re-measurement drift
+   measured between byte-identical controls (see "Gate as evidence" below) and below the ~0.2 of
+   the one confirmed gross failure (`cand_7`), so it catches genuinely broken candidates without
+   being trigger-happy on noise or a genuine close call. See `core/tests/test_subsample.py`'s
+   `test_cand7_old_significance_rule_would_have_missed_this_gross_failure` and
+   `test_genuinely_close_calls_still_promote_under_the_new_rule` for the real-run fixtures.
 
 Subset composition is `broken_ids` (tasks a previous edit is known to have broken) → most
 informative remaining (`(1-reward) + stderr`: headroom plus instability) → a seeded **random
@@ -838,6 +851,26 @@ exit — until it has printed its result. If you are running low on turns/budget
 reason to run it SOONER, not to launch it and move on.
 
 ## Gate as evidence, not a verdict
+
+**Issue #684 item 6 — control-relative is now the PRIMARY accept/reject signal, by default.**
+Measurement drift between rounds (~0.10 on a real run) is comparable in magnitude to the real
+effects being chased (~0.02-0.09). `round.py` used to gate each candidate's top-level
+`verdict`/`gate_delta`/`gate_threshold` against the PARENT's STORED reward (from an earlier
+round, so it can carry that drift), with the delta against a freshly-measured byte-identical
+control kept as a secondary cross-check (`control_relative`). That was backwards whenever a
+control existed to compare against instead — and the standard case HAS one: `--control-replicates
+2` is the default. Confirmed live: two candidates in one run tied against the stored parent while
+showing a real win against the round's own control (or the reverse), and needed a manual
+`grow.py` escalation to resolve what the gate should have resolved on its own. `round.py` now
+gates PRIMARILY against the pooled control replicates whenever one was measured this round, and
+reports the old parent-relative comparison as a secondary diagnostic field, `raw_vs_parent`, on
+each candidate row — useful for seeing the drift itself, never for deciding. `control_relative`
+keeps its pre-#684 shape (same numbers as the new primary verdict under the default path) so
+`commit.py`'s `--reject-basis drift_control` and the dashboard's control-relative panels still
+work unchanged. Falls back to the old parent-primary behavior, unchanged, only when no control
+exists this round (`--no-control`). See `core/tests/test_round_control_relative_primary.py` for
+the real run's exact scenario (tie vs. stored parent, real win vs. fresh control) resolving
+ACCEPT directly through the primary verdict, no `grow.py` growth round required.
 
 The statistics come from two scripts, and it matters which one prints what: `gate_check.py` prints
 `delta`, `stderr`, `resolvable_effect_size` and its own `"verdict"` for ONE candidate; `round.py` prints

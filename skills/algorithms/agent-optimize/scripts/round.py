@@ -1463,6 +1463,18 @@ def _main(argv=None) -> int:
         evals = [{"tag": t, "rc": 0, "reused": True} for t in ctl_tags] + evals
 
     # Gate serially against the CURRENT best; the driver commits, so best_id is stable here.
+    #
+    # issue #684 item 6: PRIMARY reference, inverted. Measurement drift between rounds
+    # (~0.10 on a real run) is comparable in magnitude to the real effects being chased
+    # (~0.02-0.09), so a verdict computed against the stored PARENT reward carries that
+    # drift baked in as if it were the edit. When this round measured null-control
+    # replicates (the standard case — ``--control-replicates 2`` is the default), gate
+    # PRIMARILY against them instead: byte-identical copies of the parent measured in
+    # THIS round, pooled per task, so drift is cancelled by construction. The
+    # raw-vs-stored-parent comparison is kept below as a SECONDARY diagnostic
+    # (``r["raw_vs_parent"]``) — useful for detecting drift itself, no longer the
+    # deciding factor. Falls back to the stored parent, unchanged, whenever no control
+    # was measured this round (``--no-control``) — nothing to be control-relative to.
     gate_ref = best
     if args.gate_against == "control":
         if args.no_control:
@@ -1470,9 +1482,11 @@ def _main(argv=None) -> int:
                                        "--no-control"}, indent=2))
             return 2
         gate_ref = CTL
+    elif ctl_tags:
+        gate_ref = list(ctl_tags)  # pooled control replicates — now the PRIMARY reference
     # TWO distinct objects, kept distinct. `gate_res` is what deltas and thresholds are measured
-    # against (the concurrent control under --gate-against control); `parent_res` is the
-    # candidate this round is climbing from. Under --gate-against parent they coincide.
+    # against (the control, pooled, whenever one was measured this round); `parent_res` is the
+    # candidate this round is climbing from. They coincide only when no control exists.
     #
     # Conflating them reported the CONTROL's reward under the PARENT's tag: on run 32871360361
     # the table said `parent: {tag: 'seed', reward: 0.34}` while baseline.json said the seed
@@ -1506,6 +1520,11 @@ def _main(argv=None) -> int:
                 return 2
             OBJ_NAMES = {c["name"] for c in CONSTRAINTS}
 
+    # The subprocess `--current` flag for gate_check.py — a comma-joined tag list when
+    # gate_ref is the pooled control, else the single tag, else unset (gate_check.py's own
+    # default: the run's stored best_id).
+    gate_ref_arg = (",".join(gate_ref) if isinstance(gate_ref, list)
+                    else (gate_ref if gate_ref != best else None))
     rows = []
     for ev in evals:
         tag = ev["tag"]
@@ -1530,8 +1549,7 @@ def _main(argv=None) -> int:
         else:
             g = gate_unless_eval_failed(ev, Path(args.run_dir), tag, args.k_se, args.mode,
                                         args.veto_regressions,
-                                        current=gate_ref if args.gate_against == "control"
-                                        else None, **gate_kwargs)
+                                        current=gate_ref_arg, **gate_kwargs)
         rows.append({
             "tag": tag,
             "reward": (g.get("candidate") or {}).get("reward"),
@@ -1614,47 +1632,53 @@ def _main(argv=None) -> int:
         archive.save(archive_path)
         PARETO_ARCHIVE_RESULT = archive.to_dict()
 
-    # A parent-gated round has ALREADY measured the drift-free comparison — it just was not
-    # reporting it. On run 32871360361 round 4 the table showed cand4 at +0.15 against the seed's
-    # stored 0.38 with a bar of 0.11 (drift), i.e. marginal; the same round's two concurrent
-    # controls both read exactly 0.27, so the drift-free answer from the identical rollouts is
-    # +0.26 against a bar of 0.00. The 0.11 belongs to WHEN the seed was measured, not to cand4,
-    # so parent-mode gating understated the effect and inflated the bar at the same time.
+    # issue #684 item 6: TWO cross-checks, kept distinct, with the PRIMARY/secondary roles
+    # inverted from before. `verdict`/`gate_delta`/`gate_threshold` on each row are now
+    # computed primarily against the pooled control (set via `gate_ref`/`gate_ref_arg`
+    # above) whenever one was measured this round — see the comment at `gate_ref`'s
+    # assignment. The two blocks below:
     #
-    # Reported rather than made the default: changing the default gate mode on one benchmark's
-    # drift would be a guess about every other workload, while an extra comparison is strictly
-    # more information and simply agrees with the primary one where there is no drift. Costs no
-    # rollouts — the controls are already evaluated and gate_check reads stored data.
+    #   * `control_relative` — kept at its PRE-#684 field name/shape for backward
+    #     compatibility (commit.py's `--reject-basis drift_control`, the dashboard's
+    #     control_relative_verdict/_delta panels). It is the SAME control-pooled
+    #     comparison the top-level fields now use as primary, so under the new default it
+    #     is intentionally REDUNDANT with `verdict`/`gate_delta` — there is no longer a
+    #     disagreement for `drift_control` to resolve, because the thing it used to
+    #     escalate TO is now what decided in the first place.
+    #   * `raw_vs_parent` — NEW: the comparison that used to be primary (against the
+    #     parent's STORED reward from an earlier round), demoted to secondary. Where it
+    #     disagrees with the (now-primary) control-relative verdict, the gap IS drift, not
+    #     the edit — useful for detecting drift itself, never for deciding.
+    #
+    # On run 32871360361 round 4 the table showed cand4 at +0.15 against the seed's stored
+    # 0.38 with a bar of 0.11 (drift), i.e. marginal; the same round's two concurrent
+    # controls both read exactly 0.27, so the drift-free (now PRIMARY) answer from the
+    # identical rollouts is +0.26 against a bar of 0.00 — the 0.11 belonged to WHEN the
+    # seed was measured, not to cand4. Costs no rollouts — both sides are already evaluated
+    # and gate_check reads stored data.
     #
     # Skipped for pareto/epsilon_constraint (#684 items 1-2): this diagnostic re-gates against
     # the control with the SAME --mode but no objective/constraint metrics threaded through —
     # ponytail: a real drift-free multi-objective comparison would need the control's own
     # cand_values too; add if a multi-objective run's drift turns out to matter in practice.
-    # pareto's real verdict is decided by the archive below, not by this diagnostic anyway.
+    # pareto's real verdict is decided by the archive above, not by this diagnostic anyway.
     if args.mode not in ("pareto", "epsilon_constraint") and args.gate_against != "control" and ctl_tags:
         for r in rows:
             if r["tag"] in ctl_tags or r.get("reward") is None:
                 continue
             # POOLED over every control replicate this round has, not just the one carrying
-            # the round-scoped tag. They are byte-identical copies of the same parent measured
-            # in the same round, so they are draws from one distribution and pooling their
-            # trials per task is the lower-variance estimate of the same quantity — for free,
-            # since these rollouts are already on disk. Measuring against a single replicate is
-            # what made this comparison a coin flip: the same candidate read +0.0867 against
-            # one replicate and +0.0067 against the other.
-            g = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
-                      args.veto_regressions, current=",".join(ctl_tags))
+            # the round-scoped tag — the same reference the primary verdict above now uses.
+            g_ctl = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
+                         args.veto_regressions, current=",".join(ctl_tags))
             r["control_relative"] = {
                 "reference": ctl_tags if len(ctl_tags) > 1 else CTL,
-                "gate_delta": (g.get("gate") or {}).get("delta"),
-                "gate_threshold": (g.get("gate") or {}).get("threshold"),
-                "verdict": g.get("verdict"),
-                "reading": ("the same comparison with the DRIFT removed: this candidate against "
-                            f"{len(ctl_tags)} byte-identical control(s) measured in this round — "
-                            "their trials POOLED per task, so the reference carries less of its "
-                            "own measurement error than any single replicate — rather than "
-                            "against a reward measured earlier. Where the two disagree, the "
-                            "difference is drift, not the edit."
+                "gate_delta": (g_ctl.get("gate") or {}).get("delta"),
+                "gate_threshold": (g_ctl.get("gate") or {}).get("threshold"),
+                "verdict": g_ctl.get("verdict"),
+                "reading": ("this is now the PRIMARY comparison (issue #684 item 6): the same "
+                            "numbers as `verdict`/`gate_delta` above, kept under this field name "
+                            "for backward compatibility with commit.py's --reject-basis "
+                            "drift_control and the dashboard's control_relative panels."
                             if not REUSED else
                             f"this candidate against a byte-identical control of the SAME parent "
                             f"measured in iteration {REUSED['from_iteration']} and reused here. "
@@ -1662,6 +1686,21 @@ def _main(argv=None) -> int:
                             "since that iteration, so it is not the drift-free comparison a "
                             "concurrent control gives — re-run with --no-reuse-control (or "
                             "--gate-against control, which never reuses) to buy that."),
+            }
+            g_par = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
+                         args.veto_regressions, current=best)
+            r["raw_vs_parent"] = {
+                "reference": best,
+                "gate_delta": (g_par.get("gate") or {}).get("delta"),
+                "gate_threshold": (g_par.get("gate") or {}).get("threshold"),
+                "verdict": g_par.get("verdict"),
+                "reading": ("SECONDARY — no longer the deciding comparison (issue #684 item "
+                            "6). This candidate against the parent's reward as STORED from an "
+                            "earlier round, carrying whatever re-measurement drift happened "
+                            "since. The PRIMARY verdict (`verdict`/`gate_delta` above, == "
+                            "`control_relative`) cancels that drift by construction. Where the "
+                            "two disagree, the difference is drift, not the edit; this field "
+                            "exists to show you that gap, not to override the primary verdict."),
             }
 
     # Would the verdict have survived a different control replicate? On run 32871360361 round 3
@@ -1695,14 +1734,20 @@ def _main(argv=None) -> int:
             if not r["verdict_stable"]:
                 r["verdict"] = "inconclusive"
 
+    # issue #684 item 6: true whenever the PRIMARY verdict above is control-relative — the
+    # explicit --gate-against control mode, or (now the default) a parent-mode round that
+    # measured null-control replicates. False only when no control exists at all this round
+    # (--no-control), in which case gate_ref falls back to best, unchanged from before.
+    CONTROL_PRIMARY = gate_ref != best
+
     ctl = next((r for r in rows if r["tag"] == CTL), None)
     # The floor must be the control's delta against the STORED parent, never against whatever
-    # this round gated on. With --gate-against control the control IS the reference, so
+    # this round gated on. Under a control-primary verdict the control IS the reference, so
     # delta_vs_parent is 0.0 by construction — reporting that as the noise floor would claim
     # zero re-measurement noise, the single most dangerous number this script can print.
     floor = None
     if ctl is not None:
-        if args.gate_against == "control":
+        if CONTROL_PRIMARY:
             floor = abs(ctl["gate_delta"]) if ctl.get("gate_delta") is not None else None
         elif ctl["delta_vs_gate_ref"] is not None:
             floor = abs(ctl["delta_vs_gate_ref"])
@@ -1753,6 +1798,11 @@ def _main(argv=None) -> int:
         # What the deltas and thresholds in `candidates` are actually measured against.
         "gate_reference": {"tag": gate_ref, "mode": args.gate_against,
                            "reward": gate_res.reward, "stderr": gate_res.stderr},
+        # issue #684 item 6: the de-facto PRIMARY accept/reject signal this round actually
+        # used — distinct from `gate_reference.mode`, which only echoes the --gate-against
+        # flag. "control" whenever a control was measured (the default, now), "parent" only
+        # when none exists (--no-control) and the stored-parent fallback applies.
+        "primary_signal": "control" if CONTROL_PRIMARY else "parent",
         # The round's OWN drift: identical-or-parent bytes measured now versus what the parent
         # measured when it was scored. Non-null only when they are different measurements.
         "parent_vs_gate_ref_drift": (None if gate_ref == best else
@@ -1810,8 +1860,8 @@ def _main(argv=None) -> int:
         "gated_against": {"tag": gate_ref, "mode": args.gate_against},
         "noise_floor_from_control": floor,
         "noise_floor_basis": ("control vs the STORED parent rollouts (differing trial counts are "
-                              "part of this floor, which is the point)" if args.gate_against ==
-                              "control" else "control vs the parent it was copied from"),
+                              "part of this floor, which is the point)" if CONTROL_PRIMARY
+                              else "control vs the parent it was copied from"),
         # ONE bar, matched to how this round actually gated. Reporting several numbers and
         # leaving the driver to choose is not neutral: on run 32871360361 round 2 the table
         # showed cand2 beating its CONCURRENT control by +0.19 (three times the k_se threshold,
@@ -1822,18 +1872,21 @@ def _main(argv=None) -> int:
         # resolved the contradiction conservatively, and booked a REJECT on the best candidate of
         # the run.
         #
-        # Which bar is right depends entirely on what the delta was measured against:
-        #   * control mode — the delta is against a control measured in THIS round, so drift is
-        #     already cancelled and the bar is the gap between identical replicates.
-        #   * parent mode  — the delta is against a reward measured in an earlier round, so drift
-        #     is inside it and the bar has to include the control's drift as well.
+        # Which bar is right depends entirely on what the delta was measured against (issue
+        # #684 item 6: now a function of CONTROL_PRIMARY, not literally args.gate_against —
+        # the default parent-mode round is control-primary too, whenever it measured one):
+        #   * control-primary — the delta is against a control measured in THIS round, so
+        #     drift is already cancelled and the bar is the gap between identical replicates.
+        #   * parent-primary  — the delta is against a reward measured in an earlier round
+        #     (only when no control exists at all this round), so drift is inside it and the
+        #     bar has to include the control's drift as well.
         "evidence_bar": {
-            "value": (null_delta if args.gate_against == "control"
+            "value": (null_delta if CONTROL_PRIMARY
                       else (None if (null_delta is None and floor is None)
                             else max(null_delta or 0.0, floor or 0.0))),
             "basis": ("gap between byte-identical control replicates measured in THIS round — "
-                      "drift is cancelled by gating against a concurrent control"
-                      if args.gate_against == "control" else
+                      "drift is cancelled by gating against the (now primary) control"
+                      if CONTROL_PRIMARY else
                       "the larger of the replicate gap and the control's drift against the "
                       "stored parent, because this round's deltas ARE against that stored "
                       "reward and carry its drift"),
@@ -1873,12 +1926,13 @@ def _main(argv=None) -> int:
             "a candidate gated against a concurrent control has to clear, because that "
             "comparison never contained the drift. Do not re-derive a delta against the stored "
             "parent and reject on it; that puts the drift back in."
-            if args.gate_against == "control" else
+            if CONTROL_PRIMARY else
             "ctl_null is a byte-identical copy of the parent, so its delta is what ZERO change "
-            "measures today. This round gated against the parent's STORED reward, so that drift "
-            "is inside every candidate delta here: treat any candidate at or below "
-            "`evidence_bar` as no evidence, even if its verdict is accept. Gating against the "
-            "control instead removes the drift from the comparison."
+            "measures today. No control exists this round (--no-control), so every verdict "
+            "fell back to the parent's STORED reward and that drift is inside every candidate "
+            "delta here: treat any candidate at or below `evidence_bar` as no evidence, even if "
+            "its verdict is accept. Drop --no-control to get the drift-free, control-primary "
+            "verdict instead."
             if floor is not None or null_delta is not None else
             "no null control in this round — you cannot separate a small gain from re-measurement."
         ),

@@ -27,6 +27,20 @@ plus the no-regression veto), by construction and by honesty invariant 1.
 Every screen is written to ``<run_dir>/screens/<tag>__tier<N>.json`` — subset ids, the
 seed, the deltas, the decision, and the MEASURED rollout economics — so any kill is
 reproducible and auditable after the fact.
+
+**issue #684 item 5 — DELIBERATE BEHAVIOR CHANGE: kill is a gross-failure check, not a
+significance test.** The old rule killed on ``mean(Δ) + k_se·SE < 0`` — i.e. required
+the subset to clear its own statistical significance bar. Measured on a real run,
+tier-1 subsets (5-11 tasks) had SEs of 0.11-0.17 while the round deltas that actually
+mattered were 0.02-0.09: the screen's SE was ALWAYS bigger than the effect it needed to
+resolve, so the rule could structurally never fire (0 kills across 7 candidates in that
+run, 0/8 in an earlier one, while screening cost more rollouts than it saved). Per
+GEPA's own validated design — its minibatch gate is a cheap "did it beat the parent on
+this subset, yes or no", no significance test, because the EXPENSIVE full eval is the
+real decision point — this script's kill rule is now ``mean(Δ) <= --gross-kill-
+threshold`` (default ``-0.15``, see ``cap_evolve.subsample.GROSS_KILL_DELTA``),
+regardless of SE. Promote is everything else. See ``references/measured-lessons.md``
+and ``references/algorithm.md`` for the full economics writeup.
 """
 
 from __future__ import annotations
@@ -43,8 +57,8 @@ from cap_evolve.check import load_adapter
 # TIER_FRAC (rung → fraction of val) and MIN_K (absolute subset floor) live in subsample.py so
 # the baseline-time screening_economics (#631) prices exactly the rung this script fires.
 from cap_evolve.subsample import (
-    MIN_K, TIER_FRAC, full_val_ceiling, paired_deltas_on, screen_decision, screen_savings,
-    select_screen_subset,
+    GROSS_KILL_DELTA, MIN_K, TIER_FRAC, full_val_ceiling, paired_deltas_on, screen_decision,
+    screen_savings, select_screen_subset,
 )
 
 
@@ -87,7 +101,15 @@ def main(argv=None) -> int:
                    help="fraction of the subset drawn at random from tasks the parent "
                         "PASSES, so the screen can see a regression (default 0.34)")
     p.add_argument("--k-se", type=float, default=1.0,
-                   help="kill only when Δ̄ + k·SE < 0 on the subset (default 1.0)")
+                   help="vestigial since #684 item 5 (kill no longer requires "
+                        "significance) — accepted for backward-compatible call sites, "
+                        "no longer affects the decision; see --gross-kill-threshold")
+    p.add_argument("--gross-kill-threshold", type=float, default=GROSS_KILL_DELTA,
+                   help="kill iff the subset's mean Δ is at or below this, REGARDLESS "
+                        f"of SE (default {GROSS_KILL_DELTA}: above the ~0.10 drift "
+                        "observed between byte-identical control replicates, below the "
+                        "~0.2 observed on a confirmed gross failure — see "
+                        "cap_evolve.subsample.GROSS_KILL_DELTA)")
     p.add_argument("--broken", default="",
                    help="comma-separated task ids a previous edit broke — screened first")
     p.add_argument("--ids", default="",
@@ -177,7 +199,8 @@ def main(argv=None) -> int:
     cand_per_task = _merged_per_task(run_dir, sorted({*prior_tags, screen_tag}))
     pair = paired_deltas_on(parent.per_task, cand_per_task, sub["ids"])
     decision = screen_decision(pair["deltas"], k_se=args.k_se,
-                               regressed=pair["regressed"])
+                               regressed=pair["regressed"],
+                               gross_kill_threshold=args.gross_kill_threshold)
 
     # ARITHMETIC kill. When the screened ids already cover every val task the parent
     # fails, the unscreened remainder is all tasks the parent passes, so it can only

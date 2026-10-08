@@ -11,6 +11,9 @@
 - [The binomial floor, and what an aggregate mean can resolve](#the-binomial-floor-and-what-an-aggregate-mean-can-resolve)
   — the SE formula against a measured null, the sign test for sub-floor effects, and why narrowing to
   the hard tasks makes an artifact measurement worse.
+- [Screening cannot out-run its own confidence bar, and drift is not a footnote](#screening-cannot-out-run-its-own-confidence-bar-and-drift-is-not-a-footnote)
+  — issue #684: why tier-1 screening measured 0 kills across 15 candidates on two real runs, and why
+  the gate now treats a freshly-measured control as primary instead of the parent's stored reward.
 - [Gate the sum, not each addend](#gate-the-sum-not-each-addend) — the six-branch merge that gated
   negative, and the cost of certifying each mechanism by rate.
 - [What a run reports vs. what it spent](#what-a-run-reports-vs-what-it-spent) — the cost-accounting
@@ -521,6 +524,50 @@ whose 3-trial bands summed to 2.33 measured **4.04** at n=10 — the screen unde
 DEFECT" label was suspect: three of them measured 0.30, 0.444 and 0.60. So screen at low `n`, but
 re-measure at the gate's `n` before you quote a number, compute headroom, or tell an optimiser what its
 starting point is.
+
+## Screening cannot out-run its own confidence bar, and drift is not a footnote
+
+Issue #684 (items 5-6), from forensic diagnosis of two real multi-objective runs.
+
+**Finding 1 — a significance-gated screen at tier-1 widths cannot kill anything, structurally.**
+Tier-1 subset sizes were 5-11 tasks, giving SEs of 0.11-0.17; the actual round deltas that
+mattered that run were 0.02-0.09. The old kill rule (`mean(Δ) + k_se·SE < 0`) requires the subset
+to be *statistically significant*, and a screen's own SE was ALWAYS larger than the effect it
+needed to resolve — the bar could never clear itself. Measured result: **0 screen-kills across 7
+candidates** in that run, and **0/8** in an earlier one, while screening's own rollouts cost 51
+more than they saved (0 saved). This is not a tuning problem (lowering `--k-se` further just
+trades false kills for the same structural ceiling); it is the wrong test for this stage. Per
+GEPA's own validated design (its `_eval_minibatch` local gate: a cheap "did the child beat the
+parent on this subset, yes/no", no significance test, because the EXPENSIVE full eval is the real
+decision point) `cap_evolve.subsample.screen_decision` now kills on a GROSS negative signal —
+`mean(Δ) <= GROSS_KILL_DELTA` (default **-0.15**), regardless of SE — and otherwise promotes.
+-0.15 sits strictly between the ~0.10 drift measured in Finding 2 below (so ordinary
+re-measurement noise never trips it) and the ~0.2 of the one confirmed GROSS failure in that run
+(`cand_7`, an infra-broken edit — see `test_cand7_old_significance_rule_would_have_missed_this_gross_failure`
+in `core/tests/test_subsample.py`, which reconstructs it as a fixture and shows the old rule would
+have promoted it while the new rule kills it). This is a deliberate, documented behavior change —
+not a silent one: the module docstring, `screen.py`'s own docstring, and this entry all say so.
+
+**Finding 2 — re-measurement drift (~0.10) is the same order of magnitude as the effects being
+chased (~0.02-0.09).** The gate used to treat the candidate's delta against the PARENT's STORED
+reward (measured in an earlier round, so it can carry drift) as the PRIMARY accept/reject signal,
+with the delta against a freshly-measured byte-identical control — `round.py`'s own standard
+null-control mechanism, `--control-replicates 2` by default — kept as a secondary cross-check.
+Backwards: when drift and signal are comparable, the thing that cancels drift by construction
+should decide, not the thing that carries it. Confirmed live: two candidates in one run hit this
+disagreement exactly (parent-relative tie, control-relative real win, or the reverse) and needed a
+manual `grow.py` escalation to resolve. `round.py` now gates PRIMARILY against the pooled control
+replicates whenever one was measured this round (`gate_ref`, in `round.py`'s own comment at the
+assignment), keeping the raw-vs-stored-parent comparison as a secondary diagnostic
+(`raw_vs_parent` on each candidate row) for drift detection. The pre-existing `control_relative`
+field (read by `commit.py`'s `--reject-basis drift_control` and the dashboard) keeps its old shape
+for backward compatibility — it is now simply redundant with the top-level verdict under the
+default control-primary path, since there is no longer a disagreement for `drift_control` to
+resolve in that case. Falls back to the unchanged parent-primary behavior whenever no control was
+measured this round (`--no-control`). See `core/tests/test_round_control_relative_primary.py` for
+the real run's exact ambiguous scenario (reward tie against the stored parent, a real win against
+fresh control replicates) reproduced end to end through `round.py`, resolving ACCEPT directly with
+no `grow.py` growth round needed.
 
 ## Gate the sum, not each addend
 

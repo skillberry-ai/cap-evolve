@@ -34,10 +34,35 @@ With k≈4 tasks and one trial, the subset's SE is large and the delta vector is
   * a **false promote** costs exactly one full-val evaluation, after which the honest
     gate reaches the correct answer anyway.
 
-So the screen is deliberately biased toward **promote**: it kills only on evidence of
-*significant harm* (``mean(Δ) + k_se·SE < 0``), or on a unanimous negative subset where
-the SE legitimately collapses to 0. Everything else — including "no signal at all" —
-promotes, and says ``inconclusive: true`` so the reason is auditable.
+So the screen is deliberately biased toward **promote**. Everything that is not a
+gross failure — including "no signal at all" — promotes, and says
+``inconclusive: true`` when it promoted a subset that still read net-negative, so the
+reason is auditable.
+
+### issue #684 item 5 — kill is a gross-failure check, not a significance test
+
+**This is a deliberate behavior change, not a tuning tweak.** The old rule killed on
+``mean(Δ) + k_se·SE < 0`` — i.e. it required the subset to be *statistically
+significant*. Measured on a real run: tier-1 subsets were 5-11 tasks, giving SEs of
+0.11-0.17, while the round deltas that actually mattered were 0.02-0.09. A screen's own
+SE was ALWAYS larger than the effect it needed to resolve, so the significance bar
+could structurally never clear itself — 0 screen-kills across 7 candidates in that run
+(and 0/8 in an earlier one), while the screen's own rollouts cost 51 more than they
+saved. A kill rule that can never fire is not a conservative gate; it is dead code with
+a cost attached.
+
+Per GEPA's own validated design (``gepa._eval_minibatch``'s local gate: did the child
+beat the parent on this minibatch, yes or no — no significance test, because the
+EXPENSIVE full eval is the real decision point, not the cheap gate), ``screen_decision``
+now kills on a **gross negative signal**: ``mean(Δ) <= gross_kill_threshold``,
+regardless of SE. :data:`GROSS_KILL_DELTA` (``-0.15``) is the default threshold — see
+its docstring for why that number. Promote is everything else, including a subset that
+reads mildly negative but above the gross-kill bar: that is exactly the gray zone the
+old significance test could never resolve anyway, and the full-val gate is where it
+gets resolved honestly. ``inconclusive: true`` on a promote now means "the subset read
+net-negative but not grossly so" rather than "not statistically significant" — the
+distinction that mattered under the old rule (significant vs. not) no longer exists at
+this stage by design.
 
 ### The overfitting tension, stated honestly
 
@@ -59,7 +84,7 @@ import random
 
 __all__ = ["select_screen_subset", "screen_decision", "screen_savings",
            "paired_deltas_on", "full_val_ceiling", "screening_economics",
-           "TIER_FRAC", "MIN_K", "SCREEN_BREAKEVEN_CEILING"]
+           "TIER_FRAC", "MIN_K", "SCREEN_BREAKEVEN_CEILING", "GROSS_KILL_DELTA"]
 
 #: Rung → fraction of val screened (``scripts/screen.py --tier``). Tier 3 is "almost full val"
 #: for the rare case where full val is very large; the real gate is still a separate full-val
@@ -84,6 +109,18 @@ MIN_K = 6
 #: screening (above the ~0.09 observed kill rate) because the screen also buys what the kill
 #: arithmetic does not count: round.py's merge stage (#438) only runs on screened survivors.
 SCREEN_BREAKEVEN_CEILING = 0.25
+
+#: Default gross-kill threshold (issue #684 item 5): a screen kills iff the subset's
+#: mean per-task Δ is at or below this, REGARDLESS of SE. Chosen to sit strictly between
+#: the two numbers a real run actually measured: re-measurement DRIFT between byte-
+#: identical control replicates ran ~0.10 (round.py's own null-control mechanism), and
+#: the real effect sizes the optimizer was chasing ran 0.02-0.09 — so -0.15 never fires
+#: on ordinary noise or a genuine close call. The same run's one confirmed GROSS failure
+#: (cand_7, an infra-broken edit) screened at Δ̄=-0.2, comfortably below -0.15, so the
+#: threshold still catches what it exists to catch. Configurable per call
+#: (``screen.py --gross-kill-threshold``) because a noisier scorer or a wider screen
+#: subset will have a different noise ceiling; -0.15 is a sensible default, not a law.
+GROSS_KILL_DELTA = -0.15
 
 
 def _valid(pt: dict) -> bool:
@@ -232,18 +269,24 @@ def paired_deltas_on(parent_per_task: list, cand_per_task: list, ids: list) -> d
             "fixed": fixed, "dropped": dropped}
 
 
-def screen_decision(deltas: list, *, k_se: float = 1.0, regressed: list | None = None) -> dict:
+def screen_decision(deltas: list, *, k_se: float = 1.0, regressed: list | None = None,
+                    gross_kill_threshold: float = GROSS_KILL_DELTA) -> dict:
     """``kill`` or ``promote`` from a subset's paired deltas. Never ``accept``.
 
-    Kill only on evidence of significant HARM:
+    issue #684 item 5: kill is a GROSS-failure check, not a significance test —
 
-      * ``mean(Δ) + k_se·SE < 0`` — the subset says the edit is worse, beyond noise; or
-      * ``SE == 0 and mean(Δ) < 0`` — every screened task moved the same way and that
-        way was down (a unanimous negative; there is no noise to hide behind).
+      * ``mean(Δ) <= gross_kill_threshold`` → kill, REGARDLESS of SE.
 
-    Everything else promotes. In particular ``mean(Δ) == 0`` promotes: a subset of 4
-    tasks cannot distinguish "no effect" from "an effect on the other 11", and paying
-    one full-val eval to find out is cheaper than silently discarding the edit.
+    Everything else promotes, including a mildly negative mean that does not clear the
+    gross-kill bar: that gray zone is exactly what a significance test at tier-1 widths
+    could never reliably resolve anyway (see module docstring), so it is left to the
+    full-val gate rather than guessed at here. ``mean(Δ) == 0`` also promotes: a subset
+    of 4 tasks cannot distinguish "no effect" from "an effect on the other 11", and
+    paying one full-val eval to find out is cheaper than silently discarding the edit.
+
+    ``se`` is still computed and reported (useful diagnostic context, and other code
+    reads it), but it no longer decides anything — ``k_se`` is accepted only for
+    backward-compatible call signatures and is otherwise unused.
 
     ``regressed`` (subset tasks the parent passed and the candidate broke) never kills
     on its own — the no-regression veto belongs to the full-val gate, where the whole
@@ -253,7 +296,7 @@ def screen_decision(deltas: list, *, k_se: float = 1.0, regressed: list | None =
     n = len(ds)
     if n == 0:
         return {"decision": "promote", "inconclusive": True, "n": 0,
-                "mean_delta": 0.0, "se": 0.0, "threshold": 0.0,
+                "mean_delta": 0.0, "se": 0.0, "threshold": gross_kill_threshold,
                 "regressed": list(regressed or []),
                 "reason": ("no usable paired deltas on the subset (missing data, not a "
                            "measurement) — promoting to full val rather than killing on "
@@ -265,28 +308,24 @@ def screen_decision(deltas: list, *, k_se: float = 1.0, regressed: list | None =
     else:
         se = 0.0
 
-    if se == 0.0:
-        kill = mean_d < 0
-        reason = (f"subset Δ̄={mean_d:+.4f} over n={n} with SE=0 (unanimous) → "
-                  f"{'kill' if kill else 'promote'}")
-    else:
-        bar = k_se * se
-        kill = (mean_d + bar) < 0
-        reason = (f"subset Δ̄={mean_d:+.4f}, SE={se:.4f}, n={n}: "
-                  f"{'harm beyond noise (Δ̄+' + f'{k_se}·SE' + f'={mean_d + bar:+.4f} < 0)' if kill else 'not significantly harmful'}"
-                  f" → {'kill' if kill else 'promote'}")
+    kill = mean_d <= gross_kill_threshold
+    reason = (f"subset Δ̄={mean_d:+.4f} over n={n} (SE={se:.4f}, informational — kill no "
+              f"longer requires significance): "
+              + (f"GROSS negative (<= {gross_kill_threshold:+.4f}) → kill" if kill else
+                 f"above the gross-kill bar ({gross_kill_threshold:+.4f}) → promote"))
 
-    inconclusive = (not kill) and (mean_d - k_se * se) <= 0
+    inconclusive = (not kill) and mean_d < 0
     return {
         "decision": "kill" if kill else "promote",
         "inconclusive": bool(inconclusive),
         "n": n,
         "mean_delta": mean_d,
         "se": se,
-        "threshold": -k_se * se,
+        "threshold": gross_kill_threshold,
         "regressed": list(regressed or []),
-        "reason": reason + (" (inconclusive: promoted without positive evidence — the "
-                            "screen is biased against false kills)" if inconclusive and not kill else ""),
+        "reason": reason + (" (inconclusive: net-negative subset, but not grossly so — "
+                            "promoted to let the full-val gate resolve the close call)"
+                            if inconclusive else ""),
     }
 
 

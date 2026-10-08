@@ -259,8 +259,12 @@ def _screen_round(c: Checker, tmp: Path) -> None:
                [str(HERE / "screen.py"), "--run-dir", R, "--project", str(project),
                 "--candidate", str(work / "same"), "--tier", "1"])
     if sc2:
-        c.check(sc2.get("decision") == "promote" and sc2.get("inconclusive") is True,
-                f"screen.py must promote (not kill) a flat/inconclusive subset: {sc2}",
+        # issue #684 item 5: kill is now a GROSS-failure check, not a significance test, so
+        # a flat (Δ̄=0) subset is a clean promote with NO signal either way — `inconclusive`
+        # (which now means "net-negative but not grossly so") is correctly False here, not
+        # True; "flat" and "inconclusive" stopped being the same case under the new rule.
+        c.check(sc2.get("decision") == "promote" and sc2.get("inconclusive") is False,
+                f"screen.py must promote (not kill) a flat subset: {sc2}",
                 note="the screen is biased against false kills: a flat Δ̄ promotes")
         c.check(sc2["savings"]["net_rollouts"] < 0,
                 f"a promote must be reported as a COST, not a saving: {sc2['savings']}",

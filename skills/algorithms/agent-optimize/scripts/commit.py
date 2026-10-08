@@ -477,7 +477,12 @@ def main(argv=None) -> int:
                         "drift_control=the raw parent-relative gate ACCEPTED, but round.py's "
                         "drift-corrected control_relative comparison (vs a same-round "
                         "null-control replicate) says reject and is verdict-stable — a "
-                        "structured disagreement, not a one-off override; "
+                        "structured disagreement, not a one-off override. Since issue #684 "
+                        "item 6 the control-relative comparison IS round.py's primary "
+                        "verdict whenever a control was measured (the default), so this "
+                        "disagreement should rarely arise any more; it is kept for the "
+                        "--gate-against control / no-control-replicate edge cases and for "
+                        "older round tables; "
                         "driver_judgement=the gate ACCEPTED and you are overriding it for any "
                         "OTHER reason (say why in --note)")
     p.add_argument("--bypassed-gate-justification", default=None,
