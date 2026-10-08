@@ -1,0 +1,1 @@
+{"path":"work/cand_0006/_vout.py","binary":false,"size":261,"truncated":false,"text":"import json, os, sys\n\nTRAJ = \"trajectories\"\n\nt = sys.argv[1]\nd = json.load(open(os.path.join(TRAJ, f\"{t}__seed__t0.json\")))\nmd = d[\"rollout\"].get(\"metadata\") or {}\nvs = md.get(\"verifier_stdout\", \"\") or \"\"\nprint(\"VERIFIER_STDOUT len:\", len(vs))\nprint(vs[:6000])\n"}

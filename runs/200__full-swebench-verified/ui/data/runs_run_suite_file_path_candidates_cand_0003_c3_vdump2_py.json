@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0003/_c3_vdump2.py","binary":false,"size":166,"truncated":false,"text":"import json\nfn = 'trajectories/pylint-dev__pylint-4661__cand_0002__t0.json'\nd = json.load(open(fn))\nvs = d['rollout']['metadata']['verifier_stdout']\nprint(vs[:3000])\n"}

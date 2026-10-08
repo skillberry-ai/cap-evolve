@@ -1,0 +1,1 @@
+{"path":"work/cand_0005/_i5_base2.py","binary":false,"size":199,"truncated":false,"text":"import json\n\nd = json.load(open(\"_baseline.json\"))\nval = d[\"val\"]\nper = val[\"per_task\"]\nprint(\"baseline val reward:\", val[\"reward\"])\nfor t in per:\n    print(f\"{t['task_id']:44s} {t['reward']:5.2f}\")\n"}

@@ -1,0 +1,1 @@
+{"path":"work/cand_0001/_meta.py","binary":false,"size":259,"truncated":false,"text":"import json\nd = json.load(open('trajectories/django__django-10554__seed__t0.json'))\nprint(\"ERROR:\", json.dumps(d['rollout'].get('error'))[:500])\nprint(\"METADATA:\", json.dumps(d['rollout'].get('metadata'))[:1500])\nprint(\"SCORE:\", json.dumps(d['score'])[:800])\n"}

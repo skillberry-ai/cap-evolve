@@ -1,0 +1,1 @@
+{"path":"work/cand_0007/_i7_rawstep.py","binary":false,"size":201,"truncated":false,"text":"import json, sys\n\nd = json.load(open(sys.argv[1]))\nsteps = d[\"rollout\"][\"output\"][\"steps\"]\nidx = int(sys.argv[2])\ns = steps[idx]\nprint(\"source:\", s.get(\"source\"))\nprint(json.dumps(s, indent=1)[:6000])\n"}

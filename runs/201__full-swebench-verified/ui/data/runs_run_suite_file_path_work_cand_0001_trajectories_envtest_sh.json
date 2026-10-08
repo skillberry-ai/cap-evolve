@@ -1,0 +1,1 @@
+{"path":"work/cand_0001/trajectories/_envtest.sh","binary":false,"size":89,"truncated":false,"text":"#!/bin/bash\n/tmp/swe_fixture/envs/deps/bin/python -c \"import mylib; print('imports ok')\"\n"}

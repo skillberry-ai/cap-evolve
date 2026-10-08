@@ -1,0 +1,1 @@
+{"path":"work/cand_0006/_dump_user.py","binary":false,"size":171,"truncated":false,"text":"import json, sys\n\nfn = sys.argv[1]\nd = json.load(open(fn))\nsteps = d['rollout']['output']['steps']\nmsg = steps[1]['message']\nprint(\"LEN:\", len(msg))\nprint(msg[2000:6000])\n"}

@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0002/_usermsg4.py","binary":false,"size":221,"truncated":false,"text":"import json\nd = json.load(open('trajectories/django__django-10554__seed__t0.json'))\nsteps = d['rollout']['trace']['steps']\nmsg = steps[1]['message']\ni = msg.find('You are an expert software engineer')\nprint(msg[i+3500:])\n"}

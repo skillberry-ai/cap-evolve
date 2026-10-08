@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0007/_i7_base.py","binary":false,"size":200,"truncated":false,"text":"import json, os\nd = json.load(open('_baseline.json'))\nval = d['val']\nprint('reward', val['reward'])\nfor t in val['per_task']:\n    print(f\"{t['task_id']:45s} r={t['reward']:.2f} {t['feedback'][:60]}\")\n"}

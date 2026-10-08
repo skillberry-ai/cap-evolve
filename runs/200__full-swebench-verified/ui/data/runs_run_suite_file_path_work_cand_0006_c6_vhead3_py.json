@@ -1,0 +1,1 @@
+{"path":"work/cand_0006/_c6_vhead3.py","binary":false,"size":232,"truncated":false,"text":"import json\n\nd = json.load(open(\"trajectories/django__django-10554__cand_0002__t0.json\"))\nro = d.get(\"rollout\") or {}\nmeta = ro.get(\"metadata\") or {}\nvs = meta.get(\"verifier_stdout\", \"\") or \"\"\nprint(\"\\n\".join(vs.splitlines()[:60]))\n"}

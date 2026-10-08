@@ -1,0 +1,1 @@
+{"path":"work/cand_0004/_d_splits.py","binary":false,"size":258,"truncated":false,"text":"import json\n\nd = json.load(open(\"tmpcmp/baseline.json\"))\nfor split in d:\n    print(split, \"reward\", d[split].get(\"reward\"))\n    ids = [t[\"task_id\"] for t in d[split][\"per_task\"]]\n    print(len(ids), \"tasks\")\n    print([i for i in ids if \"django\" in i][:60])\n"}

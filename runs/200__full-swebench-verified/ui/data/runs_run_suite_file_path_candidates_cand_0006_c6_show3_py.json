@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0006/_c6_show3.py","binary":false,"size":139,"truncated":false,"text":"import sys\nsys.path.insert(0, \".\")\nfrom _c6_lib import dump\n\nfor t in [\n    \"django__django-14376\", \"django__django-15629\",\n]:\n    dump(t)\n"}

@@ -1,0 +1,1 @@
+{"path":"work/cand_0002/_x_tc.py","binary":false,"size":261,"truncated":false,"text":"import json, sys\nd = json.load(open(sys.argv[1]))\nr = d['rollout']\nprint('tool_calls:')\nfor tc in r['tool_calls']:\n    print(json.dumps(tc)[:800])\nprint()\nprint('metadata:', json.dumps(r.get('metadata'))[:500])\n# notes\nprint('notes:', r['output'].get('notes'))\n"}

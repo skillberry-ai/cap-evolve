@@ -1,0 +1,1 @@
+{"path":"work/cand_0003/_t3_agent.py","binary":false,"size":165,"truncated":false,"text":"import json, sys\n\np = sys.argv[1]\nwith open(p) as f:\n    d = json.load(f)\ntr = d[\"rollout\"][\"trace\"]\nag = tr.get(\"agent\", {})\nprint(json.dumps(ag, indent=1)[:6000])\n"}

@@ -1,0 +1,1 @@
+{"path":"work/cand_0003/_i3_cfg2.py","binary":false,"size":273,"truncated":false,"text":"import json\n\nd = json.load(open('trajectories/django__django-10554__cand_0002__t0.json'))\nr = d['rollout']\nout = r.get('output') or {}\nagent = out.get('agent') or {}\nextra = agent.get('extra') or {}\ncfg = extra.get('agent_config') or {}\nprint(cfg.get('instance_template'))\n"}

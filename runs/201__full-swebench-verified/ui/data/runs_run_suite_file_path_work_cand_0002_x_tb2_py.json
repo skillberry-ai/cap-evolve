@@ -1,0 +1,1 @@
+{"path":"work/cand_0002/_x_tb2.py","binary":false,"size":273,"truncated":false,"text":"import json, sys\nd = json.load(open(sys.argv[1]))\nvs = (d['rollout'].get('metadata') or {}).get('verifier_stdout','')\ni = vs.find('____ test_concise')\nj = vs.find('_ test_')\nk = vs.find('____')\nif i < 0:\n    i = vs.find('____')\nprint(vs[i:i+4000] if i >= 0 else vs[:1500])\n"}

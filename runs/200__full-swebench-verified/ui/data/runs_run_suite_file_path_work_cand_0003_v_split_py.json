@@ -1,0 +1,1 @@
+{"path":"work/cand_0003/_v_split.py","binary":false,"size":173,"truncated":false,"text":"import json\nd = json.load(open('/tmp/splits.json'))\nprint('VAL tasks (%d):' % len(d['val']))\nfor t in d['val']:\n    print(' ', t)\nprint('N train:', len(d.get('train', [])))\n"}

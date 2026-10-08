@@ -1,0 +1,1 @@
+{"path":"work/cand_0001/trajectories/_pytestcheck.py","binary":false,"size":151,"truncated":false,"text":"import sys\nprint(sys.executable)\ntry:\n    import pytest\n    print(\"pytest ok\", pytest.__version__)\nexcept ImportError as e:\n    print(\"no pytest:\", e)\n"}

@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0003/_dump_user2.py","binary":false,"size":148,"truncated":false,"text":"import json, sys\n\nfn = sys.argv[1]\nd = json.load(open(fn))\nsteps = d['rollout']['output']['steps']\nmsg = steps[1]['message']\nprint(msg[6000:11480])\n"}

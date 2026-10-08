@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0004/_tmp/md.py","binary":false,"size":221,"truncated":false,"text":"\"\"\"Explore rollout.metadata (verdict details).\"\"\"\nimport json\nimport sys\n\nd = json.load(open(sys.argv[1]))\nmd = d[\"rollout\"][\"metadata\"]\nfor k, v in md.items():\n    s = str(v)\n    print(f\"== {k}: {s[:2000]}\")\n    print()\n"}

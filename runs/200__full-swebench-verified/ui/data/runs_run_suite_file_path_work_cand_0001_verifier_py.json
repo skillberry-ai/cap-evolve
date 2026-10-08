@@ -1,0 +1,1 @@
+{"path":"work/cand_0001/_verifier.py","binary":false,"size":197,"truncated":false,"text":"import json\nd = json.load(open('trajectories/django__django-10554__seed__t0.json'))\nvs = d['rollout']['metadata'].get('verifier_stdout', '')\nprint(\"VERIFIER_STDOUT (last 4000):\")\nprint(vs[-4000:])\n"}

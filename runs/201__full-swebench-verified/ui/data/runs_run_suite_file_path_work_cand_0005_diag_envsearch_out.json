@@ -1,0 +1,1 @@
+{"path":"work/cand_0005/_diag/envsearch.out","binary":false,"size":209,"truncated":false,"text":"== pylint-dev__pylint-4661 (reward=0.0)\n   [17] python - << 'PY'\nimport importlib, os, sys\nfrom importlib import reload\n\ndef get_pylint_home():\n    import pylint.config as config\n    return config.PYLINT_HOME\n"}

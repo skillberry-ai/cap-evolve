@@ -1,0 +1,1 @@
+{"path":"work/cand_0003/_scratch_base2.py","binary":false,"size":217,"truncated":false,"text":"import json\n\nd = json.load(open(\"_baseline.json\"))\npt = d[\"val\"][\"per_task\"]\nprint(type(pt).__name__, len(pt))\nitems = list(pt.items())[:3] if isinstance(pt, dict) else pt[:3]\nprint(json.dumps(items, indent=1)[:900])\n"}

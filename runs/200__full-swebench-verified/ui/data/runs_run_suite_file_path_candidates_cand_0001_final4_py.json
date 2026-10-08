@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0001/_final4.py","binary":false,"size":224,"truncated":false,"text":"import json, os\n\nTRAJ = \"trajectories\"\ndata = json.load(open(os.path.join(TRAJ, \"django__django-10554__seed__t0.json\")))\nout = data[\"rollout\"][\"output\"]\ns = json.dumps(out, indent=1)\nprint(\"LEN\", len(s))\nprint(s[3500:8000])\n"}

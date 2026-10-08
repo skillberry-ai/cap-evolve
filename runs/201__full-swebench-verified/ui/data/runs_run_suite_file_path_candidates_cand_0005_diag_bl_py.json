@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0005/_diag/bl.py","binary":false,"size":223,"truncated":false,"text":"import json, sys\n\nd = json.load(open('_diag/cmp/baseline.json'))\nprint(type(d))\nif isinstance(d, dict):\n    for k in list(d.keys())[:25]:\n        v = d[k]\n        print(k, type(v), (len(v) if hasattr(v, '__len__') else v))\n"}

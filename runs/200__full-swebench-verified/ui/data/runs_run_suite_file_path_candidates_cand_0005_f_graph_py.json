@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0005/_f_graph.py","binary":false,"size":235,"truncated":false,"text":"import sys, json, subprocess\nout = subprocess.run([\"git\", \"show\", \"b30cf23:graph.jsonl\"], capture_output=True, text=True).stdout\nfor l in out.splitlines():\n    if l.strip():\n        d = json.loads(l)\n        print(json.dumps(d)[:600])\n"}

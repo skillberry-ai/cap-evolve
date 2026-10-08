@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0002/_scratch_t6.py","binary":false,"size":253,"truncated":false,"text":"import json\nd = json.load(open(\"trajectories/sympy__sympy-21612__seed__t0.json\"))\nsteps = d[\"rollout\"][\"trace\"][\"steps\"]\ns = steps[18]  # step 19\nprint(\"keys:«redacted» list(s.keys()))\nfor k, v in s.items():\n    sv = json.dumps(v)\n    print(f\"{k}: {sv[:300]}\")\n"}

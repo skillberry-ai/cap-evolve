@@ -1,0 +1,1 @@
+{"path":"work/cand_0006/_i6_base3.py","binary":false,"size":211,"truncated":false,"text":"import json\n\nd = json.load(open('./_i6_baseline.json'))\nval = d['val']\npt = val.get('per_task') or []\nprint(f\"n_val_tasks={len(pt)}\")\nfor t in pt:\n    print(f\"  {t.get('task_id'):45s} reward={t.get('reward')}\")\n"}

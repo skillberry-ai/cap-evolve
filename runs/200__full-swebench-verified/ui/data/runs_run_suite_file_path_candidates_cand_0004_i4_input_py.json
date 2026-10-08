@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0004/_i4_input.py","binary":false,"size":186,"truncated":false,"text":"import json, os\nTRAJ = 'trajectories'\nd = json.load(open(os.path.join(TRAJ, 'django__django-16667__cand_0002__t0.json')))\ninp = d.get('input')\nprint(repr(inp)[:800] if inp else 'EMPTY')\n"}

@@ -1,0 +1,1 @@
+{"path":"candidates/cand_0003/_t3_verfull.py","binary":false,"size":196,"truncated":false,"text":"import json, sys, os, re\n\np = sys.argv[1]\nwith open(p) as f:\n    d = json.load(f)\nmd = d[\"rollout\"].get(\"metadata\") or {}\nvs = md.get(\"verifier_stdout\", \"\") or \"\"\nprint(\"LEN:\", len(vs))\nprint(vs)\n"}

@@ -1,0 +1,1 @@
+{"path":"work/cand_0002/_probe_steps.py","binary":false,"size":257,"truncated":false,"text":"import json, sys\n\nfn = sys.argv[1]\nd = json.load(open(fn))\nsteps = d['rollout']['output']['steps']\nprint('N steps:', len(steps))\ns0 = steps[0]\nprint('step keys:«redacted» list(s0.keys()) if isinstance(s0, dict) else type(s0))\nprint(json.dumps(s0, indent=1)[:1500])\n"}

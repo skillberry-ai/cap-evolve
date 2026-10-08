@@ -1,0 +1,1 @@
+{"path":"work/cand_0001/trajectories/_pytesttest.sh","binary":false,"size":178,"truncated":false,"text":"#!/bin/bash\n/usr/local/bin/python3 -m pytest --version 2>&1 | head -2\necho \"---\"\n/usr/local/bin/python3 -c \"import pytest; print('pytest ok', pytest.__version__)\" 2>&1 | head -2\n"}
