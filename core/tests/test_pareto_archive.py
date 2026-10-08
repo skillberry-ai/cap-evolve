@@ -82,6 +82,20 @@ def test_refuses_noise_cost_win_tie_on_reward():
         archive.try_insert("c2", {"reward": 0.5, "cost": 0.9999999}, {"reward": 0.0})
 
 
+def test_insert_against_existing_point_missing_declared_objective_raises_not_keyerror():
+    """Reviewer-reproduced crash: round.py's archive seeding (``_objective_metrics`` ->
+    ``ArchivePoint``) can silently omit a declared objective (e.g. ``harness.
+    candidate_cost_objective`` returning ``(None, None)``), so an existing archive point
+    may be incomplete even though ``try_insert`` validates every NEW candidate's values.
+    The next candidate that DOES carry the missing objective must get the designed
+    ``ParetoObjectiveError`` refusal, not a raw ``KeyError``."""
+    archive = ParetoArchive(OBJECTIVES)
+    archive.points.append(ArchivePoint(tag="baseline", values={"reward": 0.5},
+                                       stderr={"reward": 0.0}))
+    with pytest.raises(ParetoObjectiveError):
+        archive.try_insert("cand_1", {"reward": 0.6, "cost": 1.0}, {"reward": 0.0, "cost": 0.1})
+
+
 def test_real_cost_win_with_tracked_stderr_is_accepted():
     archive = ParetoArchive(OBJECTIVES)
     archive.try_insert("c1", *_pt(0.5, 1.0, cost_se=0.01))

@@ -36,6 +36,7 @@ from pathlib import Path
 
 from . import selection
 from .gate import ParetoObjectiveError, _objective_state
+from .rundir import _atomic_write, _file_lock
 
 ARCHIVE_VERSION = 1
 #: ponytail: a flat default, not tuned per-benchmark; raise/lower via capevolve.yaml's
@@ -73,6 +74,16 @@ def _states_vs(values: dict, stderr: dict, other_values: dict, other_stderr: dic
     states = {}
     for obj in objectives:
         name, direction = obj["name"], obj.get("direction", "maximize")
+        if name not in other_values:
+            # ``try_insert`` already validated the NEW candidate's ``values`` has every
+            # declared objective; an existing archive point can still be missing one (e.g.
+            # seeded before an objective was declared, or from a harness that silently
+            # omitted it) — refuse the same way gate.py's own missing-metric case does,
+            # rather than a raw KeyError below.
+            raise ParetoObjectiveError(
+                f"pareto archive: existing archive point is missing declared objective "
+                f"{name!r} (have: {sorted(other_values)!r}) — refusing to compare against "
+                "an incomplete archive point")
         raw_delta = values[name] - other_values[name]
         signed = raw_delta if direction == "maximize" else -raw_delta
         sa, sb = stderr.get(name), other_stderr.get(name)
@@ -185,8 +196,12 @@ class ParetoArchive:
                    points=[ArchivePoint.from_dict(p) for p in d.get("points") or []])
 
     def save(self, path: Path) -> None:
+        """Write the archive, locked + atomic — same ``rundir.py`` pattern ``state.json``
+        uses for its identical load->mutate->save read-modify-write cycle, so two
+        processes touching the same run dir's archive don't tear or lose a write."""
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
+        with _file_lock(path.with_name(f".{path.name}.lock")):
+            _atomic_write(path, json.dumps(self.to_dict(), indent=2))
 
     @classmethod
     def load_or_create(cls, path: Path, objectives: list[dict],
@@ -199,7 +214,8 @@ class ParetoArchive:
         """
         if path.is_file():
             try:
-                return cls.from_dict(json.loads(path.read_text(encoding="utf-8")))
+                with _file_lock(path.with_name(f".{path.name}.lock")):
+                    return cls.from_dict(json.loads(path.read_text(encoding="utf-8")))
             except (OSError, ValueError, KeyError, TypeError):
                 pass
         return cls(objectives=objectives, capacity=capacity)
