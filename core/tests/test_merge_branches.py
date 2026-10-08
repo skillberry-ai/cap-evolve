@@ -164,7 +164,7 @@ def test_merges_a_committed_branch_with_an_uncommitted_survivor(tmp_path):
     assert p.returncode == 0, f"merge.py failed: {p.stdout}\n{p.stderr}"
     out = json.loads(p.stdout)
 
-    assert out["overlap"] == [], f"cand_old/cand_new should not overlap: {out}"
+    assert out["conflicts"] == [], f"cand_old/cand_new should not conflict: {out}"
     assert out["built"], f"merge was not built: {out}"
     assert out["tag"] == "merge_cand_old_cand_new"
 
@@ -190,7 +190,7 @@ def test_refuses_an_overlapping_pair(tmp_path):
     p = _run_merge(run_dir, project, "cand_old", "cand_collide")
     assert p.returncode == 2
     out = json.loads(p.stdout)
-    assert out["overlap"] == ["fn_a"], f"wrong shared-function attribution: {out}"
+    assert out["conflicts"] == ["tools/tools.py::fn_a"], f"wrong shared-function attribution: {out}"
     assert out.get("attempted") is False
     assert not (run_dir.root / "work" / "merge_cand_old_cand_collide").exists(), (
         "an overlapping pair must never be built")

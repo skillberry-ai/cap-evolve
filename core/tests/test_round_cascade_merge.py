@@ -28,6 +28,11 @@ sys.path.insert(0, str(SCRIPTS))
 BASE = "def fn_a(x):\n    return x\n\n\ndef fn_b(x):\n    return x\n"
 FIX_A = BASE.replace("def fn_a(x):\n    return x", 'def fn_a(x):\n    return x + "MARK_A"')
 FIX_B = BASE.replace("def fn_b(x):\n    return x", 'def fn_b(x):\n    return x + "MARK_B"')
+# Also rewrites fn_a, but DIFFERENTLY from FIX_A — a real edit collision on the same module,
+# used to prove a genuinely non-mergeable pair (as opposed to merely same-cluster) is still
+# free to --no-merge.
+FIX_A_OTHER = BASE.replace("def fn_a(x):\n    return x",
+                          'def fn_a(x):\n    return x + "OTHER_MARK_A"')
 BROKEN = BASE + "\n\nBROKEN = True\n"
 
 ADAPTER = '''
@@ -254,10 +259,14 @@ def test_repeated_no_merge_with_eligible_pairs_is_hard_blocked(tmp_path):
     assert ok.returncode == 0, ok.stdout + ok.stderr
     assert json.loads(ok.stdout)["merge_stage"]["chosen"] == ["merge_cand_4_cand_5"]
 
-    # A round where no merge APPLIED (same-cluster alternatives) spends nothing and is not
-    # refused even with the budget gone.
+    # A round where no merge APPLIED (both siblings independently diverged on the SAME module,
+    # fn_a — #684's is_mergeable, not mere cluster labels, decides this now) spends nothing and
+    # is not refused even with the budget gone. Same cluster label ("F") on purpose: #684 item 4
+    # requires that two same-cluster siblings on DISJOINT files/functions now be attempted (see
+    # cand_4/cand_5 above, which share no cluster but prove the same point) — only a genuine
+    # same-module collision, not a shared cluster id, is a free skip.
     _sibling(run_dir, "cand_6", FIX_A, "F", ["t0", "t1"])
-    _sibling(run_dir, "cand_7", FIX_B, "F", ["t2", "t3"])
+    _sibling(run_dir, "cand_7", FIX_A_OTHER, "F", ["t0", "t1"])
     same = rnd("cand_6,cand_7", "--no-merge")
     assert same.returncode == 0, same.stdout + same.stderr
     assert json.loads(same.stdout)["merge_skip"] is None

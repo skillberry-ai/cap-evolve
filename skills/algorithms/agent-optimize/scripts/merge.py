@@ -297,19 +297,22 @@ def main(argv=None) -> int:
         print(json.dumps({"error": f"file(s) not found: {missing}"}, indent=2))
         return 2
 
-    base_src = base_file.read_text(encoding="utf-8")
-    changed_a = merge_search.changed_functions(base_src, a_file.read_text(encoding="utf-8"))
-    changed_b = merge_search.changed_functions(base_src, b_file.read_text(encoding="utf-8"))
-    shared = changed_a & changed_b
+    # #684 item 5: whole-tree GEPA mergeable-ness check (merge_search.is_mergeable), replacing
+    # the single-file (--file only) changed_functions comparison this used to run — that older
+    # check could not see a conflict in any OTHER capability file (e.g. --prose), and this is
+    # the SAME check round.py's intra-round merge_stage now requires per #684 item 4, so a pair
+    # judged mergeable here and inside one round mean the same thing.
+    check = merge_search.is_mergeable(a_dir, b_dir, base_dir)
     out = {
         "a": args.a, "b": args.b, "base": args.base,
-        "changed_functions": {args.a: sorted(changed_a), args.b: sorted(changed_b)},
-        "overlap": sorted(shared),
+        "changed_a": check["changed_a"], "changed_b": check["changed_b"],
+        "conflicts": check["conflicts"], "identical_overlaps": check["identical_overlaps"],
     }
-    if shared:
+    if not check["mergeable"]:
         out["attempted"] = False
-        out["reason"] = (f"{args.a} and {args.b} both touch {sorted(shared)} — a real edit "
-                         "collision, not a mergeable pair of independent branches")
+        out["reason"] = (f"{args.a} and {args.b} both independently diverged from {args.base!r} "
+                         f"on {check['conflicts']} — a real edit collision, not a mergeable "
+                         "pair of independent branches")
         print(json.dumps(out, indent=2))
         return 2
 
@@ -349,7 +352,7 @@ def main(argv=None) -> int:
             mechanism=f"pairwise merge of live branches {args.a} + {args.b}",
             evidence=f"integrate.py accepted: {sorted(result.get('accepted', []))}; "
                      f"final_objective={result.get('final_objective')}",
-            touches=sorted(changed_a) + sorted(changed_b),
+            touches=sorted(check["changed_a"]) + sorted(check["changed_b"]),
             task=union_tasks, supersedes=[])
         # mechanisms.add() prints its own JSON on success; suppress it — this script has ONE
         # JSON document on stdout (see main()'s final print), same guard merge_search.py uses.

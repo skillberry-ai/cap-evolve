@@ -124,6 +124,85 @@ def _mechanisms_targets(run_dir: Path, tag: str) -> list[str]:
     return sorted(ids)
 
 
+def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path) -> dict:
+    """GEPA's mergeable-ness check (arXiv:2507.19457, Appendix D, Algorithms 3-4), adapted to
+    this project's capability tree instead of GEPA's list-of-modules abstraction.
+
+    "Module" here is this project's EXISTING merge granularity, reused rather than invented:
+    every file under the capability path (``merge._changed_files``, the same scan
+    ``merge.build_merge_dir``/``merge.diff_contained`` already use for whole-tree disjointness),
+    with each ``.py`` file split further into per-function/constant blocks (``funcmerge.blocks``
+    — the same split ``integrate.py``/``funcmerge.py`` merge on, and ``changed_functions``
+    above uses for the single-file case). Two candidates are mergeable at ``common_ancestor``
+    iff, for every module, AT MOST ONE of them independently diverged from the ancestor's
+    version of that module.
+
+    Edge case, documented per the issue that asked for this check: when BOTH candidates
+    diverged on the same module but to byte-identical content, this is reported as mergeable
+    (listed under ``identical_overlaps``, not ``conflicts``) rather than refused. GEPA's own
+    Desirable() check (Algorithm 4) only tests "did i change M" vs "did j change M" and would
+    refuse this case too, but two edits that are not actually different cannot be a real
+    disagreement, and refusing them would reject work that cannot possibly conflict.
+    """
+    import merge as merge_mod
+
+    base_f, a_f, b_f, changed_a, changed_b = merge_mod._changed_files(
+        common_ancestor, candidate_a, candidate_b)
+    both = sorted(changed_a & changed_b)
+    conflicts: list[str] = []
+    identical: list[str] = []
+    for rel in both:
+        a_bytes, b_bytes = merge_mod._read(a_f, rel), merge_mod._read(b_f, rel)
+        if a_bytes == b_bytes:
+            identical.append(rel)
+            continue
+        if not rel.endswith(".py") or a_bytes is None or b_bytes is None or rel not in base_f:
+            conflicts.append(rel)  # whole-file module: both diverged, differently
+            continue
+        try:
+            _, base_fns = funcmerge.blocks(base_f[rel].read_text(encoding="utf-8"))
+            _, a_fns = funcmerge.blocks(a_bytes.decode("utf-8"))
+            _, b_fns = funcmerge.blocks(b_bytes.decode("utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            conflicts.append(rel)
+            continue
+        for name in sorted(set(a_fns) | set(b_fns) | set(base_fns)):
+            a_fn, b_fn, base_fn = a_fns.get(name), b_fns.get(name), base_fns.get(name)
+            if a_fn != base_fn and b_fn != base_fn:         # both diverged on this sub-module
+                (identical if a_fn == b_fn else conflicts).append(f"{rel}::{name}")
+    return {
+        "mergeable": not conflicts,
+        "conflicts": conflicts,
+        "identical_overlaps": identical,
+        "changed_a": sorted(changed_a),
+        "changed_b": sorted(changed_b),
+        "both_changed_files": both,
+    }
+
+
+def build_merge(candidate_a: Path, candidate_b: Path, common_ancestor: Path,
+                out_dir: Path) -> dict:
+    """Construct the merge of two candidates found mergeable by ``is_mergeable`` above.
+
+    Per module: a module only one candidate changed is taken from that candidate; a module
+    neither changed keeps the ancestor's version unchanged; a module both changed (which
+    ``is_mergeable`` only allows through when the changes are identical) resolves to either
+    one, since they are the same bytes.
+
+    This does NOT reimplement that construction — it delegates to ``merge.build_merge_dir``,
+    the merge engine ``round.py``'s cross-round merge (``merge.py``) and intra-round merge
+    (this module's own ``find_disjoint_pairs``/``round.merge_stage``) already share. That
+    engine is strictly more capable than the paragraph above describes (it 3-way-merges a
+    both-changed module at line/function granularity via ``funcmerge``/``git merge-file``
+    rather than requiring byte-identical content), so a pair ``is_mergeable`` rejects can,
+    rarely, still build cleanly here — intentional: the GEPA check above is the conservative
+    gate that decides whether a merge is WORTH ATTEMPTING, not the thing that builds it.
+    """
+    import merge as merge_mod
+
+    return merge_mod.build_merge_dir(common_ancestor, candidate_a, candidate_b, out_dir)
+
+
 def find_disjoint_pairs(base_src: str, survivor_srcs: dict[str, str]) -> dict:
     """Every survivor pair, split into disjoint (mergeable) vs overlapping (skipped).
 

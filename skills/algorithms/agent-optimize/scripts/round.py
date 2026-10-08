@@ -633,20 +633,35 @@ def dominated_siblings(base_dir: Path, work: Path, tags: list[str]) -> dict[str,
             } if len(tags) >= 2 else {}
 
 
-def mergeable_pairs(run_dir, plan: dict, survivors: list[str]) -> tuple[list, list]:
-    """(pairs merge_stage tries to build, pairs it skips as same-cluster alternatives).
+def mergeable_pairs(run_dir, plan: dict, survivors: list[str], best: str) -> tuple[list, list]:
+    """(pairs merge_stage tries to build, pairs it skips as structurally conflicting).
 
     The ONE definition of "a merge applied this round", shared by merge_stage and #630's
     --no-merge budget, so the budget can never count a pair the merge stage would not try.
+
+    Disjointness is GEPA's Appendix D mergeable-ness check (``merge_search.is_mergeable``):
+    two siblings are attempted iff, for every module (file / per-function block — see that
+    function), at most one of them diverged from the round's parent ``best`` (their common
+    ancestor). This replaced an earlier same-diagnose-cluster heuristic that skipped siblings
+    sharing a cluster WITHOUT ever looking at their files — the common real case (two children
+    of one parent fixing the same cluster via different, disjoint files/components) was never
+    even attempted under that heuristic (#684 item 4's confirmed gap).
     """
     import itertools
 
+    import merge_search
+
+    base_dir = run_dir.candidate_dir(best)
+    work = run_dir.root / "work"
     pairs, skipped = [], []
     for a, b in itertools.combinations(sorted(survivors), 2):
         ca, cb = set(cluster_ids_for(run_dir, plan, a)), set(cluster_ids_for(run_dir, plan, b))
-        if ca & cb:
-            skipped.append({"pair": [a, b], "reason": f"same diagnose cluster(s) "
-                            f"{sorted(ca & cb)} — alternative fixes, not complementary ones"})
+        check = merge_search.is_mergeable(work / a, work / b, base_dir)
+        if not check["mergeable"]:
+            skipped.append({"pair": [a, b], "reason": "both independently diverged from the "
+                            f"round parent {best!r} on the same module(s) — a real edit "
+                            "collision, not a complementary pair",
+                            "conflicts": check["conflicts"]})
         else:
             pairs.append((a, b, ca, cb))
     return pairs, skipped
@@ -665,7 +680,7 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
     seed = int(run_dir.read_splits().seed)
     screens = {t: latest_screen(run_dir, t) for t in survivors}
     merges = []
-    pairs, skipped = mergeable_pairs(run_dir, plan, survivors)
+    pairs, skipped = mergeable_pairs(run_dir, plan, survivors, best)
     for a, b, ca, cb in pairs:
         tag = f"merge_{a}_{b}"
         built = merge_mod.build_merge_dir(base_dir, work / a, work / b, work / tag)
@@ -1218,7 +1233,7 @@ def _main(argv=None) -> int:
     # skipped by merge_stage for zero rollouts. (An unscreened survivor means no merge applied,
     # so the screen budget above and this one never charge the same round twice.)
     merge_applies = len(survivors) >= 2 and all(screened_by_tag[t] for t in survivors)
-    eligible_pairs = ([[a, b] for a, b, _, _ in mergeable_pairs(run_dir, plan, survivors)[0]]
+    eligible_pairs = ([[a, b] for a, b, _, _ in mergeable_pairs(run_dir, plan, survivors, best)[0]]
                       if merge_applies else [])
     MERGE_SKIP = None
     if args.no_merge and eligible_pairs:
@@ -1234,7 +1249,7 @@ def _main(argv=None) -> int:
         run_dir.log_event("merge_compliance_warning", **MERGE_SKIP)
         if refused:
             print(json.dumps({
-                "error": f"--no-merge declines merging screened, cluster-disjoint survivors "
+                "error": f"--no-merge declines merging screened, mergeable survivors "
                          f"{eligible_pairs}, and this run already spent its "
                          f"max_merge_skips={max_merge_skips} budget",
                 "why": "a merge costs one subset screen and gates two survivors' bytes once "
