@@ -364,6 +364,51 @@ LARGE improvement (the user's stated goal references a historical hill-climb res
 on train=val and test), which many tiny single-digit-percent single-lever edits are not shaped to
 reach even if every one of them is individually accepted.
 
+## Branching from an alternative-owner parent, not always the champion (issue #684)
+
+Every round of the forensic run branched from `best_id` alone — `plan_round.py` never considered
+whether some OTHER lineage, even a rejected one, already owned tasks the champion didn't. GEPA's
+own ablation (arXiv:2507.19457, Algorithm 2) found this per-task ownership signal its single
+biggest lever (+12.44% vs +6.05% for always-greedy parent selection) — bigger than merge, bigger
+than reflection quality. `plan_round.py` now surfaces the same signal via `task_ownership.py`
+(`cap_evolve.task_ownership`): for every task, which candidate(s) currently best-score it; for
+every non-champion candidate, which tasks it owns that the champion does not.
+
+This is read from `plan.json`'s `alternative_parents` field:
+
+```json
+"alternative_parents": [
+  {"candidate": "cand_5", "tasks_uniquely_owned": ["task_12", "task_19"],
+   "rationale": "cand_5 currently best-scores 2 task(s) (task_12, task_19) that the champion (cand_2) does not"}
+]
+```
+
+sorted by how many tasks each candidate owns (GEPA's `f[candidate]` weighting) — `[]` when there is
+no champion yet or the champion already best-scores every task (correctly: no signal to surface).
+Candidates considered include ones **rejected on aggregate** — a candidate can lose the full-val
+scalar gate yet still cleanly win specific tasks the champion never solves, and that evidence does
+not stop being real just because the aggregate gate said no.
+
+**This is a signal, not a rule.** `plan_round.py` never forces branching off a non-champion — that
+stays the driving agent's judgment call, same as every other field this script emits. Consider it
+when:
+
+- the champion has been stable for **2+ rounds with no progress** on the specific tasks an
+  `alternative_parents` entry names (if the champion's own next edit is already targeting those
+  tasks, there is nothing to gain from branching elsewhere yet);
+- an entry's `tasks_uniquely_owned` is not a single flaky task (one task flipping on measurement
+  noise is not evidence of a durable alternative approach — cross-check against `move_is_resolved`
+  if the per-task gap looks thin);
+- the alternative candidate's owned tasks are NOT a strict subset of what a planned edit to the
+  champion already targets (branching from it would then just duplicate work already in flight).
+
+When it is worth it, branch a sibling from the alternative's capability bytes (not the champion's)
+in the same round, pointing `prepare_candidate.py --parent` at it; its hypothesis should name
+*which* tasks it is trying to preserve/extend, not just restate the champion's gap. This is the
+reward-weighted single-objective lever; the reward+cost 2D Pareto archive (`gate_mode: pareto`,
+above) is the separate multi-objective accept/reject mechanism — the two are complementary, not
+duplicates.
+
 ## Bucketing edits within a slot
 
 Once `plan_round.py` has decided how many branches a slot is worth, SKILL.md's step 3 still sorts

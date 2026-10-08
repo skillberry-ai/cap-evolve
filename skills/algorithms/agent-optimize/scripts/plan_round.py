@@ -28,7 +28,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 
 import spend  # sibling script — reuses its own affordability check, see spend.py's docstring
 
-from cap_evolve import RunDir
+from cap_evolve import RunDir, task_ownership
 from cap_evolve.candidate_graph import CandidateGraph
 from cap_evolve.specfile import spec_for_run
 
@@ -179,9 +179,42 @@ def _hypothesis_stub(group: list[dict]) -> str:
             f"-- fill in the actual mechanism and fix before creating this candidate")
 
 
+def alternative_parents(ownership: dict | None, champion_id: str | None) -> list[dict]:
+    """Non-champion candidates that currently own tasks the champion doesn't -- GEPA's
+    per-instance diversity signal (``task_ownership`` module docstring), surfaced as
+    structured data for the driving agent to weigh. Never forces branching off a
+    non-champion; see algorithm.md for when that judgment call is worth making.
+
+    A task counts toward a candidate here only when the champion is NOT also a
+    best-scorer on it -- a candidate merely tied with the champion on a task carries
+    no diversity signal there. Returns ``[]`` when there is no champion yet (first
+    round, nothing to diff against) or no ownership data, and -- correctly -- when the
+    champion already best-scores every task (no false positives).
+    """
+    if not ownership or not champion_id:
+        return []
+    owners = ownership.get("owners") or {}
+    candidates = {cid for cids in owners.values() for cid in cids} - {champion_id}
+    out = []
+    for cid in sorted(candidates):
+        tasks = sorted(t for t, cids in owners.items()
+                        if cid in cids and champion_id not in cids)
+        if not tasks:
+            continue
+        out.append({
+            "candidate": cid,
+            "tasks_uniquely_owned": tasks,
+            "rationale": (f"{cid} currently best-scores {len(tasks)} task(s) "
+                          f"({', '.join(tasks)}) that the champion ({champion_id}) does not"),
+        })
+    out.sort(key=lambda row: len(row["tasks_uniquely_owned"]), reverse=True)
+    return out
+
+
 def plan_round(clusters: list[dict], candidate_graph: CandidateGraph | None,
                afford: dict | None, overlap_min: float = OVERLAP_MIN,
-               max_branches_per_slot: int = DEFAULT_MAX_BRANCHES_PER_SLOT) -> dict:
+               max_branches_per_slot: int = DEFAULT_MAX_BRANCHES_PER_SLOT,
+               ownership: dict | None = None, champion_id: str | None = None) -> dict:
     groups = group_clusters(clusters, overlap_min)
     slots = []
     for i, group in enumerate(groups, start=1):
@@ -203,6 +236,7 @@ def plan_round(clusters: list[dict], candidate_graph: CandidateGraph | None,
         "max_branches_per_slot_cap": max_branches_per_slot,
         "overlap_min": overlap_min,
         "frontier": candidate_graph.frontier() if candidate_graph is not None else None,
+        "alternative_parents": alternative_parents(ownership, champion_id),
     }
     if afford is not None:
         out["afford"] = afford
@@ -253,7 +287,9 @@ def main(argv=None) -> int:
         except Exception as e:  # noqa: BLE001 — same courtesy as above
             afford = {"error": str(e)[:300]}
 
-    out = plan_round(clusters, cg, afford, args.overlap_min, args.max_branches_per_slot)
+    ownership = task_ownership.from_run(run_dir, cg)
+    out = plan_round(clusters, cg, afford, args.overlap_min, args.max_branches_per_slot,
+                      ownership=ownership, champion_id=run_dir.best_id)
     print(json.dumps(out, indent=2))
     return 0
 

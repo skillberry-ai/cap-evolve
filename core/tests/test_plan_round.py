@@ -17,6 +17,10 @@ sys.path.insert(0, str(SCRIPTS))
 
 import plan_round  # noqa: E402  (sys.path must be seeded first)
 
+from cap_evolve import Budget, RunDir, graph, harness, task_ownership  # noqa: E402
+from cap_evolve.candidate_graph import CandidateGraph  # noqa: E402
+from cap_evolve.types import Rollout, Score, Task  # noqa: E402
+
 
 def _cluster(sig: str, tasks: list[str], score_lost: float, tag: str | None = None) -> dict:
     return {"signature": sig, "tasks": tasks, "score_lost": score_lost, "tag": tag}
@@ -117,6 +121,69 @@ def test_two_unrelated_clusters_with_equal_score_lost_do_not_both_get_bumped():
     assert totals == 2  # 1 + 1, no bump on either side of the tie
 
 
+# -- alternative_parents (issue #684 item 3: ownership-driven branch diversity) ------------
+
+def test_alternative_parents_surfaces_non_champion_owning_distinct_tasks():
+    ownership = {
+        "owners": {
+            "t1": ["champ"],
+            "t2": ["champ"],
+            "t3": ["rival"],       # rival cleanly wins a task the champion doesn't
+            "t4": ["rival"],
+        },
+    }
+    out = plan_round.alternative_parents(ownership, champion_id="champ")
+    assert len(out) == 1
+    assert out[0]["candidate"] == "rival"
+    assert out[0]["tasks_uniquely_owned"] == ["t3", "t4"]
+    assert "rival" in out[0]["rationale"] and "champ" in out[0]["rationale"]
+
+
+def test_alternative_parents_empty_when_champion_dominates_every_task():
+    ownership = {
+        "owners": {"t1": ["champ"], "t2": ["champ"], "t3": ["champ"]},
+    }
+    assert plan_round.alternative_parents(ownership, champion_id="champ") == []
+
+
+def test_alternative_parents_ignores_ties_with_champion():
+    # rival ties the champion on t1 (champion still in the owner set there) -- not a
+    # diversity signal; only t2, where champion is absent entirely, counts.
+    ownership = {
+        "owners": {"t1": ["champ", "rival"], "t2": ["rival"]},
+    }
+    out = plan_round.alternative_parents(ownership, champion_id="champ")
+    assert len(out) == 1
+    assert out[0]["tasks_uniquely_owned"] == ["t2"]
+
+
+def test_alternative_parents_empty_without_champion_or_ownership():
+    ownership = {"owners": {"t1": ["rival"]}}
+    assert plan_round.alternative_parents(ownership, champion_id=None) == []
+    assert plan_round.alternative_parents(None, champion_id="champ") == []
+
+
+def test_alternative_parents_sorted_by_tasks_owned_descending():
+    ownership = {
+        "owners": {
+            "t1": ["rival_small"],
+            "t2": ["rival_big"], "t3": ["rival_big"], "t4": ["rival_big"],
+        },
+    }
+    out = plan_round.alternative_parents(ownership, champion_id="champ")
+    assert [row["candidate"] for row in out] == ["rival_big", "rival_small"]
+
+
+def test_plan_round_output_includes_alternative_parents_field():
+    clusters = [_cluster("wrong write action", ["1", "2"], 0.2)]
+    ownership = {"owners": {"t1": ["rival"], "t2": ["champ"]}}
+    out = plan_round.plan_round(clusters, None, None, ownership=ownership, champion_id="champ")
+    assert out["alternative_parents"] == [
+        {"candidate": "rival", "tasks_uniquely_owned": ["t1"],
+         "rationale": "rival currently best-scores 1 task(s) (t1) that the champion (champ) does not"},
+    ]
+
+
 def test_high_stakes_bump_requires_a_clear_margin_over_the_runner_up():
     """A unique leader that only narrowly beats the runner-up (no clear margin) should
     not get the bump either -- it's not clearly "the one cluster carrying most of the
@@ -193,3 +260,96 @@ def test_max_branches_per_slot_only_clamps_down_never_up():
     assert len(groups) == 1
     assert plan_round.estimate_branches(groups[0], groups, max_cap=2) == 2  # clamped down
     assert plan_round.estimate_branches(groups[0], groups, max_cap=100) == 6  # not clamped up to 100
+
+
+# -- end-to-end: real RunDir rollouts -> task_ownership.from_run -> plan_round -------------
+
+class _FixedTasksAdapter:
+    """Minimal adapter whose reward per task is read straight off ``solves``, so two
+    candidates can be given deliberately NON-overlapping solved-task sets -- unlike
+    ``SyntheticAdapter``'s monotonic level ladder, this can produce a genuine
+    champion-doesn't-dominate-everything scenario for the ownership signal to catch."""
+
+    def __init__(self, task_ids: list[str], solves: dict[str, set[str]]):
+        self.task_ids = task_ids
+        self.solves = solves  # {tag: {task_ids this tag scores 1.0 on}}
+
+    def tasks(self, split: str):
+        return [Task(id=t, input=t, target="1") for t in self.task_ids]
+
+    def run_target(self, task, ctx, *, seed: int = 0):
+        return Rollout(task_id=task.id, output=str(ctx), trace="")
+
+    def score(self, task, rollout):
+        tag = Path(str(rollout.output)).name  # ctx dir name doubles as the tag here
+        ok = task.id in self.solves.get(tag, set())
+        return Score(task_id=task.id, reward=1.0 if ok else 0.0, feedback="",
+                     trial_rewards=[1.0 if ok else 0.0])
+
+
+def test_plan_round_end_to_end_surfaces_a_real_non_champion_owner(tmp_path):
+    """Real RunDir, real persisted rollouts, real graph.jsonl nodes: champion ("champ")
+    wins t1/t2 but NOT t3/t4; rival ("rival") was rejected on aggregate (it loses t1/t2)
+    yet cleanly owns t3/t4 the champion never solves. plan_round's alternative_parents
+    must surface rival with exactly those two tasks -- including picking up a REJECTED
+    candidate's evidence, per issue #684 item 3's explicit example."""
+    task_ids = ["t1", "t2", "t3", "t4"]
+    solves = {"champ": {"t1", "t2"}, "rival": {"t3", "t4"}}
+    adapter = _FixedTasksAdapter(task_ids, solves)
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="t", budget=Budget())
+    # Pin every task to val -- a ratio-based split with only 4 tasks could otherwise
+    # leave t3/t4 out of the val split entirely, which would hide the signal this
+    # test exists to check rather than exercising it.
+    harness.ensure_splits(adapter, run_dir, seed=0,
+                          split_ids={"train": task_ids, "val": task_ids, "test": task_ids})
+
+    for tag in ("champ", "rival"):
+        cdir = tmp_path / tag
+        cdir.mkdir()
+        harness.evaluate_candidate(adapter, cdir, run_dir=run_dir, split="val",
+                                   n_trials=1, tag=tag)
+
+    graph.append_node(run_dir, node_id="champ", parents=["seed"], status="accepted",
+                      val_mean=0.5)
+    graph.append_node(run_dir, node_id="rival", parents=["seed"], status="rejected",
+                      val_mean=0.0)
+    run_dir.set_best("champ")
+
+    cg = CandidateGraph.load(run_dir)
+    ownership = task_ownership.from_run(run_dir, cg)
+    out = plan_round.plan_round([], cg, None, ownership=ownership, champion_id=run_dir.best_id)
+
+    assert out["alternative_parents"] == [
+        {"candidate": "rival", "tasks_uniquely_owned": ["t3", "t4"],
+         "rationale": "rival currently best-scores 2 task(s) (t3, t4) that the champion "
+                      "(champ) does not"},
+    ]
+
+
+def test_plan_round_end_to_end_no_alternative_when_champion_dominates(tmp_path):
+    """Same wiring, but champion wins every task outright -- no non-champion owner
+    exists, so alternative_parents must be empty (no false positives)."""
+    task_ids = ["t1", "t2"]
+    solves = {"champ": {"t1", "t2"}, "rival": set()}
+    adapter = _FixedTasksAdapter(task_ids, solves)
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="t", budget=Budget())
+    harness.ensure_splits(adapter, run_dir, seed=0,
+                          split_ids={"train": task_ids, "val": task_ids, "test": task_ids})
+
+    for tag in ("champ", "rival"):
+        cdir = tmp_path / tag
+        cdir.mkdir()
+        harness.evaluate_candidate(adapter, cdir, run_dir=run_dir, split="val",
+                                   n_trials=1, tag=tag)
+
+    graph.append_node(run_dir, node_id="champ", parents=["seed"], status="accepted",
+                      val_mean=1.0)
+    graph.append_node(run_dir, node_id="rival", parents=["seed"], status="rejected",
+                      val_mean=0.0)
+    run_dir.set_best("champ")
+
+    cg = CandidateGraph.load(run_dir)
+    ownership = task_ownership.from_run(run_dir, cg)
+    out = plan_round.plan_round([], cg, None, ownership=ownership, champion_id=run_dir.best_id)
+
+    assert out["alternative_parents"] == []
