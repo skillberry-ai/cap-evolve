@@ -61,3 +61,8 @@ site/dashboard-ui/
 # here, including env_snapshot.txt (a redacted .env) and LSF job logs.
 # Credentials-adjacent: never commit.
 /results/
+
+# scripts/parsec/h4 experiment shims — a tree of symlinks into an absolute,
+# machine-local path outside the repo (e.g. /dccstor/.../rhdp-parsec/...), built
+# by hand per experiment. Not portable, same category as .capevolve/.
+/.h4_shims/
