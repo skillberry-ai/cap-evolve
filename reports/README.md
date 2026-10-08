@@ -22,6 +22,19 @@ arms, splits one level further:
 | v4 T arm (task-by-task) | `v4/v4_t_e1/<task>.md` | 34 |
 | v4 G arm (global, shared bundle) | `v4/v4_g_e1/<task>.md` | 34 |
 
+`v4/h4/` is the exception to "one file per task": it holds the **h4 held-out
+suite** — 30 new scenarios (`bench-v4-035` … `-064`) authored after the
+original 34, used to test a bundle on tasks the optimizer never saw. Its
+material is cross-arm by nature (a per-trial table across three arms, and the
+run handoff), so it is grouped by suite rather than split per task. Per-task h4
+reports, if they are ever written, belong beside them as
+`v4/h4/<task>.md`.
+
+Cross-cutting analyses that span arms or experiments stay at this directory's
+root with an experiment prefix — `v4-skillset-variant-comparison.md`,
+`v4-t4-merge-decisions.md`, `v4-cap-evolve-question-answers.md` — rather than
+inside an arm folder, since none of them belongs to a single arm.
+
 v1's task ids are all of the form `traces_parsec-aap2-<NNNN>`, so the shared prefix is dropped
 and only the number kept — `v1/aap2-0047.md`. v2's ids are already readable
 (`bench-aap2-004-failing-task-and-host`) and are used whole. The mapping is not a convention to
