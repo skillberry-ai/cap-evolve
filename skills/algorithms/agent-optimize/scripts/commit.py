@@ -53,6 +53,35 @@ from cap_evolve import RunDir, graph, harness
 import meter
 
 
+# #684 item 10: optimizer_seconds/optimizer_usd are always 0 across real agent-mode runs.
+# meter.py's automatic metering only works under host.py's headless driver (it reads a
+# claude-code session log that only exists there); in agent orchestration mode (this
+# script, called directly by the conversational agent) nothing captures the proposer's own
+# thinking time unless the agent passes --optimizer-seconds/--optimizer-usd itself — SKILL.md
+# step 7 asks for this but never required or checked it. This is a cheap, automatic sanity
+# check for that compliance gap: real wall-clock time clearly passed since the previous
+# decision, yet this commit still reports zero optimizer cost.
+_ZERO_OPTIMIZER_COST_WARN_S = 120  # ponytail: fixed heuristic threshold, tune if too noisy
+
+
+def _wallclock_since_last_decision(run_dir: RunDir) -> float | None:
+    """Seconds since this run's previous accept/reject/inconclusive/provisional decision,
+    or None when this is the first one (nothing to compare against)."""
+    last_t = None
+    try:
+        with run_dir.events_path.open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if rec.get("kind") in ("accept", "reject", "inconclusive", "provisional"):
+                    last_t = rec.get("t")
+    except OSError:
+        return None
+    return (time.time() - last_t) if last_t is not None else None
+
+
 def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
     """``memory_skill`` from the sibling project spec, or ``None``.
 
@@ -815,6 +844,18 @@ def main(argv=None) -> int:
         args.optimizer_tokens = metered["tokens"]
         args.optimizer_seconds = round(metered["seconds"], 3)
         meter_field["opt_meter"] = metered["meter"]
+    # #684 item 10: only fires when nothing else already accounted for the time (the host
+    # meter above, or the agent's own --optimizer-* flags) — a real metered/self-reported
+    # $0 round (e.g. a near-instant reject) is not a compliance problem.
+    wallclock_elapsed = _wallclock_since_last_decision(run_dir)
+    optimizer_cost_warning = None
+    if (metered is None and not args.optimizer_seconds and not args.optimizer_usd
+            and wallclock_elapsed is not None
+            and wallclock_elapsed > _ZERO_OPTIMIZER_COST_WARN_S):
+        optimizer_cost_warning = (
+            f"{wallclock_elapsed:.0f}s elapsed since the previous decision but this commit "
+            "carries optimizer_seconds=0/optimizer_usd=0 — pass --optimizer-seconds/"
+            "--optimizer-usd/--optimizer-tokens for your own proposal cost (SKILL.md step 7).")
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
@@ -827,6 +868,8 @@ def main(argv=None) -> int:
                       opt_cost_usd=args.optimizer_usd or None,
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None,
+                      optimizer_cost_warning=optimizer_cost_warning,
+                      wallclock_since_last_decision=wallclock_elapsed,
                       **meter_field, **gate)
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
                          optimizer_tokens=args.optimizer_tokens,
@@ -841,6 +884,8 @@ def main(argv=None) -> int:
     if indecisive:
         reason = f"indecisive (gate): {reason}"
     warnings: list[str] = []
+    if optimizer_cost_warning:
+        warnings.append(optimizer_cost_warning)
     if not provisional and not handover and args.missing_handover_justification:
         warnings.append(
             f"missing handover: {args.candidate_id!r} was committed with NO JOURNAL.md "

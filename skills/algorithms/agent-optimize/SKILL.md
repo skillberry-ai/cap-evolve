@@ -212,7 +212,8 @@ cap-evolve dashboard --export "$R"
 **On a reject, pass `--reject-basis`** (`gate`/`screen_kill`/`ceiling`/`budget`/`infra` — never conflate
 "promote" with "evaluated on full val"). 3+ rejects? Run `merge_rejects.py` first. `commit.py`
 **refuses a `--candidate-id` that already carries a decision** (`--force` to repair deliberately).
-Pass `--optimizer-usd/--optimizer-tokens/--optimizer-seconds` for your own proposal cost.
+**Pass `--optimizer-usd/--optimizer-tokens/--optimizer-seconds`**, required — `commit.py` warns
+if not (`algorithm.md`).
 
 **Two decisions that are NOT rejects**: `--decision inconclusive` (`verdict_stable: false` — run
 `grow.py` first); `--decision provisional` (Δ>0 under the bar — `grow.py` buys trials, capped at 2).

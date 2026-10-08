@@ -1584,6 +1584,17 @@ def reduce_run(run_dir) -> dict:
                     "what": ev.get("what"), "error": ev.get("error"),
                 }
 
+    # optimizer_cost_warning (#684 item 10): commit.py's own cheap sanity check — real
+    # wall-clock time passed since the previous decision but THIS one still reports zero
+    # optimizer cost, so nothing counted the proposer's thinking time. Read generically off
+    # ANY event carrying this field, same pattern as ``context_warning_by_tag`` above.
+    optimizer_cost_warning_by_tag: dict = {}
+    for ev in events:
+        if ev.get("optimizer_cost_warning"):
+            tag = ev.get("candidate") or ev.get("tag")
+            if tag:
+                optimizer_cost_warning_by_tag[str(tag)] = ev.get("optimizer_cost_warning")
+
     # agent_optimize_round_batch: one event per round.py invocation naming every candidate
     # tag it gated together, so candidates committed serially (and possibly across a stall
     # or a later iteration bump) still know they were measured in the SAME round. Read
@@ -1768,6 +1779,8 @@ def reduce_run(run_dir) -> dict:
             # is reconstructed after the fact. Generic across drivers (see
             # ``context_warning_by_tag`` above).
             "context_warning": context_warning_by_tag.get(cid),
+            # Generic across drivers (see ``optimizer_cost_warning_by_tag`` above).
+            "optimizer_cost_warning": optimizer_cost_warning_by_tag.get(cid),
         }
         # Structured gate numbers, when the algorithm recorded them instead of leaving them
         # to be regexed out of a reason string (agent-optimize's commit.py reads them back
@@ -1802,6 +1815,19 @@ def reduce_run(run_dir) -> dict:
             for _c in (_gt.get("candidates") or []):
                 if isinstance(_c, dict) and _c.get("tag") == cid and "verdict_stable" in _c:
                     node["verdict_stable"] = _c["verdict_stable"]
+                    break
+            # #684 item 9: `gate_mode: pareto`'s own fields (round.py, item 1/2) — the
+            # candidate's non-reward objective values and whether/why it joined the
+            # persistent cross-round ParetoArchive. Absent on every paired/epsilon_constraint
+            # round, and on a pareto round whose table predates this field.
+            for _c in (_gt.get("candidates") or []):
+                if isinstance(_c, dict) and _c.get("tag") == cid:
+                    if _c.get("objective_values") is not None:
+                        node["objective_values"] = _c["objective_values"]
+                    if _c.get("objective_stderrs") is not None:
+                        node["objective_stderrs"] = _c["objective_stderrs"]
+                    if _c.get("pareto_archive") is not None:
+                        node["pareto_archive"] = _c["pareto_archive"]
                     break
         if "epoch" in ev:
             node["epoch"] = ev.get("epoch")

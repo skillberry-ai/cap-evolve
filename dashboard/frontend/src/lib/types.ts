@@ -325,6 +325,21 @@ export interface GraphNode {
    *  round: the `reason`/`note` shown is reconstructed after the fact, not the
    *  optimizer's live reasoning. */
   context_warning?: { what: string | null; error: string | null } | null
+  /** commit.py's compliance check (#684 item 10): set when real wall-clock time passed
+   *  since the previous decision but this one still carries optimizer_seconds=0/
+   *  optimizer_usd=0 — nothing counted the proposer's own thinking time for it. */
+  optimizer_cost_warning?: string | null
+  /** gate_mode: pareto's own objective values (reward is already `val`), and whether/why
+   *  this candidate joined the persistent cross-round ParetoArchive (#684 item 9, read
+   *  from round.py's own gate table — see dashboard.py's `gate_table` lookup). Absent on
+   *  every paired/epsilon_constraint round. */
+  objective_values?: Record<string, number> | null
+  pareto_archive?: {
+    inserted?: boolean
+    reason?: string
+    values?: Record<string, number>
+    size_after?: number
+  } | null
   /** Which round.py invocation gated this candidate, when one did (agent-optimize).
    *  Nodes sharing this id were evaluated and gated TOGETHER, not sequentially —
    *  absent for candidates not gated via round.py. */

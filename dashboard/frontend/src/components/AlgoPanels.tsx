@@ -491,6 +491,13 @@ function RoundCard({
             : {n.context_warning.error ?? 'empty'}).
           </div>
         )}
+        {/* #684 item 10: commit.py's own compliance check — real wall-clock time passed
+            since the previous decision but THIS one still reports zero optimizer cost. */}
+        {n.optimizer_cost_warning && (
+          <div className="mb-2 rounded border border-indecisive/50 bg-indecisive/[0.06] px-2.5 py-1.5 text-[11px] text-indecisive">
+            {n.optimizer_cost_warning}
+          </div>
+        )}
 
         {screens.length > 0 && (
           <Step label="screen">

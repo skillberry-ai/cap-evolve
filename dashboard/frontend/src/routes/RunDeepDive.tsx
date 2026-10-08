@@ -23,6 +23,7 @@ import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
 import { CostLedger } from '../components/CostLedger'
 import { GatePanel } from '../components/GatePanel'
 import { TaskMatrix, SealedTestMatrix } from '../components/TaskMatrix'
+import { TaskOwnership } from '../components/TaskOwnership'
 import { LogStream } from '../components/LogStream'
 import {
   EvographPanel,
@@ -245,6 +246,7 @@ function TabBody({
             selectedId={selectedCandidate}
             screens={extra.screens}
           />
+          <TaskOwnership nodes={data.graph.nodes} />
           <SealedTestMatrix summary={s} />
         </div>
       )

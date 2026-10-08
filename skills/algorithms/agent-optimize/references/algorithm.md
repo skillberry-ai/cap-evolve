@@ -936,6 +936,32 @@ either mode's decision: both produce the same `accept`/`indecisive` fields it al
 Without an `objectives` block in `capevolve.yaml`, none of this runs: `gate_mode` stays whatever it
 already was (`paired` by default) and every call site is byte-identical to before #667 landed.
 
+## Optimizer cost telemetry: `--optimizer-usd/--optimizer-tokens/--optimizer-seconds` (#684)
+
+`optimizer_seconds`/`optimizer_usd` were always 0 in `state.json` across every real agent-mode
+run — one run's agent/optimizer thinking time between rounds (~150 of 549 total minutes) was
+never counted at all. This is a SKILL.md compliance gap, not a framework instrumentation gap:
+`meter.py`'s automatic metering (`CAPEVOLVE_HOST_METER=1`, reading claude-code's own session log)
+only works under `host.py`'s headless driver, which has a real session log to read. In agent
+orchestration mode — this skill, `commit.py` called directly by the conversational agent — there
+is no such log, so nothing captures the proposer's own thinking time unless the agent passes
+`--optimizer-seconds`/`--optimizer-usd`/`--optimizer-tokens` itself. SKILL.md asked for this since
+#610 but never required or checked it, so in practice it was never done.
+
+**Fix it the same way merge-before-seal and the screen ladder became required**: pass the flags
+on every `commit.py` call, estimating from wall-clock since your previous commit if you have
+nothing more precise. `commit.py` cannot force this (nothing can force an agent to pass a flag),
+but it DOES check it, the same way `round.py`'s `agent_optimize_compliance` event flags an
+unscreened full-val gate: if real wall-clock time clearly passed since the run's previous
+accept/reject/inconclusive/provisional decision (`_wallclock_since_last_decision`) and this commit
+still carries `optimizer_seconds=0`/`optimizer_usd=0`, it logs an `optimizer_cost_warning` on the
+decision event — surfaced in `commit.py`'s own `warnings` list and on the dashboard's node detail
+(the same place `context_warning` already renders a missing-handover warning). The threshold is a
+fixed 120s heuristic (`_ZERO_OPTIMIZER_COST_WARN_S`); a genuinely instant reject with real 0 cost
+never trips it. Seeing the warning means a PAST commit skipped this — fix it on the next one, not
+by re-running the one that already warned (that candidate's id already has a decision; `commit.py`
+refuses to re-commit it without `--force`).
+
 ## Measuring only what the edit reaches
 
 Two things a round prints are claims about *causality*, and both were being made at a precision the

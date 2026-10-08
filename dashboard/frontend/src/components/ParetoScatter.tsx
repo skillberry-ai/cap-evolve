@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   CartesianGrid,
   ResponsiveContainer,
@@ -8,7 +9,8 @@ import {
   YAxis,
 } from 'recharts'
 import type { GraphNode, RunSummaryDetail } from '../lib/types'
-import { toParetoPoints, paretoFrontier, type ParetoPoint } from '../lib/pareto'
+import { toParetoPoints, paretoFrontier, normalizePoints, type ParetoPoint,
+  type NormalizedParetoPoint } from '../lib/pareto'
 import { pct, usd } from '../lib/format'
 import { Card } from './ui/Card'
 
@@ -45,6 +47,7 @@ const COLOR: Record<GraphNode['status'], string> = {
  * (the current Pareto frontier) drawn as filled stars, dominated points as plain dots.
  * Only rendered by the caller when `isMultiObjective()` is true. */
 export function ParetoScatter({ nodes }: { nodes: GraphNode[] }) {
+  const [normalized, setNormalized] = useState(false)
   const points = toParetoPoints(nodes)
   if (points.length === 0) {
     return (
@@ -56,19 +59,32 @@ export function ParetoScatter({ nodes }: { nodes: GraphNode[] }) {
     )
   }
   const frontier = paretoFrontier(points)
-  const frontierPts = points.filter((p) => frontier.has(p.id))
-  const dominatedPts = points.filter((p) => !frontier.has(p.id))
+  const normPoints = normalizePoints(points)
+  const frontierPts = normPoints.filter((p) => frontier.has(p.id))
+  const dominatedPts = normPoints.filter((p) => !frontier.has(p.id))
 
   return (
     <Card className="p-4">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-sm font-medium">Reward vs cost (Pareto)</h3>
-        <span className="text-xs text-muted">
-          {frontierPts.length} on the current frontier · {dominatedPts.length} dominated
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted">
+            {frontierPts.length} on the current frontier · {dominatedPts.length} dominated
+          </span>
+          {/* Utopia/nadir normalization (MOO survey eq. 7) — raw units stay the default;
+              this is an additive toggle, never a replacement (#684 item 9). */}
+          <label className="flex items-center gap-1.5 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={normalized}
+              onChange={(e) => setNormalized(e.target.checked)}
+            />
+            normalize axes
+          </label>
+        </div>
       </div>
       <div style={{ width: '100%', height: 280 }}>
-        <ScatterChartWrap frontierPts={frontierPts} dominatedPts={dominatedPts} />
+        <ScatterChartWrap frontierPts={frontierPts} dominatedPts={dominatedPts} normalized={normalized} />
       </div>
     </Card>
   )
@@ -77,31 +93,39 @@ export function ParetoScatter({ nodes }: { nodes: GraphNode[] }) {
 function ScatterChartWrap({
   frontierPts,
   dominatedPts,
+  normalized,
 }: {
-  frontierPts: ParetoPoint[]
-  dominatedPts: ParetoPoint[]
+  frontierPts: NormalizedParetoPoint[]
+  dominatedPts: NormalizedParetoPoint[]
+  normalized: boolean
 }) {
+  const xKey = normalized ? 'costNorm' : 'cost'
+  const yKey = normalized ? 'rewardNorm' : 'reward'
   return (
     <ResponsiveContainer>
       <ScatterChart margin={{ top: 8, right: 12, bottom: 24, left: 8 }}>
         <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
         <XAxis
-          dataKey="cost"
+          dataKey={xKey}
           type="number"
           name="cost"
+          domain={normalized ? [0, 1] : undefined}
           stroke="var(--muted)"
           tick={{ fontSize: 11 }}
-          tickFormatter={(v: number) => usd(v)}
-          label={{ value: 'cost ($)', position: 'insideBottom', offset: -4, fontSize: 10, fill: 'var(--muted)' }}
+          tickFormatter={(v: number) => (normalized ? v.toFixed(2) : usd(v))}
+          label={{
+            value: normalized ? 'cost (0=utopia, 1=nadir)' : 'cost ($)',
+            position: 'insideBottom', offset: -4, fontSize: 10, fill: 'var(--muted)',
+          }}
         />
         <YAxis
-          dataKey="reward"
+          dataKey={yKey}
           type="number"
           name="reward"
-          domain={[0, 1]}
+          domain={normalized ? [0, 1] : [0, 1]}
           stroke="var(--muted)"
           tick={{ fontSize: 11 }}
-          tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
+          tickFormatter={(v: number) => (normalized ? v.toFixed(2) : `${Math.round(v * 100)}%`)}
         />
         <Tooltip content={<ParetoTooltip />} />
         <Scatter data={dominatedPts} fill="var(--muted)" shape="circle" />
