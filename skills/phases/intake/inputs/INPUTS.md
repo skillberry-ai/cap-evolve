@@ -169,6 +169,21 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   also: significant|strict|threshold), `gate_k_se` (default 1.0; the
   examples use 0.2). Add `--no-regression` to forbid breaking passing tasks.
 
+- **objectives** (default: unset = single-objective, gates on `reward` alone — the
+  behavior every existing project already has). Ask only when `gate_mode: pareto` is
+  chosen (multi-objective, supported by both `agent-optimize` and `hill-climb`): single
+  objective (reward only) or multi-objective (Pareto/epsilon-constraint over reward +
+  one or more secondaries). If multi-objective and the user doesn't name objectives,
+  default to the standard pair `reward` (maximize) + `cost` (minimize) — the same
+  `_DEFAULT_PARETO_OBJECTIVES` `cap_evolve.gate.decide(mode="pareto")` itself falls back
+  to when `objectives:` is omitted from `capevolve.yaml`. Honesty cost: every non-reward
+  objective needs a real per-candidate measurement AND stderr to clear its own
+  significance bar (`gate.ParetoObjectiveError` refuses rather than silently degrading to
+  float-noise); `hill-climb`'s own per-iteration data can only resolve `cost` today
+  (per-task `cost_usd`) — a custom objective name needs the caller to source it itself.
+  Write the choice into `capevolve.yaml`'s `objectives:` block (or leave it absent for
+  single-objective) and note it in `PROJECT.md`.
+
 - **metrics (display)**: which numbers to surface and which one GATES.
   - `metric_primary`: the single metric that decides accept/reject (= the scalar reward). Blank = use the reward directly.
   - `metrics_display` + `metric_directions`: extra SHOWN-ONLY metrics and each one's direction (`higher`|`lower`). These never affect the gate — display only.

@@ -47,8 +47,14 @@ def main(argv=None) -> int:
                    help="concurrent rollouts per evaluation (1 = serial, the default). "
                         "Only safe when the adapter's run_target is thread-safe.")
     p.add_argument("--gate-mode", default="auto",
-                   help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold")
+                   help="auto = let the engine pick the paired gate (recommended; candidate & current share val tasks); or significant|paired|strict|threshold|pareto")
     p.add_argument("--k-se", type=float, default=1.0)
+    p.add_argument("--objectives", default=None,
+                   help="--gate-mode pareto only (#684): JSON list of {name, direction}, e.g. "
+                        '\'[{"name":"reward","direction":"maximize"},'
+                        '{"name":"cost","direction":"minimize"}]\'. Default (omitted) = '
+                        "cap_evolve.gate's own default (reward maximize + cost minimize). Mirror "
+                        "capevolve.yaml's `objectives:` block when the project declares one.")
     p.add_argument("--store", default="git", help="git|copy|command")
     p.add_argument("--store-commit-cmd", default=None)
     p.add_argument("--no-regression", action="store_true",
@@ -103,12 +109,19 @@ def main(argv=None) -> int:
         current_val = SplitResult.from_dict(
             json.loads((run_dir.root / "baseline.json").read_text())["val"])
 
-    # The gate's kwargs. ``gate_max_broke`` is added ONLY when set, so the dict every run so
-    # far passed is byte-identical and the accept/reject decision cannot have moved.
+    # The gate's kwargs. ``gate_max_broke``/``objectives`` are added ONLY when set, so the
+    # dict every pre-existing run passed is byte-identical and the accept/reject decision
+    # cannot have moved.
     gate_kwargs = ({"k_se": args.k_se} if args.gate_mode == "auto"
                    else {"mode": args.gate_mode, "k_se": args.k_se})
     if args.gate_max_broke is not None:
         gate_kwargs["gate_max_broke"] = int(args.gate_max_broke)
+    if args.objectives:
+        try:
+            gate_kwargs["objectives"] = json.loads(args.objectives)
+        except json.JSONDecodeError as exc:
+            print(json.dumps({"error": f"--objectives is not valid JSON: {exc}"}))
+            return 2
 
     result = harness.hill_climb_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, current_val=current_val,

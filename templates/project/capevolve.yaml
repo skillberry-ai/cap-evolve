@@ -89,13 +89,15 @@ github_integration: false    # mirror-only: mirror the algorithm's work items as
 stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective, native in round.py's own --mode) | epsilon_constraint (maximize reward subject to a hard ceiling on another metric, native in round.py's own --mode)
+gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective, native in round.py's own --mode; hill-climb natively per-iteration) | epsilon_constraint (maximize reward subject to a hard ceiling on another metric, native in round.py's own --mode)
 gate_k_se: 1.0
 # Optional, pareto gate_mode only (cap_evolve.gate.decide / cap_evolve.pareto_archive): the
 # objectives to balance. Omit for the default (reward maximize + cost minimize, with a
 # cost->latency->tokens fallback). round.py persists a bounded non-dominated frontier
 # (cap_evolve.pareto_archive.ParetoArchive) across rounds in $RUN_DIR/pareto_archive.json;
 # an accept is "the archive actually gave this candidate a slot", not a one-shot comparison.
+# hill-climb's only resolvable non-reward objective today is "cost" (per-task cost_usd);
+# agent-optimize sources metrics itself per gate_check.py --metrics-candidate/--metrics-current.
 # objectives:
 #   - {name: reward, direction: maximize}
 #   - {name: cost, direction: minimize}

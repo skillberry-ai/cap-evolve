@@ -31,6 +31,7 @@ from . import footprint as footprint_mod
 from . import gate as gate_mod
 from . import graph as graph_mod
 from . import integrity
+from . import stats
 from .cache import hash_candidate_dir
 from .memory import MemorySkill
 from .loop import SplitResult, aggregate_scores, has_valid_trials
@@ -1510,6 +1511,37 @@ def movement(parent_per_task, cand_per_task) -> dict:
     return {**moves, "n_shared": len(shared)}
 
 
+def _pareto_metrics_kwargs(current_val: SplitResult, cand_val: SplitResult) -> dict:
+    """``metrics_candidate``/``metrics_current``/their stderrs for ``gate.decide(mode="pareto")``.
+
+    Hill-climb's per-iteration data (#684 item 8) has exactly one secondary objective
+    on offer: per-task ``cost_usd`` (written by ``evaluate_candidate`` into each
+    ``Score.raw``). Mean + between-task SE over the tasks BOTH sides validly measured —
+    same estimator ``aggregate_scores``/``stats.combined_stderr`` use for reward, applied
+    to cost instead. Any other declared objective name (e.g. ``latency``) is left for
+    ``gate._resolve_pareto_objectives`` to refuse on its own (missing from these dicts),
+    rather than fabricated here.
+
+    Returns ``{}`` when either side has no usable cost data — a single-objective
+    ``pareto`` config (``objectives: [{name: reward, ...}]`` only) never needs this, and a
+    multi-objective one that declares something other than ``cost``/``latency``/``tokens``
+    gets gate.py's own ``ParetoObjectiveError`` instead of a silently fabricated value.
+    """
+    def _costs(sr: SplitResult) -> list[float]:
+        return [float(pt["raw"]["cost_usd"]) for pt in (sr.per_task or [])
+                if has_valid_trials(pt) and (pt.get("raw") or {}).get("cost_usd") is not None]
+
+    cand_costs, cur_costs = _costs(cand_val), _costs(current_val)
+    if not cand_costs or not cur_costs:
+        return {}
+    return {
+        "metrics_candidate": {"cost": stats.mean(cand_costs)},
+        "metrics_current": {"cost": stats.mean(cur_costs)},
+        "metrics_stderr_candidate": {"cost": stats.stderr(cand_costs)},
+        "metrics_stderr_current": {"cost": stats.stderr(cur_costs)},
+    }
+
+
 def _journal_tail(workdir: Path) -> str:
     """The optimizer-authored text APPENDED below the journal marker this iteration.
 
@@ -2920,11 +2952,18 @@ def run_step(
     # under-including here would hide exactly the trade this records. It never touches the
     # verdict unless the caller set ``gate_max_broke`` in ``gate_kwargs``.
     mv = movement(current_val.per_task, cand_val.per_task)
+    # Multi-objective (#684 item 8): when the caller pinned ``mode="pareto"`` (via
+    # ``gate_kwargs``, itself from ``capevolve.yaml``'s ``gate_mode``/``objectives``),
+    # supply the non-reward metric gate.py's pareto mode needs. A no-op dict ({}) for
+    # every other mode, so an existing single-metric config's gate call is unchanged.
+    pareto_metrics = (_pareto_metrics_kwargs(current_val, cand_val)
+                      if gate_kwargs.get("mode") == "pareto" else {})
     decision = gate_mod.decide(
         current_val.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=current_val.stderr,
         paired_deltas=paired_deltas, coverage=cand_val.coverage, run_dir=run_dir,
         broke=mv["broke"], fixed=mv["fixed"],
+        **pareto_metrics,
         **gate_kwargs,
     )
 

@@ -955,6 +955,11 @@ def _cmd_run(argv):
                "--gate-mode", str(spec.get("gate_mode", "auto")),
                "--k-se", str(spec.get("gate_k_se", 1.0)),
                "--store", str(spec.get("store", "git"))]
+    # Multi-objective (#684 item 8): hill-climb is the only non-agent-optimize algorithm
+    # that reads ``objectives:`` today, forwarded ONLY when the spec declares it, so an
+    # existing single-objective config's command line is byte-identical.
+    if algorithm_name == "hill-climb" and spec.get("objectives"):
+        alg_cmd += ["--objectives", json.dumps(spec["objectives"])]
     # Resume: every deterministic algorithm accepts --resume (continue from the current
     # best in the run dir instead of re-reading baseline.json). agent mode already
     # short-circuited above, so we never reach here for it.
