@@ -1,4 +1,18 @@
-def update_reservation_flights(reservation_id: str, cabin: str, flights: list, payment_id: str):
+from typing import List, Literal
+
+from pydantic import BaseModel, Field
+
+CabinClass = Literal["business", "economy", "basic_economy"]
+
+
+class FlightInfo(BaseModel):
+    flight_number: str = Field(description="Flight number, such as 'HAT001'.")
+    date: str = Field(
+        description="The date for the flight in the format 'YYYY-MM-DD', such as '2024-05-01'."
+    )
+
+
+def update_reservation_flights(reservation_id: str, cabin: CabinClass, flights: List[FlightInfo | dict], payment_id: str):
     """
     Update the flight information of a reservation.
 

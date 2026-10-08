@@ -51,8 +51,14 @@ from typing import Optional, Sequence
 # log, and each patch matches an exact snippet of the pinned source. Bumping a ref means owning
 # that patch — see the ref contract in provision(), and _patch_store_logging /
 # _patch_agent_logging for the anchors to re-validate.
-STORE_REPO = "https://github.com/skillberry-ai/skillberry-store.git"
-STORE_REF = "0.2.1"                       # a tag: cloned with --branch
+# The store is pinned to an EXACT COMMIT on a fork, not to a branch: a branch would re-point
+# the store under a run whenever that branch moves, and two runs days apart would not be
+# comparable. Moving this forward is deliberate — bump the SHA, re-run, then commit.
+STORE_REPO = "https://github.com/aviweit/skillberry-store.git"
+# fix/vmcp-rich-tool-schema @ 8603e33: derives a tool's published MCP inputSchema from its
+# Python annotations (Literal -> enum, Pydantic model -> nested fields), which is what lets a
+# store-delivered tool advertise the same surface the benchmark's in-process tools do.
+STORE_REF = "8603e332fbc837d46eb0db20ffbd2837940c45ff"   # a commit: clone + checkout
 AGENT_REPO = "https://github.com/skillberry-ai/skillberry-agent.git"
 AGENT_REF = "e359494f18267e339f9561acbd7a930e3b51189e"   # a commit: clone + checkout
 
@@ -659,7 +665,7 @@ def provision(*, store_ref: Optional[str] = None, agent_ref: Optional[str] = Non
     sd, ad = store_dir(), agent_dir()
     sref = store_ref or os.environ.get("SKILLBERRY_STORE_REF") or STORE_REF
     aref = agent_ref or os.environ.get("SKILLBERRY_AGENT_REF") or AGENT_REF
-    _clone_at(STORE_REPO, sref, sd, ref_is_tag=True)
+    _clone_at(STORE_REPO, sref, sd, ref_is_tag=False)
     _patch_store_logging(sd, sref)       # before install: the patch is source, not runtime config
     _install_service(sd)
     _clone_at(AGENT_REPO, aref, ad, ref_is_tag=False)

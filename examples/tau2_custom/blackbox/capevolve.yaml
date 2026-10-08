@@ -5,9 +5,13 @@
 capabilities: [tools]                    # the agent's TOOL SURFACE only
 capability_path: seed_capability         # my_skill/ (THE capability) + primitive_tools/ (FROZEN)
 actions: [edit]
-# The seed is generated from tau2's own primitives and the wrappers call them by NAME
-# through the store — no shared types module is imported by the editable code.
-capability_sources: []
+# tau2's airline data model, READ-ONLY: the Literal aliases and Pydantic models the
+# benchmark's own tools declare. The editable code cannot IMPORT it — the store derives
+# each tool's schema from that one script and resolves no sibling import — so a tool
+# needing a structured parameter COPIES the class it needs (see optimizer/INSTRUCTIONS.md).
+# Declared so it is materialized next to the capability SKILL.md the optimizer reads,
+# rather than left to be found in the benchmark checkout. Same file the direct arm uses.
+capability_sources: [seed_capability/reference/data_model.py]
 
 # --- how the candidate REACHES the model (the intervention) -----------------
 # capabilities: says WHAT is edited; intervention: says HOW it is delivered. Under `blackbox`
@@ -25,7 +29,7 @@ skill_name: my_skill
 # comparable. SKILL.md is not an edit surface for this run either (an empty file = a
 # neutral seed: the tool surface, not prose, is what is being optimized). Editing one of
 # these makes the candidate INDECISIVE (the measurement is void) rather than scored 0.0.
-protected_paths: ["primitive_tools/*", "my_skill/SKILL.md"]
+protected_paths: ["primitive_tools/*", "my_skill/SKILL.md", "reference/*"]
 
 # --- who proposes edits -----------------------------------------------------
 optimizer_skill: claude-code

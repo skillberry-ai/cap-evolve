@@ -36,12 +36,17 @@ exists). Here is everything intake needs:
                 candidates one way while the record says the other. The second arm is a
                 SEPARATE onboarding in its own project (intake `--base`), done only if I ask.
 - for `intervention: blackbox`, FOLLOW THE INTERVENTION SKILL —
-                `skills/interventions/llm-proxies/blackbox/SKILL.md` and the seeding reference it
-                points to. It owns provisioning, service lifecycle, the seed shape (one skill
-                package + a frozen primitives module), the wrapper authoring rules, store
-                import order, and the per-candidate deploy. Do NOT re-derive any of that from
-                this prompt, and do not hand-roll a copy of blackbox_env. This prompt supplies only
-                what the skill cannot know: the benchmark and the environment.
+                `skills/interventions/llm-proxies/blackbox/SKILL.md`. It owns provisioning,
+                service lifecycle, store import order, and the per-candidate deploy. Do NOT
+                re-derive any of that from this prompt, and do not hand-roll a copy of
+                blackbox_env. This prompt supplies only what the skill cannot know: the
+                benchmark and the environment.
+                For the SEED SHAPE and the wrapper authoring rules the skill is silent — the
+                normative example is the committed seed at
+                `examples/tau2_custom/blackbox/seed_capability/` (one skill package
+                `my_skill/` + a frozen `primitive_tools/`), and the rules the optimizer is
+                held to are `examples/tau2_custom/blackbox/optimizer/INSTRUCTIONS.md`. Read
+                both before authoring a wrapper; the invariants are in #1 below.
 
 # 1. CAPABILITY TO OPTIMIZE  (a copy is edited each iteration; the original is never touched)
 - what:         the airline agent's TOOL SURFACE only (tools; the system prompt / policy is NOT
@@ -58,11 +63,21 @@ exists). Here is everything intake needs:
                 Reservation, Passenger, Payment) so the optimizer can write correct tool code.
                 Seed tools must be CLEAN runnable code — no baked-in optimizer instructions in
                 the docstrings.
-- IF blackbox:  capabilities [tools]; the seed is GENERATED from the same 14 primitives
-                per the intervention skill's seeding procedure. capability_sources [].
-                THE SEED MUST BE NEUTRAL. my_skill/SKILL.md must be an EMPTY FILE (empty
-                string). The optimizer edits only tools (scripts/<tool>.py); SKILL.md is
-                not an edit surface.
+- IF blackbox:  capabilities [tools]; the seed renders the same 14 primitives as a SKILL
+                PACKAGE. Copy the shape from the committed
+                `examples/tau2_custom/blackbox/seed_capability/`, which is normative; four
+                invariants, and breaking one silently produces a broken tool rather than an
+                error: (a) `my_skill/scripts/<tool>.py` — ONE public top-level `def` per file,
+                named like the file, because every top-level `def` becomes its own tool;
+                (b) the wrapper body reaches the environment ONLY by calling a frozen
+                primitive BY BARE NAME (`env_<tool>`), never by importing or editing
+                `primitive_tools/`; (c) each wrapper's signature, parameter NAMES and
+                docstring match the benchmark's own tool, since the scorer matches actions by
+                name and argument and the published schema is built from both; (d)
+                `my_skill/SKILL.md` must be an EMPTY FILE (empty string) — THE SEED MUST BE
+                NEUTRAL. capability_sources: the benchmark's airline data_model, so the
+                optimizer can write correct tool code. The optimizer edits only
+                `scripts/<tool>.py`; SKILL.md is not an edit surface.
 - actions:      [edit]
 
 # 1b. INTERVENTION  (how the capability reaches the model — a spec key)

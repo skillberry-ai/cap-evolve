@@ -1,4 +1,14 @@
-def update_reservation_passengers(reservation_id: str, passengers: list):
+from typing import List
+
+from pydantic import BaseModel, Field
+
+class Passenger(BaseModel):
+    first_name: str = Field(description="Passenger's first name")
+    last_name: str = Field(description="Passenger's last name")
+    dob: str = Field(description="Date of birth in YYYY-MM-DD format")
+
+
+def update_reservation_passengers(reservation_id: str, passengers: List[Passenger | dict]):
     """
     Update the passenger information of a reservation.
 

@@ -1,4 +1,31 @@
-def book_reservation(user_id: str, origin: str, destination: str, flight_type: str, cabin: str, flights: list, passengers: list, payment_methods: list, total_baggages: int, nonfree_baggages: int, insurance: str):
+from typing import List, Literal
+
+from pydantic import BaseModel, Field
+
+FlightType = Literal["round_trip", "one_way"]
+CabinClass = Literal["business", "economy", "basic_economy"]
+Insurance = Literal["yes", "no"]
+
+
+class FlightInfo(BaseModel):
+    flight_number: str = Field(description="Flight number, such as 'HAT001'.")
+    date: str = Field(
+        description="The date for the flight in the format 'YYYY-MM-DD', such as '2024-05-01'."
+    )
+
+
+class Passenger(BaseModel):
+    first_name: str = Field(description="Passenger's first name")
+    last_name: str = Field(description="Passenger's last name")
+    dob: str = Field(description="Date of birth in YYYY-MM-DD format")
+
+
+class Payment(BaseModel):
+    payment_id: str = Field(description="Unique identifier for the payment")
+    amount: int = Field(description="Payment amount in dollars")
+
+
+def book_reservation(user_id: str, origin: str, destination: str, flight_type: FlightType, cabin: CabinClass, flights: List[FlightInfo | dict], passengers: List[Passenger | dict], payment_methods: List[Payment | dict], total_baggages: int, nonfree_baggages: int, insurance: Insurance):
     """
     Book a reservation.
 

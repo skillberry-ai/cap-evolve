@@ -94,9 +94,27 @@ breaking one silently produces a broken tool rather than an error:
 1. **One public top-level function per file, named exactly like the file.** Every
    top-level `def` in the file becomes its OWN tool, so a second one silently mints a
    phantom tool. Helpers must be NESTED inside the function and `_`-prefixed.
-2. **The docstring IS the schema the model reads** (Google style: a description, then
-   `Args:` with one `name: description` line per parameter). Type annotations must stay
-   JSON-shaped (`str`, `int`, `list`, `dict`).
+2. **The SIGNATURE and the DOCSTRING together are the schema the model reads.** The
+   docstring (Google style: a description, then `Args:` with one `name: description` line
+   per parameter) gives each parameter its DESCRIPTION; the annotations give its STRUCTURE
+   — a `Literal` becomes the allowed values, a Pydantic model becomes the object's fields
+   and which are required. A parameter declared `list` or `dict` says nothing about its
+   contents, so the model guesses the field names and the environment rejects the call.
+   - **The SEED's signatures are FROZEN** — types, parameter NAMES and docstrings are
+     identical to the benchmark's own tools. Changing one is a regression even when the
+     body still works: the scorer matches actions by name and argument.
+   - **A tool YOU add: `str` / `int` / `list` / `dict` by default.**
+   - **A new tool with a genuinely structured parameter: declare the real type**, copied
+     from `./guidance/sources/data_model.py` into your tool file WITH its dependencies
+     (`Reservation` needs `ReservationFlight`, `Passenger`, `Payment` and the cabin /
+     insurance literals; `User` needs `Name` and `Address`). Copy only value models and
+     `typing` / `pydantic` imports — never a `tau2.*` import, never a DB class (`FlightDB`).
+   - **Four constraints; breaking one gives a FLAT schema and no error:** every class or
+     alias lives in the SAME file as the `def` using it (the store derives each tool's
+     schema from that one script and resolves no sibling import); the `def` stays on ONE
+     line; no self-referential model; a missing dependency raises inside the derivation
+     and is swallowed.
+
 3. **Reach the environment ONLY by calling a frozen primitive BY BARE NAME**, inside the
    function body — the store resolves the name and injects that primitive's code. The
    callable primitives are exactly: `env_book_reservation`, `env_calculate`,
@@ -124,6 +142,11 @@ breaking one silently produces a broken tool rather than an error:
   this iteration (e.g. several in-body guards + a compute tool + enriched errors + a couple
   of sharpened docstrings), matching each cluster to the strongest type the skill describes
   for it. Then read `./guidance/tools/references/optimizer-playbook.md`.
+- **`./guidance/sources/data_model.py`** — tau2's airline data model, READ-ONLY: the
+  `Literal` aliases (cabin / flight type / insurance) and the Pydantic models
+  (`FlightInfo`, `Passenger`, `Payment`, `Reservation`, `User`, ...) the benchmark's own
+  tools declare. The seed's signatures already use them; read it before writing a new
+  tool that takes a structured parameter, and see rule 2 for how to copy a class.
 - `./guidance/diagnose/SKILL.md` — the failure-clustering method. Use it.
 - `./trajectories/` — the FULL traces of the current best candidate (the step you build
   on). The `{{FAILURES}}` block below summarizes them with argument-level feedback — read
