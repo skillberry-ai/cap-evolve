@@ -95,16 +95,39 @@ fi
 # A finished eval leaves results/h4_<suite>/<task>/run/baseline.json. Skipping
 # those makes a second invocation a resume rather than a duplicate spend.
 RESULTS_ROOT="$PROJECT_ROOT/results/h4_$SUITE_ID"
+
+# A task with no baseline.json yet might still have an LSF job already working
+# on it -- "pending" from the completed-result check alone would resubmit it,
+# and two jobs racing to create the same cap-evolve run dir corrupts both (one
+# wins RunDir.create(), the other crashes on FileExistsError, or worse, they
+# interleave trial writes into the one that wins). Cross-reference bjobs by
+# this suite's own -J naming (set below, identical to what gets submitted) so
+# an in-flight task is never resubmitted underneath itself.
+mapfile -t INFLIGHT_JOBS < <(bjobs -w -u "$USER" 2>/dev/null | awk -v p="h4_${SUITE_ID}_" \
+  'NR>1 && index($7,p)==1 {print substr($7,length(p)+1)}')
+
 PENDING=()
 DONE=()
+INFLIGHT=()
 for t in "${ALL_TASKS[@]}"; do
   [[ -z "$t" ]] && continue
   if [[ "$REDO" != true && -f "$RESULTS_ROOT/$t/run/baseline.json" ]]; then
     DONE+=("$t")
+    continue
+  fi
+  in_flight=false
+  for it in "${INFLIGHT_JOBS[@]:-}"; do
+    [[ "$it" == "$t" ]] && in_flight=true && break
+  done
+  if [[ "$in_flight" == true ]]; then
+    INFLIGHT+=("$t")
   else
     PENDING+=("$t")
   fi
 done
+if (( ${#INFLIGHT[@]} > 0 )); then
+  echo "skipping ${#INFLIGHT[@]} task(s) with a job already in flight: ${INFLIGHT[*]}"
+fi
 
 echo "suite $SUITE_ID: ${#ALL_TASKS[@]} task(s) total, ${#DONE[@]} already done, ${#PENDING[@]} pending"
 if (( ${#PENDING[@]} == 0 )); then
