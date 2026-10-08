@@ -600,6 +600,34 @@ None of this changes what pays for a rollout or what the gate decides — `scree
 are unmoved — it only orders and filters what you propose before you spend, the same as Bucketing
 above.
 
+## Cost-reduction as a lever: `detect_loop_patterns.py`
+
+Confirmed on the real run #684 diagnoses: `cost`/`num_messages` were declared objectives, full-val
+cost rose candidate over candidate ($0.79→$1.03-1.14), and not one candidate ever proposed
+consolidating tool calls — every JOURNAL.md left the cost-reduction hypothesis line unfilled. The
+gap was never a missing idea, it was that nothing ever SURFACED the concrete opportunity, so treat
+this as a named, mechanical step, not an afterthought:
+
+**Whenever `cost`, `latency`, or `num_messages` is a declared objective in `capevolve.yaml`, run
+this in step 1 ("Read the signal") alongside `diagnose.py`, on the champion's val rollouts, for
+free (no extra evaluation cost — pure trace analysis, no LLM call):**
+
+```bash
+python "$A/detect_loop_patterns.py" --run-dir "$R" --tag "$BEST" --split val --min-n 3
+```
+
+Its `by_tool` map is a **cost-reduction opportunity cluster**: each key is a tool the agent itself
+called 3+ times in a row within one rollout (e.g. `get_reservation_details` once per reservation
+across N reservations), with the tasks it recurs on and the worst repeat count. Read these on EQUAL
+footing with `diagnose.py`'s reward-improving clusters when planning the round (step 2) — a
+detected loop pattern is a concrete root-cause-adjacent signal worth its own `plan_round.py` slot,
+not something deferred until reward clusters run out. The fix shape depends on which capability
+owns the surface (`skills/capabilities/{tools,skill-package,system-prompt}/SKILL.md` each name this
+pattern explicitly): a composite/bulk tool for `tools`, a bundled script entrypoint for
+`skills-package`, or upfront-batched instructions for `prompt`/`system-prompt`. Verify the same way
+as any edit (step 3, "Verify before you gate"): run the new composite against the loop you detected
+and confirm it replaces the N calls with one, before it ever reaches the gate.
+
 ## Why N≥3 sibling candidates is the default, not one candidate at a time
 
 **This section predates `plan_round.py` and states the economic ARGUMENT for parallelism, not the

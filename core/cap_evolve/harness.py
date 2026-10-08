@@ -1032,6 +1032,13 @@ _JOURNAL_SEED = (
     "    - High-value clusters still NOT cracked (and the guard/tool designs already tried):\n"
     "    - Plateau signal (are the last few RESULTs flat/negative? if so, which LEVER to switch\n"
     "      to — e.g. a NEW composite tool instead of another guard, or prompt instead of code):\n"
+    "    - Cost-reduction opportunity (if `cost`/`latency`/`num_messages` is a declared objective,\n"
+    "      run `detect_loop_patterns.py --run-dir $R --tag $BEST --split val` — free, no extra\n"
+    "      eval — and check its `by_tool` map for a same-tool-called-N-times-in-a-row pattern. A\n"
+    "      hit names the exact tool + repeat count: propose a composite/bulk tool (capability\n"
+    "      `tools`), a bundled script entrypoint (`skills-package`), or upfront-batched\n"
+    "      instructions (`prompt`/`system-prompt`) that replace the N calls with one. No hit\n"
+    "      (or cost/latency not a declared objective): say so plainly, do not leave this blank):\n"
     "    - Focus next iteration:\n"
 )
 

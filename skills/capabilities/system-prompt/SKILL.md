@@ -68,6 +68,15 @@ that reaches it; ship every class the traces call for in one candidate. Examples
    than under-doing (excess tool calls, over-engineering, triggering a behavior where
    it did not apply), downgrade `CRITICAL/MUST/ALWAYS` to "Use … when …". The edit
    that fixes an over-eagerness cluster is a cut, not an addition.
+10. **Batch instructions upfront to cut round-trips** — the cost/latency lever here
+    (#684): when the agent calls the same tool N times in a row because the prompt
+    asks for its inputs one at a time (`agent-optimize`'s `detect_loop_patterns.py`
+    names the tool + repeat count from the champion's rollouts), rewrite the
+    instruction to ask for all the needed inputs/steps up front in one turn instead
+    of trickling them out, so the agent issues the calls together rather than in an
+    agent-driven loop. *Ex:* "Ask the user for the record id, then once you have it ask
+    for the new value" → "Ask the user for the record id and the new value in one
+    message."
 
 ## Never drop a needed rule — change, consolidate, or add
 

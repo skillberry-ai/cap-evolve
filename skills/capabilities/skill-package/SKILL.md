@@ -36,7 +36,12 @@ Pick the lever that fixes the biggest failure cluster; depth is in the reference
    command line. Write real, working code — never `...` or a docstring-only stub —
    give it a `--self-check` entry point (`validate()` runs it, so a broken script is
    caught before any rollout is paid for), and say **execute, don't read**: a script's
-   source never enters the agent's context, only its output.
+   source never enters the agent's context, only its output. **Also the cost/latency
+   lever here** (#684): when the agent re-invokes the same tool/step N times across a
+   multi-step sequence (`agent-optimize`'s `detect_loop_patterns.py` names the exact
+   tool + repeat count from the champion's rollouts), bundle the WHOLE sequence into
+   one script entrypoint instead of N separate agent-invoked steps — one call replaces
+   N round-trips.
 3. **The body** — improve clarity and altitude, delete dead weight, fix the
    instruction the agent misreads. The body loads on every trigger and stays in
    context all session — a recurring cost — so keep it **≤500 lines** (enforced),

@@ -74,7 +74,12 @@ code in the existing body instead?"
    `find_duplicate_records` it has no way to compute today, or a `search_logs` that
    returns the relevant lines instead of a raw dump.
 5. **Add a loop tool** — replace N repeated single-item calls with one list call. *Ex:*
-   `get_records(ids: [...])` replaces N× `get_record(id)`.
+   `get_records(ids: [...])` replaces N× `get_record(id)`. **This is also the primary
+   cost/latency lever** (#684): when `cost`/`latency`/`num_messages` is a declared
+   objective, run `skills/algorithms/agent-optimize/scripts/detect_loop_patterns.py`
+   against the champion's rollouts first — its `by_tool` map names the exact
+   same-tool-called-N-times-in-a-row pattern (tool + repeat count + tasks) to design
+   this composite against, instead of guessing from the trace by eye.
 6. **Replace / wrap a tool** — superset an existing tool and route the old behavior
    through it. *Ex:* wrap `find_record`+`charge_payment` behind one
    `charge_record(record_id)` that resolves then charges.

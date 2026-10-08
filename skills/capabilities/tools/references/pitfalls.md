@@ -134,7 +134,9 @@ metric, check it against this list:
 
 - **A loop/composite tool** that collapses the repeated-primitive pattern from the traces
   (fetching records one id at a time, sweeping a search across many parameter
-  combinations) into a single list call.
+  combinations) into a single list call — a named, mechanically-detectable
+  cost-reduction opportunity cluster when `cost`/`latency` is an objective; see
+  `agent-optimize`'s `detect_loop_patterns.py` (#684).
 - **A rule-enforcing tool** that reads-before-writes or validates a precondition the
   underlying API does not, turning a silent bad write into a clear refusal.
 - **Precise descriptions** that add genuinely new, always-true content: explicit
