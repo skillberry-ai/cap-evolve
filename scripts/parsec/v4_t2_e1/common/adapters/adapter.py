@@ -93,18 +93,8 @@ TASKS_DIR = V4N / "_run" / "tasks" if V4N else None
 # about those runs (TASK_ID support removed) — a shared namespace would let
 # stale v4_t2_e1 job dirs be picked up by trajectories()'s "newest" search.
 JOBS_ROOT = V4N / "_run" / "jobs" / "v4_g2_e1" if V4N else None
-# Degraded gateway latency pushed 10-18 call tasks past the task's own
-# `[agent] timeout_sec` (600s in the h4 suite). Harbor then cancels the agent,
-# the trial still writes a reward.json, the verifier's completion gate zeroes
-# it, and it lands in the results as a 0.0 indistinguishable from a wrong
-# answer -- with errored_trials still reading 0. 15% of one arm's trials died
-# that way against 0.7% in its neighbours.
-#
-# Both knobs are needed. The multiplier raises the ceiling Harbor enforces;
-# TRIAL_TIMEOUT_SEC must stay well above it, or this subprocess cap preempts
-# the ceiling it exists to contain. Revert both to 20*60 / 1.0 once the
-# gateway slowdown is understood: a raised timeout makes a *failing* trial
-# cost 2.5x more wall clock.
+# Both raised for slower sim calls; revert to 20*60 / 1.0 once the cause of the
+# increased time is understood.
 AGENT_TIMEOUT_MULTIPLIER = 2.5
 TRIAL_TIMEOUT_SEC = 40 * 60
 TASK_DIR_PREFIX = "bench-v4-"
