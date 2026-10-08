@@ -4,17 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Results — cap-evolve</title>
-  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), RH-SWE-bench (Harbor), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta name="description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), RH-SWE-bench (Harbor), SWE-bench Verified (GLM-5.3), SkillsBench. Every number cross-checked against committed run artifacts.">
   <link rel="canonical" href="https://skillberry-ai.github.io/cap-evolve/results.html">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="cap-evolve">
   <meta property="og:title" content="Results — cap-evolve">
-  <meta property="og:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta property="og:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SWE-bench Verified (GLM-5.3), SkillsBench. Every number cross-checked against committed run artifacts.">
   <meta property="og:url" content="https://skillberry-ai.github.io/cap-evolve/results.html">
   <meta property="og:image" content="https://skillberry-ai.github.io/cap-evolve/assets/rh_swe_bench.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Results — cap-evolve">
-  <meta name="twitter:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SkillsBench. Every number cross-checked against committed run artifacts.">
+  <meta name="twitter:description" content="Full benchmark results for cap-evolve — toy_calc, τ²-bench airline (fit-metric + held-out), SWE-bench Verified (GLM-5.3), SkillsBench. Every number cross-checked against committed run artifacts.">
   <meta name="twitter:image" content="https://skillberry-ai.github.io/cap-evolve/assets/rh_swe_bench.png">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -84,17 +84,18 @@
         <h2 id="at-a-glance">At a glance — baseline → optimized</h2>
 
         <figure class="chart-figure">
-          <svg viewBox="0 0 720 370" role="img"
+          <svg viewBox="0 0 720 420" role="img"
                aria-labelledby="chart-title chart-desc"
                xmlns="http://www.w3.org/2000/svg">
             <title id="chart-title">Baseline vs optimized reward across benchmarks</title>
             <desc id="chart-desc">
-              Four benchmarks, each showing the seed baseline (open circle) and the optimized
+              Five benchmarks, each showing the seed baseline (open circle) and the optimized
               candidate (filled green circle) on a 0–100 scale.
               τ²-bench airline fit metric: 53.6 to 71.2, a gain of 17.6 points.
               τ²-bench airline held-out test: 30.0 to 47.5, a gain of 17.5 points.
               RH-SWE-bench fit metric: 58.0 to 76.5, a gain of 18.5 points.
               SkillsBench held-out test: 55.6 to 66.7, a gain of 11.1 points.
+              SWE-bench Verified (GLM-5.3) held-out test: 86.9 to 95.9, a gain of 9.0 points.
             </desc>
 
             <!-- gridlines at 0/25/50/75/100 (plot: x=180..620) -->
@@ -152,8 +153,18 @@
             <text class="val-label-opt" x="473" y="229" text-anchor="middle">66.7</text>
             <text class="gain-label" x="490" y="246">+11.1 pp · +20.0%</text>
 
+            <!-- Row 5: SWE-bench Verified (GLM-5.3) held-out — 86.9 → 95.9 -->
+            <text class="row-label" x="170" y="286" text-anchor="end">SWE-bench (GLM-5.3)</text>
+            <text class="row-sub"   x="170" y="299" text-anchor="end">held-out test (125 tasks)</text>
+            <line class="connector" x1="568" y1="292" x2="596" y2="292"/>
+            <circle class="dot-base" cx="562" cy="292" r="6"/>
+            <circle class="dot-opt"  cx="602" cy="292" r="6"/>
+            <text class="val-label"     x="562" y="279" text-anchor="middle">86.9</text>
+            <text class="val-label-opt" x="602" y="279" text-anchor="middle">95.9</text>
+            <text class="gain-label" x="536" y="296">+9.0 pp</text>
+
             <!-- Legend -->
-            <g transform="translate(230,346)">
+            <g transform="translate(230,396)">
               <circle class="dot-base" cx="6" cy="0" r="6"/>
               <text class="legend-text" x="20" y="4">baseline (seed)</text>
               <circle class="dot-opt" cx="180" cy="0" r="6"/>
@@ -164,6 +175,7 @@
             Rewards normalized to 0–100 for a shared axis. <code>toy_calc</code> is omitted — it's a
             deterministic loop check (0 → 100 by construction), not a comparative benchmark. The held-out
             τ² row is the <a href="#tau2-heldout">reported (artifact-pending)</a> result.
+            The SWE-bench (GLM-5.3) row is a strong-baseline regime — the seed already scores 86.9.
           </figcaption>
         </figure>
       </section>
@@ -501,6 +513,54 @@
       </section>
 
       <section class="reveal">
+        <h2 id="swebench-glm">SWE-bench Verified — GLM-5.3 agent, unlimited turns (held-out)</h2>
+
+        <p>
+          cap-evolve optimizing a coding agent's system prompt + skill on the full
+          <strong>SWE-bench Verified</strong> suite (500 tasks) via
+          <a href="harbor.html">Harbor</a>, on OpenShift with an on-cluster AI gateway.
+          The agent under test is <code>claude-code</code> driven by <strong>GLM-5.3</strong>
+          with no turn limit — the optimizer is the same model.
+        </p>
+
+        <p>
+          Artifact: <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/swebench_glm/run_full"><code>examples/swebench_glm/run_full/</code></a>
+          (<code>report.md</code>, <code>final.json</code>; reproduce with <code>examples/swebench_glm/run.sh</code>).
+        </p>
+
+        <ul>
+          <li><strong>Capability:</strong> agent <strong>skill-package + system-prompt</strong> (<code>[skill-package, system-prompt]</code>).</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>glm-5-3</code> (unlimited turns).</li>
+          <li><strong>Agent under test:</strong> <code>claude-code</code> @ <code>glm-5-3</code> via Harbor on OpenShift.</li>
+          <li><strong>Tasks:</strong> <strong>500</strong> tasks — <strong>250</strong> train / <strong>125</strong> val / <strong>125</strong> sealed test.</li>
+          <li><strong>Algorithm / gate:</strong> <code>hill-climb --focus all</code>, <strong>10</strong> iterations (2 accepted), paired significance gate <code>k_se 1.0</code>, 1 trial per task.</li>
+        </ul>
+
+        <table>
+          <thead>
+            <tr><th></th><th>reward (125 test tasks)</th><th>Δ vs baseline</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Baseline (seed prompt + skill) — val</td><td class="num"><strong>0.896</strong> (89.6%)</td><td class="num">—</td></tr>
+            <tr><td><strong>Best candidate</strong> (<code>cand_0005</code>) — val</td><td class="num"><strong>0.976</strong> (97.6%)</td><td class="gain">+0.080 / +8.9% relative</td></tr>
+            <tr><td>Baseline seed skills — sealed test</td><td class="num"><strong>0.869</strong> (86.9%)</td><td class="num">—</td></tr>
+            <tr><td>Optimized skills — sealed test (held-out)</td><td class="num"><strong>0.959</strong> (95.9%)</td><td class="gain">+0.090 / +10.4% relative</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          Test was scored exactly once on the sealed split, for BOTH the baseline (<code>seed</code>)
+          and the optimized skills — the improvement is on held-out tasks the optimizer never saw.
+          2 of 10 iterations accepted (iter 4 <code>+0.056</code> 0.896→0.952, iter 5 <code>+0.024</code>
+          →0.976); the val→test gap is +0.017, i.e. selection optimism on val is small here.
+          Notably this is a <strong>strong-baseline regime</strong> — the seed skills already solve
+          89.6% of val — so the +9.0-point held-out gain comes on top of a high floor.
+          Optimizer spend: $60 over 10 iterations.
+        </p>
+
+      </section>
+
+      <section class="reveal">
         <h2 id="skillsbench">SkillsBench — skill-package optimization (held-out, committed)</h2>
 
         <p>
@@ -553,7 +613,7 @@
       </section>
 
       <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
-        <em>Last reviewed: 2026-07-24.</em>
+        <em>Last reviewed: 2026-10-02.</em>
       </p>
 
     </div>
@@ -568,6 +628,7 @@
       <a href="#tau2-agent">τ²-bench — agent mode</a>
       <a href="#qwen-tools">τ²-bench — Qwen 14B</a>
       <a href="#qwen-all">Qwen 14B — all capabilities</a>
+      <a href="#swebench-glm">SWE-bench — GLM-5.3</a>
       <a href="#skillsbench">SkillsBench</a>
     </nav>
   </div>
