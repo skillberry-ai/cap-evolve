@@ -923,18 +923,33 @@ dominance implementation in the codebase, not two that could drift. Reading the 
   trade), but nothing on the candidate's side clears its own noise floor, so there is no WIN to
   accept on, only an unresolved tie.
 
-**Reachable only through `gate_check.py --mode pareto` + `commit.py`, not `round.py`.** `round.py`'s
-screen/merge/null-control cascade is built around one scalar delta end to end (a screen's
-kill/promote call, a merge's "did it keep each parent's gain", the control-relative verdict) — none
-of that machinery has a multi-objective form yet, and bolting pareto mode onto it is explicitly
-**not** part of this change (issue #665 ws3's scope is the SKILL.md loop and the two scripts it
-already names). A project with `objectives` declared gates every candidate by hand, one tag at a
-time, through `gate_check.py` directly — the same path `driver_judgement` decisions already use,
-just with a frontier reason instead of a `Δ > k·SE` one. `commit.py` needs no changes to record
-either mode's decision: both produce the same `accept`/`indecisive` fields it already reads.
+**Native in `round.py --mode pareto` (issue #684, superseding the #665 ws3 "gate by hand"
+restriction below).** `round.py`'s screen/merge/null-control cascade still runs the same
+scalar-reward screen/merge it always did (a screen's kill/promote call, a merge's "did it keep
+each parent's gain" — neither needs a multi-objective form, since both only ever triaged on
+reward); only the FULL-VAL GATE step is pareto-native. `_gate()` forwards `--objectives`/
+`--metrics-*` to `gate_check.py` for the per-row diagnostic read described above, and separately
+builds/updates a persistent `cap_evolve.pareto_archive.ParetoArchive` (non-domination ranking +
+bounded capacity + NSGA-II crowding-distance eviction, per Cheng & Li 1997) stored in
+`$R/pareto_archive.json` across rounds — **a candidate's accept is "the archive gave it a slot",
+not the one-shot pairwise read above.** The real-run bug this fixes: a spec declaring
+`gate_mode: pareto` used to be silently gated single-objective (reward-only) because `round.py`
+excluded `"pareto"` from its own `--mode` choices entirely, and the documented hand-gating
+workaround below never actually happened in practice. `gate_check.py --mode pareto` by hand
+(the one-shot pairwise comparison, with no persistent frontier) still works standalone for a
+one-off check outside a round — `commit.py` needs no changes either way: every mode produces the
+same `accept`/`indecisive` fields it already reads.
 
-Without an `objectives` block in `capevolve.yaml`, none of this runs: `gate_mode` stays whatever it
-already was (`paired` by default) and every call site is byte-identical to before #667 landed.
+A simpler alternative is `gate_mode: epsilon_constraint` (Haimes, Lasdon & Wismer 1971): declare
+`constraints: [{name: cost, max: <value>}]` instead of `objectives`, and the gate maximizes
+reward (same paired/significant test as the single-metric modes) subject to each named metric
+staying under its ceiling — one point, not a frontier, with the SAME per-objective significance
+discipline (a constraint that reads nominally under its ceiling only because of measurement noise
+is not treated as satisfied). Also native in `round.py --mode epsilon_constraint`.
+
+Without an `objectives`/`constraints` block in `capevolve.yaml`, none of this runs: `gate_mode`
+stays whatever it already was (`paired` by default) and every call site is byte-identical to
+before #667/#684 landed.
 
 ## Measuring only what the edit reaches
 

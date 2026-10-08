@@ -229,6 +229,7 @@ def decide(
     metrics_current: dict | None = None,
     metrics_stderr_candidate: dict | None = None,
     metrics_stderr_current: dict | None = None,
+    constraints: list[dict] | None = None,
 ) -> GateDecision:
     """Decide whether to accept the candidate — see ``_verdict`` for the statistics.
 
@@ -262,7 +263,8 @@ def decide(
                  objectives=objectives, metrics_candidate=metrics_candidate,
                  metrics_current=metrics_current,
                  metrics_stderr_candidate=metrics_stderr_candidate,
-                 metrics_stderr_current=metrics_stderr_current)
+                 metrics_stderr_current=metrics_stderr_current,
+                 constraints=constraints)
     d.broke = [str(t) for t in (broke or [])]
     d.fixed = [str(t) for t in (fixed or [])]
     if gate_max_broke is None or d.indecisive or not d.accept:
@@ -298,6 +300,7 @@ def _verdict(
     metrics_current: dict | None = None,
     metrics_stderr_candidate: dict | None = None,
     metrics_stderr_current: dict | None = None,
+    constraints: list[dict] | None = None,
 ) -> GateDecision:
     """The gate's STATISTICS — the accept/reject test itself, and nothing else.
 
@@ -333,6 +336,19 @@ def _verdict(
         requires ``metrics_stderr_candidate``/``metrics_stderr_current`` for that same
         key on both sides too — without a real SE, a non-reward objective has no
         noise floor and pure float noise could flip the verdict.
+      - ``epsilon_constraint``: the bounded-objective-function method (Haimes, Lasdon &
+        Wismer 1971; cited by Marler & Arora's MOO survey as the simpler one-point
+        alternative to a full Pareto frontier). Maximize the single primary objective
+        (reward, via the SAME paired/significant test as the modes above) subject to
+        each declared ``constraints`` entry (``{"name", "max"}``) staying under its
+        ceiling. A constraint is satisfied only when the candidate's value PLUS
+        ``k_se`` SEs of its own measurement error still clears the ceiling — so a cost
+        that reads nominally under the ceiling only because of measurement noise does
+        not count as satisfied, same discipline as ``pareto``'s per-objective
+        significance floor. Requires ``metrics_candidate``/``metrics_stderr_candidate``
+        for every constrained name (no fallback chain — a constraint names an exact
+        metric); a missing value or stderr raises ``ParetoObjectiveError`` rather than
+        reading a missing measurement as "satisfied" or a missing SE as 0.
 
     ``coverage`` is the fraction of val tasks that produced a real measurement
     (``SplitResult.coverage``). Below ``min_coverage`` the gate REFUSES TO JUDGE and
@@ -509,5 +525,43 @@ def _verdict(
             accept=accept, reason=reason, delta=reward_delta, threshold=reward_threshold,
             resolvable_effect_size=(round(2 * reward_se, 6) if reward_se else None),
         )
+
+    if mode == "epsilon_constraint":
+        violations = []
+        mc, msc = metrics_candidate or {}, metrics_stderr_candidate or {}
+        for c in (constraints or []):
+            name, ceiling = c["name"], float(c["max"])
+            if name not in mc:
+                raise ParetoObjectiveError(
+                    f"epsilon_constraint gate: constraint {name!r} has no value in "
+                    "metrics_candidate — refusing to treat a missing measurement as satisfied")
+            if name not in msc:
+                raise ParetoObjectiveError(
+                    f"epsilon_constraint gate: constraint {name!r} has no stderr in "
+                    "metrics_stderr_candidate — refusing to fall back to a float-noise "
+                    "epsilon for a hard ceiling check")
+            value, se = float(mc[name]), float(msc[name])
+            worst_case = value + k_se * se
+            if worst_case > ceiling:
+                violations.append(
+                    f"{name}={value:.4f} (+{k_se}·SE={worst_case:.4f}) > ceiling {ceiling:.4f}")
+        if violations:
+            return GateDecision(
+                accept=False,
+                reason=f"epsilon_constraint REJECT: constraint(s) not confidently cleared: "
+                       f"{'; '.join(violations)}",
+                delta=delta, threshold=0.0,
+            )
+        # Constraints cleared (or none declared) — the primary objective (reward) is still
+        # gated on real evidence via the SAME paired test the ``paired`` mode uses; it
+        # self-degrades to ``significant`` when no per-task vector is available (see the
+        # ``paired`` branch above).
+        inner = _verdict(current_val, candidate_val, split=split, mode="paired", k_se=k_se,
+                         candidate_stderr=candidate_stderr, current_stderr=current_stderr,
+                         paired_deltas=paired_deltas, paired_se_floor=paired_se_floor,
+                         run_dir=run_dir)
+        names = ", ".join(c["name"] for c in (constraints or [])) or "none declared"
+        inner.reason = f"epsilon_constraint[constraints: {names}, all cleared] -> {inner.reason}"
+        return inner
 
     raise ValueError(f"unknown gate mode: {mode!r}")

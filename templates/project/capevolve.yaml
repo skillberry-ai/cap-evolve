@@ -89,13 +89,21 @@ github_integration: false    # mirror-only: mirror the algorithm's work items as
 stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
 
 # --- acceptance gate --------------------------------------------------------
-gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective; agent-optimize only, via gate_check.py --mode pareto)
+gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective, native in round.py's own --mode) | epsilon_constraint (maximize reward subject to a hard ceiling on another metric, native in round.py's own --mode)
 gate_k_se: 1.0
-# Optional, pareto gate_mode only (cap_evolve.gate.decide): the objectives to balance.
-# Omit for the default (reward maximize + cost minimize, with a cost->latency->tokens fallback).
+# Optional, pareto gate_mode only (cap_evolve.gate.decide / cap_evolve.pareto_archive): the
+# objectives to balance. Omit for the default (reward maximize + cost minimize, with a
+# cost->latency->tokens fallback). round.py persists a bounded non-dominated frontier
+# (cap_evolve.pareto_archive.ParetoArchive) across rounds in $RUN_DIR/pareto_archive.json;
+# an accept is "the archive actually gave this candidate a slot", not a one-shot comparison.
 # objectives:
 #   - {name: reward, direction: maximize}
 #   - {name: cost, direction: minimize}
+# Optional, epsilon_constraint gate_mode only (Haimes et al. 1971): maximize reward subject
+# to each named metric staying under its ceiling. A simpler, one-point alternative to a full
+# Pareto frontier — honest about its limits (one point per ceiling value, not a frontier).
+# constraints:
+#   - {name: cost, max: 1.0}
 
 # --- budget -----------------------------------------------------------------
 # Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a

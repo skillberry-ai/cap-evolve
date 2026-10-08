@@ -109,11 +109,11 @@ def regressions(current, candidate) -> list[str]:
 # all), `--mode val` sailed through round.py, was rejected here, and emptied the entire
 # round table while `eval_rc` stayed 0. Two copies of a list is how that happens.
 #
-# "pareto" (issue #665 ws3) is reachable only through THIS script + commit.py, not
-# round.py — round.py's own --mode stays restricted to the single-metric modes above
-# (its screen/merge machinery assumes one scalar delta), so a pareto-gated candidate is
-# always gated by hand, one at a time, same as any driver_judgement decision.
-GATE_MODES = ["paired", "significant", "strict", "threshold", "pareto"]
+# "pareto" (issue #665 ws3) and "epsilon_constraint" (issue #684 item 2) are BOTH also
+# reachable natively through round.py (issue #684 item 1): round.py forwards --objectives/
+# --metrics-*/--constraints here and, for pareto, additionally maintains a persistent
+# cap_evolve.pareto_archive.ParetoArchive across rounds — see round.py's own docstring.
+GATE_MODES = ["paired", "significant", "strict", "threshold", "pareto", "epsilon_constraint"]
 
 
 def _frozen_coverage(run_dir, per_task, split: str = "val") -> float:
@@ -183,6 +183,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--metrics-stderr-current", default=None,
                    help="--mode pareto only: same shape as --metrics-stderr-candidate, for the "
                         "reference (--current) side.")
+    p.add_argument("--constraints", default=None,
+                   help="--mode epsilon_constraint only: JSON list of {name, max}, e.g. "
+                        '\'[{"name":"cost","max":1.0}]\' — Haimes et al. 1971 bounded-objective-'
+                        "function method: maximize reward subject to each named metric staying "
+                        "under its ceiling. Mirror capevolve.yaml's `constraints:` block. Needs "
+                        "--metrics-candidate/--metrics-stderr-candidate for every constrained "
+                        "name, same as --mode pareto's non-reward objectives.")
     return p
 
 
@@ -252,7 +259,8 @@ def main(argv=None) -> int:
                    metrics_stderr_candidate=_json_arg(
                        args.metrics_stderr_candidate, "--metrics-stderr-candidate"),
                    metrics_stderr_current=_json_arg(
-                       args.metrics_stderr_current, "--metrics-stderr-current"))
+                       args.metrics_stderr_current, "--metrics-stderr-current"),
+                   constraints=_json_arg(args.constraints, "--constraints"))
     except ParetoObjectiveError as exc:
         # Refuse the same way the rest of this script refuses an unjudgeable candidate
         # (no --current, no rollouts): a clean JSON error on stdout, rc 2 — never a

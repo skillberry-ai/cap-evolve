@@ -642,6 +642,36 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     return aggregate_scores(split, scores, ks=ks)
 
 
+def candidate_cost_objective(run_dir: RunDir, tag, split: str = "val") -> tuple[float | None, float | None]:
+    """Mean + SE of a candidate's per-task cost — the "cost" objective for round.py's
+    native ``gate_mode: pareto``/``epsilon_constraint`` support (issue #684 items 1-2).
+
+    Reuses the per-task ``cost_usd`` MEAN already attached to each ``Score.raw`` dict by
+    #676's instrumentation (``split_result_from_rollouts``, above) — no new persisted field.
+    The mean/SE across tasks is the SAME estimator ``aggregate_scores`` uses for reward
+    (``stats.mean``/``stats.stderr`` over a per-task vector), applied to cost instead of
+    reward. ``tag`` may be a sequence (pooled control replicates), same as
+    ``split_result_from_rollouts``.
+
+    Returns ``(None, None)`` when no task has a priced cost at all (e.g. an unmetered
+    target) — the caller (``gate.ParetoObjectiveError``, via the pareto/epsilon_constraint
+    gate) is where that turns into a refusal, not here.
+
+    Only "cost" is derivable this way: unlike cost, neither "latency" nor "tokens" is
+    persisted per task (only cost_usd is, per #676) — a declared objective/constraint of
+    either name has no value this function can supply, which is the SAME "refuse, don't
+    silently drop" rule ``gate._resolve_pareto_objectives``'s own fallback chain already
+    applies to a run with no cost data at all.
+    """
+    from .stats import mean as _mean, stderr as _stderr
+    result = split_result_from_rollouts(run_dir, tag, split)
+    costs = [pt.get("raw", {}).get("cost_usd") for pt in (result.per_task or [])]
+    costs = [c for c in costs if c is not None]
+    if not costs:
+        return None, None
+    return _mean(costs), _stderr(costs)
+
+
 # ---- baseline -------------------------------------------------------------
 
 def _baseline_train(adapter, run_dir: RunDir, *, n_trials: int, ks=(1, 2)) -> tuple[SplitResult | None, str | None]:

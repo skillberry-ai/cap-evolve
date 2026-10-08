@@ -80,16 +80,16 @@ def test_mode_rejects_a_value_gate_check_cannot_accept():
         "script cannot accept must be refused here, before any rollout is read")
 
 
-def test_round_mode_choices_are_gate_check_mode_choices_minus_pareto():
-    """The two lists must not be able to drift apart again, except for the one deliberate gap.
+def test_round_mode_choices_are_gate_check_mode_choices():
+    """The two lists must not be able to drift apart.
 
     round.py's --mode is forwarded to gate_check.py verbatim via `_gate()`, so any value one
     accepts and the other rejects is a silent round-emptying bug (same failure mode this file's
-    module docstring covers for `--mode val`). "pareto" is the single intentional exception:
-    `_gate()` never forwards --objectives/--metrics-* to gate_check.py, so `--mode pareto` would
-    always crash at runtime, and round.py's batched cascade assumes one scalar delta per
-    candidate anyway. round.py excludes it from its own choices so that is rejected at
-    argument-parsing time instead.
+    module docstring covers for `--mode val`). Issue #684 made "pareto" (and the new
+    "epsilon_constraint") first-class, fully-working choices in round.py too — `_gate()` now
+    forwards --objectives/--metrics-*/--constraints, and round.py maintains its own persistent
+    ParetoArchive for pareto mode — so there is no longer a deliberate gap between the two
+    lists at all.
     """
     rnd, gc = _round(), _gate_check()
 
@@ -101,11 +101,10 @@ def test_round_mode_choices_are_gate_check_mode_choices_minus_pareto():
                 return a.choices
         raise AssertionError(f"{flag} not found in {mod.__name__}")
 
-    assert _choices(rnd, "--mode") == [m for m in _choices(gc, "--mode") if m != "pareto"], (
+    assert _choices(rnd, "--mode") == _choices(gc, "--mode"), (
         "round.py forwards --mode verbatim to gate_check.py, so any value one accepts and the "
-        "other rejects (other than the deliberately-excluded 'pareto') is a silent "
-        "round-emptying bug. Deriving one list from the other is the only thing that keeps "
-        "them in step")
+        "other rejects is a silent round-emptying bug. Deriving one list from the other is the "
+        "only thing that keeps them in step")
 
 
 # ---------------------------------------------------------- 2. _gate fails loudly

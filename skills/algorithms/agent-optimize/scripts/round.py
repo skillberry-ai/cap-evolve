@@ -49,6 +49,8 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 import gate_check
 
 from cap_evolve import RunDir, harness
+from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
+from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
 
 #: Gate measurement concurrency. The default is deliberately low; the ceiling is where the
@@ -748,14 +750,54 @@ class GateCheckFailed(RuntimeError):
             "already on disk, so re-gating costs nothing.")
 
 
+def _objective_metrics(run_dir: RunDir, tags, split: str, names: set[str]) -> tuple[dict, dict]:
+    """``({name: value}, {name: stderr})`` for every declared non-reward objective/constraint
+    NAME this script can actually source, for ``--mode pareto``/``epsilon_constraint``
+    (issue #684 items 1-2).
+
+    Only "cost" is derivable today — ``harness.candidate_cost_objective`` is the only
+    per-task secondary metric #676 persisted alongside reward (see its docstring for why
+    latency/tokens are not). Any OTHER declared name is simply left out of both dicts, which
+    makes ``gate.py``'s own ``ParetoObjectiveError`` fire with its existing "no value on this
+    run" refusal — the same hard-refuse discipline gate.py already applies, not a new one
+    invented here. ``tags`` may be a sequence (pooled control replicates), same as
+    ``harness.split_result_from_rollouts``.
+    """
+    values, stderrs = {}, {}
+    if "cost" in names:
+        mean_c, se_c = harness.candidate_cost_objective(run_dir, tags, split)
+        if mean_c is not None:
+            values["cost"], stderrs["cost"] = mean_c, se_c
+    return values, stderrs
+
+
 def _gate(run_dir: Path, tag: str, k_se: float, mode: str, veto: bool,
-          current: str | None = None) -> dict:
+          current: str | None = None, *, objectives: list | None = None,
+          metrics_candidate: dict | None = None, metrics_current: dict | None = None,
+          metrics_stderr_candidate: dict | None = None, metrics_stderr_current: dict | None = None,
+          constraints: list | None = None) -> dict:
+    """Run gate_check.py for one tag. ``objectives``/``metrics-*``/``constraints`` are forwarded
+    verbatim for ``--mode pareto``/``epsilon_constraint`` (issue #684 items 1-2) — see
+    ``_objective_metrics`` for where the candidate's own ``metrics_candidate`` values come from.
+    """
     cmd = [sys.executable, str(HERE / "gate_check.py"), "--run-dir", str(run_dir),
            "--candidate", tag, "--k-se", str(k_se), "--mode", mode]
     if current:
         cmd += ["--current", current]
     if veto:
         cmd.append("--veto-regressions")
+    if objectives is not None:
+        cmd += ["--objectives", json.dumps(objectives)]
+    if metrics_candidate is not None:
+        cmd += ["--metrics-candidate", json.dumps(metrics_candidate)]
+    if metrics_current is not None:
+        cmd += ["--metrics-current", json.dumps(metrics_current)]
+    if metrics_stderr_candidate is not None:
+        cmd += ["--metrics-stderr-candidate", json.dumps(metrics_stderr_candidate)]
+    if metrics_stderr_current is not None:
+        cmd += ["--metrics-stderr-current", json.dumps(metrics_stderr_current)]
+    if constraints is not None:
+        cmd += ["--constraints", json.dumps(constraints)]
     p = subprocess.run(cmd, capture_output=True, text=True)
     # A non-zero rc is a failure whether or not its stdout parses. gate_check.py's own two
     # `return 2` paths (no --current and no best_id; no rollouts for the tag) print WELL-FORMED
@@ -773,16 +815,19 @@ def _gate(run_dir: Path, tag: str, k_se: float, mode: str, veto: bool,
 
 
 def gate_unless_eval_failed(ev: dict, run_dir: Path, tag: str, k_se: float, mode: str,
-                            veto: bool, current: str | None = None) -> dict:
+                            veto: bool, current: str | None = None, **gate_kwargs) -> dict:
     """Gate a tag, unless its own EVALUATION failed — then there was never anything to gate.
 
     The distinction the round needs and did not have. A candidate whose eval died has no
     rollouts, so ``gate_check.py`` exits 2 for a legitimate reason and the row belongs in the
     table carrying its ``eval_rc``/``eval_error``. A candidate whose eval SUCCEEDED and whose
     gate still failed is a framework bug, and the round stops.
+
+    ``**gate_kwargs`` (``objectives``/``metrics_*``/``constraints``) are forwarded to ``_gate``
+    verbatim — see its docstring.
     """
     try:
-        return _gate(run_dir, tag, k_se, mode, veto, current)
+        return _gate(run_dir, tag, k_se, mode, veto, current, **gate_kwargs)
     except GateCheckFailed:
         if ev.get("rc") or ev.get("error"):
             return {}
@@ -917,16 +962,14 @@ def build_parser() -> argparse.ArgumentParser:
                    help="comma-separated tags that already exist under $R/work/")
     p.add_argument("--n-trials", type=int, required=True)
     p.add_argument("--k-se", type=float, default=1.0)
-    # choices= derived from gate_check.py's GATE_MODES, minus "pareto": this value is forwarded
-    # to _gate() verbatim and a value only one side accepts empties the whole round table (run
-    # 33492876620 round 3, `--mode val` — the caller meant `--split val`, which is the default
-    # anyway). "pareto" is excluded on purpose, not an oversight: _gate() never forwards
-    # --objectives/--metrics-* to gate_check.py, so `--mode pareto` here would pass argparse
-    # and then always crash gate_check.py at runtime. round.py's batched cascade also assumes
-    # one scalar delta per candidate, which pareto mode doesn't produce — a pareto-gated
-    # candidate is gated by hand via gate_check.py directly, same as any driver_judgement call.
-    ROUND_MODES = [m for m in gate_check.GATE_MODES if m != "pareto"]
-    p.add_argument("--mode", default="paired", choices=ROUND_MODES)
+    # choices= derived from gate_check.py's GATE_MODES verbatim: this value is forwarded to
+    # _gate() and a value only one side accepts empties the whole round table (run 33492876620
+    # round 3, `--mode val` — the caller meant `--split val`, which is the default anyway).
+    # "pareto" and "epsilon_constraint" (issue #684 items 1-2) are first-class choices here:
+    # _gate() forwards --objectives/--metrics-*/--constraints to gate_check.py, and --mode
+    # pareto additionally builds/updates a persistent cap_evolve.pareto_archive.ParetoArchive
+    # (see the gate stage below) rather than a one-shot pairwise comparison.
+    p.add_argument("--mode", default="paired", choices=gate_check.GATE_MODES)
     p.add_argument("--split", default="val")
     p.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
                    help="rollout concurrency per eval process (total = this x n_tags). Default "
@@ -1034,6 +1077,12 @@ def main(argv=None) -> int:
         return 2
     except SingleCandidateUnjustified as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    except ParetoObjectiveError as exc:
+        # Same hard-refuse discipline gate_check.py's own --mode pareto/epsilon_constraint
+        # CLI path already uses (issue #684 items 1-2): a declared objective/constraint this
+        # script cannot source a value for is refused, not silently gated on reward alone.
+        print(json.dumps({"error": f"pareto/epsilon_constraint gate: {exc}"}, indent=2))
         return 2
 
 
@@ -1435,17 +1484,54 @@ def _main(argv=None) -> int:
     parent_res = (gate_res if gate_ref == best
                   else harness.split_result_from_rollouts(run_dir, best, args.split))
     parent = gate_res  # deltas/thresholds are always against the gate reference
+
+    # #684 items 1-2: declared multi-objective config, resolved ONCE for this round. Native
+    # support in round.py — no longer "pareto excluded from --mode, gate by hand" — forwards
+    # these through _gate() to gate_check.py exactly as --objectives/--metrics-*/--constraints
+    # already accept when called directly.
+    PARETO_OBJECTIVES = None
+    CONSTRAINTS = None
+    OBJ_NAMES: set[str] = set()
+    if args.mode in ("pareto", "epsilon_constraint"):
+        if args.mode == "pareto":
+            PARETO_OBJECTIVES = spec.get("objectives") or [dict(o) for o in _DEFAULT_PARETO_OBJECTIVES]
+            OBJ_NAMES = {o["name"] for o in PARETO_OBJECTIVES if o["name"] != "reward"}
+        else:
+            CONSTRAINTS = spec.get("constraints")
+            if not CONSTRAINTS:
+                print(json.dumps({
+                    "error": "gate_mode epsilon_constraint requires a non-empty `constraints:` "
+                             "list in capevolve.yaml, e.g. constraints: [{name: cost, max: 1.0}]",
+                }, indent=2))
+                return 2
+            OBJ_NAMES = {c["name"] for c in CONSTRAINTS}
+
     rows = []
     for ev in evals:
         tag = ev["tag"]
+        # The candidate's own non-reward objective/constraint values (e.g. cost), sourced
+        # from its own persisted rollouts — never from the reference side, which gets its
+        # OWN call below with ITS tag.
+        cand_values, cand_stderrs = ((_objective_metrics(run_dir, tag, args.split, OBJ_NAMES))
+                                     if OBJ_NAMES else ({}, {}))
+        gate_kwargs = {}
+        if args.mode == "pareto":
+            ref_values, ref_stderrs = _objective_metrics(run_dir, gate_ref, args.split, OBJ_NAMES)
+            gate_kwargs = dict(objectives=PARETO_OBJECTIVES,
+                               metrics_candidate=cand_values, metrics_current=ref_values,
+                               metrics_stderr_candidate=cand_stderrs,
+                               metrics_stderr_current=ref_stderrs)
+        elif args.mode == "epsilon_constraint":
+            gate_kwargs = dict(constraints=CONSTRAINTS, metrics_candidate=cand_values,
+                               metrics_stderr_candidate=cand_stderrs)
         if tag == CTL:
             g = gate_unless_eval_failed(ev, Path(args.run_dir), tag, args.k_se, args.mode,
-                                        args.veto_regressions)
+                                        args.veto_regressions, **gate_kwargs)
         else:
             g = gate_unless_eval_failed(ev, Path(args.run_dir), tag, args.k_se, args.mode,
                                         args.veto_regressions,
                                         current=gate_ref if args.gate_against == "control"
-                                        else None)
+                                        else None, **gate_kwargs)
         rows.append({
             "tag": tag,
             "reward": (g.get("candidate") or {}).get("reward"),
@@ -1480,11 +1566,53 @@ def _main(argv=None) -> int:
             "eval_error": ev.get("error"),
             # True only for a control replicate this round read back instead of measuring.
             "reused": bool(ev.get("reused")),
+            # #684 items 1-2: this candidate's own non-reward objective/constraint values
+            # (e.g. {"cost": 0.42}), sourced from ITS persisted rollouts — {} on every
+            # single-metric mode, unchanged from before this feature existed.
+            **({"objective_values": cand_values, "objective_stderrs": cand_stderrs}
+               if OBJ_NAMES else {}),
         })
 
     # Nothing derived from these rows — the drift-free re-gate, the evidence bar, the noise
     # floor, the written table — is meaningful if a row was never judged. Check before any of it.
     assert_rows_were_judged(rows)
+
+    # #684 item 1: the NATIVE pareto gate. gate_check.py's own --mode pareto verdict (above,
+    # per row) is still a one-shot pairwise comparison against gate_ref — useful as a sanity
+    # diagnostic, but it is not what decides acceptance here. The archive IS: a candidate is
+    # accepted iff it actually gets a slot in the run's persistent frontier, which is the
+    # structural fix issue #684 asked for (today's gate had no persistent frontier at all).
+    PARETO_ARCHIVE_RESULT = None
+    if args.mode == "pareto":
+        archive_path = run_dir.root / "pareto_archive.json"
+        archive = ParetoArchive.load_or_create(archive_path, PARETO_OBJECTIVES)
+        if not archive.points:
+            # First pareto gate of this run: seed the archive with the current gate reference
+            # (parent or control) itself, so the first candidate is judged against a real
+            # baseline point rather than joining an empty frontier for free.
+            ref_obj_values, ref_obj_stderrs = _objective_metrics(
+                run_dir, gate_ref, args.split, OBJ_NAMES)
+            archive.points.append(ArchivePoint(
+                tag=gate_ref,
+                values={"reward": gate_res.reward, **ref_obj_values},
+                stderr={"reward": gate_res.stderr, **ref_obj_stderrs},
+                round=int(run_dir.spent.iterations)))
+        for r in rows:
+            if r["tag"] in ctl_tags or r.get("reward") is None:
+                continue
+            values = {"reward": r["reward"], **(r.get("objective_values") or {})}
+            stderrs = {"reward": r.get("stderr") or 0.0, **(r.get("objective_stderrs") or {})}
+            inserted, reason = archive.try_insert(
+                r["tag"], values, stderrs, k_se=args.k_se,
+                round_num=int(run_dir.spent.iterations))
+            # THE verdict for pareto mode: accept iff the archive insertion succeeded. This
+            # overrides gate_check.py's own one-shot pairwise verdict recorded above.
+            r["verdict"] = "accept" if inserted else "reject"
+            r["pareto_archive"] = {"inserted": inserted, "reason": reason, "values": values,
+                                   "stderrs": stderrs, "capacity": archive.capacity,
+                                   "size_after": len(archive.points)}
+        archive.save(archive_path)
+        PARETO_ARCHIVE_RESULT = archive.to_dict()
 
     # A parent-gated round has ALREADY measured the drift-free comparison — it just was not
     # reporting it. On run 32871360361 round 4 the table showed cand4 at +0.15 against the seed's
@@ -1497,7 +1625,13 @@ def _main(argv=None) -> int:
     # drift would be a guess about every other workload, while an extra comparison is strictly
     # more information and simply agrees with the primary one where there is no drift. Costs no
     # rollouts — the controls are already evaluated and gate_check reads stored data.
-    if args.gate_against != "control" and ctl_tags:
+    #
+    # Skipped for pareto/epsilon_constraint (#684 items 1-2): this diagnostic re-gates against
+    # the control with the SAME --mode but no objective/constraint metrics threaded through —
+    # ponytail: a real drift-free multi-objective comparison would need the control's own
+    # cand_values too; add if a multi-objective run's drift turns out to matter in practice.
+    # pareto's real verdict is decided by the archive below, not by this diagnostic anyway.
+    if args.mode not in ("pareto", "epsilon_constraint") and args.gate_against != "control" and ctl_tags:
         for r in rows:
             if r["tag"] in ctl_tags or r.get("reward") is None:
                 continue
@@ -1543,7 +1677,10 @@ def _main(argv=None) -> int:
     # null result positive exactly that way, unchecked because the round gated against the stored
     # parent. With --control-replicates 2 the default, this check now always runs whenever there
     # is more than one control block, in EITHER gate mode.
-    if len(ctl_tags) > 1:
+    #
+    # Skipped for pareto/epsilon_constraint, same reason as the control_relative block above:
+    # this diagnostic's re-gate carries no objective/constraint metrics.
+    if args.mode not in ("pareto", "epsilon_constraint") and len(ctl_tags) > 1:
         for r in rows:
             if r["tag"] in ctl_tags or r.get("reward") is None:
                 continue
@@ -1753,6 +1890,13 @@ def _main(argv=None) -> int:
         # count attempt 0's replicates twice. The pooled view is reported separately.
         "control_replicates": ctl_rows,
         "pooled_control_replicates": pooled_rows if PRIOR_CTL else None,
+        # #684 items 1-2: present (non-None) only for the two multi-objective modes. For
+        # pareto, `pareto_archive` is the authoritative frontier state this round wrote to
+        # `pareto_archive.json` — each candidate row's own `pareto_archive`/`verdict` is what
+        # actually decided it, not `gate_delta`/`gate_threshold` (those stay as diagnostics).
+        "objectives": PARETO_OBJECTIVES,
+        "constraints": CONSTRAINTS,
+        "pareto_archive": PARETO_ARCHIVE_RESULT,
         **CASCADE,
         "next": _next_steps(killed, MERGE, dominated),
     }

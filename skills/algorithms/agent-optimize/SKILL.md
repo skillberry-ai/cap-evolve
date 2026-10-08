@@ -193,10 +193,11 @@ diagnosis, not a veto** (`--veto-regressions` restores the old no-regression vet
 before the delta; `unresolved` is no evidence.** `references/algorithm.md`, "Gate as evidence"/
 "Measuring only what the edit reaches".
 
-**If `capevolve.yaml` declares `objectives`** (e.g. reward+cost), use `--mode pareto` on these SAME
-two scripts (`--objectives`/`--metrics-candidate`/`--metrics-current`/`--metrics-stderr-*`; never
-`round.py`). It refuses (`ParetoObjectiveError`) rather than guesses on a missing stderr; the result
-is a **frontier read**, not a disguised boolean. `algorithm.md`, "Pareto acceptance".
+**If `capevolve.yaml` declares `objectives`**, `round.py --mode pareto` is now native (#684): it
+maintains a persistent archive across rounds, so an accept means "got a slot", not a one-shot
+read. `constraints` + `gate_mode: epsilon_constraint` is the simpler one-ceiling alternative,
+also native. Both refuse rather than guess on a missing stderr. `algorithm.md`, "Pareto
+acceptance".
 
 **7. Handover + DIAGNOSIS.json, THEN commit.** Add one `## Iteration <cid>` entry below
 `work/$TAG/JOURNAL.md`'s marker (not `$R/JOURNAL.md`): what, why, what the numbers said. 
@@ -239,8 +240,8 @@ Read `screen_stage`/`screen_killed`/`merge_stage` first (`algorithm.md`, "Gating
 `--no-merge` past `max_merge_skips` (default 1) is refused (#630). Gold-replay check? `--pregate-check`.
 `round.py` still refuses fewer than `MIN_SIBLINGS` (3) tags unless you pass
 `--single-candidate-justification` (step 2's `plan.json` IS that justification below 3) or an
-`--afford-check-file`. **`--mode` stays single-metric** — a pareto-gated candidate is always gated by
-hand through `gate_check.py`.
+`--afford-check-file`. **`--mode pareto`/`epsilon_constraint` are first-class choices here (#684)**
+— no hand-gating through `gate_check.py` needed for either.
 
 `--concurrency` (gate load) is low by default; `round.py` refuses one too hot to
 resolve its verdict — never raise it to buy wall clock. Read
