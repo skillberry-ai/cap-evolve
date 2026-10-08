@@ -62,6 +62,7 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.request import urlopen
 
 # This file is reached through a chain of symlinks (project/adapters ->
 # v4_t2_e1_common/adapters -> scripts/parsec/v4_t2_e1/common/adapters). .resolve()
@@ -92,7 +93,20 @@ TASKS_DIR = V4N / "_run" / "tasks" if V4N else None
 # about those runs (TASK_ID support removed) — a shared namespace would let
 # stale v4_t2_e1 job dirs be picked up by trajectories()'s "newest" search.
 JOBS_ROOT = V4N / "_run" / "jobs" / "v4_g2_e1" if V4N else None
-TRIAL_TIMEOUT_SEC = 20 * 60
+# Degraded gateway latency pushed 10-18 call tasks past the task's own
+# `[agent] timeout_sec` (600s in the h4 suite). Harbor then cancels the agent,
+# the trial still writes a reward.json, the verifier's completion gate zeroes
+# it, and it lands in the results as a 0.0 indistinguishable from a wrong
+# answer -- with errored_trials still reading 0. 15% of one arm's trials died
+# that way against 0.7% in its neighbours.
+#
+# Both knobs are needed. The multiplier raises the ceiling Harbor enforces;
+# TRIAL_TIMEOUT_SEC must stay well above it, or this subprocess cap preempts
+# the ceiling it exists to contain. Revert both to 20*60 / 1.0 once the
+# gateway slowdown is understood: a raised timeout makes a *failing* trial
+# cost 2.5x more wall clock.
+AGENT_TIMEOUT_MULTIPLIER = 2.5
+TRIAL_TIMEOUT_SEC = 40 * 60
 TASK_DIR_PREFIX = "bench-v4-"
 
 PROMPT_FILES = [
@@ -113,6 +127,66 @@ PROMPT_FILES = [
 MIN_ORCHESTRATOR_BYTES = 500
 
 MCP_PORTS = parsec_paths.MCP_PORTS
+
+#: How long to wait for every harness service to report an empty queue before
+#: seeding. Deliberately well above the 120s install_seeds subprocess timeout
+#: below: this wait is NOT inside that subprocess, so it is free to outlast a
+#: slow simulator call rather than being killed partway and losing the trial.
+QUIESCE_TIMEOUT_SEC = 300.0
+QUIESCE_POLL_SEC = 2.0
+
+
+def _sim_queue_depth(port: int) -> int | None:
+    """A service's in-flight tool-call count, or None if it cannot be read.
+
+    Unreadable is not idle: a service that cannot be polled is reported as
+    None so the caller keeps waiting, rather than seeding into a service whose
+    state is unknown -- which is the thing this gate exists to prevent.
+    """
+    try:
+        with urlopen(f"http://localhost:{port}/api/v1/simulation", timeout=10) as r:
+            state = (json.loads(r.read().decode()) or {}).get("session_state") or {}
+    except (OSError, ValueError):
+        return None
+    depth = state.get("queue_depth")
+    return depth if isinstance(depth, int) else None
+
+
+def _await_quiescent_sims() -> str | None:
+    """Block until every harness service has an empty queue.
+
+    Returns None once all report ``queue_depth == 0``, or a description of what
+    was still busy when the budget ran out.
+
+    Seeding a service is refused with HTTP 409 while it still has a tool call
+    in flight, so this gate is what makes the PUT that follows it safe. The
+    call being drained usually belongs to the PREVIOUS task: a trial ends when
+    the *agent* stops, which does not wait for the simulators it stopped
+    talking to, so an abandoned call outlives the trial that made it. Arms that
+    seeded only each task's own declared services never saw this -- the service
+    the current agent used is quiet by construction, because the agent waited
+    for its answer. Seeding every service exposes it, and cost 69 errored
+    trials in one sweep before this existed.
+    """
+    deadline = time.monotonic() + QUIESCE_TIMEOUT_SEC
+    started = time.monotonic()
+    while True:
+        busy = []
+        for var, port in sorted(MCP_PORTS.items()):
+            name = var.replace("_MCP_URL", "").lower()
+            depth = _sim_queue_depth(port)
+            if depth is None:
+                busy.append(f"{name}(unreadable)")
+            elif depth > 0:
+                busy.append(f"{name}(queue={depth})")
+        if not busy:
+            waited = time.monotonic() - started
+            if waited > QUIESCE_POLL_SEC:
+                print(f"  waited {waited:.0f}s for simulators to go quiet", flush=True)
+            return None
+        if time.monotonic() >= deadline:
+            return f"still busy after {QUIESCE_TIMEOUT_SEC:.0f}s: {', '.join(busy)}"
+        time.sleep(QUIESCE_POLL_SEC)
 
 
 def _resolve_docker_host() -> str:
@@ -356,6 +430,13 @@ class Adapter(CapabilityAdapter):
         # does. A seeding failure returns Rollout(error=...) rather than a 0.0
         # reward so the harness counts it as infra noise (missing data), not a
         # capability regression.
+        quiesce_err = _await_quiescent_sims()
+        if quiesce_err is not None:
+            return Rollout(
+                task_id=task.id,
+                error=f"simulators did not go quiet before seeding: {quiesce_err}",
+                metadata={"trial_dir": str(trial_dir)},
+            )
         try:
             seed_proc = subprocess.run(
                 [sys.executable, "install_seeds.py", str(task_dir)],
@@ -423,7 +504,8 @@ class Adapter(CapabilityAdapter):
         try:
             with open(log_path, "w", encoding="utf-8") as logf:
                 proc = subprocess.run(
-                    ["harbor", "run", "--config", str(cfg_path), "--n-concurrent", "1"],
+                    ["harbor", "run", "--config", str(cfg_path), "--n-concurrent", "1",
+                     "--agent-timeout-multiplier", str(AGENT_TIMEOUT_MULTIPLIER)],
                     cwd=str(V4N), env=env, stdout=logf, stderr=subprocess.STDOUT,
                     timeout=TRIAL_TIMEOUT_SEC,
                 )

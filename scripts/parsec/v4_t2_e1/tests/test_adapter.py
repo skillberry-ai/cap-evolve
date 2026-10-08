@@ -812,3 +812,77 @@ class TestReadParsecUsageCost(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestAwaitQuiescentSims(unittest.TestCase):
+    """The pre-seed gate: seeding a busy service is refused with HTTP 409.
+
+    The failure this prevents is not loud. Before the gate existed, a trial
+    whose seeding was refused errored out, and a sweep that kept going banked
+    69 such trials. Worse, the call being drained usually belongs to the
+    PREVIOUS task -- a trial ends when the agent stops, which does not wait for
+    the simulators it stopped talking to.
+    """
+
+    def _patch_depths(self, depths):
+        """Patch per-port queue depth. `depths` maps port -> int | None."""
+        return patch.object(adapter_mod, "_sim_queue_depth",
+                            side_effect=lambda port: depths.get(port))
+
+    def test_returns_none_when_all_idle(self):
+        depths = {p: 0 for p in adapter_mod.MCP_PORTS.values()}
+        with self._patch_depths(depths):
+            self.assertIsNone(adapter_mod._await_quiescent_sims())
+
+    def test_names_the_busy_service_on_timeout(self):
+        port = adapter_mod.MCP_PORTS["PLATFORM_MCP_URL"]
+        depths = {p: (1 if p == port else 0) for p in adapter_mod.MCP_PORTS.values()}
+        with patch.object(adapter_mod, "QUIESCE_TIMEOUT_SEC", 0.2), \
+             patch.object(adapter_mod, "QUIESCE_POLL_SEC", 0.05), \
+             self._patch_depths(depths):
+            err = adapter_mod._await_quiescent_sims()
+        self.assertIsNotNone(err)
+        self.assertIn("platform(queue=1)", err)
+
+    def test_unreadable_service_is_not_treated_as_idle(self):
+        """A service that cannot be polled must block, not pass.
+
+        Seeding into a service whose state is unknown is exactly the race the
+        gate exists to stop, so None must never read as "idle".
+        """
+        port = adapter_mod.MCP_PORTS["CLOUD_MCP_URL"]
+        depths = {p: (None if p == port else 0) for p in adapter_mod.MCP_PORTS.values()}
+        with patch.object(adapter_mod, "QUIESCE_TIMEOUT_SEC", 0.2), \
+             patch.object(adapter_mod, "QUIESCE_POLL_SEC", 0.05), \
+             self._patch_depths(depths):
+            err = adapter_mod._await_quiescent_sims()
+        self.assertIsNotNone(err)
+        self.assertIn("cloud(unreadable)", err)
+
+    def test_proceeds_once_the_queue_drains(self):
+        port = adapter_mod.MCP_PORTS["GITHUB_MCP_URL"]
+        calls = {"n": 0}
+
+        def depth(p):
+            if p != port:
+                return 0
+            calls["n"] += 1
+            return 1 if calls["n"] <= 2 else 0
+
+        with patch.object(adapter_mod, "QUIESCE_TIMEOUT_SEC", 5.0), \
+             patch.object(adapter_mod, "QUIESCE_POLL_SEC", 0.01), \
+             patch.object(adapter_mod, "_sim_queue_depth", side_effect=depth):
+            self.assertIsNone(adapter_mod._await_quiescent_sims())
+
+    def test_trial_cap_exceeds_the_agent_ceiling_it_contains(self):
+        """TRIAL_TIMEOUT_SEC must not preempt the ceiling Harbor enforces.
+
+        Getting this backwards is how a nested timeout silently converts a
+        recoverable wait into a dead trial: an earlier version had a 120s drain
+        budget inside a subprocess whose own cap was also 120s, so the retry
+        could never finish. The h4 tasks declare 600s.
+        """
+        task_agent_timeout = 600.0
+        harbor_ceiling = task_agent_timeout * adapter_mod.AGENT_TIMEOUT_MULTIPLIER
+        self.assertGreater(adapter_mod.TRIAL_TIMEOUT_SEC, harbor_ceiling,
+                           "the subprocess cap must outlast the agent ceiling")
