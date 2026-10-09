@@ -1,0 +1,1 @@
+[{"run_id":"run_suite","path":"/tmp/ce-runs-glm/run_suite","algorithm":"hill-climb","status":"completed","status_reason":"finalize sealed the test split","best_val":0.976,"baseline_val":0.896,"delta_pct":8.9,"delta_abs":0.08,"test_reward":0.9590163934426229,"iterations":10,"total_usd":60.0143,"cost_metered":true,"last_event_t":1791252012.6852446,"mtime":1791252024.3923852}]
