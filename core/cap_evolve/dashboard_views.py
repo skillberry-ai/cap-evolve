@@ -52,27 +52,37 @@ def decisions(events) -> list[dict]:
 
 def enrich(run_dir, nodes: dict[str, dict], events: list[dict]) -> list[dict]:
     """Annotate ``nodes`` in place; return the run-level decisions list."""
-    root = run_dir.root
-    val_ids = _val_ids(root, nodes)
-    evals = schema_v2.legacy_coverage(events, val_ids)
-    g = CandidateGraph.load(run_dir)
-    decs = decisions(events)
+    try:
+        val_ids = _val_ids(run_dir.root, nodes)
+        evals = schema_v2.legacy_coverage(events, val_ids)
+        g = CandidateGraph.load(run_dir)
+        decs = decisions(events)
+    except Exception:  # noqa: BLE001 -- unreadable graph/events: serve the v1 view
+        return []
     for nid, n in nodes.items():
-        gn = g.node(nid) or {}
-        # events-reconstructed nodes have no graph record on old runs: stand one in from them
-        base = {"id": nid, "val_mean": n.get("val"), "status": n.get("status"),
-                "parents": [n["parent"]] if n.get("parent") else [], **gn}
-        if nid == "seed":
-            base["val_mean"] = n.get("val")
-        v2 = schema_v2.normalize_node(base, val_ids=val_ids, evals=evals,
-                                      parents=g.parents_of(nid) or base["parents"])
-        n["eval_state"] = v2["eval_state"]
-        n["coverage"] = v2.get("coverage")
-        n["parents"] = [p for p in v2.get("parents") or [] if p != nid]
-        for k in PASSTHROUGH:
-            if v2.get(k) is not None:
-                n[k] = v2[k]
-        cm = ((n.get("vs_parent") or {}).get("cost_matched") or {})
-        n["matched_task_ids"] = cm.get("matched_task_ids") or []
-        n["decisions"] = [d for d in decs if d["id"] == nid]
+        try:
+            _enrich_node(nid, n, g, nodes, val_ids, evals, decs)
+        except Exception as e:  # noqa: BLE001 -- a malformed record must not break the reducer
+            n.setdefault("eval_state", None)
+            n["schema_warning"] = {"of": "dashboard_views", "error": f"{type(e).__name__}: {e}"}
     return decs
+
+
+def _enrich_node(nid, n, g, nodes, val_ids, evals, decs) -> None:
+    gn = g.node(nid) or {}
+    # events-reconstructed nodes have no graph record on old runs: stand one in from them
+    base = {"id": nid, "val_mean": n.get("val"), "status": n.get("status"),
+            "parents": [n["parent"]] if n.get("parent") else [], **gn}
+    if nid == "seed":
+        base["val_mean"] = n.get("val")
+    v2 = schema_v2.normalize_node(base, val_ids=val_ids, evals=evals,
+                                  parents=g.parents_of(nid) or base["parents"])
+    n["eval_state"] = v2["eval_state"]
+    n["coverage"] = v2.get("coverage")
+    n["parents"] = [p for p in v2.get("parents") or [] if p != nid]
+    for k in PASSTHROUGH:
+        if v2.get(k) is not None:
+            n[k] = v2[k]
+    cm = ((n.get("vs_parent") or {}).get("cost_matched") or {})
+    n["matched_task_ids"] = cm.get("matched_task_ids") or []
+    n["decisions"] = [d for d in decs if d["id"] == nid]

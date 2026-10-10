@@ -19,6 +19,13 @@ _TAG = re.compile(r"[\w.\-]+")
 _BASES = ("parent", "latest_base", "original", "selected", "ancestry")
 
 
+MAX_CHARS = 256 * 1024  # per-file cap on diff row text; beyond it rows are cut and ``truncated`` set
+
+
+class Unavailable(Exception):
+    """A candidate snapshot that was never saved (synthetic/pruned): reported, not an error."""
+
+
 class CapDiffError(Exception):
     def __init__(self, status: int, detail: str):
         super().__init__(detail)
@@ -44,11 +51,17 @@ class _Ctx:
             ps = [p] if p and p != tag else ["seed"]
         return ps
 
+    def tree_or_empty(self, tag: str) -> dict[str, str]:
+        try:
+            return self.tree(tag)
+        except Unavailable:
+            return {}
+
     def tree(self, tag: str) -> dict[str, str]:
         if tag not in self._trees:
             d = self.rd.root / "candidates" / _tag(tag)
             if not d.is_dir():
-                raise CapDiffError(404, f"no snapshot for candidate {tag!r}")
+                raise Unavailable(f"no snapshot for candidate {tag!r}")
             t = diffview.read_tree(d)
             only = (self.g.node(tag) or {}).get("capability_files")
             self._trees[tag] = {k: v for k, v in t.items() if k in only} if only else t
@@ -96,7 +109,15 @@ def _rows(old: list[str], new: list[str], classes: dict | None = None, context: 
 
 
 def _file_entry(path, rows):
-    return {"path": path, "added": sum(r["t"] == "add" for r in rows),
+    size, cut = 0, None
+    for i, r in enumerate(rows):
+        size += len(r["l"])
+        if size > MAX_CHARS:
+            cut = i
+            break
+    if cut is not None:
+        rows = rows[:cut]
+    return {"path": path, "truncated": cut is not None, "added": sum(r["t"] == "add" for r in rows),
             "removed": sum(r["t"] == "del" for r in rows), "rows": rows}
 
 
@@ -126,9 +147,12 @@ def classify_merge(base: dict[str, str], parents: dict[str, dict[str, str]],
         for h in c_hunks:
             k = _key(o, c, h)
             who = [p for p in names if k in per_parent[p]]
+            # N parents: one -> inherited:<p>; all of exactly 2 -> inherited:both;
+            # two or more otherwise -> inherited:multiple (rows carry the list in ``by``)
             classes[k] = ("new" if not who else
-                          "inherited:both" if len(who) == len(names) and len(names) == 2 else
-                          "inherited:" + ",".join(who))
+                          "inherited:" + who[0] if len(who) == 1 else
+                          "inherited:both" if len(who) == len(names) == 2 else
+                          "inherited:multiple")
         rows = _rows(o, c, classes) if c_hunks else []
         for p in names:
             pl = _lines(parents[p].get(path, ""))
@@ -166,25 +190,43 @@ def _chain(ctx: _Ctx, tag: str) -> list[str]:
     return chain[::-1]
 
 
-def blame(ctx: _Ctx, chain: list[str]) -> dict[str, list[dict]]:
-    """``{path: [{start, end, by}]}`` -- 1-based line runs of the target and the candidate
-    along ``chain`` that introduced them (``seed`` for original lines)."""
-    owners: dict[str, list[str]] = {}
-    prev: dict[str, str] = {}
-    for tag in chain:
-        cur = ctx.tree(tag)
-        new_owners = {}
+def blame(ctx: _Ctx, target: str) -> dict[str, list[dict]]:
+    """``{path: [{start, end, by}]}`` -- 1-based line runs of ``target`` and the candidate
+    that introduced them. Follows ALL parents: a line of a node that aligns (difflib) with a
+    line of a parent keeps that parent's blame; lines aligned with several parents are
+    credited to the FIRST parent in the node's ``parents`` order (deterministic tie-break,
+    also for criss-cross graphs); lines aligned with none are the node's own (for a merge:
+    merge-specific). A node with no saved snapshot is treated as empty, so its lines are
+    credited to its first descendant that has one."""
+    memo: dict[str, dict[str, list[str]]] = {}
+
+    def own(tag, stack=()):
+        if tag in memo:
+            return memo[tag]
+        try:
+            cur = ctx.tree(tag)
+        except Unavailable:
+            cur = {}
+        ps = [] if tag == "seed" or tag in stack else ctx.parents(tag)
+        pown = [own(p, stack + (tag,)) for p in ps]
+        out = {}
         for path, text in cur.items():
-            old_l, new_l = _lines(prev.get(path, "")), _lines(text)
-            old_o = owners.get(path, [])
-            o = [tag] * len(new_l) if tag != chain[0] else ["seed"] * len(new_l)
-            for t, i1, i2, j1, j2 in difflib.SequenceMatcher(a=old_l, b=new_l, autojunk=False).get_opcodes():
-                if t == "equal":
-                    o[j1:j2] = old_o[i1:i2]
-            new_owners[path] = o
-        owners, prev = new_owners, cur
+            new_l = _lines(text)
+            o = ["seed" if tag == "seed" else tag] * len(new_l)
+            taken = [False] * len(new_l)
+            for p, po in zip(ps, pown):
+                old_l = _lines(ctx.tree_or_empty(p).get(path, ""))
+                for t, i1, i2, j1, j2 in difflib.SequenceMatcher(a=old_l, b=new_l, autojunk=False).get_opcodes():
+                    if t == "equal":
+                        for k in range(j2 - j1):
+                            if not taken[j1 + k] and i1 + k < len(po.get(path, [])):
+                                o[j1 + k], taken[j1 + k] = po[path][i1 + k], True
+            out[path] = o
+        memo[tag] = out
+        return out
+
     out = {}
-    for path, o in owners.items():
+    for path, o in own(target).items():
         runs: list[dict] = []
         for i, by in enumerate(o, 1):
             if runs and runs[-1]["by"] == by:
@@ -195,30 +237,39 @@ def blame(ctx: _Ctx, chain: list[str]) -> dict[str, list[dict]]:
     return out
 
 
-def capdiff(run_path: Path, target: str, base: str = "parent") -> dict:
+def capdiff(run_path: Path, target: str, base: str = "parent", selected: str | None = None) -> dict:
+    """``base=selected`` compares against the ``selected`` tag, default the run's current best."""
+    res = {"target": _tag(target), "mode": base if base in _BASES else "tag"}
+    try:
+        res.update(_capdiff(run_path, res["target"], base, selected))
+    except Unavailable as e:
+        res.update(unavailable=True, reason=str(e), files=[])
+    res["truncated"] = any(f.get("truncated") for f in res.get("files", []) +
+                           [f for e in res.get("edges", []) for f in e["files"]])
+    return res
+
+
+def _capdiff(run_path: Path, target: str, base: str, selected: str | None) -> dict:
     ctx = _Ctx(run_path)
-    target = _tag(target)
-    ctx.tree(target)  # 404 early
+    ctx.tree(target)
     node = ctx.g.node(target) or {}
-    res = {"target": target, "mode": base if base in _BASES else "tag"}
+    res: dict = {}
     if base == "ancestry":
         chain = _chain(ctx, target)
         res["edges"] = [{"from": a, "to": b, **edge_diff(ctx, b, parent=a if len(ctx.parents(b)) < 2 else None)}
                         for a, b in zip(chain, chain[1:])]
-        res["blame"] = blame(ctx, chain)
+        res["blame"] = blame(ctx, target)
         return res
     if base == "parent":
-        res.update(edge_diff(ctx, target))
-        return res
+        return edge_diff(ctx, target)
     if base == "latest_base":
         b = node.get("base_for_eval") or (ctx.parents(target) or ["seed"])[0]
     elif base == "original":
         b = "seed"
     elif base == "selected":
-        b = diffview.best_id(ctx.rd.root)
+        b = _tag(selected) if selected else diffview.best_id(ctx.rd.root)
         if not b:
-            raise CapDiffError(404, "no selected candidate recorded yet")
+            raise Unavailable("no selected candidate recorded yet")
     else:
         b = _tag(base)
-    res.update(base=b, parents=[b], merge=False, files=diff_trees(ctx.tree(b), ctx.tree(target)))
-    return res
+    return {"base": b, "parents": [b], "merge": False, "files": diff_trees(ctx.tree(b), ctx.tree(target))}

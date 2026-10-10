@@ -8,10 +8,11 @@ rollouts + the reducer's nodes.
 from __future__ import annotations
 
 import math
+from dataclasses import asdict
 from pathlib import Path
 
 from . import _bootstrap  # noqa: F401
-from cap_evolve import RunDir, dashboard, objectives as ob
+from cap_evolve import RunDir, dashboard, objectives as ob, specfile
 
 
 def _num(x):
@@ -51,10 +52,40 @@ def _vs(P, C, theta):
             "latency": {k: _num(lat.get(k)) for k in ("d", "rel")}}
 
 
+_CACHE: dict[str, tuple] = {}
+_CACHE_MAX = 8
+
+
+def _stamp(root: Path, spec_path) -> tuple:
+    """Invalidation key: mtimes of the files/dirs a new eval or decision touches."""
+    names = [root / "events.jsonl", root / "graph.jsonl", root / "rollouts" / "val", root / "state.json"]
+    names += [spec_path] if spec_path else []
+    return tuple(p.stat().st_mtime_ns if p.exists() else 0 for p in names)
+
+
 def run_objectives(run_path: Path) -> dict:
+    """Cached per run dir on :func:`_stamp` (LRU of 8); cold cost is dominated by
+    ``reduce_run`` plus reading every val rollout once (seconds on a 450MB run)."""
     rd = RunDir.open(Path(run_path))
+    spec_path = specfile.resolve_spec_path(rd, dashboard._find_project_dir(rd.root))
+    key, stamp = str(rd.root), _stamp(rd.root, spec_path)
+    hit = _CACHE.pop(key, None)
+    if hit and hit[0] == stamp:
+        _CACHE[key] = hit  # re-insert = most recently used
+        return hit[1]
+    res = _compute(rd, spec_path)
+    _CACHE[key] = (stamp, res)
+    while len(_CACHE) > _CACHE_MAX:
+        _CACHE.pop(next(iter(_CACHE)))
+    return res
+
+
+def _compute(rd, spec_path) -> dict:
     nodes = {n["id"]: n for n in dashboard.reduce_run(rd)["graph"]["nodes"]}
-    theta = ob.success_theta(ob.GateCfg())
+    spec = specfile.spec_for_run(rd, dashboard._find_project_dir(rd.root))
+    cfg = ob.cfg_from_spec(spec)
+    theta = ob.success_theta(cfg)
+    gate_src = ("spec:reward_gated" if (spec.get("reward_gated") or {}) else "GateCfg defaults (no reward_gated in spec)")
     cache: dict[str, list] = {}
     trials = lambda tag: cache.setdefault(tag, ob.load_trials(rd, tag))
     out = {}
@@ -72,4 +103,4 @@ def run_objectives(run_path: Path) -> dict:
             row["vs_parent"] = n.get("vs_parent")
             row["objectives"] = n.get("objectives")
         out[nid] = row
-    return {"theta": theta, "candidates": out}
+    return {"theta": theta, "gate_cfg_source": gate_src, "gate_cfg": asdict(cfg), "candidates": out}

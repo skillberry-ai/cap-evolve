@@ -73,7 +73,10 @@ def test_capdiff_bases(recorded):
     assert g("latest_base")["base"] == "cand_4"
     assert g("cand_7")["base"] == "cand_7"
     assert g("selected")["base"] == "cand_7"  # state.json best_id
-    assert recorded.get(f"/api/runs/{RID}/capdiff", params={"target": "nope"}).status_code == 404
+    sel = recorded.get(f"/api/runs/{RID}/capdiff", params={"target": "cand_9", "base": "selected", "selected": "cand_4"}).json()
+    assert sel["base"] == "cand_4"
+    miss = recorded.get(f"/api/runs/{RID}/capdiff", params={"target": "nope"})
+    assert miss.status_code == 200 and miss.json()["unavailable"] is True
     assert recorded.get(f"/api/runs/{RID}/capdiff", params={"target": "..%2Fx"}).status_code in (400, 404)
 
 
@@ -152,3 +155,94 @@ def test_objectives_vs_parent_matched_ids(recorded):
     v = recorded.get(f"/api/runs/{RID}/objectives").json()["candidates"]["cand_7"]["vs_parent"]
     assert v["cost_matched"]["matched_task_ids"] == sorted(v["cost_matched"]["matched_task_ids"])
     assert v["cost_matched"]["n_matched"] == len(v["cost_matched"]["matched_task_ids"])
+
+
+# ---- review fixes (#728) ---------------------------------------------------------------------
+
+def _mk_dag(base, ts, snaps, parents):
+    from cap_evolve import Budget, RunDir
+    rd = RunDir.create(base, ts=ts, budget=Budget())
+    rd.events_path.write_text(json.dumps({"kind": "baseline", "val": 0.1}) + "\n")
+    for tag, text in snaps.items():
+        (rd.root / "candidates" / tag / "policy").mkdir(parents=True)
+        (rd.root / "candidates" / tag / "policy" / "p.md").write_text(text)
+    (rd.root / "graph.jsonl").write_text("\n".join(json.dumps({"id": t, "parents": p}) for t, p in parents.items()) + "\n")
+    return rd
+
+
+def test_blame_follows_second_parent_of_merge(tmp_base):
+    _mk_merge_run(tmp_base)
+    d = _client(tmp_base).get("/api/runs/run_m/capdiff", params={"target": "M", "base": "ancestry"}).json()
+    # exact: line 3 (a2) from A, line 18 (c17) merge-specific, rest original
+    assert d["blame"]["policy/p.md"] == [{"start": 1, "end": 2, "by": "seed"}, {"start": 3, "end": 3, "by": "A"},
+                                         {"start": 4, "end": 17, "by": "seed"}, {"start": 18, "end": 18, "by": "M"},
+                                         {"start": 19, "end": 20, "by": "seed"}]
+
+
+def test_blame_credits_donor_parent(tmp_base):
+    base = "\n".join(f"l{i}" for i in range(10)) + "\n"
+    _mk_dag(tmp_base, "d", {"seed": base, "A": base, "B": base.replace("l8", "b8"),
+                            "M": base.replace("l8", "b8")},
+            {"A": ["seed"], "B": ["seed"], "M": ["A", "B"]})
+    d = _client(tmp_base).get("/api/runs/run_d/capdiff", params={"target": "M", "base": "ancestry"}).json()
+    assert {"start": 9, "end": 9, "by": "B"} in d["blame"]["policy/p.md"]  # donor B, not M
+
+
+def test_criss_cross_merge_base_is_deterministic(tmp_base):
+    O = "\n".join(f"l{i}" for i in range(10)) + "\n"
+    snaps = {"seed": O, "X": O.replace("l1", "x1"), "Y": O.replace("l7", "y7")}
+    snaps["M1"] = snaps["M2"] = O.replace("l1", "x1").replace("l7", "y7")
+    snaps["N"] = snaps["M1"]
+    par = {"X": ["seed"], "Y": ["seed"], "M1": ["X", "Y"], "M2": ["Y", "X"], "N": ["M1", "M2"]}
+    _mk_dag(tmp_base, "c", snaps, par)
+    d = _client(tmp_base).get("/api/runs/run_c/capdiff", params={"target": "N"}).json()
+    # LCAs X and Y tie at depth; lineage.merge_base picks lexicographically smallest -> X
+    assert d["merge"] and d["base"] == "X"
+    d2 = _client(tmp_base).get("/api/runs/run_c/capdiff", params={"target": "N", "base": "ancestry"}).json()
+    assert d2["blame"]["policy/p.md"][0]["by"] == "seed"
+
+
+def test_three_parent_merge_uses_inherited_multiple(tmp_base):
+    O = "\n".join(f"l{i}" for i in range(12)) + "\n"
+    p = {"A": O.replace("l1", "s"), "B": O.replace("l1", "s"), "C": O.replace("l1", "s").replace("l9", "c9")}
+    snaps = {"seed": O, **p, "M": O.replace("l1", "s").replace("l9", "c9")}
+    _mk_dag(tmp_base, "n", snaps, {"A": ["seed"], "B": ["seed"], "C": ["seed"], "M": ["A", "B", "C"]})
+    d = _client(tmp_base).get("/api/runs/run_n/capdiff", params={"target": "M"}).json()
+    cls = {r["l"]: r["c"] for f in d["files"] for r in f["rows"] if r.get("c")}
+    assert cls["s"] == "inherited:multiple" and cls["c9"] == "inherited:C"
+
+
+def test_capdiff_truncation_flag(tmp_base):
+    big = "\n".join("x" * 100 for _ in range(4000)) + "\n"
+    _mk_dag(tmp_base, "t", {"seed": "", "A": big}, {"A": ["seed"]})
+    d = _client(tmp_base).get("/api/runs/run_t/capdiff", params={"target": "A"}).json()
+    assert d["truncated"] is True and d["files"][0]["truncated"] is True
+
+
+def test_objectives_cache_and_invalidation(recorded, tmp_path):
+    from capevolve_dashboard import objectives_view as ov
+    ov._CACHE.clear()
+    a = recorded.get(f"/api/runs/{RID}/objectives").json()
+    calls = []
+    orig = ov._compute
+    ov._compute = lambda *x: calls.append(1) or orig(*x)
+    try:
+        assert recorded.get(f"/api/runs/{RID}/objectives").json() == a and not calls  # warm hit
+        run = recorded.app.state.base_dir / RID
+        (run / "rollouts" / "val" / "99__seed__t0.json").write_text(
+            json.dumps({"score": {"task_id": "99", "reward": 1.0}, "rollout": {"cost_usd": 1.0}}))
+        b = recorded.get(f"/api/runs/{RID}/objectives").json()
+        assert calls and b["candidates"]["seed"]["n_tasks"] == 7  # new rollout invalidated
+    finally:
+        ov._compute = orig
+
+
+def test_objectives_gate_params_come_from_run_spec(recorded):
+    from capevolve_dashboard import objectives_view as ov
+    ov._CACHE.clear()
+    o = recorded.get(f"/api/runs/{RID}/objectives").json()
+    assert o["theta"] == 0.8 and "defaults" in o["gate_cfg_source"]
+    run = recorded.app.state.base_dir / RID
+    (run / "capevolve.yaml").write_text("reward_gated:\n  theta: 0.5\n  max_reward: 1.0\n")
+    o = recorded.get(f"/api/runs/{RID}/objectives").json()
+    assert o["theta"] == 0.5 and o["gate_cfg_source"] == "spec:reward_gated"

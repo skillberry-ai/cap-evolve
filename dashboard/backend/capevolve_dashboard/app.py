@@ -67,9 +67,10 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
         return trajectories.diff_candidate(_resolve_or_404(run_id), candidate)
 
     @app.get("/api/runs/{run_id}/capdiff")
-    def get_capdiff(run_id: str, target: str = Query(...), base: str = Query(default="parent")):
+    def get_capdiff(run_id: str, target: str = Query(...), base: str = Query(default="parent"),
+                    selected: str | None = Query(default=None)):
         try:
-            return _capdiff.capdiff(_resolve_or_404(run_id), target, base)
+            return _capdiff.capdiff(_resolve_or_404(run_id), target, base, selected)
         except _capdiff.CapDiffError as e:
             raise HTTPException(status_code=e.status, detail=e.detail)
 
