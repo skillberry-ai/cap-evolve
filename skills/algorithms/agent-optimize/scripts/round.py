@@ -49,7 +49,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 import gate_check
 import pregate
 
-from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks
+from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks, posterior
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
 from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
@@ -1655,6 +1655,10 @@ def _main(argv=None) -> int:
             # 0.022-0.035 on run_finalrun6 while real per-edit effects were 0.011-0.05.
             "footprint": g.get("footprint"),
             "verdict": g.get("verdict"),
+            # #706 ablation.active_eval (default off): advisory paired-posterior read-out from
+            # the evidence ledger; the gate verdict above is unchanged.
+            **({"posterior": posterior.summarize(run_dir, tag, best, args.split)}
+               if tag != CTL and posterior.enabled(spec) else {}),
             "regressions": g.get("regressions"),
             # What the candidate TRADED (gate_check's `movement`): the broke ids AND the fixed
             # ids. Persisted so `commit.py` can put them on the step record instead of leaving
