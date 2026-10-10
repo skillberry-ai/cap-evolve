@@ -393,12 +393,19 @@ def _nway(args, run_dir: Path, survivors: list[str]) -> int:
     tt = {t: _mechanisms_targets(run_dir, t) for t in survivors}
     wins = merge_n.wins_from_run(rd, survivors, args.base)
     out_tag = "merge_" + "_".join(survivors)
+    splits = rd.read_splits()
+    try:
+        canaries = merge_n.check_ids([c.strip() for c in args.canary.split(",") if c.strip()],
+                                     splits, "--canary")
+    except ValueError as e:
+        print(f"merge_search ERROR: {e}", file=sys.stderr)
+        return 2
     for t, ids in tt.items():
         if not ids:
             print(f"merge_search WARNING: no mechanisms.jsonl tasks for {t}", file=sys.stderr)
     res = merge_n.plan(survivors, dir_of, graph, touched_tasks=tt, wins=wins or {},
-                       all_tasks=rd.read_splits().ids("val"),          # val only, never test
-                       canaries=[c.strip() for c in args.canary.split(",") if c.strip()] or None,
+                       all_tasks=splits.ids("val"),                    # val only, never test
+                       canaries=canaries or None,
                        out_dir=work / out_tag, run_dir=rd)
     res["node"] = merge_n.node_record(res, out_tag)
     print(json.dumps(res, indent=2, default=sorted))

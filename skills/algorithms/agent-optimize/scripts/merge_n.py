@@ -161,6 +161,16 @@ def features(base_dir: Path, tag_dir: Path, touched_tasks=(), wins=None) -> dict
             "tasks": set(map(str, touched_tasks)), "wins": None if wins is None else set(wins)}
 
 
+def check_ids(ids, splits, what: str) -> list[str]:
+    """User-supplied task ids must be in the val/train pool; a test or unknown id raises."""
+    pool = {str(t) for sp in ("val", "train") for t in splits.ids(sp)}
+    bad = sorted({str(i) for i in ids} - pool)
+    if bad:
+        raise ValueError(f"{what}: id(s) {bad} are not in the val/train pool of splits.json "
+                         "(test ids and unknown ids are never allowed in a probe plan)")
+    return [str(i) for i in ids]
+
+
 def probe_plan(wins: dict[str, set[str]], all_tasks, tag: str, n_trials: int = PROBE_TRIALS,
                run_dir=None, out_dir: Path | None = None, canaries=None, reason: str = "") -> dict:
     """Eval request for the ledger: union of each branch's winning tasks + sentinels."""

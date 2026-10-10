@@ -219,3 +219,23 @@ def test_nway_cli_uses_val_ids_as_sentinels_never_test(tmp_path, capsys):
     req = out["eval_request"]
     assert req["sentinels"] and set(req["task_ids"]) <= set("123456789")
     assert out["node"]["parents"] == ["a", "b", "c"]
+
+
+def test_nway_cli_rejects_test_or_unknown_canary_ids(tmp_path, capsys):
+    import shutil
+    import merge_search
+    from cap_evolve import RunDir
+    from cap_evolve.rundir import Budget
+    from cap_evolve.splits import Splits
+    rd = RunDir.create(tmp_path / ".capevolve", ts="ci", budget=Budget(max_iterations=10))
+    rd.write_splits(Splits(train=["t1"], val=list("123456789"), test=["T1", "T2"]))
+    d = _trio(tmp_path / "caps")
+    shutil.copytree(d["seed"], rd.candidate_dir("seed"))
+    for n in "ab":
+        shutil.copytree(d[n], rd.root / "work" / n)
+    argv = ["--run-dir", str(rd.root), "--project", str(tmp_path), "--base", "seed",
+            "--survivors", "a,b", "--nway"]
+    for bad in ("T1", "1,nope"):
+        assert merge_search.main(argv + ["--canary", bad]) == 2
+        assert "not in the val/train pool" in capsys.readouterr().err
+    assert merge_search.main(argv + ["--canary", "t1,2"]) == 0
