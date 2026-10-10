@@ -199,6 +199,11 @@ def main(argv=None) -> int:
                       mode, trace_dir(args.project, args.split))
     result["split"] = args.split
     result["tag"] = args.tag
+    if mode == "v2":  # the digest and act.py read $R/clusters.json: persist it, no manual redirect
+        try:
+            (Path(run_dir.root) / "clusters.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+        except OSError as exc:
+            print(f"diagnose WARNING: could not write clusters.json: {exc}", file=sys.stderr)
     print(json.dumps(result, indent=2))
     return 0
 

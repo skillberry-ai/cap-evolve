@@ -205,24 +205,13 @@ def cluster_rows(clusters, hyps, per_task: bool, own_task_means=None, T: int = 1
 
 # ---- merge opportunities (adapter over merge_n.py, PR #727) ----------------------------------
 
-def _merge_n():
-    try:
-        import merge_n
-        return merge_n
-    except ImportError:
-        return None
-
-
 def complementarity(wa, wb) -> float:
     u = set(wa) | set(wb)
     return round(len(set(wa) ^ set(wb)) / len(u), 3) if u else 0.0
 
 
 def merge_opps(run_dir, g, tips, champion, warnings, limit: int = 3) -> list[dict]:
-    mn = _merge_n()
-    if mn is None:
-        warnings.append("merge_n.py unavailable: merge_opps skipped")
-        return []
+    import merge_n as mn
     cand = [t for t in tips if t != champion][:5] + ([champion] if champion in tips else [])
     wins = mn.wins_from_run(run_dir, cand, champion or "seed") or {}
     out = []

@@ -340,10 +340,7 @@ def prune(a, ctx):
 def merge(a, ctx):
     if not ctx.cfg["smart_merge"]:
         raise Refused("smart_merge is off: use the pairwise path (merge_search.py without --nway)")
-    try:
-        import merge_n
-    except ImportError:
-        raise Refused("merge_n.py is not available in this checkout (needs the N-way merge PR)")
+    import merge_n
     run_dir, tags = ctx.run_dir, a.tags
     if len(tags) < 2:
         raise Refused("merge needs at least two candidate tags")

@@ -241,14 +241,6 @@ def test_merge_opportunities_need_complementary_wins_and_no_existing_merge(tmp_p
     assert digest.complementarity({"a", "b"}, {"b", "c"}) == pytest.approx(2 / 3, abs=1e-3)
 
 
-def test_missing_merge_n_warns_instead_of_failing(tmp_path, monkeypatch):
-    rd, _, work, val = _run(tmp_path)
-    _two_tips(rd, work, val, {t: [1] for t in val}, {t: [1] for t in val})
-    monkeypatch.setitem(sys.modules, "merge_n", None)
-    d = digest.build(rd)
-    assert d["merge_opps"] == [] and any("merge_n.py unavailable" in w for w in d["warnings"])
-
-
 def test_digest_is_valid_under_repeated_looks_at_equal_candidates(tmp_path):
     """Acting on the digest at EVERY look must not promote a candidate whose true rate equals
     the champion's: sequential looks at 5 growing evidence levels, 20 simulated runs."""
@@ -579,9 +571,6 @@ def test_merge_refuses_when_smart_merge_is_off_or_merge_n_is_missing(tmp_path, c
     rc, out = _act(monkeypatch, capsys, ["merge", "a", "b", *_args(rd, project)])
     assert rc == 2 and "smart_merge is off" in out["error"]
     monkeypatch.delenv("CAPEVOLVE_SMART_MERGE")
-    monkeypatch.setitem(sys.modules, "merge_n", None)
-    rc, out = _act(monkeypatch, capsys, ["merge", "a", "b", *_args(rd, project)])
-    assert rc == 2 and "merge_n.py is not available" in out["error"]
     monkeypatch.setitem(sys.modules, "merge_n", _fake_merge_n())
     rc, out = _act(monkeypatch, capsys, ["merge", "a", *_args(rd, project)])
     assert rc == 2 and "at least two" in out["error"]
@@ -626,3 +615,14 @@ def test_every_verb_meters_optimizer_spend_first(tmp_path, capsys, monkeypatch):
     _session_log(rd, tmp_path, monkeypatch)
     _act(monkeypatch, capsys, ["probe", "cand_1", "--plan", *_args(rd, project)], Sh())
     assert RunDir.open(rd.root).spent.optimizer_usd == pytest.approx(25.0, abs=0.01)
+
+
+def test_diagnose_v2_persists_clusters_json_for_the_digest(tmp_path):
+    import subprocess
+    rd, project, _, _ = _run(tmp_path)
+    p = subprocess.run([sys.executable, str(REPO / "skills/phases/diagnose/scripts/run.py"), "--run-dir", str(rd.root),
+                        "--tag", "cur", "--cluster", "v2"], capture_output=True, text=True)
+    assert p.returncode == 0, p.stderr
+    saved = json.loads((rd.root / "clusters.json").read_text())
+    assert saved["clusters"] == json.loads(p.stdout)["clusters"]
+    assert digest.load_clusters(rd) == saved["clusters"]

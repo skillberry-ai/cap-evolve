@@ -154,3 +154,15 @@ def test_new_engine_round_needs_no_sibling_justification_and_no_null_control(tmp
         controls = [d.name for d in (run_dir.root / "work").iterdir() if d.name.startswith("ctl_null")]
         if engine == "1":
             assert controls == [], controls
+
+
+def test_merge_n_uses_the_single_resolver(monkeypatch):
+    import merge_n
+    _clean(monkeypatch)
+    assert merge_n.enabled({}) is True
+    assert merge_n.enabled({"optimizer": {"ablation": {"smart_merge": False}}}) is False
+    monkeypatch.setenv("CAPEVOLVE_SMART_MERGE", "0")
+    assert merge_n.enabled({}) is False
+    monkeypatch.delenv("CAPEVOLVE_SMART_MERGE")
+    with pytest.raises(ValueError):
+        merge_n.enabled({"optimizer": {"ablation": {"smart_mrge": False}}})

@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import hashlib
 import itertools
-import os
 import re
 import shutil
 import sys
@@ -36,7 +35,7 @@ from pathlib import Path
 import _bootstrap  # noqa: F401
 import merge as merge_mod
 import merge_search
-from cap_evolve import eval_index, lineage, mdblocks
+from cap_evolve import eval_index, lineage, mdblocks, optimizer_config
 
 import funcmerge
 
@@ -44,18 +43,11 @@ WEIGHTS = {"blocks": 0.35, "tools": 0.25, "tasks": 0.20, "wins": 0.20}
 PROBE_AT = 0.2
 PROBE_TRIALS = 3
 N_SENTINELS = 3
-_FALSY = {"0", "false", "no", "off"}
 
 
 def enabled(spec: dict | None = None) -> bool:
-    env = os.environ.get("CAPEVOLVE_SMART_MERGE", "").strip().lower()
-    if env:
-        return env not in _FALSY
-    spec = spec or {}
-    for abl in ((spec.get("optimizer") or {}).get("ablation"), spec.get("ablation")):
-        if isinstance(abl, dict) and "smart_merge" in abl:
-            return abl["smart_merge"] is not False
-    return True
+    """Single resolver: ``optimizer_config`` (env > optimizer.ablation > legacy ablation > on)."""
+    return optimizer_config.enabled("smart_merge", spec)
 
 
 # ---- features -------------------------------------------------------------------------------
