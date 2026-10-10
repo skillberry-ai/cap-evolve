@@ -125,7 +125,7 @@ def _mechanisms_targets(run_dir: Path, tag: str) -> list[str]:
 
 
 def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path,
-                 md_blocks: bool = True) -> dict:
+                 md_blocks: bool | None = None) -> dict:
     """GEPA's mergeable-ness check (arXiv:2507.19457, Appendix D, Algorithms 3-4), adapted to
     this project's capability tree instead of GEPA's list-of-modules abstraction.
 
@@ -148,11 +148,17 @@ def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path,
     ``md_blocks`` (ablation key ``merge.md_blocks``, default on, #709): ``.md``/``.txt`` files are
     split into heading-section blocks (``cap_evolve.mdblocks``) instead of being one whole-file
     module, so siblings editing different sections of one policy.md are not a false collision.
-    Off = legacy whole-file verdict.
+    Off = legacy whole-file verdict. ``None`` resolves via ``mdblocks.enabled()`` (env
+    ``CAPEVOLVE_MD_BLOCKS=0`` turns it off; ``round.py`` passes the capevolve.yaml
+    ``merge.md_blocks`` value). ``merge.build_merge_dir`` builds the same blocks, so a pair judged
+    mergeable here is buildable. Block-disjoint is MECHANICAL mergeability, not semantic safety:
+    the merged child still goes through screen/gate.
     """
     import merge as merge_mod
     import _bootstrap  # noqa: F401
     from cap_evolve import mdblocks
+
+    md_blocks = mdblocks.enabled() if md_blocks is None else md_blocks
 
     base_f, a_f, b_f, changed_a, changed_b = merge_mod._changed_files(
         common_ancestor, candidate_a, candidate_b)
@@ -167,8 +173,8 @@ def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path,
         if md_blocks and rel.endswith((".md", ".txt")) and a_bytes is not None \
                 and b_bytes is not None and rel in base_f:
             try:
-                r = mdblocks.three_way(base_f[rel].read_text(encoding="utf-8"),
-                                       a_bytes.decode("utf-8"), b_bytes.decode("utf-8"))
+                r = mdblocks.three_way(*(mdblocks.decode(x) for x in
+                                         (base_f[rel].read_bytes(), a_bytes, b_bytes)))
             except UnicodeDecodeError:
                 conflicts.append(rel)
                 continue

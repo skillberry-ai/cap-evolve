@@ -8,10 +8,28 @@ paragraph fallback for headingless / oversized sections. Pure, stdlib only.
 
 from __future__ import annotations
 
+import os
 import re
 
 _HEADING = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.*?)[ \t#]*$")
-_FENCE = re.compile(r"^ {0,3}(```|~~~)")
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+
+
+def decode(raw: bytes) -> str:
+    """UTF-8 decode with NO newline translation, so CRLF files compare like-for-like."""
+    return raw.decode("utf-8")
+
+
+def enabled(spec: dict | None = None) -> bool:
+    """`merge.md_blocks` ablation: env CAPEVOLVE_MD_BLOCKS wins, then spec merge.md_blocks /
+    merge_md_blocks, default on."""
+    env = os.environ.get("CAPEVOLVE_MD_BLOCKS", "").strip().lower()
+    if env:
+        return env not in {"0", "false", "no", "off"}
+    spec = spec or {}
+    v = (spec.get("merge") or {}).get("md_blocks") if isinstance(spec.get("merge"), dict) else None
+    v = spec.get("merge_md_blocks") if v is None else v
+    return True if v is None else bool(v)
 
 
 def _sections(text: str) -> list[tuple[str, list[str]]]:
@@ -20,11 +38,17 @@ def _sections(text: str) -> list[tuple[str, list[str]]]:
     stack: list[tuple[int, str]] = []
     seen: dict[str, int] = {}
     cur: list[str] = []
-    cur_id, in_fence = "", False
+    cur_id, fence = "", None  # fence = (char, length) of the open code fence (CommonMark)
     for ln in text.splitlines(keepends=True):
-        if _FENCE.match(ln):
-            in_fence = not in_fence
-        m = None if in_fence else _HEADING.match(ln.rstrip("\r\n"))
+        f = _FENCE.match(ln.rstrip("\r\n"))
+        if f:
+            mark = f.group(1)
+            if fence is None:
+                if not (mark[0] == "`" and "`" in f.group(2)):  # info string can't hold backticks
+                    fence = (mark[0], len(mark))
+            elif mark[0] == fence[0] and len(mark) >= fence[1] and not f.group(2).strip():
+                fence = None
+        m = None if (fence or f) else _HEADING.match(ln.rstrip("\r\n"))
         if m:
             if cur:
                 out.append((cur_id, cur))

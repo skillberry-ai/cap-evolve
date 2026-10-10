@@ -81,3 +81,48 @@ def test_added_deleted_sections_and_paragraph_fallback():
     para = "one\n\ntwo\n\nthree\n"                                # no headings -> paragraphs
     r = mdblocks.three_way(para, para.replace("one", "ONE"), para.replace("three", "THREE"), max_block_lines=1)
     assert r["conflicts"] == [] and r["merged_text"] == "ONE\n\ntwo\n\nTHREE\n"
+
+
+def test_verdict_matches_builder_reviewer_repro(tmp_path):
+    """A edits a line in ## A, B renames ## B: mergeable AND build_merge_dir builds it."""
+    import merge as merge_mod
+    base = "# T\n## A\nline a1\nline a2\n## B\nline b1\n"
+    a, b = base.replace("line a2", "line a2 edited"), base.replace("## B", "## B2")
+    A, B, S = _cap(tmp_path, "a", a), _cap(tmp_path, "b", b), _cap(tmp_path, "s", base)
+    assert merge_search.is_mergeable(A, B, S)["mergeable"]
+    built = merge_mod.build_merge_dir(S, A, B, tmp_path / "m")
+    assert built["built"]
+    assert (tmp_path / "m/policy/policy.md").read_text() == "# T\n## A\nline a1\nline a2 edited\n## B2\nline b1\n"
+    legacy = merge_mod.build_merge_dir(S, A, B, tmp_path / "m2", md_blocks=False)
+    assert not legacy["built"]                                    # line-level merge3 refuses
+
+
+def test_crlf_base_does_not_turn_every_block_into_a_conflict(tmp_path):
+    base = "# T\r\n## A\r\nx\r\n## B\r\ny\r\n"
+    A = _cap(tmp_path, "a", "")
+    B = _cap(tmp_path, "b", "")
+    S = _cap(tmp_path, "s", "")
+    for d, t in ((A, base.replace("x", "x1")), (B, base.replace("y", "y1")), (S, base)):
+        (d / "policy/policy.md").write_bytes(t.encode())
+    assert merge_search.is_mergeable(A, B, S)["mergeable"]
+
+
+def test_fences_commonmark_and_hash_ids():
+    t = "# T\n````\n```\n# inner\n````\n## S\nz\n"
+    assert [i for i, _ in mdblocks.split(t)] == ["T", "T/S"]
+    t = "# T\n~~~\n```\n# x\n~~~\n## S\n"
+    assert [i for i, _ in mdblocks.split(t)] == ["T", "T/S"]
+    t = "# T\n## S\na\n## S\nb\n"
+    assert [i for i, _ in mdblocks.split(t)] == ["T", "T/S", "T/S#2"]
+
+
+def test_ablation_switch_env_and_config(monkeypatch, tmp_path):
+    monkeypatch.delenv("CAPEVOLVE_MD_BLOCKS", raising=False)
+    assert mdblocks.enabled() and mdblocks.enabled({"merge": {"md_blocks": True}})
+    assert not mdblocks.enabled({"merge": {"md_blocks": False}})
+    monkeypatch.setenv("CAPEVOLVE_MD_BLOCKS", "0")
+    assert not mdblocks.enabled({"merge": {"md_blocks": True}})
+    base = "# T\n## A\nx\n## B\ny\n"
+    A, B, S = (_cap(tmp_path, n, t) for n, t in (("a", base.replace("x", "x1")),
+                                                  ("b", base.replace("y", "y1")), ("s", base)))
+    assert not merge_search.is_mergeable(A, B, S)["mergeable"]   # env off -> legacy

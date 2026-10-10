@@ -132,7 +132,8 @@ def diff_contained(base_dir: Path, a_dir: Path, b_dir: Path) -> bool:
     return True
 
 
-def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> dict:
+def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path,
+                    md_blocks: bool | None = None) -> dict:
     """Build the pairwise merge of two branch tips WITHOUT measuring it (#438).
 
     The measurement-free half of this script's primitive, for ``round.py``'s automatic
@@ -150,7 +151,9 @@ def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> 
     import tempfile
 
     import funcmerge
+    from cap_evolve import mdblocks
 
+    md_blocks = mdblocks.enabled() if md_blocks is None else md_blocks
     base_f, a_f, b_f, changed_a, changed_b = _changed_files(base_dir, a_dir, b_dir)
     plan: dict[str, bytes | None] = {}
     conflicts, merged_files = [], []
@@ -184,8 +187,13 @@ def build_merge_dir(base_dir: Path, a_dir: Path, b_dir: Path, out_dir: Path) -> 
                     why = (p.stderr or p.stdout)[-300:]
             conflicts.append({"file": rel, "why": f"funcmerge: {why}"})
             continue
-        text, clean = funcmerge.merge3(base_f[rel].read_text(encoding="utf-8"),
-                                       a_bytes.decode("utf-8"), b_bytes.decode("utf-8"))
+        base_txt, a_txt, b_txt = (mdblocks.decode(x) for x in (base_f[rel].read_bytes(), a_bytes, b_bytes))
+        if md_blocks and rel.endswith((".md", ".txt")):
+            # #709: the SAME block split is_mergeable judged on, so "mergeable" == "buildable".
+            text = mdblocks.three_way(base_txt, a_txt, b_txt)["merged_text"]
+            clean = text is not None
+        else:
+            text, clean = funcmerge.merge3(base_txt, a_txt, b_txt)
         if clean:
             plan[rel] = text.encode("utf-8")
         else:
