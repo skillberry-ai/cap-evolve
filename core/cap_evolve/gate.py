@@ -71,9 +71,15 @@ class GateDecision:
     #: what its accepted candidate did.
     broke: list = field(default_factory=list)
     fixed: list = field(default_factory=list)
+    #: ``mode="reward_gated"`` only (#711): the full numbers behind the verdict, and whether the
+    #: candidate is a TRADE-OFF (reward superior, matched cost over its constraint: archive and
+    #: ownership only, never champion). Absent from ``to_dict`` for every other mode.
+    evidence: dict | None = None
+    tradeoff: bool = False
 
     def to_dict(self) -> dict:
-        return {
+        extra = {} if self.evidence is None else {"evidence": self.evidence, "tradeoff": self.tradeoff}
+        return {**extra,
             "accept": self.accept,
             "reason": self.reason,
             "delta": self.delta,
@@ -230,6 +236,10 @@ def decide(
     metrics_stderr_candidate: dict | None = None,
     metrics_stderr_current: dict | None = None,
     constraints: list[dict] | None = None,
+    task_records: tuple | None = None,
+    reward_gated_cfg=None,
+    cost_gating: bool = True,
+    legacy_mode: str = "paired",
 ) -> GateDecision:
     """Decide whether to accept the candidate — see ``_verdict`` for the statistics.
 
@@ -255,6 +265,9 @@ def decide(
     per-task ``2·SE`` bar in ``harness.move_is_resolved`` removes the worst of that, not all
     of it. So: measure and surface always, veto only on request.
     """
+    if mode == "reward_gated" and not cost_gating:
+        # ablation ``optimizer.ablation.cost_gating: false``: the reward_gated code is never entered.
+        mode = legacy_mode
     d = _verdict(current_val, candidate_val, split=split, mode=mode, k_se=k_se,
                  candidate_stderr=candidate_stderr, current_stderr=current_stderr,
                  threshold=threshold, paired_deltas=paired_deltas,
@@ -264,7 +277,8 @@ def decide(
                  metrics_current=metrics_current,
                  metrics_stderr_candidate=metrics_stderr_candidate,
                  metrics_stderr_current=metrics_stderr_current,
-                 constraints=constraints)
+                 constraints=constraints, task_records=task_records,
+                 reward_gated_cfg=reward_gated_cfg)
     d.broke = [str(t) for t in (broke or [])]
     d.fixed = [str(t) for t in (fixed or [])]
     if gate_max_broke is None or d.indecisive or not d.accept:
@@ -301,6 +315,8 @@ def _verdict(
     metrics_stderr_candidate: dict | None = None,
     metrics_stderr_current: dict | None = None,
     constraints: list[dict] | None = None,
+    task_records: tuple | None = None,
+    reward_gated_cfg=None,
 ) -> GateDecision:
     """The gate's STATISTICS — the accept/reject test itself, and nothing else.
 
@@ -388,6 +404,20 @@ def _verdict(
         _warn_low_coverage(run_dir, coverage=coverage, min_coverage=min_coverage)
         return GateDecision(accept=False, reason=reason, delta=delta,
                             threshold=0.0, indecisive=True)
+
+    if mode == "reward_gated":
+        # (parent_trials, candidate_trials) as ``objectives.TrialRec`` lists. Reward feasibility
+        # first (undetermined => indecisive, never accept), then matched-success cost.
+        if not task_records:
+            raise ParetoObjectiveError(
+                "reward_gated gate: needs task_records=(parent_trials, candidate_trials) — "
+                "refusing to gate on aggregate numbers, matched cost is per-task")
+        from . import objectives as _obj
+        v = _obj.decide_reward_gated(task_records[0], task_records[1], objectives, reward_gated_cfg)
+        return GateDecision(accept=v.accept, reason=f"reward_gated[{v.outcome}] {v.reason}",
+                            delta=v.delta, indecisive=v.outcome == "indecisive",
+                            evidence=v.evidence, tradeoff=v.outcome == "tradeoff",
+                            resolvable_effect_size=round(2 * v.evidence["reward"]["se"], 6))
 
     if mode == "paired":
         deltas = list(paired_deltas or [])

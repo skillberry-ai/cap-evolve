@@ -50,15 +50,36 @@ class ArchivePoint:
     values: dict = field(default_factory=dict)   # {objective_name: raw value}
     stderr: dict = field(default_factory=dict)   # {objective_name: SE}, same keys as values
     round: int | None = None
+    #: {task: [TrialRec.to_dict()]} (#711): per-trial records, so a PAIRWISE matched-success
+    #: comparison against any member is possible from the archive alone. Empty for legacy points.
+    per_task: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
-        return {"tag": self.tag, "values": dict(self.values), "stderr": dict(self.stderr),
-                "round": self.round}
+        d = {"tag": self.tag, "values": dict(self.values), "stderr": dict(self.stderr),
+             "round": self.round}
+        if self.per_task:  # absent for legacy points: their serialisation is unchanged
+            d["per_task"] = {t: list(v) for t, v in self.per_task.items()}
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> "ArchivePoint":
         return cls(tag=d["tag"], values=dict(d.get("values") or {}),
-                   stderr=dict(d.get("stderr") or {}), round=d.get("round"))
+                   stderr=dict(d.get("stderr") or {}), round=d.get("round"),
+                   per_task=dict(d.get("per_task") or {}))
+
+    @staticmethod
+    def per_task_of(trials) -> dict:
+        """Group ``objectives.TrialRec``s into the ``per_task`` payload."""
+        out: dict = {}
+        for t in trials:
+            out.setdefault(t.task, []).append(t.to_dict())
+        return out
+
+    def matched_vs(self, other: "ArchivePoint", theta: float = 1.0) -> dict:
+        """Matched-success cost of ``self`` relative to ``other`` (see ``objectives.matched_cost``)."""
+        from . import objectives
+        rec = lambda p: [objectives.TrialRec.from_dict(x) for v in p.per_task.values() for x in v]
+        return objectives.matched_cost(rec(other), rec(self), theta)
 
 
 def _states_vs(values: dict, stderr: dict, other_values: dict, other_stderr: dict,
@@ -107,7 +128,7 @@ class ParetoArchive:
     # ---- membership ---------------------------------------------------------
 
     def try_insert(self, tag: str, values: dict, stderr: dict, *, k_se: float = 1.0,
-                   round_num: int | None = None) -> tuple[bool, str]:
+                   round_num: int | None = None, per_task: dict | None = None) -> tuple[bool, str]:
         """Attempt to add ``tag``. Returns ``(inserted, reason)``.
 
         ``values``/``stderr`` must carry every declared objective's name, ``"reward"``
@@ -121,7 +142,7 @@ class ParetoArchive:
                 f"pareto archive: objective(s) {sorted(missing)} missing from {tag!r}'s values")
 
         if not self.points:
-            self.points.append(ArchivePoint(tag, dict(values), dict(stderr), round_num))
+            self.points.append(ArchivePoint(tag, dict(values), dict(stderr), round_num, dict(per_task or {})))
             return True, "first point in empty archive"
 
         any_win = False
@@ -140,7 +161,7 @@ class ParetoArchive:
             return False, "no significant improvement over any existing archive point (tie)"
 
         self.points = [p for p in self.points if p.tag not in dominated_by_new]
-        self.points.append(ArchivePoint(tag, dict(values), dict(stderr), round_num))
+        self.points.append(ArchivePoint(tag, dict(values), dict(stderr), round_num, dict(per_task or {})))
         evicted = self._evict()
         reason = "inserted (non-dominated, significant win on >=1 objective)"
         if dominated_by_new:

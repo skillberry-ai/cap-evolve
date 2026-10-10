@@ -1583,6 +1583,10 @@ def _main(argv=None) -> int:
         elif args.mode == "epsilon_constraint":
             gate_kwargs = dict(constraints=CONSTRAINTS, metrics_candidate=cand_values,
                                metrics_stderr_candidate=cand_stderrs)
+        elif args.mode == "reward_gated" and spec.get("objectives"):
+            # #711: role-tagged plug-in metrics (gate|pareto|display); the verdict is gate_check's
+            # own and is NOT overwritten by the archive below (that block is pareto-only).
+            gate_kwargs = dict(objectives=spec["objectives"])
         if tag == CTL:
             g = gate_unless_eval_failed(ev, Path(args.run_dir), tag, args.k_se, args.mode,
                                         args.veto_regressions, **gate_kwargs)
