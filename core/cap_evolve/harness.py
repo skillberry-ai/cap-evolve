@@ -576,6 +576,11 @@ def evaluate_candidate(
     return result
 
 
+def parse_tags(s) -> list[str]:
+    """``"a, b"`` -> ``["a", "b"]`` (strip, drop empties). One parser for every ``--current``."""
+    return [t.strip() for t in (s or "").split(",") if t.strip()]
+
+
 def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2)) -> SplitResult:
     """Reconstruct a candidate's SplitResult from its persisted rollouts.
 

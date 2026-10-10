@@ -443,6 +443,7 @@ def _live_round(c: Checker, tmp: Path) -> None:
     cm = _run(c, "commit.py (accept)", [str(HERE / "commit.py"), "--run-dir", R,
                                        "--candidate-id", tag, "--from-dir", str(work / tag),
                                        "--decision", "accept", "--val", "1.0",
+                                       "--val-unverified", "check.py smoke test",
                                        "--note", "raise coverage generally",
                                        "--optimizer-usd", "0.25",
                                        "--missing-handover-justification",

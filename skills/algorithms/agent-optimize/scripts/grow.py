@@ -92,8 +92,8 @@ def main(argv=None) -> int:
 
     run_dir = RunDir.open(Path(args.run_dir))
     adapter = load_adapter(Path(args.project))
-    cur_tag = args.current or run_dir.best_id
-    if not cur_tag:
+    cur_tags = harness.parse_tags(args.current) or ([run_dir.best_id] if run_dir.best_id else [])
+    if not cur_tags:
         print(json.dumps({"error": "no --current tag and no best_id in the run dir"}, indent=2))
         return 2
 
@@ -107,6 +107,11 @@ def main(argv=None) -> int:
     if not existing.per_task:
         print(json.dumps({"error": f"no existing val rollouts for {args.candidate!r} — "
                                    "this is not a candidate that was ever gated"}, indent=2))
+        return 2
+
+    cur = harness.split_result_from_rollouts(run_dir, cur_tags, "val")
+    if not cur.per_task:  # an empty reference scores 0.0 and fakes a huge delta (#713 B1)
+        print(json.dumps({"error": f"reference has no rollouts: {','.join(cur_tags)}"}, indent=2))
         return 2
 
     # New trials go under a THROWAWAY tag first (never the candidate's own), so they
@@ -127,7 +132,6 @@ def main(argv=None) -> int:
 
     pooled = pool_split_results(existing, new_result)
 
-    cur = harness.split_result_from_rollouts(run_dir, cur_tag, "val")
     deltas = harness._paired_deltas(cur, pooled)
     d = decide(cur.reward, pooled.reward, split="val", mode="paired", k_se=args.k_se,
                candidate_stderr=pooled.stderr, current_stderr=cur.stderr,
@@ -178,7 +182,7 @@ def main(argv=None) -> int:
         "candidate": args.candidate,
         "growth_round": args.growth_round,
         "max_growth_rounds": args.max_growth_rounds,
-        "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr},
+        "current": {"tag": ",".join(cur_tags), "tags": cur_tags, "reward": cur.reward, "stderr": cur.stderr},
         "pooled": {"reward": pooled.reward, "stderr": pooled.stderr, "n_tasks": pooled.n_tasks},
         "gate": d.to_dict(),
         "paired_n": len(deltas or []),

@@ -1137,6 +1137,12 @@ def _main(argv=None) -> int:
         return 2
 
     tags = [t.strip() for t in args.candidates.split(",") if t.strip()]
+    try:  # #713 B7: a second launch on the same tag(s) fails fast instead of clobbering
+        for t in tags:
+            run_dir.run_lock(f"round_{t}")
+    except RuntimeError as exc:
+        print(json.dumps({"error": str(exc)}, indent=2))
+        return 3
     missing = [t for t in tags if not (work / t).is_dir()]
     if missing:
         print(json.dumps({"error": f"tags not found under {work}: {missing}"}, indent=2))

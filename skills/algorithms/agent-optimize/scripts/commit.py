@@ -486,6 +486,9 @@ def main(argv=None) -> int:
                         "provisional=Δ>0 but unresolved, buying more trials on the SAME "
                         "candidate next (books nothing; re-commit it once grown)")
     p.add_argument("--val", type=float, default=None, help="candidate's full-val mean")
+    p.add_argument("--val-unverified", default=None, metavar="REASON",
+                   help="record --val as an operator-supplied number without checking it "
+                        "against the candidate's full-val rollouts (#713 B6)")
     p.add_argument("--note", default="", help="one line: why this edit, in general terms")
     # The DRIVER's disposition, recorded machine-readably alongside the screen's own
     # verdict. screen.py may only say kill/promote (invariant 1), so a candidate the
@@ -593,6 +596,19 @@ def main(argv=None) -> int:
                        "cluster: cand_r3_bags), or pass --force if you are deliberately "
                        "repairing this candidate's record.",
             }, indent=2))
+            return 2
+
+    if args.val is not None and not args.val_unverified:
+        measured = harness.split_result_from_rollouts(run_dir, args.candidate_id, "val")
+        if not measured.per_task:
+            # ponytail: warn, not refuse — many flows commit before/without full-val rollouts
+            print(f"WARNING: --val {args.val} is unverified: {args.candidate_id!r} has no "
+                  "val rollouts to check it against (#713 B6)", file=sys.stderr)
+        elif abs(measured.reward - args.val) > 1e-3:
+            print(json.dumps({"error": (
+                f"--val {args.val} does not match the measured full-val mean "
+                f"{measured.reward} of {args.candidate_id!r}; fix it, drop --val, or pass "
+                "--val-unverified REASON")}, indent=2))
             return 2
 
     accepted = args.decision == "accept"
@@ -826,7 +842,7 @@ def main(argv=None) -> int:
                if args.parents else None)
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
-        run_dir.set_best(args.candidate_id)
+        run_dir.set_best(args.candidate_id, val=args.val)
     # Carry the proposer's own spend on the EVENT as well as into state.json. update_spent
     # alone leaves the dashboard's cost ledger unable to attribute it: state.json has the
     # total, but no cost-bearing event exists to explain it, so an agent-mode run reported

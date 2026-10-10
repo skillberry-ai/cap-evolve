@@ -206,7 +206,7 @@ def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
-    cur_tags = [t.strip() for t in (args.current or "").split(",") if t.strip()] \
+    cur_tags = harness.parse_tags(args.current) \
         or ([run_dir.best_id] if run_dir.best_id else [])
     if not cur_tags:
         print(json.dumps({"error": "no --current tag and no best_id in the run dir "

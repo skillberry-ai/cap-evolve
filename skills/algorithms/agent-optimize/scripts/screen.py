@@ -126,6 +126,12 @@ def main(argv=None) -> int:
                         "screen record and graph.jsonl; defaults to the selector's own note.")
     p.add_argument("--n-trials", type=int, default=1,
                    help="trials per screened task (1 is the point; >1 is not a gate)")
+    p.add_argument("--full-trials", type=int, default=None,
+                   help="trials per task of the FULL-val eval a kill replaces (default: the "
+                        "frozen baseline trial count) — prices the savings (#713 B2)")
+    p.add_argument("--kill-z", type=float, default=None,
+                   help="SE guard (#713 B3): kill only if mean+z*SE < 0 and n>=4. Default off "
+                        "= the #684 gross-kill rule, regardless of SE")
     p.add_argument("--workers", type=int, default=None,
                    help="concurrent rollouts (adapter must be thread-safe)")
     args = p.parse_args(argv)
@@ -200,7 +206,8 @@ def main(argv=None) -> int:
     pair = paired_deltas_on(parent.per_task, cand_per_task, sub["ids"])
     decision = screen_decision(pair["deltas"], k_se=args.k_se,
                                regressed=pair["regressed"],
-                               gross_kill_threshold=args.gross_kill_threshold)
+                               gross_kill_threshold=args.gross_kill_threshold,
+                               kill_z=args.kill_z)
 
     # ARITHMETIC kill. When the screened ids already cover every val task the parent
     # fails, the unscreened remainder is all tasks the parent passes, so it can only
@@ -223,9 +230,11 @@ def main(argv=None) -> int:
                     "reason": "PROVABLE kill (not a statistical one): "
                               + ceiling["reason"]}
 
+    full_trials = args.full_trials or int(
+        ((run_dir._read_state().get("screening_economics") or {}).get("n_trials"))
+        or max(1, args.n_trials))
     savings = screen_savings(fired=fired, val_n=len(val_ids),
-                             n_trials=max(1, args.n_trials),
-                             decision=decision["decision"])
+                             n_trials=full_trials, decision=decision["decision"])
 
     payload = {
         "tag": tag, "screen_tag": screen_tag, "tier": args.tier,
