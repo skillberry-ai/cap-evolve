@@ -4,29 +4,40 @@ A candidate once added a composite write tool that called other write tools from
 The benchmark grades the list of actions the AGENT took, so the internal writes were invisible:
 a zero DB-match after 278 rollouts (~3.55 USD). Everything here is the cheap version of that lesson.
 
-Checks (each ``{name, ok, detail, skipped?}``; a check with nothing to look at is skipped, never
-failed):
+Checks (each ``{name, ok, detail, skipped, warnings?, error?}``):
 
-* ``static``      — every ``.py`` compiles, every ``.md`` decodes, policy text grew <= the cap.
-* ``hidden_writes`` — AST scan: a NEW/CHANGED write tool must not call another write tool
-  itself (``self.other_write(...)`` / ``getattr(self, "other_write")``). Heuristic: a call via a
-  computed name is reported as a warning only, never a failure.
-* ``tool_smoke``  — changed tools re-run on ``tool_fixtures.jsonl`` rows (built by
-  ``diagnose/scripts/build_tool_fixtures.py``); a NEW exception on a row that recorded no error fails.
-* ``replay``      — tool-call-level gold replay (see below).
+* ``static``        — tools/*.py compile, policy/*.md decode; policy growth over the parent is a
+  WARNING unless ``pregate.max_policy_growth`` is set explicitly (big coherent edits are wanted).
+* ``hidden_writes`` — call-graph scan. Nodes are ``file:Class.method`` / ``file:function``. Edges are
+  any reference (call OR value: aliases, dispatch dicts) to a known function name through
+  ``self``/``cls``/``type(self)``/``self.helper.x``/an imported module, or a bare name. From each
+  write tool we follow private helpers transitively and stop at the first write tool reached. A
+  write tool that reaches another write tool, or uses a name it cannot resolve statically
+  (``getattr(self, name)``, ``exec``, ``eval``, ``__import__``, ``globals()``), FAILS — but only
+  for edges NEW relative to the parent, so an old composite with a docstring edit is not blamed.
+  Without a parent dir the delta checks are skipped with a warning.
+  Write tools = decorated ``WRITE``, plus ``pregate.write_tools`` (explicit list, authoritative
+  for undecorated names), else the parent's decorated-WRITE names and the public-name prefixes
+  in ``WRITE_PREFIXES``. Plain helpers (``format_reservation``) are never writes.
+* ``tool_smoke``    — changed tools re-run on ``tool_fixtures.jsonl`` rows; a NEW exception fails.
+* ``replay``        — tool-call-level replay (below). Candidate must equal the parent on tools
+  UNCHANGED between them; diffs on changed tools are info only (a legitimate fix changes them).
+
+Infra errors (missing module, bad toolkit, malformed fixture) never crash a round: the check
+returns ``skipped`` with ``error`` and a warning (fail-OPEN), unless ``pregate.strict: true``,
+which turns the error into a failure. static/hidden_writes are computed first and never lost.
 
 Replay spike (scripting the benchmark's user simulator): its registry lets a custom user class
 be registered, so a user returning the recorded user turns is possible, but the AGENT is still
 an LLM, so after its first divergent reply the scripted turns no longer answer what it asked:
-it costs real LLM calls, needs the benchmark venv and gateway, and is not deterministic. So the replay here is at the TOOL-CALL level, with no LLM: the recorded agent tool
-calls are re-executed in order against the candidate's tools and against the parent's, each on
-a fresh toolkit, and the per-call outcome (ok/error), the set of successful write calls and the
-final DB hash must match. It is valid only for deterministic tool paths, and it only runs when
-an adapter-supplied ``--toolkit module:callable`` (``callable(candidate_dir) -> toolkit``,
-optional ``get_db_hash()``) and ``--trace`` are given.
+it costs real LLM calls, needs the benchmark venv and gateway, and is not deterministic. So the
+replay is at the TOOL-CALL level, with no LLM: recorded agent calls are re-executed in order on a
+fresh candidate and parent toolkit (adapter-supplied ``--toolkit module_or_file.py:callable``,
+``callable(candidate_dir) -> toolkit``, optional ``get_db_hash()``) and compared. Valid only for
+deterministic tool paths.
 
 CLI: ``pregate.py --candidate DIR [--parent DIR] [--fixtures F] [--toolkit M:F] [--trace T ...]``;
-exit 1 and a fix-it message on failure. ``enabled(spec)`` is the ``ablation.pregate`` switch.
+exit 1 on failure. ``enabled(spec)`` is the ``optimizer.ablation.pregate`` switch.
 """
 
 from __future__ import annotations
@@ -40,18 +51,26 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-#: Policy text may grow at most this fraction over the parent (one real candidate: +42% — the cost guard).
+#: Policy growth above this fraction over the parent is a warning (a failure only if set explicitly).
 MAX_POLICY_GROWTH = 0.30
+#: Public undecorated names starting with these count as write tools (the documented fallback).
+WRITE_PREFIXES = ("update_", "cancel_", "book_", "send_", "create_", "delete_", "modify_",
+                  "remove_", "add_", "set_", "issue_", "refund_", "exchange_", "pay_")
+_DYNAMIC_CALLS = {"exec", "eval", "__import__", "globals", "vars"}
 
 
 def enabled(spec: dict | None = None) -> bool:
-    """`ablation.pregate`: env CAPEVOLVE_PREGATE wins, then spec ablation.pregate; default on."""
+    """Ablation: env CAPEVOLVE_PREGATE wins, then ``optimizer.ablation.pregate``, then the legacy
+    top-level ``ablation.pregate``; default on."""
     env = os.environ.get("CAPEVOLVE_PREGATE", "").strip().lower()
     if env:
         return env not in {"0", "false", "no", "off"}
-    ab = (spec or {}).get("ablation")
-    v = ab.get("pregate") if isinstance(ab, dict) else None
-    return True if v is None else bool(v)
+    spec = spec or {}
+    for holder in (spec.get("optimizer"), spec):
+        ab = holder.get("ablation") if isinstance(holder, dict) else None
+        if isinstance(ab, dict) and ab.get("pregate") is not None:
+            return bool(ab["pregate"])
+    return True
 
 
 def _cluster():
@@ -64,35 +83,54 @@ def _cluster():
     return mod
 
 
-def _check(name, ok, detail="", skipped=False):
-    return {"name": name, "ok": bool(ok), "detail": detail, "skipped": skipped}
+def _check(name, ok, detail="", skipped=False, **extra):
+    return {"name": name, "ok": bool(ok), "detail": detail, "skipped": skipped, **extra}
 
 
-def _files(root: Path, suffix: str) -> list[Path]:
-    return sorted(p for p in root.rglob(f"*{suffix}")
-                  if p.is_file() and "__pycache__" not in p.parts) if root.is_dir() else []
+def _guard(name, fn, strict=False):
+    """Run a check; an infra exception becomes a structured error result (fail-open unless strict)."""
+    try:
+        return fn()
+    except Exception as e:  # noqa: BLE001 — a broken check must never abort the round
+        msg = f"{type(e).__name__}: {e}"
+        return _check(name, not strict, f"infra error ({'strict: failing' if strict else 'fail-open'}): {msg}",
+                      skipped=True, error=msg, warnings=[f"pregate check {name!r} errored: {msg}"])
+
+
+def _py_files(root: Path, dirs) -> list[Path]:
+    out = []
+    for d in dirs:
+        base = root / d
+        out += [p for p in base.rglob("*.py") if "__pycache__" not in p.parts] if base.is_dir() else []
+    return sorted(out)
+
+
+def _md_files(root: Path) -> list[Path]:
+    base = root / "policy"
+    return sorted(base.rglob("*.md")) if base.is_dir() else []
 
 
 def _policy_bytes(root: Path) -> int:
-    return sum(p.stat().st_size for p in _files(root / "policy", ".md"))
+    return sum(p.stat().st_size for p in _md_files(root))
 
 
 # ---- static ---------------------------------------------------------------------------------
-def static_check(cand: Path, parent: Path | None = None, max_growth: float | None = None) -> dict:
-    """Policy growth is only a WARNING (big coherent edits are wanted) unless ``max_growth`` is
-    set explicitly, in which case exceeding it fails."""
+def static_check(cand: Path, parent: Path | None = None, max_growth: float | None = None,
+                 tool_dirs=("tools",)) -> dict:
+    """Compiles only tool files and policy files (vendored/template files elsewhere are not the
+    edit's business). Policy growth warns unless ``max_growth`` is explicit."""
     bad, warn = [], []
-    for p in _files(cand, ".py"):
+    for p in _py_files(cand, tool_dirs):
         try:
             compile(p.read_text(encoding="utf-8"), str(p), "exec")
         except (SyntaxError, UnicodeDecodeError, ValueError) as e:
             bad.append(f"{p.relative_to(cand)}: {type(e).__name__}: {e}")
-    for p in _files(cand, ".md"):
+    for p in _md_files(cand):
         try:
             p.read_text(encoding="utf-8")
         except UnicodeDecodeError as e:
             bad.append(f"{p.relative_to(cand)}: {e}")
-    if parent is not None and (old := _policy_bytes(parent)):
+    if parent is not None and parent.is_dir() and (old := _policy_bytes(parent)):
         growth = _policy_bytes(cand) / old - 1
         cap = MAX_POLICY_GROWTH if max_growth is None else max_growth
         if growth > cap:
@@ -102,66 +140,168 @@ def static_check(cand: Path, parent: Path | None = None, max_growth: float | Non
     return {**_check("static", not bad, "; ".join(bad)), "warnings": warn}
 
 
-# ---- hidden writes (AST) --------------------------------------------------------------------
-def _funcs(tree: ast.AST) -> dict[str, ast.FunctionDef]:
-    return {n.name: n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+# ---- hidden writes: call graph ----------------------------------------------------------------
+def _fold(node):
+    """Constant-fold string expressions ('update_' + 'a', f-strings of constants); None if dynamic."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        a, b = _fold(node.left), _fold(node.right)
+        return a + b if a is not None and b is not None else None
+    if isinstance(node, ast.JoinedStr):
+        parts = [_fold(v) for v in node.values]
+        return None if None in parts else "".join(parts)
+    return None
 
 
-def _is_write(fn, mutates) -> bool:
-    deco = " ".join(ast.unparse(d) for d in fn.decorator_list)
-    if "WRITE" in deco:
-        return True
-    if "is_tool" in deco or fn.name.startswith("_"):
-        return False
-    return mutates(fn.name)  # undecorated public function: the name heuristic, as cluster.py
+def _self_rooted(node, mods) -> bool:
+    while isinstance(node, ast.Attribute):
+        node = node.value
+    if isinstance(node, ast.Call):  # type(self).m
+        return isinstance(node.func, ast.Name) and node.func.id == "type"
+    return isinstance(node, ast.Name) and (node.id in {"self", "cls"} or node.id in mods)
 
 
-def hidden_writes(cand_src: str, parent_src: str | None = None, mutates=None) -> dict:
-    """Failure iff a new/changed write tool directly calls another write tool."""
-    mutates = mutates or _cluster()._mutates
-    funcs, old = _funcs(ast.parse(cand_src)), _funcs(ast.parse(parent_src)) if parent_src else {}
-    writes = {n for n, f in funcs.items() if _is_write(f, mutates)}
-    bad, warn = [], []
-    for name in sorted(writes):
-        fn = funcs[name]
-        if name in old and ast.dump(old[name]) == ast.dump(fn):
-            continue  # unchanged: whatever it does, the parent already did
-        for c in (n for n in ast.walk(fn) if isinstance(n, ast.Call)):
-            f = c.func
-            callee = f.attr if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Name) \
-                and f.value.id in {"self", "cls"} else f.id if isinstance(f, ast.Name) else None
-            if isinstance(f, ast.Name) and f.id == "getattr" and len(c.args) >= 2:
-                a = c.args[1]
-                if isinstance(a, ast.Constant) and isinstance(a.value, str):
-                    callee = a.value
+class _Node:
+    def __init__(self, key, short, cls, fn, mods):
+        self.key, self.short, self.cls = key, short, cls
+        deco = " ".join(ast.unparse(d) for d in fn.decorator_list)
+        self.decorated_write = "WRITE" in deco
+        self.is_tool = "is_tool" in deco
+        self.attr_edges, self.name_edges, self.dynamic = set(), set(), False
+        for n in ast.walk(fn):
+            if isinstance(n, ast.Attribute) and _self_rooted(n, mods):
+                self.attr_edges.add(n.attr)
+            elif isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load):
+                self.name_edges.add(n.id)
+            if isinstance(n, ast.Call):
+                f = n.func
+                fname = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+                if fname in _DYNAMIC_CALLS:
+                    self.dynamic = True
+                elif fname in {"getattr", "methodcaller"}:
+                    arg = n.args[1] if fname == "getattr" and len(n.args) >= 2 else \
+                        n.args[0] if fname == "methodcaller" and n.args else None
+                    name = _fold(arg) if arg is not None else None
+                    if name is None:
+                        self.dynamic = True
+                    else:
+                        self.attr_edges.add(name)
+
+
+class CallGraph:
+    def __init__(self, sources: dict[str, str], explicit: set | None = None, known: set = frozenset()):
+        self.nodes: dict[str, _Node] = {}
+        for rel, src in sources.items():
+            tree = ast.parse(src)
+            mods = {(a.asname or a.name).split(".")[0] for n in ast.walk(tree)
+                    if isinstance(n, ast.Import) for a in n.names}
+            for top in tree.body:
+                defs = [(None, top)] if isinstance(top, (ast.FunctionDef, ast.AsyncFunctionDef)) else \
+                    [(top.name, f) for f in top.body if isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef))] \
+                    if isinstance(top, ast.ClassDef) else []
+                for cls, fn in defs:
+                    key = f"{rel}:{cls + '.' if cls else ''}{fn.name}"
+                    self.nodes[key] = _Node(key, fn.name, cls, fn, mods)
+        self.by_short: dict[str, list[str]] = {}
+        for k, n in self.nodes.items():
+            self.by_short.setdefault(n.short, []).append(k)
+        self.explicit, self.known = explicit, set(known)
+        self.imported = {a.asname or a.name for src in sources.values() for n in ast.walk(ast.parse(src))
+                         if isinstance(n, ast.ImportFrom) for a in n.names}
+
+    def is_write(self, key) -> bool:
+        n = self.nodes[key]
+        if n.decorated_write:
+            return True
+        if n.is_tool or n.short.startswith("_"):
+            return False
+        if self.explicit is not None:
+            return n.short in self.explicit
+        return n.short in self.known or n.short.startswith(WRITE_PREFIXES)
+
+    def write_names(self) -> set:
+        return {self.nodes[k].short for k in self.nodes if self.is_write(k)}
+
+    def _targets(self, node: _Node) -> list[str]:
+        out = []
+        for name in node.attr_edges:
+            ks = self.by_short.get(name, [])
+            same = [k for k in ks if self.nodes[k].cls == node.cls and node.cls]
+            out += same or ks
+        for name in node.name_edges:
+            out += [k for k in self.by_short.get(name, []) if self.nodes[k].cls is None]
+        return [k for k in dict.fromkeys(out) if k != node.key]
+
+    def reach(self, key: str) -> dict[str, str]:
+        """{token: path text}: write tools (and dynamic-name uses) reachable from ``key`` through
+        non-write helpers. A write tool reached ends that path."""
+        found, seen, stack = {}, {key}, [(key, [self.nodes[key].short])]
+        while stack:
+            k, path = stack.pop()
+            n = self.nodes[k]
+            if n.dynamic:
+                found.setdefault(f"dynamic@{k.split(':', 1)[-1]}", " -> ".join(path) + " (unresolvable name)")
+            for t in self._targets(n):
+                if t in seen:
+                    continue
+                seen.add(t)
+                p = path + [self.nodes[t].short]
+                if self.is_write(t):
+                    found.setdefault(f"write@{t.split(':', 1)[-1]}", " -> ".join(p))
                 else:
-                    warn.append(f"{name}: getattr with a computed name (cannot verify)")
-            if callee in writes and callee != name:
-                bad.append(f"{name} calls write tool {callee} internally (line {c.lineno})")
-    msg = ("; ".join(dict.fromkeys(bad)) + ". The grader scores the agent's visible actions, so an internal "
-           "write is invisible to it (DB match 0). Keep one tool per write, or "
-           "have the policy tell the agent to call each write itself.") if bad else ""
-    return {**_check("hidden_writes", not bad, msg or "; ".join(dict.fromkeys(warn))),
-            "warnings": list(dict.fromkeys(warn))}
+                    stack.append((t, p))
+        return found
+
+    def external_writes(self, key: str, names: set) -> dict[str, str]:
+        """Imported bare names used in ``key`` that look like write tools (known/explicit/prefix)."""
+        n = self.nodes[key]
+        def looks_write(x):
+            return x in names or (x in self.explicit if self.explicit is not None
+                                  else x.startswith(WRITE_PREFIXES))
+        return {f"write@ext:{x}": f"{n.short} -> {x} (imported)"
+                for x in sorted(n.name_edges & self.imported) if looks_write(x)}
 
 
-def hidden_writes_dirs(cand: Path, parent: Path | None) -> dict:
-    """hidden_writes over every .py under cand/tools, paired with the parent's same-path file."""
-    fails, warns, seen = [], [], 0
-    for p in _files(cand / "tools", ".py"):
-        rel = p.relative_to(cand)
-        old = (parent / rel) if parent else None
-        try:
-            r = hidden_writes(p.read_text(encoding="utf-8"),
-                              old.read_text(encoding="utf-8") if old and old.is_file() else None)
-        except SyntaxError:
-            continue  # reported by static
-        seen += 1
-        if r["detail"]:
-            (warns if r["ok"] else fails).append(f"{rel}: {r['detail']}")
-    if not seen:
-        return _check("hidden_writes", True, "no tools/*.py", skipped=True)
-    return _check("hidden_writes", not fails, "; ".join(fails or warns))
+def hidden_writes(cand_src, parent_src=None, explicit: set | None = None) -> dict:
+    """``*_src``: source text or {path: text}. ``parent_src=None`` skips the delta (warning)."""
+    as_map = lambda s: s if isinstance(s, dict) else {"tools.py": s}  # noqa: E731
+    if parent_src is None:
+        return _check("hidden_writes", True, "no parent to diff against", skipped=True,
+                      warnings=["hidden_writes skipped: no parent directory"])
+    pg = CallGraph(as_map(parent_src), explicit)
+    known = pg.write_names()
+    pg.known = known
+    cg = CallGraph(as_map(cand_src), explicit, known)
+    names = cg.write_names() | known
+    bad = []
+    for k in sorted(cg.nodes):
+        if not cg.is_write(k):
+            continue
+        now = {**cg.reach(k), **cg.external_writes(k, names)}
+        old = {**pg.reach(k), **pg.external_writes(k, names)} if k in pg.nodes else {}
+        bad += [f"{path}" for tok, path in sorted(now.items()) if tok not in old]
+    msg = ""
+    if bad:
+        msg = ("write tool(s) delegate to other writes or use unresolvable names: "
+               + "; ".join(dict.fromkeys(bad)) + ". The grader scores only the agent's visible "
+               "calls, so an internal write is invisible to it (DB match 0). Keep one tool per "
+               "write, or have the policy tell the agent to call each write itself.")
+    return _check("hidden_writes", not bad, msg, warnings=[])
+
+
+def _sources(root: Path, dirs) -> dict[str, str]:
+    return {str(p.relative_to(root)): p.read_text(encoding="utf-8") for p in _py_files(root, dirs)}
+
+
+def hidden_writes_dirs(cand: Path, parent: Path | None, tool_dirs=("tools",),
+                       explicit: set | None = None) -> dict:
+    cs = _sources(cand, tool_dirs)
+    if not cs:
+        return _check("hidden_writes", True, "no tool files", skipped=True)
+    if parent is None or not parent.is_dir():
+        return hidden_writes(cs, None)
+    return hidden_writes(cs, _sources(parent, tool_dirs), explicit)
 
 
 # ---- tool smoke -----------------------------------------------------------------------------
@@ -190,29 +330,36 @@ def _run_calls(toolkit, calls: list[dict]) -> tuple[list[str], str | None]:
         try:
             getattr(toolkit, c["name"])(**(c["args"] if isinstance(c["args"], dict) else {}))
             out.append("ok")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             out.append(f"err:{type(e).__name__}")
     h = getattr(toolkit, "get_db_hash", None)
     return out, (h() if callable(h) else None)
 
 
-def replay(make_cand, make_parent, calls: list[dict], mutates=None) -> dict:
-    """Same recorded calls on a fresh candidate and parent toolkit: outcomes, successful write
-    calls and final DB hash must agree. (Parent-only comparison: the recorded trace's own
-    results may depend on LLM-free state we cannot rebuild, the parent's replay is the oracle.)"""
+def replay(make_cand, make_parent, calls: list[dict], mutates=None, changed: set = frozenset()) -> dict:
+    """Same recorded calls on a fresh candidate and parent toolkit. Enforced only for tools
+    UNCHANGED between them: per-call outcomes, successful write calls and the final DB hash must
+    match. Calls to ``changed`` tools are reported as ``info`` (a legitimate fix changes them), and
+    when the trace exercises one the state/write-list comparison is info too."""
     mutates = mutates or _cluster()._mutates
     if not calls:
         return _check("replay", True, "no recorded tool calls", skipped=True)
     (co, ch), (po, ph) = _run_calls(make_cand(), calls), _run_calls(make_parent(), calls)
-    diffs = [f"call {i} {c['name']}: candidate {a}, parent {b}"
-             for i, (c, a, b) in enumerate(zip(calls, co, po)) if a != b]
+    diffs, info = [], []
+    for i, (c, a, b) in enumerate(zip(calls, co, po)):
+        if a != b:
+            (info if c["name"] in changed else diffs).append(
+                f"call {i} {c['name']}: candidate {a}, parent {b}")
+    touched = any(c["name"] in changed for c in calls)
     cw = [c["name"] for c, o in zip(calls, co) if o == "ok" and mutates(c["name"])]
     pw = [c["name"] for c, o in zip(calls, po) if o == "ok" and mutates(c["name"])]
+    state = []
     if cw != pw:
-        diffs.append(f"successful write calls differ: candidate {cw}, parent {pw}")
+        state.append(f"successful write calls differ: candidate {cw}, parent {pw}")
     if ch != ph:
-        diffs.append("final DB state differs from the parent's replay")
-    return _check("replay", not diffs, "; ".join(diffs[:5]))
+        state.append("final DB state differs from the parent's replay")
+    (info if touched else diffs).extend(state)
+    return _check("replay", not diffs, "; ".join(diffs[:5]), info=info)
 
 
 def trace_agent_calls(path: Path) -> list[dict]:
@@ -222,7 +369,7 @@ def trace_agent_calls(path: Path) -> list[dict]:
 
 # ---- driver ---------------------------------------------------------------------------------
 def _load_factory(spec: str):
-    mod, _, fn = spec.partition(":")
+    mod, _, fn = spec.rpartition(":") if ":" in spec else (spec, "", "")
     if mod.endswith(".py"):  # a file path, e.g. the adapter: adapters/adapter.py:pregate_toolkit
         s = importlib.util.spec_from_file_location("pregate_toolkit_mod", mod)
         m = importlib.util.module_from_spec(s)
@@ -232,42 +379,62 @@ def _load_factory(spec: str):
     return getattr(m, fn or "make_toolkit")
 
 
-def changed_tools(cand: Path, parent: Path | None) -> set[str]:
-    """Names of functions in cand/tools that are new or differ from the parent's."""
-    names = set()
-    for p in _files(cand / "tools", ".py"):
-        old = parent / p.relative_to(cand) if parent else None
-        try:
-            new_f = _funcs(ast.parse(p.read_text(encoding="utf-8")))
-            old_f = _funcs(ast.parse(old.read_text(encoding="utf-8"))) if old and old.is_file() else {}
-        except SyntaxError:
-            continue
-        names |= {n for n, f in new_f.items() if n not in old_f or ast.dump(old_f[n]) != ast.dump(f)}
-    return names
+def changed_tools(cand: Path, parent: Path | None, tool_dirs=("tools",)) -> set[str]:
+    """Short names of functions in the tool files that are new or differ from the parent's."""
+    def funcs(srcs):
+        return {n.name: ast.dump(n) for s in srcs.values() for n in ast.walk(ast.parse(s))
+                if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    new = funcs(_sources(cand, tool_dirs))
+    old = funcs(_sources(parent, tool_dirs)) if parent is not None and parent.is_dir() else {}
+    return {n for n, d in new.items() if old.get(n) != d}
+
+
+def _smoke_and_replay(cand, parent, factory_spec, fixtures, traces, tool_dirs, strict):
+    if not factory_spec:
+        return [_check("tool_smoke", True, "needs pregate.toolkit and tool_fixtures.jsonl", skipped=True),
+                _check("replay", True, "needs pregate.toolkit, a parent and traces", skipped=True)]
+    changed = changed_tools(cand, parent, tool_dirs)
+
+    def fx_rows():
+        if not (fixtures and fixtures.is_file()):
+            return []
+        return [json.loads(ln) for ln in fixtures.read_text(encoding="utf-8").splitlines() if ln.strip()]
+
+    out = []
+    holder = {}
+
+    def factory():
+        if "f" not in holder:
+            holder["f"] = _load_factory(factory_spec)
+        return holder["f"]
+
+    out.append(_guard("tool_smoke", lambda: tool_smoke(factory()(cand), fx_rows(), changed)
+                      if fx_rows() else _check("tool_smoke", True, "no tool_fixtures.jsonl rows", skipped=True),
+                      strict))
+    if parent is not None and traces:
+        for t in traces:
+            r = _guard("replay", lambda t=t: replay(lambda: factory()(cand), lambda: factory()(parent),
+                                                    trace_agent_calls(t), changed=changed), strict)
+            if r["detail"]:
+                r["detail"] = f"{Path(t).name}: {r['detail']}"
+            out.append(r)
+    else:
+        out.append(_check("replay", True, "needs a parent and traces", skipped=True))
+    return out
 
 
 def run(cand: Path, parent: Path | None = None, *, fixtures: Path | None = None,
-        toolkit: str | None = None, traces: list[Path] = (), max_growth: float | None = None) -> dict:
-    checks = [static_check(cand, parent, max_growth)]
-    if checks[0]["ok"]:  # nothing below is meaningful on code that does not compile
-        checks.append(hidden_writes_dirs(cand, parent))
-        factory = _load_factory(toolkit) if toolkit else None
-        rows = [json.loads(ln) for ln in fixtures.read_text(encoding="utf-8").splitlines() if ln.strip()] \
-            if fixtures and fixtures.is_file() else []
-        if factory and rows:
-            checks.append(tool_smoke(factory(cand), rows, changed_tools(cand, parent)))
-        else:
-            checks.append(_check("tool_smoke", True, "needs --toolkit and tool_fixtures.jsonl", skipped=True))
-        if factory and parent is not None and traces:
-            for t in traces:
-                r = replay(lambda: factory(cand), lambda: factory(parent), trace_agent_calls(t))
-                r["detail"] = f"{Path(t).name}: {r['detail']}" if r["detail"] else ""
-                checks.append(r)
-        else:
-            checks.append(_check("replay", True, "needs --toolkit, --parent and --trace", skipped=True))
+        toolkit: str | None = None, traces: list[Path] = (), max_growth: float | None = None,
+        strict: bool = False, write_tools=None, tool_dirs=("tools",)) -> dict:
+    explicit = set(write_tools) if write_tools else None
+    checks = [_guard("static", lambda: static_check(cand, parent, max_growth, tool_dirs), strict)]
+    if checks[0]["ok"] or checks[0].get("error"):  # nothing below is meaningful on code that does not compile
+        checks.append(_guard("hidden_writes",
+                             lambda: hidden_writes_dirs(cand, parent, tool_dirs, explicit), strict))
+        checks += _smoke_and_replay(cand, parent, toolkit, fixtures, traces, tool_dirs, strict)
     failed = [c for c in checks if not c["ok"]]
-    warnings = [w for c in checks for w in c.get("warnings") or []]
-    return {"ok": not failed, "checks": checks, "warnings": warnings,
+    return {"ok": not failed, "checks": checks,
+            "warnings": [w for c in checks for w in c.get("warnings") or []],
             "failure": "; ".join(f"[{c['name']}] {c['detail']}" for c in failed)}
 
 
@@ -277,15 +444,18 @@ def main(argv=None) -> int:
     p.add_argument("--parent")
     p.add_argument("--fixtures", help="tool_fixtures.jsonl (default: <run>/tool_fixtures.jsonl via --run-dir)")
     p.add_argument("--run-dir")
-    p.add_argument("--toolkit", help="module:callable(candidate_dir) -> toolkit with the tool methods")
+    p.add_argument("--toolkit", help="module_or_file.py:callable(candidate_dir) -> toolkit")
     p.add_argument("--trace", action="append", default=[], help="rollout json to replay (repeatable)")
     p.add_argument("--max-policy-growth", type=float, default=None,
                    help=f"FAIL above this policy growth fraction (default: only warn above "
                         f"{MAX_POLICY_GROWTH:.2f})")
+    p.add_argument("--strict", action="store_true", help="infra errors in checks fail instead of warn")
+    p.add_argument("--write-tool", action="append", default=[], help="explicit write tool name (repeatable)")
     a = p.parse_args(argv)
     fx = Path(a.fixtures) if a.fixtures else (Path(a.run_dir) / "tool_fixtures.jsonl" if a.run_dir else None)
     res = run(Path(a.candidate), Path(a.parent) if a.parent else None, fixtures=fx,
-              toolkit=a.toolkit, traces=[Path(t) for t in a.trace], max_growth=a.max_policy_growth)
+              toolkit=a.toolkit, traces=[Path(t) for t in a.trace], max_growth=a.max_policy_growth,
+              strict=a.strict, write_tools=a.write_tool)
     print(json.dumps(res, indent=2))
     return 0 if res["ok"] else 1
 

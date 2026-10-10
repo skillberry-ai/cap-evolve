@@ -121,7 +121,7 @@ def test_builtin_pregate_refuses_hidden_write_composite_before_any_spend(tmp_pat
     run_dir, project = _stage_composite(tmp_path)
     p = _round(run_dir, project, "cand_1")
     assert p.returncode == 2, p.stdout + p.stderr
-    assert "update_both calls write tool update_a" in json.loads(p.stdout)["invalid"]["cand_1"]
+    assert "update_both -> update_a" in json.loads(p.stdout)["invalid"]["cand_1"]
     assert not list((run_dir.rollouts / "val").glob("*__cand_1__*"))
     assert [e["tag"] for e in _events(run_dir, "agent_optimize_pregate_invalid")] == ["cand_1"]
 
@@ -135,3 +135,14 @@ def test_ablation_pregate_off_is_legacy_behaviour(tmp_path):
               *_JUSTIFY], env={"CAPEVOLVE_PREGATE": "off"})
     assert q.returncode == 0, q.stdout + q.stderr
     assert not _events(run_dir, "agent_optimize_pregate_invalid")
+
+
+def test_invalid_sibling_is_dropped_not_the_whole_round(tmp_path):
+    run_dir, project = _stage_composite(tmp_path)
+    work = run_dir.root / "work"
+    shutil.copytree(work / "cand_1", work / "cand_2")
+    (work / "cand_2" / "tools" / "composite.py").unlink()  # cand_2 is clean
+    p = _round(run_dir, project, "cand_1,cand_2")
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert [r["tag"] for r in json.loads(p.stdout)["candidates"]] == ["cand_2"]
+    assert [e["tag"] for e in _events(run_dir, "agent_optimize_pregate_invalid")] == ["cand_1"]

@@ -13,6 +13,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "core"))
 sys.path.insert(0, str(REPO / "skills" / "algorithms" / "agent-optimize" / "scripts"))
 
+import pytest  # noqa: E402
 import pregate  # noqa: E402
 
 FX = Path(__file__).parent / "fixtures" / "pregate"
@@ -22,32 +23,123 @@ SEED, CAND = FX / "seed", FX / "cand_10"
 def test_cand10_hidden_write_is_caught_statically():
     r = pregate.hidden_writes_dirs(CAND, SEED)
     assert not r["ok"]
-    assert "update_reservation_cabin calls write tool update_reservation_flights" in r["detail"]
-    assert "update_reservation_baggages" in r["detail"]
+    assert "update_reservation_cabin -> update_reservation_flights" in r["detail"]
+    assert "update_reservation_cabin -> update_reservation_baggages" in r["detail"]
 
 
-def test_seed_and_unchanged_composites_pass():
-    assert pregate.hidden_writes_dirs(SEED, None)["ok"]
+def test_seed_unchanged_composites_and_missing_parent():
+    assert pregate.hidden_writes_dirs(SEED, SEED)["ok"]
     # same bytes as parent: a composite the parent already had is not this candidate's fault
     assert pregate.hidden_writes_dirs(CAND, CAND)["ok"]
+    # no parent: delta checks are skipped with a warning, existing composites are not flagged
+    r = pregate.hidden_writes_dirs(CAND, None)
+    assert r["ok"] and r["skipped"] and r["warnings"]
 
 
-def test_getattr_constant_is_resolved_computed_only_warns():
-    src = ("class T:\n"
-           "    @is_tool(ToolType.WRITE)\n    def a(self): pass\n"
-           "    @is_tool(ToolType.WRITE)\n    def b(self):\n        return getattr(self, 'a')()\n"
-           "    @is_tool(ToolType.WRITE)\n    def c(self, n):\n        return getattr(self, n)()\n")
-    r = pregate.hidden_writes(src)
-    assert not r["ok"] and "b calls write tool a" in r["detail"]
-    assert r["warnings"] == ["c: getattr with a computed name (cannot verify)"]
+_BASE = ("class T:\n"
+         "    @is_tool(ToolType.WRITE)\n    def update_a(self, x): pass\n"
+         "    def _helper(self, x):\n        return self.update_a(x)\n")
+
+
+def _hw(body, extra="", head="", parent=_BASE):
+    """Candidate = _BASE + a new write tool update_b whose body is ``body``."""
+    src = head + _BASE + extra + ("    @is_tool(ToolType.WRITE)\n    def update_b(self, x):\n"
+                                  + "".join(f"        {ln}\n" for ln in body.split("\n")))
+    return pregate.hidden_writes(src, parent)
+
+
+@pytest.mark.parametrize("body,head", [
+    ("return self.update_a(x)", ""),                                  # direct (the cand_10 form)
+    ("return self._helper(x)", ""),                                   # private helper
+    ("return type(self).update_a(self, x)", ""),                      # type(self).m
+    ("return self.helper.update_a(x)", ""),                           # attribute chain
+    ("m = self.update_a\nreturn m(x)", ""),                           # alias
+    ("return {'a': self.update_a}['a'](x)", ""),                      # dispatch dict
+    ("return getattr(self, 'update_' + 'a')(x)", ""),                 # folded getattr name
+    ("return update_z(x)", "from other import update_z\n"),           # bare imported write
+], ids=["direct", "private_helper", "type_self", "chain", "alias", "dispatch", "getattr_fold", "bare_import"])
+def test_every_bypass_form_is_flagged(body, head):
+    r = _hw(body, head=head)
+    assert not r["ok"] and ("update_a" in r["detail"] or "update_z" in r["detail"]), r
+
+
+def test_computed_name_is_a_failure_not_a_warning():
+    for body in ("return getattr(self, x)()", "return eval(x)", "return globals()[x]()"):
+        r = _hw(body)
+        assert not r["ok"] and "unresolvable" in r["detail"], body
+
+
+def test_transitive_through_two_helpers():
+    r = _hw("return self._h1(x)", extra="    def _h1(self, x):\n        return self._helper(x)\n")
+    assert not r["ok"] and "update_b -> _h1 -> _helper -> update_a" in r["detail"]
+
+
+def test_plain_public_helpers_and_reads_are_not_writes():
+    extra = ("    def format_reservation(self, r): return str(r)\n"
+             "    @is_tool(ToolType.READ)\n    def get_r(self): pass\n")
+    assert _hw("return self.format_reservation(self.get_r())", extra=extra)["ok"]
+
+
+def test_docstring_edit_to_existing_composite_is_not_blamed():
+    parent = _BASE + ("    @is_tool(ToolType.WRITE)\n    def update_b(self, x):\n"
+                      "        return self.update_a(x)\n")
+    cand = parent.replace("def update_b(self, x):\n", 'def update_b(self, x):\n        """doc"""\n')
+    assert pregate.hidden_writes(cand, parent)["ok"]
+
+
+def test_same_named_methods_in_different_classes_do_not_collide():
+    src = ("class A:\n    @is_tool(ToolType.WRITE)\n    def update_x(self): pass\n"
+           "    @is_tool(ToolType.WRITE)\n    def update_y(self):\n        return self.run()\n"
+           "    def run(self): return 1\n"
+           "class B:\n    def run(self):\n        return self.update_x()\n"
+           "    @is_tool(ToolType.WRITE)\n    def update_x(self): pass\n")
+    assert pregate.hidden_writes(src, "")["ok"]
+
+
+def test_explicit_write_tools_are_authoritative():
+    src = "class T:\n    def zap(self): pass\n    def update_q(self):\n        return self.zap()\n"
+    assert not pregate.hidden_writes(src, "", explicit={"zap", "update_q"})["ok"]
+    assert pregate.hidden_writes(src, "", explicit={"other"})["ok"]  # no prefix guessing then
 
 
 def test_read_calling_read_and_write_calling_read_are_fine():
     src = ("class T:\n"
            "    @is_tool(ToolType.READ)\n    def r1(self): pass\n"
            "    @is_tool(ToolType.WRITE)\n    def w(self):\n        return self.r1()\n")
-    assert pregate.hidden_writes(src)["ok"]
+    assert pregate.hidden_writes(src, "")["ok"]
 
+
+def test_infra_errors_never_crash_and_strict_fails(tmp_path):
+    fx = tmp_path / "fx.jsonl"
+    fx.write_text("{not json\n")
+    for tk in ("no_such_module_xyz:make", "/nonexistent/adapter.py:f"):
+        res = pregate.run(CAND, SEED, fixtures=fx, toolkit=tk)
+        assert "[hidden_writes]" in res["failure"]            # the real verdict is never lost
+        errs = [c for c in res["checks"] if c.get("error")]
+        assert errs and all(c["ok"] for c in errs)           # fail-open ...
+        assert any("errored" in w for w in res["warnings"])  # ... but loud
+    res = pregate.run(SEED, SEED, fixtures=fx, toolkit="no_such_module_xyz:make", strict=True)
+    assert not res["ok"] and "infra error" in res["failure"]
+
+
+def test_replay_changed_tools_are_info_only():
+    # candidate's update_reservation_flights is "fixed" (raises); parent's succeeds
+    r = pregate.replay(lambda: _Kit(bad=True), _Kit, CALLS, changed={"update_reservation_flights"})
+    assert r["ok"] and r["info"]
+    assert not pregate.replay(lambda: _Kit(bad=True), _Kit, CALLS, changed={"other"})["ok"]
+
+
+def test_ablation_key_is_optimizer_ablation_with_legacy_fallback(monkeypatch):
+    monkeypatch.delenv("CAPEVOLVE_PREGATE", raising=False)
+    assert not pregate.enabled({"optimizer": {"ablation": {"pregate": False}}})
+    assert not pregate.enabled({"ablation": {"pregate": False}})
+    assert pregate.enabled({"optimizer": {"ablation": {"pregate": True}}, "ablation": {"pregate": False}})
+
+
+def test_static_ignores_files_outside_tools(tmp_path):
+    (tmp_path / "vendor").mkdir()
+    (tmp_path / "vendor" / "py2.py").write_text("print 'x'\n")
+    assert pregate.static_check(tmp_path)["ok"]
 
 def test_static_flags_syntax_error_and_policy_growth(tmp_path):
     (tmp_path / "tools").mkdir()
@@ -170,6 +262,6 @@ def test_smoke_and_replay_are_live_on_real_tau2_toolkit(tmp_path):
     assert not c["tool_smoke"]["skipped"] and c["tool_smoke"]["ok"], c["tool_smoke"]
     assert not c["replay"]["skipped"] and c["replay"]["ok"], c["replay"]
     assert not c["hidden_writes"]["ok"]  # cand_10 is still caught by the AST scan
-    # the real failing trace calls a tool the parent lacks: replay reports the divergence
+    # the real failing trace calls a tool the parent lacks (a CHANGED tool): info only, not a failure
     c = go(FX / "cand10_task14_t1.json")
-    assert not c["replay"]["ok"] and "update_reservation_cabin" in c["replay"]["detail"]
+    assert c["replay"]["ok"] and "update_reservation_cabin" in " ".join(c["replay"]["info"])

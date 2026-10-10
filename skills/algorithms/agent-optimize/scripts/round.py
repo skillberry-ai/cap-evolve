@@ -525,12 +525,17 @@ def pregate_failure(run_dir, project, parent_tag: str, cand_dir: Path, cmd: str 
             tk = str(Path(project) / tk)
         cfg = {**cfg, "toolkit": tk}
         parent = run_dir.candidate_dir(parent_tag)
-        res = pregate.run(
-            cand_dir, parent if parent.is_dir() else None,
-            fixtures=run_dir.root / "tool_fixtures.jsonl", toolkit=cfg.get("toolkit"),
-            traces=[Path(t) for t in cfg.get("traces") or []],
-            max_growth=None if cfg.get("max_policy_growth") is None
-            else float(cfg["max_policy_growth"]))
+        try:  # a broken pre-gate must never crash the round (fail-open, loudly)
+            res = pregate.run(
+                cand_dir, parent if parent.is_dir() else None,
+                fixtures=run_dir.root / "tool_fixtures.jsonl", toolkit=cfg.get("toolkit"),
+                traces=[Path(t) for t in cfg.get("traces") or []],
+                max_growth=None if cfg.get("max_policy_growth") is None
+                else float(cfg["max_policy_growth"]),
+                strict=bool(cfg.get("strict")), write_tools=cfg.get("write_tools"),
+                tool_dirs=tuple(cfg.get("tool_paths") or ("tools",)))
+        except Exception as e:  # noqa: BLE001
+            res = {"ok": True, "failure": "", "warnings": [f"built-in pre-gate crashed: {type(e).__name__}: {e}"]}
         if res["warnings"]:  # surfaced in events.jsonl for the digest; never a refusal
             run_dir.log_event("agent_optimize_pregate_warning", tag=cand_dir.name,
                               warnings=res["warnings"])
@@ -1201,6 +1206,13 @@ def _main(argv=None) -> int:
         for t, r in invalid.items():
             run_dir.log_event("agent_optimize_pregate_invalid", tag=t, output=r,
                               iteration=int(run_dir.spent.iterations))
+        # #708: a sibling failing only the BUILT-IN pre-gate is dropped, not the whole round; the
+        # legacy registered check (#632) still refuses the round, and so does "every tag invalid".
+        builtin = {t: r for t, r in invalid.items() if r.startswith("built-in pre-gate:")}
+        if builtin and len(builtin) == len(invalid) and len(builtin) < len(tags):
+            tags = [t for t in tags if t not in builtin]
+            print(json.dumps({"pregate_dropped": builtin}), file=sys.stderr)
+            invalid = {}
         if invalid:
             print(json.dumps({
                 "error": f"candidate(s) {sorted(invalid)} fail the run's pre-gate check "
