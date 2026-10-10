@@ -205,11 +205,18 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
         tokens = 0
     missing_usage = sum(1 for m in messages if getattr(m, "usage", None) is None)
 
+    # User-simulator tokens, so the framework can price them (gateways report cost 0.0).
+    ut = [getattr(m, "usage", None) or {} for m in messages if getattr(m, "role", None) == "user"]
+    usersim = {"model": model_config.MODEL, "cost_usd": float(user_cost or 0.0),
+               "prompt_tokens": sum(int(u.get("prompt_tokens") or 0) for u in ut),
+               "completion_tokens": sum(int(u.get("completion_tokens") or 0) for u in ut)}
+
     if agent_cost is not None or user_cost is not None:
         return (
             float(agent_cost or 0.0) + float(user_cost or 0.0),
             tokens,
-            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage},
+            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage,
+             "usersim": usersim},
         )
 
     # tau2 gave up on the whole run: salvage whatever the provider did price.
@@ -233,6 +240,7 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
         "cost_source": source,
         "messages_missing_cost": missing,
         "messages_missing_usage": missing_usage,
+        "usersim": usersim,
     }
 
 

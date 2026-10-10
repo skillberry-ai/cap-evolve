@@ -132,6 +132,33 @@ def _resolve_workers(workers: int | None) -> int:
 OptimizerFn = Callable[[Path, str], "dict | None"]
 
 
+def _usersim(rollout) -> dict | None:
+    u = (getattr(rollout, "metadata", None) or {}).get("usersim")
+    return u if isinstance(u, dict) and os.environ.get("CAPEVOLVE_USERSIM_PRICING", "1") != "0" else None
+
+
+def _usersim_usd(rollout) -> float | None:
+    """List-price estimate of the user simulator's spend for one rollout, or ``None``.
+
+    Adapters report it as ``metadata["usersim"] = {model, prompt_tokens, completion_tokens,
+    cost_usd}``; providers often return ``cost: 0.0`` for it (a gateway alias), so the
+    estimate is added only when the adapter-measured ``cost_usd`` is falsy and the model has
+    a price. Unpriced models return ``None`` (see ``_usersim_unpriced``), never 0.
+    """
+    from .pricing import token_cost
+    u = _usersim(rollout)
+    if not u or u.get("cost_usd"):
+        return None
+    return token_cost(u.get("model"), int(u.get("prompt_tokens") or 0),
+                      int(u.get("completion_tokens") or 0))
+
+
+def _usersim_unpriced(rollout) -> bool:
+    u = _usersim(rollout)
+    return bool(u and not u.get("cost_usd")
+                and (u.get("prompt_tokens") or u.get("completion_tokens")))
+
+
 def _parse_optimizer_cost(stdout: str) -> dict | None:
     """Pull ``{"cost_usd","tokens"}`` from a ``run-optimizer`` stdout payload.
 
@@ -360,7 +387,7 @@ def evaluate_candidate(
     # which only keeps valid rewards.
     per_task_cost: dict[str, list[float]] = {t.id: [] for t in tasks}
     task_by_id = {t.id: t for t in tasks}
-    run_acc = {"cost": 0.0, "tokens": 0, "cost_source": {}}  # RUNNER spend, summed over rollouts
+    run_acc = {"cost": 0.0, "tokens": 0, "cost_source": {}, "usersim": 0.0}  # RUNNER spend, summed over rollouts
     t0 = time.time()
     # See #589: a heartbeat for the long silent stretch between ``eval_start`` and
     # ``evaluate``. Only the rollout-generation paths that see individual (task,
@@ -403,6 +430,10 @@ def evaluate_candidate(
                 per_task_errored[tid] = True
                 per_task_errored_trials[tid] += 1
             run_acc["cost"] += float(getattr(rollout, "cost_usd", 0.0) or 0.0)
+            _us = _usersim_usd(rollout)
+            if _us is not None:
+                run_acc["cost"] += _us
+                run_acc["usersim"] += _us
             run_acc["tokens"] += int(getattr(rollout, "tokens", 0) or 0)
             per_task_cost[tid].append(float(getattr(rollout, "cost_usd", 0.0) or 0.0))
             # An adapter that cannot price its rollouts (e.g. an unmetered proxy
@@ -411,6 +442,9 @@ def evaluate_candidate(
             _cs = (getattr(rollout, "metadata", None) or {}).get("cost_source")
             if _cs:
                 run_acc["cost_source"][_cs] = run_acc["cost_source"].get(_cs, 0) + 1
+            if _us is None and _usersim_unpriced(rollout):
+                run_acc["cost_source"]["usersim_unpriced"] = (
+                    run_acc["cost_source"].get("usersim_unpriced", 0) + 1)
             sc = scores_by_id.get(tid)
             if sc is None:  # not in has_score_batch mode, or the batch omitted this id
                 sc = adapter.score(task, rollout)
@@ -556,7 +590,8 @@ def evaluate_candidate(
 
     elapsed = time.time() - t0
     run_dir.update_spent(metric_calls=len(tasks) * n_trials, usd=run_cost,
-                         runner_tokens=run_tokens, runner_seconds=elapsed)
+                         runner_tokens=run_tokens, runner_seconds=elapsed,
+                         usersim_usd=run_acc["usersim"])
     result = aggregate_scores(split, scores, ks=ks)
     result.cost_usd, result.tokens, result.seconds = run_cost, run_tokens, elapsed
     result.cost_source = cost_source_counts
