@@ -25,3 +25,8 @@ stop_at_reward:     1.0                   # 0 = off; stop as soon as best val re
                                           # On here: num_trials=5 gives best_val a real stderr,
                                           # unlike the num_trials=1 templates.
 store:              git
+
+# --- built-in pre-gate (#708): makes tool smoke + tool-call replay live on tau2
+pregate:
+  toolkit: adapters/adapter.py:pregate_toolkit   # relative to the project dir
+  # max_policy_growth: 0.5   # optional: FAIL (not just warn) above this policy growth

@@ -47,6 +47,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 # accepted values is the only correct source for ours. Importable on the same terms as
 # _bootstrap above — this directory is already on sys.path or that import would have failed.
 import gate_check
+import pregate
 
 from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
@@ -512,6 +513,37 @@ def run_pregate_check(cmd: str, cand_dir: Path) -> str | None:
     return None
 
 
+def pregate_failure(run_dir, project, parent_tag: str, cand_dir: Path, cmd: str | None) -> str | None:
+    """The built-in deterministic pre-gate (#708, ``ablation.pregate``) first, then the
+    agent-registered check (#632). ``None`` = valid; else the reason. With the ablation off only
+    the legacy check runs."""
+    spec = spec_for_run(run_dir, project)
+    if pregate.enabled(spec):
+        cfg = spec.get("pregate") if isinstance(spec.get("pregate"), dict) else {}
+        tk = cfg.get("toolkit")
+        if tk and ".py:" in tk and not os.path.isabs(tk):  # path relative to the project dir
+            tk = str(Path(project) / tk)
+        cfg = {**cfg, "toolkit": tk}
+        parent = run_dir.candidate_dir(parent_tag)
+        try:  # a broken pre-gate must never crash the round (fail-open, loudly)
+            res = pregate.run(
+                cand_dir, parent if parent.is_dir() else None,
+                fixtures=run_dir.root / "tool_fixtures.jsonl", toolkit=cfg.get("toolkit"),
+                traces=[Path(t) for t in cfg.get("traces") or []],
+                max_growth=None if cfg.get("max_policy_growth") is None
+                else float(cfg["max_policy_growth"]),
+                strict=bool(cfg.get("strict")), write_tools=cfg.get("write_tools"),
+                tool_dirs=tuple(cfg.get("tool_paths") or ("tools",)))
+        except Exception as e:  # noqa: BLE001
+            res = {"ok": True, "failure": "", "warnings": [f"built-in pre-gate crashed: {type(e).__name__}: {e}"]}
+        if res["warnings"]:  # surfaced in events.jsonl for the digest; never a refusal
+            run_dir.log_event("agent_optimize_pregate_warning", tag=cand_dir.name,
+                              warnings=res["warnings"])
+        if not res["ok"]:
+            return "built-in pre-gate: " + res["failure"]
+    return run_pregate_check(cmd, cand_dir) if cmd else None
+
+
 def known_invalid(run_dir) -> list[str]:
     """Tags an earlier round's pre-gate check already disqualified in this run."""
     if not run_dir.events_path.exists():
@@ -703,7 +735,7 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
             continue
         # #632: two valid parents can still compose into an invalid merge — check before its
         # screen spends a rollout, same as the round's own candidates.
-        bad = pregate_cmd and run_pregate_check(pregate_cmd, work / tag)
+        bad = pregate_failure(run_dir, project, best, work / tag, pregate_cmd)
         if bad:
             run_dir.log_event("agent_optimize_pregate_invalid", tag=tag, parents=[a, b],
                               output=bad)
@@ -1185,12 +1217,19 @@ def _main(argv=None) -> int:
     # every tag's bytes before any screen or eval is paid for. One invalid tag refuses the
     # whole round, the same idiom as the screen-ladder refusal below.
     PREGATE = resolve_pregate_check(run_dir, args.pregate_check)
-    if PREGATE:
+    if PREGATE or pregate.enabled(spec_for_run(run_dir, project)):  # #708: built-in needs no registration
         prior_invalid = known_invalid(run_dir)
-        invalid = {t: r for t in tags if (r := run_pregate_check(PREGATE, work / t))}
+        invalid = {t: r for t in tags if (r := pregate_failure(run_dir, project, best, work / t, PREGATE))}
         for t, r in invalid.items():
             run_dir.log_event("agent_optimize_pregate_invalid", tag=t, output=r,
                               iteration=int(run_dir.spent.iterations))
+        # #708: a sibling failing only the BUILT-IN pre-gate is dropped, not the whole round; the
+        # legacy registered check (#632) still refuses the round, and so does "every tag invalid".
+        builtin = {t: r for t, r in invalid.items() if r.startswith("built-in pre-gate:")}
+        if builtin and len(builtin) == len(invalid) and len(builtin) < len(tags):
+            tags = [t for t in tags if t not in builtin]
+            print(json.dumps({"pregate_dropped": builtin}), file=sys.stderr)
+            invalid = {}
         if invalid:
             print(json.dumps({
                 "error": f"candidate(s) {sorted(invalid)} fail the run's pre-gate check "

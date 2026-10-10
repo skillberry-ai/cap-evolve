@@ -1,0 +1,123 @@
+{
+ "task_id": "14",
+ "reward": 0.0,
+ "db_match": 0.0,
+ "trace": [
+  {
+   "role": "assistant",
+   "tool_calls": [
+    {
+     "id": "tooluse_cZiTUEa8yWKHqeRXZpvF5x",
+     "name": "get_user_details",
+     "arguments": {
+      "user_id": "mohamed_silva_9265"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "id": "tooluse_cZiTUEa8yWKHqeRXZpvF5x",
+   "content": "{\"user_id\": \"mohamed_silva_9265\", \"name\": {\"first_name\": \"Mohamed\", \"last_name\": \"Silva\"}, \"address\": {\"address1\": \"638 Elm Street\", \"address2\": \"Suite 548\", \"city\": \"Los Angeles\", \"country\": \"USA\", \"state\": \"CA\", \"zip\": \"91365\"}, \"email\": \"mohamed.silva9198@example.com\", \"dob\": \"1960-11-26\", \"payme",
+   "error": false
+  },
+  {
+   "role": "assistant",
+   "tool_calls": [
+    {
+     "id": "tooluse_0K172VGNEGxNAt1QWeEAsV",
+     "name": "get_reservation_details",
+     "arguments": {
+      "reservation_id": "K1NW8N"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "id": "tooluse_0K172VGNEGxNAt1QWeEAsV",
+   "content": "{\"reservation_id\": \"K1NW8N\", \"user_id\": \"mohamed_silva_9265\", \"origin\": \"JFK\", \"destination\": \"SFO\", \"flight_type\": \"round_trip\", \"cabin\": \"basic_economy\", \"flights\": [{\"flight_number\": \"HAT023\", \"origin\": \"JFK\", \"destination\": \"SFO\", \"date\": \"2024-05-26\", \"price\": 53}, {\"flight_number\": \"HAT204\", \"",
+   "error": false
+  },
+  {
+   "role": "assistant",
+   "tool_calls": [
+    {
+     "id": "tooluse_pVuM38kbxRtBsNEmRxAXYy",
+     "name": "search_direct_flight",
+     "arguments": {
+      "origin": "JFK",
+      "destination": "SFO",
+      "date": "2024-05-26"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "id": "tooluse_pVuM38kbxRtBsNEmRxAXYy",
+   "content": "[{\"flight_number\": \"HAT023\", \"origin\": \"JFK\", \"destination\": \"SFO\", \"status\": \"available\", \"scheduled_departure_time_est\": \"14:00:00\", \"scheduled_arrival_time_est\": \"20:00:00\", \"date\": null, \"available_seats\": {\"basic_economy\": 8, \"economy\": 14, \"business\": 6}, \"prices\": {\"basic_economy\": 69, \"econo",
+   "error": false
+  },
+  {
+   "role": "assistant",
+   "tool_calls": [
+    {
+     "id": "tooluse_vvTMwnuyrkzluUUXIFCpIc",
+     "name": "search_direct_flight",
+     "arguments": {
+      "destination": "JFK",
+      "date": "2024-05-28",
+      "origin": "SFO"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "id": "tooluse_vvTMwnuyrkzluUUXIFCpIc",
+   "content": "[]",
+   "error": false
+  },
+  {
+   "role": "assistant",
+   "tool_calls": [
+    {
+     "id": "tooluse_gW09UH6Mq2Yu0SKZsYO7dZ",
+     "name": "search_onestop_flight",
+     "arguments": {
+      "destination": "JFK",
+      "date": "2024-05-28",
+      "origin": "SFO"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "id": "tooluse_gW09UH6Mq2Yu0SKZsYO7dZ",
+   "content": "[[{\"flight_number\": \"HAT082\", \"origin\": \"SFO\", \"destination\": \"IAH\", \"status\": \"available\", \"scheduled_departure_time_est\": \"23:00:00\", \"scheduled_arrival_time_est\": \"03:00:00+1\", \"date\": \"2024-05-28\", \"available_seats\": {\"basic_economy\": 5, \"economy\": 5, \"business\": 10}, \"prices\": {\"basic_economy\":",
+   "error": false
+  },
+  {
+   "role": "assistant",
+   "tool_calls": [
+    {
+     "id": "tooluse_Tfl0Q4JKUjEMTHOPWxX0P2",
+     "name": "update_reservation_cabin",
+     "arguments": {
+      "reservation_id": "K1NW8N",
+      "cabin": "business",
+      "payment_id": "credit_card_2198526"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "id": "tooluse_Tfl0Q4JKUjEMTHOPWxX0P2",
+   "content": "{\"reservation_id\": \"K1NW8N\", \"user_id\": \"mohamed_silva_9265\", \"origin\": \"JFK\", \"destination\": \"SFO\", \"flight_type\": \"round_trip\", \"cabin\": \"business\", \"flights\": [{\"flight_number\": \"HAT023\", \"origin\": \"JFK\", \"destination\": \"SFO\", \"date\": \"2024-05-26\", \"price\": 364}, {\"flight_number\": \"HAT204\", \"orig",
+   "error": false
+  }
+ ]
+}

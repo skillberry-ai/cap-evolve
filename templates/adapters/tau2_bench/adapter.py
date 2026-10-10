@@ -148,6 +148,11 @@ def _build_candidate_tools(candidate_dir: Path):
     return CandidateTools(db)
 
 
+#: Toolkit factory for the built-in pre-gate (#708): `pregate: {toolkit: <this file>:pregate_toolkit}`
+#: in capevolve.yaml makes tool smoke + tool-call replay live (callable(candidate_dir) -> toolkit).
+pregate_toolkit = _build_candidate_tools
+
+
 def _read_candidate_policy(candidate_dir: Path) -> str:
     """Read the candidate policy; fall back to tau2's canonical policy."""
     policy_path = candidate_dir / "policy" / "policy.md"

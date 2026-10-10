@@ -103,3 +103,46 @@ def test_merge_that_fails_the_check_is_skipped_before_its_screen(tmp_path, monke
     assert out["skipped_pairs"][0]["reason"] == "merge fails the pre-gate check"
     assert [e["tag"] for e in _events(rd, "agent_optimize_pregate_invalid")] == [
         "merge_cand_1_cand_2"]
+
+
+# ---- #708: the built-in deterministic pre-gate, with no registered check -------------------
+_COMPOSITE = ("class T:\n    @is_tool(ToolType.WRITE)\n    def update_a(self): pass\n"
+              "    @is_tool(ToolType.WRITE)\n    def update_both(self):\n        return self.update_a()\n")
+
+
+def _stage_composite(tmp_path):
+    run_dir, project, work = _staged_run_dir(tmp_path)
+    (work / "cand_1" / "tools").mkdir(exist_ok=True)
+    (work / "cand_1" / "tools" / "composite.py").write_text(_COMPOSITE, encoding="utf-8")
+    return run_dir, project
+
+
+def test_builtin_pregate_refuses_hidden_write_composite_before_any_spend(tmp_path):
+    run_dir, project = _stage_composite(tmp_path)
+    p = _round(run_dir, project, "cand_1")
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert "update_both -> update_a" in json.loads(p.stdout)["invalid"]["cand_1"]
+    assert not list((run_dir.rollouts / "val").glob("*__cand_1__*"))
+    assert [e["tag"] for e in _events(run_dir, "agent_optimize_pregate_invalid")] == ["cand_1"]
+
+
+def test_ablation_pregate_off_is_legacy_behaviour(tmp_path):
+    from test_round_requires_screen_ladder import _run
+
+    run_dir, project = _stage_composite(tmp_path)
+    q = _run([str(SCRIPTS / "round.py"), "--run-dir", str(run_dir.root), "--project", str(project),
+              "--candidates", "cand_1", "--n-trials", "1", "--skip-screen-justification", "x",
+              *_JUSTIFY], env={"CAPEVOLVE_PREGATE": "off"})
+    assert q.returncode == 0, q.stdout + q.stderr
+    assert not _events(run_dir, "agent_optimize_pregate_invalid")
+
+
+def test_invalid_sibling_is_dropped_not_the_whole_round(tmp_path):
+    run_dir, project = _stage_composite(tmp_path)
+    work = run_dir.root / "work"
+    shutil.copytree(work / "cand_1", work / "cand_2")
+    (work / "cand_2" / "tools" / "composite.py").unlink()  # cand_2 is clean
+    p = _round(run_dir, project, "cand_1,cand_2")
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert [r["tag"] for r in json.loads(p.stdout)["candidates"]] == ["cand_2"]
+    assert [e["tag"] for e in _events(run_dir, "agent_optimize_pregate_invalid")] == ["cand_1"]
