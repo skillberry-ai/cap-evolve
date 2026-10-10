@@ -149,6 +149,9 @@ export function TaskMatrix({
     return [...ids].sort((a, b) => mean(a) - mean(b))
   }, [summary.tasks, cols, selectedTaskIds, selectedNode])
 
+  const roundGroups = useMemo(() => groupByRound(cols), [cols])
+  const hasRounds = roundGroups.some((g) => g.round_id != null)
+
   if (cols.length === 0 || rows.length === 0) {
     return (
       <Card>
@@ -171,8 +174,6 @@ export function TaskMatrix({
     return c != null && b != null ? c - b : null
   }
   const churn = findChurn(cols)
-  const roundGroups = useMemo(() => groupByRound(cols), [cols])
-  const hasRounds = roundGroups.some((g) => g.round_id != null)
 
   return (
     <div className="space-y-4">

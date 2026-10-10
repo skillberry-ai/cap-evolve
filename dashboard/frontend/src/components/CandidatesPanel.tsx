@@ -6,6 +6,7 @@ import { VerdictBadge } from './StatusBadge'
 import { Card } from './ui/Card'
 import { duration, pct, usd } from '../lib/format'
 import { cn } from '../lib/cn'
+import { coverageBadge, parentOf } from '../lib/coverage'
 
 type SortKey = 'iteration' | 'val' | 'delta'
 
@@ -30,7 +31,8 @@ export function CandidatesPanel({
   const rows = useMemo(() => {
     const withDelta = graph.nodes.map((n) => ({
       ...n,
-      delta: n.val != null && n.parent_val != null ? n.val - n.parent_val : null,
+      // a screened/partial val is a subset statistic: no parent delta is shown for it
+      delta: n.val != null && n.parent_val != null && !coverageBadge(n) ? n.val - n.parent_val : null,
     }))
     const cmp = {
       iteration: (a: typeof withDelta[number], b: typeof withDelta[number]) =>
@@ -128,11 +130,19 @@ export function CandidatesPanel({
                   <td className="px-3 py-1.5">
                     <VerdictBadge verdict={n.status} />
                   </td>
-                  <td className="px-3 py-1.5 font-mono text-muted">{n.parent ?? '—'}</td>
+                  <td className="px-3 py-1.5 font-mono text-muted">{parentOf(n) ?? '—'}</td>
                   <td className="tnum px-3 py-1.5 text-right">
                     {n.val == null ? (
                       <span className="text-muted" title="No valid measurement exists.">
                         —
+                      </span>
+                    ) : coverageBadge(n) ? (
+                      // never a bare percentage for a subset result
+                      <span title="Measured on a subset of val: not comparable to a full val score.">
+                        <span className="mr-1 rounded border border-indecisive px-1 text-[10px] text-indecisive">
+                          {coverageBadge(n)}
+                        </span>
+                        {pct(n.val)}
                       </span>
                     ) : (
                       pct(n.val)

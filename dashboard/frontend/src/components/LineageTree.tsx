@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import type { RunGraph, GraphNode, Coverage, EvalState } from '../lib/types'
 import { layoutLineage, type LaidNode } from '../lib/lineage'
 import { pct } from '../lib/format'
+import { coverageBadge, isPartial } from '../lib/coverage'
 import { prefersReducedMotion, springGrow } from '../lib/motion'
 import { Card } from './ui/Card'
 
@@ -56,6 +57,8 @@ export function LineageTree({
   const y = (row: number) => PAD + row * ROW_H + R
   const width = PAD * 2 + layout.cols * COL_W
   const height = PAD * 2 + layout.rows * ROW_H
+  const parentIdx = new Map<string, number>()
+  for (const e of layout.edges) if (!parentIdx.has(e.from)) parentIdx.set(e.from, parentIdx.size)
   const sel = selected ? pos.get(selected) : undefined
   const selParent = sel?.parent ? pos.get(sel.parent) : undefined
 
@@ -82,19 +85,36 @@ export function LineageTree({
             const y1 = y(a.row)
             const x2 = x(b.col)
             const y2 = y(b.row)
-            const d = `M ${x1} ${y1} H ${(x1 + x2) / 2} V ${y2} H ${x2}`
+            // Each parent gets its own trunk x-offset and colour, so siblings of different
+            // parents sharing a column stay attributable; a "from #n" label sits at the child.
+            const pi = parentIdx.get(e.from) ?? 0
+            const trunk = x1 + 14 + (pi % 5) * 6
+            const d = `M ${x1} ${y1} H ${Math.min(trunk, x2 - R - 6)} V ${y2} H ${x2}`
+            const edgeColor = e.onSpine ? 'var(--accent)' : e.merge ? 'var(--muted)' : `var(--series-${(pi % 5) + 1})`
             return (
               <motion.path
                 key={`${e.from}-${e.to}-${e.merge ? 'merge' : 'derive'}`}
                 d={d}
                 fill="none"
-                stroke={e.onSpine ? 'var(--accent)' : e.merge ? 'var(--muted)' : 'var(--border)'}
+                stroke={edgeColor}
+                data-from={e.from}
                 strokeWidth={e.onSpine ? 2.5 : 1.5}
                 strokeDasharray={e.merge ? '4 3' : undefined}
                 initial={reduce ? false : { pathLength: 0, opacity: 0 }}
                 animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: reduce ? 0 : 0.4 }}
               />
+            )
+          })}
+
+          {/* which parent each child hangs from */}
+          {layout.edges.map((e) => {
+            const b = pos.get(e.to)!
+            if (e.onSpine) return null
+            return (
+              <text key={`lbl-${e.from}-${e.to}-${e.merge ? 'm' : 'd'}`} x={x(b.col) - R - 4} y={y(b.row) - 4} textAnchor="end" fontSize={8} fill="var(--muted-strong)" data-testid="edge-label">
+                {e.merge ? 'merge ' : ''}from {shortId(e.from)}
+              </text>
             )
           })}
 
@@ -173,10 +193,13 @@ function LineageNode({
   reduce: boolean
   onSelect: () => void
 }) {
-  const dim = node.status === 'rejected' || node.status === 'failed'
+  const dim = node.status === 'failed'
+  const partial = isPartial(node)
+  const badge = coverageBadge(node)
+  const glyph = node.status === 'accepted' ? '✓' : node.status === 'rejected' ? '✗' : null
   const state = node.evalState
   const cov = node.coverage
-  const ring = state === 'partial' && cov ? coverageLabel(cov) : null
+  const ring = badge ?? (state === 'partial' && cov ? coverageLabel(cov) : null)
   return (
     <motion.g
       style={{ cursor: 'pointer', transformOrigin: `${cx}px ${cy}px` }}
@@ -192,9 +215,17 @@ function LineageNode({
       {isBest && <circle cx={cx} cy={cy} r={R + 5} fill="none" stroke="var(--accent)" strokeWidth={1.5} opacity={0.5} />}
       {isSelected && <circle cx={cx} cy={cy} r={R + 2} fill="none" stroke="var(--primary)" strokeWidth={2} />}
       <NodeBody cx={cx} cy={cy} fill={isBest ? 'var(--accent)' : FILL[node.status]} state={state} />
-      <text x={cx} y={cy + 4} textAnchor="middle" fontSize={10} fill="var(--bg)" fontWeight={600}>
-        {node.val != null ? Math.round(node.val * 100) : '·'}
-      </text>
+      {/* a subset result never shows a bare percentage inside the node: the badge below carries it */}
+      {!partial && (
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize={10} fill="#fff" stroke="rgba(0,0,0,0.45)" strokeWidth={2} paintOrder="stroke" fontWeight={700}>
+          {node.val != null ? Math.round(node.val * 100) : '·'}
+        </text>
+      )}
+      {glyph && (
+        <text x={cx + R - 2} y={cy - R + 4} textAnchor="middle" fontSize={12} fontWeight={800} fill={node.status === 'accepted' ? 'var(--accepted)' : 'var(--rejected)'} stroke="var(--bg)" strokeWidth={3} paintOrder="stroke" data-testid="verdict-glyph">
+          {glyph}
+        </text>
+      )}
       <text x={cx} y={cy + R + 14} textAnchor="middle" fontSize={9} fill="var(--muted)">
         {shortId(node.id)}
       </text>

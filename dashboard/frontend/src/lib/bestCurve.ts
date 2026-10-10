@@ -1,5 +1,6 @@
 /** Derive the cumulative-best (running max) stair series from graph nodes. */
 import type { GraphNode } from './types'
+import { coverageBadge, isPartial } from './coverage'
 
 export interface CurvePoint {
   iteration: number
@@ -14,15 +15,17 @@ export interface CurvePoint {
    *  every point that merely ties it (three identical 0.750s in a real run) produced a
    *  row of stars and no champion. */
   isChampion: boolean
+  /** "8/30 screened" etc. when this val is NOT a full-val measurement (never a record). */
+  badge: string | null
 }
 
 /**
  * Order nodes by iteration and compute the running best. Nodes without a numeric
  * `val` are skipped (no scatter point and no effect on the running best).
  */
-export function cumulativeBest(nodes: GraphNode[]): CurvePoint[] {
+export function cumulativeBest(nodes: GraphNode[], bestId?: string | null, includePartial = false): CurvePoint[] {
   const ordered = [...nodes]
-    .filter((n) => typeof n.val === 'number')
+    .filter((n) => typeof n.val === 'number' && (includePartial || !isPartial(n)))
     .sort((a, b) => (a.iteration ?? 0) - (b.iteration ?? 0))
 
   const out: CurvePoint[] = []
@@ -35,7 +38,7 @@ export function cumulativeBest(nodes: GraphNode[]): CurvePoint[] {
     // no-regression veto, and the chart then read "best 58.3%" while the run's actual
     // best was the seed at 56.7% — the KPI tile and the chart contradicted each other.
     // A rejected capability is one you cannot ship, so it is not a best of anything.
-    const isRecord = v > best && (n.status === 'accepted' || n.status === 'seed')
+    const isRecord = !isPartial(n) && v > best && (n.status === 'accepted' || n.status === 'seed')
     if (isRecord) best = v
     out.push({
       iteration: n.iteration ?? out.length,
@@ -46,10 +49,13 @@ export function cumulativeBest(nodes: GraphNode[]): CurvePoint[] {
       isRecord,
       stderr: n.stderr ?? null,
       isChampion: false,
+      badge: coverageBadge(n),
     })
   }
   const finalBest = out.length ? out[out.length - 1].best : null
-  const champ = out.find((p) => p.isRecord && p.best === finalBest)
+  // The star sits on the run's selected champion (best_id) when it is plotted, so it always
+  // agrees with the KPI tile; otherwise on the first point to reach the final running best.
+  const champ = (bestId && out.find((p) => p.id === bestId)) || out.find((p) => p.isRecord && p.best === finalBest)
   if (champ) champ.isChampion = true
   return out
 }

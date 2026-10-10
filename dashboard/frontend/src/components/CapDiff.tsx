@@ -6,6 +6,10 @@ import { cn } from '../lib/cn'
 import { Card } from './ui/Card'
 import { Skeleton } from './ui/Skeleton'
 
+// Optimizer bookkeeping that is not capability (the backend filters most; belt and braces).
+const NON_CAP = /(^|\/)(DIAGNOSIS\.json|JOURNAL[^/]*|PROCESS\.md|INSIGHTS[^/]*|memory|work)(\/|$)/
+const capOnly = (files: CapDiffFile[]) => files.filter((f) => !NON_CAP.test(f.path))
+
 const FIXED_BASES = ['parent', 'latest_base', 'original', 'selected', 'ancestry'] as const
 
 /** Merge-hunk class -> style. Each class differs in border STYLE and a text chip, not only
@@ -49,7 +53,8 @@ function Rows({ rows }: { rows: CapDiffRow[] }) {
   )
 }
 
-function Files({ files }: { files: CapDiffFile[] }) {
+function Files({ files: all }: { files: CapDiffFile[] }) {
+  const files = capOnly(all)
   if (files.length === 0) return <p className="py-6 text-center text-sm text-muted">No capability changes.</p>
   return (
     <>

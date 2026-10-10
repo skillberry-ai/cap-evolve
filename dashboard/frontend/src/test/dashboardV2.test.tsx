@@ -26,7 +26,7 @@ describe('LineageTree node states', () => {
     for (const s of ['full', 'partial', 'screened', 'unevaluated']) {
       expect(container.querySelector(`[data-state="${s}"]`)).not.toBeNull()
     }
-    expect(screen.getByTestId('coverage-mark')).toHaveTextContent('12/30 tasks')
+    expect(screen.getAllByTestId('coverage-mark').map((e) => e.textContent)).toContain('12/30 partial')
     const merge = layoutLineage(graph).edges.filter((e) => e.merge)
     expect(merge).toEqual([{ from: 'cand_3', to: 'cand_6', onSpine: false, merge: true }])
   })
@@ -40,7 +40,7 @@ describe('SeriesCharts', () => {
     expect(screen.queryByTestId('series-latency_s')).toBeNull()
     fireEvent.click(screen.getByLabelText('Latency'))
     expect(screen.getByTestId('series-latency_s')).toBeInTheDocument()
-    const pts = buildSeries(nodes, objectives)
+    const pts = buildSeries(nodes, objectives, true)
     expect(pts.map((p) => p.values.optimizer_cum_usd?.toFixed(2))).toEqual([undefined, '0.42', '0.52', '0.82'])
     expect(pts[3].values.latency_s).toBeUndefined()
   })

@@ -14,6 +14,7 @@ import { BestCurveChart } from '../components/BestCurveChart'
 import { OverviewObjectives } from '../components/OverviewObjectives'
 import { isMultiObjective } from '../components/ParetoScatter'
 import { ObjectiveTimeSeries } from '../components/ObjectiveTimeSeries'
+import { LineageTree } from '../components/LineageTree'
 import { CandidatesPanel } from '../components/CandidatesPanel'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
@@ -157,6 +158,9 @@ export function RunDeepDive() {
               ))}
             </div>
             <Skeleton className="h-72 w-full" />
+            <p className="text-center text-xs text-muted" role="status">
+              Loading run — reducing a large run's events can take 10+ seconds on first load.
+            </p>
           </div>
         )}
 
@@ -184,7 +188,7 @@ export function RunDeepDive() {
               summary={summary}
               liveEvents={stream.status === 'live' ? stream.count : 0}
             />
-            <KpiStrip summary={summary} />
+            <KpiStrip summary={summary} nodes={data.graph.nodes} />
             <Tabs tabs={tabs}>
               {(active) => (
                 <TabBody
@@ -222,7 +226,8 @@ function TabBody({
     case 'overview':
       return (
         <div className="space-y-5">
-          <BestCurveChart nodes={data.graph.nodes} />
+          <LineageTree graph={data.graph} selectedId={selectedCandidate} onSelectId={onSelectCandidate} />
+          <BestCurveChart nodes={data.graph.nodes} bestId={data.graph.best_id} />
           <OverviewObjectives runId={runId} nodes={data.graph.nodes} summary={s} />
           {isMultiObjective(s) && <ObjectiveTimeSeries nodes={data.graph.nodes} summary={s} />}
           <PhasesTimeline detail={data} />

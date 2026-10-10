@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { GraphNode, RunObjectives } from '../lib/types'
+import { isPartial } from '../lib/coverage'
 import { usd } from '../lib/format'
 import { Card } from './ui/Card'
 
@@ -15,16 +16,16 @@ export const SERIES = [
 ] as const
 type Key = (typeof SERIES)[number]['key']
 
-export interface SeriesPoint { id: string; iteration: number; champion: boolean; values: Partial<Record<Key, number>> }
+export interface SeriesPoint { id: string; iteration: number; champion: boolean; partial?: boolean; values: Partial<Record<Key, number>> }
 
 /** Candidates in iteration order, with cumulative optimizer spend. Missing values stay
  *  absent (a gap in the line), never 0. */
-export function buildSeries(nodes: GraphNode[], obj: RunObjectives): SeriesPoint[] {
+export function buildSeries(nodes: GraphNode[], obj: RunObjectives, includePartial = false): SeriesPoint[] {
   let cum = 0
   return [...nodes]
     .filter((n) => n.iteration != null && obj.candidates[n.id])
     .sort((a, b) => (a.iteration as number) - (b.iteration as number))
-    .map((n) => {
+    .map((n) => {  // spend is real for every candidate, so it accumulates before the filter below
       const r = obj.candidates[n.id]
       const values: SeriesPoint['values'] = {}
       for (const k of ['reward', 'cost_matched_success', 'cost_overall', 'latency_s'] as const) {
@@ -32,13 +33,16 @@ export function buildSeries(nodes: GraphNode[], obj: RunObjectives): SeriesPoint
         if (v != null) values[k] = v
       }
       if (r.optimizer_usd != null) { cum += r.optimizer_usd; values.optimizer_cum_usd = cum }
-      return { id: n.id, iteration: n.iteration as number, champion: !!n.best_so_far, values }
+      return { id: n.id, iteration: n.iteration as number, champion: !!n.best_so_far, values, partial: isPartial(n) }
     })
+    .filter((p) => includePartial || !p.partial)
 }
 
 export function SeriesCharts({ nodes, objectives }: { nodes: GraphNode[]; objectives: RunObjectives }) {
   const [on, setOn] = useState<Set<Key>>(new Set(SERIES.filter((s) => s.on).map((s) => s.key)))
-  const points = buildSeries(nodes, objectives)
+  const [withPartial, setWithPartial] = useState(false)
+  const points = buildSeries(nodes, objectives, withPartial)
+  const nPartial = nodes.filter((n) => isPartial(n) && objectives.candidates[n.id]).length
   if (points.length === 0) return null
   const champs = points.filter((p) => p.champion)
   const toggle = (k: Key) => setOn((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n })
@@ -54,6 +58,12 @@ export function SeriesCharts({ nodes, objectives }: { nodes: GraphNode[]; object
           </label>
         ))}
       </div>
+      {nPartial > 0 && (
+        <label className="mb-2 flex items-center gap-1.5 text-xs text-muted">
+          <input type="checkbox" checked={withPartial} onChange={(e) => setWithPartial(e.target.checked)} />
+          include {nPartial} screened / partial candidate{nPartial === 1 ? '' : 's'} (subset results, off by default)
+        </label>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         {SERIES.filter((s) => on.has(s.key)).map((s) => {
           const data = points.map((p) => ({ id: p.id, iteration: p.iteration, value: p.values[s.key] ?? null }))
