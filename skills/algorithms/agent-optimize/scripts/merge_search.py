@@ -124,7 +124,8 @@ def _mechanisms_targets(run_dir: Path, tag: str) -> list[str]:
     return sorted(ids)
 
 
-def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path) -> dict:
+def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path,
+                 md_blocks: bool = True) -> dict:
     """GEPA's mergeable-ness check (arXiv:2507.19457, Appendix D, Algorithms 3-4), adapted to
     this project's capability tree instead of GEPA's list-of-modules abstraction.
 
@@ -143,8 +144,15 @@ def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path) ->
     Desirable() check (Algorithm 4) only tests "did i change M" vs "did j change M" and would
     refuse this case too, but two edits that are not actually different cannot be a real
     disagreement, and refusing them would reject work that cannot possibly conflict.
+
+    ``md_blocks`` (ablation key ``merge.md_blocks``, default on, #709): ``.md``/``.txt`` files are
+    split into heading-section blocks (``cap_evolve.mdblocks``) instead of being one whole-file
+    module, so siblings editing different sections of one policy.md are not a false collision.
+    Off = legacy whole-file verdict.
     """
     import merge as merge_mod
+    import _bootstrap  # noqa: F401
+    from cap_evolve import mdblocks
 
     base_f, a_f, b_f, changed_a, changed_b = merge_mod._changed_files(
         common_ancestor, candidate_a, candidate_b)
@@ -155,6 +163,17 @@ def is_mergeable(candidate_a: Path, candidate_b: Path, common_ancestor: Path) ->
         a_bytes, b_bytes = merge_mod._read(a_f, rel), merge_mod._read(b_f, rel)
         if a_bytes == b_bytes:
             identical.append(rel)
+            continue
+        if md_blocks and rel.endswith((".md", ".txt")) and a_bytes is not None \
+                and b_bytes is not None and rel in base_f:
+            try:
+                r = mdblocks.three_way(base_f[rel].read_text(encoding="utf-8"),
+                                       a_bytes.decode("utf-8"), b_bytes.decode("utf-8"))
+            except UnicodeDecodeError:
+                conflicts.append(rel)
+                continue
+            conflicts += [f"{rel}::{i}" for i in r["conflicts"]]
+            identical += [f"{rel}::{i}" for i in r["identical"]]
             continue
         if not rel.endswith(".py") or a_bytes is None or b_bytes is None or rel not in base_f:
             conflicts.append(rel)  # whole-file module: both diverged, differently
