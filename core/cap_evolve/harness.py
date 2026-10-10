@@ -140,14 +140,14 @@ def _usersim(rollout) -> dict | None:
 def _usersim_usd(rollout) -> float | None:
     """List-price estimate of the user simulator's spend for one rollout, or ``None``.
 
-    Adapters report it as ``metadata["usersim"] = {model, prompt_tokens, completion_tokens,
-    cost_usd}``; providers often return ``cost: 0.0`` for it (a gateway alias), so the
-    estimate is added only when the adapter-measured ``cost_usd`` is falsy and the model has
-    a price. Unpriced models return ``None`` (see ``_usersim_unpriced``), never 0.
+    Adapters report it as ``metadata["usersim"] = {model, prompt_tokens, completion_tokens}``
+    covering only user messages the provider did not cost (gateways return 0.0), so the
+    estimate is added only when the adapter reports user tokens the provider left unpriced and the
+    model has a price. Unpriced models return ``None`` (see ``_usersim_unpriced``), never 0.
     """
     from .pricing import token_cost
     u = _usersim(rollout)
-    if not u or u.get("cost_usd"):
+    if not u:
         return None
     return token_cost(u.get("model"), int(u.get("prompt_tokens") or 0),
                       int(u.get("completion_tokens") or 0))
@@ -155,8 +155,7 @@ def _usersim_usd(rollout) -> float | None:
 
 def _usersim_unpriced(rollout) -> bool:
     u = _usersim(rollout)
-    return bool(u and not u.get("cost_usd")
-                and (u.get("prompt_tokens") or u.get("completion_tokens")))
+    return bool(u and (u.get("prompt_tokens") or u.get("completion_tokens")))
 
 
 def _parse_optimizer_cost(stdout: str) -> dict | None:
@@ -435,7 +434,8 @@ def evaluate_candidate(
                 run_acc["cost"] += _us
                 run_acc["usersim"] += _us
             run_acc["tokens"] += int(getattr(rollout, "tokens", 0) or 0)
-            per_task_cost[tid].append(float(getattr(rollout, "cost_usd", 0.0) or 0.0))
+            per_task_cost[tid].append(float(getattr(rollout, "cost_usd", 0.0) or 0.0)
+                                      + (_us or 0.0))
             # An adapter that cannot price its rollouts (e.g. an unmetered proxy
             # endpoint) tags this in metadata rather than silently reporting $0 as
             # "free" — count it so the eval record can say "unpriced", not "$0".

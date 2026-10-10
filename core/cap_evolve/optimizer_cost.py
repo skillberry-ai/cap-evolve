@@ -28,14 +28,40 @@ def mode() -> str:
     return m if m in ("off", "window", "session") else "window"
 
 
-def _logs(dirs: list[Path]) -> list[Path]:
+def _logs(dirs: list[Path], sids: list[str] | None) -> list[Path]:
+    """Session logs under the cwd slug dirs; only ``sids`` when given (else EVERY session)."""
     root = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "projects"
     out: list[Path] = []
     for d in dirs:
         proj = root / re.sub(r"[^A-Za-z0-9]", "-", str(Path(d).resolve()))
-        out += proj.glob("*.jsonl")
-        out += proj.glob("*/subagents/*.jsonl")
+        for sid in (sids if sids is not None else [None]):
+            out += proj.glob(f"{sid or '*'}.jsonl")
+            out += proj.glob(f"{sid or '*'}/subagents/*.jsonl")
     return sorted(set(out))
+
+
+def _session_ids(run_dir) -> list[str] | None:
+    """Session ids billed to this run: the current one (``CLAUDE_CODE_SESSION_ID``) added to
+    the list recorded in the run dir. ``None`` = unknown, caller falls back to time-window."""
+    path = Path(run_dir.root) / "optimizer_sessions.json"
+    try:
+        sids = list(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        sids = []
+    cur = os.environ.get("CLAUDE_CODE_SESSION_ID") or os.environ.get("CLAUDE_SESSION_ID")
+    if cur and cur not in sids:
+        sids.append(cur)
+        _write(path, sids)
+    return sids or None
+
+
+def _write(path: Path, obj) -> None:
+    try:
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(obj), encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError:
+        pass
 
 
 def _ts(s) -> float | None:
@@ -48,11 +74,13 @@ def _ts(s) -> float | None:
 def harvest(run_dir, dirs: list[Path], since: float, *, record: bool = True) -> dict | None:
     """New optimizer spend since ``since`` (epoch s), or ``None`` when no session log exists.
 
-    Returns ``{usd, tokens, unpriced_tokens, models}``; ``usd`` covers priced models only, so
+    Returns ``{usd, tokens, unpriced_tokens, models, scoped}`` (``scoped`` False = no session
+    id known, so EVERY session in the dir was read — a heuristic); ``usd`` covers priced models only, so
     an unpriced model shows up as ``unpriced_tokens`` rather than as a silent $0.
     ``record=False`` reads without marking messages as counted (dry run).
     """
-    logs = _logs(dirs)
+    sids = _session_ids(run_dir)
+    logs = _logs(dirs, sids)
     if not logs:
         return None
     seen_path = Path(run_dir.root) / "optimizer_cost_seen.json"
@@ -94,8 +122,6 @@ def harvest(run_dir, dirs: list[Path], since: float, *, record: bool = True) -> 
         else:
             usd += c
     if record:
-        try:
-            seen_path.write_text(json.dumps(sorted(seen | set(by_msg))), encoding="utf-8")
-        except OSError:
-            pass
-    return {"usd": round(usd, 6), "tokens": tokens, "unpriced_tokens": unpriced, "models": models}
+        _write(seen_path, sorted(seen | set(by_msg)))
+    return {"usd": round(usd, 6), "tokens": tokens, "unpriced_tokens": unpriced, "models": models,
+            "scoped": sids is not None}
