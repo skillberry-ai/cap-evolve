@@ -57,3 +57,8 @@ max_optimizer_usd: 400.0    # cumulative optimizer-only $ cap (per-iteration cap
 
 # --- iteration store (how each iteration is versioned for an inspectable process)
 store: git                               # git (default) | copy | command
+
+# --- built-in pre-gate (#708): makes tool smoke + tool-call replay live on tau2
+pregate:
+  toolkit: adapters/adapter.py:pregate_toolkit   # relative to the project dir
+  # max_policy_growth: 0.5   # optional: FAIL (not just warn) above this policy growth

@@ -78,8 +78,10 @@ def _policy_bytes(root: Path) -> int:
 
 
 # ---- static ---------------------------------------------------------------------------------
-def static_check(cand: Path, parent: Path | None = None, max_growth: float = MAX_POLICY_GROWTH) -> dict:
-    bad = []
+def static_check(cand: Path, parent: Path | None = None, max_growth: float | None = None) -> dict:
+    """Policy growth is only a WARNING (big coherent edits are wanted) unless ``max_growth`` is
+    set explicitly, in which case exceeding it fails."""
+    bad, warn = [], []
     for p in _files(cand, ".py"):
         try:
             compile(p.read_text(encoding="utf-8"), str(p), "exec")
@@ -92,10 +94,12 @@ def static_check(cand: Path, parent: Path | None = None, max_growth: float = MAX
             bad.append(f"{p.relative_to(cand)}: {e}")
     if parent is not None and (old := _policy_bytes(parent)):
         growth = _policy_bytes(cand) / old - 1
-        if growth > max_growth:
-            bad.append(f"policy grew {growth:+.0%} over the parent (cap {max_growth:+.0%}): "
-                       "every task pays for those tokens; trim or justify")
-    return _check("static", not bad, "; ".join(bad))
+        cap = MAX_POLICY_GROWTH if max_growth is None else max_growth
+        if growth > cap:
+            (warn if max_growth is None else bad).append(
+                f"policy grew {growth:+.0%} over the parent (cap {cap:+.0%}): "
+                "every task pays for those tokens; trim or justify")
+    return {**_check("static", not bad, "; ".join(bad)), "warnings": warn}
 
 
 # ---- hidden writes (AST) --------------------------------------------------------------------
@@ -219,7 +223,13 @@ def trace_agent_calls(path: Path) -> list[dict]:
 # ---- driver ---------------------------------------------------------------------------------
 def _load_factory(spec: str):
     mod, _, fn = spec.partition(":")
-    return getattr(__import__(mod, fromlist=[fn]), fn or "make_toolkit")
+    if mod.endswith(".py"):  # a file path, e.g. the adapter: adapters/adapter.py:pregate_toolkit
+        s = importlib.util.spec_from_file_location("pregate_toolkit_mod", mod)
+        m = importlib.util.module_from_spec(s)
+        s.loader.exec_module(m)
+    else:
+        m = __import__(mod, fromlist=[fn])
+    return getattr(m, fn or "make_toolkit")
 
 
 def changed_tools(cand: Path, parent: Path | None) -> set[str]:
@@ -237,7 +247,7 @@ def changed_tools(cand: Path, parent: Path | None) -> set[str]:
 
 
 def run(cand: Path, parent: Path | None = None, *, fixtures: Path | None = None,
-        toolkit: str | None = None, traces: list[Path] = (), max_growth: float = MAX_POLICY_GROWTH) -> dict:
+        toolkit: str | None = None, traces: list[Path] = (), max_growth: float | None = None) -> dict:
     checks = [static_check(cand, parent, max_growth)]
     if checks[0]["ok"]:  # nothing below is meaningful on code that does not compile
         checks.append(hidden_writes_dirs(cand, parent))
@@ -256,7 +266,8 @@ def run(cand: Path, parent: Path | None = None, *, fixtures: Path | None = None,
         else:
             checks.append(_check("replay", True, "needs --toolkit, --parent and --trace", skipped=True))
     failed = [c for c in checks if not c["ok"]]
-    return {"ok": not failed, "checks": checks,
+    warnings = [w for c in checks for w in c.get("warnings") or []]
+    return {"ok": not failed, "checks": checks, "warnings": warnings,
             "failure": "; ".join(f"[{c['name']}] {c['detail']}" for c in failed)}
 
 
@@ -268,7 +279,9 @@ def main(argv=None) -> int:
     p.add_argument("--run-dir")
     p.add_argument("--toolkit", help="module:callable(candidate_dir) -> toolkit with the tool methods")
     p.add_argument("--trace", action="append", default=[], help="rollout json to replay (repeatable)")
-    p.add_argument("--max-policy-growth", type=float, default=MAX_POLICY_GROWTH)
+    p.add_argument("--max-policy-growth", type=float, default=None,
+                   help=f"FAIL above this policy growth fraction (default: only warn above "
+                        f"{MAX_POLICY_GROWTH:.2f})")
     a = p.parse_args(argv)
     fx = Path(a.fixtures) if a.fixtures else (Path(a.run_dir) / "tool_fixtures.jsonl" if a.run_dir else None)
     res = run(Path(a.candidate), Path(a.parent) if a.parent else None, fixtures=fx,

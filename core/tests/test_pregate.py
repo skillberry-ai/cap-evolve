@@ -54,8 +54,11 @@ def test_static_flags_syntax_error_and_policy_growth(tmp_path):
     (tmp_path / "tools" / "t.py").write_text("def f(:\n")
     r = pregate.static_check(tmp_path)
     assert not r["ok"] and "t.py" in r["detail"]
-    # cand_10's policy grew ~42% over the seed's: over the default +30% cap, under a +50% cap
-    assert "policy grew" in pregate.static_check(CAND, SEED)["detail"]
+    # cand_10's policy grew ~42%: only a WARNING by default (big coherent edits are wanted) ...
+    r = pregate.static_check(CAND, SEED)
+    assert r["ok"] and "policy grew +42%" in r["warnings"][0]
+    # ... a failure only when a cap is set explicitly
+    assert not pregate.static_check(CAND, SEED, max_growth=0.3)["ok"]
     assert pregate.static_check(CAND, SEED, max_growth=0.5)["ok"]
     assert pregate.static_check(SEED, SEED)["ok"]
 
@@ -107,8 +110,9 @@ def test_tool_smoke_new_exception_fails_and_missing_fixtures_skip():
 
 
 def test_run_end_to_end_cand10_fails_seed_passes_and_skips_cleanly():
-    res = pregate.run(CAND, SEED, max_growth=0.5)
+    res = pregate.run(CAND, SEED)
     assert not res["ok"] and "[hidden_writes]" in res["failure"]
+    assert "[static]" not in res["failure"] and "policy grew" in res["warnings"][0]
     assert {c["name"] for c in res["checks"] if c["skipped"]} == {"tool_smoke", "replay"}
     assert pregate.run(SEED, SEED)["ok"]
 
@@ -124,3 +128,48 @@ def test_ablation_switch(monkeypatch):
     assert not pregate.enabled({"ablation": {"pregate": False}})
     monkeypatch.setenv("CAPEVOLVE_PREGATE", "off")
     assert not pregate.enabled({"ablation": {"pregate": True}})
+
+
+def _tau2_python():
+    import os
+    import shutil
+    if os.environ.get("CAPEVOLVE_TAU2_PYTHON"):
+        return os.environ["CAPEVOLVE_TAU2_PYTHON"]
+    for d in REPO.parents:
+        if (d / ".venv-tau2" / "bin" / "python").exists():
+            return str(d / ".venv-tau2" / "bin" / "python")
+    return shutil.which("python-tau2")
+
+
+def test_smoke_and_replay_are_live_on_real_tau2_toolkit(tmp_path):
+    """Needs tau2 importable: set CAPEVOLVE_TAU2_PYTHON=<.venv-tau2>/bin/python (auto-found in a
+    parent dir's .venv-tau2); otherwise skipped."""
+    import subprocess
+
+    import pytest
+    py = _tau2_python()
+    if not py or subprocess.run([py, "-c", "import tau2"], capture_output=True).returncode:
+        pytest.skip("tau2 not importable: set CAPEVOLVE_TAU2_PYTHON to the .venv-tau2 python")
+    fx = tmp_path / "fx.jsonl"
+    fx.write_text(json.dumps({"tool": "get_all_reservations_for_user", "result": "[]",
+                              "args": {"user_id": "mohamed_silva_9265"}}) + "\n")
+    ro = tmp_path / "ro.json"
+    ro.write_text(json.dumps({"trace": [{"role": "assistant", "tool_calls": [
+        {"id": "1", "name": "get_user_details", "arguments": {"user_id": "mohamed_silva_9265"}},
+        {"id": "2", "name": "get_reservation_details", "arguments": {"reservation_id": "K1NW8N"}}]}]}))
+    adapter = REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py"
+
+    def go(trace):
+        p = subprocess.run([py, str(REPO / "skills/algorithms/agent-optimize/scripts/pregate.py"),
+                            "--candidate", str(CAND), "--parent", str(SEED), "--fixtures", str(fx),
+                            "--toolkit", f"{adapter}:pregate_toolkit", "--trace", str(trace)],
+                           capture_output=True, text=True)
+        return {c["name"]: c for c in json.loads(p.stdout)["checks"]}
+
+    c = go(ro)
+    assert not c["tool_smoke"]["skipped"] and c["tool_smoke"]["ok"], c["tool_smoke"]
+    assert not c["replay"]["skipped"] and c["replay"]["ok"], c["replay"]
+    assert not c["hidden_writes"]["ok"]  # cand_10 is still caught by the AST scan
+    # the real failing trace calls a tool the parent lacks: replay reports the divergence
+    c = go(FX / "cand10_task14_t1.json")
+    assert not c["replay"]["ok"] and "update_reservation_cabin" in c["replay"]["detail"]

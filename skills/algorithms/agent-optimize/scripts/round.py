@@ -520,12 +520,20 @@ def pregate_failure(run_dir, project, parent_tag: str, cand_dir: Path, cmd: str 
     spec = spec_for_run(run_dir, project)
     if pregate.enabled(spec):
         cfg = spec.get("pregate") if isinstance(spec.get("pregate"), dict) else {}
+        tk = cfg.get("toolkit")
+        if tk and ".py:" in tk and not os.path.isabs(tk):  # path relative to the project dir
+            tk = str(Path(project) / tk)
+        cfg = {**cfg, "toolkit": tk}
         parent = run_dir.candidate_dir(parent_tag)
         res = pregate.run(
             cand_dir, parent if parent.is_dir() else None,
             fixtures=run_dir.root / "tool_fixtures.jsonl", toolkit=cfg.get("toolkit"),
             traces=[Path(t) for t in cfg.get("traces") or []],
-            max_growth=float(cfg.get("max_policy_growth", pregate.MAX_POLICY_GROWTH)))
+            max_growth=None if cfg.get("max_policy_growth") is None
+            else float(cfg["max_policy_growth"]))
+        if res["warnings"]:  # surfaced in events.jsonl for the digest; never a refusal
+            run_dir.log_event("agent_optimize_pregate_warning", tag=cand_dir.name,
+                              warnings=res["warnings"])
         if not res["ok"]:
             return "built-in pre-gate: " + res["failure"]
     return run_pregate_check(cmd, cand_dir) if cmd else None
