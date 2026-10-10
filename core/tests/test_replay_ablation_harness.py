@@ -32,7 +32,8 @@ def test_fixture_is_the_recorded_run():
 def test_cand10_is_caught_by_pregate_before_any_val_rollout():
     r = pregate.hidden_writes_dirs(FX / "pregate" / "cand_10", FX / "pregate" / "seed")
     assert not r["ok"] and "update_reservation_cabin -> update_reservation_flights" in r["detail"]
-    rows = ablate.replay_candidates(FIX, pregate_rejects={"cand_10"}, resamples=2, m=60)
+    assert ablate.pregate_verdicts(FX) == {"cand_10"}          # verdict comes from the real pregate
+    rows = ablate.replay_candidates(FIX, pregate_rejects=ablate.pregate_verdicts(FX), resamples=2, m=60)
     assert rows["cand_10"]["mean_rollouts"] == 0 and rows["cand_10"]["decisions"] == {"pregate_reject": 2}
 
 
@@ -48,7 +49,7 @@ def test_cand345_policy_collisions_are_real_conflicts_for_merge_n(tmp_path):
 
 @pytest.fixture(scope="module")
 def report():
-    return ablate.replay_report(FIX, {"cand_10"}, n_splits=3, m=100)
+    return ablate.replay_report(FIX, None, n_splits=3, m=100, fixdir=FX)
 
 
 def test_no_accept_among_identical_bytes_pairs_except_the_known_drift_hash(report):
@@ -62,9 +63,19 @@ def test_no_accept_among_identical_bytes_pairs_except_the_known_drift_hash(repor
     assert all(v["new_engine_accepts"] == 0 for v in report["identical_bytes_resplits"].values())
 
 
+def test_report_uses_real_modules_and_compares_val_to_val(report):
+    assert report["pregate_rejects"] == ["cand_10"]
+    mv = report["merge_cand_3_4_5"]
+    assert not mv["built"] and mv["conflicts"]
+    r = report["rollouts"]
+    assert r["recorded_val"] == 2150 and r["recorded_test_sealed"] == 120
+    assert "NOT a measured saving" in report["note"] and "pairs" not in report["note"]
+    assert "objectives/gate (cost gating)" in report["not_wired"][1]
+
+
 def test_new_engine_requests_fewer_rollouts_than_were_spent_and_no_controls(report):
     assert report["control_rollouts"] == 0
-    assert 0 < report["new_engine_rollouts"] < report["recorded_spent"]["total"]
+    assert 0 < report["rollouts"]["replay_requested_with_seed_baseline"] < report["rollouts"]["recorded_val"]
     c = report["candidates"]
     assert set(c["cand_2"]["decisions"]) == {"prune"}
     assert c["cand_10"]["mean_rollouts"] == 0
@@ -81,21 +92,41 @@ def test_every_arm_resolves_to_its_explicit_config_and_ignores_env(monkeypatch):
     assert ablate.arm_config("shipped_default") == ablate.optimizer_config.DEFAULTS
 
 
-def _sim(arm, seeds=4, budget=600):
-    res = ablate.simulate([arm], n_seeds=seeds, budget=budget, m=60, fx=FIX)
-    return res, [r["decisions"] for r in res["arms"][arm]["runs"]]
+def _sim(arm, seeds=20, budget=600):
+    res = ablate.simulate([arm], n_seeds=seeds, budget=budget, m=40, fx=FIX)
+    return res["arms"][arm]["summary"], [r["decisions"] for r in res["arms"][arm]["runs"]]
+
+
+def _tot(decs, k):
+    return sum(d.get(k, 0) for d in decs)
 
 
 def test_switches_change_behaviour():
-    _, on = _sim("full")
+    """Strict direction checks over 20 seeds. context_digest is a documented no-op (identical runs)."""
+    s_full, on = _sim("full")
     _, off = _sim("full_no_pregate")
-    assert sum(d.get("pregate_reject", 0) for d in on) > 0 and not any("pregate_reject" in d for d in off)
-    _, nog = _sim("full_no_cost_gating")
-    assert not any("cost_reject" in d for d in nog)
-    r_old, _ = _sim("baseline_original")
-    r_new, _ = _sim("adaptive_only")
-    assert r_new["arms"]["adaptive_only"]["summary"]["false_accepts"]["mean"] <= \
-        r_old["arms"]["baseline_original"]["summary"]["false_accepts"]["mean"]
+    assert _tot(on, "pregate_reject") > 0 and _tot(off, "pregate_reject") == 0
+    s_nog, nog = _sim("full_no_cost_gating")
+    assert _tot(on, "cost_reject") > 0 and _tot(nog, "cost_reject") == 0
+    assert s_nog["final_cost_factor"]["mean"] >= s_full["final_cost_factor"]["mean"]
+    s_old, _ = _sim("baseline_original")
+    s_new, new = _sim("adaptive_only")
+    assert s_new["false_accepts"]["mean"] < s_old["false_accepts"]["mean"]
+    assert _tot(new, "inconclusive") > 0                       # only the posterior engine has this outcome
+    _, dag = _sim("dag_only")
+    assert _tot(dag, "merge_ok") + _tot(dag, "merge_conflict") > 0
+    _, serial = _sim("full_no_dag_parallel")
+    assert _tot(serial, "merge_ok") + _tot(serial, "merge_conflict") == 0
+    assert _sim("full_no_context_digest")[1] == on             # declared no-op
+
+
+def test_real_plan_refuses_contaminated_env(tmp_path, monkeypatch):
+    base = tmp_path / "base.yaml"
+    base.write_text("capabilities: [system-prompt]\n", encoding="utf-8")
+    monkeypatch.setenv("CAPEVOLVE_PREGATE", "0")
+    with pytest.raises(SystemExit, match="CAPEVOLVE_PREGATE"):
+        ablate.real_plan(base, tmp_path, ["full"])
+    assert ablate.real_plan(base, tmp_path, ["full"], allow_env=True)
 
 
 def test_output_is_labelled_deterministic_and_has_curves_and_cis():
@@ -111,9 +142,10 @@ def test_output_is_labelled_deterministic_and_has_curves_and_cis():
     json.dumps(a)
 
 
-def test_real_mode_only_writes_specs_with_ablation_block(tmp_path):
+def test_real_mode_only_writes_specs_with_ablation_block(tmp_path, monkeypatch):
     base = tmp_path / "base.yaml"
     base.write_text("capabilities: [system-prompt]\n", encoding="utf-8")
+    monkeypatch.delenv("CAPEVOLVE_PREGATE", raising=False)
     cmds = ablate.real_plan(base, tmp_path, ["baseline_original", "full"], range(2))
     assert len(cmds) == 4 and all(c.startswith("cap-evolve run --spec ") for c in cmds)
     from cap_evolve.specfile import read_yaml

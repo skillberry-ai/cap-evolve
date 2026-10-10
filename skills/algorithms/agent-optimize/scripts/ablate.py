@@ -1,9 +1,14 @@
 """ablate -- offline replay + ablation harness for the optimizer engine (#707).
 
-SIMULATOR RESULTS ARE NOT EVIDENCE OF REAL PERFORMANCE. They show how the *decision machinery*
-(the real ``posterior``/``sched`` code, plus switch plumbing) behaves in a toy world whose
-task-outcome rates come from a recorded run and whose candidates are *assumed* per-task rate
-shifts (``PARAMS``). A real-agent claim needs ``real`` mode run by a human/agent (see
+SIMULATOR RESULTS ARE NOT EVIDENCE OF REAL PERFORMANCE.
+
+What is REAL code: replay calls ``posterior.Pair``/``sched.run`` (decisions), ``pregate.hidden_writes_dirs``
+on the recorded cand_10 files, ``merge_n.merge_n`` on the recorded cand_3/4/5 policies, and arms are
+resolved by ``optimizer_config``; ``sim`` also runs ``posterior``/``sched`` for active_eval arms.
+What is REIMPLEMENTED / SIMULATED here: the sim's legacy 0.2-SE gate, null control, merge
+(``Sim._merge``), pregate (a ``defect`` flag), cost gating, proposals, drift, time/$ proxies. NOT wired:
+``eval_index.missing`` (no ledger dir in the fixture; the replay counts cells itself), ``objectives``/
+``gate`` (the cost-gate arm is a simple threshold). Candidate effects in the sim are assumed (``PARAMS``). A real-agent claim needs ``real`` mode run by a human/agent (see
 docs/HOLDOUT_PROTOCOL.md). Every output carries ``LABEL``.
 
 Sub-commands
@@ -29,6 +34,10 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 from cap_evolve import optimizer_config, posterior, sched
+from cap_evolve.candidate_graph import CandidateGraph
+
+import merge_n
+import pregate
 
 HERE = Path(__file__).resolve()
 FIXTURE = HERE.parents[4] / "core" / "tests" / "fixtures" / "replay_run_20261008.json"
@@ -199,8 +208,9 @@ def replay_candidates(fx: dict, pregate_rejects=(), seed: int = 0, m: int = 150,
                       resamples: int = 10) -> dict:
     """Drive the posterior engine with each recorded candidate vs its recorded parent. Rollouts are
     drawn without replacement from the recorded ones of that capability (``resamples`` shuffles);
-    ledger pooling means no null control is ever requested. Conditional on the ORIGINAL lineage (a
-    different accept would change later parents)."""
+    no null control is requested, but parent top-ups reuse later siblings'/ctl_null evals as free evidence.
+    Biases: candidates hold ~3 trials/task so several end 'inconclusive' from data exhaustion, not by
+    engine choice; arms cannot be interleaved (drift not cancelled); conditional on the ORIGINAL lineage."""
     P0, tids = pools(fx), task_ids(fx)
     pooled = lambda g: sum(sum(v) for v in P0[g].values()) / sum(len(v) for v in P0[g].values())
     rows = {}
@@ -225,15 +235,51 @@ def replay_candidates(fx: dict, pregate_rejects=(), seed: int = 0, m: int = 150,
     return rows
 
 
-def replay_report(fx: dict, pregate_rejects=(), n_splits: int = 10, seed: int = 0, m: int = 150) -> dict:
-    cands = replay_candidates(fx, pregate_rejects, seed, m)
-    new = 90 + round(sum(r["mean_rollouts"] for r in cands.values()))      # +90 = seed baseline; 0 controls
-    return {"label": LABEL, "identical_bytes_pairs": replay_identical_pairs(fx, seed, m),
+FIXDIR = FIXTURE.parent
+
+
+def pregate_verdicts(fixdir: Path = FIXDIR) -> set[str]:
+    """Candidates the REAL pre-gate (``pregate.hidden_writes_dirs``) rejects among the recorded files
+    committed under fixtures/pregate (only cand_10 + its parent ``seed`` are kept there)."""
+    root, bad = Path(fixdir) / "pregate", set()
+    for c in sorted(p.name for p in root.iterdir() if p.is_dir() and p.name.startswith("cand_")):
+        if not pregate.hidden_writes_dirs(root / c, root / "seed")["ok"]:
+            bad.add(c)
+    return bad
+
+
+def merge_verdict(fixdir: Path = FIXDIR, tags=("cand_3", "cand_4", "cand_5")) -> dict:
+    """REAL ``merge_n.merge_n`` on the recorded policies (fixtures/md_blocks, parent seed)."""
+    import tempfile
+    root = Path(fixdir) / "md_blocks"
+    g = CandidateGraph({k: {"id": k, "parents": v, "children": []}
+                        for k, v in {"seed": [], **{t: ["seed"] for t in tags}}.items()})
+    with tempfile.TemporaryDirectory() as td:
+        r = merge_n.merge_n(list(tags), lambda t: root / t, g, Path(td) / "out")
+    return {"built": r["built"], "merged": r["merged"], "unmerged": r["unmerged"],
+            "conflicts": [c["where"] for c in r["conflicts"]]}
+
+
+def replay_report(fx: dict, pregate_rejects=None, n_splits: int = 10, seed: int = 0, m: int = 150,
+                  fixdir: Path = FIXDIR) -> dict:
+    rej = pregate_verdicts(fixdir) if pregate_rejects is None else set(pregate_rejects)
+    cands = replay_candidates(fx, rej, seed, m)
+    req = round(sum(r["mean_rollouts"] for r in cands.values()))
+    return {"label": LABEL, "real_modules": ["posterior.Pair", "sched.run", "pregate.hidden_writes_dirs",
+                                              "merge_n.merge_n", "optimizer_config"],
+            "not_wired": ["eval_index.missing (cells counted by the replay)", "objectives/gate (cost gating)"],
+            "pregate_rejects": sorted(rej), "merge_cand_3_4_5": merge_verdict(fixdir),
+            "identical_bytes_pairs": replay_identical_pairs(fx, seed, m),
             "identical_bytes_resplits": replay_resplits(fx, n_splits, seed, m),
-            "candidates": cands, "new_engine_rollouts": new, "control_rollouts": 0,
-            "recorded_spent": fx["spent"],
-            "note": "new_engine_rollouts = 9 replayable candidates (mean over resamples) + 90 seed baseline; the "
-                    "recorded 2270 also include screens, cand_9, null controls (900) and test (120)."}
+            "candidates": cands, "control_rollouts": 0,
+            "rollouts": {"recorded_val": fx["spent"]["val"], "recorded_test_sealed": fx["spent"]["test"],
+                         "recorded_val_of_which_null_controls": fx["spent"]["control_val"],
+                         "replay_requested_candidates": req, "replay_requested_with_seed_baseline": req + 90},
+            "note": ("Compare ONLY val to val: recorded 2150 val rollouts (includes 900 null controls, screens, "
+                     "cand_9's 8, the seed baseline and other evals; excludes 120 sealed-test) vs the "
+                     "replay's request. The replay request EXCLUDES costs the new engine would add (merge-candidate "
+                     "evals, extra siblings, probes, champion confirmation) and uses later siblings' and "
+                     "ctl_null evals as free parent evidence; it is NOT a measured saving.")}
 
 
 # ---- simulator -------------------------------------------------------------------------------------
@@ -546,9 +592,14 @@ def markdown(res: dict) -> str:
 
 # ---- real mode (dry run) ---------------------------------------------------------------------------
 
-def real_plan(base_spec: Path, out_dir: Path, arms=None, seeds=(0, 1, 2), max_iterations: int = 6) -> list[str]:
+def real_plan(base_spec: Path, out_dir: Path, arms=None, seeds=(0, 1, 2), max_iterations: int = 6,
+              allow_env: bool = False) -> list[str]:
     """Write one spec per arm = base spec + an ``optimizer.ablation`` block, return the commands.
     Nothing is executed. The base spec must not already define a top-level ``optimizer:`` key."""
+    stray = sorted(k for k in os.environ if k.startswith("CAPEVOLVE_") and k[len("CAPEVOLVE_"):].lower() in KEYS)
+    if stray and not allow_env:
+        raise SystemExit(f"{stray} are set and override optimizer.ablation (env wins): unset them or the arms "
+                         "are contaminated (--allow-env to override)")
     text = Path(base_spec).read_text(encoding="utf-8")
     if any(l.startswith("optimizer:") for l in text.splitlines()):
         raise SystemExit("base spec already has a top-level `optimizer:` block; merge by hand")
@@ -568,19 +619,19 @@ def real_plan(base_spec: Path, out_dir: Path, arms=None, seeds=(0, 1, 2), max_it
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="ablate", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
-    r = sub.add_parser("replay"); r.add_argument("--splits", type=int, default=10)
-    r.add_argument("--pregate-reject", action="append", default=["cand_10"],
-                   help="candidates the pre-gate rejects (default cand_10, see test_replay_ablation_harness)")
-    s = sub.add_parser("sim"); s.add_argument("--out", default="ablation_out")
+    r = sub.add_parser("replay", help="REPLAY of the recorded run (real posterior/sched/pregate/merge_n; see module doc)"); r.add_argument("--splits", type=int, default=10)
+    r.add_argument("--pregate-reject", action="append", default=None,
+                   help="override the pre-gate verdicts (default: run the real pregate on the recorded cand_10)")
+    s = sub.add_parser("sim", help="SIMULATED switch matrix (assumed effects, not evidence)"); s.add_argument("--out", default="ablation_out")
     s.add_argument("--seeds", type=int, default=20); s.add_argument("--budget", type=int)
     s.add_argument("--arm", action="append"); s.add_argument("--jobs", type=int, default=1)
     s.add_argument("--m", type=int, default=150)
-    d = sub.add_parser("real"); d.add_argument("--spec", required=True); d.add_argument("--out", default="ablation_out")
-    d.add_argument("--seeds", type=int, default=3); d.add_argument("--arm", action="append")
+    d = sub.add_parser("real", help="DRY RUN: write per-arm specs, print commands"); d.add_argument("--spec", required=True); d.add_argument("--out", default="ablation_out")
+    d.add_argument("--allow-env", action="store_true"); d.add_argument("--seeds", type=int, default=3); d.add_argument("--arm", action="append")
     a = p.parse_args(argv)
     print(f"# {LABEL}", file=sys.stderr)
     if a.cmd == "replay":
-        print(json.dumps(replay_report(load_fixture(), set(a.pregate_reject), a.splits), indent=1))
+        print(json.dumps(replay_report(load_fixture(), set(a.pregate_reject) if a.pregate_reject else None, a.splits), indent=1))
     elif a.cmd == "sim":
         res = simulate(a.arm, a.seeds, a.budget, a.m, a.jobs)
         out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
@@ -588,7 +639,7 @@ def main(argv=None) -> int:
         (out / "ablation_sim.md").write_text(markdown(res), encoding="utf-8")
         print(markdown(res))
     else:
-        print("\n".join(real_plan(Path(a.spec), Path(a.out), a.arm, range(a.seeds))))
+        print("\n".join(real_plan(Path(a.spec), Path(a.out), a.arm, range(a.seeds), allow_env=a.allow_env)))
     return 0
 
 

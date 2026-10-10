@@ -8,9 +8,12 @@ says what we can and cannot claim on tau2 airline, and how every report must lab
 - tau2 airline has **50 tasks**. Optimization uses tasks **0-29**; they are both the search signal
   (train) and the gate (val). Selecting the best of many edits on the same 30 tasks inflates the
   winner's val score ("winner's curse"), so val is a fit metric, not a generalization estimate.
-- Tasks **30-49** (the old test split) were **scored once before the redesign** and that aggregate
-  steered design decisions. They are therefore **development-exposed**: no longer untouched, even
-  though no test trace was read.
+- Tasks **30-49** (the old test split) were already scored in run `run_20261008_150326`: its
+  `splits.json` has `"test_used": true` (20 test ids), `final.json` holds the test score of the
+  optimized capability (0.733) and of the baseline (0.683), and `report.md` states the test was scored
+  once for both. The artifacts show the *scoring*; they cannot show whether that number later steered
+  design decisions, so we treat 30-49 as **development-exposed**: no longer untouched, even though no
+  test trace was read.
 - **There is no fresh, untouched holdout inside tau2 airline's 50 tasks.** We state this plainly;
   we do not fabricate one. Splitting the 30 optimization tasks further (for example 25 + 5) gives a
   validation set too small to resolve effects of the size we see (a +0.05 mean effect on 30 tasks
