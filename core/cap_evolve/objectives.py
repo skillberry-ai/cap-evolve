@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import json
 import math
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from statistics import NormalDist, stdev
@@ -97,10 +96,8 @@ def z_accept(cfg: GateCfg) -> float:
 def cost_gating_enabled(spec: dict | None) -> bool:
     """``optimizer.ablation.cost_gating`` / env ``CAPEVOLVE_COST_GATING`` (env wins; default on).
     False => the legacy gate mode."""
-    env = os.environ.get("CAPEVOLVE_COST_GATING", "").strip().lower()
-    if env:
-        return env not in {"0", "false", "no", "off"}
-    return ((((spec or {}).get("optimizer") or {}).get("ablation") or {}).get("cost_gating")) is not False
+    from .optimizer_config import enabled
+    return enabled("cost_gating", spec)
 
 
 # ---- loading ---------------------------------------------------------------------------------

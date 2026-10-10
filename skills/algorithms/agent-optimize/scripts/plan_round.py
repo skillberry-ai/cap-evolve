@@ -29,7 +29,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 import merge_n
 import spend  # sibling script — reuses its own affordability check, see spend.py's docstring
 
-from cap_evolve import RunDir, hypotheses, task_ownership
+from cap_evolve import RunDir, hypotheses, optimizer_config, task_ownership
 from cap_evolve.candidate_graph import CandidateGraph
 from cap_evolve.specfile import spec_for_run
 
@@ -304,7 +304,7 @@ def main(argv=None) -> int:
             afford = {"error": str(e)[:300]}
 
     ownership = task_ownership.from_run(run_dir, cg)
-    size_rule = ((spec.get("optimizer") or {}).get("ablation") or {}).get("failure_clustering") is not False
+    size_rule = optimizer_config.enabled("failure_clustering", spec)
     out = plan_round(clusters, cg, afford, args.overlap_min, args.max_branches_per_slot,
                       ownership=ownership, champion_id=run_dir.best_id, size_rule=size_rule)
     if size_rule and args.hypotheses:

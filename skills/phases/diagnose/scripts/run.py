@@ -72,12 +72,13 @@ def trace_dir(project: str | None, split: str) -> str | None:
 
 def failure_clustering_enabled(run_dir, project: str | None) -> bool:
     """``optimizer.ablation.failure_clustering`` (default on). Unreadable spec => on."""
+    from cap_evolve.optimizer_config import enabled
     try:
         from cap_evolve.specfile import spec_for_run
         spec = spec_for_run(run_dir, Path(project) if project else None)
-        return ((spec.get("optimizer") or {}).get("ablation") or {}).get("failure_clustering") is not False
     except Exception:  # noqa: BLE001
-        return True
+        spec = {}
+    return enabled("failure_clustering", spec)
 
 
 def first_n_words_signature(feedback: str, n: int = 6) -> str:
