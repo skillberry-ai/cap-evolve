@@ -83,6 +83,8 @@ def meter(run_dir, strict: bool = False) -> dict | None:
             h = optimizer_cost.harvest(run_dir, [run_dir.root.parent.parent, Path.cwd()], _run_start(run_dir))
             if h and (h["usd"] or h["tokens"]):
                 run_dir.update_spent(optimizer_usd=h["usd"], optimizer_tokens=h["tokens"])
+        if h is None:
+            infra(run_dir, optimizer_cost.NO_TRANSCRIPT_MSG)
         if h and (h["usd"] or h["tokens"]):
             schema_v2.emit(run_dir, "optimizer_spend", role="agent", usd=h["usd"], tokens=h["tokens"],
                            model=",".join(sorted(h.get("models") or {})) or None, node=None)
@@ -109,7 +111,7 @@ def recent_infra(run_dir, n: int = 3) -> list[str]:
             continue
         if e.get("kind") == "infra_warning":
             out.append(str(e.get("msg")))
-    return out[-n:]
+    return list(dict.fromkeys(out))[-n:]
 
 
 # ---- noise -----------------------------------------------------------------------------------
@@ -188,7 +190,9 @@ def p_beat(P, seed: int = 0) -> float:
 def _own(run_dir, tag, val_ids) -> dict:
     c = eval_index.counts(run_dir, eval_index.cap_hash(cand_dir(run_dir, tag)), "val")
     ms = [((c.get(t, (0.0, 0))[0] + .5) / (c.get(t, (0.0, 0))[1] + 1)) for t in val_ids]
-    return {"mean": round(sum(ms) / len(ms), 4) if ms else None,
+    raw = [c[t][0] / c[t][1] for t in val_ids if c.get(t, (0, 0))[1] > 0]
+    return {"mean": round(sum(ms) / len(ms), 4) if ms else None,   # posterior: shrunk toward 0.5
+            "raw": round(sum(raw) / len(raw), 4) if raw else None,  # plain mean over covered tasks
             "cov": sum(1 for t in val_ids if c.get(t, (0, 0))[1] > 0), "T": len(val_ids)}
 
 
@@ -388,7 +392,8 @@ def suggest(d: dict, hyps: list[dict], cfg: dict) -> list[dict]:
     if openc:
         c = openc[0]
         ev = round(c["headroom"] * p_succ, 3)
-        if md is not None and ev < md:
+        # a stale/thin noise estimate (few repeat cells) must not end the search: refresh it first
+        if md is not None and ev < md and not (d.get("noise") or {}).get("stale"):
             out.append({"verb": "finalize", "target": "",
                         "why": f"best open cluster {c['id']} headroom {c['headroom']} x P(success) {round(p_succ, 2)} = {ev} < min detectable {md}"})
         elif c["status"] == "open":
@@ -424,7 +429,8 @@ def render(d: dict) -> str:
         n["sd_est"], n["min_detectable"], n["repeat_cells"], ", STALE: " + n["why"] if n["stale"] else "")
         if n["sd_est"] is not None else "unknown (%s)" % n["why"]))
     c = d["champion"]
-    L.append(f"champion: {c['id']}" + (f" mean {c.get('mean')} cov {c.get('cov')}/{c.get('T')}" if "mean" in c else ""))
+    L.append(f"champion: {c['id']}" + (
+        f" posterior mean {c.get('mean')} (raw {c.get('raw')}) cov {c.get('cov')}/{c.get('T')}" if "mean" in c else ""))
     L.append("clusters: " + (" | ".join(
         f"{x['id']} {x.get('label', '')} (tasks {','.join(x['tasks'][:4])}) headroom {x['headroom']} {x['status']}"
         + (f" x{x['attempts']}" if x["attempts"] else "") for x in d["clusters"]) or "none"))

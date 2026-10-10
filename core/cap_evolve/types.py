@@ -28,6 +28,10 @@ NON_CAPABILITY_FILES = frozenset({
     "FOCUS.md", "REFLECTION.md",
     # cross-iteration state files — scratch, not capability
     "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md",
+    # optimizer-owned accumulators + machine-readable diagnosis (seeded by prepare_candidate /
+    # ensure_framework_memory, required by agent-optimize commit.py). Hashing them made a
+    # byte-identical copy of the seed hash differently and changed the champion's hash on commit.
+    "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md", "DIAGNOSIS.json",
     # per-agent always-on instructions files: injection appends a pointer block to them
     "CLAUDE.md", "AGENTS.md", "GEMINI.md",
     # per-candidate planning record written by persist_evaluation_plan — bookkeeping, not capability

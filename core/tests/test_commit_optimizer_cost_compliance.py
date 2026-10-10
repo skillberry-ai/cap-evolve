@@ -48,7 +48,9 @@ def _commit(run_dir, work, tag, *extra):
          "--missing-diagnosis-justification", "fixture: diagnosis not under test",
          *extra],
         capture_output=True, text=True,
-        env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
+        # hermetic: a developer's live ~/.claude session log must not be metered into the fixture
+        env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core"),
+             "CLAUDE_CONFIG_DIR": str(run_dir.root.parent / "claude-empty")})
 
 
 def _backdate_last_decision(run_dir, seconds_ago):
