@@ -207,10 +207,20 @@ def build_dag(run_dir) -> dict[str, dict]:
     read-back that should reflect the latest state.
     """
     by_id: dict[str, dict] = {}
+    last_clean: dict[str, list] = {}
     for n in read_nodes(run_dir):
         nid = n.get("id")
         if not nid:
             continue
+        # A self-parent (seen live: cand_4 -> cand_4 on its accept record) is corrupt, never an
+        # edge: fall back to this node's previous non-self parents instead of orphaning it.
+        raw = n.get("parents") or []
+        clean = [p for p in raw if p != nid]
+        if clean:
+            last_clean[nid] = clean
+        if raw and not clean:
+            clean = last_clean.get(nid, [])
+        n = {**n, "parents": clean} if clean != raw else n
         by_id[nid] = {**n, "children": by_id.get(nid, {}).get("children", [])}
     for nid, n in by_id.items():
         for parent in n.get("parents") or []:

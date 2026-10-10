@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -137,7 +138,9 @@ def main(argv=None) -> int:
         journal.write_text(journal.read_text(encoding="utf-8").rstrip() + "\n\n" + pending + "\n",
                            encoding="utf-8")
     try:
-        graph.append_node(run_dir, node_id=args.tag, parents=[parent], status="proposed")
+        # CAPEVOLVE_DAG_PARALLEL=0: legacy -- record nothing, round.py parents on best_id
+        if os.environ.get("CAPEVOLVE_DAG_PARALLEL", "1") != "0":
+            graph.append_node(run_dir, node_id=args.tag, parents=[parent], status="proposed")
     except ValueError as e:
         shutil.rmtree(dest)
         print(json.dumps({"error": str(e)}, indent=2))

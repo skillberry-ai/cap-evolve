@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import socket
@@ -60,23 +61,59 @@ def validate(g: CandidateGraph, node_id: str, parents: list[str]) -> None:
             raise ValueError(f"parent {p!r} descends from {node_id!r}: would create a cycle")
 
 
-def acquire_driver_lock(run_dir_root) -> str | None:
-    """Claim ``$R/driver.lock`` for this process. Returns an error message when another
-    live pid on this host holds it, else ``None`` (a dead holder's lock is stolen)."""
+class DriverBusy(RuntimeError):
+    pass
+
+
+def acquire_driver_lock(run_dir_root, steal: bool = False) -> None:
+    """Claim ``$R/driver.lock`` atomically (``O_EXCL``) and release it at exit.
+
+    Raises :class:`DriverBusy` when a lock exists and its holder is alive, or cannot be
+    judged (other host, unreadable file): a recycled pid or NFS run dir must not be
+    silently overridden. ``steal=True`` (``round.py --steal-lock``) takes it over anyway.
+    A same-host holder whose pid is dead is replaced.
+    """
     path = Path(run_dir_root) / "driver.lock"
+    me = {"pid": os.getpid(), "host": socket.gethostname(), "started": time.time()}
+    for _ in range(2):
+        try:
+            fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            if not steal:
+                _refuse_unless_stale(path)
+            path.unlink(missing_ok=True)
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(me, f)
+        atexit.register(_release, path, me["pid"])
+        return
+    raise DriverBusy(f"could not claim {path}")
+
+
+def _refuse_unless_stale(path: Path) -> None:
     try:
         held = json.loads(path.read_text(encoding="utf-8"))
-        pid = int(held["pid"])
-        if held.get("host") == socket.gethostname() and pid != os.getpid():
-            try:
-                os.kill(pid, 0)
-                return f"another driver (pid {pid}) holds {path}; refusing to start"
-            except ProcessLookupError:
-                pass
-            except PermissionError:
-                return f"another driver (pid {pid}) holds {path}; refusing to start"
+        pid, host = int(held["pid"]), held.get("host")
     except (OSError, ValueError, KeyError, TypeError):
+        raise DriverBusy(f"{path} exists and is unreadable; remove it or pass --steal-lock")
+    if host != socket.gethostname():
+        raise DriverBusy(f"{path} is held by pid {pid} on host {host!r}; cannot verify it is "
+                         "dead from here. Pass --steal-lock if you are sure.")
+    if pid == os.getpid():
+        return
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return
+    except PermissionError:
         pass
-    path.write_text(json.dumps({"pid": os.getpid(), "host": socket.gethostname(),
-                                "started": time.time()}), encoding="utf-8")
-    return None
+    raise DriverBusy(f"another driver (pid {pid}) holds {path}; refusing to start. "
+                     "If that pid is stale (recycled), pass --steal-lock.")
+
+
+def _release(path: Path, pid: int) -> None:
+    try:
+        if json.loads(path.read_text(encoding="utf-8")).get("pid") == pid:
+            path.unlink()
+    except (OSError, ValueError):
+        pass

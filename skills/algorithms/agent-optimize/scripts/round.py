@@ -1044,6 +1044,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "parent always gets fresh ones.")
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
+    p.add_argument("--steal-lock", action="store_true",
+                   help="take over $R/driver.lock even if its holder looks alive or is on "
+                        "another host (use only when that driver is known dead)")
     p.add_argument("--skip-screen-ladder", action="store_true",
                    help="run full-val on a candidate with no screen.py record for it. Unless "
                         "the run's frozen screening_structurally_uneconomical is true, each "
@@ -1141,14 +1144,14 @@ def _main(argv=None) -> int:
     project = Path(args.project)
     work = Path(args.run_dir) / "work"
     work.mkdir(parents=True, exist_ok=True)
-    busy = lineage.acquire_driver_lock(run_dir.root)
-    if busy:
-        print(json.dumps({"error": busy}, indent=2))
-        return 2
-
     best = run_dir.best_id
     if not best:
         print(json.dumps({"error": "no best_id in the run dir — run baseline first"}, indent=2))
+        return 2
+    try:
+        lineage.acquire_driver_lock(run_dir.root, steal=args.steal_lock)
+    except lineage.DriverBusy as e:
+        print(json.dumps({"error": str(e)}, indent=2))
         return 2
 
     tags = [t.strip() for t in args.candidates.split(",") if t.strip()]
@@ -1995,7 +1998,7 @@ def _main(argv=None) -> int:
     # One "gated" transition per candidate the full-val gate judged (#435). A node gated with
     # no screen carries the override that let it through, so `subset: null` is never silent.
     for r in out["candidates"]:
-        graph.append_node(run_dir, node_id=r["tag"], parents=node_parents.get(r["tag"]),
+        graph.append_node(run_dir, node_id=r["tag"], parents=node_parents.get(r["tag"], [best]),
                           status="gated", val_mean=r.get("reward"), gate=r,
                           screen_skip_justification=(
                               None if screened_by_tag.get(r["tag"], True) else
