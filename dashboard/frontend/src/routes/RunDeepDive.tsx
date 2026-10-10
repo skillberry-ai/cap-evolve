@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { api, LivePendingError } from '../lib/api'
+import { api, LivePendingError, STATIC_MODE } from '../lib/api'
 import { useRunStream } from '../lib/useRunStream'
 import { AppShell } from '../components/AppShell'
 import { Card } from '../components/ui/Card'
@@ -11,12 +11,15 @@ import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { RunHeader } from '../components/RunHeader'
 import { KpiStrip } from '../components/KpiStrip'
 import { BestCurveChart } from '../components/BestCurveChart'
-import { ParetoScatter, isMultiObjective } from '../components/ParetoScatter'
+import { OverviewObjectives } from '../components/OverviewObjectives'
+import { isMultiObjective } from '../components/ParetoScatter'
 import { ObjectiveTimeSeries } from '../components/ObjectiveTimeSeries'
+import { LineageTree } from '../components/LineageTree'
 import { CandidatesPanel } from '../components/CandidatesPanel'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
 import { IterationsDiff } from '../components/IterationsDiff'
+import { CapDiff } from '../components/CapDiff'
 import { MemoryPanel, NarrativePanel } from '../components/MemoryPanel'
 import { ConfigPanel } from '../components/ConfigPanel'
 import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
@@ -155,6 +158,9 @@ export function RunDeepDive() {
               ))}
             </div>
             <Skeleton className="h-72 w-full" />
+            <p className="text-center text-xs text-muted" role="status">
+              Loading run — reducing a large run's events can take 10+ seconds on first load.
+            </p>
           </div>
         )}
 
@@ -182,7 +188,7 @@ export function RunDeepDive() {
               summary={summary}
               liveEvents={stream.status === 'live' ? stream.count : 0}
             />
-            <KpiStrip summary={summary} />
+            <KpiStrip summary={summary} nodes={data.graph.nodes} />
             <Tabs tabs={tabs}>
               {(active) => (
                 <TabBody
@@ -220,8 +226,9 @@ function TabBody({
     case 'overview':
       return (
         <div className="space-y-5">
-          <BestCurveChart nodes={data.graph.nodes} />
-          {isMultiObjective(s) && <ParetoScatter nodes={data.graph.nodes} />}
+          <LineageTree graph={data.graph} selectedId={selectedCandidate} onSelectId={onSelectCandidate} />
+          <BestCurveChart nodes={data.graph.nodes} bestId={data.graph.best_id} />
+          <OverviewObjectives runId={runId} nodes={data.graph.nodes} summary={s} />
           {isMultiObjective(s) && <ObjectiveTimeSeries nodes={data.graph.nodes} summary={s} />}
           <PhasesTimeline detail={data} />
         </div>
@@ -329,7 +336,8 @@ function TabBody({
         />
       )
     case 'diffs':
-      return <IterationsDiff runId={runId} graph={data.graph} />
+      // /capdiff is a live-backend route; a static export keeps the per-candidate diff.
+      return STATIC_MODE ? <IterationsDiff runId={runId} graph={data.graph} /> : <CapDiff runId={runId} graph={data.graph} />
     case 'trajectories':
       return <Trajectories runId={runId} />
     case 'memory':

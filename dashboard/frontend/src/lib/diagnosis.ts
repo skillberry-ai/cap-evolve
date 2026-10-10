@@ -55,3 +55,25 @@ export function diagnosisTaskGroups(d: Diagnosis, outcomes?: Outcomes | null): T
 
   return groups.filter(g => g.tasks.length > 0)
 }
+
+export interface EditOutcome {
+  target: { n: number; fixed: number; broke: number }
+  rest: { n: number; fixed: number; broke: number }
+  /** True when the edit named target tasks and at least one of them was fixed. */
+  moved: boolean
+}
+
+/** Did the edit move the tasks it said it would (`edit.target_tasks`), vs the rest? Needs
+ *  `outcomes` (per-task fixed/broke vs parent); returns null without either input. */
+export function editOutcome(edit: { target_tasks?: string[] } | null | undefined, outcomes?: Outcomes | null): EditOutcome | null {
+  const targets = edit?.target_tasks ?? []
+  if (!targets.length || !outcomes) return null
+  const tset = new Set(targets)
+  const count = (ids: string[]) => ({
+    n: ids.length,
+    fixed: ids.filter(t => outcomes[t] === 'fixed').length,
+    broke: ids.filter(t => outcomes[t] === 'broke').length,
+  })
+  const target = count(targets)
+  return { target, rest: count(Object.keys(outcomes).filter(t => !tset.has(t))), moved: target.fixed > 0 }
+}

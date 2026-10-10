@@ -8,7 +8,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useState } from 'react'
 import type { GraphNode } from '../lib/types'
+import { bestSeen, isPartial } from '../lib/coverage'
 import { cumulativeBest, type CurvePoint } from '../lib/bestCurve'
 import { pct } from '../lib/format'
 import { prefersReducedMotion } from '../lib/motion'
@@ -28,8 +30,11 @@ const COLOR: Record<GraphNode['status'], string> = {
 }
 
 /** Per-iteration val scatter under the amber cumulative-best stair. */
-export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
-  const data = cumulativeBest(nodes)
+export function BestCurveChart({ nodes, bestId }: { nodes: GraphNode[]; bestId?: string | null }) {
+  // Screened / partial results are subset statistics: off the line by default.
+  const [includePartial, setIncludePartial] = useState(false)
+  const hidden = nodes.filter((n) => typeof n.val === 'number' && isPartial(n)).length
+  const data = cumulativeBest(nodes, bestId, includePartial)
   const reduce = prefersReducedMotion()
 
   if (data.length === 0) {
@@ -42,7 +47,8 @@ export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
     )
   }
 
-  const championBest = Math.max(...data.map((d) => d.best))
+  const champ = data.find((d) => d.isChampion)
+  const seen = bestSeen(nodes)
   const anyStderr = data.some((d) => d.stderr != null)
 
   return (
@@ -52,12 +58,19 @@ export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
           Val score per candidate, with the cumulative best
         </h3>
         <span className="tnum text-xs text-muted">
-          best <span className="text-accent">{pct(championBest)}</span>
+          champion <span className="text-accent">{champ ? `${champ.id} ${pct(champ.val)}` : '—'}</span>
+          {seen && champ && seen.id !== champ.id && <> · best seen <span className="text-foreground">{seen.id} {pct(seen.val)}</span></>}
           {anyStderr
             ? ' · hover a point (or open the data table) for ± SE'
             : ' · no stderr recorded for this run'}
         </span>
       </div>
+      {hidden > 0 && (
+        <label className="mb-1 flex items-center gap-1.5 text-xs text-muted">
+          <input type="checkbox" checked={includePartial} onChange={(e) => setIncludePartial(e.target.checked)} />
+          include {hidden} screened / partial candidate{hidden === 1 ? '' : 's'} (hollow diamonds, never on the best line)
+        </label>
+      )}
       <div style={{ width: '100%', height: 280 }}>
         <ResponsiveContainer>
           <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
@@ -104,6 +117,7 @@ export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
               <th className="py-1 pr-3 font-medium">iter</th>
               <th className="py-1 pr-3 font-medium">candidate</th>
               <th className="py-1 pr-3 font-medium">val ± SE</th>
+              <th className="py-1 pr-3 font-medium">coverage</th>
               <th className="py-1 font-medium">best</th>
             </tr>
           </thead>
@@ -116,6 +130,7 @@ export function BestCurveChart({ nodes }: { nodes: GraphNode[] }) {
                   {pct(d.val)}
                   {d.stderr != null ? ` ± ${d.stderr.toFixed(3)}` : ''}
                 </td>
+                <td className="py-1 pr-3">{d.badge ?? 'full'}</td>
                 <td className="py-1">{pct(d.best)}</td>
               </tr>
             ))}
@@ -138,6 +153,9 @@ function CandidateDot({ cx, cy, payload }: DotProps) {
     <g>
       {payload.isChampion ? (
         <Star cx={cx} cy={cy} />
+      ) : payload.badge ? (
+        // hollow diamond: a subset measurement, never a full val score
+        <polygon data-partial="true" points={`${cx},${cy - 6} ${cx + 6},${cy} ${cx},${cy + 6} ${cx - 6},${cy}`} fill="var(--bg)" stroke={COLOR[payload.status]} strokeWidth={2} />
       ) : payload.status === 'indecisive' ? (
         // hollow: the gate refused to judge, so there is no verdict to fill in
         <circle cx={cx} cy={cy} r={4.5} fill="var(--bg)" stroke={COLOR.indecisive} strokeWidth={2} />
@@ -165,6 +183,7 @@ function CurveTooltip({ active, payload }: { active?: boolean; payload?: Array<{
     <div className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs shadow-lg">
       <div className="font-medium">{p.id}</div>
       <div className="tnum text-muted">
+        {p.badge && <span className="mr-1 rounded border border-indecisive px-1 text-[10px] text-indecisive">{p.badge}</span>}
         val <span className="text-foreground">{pct(p.val)}</span>
         {p.stderr != null && <span> ± {p.stderr.toFixed(3)}</span>} · best{' '}
         <span className="text-accent">{pct(p.best)}</span>

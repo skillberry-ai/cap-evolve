@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import type { RunSummaryDetail } from '../lib/types'
+import type { GraphNode, RunSummaryDetail } from '../lib/types'
+import { bestSeen, coverageBadge } from '../lib/coverage'
 import { compactNum, duration, isMeasured, pct, usd } from '../lib/format'
 import { fadeUpItem, staggerContainer } from '../lib/motion'
 import { CountUp } from './CountUp'
@@ -65,7 +66,12 @@ const signed = (v: number | null | undefined, digits = 3) =>
  * grouping (not colour): four large outcome tiles, then a single accounting row where an
  * unrecorded measurement says "not recorded" instead of showing a confident zero.
  */
-export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
+export function KpiStrip({ summary, nodes }: { summary: RunSummaryDetail; nodes?: GraphNode[] }) {
+  // With nodes: a CHAMPION tile (best_id and ITS OWN val) and, when different, a separate
+  // BEST VAL SEEN tile with its own id -- never best_id paired with another candidate's val.
+  const champ = nodes && summary.best_id ? nodes.find((n) => n.id === summary.best_id) : undefined
+  const seen = nodes ? bestSeen(nodes) : null
+  const split = !!champ && champ.val != null && seen != null && seen.id !== champ.id && seen.val !== champ.val
   const c = summary.counts
   const delta = summary.delta_abs ?? null
   const nVal = summary.splits?.val ?? summary.tasks?.length ?? null
@@ -113,14 +119,34 @@ export function KpiStrip({ summary }: { summary: RunSummaryDetail }) {
           <CountUp value={summary.baseline_val} format={pct} />
         </Kpi>
 
-        <Kpi
-          label="best val"
-          tone="text-accent"
-          hint={summary.best_id ? `candidate ${summary.best_id}` : undefined}
-          title="Best val score any accepted candidate reached. Selection metric, not the result."
-        >
-          <CountUp value={summary.best_val} format={pct} />
-        </Kpi>
+        {split ? (
+          <>
+            <Kpi
+              label="champion"
+              tone="text-accent"
+              hint={`candidate ${champ!.id}${coverageBadge(champ!) ? ` · ${coverageBadge(champ!)}` : ''}`}
+              title="The candidate the run selected (best_id), with its OWN val score."
+            >
+              <CountUp value={champ!.val} format={pct} />
+            </Kpi>
+            <Kpi
+              label="best val seen"
+              hint={`candidate ${seen!.id}`}
+              title="Highest full-val score of any accepted candidate -- may differ from the selected champion."
+            >
+              <CountUp value={seen!.val} format={pct} />
+            </Kpi>
+          </>
+        ) : (
+          <Kpi
+            label="best val"
+            tone="text-accent"
+            hint={summary.best_id ? `candidate ${summary.best_id}` : undefined}
+            title="Best val score any accepted candidate reached. Selection metric, not the result."
+          >
+            <CountUp value={champ?.val ?? summary.best_val} format={pct} />
+          </Kpi>
+        )}
 
         <Kpi
           label="Δ val vs baseline"

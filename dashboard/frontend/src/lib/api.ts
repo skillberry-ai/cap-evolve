@@ -10,6 +10,7 @@
 import type {
   CandidateDiff,
   CandidateFile,
+  CapDiffResult,
   CompareResult,
   FileResult,
   GitCommit,
@@ -17,6 +18,7 @@ import type {
   MemoryResult,
   RolloutDetail,
   RolloutRow,
+  RunObjectives,
   RunDetail,
   RunSummary,
   TreeResult,
@@ -117,6 +119,15 @@ export const api = {
       `/api/runs/${encodeURIComponent(id)}/diff/${encodeURIComponent(candidate)}`,
       signal,
     ),
+
+  capdiff: (id: string, target: string, base: string, signal?: AbortSignal) =>
+    getJSON<CapDiffResult>(
+      `/api/runs/${encodeURIComponent(id)}/capdiff?target=${encodeURIComponent(target)}&base=${encodeURIComponent(base)}`,
+      signal,
+    ),
+
+  objectives: (id: string, signal?: AbortSignal) =>
+    getJSON<RunObjectives>(`/api/runs/${encodeURIComponent(id)}/objectives`, signal),
 
   memory: (id: string, signal?: AbortSignal) =>
     getJSON<MemoryResult>(`/api/runs/${encodeURIComponent(id)}/memory`, signal),

@@ -2,7 +2,7 @@
  *
  * A point is non-dominated when no OTHER point beats it on both axes at once:
  * reward (maximize) and cost (minimize). Ties on both axes do not dominate each other. */
-import type { GraphNode } from './types'
+import type { GraphNode, RunObjectives } from './types'
 
 export interface ParetoPoint {
   id: string
@@ -10,6 +10,8 @@ export interface ParetoPoint {
   reward: number
   status: GraphNode['status']
   parent: string | null
+  /** gate outcome was `tradeoff` (cheaper/slower mix, no clear win) -- drawn hollow. */
+  tradeoff?: boolean
 }
 
 /** Candidate nodes with both a val (reward) and a cost_usd, as scatter points.
@@ -20,6 +22,28 @@ export function toParetoPoints(nodes: GraphNode[]): ParetoPoint[] {
     .filter((n) => n.val != null && n.cost_usd != null)
     .map((n) => ({ id: n.id, cost: n.cost_usd as number, reward: n.val as number,
                    status: n.status, parent: n.parent }))
+}
+
+/** x-axes selectable once `/objectives` data is available (all minimize). */
+export const COST_AXES = ['cost_overall', 'cost_matched_success', 'cost_per_success', 'latency_s'] as const
+export type CostAxis = (typeof COST_AXES)[number]
+
+/** v2 `gate_verdict` is `{stage, outcome, reason}`; older runs have a plain verdict string. */
+export function gateOutcome(n: GraphNode): string | null {
+  const gv = n.gate_verdict as unknown
+  if (typeof gv === 'string') return gv
+  const o = (gv as { outcome?: unknown } | null)?.outcome
+  return typeof o === 'string' ? o : null
+}
+
+/** Reward vs a chosen declared cost axis, from the per-trial `/objectives` arm stats. */
+export function toObjectivePoints(nodes: GraphNode[], obj: RunObjectives, axis: CostAxis): ParetoPoint[] {
+  return nodes.flatMap((n) => {
+    const r = obj.candidates[n.id]
+    if (!r || r.reward == null || r[axis] == null) return []
+    return [{ id: n.id, cost: r[axis] as number, reward: r.reward, status: n.status, parent: n.parent,
+              tradeoff: gateOutcome(n) === 'tradeoff' }]
+  })
 }
 
 /** Ids of the non-dominated (Pareto-optimal) points: maximize reward, minimize cost. */

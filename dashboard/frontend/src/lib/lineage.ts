@@ -1,5 +1,6 @@
 /** Lay out the candidate graph as a best-path spine with branches hanging below. */
-import type { RunGraph, GraphNode } from './types'
+import type { RunGraph, GraphNode, EvalState, Coverage } from './types'
+import { parentOf } from './coverage'
 
 export interface LaidNode {
   id: string
@@ -14,6 +15,9 @@ export interface LaidNode {
   clusterIds?: string[]
   mergeOf?: string[]
   changeType?: string | null
+  evalState?: EvalState
+  coverage?: Coverage | null
+  parents?: string[]
 }
 
 export interface LineageLayout {
@@ -27,16 +31,18 @@ export interface LineageLayout {
  * below, ordered by depth. Deterministic and dependency-free for unit testing. */
 export function layoutLineage(graph: RunGraph): LineageLayout {
   const byId = new Map(graph.nodes.map((n) => [n.id, n]))
+  // schema v2 `parents[]` first; a self-parent (backend artifact) is ignored.
+  const par = (n: GraphNode) => parentOf(n)
 
   // Depth (column) from root via parent chain.
   const depthOf = (id: string): number => {
     let d = 0
     let cur = byId.get(id)
     const seen = new Set<string>()
-    while (cur?.parent && byId.has(cur.parent) && !seen.has(cur.id)) {
+    while (cur && par(cur) && byId.has(par(cur)!) && !seen.has(cur.id)) {
       seen.add(cur.id)
       d += 1
-      cur = byId.get(cur.parent)
+      cur = byId.get(par(cur)!)
     }
     return d
   }
@@ -48,7 +54,7 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
   while (cur && !guard.has(cur.id)) {
     spine.add(cur.id)
     guard.add(cur.id)
-    cur = cur.parent ? byId.get(cur.parent) : undefined
+    cur = par(cur) ? byId.get(par(cur)!) : undefined
   }
 
   // Assign rows: spine = 0; branches get the next free lane per column.
@@ -68,7 +74,7 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
     }
     return {
       id: n.id,
-      parent: n.parent,
+      parent: par(n),
       status: n.status,
       val: n.val,
       reason: n.reason ?? null,
@@ -79,6 +85,9 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
       clusterIds: n.cluster_ids,
       mergeOf: n.merge_of,
       changeType: n.change_type ?? null,
+      evalState: n.eval_state,
+      coverage: n.coverage ?? null,
+      parents: n.parents,
     }
   })
 
@@ -95,7 +104,8 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
   // the normal derive edge above — never on the spine (a merge result's spine parent is
   // `parent`, these are the extra lineage the spine doesn't follow).
   for (const n of ordered) {
-    for (const mergeParent of n.merge_of ?? []) {
+    // schema v2 `parents[]` (merge results have 2+) and legacy `merge_of`, de-duplicated.
+    for (const mergeParent of new Set([...(n.merge_of ?? []), ...(n.parents ?? [])])) {
       if (mergeParent !== n.parent && byIdLaid.has(mergeParent)) {
         edges.push({ from: mergeParent, to: n.id, onSpine: false, merge: true })
       }

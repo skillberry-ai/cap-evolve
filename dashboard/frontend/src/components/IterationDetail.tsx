@@ -249,7 +249,7 @@ export function IterationDetail({
         )}
 
         {activeTab === 'diagnosis' && candidate.diagnosis && (
-          <DiagnosisFlow diagnosis={candidate.diagnosis} outcomes={candidate.outcomes} />
+          <DiagnosisFlow diagnosis={candidate.diagnosis} outcomes={candidate.outcomes} edit={candidate.edit} />
         )}
 
         {activeTab === 'prompt-map' && candidate.prompt_map && (

@@ -8,8 +8,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { GraphNode, RunSummaryDetail } from '../lib/types'
-import { toParetoPoints, paretoFrontier, normalizePoints, type ParetoPoint,
+import type { GraphNode, RunObjectives, RunSummaryDetail } from '../lib/types'
+import { toParetoPoints, toObjectivePoints, COST_AXES, paretoFrontier, normalizePoints, type CostAxis, type ParetoPoint,
   type NormalizedParetoPoint } from '../lib/pareto'
 import { pct, usd } from '../lib/format'
 import { Card } from './ui/Card'
@@ -46,9 +46,11 @@ const COLOR: Record<GraphNode['status'], string> = {
 /** Reward (val) vs cost scatter: baseline + every candidate, non-dominated points
  * (the current Pareto frontier) drawn as filled stars, dominated points as plain dots.
  * Only rendered by the caller when `isMultiObjective()` is true. */
-export function ParetoScatter({ nodes }: { nodes: GraphNode[] }) {
+export function ParetoScatter({ nodes, objectives }: { nodes: GraphNode[]; objectives?: RunObjectives }) {
   const [normalized, setNormalized] = useState(false)
-  const points = toParetoPoints(nodes)
+  // With /objectives data the cost axis is selectable; without it, today's cost_usd view.
+  const [axis, setAxis] = useState<CostAxis>('cost_overall')
+  const points = objectives ? toObjectivePoints(nodes, objectives, axis) : toParetoPoints(nodes)
   if (points.length === 0) {
     return (
       <Card>
@@ -71,6 +73,15 @@ export function ParetoScatter({ nodes }: { nodes: GraphNode[] }) {
           <span className="text-xs text-muted">
             {frontierPts.length} on the current frontier · {dominatedPts.length} dominated
           </span>
+          {objectives && (
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              x axis
+              <select aria-label="cost axis" value={axis} onChange={(e) => setAxis(e.target.value as CostAxis)}
+                className="rounded border border-border bg-surface-2 px-1 py-0.5">
+                {COST_AXES.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </label>
+          )}
           {/* Utopia/nadir normalization (MOO survey eq. 7) — raw units stay the default;
               this is an additive toggle, never a replacement (#684 item 9). */}
           <label className="flex items-center gap-1.5 text-xs text-muted">
@@ -84,7 +95,7 @@ export function ParetoScatter({ nodes }: { nodes: GraphNode[] }) {
         </div>
       </div>
       <div style={{ width: '100%', height: 280 }}>
-        <ScatterChartWrap frontierPts={frontierPts} dominatedPts={dominatedPts} normalized={normalized} />
+        <ScatterChartWrap frontierPts={frontierPts} dominatedPts={dominatedPts} normalized={normalized} axis={objectives ? axis : undefined} />
       </div>
     </Card>
   )
@@ -94,11 +105,14 @@ function ScatterChartWrap({
   frontierPts,
   dominatedPts,
   normalized,
+  axis,
 }: {
   frontierPts: NormalizedParetoPoint[]
   dominatedPts: NormalizedParetoPoint[]
   normalized: boolean
+  axis?: CostAxis
 }) {
+  const isTime = axis === 'latency_s'
   const xKey = normalized ? 'costNorm' : 'cost'
   const yKey = normalized ? 'rewardNorm' : 'reward'
   return (
@@ -112,9 +126,9 @@ function ScatterChartWrap({
           domain={normalized ? [0, 1] : undefined}
           stroke="var(--muted)"
           tick={{ fontSize: 11 }}
-          tickFormatter={(v: number) => (normalized ? v.toFixed(2) : usd(v))}
+          tickFormatter={(v: number) => (normalized ? v.toFixed(2) : isTime ? `${v.toFixed(1)}s` : usd(v))}
           label={{
-            value: normalized ? 'cost (0=utopia, 1=nadir)' : 'cost ($)',
+            value: normalized ? 'cost (0=utopia, 1=nadir)' : axis ? `${axis}${isTime ? ' (s)' : ' ($)'}` : 'cost ($)',
             position: 'insideBottom', offset: -4, fontSize: 10, fill: 'var(--muted)',
           }}
         />
@@ -143,7 +157,9 @@ interface DotProps {
 
 function FrontierDot({ cx, cy, payload }: DotProps) {
   if (cx == null || cy == null || !payload) return null
-  return <circle cx={cx} cy={cy} r={5.5} fill={COLOR[payload.status]} stroke="var(--accent)" strokeWidth={2} />
+  // Tradeoff outcomes are hollow: neither a win nor a loss, so they must not read as filled.
+  return <circle data-tradeoff={payload.tradeoff ? 'true' : undefined} cx={cx} cy={cy} r={5.5}
+    fill={payload.tradeoff ? 'none' : COLOR[payload.status]} stroke={payload.tradeoff ? COLOR[payload.status] : 'var(--accent)'} strokeWidth={2} />
 }
 
 function ParetoTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ParetoPoint }> }) {

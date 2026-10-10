@@ -1,0 +1,47 @@
+{
+  "_note": "Hand-trimmed to the response shapes of PR #728 (reduce_run graph/summary.decisions, /objectives, /capdiff) using the recorded run_20261008_150326 node ids and coverage (cand_9 = screened 8/30).",
+  "graph": {
+    "root": "seed",
+    "best_id": "cand_1",
+    "nodes": [
+      {"id": "seed", "parent": null, "parents": [], "children": ["cand_1"], "status": "seed", "val": 0.59, "iteration": 0, "eval_state": "full", "coverage": {"n_tasks": 30, "n_val_tasks": 30, "full": true}, "per_task": {"3": 1, "7": 1, "22": 0}, "per_task_metrics": {"3": {"cost": 0.010}, "7": {"cost": 0.020}, "22": {"cost": 0.030}}},
+      {"id": "cand_1", "parent": "seed", "parents": ["seed"], "children": ["cand_3", "cand_4", "cand_5"], "status": "accepted", "val": 0.66, "iteration": 1, "best_so_far": true, "eval_state": "full", "coverage": {"n_tasks": 30, "n_val_tasks": 30, "full": true}, "per_task": {"3": 1, "7": 1, "22": 1}, "per_task_metrics": {"3": {"cost": 0.012}, "7": {"cost": 0.024}, "22": {"cost": 0.030}}, "matched_task_ids": ["3", "7"], "edit": {"hypothesis": "Add a cancellation-policy checklist", "target_tasks": ["22"], "cluster_ids": ["c1"]}, "outcomes": {"22": "fixed", "3": "still_passing", "7": "still_passing"}},
+      {"id": "cand_3", "parent": "cand_1", "parents": ["cand_1"], "children": [], "status": "indecisive", "val": 0.64, "iteration": 2, "eval_state": "partial", "coverage": {"n_tasks": 12, "n_val_tasks": 30, "full": false}, "per_task": {"3": 1, "7": 0}, "per_task_metrics": {"3": {"cost": 0.014}, "7": {"cost": 0.025}}, "matched_task_ids": ["3"], "edit": {"hypothesis": "Tighten tool-call retries", "target_tasks": ["7"]}, "outcomes": {"7": "broke", "3": "still_passing"}},
+      {"id": "cand_4", "parent": "cand_1", "parents": ["cand_1"], "children": [], "status": "rejected", "val": null, "iteration": 3, "eval_state": "screened", "coverage": {"n_tasks": 8, "n_val_tasks": 30, "full": false}},
+      {"id": "cand_5", "parent": "cand_1", "parents": ["cand_1"], "children": [], "status": "indecisive", "val": null, "iteration": 4, "eval_state": "unevaluated", "coverage": null},
+      {"id": "cand_6", "parent": "cand_1", "parents": ["cand_1", "cand_3"], "children": [], "status": "accepted", "val": 0.7, "iteration": 5, "eval_state": "full", "coverage": {"n_tasks": 30, "n_val_tasks": 30, "full": true}, "merge_base": "seed", "gate_verdict": {"stage": "ordering", "outcome": "tradeoff", "reason": "cheaper, same reward"}}
+    ]
+  },
+  "decisions": [
+    {"t": 10, "id": "cand_1", "decision": "propose", "evidence": {}, "rationale": "cluster c1: cancellation failures", "optimizer_usd": 0.42},
+    {"t": 20, "id": "cand_4", "decision": "screen", "evidence": {"n": 8, "mean_delta": -0.12}, "rationale": "screen on 8 tasks", "optimizer_usd": 0.01},
+    {"t": 30, "id": "cand_4", "decision": "kill", "evidence": {"z": -2.1}, "rationale": "decisively worse on screen", "optimizer_usd": null},
+    {"t": 40, "id": "cand_3", "decision": "grow", "evidence": {"n_tasks": 12}, "rationale": "evidence already decisive", "optimizer_usd": 0.0},
+    {"t": 50, "id": "cand_6", "decision": "merge", "evidence": {"parents": ["cand_1", "cand_3"]}, "rationale": "combine donors", "optimizer_usd": 0.3}
+  ],
+  "objectives": {
+    "theta": 1.0,
+    "candidates": {
+      "seed": {"parent": null, "optimizer_usd": null, "reward": 0.59, "cost_overall": 0.020, "cost_matched_success": 0.015, "latency_s": 12.0},
+      "cand_1": {"parent": "seed", "optimizer_usd": 0.42, "reward": 0.66, "cost_overall": 0.022, "cost_matched_success": 0.017, "latency_s": 13.0},
+      "cand_3": {"parent": "cand_1", "optimizer_usd": 0.1, "reward": 0.64, "cost_overall": 0.024, "cost_matched_success": 0.019, "latency_s": 15.0},
+      "cand_6": {"parent": "cand_1", "optimizer_usd": 0.3, "reward": 0.7, "cost_overall": 0.018, "cost_matched_success": 0.014, "latency_s": null}
+    }
+  },
+  "capdiff_merge": {
+    "target": "cand_6", "mode": "parent", "base": "seed", "parents": ["cand_1", "cand_3"], "merge": true,
+    "files": [{"path": "SKILL.md", "added": 2, "removed": 1, "rows": [
+      {"t": "hunk", "l": "@@ -1 +1 @@"},
+      {"t": "add", "l": "Always confirm cancellation policy.", "c": "inherited:cand_1"},
+      {"t": "add", "l": "Retry a failed tool call once.", "c": "inherited:cand_3"},
+      {"t": "add", "l": "Escalate when unsure.", "c": "new"},
+      {"t": "hunk", "l": "@@ reverted parent change from cand_3 @@"},
+      {"t": "del", "l": "Never retry.", "c": "reverted"}
+    ]}]
+  },
+  "capdiff_ancestry": {
+    "target": "cand_6", "mode": "ancestry",
+    "edges": [{"from": "seed", "to": "cand_1", "base": "seed", "parents": ["seed"], "merge": false, "files": [{"path": "SKILL.md", "added": 1, "removed": 0, "rows": [{"t": "add", "l": "Always confirm cancellation policy."}]}]}],
+    "blame": {"SKILL.md": [{"start": 1, "end": 1, "by": "seed"}, {"start": 2, "end": 2, "by": "cand_1"}]}
+  }
+}

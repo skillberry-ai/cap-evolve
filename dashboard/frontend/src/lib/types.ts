@@ -350,6 +350,95 @@ export interface GraphNode {
   outcomes?: Outcomes | null
   /** Prompt map metadata for capability files. */
   prompt_map?: PromptMap | null
+  /** Run schema v2 (docs/RUN_SCHEMA_V2.md), filled by dashboard_views.enrich — all
+   *  optional: an old run still gets eval_state/coverage derived from its events. */
+  eval_state?: EvalState
+  coverage?: Coverage | null
+  /** Every parent (merge results have 2+); `parent` stays parents[0]. */
+  parents?: string[]
+  merge_base?: string | null
+  base_for_eval?: string | null
+  edit?: NodeEdit | null
+  vs_parent?: VsParent | null
+  matched_task_ids?: string[]
+  decisions?: OptimizerDecision[]
+}
+
+export type EvalState = 'unevaluated' | 'screened' | 'partial' | 'full'
+
+export interface Coverage {
+  split?: string
+  task_ids?: string[]
+  n_tasks: number
+  n_val_tasks: number
+  full?: boolean
+  stage?: string
+}
+
+export interface NodeEdit {
+  change_type?: string
+  cluster_ids?: string[]
+  target_tasks?: string[]
+  hypothesis?: string
+  files_changed?: string[]
+}
+
+export interface VsParent {
+  reward?: { d: number | null; se: number | null; z: number | null; n: number | null }
+  cost_matched?: {
+    d: number | null; rel: number | null; se: number | null; z: number | null
+    n_matched?: number; coverage?: number | null; matched_task_ids?: string[]
+  }
+  ecps?: { d: number | null; rel: number | null }
+  latency?: { d: number | null; rel: number | null }
+}
+
+/** One optimizer decision (summary.decisions / node.decisions). */
+export interface OptimizerDecision {
+  t: number | null
+  id: string
+  decision: string
+  evidence: Record<string, unknown>
+  rationale?: string | null
+  optimizer_usd?: number | null
+}
+
+/** GET /api/runs/{id}/objectives -- per-candidate arm stats from per-trial rollouts. */
+export interface ObjectivesRow {
+  parent: string | null
+  eval_state?: EvalState
+  optimizer_usd: number | null
+  reward?: number | null
+  cost_overall?: number | null
+  cost_matched_success?: number | null
+  cost_per_success?: number | null
+  latency_s?: number | null
+  n_tasks?: number
+  n_trials?: number
+  vs_parent?: VsParent | null
+}
+export interface RunObjectives {
+  theta: number
+  candidates: Record<string, ObjectivesRow>
+}
+
+/** Merge-hunk class from /capdiff: inherited:<parent>[,<parent>] | inherited:both | reverted | new. */
+export type MergeClass = string
+export interface CapDiffRow { t: 'add' | 'del' | 'ctx' | 'hunk'; l: string; c?: MergeClass }
+export interface CapDiffFile { path: string; added: number; removed: number; rows: CapDiffRow[] }
+export interface CapDiffEdge {
+  from?: string; to?: string; base: string; parents: string[]; merge: boolean; files: CapDiffFile[]
+}
+export interface CapDiffResult {
+  target: string
+  mode: string
+  base?: string
+  parents?: string[]
+  merge?: boolean
+  files?: CapDiffFile[]
+  /** ancestry mode only */
+  edges?: CapDiffEdge[]
+  blame?: Record<string, { start: number; end: number; by: string }[]>
 }
 
 export interface RunGraph {
@@ -376,6 +465,8 @@ export interface RunSummaryDetail {
   capabilities?: RunCapabilities
   splits?: SplitsInfo | null
   gate_decisions?: GateDecision[]
+  /** Optimizer decisions in event order (Run schema v2). */
+  decisions?: OptimizerDecision[]
   cost_ledger?: CostLedger
   log?: LogRow[]
   algo_extra?: AlgoExtra
