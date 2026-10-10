@@ -12,7 +12,7 @@ Hypothesis file (`--hypothesis-file`, JSON):
 `predicted_tasks` must lie inside the chosen clusters. Same clusters + scope as a pruned hypothesis is
 flagged `repeat_of`: change the FORM (tool-edit-lessons.md), not the wording.
 
-Status in the digest: open, attempted, fixed, stuck. After two `stuck` attempts read a raw TRAIN trace
+Status in the digest: open, attempted, fixed, stuck. After two `stuck` attempts re-read raw full traces
 (never test) before a third.
 
 Per-task pass rate k/n: <= 0.3 real defect (aim here); 0.4-0.7 unstable (remove ambiguity); >= 0.8 noise, leave alone.

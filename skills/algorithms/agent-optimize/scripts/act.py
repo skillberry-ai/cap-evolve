@@ -175,7 +175,8 @@ def propose(a, ctx):
     run_dir, tag = ctx.run_dir, a.tag
     ctx.check_budget(a)
     best = ctx.champion()
-    parent = a.parent or best
+    saved = ctx.work(tag).parent / f".parent_{tag}"      # 1st call records it: the 2nd must not re-parent
+    parent = a.parent or (saved.read_text().strip() if saved.is_file() else best)
     if not ctx.cfg["dag_parallel"] and parent != best:
         ctx.warn(f"dag_parallel is off: parenting on best_id {best!r}, not {parent!r}")
         parent = best
@@ -184,6 +185,7 @@ def propose(a, ctx):
         rc, out, err = sh([PY, HERE / "prepare_candidate.py", "-r", ctx.root, "-t", tag, "--parent", parent])
         if rc != 0:
             raise Refused("prepare_candidate failed", output=jload(out) or out, stderr=err[-400:])
+        saved.write_text(parent)
         return 0, {"stage": "proposed", "parent": parent, "work": str(work),
                    "next": f"edit {work} (one coherent edit for ONE hypothesis), then re-run: "
                            f"act.py propose {tag} --parent {parent} --hypothesis-file H.json"}
@@ -253,6 +255,8 @@ def probe_ids(a, ctx, tag, parent, val_ids) -> tuple[list[str], str]:
         P = digest.pair(ctx.run_dir, tag, parent, val_ids)
         picks = sched.pick(P, [max(0.0, a.n - n) for n in P.nc], [0.0] * P.T, a.budget)
         return sorted({val_ids[i] for _, i in picks}), "posterior allocator (active_eval)"
+    if a.auto:
+        ctx.warn("probe --auto is running FULL val: " + digest.ENGINE_FIX)
     return list(val_ids), "full val" + ("" if ctx.cfg["active_eval"] else " (active_eval off)")
 
 

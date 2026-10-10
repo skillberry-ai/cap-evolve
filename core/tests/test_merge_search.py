@@ -220,7 +220,7 @@ def test_the_merge_is_attempted_via_existing_integrate_py_machinery(tmp_path):
     assert ab["tag"] in out["ready_for_gate"]
 
     # mechanisms.jsonl records the merge as a first-class finding, same ledger any hand-driven
-    # merge would use (per-task-fanout.md), not a side channel only this script can read.
+    # merge would use (docs/archive/agent-optimize-legacy/per-task-fanout.md), not a side channel only this script can read.
     ledger = [json.loads(ln) for ln in
              (run_dir.root / "mechanisms.jsonl").read_text().splitlines() if ln.strip()]
     merge_rows = [r for r in ledger if r["owner"] == ab["tag"]]

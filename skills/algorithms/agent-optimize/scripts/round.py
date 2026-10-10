@@ -627,7 +627,7 @@ def keeps_parent_gain(merge_payload: dict, parent_payload: dict) -> bool:
 def merge_canaries(parent_per_task: list, union_ids: list[str], seed: int) -> list[str]:
     """Fresh regression canaries for a merge screen, drawn from the WHOLE suite.
 
-    per-task-fanout.md's rule: a canary set that only covers what the branches aimed at
+    docs/archive/agent-optimize-legacy/per-task-fanout.md's rule: a canary set that only covers what the branches aimed at
     cannot catch what the merge hit by accident. Tasks the parent passes that neither
     parent's screen covered, seeded, about a third of the union's size (screen.py's own
     holdout fraction).

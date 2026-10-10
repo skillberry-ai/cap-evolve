@@ -153,7 +153,7 @@ def test_agent_optimize_reference_pointers_are_not_empty_promises():
                        .read_text(encoding="utf-8").lower().split())
     if "sign test" in body:
         assert "sign test" in lessons, \
-            "SKILL.md points at measured-lessons.md for the sign test; it is not there"
+            "SKILL.md points at stats.md for the sign test; it is not there"
 
 
 # ---- #665 ws3: SKILL.md's rewritten loop must be mechanically followable -------

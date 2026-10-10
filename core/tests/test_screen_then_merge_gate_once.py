@@ -158,7 +158,7 @@ def test_two_disjoint_siblings_screen_survive_merge_and_gate_exactly_once(tmp_pa
     assert pre_tags == set(), f"screening must not itself pay for a full-val eval: {pre_tags}"
 
     # 2. Merge the two disjoint screen-survivors into ONE candidate — the required step
-    #    before gating, per SKILL.md step 2 / algorithm.md's screen-then-merge section.
+    #    before gating, per docs/archive/agent-optimize-legacy/legacy-SKILL.md step 2 / algorithm.md's screen-then-merge section.
     for tag, tids in (("cand_1", ["t0", "t1"]), ("cand_2", ["t2", "t3"])):
         _run([sys.executable, str(SCRIPTS / "mechanisms.py"), "add",
               "--run-dir", str(run_dir.root), "--owner", tag, "--status", "proposed",

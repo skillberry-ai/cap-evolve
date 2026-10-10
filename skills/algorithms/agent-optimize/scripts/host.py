@@ -83,6 +83,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -91,11 +92,13 @@ from datetime import datetime
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
+from cap_evolve import optimizer_config
 import meter
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
 SKILLS = SKILL_DIR.parents[1]
+LEGACY_DOC = SKILL_DIR.parents[2] / "docs/archive/agent-optimize-legacy/legacy-SKILL.md"
 RUN_OPTIMIZER = SKILLS / "optimizers" / "run-optimizer" / "scripts" / "run.py"
 REGISTRY = SKILLS / "optimizers" / "registry.yaml"
 
@@ -539,13 +542,16 @@ lacks. Noise sd is ~0.05: never re-test a within-noise delta. Never view test tr
 
 def _new_engine_briefing(text: str, spec: dict) -> str:
     """Legacy briefing unless the new engine (dag_parallel AND active_eval) is on."""
-    from cap_evolve import optimizer_config
     if not optimizer_config.new_engine(spec):
-        return text
+        # legacy loop: its sections ("Agent-mode loop", "Phase 0", "Stop & seal") live in the archive
+        return re.sub(r"(?<![/\w-])SKILL\.md", "legacy-SKILL.md", text)
     a = text.index("## Default to 3+ candidates per round")
     b = text.index("## Your stop condition")
     text = text[:a] + _NEW_LOOP + text[b:]
     text = text.replace('its "Agent-mode loop" section', 'its "The loop" section')
+    text = text.replace("step, including Phase 0.", "step, including Setup.")
+    text = text.replace("SKILL.md's Phase 0 says", "SKILL.md's Setup says")
+    text = text.replace('"Stop & seal" section', '"Finalize" section')
     text = text.replace("Finish with `measure.py` (which seals test exactly\n   once)",
                         "Finish with `act.py finalize` (which seals test exactly\n   once)")
     return text.replace("measure.py", "act.py finalize")
@@ -569,7 +575,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     surface = _surface_section(_editable_files(run_dir, project, spec))
     guidance = _shared_blocks(ctx, run_dir, context) if ctx is not None else ""
     arm_block = _arm_section(arm)
-    skill_md = SKILL_DIR / "SKILL.md"
+    skill_md = SKILL_DIR / "SKILL.md" if optimizer_config.new_engine(spec) else LEGACY_DOC
     helpers = HERE
     # Quoted from the constant that actually sets BASH_*_TIMEOUT_MS below, so the briefing
     # cannot promise a ceiling the env does not grant.
