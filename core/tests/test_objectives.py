@@ -162,7 +162,7 @@ def test_reward_undetermined_is_indecisive_never_accept():
 def test_partial_credit_trial_counts_in_reward_and_E_but_not_in_matched_set():
     P = arm({"a": [(1.0, 10.0)] * 2, "b": [(0.5, 4.0)] * 2})
     C = arm({"a": [(1.0, 12.0)] * 2, "b": [(0.5, 5.0)] * 2})
-    theta = ob.success_theta(ob.GateCfg(), P, C)
+    theta = ob.success_theta(ob.GateCfg())
     assert theta == pytest.approx(0.8)
     M = ob.matched_cost(P, C, theta)
     assert M["tasks"] == ["a"]                              # the 0.5 task is excluded from M
@@ -312,3 +312,85 @@ def test_archive_per_task_survives_save_load_and_supports_pairwise_matched_compa
     m = cand.matched_vs(parent)
     assert m["rel"] == pytest.approx(0.30, abs=0.03) and m["n"] == 14
     assert "per_task" not in ArchivePoint("x", {"reward": 1}).to_dict()   # legacy serialisation unchanged
+
+
+# ---- review fixes (#724): sequential validity, gaming, missing cost, shedding -----------------
+
+def _pool():
+    import collections
+    fx = json.loads(FIX.read_text())
+    pool = collections.defaultdict(list)
+    for tag in ("ctl_null_i0", "ctl_null_i0r1"):       # byte-identical replicates = a true null
+        for r in fx[tag]:
+            pool[str(r[0])].append(r)
+    return pool
+
+
+def _bootstrap_looks(adv=None, n=300, kmax=8, seed=1):
+    """Fraction of simulations that EVER accept when the rule is applied at every k=2..kmax.
+    adv = (p_fail, pass_cost_mult, fail_cost_mult): an adversary failing solved trials expensively."""
+    pool, rng = _pool(), random.Random(seed)
+    tasks = sorted(pool)
+    ever = 0
+    for _ in range(n):
+        P, C, hit = [], [], False
+        for k in range(1, kmax + 1):
+            for t in tasks:
+                a, b = rng.choice(pool[t]), rng.choice(pool[t])
+                P.append(TrialRec(t, k, a[2], a[3], a[4], 1.0))
+                if adv and b[2] >= 0.8 and rng.random() < adv[0]:
+                    C.append(TrialRec(t, k, 0.0, b[3] * adv[2], b[4], 1.0))
+                else:
+                    C.append(TrialRec(t, k, b[2], b[3] * (adv[1] if adv and b[2] >= 0.8 else 1.0), b[4], 1.0))
+            if k >= 2 and not hit and decide_reward_gated(P, C).accept:
+                hit = True
+        ever += hit
+    return ever / n
+
+
+def test_cumulative_false_accept_over_every_checkpoint_on_null_pairs_is_at_most_5pct():
+    assert _bootstrap_looks() <= 0.05          # reviewer measured 19.8% before alpha-spending
+
+
+def test_expensive_failure_gaming_is_not_accepted_across_checkpoints():
+    # 6% of solved trials fail at 10x cost, the other passes get 25% cheaper (true E ~ +30%)
+    assert _bootstrap_looks(adv=(0.06, 0.75, 10), n=200, seed=2) <= 0.05
+
+
+def test_missing_cost_is_indecisive_not_free():
+    rng = random.Random(7)
+    P = arm({t: [(1.0, rng.uniform(8, 12)) for _ in range(3)] for t in range(30)})
+    C = [TrialRec(t.task, t.k, t.reward, None) for t in P]
+    v = decide_reward_gated(P, C)
+    assert v.outcome == "indecisive" and "cost unmeasured" in v.reason and not v.accept
+
+
+def test_load_trials_keeps_missing_cost_as_none_and_errored_as_failure(tmp_path):
+    class RD:
+        rollouts = tmp_path / "rollouts"
+    (RD.rollouts / "val").mkdir(parents=True)
+    (RD.rollouts / "val" / "a__t1__t0.json").write_text(json.dumps(
+        {"score": {"task_id": "a", "reward": 1.0}, "rollout": {}}))
+    (RD.rollouts / "val" / "a__t1__t1.json").write_text(json.dumps(
+        {"score": {"task_id": "a", "reward": 1.0}, "rollout": {"error": "boom", "cost_usd": 0.5}}))
+    ts = ob.load_trials(RD, "t1")
+    assert [t.cost_usd for t in ts] == [None, 0.5] and [t.reward for t in ts] == [1.0, 0.0]
+
+
+def test_candidate_that_drops_its_hardest_tasks_pays_in_reward():
+    P = arm({t: [(1.0, 10.0)] * 3 for t in range(30)})
+    C = arm({t: [(1.0, 8.0)] * 3 for t in range(20)})          # 10 tasks never measured
+    assert ob.paired_reward(P, C)["d"] == pytest.approx(-10 / 30)
+    assert decide_reward_gated(P, C).outcome == "reject"
+
+
+def test_theta_does_not_depend_on_the_pair():
+    assert ob.success_theta(ob.GateCfg()) == pytest.approx(0.8)
+    assert ob.success_theta(ob.GateCfg(max_reward=5)) == pytest.approx(4.0)
+
+
+def test_cost_gating_env_overrides_spec(monkeypatch):
+    monkeypatch.setenv("CAPEVOLVE_COST_GATING", "off")
+    assert not ob.cost_gating_enabled({})
+    monkeypatch.setenv("CAPEVOLVE_COST_GATING", "1")
+    assert ob.cost_gating_enabled({"optimizer": {"ablation": {"cost_gating": False}}})

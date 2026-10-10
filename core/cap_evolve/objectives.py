@@ -12,6 +12,19 @@ looks cheaper than it is. ``decide_reward_gated`` asks two questions in order:
    champion); otherwise only a real cost win (``< -delta_c``, z <= -1.65, coverage >= 0.7, cost
    per success not worse) is accepted.
 
+Sequential validity: the verdict is re-run as trials grow (indecisive -> grow). Each ACCEPT branch
+(reward superior; cost win) must clear ``z_accept = Z(1 - alpha_accept / (2 * looks))`` -- a
+Bonferroni split of ``alpha_accept`` (0.05) over ``looks`` (8) evaluations and the 2 branches, so
+the cumulative false-accept rate over up to ``looks`` re-evaluations is <= alpha_accept by the
+union bound (z = 2.73). Valid for <= ``looks`` re-runs of the same candidate; tested by applying
+the rule at every checkpoint (2..8 trials/task) on byte-identical null pairs. Cost-per-success and
+overall cost must also be confidently NOT worse (upper confidence bound), and a candidate whose
+cost was not recorded is INDECISIVE (missing cost is not free).
+
+Evidence source: the caller supplies the task records (``load_trials`` reads rollouts by tag);
+this module does not consult the ``eval_index`` ledger, so top-up trials recorded under another tag
+must be passed in by the caller.
+
 Pure: the only I/O is ``load_trials``. Returns a plain ``RGVerdict``; ``gate.py`` wraps it in a
 ``GateDecision`` (this module must not import gate, which imports it).
 """
@@ -20,6 +33,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from statistics import NormalDist, stdev
@@ -36,7 +50,7 @@ class TrialRec:
     task: str
     k: int
     reward: float
-    cost_usd: float
+    cost_usd: float | None   # None = not recorded (NOT free)
     n_msgs: float = 0.0
     latency_s: float = float("nan")
     extras: dict = field(default_factory=dict)
@@ -50,7 +64,7 @@ class TrialRec:
     def from_dict(cls, d: dict) -> "TrialRec":
         lat = d.get("latency_s")
         return cls(task=str(d["task"]), k=int(d.get("k", 0)), reward=float(d["reward"]),
-                   cost_usd=float(d.get("cost_usd") or 0.0), n_msgs=float(d.get("n_msgs") or 0.0),
+                   cost_usd=None if d.get("cost_usd") is None else float(d["cost_usd"]), n_msgs=float(d.get("n_msgs") or 0.0),
                    latency_s=float("nan") if lat is None else float(lat),
                    extras=dict(d.get("extras") or {}))
 
@@ -59,11 +73,15 @@ class TrialRec:
 class GateCfg:
     m: float = 0.03            # reward feasibility margin (~1 task of 30)
     alpha: float = 0.2         # feasibility confidence 1-alpha (not superiority)
-    k_sup: float = _Z_WIN      # reward-superior bar on dR/SE
+    k_sup: float | None = None  # reward-superior bar on dR/SE; None = z_accept (sequential)
+    alpha_accept: float = 0.05  # cumulative false-accept budget over ``looks`` re-evaluations
+    looks: int = 8
+    min_cost_coverage: float = 0.9
+    max_reward: float = 1.0
     eps_c: float = 0.05        # max relative matched-cost rise for a reward-superior accept
     delta_c: float = 0.03      # min relative matched-cost drop for a cost-win accept
     min_coverage: float = 0.7
-    theta: float | None = None  # success bar; None = 0.8 * max observed reward
+    theta: float | None = None  # success bar; None = 0.8 * max_reward (never data-dependent)
     noise_floor: float = NOISE_FLOOR
 
 
@@ -72,8 +90,16 @@ def cfg_from_spec(spec: dict | None) -> GateCfg:
     return GateCfg(**{k: v for k, v in raw.items() if k in GateCfg.__dataclass_fields__})
 
 
+def z_accept(cfg: GateCfg) -> float:
+    return NormalDist().inv_cdf(1 - cfg.alpha_accept / (2 * cfg.looks))
+
+
 def cost_gating_enabled(spec: dict | None) -> bool:
-    """``optimizer.ablation.cost_gating`` (default on). False => the legacy gate mode."""
+    """``optimizer.ablation.cost_gating`` / env ``CAPEVOLVE_COST_GATING`` (env wins; default on).
+    False => the legacy gate mode."""
+    env = os.environ.get("CAPEVOLVE_COST_GATING", "").strip().lower()
+    if env:
+        return env not in {"0", "false", "no", "off"}
     return ((((spec or {}).get("optimizer") or {}).get("ablation") or {}).get("cost_gating")) is not False
 
 
@@ -88,7 +114,8 @@ def _latency(trace) -> float:
 
 
 def load_trials(run_dir, tags, split: str = "val") -> list[TrialRec]:
-    """Per-trial records from ``rollouts/<split>/<task>__<tag>__t<k>.json``, POOLED over ``tags``
+    """Errored trials are kept as reward 0 (an unmeasured trial is a failure, not a shed task).
+    Per-trial records from ``rollouts/<split>/<task>__<tag>__t<k>.json``, POOLED over ``tags``
     (byte-identical replicates are one arm). Errored trials are skipped, as in
     ``harness.split_result_from_rollouts``."""
     tags = [tags] if isinstance(tags, str) else list(tags)
@@ -100,17 +127,17 @@ def load_trials(run_dir, tags, split: str = "val") -> list[TrialRec]:
         for f in sorted(vdir.glob(f"*__{tag}__t*.json")):
             rec = json.loads(f.read_text(encoding="utf-8"))
             sc, ro = rec.get("score") or {}, rec.get("rollout") or {}
-            if ro.get("error") or (sc.get("raw") or {}).get("errored"):
-                continue
+            errored = bool(ro.get("error") or (sc.get("raw") or {}).get("errored"))
             metrics = {m["name"]: m["value"] for m in sc.get("metrics") or []
                        if isinstance(m, dict) and "name" in m}
             tid = str(sc.get("task_id") or f.name.split("__")[0])
             k = int(f.stem.rsplit("__t", 1)[1]) if "__t" in f.stem else 0
             out.append(TrialRec(
-                task=tid, k=k, reward=float(sc.get("reward", 0.0)),
-                cost_usd=float(ro.get("cost_usd") or 0.0),
+                task=tid, k=k, reward=0.0 if errored else float(sc.get("reward", 0.0)),
+                cost_usd=None if ro.get("cost_usd") is None else float(ro["cost_usd"]),
                 n_msgs=float(metrics.get("num_messages", len(ro.get("trace") or []))),
-                latency_s=_latency(ro.get("trace") or []), extras=metrics))
+                latency_s=_latency(ro.get("trace") or []),
+                extras={**metrics, **({"errored": 1} if errored else {})}))
     return out
 
 
@@ -135,18 +162,17 @@ def _z(d: float, se: float) -> float:
     return d / se if se and se == se else 0.0
 
 
-def success_theta(cfg: GateCfg, *arms) -> float:
-    if cfg.theta is not None:
-        return cfg.theta
-    return 0.8 * max([t.reward for a in arms for t in a] or [1.0])
+def success_theta(cfg: GateCfg) -> float:
+    return cfg.theta if cfg.theta is not None else 0.8 * cfg.max_reward
 
 
 def paired_reward(P, C, noise_floor: float = NOISE_FLOOR) -> dict:
     """``dR = mean_i(R_i^c - R_i^p)`` over tasks in both arms; SE across tasks floored at the
     replicate noise."""
     p, c = _by_task(P), _by_task(C)
-    ts = sorted(set(p) & set(c))
-    d = [_mean([t.reward for t in c[i]]) - _mean([t.reward for t in p[i]]) for i in ts]
+    # tasks the candidate has no trial for count as reward 0: shedding a task is a failure
+    d = [(_mean([t.reward for t in c[i]]) if i in c else 0.0) - _mean([t.reward for t in p[i]])
+         for i in sorted(p)]
     if not d:
         return {"d": 0.0, "se": noise_floor, "se_raw": float("nan"), "n": 0}
     se = _se(d)
@@ -164,8 +190,8 @@ def matched_cost(P, C, theta: float, value=lambda t: t.cost_usd) -> dict:
     out.update(tasks=M, coverage=len(M) / len(parent_pass) if parent_pass else 0.0)
     allpass = lambda trs: all(t.reward >= theta for t in trs)
     S = [i for i in M if allpass(p[i]) and allpass(c[i])]
-    strict = _paired_stat([_mean([value(t) for t in p[i]]) for i in S],
-                          [_mean([value(t) for t in c[i]]) for i in S])
+    mv = lambda trs: _mean([value(t) for t in trs if value(t) is not None] or [0.0])
+    strict = _paired_stat([mv(p[i]) for i in S], [mv(c[i]) for i in S])
     out["strict"] = strict
     out["sensitivity_disagree"] = bool(S) and strict["n"] > 1 and (strict["d"] > 0) != (out["d"] > 0)
     return out
@@ -208,7 +234,7 @@ def cost_per_success(P, C, value=lambda t: t.cost_usd) -> dict:
                 "se": float("nan"), "z": 99.0 if worse else 0.0}
     se = _se([b - a for a, b in zip(up, uc)])
     return {"n": len(ts), "E_p": Ep, "E_c": Ec, "d": Ec - Ep, "rel": (Ec - Ep) / Ep if Ep else 0.0,
-            "se": se, "z": _z(Ec - Ep, se)}
+            "se": se, "se_rel": se / Ep if Ep else float("nan"), "z": _z(Ec - Ep, se)}
 
 
 # ---- plug-in metrics -------------------------------------------------------------------------
@@ -280,7 +306,9 @@ def decide_reward_gated(P, C, objectives=None, cfg: GateCfg | None = None) -> RG
     cfg = cfg or GateCfg()
     objs = _validate(objectives)
     za = NormalDist().inv_cdf(1 - cfg.alpha)
-    theta = success_theta(cfg, P, C)
+    theta = success_theta(cfg)
+    zacc = z_accept(cfg)
+    k_sup = zacc if cfg.k_sup is None else cfg.k_sup
     R = paired_reward(P, C, cfg.noise_floor)
     d, se = R["d"], R["se"]
     # Both tests are on (dR + m)/SE. (The design text wrote (dR - m) for infeasible, which would
@@ -293,9 +321,15 @@ def decide_reward_gated(P, C, objectives=None, cfg: GateCfg | None = None) -> RG
         ev["stage"] = stage
         return RGVerdict(outcome, reason, d, ev)
 
-    M = matched_cost(P, C, theta)
-    E = cost_per_success(P, C)
-    ev["cost_matched"], ev["ecps"] = M, E
+    cov = lambda arm: sum(t.cost_usd is not None for t in arm) / len(arm) if arm else 0.0
+    ev["cost_coverage"] = {"parent": cov(P), "candidate": cov(C)}
+    # cost estimators only see trials whose cost was recorded; reward stays on all trials
+    Pc, Cc = ([t for t in a if t.cost_usd is not None] for a in (P, C))
+    Pc, Cc = list(Pc), list(Cc)
+    M = matched_cost(Pc, Cc, theta)
+    E = cost_per_success(Pc, Cc)
+    A = _all_cost(Pc, Cc)
+    ev["cost_matched"], ev["ecps"], ev["cost_all"] = M, E, A
     for o in objs:
         if o["role"] == "display":
             ev["displays"][o["name"]] = metric_delta(P, C, o, theta)
@@ -306,6 +340,9 @@ def decide_reward_gated(P, C, objectives=None, cfg: GateCfg | None = None) -> RG
     if zf < za:
         return out("indecisive", f"reward undetermined: dR={d:+.4f}, z_feasible={zf:.2f} < {za:.2f}"
                                  " -> grow trials, never accept", "feasibility")
+    if min(ev["cost_coverage"].values()) < cfg.min_cost_coverage:
+        return out("indecisive", f"cost unmeasured: coverage {ev['cost_coverage']} < "
+                                 f"{cfg.min_cost_coverage}; a missing cost is not free", "feasibility")
     for g in (o for o in objs if o["role"] == "gate"):
         r = ev["displays"][g["name"]] = metric_delta(P, C, g, theta)
         margin = float(g.get("margin", 0.0))
@@ -319,20 +356,38 @@ def decide_reward_gated(P, C, objectives=None, cfg: GateCfg | None = None) -> RG
          float(o.get("eps", cfg.eps_c)))
         for o in sorted((o for o in objs if o["role"] == "pareto"), key=lambda o: o.get("order", 0))]
     over = [n for n, r, eps in pareto if _rel(r) > eps]
-    if d / se > cfg.k_sup:
-        if not over:
+    # one-sided non-inferiority: upper confidence bound (at z=2) of the relative delta
+    ub = lambda r: r["rel"] + 2.0 * r["se_rel"] if r.get("n", 0) > 1 and r["se_rel"] == r["se_rel"] else float("inf")
+    e_ok_sup = ub(E) <= cfg.eps_c
+    if d / se > k_sup:
+        if M["sensitivity_disagree"]:
+            return out("indecisive", "matched vs strict (all-pass) cost disagree in sign: "
+                                     "success-conditioning bias cannot be ruled out -> grow trials")
+        if not over and e_ok_sup:
             return out("accept", f"reward superior (dR={d:+.4f}, z={d / se:.2f}) and matched cost "
                                  f"{M['rel']:+.1%} within +{cfg.eps_c:.0%}")
         ev["tradeoff"] = True
-        return out("tradeoff", f"reward superior but {over} exceed their constraint "
+        return out("tradeoff", f"reward superior but {over or ['cost_per_success']} exceed their constraint "
                                f"(matched cost {M['rel']:+.1%}): archive only, not champion")
-    win = (M["n"] > 1 and M["rel"] < -cfg.delta_c and M["z"] <= -_Z_WIN
-           and M["coverage"] >= cfg.min_coverage and E["z"] < 1 and not over)
+    win = (M["n"] > 1 and M["rel"] < -cfg.delta_c and M["z"] <= -zacc
+           and M["coverage"] >= cfg.min_coverage and not over
+           and d >= -cfg.m / 3                  # the point estimate must not be a loss either
+           and ub(E) <= 0 and ub(A) <= 0)       # E and overall cost confidently NOT worse
+    if win and M["sensitivity_disagree"]:
+        return out("indecisive", "matched vs strict (all-pass) cost disagree in sign: "
+                                 "success-conditioning bias cannot be ruled out -> grow trials")
     if win:
         return out("accept", f"non-inferior reward and matched cost win {M['rel']:+.1%} "
                              f"(z={M['z']:.2f}, coverage {M['coverage']:.0%})")
     return out("reject", f"no reward gain and no cost win (matched cost {M['rel']:+.1%}, "
                          f"z={M['z']:.2f}, coverage {M['coverage']:.0%}, E z={E['z']:.2f})")
+
+
+def _all_cost(P, C) -> dict:
+    p, c = _by_task(P), _by_task(C)
+    ts = sorted(set(p) & set(c))
+    return _paired_stat([_mean([t.cost_usd for t in p[i]]) for i in ts],
+                        [_mean([t.cost_usd for t in c[i]]) for i in ts])
 
 
 def _rel(r: dict) -> float:
