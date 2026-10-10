@@ -14,6 +14,7 @@ working exactly as before; this is a second, independent reader of the same view
 from __future__ import annotations
 
 from . import graph as _graph
+from . import schema_v2 as _schema_v2
 
 #: Statuses that close a lineage — nothing should ever branch from or re-measure
 #: these again. Everything else (``"screened"``, ``"proposed"``, ``"gated"``,
@@ -40,6 +41,14 @@ class CandidateGraph:
 
     def node(self, node_id: str) -> dict | None:
         return self._nodes.get(node_id)
+
+    def node_v2(self, node_id: str, *, val_ids=None, evals=None) -> dict | None:
+        """:meth:`node` with Run schema v2 keys filled from legacy fields
+        (docs/RUN_SCHEMA_V2.md). Parents come from :meth:`parents_of`, so any self-parent
+        filtering there (#719) applies; ``val_ids``/``evals`` give real eval coverage."""
+        n = self._nodes.get(node_id)
+        return (_schema_v2.normalize_node(n, val_ids=val_ids, evals=evals,
+                                          parents=self.parents_of(node_id)) if n else None)
 
     def __contains__(self, node_id: str) -> bool:
         return node_id in self._nodes
