@@ -366,7 +366,38 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--floor", type=float, default=0.0,
                     help="measured null delta — see integrate.py --floor")
     ap.add_argument("--json", dest="json_out", default="")
+    ap.add_argument("--nway", action="store_true",
+                    help="#710: fold ALL survivors by merge-base with an interaction score and a "
+                         "probe plan (merge_n.py) instead of pairwise integrate.py. Prints the "
+                         "plan; builds $R/work/merge_<tags>. Ablation smart_merge off => ignored.")
     return ap
+
+
+def _nway(args, run_dir: Path, survivors: list[str]) -> int:
+    import _bootstrap  # noqa: F401
+    import merge_n
+    from cap_evolve import RunDir
+    from cap_evolve.candidate_graph import CandidateGraph
+    from cap_evolve.specfile import spec_for_run
+
+    rd = RunDir.open(run_dir)
+    if not merge_n.enabled(spec_for_run(rd, Path(args.project))):
+        print("smart_merge is off; use the pairwise path (omit --nway)", file=sys.stderr)
+        return 2
+    work = run_dir / "work"
+    dir_of = lambda t: work / t if (work / t).is_dir() else rd.candidate_dir(t)  # noqa: E731
+    graph = CandidateGraph.load(rd)
+    for t in survivors:  # survivors are not in the graph yet: attach them to --base
+        if t not in graph:
+            graph._nodes[t] = {"id": t, "parents": [args.base]}
+    tt = {t: _mechanisms_targets(run_dir, t) for t in survivors}
+    wins = merge_n.wins_from_run(rd, survivors, args.base)
+    out_tag = "merge_" + "_".join(survivors)
+    res = merge_n.plan(survivors, dir_of, graph, touched_tasks=tt, wins=wins,
+                       out_dir=work / out_tag, run_dir=rd)
+    res["node"] = merge_n.node_record(res, out_tag)
+    print(json.dumps(res, indent=2, default=sorted))
+    return 0 if res["built"] else 1
 
 
 def main(argv=None) -> int:
@@ -376,6 +407,8 @@ def main(argv=None) -> int:
     project = Path(args.project)
     work = run_dir / "work"
     survivors = [t.strip() for t in args.survivors.split(",") if t.strip()]
+    if args.nway:
+        return _nway(args, run_dir, survivors)
     canary_auto = _canary_auto_file(args.canary_auto) if args.canary_auto else ""
 
     explicit_targets: dict[str, list[str]] = {}

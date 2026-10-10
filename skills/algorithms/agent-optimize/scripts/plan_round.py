@@ -26,6 +26,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve
 
+import merge_n
 import spend  # sibling script — reuses its own affordability check, see spend.py's docstring
 
 from cap_evolve import RunDir, hypotheses, task_ownership
@@ -312,6 +313,8 @@ def main(argv=None) -> int:
         out["hypothesis_checks"] = [
             dict(zip(("id", "ok", "reason"), (h.get("id"), *hypotheses.validate(
                 h, clusters, args.small_edit_justification)))) for h in recs]
+    if merge_n.enabled(spec):  # #638: per-instance ownership picks the merge parents
+        out["merge_set"] = merge_n.select_merge_set(out["alternative_parents"], run_dir.best_id)
     print(json.dumps(out, indent=2))
     return 0
 
