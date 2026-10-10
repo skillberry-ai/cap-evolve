@@ -337,7 +337,7 @@ against a passing one, since the divergence point is the ambiguity and removing 
   stated."* Relay a criterion the agent can evaluate from the conversation, never a value or an id — if
   the only way to state the fix is to name the answer, the task isn't winnable, and that's the finding.
 - **A guard must fire on a DECISION, not on a tool.** A precondition refusing every call of a write
-  tool derails tasks it was never aimed at — one such guard dropped a canary from 1.0 to 0.333 and its
+  tool disrupts tasks it was never aimed at — one such guard dropped a canary from 1.0 to 0.333 and its
   eval's wall time from 299s to 1493s (every extra refusal costs a turn). Key the guard to the specific
   contested situation, firing once per situation — re-keying one from per-user to per-contested-date was
   worth 0.0 -> 0.333 alone — and keep the refusal directive: softening "otherwise proceed" flipped

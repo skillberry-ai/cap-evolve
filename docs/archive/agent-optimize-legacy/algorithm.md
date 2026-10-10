@@ -306,7 +306,7 @@ Two properties matter more than the parsing:
 
 - **Ambiguity is reported, never guessed.** "don't spend too much", or a bare number with no
   unit, lands in `constraints.ambiguous` with the offending span and a reason, and an
-  unparseable condition is explicitly *not* treated as "no constraint". SKILL.md's Phase 0
+  unparsable condition is explicitly *not* treated as "no constraint". SKILL.md's Phase 0
   says to clear that list with the user before the loop runs unattended — the one moment when
   asking is free.
 - **Nothing is remembered.** Spend comes from `state.json`, wallclock from the first entry in
@@ -480,7 +480,7 @@ step"). `merge_search.py` was built for exactly this shape — prior real runs (
 run_agentoptv4) produced 3-6 narrow single-issue candidates per round, each individually full-val
 gated and rejected, and never combined. `--survivors` accepts any tag under `$R/work/`, screened or
 not, so a screen-survivor works exactly like the finalize-time "Merging accepted candidates"
-survivors below — disjointness is a property of what each edit TOUCHED, not of how far through the
+survivors below — disjoint-ness is a property of what each edit TOUCHED, not of how far through the
 gate it got. The resulting merged candidate(s), plus any survivor `funcmerge.py` refuses to merge
 (a real collision, not a bundling choice), are what pay for full val — never each of the N siblings
 alone when a cheap screen-then-merge path existed. A bundle's measurement footprint is the union of
@@ -1234,7 +1234,7 @@ miss to mention in passing.
 
 Practically: `--survivors` takes any tag under `$R/work/`, whether or not it individually cleared
 the gate — an `accepted` graph node works exactly like a screening survivor for this purpose, since
-disjointness is a property of what the edits TOUCHED, not of how they were judged. `--targets`
+disjoint-ness is a property of what the edits TOUCHED, not of how they were judged. `--targets`
 (or a `mechanisms.jsonl` row per tag) supplies each one's task ids; a tag with neither is skipped,
 never silently merged on an empty objective. The merge itself pays `integrate.py`/`funcmerge.py`,
 same as any hand-driven merge (per-task-fanout.md); a real edit collision (both branches touch the
@@ -1272,12 +1272,12 @@ candidate id, note, `reject_basis`, and, when a gate table exists, `gate_delta` 
 `broke` list: it did not clearly hurt, it just did not clear the bar. `rejected.jsonl`
 (`cap_evolve.memory.RejectedMemory`) is deliberately NOT the source — it stores only
 `{candidate_id, summary, reason, val}`, none of the structured gate numbers this needs.
-`check_rejects_compliance` mirrors `check_merge_compliance` exactly (disjointness by target
+`check_rejects_compliance` mirrors `check_merge_compliance` exactly (disjoint-ness by target
 task ids via `mechanisms.jsonl`, the same `_mechanisms_targets` fallback): 3+ safe rejects with
 pairwise disjoint targets and no merge-of-rejects proposed yet this run logs
 `merge_rejects_compliance_warning` to `events.jsonl` — an audit signal, never a block, same as
 its accepted-candidate sibling. `--propose --rejects tag1,tag2[,tag3]` builds the actual
-combined candidate: disjointness there is by CHANGED FUNCTIONS (`merge_search.changed_functions`,
+combined candidate: disjoint-ness there is by CHANGED FUNCTIONS (`merge_search.changed_functions`,
 i.e. `funcmerge.py`'s per-function split — a real edit collision is refused, never force-merged),
 and assembly is one `integrate.py` call over every given branch, best-evidenced first, which
 folds them ONE AT A TIME and measures after each — the same discipline `integrate.py`'s own
