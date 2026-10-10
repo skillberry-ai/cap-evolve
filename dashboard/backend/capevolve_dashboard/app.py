@@ -8,7 +8,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from . import compare, runs, trajectories
+from . import capdiff as _capdiff
+from . import compare, objectives_view, runs, trajectories
 from . import memory as _memory
 from . import stream as _stream
 from . import files as _files
@@ -64,6 +65,17 @@ def create_app(base_dir: Path, static_dir: Path | None = None) -> FastAPI:
     @app.get("/api/runs/{run_id}/diff/{candidate}")
     def get_diff(run_id: str, candidate: str):
         return trajectories.diff_candidate(_resolve_or_404(run_id), candidate)
+
+    @app.get("/api/runs/{run_id}/capdiff")
+    def get_capdiff(run_id: str, target: str = Query(...), base: str = Query(default="parent")):
+        try:
+            return _capdiff.capdiff(_resolve_or_404(run_id), target, base)
+        except _capdiff.CapDiffError as e:
+            raise HTTPException(status_code=e.status, detail=e.detail)
+
+    @app.get("/api/runs/{run_id}/objectives")
+    def get_objectives(run_id: str):
+        return objectives_view.run_objectives(_resolve_or_404(run_id))
 
     @app.get("/api/runs/{run_id}/memory")
     def get_memory(run_id: str):

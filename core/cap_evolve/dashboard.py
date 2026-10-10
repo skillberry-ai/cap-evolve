@@ -94,6 +94,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from . import dashboard_views
 from . import graph as graph_mod
 
 # ---------------------------------------------------------------------------
@@ -2958,6 +2959,7 @@ def reduce_run(run_dir) -> dict:
                 if prompt_map:
                     n["prompt_map"] = prompt_map
 
+    summary["decisions"] = dashboard_views.enrich(run_dir, nodes, events)  # Run schema v2 views (#702)
     graph = {"nodes": list(nodes.values()), "root": "seed", "best_id": best_id}
     return redact({"graph": graph, "summary": summary})
 
