@@ -1,10 +1,12 @@
 import { useState, useMemo, useRef, useLayoutEffect, useCallback } from 'react'
-import type { Diagnosis, Outcomes } from '../lib/types'
-import { diagnosisEdits, diagnosisSkipped, diagnosisTaskGroups } from '../lib/diagnosis'
+import type { Diagnosis, NodeEdit, Outcomes } from '../lib/types'
+import { editOutcome, diagnosisEdits, diagnosisSkipped, diagnosisTaskGroups } from '../lib/diagnosis'
 
 interface DiagnosisFlowProps {
   diagnosis: Diagnosis
   outcomes?: Outcomes | null
+  /** The node's recorded v2 edit (hypothesis + target_tasks): enables the outcome strip. */
+  edit?: NodeEdit | null
 }
 
 /** One curved SVG link between two flow boxes (task→cluster or cluster→edit). */
@@ -15,7 +17,8 @@ interface FlowLink {
   color: string
 }
 
-export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
+export function DiagnosisFlow({ diagnosis, outcomes, edit }: DiagnosisFlowProps) {
+  const outcome = editOutcome(edit, outcomes)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
   const { clusters } = diagnosis
@@ -172,6 +175,22 @@ export function DiagnosisFlow({ diagnosis, outcomes }: DiagnosisFlowProps) {
 
   return (
     <div className="space-y-4">
+      {edit?.hypothesis && (
+        <div data-testid="edit-outcome" className="rounded-lg border p-3 text-sm"
+          style={{ borderColor: outcome ? (outcome.moved ? 'var(--accepted)' : 'var(--rejected)') : 'var(--border)' }}>
+          <div className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--muted)]">Edit hypothesis</div>
+          <div className="mt-1">{edit.hypothesis}</div>
+          {outcome && (
+            <div className="tnum mt-2 text-xs text-[var(--muted-strong)]">
+              target tasks: fixed {outcome.target.fixed}/{outcome.target.n}, broke {outcome.target.broke} · other tasks:
+              fixed {outcome.rest.fixed}, broke {outcome.rest.broke}{' '}
+              <strong style={{ color: outcome.moved ? 'var(--accepted)' : 'var(--rejected)' }}>
+                {outcome.moved ? 'OUTCOME: target moved' : 'FLAG: edit did not move its target tasks'}
+              </strong>
+            </div>
+          )}
+        </div>
+      )}
       {/* Validation warnings */}
       {diagnosis.warnings && diagnosis.warnings.length > 0 && (
         <div className="bg-[var(--failed)] bg-opacity-10 border border-[var(--failed)] border-opacity-30 rounded-lg p-3">

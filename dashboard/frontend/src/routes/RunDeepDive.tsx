@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { api, LivePendingError } from '../lib/api'
+import { api, LivePendingError, STATIC_MODE } from '../lib/api'
 import { useRunStream } from '../lib/useRunStream'
 import { AppShell } from '../components/AppShell'
 import { Card } from '../components/ui/Card'
@@ -11,12 +11,14 @@ import { Tabs, type TabDef } from '../components/ui/Tabs'
 import { RunHeader } from '../components/RunHeader'
 import { KpiStrip } from '../components/KpiStrip'
 import { BestCurveChart } from '../components/BestCurveChart'
-import { ParetoScatter, isMultiObjective } from '../components/ParetoScatter'
+import { OverviewObjectives } from '../components/OverviewObjectives'
+import { isMultiObjective } from '../components/ParetoScatter'
 import { ObjectiveTimeSeries } from '../components/ObjectiveTimeSeries'
 import { CandidatesPanel } from '../components/CandidatesPanel'
 import { PhasesTimeline } from '../components/PhasesTimeline'
 import { Trajectories } from '../components/Trajectories'
 import { IterationsDiff } from '../components/IterationsDiff'
+import { CapDiff } from '../components/CapDiff'
 import { MemoryPanel, NarrativePanel } from '../components/MemoryPanel'
 import { ConfigPanel } from '../components/ConfigPanel'
 import { BudgetPanel, PerIterationCostTime } from '../components/CostPanel'
@@ -221,7 +223,7 @@ function TabBody({
       return (
         <div className="space-y-5">
           <BestCurveChart nodes={data.graph.nodes} />
-          {isMultiObjective(s) && <ParetoScatter nodes={data.graph.nodes} />}
+          <OverviewObjectives runId={runId} nodes={data.graph.nodes} summary={s} />
           {isMultiObjective(s) && <ObjectiveTimeSeries nodes={data.graph.nodes} summary={s} />}
           <PhasesTimeline detail={data} />
         </div>
@@ -329,7 +331,8 @@ function TabBody({
         />
       )
     case 'diffs':
-      return <IterationsDiff runId={runId} graph={data.graph} />
+      // /capdiff is a live-backend route; a static export keeps the per-candidate diff.
+      return STATIC_MODE ? <IterationsDiff runId={runId} graph={data.graph} /> : <CapDiff runId={runId} graph={data.graph} />
     case 'trajectories':
       return <Trajectories runId={runId} />
     case 'memory':

@@ -105,6 +105,9 @@ export function TaskMatrix({
   screens?: ScreenRow[]
 }) {
   const [hover, setHover] = useState<{ task: string; node: GraphNode } | null>(null)
+  // Matched-subset toggle: the tasks the cost comparison between the selected candidate
+  // and its base was actually computed on (`vs_parent.cost_matched.matched_task_ids`).
+  const [matchedOnly, setMatchedOnly] = useState(false)
 
   // #676: a run that declared more than one objective (pareto gate_mode) gets the
   // extra per-objective-score-and-delta detail in the hover panel below; an ordinary
@@ -158,6 +161,15 @@ export function TaskMatrix({
     )
   }
 
+  const matchedIds = selectedNode?.matched_task_ids ?? []
+  const matchedOn = matchedOnly && matchedIds.length > 0
+  const matched = new Set(matchedIds)
+  const baseNode = selectedNode ? parentOf(selectedNode) : undefined
+  const dCost = (t: string) => {
+    const c = selectedNode?.per_task_metrics?.[t]?.cost
+    const b = baseNode?.per_task_metrics?.[t]?.cost
+    return c != null && b != null ? c - b : null
+  }
   const churn = findChurn(cols)
   const roundGroups = useMemo(() => groupByRound(cols), [cols])
   const hasRounds = roundGroups.some((g) => g.round_id != null)
@@ -173,6 +185,12 @@ export function TaskMatrix({
             universe.
           </p>
         </Card>
+      )}
+      {matchedIds.length > 0 && (
+        <label className="flex items-center gap-2 text-xs text-muted">
+          <input type="checkbox" checked={matchedOnly} onChange={(e) => setMatchedOnly(e.target.checked)} />
+          matched subset ({matchedIds.length} task(s) where {selectedId} and {baseNode?.id ?? 'its base'} both succeed) with per-task cost delta
+        </label>
       )}
       {churn.length > 0 && (
         <Card className="border-accent/40 bg-accent/[0.04]">
@@ -210,6 +228,7 @@ export function TaskMatrix({
                 <th className="sticky left-0 z-10 bg-surface pr-2 text-left font-normal text-muted">
                   task
                 </th>
+                {matchedOn && <th className="pr-1 pb-1 text-left align-bottom text-[10px] font-normal text-muted">dC</th>}
                 {cols.map((n) => (
                   <th key={n.id} className="px-0.5 pb-1 align-bottom">
                     <div
@@ -224,7 +243,9 @@ export function TaskMatrix({
             </thead>
             <tbody>
               {rows.map((t) => (
-                <tr key={t}>
+                <tr key={t} data-matched={matchedOn ? String(matched.has(t)) : undefined}
+                  className={matchedOn && !matched.has(t) ? 'opacity-40' : undefined}
+                  title={matchedOn && !matched.has(t) ? 'not in the matched set: passes only in parent or only in candidate' : undefined}>
                   <th
                     scope="row"
                     className="sticky left-0 z-10 max-w-[190px] truncate bg-surface pr-2
@@ -233,6 +254,13 @@ export function TaskMatrix({
                   >
                     {t}
                   </th>
+                  {matchedOn && (
+                    <td className="tnum pr-1 text-[10px] text-muted-strong">
+                      {matched.has(t)
+                        ? (() => { const d = dCost(t); return d == null ? '—' : `${d >= 0 ? '+' : '-'}$${Math.abs(d).toFixed(3)}` })()
+                        : 'one side only'}
+                    </td>
+                  )}
                   {cols.map((n) => {
                     const v = n.per_task?.[t]
                     const c = cellFor(v)
@@ -320,13 +348,12 @@ export function TaskMatrix({
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
                   {objectives.map((obj) => {
                     const value = hover.node.per_task_metrics?.[hover.task]?.[obj.name]
-                    if (value == null) return null
                     const parentValue = parentOf(hover.node)?.per_task_metrics?.[hover.task]?.[obj.name]
                     return (
                       <span key={obj.name} className="tnum">
                         {obj.name}{' '}
-                        <span className="text-foreground">{value.toFixed(3)}</span>
-                        <ObjectiveDelta value={value} parentValue={parentValue} direction={obj.direction} />
+                        <span className="text-foreground">{value == null ? '—' : value.toFixed(3)}</span>
+                        {value != null && <ObjectiveDelta value={value} parentValue={parentValue} direction={obj.direction} />}
                       </span>
                     )
                   })}

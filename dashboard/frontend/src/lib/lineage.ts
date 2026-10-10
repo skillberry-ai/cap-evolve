@@ -1,5 +1,5 @@
 /** Lay out the candidate graph as a best-path spine with branches hanging below. */
-import type { RunGraph, GraphNode } from './types'
+import type { RunGraph, GraphNode, EvalState, Coverage } from './types'
 
 export interface LaidNode {
   id: string
@@ -14,6 +14,9 @@ export interface LaidNode {
   clusterIds?: string[]
   mergeOf?: string[]
   changeType?: string | null
+  evalState?: EvalState
+  coverage?: Coverage | null
+  parents?: string[]
 }
 
 export interface LineageLayout {
@@ -79,6 +82,9 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
       clusterIds: n.cluster_ids,
       mergeOf: n.merge_of,
       changeType: n.change_type ?? null,
+      evalState: n.eval_state,
+      coverage: n.coverage ?? null,
+      parents: n.parents,
     }
   })
 
@@ -95,7 +101,8 @@ export function layoutLineage(graph: RunGraph): LineageLayout {
   // the normal derive edge above — never on the spine (a merge result's spine parent is
   // `parent`, these are the extra lineage the spine doesn't follow).
   for (const n of ordered) {
-    for (const mergeParent of n.merge_of ?? []) {
+    // schema v2 `parents[]` (merge results have 2+) and legacy `merge_of`, de-duplicated.
+    for (const mergeParent of new Set([...(n.merge_of ?? []), ...(n.parents ?? [])])) {
       if (mergeParent !== n.parent && byIdLaid.has(mergeParent)) {
         edges.push({ from: mergeParent, to: n.id, onSpine: false, merge: true })
       }

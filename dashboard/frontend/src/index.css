@@ -37,6 +37,8 @@
   --indecisive: #4aa8ff;    /* indecisive — the gate REFUSED to judge (missing data) */
   --failed: #c05fd8;        /* failed   — no measurement at all */
   --seed: #7f899b;          /* seed / neutral baseline */
+  /* dataviz categorical slots 1-5 (CVD-validated adjacent order), dark values */
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181;
 
   /* Single source of truth for both stacks — tailwind.config.js's font-sans /
      font-mono utilities reference these vars, so the utilities and the raw rules
@@ -71,6 +73,7 @@
   --indecisive: #1d63c4;
   --failed: #8b2ca3;
   --seed: #616b7d;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4;
   color-scheme: light;
 }
 

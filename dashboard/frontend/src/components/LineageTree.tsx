@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import type { RunGraph, GraphNode } from '../lib/types'
+import type { RunGraph, GraphNode, Coverage, EvalState } from '../lib/types'
 import { layoutLineage, type LaidNode } from '../lib/lineage'
 import { pct } from '../lib/format'
 import { prefersReducedMotion, springGrow } from '../lib/motion'
@@ -67,6 +67,9 @@ export function LineageTree({
         <Legend color="var(--rejected)" label="rejected" />
         <Legend color="var(--seed)" label="seed" />
         <Legend color="var(--muted)" label="merge edge" dashed />
+        <span className="inline-flex items-center gap-3" data-testid="state-legend">
+          <span>solid = full val</span><span>ring = k/N tasks</span><span>half = screened</span><span>dashed = not run</span>
+        </span>
       </div>
 
       <div className="overflow-x-auto">
@@ -117,6 +120,7 @@ export function LineageTree({
           <div className="flex items-center gap-2">
             <span className="font-medium">{sel.id}</span>
             <span className="capitalize text-muted">· {sel.status}</span>
+            {sel.evalState && <span className="text-muted">· {sel.evalState}{sel.coverage ? ` (${coverageLabel(sel.coverage)})` : ''}</span>}
             {sel.id === graph.best_id && <span className="text-accent">· champion</span>}
             {sel.changeType && <ChangeTypeBadge changeType={sel.changeType} />}
           </div>
@@ -170,13 +174,16 @@ function LineageNode({
   onSelect: () => void
 }) {
   const dim = node.status === 'rejected' || node.status === 'failed'
+  const state = node.evalState
+  const cov = node.coverage
+  const ring = state === 'partial' && cov ? coverageLabel(cov) : null
   return (
     <motion.g
       style={{ cursor: 'pointer', transformOrigin: `${cx}px ${cy}px` }}
       onClick={onSelect}
       tabIndex={0}
       role="button"
-      aria-label={`${node.id} ${node.status} ${node.val != null ? pct(node.val) : ''}`}
+      aria-label={`${node.id} ${node.status} ${state ?? ''} ${node.val != null ? pct(node.val) : ''}`}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect()}
       initial={reduce ? false : { scale: 0.4, opacity: 0 }}
       animate={{ scale: 1, opacity: dim ? 0.55 : 1 }}
@@ -184,15 +191,46 @@ function LineageNode({
     >
       {isBest && <circle cx={cx} cy={cy} r={R + 5} fill="none" stroke="var(--accent)" strokeWidth={1.5} opacity={0.5} />}
       {isSelected && <circle cx={cx} cy={cy} r={R + 2} fill="none" stroke="var(--primary)" strokeWidth={2} />}
-      <circle cx={cx} cy={cy} r={R} fill={isBest ? 'var(--accent)' : FILL[node.status]} stroke="var(--bg)" strokeWidth={2} />
+      <NodeBody cx={cx} cy={cy} fill={isBest ? 'var(--accent)' : FILL[node.status]} state={state} />
       <text x={cx} y={cy + 4} textAnchor="middle" fontSize={10} fill="var(--bg)" fontWeight={600}>
         {node.val != null ? Math.round(node.val * 100) : '·'}
       </text>
       <text x={cx} y={cy + R + 14} textAnchor="middle" fontSize={9} fill="var(--muted)">
         {shortId(node.id)}
       </text>
+      {ring && (
+        <text x={cx} y={cy + R + 25} textAnchor="middle" fontSize={8} fill="var(--muted)" data-testid="coverage-mark">
+          {ring}
+        </text>
+      )}
     </motion.g>
   )
+}
+
+export const coverageLabel = (c: Coverage) => `${c.n_tasks}/${c.n_val_tasks} tasks`
+
+/** How much of val a candidate was measured on, encoded by PATTERN as well as colour so
+ *  it reads for colour-blind reviewers: full = solid, partial = solid disc inside a
+ *  lighter ring, screened = left half filled, unevaluated = dashed outline only. */
+function NodeBody({ cx, cy, fill, state }: { cx: number; cy: number; fill: string; state?: EvalState }) {
+  const stroke = { stroke: 'var(--bg)', strokeWidth: 2 }
+  if (state === 'unevaluated')
+    return <circle data-state={state} cx={cx} cy={cy} r={R} fill="var(--surface-2)" stroke={fill} strokeWidth={2} strokeDasharray="4 3" />
+  if (state === 'screened')
+    return (
+      <g data-state={state}>
+        <circle cx={cx} cy={cy} r={R} fill="var(--surface-2)" stroke={fill} strokeWidth={2} />
+        <path d={`M ${cx} ${cy - R} A ${R} ${R} 0 0 0 ${cx} ${cy + R} Z`} fill={fill} />
+      </g>
+    )
+  if (state === 'partial')
+    return (
+      <g data-state={state}>
+        <circle cx={cx} cy={cy} r={R} fill="var(--surface-2)" stroke={fill} strokeWidth={3} />
+        <circle cx={cx} cy={cy} r={R - 6} fill={fill} />
+      </g>
+    )
+  return <circle data-state={state ?? 'full'} cx={cx} cy={cy} r={R} fill={fill} {...stroke} />
 }
 
 /** Small badge for a candidate's self-reported change_type (optional/nullable field —

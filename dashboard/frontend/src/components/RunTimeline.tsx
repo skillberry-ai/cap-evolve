@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Activity, RunSummaryDetail, GraphNode, GateDecision, PerIterationCost, RunGraph } from '../lib/types'
 import { layoutLineage } from '../lib/lineage'
 import { FILL } from './LineageTree'
+import { DecisionTrail } from './DecisionTrail'
 
 interface RunTimelineProps {
   summary: RunSummaryDetail
@@ -649,6 +650,7 @@ export function RunTimeline({ summary, nodes, graph, onActivityClick }: RunTimel
           </span>
         )}
       </div>
+      <DecisionTrail decisions={summary.decisions} />
     </div>
   )
 }
