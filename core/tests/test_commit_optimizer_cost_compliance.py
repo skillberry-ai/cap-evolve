@@ -42,7 +42,7 @@ def _commit(run_dir, work, tag, *extra):
     return subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", tag, "--from-dir", str(work), "--decision", "reject",
-         "--val", "0.4", "--note", "test",
+         "--val", "0.4", "--val-unverified", "fixture: val not under test", "--note", "test",
          "--missing-handover-justification", "fixture: journal handover not under test",
          "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test",

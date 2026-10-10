@@ -65,7 +65,7 @@ def test_pareto_archive_fields_are_carried_onto_the_node(tmp_path):
     p = subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", "cand_1", "--from-dir", str(work), "--decision", "accept",
-         "--val", "1.0", "--note", "test",
+         "--val", "1.0", "--val-unverified", "fixture: val not under test", "--note", "test",
          "--missing-handover-justification", "fixture",
          "--missing-ranked-issues-justification", "fixture",
          "--missing-diagnosis-justification", "fixture"],

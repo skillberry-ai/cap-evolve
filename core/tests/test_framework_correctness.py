@@ -19,7 +19,21 @@ sys.path.insert(0, str(CORE))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from test_agent_optimize_provisional import (  # noqa: E402
-    _SCRIPTED_ADAPTER, _commit, _run_dir)
+    _SCRIPTED_ADAPTER, _run_dir)
+AGENT_COMMIT = SCRIPTS / "commit.py"
+
+
+def _commit(run_dir, cid, from_dir, decision, val=None, extra=()):
+    """commit.py exactly as an operator runs it: --val is NOT auto-marked unverified."""
+    cmd = [sys.executable, str(AGENT_COMMIT), "--run-dir", str(run_dir.root),
+           "--candidate-id", cid, "--from-dir", str(from_dir), "--decision", decision,
+           "--note", "t", "--missing-handover-justification", "fixture",
+           "--missing-ranked-issues-justification", "fixture",
+           "--missing-diagnosis-justification", "fixture"]
+    if val is not None:
+        cmd += ["--val", str(val)]
+    return subprocess.run(cmd + list(extra), capture_output=True, text=True,
+                          env=dict(os.environ, PYTHONPATH=str(CORE)), cwd=str(SCRIPTS))
 
 
 @pytest.fixture(autouse=True)
@@ -110,6 +124,8 @@ def test_set_best_with_val_sets_the_champions_own_best_val(tmp_path):
     run_dir.update_spent(best_val=0.644)
     run_dir.set_best("cand_7", val=0.567)
     assert run_dir.best_id == "cand_7" and run_dir.spent.best_val == pytest.approx(0.567)
+    run_dir.set_best("cand_8")  # no measured val: best_val (= val of best_id) is left alone
+    assert run_dir.spent.best_val == pytest.approx(0.567)
 
 
 def test_commit_refuses_a_val_that_disagrees_with_the_rollouts(tmp_path):
@@ -121,6 +137,21 @@ def test_commit_refuses_a_val_that_disagrees_with_the_rollouts(tmp_path):
     assert bad.returncode == 2 and "does not match" in bad.stdout
     good = _commit(run_dir, "cand_1", cand, "reject", val=round(real, 4))
     assert good.returncode == 0, good.stdout + good.stderr
+    assert run_dir.spent.best_val == 0.0  # a reject never touches the champion's val
+
+
+def test_commit_without_val_rollouts_needs_val_unverified_and_records_it(tmp_path):
+    project, run_dir, adapter, seed, cand = _setup(tmp_path, "u")
+    no = _commit(run_dir, "cand_1", cand, "accept", val=0.9)
+    assert no.returncode == 2 and "cannot be verified" in no.stdout
+    assert run_dir.best_id == "seed"
+    ok = _commit(run_dir, "cand_1", cand, "accept", val=0.9,
+                 extra=["--val-unverified", "operator says so"])
+    assert ok.returncode == 0, ok.stdout + ok.stderr
+    assert run_dir.best_id == "cand_1"
+    assert run_dir.spent.best_val == 0.0  # an unverified val never becomes the champion's
+    ev = [json.loads(l) for l in (run_dir.root / "events.jsonl").read_text().splitlines()]
+    assert [e for e in ev if e.get("kind") == "accept"][-1]["val_unverified"] == "operator says so"
 
 
 def test_a_second_launch_on_the_same_round_tag_fails_fast(tmp_path):

@@ -64,7 +64,7 @@ def _commit(run_dir, work, *extra, cid="cand_1", decision="reject", val="0.4967"
     p = subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", cid, "--from-dir", str(work),
-         "--decision", decision, "--val", val,
+         "--decision", decision, "--val", val, "--val-unverified", "fixture: val not under test",
          "--note", "compute-not-hardcode replay + over-write contract", *extra],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})
@@ -141,7 +141,7 @@ def test_a_missing_handover_is_refused_by_default(tmp_path):
     p = subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", "cand_1", "--from-dir", str(work),
-         "--decision", "reject", "--val", "0.4967",
+         "--decision", "reject", "--val", "0.4967", "--val-unverified", "fixture: val not under test",
          "--note", "compute-not-hardcode replay + over-write contract"],
         capture_output=True, text=True,
         env={**os.environ, "CAPEVOLVE_CORE": str(REPO / "core")})

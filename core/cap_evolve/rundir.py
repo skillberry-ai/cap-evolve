@@ -255,8 +255,9 @@ class RunDir:
         return self._read_state().get("best_id")
 
     def set_best(self, candidate_id: str, val: float | None = None) -> None:
-        """Move the champion. With ``val`` the champion's own val replaces ``spent.best_val``
-        under the same lock hold (it is the champion's, not a high-water mark of any value)."""
+        """Move the champion. Semantics: ``spent.best_val`` is the val of ``best_id``. Pass the
+        MEASURED val and it replaces ``spent.best_val`` under the same lock hold (not a
+        high-water mark); omit it (unverified/unknown) and ``best_val`` is left untouched."""
         with _file_lock(self._state_lock):
             st = self._read_state()
             st["best_id"] = candidate_id
@@ -272,7 +273,14 @@ class RunDir:
         flock, held until this process exits (released by the OS even on a crash, so there
         is no stale-lock case). Raises ``RuntimeError`` naming the holder's pid.
         """
-        import fcntl
+        try:
+            import fcntl
+        except ImportError:  # non-POSIX: no lock (see _file_lock's note); say so, don't crash
+            import warnings
+            warnings.warn("run_lock is a no-op on this platform (no fcntl)")
+            return
+        if "/" in name or ".." in name:
+            raise ValueError(f"bad lock name {name!r}")
         d = self.root / "locks"
         d.mkdir(parents=True, exist_ok=True)
         f = open(d / f"{name}.lock", "a+")

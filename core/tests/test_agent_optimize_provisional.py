@@ -184,7 +184,7 @@ def _commit(run_dir, candidate_id, from_dir, decision, val=None, extra=()):
          "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          "--missing-diagnosis-justification", "fixture: diagnosis not under test"]
     if val is not None:
-        cmd += ["--val", str(val)]
+        cmd += ["--val", str(val), "--val-unverified", "fixture: val not under test"]
     cmd += list(extra)
     return subprocess.run(cmd, capture_output=True, text=True, env=env,
                           cwd=str(AGENT_COMMIT.parent))
