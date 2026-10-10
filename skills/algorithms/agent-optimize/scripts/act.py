@@ -10,14 +10,21 @@
   probe    TAG [--tasks a,b | --auto] [--n N] [--budget R] [--plan]   evaluate ONLY the cells the
            ledger lacks (evaluate/run.py --topup-to N). --auto = posterior allocator (needs
            active_eval; otherwise full val). --plan prints the missing cells and spends nothing.
-  promote  TAG    needs full-val ledger coverage; gate_check.py vs the champion (reward_gated, or
-           paired when cost_gating is off); accept -> commit.py --decision accept (best_id moves),
-           otherwise the node is `alive` as a contender and best_id is untouched.
+  promote  TAG [--verbose]   needs full-val ledger coverage; a SEQUENTIALLY VALID test vs the champion
+           (gate_check reward_gated; when cost_gating is off the posterior rule, never the plain paired
+           gate); accept -> commit.py --decision accept (best_id moves), otherwise the node is `alive`
+           as a contender and best_id is untouched. Output is trimmed; --verbose adds the full gate.
   prune    TAG --reason R   commit.py --decision reject (driver_judgement), stage `pruned`.
   merge    A B [C..] [--tag T]   merge_n.plan (fold + interaction + probe price); builds
            work/T and records the merge node; the probe it asks for is yours to run (`probe T ...`).
-  finalize [--n-confirm 3] [--n-trials N]   confirm-evaluate the champion on full val with fresh
-           seeds, gate it against the seed, seal test ONCE (phases/finalize), write final.json.
+  finalize [--n-confirm 3] [--n-trials N] [--seal-anyway REASON]   confirm-evaluate the champion's
+           committed snapshot on full val with fresh seeds, test it against the seed, seal test ONCE
+           (phases/finalize), write final.json. A confirm that does not accept refuses to seal unless
+           --seal-anyway REASON (then the result is recorded as "no accepted change").
+
+Spending verbs (propose, probe, promote-accept, finalize confirm) refuse when the budget is exhausted
+(the digest's EXHAUSTED) unless --over-budget REASON (recorded as an event). A full-val probe prints its
+estimate and needs --yes. Concurrent probes claim (cap_hash, task) cells, so one set of rollouts runs.
 
 Every verb: meters optimizer spend first (digest.meter, idempotent), logs a `decision` event that
 records whether the verb followed the last digest's suggestions, and prints the digest.
@@ -34,23 +41,27 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import shlex
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve
 
 import digest
-from cap_evolve import (RunDir, eval_index, graph, hypotheses, optimizer_config, posterior, sched,
+from cap_evolve import (RunDir, eval_index, graph, harness, hypotheses, optimizer_config, posterior, sched,
                         schema_v2)
 from cap_evolve.candidate_graph import CandidateGraph
+from cap_evolve.rundir import _file_lock
 from cap_evolve.specfile import spec_for_run
 
 HERE = Path(__file__).resolve().parent
 SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
 PY = sys.executable
+CLAIM_STALE_S = 2 * 3600   # an in-progress evaluation claim older than this is stolen
 DECISION = {"propose": "propose", "probe": "screen", "promote": "promote", "prune": "kill",
             "merge": "merge", "finalize": "stop"}
 
@@ -77,7 +88,7 @@ def jload(text: str):
 
 class Ctx:
     def __init__(self, a):
-        self.run_dir = RunDir.open(Path(a.run_dir))
+        self.run_dir = RunDir.open(Path(a.run_dir).resolve())  # absolute: metering finds the session log from it
         self.root = Path(self.run_dir.root)
         self.project = Path(a.project) if a.project else None
         self.strict = a.strict
@@ -90,10 +101,25 @@ class Ctx:
         print(f"act WARNING: {msg}", file=sys.stderr)
 
     def infra(self, msg):
-        """Infra error: refuse under --strict, otherwise warn loudly and carry on."""
+        """Infra error: refuse under --strict, otherwise warn loudly (stderr, output, and the
+        digest's INFRA line) and carry on."""
         if self.strict:
             raise Refused(f"{msg} (--strict)")
-        self.warn(msg)
+        self.warnings.append(msg)
+        digest.infra(self.run_dir, f"act: {msg}")
+
+    def check_budget(self, a):
+        """Refuse a spend when the run's budget is exhausted (what the digest calls EXHAUSTED),
+        unless ``--over-budget REASON`` is given; the override is recorded in events."""
+        stop, why = self.run_dir.budget_exhausted()
+        if not stop:
+            return
+        reason = (getattr(a, "over_budget", None) or "").strip()
+        if not reason:
+            raise Refused(f"budget exhausted: {why}; refusing to spend",
+                          next="act.py finalize (seal what you have) or re-run with --over-budget REASON")
+        self.run_dir.log_event("over_budget_override", verb=a.verb, reason=reason, budget=why)
+        self.warn(f"over-budget override recorded: {reason}")
 
     def val_ids(self) -> list[str]:
         return [str(t) for t in self.run_dir.read_splits().ids("val")]
@@ -147,6 +173,7 @@ def _hypothesis(a, ctx) -> dict | None:
 
 def propose(a, ctx):
     run_dir, tag = ctx.run_dir, a.tag
+    ctx.check_budget(a)
     best = ctx.champion()
     parent = a.parent or best
     if not ctx.cfg["dag_parallel"] and parent != best:
@@ -229,9 +256,66 @@ def probe_ids(a, ctx, tag, parent, val_ids) -> tuple[list[str], str]:
     return list(val_ids), "full val" + ("" if ctx.cfg["active_eval"] else " (active_eval off)")
 
 
+def _owner() -> str:
+    return f"{os.getpid()}:{threading.get_ident()}"
+
+
+def _alive(c) -> bool:
+    if time.time() - float(c.get("t") or 0) > CLAIM_STALE_S:
+        return False
+    try:
+        os.kill(int(c["pid"]), 0)
+        return True
+    except (OSError, ValueError, KeyError):
+        return False
+
+
+def claim_cells(ctx, h: str, ids, n: int, poll: float = 0.5, wait_s: float = CLAIM_STALE_S):
+    """Claim the (cap_hash, task) cells that still lack ``n`` trials, so concurrent probes launch
+    ONE set of rollouts. Returns (missing_for_me, claim_keys). A cell claimed by a live process
+    (pid alive, younger than CLAIM_STALE_S) is waited for, then re-read from the ledger; a dead or
+    stale claim is stolen. Claims live in ``$R/eval_claims.json`` under a file lock."""
+    path = ctx.root / "eval_claims.json"
+    end = time.time() + wait_s
+    while True:
+        with _file_lock(ctx.root / ".claims.lock"):
+            try:
+                claims = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                claims = {}
+            miss = eval_index.missing(ctx.run_dir, h, ids, n)
+            theirs = {t for t in miss if f"{h}|{t}" in claims and _alive(claims[f"{h}|{t}"])
+                      and claims[f"{h}|{t}"].get("owner") != _owner()}
+            mine = {t: v for t, v in miss.items() if t not in theirs}
+            if mine or not theirs:
+                keys = [f"{h}|{t}" for t in mine]
+                for k in keys:
+                    claims[k] = {"pid": os.getpid(), "owner": _owner(), "t": time.time()}
+                tmp = path.with_suffix(f".{os.getpid()}.tmp")
+                tmp.write_text(json.dumps(claims), encoding="utf-8")
+                os.replace(tmp, path)
+                return mine, keys
+        if time.time() > end:
+            raise Refused("cells are claimed by another running probe that never finished", cells=sorted(theirs)[:10])
+        time.sleep(poll)
+
+
+def release_cells(ctx, keys) -> None:
+    path = ctx.root / "eval_claims.json"
+    with _file_lock(ctx.root / ".claims.lock"):
+        try:
+            claims = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        for k in keys:
+            if claims.get(k, {}).get("owner") == _owner():
+                claims.pop(k)
+        path.write_text(json.dumps(claims), encoding="utf-8")
+
+
 def probe(a, ctx):
     run_dir, tag = ctx.run_dir, a.tag
-    d = ctx.work(tag) if ctx.work(tag).is_dir() else run_dir.candidate_dir(tag)
+    d = digest.cand_dir(run_dir, tag)
     if not d.is_dir():
         raise Refused(f"no candidate dir for {tag!r}")
     val_ids = ctx.val_ids()
@@ -242,15 +326,31 @@ def probe(a, ctx):
     miss = eval_index.missing(run_dir, h, ids, a.n)
     out = {"tasks": ids, "selected_by": how, "n": a.n, "missing_cells": sum(miss.values()),
            "missing": dict(list(miss.items())[:12])}
+    sp = run_dir.spent
+    upr = sp.usd / sp.metric_calls if sp.metric_calls and sp.usd else None
+    out["estimate"] = {"rollouts": sum(miss.values()), "usd": round(upr * sum(miss.values()), 2) if upr else None}
     if a.plan or not miss:
         out["next"] = "nothing missing: every requested cell is in the ledger (free)" if not miss else "--plan: nothing run"
         return 0, out
-    cmd = topup_cmd(ctx, tag, a.n, list(miss))
-    env = {}
-    cap = ctx.spec.get("gateway_max_concurrency")
-    if cap and not os.environ.get("CAPEVOLVE_WORKERS"):
-        env["CAPEVOLVE_WORKERS"] = str(cap)  # one gateway cap shared by every branch
-    rc, so, se = sh(cmd, env)
+    if how.startswith("full val") and not a.yes:
+        raise Refused(f"full-val probe would run ~{out['estimate']['rollouts']} rollouts"
+                      + (f" (~${out['estimate']['usd']})" if upr else "") + "; confirm with --yes, or pick "
+                      "--tasks / --auto (active_eval on)", estimate=out["estimate"])
+    ctx.check_budget(a)
+    miss, keys = claim_cells(ctx, h, ids, a.n)   # concurrent probes of the same cells launch one set of rollouts
+    out["missing_cells"] = sum(miss.values())
+    if not miss:
+        out["next"] = "another probe produced these cells while we waited (free)"
+        return 0, out
+    try:
+        cmd = topup_cmd(ctx, tag, a.n, list(miss))
+        env = {}
+        cap = ctx.spec.get("gateway_max_concurrency")
+        if cap and not os.environ.get("CAPEVOLVE_WORKERS"):
+            env["CAPEVOLVE_WORKERS"] = str(cap)  # one gateway cap shared by every branch
+        rc, so, se = sh(cmd, env)
+    finally:
+        release_cells(ctx, keys)
     if rc != 0:
         raise Refused(f"evaluation failed rc={rc}", stderr=(se or so)[-500:])
     P = digest.pair(run_dir, tag, parent, val_ids)
@@ -269,14 +369,30 @@ def probe(a, ctx):
 
 # ---- promote / prune -------------------------------------------------------------------------
 
-def gate(ctx, tag, current) -> dict:
-    mode = "reward_gated" if ctx.cfg["cost_gating"] else "paired"
-    rc, so, se = sh([PY, HERE / "gate_check.py", "--run-dir", ctx.root, "--candidate", tag,
-                     "--current", current, "--mode", mode])
-    g = jload(so)
-    if g is None or "error" in g:
-        raise Refused(f"gate_check could not judge {tag}: {(g or {}).get('error') or se[-300:]}")
-    return g
+GATE_KEYS = ("accept", "indecisive", "delta", "se", "z", "reason")
+
+
+def judge(ctx, tag, ref) -> dict:
+    """The accept test for ``tag`` vs ``ref``; ALWAYS sequentially valid (promote and finalize are
+    re-run as evidence grows). cost_gating on: gate_check --mode reward_gated (Bonferroni over its
+    looks). cost_gating off: the posterior rule (posterior.py: accept needs P(D>dmin)>=0.95 and canary
+    cover, validated under repeated looks) -- never the plain paired gate, whose cumulative false-accept
+    rate over 8 looks was measured at 39%."""
+    P = digest.pair(ctx.run_dir, tag, ref, ctx.val_ids())
+    v = P.verdict(random.Random(0), int(sum(P.nc)))
+    base = {"p_beat": round(v["p_beat"], 3)}
+    if ctx.cfg["cost_gating"]:
+        rc, so, se = sh([PY, HERE / "gate_check.py", "--run-dir", ctx.root, "--candidate", tag,
+                         "--current", ref, "--mode", "reward_gated"])
+        g = jload(so)
+        if g is None or "error" in g:
+            raise Refused(f"gate_check could not judge {tag}: {(g or {}).get('error') or se[-300:]}")
+        return {**base, "verdict": g["verdict"], "gate_mode": "reward_gated", "reward": g["candidate"]["reward"],
+                "gate": {k: g["gate"][k] for k in GATE_KEYS if k in g["gate"]}, "full_gate": g["gate"]}
+    reward = harness.split_result_from_rollouts(ctx.run_dir, tag, "val").reward
+    verdict = {"accept": "accept", "prune": "reject"}.get(v["decision"], "indecisive")
+    return {**base, "verdict": verdict, "gate_mode": "posterior", "reward": reward,
+            "gate": {"d_mean": round(v["d_mean"], 4), "canary_tasks": v["canary_tasks"]}}
 
 
 def commit(ctx, tag, decision, note, extra: list[str]) -> tuple[int, dict]:
@@ -287,28 +403,31 @@ def commit(ctx, tag, decision, note, extra: list[str]) -> tuple[int, dict]:
 
 def promote(a, ctx):
     run_dir, tag = ctx.run_dir, a.tag
-    d = ctx.work(tag) if ctx.work(tag).is_dir() else run_dir.candidate_dir(tag)
+    champ = ctx.champion()
+    if tag == champ:
+        raise Refused(f"{tag} is already the champion")
+    d = digest.cand_dir(run_dir, tag)
     miss = eval_index.missing(run_dir, eval_index.cap_hash(d), ctx.val_ids(), 1)
     if miss:
         raise Refused(f"{tag} lacks full-val ledger coverage ({len(miss)} tasks unmeasured)",
                       next=f"act.py probe {tag} --tasks {','.join(list(miss)[:10])} --n 1")
-    champ = ctx.champion()
-    g = gate(ctx, tag, champ)
-    P = digest.pair(run_dir, tag, champ, ctx.val_ids())
-    out = {"champion": champ, "gate": g["gate"], "verdict": g["verdict"], "p_beat_champion": digest.p_beat(P),
-           "gate_mode": "reward_gated" if ctx.cfg["cost_gating"] else "paired"}
+    j = judge(ctx, tag, champ)
+    out = {"champion": champ, "verdict": j["verdict"], "p_beat_champion": j["p_beat"],
+           "gate_mode": j["gate_mode"], "gate": j["gate"]}
+    if a.verbose:
+        out["full_gate"] = j.get("full_gate")
     extra = shlex.split(a.commit_extra or "")
-    accept = g["verdict"] == "accept"
+    accept = j["verdict"] == "accept"
     if accept:
-        rc, res = commit(ctx, tag, "accept", a.note or "act.py promote", ["--val", str(g["candidate"]["reward"]), *extra])
+        ctx.check_budget(a)
+        rc, res = commit(ctx, tag, "accept", a.note or "act.py promote", ["--val", str(j["reward"]), *extra])
         if rc != 0:
             raise Refused("commit.py refused the accept", commit=res)
         out["best_id"] = RunDir.open(ctx.root).best_id
     ctx.node(tag, "accepted" if accept else "gated", stage="alive", tip=True,
-             post={"p_beat_champion": out["p_beat_champion"]},
-             cost_ledger={"optimizer_usd": ctx.opt_delta(tag)})
+             post={"p_beat_champion": j["p_beat"]}, cost_ledger={"optimizer_usd": ctx.opt_delta(tag)})
     out.update(stage="alive", champion_changed=accept)
-    ctx.decision("promote", tag, verdict=g["verdict"], p_beat_champion=out["p_beat_champion"])
+    ctx.decision("promote", tag, verdict=j["verdict"], p_beat_champion=j["p_beat"])
     return (0 if accept else 1), out
 
 
@@ -316,6 +435,8 @@ def prune(a, ctx):
     run_dir, tag = ctx.run_dir, a.tag
     if not a.reason.strip():
         raise Refused("--reason is required")
+    if not ctx.work(tag).is_dir():
+        raise Refused(f"unknown candidate {tag!r}: no work dir to prune")
     why = f"act.py prune: {a.reason}"
     rc, res = commit(ctx, tag, "reject", why, [
         "--reject-basis", "driver_judgement", "--bypassed-gate-justification", why,
@@ -383,16 +504,26 @@ def finalize(a, ctx):
     if run_dir.read_splits().test_used:
         raise Refused("test is already sealed (scored once): a second finalize is refused")
     champ = ctx.champion()
-    d = digest.cand_dir(run_dir, champ)
+    d = digest.cand_dir(run_dir, champ)   # the committed snapshot: the bytes the finalize phase seals
     out = {"champion": champ}
     if a.n_confirm > 0 and champ != "seed":
+        ctx.check_budget(a)
         have = eval_index.counts(run_dir, eval_index.cap_hash(d), "val")
         want = max((n for _, n in have.values()), default=0) + a.n_confirm  # fresh seeds: ledger trial_idx continues
         rc, so, se = sh(topup_cmd(ctx, champ, want, ctx.val_ids()))
         if rc != 0:
             raise Refused(f"confirm evaluation failed rc={rc}", stderr=(se or so)[-500:])
-        g = gate(ctx, champ, "seed")
-        out["confirm"] = {"n_trials": want, "verdict_vs_seed": g["verdict"], "gate": g["gate"]}
+        j = judge(ctx, champ, "seed")
+        out["confirm"] = {"n_trials": want, "verdict_vs_seed": j["verdict"], "gate_mode": j["gate_mode"],
+                          "p_beat_seed": j["p_beat"], "gate": j["gate"]}
+        if j["verdict"] != "accept":
+            if not (a.seal_anyway or "").strip():
+                raise Refused(f"confirm gate says {j['verdict']} vs the seed: test NOT sealed", confirm=out["confirm"],
+                              next="keep optimizing, or finalize --seal-anyway REASON to score test with no accepted change")
+            out["no_accepted_change"] = True
+            out["seal_anyway_reason"] = a.seal_anyway
+            out["claim"] = ("the champion did NOT beat the seed on confirmation: report this run as having no "
+                            "accepted change (the test score below is for the best-so-far, not an improvement)")
     n_trials = a.n_trials or int(ctx.spec.get("num_trials") or 1)
     rc, so, se = sh([PY, SKILLS / "phases" / "finalize" / "scripts" / "run.py", "--run-dir", ctx.root,
                      "--project", project, "--n-trials", str(n_trials)])
@@ -414,20 +545,26 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--strict", action="store_true", help="infra errors refuse instead of warning")
     sub = p.add_subparsers(dest="verb", required=True)
     s = sub.add_parser("propose", parents=[common]); s.add_argument("tag"); s.add_argument("--parent")
-    s.add_argument("--hypothesis-file"); s.add_argument("--small-edit-justification")
+    s.add_argument("--hypothesis-file"); s.add_argument("--small-edit-justification"); s.add_argument("--over-budget", metavar="REASON")
     s = sub.add_parser("probe", parents=[common]); s.add_argument("tag")
     s.add_argument("--tasks"); s.add_argument("--auto", action="store_true")
     s.add_argument("--n", type=int, default=1, help="trials per cell to reach (default 1)")
     s.add_argument("--budget", type=int, default=sched.ROUND, help="--auto: max new rollouts picked")
     s.add_argument("--plan", action="store_true", help="show the missing cells, spend nothing")
+    s.add_argument("--yes", action="store_true", help="confirm a full-val probe (shows the estimate otherwise)")
+    s.add_argument("--over-budget", metavar="REASON", help="spend although the budget is exhausted (recorded)")
     s = sub.add_parser("promote", parents=[common]); s.add_argument("tag")
     s.add_argument("--note"); s.add_argument("--commit-extra", help="extra commit.py flags (quoted)")
+    s.add_argument("--verbose", action="store_true", help="include the full gate evidence")
+    s.add_argument("--over-budget", metavar="REASON")
     s = sub.add_parser("prune", parents=[common]); s.add_argument("tag")
     s.add_argument("--reason", required=True); s.add_argument("--commit-extra")
     s = sub.add_parser("merge", parents=[common]); s.add_argument("tags", nargs="+"); s.add_argument("--tag")
     s = sub.add_parser("finalize", parents=[common])
     s.add_argument("--n-confirm", type=int, default=3, help="extra full-val trials on the champion (0 = skip)")
     s.add_argument("--n-trials", type=int, default=0, help="test trials (default: spec num_trials)")
+    s.add_argument("--seal-anyway", metavar="REASON", help="seal test although the confirm gate did not accept (recorded)")
+    s.add_argument("--over-budget", metavar="REASON")
     return p
 
 

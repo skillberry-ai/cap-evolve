@@ -478,16 +478,6 @@ def test_promote_without_an_accept_leaves_the_champion_alone(tmp_path, capsys, m
     assert graph.latest_node(rd, "cand_1")["stage"] == "alive" and rd.best_id == "cur"
 
 
-def test_cost_gating_off_uses_the_paired_gate(tmp_path, capsys, monkeypatch):
-    rd, project, _, val = _run(tmp_path)
-    _covered(rd, val)
-    monkeypatch.setenv("CAPEVOLVE_COST_GATING", "0")
-    sh = Sh(**{"gate_check.py": _gate("reject")})
-    _act(monkeypatch, capsys, ["promote", "cand_1", *_args(rd, project)], sh)
-    g = sh.cmd("gate_check.py")
-    assert g[g.index("--mode") + 1] == "paired"
-
-
 def test_gate_that_cannot_judge_refuses(tmp_path, capsys, monkeypatch):
     rd, project, _, val = _run(tmp_path)
     _covered(rd, val)
@@ -513,6 +503,8 @@ def test_prune_commits_a_reject_marks_the_hypothesis_and_the_new_engine_keeps_st
     assert RunDir.open(rd.root).spent.stall == 2, "legacy engine: the stall counter is the commit's business"
     monkeypatch.setenv("CAPEVOLVE_ACTIVE_EVAL", "1")
     graph.append_node(rd, node_id="cand_2", parents=["cur"], status="proposed")
+    import shutil
+    shutil.copytree(rd.root / "work" / "cand_1", rd.root / "work" / "cand_2")
     _act(monkeypatch, capsys, ["prune", "cand_2", "--reason", "r", *_args(rd, project)], sh)
     assert RunDir.open(rd.root).spent.stall == 0, "new engine has no stall rule"
 
@@ -626,3 +618,188 @@ def test_diagnose_v2_persists_clusters_json_for_the_digest(tmp_path):
     saved = json.loads((rd.root / "clusters.json").read_text())
     assert saved["clusters"] == json.loads(p.stdout)["clusters"]
     assert digest.load_clusters(rd) == saved["clusters"]
+
+
+def test_cost_gating_off_uses_the_posterior_never_the_paired_gate(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    monkeypatch.setenv("CAPEVOLVE_COST_GATING", "0")
+    sh = Sh()
+    rc, out = _act(monkeypatch, capsys, ["promote", "cand_1", *_args(rd, project)], sh)
+    assert out["result"]["gate_mode"] == "posterior"
+    assert not any(c[1].endswith("gate_check.py") for c in sh.calls)
+
+
+def _ctx(rd, project):
+    return act.Ctx(types.SimpleNamespace(run_dir=str(rd.root), project=str(project), strict=False))
+
+
+def test_posterior_promotion_is_valid_under_repeated_looks(tmp_path, monkeypatch):
+    """cost_gating off: promoting a null candidate after every one of 8 looks falsely accepts rarely
+    (the plain paired gate was measured at 39% cumulative)."""
+    import shutil
+    monkeypatch.setenv("CAPEVOLVE_COST_GATING", "0")
+    false = 0
+    for sim in range(20):
+        sub = tmp_path / f"s{sim}"
+        sub.mkdir()
+        rd, project, work, val = _run(sub, n=12)
+        shutil.copytree(work / "cand_1", work / "cand_2")
+        (work / "cand_2" / "z.md").write_text("z")
+        graph.append_node(rd, node_id="cand_2", parents=["cur"], status="proposed")
+        rng = random.Random(100 + sim)
+        p = {t: rng.choice([.2, .5, .8]) for t in val}
+        ctx = _ctx(rd, project)
+        for look in range(8):
+            for tag in ("cur", "cand_2"):
+                _ledger(rd, _h(rd, tag), {t: [int(rng.random() < p[t])] for t in val},
+                        ts=time.time() + look * 100 + (tag == "cur"))
+            if act.judge(ctx, "cand_2", "cur")["verdict"] == "accept":
+                false += 1
+                break
+    assert false <= 2, f"{false}/20 null candidates accepted over 8 looks"
+
+
+# ---- review fixes: races, budget, snapshot, sealing, output size ------------------------------
+
+def test_four_concurrent_digests_charge_the_optimizer_once(tmp_path, monkeypatch):
+    import threading
+    rd, _, _, _ = _run(tmp_path)
+    slug = re.sub(r"[^A-Za-z0-9]", "-", str(Path(rd.root).parent.parent.resolve()))
+    log = tmp_path / "claude" / "projects" / slug / "sess.jsonl"
+    log.parent.mkdir(parents=True)
+    log.write_text("".join(json.dumps({"type": "assistant", "timestamp": "2030-01-01T00:00:00Z", "message": {
+        "id": f"m{i}", "model": "claude-opus-4-8", "usage": {"output_tokens": 1000}}}) + "\n" for i in range(300)))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "sess")
+    monkeypatch.setenv("CAPEVOLVE_OPTIMIZER_COST", "session")
+    ts = [threading.Thread(target=digest.meter, args=(RunDir.open(rd.root),)) for _ in range(4)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert RunDir.open(rd.root).spent.optimizer_usd == pytest.approx(300 * 1000 / 1e6 * 25.0, abs=0.01)
+
+
+def test_concurrent_probes_of_the_same_cells_launch_one_evaluation(tmp_path, monkeypatch):
+    import threading
+    rd, project, _, val = _run(tmp_path)
+    h = _h(rd, "cand_1")
+    launched = []
+
+    def fake(cmd, env=None):
+        launched.append([str(c) for c in cmd])
+        time.sleep(0.4)
+        _ledger(rd, h, {t: [1] for t in val[:2]})
+        return 0, "{}", ""
+    monkeypatch.setattr(act, "sh", fake)
+    args = types.SimpleNamespace(run_dir=str(rd.root), project=str(project), strict=False, verb="probe",
+                                 tag="cand_1", tasks=",".join(val[:2]), auto=False, n=1, budget=8, plan=False,
+                                 yes=True, over_budget=None)
+    res = []
+    ts = [threading.Thread(target=lambda: res.append(act.probe(args, act.Ctx(args)))) for _ in range(2)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(launched) == 1 and len(res) == 2, "the second probe waited, saw the cells, and ran nothing"
+    assert json.loads((rd.root / "eval_claims.json").read_text()) == {}
+
+
+def test_a_dead_claim_is_stolen(tmp_path):
+    rd, project, _, val = _run(tmp_path)
+    ctx = _ctx(rd, project)
+    (rd.root / "eval_claims.json").write_text(json.dumps({f"hh|{val[0]}": {"pid": 2 ** 22 + 12345, "t": time.time()}}))
+    miss, keys = act.claim_cells(ctx, "hh", [val[0]], 1, wait_s=1)
+    assert list(miss) == [val[0]] and keys == [f"hh|{val[0]}"]
+
+
+def test_exhausted_budget_refuses_spending_verbs_unless_overridden_and_records_it(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    rd.update_budget(max_usd=1.0)
+    rd.update_spent(usd=2.0)
+    sh = Sh()
+    rc, out = _act(monkeypatch, capsys, ["probe", "cand_1", "--tasks", val[0], *_args(rd, project)], sh)
+    assert rc == 2 and "budget exhausted" in out["error"] and not sh.calls
+    rc, out = _act(monkeypatch, capsys, ["probe", "cand_1", "--tasks", val[0], "--over-budget", "need one cell",
+                                         *_args(rd, project)], sh)
+    assert rc == 0 and sh.calls
+    ev = [json.loads(ln) for ln in rd.events_path.read_text().splitlines()]
+    assert [e["reason"] for e in ev if e["kind"] == "over_budget_override"] == ["need one cell"]
+    rc, out = _act(monkeypatch, capsys, ["finalize", *_args(rd, project)], Sh())
+    assert rc == 2 and "budget exhausted" in out["error"]
+    rc, out = _act(monkeypatch, capsys, ["propose", "cand_1", *_args(rd, project)], Sh())
+    assert rc == 2 and "budget exhausted" in out["error"]
+
+
+def test_full_val_probe_shows_its_estimate_and_needs_yes(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    sh = Sh()
+    rc, out = _act(monkeypatch, capsys, ["probe", "cand_1", *_args(rd, project)], sh)
+    assert rc == 2 and out["estimate"]["rollouts"] == len(val) and not sh.calls
+    rc, out = _act(monkeypatch, capsys, ["probe", "cand_1", "--yes", *_args(rd, project)], sh)
+    assert rc == 0 and sh.calls
+
+
+def test_the_digest_never_suggests_pruning_the_champion(tmp_path):
+    rd, _, work, val = _run(tmp_path)
+    _two_tips(rd, work, val, {t: [1] for t in val}, {t: [1] for t in val})
+    graph.append_node(rd, node_id="cur", parents=["seed"], status="accepted")
+    d = digest.build(rd)
+    assert "cur" not in [t["id"] for t in d["tips"]]
+    assert not any(s["target"] == "cur" and s["verb"] in ("prune", "promote") for s in d["suggested"])
+
+
+def test_coverage_and_confirm_use_the_committed_snapshot_not_the_work_dir(tmp_path):
+    rd, _, work, _ = _run(tmp_path)
+    (work / "cur").mkdir()
+    (work / "cur" / "edited.md").write_text("uncommitted edit")
+    assert digest.cand_dir(rd, "cur") == rd.candidate_dir("cur")
+    assert digest.cand_dir(rd, "cand_1") == work / "cand_1", "an uncommitted tag still uses its work dir"
+
+
+def test_relative_run_dir_still_meters(tmp_path, monkeypatch, capsys):
+    rd, project, _, _ = _run(tmp_path)
+    _session_log(rd, tmp_path, monkeypatch)
+    monkeypatch.chdir(tmp_path)
+    rel = str(Path(rd.root).relative_to(tmp_path))
+    digest.main(["--run-dir", rel])
+    capsys.readouterr()
+    assert RunDir.open(rd.root).spent.optimizer_usd == pytest.approx(25.0, abs=0.01)
+
+
+def test_infra_failures_are_prominent_in_the_digest(tmp_path, monkeypatch):
+    rd, _, _, _ = _run(tmp_path)
+    monkeypatch.setenv("CAPEVOLVE_OPTIMIZER_COST", "session")
+    monkeypatch.setattr(digest.optimizer_cost, "harvest", lambda *a, **k: (_ for _ in ()).throw(OSError("disk")))
+    text = digest.render(digest.build(rd))
+    assert text.startswith("!! INFRA") and "metering failed" in text
+
+
+def test_finalize_does_not_seal_when_the_confirm_gate_does_not_accept(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    rd.snapshot("seed", rd.candidate_dir("cur"))
+    _ledger(rd, _h(rd, "cur"), {v: [1, 0] for v in val})
+    sh = Sh(**{"gate_check.py": _gate("reject"), "run.py": (0, json.dumps({"test_reward": 0.4}), "")})
+    rc, out = _act(monkeypatch, capsys, ["finalize", *_args(rd, project)], sh)
+    assert rc == 2 and "test NOT sealed" in out["error"] and out["confirm"]["verdict_vs_seed"] == "reject"
+    assert not any("finalize" in c[1] for c in sh.calls)
+    rc, out = _act(monkeypatch, capsys, ["finalize", "--seal-anyway", "report the null honestly", *_args(rd, project)], sh)
+    r = out["result"]
+    assert rc == 0 and r["no_accepted_change"] and "did NOT beat the seed" in r["claim"] and r["final"] == {"test_reward": 0.4}
+
+
+def test_promote_output_is_trimmed_unless_verbose(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    big = {"verdict": "reject", "gate": {"accept": False, "delta": 0.1, "se": 0.05, "z": 2.0, "blob": "x" * 5000},
+           "candidate": {"reward": .5}}
+    sh = Sh(**{"gate_check.py": (0, json.dumps(big), "")})
+    rc, out = _act(monkeypatch, capsys, ["promote", "cand_1", *_args(rd, project)], sh)
+    assert "blob" not in json.dumps(out["result"]) and "full_gate" not in out["result"]
+    rc, out = _act(monkeypatch, capsys, ["promote", "cand_1", "--verbose", *_args(rd, project)], sh)
+    assert "blob" in json.dumps(out["result"]["full_gate"])
+
+
+def test_promoting_the_champion_or_pruning_an_unknown_tag_is_refused(tmp_path, capsys, monkeypatch):
+    rd, project, _, _ = _run(tmp_path)
+    rc, out = _act(monkeypatch, capsys, ["promote", "cur", *_args(rd, project)], Sh())
+    assert rc == 2 and "already the champion" in out["error"]
+    rc, out = _act(monkeypatch, capsys, ["prune", "nonexist", "--reason", "x", *_args(rd, project)], Sh())
+    assert rc == 2 and "unknown candidate" in out["error"]

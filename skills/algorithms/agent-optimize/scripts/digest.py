@@ -36,6 +36,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 from cap_evolve import (RunDir, eval_index, hypotheses, lineage, optimizer_config, optimizer_cost,
                         posterior, sched, schema_v2)
 from cap_evolve.candidate_graph import CandidateGraph
+from cap_evolve.rundir import _file_lock
 from cap_evolve.specfile import spec_for_run
 
 MIN_REPEAT_CELLS = 6        # fewer repeat cells than this and sd_est is called stale
@@ -61,15 +62,28 @@ def _run_start(run_dir) -> float:
         return 0.0
 
 
+def infra(run_dir, msg: str) -> None:
+    """Fail-open infra error: loud on stderr AND recorded, so the digest shows it prominently."""
+    warn(msg)
+    try:
+        run_dir.log_event("infra_warning", msg=msg[:300])
+    except OSError:
+        pass
+
+
 def meter(run_dir, strict: bool = False) -> dict | None:
     """Add optimizer spend not yet counted (session-log messages deduped by id, so repeated
-    calls are idempotent) to ``state.json``. Fail-open: an unreadable log warns, ``strict`` raises."""
+    calls are idempotent) to ``state.json``. The read-seen / price / write-seen / update_spent
+    sequence runs under one lock, so concurrent verbs charge each message exactly once.
+    Fail-open: an unreadable log warns (and shows in the digest), ``strict`` raises."""
     if optimizer_cost.mode() == "off":
         return None
     try:
-        h = optimizer_cost.harvest(run_dir, [run_dir.root.parent.parent, Path.cwd()], _run_start(run_dir))
+        with _file_lock(Path(run_dir.root) / ".meter.lock"):
+            h = optimizer_cost.harvest(run_dir, [run_dir.root.parent.parent, Path.cwd()], _run_start(run_dir))
+            if h and (h["usd"] or h["tokens"]):
+                run_dir.update_spent(optimizer_usd=h["usd"], optimizer_tokens=h["tokens"])
         if h and (h["usd"] or h["tokens"]):
-            run_dir.update_spent(optimizer_usd=h["usd"], optimizer_tokens=h["tokens"])
             schema_v2.emit(run_dir, "optimizer_spend", role="agent", usd=h["usd"], tokens=h["tokens"],
                            model=",".join(sorted(h.get("models") or {})) or None, node=None)
             if h.get("unpriced_tokens"):
@@ -78,8 +92,24 @@ def meter(run_dir, strict: bool = False) -> dict | None:
     except Exception as e:  # noqa: BLE001 - metering is advisory
         if strict:
             raise
-        warn(f"optimizer metering failed ({type(e).__name__}: {e}); spend NOT updated")
+        infra(run_dir, f"optimizer metering failed ({type(e).__name__}: {e}); spend NOT updated")
         return None
+
+
+def recent_infra(run_dir, n: int = 3) -> list[str]:
+    try:
+        lines = Path(run_dir.events_path).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    out = []
+    for ln in lines:
+        try:
+            e = json.loads(ln)
+        except ValueError:
+            continue
+        if e.get("kind") == "infra_warning":
+            out.append(str(e.get("msg")))
+    return out[-n:]
 
 
 # ---- noise -----------------------------------------------------------------------------------
@@ -125,8 +155,11 @@ def noise(run_dir, val_ids, now: float | None = None) -> dict:
 # ---- posteriors ------------------------------------------------------------------------------
 
 def cand_dir(run_dir, tag: str) -> Path:
+    """The COMMITTED snapshot when one exists (finalize seals ``candidates/<best_id>``, so every
+    coverage / confirm figure must describe those bytes); the work dir only for an uncommitted tag."""
+    snap = run_dir.candidate_dir(tag)
     w = Path(run_dir.root) / "work" / tag
-    return w if w.is_dir() else run_dir.candidate_dir(tag)
+    return snap if snap.is_dir() or not w.is_dir() else w
 
 
 def pair(run_dir, cand: str, ref: str, val_ids):
@@ -251,6 +284,7 @@ def build(run_dir, project: Path | None = None, spec: dict | None = None, strict
     warnings: list[str] = []
     out: dict = {"budget": {
         "remaining_usd": round(b.max_usd - s.total_usd, 2) if b.max_usd else None,
+        "remaining_opt_usd": round(b.max_optimizer_usd - s.optimizer_usd, 2) if b.max_optimizer_usd else None,
         "eval_usd": round(s.usd, 2), "opt_usd": round(s.optimizer_usd, 2),
         "usersim_usd": round(s.usersim_usd, 2), "rollouts": s.metric_calls,
         "wall_min": round(max(0.0, time.time() - _run_start(run_dir)) / 60, 1)}}
@@ -300,7 +334,10 @@ def build(run_dir, project: Path | None = None, spec: dict | None = None, strict
             warnings.append(f"posterior for {t} failed: {type(e).__name__}: {e}")
     rows.sort(key=lambda r: -(r.get("mean") or 0))
     out["champion"] = {"id": champ, **_own(run_dir, champ, val_ids)} if val_ids else {"id": champ}
-    out["tips"] = rows
+    out["tips"] = [r for r in rows if r["id"] != champ]   # the champion is never a prune/promote target
+    infra_w = recent_infra(run_dir)
+    if infra_w:
+        out["infra_warnings"] = infra_w
     cl = load_clusters(run_dir)
     if cl is None:
         warnings.append("no clusters.json: run diagnose/scripts/run.py --cluster v2 > $R/clusters.json")
@@ -375,7 +412,10 @@ def tokens(text: str) -> int:
 def render(d: dict) -> str:
     b = d["budget"]
     left = f"${b['remaining_usd']} left | " if b.get("remaining_usd") is not None else ""
-    L = [f"budget: {left}eval ${b['eval_usd']} opt ${b['opt_usd']} usersim ${b['usersim_usd']} | "
+    if b.get("remaining_opt_usd") is not None:
+        left += f"${b['remaining_opt_usd']} optimizer left | "
+    L = (["!! INFRA (fail-open, result may be incomplete): " + " | ".join(d["infra_warnings"])]
+         if d.get("infra_warnings") else []) + [f"budget: {left}eval ${b['eval_usd']} opt ${b['opt_usd']} usersim ${b['usersim_usd']} | "
          f"{b['rollouts']} rollouts | {b['wall_min']} min" + (f" | EXHAUSTED: {b['exhausted']}" if b.get("exhausted") else "")]
     if d.get("context_digest") is False:
         return "\n".join(L + [f"best: {d.get('best_id')}", d["note"]])
@@ -421,7 +461,7 @@ def save_suggestions(run_dir, d: dict) -> None:
     """``$R/digest_last.json``: what was suggested, so act.py can log whether it was followed."""
     try:
         p = Path(run_dir.root) / "digest_last.json"
-        tmp = p.with_suffix(".tmp")
+        tmp = p.with_suffix(f".{os.getpid()}.tmp")
         tmp.write_text(json.dumps({"t": time.time(), "suggested": d.get("suggested", [])}), encoding="utf-8")
         os.replace(tmp, p)
     except OSError:
@@ -437,8 +477,12 @@ def main(argv=None) -> int:
     p.add_argument("--max-tokens", type=int, default=MAX_TOKENS)
     p.add_argument("--strict", action="store_true", help="infra errors (metering, ledger) are fatal, not warnings")
     a = p.parse_args(argv)
-    run_dir = RunDir.open(Path(a.run_dir))
-    d, text = fit(build(run_dir, Path(a.project) if a.project else None, strict=a.strict), a.max_tokens)
+    run_dir = RunDir.open(Path(a.run_dir).resolve())  # absolute: metering locates the session log from it
+    try:
+        d, text = fit(build(run_dir, Path(a.project) if a.project else None, strict=a.strict), a.max_tokens)
+    except ValueError as e:  # e.g. an unknown ablation key
+        print(json.dumps({"error": str(e)}))
+        return 2
     save_suggestions(run_dir, d)
     print(json.dumps(d, indent=1) if a.format == "json" else text)
     return 0
