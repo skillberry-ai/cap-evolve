@@ -71,3 +71,18 @@ def call_cost(model: str | None, role: str) -> float | None:
     tin, tout = ASSUMED_TOKENS.get(role, (3_000, 800))
     pin, pout = price
     return (tin * pin + tout * pout) / 1_000_000.0
+
+
+def token_cost(model: str | None, input_tokens: int = 0, output_tokens: int = 0,
+               cache_read: int = 0, cache_write: int = 0) -> float | None:
+    """List-price USD for measured tokens, or ``None`` when the model has no price (never 0).
+
+    Cache read is 0.1x and a 5-minute cache write 1.25x the input rate (Anthropic list);
+    models without a cache tier just never pass those. An ESTIMATE, not an invoice.
+    """
+    price = lookup(model)
+    if price is None:
+        return None
+    pin, pout = price
+    return (input_tokens * pin + output_tokens * pout
+            + cache_read * pin * 0.1 + cache_write * pin * 1.25) / 1_000_000.0

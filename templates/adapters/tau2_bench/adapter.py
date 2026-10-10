@@ -161,6 +161,20 @@ def _read_candidate_policy(candidate_dir: Path) -> str:
 _cost_unpriced_warned = False
 
 
+def _user_model() -> str:
+    return os.environ.get("TAU2_USER_MODEL") or model_config.MODEL
+
+
+def _usersim_meta(messages, model) -> dict:
+    """User-simulator tokens whose cost the provider did NOT report (None or 0.0), so the
+    harness can list-price exactly those and never double-count a provider-priced message."""
+    ut = [getattr(m, "usage", None) or {} for m in messages
+          if getattr(m, "role", None) == "user" and not getattr(m, "cost", None)]
+    return {"model": model,
+            "prompt_tokens": sum(int(u.get("prompt_tokens") or 0) for u in ut),
+            "completion_tokens": sum(int(u.get("completion_tokens") or 0) for u in ut)}
+
+
 def _cost_and_tokens(sim) -> tuple[float, int, dict]:
     """Cost and token usage for one simulation, plus metadata saying how solid the cost is.
 
@@ -205,11 +219,14 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
         tokens = 0
     missing_usage = sum(1 for m in messages if getattr(m, "usage", None) is None)
 
+    usersim = _usersim_meta(messages, _user_model())
+
     if agent_cost is not None or user_cost is not None:
         return (
             float(agent_cost or 0.0) + float(user_cost or 0.0),
             tokens,
-            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage},
+            {"cost_source": "tau2", "messages_missing_cost": 0, "messages_missing_usage": missing_usage,
+             "usersim": usersim},
         )
 
     # tau2 gave up on the whole run: salvage whatever the provider did price.
@@ -233,6 +250,7 @@ def _cost_and_tokens(sim) -> tuple[float, int, dict]:
         "cost_source": source,
         "messages_missing_cost": missing,
         "messages_missing_usage": missing_usage,
+        "usersim": usersim,
     }
 
 
@@ -379,7 +397,7 @@ class Adapter(CapabilityAdapter):
             llm_agent=model_config.MODEL,
             llm_args_agent=model_config.llm_kwargs_for("agent"),
             user="user_simulator",
-            llm_user=model_config.MODEL,
+            llm_user=_user_model(),
             llm_args_user=model_config.llm_kwargs_for("user"),
             num_trials=1,
             max_steps=100,
@@ -541,7 +559,7 @@ class Adapter(CapabilityAdapter):
             llm_agent=model_config.MODEL,
             llm_args_agent=model_config.llm_kwargs_for("agent"),
             user="user_simulator",
-            llm_user=model_config.MODEL,
+            llm_user=_user_model(),
             llm_args_user=model_config.llm_kwargs_for("user"),
             num_trials=n_trials,
             max_steps=100,

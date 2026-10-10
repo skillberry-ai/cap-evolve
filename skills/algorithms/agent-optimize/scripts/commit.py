@@ -48,7 +48,7 @@ from pathlib import Path
 # cap_evolve imports below; not "unused" — deleting it breaks standalone runs.
 import _bootstrap  # noqa: F401  # side-effect import, see above
 
-from cap_evolve import RunDir, graph, harness
+from cap_evolve import RunDir, graph, harness, optimizer_cost
 
 import meter
 
@@ -62,6 +62,24 @@ import meter
 # check for that compliance gap: real wall-clock time clearly passed since the previous
 # decision, yet this commit still reports zero optimizer cost.
 _ZERO_OPTIMIZER_COST_WARN_S = 120  # ponytail: fixed heuristic threshold, tune if too noisy
+
+
+def _decision_times(run_dir: RunDir) -> tuple[float | None, float | None]:
+    """(first event time, previous decision time) of this run — bounds for the log harvest."""
+    first = last = None
+    try:
+        with run_dir.events_path.open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                first = first if first is not None else rec.get("t")
+                if rec.get("kind") in ("accept", "reject", "inconclusive", "provisional"):
+                    last = rec.get("t")
+    except OSError:
+        pass
+    return first, last
 
 
 def _wallclock_since_last_decision(run_dir: RunDir) -> float | None:
@@ -849,13 +867,31 @@ def main(argv=None) -> int:
         args.optimizer_tokens = metered["tokens"]
         args.optimizer_seconds = round(metered["seconds"], 3)
         meter_field["opt_meter"] = metered["meter"]
+    # #715: a conversational run has no host transcript, but Claude Code's own session log
+    # (~/.claude/projects) has every message's usage. Harvest what is new since the previous
+    # decision, deduped by message id, unless the host meter or the agent already accounted
+    # for this round. USD is a list-price estimate; unpriced models are reported, not zeroed.
+    harvested = None
+    if (metered is None and not args.optimizer_usd and not args.optimizer_tokens
+            and optimizer_cost.mode() != "off"):
+        first_t, last_t = _decision_times(run_dir)
+        since = (first_t if optimizer_cost.mode() == "session" else last_t) or first_t or 0.0
+        harvested = optimizer_cost.harvest(
+            run_dir, [run_dir.root.parent.parent, Path.cwd()], since)
+        if harvested is not None:
+            args.optimizer_usd = harvested["usd"]
+            args.optimizer_tokens = harvested["tokens"]
+            if not harvested["scoped"]:
+                print("WARNING: CLAUDE_CODE_SESSION_ID unset - optimizer cost falls back to "
+                      "ALL Claude sessions in this directory since the last decision (may "
+                      "over-count other sessions).", file=sys.stderr)
     # #684 item 10: only fires when nothing else already accounted for the time (the host
     # meter above, or the agent's own --optimizer-* flags) — a real metered/self-reported
     # $0 round (e.g. a near-instant reject) is not a compliance problem.
     wallclock_elapsed = _wallclock_since_last_decision(run_dir)
     optimizer_cost_warning = None
-    if (metered is None and not args.optimizer_seconds and not args.optimizer_usd
-            and wallclock_elapsed is not None
+    if (metered is None and harvested is None and not args.optimizer_seconds
+            and not args.optimizer_usd and wallclock_elapsed is not None
             and wallclock_elapsed > _ZERO_OPTIMIZER_COST_WARN_S):
         optimizer_cost_warning = (
             f"{wallclock_elapsed:.0f}s elapsed since the previous decision but this commit "
@@ -874,6 +910,9 @@ def main(argv=None) -> int:
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None,
                       optimizer_cost_warning=optimizer_cost_warning,
+                      opt_cost_basis="session_log_list_price_estimate" if harvested else None,
+                      opt_cost_session_scoped=harvested["scoped"] if harvested else None,
+                      opt_unpriced_tokens=(harvested or {}).get("unpriced_tokens") or None,
                       wallclock_since_last_decision=wallclock_elapsed,
                       **meter_field, **gate)
     run_dir.update_spent(optimizer_usd=args.optimizer_usd,
