@@ -47,6 +47,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 # accepted values is the only correct source for ours. Importable on the same terms as
 # _bootstrap above — this directory is already on sys.path or that import would have failed.
 import gate_check
+import pregate
 
 from cap_evolve import RunDir, eval_index, harness, mdblocks
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
@@ -512,6 +513,24 @@ def run_pregate_check(cmd: str, cand_dir: Path) -> str | None:
     return None
 
 
+def pregate_failure(run_dir, project, parent_tag: str, cand_dir: Path, cmd: str | None) -> str | None:
+    """The built-in deterministic pre-gate (#708, ``ablation.pregate``) first, then the
+    agent-registered check (#632). ``None`` = valid; else the reason. With the ablation off only
+    the legacy check runs."""
+    spec = spec_for_run(run_dir, project)
+    if pregate.enabled(spec):
+        cfg = spec.get("pregate") if isinstance(spec.get("pregate"), dict) else {}
+        parent = run_dir.candidate_dir(parent_tag)
+        res = pregate.run(
+            cand_dir, parent if parent.is_dir() else None,
+            fixtures=run_dir.root / "tool_fixtures.jsonl", toolkit=cfg.get("toolkit"),
+            traces=[Path(t) for t in cfg.get("traces") or []],
+            max_growth=float(cfg.get("max_policy_growth", pregate.MAX_POLICY_GROWTH)))
+        if not res["ok"]:
+            return "built-in pre-gate: " + res["failure"]
+    return run_pregate_check(cmd, cand_dir) if cmd else None
+
+
 def known_invalid(run_dir) -> list[str]:
     """Tags an earlier round's pre-gate check already disqualified in this run."""
     if not run_dir.events_path.exists():
@@ -693,7 +712,7 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
             continue
         # #632: two valid parents can still compose into an invalid merge — check before its
         # screen spends a rollout, same as the round's own candidates.
-        bad = pregate_cmd and run_pregate_check(pregate_cmd, work / tag)
+        bad = pregate_failure(run_dir, project, best, work / tag, pregate_cmd)
         if bad:
             run_dir.log_event("agent_optimize_pregate_invalid", tag=tag, parents=[a, b],
                               output=bad)
@@ -1168,9 +1187,9 @@ def _main(argv=None) -> int:
     # every tag's bytes before any screen or eval is paid for. One invalid tag refuses the
     # whole round, the same idiom as the screen-ladder refusal below.
     PREGATE = resolve_pregate_check(run_dir, args.pregate_check)
-    if PREGATE:
+    if PREGATE or pregate.enabled(spec_for_run(run_dir, project)):  # #708: built-in needs no registration
         prior_invalid = known_invalid(run_dir)
-        invalid = {t: r for t in tags if (r := run_pregate_check(PREGATE, work / t))}
+        invalid = {t: r for t in tags if (r := pregate_failure(run_dir, project, best, work / t, PREGATE))}
         for t, r in invalid.items():
             run_dir.log_event("agent_optimize_pregate_invalid", tag=t, output=r,
                               iteration=int(run_dir.spent.iterations))
