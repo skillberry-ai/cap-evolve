@@ -33,6 +33,7 @@ feedback for a genuinely wrong write, so the lexical key above cannot separate t
 
 from __future__ import annotations
 
+import json
 import re
 
 # Words that name THAT something failed, never WHY. Keeping them lets two unrelated
@@ -254,12 +255,7 @@ def overlap(a: frozenset[str], b: frozenset[str]) -> float:
     return len(a & b) / min(len(a), len(b))
 
 
-def cluster(items: list[tuple[str, str, float]]) -> list[dict]:
-    """Group ``(task_id, feedback, score_lost)`` triples by root cause.
-
-    Clusters are sorted by score lost, then task count, then signature — a total
-    order, so the output is byte-identical on repeated runs over the same input.
-    """
+def _keys(items: list[tuple[str, str, float]]) -> list[frozenset[str]]:
     prefix = common_prefix([f for _, f, _ in items])
     stemmed = [_stemmed(f, prefix) for _, f, _ in items]
     # Corpus-relative, IN ADDITION to the generic-English list: a benchmark's own recurring
@@ -268,11 +264,14 @@ def cluster(items: list[tuple[str, str, float]]) -> list[dict]:
     # failures. Without this, that vocabulary survives into every key and merges unrelated
     # failures into one mega-cluster with no discriminating signal.
     extra_stop = corpus_stopwords(stemmed)
-    keys = [_filter_stems(s, extra_stop) for s in stemmed]
+    return [_filter_stems(s, extra_stop) for s in stemmed]
 
-    # Union-find over the overlap relation (transitive: A~B and B~C => one cluster).
-    # ponytail: O(n^2) pair scan — fine for a val split; index by token if it grows.
-    parent = list(range(len(items)))
+
+def _components(n: int, linked) -> dict[int, list[int]]:
+    """Union-find over ``linked(i, j)`` (transitive: A~B and B~C => one group).
+
+    ponytail: O(n^2) pair scan — fine for a val split; index by token if it grows."""
+    parent = list(range(n))
 
     def find(i: int) -> int:
         while parent[i] != i:
@@ -280,28 +279,42 @@ def cluster(items: list[tuple[str, str, float]]) -> list[dict]:
             i = parent[i]
         return i
 
-    for i in range(len(items)):
-        for j in range(i + 1, len(items)):
-            if overlap(keys[i], keys[j]) >= OVERLAP_MIN:
+    for i in range(n):
+        for j in range(i + 1, n):
+            if linked(i, j):
                 ri, rj = find(i), find(j)
                 if ri != rj:
                     parent[max(ri, rj)] = min(ri, rj)
 
     groups: dict[int, list[int]] = {}
-    for i in range(len(items)):
+    for i in range(n):
         groups.setdefault(find(i), []).append(i)
+    return groups
+
+
+def _label(keys: list[frozenset[str]], idxs: list[int]) -> str:
+    counts: dict[str, int] = {}
+    for i in idxs:
+        for t in keys[i]:
+            counts[t] = counts.get(t, 0) + 1
+    return " ".join(t for t, _ in
+                    sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:4])
+
+
+def cluster(items: list[tuple[str, str, float]]) -> list[dict]:
+    """Group ``(task_id, feedback, score_lost)`` triples by root cause.
+
+    Clusters are sorted by score lost, then task count, then signature — a total
+    order, so the output is byte-identical on repeated runs over the same input.
+    """
+    keys = _keys(items)
+    groups = _components(len(items), lambda i, j: overlap(keys[i], keys[j]) >= OVERLAP_MIN)
 
     out = []
     for root in sorted(groups):
         idxs = groups[root]
-        counts: dict[str, int] = {}
-        for i in idxs:
-            for t in keys[i]:
-                counts[t] = counts.get(t, 0) + 1
-        label = " ".join(t for t, _ in
-                         sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:4])
         out.append({
-            "signature": label or "unknown",
+            "signature": _label(keys, idxs) or "unknown",
             "tasks": sorted(items[i][0] for i in idxs),
             "score_lost": round(sum(items[i][2] for i in idxs), 4),
             # Judgement, not derivable here — diagnose's reader fills these in.
@@ -309,4 +322,173 @@ def cluster(items: list[tuple[str, str, float]]) -> list[dict]:
             "blast_radius": None,
         })
     out.sort(key=lambda c: (-c["score_lost"], -len(c["tasks"]), c["signature"]))
+    return out
+
+
+# ---------------------------------------------------------------------------------------
+# v2 (issue #716): + tool-error signature + trajectory pattern, pooled trials, kind/headroom.
+# ``cluster()`` above is unchanged in behaviour; everything below is opt-in.
+# ---------------------------------------------------------------------------------------
+
+#: A tool-error signature / pattern must account for this share of a cluster's trials
+#: before it names the cluster's ``kind``.
+KIND_DOMINANCE = 0.5
+
+#: Same call (name + arguments) this many times => ``loop:<tool>``.
+LOOP_MIN = 3
+
+
+def trace_calls(rollout: dict) -> list[dict]:
+    """Ordered ``{id, name, args, result, error, mutates}`` for every tool call in an
+    OpenAI/tau2-style ``trace`` message list (assistant ``tool_calls`` answered by
+    ``role: tool`` messages carrying the call ``id``). Same two call shapes ``_call_names``
+    reads; ``error`` is the tool message's own ``error`` flag, else a leading ``Error``."""
+    trace = rollout.get("trace")
+    if not isinstance(trace, list):
+        return []
+    calls: list[dict] = []
+    by_id: dict[str, dict] = {}
+    for msg in trace:
+        if not isinstance(msg, dict):
+            continue
+        if msg.get("role") == "tool":
+            c = by_id.get(msg.get("id"))
+            if c is not None and c["result"] is None:
+                c["result"] = msg.get("content")
+                c["error"] = (bool(msg.get("error"))
+                              or str(msg.get("content") or "").lstrip().lower().startswith("error"))
+            continue
+        for call in msg.get("tool_calls") or []:
+            if not isinstance(call, dict):
+                continue
+            fn = call.get("function") if isinstance(call.get("function"), dict) else {}
+            name = call.get("name") or fn.get("name")
+            if not name:
+                continue
+            args = call.get("arguments", fn.get("arguments"))
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except ValueError:
+                    pass
+            c = {"id": call.get("id"), "name": str(name), "args": {} if args is None else args,
+                 "result": None, "error": False, "mutates": call.get("mutates") is True}
+            calls.append(c)
+            if c["id"] is not None:
+                by_id[c["id"]] = c
+    return calls
+
+
+def _error_class(text: str) -> str:
+    """Normalized error class: pydantic errors collapse to ``validation <Model>``; anything
+    else is the first clause with quoted literals and numbers stripped (task-specific)."""
+    t = re.sub(r"^\s*error:?\s*", "", str(text or ""), flags=re.IGNORECASE)
+    m = re.match(r"\d+ validation errors? for (\w+)", t)
+    if m:
+        return f"validation {m.group(1)}"
+    t = re.sub(r"['\"`].*?['\"`]", " ", t.lower())
+    t = re.sub(r"[0-9]+", " ", t)
+    return " ".join(re.split(r"[,;\n]", t)[0].split())[:60]
+
+
+def tool_error_sigs(rollout: dict) -> dict[str, int]:
+    """``{"<tool>|<error class>": count}`` over the rollout's failed tool calls."""
+    out: dict[str, int] = {}
+    for c in trace_calls(rollout or {}):
+        if c["error"]:
+            k = f"{c['name']}|{_error_class(c['result'])}"
+            out[k] = out.get(k, 0) + 1
+    return out
+
+
+def patterns(rollout: dict) -> list[str]:
+    """Trajectory patterns: ``loop:<tool>``, ``transfer_first``, ``too_many_errors``
+    (``narrated_without_action`` is handled separately, see ``cluster_v2``)."""
+    rollout = rollout or {}
+    calls = trace_calls(rollout)
+    seen: dict[tuple, int] = {}
+    for c in calls:
+        k = (c["name"], json.dumps(c["args"], sort_keys=True, default=str))
+        seen[k] = seen.get(k, 0) + 1
+    out = sorted({f"loop:{n}" for (n, _), v in seen.items() if v >= LOOP_MIN})
+    if calls and calls[0]["name"].lower().startswith("transfer"):
+        out.append("transfer_first")
+    if "too_many_errors" in json.dumps((rollout.get("metadata") or {}).get("termination_reason", "")).lower():
+        out.append("too_many_errors")
+    return out
+
+
+def cluster_v2(trials: list[dict], n_tasks: int, totals: dict[str, int] | None = None) -> list[dict]:
+    """Cluster failing trials: shared tool-error signature, else shared pattern, else lexical overlap.
+
+    ``trials``: ``{task_id, feedback, lost, rollout, trace_id}`` per FAILING trial (pooled
+    over however many trials/tags the caller has). ``totals``: trials per task INCLUDING
+    passes (denominator of ``headroom``); defaults to the failing trials given.
+    ``narrated_without_action`` trials never merge with anything else.
+
+    Output is a superset of ``cluster()``: adds ``cluster_id`` (``C1``.. in rank order — an
+    ordinal, so it shifts when evidence does), ``trial_count``, ``exemplar_trace_ids``,
+    ``kind`` (CAPABILITY / BEHAVIORAL / KNOWLEDGE), ``tool_error_sig`` and ``headroom``
+    (reward units: per task, cluster-attributable failing trials / all trials, summed,
+    / ``n_tasks``)."""
+    items = [(t["task_id"], t.get("feedback") or "", t.get("lost", 1.0)) for t in trials]
+    keys = _keys(items)
+    nar = [narrated_without_action(t.get("rollout") or {}) for t in trials]
+    # A signature only links trials where it recurs (>= 2 in that trial): one incidental
+    # error in a long trace must not chain unrelated failures together.
+    sigs = [frozenset(k for k, v in tool_error_sigs(t.get("rollout") or {}).items() if v >= 2)
+            for t in trials]
+    pats = [patterns(t.get("rollout") or {}) for t in trials]
+
+    def linked(i: int, j: int) -> bool:
+        if nar[i] or nar[j]:
+            return nar[i] and nar[j]
+        # Strongest evidence wins: a recurring tool-error signature decides alone; a trial
+        # without one is decided by a shared trajectory pattern; only trials with neither
+        # fall back to the lexical key. (Scorer feedback is often a fixed preamble + the
+        # task's own tool names, so letting the lexical key link ACROSS these tiers chains
+        # every failure into one cluster — measured on the tau2 airline run.)
+        if sigs[i] or sigs[j]:
+            return bool(sigs[i] & sigs[j])
+        if pats[i] or pats[j]:
+            return bool(set(pats[i]) & set(pats[j]))
+        return overlap(keys[i], keys[j]) >= OVERLAP_MIN
+
+    groups = _components(len(trials), linked)
+    totals = totals or {}
+    out = []
+    for root in sorted(groups):
+        idxs = groups[root]
+        per_task: dict[str, int] = {}
+        lost: dict[str, float] = {}
+        for i in idxs:
+            tid = trials[i]["task_id"]
+            per_task[tid] = per_task.get(tid, 0) + 1
+            lost[tid] = lost.get(tid, 0.0) + items[i][2]
+        denom = {t: max(totals.get(t, 0), n) for t, n in per_task.items()}
+        n_sig = sum(1 for i in idxs if sigs[i])
+        n_pat = sum(1 for i in idxs if pats[i] or nar[i])
+        kind = ("CAPABILITY" if n_sig / len(idxs) >= KIND_DOMINANCE else
+                "BEHAVIORAL" if n_pat / len(idxs) >= KIND_DOMINANCE else "KNOWLEDGE")
+        sig_counts: dict[str, int] = {}
+        for i in idxs:
+            for k in sigs[i]:
+                sig_counts[k] = sig_counts.get(k, 0) + 1
+        top_sig = sorted(sig_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:1]
+        out.append({
+            "signature": (NARRATED_WITHOUT_ACTION if all(nar[i] for i in idxs)
+                          else _label(keys, idxs) or "unknown"),
+            "tasks": sorted(per_task),
+            "trial_count": len(idxs),
+            "exemplar_trace_ids": sorted(t for t in (trials[i].get("trace_id") for i in idxs) if t)[:3],
+            "kind": kind,
+            "tool_error_sig": top_sig[0][0] if top_sig else None,
+            "headroom": round(sum(c / denom[t] for t, c in per_task.items()) / max(1, n_tasks), 4),
+            "score_lost": round(sum(lost[t] / denom[t] for t in per_task), 4),
+            "tag": None,
+            "blast_radius": None,
+        })
+    out.sort(key=lambda c: (-c["score_lost"], -len(c["tasks"]), c["signature"]))
+    for n, c in enumerate(out, start=1):
+        c["cluster_id"] = f"C{n}"
     return out

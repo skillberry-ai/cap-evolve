@@ -44,7 +44,8 @@ def _load_records(run_dir: RunDir, tag: str, split: str = "val") -> list[dict]:
     vdir = run_dir.rollouts / split
     if not vdir.exists():
         return out
-    for f in sorted(vdir.glob(f"*__{tag}__t*.json")):
+    # ``tag`` may be a comma-separated list: pooled evidence (e.g. every seed-equivalent run).
+    for f in sorted(g for t in tag.split(",") for g in vdir.glob(f"*__{t.strip()}__t*.json")):
         rec = json.loads(f.read_text(encoding="utf-8"))
         rec["__file"] = str(f)
         out.append(rec)
@@ -69,6 +70,16 @@ def trace_dir(project: str | None, split: str) -> str | None:
         return None
 
 
+def failure_clustering_enabled(run_dir, project: str | None) -> bool:
+    """``optimizer.ablation.failure_clustering`` (default on). Unreadable spec => on."""
+    try:
+        from cap_evolve.specfile import spec_for_run
+        spec = spec_for_run(run_dir, Path(project) if project else None)
+        return ((spec.get("optimizer") or {}).get("ablation") or {}).get("failure_clustering") is not False
+    except Exception:  # noqa: BLE001
+        return True
+
+
 def first_n_words_signature(feedback: str, n: int = 6) -> str:
     """Legacy lexical clustering key (opt-in via ``--cluster first-words``)."""
     return " ".join((feedback or "").split()[:n]) or "unknown"
@@ -80,7 +91,10 @@ def diagnose(records: list[dict], mode: str = "root-cause",
     items: list[tuple[str, str, float]] = []
     narrated: list[tuple[str, str, float]] = []
     kept = []
+    trials: list[dict] = []
+    totals: dict[str, int] = defaultdict(int)
     for rec in records:
+        totals[str(rec.get("score", {}).get("task_id"))] += 1
         sc = rec.get("score", {})
         ro = rec.get("rollout", {})
         reward = sc.get("reward", 0) or 0
@@ -101,9 +115,23 @@ def diagnose(records: list[dict], mode: str = "root-cause",
             "Trajectory": traces or rec.get("__file"),
             _cluster.NARRATED_WITHOUT_ACTION: flagged,
         })
+        trials.append({"task_id": str(sc.get("task_id")), "feedback": fb,
+                       "lost": max(0.0, 1.0 - float(reward)), "rollout": ro,
+                       "trace_id": Path(rec.get("__file") or "").stem or None})
         row = (sc.get("task_id"), fb, max(0.0, 1.0 - float(reward)))
         (narrated if flagged else items).append(row)
 
+    if mode == "v2":
+        # Pooled, tool-error-aware, with kind/headroom; narrated trials stay their own cluster.
+        return {"reflective_dataset": reflective, "kept_good": kept,
+                "clusters": _cluster.cluster_v2(trials, len(totals), dict(totals))}
+    if mode == "per-task":      # ablation failure_clustering=false: no grouping at all
+        by_task: dict[str, float] = defaultdict(float)
+        for t in trials:
+            by_task[t["task_id"]] += t["lost"]
+        clusters = [{"signature": f"task {k}", "tasks": [k], "score_lost": round(v, 4),
+                     "tag": None, "blast_radius": None} for k, v in sorted(by_task.items())]
+        return {"reflective_dataset": reflective, "clusters": clusters, "kept_good": kept}
     if mode == "first-words":
         groups = defaultdict(list)
         lost = defaultdict(float)
@@ -155,13 +183,19 @@ def main(argv=None) -> int:
     p.add_argument("--split", default="val", choices=["train", "val"],
                    help="which split's rollouts to diagnose (train is the honest "
                         "learning surface; val is what the gate scores)")
-    p.add_argument("--cluster", default="root-cause",
-                   choices=["root-cause", "first-words"],
-                   help="failure-clustering method (root-cause: site+expectation key)")
+    p.add_argument("--cluster", default="auto",
+                   choices=["auto", "root-cause", "first-words", "v2", "per-task"],
+                   help="failure-clustering method (root-cause: site+expectation key; v2: + "
+                        "tool-error signature, pooled trials, kind/headroom; per-task: no "
+                        "grouping). auto = v2 unless optimizer.ablation.failure_clustering "
+                        "is false in the project spec (then per-task)")
     args = p.parse_args(argv)
     run_dir = RunDir.open(Path(args.run_dir))
+    mode = args.cluster
+    if mode == "auto":
+        mode = "v2" if failure_clustering_enabled(run_dir, args.project) else "per-task"
     result = diagnose(_load_records(run_dir, args.tag, args.split),
-                      args.cluster, trace_dir(args.project, args.split))
+                      mode, trace_dir(args.project, args.split))
     result["split"] = args.split
     result["tag"] = args.tag
     print(json.dumps(result, indent=2))

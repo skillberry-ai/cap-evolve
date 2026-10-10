@@ -28,7 +28,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 
 import spend  # sibling script — reuses its own affordability check, see spend.py's docstring
 
-from cap_evolve import RunDir, task_ownership
+from cap_evolve import RunDir, hypotheses, task_ownership
 from cap_evolve.candidate_graph import CandidateGraph
 from cap_evolve.specfile import spec_for_run
 
@@ -214,20 +214,30 @@ def alternative_parents(ownership: dict | None, champion_id: str | None) -> list
 def plan_round(clusters: list[dict], candidate_graph: CandidateGraph | None,
                afford: dict | None, overlap_min: float = OVERLAP_MIN,
                max_branches_per_slot: int = DEFAULT_MAX_BRANCHES_PER_SLOT,
-               ownership: dict | None = None, champion_id: str | None = None) -> dict:
+               ownership: dict | None = None, champion_id: str | None = None,
+               size_rule: bool = True) -> dict:
+    """``size_rule`` (``optimizer.ablation.failure_clustering``, issue #716): when the clusters
+    carry v2 ``cluster_id``/``headroom``, each slot also reports whether a hypothesis covering
+    the whole slot clears the minimum edit size (see ``hypotheses.validate``)."""
     groups = group_clusters(clusters, overlap_min)
     slots = []
     for i, group in enumerate(groups, start=1):
         branches = estimate_branches(group, groups, max_branches_per_slot)
         slots.append({
             "slot_id": f"slot_{i}",
-            "cluster_ids": [c.get("tag") or c.get("signature") for c in group],
+            "cluster_ids": [c.get("cluster_id") or c.get("tag") or c.get("signature") for c in group],
             "cluster_count": len(group),
             "score_lost": round(sum(float(c.get("score_lost") or 0.0) for c in group), 4),
             "affected_tasks": sorted({str(t) for c in group for t in (c.get("tasks") or [])}),
             "hypothesis_stub": _hypothesis_stub(group),
             "estimated_branches": branches,
         })
+        if size_rule and all("headroom" in c and c.get("cluster_id") for c in group):
+            ok, reason = hypotheses.validate(
+                {"cluster_ids": slots[-1]["cluster_ids"], "predicted_tasks": slots[-1]["affected_tasks"]},
+                group)
+            slots[-1]["headroom"] = round(sum(float(c["headroom"]) for c in group), 4)
+            slots[-1]["size_check"] = {"ok": ok, "reason": reason}
     total_branches = sum(s["estimated_branches"] for s in slots)
     out = {
         "slots": slots,
@@ -253,6 +263,11 @@ def main(argv=None) -> int:
     p.add_argument("--overlap-min", type=float, default=OVERLAP_MIN)
     p.add_argument("--max-branches-per-slot", type=int, default=DEFAULT_MAX_BRANCHES_PER_SLOT,
                    help="safety ceiling only -- NOT a target branch count (see module docstring)")
+    p.add_argument("--hypotheses", default=None,
+                   help="path to a hypotheses.jsonl; each record is checked against the clusters "
+                        "(minimum edit size, issue #716) and the verdicts are emitted")
+    p.add_argument("--small-edit-justification", default="",
+                   help="written reason to allow a hypothesis below the minimum edit size")
     p.add_argument("--n-trials", type=int, default=0,
                    help="trials per full-val eval for the affordability check; "
                         "default = the project spec's num_trials")
@@ -288,8 +303,15 @@ def main(argv=None) -> int:
             afford = {"error": str(e)[:300]}
 
     ownership = task_ownership.from_run(run_dir, cg)
+    size_rule = ((spec.get("optimizer") or {}).get("ablation") or {}).get("failure_clustering") is not False
     out = plan_round(clusters, cg, afford, args.overlap_min, args.max_branches_per_slot,
-                      ownership=ownership, champion_id=run_dir.best_id)
+                      ownership=ownership, champion_id=run_dir.best_id, size_rule=size_rule)
+    if size_rule and args.hypotheses:
+        recs = [json.loads(line) for line in Path(args.hypotheses).read_text(encoding="utf-8").splitlines()
+                if line.strip()]
+        out["hypothesis_checks"] = [
+            dict(zip(("id", "ok", "reason"), (h.get("id"), *hypotheses.validate(
+                h, clusters, args.small_edit_justification)))) for h in recs]
     print(json.dumps(out, indent=2))
     return 0
 
