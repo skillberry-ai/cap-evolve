@@ -101,8 +101,7 @@ def test_recorded_run_without_events_still_flags_cand_9_screened(tmp_path):
     assert cg.node_v2("cand_4")["eval_state"] == "full"
 
 
-def test_recorded_run_cand_4_is_never_its_own_base(tmp_path):
-    # TODO(#719): once parents_of drops self-parents with history, base_for_eval should be
-    # cand_1 (cand_4's real parent); until then we only guarantee it is not itself.
+def test_recorded_run_cand_4_base_is_its_real_parent(tmp_path):
+    # build_dag's history-aware self-parent fallback (#719) recovers cand_4's real parent.
     cg, val, evals = _recorded(tmp_path)
-    assert cg.node_v2("cand_4", val_ids=val, evals=evals).get("base_for_eval") != "cand_4"
+    assert cg.node_v2("cand_4", val_ids=val, evals=evals).get("base_for_eval") == "cand_1"

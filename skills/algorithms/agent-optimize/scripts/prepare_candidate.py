@@ -35,13 +35,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
 
 import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, graph, harness
 
 
 def _is_provisional_snapshot(run_dir: RunDir, src: Path) -> bool:
@@ -92,6 +93,10 @@ def main(argv=None) -> int:
                         "work dir's own freshly-appended journal entry is not yet folded into "
                         "the run-level journal, and seed_framework_memory would silently "
                         "overwrite it away (see --allow-uncommitted-source).")
+    p.add_argument("--parent", default=None,
+                   help="graph parent tag (candidates/<tag>); recorded at creation as the new "
+                        "node's parent. Default = best_id, so the legacy chain is unchanged. "
+                        "Also the copy source unless --source is given.")
     p.add_argument("--allow-uncommitted-source", action="store_true",
                    help="--source is an uncommitted work dir with a journal entry not yet "
                         "folded into the run's journal; copy that entry forward into dest "
@@ -99,7 +104,8 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
-    src = Path(args.source) if args.source else run_dir.candidate_dir(run_dir.best_id or "seed")
+    parent = args.parent or run_dir.best_id or "seed"
+    src = Path(args.source) if args.source else run_dir.candidate_dir(parent)
     if not src.is_dir():
         print(json.dumps({"error": f"source dir not found: {src}"}, indent=2))
         return 2
@@ -131,7 +137,15 @@ def main(argv=None) -> int:
         journal = dest / "JOURNAL.md"
         journal.write_text(journal.read_text(encoding="utf-8").rstrip() + "\n\n" + pending + "\n",
                            encoding="utf-8")
-    print(json.dumps({"tag": args.tag, "source": str(src), "dest": str(dest),
+    try:
+        # CAPEVOLVE_DAG_PARALLEL=0: legacy -- record nothing, round.py parents on best_id
+        if os.environ.get("CAPEVOLVE_DAG_PARALLEL", "1") != "0":
+            graph.append_node(run_dir, node_id=args.tag, parents=[parent], status="proposed")
+    except ValueError as e:
+        shutil.rmtree(dest)
+        print(json.dumps({"error": str(e)}, indent=2))
+        return 2
+    print(json.dumps({"tag": args.tag, "parent": parent, "source": str(src), "dest": str(dest),
                       "memory_written": written,
                       "uncommitted_source_journal_carried_forward": bool(pending),
                       "provisional_source": provisional_source}, indent=2))

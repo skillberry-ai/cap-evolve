@@ -48,7 +48,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 # _bootstrap above — this directory is already on sys.path or that import would have failed.
 import gate_check
 
-from cap_evolve import RunDir, eval_index, harness, mdblocks
+from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
 from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
@@ -568,6 +568,16 @@ def _paired(payload: dict) -> dict[str, float]:
     return dict(zip([str(i) for i in pair.get("ids") or []], pair.get("deltas") or []))
 
 
+def _recorded_parents(run_dir, tag: str, best: str):
+    """Parent recorded at creation (``prepare_candidate --parent``, #714) when set, else
+    ``[best]`` (legacy). ``None`` (carry the prior record forward) if ``best`` is the tag
+    itself -- the self-parent seen on cand_4. ``CAPEVOLVE_DAG_PARALLEL=0`` forces legacy."""
+    prior = [p for p in (graph.latest_node(run_dir, tag) or {}).get("parents") or [] if p != tag]
+    if prior and os.environ.get("CAPEVOLVE_DAG_PARALLEL", "1") != "0":
+        return prior
+    return [best] if best != tag else None
+
+
 def keeps_parent_gain(merge_payload: dict, parent_payload: dict) -> bool:
     """Does the merge keep what ``parent`` showed on ITS OWN screened tasks?
 
@@ -1034,6 +1044,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "parent always gets fresh ones.")
     p.add_argument("--no-control", action="store_true",
                    help="skip the null control (NOT recommended — you lose the noise floor)")
+    p.add_argument("--steal-lock", action="store_true",
+                   help="take over $R/driver.lock even if its holder looks alive or is on "
+                        "another host (use only when that driver is known dead)")
     p.add_argument("--skip-screen-ladder", action="store_true",
                    help="run full-val on a candidate with no screen.py record for it. Unless "
                         "the run's frozen screening_structurally_uneconomical is true, each "
@@ -1131,10 +1144,14 @@ def _main(argv=None) -> int:
     project = Path(args.project)
     work = Path(args.run_dir) / "work"
     work.mkdir(parents=True, exist_ok=True)
-
     best = run_dir.best_id
     if not best:
         print(json.dumps({"error": "no best_id in the run dir — run baseline first"}, indent=2))
+        return 2
+    try:
+        lineage.acquire_driver_lock(run_dir.root, steal=args.steal_lock)
+    except lineage.DriverBusy as e:
+        print(json.dumps({"error": str(e)}, indent=2))
         return 2
 
     tags = [t.strip() for t in args.candidates.split(",") if t.strip()]
@@ -1367,18 +1384,18 @@ def _main(argv=None) -> int:
 
     input_tags = list(tags)
     screen_stage = {}
-    node_parents = {t: [best] for t in tags}
+    node_parents = {t: _recorded_parents(run_dir, t, best) for t in tags}
     for t in tags:
         payload = screen_payloads[t]
         screen_stage[t] = screen_summary(payload, auto=t in auto_screened)
         if payload is None:
             continue
-        graph.append_node(run_dir, node_id=t, parents=[best], status="screened", gate={},
+        graph.append_node(run_dir, node_id=t, parents=node_parents[t], status="screened", gate={},
                           cluster_ids=cluster_ids_for(run_dir, plan, t),
                           edit_kind=(plan.get(t) or {}).get("edit_kind"))
 
     for t, sup in dominated.items():
-        graph.append_node(run_dir, node_id=t, parents=[best], status="superseded", gate={},
+        graph.append_node(run_dir, node_id=t, parents=node_parents.get(t), status="superseded", gate={},
                           dominated_by=sup,
                           reason=f"its diff is a strict subset of sibling {sup}'s, which is "
                                  "gated instead")
