@@ -34,6 +34,7 @@ from . import integrity
 from . import stats
 from .cache import hash_candidate_dir
 from .memory import MemorySkill
+from . import eval_index
 from .loop import SplitResult, aggregate_scores, has_valid_trials
 from .rundir import RunDir, _atomic_write
 from .splits import Splits, make_splits
@@ -291,6 +292,7 @@ def evaluate_candidate(
     base_seed: int | None = None,
     workers: int | None = None,
     ids: list | None = None,
+    trial_offset: int = 0,
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
 
@@ -322,6 +324,10 @@ def evaluate_candidate(
     (its ``n_tasks`` is the subset, so its ``coverage`` looks like 1.0), and it must
     use its own ``tag`` so a later full-split eval's rollouts are not mixed with it.
     ``ids`` never widens a split: an id outside the frozen split is ignored.
+
+    ``trial_offset`` (default 0 = legacy) makes this a TOP-UP: trial ``k`` is written as
+    ``t{trial_offset + k}`` and seeded ``base_seed + trial_offset + k``, so extra trials on an
+    existing tag add rollouts with fresh seeds instead of replacing ``t0..`` or repeating them.
     """
     workers = _resolve_workers(workers)
     if split == "test":
@@ -353,7 +359,7 @@ def evaluate_candidate(
     # indistinguishable from progress. ``prior_reward`` is recorded because once the files are
     # overwritten the destroyed reading exists nowhere else.
     prior = sorted(out_dir.glob(f"*__{tag}__t*.json"))
-    if prior:
+    if prior and not trial_offset:
         prior_reward = None
         try:
             prior_reward = split_result_from_rollouts(run_dir, tag, split).reward
@@ -478,7 +484,7 @@ def evaluate_candidate(
             # (see cap_evolve/__init__.py) — a no-op call when logging isn't enabled.
             logger.debug("split=%s tag=%s task=%s trial=%s reward=%s errored=%s",
                          split, tag, tid, k, getattr(sc, "reward", None), errored)
-            (out_dir / f"{tid}__{tag}__t{k}.json").write_text(
+            (out_dir / f"{tid}__{tag}__t{trial_offset + k}.json").write_text(
                 json.dumps({"input": task.input, "rollout": rollout.to_dict(),
                             "score": sc.to_dict()}, default=str),
                 encoding="utf-8",
@@ -522,7 +528,7 @@ def evaluate_candidate(
             # ({task_id: [rollout_t0, rollout_t1, ...]}, trial-ordered), then run the
             # SAME per-trial persistence/scoring body for each k. Tolerate missing
             # trial entries (short/absent lists) as omitted rollouts.
-            rollouts_by_task = adapter.run_trials(tasks, ctx, n_trials=n_trials, base_seed=base_seed)
+            rollouts_by_task = adapter.run_trials(tasks, ctx, n_trials=n_trials, base_seed=base_seed + trial_offset)
             rollouts_by_task = rollouts_by_task or {}
             for k in range(n_trials):
                 rollouts_for_k: dict = {}
@@ -533,7 +539,7 @@ def evaluate_candidate(
                 _persist_trial(k, rollouts_for_k)
         else:
             for k in range(n_trials):
-                seed = base_seed + k
+                seed = base_seed + trial_offset + k
                 if has_batch:
                     rb = adapter.run_batch(tasks, ctx, seed=seed)
                     # accept either {task_id: Rollout} or a list parallel to `tasks`
@@ -563,6 +569,8 @@ def evaluate_candidate(
                         emit_progress()
                 _persist_trial(k, rollouts)
 
+    eval_index.record(run_dir, candidate_dir, split, tag, [t.id for t in tasks],
+                      range(trial_offset, trial_offset + n_trials))
     run_cost, run_tokens = run_acc["cost"], run_acc["tokens"]
     cost_source_counts = run_acc["cost_source"]
 

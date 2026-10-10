@@ -48,7 +48,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 # _bootstrap above — this directory is already on sys.path or that import would have failed.
 import gate_check
 
-from cap_evolve import RunDir, harness, mdblocks
+from cap_evolve import RunDir, eval_index, harness, mdblocks
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
 from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
@@ -410,12 +410,11 @@ def _run_json(cmd: list[str], tag: str, concurrency: int | None) -> dict:
 
 
 def _evaluate(run_dir: Path, project: Path, tag: str, split: str, n_trials: int,
-              concurrency: int | None) -> dict:
-    """Run the evaluate phase for one tag in its own process."""
-    cmd = [sys.executable, str(SKILLS / "phases" / "evaluate" / "scripts" / "run.py"),
-           "--run-dir", str(run_dir), "--project", str(project),
-           "--candidate", str(Path(run_dir) / "work" / tag),
-           "--split", split, "--n-trials", str(n_trials)]
+              concurrency: int | None, ids: list[str] | None = None,
+              trial_offset: int = 0) -> dict:
+    """Run the evaluate phase for one tag in its own process (optionally a subset / top-up)."""
+    cmd = eval_index.eval_cmd(run_dir, project, tag, split, n_trials, ids=ids,
+                              trial_offset=trial_offset, skills_dir=SKILLS)
     return _run_json(cmd, tag, concurrency)
 
 

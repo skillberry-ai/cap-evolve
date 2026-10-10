@@ -37,6 +37,10 @@ def main(argv=None) -> int:
                         "pass this for the full-val accept gate: a subset result's coverage "
                         "looks like 1.0 to gate_check.py, exactly the case its coverage guard "
                         "cannot see through.")
+    p.add_argument("--trial-offset", type=int, default=0,
+                   help="first trial index to write (default 0). A top-up of an existing tag "
+                        "passes the trials it already has, so new rollouts add t<offset>.. with "
+                        "fresh seeds instead of replacing t0..")
     args = p.parse_args(argv)
     ids = [i.strip() for i in args.ids.split(",") if i.strip()] if args.ids else None
 
@@ -62,7 +66,8 @@ def main(argv=None) -> int:
     cand_dir = cand if cand.exists() else run_dir.candidate_dir(args.candidate)
     result = harness.evaluate_candidate(adapter, cand_dir, run_dir=run_dir,
                                         split=args.split, n_trials=args.n_trials,
-                                        ks=ks, tag=cand_dir.name, ids=ids)
+                                        ks=ks, tag=cand_dir.name, ids=ids,
+                                        trial_offset=args.trial_offset)
     print(json.dumps(result.to_dict(), indent=2))
     return 0
 
