@@ -36,6 +36,7 @@ DAG"): one JSON object per line —
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 GRAPH_FILENAME = "graph.jsonl"
@@ -159,9 +160,24 @@ def append_node(run_dir, *, node_id: str, parents: list[str] | None, status: str
         "note": note,
         **{k: v for k, v in extra.items() if v is not None},
     }
+    return append_node_locked(run_dir, rec)
+
+
+def append_node_locked(run_dir, rec: dict) -> dict:
+    """Validate ``rec`` (no self-parent / cycle, #714) and append it as ONE ``O_APPEND``
+    write under ``$R/.graph.lock``."""
+    from .candidate_graph import CandidateGraph
+    from .lineage import validate
+    from .rundir import _file_lock
     path = run_dir.root / GRAPH_FILENAME
-    with path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(rec, default=str) + "\n")
+    line = (json.dumps(rec, default=str) + "\n").encode("utf-8")
+    with _file_lock(run_dir.root / ".graph.lock"):
+        validate(CandidateGraph.load(run_dir), rec["id"], rec["parents"])
+        fd = os.open(str(path), os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line)
+        finally:
+            os.close(fd)
     return rec
 
 
@@ -198,6 +214,6 @@ def build_dag(run_dir) -> dict[str, dict]:
         by_id[nid] = {**n, "children": by_id.get(nid, {}).get("children", [])}
     for nid, n in by_id.items():
         for parent in n.get("parents") or []:
-            if parent in by_id:
+            if parent in by_id and parent != nid:
                 by_id[parent].setdefault("children", []).append(nid)
     return by_id

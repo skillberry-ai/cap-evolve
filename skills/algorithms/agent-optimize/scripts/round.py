@@ -48,7 +48,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 # _bootstrap above — this directory is already on sys.path or that import would have failed.
 import gate_check
 
-from cap_evolve import RunDir, eval_index, harness, mdblocks
+from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
 from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
@@ -566,6 +566,16 @@ def screen_summary(payload: dict | None, auto: bool) -> dict | None:
 def _paired(payload: dict) -> dict[str, float]:
     pair = payload.get("paired") or {}
     return dict(zip([str(i) for i in pair.get("ids") or []], pair.get("deltas") or []))
+
+
+def _recorded_parents(run_dir, tag: str, best: str):
+    """Parent recorded at creation (``prepare_candidate --parent``, #714) when set, else
+    ``[best]`` (legacy). ``None`` (carry the prior record forward) if ``best`` is the tag
+    itself -- the self-parent seen on cand_4. ``CAPEVOLVE_DAG_PARALLEL=0`` forces legacy."""
+    prior = [p for p in (graph.latest_node(run_dir, tag) or {}).get("parents") or [] if p != tag]
+    if prior and os.environ.get("CAPEVOLVE_DAG_PARALLEL", "1") != "0":
+        return prior
+    return [best] if best != tag else None
 
 
 def keeps_parent_gain(merge_payload: dict, parent_payload: dict) -> bool:
@@ -1131,6 +1141,10 @@ def _main(argv=None) -> int:
     project = Path(args.project)
     work = Path(args.run_dir) / "work"
     work.mkdir(parents=True, exist_ok=True)
+    busy = lineage.acquire_driver_lock(run_dir.root)
+    if busy:
+        print(json.dumps({"error": busy}, indent=2))
+        return 2
 
     best = run_dir.best_id
     if not best:
@@ -1367,18 +1381,18 @@ def _main(argv=None) -> int:
 
     input_tags = list(tags)
     screen_stage = {}
-    node_parents = {t: [best] for t in tags}
+    node_parents = {t: _recorded_parents(run_dir, t, best) for t in tags}
     for t in tags:
         payload = screen_payloads[t]
         screen_stage[t] = screen_summary(payload, auto=t in auto_screened)
         if payload is None:
             continue
-        graph.append_node(run_dir, node_id=t, parents=[best], status="screened", gate={},
+        graph.append_node(run_dir, node_id=t, parents=node_parents[t], status="screened", gate={},
                           cluster_ids=cluster_ids_for(run_dir, plan, t),
                           edit_kind=(plan.get(t) or {}).get("edit_kind"))
 
     for t, sup in dominated.items():
-        graph.append_node(run_dir, node_id=t, parents=[best], status="superseded", gate={},
+        graph.append_node(run_dir, node_id=t, parents=node_parents.get(t), status="superseded", gate={},
                           dominated_by=sup,
                           reason=f"its diff is a strict subset of sibling {sup}'s, which is "
                                  "gated instead")
@@ -1981,7 +1995,7 @@ def _main(argv=None) -> int:
     # One "gated" transition per candidate the full-val gate judged (#435). A node gated with
     # no screen carries the override that let it through, so `subset: null` is never silent.
     for r in out["candidates"]:
-        graph.append_node(run_dir, node_id=r["tag"], parents=node_parents.get(r["tag"], [best]),
+        graph.append_node(run_dir, node_id=r["tag"], parents=node_parents.get(r["tag"]),
                           status="gated", val_mean=r.get("reward"), gate=r,
                           screen_skip_justification=(
                               None if screened_by_tag.get(r["tag"], True) else

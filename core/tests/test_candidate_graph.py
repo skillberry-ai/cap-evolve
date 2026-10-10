@@ -97,9 +97,11 @@ def test_branches_raises_on_parent_cycle_instead_of_hanging(tmp_path):
     # branches() must detect it via the same `seen`-set guard is_descendant() uses,
     # not loop forever.
     run_dir = _run_dir(tmp_path)
-    _add(run_dir, "a", ["b"], "accepted")
-    _add(run_dir, "b", ["a"], "accepted")
-    _add(run_dir, "c", ["a"], "accepted")  # the only frontier tip; its ancestry hits the cycle
+    # written raw: append_node now refuses cycles (#714), a hand-edited file is the only source
+    import json
+    (run_dir.root / "graph.jsonl").write_text("".join(json.dumps(
+        {"id": i, "parents": p, "status": "accepted"}) + "\n"
+        for i, p in (("a", ["b"]), ("b", ["a"]), ("c", ["a"]))))  # c: the only frontier tip; its ancestry hits the cycle
 
     cg = CandidateGraph.load(run_dir)
     try:

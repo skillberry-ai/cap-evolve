@@ -59,7 +59,8 @@ class CandidateGraph:
     def parents_of(self, node_id: str) -> list[str]:
         """``node_id``'s parent ids (1 for an edit, 2+ for a merge, ``[]`` unknown/root)."""
         n = self._nodes.get(node_id)
-        return list(n.get("parents") or []) if n else []
+        # a self-parent (seen live: cand_4 -> cand_4) is corrupt data, never an edge
+        return [p for p in n.get("parents") or [] if p != node_id] if n else []
 
     def children_of(self, node_id: str) -> list[str]:
         """Ids of every node whose ``parents`` names ``node_id`` (``build_dag``'s edge)."""
