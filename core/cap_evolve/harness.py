@@ -341,6 +341,15 @@ def evaluate_candidate(
         except Exception:  # noqa: BLE001
             base_seed = 0
 
+    # Seeds must not replay what the ledger already holds for identical bytes (a new tag of the
+    # same capability is MORE independent trials, not a copy of the old draws). Re-evaluating an
+    # existing tag at offset 0 still replaces t0.. with the same seeds, as before.
+    seed_off = trial_offset
+    if split != "test" and eval_index.enabled() and (
+            trial_offset or not list((run_dir.rollouts / split).glob(f"*__{tag}__t*.json"))):
+        seed_off = max(trial_offset, eval_index.next_trial_idx(
+            run_dir, eval_index.cap_hash(candidate_dir), split=split))
+
     tasks = _tasks_for(adapter, run_dir, split)
     if ids is not None:
         want = {str(i) for i in ids}
@@ -528,7 +537,7 @@ def evaluate_candidate(
             # ({task_id: [rollout_t0, rollout_t1, ...]}, trial-ordered), then run the
             # SAME per-trial persistence/scoring body for each k. Tolerate missing
             # trial entries (short/absent lists) as omitted rollouts.
-            rollouts_by_task = adapter.run_trials(tasks, ctx, n_trials=n_trials, base_seed=base_seed + trial_offset)
+            rollouts_by_task = adapter.run_trials(tasks, ctx, n_trials=n_trials, base_seed=base_seed + seed_off)
             rollouts_by_task = rollouts_by_task or {}
             for k in range(n_trials):
                 rollouts_for_k: dict = {}
@@ -539,7 +548,7 @@ def evaluate_candidate(
                 _persist_trial(k, rollouts_for_k)
         else:
             for k in range(n_trials):
-                seed = base_seed + trial_offset + k
+                seed = base_seed + seed_off + k
                 if has_batch:
                     rb = adapter.run_batch(tasks, ctx, seed=seed)
                     # accept either {task_id: Rollout} or a list parallel to `tasks`
@@ -570,7 +579,8 @@ def evaluate_candidate(
                 _persist_trial(k, rollouts)
 
     eval_index.record(run_dir, candidate_dir, split, tag, [t.id for t in tasks],
-                      range(trial_offset, trial_offset + n_trials))
+                      range(trial_offset, trial_offset + n_trials), seed_base=seed_off,
+                      subset=ids is not None)
     run_cost, run_tokens = run_acc["cost"], run_acc["tokens"]
     cost_source_counts = run_acc["cost_source"]
 

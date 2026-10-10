@@ -41,8 +41,13 @@ def main(argv=None) -> int:
                    help="first trial index to write (default 0). A top-up of an existing tag "
                         "passes the trials it already has, so new rollouts add t<offset>.. with "
                         "fresh seeds instead of replacing t0..")
+    p.add_argument("--topup-to", type=int, default=0,
+                   help="evidence-ledger top-up: run only the tasks whose pooled trials for this "
+                        "candidate's bytes are below N, for just the missing trials (ids and "
+                        "--n-trials are derived; nothing runs when the ledger already has N)")
     args = p.parse_args(argv)
     ids = [i.strip() for i in args.ids.split(",") if i.strip()] if args.ids else None
+    offset = args.trial_offset
 
     # ks defaults to every k the trials can support. The harness default is (1, 2),
     # which silently drops pass^3 from a --n-trials 3 run — the exact reliability
@@ -64,10 +69,20 @@ def main(argv=None) -> int:
     adapter = load_adapter(Path(args.project))
     cand = Path(args.candidate)
     cand_dir = cand if cand.exists() else run_dir.candidate_dir(args.candidate)
+    if args.topup_to:
+        from cap_evolve import eval_index
+        want = ids or [t.id for t in harness._tasks_for(adapter, run_dir, args.split)]
+        need = eval_index.missing(run_dir, eval_index.cap_hash(cand_dir), want, args.topup_to, args.split)
+        if not need:
+            print(json.dumps({"topup": "nothing missing", "reward": None}))
+            return 0
+        ids, args.n_trials = list(need), max(need.values())
+        have = list((run_dir.rollouts / args.split).glob(f"*__{cand_dir.name}__t*.json"))
+        offset = 1 + max((int(f.stem.rsplit("__t", 1)[1]) for f in have), default=-1)
     result = harness.evaluate_candidate(adapter, cand_dir, run_dir=run_dir,
                                         split=args.split, n_trials=args.n_trials,
                                         ks=ks, tag=cand_dir.name, ids=ids,
-                                        trial_offset=args.trial_offset)
+                                        trial_offset=offset)
     print(json.dumps(result.to_dict(), indent=2))
     return 0
 

@@ -1,10 +1,10 @@
 """Evidence ledger: a content-hash index over rollouts, plus the subset-capable eval worker.
 
 Rollouts stay the source of truth; ``<run>/eval_index.jsonl`` is an append-only, rebuildable view
-keyed by the SHA-256 of the candidate's bytes. Re-measuring identical bytes (a revert, a "control"
+keyed by ``cap_hash`` (the SHA-256 of the candidate's capability bytes). Re-measuring identical bytes (a revert, a "control"
 copy of the parent) is then just more trials on the same hash instead of a new tag.
 
-Row: ``{hash, split, task, trial_idx, tag, k, env_fp, window_id, reward, cost, tokens, ts}``.
+Row: ``{cap_hash, split, task, trial_idx, tag, k, env_fp, window_id, reward, cost, tokens, ts}``.
 ``trial_idx`` is allocated here (next unused per hash/task/split); ``(tag, k)`` is the rollout the row
 came from, which makes recording idempotent. Evidence pools only within an equal ``env_fp``
 (env var ``CAPEVOLVE_ENV_FP``; empty by default). ``CAPEVOLVE_EVAL_LEDGER=0`` turns recording off.
@@ -12,27 +12,23 @@ came from, which makes recording idempotent. Evidence pools only within an equal
 
 from __future__ import annotations
 
-import hashlib
+import re
 import json
 import os
-import subprocess
 import sys
 import time
 from pathlib import Path
+
+from .cache import hash_candidate_dir
+from .rundir import _file_lock
 
 LEDGER = "eval_index.jsonl"
 
 
 def cap_hash(candidate_dir) -> str:
-    """SHA-256 over the candidate's files (relative path + bytes), ignoring hidden/cache entries."""
-    h = hashlib.sha256()
-    root = Path(candidate_dir)
-    if root.is_dir():
-        for p in sorted(root.rglob("*")):
-            rel = p.relative_to(root)
-            if p.is_file() and not any(s.startswith(".") or s == "__pycache__" for s in rel.parts):
-                h.update(str(rel).encode() + b"\0" + p.read_bytes() + b"\0")
-    return h.hexdigest()
+    """Same value as ``cache.hash_candidate_dir`` (injected memory/trajectories/dot-scratch are not
+    capability). The graph node field ``capability_hash`` (run schema v2) is this exact value."""
+    return hash_candidate_dir(Path(candidate_dir))
 
 
 def enabled() -> bool:
@@ -61,16 +57,21 @@ def counts(run_dir, hash_: str, split: str = "val", fp: str | None = None) -> di
     fp = env_fp() if fp is None else fp
     acc: dict[str, list] = {}
     for r in rows(run_dir):
-        if r["hash"] == hash_ and r["split"] == split and r["env_fp"] == fp:
+        if r["cap_hash"] == hash_ and r["split"] == split and r["env_fp"] == fp:
             a = acc.setdefault(r["task"], [0.0, 0])
             a[0] += r["reward"]
             a[1] += 1
     return {t: (s, n) for t, (s, n) in acc.items()}
 
 
-def next_trial_idx(run_dir, hash_: str, task: str, split: str = "val", fp: str | None = None) -> int:
-    """Ledger trial depth for this cell: the ``trial_offset`` a top-up must start at."""
-    return counts(run_dir, hash_, split, fp).get(task, (0.0, 0))[1]
+def next_trial_idx(run_dir, hash_: str, task: str | None = None, split: str = "val",
+                   fp: str | None = None) -> int:
+    """First unused trial/seed index for this hash (``task=None``: across all its tasks), so a
+    new tag's trials are fresh seeds, never a replay of seeds already in the ledger."""
+    fp = env_fp() if fp is None else fp
+    return max((r["trial_idx"] + 1 for r in rows(run_dir)
+                if r["cap_hash"] == hash_ and r["split"] == split and r["env_fp"] == fp
+                and (task is None or r["task"] == task)), default=0)
 
 
 def missing(run_dir, hash_: str, task_ids, want_n: int, split: str = "val") -> dict[str, int]:
@@ -79,44 +80,68 @@ def missing(run_dir, hash_: str, task_ids, want_n: int, split: str = "val") -> d
     return {t: want_n - c.get(t, (0, 0))[1] for t in map(str, task_ids) if c.get(t, (0, 0))[1] < want_n}
 
 
-def record(run_dir, candidate_dir, split: str, tag: str, task_ids, ks) -> int:
-    """Index the rollouts ``<task>__<tag>__t<k>`` for the given tasks/ks. Returns rows appended.
+_ROLLOUT = re.compile(r"^(?P<task>.+)__(?P<tag>.+)__t(?P<k>\d+)\.json$")
 
-    Errored rollouts are missing data, not zeros, so they are not indexed. Idempotent on
-    ``(hash, split, tag, task, k)``.
+
+def record(run_dir, candidate_dir, split: str, tag: str, task_ids, ks, *, seed_base: int = 0,
+           subset: bool = False) -> int:
+    """Index the rollouts ``<task>__<tag>__t<k>`` for the given tasks/ks. Returns rows written.
+
+    ``trial_idx`` of the j-th k is ``seed_base + j`` (the seed index the harness used). Errored
+    rollouts are missing data, so they are not indexed; the test split is never indexed.
+    Atomic under the run's file lock. Idempotent on ``(tag, split, task, k)``: re-recording a
+    re-evaluated tag replaces its superseded rows (rollouts are the truth), unchanged rows stay.
     """
-    if not enabled():
+    if not enabled() or split == "test":
         return 0
     h, fp = cap_hash(candidate_dir), env_fp()
-    have = rows(run_dir)
-    seen = {(r["hash"], r["split"], r["tag"], r["task"], r["k"]) for r in have}
-    depth: dict[str, int] = {}
-    for r in have:
-        if r["hash"] == h and r["split"] == split and r["env_fp"] == fp:
-            depth[r["task"]] = depth.get(r["task"], 0) + 1
-    new = []
-    for tid in task_ids:
-        for k in ks:
-            if (h, split, tag, tid, k) in seen:
-                continue
-            f = Path(run_dir.rollouts) / split / f"{tid}__{tag}__t{k}.json"
-            try:
-                d = json.loads(f.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                continue
-            ro, sc = d.get("rollout") or {}, d.get("score") or {}
-            if ro.get("error") or (sc.get("raw") or {}).get("errored"):
-                continue
-            i = depth.get(tid, 0)
-            depth[tid] = i + 1
-            new.append({"hash": h, "split": split, "task": tid, "trial_idx": i, "tag": tag, "k": k,
-                        "env_fp": fp, "window_id": 0, "reward": float(sc.get("reward") or 0.0),
-                        "cost": float(ro.get("cost_usd") or 0.0), "tokens": int(ro.get("tokens") or 0),
-                        "ts": time.time()})
-    if new:
-        with (Path(run_dir.root) / LEDGER).open("a", encoding="utf-8") as fh:
-            fh.write("".join(json.dumps(r) + "\n" for r in new))
-    return len(new)
+    path = Path(run_dir.root) / LEDGER
+    with _file_lock(path.with_suffix(".lock")):
+        have = rows(run_dir)
+        old = {(r["tag"], r["split"], r["task"], r["k"]): r for r in have}
+        new = []
+        for tid in task_ids:
+            for j, k in enumerate(ks):
+                f = Path(run_dir.rollouts) / split / f"{tid}__{tag}__t{k}.json"
+                try:
+                    d = json.loads(f.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+                ro, sc = d.get("rollout") or {}, d.get("score") or {}
+                if ro.get("error") or (sc.get("raw") or {}).get("errored"):
+                    continue
+                reward = float(sc.get("reward") or 0.0)
+                prev = old.get((tag, split, tid, k))
+                if prev and prev["cap_hash"] == h and prev["reward"] == reward:
+                    continue
+                new.append({"cap_hash": h, "split": split, "task": tid, "trial_idx": seed_base + j,
+                            "tag": tag, "k": k, "env_fp": fp, "window_id": 0, "reward": reward,
+                            "subset": subset, "cost": float(ro.get("cost_usd") or 0.0),
+                            "tokens": int(ro.get("tokens") or 0), "ts": time.time()})
+        if new:
+            gone = {(r["tag"], r["split"], r["task"], r["k"]) for r in new}
+            keep = [r for r in have if (r["tag"], r["split"], r["task"], r["k"]) not in gone]
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text("".join(json.dumps(r) + "\n" for r in keep + new), encoding="utf-8")
+            os.replace(tmp, path)
+        return len(new)
+
+
+def backfill(run_dir) -> int:
+    """Rebuild the ledger from the rollouts on disk (train/val; never test)."""
+    n = 0
+    for split in ("train", "val"):
+        d = Path(run_dir.rollouts) / split
+        by_tag: dict[str, dict[str, set]] = {}
+        for p in d.glob("*.json") if d.is_dir() else []:
+            m = _ROLLOUT.match(p.name)
+            if m:
+                by_tag.setdefault(m["tag"], {}).setdefault(m["task"], set()).add(int(m["k"]))
+        for tag, tasks in by_tag.items():
+            cand = run_dir.candidate_dir(tag)
+            for tid, ks in tasks.items():
+                n += record(run_dir, cand, split, tag, [tid], sorted(ks), seed_base=min(ks))
+    return n
 
 
 # ---- subset-capable eval executor (extracted from agent-optimize round.py::_evaluate) ----------
