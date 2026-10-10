@@ -314,7 +314,7 @@ def main(argv=None) -> int:
             dict(zip(("id", "ok", "reason"), (h.get("id"), *hypotheses.validate(
                 h, clusters, args.small_edit_justification)))) for h in recs]
     if merge_n.enabled(spec):  # #638: per-instance ownership picks the merge parents
-        out["merge_set"] = merge_n.select_merge_set(out["alternative_parents"], run_dir.best_id)
+        out["merge_set"] = merge_n.select_merge_set(out["alternative_parents"], run_dir.best_id, graph=cg)
     print(json.dumps(out, indent=2))
     return 0
 

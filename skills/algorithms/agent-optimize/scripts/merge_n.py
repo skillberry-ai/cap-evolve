@@ -16,6 +16,11 @@ measuring; otherwise a targeted probe plan (union of each branch's winning tasks
 Ablation ``smart_merge`` (spec ``optimizer.ablation.smart_merge``, legacy top-level
 ``ablation.smart_merge``, env ``CAPEVOLVE_SMART_MERGE``; env wins; default on). Off => the
 legacy pairwise path (``merge.py`` / ``merge_search.py`` without ``--nway``).
+
+Unknown interaction never merges silently: a pair with no win evidence (missing, or both win
+sets empty) or no touched-task record is ``unknown`` and forces a probe. Tie-breaks are
+deterministic: fold order = most wins first then tag name; a criss-cross merge base resolves per
+``lineage.merge_base`` (smallest depth sum, then higher score, then lexicographic).
 """
 
 from __future__ import annotations
@@ -98,15 +103,23 @@ def _jac(a, b) -> float:
 
 def interaction(f1: dict, f2: dict) -> dict:
     """``f = {"blocks", "tools", "tasks", "wins"}`` (sets; ``wins=None`` = no evidence).
-    Missing win evidence counts as 0.5 (neutral) and is flagged, never silently zero."""
+    ``unknown`` (no win evidence, both win sets empty, or no touched-task record) forces a
+    probe in :func:`plan`; the neutral 0.5 is only the displayed score for the wins term."""
     parts = {k: _jac(f1[k], f2[k]) for k in ("blocks", "tools", "tasks")}
-    no_ev = f1.get("wins") is None or f2.get("wins") is None
-    parts["wins"] = 0.5 if no_ev else _jac(f1["wins"], f2["wins"])
+    why = []
+    if f1.get("wins") is None or f2.get("wins") is None or not (f1["wins"] or f2["wins"]):
+        why.append("no per-task win evidence")
+        parts["wins"] = 0.5
+    else:
+        parts["wins"] = _jac(f1["wins"], f2["wins"])
+    if not (f1["tasks"] and f2["tasks"]):
+        why.append("no touched-task record (mechanisms.jsonl missing or empty)")
     score = sum(WEIGHTS[k] * v for k, v in parts.items())
-    out = {"I": round(score, 4), "parts": {k: round(v, 4) for k, v in parts.items()}}
-    if no_ev:
-        out["warning"] = "no per-task win evidence for at least one branch; wins term assumed 0.5"
-        print(f"merge_n WARNING: {out['warning']}", file=sys.stderr)
+    out = {"I": round(score, 4), "parts": {k: round(v, 4) for k, v in parts.items()},
+           "unknown": bool(why)}
+    if why:
+        out["warning"] = "; ".join(why)
+        print(f"merge_n WARNING: interaction unknown, probe required: {out['warning']}", file=sys.stderr)
     return out
 
 
@@ -119,10 +132,11 @@ def wins_from_scores(per_task: dict[str, dict[str, float]], base: str, eps: floa
 
 
 def wins_from_run(run_dir, tags, base: str, split: str = "val") -> dict[str, set[str]] | None:
-    """Per-task wins vs ``base`` from persisted val rollouts; ``None`` if any tag has none."""
+    """Per-task wins vs ``base`` from persisted val rollouts. A tag with no val rollouts is
+    skipped (with a warning) and absent from the result; ``None`` only if ``base`` has none."""
     from cap_evolve import harness
-    per: dict[str, dict[str, float]] = {}
-    for t in [base, *tags]:
+
+    def load(t):
         try:
             rows = harness.split_result_from_rollouts(run_dir, t, split).per_task or []
         except Exception as e:  # noqa: BLE001
@@ -131,8 +145,13 @@ def wins_from_run(run_dir, tags, base: str, split: str = "val") -> dict[str, set
         if not rows:
             print(f"merge_n WARNING: no val evidence for {t}", file=sys.stderr)
             return None
-        per[t] = {r["task_id"]: float(r.get("reward", 0.0)) for r in rows}
-    return wins_from_scores(per, base)
+        return {r["task_id"]: float(r.get("reward", 0.0)) for r in rows}
+
+    per = {}
+    for t in [base, *tags]:
+        if (v := load(t)) is not None:
+            per[t] = v
+    return wins_from_scores(per, base) if base in per else None
 
 
 # ---- planning -------------------------------------------------------------------------------
@@ -143,7 +162,7 @@ def features(base_dir: Path, tag_dir: Path, touched_tasks=(), wins=None) -> dict
 
 
 def probe_plan(wins: dict[str, set[str]], all_tasks, tag: str, n_trials: int = PROBE_TRIALS,
-               run_dir=None, out_dir: Path | None = None, canaries=None) -> dict:
+               run_dir=None, out_dir: Path | None = None, canaries=None, reason: str = "") -> dict:
     """Eval request for the ledger: union of each branch's winning tasks + sentinels."""
     owned = sorted(set().union(*wins.values())) if wins else []
     rest = sorted((str(t) for t in all_tasks if str(t) not in owned),
@@ -151,7 +170,7 @@ def probe_plan(wins: dict[str, set[str]], all_tasks, tag: str, n_trials: int = P
     sentinels = list(canaries) if canaries else rest[:N_SENTINELS]
     ids = owned + [s for s in sentinels if s not in owned]
     req = {"kind": "eval_request", "tag": tag, "split": "val", "task_ids": ids,
-           "n_trials": n_trials, "sentinels": sentinels}
+           "n_trials": n_trials, "sentinels": sentinels, "reason": reason}
     if run_dir is not None and out_dir is not None and out_dir.is_dir():
         h = eval_index.cap_hash(out_dir)
         req["cap_hash"] = h
@@ -201,60 +220,75 @@ def merge_n(tags: list[str], dir_of, graph, out_dir: Path, *, wins=None, md_bloc
         shutil.copytree(acc_dir, out_dir)
     for w in work:
         shutil.rmtree(w, ignore_errors=True)
-    return {"order": order, "merged": acc_tags, "unmerged": unmerged, "steps": steps,
+    dropped = [{"branch": s["added"], "reason": "conflict", "conflicts": s["conflicts"]}
+               for s in steps if not s["built"]]
+    return {"order": order, "merged": acc_tags, "unmerged": unmerged, "dropped": dropped, "steps": steps,
             "conflicts": conflicts, "built": not unmerged and len(acc_tags) > 1,
             "out": str(out_dir) if len(acc_tags) > 1 else None}
 
 
-def node_record(result: dict, out_tag: str, round_id=None) -> dict:
-    """graph.jsonl extras for the merged node (docs/RUN_SCHEMA_V2.md): ``parents`` are the
-    merged tips, so the node is itself a tip you can branch from again; ``merge_base`` is the
-    first fold step's base, the full per-step list is in ``merge_changes``."""
+def node_record(result: dict, out_tag: str, round_id=None) -> dict | None:
+    """graph.jsonl extras for the merged node (docs/RUN_SCHEMA_V2.md), or ``None`` when fewer
+    than two branches merged (no merge happened, so no merge node). ``parents`` are only the
+    branches actually merged; skipped/conflicting ones are recorded in ``skipped``. The node is
+    itself a tip you can branch from again; ``merge_base`` is the first fold step's base, the full
+    per-step list is in ``merge_changes``, and ``fold_order`` records the order tried."""
     parents = result["merged"]
+    if len(parents) < 2:
+        return None
     steps = result["steps"]
     return {"id": out_tag, "parents": parents, "edit_kind": "merge",
             "merge_base": steps[0]["base"] if steps else None,
             "base_for_eval": parents[0],
             "parent_roles": {p: ("primary" if i == 0 else "donor") for i, p in enumerate(parents)},
             "stage": "built", "status": "proposed", "eval_state": "unevaluated",
-            "round_id": round_id,
+            "round_id": round_id, "fold_order": result["order"],
+            "skipped": result.get("dropped", []),
             "merge_changes": [{"added": s["added"], "base": s["base"],
                                "files": s["three_way_merged"]} for s in steps if s["built"]]}
 
 
 def plan(tags: list[str], dir_of, graph, *, touched_tasks=None, wins=None, all_tasks=(),
-         out_dir: Path, run_dir=None, md_blocks=None) -> dict:
-    """Merge decision for the whole set: fold + pairwise interaction + probe-or-not."""
-    touched_tasks = touched_tasks or {}
+         out_dir: Path, run_dir=None, md_blocks=None, canaries=None) -> dict:
+    """Merge decision for the whole set: fold + pairwise interaction + probe-or-not.
+    ``all_tasks`` = optimisation (val) task ids, the sentinel pool; never pass test ids."""
+    touched_tasks, wins = touched_tasks or {}, wins or {}
     res = merge_n(tags, dir_of, graph, out_dir, wins=wins, md_blocks=md_blocks)
-    def base_of(t):  # the LCA of t with another tip: what t's edit is measured against
-        return dir_of(lineage.merge_base(graph, t, tags[1] if t == tags[0] else tags[0]))
-
-    feats = {t: features(base_of(t), dir_of(t), touched_tasks.get(t, ()), (wins or {}).get(t))
-             for t in tags}
-    pairs = [{"pair": [a, b], **interaction(feats[a], feats[b])}
-             for a, b in itertools.combinations(tags, 2)]
+    pairs = []
+    for a, b in itertools.combinations(sorted(tags), 2):
+        base = dir_of(lineage.merge_base(graph, a, b))   # this pair's own LCA
+        fa, fb = (features(base, dir_of(t), touched_tasks.get(t, ()), wins.get(t)) for t in (a, b))
+        pairs.append({"pair": [a, b], **interaction(fa, fb)})
     top = max((p["I"] for p in pairs), default=0.0)
-    res["interaction"] = pairs
-    res["max_I"] = top
-    res["probe"] = bool(res["built"] and top >= PROBE_AT)
+    unknown = [p["pair"] for p in pairs if p["unknown"]]
+    res["interaction"], res["max_I"], res["unknown_pairs"] = pairs, top, unknown
+    res["evidence_missing"] = sorted(t for t in tags if t not in wins or not touched_tasks.get(t))
+    res["probe"] = bool(res["built"] and (top >= PROBE_AT or unknown))
     if res["probe"]:
-        res["eval_request"] = probe_plan({t: (wins or {}).get(t, set()) for t in res["merged"]},
-                                         all_tasks, out_dir.name, run_dir=run_dir, out_dir=out_dir)
+        why = "unknown interaction (missing evidence)" if unknown else f"I={top} >= {PROBE_AT}"
+        res["eval_request"] = probe_plan({t: wins.get(t, set()) for t in res["merged"]},
+                                         all_tasks, out_dir.name, run_dir=run_dir,
+                                         out_dir=out_dir, canaries=canaries, reason=why)
     return res
 
 
-def select_merge_set(alternative_parents: list[dict], champion: str | None, k: int = 3) -> list[str]:
+def select_merge_set(alternative_parents: list[dict], champion: str | None, k: int = 3,
+                     graph=None) -> list[str]:
     """#638: parents for a merge round from per-instance ownership -- the champion plus the
-    non-champions owning the most tasks the picks do not already cover (greedy)."""
+    non-champions owning the most uncovered tasks (greedy). With ``graph``, an ancestor or
+    descendant of an already-picked parent is skipped (merging it is a no-op)."""
     if not champion:
         return []
     picked, covered = [champion], set()
     pool = {a["candidate"]: set(a["tasks_uniquely_owned"]) for a in alternative_parents}
+
+    def related(c):
+        return graph is not None and any(c in lineage.ancestors(graph, p) or p in lineage.ancestors(graph, c)
+                                         for p in picked)
     while pool and len(picked) < k:
         best = max(sorted(pool), key=lambda c: len(pool[c] - covered))
-        if not pool[best] - covered:
-            break
-        covered |= pool.pop(best)
-        picked.append(best)
+        tasks = pool.pop(best)
+        if tasks - covered and not related(best):
+            covered |= tasks
+            picked.append(best)
     return picked
