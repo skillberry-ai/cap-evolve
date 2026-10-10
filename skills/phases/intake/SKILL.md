@@ -81,7 +81,7 @@ coding agent proposes edits), the algorithm (*the search loop*), dataset, splits
 4. **Customize the scaffolded `optimizer/INSTRUCTIONS.md`** for THIS benchmark — **skip
    this step when `orchestration_mode` resolved to `agent`**: that mode's algorithm
    (`agent-optimize`) never reads `INSTRUCTIONS.md`, it drives its own briefing via
-   `SKILL.md`/`references/algorithm.md`, so customizing it would be wasted effort; note
+   `SKILL.md`/`docs/archive/agent-optimize-legacy/algorithm.md`, so customizing it would be wasted effort; note
    in `PROJECT.md` that it was skipped and why. Deterministic mode: the shipped template
    already carries the depth mandate, the non-overfitting guardrail, the STEP-0 reading
    mandate and the cross-iteration file protocol — do not re-author any of them. Your

@@ -526,6 +526,31 @@ def _shared_blocks(ctx, run_dir: Path, context: dict) -> str:
     return "\n\n".join(p.strip() for p in parts if p and p.strip())
 
 
+_NEW_LOOP = """## The loop (digest -> act)
+
+Run `$A/digest.py --run-dir "$R" --project "$P"` first and after every verb; act on its suggestions.
+Pick a failure-cluster hypothesis covering >= 2 tasks (or a deterministic tool bug), make ONE big
+coherent edit, then `$A/act.py propose | probe | promote | prune | merge | finalize` (flags in SKILL.md).
+There is no mandatory null control and no minimum sibling count. Probes run only the cells the ledger
+lacks. Noise sd is ~0.05: never re-test a within-noise delta. Never view test traces.
+
+"""
+
+
+def _new_engine_briefing(text: str, spec: dict) -> str:
+    """Legacy briefing unless the new engine (dag_parallel AND active_eval) is on."""
+    from cap_evolve import optimizer_config
+    if not optimizer_config.new_engine(spec):
+        return text
+    a = text.index("## Default to 3+ candidates per round")
+    b = text.index("## Your stop condition")
+    text = text[:a] + _NEW_LOOP + text[b:]
+    text = text.replace('its "Agent-mode loop" section', 'its "The loop" section')
+    text = text.replace("Finish with `measure.py` (which seals test exactly\n   once)",
+                        "Finish with `act.py finalize` (which seals test exactly\n   once)")
+    return text.replace("measure.py", "act.py finalize")
+
+
 def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
               rounds: int, workdir: Path, context: dict, arm: str = "",
               ctx=None) -> str:
@@ -558,7 +583,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
         stop = (f"Spend at most {rounds} rounds, gate every candidate on FULL val, and "
                 "finish by sealing test exactly once with measure.py.")
 
-    return f"""# Drive the agent-optimize loop on an existing run — unattended
+    text = f"""# Drive the agent-optimize loop on an existing run — unattended
 
 You are the optimizer for a cap-evolve run that is ALREADY set up and baselined.
 `cap-evolve run` finished check + baseline and handed the loop over. Your job is to run the
@@ -763,6 +788,7 @@ Finish your final message with the run's honest table: seed vs best on val, on t
 adds information, and on the sealed test split — plus the accepted candidate id, the number
 of rounds, and any assumption you had to make on your own.
 """
+    return _new_engine_briefing(text, spec)
 
 
 def _decided_candidates(run_dir: Path) -> set[str]:

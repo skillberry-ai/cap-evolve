@@ -4,7 +4,7 @@ A candidate is ``provisional`` (``commit.py --decision provisional``) when it is
 directionally positive (Δ>0) but did not clear the significance gate at the n it was
 measured at. That is sequential evidence, not a null result: the honest next step is
 more trials on the SAME, UNMODIFIED candidate — never a new edit on top of unconfirmed
-ground (see references/algorithm.md, "Provisional candidates").
+ground (see docs/archive/agent-optimize-legacy/algorithm.md, "Provisional candidates").
 
 This script:
   1. runs ``--add-trials`` NEW trials on the candidate's unchanged working copy, under a

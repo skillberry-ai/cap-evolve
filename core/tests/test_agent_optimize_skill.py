@@ -48,9 +48,8 @@ def test_skill_md_has_no_known_broken_patterns():
     # Defect C: RunDir.create only mkdirs candidates/ and rollouts/.
     assert 'mkdir -p "$R/work"' in md
 
-    # The parallel round and its non-negotiables are documented.
-    assert "## Parallel round" in md
-    for needle in ("unique per sibling", "gate stays serial", "re-gate"):
+    # The new loop's verbs and honest-statistics lines are documented.
+    for needle in ("digest.py", "act.py", "finalize", "ONCE", "~0.05", "Never view test traces"):
         assert needle in md, needle
     assert "Task" in md.split("---")[1], "frontmatter must allow the Task tool"
 

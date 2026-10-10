@@ -293,7 +293,7 @@ def main(argv=None) -> int:
     verdict = "indecisive" if d.indecisive else ("accept" if accept else "reject")
     # A reject with delta > 0 is not the same as a reject with delta <= 0: the first is
     # a positive direction the gate could not yet resolve at this n, and growing n on
-    # this SAME candidate (never a new edit) may resolve it — see references/algorithm.md,
+    # this SAME candidate (never a new edit) may resolve it — see docs/archive/agent-optimize-legacy/algorithm.md,
     # "Provisional candidates". Surfaced here so the driver notices it without having to
     # compute delta > 0 itself.
     # Off `d.accept`, not the regression-vetoed `accept`: a candidate the GATE accepted and

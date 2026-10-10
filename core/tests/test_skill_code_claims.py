@@ -144,12 +144,12 @@ def test_skillopt_minibatch_focus_is_still_empty_by_construction():
 
 def test_agent_optimize_reference_pointers_are_not_empty_promises():
     """`agent-optimize/SKILL.md` names the sign test as living in
-    `references/measured-lessons.md`. #368 moved the section but dropped the rule."""
+    `references/stats.md`. #368 moved the section but dropped the rule."""
     # Both files are hard-wrapped, so any multi-word phrase can straddle a newline; and the
     # reference emphasises rules in caps, so compare case-insensitively.
     body = " ".join((SKILLS / "algorithms/agent-optimize/SKILL.md")
                     .read_text(encoding="utf-8").lower().split())
-    lessons = " ".join((SKILLS / "algorithms/agent-optimize/references/measured-lessons.md")
+    lessons = " ".join((SKILLS / "algorithms/agent-optimize/references/stats.md")
                        .read_text(encoding="utf-8").lower().split())
     if "sign test" in body:
         assert "sign test" in lessons, \
@@ -193,13 +193,13 @@ def test_plan_round_output_shape_matches_what_skill_md_tells_the_driver_to_read(
 
 
 def test_model_routing_roles_match_the_table_skill_md_prints():
-    """SKILL.md's "Model routing" section prints a table naming exactly these seven roles
+    """the archived algorithm.md's "Model routing" section prints a table naming exactly these seven roles
     against `resolve_model`'s own `ROLES`. A role added or renamed in the module without
     updating the table makes the table describe a role `resolve_model` doesn't accept, or
     silently omits one it does."""
     from cap_evolve.model_routing import ROLES
 
-    body = AO_SKILL_MD.read_text(encoding="utf-8")
+    body = (SKILLS.parent / "docs/archive/agent-optimize-legacy/algorithm.md").read_text(encoding="utf-8")
     for role in ROLES:
         assert f"`{role}`" in body, (
             f"model_routing.ROLES includes {role!r}; SKILL.md's Model routing table doesn't "
@@ -275,21 +275,13 @@ def test_gate_check_pareto_wiring_actually_reaches_gate_decide(tmp_path, monkeyp
     assert captured.get("metrics_stderr_current") == {"cost": 0.1}
 
 
-def test_evaluation_plan_stage_table_in_skill_md_matches_the_module_constants():
-    """SKILL.md's step 5 names every stage 0-5 by its constant. If `evaluation_plan.py` ever
-    renumbers or renames one, SKILL.md silently starts describing the wrong stage."""
+def test_evaluation_plan_stage_constants_are_stable():
+    """The archived legacy docs name stages 0-5 by number; renumbering must be deliberate."""
     from cap_evolve import evaluation_plan as ep
 
-    body = AO_SKILL_MD.read_text(encoding="utf-8")
-    expected = {
-        0: "STAGE_STATIC", 1: "STAGE_TARGETED_SMALL", 2: "STAGE_EXPANDED_CLUSTER",
-        3: "STAGE_REGRESSION", 4: "STAGE_BROAD_PARTIAL", 5: "STAGE_FULL",
-    }
-    for value, const_name in expected.items():
-        assert getattr(ep, const_name) == value, (
-            f"evaluation_plan.{const_name} is no longer {value}; SKILL.md's stage guidance is stale")
-        assert f"`{const_name}`" in body, (
-            f"SKILL.md doesn't name stage {value} ({const_name}) as documented")
+    for value, name in enumerate(("STAGE_STATIC", "STAGE_TARGETED_SMALL", "STAGE_EXPANDED_CLUSTER",
+                                  "STAGE_REGRESSION", "STAGE_BROAD_PARTIAL", "STAGE_FULL")):
+        assert getattr(ep, name) == value
 
 
 def test_merge_search_check_merge_compliance_is_the_function_skill_md_requires():

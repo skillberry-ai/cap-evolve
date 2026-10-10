@@ -76,7 +76,7 @@ def test_the_warning_travels_with_the_round_count_it_applies_to():
 
 
 def test_the_clause_points_back_at_the_screen_then_merge_rule():
-    """Run 35861572021's three siblings were exactly the shape references/algorithm.md's
+    """Run 35861572021's three siblings were exactly the shape docs/archive/agent-optimize-legacy/algorithm.md's
     screen-then-merge rule already covers (screen first, merge_search.py the disjoint
     survivors, gate only the merge) — that path costs zero extra rounds. The new clause must
     say so, or an agent can read "siblings cost rounds, so run fewer at once" and still never

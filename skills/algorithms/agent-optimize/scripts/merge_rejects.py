@@ -20,7 +20,7 @@ reuses `merge_search.py`'s own machinery end to end:
   * "safe reject" evidence comes from `events.jsonl`'s `"reject"` decision events — the exact
     record `commit.py` writes (candidate, note, reject_basis, and, when a gate table exists,
     `gate_delta` plus `movement`'s `broke`/`fixed` — see `gate_check.py`'s `regressions`/
-    `movement` output and `references/algorithm.md`'s "Composition, not just the mean"). A
+    `movement` output and `docs/archive/agent-optimize-legacy/algorithm.md`'s "Composition, not just the mean"). A
     reject is "safe" when `gate_delta >= 0` and `broke == []`: it did not clearly hurt, it just
     did not clear the bar. `rejected.jsonl` (`cap_evolve.memory.RejectedMemory`) is NOT read
     here — it stores only `{candidate_id, summary, reason, val}`, none of the structured gate

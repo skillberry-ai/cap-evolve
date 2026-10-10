@@ -93,49 +93,20 @@ def _guard(c: Checker) -> None:
 
 
 def _prose(c: Checker, skill: str) -> None:
-    for section in ("## Agent-mode loop", "Phase 0", "Honesty invariants",
-                    "## Parallel round"):
+    for section in ("## The loop", "## If the digest says X, do Y", "## Finalize", "## Invariants",
+                    "## Honest statistics"):
         c.check(section in skill, f"SKILL.md missing section: {section!r}")
-    for needle in ("FULL val", "stop_condition", "finalize", "budget_exhausted",
-                   "no-regression", "unique per sibling",
-                   # A: the subset ladder and its non-negotiable limit
-                   "never accept", "holdout", "net_rollouts",
-                   # B: textual constraints re-read from the run dir
-                   "predicates", "ambiguous", "recommendation",
-                   # C: multi-opportunity rounds and the churn they must not admit
-                   "churn",
-                   # D: the final full-split measurement
-                   "sealed test"):
-        c.check(needle in skill, f"SKILL.md missing honesty/loop marker: {needle!r}")
-
-    # Known-broken patterns that previously shipped.
-    # `--mode paired` used to be an invalid choice (argparse exit 2). The phase CLI now
-    # reaches it, but ONLY in rollout mode: two scalar means carry no per-task deltas.
-    # Join backslash continuations so a multi-line invocation is judged as one command.
-    _joined = skill.replace("\\\n", " ")
-    c.check(all("--run-dir" in ln for ln in _joined.splitlines() if "--mode paired" in ln),
-            "SKILL.md pairs `--mode paired` with scalar means — that combination is "
-            "refused; a paired test needs --run-dir/--current-tag/--candidate-tag",
-            note="any --mode paired invocation supplies a run dir")
-    c.check("<<'PY'" not in skill and '<<"PY"' not in skill,
-            "SKILL.md uses a heredoc for run-dir Python (a quoted one never expands $R)",
-            note="no heredoc-Python: the commit step is a real script with real flags")
-    c.check('mkdir -p "$R/work"' in skill,
-            "SKILL.md copies into $R/work without creating it (RunDir.create does not)",
-            note="$R/work is explicitly created before it is used")
-    c.check("Example only" in skill,
-            "SKILL.md must mark the capability file layout as example-only")
-
-    # Every helper the loop names must exist, and every helper must be named.
-    helpers = ["gate_check.py", "commit.py", "spend.py", "screen.py", "measure.py",
-               "funcmerge.py", "multirep.py",
-               "round.py", "taskeval.py", "merge_taskopt.py", "mechanisms.py"]
-    for h in helpers:
+    for needle in ("digest.py", "act.py", "propose", "probe", "promote", "prune", "merge", "finalize",
+                   "stop_condition", "ONCE", "Never view test traces"):
+        c.check(needle in skill, f"SKILL.md missing loop/honesty marker: {needle!r}")
+    c.check('mkdir -p "$R/work"' in skill, "SKILL.md uses $R/work without creating it")
+    c.check("<<'PY'" not in skill and '<<"PY"' not in skill, "SKILL.md uses a quoted heredoc")
+    # Body cap: the lint enforces tokens; this keeps the loop short enough to be re-read each trigger.
+    c.check(len(skill) < 14000, f"SKILL.md is {len(skill)} chars; keep the body short (details in references/)")
+    for h in ("digest.py", "act.py", "spend.py"):
         c.check((HERE / h).is_file(), f"missing documented helper script: scripts/{h}")
-        c.check(h in skill, f"scripts/{h} exists but SKILL.md never uses it")
     c.check("Task" in (skill.split("---")[1] if skill.count("---") >= 2 else ""),
-            "frontmatter allowed-tools must include Task for the parallel round",
-            note="allowed-tools declares Task (parallel fan-out is actionable)")
+            "frontmatter allowed-tools must include Task", note="allowed-tools declares Task")
 
 
 def _progressive_disclosure(c: Checker, skill: str) -> None:
@@ -1091,29 +1062,6 @@ def _gate_concurrency(c: Checker, tmp: Path) -> None:
             note="a high-concurrency gate warns IN the result, not just in prose")
 
 
-def _integrate_is_mandated(c: Checker, skill: str) -> None:
-    """SKILL.md must tell the driver to ASSEMBLE with integrate.py, not merely that it exists.
-
-    Measured, and the reason this check is here: on the round integrate.py was written, its own
-    author merged six branches in one step instead of using it. The resulting artifact gated at
-    -0.0146 with seven replicated per-task losses against two replicated gains, while the same
-    round's single-mechanism artifact gated at +0.0115. A tool that is documented as available but
-    not as REQUIRED gets skipped under time pressure, which is exactly when it is needed.
-    """
-    # SKILL.md is hard-wrapped, so any multi-word phrase can straddle a newline. Match on
-    # whitespace-normalised text: a check that fails on line wrapping is a false positive, and a
-    # contract with false positives trains its reader to ignore it.
-    flat = " ".join(skill.split())
-    c.check("integrate.py" in flat and "never by one merge" in flat,
-            "SKILL.md must state that a multi-branch artifact is assembled with integrate.py and "
-            "NOT by a single merge; documenting the script's existence is not enough",
-            note="sequential assembly is mandated, not merely available")
-    c.check("Clean merge is a syntactic property" in flat,
-            "SKILL.md must warn that funcmerge merging cleanly is not evidence the branches "
-            "compose - every branch retained cleanly in the artifact that then failed its gate",
-            note="a clean merge is explicitly distinguished from composition")
-
-
 def _integrate(c: Checker, tmp: Path) -> None:
     """Verified per-task branches must be folded in ONE AT A TIME, each step measured.
 
@@ -1269,7 +1217,6 @@ def main() -> int:
     _skill_text = SKILL_MD.read_text(encoding="utf-8")
     _prose(c, _skill_text)
     _progressive_disclosure(c, _skill_text)
-    _integrate_is_mandated(c, _skill_text)
     tmp = Path(tempfile.mkdtemp(prefix="agent_optimize_chk_"))
     try:
         _live_round(c, tmp)

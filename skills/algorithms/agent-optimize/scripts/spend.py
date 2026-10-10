@@ -1,6 +1,6 @@
 """spend — ONE call that answers "may I spend, and am I done?".
 
-``references/algorithm.md`` says the agent re-reads spend against the project's
+``docs/archive/agent-optimize-legacy/algorithm.md`` says the agent re-reads spend against the project's
 free-text ``stop_condition`` every few rounds. Re-reads is the operative word: a running
 total carried in an agent's context is how a $6.00 cap becomes $6.01. Everything here is
 read from the RUN DIR (``state.json`` spend, ``events.jsonl`` timestamps, the persisted
