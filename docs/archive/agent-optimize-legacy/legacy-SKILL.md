@@ -248,7 +248,7 @@ resolve its verdict — never raise it to buy wall clock. Read
 `noise_floor_from_control` FIRST: inside that band is no evidence, whatever the verdict.
 It never commits; which part of a bundle to keep is your call.
 
-Four fan-out invariants (reasoning: *Parallelism*, [`references/algorithm.md`](references/algorithm.md)):
+Four fan-out invariants (reasoning: *Parallelism*, [`references/algorithm.md`](algorithm.md)):
 diagnosis fans freely (≤2 at a time, read-only); proposal fans across distinct copies, a tag that is
 unique per sibling (shared tags corrupt rollout filenames); the gate stays serial — re-gate every
 remaining sibling against the new best after any accept; never fan out across test, pay before you
@@ -259,7 +259,7 @@ do. Concurrency also composes inside one eval (`screen.py --workers N`), thread-
 Reach for this only when `k/n` bands show loss **concentrated in a few named tasks**: one task at
 `n_trials` buys the same bit as a full-val round. Helpers, in order — `taskeval.py` (detached),
 `mechanisms.py` (list BEFORE diagnosing), `integrate.py`, `funcmerge.py`, `merge_taskopt.py` — then gate
-once via `round.py`. Flags: [`references/per-task-fanout.md`](references/per-task-fanout.md). A
+once via `round.py`. Flags: [`references/per-task-fanout.md`](per-task-fanout.md). A
 multi-branch artifact is assembled with `integrate.py`, never by one merge — a clean `funcmerge` is not
 evidence the branches compose. Clean merge is a syntactic property; composition is empirical.
 
@@ -267,7 +267,7 @@ evidence the branches compose. Clean merge is a syntactic property; composition 
 
 **Measure step 3's null control twice**: the gap between two byte-identical parents is the round's bar.
 Rest — ceiling arithmetic, the binomial floor, the sign test —
-[`references/measured-lessons.md`](references/measured-lessons.md). (1) Explore fast, gate slow, gate
+[`references/measured-lessons.md`](measured-lessons.md). (1) Explore fast, gate slow, gate
 ALONE. (2) Two independently-seeded blocks, agreeing in sign, before a small effect is a result —
 `multirep.py` takes the error across whole runs; unaffordable ⇒ "not resolvable" is the honest output.
 
@@ -318,15 +318,15 @@ created** — host.py owns no algorithm decisions, so that one is on you alone.
 
 One level deep — each read standalone, none points at another.
 
-- [`references/algorithm.md`](references/algorithm.md) — why free-form, honesty under full autonomy,
+- [`references/algorithm.md`](algorithm.md) — why free-form, honesty under full autonomy,
   screening break-even, the constraint surface, branch planning, evaluation plans, model routing,
   Pareto acceptance. **Load** before relying on a screen, growing a candidate, or skipping a rule.
-- [`references/measured-lessons.md`](references/measured-lessons.md) — binomial floor, full val vs a
+- [`references/measured-lessons.md`](measured-lessons.md) — binomial floor, full val vs a
   hard subset, the sign test. **Load** before your first gate decision, or when a result surprises you.
-- [`references/per-task-fanout.md`](references/per-task-fanout.md) — fan-out economics, briefing
+- [`references/per-task-fanout.md`](per-task-fanout.md) — fan-out economics, briefing
   contract, canary selection. **Load** when the loss concentrates in a few named tasks.
-- [`references/edit-design-lessons.md`](references/edit-design-lessons.md) — scorer audit, guard
+- `references/edit-design-lessons.md` (removed in the rewrite; see references/tool-edit-lessons.md) — scorer audit, guard
   closure, measured backfires. **Load** before editing a surface the first time, or after two rejects.
-- [`references/microcase.md`](references/microcase.md) — micro-test schema, `gen` contract. **Load**
+- [`references/microcase.md`](microcase.md) — micro-test schema, `gen` contract. **Load**
   before proposing a candidate for a cluster with (or needing) a case.
-- [`references/context-sources.md`](references/context-sources.md) — the Phase-0 sources compared.
+- `references/context-sources.md` (removed in the rewrite) — the Phase-0 sources compared.
