@@ -106,7 +106,7 @@ Read-only tool names are recognised by their leading verb (`get`/`list`/`search`
 an adapter that knows better can mark a call `{"mutates": true}`. Nothing is flagged
 when the rollout reports no tool calls at all — that is missing data, not evidence.
 The fix this cluster calls for is structural, never a prose reminder: see
-`agent-optimize/references/edit-design-lessons.md`.
+`agent-optimize/references/tool-edit-lessons.md`.
 
 Two sanity checks on the result: one cluster per failing task means the signature is
 too fine and no generalizing edit is possible; one cluster spanning visibly

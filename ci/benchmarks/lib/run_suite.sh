@@ -124,7 +124,7 @@ case "$ALGORITHM" in
     # 35861572021 (iterations=3), a first wave of three edit-surface variants consumed all
     # three rounds outright, and the clearest finding it produced — one surface beating another
     # by 0.089 — had no round left to act on (the obvious next round, retesting the winning
-    # surface alone, was unavailable). That wave was exactly the shape references/algorithm.md's
+    # surface alone, was unavailable). That wave was exactly the shape docs/archive/agent-optimize-legacy/algorithm.md's
     # "Gating N Bucket-A siblings does not mean paying full val N times" rule already covers:
     # screen every sibling first, merge_search.py the disjoint survivors, and gate only the
     # merge — a path that costs zero extra rounds. The clause below is for when siblings truly
@@ -141,7 +141,7 @@ case "$ALGORITHM" in
  run — not all in one wave. SIBLINGS ARE NOT FREE: candidates gated in the same wave each\
  consume a round. Before gating a wave on full val, confirm this is not a screen-then-merge\
  case (screen every sibling first, merge the disjoint survivors, gate only the merge — see\
- references/algorithm.md, 'Gating N Bucket-A siblings...') — that path costs zero extra rounds.\
+ docs/archive/agent-optimize-legacy/algorithm.md, 'Gating N Bucket-A siblings...') — that path costs zero extra rounds.\
  When siblings truly are independent risks that must each be gated alone, keep a narrow first\
  wave and hold rounds in RESERVE for the follow-up the evidence points at. Gate every candidate\
  on FULL val at gate_k_se=${_k_se} over ${_trials} trial(s); never gate on a screen subset. Pass\

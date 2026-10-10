@@ -276,6 +276,19 @@ def merge_opps(run_dir, g, tips, champion, warnings, limit: int = 3) -> list[dic
 
 # ---- the digest ------------------------------------------------------------------------------
 
+ENGINE_FIX = ("set optimizer.ablation.dag_parallel/active_eval/... = true in capevolve.yaml "
+              "(references/ablation.md) or run with CAPEVOLVE_ACTIVE_EVAL=1")
+
+
+def config_warning(cfg: dict) -> str | None:
+    """Loud first-line warning when the run is not on the full new engine (switches off)."""
+    off = sorted(k for k, v in cfg.items() if not v)
+    if not off:
+        return None
+    full = " probe --auto runs FULL val (no posterior allocator)." if "active_eval" in off else ""
+    return f"CONFIG: mixed/legacy engine, switches off: {', '.join(off)}.{full} Fix: {ENGINE_FIX}"
+
+
 def build(run_dir, project: Path | None = None, spec: dict | None = None, strict: bool = False) -> dict:
     spec = spec if spec is not None else spec_for_run(run_dir, project)
     cfg = optimizer_config.resolve(spec)
@@ -291,6 +304,9 @@ def build(run_dir, project: Path | None = None, spec: dict | None = None, strict
     stop, why = run_dir.budget_exhausted()
     if stop:
         out["budget"]["exhausted"] = why
+    cw = config_warning(cfg)
+    if cw:
+        out["config_warning"] = cw
     if not cfg["context_digest"]:  # legacy: raw numbers, no summaries/suggestions
         out["context_digest"] = False
         out["best_id"] = run_dir.best_id
@@ -415,7 +431,7 @@ def render(d: dict) -> str:
     if b.get("remaining_opt_usd") is not None:
         left += f"${b['remaining_opt_usd']} optimizer left | "
     L = (["!! INFRA (fail-open, result may be incomplete): " + " | ".join(d["infra_warnings"])]
-         if d.get("infra_warnings") else []) + [f"budget: {left}eval ${b['eval_usd']} opt ${b['opt_usd']} usersim ${b['usersim_usd']} | "
+         if d.get("infra_warnings") else []) + (["!! " + d["config_warning"]] if d.get("config_warning") else []) + [f"budget: {left}eval ${b['eval_usd']} opt ${b['opt_usd']} usersim ${b['usersim_usd']} | "
          f"{b['rollouts']} rollouts | {b['wall_min']} min" + (f" | EXHAUSTED: {b['exhausted']}" if b.get("exhausted") else "")]
     if d.get("context_digest") is False:
         return "\n".join(L + [f"best: {d.get('best_id')}", d["note"]])

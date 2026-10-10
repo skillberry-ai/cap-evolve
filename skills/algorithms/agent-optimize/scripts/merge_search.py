@@ -16,13 +16,13 @@ own docstring is the reason overlapping edits are refused here rather than attem
 same-function collision is a genuine semantic disagreement funcmerge.py already declines to
 auto-resolve, and offering it to a human via a merge conflict is not "graph search", it is
 "ask a human what the graph search could not decide". Disjoint edits are exactly the
-provably-safe case per-task-fanout.md already describes.
+provably-safe case docs/archive/agent-optimize-legacy/per-task-fanout.md already describes.
 
 This script does NOT invent a new merge engine. Per pair it shells out to `integrate.py`
 (one branch at a time, measured after each — see that file for why a one-shot N-way merge
 does not compose) and forwards `--canary-auto` so the merge's objective is measured against
 canaries drawn from the WHOLE suite, never just the neighbourhood of the two branches'
-targets (per-task-fanout.md's "a canary set that only covers what you aimed at cannot catch
+targets (docs/archive/agent-optimize-legacy/per-task-fanout.md's "a canary set that only covers what you aimed at cannot catch
 what you hit by accident" — restated here because a merge is exactly the moment two
 neighbourhoods combine and the blast radius is not either one's alone).
 
@@ -356,7 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--prose", default="policy/policy.md")
     ap.add_argument("--canary-auto", default="",
                     help="path to a baseline per-task JSON. Canaries are drawn from the "
-                         "WHOLE suite (per-task-fanout.md), not from the merged branches' "
+                         "WHOLE suite (docs/archive/agent-optimize-legacy/per-task-fanout.md), not from the merged branches' "
                          "own neighbourhood — pass the run's baseline.json.")
     ap.add_argument("--canary", default="", help="explicit canary ids, if not using --canary-auto")
     ap.add_argument("--canary-floor", type=float, default=0.9)

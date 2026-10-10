@@ -44,7 +44,7 @@ from cap_evolve.specfile import spec_for_run
 #: own slot instead of being bundled into one substantial, coherently-combined candidate.
 #: Lowered to 0.3 so clusters that share SOME of their implementation surface (not half of
 #: it) still bundle — the user wants fewer, bigger, more-impactful candidates per round, not
-#: many tiny ones; see algorithm.md's "Bucketing edits within a slot" for the companion
+#: many tiny ones; see docs/archive/agent-optimize-legacy/algorithm.md's "Bucketing edits within a slot" for the companion
 #: guidance change.
 OVERLAP_MIN = 0.3
 
@@ -184,7 +184,7 @@ def alternative_parents(ownership: dict | None, champion_id: str | None) -> list
     """Non-champion candidates that currently own tasks the champion doesn't -- GEPA's
     per-instance diversity signal (``task_ownership`` module docstring), surfaced as
     structured data for the driving agent to weigh. Never forces branching off a
-    non-champion; see algorithm.md for when that judgment call is worth making.
+    non-champion; see docs/archive/agent-optimize-legacy/algorithm.md for when that judgment call is worth making.
 
     A task counts toward a candidate here only when the champion is NOT also a
     best-scorer on it -- a candidate merely tied with the champion on a task carries

@@ -200,8 +200,13 @@ def main(argv=None) -> int:
     result["split"] = args.split
     result["tag"] = args.tag
     if mode == "v2":  # the digest and act.py read $R/clusters.json: persist it, no manual redirect
+        # clusters.json is SLIM (ids/labels/exemplar trace ids; safe to read); the embedded
+        # trajectories live in clusters_full.json.
         try:
-            (Path(run_dir.root) / "clusters.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+            root = Path(run_dir.root)
+            (root / "clusters_full.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+            slim = {k: v for k, v in result.items() if k != "reflective_dataset"}
+            (root / "clusters.json").write_text(json.dumps(slim, indent=2), encoding="utf-8")
         except OSError as exc:
             print(f"diagnose WARNING: could not write clusters.json: {exc}", file=sys.stderr)
     print(json.dumps(result, indent=2))

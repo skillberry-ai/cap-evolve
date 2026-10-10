@@ -39,8 +39,8 @@ GEPA's own validated design — its minibatch gate is a cheap "did it beat the p
 this subset, yes or no", no significance test, because the EXPENSIVE full eval is the
 real decision point — this script's kill rule is now ``mean(Δ) <= --gross-kill-
 threshold`` (default ``-0.15``, see ``cap_evolve.subsample.GROSS_KILL_DELTA``),
-regardless of SE. Promote is everything else. See ``references/measured-lessons.md``
-and ``references/algorithm.md`` for the full economics writeup.
+regardless of SE. Promote is everything else. See ``docs/archive/agent-optimize-legacy/measured-lessons.md``
+and ``docs/archive/agent-optimize-legacy/algorithm.md`` for the full economics writeup.
 """
 
 from __future__ import annotations
