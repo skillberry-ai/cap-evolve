@@ -183,11 +183,11 @@ def main(argv=None) -> int:
     p.add_argument("--split", default="val", choices=["train", "val"],
                    help="which split's rollouts to diagnose (train is the honest "
                         "learning surface; val is what the gate scores)")
-    p.add_argument("--cluster", default="auto",
+    p.add_argument("--cluster", default="root-cause",
                    choices=["auto", "root-cause", "first-words", "v2", "per-task"],
                    help="failure-clustering method (root-cause: site+expectation key; v2: + "
                         "tool-error signature, pooled trials, kind/headroom; per-task: no "
-                        "grouping). auto = v2 unless optimizer.ablation.failure_clustering "
+                        "grouping). Default is the legacy root-cause; auto = v2 unless optimizer.ablation.failure_clustering "
                         "is false in the project spec (then per-task)")
     args = p.parse_args(argv)
     run_dir = RunDir.open(Path(args.run_dir))

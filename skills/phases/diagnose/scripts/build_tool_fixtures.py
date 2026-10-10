@@ -36,10 +36,13 @@ def fixtures_from(records: list[dict]) -> list[dict]:
         tid = str(rec.get("score", {}).get("task_id"))
         trace_id = Path(rec.get("__file") or "").stem or None
         for c in _cluster.trace_calls(ro):
-            if c["result"] is None:
-                continue                     # never answered: nothing to replay against
-            if (c["mutates"] or _cluster._mutates(c["name"])) and not c["error"]:
+            # Checked BEFORE the unanswered skip: a write that never got a reply (truncated
+            # trace, timeout) may still have changed state, so it ends the window too. An
+            # unanswered read is simply nothing to replay.
+            if (c["mutates"] or _cluster._mutates(c["name"])) and not (c["result"] is not None and c["error"]):
                 break                        # first state change: later results are state-dependent
+            if c["result"] is None:
+                continue
             key = (c["name"], hashlib.sha1(
                 json.dumps(c["args"], sort_keys=True, default=str).encode()).hexdigest())
             seen.setdefault(key, {"tool": c["name"], "args": c["args"], "result": c["result"],
@@ -51,7 +54,10 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="build_tool_fixtures")
     p.add_argument("--run-dir", required=True)
     p.add_argument("--tag", default="seed", help="parent tag(s) to harvest, comma-separated")
-    p.add_argument("--split", default="val", choices=["train", "val"])
+    # No default and no "test": these rows are literal task arguments/results, so the caller
+    # must name the optimization split explicitly (train is the honest learning surface; val
+    # is what the gate scores). Rows also carry whatever PII the tools returned.
+    p.add_argument("--split", required=True, choices=["train", "val"])
     p.add_argument("--only-failing", action="store_true",
                    help="harvest only from trials that failed (reward < 1)")
     args = p.parse_args(argv)

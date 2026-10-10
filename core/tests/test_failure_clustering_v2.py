@@ -177,3 +177,47 @@ def test_fixtures_keep_only_calls_before_the_first_successful_write_and_dedupe()
         ("book_reservation", {"p": 1}), ("get_user_details", {"u": 1})]
     assert all(r["pre_write"] and r["task_id"] == "23" for r in rows)
     assert rows == btf.fixtures_from(recs)
+
+
+# --- review fixes ------------------------------------------------------------------------
+
+def test_cluster_id_is_stable_when_other_evidence_changes():
+    pay = [_trial("8", _pay_rollout(), "a b c"), _trial("20", _pay_rollout(), "d e f")]
+    other = [_trial(str(i), _tr(("x", {}, "ok", False)), f"unique{i} words{i}") for i in range(5)]
+    before = next(c for c in C.cluster_v2(pay, 30) if c["tool_error_sig"])
+    after = next(c for c in C.cluster_v2(pay + other * 3, 30) if c["tool_error_sig"])
+    assert before["cluster_id"] == after["cluster_id"]
+    ids = [c["cluster_id"] for c in C.cluster_v2(pay + other, 30)]
+    assert len(ids) == len(set(ids))
+
+
+def test_unanswered_write_ends_the_prewrite_window():
+    trace = [{"role": "assistant", "tool_calls": [{"id": "w", "name": "cancel_reservation", "arguments": {}}]},
+             {"role": "assistant", "tool_calls": [{"id": "r", "name": "get_user", "arguments": {}}]},
+             {"role": "tool", "id": "r", "content": "state after cancel", "error": False}]
+    assert btf.fixtures_from([_rec("1", 0.0, {"trace": trace})]) == []
+    # an unanswered READ is just skipped; later reads still count
+    trace2 = [{"role": "assistant", "tool_calls": [{"id": "a", "name": "get_a", "arguments": {}}]},
+              {"role": "assistant", "tool_calls": [{"id": "r", "name": "get_user", "arguments": {}}]},
+              {"role": "tool", "id": "r", "content": "u", "error": False}]
+    assert [r["tool"] for r in btf.fixtures_from([_rec("1", 0.0, {"trace": trace2})])] == ["get_user"]
+
+
+def test_fixture_split_is_explicit_and_never_test(tmp_path):
+    import pytest
+    for argv in ([], ["--split", "test"]):
+        with pytest.raises(SystemExit):
+            btf.main(["--run-dir", str(tmp_path), *argv])
+
+
+def test_cli_default_cluster_mode_is_legacy(tmp_path, capsys):
+    (tmp_path / "state.json").write_text("{}")
+    val = tmp_path / "rollouts" / "val"
+    val.mkdir(parents=True)
+    rec = _rec("8", 0.0, _pay_rollout())
+    rec["score"]["feedback"] = "wrong write"
+    (val / "8__seed__t0.json").write_text(json.dumps(rec))
+    assert diag.main(["--run-dir", str(tmp_path)]) == 0
+    assert "cluster_id" not in json.loads(capsys.readouterr().out)["clusters"][0]
+    assert diag.main(["--run-dir", str(tmp_path), "--cluster", "v2"]) == 0
+    assert "cluster_id" in json.loads(capsys.readouterr().out)["clusters"][0]

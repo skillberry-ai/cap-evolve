@@ -33,6 +33,7 @@ feedback for a genuinely wrong write, so the lexical key above cannot separate t
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 
@@ -426,8 +427,8 @@ def cluster_v2(trials: list[dict], n_tasks: int, totals: dict[str, int] | None =
     passes (denominator of ``headroom``); defaults to the failing trials given.
     ``narrated_without_action`` trials never merge with anything else.
 
-    Output is a superset of ``cluster()``: adds ``cluster_id`` (``C1``.. in rank order — an
-    ordinal, so it shifts when evidence does), ``trial_count``, ``exemplar_trace_ids``,
+    Output is a superset of ``cluster()``: adds ``cluster_id`` (``C`` + 6 hex of a hash of the
+    tool-error signature, else the label — stable across rounds; ``rank`` is the display ordinal), ``trial_count``, ``exemplar_trace_ids``,
     ``kind`` (CAPABILITY / BEHAVIORAL / KNOWLEDGE), ``tool_error_sig`` and ``headroom``
     (reward units: per task, cluster-attributable failing trials / all trials, summed,
     / ``n_tasks``)."""
@@ -489,6 +490,14 @@ def cluster_v2(trials: list[dict], n_tasks: int, totals: dict[str, int] | None =
             "blast_radius": None,
         })
     out.sort(key=lambda c: (-c["score_lost"], -len(c["tasks"]), c["signature"]))
+    seen: set[str] = set()
     for n, c in enumerate(out, start=1):
-        c["cluster_id"] = f"C{n}"
+        c["rank"] = n                      # display only: shifts with evidence
+        # Stable id for persisted references (hypotheses.jsonl): content-derived, so it does
+        # not renumber when other clusters grow. Anchor = tool-error signature, else the label.
+        cid = "C" + hashlib.sha1((c["tool_error_sig"] or c["signature"]).encode()).hexdigest()[:6]
+        while cid in seen:                 # two groups with one anchor: disambiguate by tasks
+            cid = "C" + hashlib.sha1((cid + ",".join(c["tasks"])).encode()).hexdigest()[:6]
+        seen.add(cid)
+        c["cluster_id"] = cid
     return out
