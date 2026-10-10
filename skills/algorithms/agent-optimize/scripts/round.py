@@ -48,7 +48,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 # _bootstrap above — this directory is already on sys.path or that import would have failed.
 import gate_check
 
-from cap_evolve import RunDir, harness
+from cap_evolve import RunDir, harness, mdblocks
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
 from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
@@ -635,7 +635,8 @@ def dominated_siblings(base_dir: Path, work: Path, tags: list[str]) -> dict[str,
             } if len(tags) >= 2 else {}
 
 
-def mergeable_pairs(run_dir, plan: dict, survivors: list[str], best: str) -> tuple[list, list]:
+def mergeable_pairs(run_dir, plan: dict, survivors: list[str], best: str,
+                    md_blocks: bool | None = None) -> tuple[list, list]:
     """(pairs merge_stage tries to build, pairs it skips as structurally conflicting).
 
     The ONE definition of "a merge applied this round", shared by merge_stage and #630's
@@ -658,7 +659,7 @@ def mergeable_pairs(run_dir, plan: dict, survivors: list[str], best: str) -> tup
     pairs, skipped = [], []
     for a, b in itertools.combinations(sorted(survivors), 2):
         ca, cb = set(cluster_ids_for(run_dir, plan, a)), set(cluster_ids_for(run_dir, plan, b))
-        check = merge_search.is_mergeable(work / a, work / b, base_dir)
+        check = merge_search.is_mergeable(work / a, work / b, base_dir, md_blocks=md_blocks)
         if not check["mergeable"]:
             skipped.append({"pair": [a, b], "reason": "both independently diverged from the "
                             f"round parent {best!r} on the same module(s) — a real edit "
@@ -671,7 +672,7 @@ def mergeable_pairs(run_dir, plan: dict, survivors: list[str], best: str) -> tup
 
 def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: dict,
                 concurrency: int | None, max_parallel: int,
-                pregate_cmd: str | None = None) -> dict:
+                pregate_cmd: str | None = None, md_blocks: bool | None = None) -> dict:
     """Build, screen and select pairwise merges among this round's screen survivors (#438)."""
     import merge as merge_mod
     from cap_evolve import graph
@@ -682,10 +683,11 @@ def merge_stage(run_dir, project: Path, best: str, survivors: list[str], plan: d
     seed = int(run_dir.read_splits().seed)
     screens = {t: latest_screen(run_dir, t) for t in survivors}
     merges = []
-    pairs, skipped = mergeable_pairs(run_dir, plan, survivors, best)
+    pairs, skipped = mergeable_pairs(run_dir, plan, survivors, best, md_blocks)
     for a, b, ca, cb in pairs:
         tag = f"merge_{a}_{b}"
-        built = merge_mod.build_merge_dir(base_dir, work / a, work / b, work / tag)
+        built = merge_mod.build_merge_dir(base_dir, work / a, work / b, work / tag,
+                                          md_blocks=md_blocks)
         if not built["built"]:
             skipped.append({"pair": [a, b], "reason": "edit collision",
                             "conflicts": built["conflicts"]})
@@ -1282,7 +1284,8 @@ def _main(argv=None) -> int:
     # skipped by merge_stage for zero rollouts. (An unscreened survivor means no merge applied,
     # so the screen budget above and this one never charge the same round twice.)
     merge_applies = len(survivors) >= 2 and all(screened_by_tag[t] for t in survivors)
-    eligible_pairs = ([[a, b] for a, b, _, _ in mergeable_pairs(run_dir, plan, survivors, best)[0]]
+    MD_BLOCKS = mdblocks.enabled(spec)  # #709 ablation: merge.md_blocks / CAPEVOLVE_MD_BLOCKS
+    eligible_pairs = ([[a, b] for a, b, _, _ in mergeable_pairs(run_dir, plan, survivors, best, MD_BLOCKS)[0]]
                       if merge_applies else [])
     MERGE_SKIP = None
     if args.no_merge and eligible_pairs:
@@ -1379,7 +1382,7 @@ def _main(argv=None) -> int:
     MERGE = None
     if not args.no_merge and merge_applies:
         MERGE = merge_stage(run_dir, project, best, survivors, plan, EFFECTIVE_CONCURRENCY,
-                            args.max_parallel, pregate_cmd=PREGATE)
+                            args.max_parallel, pregate_cmd=PREGATE, md_blocks=MD_BLOCKS)
         for m in MERGE["merges"]:
             node_parents[m["tag"]] = m["parents"]
         tags = [t for t in survivors if t not in MERGE["subsumed"]] + MERGE["chosen"]

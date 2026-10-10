@@ -97,9 +97,13 @@ def test_whole_file_module_both_diverged_differently_on_prose(tmp_path):
     ancestor = _cap(tmp_path, "ancestor", BASE_TOOLS, "base policy\n")
     a = _cap(tmp_path, "a", BASE_TOOLS, "base policy\nadded by A\n")
     b = _cap(tmp_path, "b", BASE_TOOLS, "base policy\nadded by B\n")
-    out = merge_search.is_mergeable(a, b, ancestor)
+    out = merge_search.is_mergeable(a, b, ancestor, md_blocks=False)
     assert out["mergeable"] is False
     assert out["conflicts"] == ["policy/policy.md"]
+    # #709: with heading-block splitting (default) the same-block edit is still a conflict.
+    out = merge_search.is_mergeable(a, b, ancestor)
+    assert out["mergeable"] is False
+    assert out["conflicts"] == ["policy/policy.md::"]
 
 
 def test_only_one_diverger_is_mergeable_even_on_a_module_the_other_also_touches_elsewhere(

@@ -88,7 +88,7 @@ def test_merge_that_fails_the_check_is_skipped_before_its_screen(tmp_path, monke
     rd = RunDir.open(run_dir.root)
     shutil.copytree(work / "cand_1", work / "cand_2")
 
-    def fake_merge(base, a, b, dest):  # two valid parents composing into an invalid merge
+    def fake_merge(base, a, b, dest, **_kw):  # two valid parents composing into an invalid merge
         shutil.copytree(a, dest)
         (dest / "GUARD").write_text("g", encoding="utf-8")
         return {"built": True, "conflicts": [], "three_way_merged": []}
