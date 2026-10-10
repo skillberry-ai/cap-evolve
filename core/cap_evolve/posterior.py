@@ -11,7 +11,6 @@ rejects regardless. Budget exhausted undecided = inconclusive (not accepted).
 from __future__ import annotations
 
 import json
-import os
 import random
 from pathlib import Path
 
@@ -89,12 +88,8 @@ class Pair:
 def enabled(spec: dict | None = None) -> bool:
     """`optimizer.ablation.active_eval`: env CAPEVOLVE_ACTIVE_EVAL wins, then the spec key;
     default OFF until the E2E replay validates it."""
-    env = os.environ.get("CAPEVOLVE_ACTIVE_EVAL", "").strip().lower()
-    if env:
-        return env not in {"0", "false", "no", "off"}
-    opt = (spec or {}).get("optimizer")
-    ab = opt.get("ablation") if isinstance(opt, dict) else None
-    return bool(ab.get("active_eval")) if isinstance(ab, dict) else False
+    from .optimizer_config import enabled as _enabled
+    return _enabled("active_eval", spec)
 
 
 def from_ledger(run_dir, cand_hash: str, parent_hash: str, task_ids=None, split: str = "val") -> Pair:

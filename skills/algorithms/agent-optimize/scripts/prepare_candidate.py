@@ -35,14 +35,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
 
 import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve
 
-from cap_evolve import RunDir, graph, harness
+from cap_evolve import RunDir, graph, harness, optimizer_config
+from cap_evolve.specfile import spec_for_run
 
 
 def _is_provisional_snapshot(run_dir: RunDir, src: Path) -> bool:
@@ -138,8 +138,8 @@ def main(argv=None) -> int:
         journal.write_text(journal.read_text(encoding="utf-8").rstrip() + "\n\n" + pending + "\n",
                            encoding="utf-8")
     try:
-        # CAPEVOLVE_DAG_PARALLEL=0: legacy -- record nothing, round.py parents on best_id
-        if os.environ.get("CAPEVOLVE_DAG_PARALLEL", "1") != "0":
+        # dag_parallel off (spec or CAPEVOLVE_DAG_PARALLEL=0): legacy -- record nothing, round.py parents on best_id
+        if optimizer_config.enabled("dag_parallel", spec_for_run(run_dir)):
             graph.append_node(run_dir, node_id=args.tag, parents=[parent], status="proposed")
     except ValueError as e:
         shutil.rmtree(dest)

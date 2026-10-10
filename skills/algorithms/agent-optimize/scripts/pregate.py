@@ -62,15 +62,8 @@ _DYNAMIC_CALLS = {"exec", "eval", "__import__", "globals", "vars"}
 def enabled(spec: dict | None = None) -> bool:
     """Ablation: env CAPEVOLVE_PREGATE wins, then ``optimizer.ablation.pregate``, then the legacy
     top-level ``ablation.pregate``; default on."""
-    env = os.environ.get("CAPEVOLVE_PREGATE", "").strip().lower()
-    if env:
-        return env not in {"0", "false", "no", "off"}
-    spec = spec or {}
-    for holder in (spec.get("optimizer"), spec):
-        ab = holder.get("ablation") if isinstance(holder, dict) else None
-        if isinstance(ab, dict) and ab.get("pregate") is not None:
-            return bool(ab["pregate"])
-    return True
+    from cap_evolve.optimizer_config import enabled as _enabled
+    return _enabled("pregate", spec)
 
 
 def _cluster():

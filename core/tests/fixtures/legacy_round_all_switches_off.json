@@ -1,0 +1,151 @@
+{
+ "graph": [
+  {
+   "cluster_ids": [],
+   "edit_kind": "code",
+   "gate": {},
+   "id": "cand_1",
+   "micro_tests": [],
+   "note": null,
+   "parents": [
+    "cur"
+   ],
+   "screen": {
+    "decision": "promote",
+    "last_tier": 1,
+    "rationale": "4 most-informative failing/high-variance task(s) ['t3', 't5', 't9', 't19']; 2 random regression-canary task(s) ['t18', 't23'] drawn (seed 1) from tasks the parent currently passes",
+    "subset_ids": [
+     "t18",
+     "t19",
+     "t23",
+     "t3",
+     "t5",
+     "t9"
+    ],
+    "tiers": [
+     {
+      "decision": "promote",
+      "mean_delta": 0.5,
+      "se": 0.22360679774997896,
+      "tier": 1
+     }
+    ]
+   },
+   "status": "screened",
+   "subset": {
+    "rationale": "4 most-informative failing/high-variance task(s) ['t3', 't5', 't9', 't19']; 2 random regression-canary task(s) ['t18', 't23'] drawn (seed 1) from tasks the parent currently passes",
+    "task_ids": [
+     "t18",
+     "t19",
+     "t23",
+     "t3",
+     "t5",
+     "t9"
+    ],
+    "tier": 1
+   },
+   "val_mean": null
+  },
+  {
+   "cluster_ids": [],
+   "edit_kind": "code",
+   "gate": {
+    "control_relative": {
+     "gate_delta": 0.5,
+     "gate_threshold": 0.22360679774997896,
+     "reading": "this is now the PRIMARY comparison (issue #684 item 6): the same numbers as `verdict`/`gate_delta` above, kept under this field name for backward compatibility with commit.py's --reject-basis drift_control and the dashboard's control_relative panels.",
+     "reference": [
+      "ctl_null_i0",
+      "ctl_null_i0r1"
+     ],
+     "verdict": "accept"
+    },
+    "delta_vs_gate_ref": 0.5,
+    "eval_error": null,
+    "eval_rc": 0,
+    "footprint": {
+     "reading": "the edit's surface could not be localized (no diff, a rewrite-sized diff, no rollouts, or it reaches every task) \u2014 full-vector measurement, as before",
+     "restricted": false
+    },
+    "gate_delta": 0.5,
+    "gate_threshold": 0.22360679774997896,
+    "k_se": 1.0,
+    "movement": {
+     "broke": [],
+     "fixed": [
+      "t18",
+      "t19",
+      "t23"
+     ],
+     "unresolved": []
+    },
+    "n": 6,
+    "n_broke": 0,
+    "n_fixed": 3,
+    "raw_vs_parent": {
+     "gate_delta": 0.5,
+     "gate_threshold": 0.22360679774997896,
+     "reading": "SECONDARY \u2014 no longer the deciding comparison (issue #684 item 6). This candidate against the parent's reward as STORED from an earlier round, carrying whatever re-measurement drift happened since. The PRIMARY verdict (`verdict`/`gate_delta` above, == `control_relative`) cancels that drift by construction. Where the two disagree, the difference is drift, not the edit; this field exists to show you that gap, not to override the primary verdict.",
+     "reference": "cur",
+     "verdict": "accept"
+    },
+    "regressions": [],
+    "resolvable_effect_size": 0.447214,
+    "reused": false,
+    "reward": 1.0,
+    "stderr": 0.0,
+    "tag": "cand_1",
+    "verdict": "accept",
+    "verdict_by_reference": {
+     "ctl_null_i0": "accept",
+     "ctl_null_i0r1": "accept"
+    },
+    "verdict_stable": true
+   },
+   "id": "cand_1",
+   "micro_tests": [],
+   "note": null,
+   "parents": [
+    "cur"
+   ],
+   "screen": {
+    "decision": "promote",
+    "last_tier": 1,
+    "rationale": "4 most-informative failing/high-variance task(s) ['t3', 't5', 't9', 't19']; 2 random regression-canary task(s) ['t18', 't23'] drawn (seed 1) from tasks the parent currently passes",
+    "subset_ids": [
+     "t18",
+     "t19",
+     "t23",
+     "t3",
+     "t5",
+     "t9"
+    ],
+    "tiers": [
+     {
+      "decision": "promote",
+      "mean_delta": 0.5,
+      "se": 0.22360679774997896,
+      "tier": 1
+     }
+    ]
+   },
+   "status": "gated",
+   "subset": {
+    "rationale": "4 most-informative failing/high-variance task(s) ['t3', 't5', 't9', 't19']; 2 random regression-canary task(s) ['t18', 't23'] drawn (seed 1) from tasks the parent currently passes",
+    "task_ids": [
+     "t18",
+     "t19",
+     "t23",
+     "t3",
+     "t5",
+     "t9"
+    ],
+    "tier": 1
+   },
+   "val_mean": 1.0
+  }
+ ],
+ "out": "{\n  \"attempt\": 0,\n  \"batch_id\": \"round_i0\",\n  \"attempt_reading\": \"first gate of this iteration\",\n  \"parent\": {\n    \"tag\": \"cur\",\n    \"reward\": 0.5,\n    \"stderr\": 0.22360679774997896,\n    \"n_tasks\": 6\n  },\n  \"gate_reference\": {\n    \"tag\": [\n      \"ctl_null_i0\",\n      \"ctl_null_i0r1\"\n    ],\n    \"mode\": \"parent\",\n    \"reward\": 0.5,\n    \"stderr\": 0.22360679774997896\n  },\n  \"primary_signal\": \"control\",\n  \"parent_vs_gate_ref_drift\": 0.0,\n  \"drift_reading\": \"the parent's stored reward and a byte-identical control measured in THIS round differ by this much. It is re-measurement drift, not progress, and any candidate delta of comparable size is not evidence \\u2014 whatever its verdict says.\",\n  \"measurement\": {\n    \"split\": \"val\",\n    \"n_trials\": 1,\n    \"concurrency\": 8\n  },\n  \"control_reuse\": {\n    \"reused\": false,\n    \"reason\": \"no earlier round measured THIS parent's replicates under this same measurement context \\u2014 a new parent has no established noise floor, so it must be measured\"\n  },\n  \"measurement_concurrency\": 8,\n  \"requested_concurrency\": 8,\n  \"max_total_concurrency\": 24,\n  \"concurrency_warning\": null,\n  \"measurement_max_parallel\": 1,\n  \"parallel_warning\": null,\n  \"null_delta_between_control_replicates\": 0.0,\n  \"null_delta_replicates\": 2,\n  \"null_delta_reading\": \"identical bytes on identical seeds, so this is pure re-measurement noise. Any candidate delta at or below it is NOT evidence, whatever its verdict says.\",\n  \"gated_against\": {\n    \"tag\": [\n      \"ctl_null_i0\",\n      \"ctl_null_i0r1\"\n    ],\n    \"mode\": \"parent\"\n  },\n  \"noise_floor_from_control\": 0.0,\n  \"noise_floor_basis\": \"control vs the STORED parent rollouts (differing trial counts are part of this floor, which is the point)\",\n  \"evidence_bar\": {\n    \"value\": 0.0,\n    \"basis\": \"gap between byte-identical control replicates measured in THIS round \\u2014 drift is cancelled by gating against the (now primary) control\"\n  },\n  \"reading\": \"every candidate is screened first (round.py runs screen.py itself unless a skip flag is passed), screen kills are never gated, disjoint survivors are pairwise-merged and the merge screened, and each survivor is gated ONCE \\u2014 inside the chosen merge that carries it, or alone\",\n  \"candidates\": [\n    {\n      \"tag\": \"cand_1\",\n      \"reward\": 1.0,\n      \"delta_vs_gate_ref\": 0.5,\n      \"gate_delta\": 0.5,\n      \"gate_threshold\": 0.22360679774997896,\n      \"stderr\": 0.0,\n      \"n\": 6,\n      \"k_se\": 1.0,\n      \"resolvable_effect_size\": 0.447214,\n      \"footprint\": {\n        \"restricted\": false,\n        \"reading\": \"the edit's surface could not be localized (no diff, a rewrite-sized diff, no rollouts, or it reaches every task) \\u2014 full-vector measurement, as before\"\n      },\n      \"verdict\": \"accept\",\n      \"regressions\": [],\n      \"movement\": {\n        \"broke\": [],\n        \"fixed\": [\n          \"t18\",\n          \"t19\",\n          \"t23\"\n        ],\n        \"unresolved\": []\n      },\n      \"n_broke\": 0,\n      \"n_fixed\": 3,\n      \"eval_rc\": 0,\n      \"eval_error\": null,\n      \"reused\": false,\n      \"control_relative\": {\n        \"reference\": [\n          \"ctl_null_i0\",\n          \"ctl_null_i0r1\"\n        ],\n        \"gate_delta\": 0.5,\n        \"gate_threshold\": 0.22360679774997896,\n        \"verdict\": \"accept\",\n        \"reading\": \"this is now the PRIMARY comparison (issue #684 item 6): the same numbers as `verdict`/`gate_delta` above, kept under this field name for backward compatibility with commit.py's --reject-basis drift_control and the dashboard's control_relative panels.\"\n      },\n      \"raw_vs_parent\": {\n        \"reference\": \"cur\",\n        \"gate_delta\": 0.5,\n        \"gate_threshold\": 0.22360679774997896,\n        \"verdict\": \"accept\",\n        \"reading\": \"SECONDARY \\u2014 no longer the deciding comparison (issue #684 item 6). This candidate against the parent's reward as STORED from an earlier round, carrying whatever re-measurement drift happened since. The PRIMARY verdict (`verdict`/`gate_delta` above, == `control_relative`) cancels that drift by construction. Where the two disagree, the difference is drift, not the edit; this field exists to show you that gap, not to override the primary verdict.\"\n      },\n      \"verdict_by_reference\": {\n        \"ctl_null_i0\": \"accept\",\n        \"ctl_null_i0r1\": \"accept\"\n      },\n      \"verdict_stable\": true\n    }\n  ],\n  \"control\": {\n    \"tag\": \"ctl_null_i0\",\n    \"reward\": 0.5,\n    \"delta_vs_gate_ref\": 0.0,\n    \"gate_delta\": 0.0,\n    \"gate_threshold\": 0.4472135954999579,\n    \"stderr\": 0.22360679774997896,\n    \"n\": 6,\n    \"k_se\": 1.0,\n    \"resolvable_effect_size\": 0.894427,\n    \"footprint\": {\n      \"restricted\": false,\n      \"reading\": \"the edit's surface could not be localized (no diff, a rewrite-sized diff, no rollouts, or it reaches every task) \\u2014 full-vector measurement, as before\"\n    },\n    \"verdict\": \"reject\",\n    \"regressions\": [\n      \"t18\",\n      \"t19\",\n      \"t23\"\n    ],\n    \"movement\": {\n      \"broke\": [\n        \"t18\",\n        \"t19\",\n        \"t23\"\n      ],\n      \"fixed\": [\n        \"t3\",\n        \"t5\",\n        \"t9\"\n      ],\n      \"unresolved\": []\n    },\n    \"n_broke\": 3,\n    \"n_fixed\": 3,\n    \"eval_rc\": 0,\n    \"eval_error\": null,\n    \"reused\": false\n  },\n  \"control_replicates\": [\n    {\n      \"tag\": \"ctl_null_i0\",\n      \"reward\": 0.5,\n      \"delta_vs_gate_ref\": 0.0,\n      \"gate_delta\": 0.0,\n      \"gate_threshold\": 0.4472135954999579,\n      \"stderr\": 0.22360679774997896,\n      \"n\": 6,\n      \"k_se\": 1.0,\n      \"resolvable_effect_size\": 0.894427,\n      \"footprint\": {\n        \"restricted\": false,\n        \"reading\": \"the edit's surface could not be localized (no diff, a rewrite-sized diff, no rollouts, or it reaches every task) \\u2014 full-vector measurement, as before\"\n      },\n      \"verdict\": \"reject\",\n      \"regressions\": [\n        \"t18\",\n        \"t19\",\n        \"t23\"\n      ],\n      \"movement\": {\n        \"broke\": [\n          \"t18\",\n          \"t19\",\n          \"t23\"\n        ],\n        \"fixed\": [\n          \"t3\",\n          \"t5\",\n          \"t9\"\n        ],\n        \"unresolved\": []\n      },\n      \"n_broke\": 3,\n      \"n_fixed\": 3,\n      \"eval_rc\": 0,\n      \"eval_error\": null,\n      \"reused\": false\n    },\n    {\n      \"tag\": \"ctl_null_i0r1\",\n      \"reward\": 0.5,\n      \"delta_vs_gate_ref\": 0.0,\n      \"gate_delta\": 0.0,\n      \"gate_threshold\": 0.0,\n      \"stderr\": 0.22360679774997896,\n      \"n\": 6,\n      \"k_se\": 1.0,\n      \"resolvable_effect_size\": null,\n      \"footprint\": {\n        \"restricted\": false,\n        \"reading\": \"the edit's surface could not be localized (no diff, a rewrite-sized diff, no rollouts, or it reaches every task) \\u2014 full-vector measurement, as before\"\n      },\n      \"verdict\": \"reject\",\n      \"regressions\": [],\n      \"movement\": {\n        \"broke\": [],\n        \"fixed\": [],\n        \"unresolved\": []\n      },\n      \"n_broke\": 0,\n      \"n_fixed\": 0,\n      \"eval_rc\": 0,\n      \"eval_error\": null,\n      \"reused\": false\n    }\n  ],\n  \"pooled_control_replicates\": null,\n  \"objectives\": null,\n  \"constraints\": null,\n  \"pareto_archive\": null,\n  \"screen_stage\": {\n    \"cand_1\": {\n      \"decision\": \"promote\",\n      \"mean_delta\": 0.5,\n      \"se\": 0.22360679774997896,\n      \"n\": 6,\n      \"tier\": 1,\n      \"subset_ids\": [\n        \"t18\",\n        \"t19\",\n        \"t23\",\n        \"t3\",\n        \"t5\",\n        \"t9\"\n      ],\n      \"rationale\": \"4 most-informative failing/high-variance task(s) ['t3', 't5', 't9', 't19']; 2 random regression-canary task(s) ['t18', 't23'] drawn (seed 1) from tasks the parent currently passes\",\n      \"fired\": 6,\n      \"auto\": true\n    }\n  },\n  \"screen_killed\": [],\n  \"dominated\": {},\n  \"merge_stage\": null,\n  \"merge_skip\": null,\n  \"gated\": [\n    \"cand_1\"\n  ],\n  \"next\": \"read regressions, then commit.py --decision accept|reject|inconclusive per gated candidate \\u2014 `inconclusive` for any row whose `verdict` is inconclusive, so the round is not recorded as refuting an edit it could not judge\",\n  \"table_path\": \"<TMP>/.capevolve/run_chk/work/round_i0.json\"\n}\n",
+ "rc": 0,
+ "stderr_tail": ""
+}

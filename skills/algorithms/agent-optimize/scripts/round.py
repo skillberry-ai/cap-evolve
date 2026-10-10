@@ -49,7 +49,7 @@ import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_ev
 import gate_check
 import pregate
 
-from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks, posterior
+from cap_evolve import RunDir, eval_index, graph, harness, lineage, mdblocks, optimizer_config, posterior
 from cap_evolve.gate import ParetoObjectiveError, _DEFAULT_PARETO_OBJECTIVES
 from cap_evolve.pareto_archive import ArchivePoint, ParetoArchive
 from cap_evolve.specfile import spec_for_run
@@ -603,9 +603,9 @@ def _paired(payload: dict) -> dict[str, float]:
 def _recorded_parents(run_dir, tag: str, best: str):
     """Parent recorded at creation (``prepare_candidate --parent``, #714) when set, else
     ``[best]`` (legacy). ``None`` (carry the prior record forward) if ``best`` is the tag
-    itself -- the self-parent seen on cand_4. ``CAPEVOLVE_DAG_PARALLEL=0`` forces legacy."""
+    itself -- the self-parent seen on cand_4. ``optimizer.ablation.dag_parallel: false`` / ``CAPEVOLVE_DAG_PARALLEL=0`` forces legacy."""
     prior = [p for p in (graph.latest_node(run_dir, tag) or {}).get("parents") or [] if p != tag]
-    if prior and os.environ.get("CAPEVOLVE_DAG_PARALLEL", "1") != "0":
+    if prior and optimizer_config.enabled("dag_parallel", spec_for_run(run_dir)):
         return prior
     return [best] if best != tag else None
 
@@ -945,7 +945,8 @@ class SingleCandidateUnjustified(RuntimeError):
 
 
 def sibling_justification(n_candidates: int, explicit: str | None,
-                          afford_check_file: str | None) -> tuple[str | None, str | None]:
+                          afford_check_file: str | None,
+                          new_engine: bool = False) -> tuple[str | None, str | None]:
     """Resolve why this round runs below MIN_SIBLINGS, or raise if it cannot.
 
     Returns ``(justification, source)`` — both ``None`` when ``n_candidates`` already meets
@@ -955,6 +956,8 @@ def sibling_justification(n_candidates: int, explicit: str | None,
     """
     if n_candidates >= MIN_SIBLINGS:
         return None, None
+    if new_engine:  # dag_parallel + active_eval: the ledger makes one good idea affordable
+        return "new engine: no sibling minimum", "new_engine"
     if explicit and explicit.strip():
         return explicit.strip(), "explicit"
     if afford_check_file:
@@ -1210,8 +1213,11 @@ def _main(argv=None) -> int:
     # (SKILL.md step 2) — see SingleCandidateUnjustified's docstring for why. Resolved before
     # any work-dir mutation or spend below, so an unjustified serial round fails fast with
     # nothing charged.
+    NEW_ENGINE = optimizer_config.new_engine(spec_for_run(run_dir, project))
+    if NEW_ENGINE and args.gate_against != "control":
+        args.no_control = True  # ledger pooling replaces the per-round null control
     JUSTIFICATION, JUSTIFICATION_SOURCE = sibling_justification(
-        len(tags), args.single_candidate_justification, args.afford_check_file)
+        len(tags), args.single_candidate_justification, args.afford_check_file, NEW_ENGINE)
 
     # #632: the registered pre-gate check (e.g. gold replay) is a HARD precondition, run on
     # every tag's bytes before any screen or eval is paid for. One invalid tag refuses the
