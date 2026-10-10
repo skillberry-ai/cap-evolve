@@ -43,7 +43,7 @@ def _commit(run_dir, work, *extra):
     return subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", "cand_1", "--from-dir", str(work), "--decision", "reject",
-         "--val", "0.4", "--note", "test",
+         "--val", "0.4", "--val-unverified", "fixture: val not under test", "--note", "test",
          "--missing-handover-justification", "fixture: journal handover not under test",
          "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
          *extra],

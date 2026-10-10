@@ -52,6 +52,9 @@ def _atomic_write(path: Path, text: str) -> None:
         raise
 
 
+_HELD_LOCKS: list = []
+
+
 @contextlib.contextmanager
 def _file_lock(lock_path: Path):
     """Advisory cross-process lock around a read-modify-write of run state.
@@ -254,11 +257,48 @@ class RunDir:
     def best_id(self) -> str | None:
         return self._read_state().get("best_id")
 
-    def set_best(self, candidate_id: str) -> None:
+    def set_best(self, candidate_id: str, val: float | None = None) -> None:
+        """Move the champion. Semantics: ``spent.best_val`` is the val of ``best_id``. Pass the
+        MEASURED val and it replaces ``spent.best_val`` under the same lock hold (not a
+        high-water mark); omit it (unverified/unknown) and ``best_val`` is left untouched."""
         with _file_lock(self._state_lock):
             st = self._read_state()
             st["best_id"] = candidate_id
+            if val is not None:
+                sp = Spent.from_dict(st.get("spent"))
+                sp.best_val = float(val)
+                st["spent"] = sp.to_dict()
             self._write_state(st)
+
+    def run_lock(self, name: str) -> None:
+        """Fail fast if another live process holds ``locks/<name>.lock`` (#713 B7).
+
+        flock, held until this process exits (released by the OS even on a crash, so there
+        is no stale-lock case). Raises ``RuntimeError`` naming the holder's pid.
+        """
+        try:
+            import fcntl
+        except ImportError:  # non-POSIX: no lock (see _file_lock's note); say so, don't crash
+            import warnings
+            warnings.warn("run_lock is a no-op on this platform (no fcntl)")
+            return
+        if "/" in name or ".." in name:
+            raise ValueError(f"bad lock name {name!r}")
+        d = self.root / "locks"
+        d.mkdir(parents=True, exist_ok=True)
+        f = open(d / f"{name}.lock", "a+")
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            f.seek(0)
+            holder = f.read().strip()
+            f.close()
+            raise RuntimeError(f"{name} is already running (holder: {holder or 'unknown'})")
+        f.seek(0)
+        f.truncate()
+        f.write(f"pid={os.getpid()} start={int(time.time())}")
+        f.flush()
+        _HELD_LOCKS.append(f)  # keep the fd open for the life of the process
 
     def update_spent(self, *, iterations=0, metric_calls=0, usd=0.0, runner_tokens=0,
                      runner_seconds=0.0, optimizer_seconds=0.0, optimizer_usd=0.0,

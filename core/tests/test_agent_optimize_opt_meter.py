@@ -66,7 +66,7 @@ def _commit(rd, cfg, work, cid, decision, extra=()):
 def test_each_decision_carries_only_the_delta_since_the_previous_one(tmp_path, monkeypatch):
     rd, cfg, log, work = _setup(tmp_path)
     log.write_text(_msg("m1", 10, 100, 1000, 200) + _msg("m2", 5, 50, 500, 0))
-    acc = _commit(rd, cfg, work, "cand1", "accept", ["--val", "0.5"])
+    acc = _commit(rd, cfg, work, "cand1", "accept", ["--val", "0.5", "--val-unverified", "fixture: val not under test"])
     assert acc["opt_tokens"] == 1310 + 555  # input+output+cache_read+cache_creation
     assert acc["opt_seconds"] and acc["opt_seconds"] > 0
 

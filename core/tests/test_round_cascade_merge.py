@@ -181,7 +181,7 @@ def test_default_round_screens_kills_merges_and_gates_the_merge_once(tmp_path):
     # --missing-diagnosis-justification: the auto-merge satisfies #611's precondition itself.
     c = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
                         "--candidate-id", merge, "--from-dir", str(run_dir.root / "work" / merge),
-                        "--decision", "accept", "--val", "1.0", "--note", "merge accepted",
+                        "--decision", "accept", "--val", "1.0", "--val-unverified", "fixture: val not under test", "--note", "merge accepted",
                         "--missing-handover-justification", "fixture: handover not under test"],
                        capture_output=True, text=True, env=_env())
     assert c.returncode == 0, c.stdout + c.stderr

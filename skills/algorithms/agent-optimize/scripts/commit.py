@@ -504,6 +504,9 @@ def main(argv=None) -> int:
                         "provisional=Δ>0 but unresolved, buying more trials on the SAME "
                         "candidate next (books nothing; re-commit it once grown)")
     p.add_argument("--val", type=float, default=None, help="candidate's full-val mean")
+    p.add_argument("--val-unverified", default=None, metavar="REASON",
+                   help="record --val as an operator-supplied number without checking it "
+                        "against the candidate's full-val rollouts (#713 B6)")
     p.add_argument("--note", default="", help="one line: why this edit, in general terms")
     # The DRIVER's disposition, recorded machine-readably alongside the screen's own
     # verdict. screen.py may only say kill/promote (invariant 1), so a candidate the
@@ -612,6 +615,25 @@ def main(argv=None) -> int:
                        "repairing this candidate's record.",
             }, indent=2))
             return 2
+
+    # #713 B6: --val must match the candidate's measured full-val mean. With no val rollouts
+    # there is nothing to verify against, so it needs an explicit --val-unverified REASON
+    # (recorded on the decision event). Only a MEASURED val may become the champion's best_val.
+    measured_val = None
+    if args.val is not None and not args.val_unverified:
+        measured = harness.split_result_from_rollouts(run_dir, args.candidate_id, "val")
+        if not measured.per_task:
+            print(json.dumps({"error": (
+                f"--val {args.val} cannot be verified: {args.candidate_id!r} has no full-val "
+                "rollouts. Evaluate it, drop --val, or pass --val-unverified REASON")}, indent=2))
+            return 2
+        if abs(measured.reward - args.val) > 1e-3:
+            print(json.dumps({"error": (
+                f"--val {args.val} does not match the measured full-val mean "
+                f"{measured.reward} of {args.candidate_id!r}; fix it, drop --val, or pass "
+                "--val-unverified REASON")}, indent=2))
+            return 2
+        measured_val = measured.reward
 
     accepted = args.decision == "accept"
     indecisive = args.decision == "inconclusive"
@@ -844,7 +866,7 @@ def main(argv=None) -> int:
                if args.parents else None)
     run_dir.snapshot(args.candidate_id, src)
     if accepted:
-        run_dir.set_best(args.candidate_id)
+        run_dir.set_best(args.candidate_id, val=measured_val)
     # Carry the proposer's own spend on the EVENT as well as into state.json. update_spent
     # alone leaves the dashboard's cost ledger unable to attribute it: state.json has the
     # total, but no cost-bearing event exists to explain it, so an agent-mode run reported
@@ -898,6 +920,7 @@ def main(argv=None) -> int:
             "carries optimizer_seconds=0/optimizer_usd=0 — pass --optimizer-seconds/"
             "--optimizer-usd/--optimizer-tokens for your own proposal cost (SKILL.md step 7).")
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
+                      val_unverified=args.val_unverified,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
@@ -969,7 +992,7 @@ def main(argv=None) -> int:
         # dashboard's ``gate_decisions[]`` does not have to regex them out of an agent's prose.
         harness.record_iteration(run_dir, src, args.candidate_id, parent_id=parent_id,
                                  accepted=accepted, reason=reason,
-                                 val=args.val,
+                                 val=args.val, val_verified=not args.val_unverified,
                                  parent_val=parent_val,
                                  indecisive=indecisive, memory_skill=memory_skill,
                                  parents=parents, edit_kind=args.edit_kind,

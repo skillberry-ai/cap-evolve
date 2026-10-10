@@ -611,6 +611,11 @@ def evaluate_candidate(
     return result
 
 
+def parse_tags(s) -> list[str]:
+    """``"a, b"`` -> ``["a", "b"]`` (strip, drop empties). One parser for every ``--current``."""
+    return [t.strip() for t in (s or "").split(",") if t.strip()]
+
+
 def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2)) -> SplitResult:
     """Reconstruct a candidate's SplitResult from its persisted rollouts.
 
@@ -1885,7 +1890,7 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                      indecisive: bool = False, parents: list | None = None,
                      edit_kind: str | None = None, memory_skill: str | None = None,
                      cluster_ids: list[str] | None = None, subset: dict | None = None,
-                     **extra) -> None:
+                     val_verified: bool = True, **extra) -> None:
     """THE one place an iteration is recorded. EVERY algorithm ends its iteration here.
 
     Three things must happen exactly once per iteration, and they used to be
@@ -1937,7 +1942,7 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
     if parents and len(parents) > 1:
         extra.setdefault("merge_of", list(parents))  # the dashboard's multi-parent edge
     run_dir.update_spent(iterations=1, accepted=None if indecisive else accepted,
-                         best_val=val if accepted and val is not None else None)
+                         best_val=val if accepted and val is not None and val_verified else None)
     run_dir.log_event("step", candidate=cid, accept=accepted, reason=reason,
                       val=val, parent=parent_id, parent_val=parent_val, **extra)
     resolve_memory(memory_skill).write_handover(

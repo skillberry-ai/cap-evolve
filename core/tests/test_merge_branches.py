@@ -227,7 +227,7 @@ def test_merged_candidate_gates_and_commits_with_two_parents(tmp_path):
     commit = subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", tag, "--from-dir", str(run_dir.root / "work" / tag),
-         "--decision", "accept", "--val", str(row["reward"]),
+         "--decision", "accept", "--val", str(row["reward"]), "--val-unverified", "fixture: val not under test",
          "--parents", "cand_old,cand_new", "--note", "merge of two live branches (#586)",
          # #588 made the JOURNAL.md handover a hard precondition of commit.py; this fixture
          # is testing the --parents plumbing, not the journal discipline, so the same escape

@@ -270,7 +270,8 @@ def paired_deltas_on(parent_per_task: list, cand_per_task: list, ids: list) -> d
 
 
 def screen_decision(deltas: list, *, k_se: float = 1.0, regressed: list | None = None,
-                    gross_kill_threshold: float = GROSS_KILL_DELTA) -> dict:
+                    gross_kill_threshold: float = GROSS_KILL_DELTA,
+                    kill_z: float | None = None) -> dict:
     """``kill`` or ``promote`` from a subset's paired deltas. Never ``accept``.
 
     issue #684 item 5: kill is a GROSS-failure check, not a significance test —
@@ -309,6 +310,10 @@ def screen_decision(deltas: list, *, k_se: float = 1.0, regressed: list | None =
         se = 0.0
 
     kill = mean_d <= gross_kill_threshold
+    # #713 B3: opt-in SE guard. A gross-looking mean within kill_z·SE of 0 is noise
+    # (cand_9: -0.167, SE 0.167) -> promote. Default None = the deliberate #684 legacy rule.
+    if kill and kill_z is not None and (n < 4 or mean_d + kill_z * se >= 0):
+        kill = False
     reason = (f"subset Δ̄={mean_d:+.4f} over n={n} (SE={se:.4f}, informational — kill no "
               f"longer requires significance): "
               + (f"GROSS negative (<= {gross_kill_threshold:+.4f}) → kill" if kill else

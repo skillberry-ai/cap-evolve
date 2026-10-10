@@ -152,7 +152,7 @@ def _commit(run_dir, work, *extra):
     p = subprocess.run(
         [sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(run_dir.root),
          "--candidate-id", "cand_1", "--from-dir", str(work),
-         "--decision", "reject", "--val", "0.5333333333333333",
+         "--decision", "reject", "--val", "0.5333333333333333", "--val-unverified", "fixture: val not under test",
          "--note", "delta +0.033 within control noise 0.044",
          "--missing-handover-justification", "fixture: journal handover not under test",
          "--missing-ranked-issues-justification", "fixture: ranked issues not under test",
