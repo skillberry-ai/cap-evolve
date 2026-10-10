@@ -24,7 +24,7 @@ Existing keys (`id`, `parents[]`, `status`, `val_mean`, `screen`, `gate`, `subse
 | `status` | existing vocabulary | a not-yet-evaluated node is `proposed` with `eval_state: unevaluated`; legacy `queued` reads as `proposed` |
 | `eval_state` | `unevaluated\|screened\|partial\|full` | monotone measurement state |
 | `coverage` | `{split, task_ids[], n_tasks, n_val_tasks, trials_min, trials_max, tier, stage, full: bool, reuse_from: [tag]}` | what the scores were measured on |
-| `capability_hash` | str | content hash of the capability; equals the evidence-ledger row key `cap_hash` (#718) |
+| `capability_hash` | str | content hash of the capability; equals the evidence-ledger row key `cap_hash` (#718). Optimizer bookkeeping (`INSIGHTS.md`, `META_INSIGHTS.md`, `FRAMEWORK_IMPROVEMENTS.md`, `DIAGNOSIS.json`, `JOURNAL.md`, `LEDGER.md`, ...; `types.NON_CAPABILITY_FILES`) is excluded from the hash. Ledgers written before this exclusion carry hashes that include those files: rebuild with `eval_index.backfill(run_dir)` (the digest does it automatically when the ledger is empty) |
 | `capability_files` | `[paths]` | files in the capability snapshot |
 | `edit` | `{change_type, cluster_ids, target_tasks, hypothesis, files_changed}` | what the edit tried |
 | `objectives` | `{name: {value, stderr, n_tasks, basis}}` | per-objective estimates |

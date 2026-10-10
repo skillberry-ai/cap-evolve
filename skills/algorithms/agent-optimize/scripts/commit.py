@@ -894,13 +894,17 @@ def main(argv=None) -> int:
     # decision, deduped by message id, unless the host meter or the agent already accounted
     # for this round. USD is a list-price estimate; unpriced models are reported, not zeroed.
     harvested = None
+    no_transcript_warning = None
     if (metered is None and not args.optimizer_usd and not args.optimizer_tokens
             and optimizer_cost.mode() != "off"):
         first_t, last_t = _decision_times(run_dir)
         since = (first_t if optimizer_cost.mode() == "session" else last_t) or first_t or 0.0
         harvested = optimizer_cost.harvest(
             run_dir, [run_dir.root.parent.parent, Path.cwd()], since)
-        if harvested is not None:
+        if harvested is None:
+            no_transcript_warning = optimizer_cost.NO_TRANSCRIPT_MSG
+            print(f"WARNING: {no_transcript_warning}", file=sys.stderr)
+        else:
             args.optimizer_usd = harvested["usd"]
             args.optimizer_tokens = harvested["tokens"]
             if not harvested["scoped"]:
@@ -933,6 +937,7 @@ def main(argv=None) -> int:
                       opt_tokens=args.optimizer_tokens or None,
                       opt_seconds=args.optimizer_seconds or None,
                       optimizer_cost_warning=optimizer_cost_warning,
+                      optimizer_meter_warning=no_transcript_warning,
                       opt_cost_basis="session_log_list_price_estimate" if harvested else None,
                       opt_cost_session_scoped=harvested["scoped"] if harvested else None,
                       opt_unpriced_tokens=(harvested or {}).get("unpriced_tokens") or None,

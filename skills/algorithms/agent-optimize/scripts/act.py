@@ -42,6 +42,7 @@ import argparse
 import json
 import os
 import random
+import re
 import shlex
 import subprocess
 import sys
@@ -80,10 +81,18 @@ def sh(cmd: list[str], env: dict | None = None) -> tuple[int, str, str]:
 
 
 def jload(text: str):
+    """Parse a script's stdout as JSON; tolerate stray log lines before the object (the first
+    line that starts a JSON object/array and parses wins)."""
     try:
         return json.loads(text)
     except ValueError:
-        return None
+        pass
+    for m in re.finditer(r"^[\[{]", text or "", re.M):
+        try:
+            return json.JSONDecoder().raw_decode(text[m.start():])[0]
+        except ValueError:
+            continue
+    return None
 
 
 class Ctx:
