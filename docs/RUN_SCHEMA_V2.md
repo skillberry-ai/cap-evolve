@@ -4,7 +4,7 @@ The single contract for `graph.jsonl` node extras and new `events.jsonl` kinds. 
 evidence-ledger, cost and dashboard PRs cite this file for field names. Code: `core/cap_evolve/schema_v2.py`.
 
 Rules: every key below is **optional and additive**; readers must tolerate absence (a v1 run
-renders unchanged). `run_config` events carry `schema_version: 2`. Nodes are written with the
+renders unchanged). Emitters land incrementally in the DAG-engine/ledger PRs, so a v2 run only carries the fields its emitters wrote; `run_config` gains `schema_version: 2` when the first emitter is wired (it is NOT stamped by this PR, so absence means nothing). Nodes are written with the
 existing `graph.append_node(..., **extra)` (no signature change; last record per `id` wins).
 Emitters never raise: a malformed payload is dropped and a `schema_warning {of, bad_keys}`
 event is logged instead.
@@ -21,10 +21,10 @@ Existing keys (`id`, `parents[]`, `status`, `val_mean`, `screen`, `gate`, `subse
 | `base_for_eval` | tag | gating reference; may differ from `parents[0]` |
 | `round_id` | str/int | proposing round |
 | `stage` | `proposed\|built\|checked\|probed\|evaluating\|alive\|pruned\|merged` | fine-grained lifecycle; legacy mapping: proposed/built/checked/probed/evaluating -> `proposed`, alive -> `gated`/`accepted`, pruned -> `rejected`, merged -> `superseded` |
-| `status` | existing + `queued` | `queued` = proposed, not yet evaluated |
+| `status` | existing vocabulary | a not-yet-evaluated node is `proposed` with `eval_state: unevaluated`; legacy `queued` reads as `proposed` |
 | `eval_state` | `unevaluated\|screened\|partial\|full` | monotone measurement state |
-| `eval_coverage` | `{split, task_ids[], n_tasks, n_val_tasks, trials_min, trials_max, tier, stage, full: bool, reuse_from: [tag]}` | what the scores were measured on |
-| `capability_hash` | str | content hash of the capability |
+| `coverage` | `{split, task_ids[], n_tasks, n_val_tasks, trials_min, trials_max, tier, stage, full: bool, reuse_from: [tag]}` | what the scores were measured on |
+| `capability_hash` | str | content hash of the capability; equals the evidence-ledger row key `cap_hash` (#718) |
 | `capability_files` | `[paths]` | files in the capability snapshot |
 | `edit` | `{change_type, cluster_ids, target_tasks, hypothesis, files_changed}` | what the edit tried |
 | `objectives` | `{name: {value, stderr, n_tasks, basis}}` | per-objective estimates |
@@ -33,16 +33,17 @@ Existing keys (`id`, `parents[]`, `status`, `val_mean`, `screen`, `gate`, `subse
 | `cost_ledger` | `{optimizer_usd, optimizer_tokens, optimizer_seconds, eval_agent_usd, eval_usersim_usd, control_usd, eval_seconds}` | who spent what |
 
 Also reserved by the lineage design (same record, optional): `tip: bool`, `hypothesis_id`,
-`pregate: {ok, tests[], replay:{task, ok}}`, `coverage: {n_tasks, n_trials, task_ids[]}`,
-`post: {mean, se, p_beat_parent, p_beat_seed}`, `cost: {eval_usd, optimizer_usd}`,
-`interaction: {score, parts}`.
+`pregate: {ok, tests[], replay:{task, ok}}`, `post: {mean, se, p_beat_parent, p_beat_seed}`,
+`interaction: {score, parts}`. Per-node coverage is only `coverage`; per-node cost is only `cost_ledger`.
+The event `eval_coverage` has `trials` (trials per task of that eval); the node's `coverage` aggregates
+them as `trials_min`/`trials_max`.
 
 ## 2. events.jsonl kinds
 
 | kind | fields |
 |---|---|
 | `candidate_proposed` | `id, parents, branch_id, round_id` |
-| `eval_coverage` | `tag, split, task_ids, trials, reused_from` |
+| `eval_coverage` | `tag, split, task_ids, trials, reused_from` (event; folds into node `coverage`) |
 | `eval_state` | `id, from, to` (monotone: unevaluated < screened < partial < full) |
 | `decision` | `id, decision: propose\|screen\|promote\|kill\|merge\|grow\|accept\|reject\|stop\|tradeoff, evidence{}, rationale, optimizer_usd` |
 | `optimizer_spend` | `role, model, usd, tokens, seconds, node\|null` |
@@ -55,11 +56,18 @@ tag,split,task_ids,trials; `eval_state` id,to; `decision` id,decision; `optimize
 
 ## 3. Backward compatibility (reader side)
 
-`schema_v2.normalize_node(node)` / `CandidateGraph.node_v2(id)` fill, only when absent:
+`schema_v2.normalize_node(node, val_ids=, evals=, parents=)` / `CandidateGraph.node_v2(id)` fill, only when absent
+(explicit `eval_state`/`coverage` always win):
 
-- `eval_state`: `status: queued` -> `unevaluated`; `val_mean` present -> `full`; screen/subset only -> `screened`; else `unevaluated`.
-- `base_for_eval` = `parents[0]`; `parent_roles` = `parents[0]` primary, rest donor.
-- `eval_coverage` for a screened-only node = `{split: val, task_ids: <screen subset>, n_tasks, full: false}`.
+- `coverage` + `eval_state` from real evaluated task ids: `schema_v2.legacy_coverage(events, val_ids)` folds v1
+  `eval_start`/`evaluate` val events (`subset_ids`, `n_trials`; `<tag>__screenN` folds into `<tag>`). All val tasks -> `full`;
+  only screen evals -> `screened`; otherwise `partial`.
+- Without events: `val_mean` alone is not proof of a full eval. A node with `screen` and no `gate` row was screen-killed
+  -> `screened` (cand_9 in run_20261008_150326: 8 of 30 tasks x 1 trial, `val_mean` was cand_7's number). `val_mean` plus a
+  `gate` row (or no screen) -> `full`; screen/subset only -> `screened`; else `unevaluated`.
+- `status: queued` -> `proposed`.
+- `base_for_eval` = first parent; `parent_roles` = first primary, rest donor. Self-parents are dropped (`node_v2` uses
+  `CandidateGraph.parents_of`, which gets #719's filter once it lands; TODO: use history to recover the original parent).
 
-Concurrency: `eval_state` is monotone; a reducer takes the latest record per id, so out-of-order
-writes from concurrent branches are safe (`schema_v2.advance_eval_state` never moves backwards).
+Ordering: `eval_state` is monotone by convention (`advance_eval_state` never moves backwards), but there is no lock or reducer
+here; writers racing on one tag serialise via `graph.append_node_locked` (#714).
