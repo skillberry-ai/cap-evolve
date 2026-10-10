@@ -18,3 +18,9 @@ def test_malformed_node_does_not_break_reducer(monkeypatch):
     monkeypatch.setattr(schema_v2, "normalize_node", lambda *a, **k: 1 / 0)
     r = dashboard.reduce_run(RunDir.open(FIX))
     assert all("schema_warning" in n for n in r["graph"]["nodes"])
+
+
+def test_no_node_is_its_own_parent_and_cand4_resolves_to_cand1():
+    nodes = {n["id"]: n for n in dashboard.reduce_run(RunDir.open(FIX))["graph"]["nodes"]}
+    assert [i for i, n in nodes.items() if n.get("parent") == i] == []
+    assert nodes["cand_4"]["parent"] == "cand_1"

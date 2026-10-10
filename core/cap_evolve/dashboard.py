@@ -1644,6 +1644,11 @@ def reduce_run(run_dir) -> dict:
             # the run's current best (``gate_check --current`` defaults to ``best_id``),
             # so the last accepted candidate is the real comparison parent, not a guess.
             parent = last_accepted
+        if parent == cid:
+            # A candidate is never its own parent (a re-commit of the current best, or a
+            # step logged right after its own accept, names itself): keep the edge
+            # recorded earlier.
+            parent = (nodes.get(cid) or {}).get("parent")
         # gepa val-gate / step events don't always carry the parent edge; fall back
         # to "seed" if we have nothing better so the lineage tree stays connected.
         val = ev.get("val")
