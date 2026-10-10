@@ -1657,7 +1657,7 @@ def _main(argv=None) -> int:
             "verdict": g.get("verdict"),
             # #706 ablation.active_eval (default off): advisory paired-posterior read-out from
             # the evidence ledger; the gate verdict above is unchanged.
-            **({"posterior": posterior.summarize(run_dir, tag, best, args.split)}
+            **({"posterior": posterior.safe_summarize(run_dir, tag, best, args.split)}
                if tag != CTL and posterior.enabled(spec) else {}),
             "regressions": g.get("regressions"),
             # What the candidate TRADED (gate_check's `movement`): the broke ids AND the fixed

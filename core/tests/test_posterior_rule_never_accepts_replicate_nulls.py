@@ -70,15 +70,15 @@ def test_large_coherent_effect_is_accepted():
     assert dec == "accept" and v["p_beat"] >= posterior.P_ACC
 
 
-def test_global_slot_cap_and_stable_tasks_get_nothing():
+def test_global_slot_cap_and_stable_tasks_get_only_the_canary_floor():
     rng = random.Random(0)
     p = [1.0] * 10 + [.5] * 20
     P = Pair(k_vector(p), [3 * x for x in p], [3.0] * T)
     seen = []
-    slots = [25]
+    slots = [45]
     sched.run(P, lambda arm, t: seen.append(t) or 0.5, [10**6] * T, [10**6] * T, rng, slots=slots, m=50)
-    assert len(seen) <= 25 and slots[0] >= 0
-    assert sum(t < 10 for t in seen) <= len(seen) // 4  # stable-pass tasks carry little information
+    assert len(seen) <= 45 and slots[0] >= 0
+    assert sum(t < 10 for t in seen) == 10 * posterior.CANARY_MIN  # reserved floor, then information-driven
 
 
 def _ledger_run(tmp_path):
@@ -114,9 +114,9 @@ def test_from_ledger_pools_hashes(tmp_path):
 def test_active_eval_ablation_default_off_and_env_overrides(monkeypatch):
     monkeypatch.delenv("CAPEVOLVE_ACTIVE_EVAL", raising=False)
     assert posterior.enabled({}) is False
-    assert posterior.enabled({"ablation": {"active_eval": True}}) is True
+    assert posterior.enabled({"optimizer": {"ablation": {"active_eval": True}}}) is True
     monkeypatch.setenv("CAPEVOLVE_ACTIVE_EVAL", "0")
-    assert posterior.enabled({"ablation": {"active_eval": True}}) is False
+    assert posterior.enabled({"optimizer": {"ablation": {"active_eval": True}}}) is False
     monkeypatch.setenv("CAPEVOLVE_ACTIVE_EVAL", "1")
     assert posterior.enabled({}) is True
 
@@ -131,3 +131,65 @@ def test_posterior_check_cli_prints_candidates(tmp_path, capsys):
     rd = _ledger_run(tmp_path)
     assert mod.main(["--run-dir", str(rd.root), "--parent", "par"]) == 0
     assert "cand" in capsys.readouterr().out
+
+
+def test_unsampled_frozen_val_tasks_widen_the_pair(tmp_path):
+    rd = _ledger_run(tmp_path)
+    sp = json.loads(rd.splits_path.read_text())
+    sp["val"] = sp["val"] + ["never_sampled"]
+    rd.splits_path.write_text(json.dumps(sp))
+    P = posterior.from_ledger(rd, eval_index.cap_hash(tmp_path / "cand"), eval_index.cap_hash(tmp_path / "par"))
+    assert P.T == 3 and P.nc[-1] == 0 and P.np_[-1] == 0
+
+
+def test_bad_inputs_error_clearly_and_advisory_path_never_raises(tmp_path):
+    import pytest
+    with pytest.raises(ValueError):
+        Pair([], [], [])
+    with pytest.raises(ValueError):
+        Pair([3.0], [2.0], [1.0])  # reward sum above trials, i.e. reward > 1
+    rd = _ledger_run(tmp_path)
+    assert "error" in posterior.safe_summarize(rd, "cand", "par", split=None)
+
+
+def test_canary_fires_on_stable_parent_vs_zero_of_three():
+    P = Pair([6.0] + [3.0], [9.0, 1.0], [9.0, 3.0], [0.0, 1.0], [3.0, 3.0])
+    v = P.verdict(random.Random(0), 6, m=200)
+    assert v["canary_tasks"] == [0] and v["decision"] == "prune"
+
+
+def _collapse_run(rng, m, cap_new=270):
+    """10 parent-stable tasks (.95) collapse to .05 while 20 flaky ones rise .3 -> .7 (true D = -0.033)."""
+    p = [.95] * 10 + [.3] * 20
+    q = [.05] * 10 + [.7] * 20
+    sp = [float(sum(rng.random() < p[t] for _ in range(3))) for t in range(T)]
+    P = Pair(k_vector([(s + .5) / 4 for s in sp]), sp, [3.0] * T)
+    dec, _, _ = sched.run(P, lambda a, t: float(rng.random() < (q if a == 0 else p)[t]),
+                          [10**6] * T, [10**6] * T, rng, cap_new=cap_new, m=m)
+    return dec
+
+
+def test_collapse_on_stable_tasks_is_not_accepted():
+    rng = random.Random(5)
+    acc = sum(_collapse_run(rng, 100) == "accept" for _ in range(30))
+    assert acc <= 1  # <= 5% of 30 (review repro was 15/30)
+
+
+def test_cumulative_looks_false_accept_rate_at_small_and_production_m():
+    rates = [sum(x for b in FIX["seed"] + FIX["cand_1"] for x in b[str(t)]) /
+             sum(len(b[str(t)]) for b in FIX["seed"] + FIX["cand_1"]) for t in range(T)]
+    for m, n in ((100, 60), (400, 12)):
+        rng = random.Random(m)
+        fa = 0
+        for _ in range(n):  # identical arms; sched.run applies the rule at every 20-rollout look
+            sp = [float(sum(rng.random() < rates[t] for _ in range(3))) for t in range(T)]
+            P = Pair(k_vector([(s + .5) / 4 for s in sp]), sp, [3.0] * T)
+            dec, _, _ = sched.run(P, lambda a, t: float(rng.random() < rates[t]),
+                                  [10**6] * T, [10**6] * T, rng, m=m)
+            fa += dec == "accept"
+        assert fa / n <= 0.05, (m, fa)
+
+
+def test_halve_keeps_the_better_half_and_stages_advance():
+    assert sched.halve({"a": .9, "b": .5, "c": .3, "d": .05}, 40) == ["a"]
+    assert sched.next_budget(40) == 100 and sched.next_budget(450) is None

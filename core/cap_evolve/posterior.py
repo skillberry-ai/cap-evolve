@@ -10,19 +10,22 @@ rejects regardless. Budget exhausted undecided = inconclusive (not accepted).
 
 from __future__ import annotations
 
+import json
 import os
 import random
+from pathlib import Path
 
 DMIN, P_ACC, P_REJ, P_REJ_LATE, MIN_USED = 0.02, 0.95, 0.10, 0.25, 40
-K_IMPACT, K_CANARY, K_OTHER = 3.0, 6.0, 12.0
+K_IMPACT, K_CANARY = 3.0, 6.0
+STABLE, CANARY_MIN, CANARY_DROP, CANARY_P = .85, 3, 0.3, 0.9  # parent-stable task: >= CANARY_MIN cand trials before any accept
 M = 400  # posterior draws
 
 
 def k_vector(p_par) -> list[float]:
     """Prior strength per task from the parent's rate: flaky/failing tasks are what an edit can
-    move (K_IMPACT), stable passes are regression canaries (K_CANARY). ``K_OTHER`` is for tasks a
-    caller knows the diff cannot touch (pass a custom k to ``Pair``)."""
-    return [K_CANARY if p >= .85 else K_IMPACT for p in p_par]
+    move (K_IMPACT), stable passes are regression canaries (K_CANARY). A caller that knows which
+    tasks the diff cannot touch can pass its own k to ``Pair``."""
+    return [K_CANARY if p >= STABLE else K_IMPACT for p in p_par]
 
 
 class Pair:
@@ -30,10 +33,22 @@ class Pair:
 
     def __init__(self, k, sp, np_, sc=None, nc=None):
         T = len(k)
+        if not T or not (len(sp) == len(np_) == T):
+            raise ValueError("posterior.Pair needs at least one task and equal-length arrays")
         self.k, self.sp, self.np_ = list(k), list(map(float, sp)), list(map(float, np_))
         self.sc = [0.0] * T if sc is None else list(map(float, sc))
         self.nc = [0.0] * T if nc is None else list(map(float, nc))
         self.T = T
+        for s_, n_ in list(zip(self.sp, self.np_)) + list(zip(self.sc, self.nc)):
+            if not (0 <= s_ <= n_):
+                raise ValueError("posterior.Pair: rewards must lie in [0,1] (successes within trials)")
+
+    def stable(self, i: int) -> bool:
+        return (self.sp[i] + .5) / (self.np_[i] + 1) >= STABLE
+
+    def uncovered(self) -> list[int]:
+        """Parent-stable tasks with fewer than CANARY_MIN candidate trials (accept is blocked)."""
+        return [i for i in range(self.T) if self.stable(i) and self.nc[i] < CANARY_MIN]
 
     def add(self, arm: int, task: int, reward: float) -> None:
         """arm 0 = candidate, 1 = parent."""
@@ -55,12 +70,13 @@ class Pair:
         T = self.T
         D = [sum(c[i] - p[i] for i in range(T)) / T for p, c in zip(pp, pc)]
         p_beat = sum(d > DMIN for d in D) / m
-        pm = [(self.sp[i] + .5) / (self.np_[i] + 1) for i in range(T)]
-        canary = [i for i in range(T) if pm[i] >= .85 and self.nc[i] >= 3
-                  and sum(c[i] - p[i] < -0.25 for p, c in zip(pp, pc)) / m > .9]
+        # canary: flat-prior (evidence-scaled, not k-weighted) P(q_i < p_i - CANARY_DROP)
+        canary = [i for i in range(T) if self.stable(i) and self.nc[i] >= CANARY_MIN
+                  and sum(rng.betavariate(1 + self.sc[i], 1 + self.nc[i] - self.sc[i]) < p[i] - CANARY_DROP
+                          for p in pp) / m > CANARY_P]
         if canary:
             decision = "prune"
-        elif p_beat >= P_ACC:
+        elif p_beat >= P_ACC and not self.uncovered():
             decision = "accept"
         elif used >= MIN_USED and p_beat <= (P_REJ if used < 100 else P_REJ_LATE):
             decision = "prune"
@@ -71,21 +87,27 @@ class Pair:
 
 
 def enabled(spec: dict | None = None) -> bool:
-    """`ablation.active_eval`: env CAPEVOLVE_ACTIVE_EVAL wins, then spec ablation.active_eval;
+    """`optimizer.ablation.active_eval`: env CAPEVOLVE_ACTIVE_EVAL wins, then the spec key;
     default OFF until the E2E replay validates it."""
     env = os.environ.get("CAPEVOLVE_ACTIVE_EVAL", "").strip().lower()
     if env:
         return env not in {"0", "false", "no", "off"}
-    ab = (spec or {}).get("ablation")
+    opt = (spec or {}).get("optimizer")
+    ab = opt.get("ablation") if isinstance(opt, dict) else None
     return bool(ab.get("active_eval")) if isinstance(ab, dict) else False
 
 
 def from_ledger(run_dir, cand_hash: str, parent_hash: str, task_ids=None, split: str = "val") -> Pair:
     """Pair built from the eval_index ledger (pooled over every tag sharing a hash). Default task
-    set = every task either hash has a row for."""
+    set = the run's frozen split (so unsampled tasks widen D)."""
     from . import eval_index
     cc, pc = (eval_index.counts(run_dir, h, split) for h in (cand_hash, parent_hash))
-    ids = sorted(set(cc) | set(pc)) if task_ids is None else [str(t) for t in task_ids]
+    if task_ids is None:  # frozen split: tasks without rows keep full prior uncertainty
+        try:
+            task_ids = json.loads(Path(run_dir.splits_path).read_text(encoding="utf-8"))[split]
+        except (OSError, ValueError, KeyError, TypeError):
+            task_ids = sorted(set(cc) | set(pc))
+    ids = [str(t) for t in task_ids]
     g = lambda c, t: c.get(t, (0.0, 0))
     sp, np_ = [g(pc, t)[0] for t in ids], [g(pc, t)[1] for t in ids]
     k = k_vector([(s + .5) / (n + 1) for s, n in zip(sp, np_)])
@@ -101,3 +123,11 @@ def summarize(run_dir, cand_tag: str, parent_tag: str, split: str = "val", seed:
         return None
     v = P.verdict(random.Random(seed), int(sum(P.nc)))
     return {**v, "n_cand": int(sum(P.nc)), "n_parent": int(sum(P.np_)), "tasks": P.T}
+
+
+def safe_summarize(*a, **kw) -> dict | None:
+    """``summarize`` for advisory callers: a malformed ledger yields {"error": ...}, never a crash."""
+    try:
+        return summarize(*a, **kw)
+    except Exception as exc:  # noqa: BLE001 - advisory path must not kill a round
+        return {"error": f"{type(exc).__name__}: {exc}"}

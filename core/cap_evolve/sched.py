@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import random
 
-from .posterior import M, P_REJ, P_REJ_LATE, Pair
+from .posterior import CANARY_MIN, M, P_REJ, P_REJ_LATE, Pair
 
 ROUND = 20                          # rollouts per decision round (both arms interleaved)
 STAGES = (40, 100, 270, 450)        # successive-halving cumulative budgets per candidate
@@ -36,7 +36,13 @@ def pick(P: Pair, cap_c, cap_p, n: int = ROUND) -> list[tuple[int, int]]:
     lists; repeated picks of one task are damped by the diminishing-return factors."""
     gc, gp = gains(P, cap_c, cap_p)
     out = []
-    for _ in range(n):
+    # reserved canary budget: parent-stable tasks (zero information gain) still get CANARY_MIN trials
+    for i in P.uncovered():
+        for _ in range(int(CANARY_MIN - P.nc[i])):
+            if len(out) >= n or cap_c[i] <= 0:
+                break
+            out.append((0, i)); cap_c[i] -= 1
+    for _ in range(n - len(out)):
         tc, tp = max(range(P.T), key=gc.__getitem__), max(range(P.T), key=gp.__getitem__)
         if gc[tc] <= 0 and gp[tp] <= 0:
             break
@@ -73,7 +79,13 @@ def run(P: Pair, draw, cap_c, cap_p, rng: random.Random, cap_new: int = CAP_NEW,
 
 
 def halve(p_beats: dict[str, float], used: int) -> list[str]:
-    """Successive-halving baseline across siblings: tags not yet pruned by the futility bar at
-    this stage budget; the caller funds survivors up to the next ``STAGES`` entry."""
+    """Successive halving across siblings: drop tags under the futility bar, then keep the better
+    half (by p_beat, at least one) to be funded up to the next ``STAGES`` budget."""
     bar = P_REJ if used < 100 else P_REJ_LATE
-    return [t for t, p in p_beats.items() if p > bar]
+    alive = sorted((t for t, p in p_beats.items() if p > bar), key=lambda t: -p_beats[t])
+    return alive[:max(1, len(alive) // 2)] if alive else []
+
+
+def next_budget(used: int) -> int | None:
+    """The next cumulative stage budget above ``used`` (None once past the last)."""
+    return next((s for s in STAGES if s > used), None)
