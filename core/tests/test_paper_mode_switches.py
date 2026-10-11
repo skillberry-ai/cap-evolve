@@ -422,3 +422,42 @@ def test_finalize_default_is_unchanged_without_the_flag(tmp_path, capsys, monkey
     rc, out = T._act(monkeypatch, capsys, ["finalize", *T._args(rd, project)], sh)
     assert rc == 0 and out["result"]["confirm"]["fresh_only"] is False
     assert sum(any(x.endswith("gate_check.py") for x in c) for c in sh.calls) == 1
+
+
+# ---- agent mode: policy comes from the run's spec when the env var is absent --------------------
+
+def _gate_check_paired_n(run_dir, env_extra=None):
+    script = REPO / "skills" / "algorithms" / "agent-optimize" / "scripts" / "gate_check.py"
+    env = {"PYTHONPATH": str(CORE), "PATH": "/usr/bin:/bin", **(env_extra or {})}   # clean: no policy env
+    p = subprocess.run([sys.executable, str(script), "--run-dir", str(run_dir.root), "--candidate", "c",
+                        "--current", "seed", "--mode", "paired", "--no-footprint"],
+                       capture_output=True, text=True, env=env)
+    return json.loads(p.stdout)["paired_n"]
+
+
+def test_gate_check_in_a_clean_shell_reads_the_policy_from_the_run_spec(tmp_path, _policy_env):
+    from cap_evolve import harness
+    adapter, run_dir, _ = _setup(tmp_path, {"pass": SEED_PASS})
+    c = tmp_path / "c"
+    c.mkdir()
+    (c / "cfg.json").write_text(json.dumps({"pass": SEED_PASS, "err_candidate": TASKS[:3]}))
+    harness.evaluate_candidate(adapter, c, run_dir=run_dir, split="val", tag="c", errored_policy="fail")
+    run_dir.snapshot("c", c)
+    assert _gate_check_paired_n(run_dir) == 27                      # no spec, no env: drop
+    spec = tmp_path / "capevolve.yaml"
+    spec.write_text("errored_trial_policy: fail\n")
+    run_dir.log_event("run_config", spec=str(spec))
+    assert _gate_check_paired_n(run_dir) == 30                      # spec says fail, env unset
+    assert _gate_check_paired_n(run_dir, {"CAPEVOLVE_ERRORED_TRIAL_POLICY": "drop"}) == 27   # env wins
+
+
+def test_resolve_policy_precedence(tmp_path, _policy_env):
+    from cap_evolve import harness
+    _, run_dir, _ = _setup(tmp_path, {"pass": SEED_PASS})
+    spec = tmp_path / "capevolve.yaml"
+    spec.write_text("errored_trial_policy: fail\n")
+    run_dir.log_event("run_config", spec=str(spec))
+    assert harness.resolve_errored_policy(None, run_dir) == "fail"
+    assert harness.resolve_errored_policy("drop", run_dir) == "drop"
+    _policy_env.setenv("CAPEVOLVE_ERRORED_TRIAL_POLICY", "drop")
+    assert harness.resolve_errored_policy(None, run_dir) == "drop"

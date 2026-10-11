@@ -289,14 +289,22 @@ ERRORED_POLICIES = ("drop", "fail")
 ERRORED_POLICY_ENV = "CAPEVOLVE_ERRORED_TRIAL_POLICY"
 
 
-def resolve_errored_policy(explicit=None) -> str:
-    """explicit argument > env ``CAPEVOLVE_ERRORED_TRIAL_POLICY`` > ``drop``.
+def resolve_errored_policy(explicit=None, run_dir=None) -> str:
+    """explicit argument > env ``CAPEVOLVE_ERRORED_TRIAL_POLICY`` > the run's spec > ``drop``.
+
+    The spec fallback matters in agent orchestration mode, where ``act.py`` / ``gate_check.py`` /
+    ``evaluate/run.py`` run in shells that never inherited the env var ``cap-evolve run`` exported
+    for baseline and the bookends; the run's own spec (``spec_for_run``) is the shared source.
 
     The env var is how ONE rule reaches every evaluation of a run: ``cap-evolve run`` and the
     algorithm scripts export it, so baseline/seed, resume, candidates, ``gate_check`` and the
     finalize bookend all read trials the same way (both sides of every pair).
     """
-    pol = explicit or os.environ.get(ERRORED_POLICY_ENV) or "drop"
+    pol = explicit or os.environ.get(ERRORED_POLICY_ENV)
+    if not pol and run_dir is not None:
+        from .specfile import spec_for_run
+        pol = (spec_for_run(run_dir) or {}).get("errored_trial_policy")
+    pol = pol or "drop"
     if pol not in ERRORED_POLICIES:
         raise ValueError(f"errored_trial_policy must be one of {ERRORED_POLICIES}, got {pol!r}")
     return pol
@@ -364,7 +372,7 @@ def evaluate_candidate(
     existing tag add rollouts with fresh seeds instead of replacing ``t0..`` or repeating them.
     """
     workers = _resolve_workers(workers)
-    errored_policy = resolve_errored_policy(errored_policy)
+    errored_policy = resolve_errored_policy(errored_policy, run_dir)
     n_reclassified = 0      # candidate-attributed errors counted as 0.0 (policy=fail)
     if split == "test":
         run_dir.reserve_test()  # raises TestSealError on reuse; does NOT burn the seal yet
@@ -706,7 +714,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     """
     import json as _json
     from .stats import mean, stderr
-    errored_policy = resolve_errored_policy(errored_policy)
+    errored_policy = resolve_errored_policy(errored_policy, run_dir)
     tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
     vdir = run_dir.rollouts / split
     by_task: dict[str, list[float]] = {}
