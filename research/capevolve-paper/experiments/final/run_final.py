@@ -24,6 +24,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -251,9 +252,11 @@ def worker_hl(job, attempt_dir):
     row = next((x for x in rows if str(x.get("task_id")) == str(job["task"]) and int(x.get("trial", -1)) == trial), None)
     if row is None:
         return {"t_start": t0, "t_end": t1, "error": "hl_final_eval produced no result (exit %d): %s" % (r.returncode, (r.stdout + r.stderr)[-500:]),
-                "error_kind_adapter": "infra", "force_infra": True, "reward": 0.0, "reward_as_saved": 0.0, "tokens": 0, "n_llm_calls": 0, "empty_output": False}
+                "error_kind_adapter": "infra", "force_infra": True, "force_rule": "hl_wrapper_error", "reward": 0.0, "reward_as_saved": 0.0, "tokens": 0, "n_llm_calls": 0, "empty_output": False}
     err = row.get("error")
-    return {"t_start": t0, "t_end": t1, "error": err, "error_kind_adapter": "infra" if err else None, "force_infra": bool(err), "reward": float(row.get("reward") or 0.0),
+    return {"t_start": t0, "t_end": t1, "error": err, "error_kind_adapter": "infra" if err else None,
+            # (b) errors during the harness run follow the uniform rule; a worker exit is assumed to have made no target calls (not logged) -> infra
+            "force_infra": bool(err and re.search(r"exit[_ ]?(code[_ ]?)?\d|worker exit", str(err), re.I)), "force_rule": "hl_worker_exit_no_target_calls_assumed", "reward": float(row.get("reward") or 0.0),
             "reward_as_saved": float(row.get("reward") or 0.0), "tokens": 0, "n_llm_calls": 0, "empty_output": False, "hl_run_id": row.get("run_id")}
 
 
@@ -326,7 +329,7 @@ class Store:
 def classify(res, cm):
     """returns (class, rule).  class in '', infra, candidate, unverifiable"""
     if res.get("force_infra"):
-        return "infra", "hl_worker_error"             # HarnessLens-side worker errors (opencode exit, no result) are never a score
+        return "infra", res.get("force_rule") or "hl_worker_error"
     if res.get("hang"):
         return "infra", "hang_rule_3h"                # HUNG_ROLLOUT_RULE.txt: a watchdog timeout is an infra error, never a 0
     if not res.get("worker_ok"):
