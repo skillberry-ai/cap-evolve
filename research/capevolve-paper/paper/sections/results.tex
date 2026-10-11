@@ -5,16 +5,16 @@
 This section compares every arm with the seed on three suites, prices the comparison, and reports the gate trade-off between rule P and the stock gate.
 \needs{One sentence with the headline result of the final evaluation: which arm leads on which suite, and by how much. Write it only after the numbers exist.}
 Each difference is paired with the seed on the same tasks, intervals are family-cluster-robust, and p-values are Holm-adjusted inside their family (Section~\ref{sec:setup:stats}).
-All arms are compared at the matched checkpoint \ckpt{}, the largest budget that every arm reached: \mockBstarA, \mockBstarB and \mockBstarC{} target rollouts on Suites A, B and C.
+All arms are compared at the matched checkpoint \ckpt{}, the largest rollout budget \budget{} that every arm reached: \mockBstarA, \mockBstarB and \mockBstarC{} target rollouts on Suites A, B and C.
 Red numbers with a dagger are placeholders, and orange numbers are real but still change.
 The scorer audit that motivates the protocol is in Section~\ref{sec:problem} and Appendix~\ref{app:hist}.
 
 \subsection{Suite A, SpreadsheetBench}
 \label{sec:results:a}
 
-On Suite A, \mockNsigA{} of the ten optimizer arms beat the seed with Holm-adjusted $p<0.05$, and the largest paired delta is \mockTopDeltaA{} points, held by \mockTopArmA{} (Table~\ref{tab:main_a}).
+Table~\ref{tab:main_a} lists the ten optimizer arms against the seed.
 The final set has \mockTA{} tasks scored once each, for \mockSeedsA{} search seeds per arm, and the seed is scored twice.
-\needs{State whether the CapEvolve arms are above, level with or below the best baseline, and whether their intervals exclude it.}
+\needs{State how many of the ten optimizer arms beat the seed with Holm-adjusted $p<0.05$, which arm has the largest paired delta, and whether the CapEvolve arms are above, level with or below the best baseline.}
 Suite A has no one-shot control, so whether search pays is answered on Suites B and C.
 Figure~\ref{fig:contrast} contrasts each CapEvolve arm with every baseline, which is the primary family.
 
@@ -24,9 +24,8 @@ Figure~\ref{fig:contrast} contrasts each CapEvolve arm with every baseline, whic
 \label{sec:results:bc}
 
 Suite B has \mockTB{} sealed test tasks, each scored \mockTrialsB{} times, and it carries the one-shot control (Table~\ref{tab:main_bc}).
-There the largest paired delta is \mockTopDeltaB{} points (\mockTopArmB), and \mockNsigB{} arms clear $p<0.05$.
-Suite C reuses the official airline test set of \mockTC{} tasks, which earlier work optimized against, so it is development-exposed and arms are not ranked on it.
-Its largest delta is \mockTopDeltaC{} points (\mockTopArmC), and \mockNsigC{} arms clear $p<0.05$.
+Suite C reuses the official airline test set of \mockTC{} tasks, scored \mockTrialsC{} times each, which earlier work optimized against, so it is development-exposed and arms are not ranked on it.
+\needs{Give the largest paired delta and the number of arms below $p=0.05$ on each of Suites B and C.}
 \needs{State whether the arm ordering on B and C agrees with Suite A, using rank correlation of the paired deltas.}
 
 \input{tables/main_BC}
@@ -66,7 +65,5 @@ Table~\ref{tab:promotions} in Appendix~\ref{app:results} gives the same counts f
 \subsection{Infrastructure incidents}
 \label{sec:results:ops}
 
-A stale gateway priority tag kept EvoSkill rollouts queued from 13:05 to 18:40 UTC on the first day, so its three seeds restarted from scratch.
-Gateway 502 errors hit 1 to 2.5\% of Gemma calls until a retry went in at 13:11, and until then a failed rollout scored zero for competitor arms but was dropped for CapEvolve.
+A stale gateway priority tag invalidated EvoSkill rollouts from 13:05 to 18:40 UTC on the first day, and gateway 502 errors failed 1 to 2.5\% of Gemma calls until a retry went in at 13:11 (Appendix~\ref{app:incidents}).
 On Suite B, the agent-optimize arm can read gold actions for its 74 optimization and selection tasks, never for the sealed test set.
-Appendix~\ref{app:incidents} lists every incident with its effect on the data.

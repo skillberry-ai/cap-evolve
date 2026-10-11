@@ -2,7 +2,7 @@
 \centering\scriptsize
 \caption{Changes to each competitor's official code, from the per-arm deviation records (\texttt{baselines/deviations\_*.json}) and \texttt{decisions.md}. All arms share the same target rollout (Gemma-4-31B-it, 30 turns, gold-free sandbox), the same seed artifact, the same optimizer model (Claude Sonnet 5.5 through the gateway) and the same recalculated hard reward during search. ``Direction'' is our reading of how each change affects the arm relative to its published setting, not a measured effect.}
 \label{tab:deviations}
-\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.9in}@{}}
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
 \toprule
 Arm & Change from the official code & Reason & Direction \\
 \midrule

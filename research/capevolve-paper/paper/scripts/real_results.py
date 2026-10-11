@@ -105,7 +105,7 @@ def table_audit(a):
     by = {r["claim_id"]: r for r in a["rows"]}
     L = [r"\begin{table}[t]", r"\centering", r"\scriptsize",
          r"\caption{Selected historical claims and their recomputation from archived artifacts "
-         r"(\texttt{audit/recomputed\_numbers.csv}, " + str(a["n"]) + r" claims in total).}",
+         r"(" + str(a["n"]) + r" claims in total).}",
          r"\label{tab:audit}", r"\begin{tabularx}{\columnwidth}{@{}p{0.9in}X@{}}", r"\toprule", r"Claim & Recomputation \\", r"\midrule"]
     for k in keep:
         assert k in by, k
