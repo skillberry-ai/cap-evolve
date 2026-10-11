@@ -580,12 +580,11 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
     except Exception as exc:
         prob.append("gateway health failed: %s" % exc)
     if suite == "A":
-        try:    # baseline-eng: sandbox must have no internet (podman network sb_internal) for the final evaluation
-            img = "docker.io/xingyaoww/codeact-executor:latest"
-            r = subprocess.run(["podman", "run", "--rm", img, "bash", "-c", "curl -m 8 -s -o /dev/null -w %{http_code} https://github.com || true"],
-                               capture_output=True, text=True, timeout=120)
-            if r.stdout.strip() not in ("000", ""):
-                prob.append("sandbox has internet egress (curl github -> %s); see baselines/EGRESS_SWITCH.txt" % r.stdout.strip())
+        try:    # baseline-eng: sandbox must have no internet; check over the podman socket exactly as the adapter creates containers
+            chk = BASELINES / "code" / "check_sandbox_egress.py"
+            r = subprocess.run(["bash", "-c", "source %s/local/env_local.sh; %s -I %s" % (BENCH, PY["A"], chk)], capture_output=True, text=True, timeout=300)
+            if r.returncode != 0:
+                prob.append("sandbox egress check failed (exit %d): %s" % (r.returncode, (r.stdout + r.stderr)[-300:].replace("\n", " ")))
         except Exception as exc:
             prob.append("egress check failed: %r" % exc)
         for p in (SB_LO_BIN,):
