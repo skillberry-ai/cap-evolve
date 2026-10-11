@@ -195,8 +195,19 @@ draws. Second, the \emph{confirmation} of the promoted candidate, not its screen
 which removes the selection bias from the reference that later candidates must beat; on resume the confirmation
 measurement is read back.
 % src: core/cap_evolve/harness.py:1128-1135 (resume_val reads <tag>__conf when rule P is on); core/cap_evolve/harness.py:4618
-Parameter values used in the experiments: $k=\TODO{}$, $n_{\mathrm{conf}}=\TODO{}$, $\delta_{\min}=\TODO{}$,
-$z_{\mathrm{conf}}=\TODO{}$, $\rho=\TODO{}$ (operating point under review; the library default for $\rho$ is $0.6$). Both CapEvolve arms judge through rule P with the footprint mask off
+Parameter values used in the experiments: $k=1$, $n_{\mathrm{conf}}=3$, $\delta_{\min}=0$,
+$z_{\mathrm{conf}}=1.282$ (the one-sided $90\%$ normal quantile), $\rho=0.95$ (the library defaults are $n_{\mathrm{conf}}=10$,
+$\delta_{\min}=0.02$, $z_{\mathrm{conf}}=2$, $\rho=0.6$). The values were chosen by a budget-exact simulation of a
+600-rollout search, in which an all-null search of $12$ candidates falsely promotes at least one candidate with
+probability $0.565$ under the one-stage $k=1$ gate and $0.055$ under rule P at these values, with power
+$0.09/0.17/0.27/0.41$ against true edits of $+0.04/+0.06/+0.08/+0.10$; the stricter setting ($z_{\mathrm{conf}}=2$,
+$\delta_{\min}=0.02$) gives $0.014$ with power $0.03/0.08/0.15/0.26$. The design is therefore deliberately underpowered
+for small edits under a 600-rollout budget: it trades power for a low false-promotion rate, and we report null and small
+effects as undetected rather than as absent.
+% src (numbers): research/capevolve-paper/analysis/out/sim_budget.md (rows "f: one-stage k=1", "c: P n_conf=3 z=1.282 dmin=0",
+%   "a: P n_conf=3 z=2.0 dmin=.02"; power table), produced by research/capevolve-paper/analysis/scripts/sim_budget.py; these are
+%   simulation outputs under that script's generative assumptions, not measurements on the benchmark.
+% src (library defaults): core/cap_evolve/promotion.py:28-35 Both CapEvolve arms judge through rule P with the footprint mask off
 (\texttt{gate\_\allowbreak footprint: false}) and joint coverage (\texttt{gate\_\allowbreak coverage: joint}), so the two algorithms share one
 acceptance rule. The confirmation costs $2\,|\Dsel|\,n_{\mathrm{conf}}$ rollouts per candidate that passes the screen and
 nothing for candidates that do not; these rollouts are charged to the budget $B$.
@@ -338,7 +349,7 @@ mitigates but does not remove.
 
 We make no statistical guarantee for the search-time rules; they are heuristics with measured operating characteristics.
 The paired one-SE gate accepts when $\bar\Delta>\SE$; under a normal approximation and a true null this fires with
-probability $\Pr(Z>1)\approx0.16$ per test, and repeated looks compound it (\TODO{simulated per-search false-promotion rate}).
+probability $\Pr(Z>1)\approx0.16$ per test, and repeated looks compound it (in the budget-exact simulation of Section~\ref{sec:method:P}, an all-null search of $12$ candidates falsely promotes at least once with probability $0.565$ under the one-stage $k=1$ gate).
 % src: core/cap_evolve/gate.py:451-452; the 0.16 is the standard normal tail Pr(Z>1)=0.1587. Simulated rates:
 %   research/capevolve-paper/analysis/out/sim_promotion.md, sim_gate.md
 The Beta-posterior rule is a Bayesian decision rule under a modelling assumption; we make no frequentist claim for it,
