@@ -139,3 +139,8 @@ Format: date (UTC) — decision — rationale — reversible?
   - The campaign gateway does not parse or rewrite tool calls: it forwards bodies byte-for-byte except the model name. The RITS deployment's parser is shared by all arms, so this is uniform.
   - Final-eval runner must add an hourly 5-task canary measuring the raw-tool-text rate, to detect provider-side changes. The rate is reported per arm as a descriptive outcome.
   - A fallback parser discovered by an arm is a legitimate artifact edit, not a parity breach.
+- 2026-10-11 22:20 — Uniform error classifier (reporting only; search-time feedback kept each method's native handling).
+  - A rollout is infra when its error string is a transport, timeout or sandbox-HTTP error, or a tau2 user-simulator malfunction (subclass env_user_simulator, which a sensitivity analysis flips to candidate), or when it has zero target calls and an unrecorded error string. A recorded non-infra string takes precedence.
+  - Rows the adapter labelled infra but that have no string and made target calls are "unverifiable". They are counted as failures in the pessimistic bound and dropped in the optimistic bound.
+  - Search-phase counts: Trace2Skill 26/27 infra; WikiSkill 8/8; Meta-Harness 30/30; SkillOpt 27 infra and 120 candidate (task template broke before any call); GEPA 7 infra and 1 unverifiable; EvoSkill 5; CapEvolve hc/ao/ctl all infra.
+  - The final evaluation uses the same classifier.
