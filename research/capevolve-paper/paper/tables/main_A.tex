@@ -2,26 +2,26 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.5pt}
-\caption{Suite A results, baselines by ascending delta and CapEvolve last. Score is the final-set reward. $\Delta$ is the paired difference in points with a family-cluster-robust 95\% interval, $p_{\mathrm{Holm}}$ is Holm-adjusted within the suite, and USD is optimizer cost at Sonnet list prices. Missing is missing over scheduled cells. Tokens and wall clock are in Table~\ref{tab:cost_tokens}, per-seed values in Table~\ref{tab:perseed}. (placeholder)}
+\caption{Suite A results, baselines by ascending delta and CapEvolve last, with the exploratory stock-gate arm below. Score is the final-set reward. $\Delta$ is the paired difference in points with a family-cluster-robust 95\% interval, $p_{\mathrm{Holm}}$ is Holm-adjusted within the suite, and USD is optimizer cost at Sonnet list prices. Missing is missing over scheduled cells. Tokens and wall clock are in Table~\ref{tab:cost_tokens}, per-seed values in Table~\ref{tab:perseed}, promotions per search in Table~\ref{tab:promotions}. Suite A has no one-shot control. The stock-gate arm (E12A on Suite A, E12C on Suite C) is exploratory and outside the Holm family. (placeholder)}
 \label{tab:main_a}
 \begin{tabular}{lcccrrr}
 \toprule
-Arm & Score (\%) & $\Delta$ vs seed [CI] & $\Delta$ vs one-shot [CI] & $p_{\mathrm{Holm}}$ & USD & Missing \\
+Arm & Score (\%) & $\Delta$ vs seed [CI] & $p_{\mathrm{Holm}}$ & USD & Missing \\
 \midrule
-\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\multicolumn{6}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
 \midrule
-Seed (no search) & \pend{50.0} & ref. & \pend{$-$1.9} & -- & -- & \pend{0/240} \\
-One-shot control & \pend{51.9} & \pend{+1.9 [$-$2.9, +6.7]} & ref. & \pend{1.000} & \pend{3} & \pend{2/720} \\
-Meta-Harness & \pend{51.1} & \pend{+1.1 [$-$4.0, +6.2]} & \pend{$-$0.8 [$-$6.4, +4.7]} & \pend{1.000} & \pend{28} & \pend{2/720} \\
-EvoSkill & \pend{52.2} & \pend{+2.2 [$-$2.8, +7.2]} & \pend{+0.3 [$-$5.2, +5.8]} & \pend{1.000} & \pend{38} & \pend{4/720} \\
-GEPA & \pend{53.3} & \pend{+3.3 [$-$1.1, +7.8]} & \pend{+1.4 [$-$3.4, +6.3]} & \pend{0.724} & \pend{15} & \pend{1/720} \\
-Trace2Skill & \pend{55.2} & \pend{+5.2 [+0.2, +10.2]} & \pend{+3.3 [$-$2.2, +8.7]} & \pend{0.220} & \pend{11} & \pend{6/720} \\
-MIPROv2 & \pend{55.5} & \pend{+5.5 [+1.0, +10.0]} & \pend{+3.6 [$-$1.3, +8.5]} & \pend{0.098} & \pend{14} & \pend{4/720} \\
-ACE & \pend{55.8} & \pend{+5.8 [+1.8, +9.9]} & \pend{+3.9 [$-$0.5, +8.3]} & \pend{0.032} & \pend{16} & \pend{4/720} \\
-WikiSkill (community) & \pend{55.9} & \pend{+5.9 [+1.0, +10.8]} & \pend{+4.0 [$-$1.3, +9.3]} & \pend{0.098} & \pend{6} & \pend{1/720} \\
-SkillOpt & \pend{56.7} & \pend{+6.7 [+2.0, +11.4]} & \pend{+4.8 [$-$0.3, +9.9]} & \pend{0.033} & \pend{11} & \pend{6/720} \\
-CapEvolve HC & \pend{53.4} & \pend{+3.4 [$-$1.7, +8.5]} & \pend{+1.5 [$-$4.0, +7.0]} & \pend{0.738} & \pend{27} & \pend{5/720} \\
-CapEvolve AO & \pend{53.6} & \pend{+3.6 [$-$1.5, +8.7]} & \pend{+1.7 [$-$3.9, +7.2]} & \pend{0.738} & \pend{29} & \pend{3/720} \\
+Seed (no search) & \pend{50.0} & ref. & -- & -- & \pend{0/140} \\
+Meta-Harness & \pend{51.1} & \pend{+1.1 [$-$5.8, +8.0]} & \pend{1.000} & \pend{28} & \pend{0/210} \\
+EvoSkill & \pend{52.2} & \pend{+2.2 [$-$4.6, +9.0]} & \pend{1.000} & \pend{17} & \pend{4/210} \\
+GEPA & \pend{53.3} & \pend{+3.3 [$-$2.7, +9.4]} & \pend{1.000} & \pend{7} & \pend{5/210} \\
+Trace2Skill & \pend{55.2} & \pend{+5.2 [$-$1.6, +12.0]} & \pend{0.687} & \pend{18} & \pend{0/210} \\
+MIPROv2 & \pend{55.5} & \pend{+5.5 [$-$0.6, +11.6]} & \pend{0.496} & \pend{11} & \pend{1/210} \\
+ACE & \pend{55.8} & \pend{+5.8 [+0.3, +11.3]} & \pend{0.290} & \pend{16} & \pend{5/210} \\
+WikiSkill (community) & \pend{55.9} & \pend{+5.9 [$-$0.7, +12.5]} & \pend{0.496} & \pend{6} & \pend{1/210} \\
+SkillOpt & \pend{56.7} & \pend{+6.7 [+0.3, +13.1]} & \pend{0.290} & \pend{10} & \pend{1/210} \\
+CapEvolve HC & \pend{53.4} & \pend{+3.4 [$-$3.5, +10.3]} & \pend{1.000} & \pend{27} & \pend{5/210} \\
+CapEvolve AO & \pend{53.6} & \pend{+3.6 [$-$3.4, +10.6]} & \pend{1.000} & \pend{36} & \pend{9/210} \\
+CapEvolve HC, stock gate \textit{(exploratory)} & \pend{54.4} & \pend{+4.4 [$-$2.1, +10.9]} & -- & \pend{37} & \pend{8/210} \\
 \bottomrule
 \end{tabular}
 \end{table*}

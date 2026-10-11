@@ -9,12 +9,14 @@
 \end{figure*}
 
 \input{tables/cost_tokens}
+\input{tables/promotions}
+\input{appendix/deviations_table}
 \input{tables/perseed}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_anytime.pdf}
-\caption{Score against rollouts, with the matched checkpoint $B^\ast$ dashed. Lines show the best score so far, averaged over seeds, and bands show the minimum to maximum of the CapEvolve arms. The one-shot control has no curve because it makes one optimizer pass (placeholder).}
+\caption{Best selection-set score so far against target rollouts, with the matched checkpoint $B^\ast$ dashed. The selection set is the 40 validation tasks on Suite A and the selection split on Suites B and C. Lines are averages over seeds, and bands are the minimum to maximum of the CapEvolve arms. The one-shot control has no curve because it makes one optimizer pass, and Suite A has no such control (placeholder).}
 \label{fig:anytime}
 \end{figure*}
 
@@ -35,7 +37,7 @@
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_rulep.pdf}
-\caption{Rule P promotes false candidates rarely and real ones less often than the one-stage gate. Left: share of all-null searches of six candidates with at least one false promotion. Right: share of single candidates promoted, against their true effect. Source: \texttt{analysis/out/sim\_budget.md}.}
+\caption{Rule P promotes false candidates rarely and real ones less often than the one-stage gate. Left: share of all-null searches of six candidates with at least one false promotion. Right: share of single candidates promoted, against their true effect. The letter z is the confirmation threshold of rule P and k the threshold of the one-stage gate, both in standard errors. Source: \texttt{analysis/out/sim\_budget.md}.}
 \label{fig:rulep}
 \end{figure*}
 

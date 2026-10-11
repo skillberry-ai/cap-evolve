@@ -10,33 +10,34 @@ Arm & Rollouts at $B^\ast$ & Non-cache-read & Cache read & Incl.\ cache read & C
 \midrule
 \multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
 \midrule
-One-shot control & \pend{10} & \pend{0.7} & \pend{5.6} & \pend{6.3} & \pend{7} & \pend{1.0} \\
-Meta-Harness & \pend{528} & \pend{7.6} & \pend{27.0} & \pend{34.7} & \pend{76} & \pend{27.4} \\
-EvoSkill & \pend{538} & \pend{6.9} & \pend{87.2} & \pend{94.0} & \pend{69} & \pend{28.7} \\
-GEPA & \pend{529} & \pend{5.4} & \pend{4.3} & \pend{9.8} & \pend{54} & \pend{20.2} \\
-Trace2Skill & \pend{536} & \pend{3.5} & \pend{3.3} & \pend{6.8} & \pend{35} & \pend{11.6} \\
-MIPROv2 & \pend{532} & \pend{5.1} & \pend{1.1} & \pend{6.2} & \pend{51} & \pend{27.6} \\
-ACE & \pend{536} & \pend{5.2} & \pend{4.2} & \pend{9.4} & \pend{52} & \pend{21.7} \\
-WikiSkill (community) & \pend{533} & \pend{1.9} & \pend{0.1} & \pend{2.0} & \pend{19} & \pend{26.7} \\
-SkillOpt & \pend{528} & \pend{3.5} & \pend{7.6} & \pend{11.1} & \pend{35} & \pend{22.0} \\
-CapEvolve HC & \pend{534} & \pend{4.3} & \pend{78.6} & \pend{82.9} & \pend{43} & \pend{24.1} \\
-CapEvolve AO & \pend{536} & \pend{5.3} & \pend{68.4} & \pend{73.7} & \pend{53} & \pend{25.6} \\
+Meta-Harness & \pend{395} & \pend{5.1} & \pend{63.9} & \pend{69.0} & \pend{51} & \pend{6.4} \\
+EvoSkill & \pend{393} & \pend{3.4} & \pend{36.7} & \pend{40.1} & \pend{34} & \pend{14.3} \\
+GEPA & \pend{397} & \pend{2.2} & \pend{4.1} & \pend{6.4} & \pend{22} & \pend{22.5} \\
+Trace2Skill & \pend{388} & \pend{5.5} & \pend{6.6} & \pend{12.1} & \pend{55} & \pend{24.4} \\
+MIPROv2 & \pend{399} & \pend{3.7} & \pend{0.8} & \pend{4.5} & \pend{37} & \pend{22.4} \\
+ACE & \pend{396} & \pend{5.2} & \pend{5.4} & \pend{10.7} & \pend{52} & \pend{27.8} \\
+WikiSkill (community) & \pend{393} & \pend{2.2} & \pend{3.4} & \pend{5.6} & \pend{22} & \pend{28.3} \\
+SkillOpt & \pend{393} & \pend{3.9} & \pend{0.8} & \pend{4.7} & \pend{39} & \pend{19.6} \\
+CapEvolve HC & \pend{394} & \pend{4.3} & \pend{78.6} & \pend{82.9} & \pend{43} & \pend{24.1} \\
+CapEvolve AO & \pend{386} & \pend{7.2} & \pend{73.6} & \pend{80.8} & \pend{72} & \pend{16.7} \\
+CapEvolve HC, stock gate \textit{(exploratory)} & \pend{396} & \pend{6.2} & \pend{96.4} & \pend{102.6} & \pend{62} & \pend{9.1} \\
 \midrule
 \multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
 \midrule
-One-shot control & \pend{10} & \pend{0.4} & \pend{5.8} & \pend{6.2} & \pend{4} & \pend{1.2} \\
-GEPA & \pend{476} & \pend{3.7} & \pend{2.5} & \pend{6.2} & \pend{37} & \pend{12.5} \\
-HarnessLens & \pend{475} & \pend{1.8} & \pend{4.5} & \pend{6.3} & \pend{18} & \pend{13.4} \\
-CapEvolve HC & \pend{480} & \pend{7.9} & \pend{109.5} & \pend{117.4} & \pend{79} & \pend{19.4} \\
-CapEvolve AO & \pend{471} & \pend{2.9} & \pend{23.3} & \pend{26.2} & \pend{29} & \pend{22.5} \\
+One-shot control & \pend{10} & \pend{0.6} & \pend{2.1} & \pend{2.7} & \pend{6} & \pend{0.8} \\
+GEPA & \pend{338} & \pend{3.0} & \pend{3.5} & \pend{6.5} & \pend{30} & \pend{18.1} \\
+HarnessLens & \pend{336} & \pend{4.6} & \pend{6.7} & \pend{11.3} & \pend{46} & \pend{11.2} \\
+CapEvolve HC & \pend{342} & \pend{7.9} & \pend{118.4} & \pend{126.3} & \pend{79} & \pend{15.6} \\
+CapEvolve AO & \pend{350} & \pend{3.7} & \pend{109.7} & \pend{113.4} & \pend{37} & \pend{10.9} \\
 \midrule
 \multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
 \midrule
-One-shot control & \pend{10} & \pend{0.7} & \pend{6.3} & \pend{7.0} & \pend{7} & \pend{0.7} \\
-GEPA & \pend{409} & \pend{2.2} & \pend{3.6} & \pend{5.9} & \pend{22} & \pend{16.3} \\
-HarnessLens & \pend{420} & \pend{5.8} & \pend{2.9} & \pend{8.7} & \pend{58} & \pend{8.0} \\
-CapEvolve HC & \pend{408} & \pend{6.0} & \pend{118.3} & \pend{124.3} & \pend{60} & \pend{29.7} \\
-CapEvolve AO & \pend{415} & \pend{8.1} & \pend{104.5} & \pend{112.7} & \pend{81} & \pend{11.2} \\
+One-shot control & \pend{10} & \pend{0.6} & \pend{6.8} & \pend{7.4} & \pend{6} & \pend{1.0} \\
+HarnessLens & \pend{241} & \pend{1.9} & \pend{3.2} & \pend{5.1} & \pend{19} & \pend{7.4} \\
+GEPA & \pend{245} & \pend{5.1} & \pend{3.5} & \pend{8.5} & \pend{51} & \pend{13.9} \\
+CapEvolve HC & \pend{245} & \pend{4.1} & \pend{107.7} & \pend{111.8} & \pend{41} & \pend{20.1} \\
+CapEvolve AO & \pend{247} & \pend{4.8} & \pend{119.0} & \pend{123.8} & \pend{48} & \pend{25.4} \\
+CapEvolve HC, stock gate \textit{(exploratory)} & \pend{245} & \pend{7.6} & \pend{75.9} & \pend{83.5} & \pend{76} & \pend{29.8} \\
 \bottomrule
 \end{tabular}
 \end{table*}

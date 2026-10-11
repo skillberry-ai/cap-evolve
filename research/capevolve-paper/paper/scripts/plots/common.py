@@ -27,15 +27,17 @@ ARMS = {
     "ace":         ("ACE",            "#882255", "h"),
     "mipro":       ("MIPROv2",        "#44AA99", "<"),
     "harnesslens": ("HarnessLens",    "#332288", ">"),
-    "oneshot":     ("One-shot ctrl",  "#999999", "p"),
+    "hcstock":     ("CapEvolve HC, stock gate", "#6C9BC4", "H"),
+    "oneshot":     ("One-shot control",  "#999999", "p"),
     "seed":        ("Seed",           "#555555", "+"),
 }
 SUITE_ARMS = {
-    "A": ["hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill", "trace2skill", "ace", "mipro", "oneshot", "seed"],
+    "A": ["hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill", "trace2skill", "ace", "mipro", "hcstock", "seed"],
     "B": ["hc", "ao", "gepa", "harnesslens", "oneshot", "seed"],
-    "C": ["hc", "ao", "gepa", "harnesslens", "oneshot", "seed"],
+    "C": ["hc", "ao", "gepa", "harnesslens", "oneshot", "hcstock", "seed"],
 }
-SUITE_NAME = {"A": "Suite A (SpreadsheetBench)", "B": r"Suite B ($\tau^2$ retail)", "C": r"Suite C ($\tau^2$ airline)"}
+SUITE_NAME = {"A": "Suite A (SpreadsheetBench)", "B": "Suite B (\u03c4\u00b2 retail)", "C": "Suite C (\u03c4\u00b2 airline)"}  # plain Unicode: mathtext tau extracts as a wrong glyph from the PDF
+CKPT = "B*"  # label of the matched checkpoint; set to the symbol paper-core adopts
 ROLE_COLOR = {"target": "#0072B2", "user": "#56B4E9", "judge": "#E69F00", "optimizer": "#D55E00", "other": "#999999"}
 
 
@@ -78,3 +80,10 @@ def save(fig, name, mock):
     out = PAPER / "figures" / f"{name}.pdf"
     fig.savefig(out)
     return out
+
+
+def table_order(suite_data):
+    """Row order shared by the tables and the forest plot: one-shot control, baselines by ascending delta, CapEvolve last, exploratory arm after."""
+    arms = suite_data["arms"]
+    base = sorted((a for a in arms if a not in ("seed", "oneshot", "hc", "ao", "hcstock")), key=lambda a: arms[a]["delta"])
+    return (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hc", "ao") if a in arms] + (["hcstock"] if "hcstock" in arms else [])

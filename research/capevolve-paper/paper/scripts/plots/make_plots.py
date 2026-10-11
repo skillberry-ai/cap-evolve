@@ -39,10 +39,10 @@ def anytime():
             ax.fill_between(x, [y * 100 for y in cv["lo"]], [y * 100 for y in cv["hi"]], color=col, alpha=0.10 if a in C.CAP else 0.0, lw=0)
         b = s["params"]["bstar"]
         ax.axvline(b, color="k", ls="--", lw=0.7)
-        ax.text(b, 0.02, r"$B^\ast$ ", va="bottom", ha="right", fontsize=6.5, transform=ax.get_xaxis_transform())
+        ax.text(b, 0.02, C.CKPT + " ", va="bottom", ha="right", fontsize=6.5, transform=ax.get_xaxis_transform())
         ax.set_title(C.SUITE_NAME[su])
         ax.set_xlabel("Target rollouts")
-    axes[0].set_ylabel("Best score so far (%)")
+    axes[0].set_ylabel("Best selection-set score so far (%)")
     h, l = axes[0].get_legend_handles_labels()
     for ax in axes[1:]:
         hh, ll = ax.get_legend_handles_labels()
@@ -56,11 +56,10 @@ def anytime():
 
 def forest():
     # Panels share the row order of their arm list. B and C share the same arms, so they also share the y axis and align row for row.
-    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 3.0), gridspec_kw=dict(width_ratios=[10, 6, 6]))
-    axes[2].sharey(axes[1])
+    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 3.1), gridspec_kw=dict(width_ratios=[10, 7, 7]), constrained_layout=True)
     for ax, su, tag in zip(axes, SUITES, "abc"):
         s = data["suites"][su]
-        arms = [a for a in C.SUITE_ARMS[su] if a != "seed"]
+        arms = C.table_order(s)
         for i, a in enumerate(arms):
             v = s["arms"][a]
             lab, col, mk = C.ARMS[a]
@@ -73,18 +72,15 @@ def forest():
         ax.set_yticklabels([C.ARMS[a][0] for a in reversed(arms)])
         ax.set_title(f"({tag}) {C.SUITE_NAME[su]}")
         ax.grid(axis="y", alpha=0)
-    plt.setp(axes[2].get_yticklabels(), visible=False)
-    fig.tight_layout()
-    fig.supxlabel("Paired difference to seed (points). Filled markers: Holm-adjusted p < 0.05", fontsize=8.5, y=-0.04)
+    fig.supxlabel("Paired difference to seed (points). Filled markers: Holm-adjusted p < 0.05", fontsize=8.5, y=0.0)
     C.save(fig, "fig_forest", MOCK)
 
 
 def contrast():
-    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 3.0), gridspec_kw=dict(width_ratios=[10, 6, 6]))
-    axes[2].sharey(axes[1])
+    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 3.1), gridspec_kw=dict(width_ratios=[10, 7, 7]), constrained_layout=True)
     for ax, su, tag in zip(axes, SUITES, "abc"):
         s = data["suites"][su]
-        others = [a for a in C.SUITE_ARMS[su] if a not in ("hc", "ao", "seed")]
+        others = [a for a in C.SUITE_ARMS[su] if a not in ("hc", "ao", "seed", "hcstock")]
         for i, a in enumerate(others):
             y = len(others) - 1 - i
             for off, cap in ((0.17, "hc"), (-0.17, "ao")):
@@ -97,13 +93,11 @@ def contrast():
         ax.set_yticklabels([C.ARMS[a][0] for a in reversed(others)])
         ax.set_title(f"({tag}) {C.SUITE_NAME[su]}")
         ax.grid(axis="y", alpha=0)
-    plt.setp(axes[2].get_yticklabels(), visible=False)
     axes[0].plot([], [], color=C.ARMS["hc"][1], marker="o", label="CapEvolve HC minus arm")
     axes[0].plot([], [], color=C.ARMS["ao"][1], marker="s", label="CapEvolve AO minus arm")
     h, l = axes[0].get_legend_handles_labels()
     fig.legend(h, l, loc="upper center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 1.07))
-    fig.tight_layout()
-    fig.supxlabel("Difference in paired delta (points). Filled markers: interval excludes zero", fontsize=8.5, y=-0.04)
+    fig.supxlabel("Difference in paired delta (points). Filled markers: interval excludes zero", fontsize=8.5, y=0.0)
     C.save(fig, "fig_contrast", MOCK)
 
 
@@ -128,8 +122,12 @@ def pareto():
                 front.append((x, y)); best = y
         ax.step([p[0] for p in front], [p[1] for p in front], where="post", color="k", lw=0.7, ls="--")
         ax.set_xscale("log")
+        lo_, hi_ = ax.get_xlim()
+        ticks = [t for t in (2, 3, 5, 10, 20, 30, 50, 100, 200, 300, 500, 1000) if lo_ * 0.8 <= t <= hi_ * 1.25]
+        ax.set_xticks(ticks)
         ax.xaxis.set_major_formatter(ScalarFormatter())
         ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.set_xlim(lo_ * 0.85, hi_ * 1.2)
         ax.axhline(0, color="k", lw=0.5)
         ax.set_title(C.SUITE_NAME[su])
         ax.set_xlabel("Optimizer cost (USD, log scale)")
@@ -144,7 +142,7 @@ def families():
     fams = data["suites"]["A"]["families"]
     names = list(fams)
     arms = [a for a in fams[names[0]]["arms"]]
-    fig, ax = plt.subplots(figsize=(C.COL_W, 2.8))
+    fig, ax = plt.subplots(figsize=(C.COL_W, 2.6))
     w = 0.8 / len(arms)
     for j, a in enumerate(arms):
         lab, col, mk = C.ARMS[a]
@@ -158,7 +156,8 @@ def families():
     ax.set_xticklabels([f"{n}\n(n={fams[n]['n_tasks']})" for n in names])
     ax.set_ylabel("Paired difference to seed (points)")
     ax.set_xlabel("Task family, Suite A")
-    ax.legend(ncol=2, frameon=False, loc="upper center", bbox_to_anchor=(0.5, 1.4))
+    h_, l_ = ax.get_legend_handles_labels()
+    fig.legend(h_, l_, loc="lower center", ncol=3, frameon=False, bbox_to_anchor=(0.5, -0.12))
     fig.tight_layout()
     C.save(fig, "fig_families", MOCK)
 

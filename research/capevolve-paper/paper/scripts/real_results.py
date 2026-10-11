@@ -117,8 +117,8 @@ def table_audit(a):
 # ---------------------------------------------------------------- rule P
 def fig_rulep():
     d = json.loads((REPO / "analysis" / "out" / "sim_budget.json").read_text())
-    opts = {"c: P n_conf=3 z=1.282 dmin=0": ("Rule P, campaign setting", "#0072B2", "o"),
-            "a: P n_conf=3 z=2.0 dmin=.02": ("Rule P, stricter", "#009E73", "s"),
+    opts = {"c: P n_conf=3 z=1.282 dmin=0": ("Rule P, campaign setting (z = 1.28)", "#0072B2", "o"),
+            "a: P n_conf=3 z=2.0 dmin=.02": ("Rule P, z = 2.0 and minimum gain 2 points", "#009E73", "s"),
             "b: P n_conf=3 z=1.645 dmin=0": ("Rule P, z = 1.645", "#E69F00", "^"),
             "g: one-stage k=1.645": ("One-stage gate, k = 1.645", "#CC79A7", "v"),
             "f: one-stage k=1": ("One-stage gate, k = 1", "#D55E00", "D")}
@@ -139,7 +139,7 @@ def fig_rulep():
     bx.set_xlabel("True effect of the candidate (points)")
     bx.set_ylabel("Candidates promoted (%)")
     bx.set_ylim(0, 80)
-    bx.legend(frameon=False, fontsize=7, loc="upper left")
+    bx.legend(frameon=False, loc="upper left", fontsize=7)
     fig.tight_layout()
     C.save(fig, "fig_rulep", False)
 
@@ -285,17 +285,18 @@ def fig_roles():
         ax.set_ylabel("Tokens so far (millions)" if su == "A" else "")
         ax.tick_params(axis="x", rotation=30)
         ax.grid(axis="x", alpha=0)
-    axes[0].legend(frameon=False, fontsize=7)
+    h_, l_ = axes[0].get_legend_handles_labels()
+    fig.legend(h_, l_, loc="lower center", ncol=4, frameon=False, bbox_to_anchor=(0.34, -0.1))
     ax = axes[2]
     xs = range(len(roles))
     p50 = [lat[r][1] / lat[r][0] if lat[r][0] else 0 for r in roles]
     p95 = [lat[r][2] / lat[r][0] if lat[r][0] else 0 for r in roles]
-    ax.bar([i - 0.2 for i in xs], p50, 0.38, color="#0072B2", label="Median")
-    ax.bar([i + 0.2 for i in xs], p95, 0.38, color="#D55E00", label="95th percentile")
+    ax.bar([i - 0.2 for i in xs], p50, 0.38, color="#999999", label="Median")
+    ax.bar([i + 0.2 for i in xs], p95, 0.38, color="#333333", label="95th percentile")
     ax.set_xticks(list(xs)); ax.set_xticklabels(roles, rotation=30)
     ax.set_ylabel("Call latency (seconds)")
     ax.set_title("All suites")
-    ax.legend(frameon=False, fontsize=7)
+    fig.legend(*ax.get_legend_handles_labels(), loc="lower center", ncol=2, frameon=False, bbox_to_anchor=(0.84, -0.1))
     ax.grid(axis="x", alpha=0)
     fig.tight_layout()
     C.save(fig, "fig_roles", False)

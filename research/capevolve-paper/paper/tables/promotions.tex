@@ -1,0 +1,43 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Promotions per search for every arm, from the candidate logs, with the mean number of candidates evaluated. A promotion is a candidate that the arm's own acceptance rule put on its lineage. CapEvolve with rule P is a deliberately conservative configuration and is expected to promote rarely, and the stock-gate rows (E12) show the other side of that trade. (placeholder)}
+\label{tab:promotions}
+\begin{tabular}{lcccccr}
+\toprule
+Arm & Seed 0 & Seed 1 & Seed 2 & Mean per search & Candidates evaluated & Promoted (\%) \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\midrule
+Meta-Harness & \pend{4} & \pend{1} & \pend{3} & \pend{2.7} & \pend{12.0} & \pend{22} \\
+EvoSkill & \pend{4} & \pend{6} & \pend{1} & \pend{3.7} & \pend{11.3} & \pend{32} \\
+GEPA & \pend{2} & \pend{6} & \pend{7} & \pend{5.0} & \pend{9.7} & \pend{52} \\
+Trace2Skill & \pend{5} & \pend{5} & \pend{1} & \pend{3.7} & \pend{9.3} & \pend{39} \\
+MIPROv2 & \pend{6} & \pend{5} & \pend{2} & \pend{4.3} & \pend{9.7} & \pend{45} \\
+ACE & \pend{7} & \pend{4} & \pend{5} & \pend{5.3} & \pend{10.7} & \pend{50} \\
+WikiSkill (community) & \pend{5} & \pend{7} & \pend{6} & \pend{6.0} & \pend{9.3} & \pend{64} \\
+SkillOpt & \pend{3} & \pend{4} & \pend{6} & \pend{4.3} & \pend{9.0} & \pend{48} \\
+CapEvolve HC & \pend{3} & \pend{3} & \pend{3} & \pend{3.0} & \pend{11.3} & \pend{26} \\
+CapEvolve AO & \pend{2} & \pend{2} & \pend{2} & \pend{2.0} & \pend{11.7} & \pend{17} \\
+CapEvolve HC, stock gate \textit{(exploratory)} & \pend{3} & \pend{2} & \pend{7} & \pend{4.0} & \pend{11.0} & \pend{36} \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
+\midrule
+One-shot control & \pend{2} & \pend{2} & \pend{1} & \pend{1.7} & \pend{8.7} & \pend{19} \\
+GEPA & \pend{3} & \pend{2} & \pend{3} & \pend{2.7} & \pend{10.0} & \pend{27} \\
+HarnessLens & \pend{7} & \pend{4} & \pend{4} & \pend{5.0} & \pend{8.3} & \pend{60} \\
+CapEvolve HC & \pend{2} & \pend{1} & \pend{0} & \pend{1.0} & \pend{7.7} & \pend{13} \\
+CapEvolve AO & \pend{3} & \pend{1} & \pend{0} & \pend{1.3} & \pend{9.7} & \pend{14} \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
+\midrule
+One-shot control & \pend{6} & \pend{4} & \pend{3} & \pend{4.3} & \pend{8.0} & \pend{54} \\
+HarnessLens & \pend{2} & \pend{7} & \pend{7} & \pend{5.3} & \pend{9.7} & \pend{55} \\
+GEPA & \pend{6} & \pend{4} & \pend{7} & \pend{5.7} & \pend{10.7} & \pend{53} \\
+CapEvolve HC & \pend{1} & \pend{0} & \pend{0} & \pend{0.3} & \pend{8.0} & \pend{4} \\
+CapEvolve AO & \pend{0} & \pend{1} & \pend{0} & \pend{0.3} & \pend{8.7} & \pend{4} \\
+CapEvolve HC, stock gate \textit{(exploratory)} & \pend{5} & \pend{4} & \pend{7} & \pend{5.3} & \pend{7.7} & \pend{70} \\
+\bottomrule
+\end{tabular}
+\end{table*}

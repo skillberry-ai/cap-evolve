@@ -13,22 +13,23 @@ Red numbers with a dagger are placeholders, and orange numbers are real but stil
 \label{sec:results:a}
 
 On Suite A, \mockNsigA{} of the ten optimizer arms beat the seed with Holm-adjusted $p<0.05$, and the largest paired delta is \mockTopDeltaA{} points, held by \mockTopArmA{} (Table~\ref{tab:main_a}, Figure~\ref{fig:forest}).
-The final set has \mockTA{} tasks, each scored with \mockTrialsA{} trials, for \mockSeedsA{} search seeds per arm.
+The final set has \mockTA{} tasks scored once per task, with \mockSeedsA{} search seeds per arm and two evaluations of the seed.
 \needs{State whether the CapEvolve arms are above, level with or below the best baseline, and whether their intervals exclude it.}
-The one-shot control makes a single optimizer pass with no search, so the second delta column in the table, the difference to that control, is the test of whether search pays.
-Figure~\ref{fig:contrast} in Appendix~\ref{app:results} contrasts each CapEvolve arm with every baseline directly.
-\needs{Report the one-shot control against the best search arm. If it is within one interval of the best arm, say that search adds nothing measurable here.}
+CapEvolve with rule P is a deliberately conservative configuration, so we also ran the stock gate as an exploratory arm (E12A), shown below the main rows and outside the Holm family.
+Table~\ref{tab:promotions} in Appendix~\ref{app:results} reports promotions per search for every arm, and Figure~\ref{fig:contrast} contrasts each CapEvolve arm with every baseline.
+Suite A has no one-shot control, so the question of whether search pays is answered on Suites B and C.
+\needs{Report the stock-gate arm against rule P with the pre-specified equivalence margin, and use the word inconclusive when the margin is not met.}
 
 \input{tables/main_A}
 
 \subsection{Suites B and C, tau2 retail and airline}
 \label{sec:results:bc}
 
-Suite B gives the cleaner second test, because its \mockTB{} test tasks are sealed (Table~\ref{tab:main_bc}).
+Suite B has \mockTB{} sealed test tasks, each scored \mockTrialsB{} times, and it carries the one-shot control (Table~\ref{tab:main_bc}).
 There the largest paired delta is \mockTopDeltaB{} points (\mockTopArmB), and \mockNsigB{} arms clear Holm-adjusted $p<0.05$.
-Suite C reuses the official airline test set of \mockTC{} tasks, which earlier work optimized against, so we call it development-exposed and do not rank arms on it.
+Suite C reuses the official airline test set of \mockTC{} tasks, scored \mockTrialsC{} times each. Earlier work optimized against that set, so we call it development-exposed and do not rank arms on it. Its stock-gate arm (E12C) is exploratory.
 Its largest delta is \mockTopDeltaC{} points (\mockTopArmC), and \mockNsigC{} arms clear $p<0.05$.
-Even at 40 tasks the simulated minimum detectable effect of a single comparison is 0.10 to 0.13 under our planning assumptions (\texttt{analysis/out/sim\_mde.md}), and Suite C has half as many, so we read it descriptively.
+Suite C has half as many tasks as Suite B, so we read it descriptively (minimum detectable effects are in Appendix~\ref{app:sim}).
 \needs{State whether the arm ordering on B and C agrees with Suite A, using rank correlation of the paired deltas.}
 
 \input{tables/main_BC}
@@ -36,7 +37,7 @@ Even at 40 tasks the simulated minimum detectable effect of a single comparison 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_forest.pdf}
-\caption{Paired delta to the seed, per suite, with 95\% intervals. CapEvolve arms are drawn thick. Filled markers have Holm-adjusted $p<0.05$. An interval that crosses zero is not evidence of a gain (placeholder).}
+\caption{Paired delta to the seed, per suite, with 95\% intervals. CapEvolve arms are drawn thick, and rows follow the order of the results tables. Filled markers have Holm-adjusted $p<0.05$; the exploratory stock-gate arm is outside the Holm family. An interval that crosses zero is not evidence of a gain (placeholder).}
 \label{fig:forest}
 \end{figure*}
 
