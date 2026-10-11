@@ -525,3 +525,51 @@ agent had been searching a database that did not contain the host.
   0.4000 when both its surviving trials scored **1.000** — a candidate discarded
   on a gateway outage. Detail:
   `reports/v4-cap-evolve-question-answers.md`, on this branch.
+
+---
+
+## 8. Addendum (2026-10-08) — the `g2_e3` run on CCC
+
+This answers the two G2-related open questions above. Run via
+`scripts/parsec/h4/` (`cap-evolve-ps-worktrees/parsec-intake-h4`, PR #797) on
+the CCC cluster: `cand_0006` (the `v4_g_e1` candidate with the highest raw val
+reward — 0.952 — though not the one hill-climb's gate accepted; see
+`results/v4/v4_g_e1/results.json`), all 30 h4 tasks, same Oct-06 drop as e3,
+`n=5`. Full per-trial table in
+[`all-arms-per-trial.md`](all-arms-per-trial.md).
+
+**G2 is now audited.** 150/150 trials clean under `audit_trials.py` (0 dead
+trials scored as real), and `audit_absence_traps.py` found exactly one hit
+(`cost-050`, 1/5 trials) — the same simulator-fabrication class as §1c, not a
+new failure mode. **All 30 tasks ran**, closing `h4_g2_e1`'s icinga gap;
+`icinga-045` itself did not repeat e3's perfect score under g2_e3 (0.475,
+matching e1/e2's older value instead) — worth a closer look, since that
+reversion is unexplained the same way `icinga-047`'s e2 outlier was.
+
+**The headline finding: the five control tasks stopped being deterministic.**
+`cloud-056`, `platform-035/038/041/043` score a stable 1.000 in *every* prior
+arm (George, e1, e2, e3) — that is the entire reason they were chosen as
+controls. Under g2_e3, every one of them is now bimodal or spread (e.g.
+`platform-038`: `[0.45 1.00 0.25 1.00 1.00]`; `platform-043`:
+`[1.00 0.25 1.00 1.00 0.25]`). Peak performance can still reach 1.0, but the
+reliability is gone. `platform-040` is the exception that's worse, not just
+less reliable: `[0.17 0.00 0.00 1.00 0.00]`, a near-total loss on a task T1
+answered near-perfectly in every arm (0.93–1.00).
+
+**Three deltas look like genuine, uncompounded improvements**: `icinga-048`
+(0.500→1.000 — matches the handoff's own fix hypothesis, service_name
+discrimination), `platform-039` (0.475→0.860 — one of the two
+`lookup_catalog_item`-schema-failure tasks every T1 arm hit), and `icinga-047`
+(0.550→0.887, above even e2's unexplained outlier).
+
+**Aggregate is lower** (0.600 vs e3's 0.674), but the per-task table is the
+real result here, not the mean — several tasks are bimodal (`cost-052`,
+`cost-054`, `platform-040`, `platform-043`), where per §5 above "the mean
+describes nothing real." This was one run (`n=5`, no paired resampling against
+e3), so treat every delta here the way §5 asks: by shape first, mean second.
+
+**Open going forward**: whether the control-task instability is specific to
+`cand_0006` (recall it was *not* the hill-climb's accepted candidate — `cand_0004`
+was) or a property of the G2 approach generally. The natural next step is the
+same sweep against `cand_0004` on this same drop, which would separate those two
+explanations.
