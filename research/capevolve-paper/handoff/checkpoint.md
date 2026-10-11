@@ -45,3 +45,17 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - COORDINATOR ERROR fixed 18:40: E10-evoskill/E10-harnesslens/probe were left in caps.json low_priority_tags after EvoSkill promotion; EvoSkill restarted 18:28 on canonical tags (pre-18:28 data invalid).
 - Suite C (airline) launched; tau-runner monitors B and C every 2h. HarnessLens (bl-harness) trial e2e9 still running; hand-over to tau-runner pending.
 - Cron jobs are session-only: cutoff one-shot b76737e4 (2026-10-13 06:00 UTC), 3-hourly check 82e47de9.
+
+## Update 21:50 UTC (periodic check)
+- Gateways: :4111 (main) and :4112 (Azure-direct, azoai/<dated deployment>). Both healthy.
+- Agents active:
+  - paper: paper-core, paper-results, paper-lit;
+  - measurement and runs: stats-reviewer, metering-auditor, final-eval-eng (building bstar/reconstruct/order/run_final/freeze), provenance-auditor, capevolve-runner, tau-runner, bl-harness, bl-context, baseline-eng.
+- Pending:
+  - HarnessLens hand-over;
+  - ACE batch restart;
+  - E12C best-of-k (after the C controls);
+  - closing Suite B sealed-file visibility (tau-runner);
+  - final-eval machinery dry run.
+- Token budget plan in decisions.md (65M stop order).
+- Session-only crons: 3-hourly check and the cutoff one-shot. Re-create them if the session restarts.

@@ -192,3 +192,14 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - CapEvolve: screen and rule-P confirmation on opt (49/20); sel (25/10) is touched only at finalize.
   - GEPA: learns on opt and selects best-on-sel, so its sel score is selection-biased.
   - Consequences: the B/C rule-P operating characteristics in the paper are the opt-count simulations (sim_budget_B.md, sim_budget_C.md), which are correct as used. Search-time sel scores are not comparable across methods. Only the final sets support comparisons.
+- 2026-10-11 22:00 UTC — E12C best-of-k (exploratory, not binding B*): k independent one-shot proposals per seed on Suite C, fresh CapEvolve run state per proposal, each scored once on opt-20, best by opt score (ties earliest), 550+finalize rollout cap (k~26), starts when Suite C controls free their slots. Optimizer-token guard raised to 8M non-cache-read FOR THIS CONTROL ONLY, because the 4M cap was set against target-rollout budgets and k x ~0.3M optimizer tokens (~7.8M) matches compute, not an optimizer-token budget; disclosed. Achieved k per seed will be reported. — tau-runner (lead approval)
+- 2026-10-11T21:48 — Non-RITS token budget plan (the 100M gateway cap blocks every non-RITS call, final evaluation included).
+  - Current state: 27.9M used. Recent rate about 1.6-2M/h (hour 20's 7.3M was the Trace2Skill burst). Linear projection about 85-90M at the cutoff, before the new consumers below.
+  - New consumers: CapEvolve Suite A optimizers (from about 00:30), HarnessLens on B, best-of-k on C (8M guard), the ACE batch restart.
+  - Final evaluation needs about 10-15M (the GPT-5.5 judge on Suite B). The gpt-4.1 re-judge goes through Azure-direct, which is uncapped.
+  - Rules: reserve 15M for final evaluation, so searches must stop by 85M. At 65M the coordinator stops exploratory consumers in this order:
+    1. E12C best-of-k
+    2. E12A/E12C stock-gate
+    3. secondary arms (ACE, MIPROv2, Trace2Skill)
+  - Primary arms are stopped last; stopped seeds are reported as incomplete at their counts.
+  - The 3-hourly check tracks this. Any change to the cap itself is the user's decision.
