@@ -166,3 +166,16 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - E12A and E12C are descriptive, compared at min(B*, own count).
   - Promotions per search (screened, promoted, returned-seed hash) are reported for every arm.
   - HarnessLens: the unmodified-harness reference arm hl-v0 is added to Suite B final scoring as a within-method reference. It is not in the Holm family.
+- 2026-10-11 23:00 — B* scope clarified BEFORE the cutoff, using rollout counters only (no outcomes seen). Counter rates since 19:10:
+  - ACE: about 2 to 9 rollouts/h per seed, about 90 to 320 projected at the cutoff.
+  - MIPROv2 and EvoSkill: about 11/h, about 400.
+  - CapEvolve HC and AO: about 12.5/h, about 490.
+  - GEPA, SkillOpt and Meta-Harness: well above.
+- Rule: B* per suite = the largest count reached by every seed of every PRIMARY-family arm (analysis plan amendment 1).
+  - Suite A primary arms: hc, ao, GEPA, SkillOpt, Meta-Harness, WikiSkill, EvoSkill.
+  - Suite B primary arms: hc, ao, GEPA, HarnessLens.
+  - Suite C primary arms: hc, ao, GEPA.
+  - Floor to a multiple of 50, minimum 200.
+- Secondary arms (Trace2Skill, ACE, MIPROv2) and exploratory arms (E12A, E12C) are compared at min(B*, own count at the cutoff), with the count reported per seed and disclosed. They never lower B*.
+- Seeds of primary arms that do not reach the floor are reported as incomplete (R21), not dropped.
+- Rationale: the original wording ("every Tier 1 arm") predates the primary/secondary split. With it, the slowest secondary seed would set the comparison budget for all arms.
