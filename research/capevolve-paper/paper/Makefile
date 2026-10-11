@@ -17,10 +17,7 @@ pending:
 	$(PYTHON) -I scripts/mock_numbers.py
 
 paper:
-	$(TEX) $(PAPER).tex
-	bibtex $(PAPER)
-	$(TEX) $(PAPER).tex
-	$(TEX) $(PAPER).tex
+	flock /tmp/capevolve-paper-build.lock sh -c '$(TEX) $(PAPER).tex && bibtex $(PAPER); $(TEX) $(PAPER).tex && $(TEX) $(PAPER).tex'
 
 check: paper
 	$(PYTHON) -I scripts/check_paper.py $(PAPER).pdf
