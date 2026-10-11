@@ -117,3 +117,44 @@ the launchers, and a probe from a fresh `unshare --user --map-root-user --mount`
 - The trace2skill s1/s2 agent logs were only grepped, not read.
 - The OpenCode session store of the HL trial (XDG_DATA_HOME of that run) was not searched for env-dumping commands.
 - Claude sessions of this research team (uid dev, default config) are not in the campaign ledger by design; they are out of scope.
+
+## 6. Error-label parity across arms (uniform infra/candidate classifier)
+
+**Reporting is unified; search-time handling is not.** Every method's search-time feedback used that method's native handling of
+errors (what it scored, retried, showed to its proposer, or dropped), exactly as published or as adapted for the campaign. That
+stays a property of the method and is not changed or re-run. The uniform classifier below is applied only when the campaign metrics
+and the final report count infrastructure versus candidate failures (analysis_plan.md section 6, R14). It never feeds back into a search.
+
+Rule, implemented once in `analysis/scripts/collect_metrics.py` (`uniform_class`) and applied to every arm and suite:
+- **infra**: the rollout has a transport, timeout or sandbox-HTTP error string (timeouts, connection errors, 429/5xx, "sandbox exec
+  failed", "infrastructure", gateway/upstream), OR it made zero target-LLM calls and carries an error whose text the adapter did not keep.
+- **candidate**: any other failure or error (including an error with a recorded non-infra string).
+- blank: no error and reward >= 1.
+
+Two refinements the rule needs, both visible in the data:
+1. A recorded non-infra string wins over the zero-call test. SkillOpt's 120 "candidate" zeros (s0 80, s2 40) have 0 turns and
+   0 target calls, but the per-step `results.jsonl` string is "task_template.md broke the placeholder contract": the candidate
+   was invalid before any LLM call. A pure zero-calls rule would have turned these into infra; they stay candidate.
+2. Error strings are recovered where they exist outside the metrics rows: SkillOpt (per-step `results.jsonl`), Trace2Skill
+   (`pool.jsonl`, matched by task id, one-to-one), ACE and MIPROv2 (`events.jsonl` `err`), plus the capevolve rollout JSON.
+
+Outputs (columns in `rollout_metrics.csv`: `error_kind_adapter` = original label, `error_class_uniform`, `error_rule_uniform`,
+`error_text`; `error_kind` now carries the uniform class for rows that have an error): `analysis/out/metrics/error_label_parity.csv`
+(per arm, seed, category) and `error_label_parity.md`. Totals across live seeds (counts are rollouts with an error):
+
+| arm | errors | adapter label (infra / candidate) | uniform (infra / candidate) | candidate -> infra | infra -> candidate | note |
+|---|---|---|---|---|---|---|
+| Trace2Skill | 27 | 0 / 27 | 26 / 1 | **26** | 0 | the 1 left has no pool string and an unknown call count |
+| WikiSkill | 8 | 0 / 8 | 8 / 0 | **8** | 0 | S0 (seed) rows, zero calls, no string; the seed cannot break its own template |
+| Meta-Harness | 30 | 30 / 0 | 27 / 3 | 0 | 3 | 3 have no string and unknown call count |
+| SkillOpt | 147 | 27 / 120 | 27 / 120 | 0 | 0 | 120 are candidate by recorded string |
+| ACE | 2 | 2 / 0 | 2 / 0 | 0 | 0 | from event strings |
+| MIPROv2 | 7 | 7 / 0 | 7 / 0 | 0 | 0 | from event strings |
+| GEPA (A) | 7 | 7 / 0 | 0 / 7 | 0 | 7 | no string, unknown call count |
+| CapEvolve hc / ao, EvoSkill (A) | 10 / 7 / 5 | all infra | hc 7/3, ao 5/2, evoskill 5/0 | 0 | hc 3, ao 2 | 0-call rows kept infra |
+| Suites B, C (hc, ao, ctl-oneshot) | 10 B + 2 C ctl | all infra | see CSV | 0 | a few | B rows with calls > 0 and no string |
+
+Open decision for the owner of R14: 18 rows are labelled infra by their adapter but have no error string and either more than zero or an
+unknown number of target calls (GEPA 7, Meta-Harness 3, hc 3, ao 2, ctl-oneshot 3; column `adapter_infra_unverifiable`). The
+rule as specified counts them as candidate. If the tau2/GEPA/Meta-Harness raw logs can supply the string, rerun `refresh_metrics.sh --once`;
+the column `error_rule_uniform=adapter_infra_unverifiable` marks exactly these rows.

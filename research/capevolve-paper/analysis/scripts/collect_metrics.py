@@ -423,7 +423,8 @@ def adapter_unified(rd):
                      "wall_s": r.get("wall_s"), "turns": r.get("turns"), "n_llm_calls": r.get("n_llm_calls"),
                      "target_prompt_tokens": r.get("target_prompt_tokens"), "target_completion_tokens": r.get("target_completion_tokens"),
                      "target_total_tokens": tt, "reward": r.get("reward"), "reward_as_saved": r.get("reward_as_saved"),
-                     "error_kind": r.get("error_kind"), "retried": r.get("retried"), "counted": True,
+                     "error_kind": r.get("error_kind"), "error_text": r.get("error") or r.get("error_text"), "_source": r.get("source"),
+                     "retried": r.get("retried"), "counted": True,
                      **{k: r.get(k) for k in EXTRA_COLS}})
     return "unified:" + files[0].name, rows
 
@@ -486,7 +487,7 @@ def adapter_capevolve(rd):
                          "t_start": None, "t_end": e.get("ts"), "wall_s": j and j["wall_s"], "turns": j and j["turns"],
                          "n_llm_calls": j and j["turns"], "target_prompt_tokens": None, "target_completion_tokens": None,
                          "target_total_tokens": e.get("tokens"), "reward": e.get("reward"),
-                         "reward_as_saved": j and j["reward_as_saved"], "error_kind": j and j["error_kind"],
+                         "reward_as_saved": j and j["reward_as_saved"], "error_kind": j and j["error_kind"], "error_text": j and j.get("error"),
                          "retried": None, "counted": True})
         for key, p in jsons.items():
             if key in used:
@@ -496,7 +497,7 @@ def adapter_capevolve(rd):
                 rows.append({"task_id": key[1], "split": key[0], "trial_seed": key[3], "candidate_id": key[2], "t_start": None,
                              "t_end": j["t_end"], "wall_s": j["wall_s"], "turns": j["turns"], "n_llm_calls": j["turns"],
                              "target_prompt_tokens": None, "target_completion_tokens": None, "target_total_tokens": j["tokens"],
-                             "reward": j["reward"], "reward_as_saved": j["reward_as_saved"], "error_kind": j["error_kind"],
+                             "reward": j["reward"], "reward_as_saved": j["reward_as_saved"], "error_kind": j["error_kind"], "error_text": j.get("error"),
                              "retried": None, "counted": True})
     if not rows:  # Suite A daemon meter (rollouts.jsonl) when per-rollout JSONs are not yet written
         for m in jsonl(rd / "logs" / "rollouts.jsonl"):
@@ -521,7 +522,7 @@ def adapter_events(rd):
                      "t_start": None, "t_end": e.get("t"), "wall_s": None, "turns": None, "n_llm_calls": None,
                      "target_prompt_tokens": None, "target_completion_tokens": None, "target_total_tokens": None,
                      "reward": e.get("reward"), "reward_as_saved": e.get("as_saved"),
-                     "error_kind": "infra" if e.get("err") else None, "retried": None, "counted": e.get("counted", True)})
+                     "error_kind": "infra" if e.get("err") else None, "error_text": e.get("err"), "retried": None, "counted": e.get("counted", True)})
     return "events.jsonl(ev=rollout)", rows
 
 
@@ -533,8 +534,8 @@ def adapter_memento(rd):
              "t_start": (r["t"] - r["wall_s"]) if r.get("t") and r.get("wall_s") else None, "t_end": r.get("t"),
              "wall_s": r.get("wall_s"), "turns": None, "n_llm_calls": None, "target_prompt_tokens": None,
              "target_completion_tokens": None, "target_total_tokens": r.get("tokens"), "reward": r.get("reward"),
-             "reward_as_saved": r.get("as_saved"), "error_kind": "infra" if r.get("error") else None, "retried": None,
-             "counted": r.get("counted", True)} for r in ro]
+             "reward_as_saved": r.get("as_saved"), "error_kind": "infra" if r.get("error") else None, "error_text": r.get("error"),
+             "retried": None, "counted": r.get("counted", True)} for r in ro]
     return "rollouts.jsonl", rows
 
 
@@ -545,7 +546,7 @@ def adapter_gepa_evals(rd):
     rows = [{"task_id": e.get("id"), "split": "val", "trial_seed": None, "candidate_id": "call%s" % e.get("call"), "t_start": None,
              "t_end": None, "wall_s": None, "turns": None, "n_llm_calls": None, "target_prompt_tokens": None,
              "target_completion_tokens": None, "target_total_tokens": None, "reward": e.get("reward"), "reward_as_saved": None,
-             "error_kind": "infra" if e.get("error") else None, "retried": None, "counted": True} for e in ev]
+             "error_kind": "infra" if e.get("error") else None, "error_text": e.get("error"), "retried": None, "counted": True} for e in ev]
     return "evals.jsonl", rows
 
 
@@ -560,7 +561,7 @@ def adapter_eval_opt(rd):
     rows = [{"task_id": r.get("id"), "split": r["_split"], "trial_seed": r.get("trial"), "candidate_id": "seed", "t_start": None,
              "t_end": None, "wall_s": None, "turns": None, "n_llm_calls": None, "target_prompt_tokens": None,
              "target_completion_tokens": None, "target_total_tokens": r.get("tokens"), "reward": r.get("reward"),
-             "reward_as_saved": None, "error_kind": "infra" if r.get("error") else None,
+             "reward_as_saved": None, "error_kind": "infra" if r.get("error") else None, "error_text": r.get("error"),
              "retried": (r.get("attempts") or 1) > 1, "counted": r["_split"] == "opt"} for r in rows]
     return "eval_opt.json+eval_sel.json", rows
 
@@ -579,6 +580,66 @@ def rollout_rows(rd):
         if r and len(r[1]) > len(best[1]):
             best = r
     return best
+
+
+# ----------------------------------------------------------------------------------------------- uniform error classifier
+# ONE rule for every arm (analysis_plan.md section 6, R14).  The adapter's own label is kept in `error_kind_adapter`.
+#   infra     = a transport / timeout / sandbox-HTTP error string, OR zero target-LLM calls together with an error
+#   candidate = any other failure or error (reward < 1 without an infra cause)
+#   ""        = no error and reward >= 1
+# "zero calls" is only used when the call count is known (n_target_calls, else n_llm_calls); None never counts as zero.
+INFRA_RE = re.compile(
+    r"timed? ?out|timeout|connection ?(error|reset|refused|aborted)|connecterror|apiconnection|remoteprotocol|read ?error|broken pipe|"
+    r"infrastructure|sandbox exec failed|server error|internal ?server|service ?unavailable|bad gateway|gateway time|rate ?limit|"
+    r"\b(429|500|502|503|504)\b|container (pull|start)|oom|out of memory|ratelimit|upstream", re.I)
+
+
+def _calls(r):
+    for k in ("n_target_calls", "n_llm_calls"):
+        v = r.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return v
+    return None
+
+
+def uniform_class(r):
+    """returns (class, rule) with class in {"", "infra", "candidate"}"""
+    txt = str(r.get("error_text") or "")
+    adapter = r.get("error_kind_adapter")
+    has_err = bool(adapter or txt)
+    if has_err:
+        if txt and INFRA_RE.search(txt):
+            return "infra", "error_string"
+        # a recorded non-infra string (e.g. "task_template.md broke the placeholder contract") is candidate-induced even with 0 calls;
+        # the zero-call rule only decides label-only errors whose text the adapter did not keep
+        if not txt and _calls(r) == 0:
+            return "infra", "zero_target_calls_with_error"
+        return "candidate", ("adapter_infra_unverifiable" if adapter == "infra" and not txt else "error_other")
+    rw = r.get("reward")
+    if isinstance(rw, (int, float)) and rw >= 1.0:
+        return "", ""
+    return "candidate", "failure_no_error"
+
+
+def attach_pool_error_text(rd, rows):
+    """Trace2Skill stores the error string only in pool.jsonl; give it to the metric rows that carry an adapter label but no text.
+    Matching is by task id, consumed one-to-one in file order."""
+    cache = {}
+    for r in rows:  # SkillOpt: the converter dropped the string, the per-step results.jsonl has it
+        src = r.get("_source")
+        if r.get("error_kind") and not r.get("error_text") and src and str(src).endswith("results.jsonl"):
+            if src not in cache:
+                cache[src] = {str(e.get("id")): e.get("error") for e in jsonl(rd / src) if e.get("error")}
+            r["error_text"] = cache[src].get(str(r.get("task_id"))) or r.get("error_text")
+    pool = [e for e in jsonl(rd / "pool.jsonl") if e.get("error")]
+    if not pool:
+        return
+    by = defaultdict(list)
+    for e in pool:
+        by[str(e.get("id"))].append(e["error"])
+    for r in rows:
+        if r.get("error_kind") and not r.get("error_text") and by.get(str(r.get("task_id"))):
+            r["error_text"] = by[str(r["task_id"])].pop(0)
 
 
 # ----------------------------------------------------------------------------------------------- run-level facts
@@ -835,8 +896,12 @@ def main():
         ir, _ = infra_retries(rd)
         st = capevolve_state(rd)
         cat = "stopped" if info["stopped"] else ("superseded" if info["superseded_note"] else "main")
+        attach_pool_error_text(rd, rows)
         for r in rows:
             r2 = dict(r)
+            r2["error_kind_adapter"] = r2.get("error_kind")
+            r2["error_class_uniform"], r2["error_rule_uniform"] = uniform_class(r2)
+            r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
             r2.update({"suite": key[0], "arm": key[1], "seed": key[2], "category": cat, "source_adapter": src})
             for tk in ("t_start", "t_end"):
                 if isinstance(r2.get(tk), (int, float)):
@@ -847,7 +912,8 @@ def main():
     write_csv(OUT / "rollout_metrics.csv", rollout_out, cols=[
         "suite", "arm", "seed", "category", "source_adapter", "task_id", "split", "trial_seed", "candidate_id", "t_start", "t_end", "wall_s",
         "turns", "n_llm_calls", "target_prompt_tokens", "target_completion_tokens", "target_total_tokens", "reward", "reward_as_saved",
-        "error_kind", "retried", "counted"] + EXTRA_COLS)
+        "error_kind", "error_kind_adapter", "error_class_uniform", "error_rule_uniform", "error_text", "retried", "counted"] + EXTRA_COLS)
+    write_error_parity(rollout_out)
     try:
         json.dump(_RCACHE, open(_RCACHE_PATH, "w"))
     except Exception:
@@ -955,6 +1021,47 @@ def main():
 
     write_report(arm_rows, role_rows, totals, waste_dirs, run_facts, main_runs, newest)
     print("wrote", OUT, "gateway lines:", len(lines), "newest:", iso(newest))
+
+
+def write_error_parity(rows):
+    """per arm/seed: adapter label vs uniform label and how many change (error_label_parity.csv + .md)"""
+    g = defaultdict(lambda: Counter())
+    for r in rows:
+        k = (r["suite"], r["arm"], r["seed"], r["category"])
+        c = g[k]
+        c["rollouts"] += 1
+        a, u = r.get("error_kind_adapter") or "", r.get("error_class_uniform") or ""
+        if a == "infra": c["adapter_infra"] += 1
+        if a == "candidate": c["adapter_candidate"] += 1
+        has = bool(a or r.get("error_text"))
+        if has:
+            c["errors"] += 1
+            c["uniform_infra"] += u == "infra"
+            c["uniform_candidate_error"] += u == "candidate"
+            if a == "candidate" and u == "infra": c["changed_candidate_to_infra"] += 1
+            if a == "infra" and u == "candidate": c["changed_infra_to_candidate"] += 1
+            if not a and u == "infra": c["changed_unlabelled_to_infra"] += 1
+            if u == "infra" and r.get("error_rule_uniform") == "zero_target_calls_with_error" and not r.get("error_text"):
+                c["infra_by_zero_calls_no_string"] += 1
+            if not r.get("error_text"): c["errors_without_string"] += 1
+            if r.get("error_rule_uniform") == "adapter_infra_unverifiable": c["adapter_infra_unverifiable"] += 1
+        if u == "candidate" and not has: c["failures_without_error"] += 1
+    cols = ["suite", "arm", "seed", "category", "rollouts", "errors", "errors_without_string", "adapter_infra", "adapter_candidate",
+            "uniform_infra", "uniform_candidate_error", "changed_candidate_to_infra", "changed_infra_to_candidate",
+            "changed_unlabelled_to_infra", "infra_by_zero_calls_no_string", "adapter_infra_unverifiable", "failures_without_error"]
+    out = [dict(zip(cols[:4], k), **{c: v[c] for c in cols[4:]}) for k, v in sorted(g.items(), key=lambda kv: tuple(str(x) for x in kv[0]))]
+    write_csv(OUT / "error_label_parity.csv", out, cols=cols)
+    lines = ["# Error-label parity: adapter label vs uniform classifier", "",
+             "Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero target-LLM calls with an error; otherwise candidate. "
+             "Adapter label kept in `error_kind_adapter` of rollout_metrics.csv. Only rows with an adapter label or an error string are counted in `errors`.", "",
+             "| suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in out:
+        if r["errors"] or r["adapter_infra"] or r["adapter_candidate"]:
+            lines.append("| " + " | ".join(str(r[c]) for c in ["suite", "arm", "seed", "category", "rollouts", "errors", "adapter_infra", "adapter_candidate",
+                         "uniform_infra", "uniform_candidate_error", "changed_candidate_to_infra", "changed_infra_to_candidate",
+                         "changed_unlabelled_to_infra", "infra_by_zero_calls_no_string", "adapter_infra_unverifiable"]) + " |")
+    (OUT / "error_label_parity.md").write_text("\n".join(lines) + "\n")
 
 
 def write_csv(path, rows, cols=None):
