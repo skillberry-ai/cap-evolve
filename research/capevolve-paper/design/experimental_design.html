@@ -1,0 +1,930 @@
+<title>CapEvolve Experimental Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout concept: protocol document. Sticky contents rail on wide screens, one reading column, tables in their own scroll boxes.
+   Status is encoded by chip form: frozen (filled teal), pending (amber outline on tint), done, running, planned. */
+:root {
+  --bg: #f2f5f7;
+  --surface: #ffffff;
+  --surface-2: #e9eef2;
+  --ink: #15212b;
+  --muted: #53636f;
+  --rule: #d2dbe2;
+  --accent: #0d5c8c;
+  --accent-soft: #dcebf5;
+  --frozen: #14664f;
+  --frozen-soft: #dcefe8;
+  --pending: #8f4e00;
+  --pending-soft: #fbecd2;
+  --pending-edge: #d9922b;
+  --done: #14664f;
+  --running: #0d5c8c;
+  --planned: #53636f;
+  --bad: #a3282f;
+  --bad-soft: #f8e0e1;
+  --code-bg: #e9eef2;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-head: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171d;
+    --surface: #16212a;
+    --surface-2: #1d2b36;
+    --ink: #e3eaef;
+    --muted: #9db0bd;
+    --rule: #2b3b47;
+    --accent: #6cb7e6;
+    --accent-soft: #18364a;
+    --frozen: #5fcfae;
+    --frozen-soft: #15392f;
+    --pending: #f0b35a;
+    --pending-soft: #3a2a10;
+    --pending-edge: #b57a24;
+    --done: #5fcfae;
+    --running: #6cb7e6;
+    --planned: #9db0bd;
+    --bad: #f08a90;
+    --bad-soft: #3d1c1f;
+    --code-bg: #1d2b36;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171d;
+  --surface: #16212a;
+  --surface-2: #1d2b36;
+  --ink: #e3eaef;
+  --muted: #9db0bd;
+  --rule: #2b3b47;
+  --accent: #6cb7e6;
+  --accent-soft: #18364a;
+  --frozen: #5fcfae;
+  --frozen-soft: #15392f;
+  --pending: #f0b35a;
+  --pending-soft: #3a2a10;
+  --pending-edge: #b57a24;
+  --done: #5fcfae;
+  --running: #6cb7e6;
+  --planned: #9db0bd;
+  --bad: #f08a90;
+  --bad-soft: #3d1c1f;
+  --code-bg: #1d2b36;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  padding-inline: 16px;
+  padding-block: 24px 64px;
+}
+.page { max-width: 1180px; margin-inline: auto; display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) {
+  .page { grid-template-columns: 220px minmax(0, 1fr); gap: 40px; }
+  nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; max-height: calc(100vh - 32px); overflow-y: auto; }
+}
+main { min-width: 0; display: grid; gap: 44px; }
+nav.toc { min-width: 0; font-size: 14px; }
+nav.toc .toc-label, .eyebrow { font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+nav.toc ol { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 1px; }
+nav.toc summary { cursor: pointer; }
+nav.toc a { display: block; padding: 3px 8px; color: var(--ink); text-decoration: none; border-left: 2px solid var(--rule); }
+nav.toc a:hover, nav.toc a:focus-visible { border-left-color: var(--accent); background: var(--accent-soft); outline: none; }
+@media (max-width: 979px) {
+  nav.toc details { border: 1px solid var(--rule); background: var(--surface); padding: 10px 12px; }
+  nav.toc ol { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+}
+
+
+header.top h1 { font-family: var(--font-head); font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 6px 0 12px; text-wrap: balance; letter-spacing: -0.01em; }
+header.top p { max-width: 70ch; margin: 0 0 8px; color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); margin-top: 12px; }
+
+section { min-width: 0; scroll-margin-top: 16px; }
+h2 { font-family: var(--font-head); font-size: 26px; line-height: 1.2; margin: 0 0 6px; padding-top: 14px; border-top: 3px solid var(--ink); text-wrap: balance; }
+h3 { font-size: 17px; line-height: 1.3; margin: 26px 0 6px; font-weight: 600; text-wrap: balance; }
+p, li { max-width: 74ch; }
+p { margin: 0 0 12px; }
+ul, ol.plain { margin: 0 0 14px; padding-left: 22px; }
+li { margin-bottom: 4px; }
+.lede { color: var(--muted); max-width: 72ch; margin-bottom: 16px; }
+code, .mono { font-family: var(--font-mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 2px; overflow-wrap: anywhere; }
+.src { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.num, td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.tw { overflow-x: auto; margin: 10px 0 18px; border: 1px solid var(--rule); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+th { background: var(--surface-2); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+td.wide { min-width: 280px; }
+td.mid { min-width: 170px; }
+caption { text-align: left; padding: 8px 12px; font-size: 13px; color: var(--muted); caption-side: bottom; border-top: 1px solid var(--rule); }
+
+.chip { display: inline-block; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; padding: 1px 7px; border: 1px solid currentColor; white-space: nowrap; vertical-align: 1px; }
+.chip.frozen { color: var(--frozen); background: var(--frozen-soft); }
+.chip.pending { color: var(--pending); background: var(--pending-soft); border-color: var(--pending-edge); border-style: dashed; }
+.chip.done { color: var(--done); }
+.chip.running { color: var(--running); background: var(--accent-soft); }
+.chip.planned { color: var(--planned); }
+.chip.defect { color: var(--bad); background: var(--bad-soft); }
+
+.pend { background: var(--pending-soft); border: 1px dashed var(--pending-edge); padding: 1px 6px; color: var(--ink); }
+.callout { border-left: 4px solid var(--pending-edge); background: var(--pending-soft); padding: 12px 16px; margin: 14px 0 18px; }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.callout strong.t { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pending); margin-bottom: 4px; }
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; margin: 14px 0 18px; }
+.note p:last-child { margin-bottom: 0; }
+
+.rq { display: grid; gap: 0; border: 1px solid var(--rule); background: var(--surface); margin: 10px 0 16px; }
+.rq > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; padding: 12px 14px; border-bottom: 1px solid var(--rule); }
+.rq > div:last-child { border-bottom: none; }
+.rq b.id { font-family: var(--font-mono); font-size: 14px; color: var(--accent); }
+.rq p { margin: 0 0 4px; }
+.rq .how { color: var(--muted); font-size: 14px; }
+
+.bar { display: flex; height: 34px; border: 1px solid var(--ink); margin: 10px 0 4px; font-size: 13px; font-weight: 600; }
+.bar > div { display: flex; align-items: center; padding-inline: 10px; white-space: nowrap; overflow: hidden; }
+.bar .dev { flex: 75; background: var(--accent-soft); }
+.bar .fin { flex: 25; background: var(--frozen-soft); border-left: 1px solid var(--ink); }
+
+.mm { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); padding: 12px; margin: 10px 0 16px; }
+.mm pre.mermaid { margin: 0; min-width: 760px; }
+
+.grid2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid2 > * { min-width: 0; }
+.kv { display: grid; grid-template-columns: minmax(130px, 200px) minmax(0, 1fr); border: 1px solid var(--rule); background: var(--surface); margin: 8px 0 16px; }
+.kv > dt, .kv > dd { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.kv > dt { background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--muted); }
+.kv > dt:nth-last-of-type(1), .kv > dd:last-of-type { border-bottom: none; }
+@media (max-width: 520px) { .kv { grid-template-columns: 1fr; } .kv > dt { border-bottom: none; padding-bottom: 0; background: var(--surface); } .rq > div { grid-template-columns: 1fr; gap: 2px; } }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 12px; }
+</style>
+
+<div class="page">
+<nav class="toc" aria-label="Contents">
+  <details open>
+    <summary class="toc-label">Contents</summary>
+        <ol>
+      <li><a href="#summary">Summary and decision table</a></li>
+      <li><a href="#feasibility">Feasibility check</a></li>
+      <li><a href="#rq">Research questions</a></li>
+      <li><a href="#budget">Budget</a></li>
+      <li><a href="#suite-a">Suite A: SpreadsheetBench</a></li>
+      <li><a href="#suite-b">Suite B: tau2 retail</a></li>
+      <li><a href="#models">Models and roles</a></li>
+      <li><a href="#arms">Arms and tracks</a></li>
+      <li><a href="#search">Per-search budget, rule P</a></li>
+      <li><a href="#final">Final campaign</a></li>
+      <li><a href="#transfer">Transfer</a></li>
+      <li><a href="#ablations">Ablations</a></li>
+      <li><a href="#improvements">Algorithm improvements</a></li>
+      <li><a href="#controls">Measurement controls</a></li>
+      <li><a href="#stats">Statistics and MDE</a></li>
+      <li><a href="#cost">Cost accounting</a></li>
+      <li><a href="#registry">Experiment registry</a></li>
+      <li><a href="#integrity">Integrity map</a></li>
+      <li><a href="#timeline">Timeline and dependencies</a></li>
+      <li><a href="#pending">All pending items</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol>
+  </details>
+</nav>
+
+<main>
+<header class="top">
+  <div class="eyebrow">Experimental design, paper campaign</div>
+  <h1>CapEvolve Experimental Design</h1>
+  <p>This page is the design for the CapEvolve paper campaign. It lists what is frozen, what is still pending and what decides each pending item. Every number comes from a source record in the campaign repository, cited by path. Forecasts are arithmetic on stated inputs and are labelled as such.</p>
+  <div class="meta">
+    <span>campaign capevolve-paper-20261011</span>
+    <span>base e3cb513</span>
+    <span>written 2026-10-11, updated 09:00 UTC</span>
+    <span>root: cap-evolve-campaign/research/capevolve-paper/</span>
+  </div>
+</header>
+
+<!-- ============================ 1 ============================ -->
+<section id="summary">
+  <h2>Summary and decision table</h2>
+  <p class="lede">The campaign asks whether reported capability-optimization gains survive scorer correction and fresh tasks, then compares search methods at matched budget on two suites. The paper route (systems, method or empirical) is chosen after the evidence. A simpler method winning is a valid outcome.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Item</th><th>Design</th><th>Status</th></tr></thead>
+    <tbody>
+    <tr><td>Research questions</td><td class="wide">RQ1 gain survival; RQ2 matched-budget comparison; RQ3 mechanisms; RQ4 transfer; RQ5 measurement controls.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Budget</td><td class="wide">RITS target tokens uncapped but metered. All other tokens capped at 100M (cache reads excluded), spend capped at $1000, 72 h wall, 25% reserve for final evaluation. Unpriced is "unknown", never $0.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Suite A data and splits</td><td class="wide">SpreadsheetBench verified-400, SkillOpt split 80/40/280. train-80 feedback, val-40 selection, test-280 only in a labelled historical table. Pins in <a href="#suite-a">Suite A</a>.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Suite A fresh final set</td><td class="wide">Candidates: (i) SpreadsheetBench-912 tasks outside verified-400, about 150 sampled and stratified by family, labelled "lightly exposed"; (ii) SpreadsheetBench 2 deterministic categories as an out-of-distribution set. Decided by the provenance check.</td><td><span class="chip pending">pending</span></td></tr>
+    <tr><td>Suite A reward and sandbox</td><td class="wide">Primary: LibreOffice 25.8 recalculated hard score. Secondary: as-saved. Unscorable tasks excluded and listed. Gold-free agent sandbox (issue #782). Gemma-4-31B-it on RITS, 30 turns.</td><td><span class="chip frozen">frozen</span> design<br><span class="chip pending">pending</span> patch landed</td></tr>
+    <tr><td>Suite B data and splits</td><td class="wide">tau2 retail at tau2-bench <span class="mono">8ebb7499</span>. Optimization and selection inside the official train split (74 tasks). Final = official retail test (40 tasks) if the exposure check confirms it is untouched. Airline is historical only.</td><td><span class="chip frozen">frozen</span> design<br><span class="chip pending">pending</span> exposure check</td></tr>
+    <tr><td>Suite B target and surfaces</td><td class="wide">gpt-oss-120b on RITS; user simulator is the same model, fixed across arms. Editable: policy text and agent-side tool wrappers. Immutable: environment tools, DB, business rules, reward. 4 trials per task at final, report pass^1 and pass^4.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Suite B judge</td><td class="wide">tau2 NL-assertion grading uses azure/gpt-5.5 for every arm. This deviates from the tau2 default gpt-4.1, which is unavailable. Rationale: gpt-oss is already target and simulator.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Optimizer</td><td class="wide">Claude Sonnet 5.5 through the LiteLLM gateway for every matched arm, same settings. Proxy price $2 / $10 per MTok in/out, cache read $0.20.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Arms</td><td class="wide">Four controls, two CapEvolve search arms and a roster of official competitors (plus a WikiSkill reimplementation), each with 3 search seeds. Five seeds for all search arms only if budget allows. Roster, context-only and out-of-scope lists in <a href="#arms">Arms</a>. GEPA and SkillOpt are running; the other competitors are being adapted.</td><td><span class="chip frozen">frozen</span> roster<br><span class="chip pending">pending</span> adaptation of 13 Suite A methods, 5 seeds</td></tr>
+    <tr><td>Per-search budget</td><td class="wide">600 target rollouts on dev data (every evaluation counts) plus at most 4M non-cache-read optimizer tokens. Matched across methods.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Promotion</td><td class="wide">Rule P (analysis plan section 8) for CapEvolve arms. Competitors keep native acceptance rules and are reported as such.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Final campaign</td><td class="wide">Every frozen artifact and seed scored once, interleaved in randomized order, in one short window. Suite A 2 trials per task, Suite B 4. One shared baseline per suite.</td><td><span class="chip frozen">frozen</span></td></tr>
+    <tr><td>Transfer</td><td class="wide">Frozen Suite A artifacts on Qwen3.6-35B-A3B and GPT-5.5 without re-optimization; SpreadsheetBench 2 if available.</td><td><span class="chip frozen">frozen</span> design<br><span class="chip pending">pending</span> artifact subset, SB2</td></tr>
+    <tr><td>Ablations</td><td class="wide">Development data only, equal budgets, 3 seeds when they support a headline. Priority goes to the three mechanisms that explain the gains.</td><td><span class="chip frozen">frozen</span> list<br><span class="chip pending">pending</span> final selection</td></tr>
+    <tr><td>Statistics</td><td class="wide">Paired, family-cluster-robust, seeds a separate level, Holm within a suite. Claims are artifact-level unless S is at least 5.</td><td><span class="chip frozen">frozen</span> method<br><span class="chip pending">pending</span> MDE re-run, Holm family</td></tr>
+    <tr><td>CapEvolve algorithm improvements</td><td class="wide">Three changes behind off-by-default switches: shared rule P, interaction-aware merge verification, screen accounting with a random-subset control. Design issue first, ablation on development data only.</td><td><span class="chip frozen">frozen</span> list<br><span class="chip pending">pending</span> design issues</td></tr>
+    <tr><td>Wall-time and token fit</td><td class="wide">The matrix as designed still exceeds 72 h on the Gemma deployment even at concurrency 32, and exceeds the 100M non-RITS token cap at the optimizer ceiling. See next section.</td><td><span class="chip pending">pending</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================ 2 ============================ -->
+<section id="feasibility">
+  <h2>Feasibility check</h2>
+  <p class="lede">The frozen design was run through the measured costs. Three results need a decision before launch. Inputs: one Gemma SpreadsheetBench rollout is about 41k tokens and about 3 minutes (<span class="src">decisions.md</span>, task 58687, 41.5k tokens, 177 s); RITS concurrency is 4 per deployment (<span class="src">campaign.yaml</span>).</p>
+  <div class="callout">
+    <strong class="t">Pending: wall time</strong>
+    <p>At 3 minutes per rollout, one deployment completes 5,760 rollouts in 72 h at concurrency 4 and 46,080 at concurrency 32 (72 x 60 / 3 x slots), if latency holds under load. Suite A now has 19 search or best-of-K arms: CapEvolve hill-climb and agent-optimize, 16 non-CapEvolve competitors (including the WikiSkill reimplementation and four harness/context methods) and best-of-K. At 3 seeds x 600 rollouts that is 34,200 search rollouts, about 53 h at concurrency 32 (427 h at 4). The Suite A final adds up to 18,600 rollouts and the ablations 16,200 to 18,000. Together that is 69,000 to 70,800, about 1.5 times the 46,080 capacity of the Gemma deployment, before E03 and E17. Suite B runs on a different deployment and can run in parallel.</p>
+    <p>What decides it: a latency measurement at concurrency 32, how many competitor adaptations succeed, and which arms and ablations are cut. The 3-minute figure comes from one 6-turn task at low concurrency. GEPA and SkillOpt are already running, so they are the first rows to consume the budget.</p>
+    </div>
+  <div class="callout">
+    <strong class="t">Pending: non-RITS token cap</strong>
+    <p>The optimizer ceiling is 4M tokens per search. About 15 methods x 2 suites x 3 seeds x 4M is about 360M, more than three times the 100M cap. Counting the arms on this page (Suite A 19 arms, Suite B 6 to 12 arms, 3 seeds each) gives 75 to 93 searches and 300M to 372M at the ceiling. If the 25% reserve also applies to tokens, 75M is available before final evaluation, which fits at most 18 full-ceiling searches. GPT-5.5 transfer rollouts and the GPT-5.5 judge for Suite B also count against the cap: at a similar 41k tokens per rollout (unmeasured for GPT-5.5), 100M is about 2,400 rollouts.</p>
+    <p>Handling: the gateway token guard monitors spend. Suite A has priority over Suite B when the cap tightens. What decides the rest: measured optimizer tokens per search in the pilots (many methods spend well under the ceiling), and whether the reserve applies to tokens.</p>
+    </div>
+  <div class="callout">
+    <strong class="t">Pending: how far 600 rollouts go</strong>
+    <p>Rule P screens each candidate on val-40. With the simulation's 5 trials per task a single paired screen is about 200 candidate rollouts, so 600 rollouts fund roughly three screens before any fresh-trial confirmation. Trials per screen are not yet frozen. The pilot decides it and decides whether 600 is enough to separate methods.</p>
+  </div>
+  <div class="budget-note">
+    <div class="eyebrow">72 h wall, as allocated</div>
+    <div class="bar" role="img" aria-label="72 hours: 54 hours development and search, 18 hours reserve for final evaluation"><div class="dev">54 h development and search</div><div class="fin">18 h final</div></div>
+    <p class="src">25% reserve from <span class="mono">campaign.yaml</span> final_eval_reserve_fraction. 18 h = 0.25 x 72.</p>
+  </div>
+</section>
+
+<!-- ============================ 3 ============================ -->
+<section id="rq">
+  <h2>Research questions</h2>
+  <div class="rq">
+    <div><b class="id">RQ1</b><div><p>How much of reported capability-optimization gain survives scorer correction and fresh held-out tasks?</p><p class="how">Re-score history under both scorers (done, zero LLM cost). E03 compliance diagnostic. Re-measure seed and champions on a fresh final set. Experiments: E00, E03, E10.</p></div></div>
+    <div><b class="id">RQ2</b><div><p>Under matched budgets, how do hill-climb, agent-optimize and official competitors compare?</p><p class="how">Same surface, models, feedback, evaluator and budget (matched track) plus native designs at equal total budget (practical track). Controls: seed, compliance instruction, one-shot repair, best-of-K. Experiment: E10.</p></div></div>
+    <div><b class="id">RQ3</b><div><p>Which mechanisms explain any gain: gate, footprint masking, DAG and merge, active evaluation, surface width?</p><p class="how">Development-data ablations at equal budgets. Experiments: E11 to E16.</p></div></div>
+    <div><b class="id">RQ4</b><div><p>Do frozen artifacts transfer across models and benchmarks?</p><p class="how">No re-optimization. Qwen3.6-35B-A3B, GPT-5.5, SpreadsheetBench 2 if available. Smaller-optimized vs larger-unoptimized at measured deployment cost. Experiments: E20 to E22.</p></div></div>
+    <div><b class="id">RQ5</b><div><p>Do the measurement controls prevent false improvements: null edits, injected faults, gold isolation?</p><p class="how">Null-edit candidates through each gate, injected fault cases, gold-isolation negative test, footprint false-exclusion audit. Experiments: E04 to E07 (IDs proposed).</p></div></div>
+  </div>
+  <p><strong>Paper route.</strong> Chosen after the evidence: systems (A), method (B) or empirical study (C). The novelty screen leaves only narrow claims (S1 to S6 in <span class="src">literature/novelty_matrix.md</span> section 3). Route B needs S1 or S2 to show a gain under matched budget. Otherwise route C is built on S3 to S5. S5 (hill-climb vs agent-optimize at matched total budget) does not require a win: a simpler method winning is reported as such.</p>
+</section>
+
+<!-- ============================ 4 ============================ -->
+<section id="budget">
+  <h2>Budget</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Limit</th><th class="num">Value</th><th>Rule</th></tr></thead>
+    <tbody>
+      <tr><td>RITS-served target tokens</td><td class="num">uncapped</td><td class="wide">User decision 2026-10-11. Always metered and reported.</td></tr>
+      <tr><td>All other tokens</td><td class="num">100M</td><td class="wide">Proposer, gateway-served targets, judges, diagnostics. Counts uncached input, output and cache-write tokens. Cache reads are recorded and priced but excluded (<span class="src">decisions.md</span>).</td></tr>
+      <tr><td>Metered spend</td><td class="num">$1000</td><td class="wide">Includes preflight (<span class="src">campaign.yaml</span> also sets a $50 preflight cap). Unpriced endpoints count as "unknown" and make a sum a lower bound.</td></tr>
+      <tr><td>Wall clock</td><td class="num">72 h</td><td class="wide">First exhausted limit wins.</td></tr>
+      <tr><td>Reserve</td><td class="num">25%</td><td class="wide">For confirmation, final evaluation and analysis.</td></tr>
+      <tr><td>Target rollout cap</td><td class="num">10,000</td><td class="wide">In <span class="src">campaign.yaml</span> as a fallback envelope. The decisions log notes that tokens, not this cap, were the binding constraint; the user then uncapped RITS tokens. Whether the 10,000 rollout cap still applies is <span class="pend">pending</span>. Suite A search plus final alone exceed it (see forecast).</td></tr>
+      <tr><td>Concurrency</td><td class="num">32 / 16 / 8 / 8</td><td class="wide">Gemma deployment / LiteLLM gateway / Azure direct / containers. Gemma was raised from 4 to 32 and the gateway from 8 to 16 (coordinator update 2026-10-11). Other RITS deployments keep the initial per-deployment cap of 4 unless stated otherwise. Latency at the higher concurrency is unmeasured: tune on 429, timeout and p95 evidence.</td></tr>
+    </tbody>
+  </table></div>
+  <p>All model calls pass through the campaign gateway (<span class="src">experiments/tooling/campaign_gateway.py</span>, 127.0.0.1:4111). It routes by provider, holds per-upstream semaphores, tags every call <span class="mono">tag:&lt;exp&gt;:&lt;arm&gt;:&lt;role&gt;</span> and enforces a token guard.</p>
+</section>
+
+<!-- ============================ 5 ============================ -->
+<section id="suite-a">
+  <h2>Suite A: SpreadsheetBench verified-400</h2>
+  <p class="lede">Spreadsheet editing with a Python code-execution agent. The optimizer may edit only <span class="mono">prompt.md</span> and <span class="mono">task_template.md</span>. Source: <span class="src">protocol/benchmarks.md</span> section 2, <span class="src">protocol/scorer_audit.md</span>.</p>
+
+  <h3>Pins</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Item</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Data archive</td><td class="wide"><span class="mono">data/spreadsheetbench_verified_400.tar.gz</span>, git blob <span class="mono">b6baaf0f23ef5adc1cd22078f4eeb3102b4a7c72</span>, sha256 <span class="mono">10ef893dd29cb13a…</span> (full hash in benchmarks.md). Extracted tree sha256 <span class="mono">6179b69926…</span>, 1,201 files.</td></tr>
+      <tr><td>Scorer</td><td class="wide">RUCKBReasoning/SpreadsheetBench <span class="mono">49b73a94775fb489063f60ca1865e3a650079a79</span>. The vendored harness is byte-identical to this commit for the evaluation files.</td></tr>
+      <tr><td>Split</td><td class="wide">SkillOpt's released split 80/40/280, <span class="mono">ci/benchmarks/spreadsheetbench/full_verified/split_ids.json</span>, file sha256 <span class="mono">fd40cc4e…</span>, pinned to microsoft/SkillOpt <span class="mono">79124b37e9a6…</span>.</td></tr>
+      <tr><td>Recalculation engine</td><td class="wide">LibreOffice 25.8.7.3 (rootless extract on this host). The host package 7.1.8.1 is not used for the primary reward.</td></tr>
+      <tr><td>Container</td><td class="wide">codeact-executor, digest <span class="mono">sha256:ed8c0478e05fc38734da…</span>, podman through the docker-compatible socket.</td></tr>
+      <tr><td>Open pin item</td><td class="wide">The HF mirror <span class="mono">KAKA22/SpreadsheetBench</span> rev <span class="mono">ab0b742b</span> used by SkillOpt was not shown to equal the GitHub blob. <span class="chip pending">pending</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Roles of each split</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Split</th><th class="num">Tasks</th><th>Role</th><th>Exposure</th></tr></thead>
+    <tbody>
+      <tr><td>train</td><td class="num">80</td><td class="mid">Optimization feedback (rollouts and failure traces the optimizer sees).</td><td>dev-exposed</td></tr>
+      <tr><td>val</td><td class="num">40</td><td class="mid">Selection: gates, parent choice, champion choice.</td><td>dev-exposed</td></tr>
+      <tr><td>test</td><td class="num">280</td><td class="mid">Reported only in a labelled historical-comparability table. Never confirmatory.</td><td>dev-exposed: 16 completed full runs, probe subsets, val_hard-40 drawn from it (<span class="src">audit/exposure_ledger.csv</span>)</td></tr>
+      <tr><td>fresh final set</td><td class="num"><span class="pend">pending</span></td><td class="mid">The only confirmatory set. Manifest with family ids is hashed before any scoring.</td><td>see below</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Fresh final set: pending provenance check</h3>
+  <div class="callout">
+    <strong class="t">Pending: fresh final set</strong>
+    <p>Two candidates are on the table. The provenance auditor's exposure audit (<span class="src">audit/fresh_test_candidates.md</span>, <span class="src">audit/sb912_residual_exposure.csv</span>) supplies the facts. The check closes when the audit is complete and a frozen manifest hash exists.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>Candidate</th><th>What the record shows</th><th>Risks stated in the audit</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="mid"><strong>(i)</strong> SpreadsheetBench-912 tasks outside verified-400. Sample T about 150, stratified by family. Label: "lightly exposed".</td>
+        <td class="wide">512 ids. 358 were score-only in at most 2 finalize runs (4 scorings, gpt-5.5, no recorded design use). 67 more were never evaluated in a completed run. 87 were optimization-exposed and are excluded. Conservative pool after removing sample_200 ids and known defects: 340 (290 score-only, 50 train-only).</td>
+        <td class="wide">Not expert-verified; older instruction text; 3 graded cases per task; known defective ids (43026, 46444); 66 ids in the public sample_200; same task family as the exposed verified-400, so transfer may be by construction; local development off record is invisible; public since 2025-04.</td>
+      </tr>
+      <tr>
+        <td class="mid"><strong>(ii)</strong> SpreadsheetBench 2, deterministic categories, as an out-of-distribution transfer set.</td>
+        <td class="wide">HF <span class="mono">KAKA22/SpreadsheetBench-v2</span> rev <span class="mono">5a2215ed</span> (the 2026-06-03 upload differs; pin the revision). 321 tasks, of which Debugging 100, Financial_Model 100 and Template 97 (297) are deterministic. Visualization (24) uses a VLM checklist and is excluded. No CapEvolve exposure on record. No official split.</td>
+        <td class="wide">Needs a new adapter and a larger turn budget; frontier accuracy 12 to 35%, so baselines near zero would make gains uninformative; per-task metric granularity unchecked; every input and golden must be recalculated first.</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <p class="src">The audit ranks SpreadsheetBench 2 first for an independent claim and the 912 residual second for continuity. The frozen design uses (i) as the Suite A final set and (ii) as the transfer set.</p>
+
+  <h3>Reward</h3>
+  <ul>
+    <li><strong>Primary:</strong> LibreOffice 25.8 recalculated hard score (<span class="mono">hard_restriction</span>). Optimization and selection use this reward.</li>
+    <li><strong>Secondary:</strong> as-saved hard score (<span class="mono">hard_no_recalc</span>), reported for comparability with the literature. Both are always reported.</li>
+    <li><strong>Exclusions:</strong> tasks the official comparator cannot pass even when the gold file is the output are excluded and listed. Verified-400: 4 tasks are unscorable on any path (130-9, 283-32, 45944, 49300, all in the SkillOpt test split). With LibreOffice 25.8.7.3, 19 of 400 fail gold-as-output (15 beyond those 4). The per-split breakdown for 25.8 is <span class="pend">pending</span>; the 7.1.8.1 breakdown (8 train, 2 val, 18 test) is not the one used.</li>
+    <li><strong>Why recalculation:</strong> 282 of 400 gold answers contain formula cells. The as-saved scorer gives 0 of 30 on correct formula outputs with no cached values; recalculation gives 25 to 30 of 30 depending on engine. As-saved rewards writing literals instead of formulas.</li>
+  </ul>
+
+  <h3>Agent, sandbox and scorer isolation</h3>
+  <ul>
+    <li>Target: Gemma-4-31B-it on RITS, maximum 30 turns.</li>
+    <li>Gold-free agent sandbox (issue #782). Historically the gold workbooks sat in the directory mounted read-write into the agent container. The patch (<span class="src">patches/adapter_gold_dir.patch</span> by bench-steward) gives the agent a gold-free copy and keeps the scorer on the pristine tree. A negative test (E06) must fail to read gold before any search rollout. Patch landed: <span class="chip pending">pending</span>. Historical optimizer sessions also read gold workbooks and one read a prior sealed-test evaluation (issue #784), so the optimizer side is isolated too.</li>
+    <li>The scorer recalculates the candidate output only. Gold is never modified.</li>
+  </ul>
+
+  <h3>Historical context the design responds to</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Target</th><th class="num">As-saved gain</th><th class="num">Recalculated gain</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>Gemma-4-31B, Opus 5 optimizer</td><td class="num">+33.0 (43.5 to 76.5)</td><td class="num">+18.7 (58.3 to about 77)</td><td class="mid"><span class="src">audit/historical_results.md</span> sections 1, 2</td></tr>
+      <tr><td>GPT-5.5, Opus 5 optimizer</td><td class="num">+49.1 (38.5 to 87.6)</td><td class="num">about +10 (77.5 to 87.4)</td><td class="mid"><span class="src">audit/historical_results.md</span> sections 1, 2</td></tr>
+    </tbody>
+  </table></div>
+  <p>Roughly 14 points (Gemma) and 39 points (GPT-5.5) of the as-saved gains are formula-to-literal compliance. This is why E03 compares the seed, a one-line compliance instruction and the historical champions under both scorers.</p>
+</section>
+
+<!-- ============================ 6 ============================ -->
+<section id="suite-b">
+  <h2>Suite B: tau2 retail</h2>
+  <p class="lede">Customer-service agent with an LLM user simulator and a deterministic final-state reward. Source: <span class="src">protocol/benchmarks.md</span> section 3, <span class="src">audit/fresh_test_candidates.md</span> section 2.</p>
+  <dl class="kv">
+    <dt>Pin</dt><dd>sierra-research/tau2-bench <span class="mono">8ebb7499622fc2be9b9d510d6f7a7653461f4f29</span> (tau3 task content). Never mixed with original-content runs (v0.2.0, <span class="mono">tau2_custom_*</span> arms). Retail and telecom data files are byte-identical at v1.0.0, 8ebb7499 and main, per the audit.</dd>
+    <dt>Splits</dt><dd>Official retail split: 74 train, 40 test, 114 total. Optimization and selection are cut inside the 74 train tasks with seed 42: <strong>opt 49 / sel 25</strong>, frozen with id-list hashes in <span class="src">wt-tau protocol/tau_retail_splits.json</span>. The adapter raises an error if any test id reaches a rollout.</dd>
+    <dt>Final set</dt><dd>Official retail test (40 tasks), scored once, if the exposure check confirms it is untouched. The audit found no recorded CapEvolve exposure: no run, config, issue or doc beyond a proposal naming the domain. Off-repo use cannot be seen. <span class="chip pending">pending</span> confirmation.</dd>
+    <dt>Airline</dt><dd>Development-exposed (at least 6 sealed scorings of the same 20 test tasks, and overlapping splits). Used only for historical continuity.</dd>
+    <dt>Target</dt><dd>gpt-oss-120b on RITS (<span class="mono">openai/gpt-oss-120b-a100</span>, max model length 40,144). The gateway model <span class="mono">aws/gpt-oss-120b</span> is a different serving stack and is never mixed in.</dd>
+    <dt>User simulator</dt><dd>The same model, fixed across all arms.</dd>
+    <dt>Judge</dt><dd>tau2 NL-assertion grading uses <span class="mono">azure/gpt-5.5</span> through the gateway, the same for every arm. This deviates from the tau2 default <span class="mono">gpt-4.1-2025-04-14</span>, which is unavailable. gpt-oss is already target and simulator, so a third model grades. Judge tokens are non-RITS and count against the 100M cap, price unknown. Retail does use NL assertions: reward basis DB + NL_ASSERTION, with 29 of 74 train tasks (20 opt, 9 sel) and 11 of 40 test tasks judge-graded. Judge verdicts are stored per assertion for a sensitivity sample.</dd>
+    <dt>Editable surfaces</dt><dd>Agent system prompt and policy text; agent-side tool wrappers.</dd>
+    <dt>Immutable</dt><dd>Environment tools, database, business rules, reward.</dd>
+    <dt>Final trials</dt><dd>4 per task. Report pass^1 and pass^4.</dd>
+  </dl>
+  <h3>Work the audit says retail needs</h3>
+  <ul>
+    <li>The adapter hard-codes <span class="mono">DOMAIN = "airline"</span>. It needs a domain parameter and a retail seed capability (policy and tools). <span class="chip pending">pending</span></li>
+    <li><strong>Evaluator coupling.</strong> <span class="mono">adapter.apply()</span> replaces the tau2 domain constructor with one built from the candidate <span class="mono">tools.py</span>. tau2's evaluator uses that constructor for both the predicted and the gold environment, so a candidate that weakens state-changing tools moves both sides. The audit's proposed fix keeps the pristine constructor for <span class="mono">evaluate_simulation</span> and uses the candidate constructor only for the agent's environment. The design requires this fix, tested by an injected-fault case (E05). Patch status: <span class="chip pending">pending</span></li>
+    <li>Candidate <span class="mono">tools.py</span> executes inside the evaluator process. Isolation is needed so edits cannot alter evaluation state (defect D08).</li>
+    <li>Adapter settings differ from tau2 defaults (<span class="mono">max_steps=100</span> vs 200, and rollouts with a leaked <span class="mono">###STOP###</span> are dropped as infra noise). The design either aligns these with tau2 defaults or discloses them in every table; which one is <span class="chip pending">pending</span>. Dropped rollouts must follow the missingness rules in the statistics section.</li>
+    <li>The user simulator is an LLM, so noise is high. The audit expects retail to be unable to certify +0.02 effects, as for airline.</li>
+  </ul>
+</section>
+
+<!-- ============================ 7 ============================ -->
+<section id="models">
+  <h2>Models and roles</h2>
+  <p class="lede">Source: <span class="src">protocol/model_registry.json</span> (status: PROVISIONAL, the frozen copy goes into the preregistration) and <span class="src">protocol/pricing.json</span>. The selection rule is one fixed optimizer across matched arms and no silent substitution after outages; an outage pauses the arm.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Role</th><th>Model</th><th>Served by</th><th>Price</th></tr></thead>
+    <tbody>
+      <tr><td>Suite A target</td><td class="mid">Gemma-4-31B-it (<span class="mono">/google-gemma-4-31b-it-a100</span>), max length 262,144</td><td>RITS</td><td>unknown, tokens metered</td></tr>
+      <tr><td>Suite B target and simulator</td><td class="mid">gpt-oss-120b (<span class="mono">/gpt-oss-120b-a100</span>), max length 40,144</td><td>RITS</td><td>unknown, tokens metered</td></tr>
+      <tr><td>Transfer target 1</td><td class="mid">Qwen3.6-35B-A3B (<span class="mono">/qwen3-6-35b-a3b-a100</span>), thinking model, emits reasoning tokens</td><td>RITS</td><td>unknown, tokens metered</td></tr>
+      <tr><td>Transfer target 2</td><td class="mid">GPT-5.5 (<span class="mono">azure/gpt-5.5</span> through the gateway)</td><td>LiteLLM gateway</td><td>unknown</td></tr>
+      <tr><td>Suite B NL-assertion judge</td><td class="mid">GPT-5.5 (<span class="mono">azure/gpt-5.5</span>), same for every arm</td><td>LiteLLM gateway</td><td>unknown</td></tr>
+      <tr><td>Optimizer, all matched arms</td><td class="mid">Claude Sonnet 5.5 (<span class="mono">aws/claude-sonnet-5-5</span>)</td><td>LiteLLM gateway</td><td class="num">$2 in / $10 out per MTok, cache read $0.20, cache write 5 min $2.50 (proxy price)</td></tr>
+    </tbody>
+  </table></div>
+  <p>The proxy price is Anthropic list price; the gateway's internal billing is not visible. Every cost table labels it as a proxy. The E01 preflight probes (concurrency 4 on RITS, 8 on the gateway, 8 requests each) returned 8 of 8 successes for each of the models above (<span class="src">model_registry.json</span> probes). Registry freeze: <span class="chip pending">pending</span></p>
+</section>
+
+<!-- ============================ 8 ============================ -->
+<section id="arms">
+  <h2>Arms and tracks</h2>
+  <p class="lede">Every arm runs with search seeds 0, 1 and 2. Five seeds are added for all search arms only if the budget allows (<span class="chip pending">pending</span>; the feasibility check says it currently does not).</p>
+
+  <h3>Controls</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Arm</th><th>Definition</th><th>Suites</th></tr></thead>
+    <tbody>
+      <tr><td>(a) Unoptimized seed</td><td class="wide">The starting artifact. One shared measurement per suite serves every contrast.</td><td>A, B</td></tr>
+      <tr><td>(b) Compliance instruction</td><td class="wide">A one-line instruction: write literal values, recalculate. Tests how much of a gain is scorer compliance.</td><td>A</td></tr>
+      <tr><td>(c) One-shot repair</td><td class="wide">A single optimizer proposal built from train failures.</td><td>A, B</td></tr>
+      <tr><td>(d) Matched-budget best-of-K</td><td class="wide">K one-shot proposals, choose on val. K follows from the 600-rollout budget and is <span class="pend">pending</span> (depends on rollouts spent per proposal).</td><td>A, B</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>CapEvolve search arms</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Arm</th><th>Configuration</th><th>Acceptance</th><th>Suites</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>CapEvolve hill-climb</td><td class="wide">Paper mode: unmasked footprint, joint coverage at least 0.95, k_se=1 screen plus fresh-trial confirmation.</td><td>Rule P</td><td>A, B</td><td><span class="chip frozen">frozen</span><br><span class="src">needs PR #779</span></td></tr>
+      <tr><td>CapEvolve agent-optimize</td><td class="wide">Stock defaults plus <span class="mono">confirm_fresh_only</span>. The full ablation vector is published.</td><td>Rule P</td><td>A, B</td><td><span class="chip frozen">frozen</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Official competitors: run in matched tables</h3>
+  <p class="src">All use official code except the WikiSkill row. Feasibility notes from literature/novelty_matrix.md section 5 are README-level; the adaptation status is from the coordinator. A failed official reproduction is reported with attempts, errors and cost, and is never silently dropped.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Method</th><th>Suite A</th><th>Suite B</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>GEPA (gepa 0.1.4)</td><td>yes</td><td>yes</td><td><span class="chip running">running</span> A, 3 seeds</td><td class="wide">Same text artifact, matched track. In-repo GEPA is a different algorithm (D12) and is labelled "cap-evolve GEPA".</td></tr>
+      <tr><td>SkillOpt (microsoft/SkillOpt@79124b37)</td><td>yes</td><td>no</td><td><span class="chip running">running</span> A, 3 seeds</td><td class="wide">Pinned to the commit that defines the released split. In-repo version is labelled "SkillOpt-style" (D13).</td></tr>
+      <tr><td>EvoSkill</td><td>yes</td><td>no</td><td><span class="chip pending">adapting</span></td><td class="wide">Official loop with an adapted task interface: base agent, scorer and dataset are replaced, and each replacement is listed as a deviation. Apache-2.0.</td></tr>
+      <tr><td>Trace2Skill</td><td>yes</td><td>no</td><td><span class="chip pending">adapting</span></td><td class="wide">Spreadsheet distillation control.</td></tr>
+      <tr><td>CoEvoSkills</td><td>yes</td><td>no</td><td><span class="chip pending">adapting</span></td><td class="wide">Adapted from its per-task setting to one shared skill learned on train-80. The adaptation is disclosed in every table row. Its own published numbers are in-sample, so they are not quoted.</td></tr>
+      <tr><td>GraphSkillEvo</td><td>yes</td><td>no</td><td><span class="chip pending">adapting</span></td><td class="wide">No license, private research use only. Results can be reported; code is not redistributed.</td></tr>
+      <tr><td>ACE</td><td>yes</td><td>yes</td><td><span class="chip pending">adapting</span></td><td class="wide">Context-evolution control.</td></tr>
+      <tr><td>MIPROv2 (DSPy)</td><td>yes</td><td>yes</td><td><span class="chip pending">adapting</span></td><td class="wide">Prompt-optimizer control.</td></tr>
+      <tr><td>Meta-Harness (stanford-iris-lab/meta-harness@8123cca)</td><td>yes</td><td>if adaptable</td><td><span class="chip running">running</span> A, 3 seeds</td><td class="wide">Agent-driven harness baseline. MIT, endpoint unverified (Claude Code proposer).</td></tr>
+      <tr><td>HarnessLens ("Verify Smarter, Evolve Further")</td><td>yes</td><td>if adaptable</td><td><span class="chip pending">adapting</span></td><td class="wide">Cheap-subset triage with fresh confirmation; the key baseline for S1. MIT text, OpenAI-compatible provider.</td></tr>
+      <tr><td>VERSE</td><td>yes</td><td>no</td><td><span class="chip pending">adapting</span></td><td class="wide">Compares itself to Meta-Harness.</td></tr>
+      <tr><td>Agentic Harness Engineering (AHE)</td><td>yes</td><td>if feasible</td><td><span class="chip pending">adapting</span></td><td class="wide">MIT. Agent-driven harness evolution.</td></tr>
+      <tr><td>Meta Context Engineering (MCE)</td><td>yes</td><td>if feasible</td><td><span class="chip pending">adapting</span></td><td class="wide">MIT.</td></tr>
+      <tr><td>Retrospective Harness Optimization (RHO)</td><td>yes</td><td>if feasible</td><td><span class="chip pending">adapting, may be blocked</span></td><td class="wide">MIT. Needs the Codex CLI; if that cannot run against our endpoints it is reported as a failed reproduction.</td></tr>
+      <tr><td>Memento-Skills</td><td>yes</td><td>if feasible</td><td><span class="chip pending">adapting</span></td><td class="wide">Apache-2.0.</td></tr>
+      <tr><td>WikiSkill (our reimplementation, no official code)</td><td>yes</td><td>no</td><td><span class="chip pending">building</span></td><td class="wide">Built from the paper alone, with a component-to-section spec kept in the repository. Always labelled as our reimplementation, so it is never presented as the authors' method. Its result cannot be read as evidence about the original.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Official methods keep their native acceptance rules. Competitors with "no" in the Suite B column (SkillOpt, EvoSkill, Trace2Skill, CoEvoSkills, GraphSkillEvo, VERSE, WikiSkill) appear on Suite A only; "if feasible" or "if adaptable" methods get a Suite B run only if the Suite A adaptation works and the retail interface allows it. Which adaptations succeed is <span class="chip pending">pending</span>; the matched table lists only methods that completed, and the failed ones appear in a separate reproduction-failure table.</p>
+
+  <h3>Context-only: external-context table</h3>
+  <p>No released code. Published numbers appear in one labelled external-context table, never in a matched table, with a note that harness, tools, turns, decoding and scorer may differ.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Method</th><th>Why context-only</th></tr></thead>
+    <tbody>
+      <tr><td>SkillSmith</td><td class="wide">No official code found (catalog URL 404). Cite and approximate only.</td></tr>
+      <tr><td>MESH-Harness</td><td class="wide">No released code.</td></tr>
+      <tr><td>EvoTool</td><td class="wide">No official code.</td></tr>
+      <tr><td>HarnessEvolve</td><td class="wide">No released code.</td></tr>
+      <tr><td>Mixture of Self-Improving Branches</td><td class="wide">No released code.</td></tr>
+      <tr><td>SBCO</td><td class="wide">No released code.</td></tr>
+      <tr><td>AutoSaddler</td><td class="wide">Code announced, not released.</td></tr>
+      <tr><td>DarwinX</td><td class="wide">No code.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>WikiSkill published numbers beside our own logs</h3>
+  <p>WikiSkill's Table 1 reports Gemma-4-31B on SpreadsheetBench with SkillOpt's split, as-saved scoring, mean of 3 runs. The numbers are copied from the paper through the coordinator, not re-derived. They sit in the external-context table next to our own as-saved logs, with a scorer caveat: as-saved rewards writing literals over formulas (about 14 of Gemma's 33 historical points), and every figure in this table is as-saved. They are not comparable with the recalculated primary reward.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Method</th><th class="num">Published, as-saved</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>No skill</td><td class="num">48.3</td><td class="mid">WikiSkill paper, Table 1</td></tr>
+      <tr><td>Trace2Skill</td><td class="num">58.5</td><td class="mid">WikiSkill paper, Table 1</td></tr>
+      <tr><td>EvoSkill</td><td class="num">56.4</td><td class="mid">WikiSkill paper, Table 1</td></tr>
+      <tr><td>SkillOpt</td><td class="num">63.1</td><td class="mid">WikiSkill paper, Table 1</td></tr>
+      <tr><td>WikiSkill</td><td class="num">68.0</td><td class="mid">WikiSkill paper, Table 1</td></tr>
+      <tr><td>Our logs: no skill</td><td class="num">43.5</td><td class="mid">audit/historical_results.md, 276 scored tasks, as-saved</td></tr>
+      <tr><td>Our logs: CapEvolve hill-climb, Opus 5 optimizer</td><td class="num">76.5</td><td class="mid">audit/historical_results.md, SD 1.5 over 3 runs, as-saved</td></tr>
+    </tbody>
+    <caption>The historical_results audit quarantined the cross-paper comparison with 68.0 (harness, tools, turns, decoding and scorer of their runs unknown). The row stays in the external table only; our matched tables never show it.</caption>
+  </table></div>
+
+  <h3>Out of scope, cited as prior art</h3>
+  <p>DGM, HGM, SICA, Hyperagents, ADAS and AFlow search over workflows or self-modifying agents. The editable object differs and the cost is very high. HGM-style Thompson allocation can still be implemented inside CapEvolve as an allocator if the paper makes an evaluation-allocation claim (S1). CAPO and BudgetAPO are likewise implemented as acceptors or allocators only under that claim. <span class="chip pending">pending</span> on the claim.</p>
+
+  <h3>Conditional</h3>
+  <p>ActiveSaddler runs only if the paper makes a curriculum claim. <span class="chip pending">pending</span></p>
+
+  <h3>Two tracks</h3>
+  <div class="grid2">
+    <div class="tw" style="padding:12px 14px"><strong>Matched algorithm track.</strong><p style="margin:6px 0 0">Same editable surface, models, feedback, evaluator and budget. Isolates the search algorithm.</p></div>
+    <div class="tw" style="padding:12px 14px"><strong>Practical track.</strong><p style="margin:6px 0 0">Each method in its native design, same total budget. Shows what a user gets from the shipped method.</p></div>
+  </div>
+  <p>Every table and figure is marked with its track. Matching across tracks is never implied.</p>
+</section>
+
+<!-- ============================ 9 ============================ -->
+<section id="search">
+  <h2>Per-search budget and promotion rule P</h2>
+  <p>Each search gets <strong>600 target rollouts on dev data</strong>, counting every evaluation including screens and confirmations, plus <strong>at most 4M non-cache-read optimizer tokens</strong>. The same budget applies to every method, including best-of-K.</p>
+  <h3>Rule P (CapEvolve arms)</h3>
+  <p class="src">protocol/analysis_plan.md section 8; operating characteristics from analysis/out/sim_promotion.md.</p>
+  <ol class="plain">
+    <li>Screen on val with the paired gate at k_se=1 on the full unmasked delta vector (<span class="mono">footprint_gate=False</span>).</li>
+    <li>Confirm: re-evaluate candidate and incumbent with fresh trials (new seeds, at least 10 per task) on the same val tasks. Promote only if mean delta is at least 0.02 and delta / paired SE is at least 2.0.</li>
+    <li>The incumbent's confirmation measurement is the baseline for the next iteration.</li>
+    <li>Budgets count confirmation calls.</li>
+    <li>The deployed artifact is the last promoted candidate, not the best-looking dev score.</li>
+  </ol>
+  <div class="tw"><table>
+    <thead><tr><th>Rule (T=40, screen n=5, 10 iterations)</th><th class="num">P(at least 1 false promotion)</th><th class="num">Power at +0.08</th><th class="num">Power at +0.10</th></tr></thead>
+    <tbody>
+      <tr><td>One-stage k_se=1</td><td class="num">0.57</td><td class="num">0.85</td><td class="num">0.92</td></tr>
+      <tr><td>Rule P (z=2.0, min delta 0.02, 10 confirm trials)</td><td class="num">0.037</td><td class="num">0.68</td><td class="num">0.87</td></tr>
+    </tbody>
+    <caption>sim_promotion.md, diffuse scenario for power. Roughly 4% false promotion against 57%, at the price of some power.</caption>
+  </table></div>
+  <p>Competitors keep their native acceptance rules. Their results are labelled "native acceptance" and the gate strictness difference is reported, because gate strictness is a controlled factor (methodology rule R12).</p>
+  <div class="callout">
+    <strong class="t">Pending: confirmation cost</strong>
+    <p>10 confirmation trials per task on val-40 is 400 rollouts per side. The simulation charges about 0.58 to 0.63 of one screening evaluation per iteration, which assumes confirmation only for candidates that pass the screen. Whether 600 rollouts leave room for the confirmation count in rule P is settled by the pilot.</p>
+  </div>
+</section>
+
+<!-- ============================ 10 ============================ -->
+<section id="final">
+  <h2>Final campaign</h2>
+  <ul>
+    <li><strong>Scored once.</strong> All frozen artifacts and seeds are scored once, interleaved in randomized order, in one short window. This controls provider drift. Model snapshot ids and timestamps are recorded per rollout.</li>
+    <li><strong>Trials.</strong> Suite A: 2 per task. Suite B: 4 per task. Every confirmation and final trial uses new seeds. Whether the providers honour seeds is verified first.</li>
+    <li><strong>One shared baseline measurement per suite</strong> serves every contrast. This removes the 76.5 / 76.8 and 38.5 / 38.6 discrepancies seen in the history.</li>
+    <li><strong>Test-event ledger.</strong> A campaign-level ledger records every scoring of a final set (artifact hash, evaluator hash, time). The per-run test seal is not a campaign barrier (defect D07), and <span class="mono">reuse_baseline</span> resets it, so the ledger is outside the run directory.</li>
+    <li><strong>Evaluator isolation.</strong> The final evaluator and labels are not readable from optimizer workspaces. Actual read permissions are audited and recorded.</li>
+    <li><strong>Reporting.</strong> All registered arms and seeds are reported, whether or not they look good. A crashed or aborted search stays in the denominator and its champion is the seed artifact unless a candidate had already been promoted.</li>
+    <li><strong>Gain.</strong> Reported only from fresh re-measurement of the seed and the final champion. Dev-val gains and gate deltas are never results (they run about 4x the new-task gain under the one-stage gate).</li>
+  </ul>
+  <h3>Freeze list</h3>
+  <p class="src">protocol/analysis_plan.md section 10. All hashed and recorded in experiments/registry.jsonl before any final-set scoring.</p>
+  <ul>
+    <li>The analysis plan itself.</li>
+    <li>Final-task manifest with family ids, per suite.</li>
+    <li>Model registry: provider, model id, snapshot or date, temperature, max tokens.</li>
+    <li>Evaluator and scorer code.</li>
+    <li>The missingness classifier (error class, exit code, exception-type allowlist), published with its code. <span class="chip pending">pending</span> not yet among the records read.</li>
+    <li>The comparison family for multiplicity control. <span class="chip pending">pending</span></li>
+    <li>Content hashes of all artifacts to be scored, including the single baseline.</li>
+    <li>Analysis scripts at the commit used.</li>
+  </ul>
+  <p>Deviations after freeze go in <span class="mono">decisions.md</span> with the reason and the effect on interpretation. Deviating analyses are labelled exploratory. History artifacts expire starting 2026-11-07 (GitHub 90-day clock); they are already downloaded (<span class="src">audit/artifact_manifest.json</span>).</p>
+</section>
+
+<!-- ============================ 11 ============================ -->
+<section id="transfer">
+  <h2>Transfer</h2>
+  <p>Frozen Suite A artifacts are evaluated without re-optimization on:</p>
+  <ul>
+    <li>Qwen3.6-35B-A3B on RITS (cross-family open model; a thinking model, so reasoning tokens inflate cost).</li>
+    <li>GPT-5.5 through the gateway (price unknown).</li>
+    <li>Both on the Suite A final set, plus SpreadsheetBench 2 (deterministic categories) if available.</li>
+  </ul>
+  <p>Every transfer evaluation includes the unoptimized seed on the same model as its baseline. The additional comparison is <strong>smaller-optimized against larger-unoptimized at measured deployment cost</strong>: the Gemma champion against the unoptimized GPT-5.5 seed. Because RITS and the GPT-5.5 gateway price are both unknown, the comparison is in tokens and wall time per task. Dollars are reported as "unknown", not guessed.</p>
+  <div class="callout">
+    <strong class="t">Pending</strong>
+    <ul>
+      <li>Which artifacts are transferred. All frozen artifacts is at most 62 (see forecast). A subset (seed, the best champion per method) is cheaper. Decided by budget after E10.</li>
+      <li>SpreadsheetBench 2 availability: needs a new adapter, rev <span class="mono">5a2215ed</span> pinned, a train/dev/test partition drawn once with the digest committed, and a larger turn budget.</li>
+      <li>GPT-5.5 transfer counts against the 100M non-RITS token cap.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 12 ============================ -->
+<section id="ablations">
+  <h2>Ablations</h2>
+  <p class="lede">Development data only, equal budgets, 3 seeds when an ablation supports a headline. They are prioritized by which three mechanisms best explain the gains seen in E10. Each added arm costs one search per seed, so about 1,800 rollouts per arm at 600 x 3.</p>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Ablation</th><th>Compares</th><th>Suite</th><th class="num">New arms</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">E11</td><td class="mid">Footprint masking (hill-climb)</td><td class="wide">On vs off. Off is the paper-mode arm in E10.</td><td>A</td><td class="num">1</td><td>candidate for top 3</td></tr>
+      <tr><td class="mono">E12</td><td class="mid">Gate (hill-climb)</td><td class="wide">Default one-SE single stage vs rule P. Includes improvement 1 (rule P as a shared module, applied to agent-optimize as well).</td><td>A</td><td class="num">1</td><td>candidate for top 3</td></tr>
+      <tr><td class="mono">E13</td><td class="mid">DAG vs single lineage (agent-optimize)</td><td class="wide">Candidate DAG against a single lineage.</td><td>A</td><td class="num">1</td><td>candidate for top 3</td></tr>
+      <tr><td class="mono">E14</td><td class="mid">Merge (agent-optimize)</td><td class="wide">none / naive / verified, plus improvement 2 (interaction-aware verification). One of the first three may equal the E10 reference.</td><td>A</td><td class="num">3 to 4</td><td>candidate for top 3</td></tr>
+      <tr><td class="mono">E15</td><td class="mid">Active evaluation (agent-optimize)</td><td class="wide"><span class="mono">active_eval</span> on vs off (stock default is off, defect D10), plus improvement 3 (screen accounting) and its equal-size random-subset control.</td><td>A</td><td class="num">3</td><td>candidate for top 3</td></tr>
+      <tr><td class="mono">E16</td><td class="mid">Surface width</td><td class="wide">Prompt-only vs tools-only vs prompt+tools. Per-surface budget is reported (budget-splitting hazard, novelty_matrix S3).</td><td>B</td><td class="num">2</td><td>candidate for top 3</td></tr>
+      <tr><td class="mono">E17</td><td class="mid">Optimizer mechanics 2x2</td><td class="wide">Output guard x delegation, with a Gemma optimizer.</td><td>A</td><td class="num">4</td><td>lower priority</td></tr>
+    </tbody>
+    <caption>Mapping of ablations to IDs E11 to E17 is proposed here. The coordinator assigns the algorithm improvements to E12 and E13, which does not match this mapping one for one. <strong>Pending:</strong> reconcile the mapping. Improvements are described in the next section.</caption>
+  </table></div>
+  <p><strong>Selection rule.</strong> Run first the ablations that test the mechanisms with the strongest simulated or historical effect on false acceptance or gain: footprint masking (84% harmful-edit acceptance when the footprint misses the regressions, against 1% unmasked), the gate (57% against 4% false promotion) and the agent-optimize mechanisms. The three that go to 3 seeds are chosen from E10 evidence. <span class="chip pending">pending</span> The ablation that decides the surface-width question (E16) runs on the Suite B deployment in parallel with Suite A.</p>
+</section>
+
+<!-- improvements -->
+<section id="improvements">
+  <h2>CapEvolve algorithm improvements</h2>
+  <p class="lede">Three changes to CapEvolve itself, each behind an ablation switch that defaults to off, with a design issue written first. They are evaluated as ablations on development data only. The main E10 CapEvolve arms use the frozen paper-mode configuration without them, so no main-table number depends on an unreviewed change. If one wins its ablation, it is reported as an improvement and re-run as a separate arm; it never replaces the frozen arm after the fact.</p>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Improvement</th><th>Problem it addresses</th><th>Ablation</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td class="mid">Promotion rule P as a shared module used by both CapEvolve algorithms.</td><td class="wide">Hill-climb and agent-optimize have different effective gate bars (about 0.04 and about 0.085, issue #760), so method is confounded with gate strictness (methodology_preflight.md section 4, rule R12).</td><td class="wide">E12: shared module on vs stock gates, same budget.</td><td><span class="chip running">issue #785, implementing</span></td></tr>
+      <tr><td class="num">2</td><td class="mid">Interaction-aware merge verification: common-ancestor blocks, interaction term delta(A+B) - delta(A) - delta(B), and delta-debugging when a merge fails.</td><td class="wide">The project's own latest merge failed full-val confirmation (the c_win result: pooled delta -0.0146, SE 0.0181, z -0.81; raw blocks not committed, historical_results.md). Merge interference is the S2 claim.</td><td class="wide">E14 (or E13, see mapping note): none / naive / verified / interaction-aware.</td><td><span class="chip pending">design issue pending</span></td></tr>
+      <tr><td class="num">3</td><td class="mid">Screen accounting: predicted tasks, sentinel tasks and random exploration tasks, each with a recorded inclusion probability, plus an equal-size random-subset control.</td><td class="wide">Subset triage that picks tasks adaptively gives biased deltas. Inclusion probabilities allow weighted estimates. The random control tests whether prediction beats a random subset of the same size (S1; HarnessLens is the competitor).</td><td class="wide">E15: screen accounting on vs off vs random-subset control.</td><td><span class="chip pending">design issue pending</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <strong class="t">Pending</strong>
+    <ul>
+      <li>Design issue numbers and acceptance criteria for each improvement. None is implemented in the records read.</li>
+      <li>Relation to the frozen decision that both CapEvolve arms use rule P. If the paper-mode switches already route agent-optimize through P, improvement 1 is the packaging of the same rule and E12 tests it against stock gates. This needs confirmation.</li>
+      <li>The mapping of improvements to E12 and E13 against the proposed E11 to E17 layout.</li>
+      <li>Improvements add 3 or more ablation arms (counted in the ablation forecast).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================ 13 ============================ -->
+<section id="controls">
+  <h2>Measurement controls (RQ5)</h2>
+  <p class="lede">These test the measurement system. A false improvement is any accepted edit that does not raise the true score on new tasks.</p>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Experiment</th><th>Pass criterion</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">E04</td><td class="mid">Null-edit candidates through each gate (one-SE, rule P, reward-gated, posterior, native competitor rules) on real rollouts.</td><td class="wide">False-acceptance rate per gate, compared with the simulated rate (0.51 to 0.58 per 10 iterations for one-SE).</td><td><span class="chip planned">planned</span> size <span class="pend">pending</span></td></tr>
+      <tr><td class="mono">E05</td><td class="mid">Injected scorer and adapter fault cases. Includes the tau2 evaluator-coupling case, errored trials, and candidate-induced crashes.</td><td class="wide">Each injected fault is detected or neutralized; coverage reported.</td><td><span class="chip planned">planned</span></td></tr>
+      <tr><td class="mono">E06</td><td class="mid">Gold-isolation negative test. An agent and an optimizer workspace attempt to read gold, the final labels and the test seal.</td><td class="wide">Every attempt fails. Run before any search rollout.</td><td><span class="chip planned">planned</span></td></tr>
+      <tr><td class="mono">E07</td><td class="mid">Footprint false-exclusion audit.</td><td class="wide">Count of real regressions that fall outside the footprint and would be masked.</td><td><span class="chip planned">planned</span></td></tr>
+      <tr><td class="mono">E00</td><td class="mid">Historical re-scoring under both scorers (zero LLM cost).</td><td class="wide">Done: <span class="src">audit/recomputed_numbers.csv</span>, <span class="src">audit/historical_results.md</span>.</td><td><span class="chip done">done</span></td></tr>
+    </tbody>
+    <caption>E04 to E07 are proposed IDs. The brief fixes the experiment list but not these numbers. <strong>Pending:</strong> confirm IDs.</caption>
+  </table></div>
+  <p>Zero-cost simulations on the real code already exist in <span class="src">analysis/out/sim_*.md</span>: one-SE null acceptance 54 to 58%; dropped errored trials turn a null edit into 52 to 89% acceptance while coverage stays at 0.96 or above; masked footprint accepts a harmful edit 84% of the time. E04 to E07 measure the same effects on real rollouts.</p>
+</section>
+
+<!-- ============================ 14 ============================ -->
+<section id="stats">
+  <h2>Statistics</h2>
+  <p class="lede">Source: <span class="src">protocol/analysis_plan.md</span>. Pending items are marked.</p>
+  <h3>Estimands</h3>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Estimand</th><th>Interval includes</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">E1</td><td class="wide">Fixed-task-set score of an artifact on the final set. Goes in benchmark tables, never offered as evidence of generalization.</td><td>Execution randomness</td></tr>
+      <tr><td class="mono">E2</td><td class="wide">Generalization to new tasks and families. Headline: each method's champion minus the seed artifact.</td><td>Task sampling (family-clustered) and execution</td></tr>
+      <tr><td class="mono">E3</td><td class="wide">Optimization-pipeline variance: spread of champion E2 score over search seeds.</td><td>Search seeds</td></tr>
+      <tr><td class="mono">E4</td><td class="wide">Cost (see cost accounting).</td><td>Seed and deployment cost variance</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Rules</h3>
+  <ul>
+    <li><strong>Unit of inference:</strong> the task, clustered by family; trials averaged only within a task.</li>
+    <li><strong>Seeds</strong> are a separate level. S=3 gives 2 degrees of freedom, so pipeline intervals use t(2) = 4.30. Seed-level percentile bootstraps are not the headline for S below 8.</li>
+    <li><strong>Intervals:</strong> below 30 families the headline CI is the cluster-robust t interval (CR1), not the percentile bootstrap. Sign-flip randomization is a declared robustness check.</li>
+    <li><strong>Multiplicity:</strong> Holm step-down at FWER 0.05 within a suite. Each suite is its own family. A cross-suite claim needs both to pass. Unlisted contrasts are exploratory.</li>
+    <li><strong>"Win" language</strong> only if the Holm-adjusted p is below 0.05 and the CI excludes 0 under the pessimistic missingness bound. Otherwise "no detectable difference at the MDE of X".</li>
+    <li><strong>Claims</strong> are artifact-level (about the S champions) unless S is at least 5; pipeline-level claims need S of at least 5.</li>
+    <li><strong>Never reported:</strong> <span class="mono">SplitResult.stderr</span> / <span class="mono">combined_stderr</span> (double counts within-task noise; overstates new-task variance by 12 to 33% at the assumed kappa and fixed-task variance by 1.2 to 8.6x).</li>
+    <li>SD labels its unit; SE names its sampling process; every table cell states n tasks, n families, n seeds, n trials per task.</li>
+  </ul>
+  <h3>Missingness</h3>
+  <ul>
+    <li>Failures are classified by a frozen deterministic classifier, blind to arm and reward. Unclassified counts as failure.</li>
+    <li>Exogenous failures (429, 5xx, gateway timeout, container pull, host OOM): up to 3 further attempts, same policy on every arm, triggered by error class only, cost charged to the arm. Exhausted retries make a missing cell.</li>
+    <li>Artifact-induced failures count as a trial with reward 0. They are never dropped.</li>
+    <li>Complete-case analysis only if the missing fraction is at most 5% per arm and missing counts are not associated with arm (Fisher exact p at least 0.10). Otherwise bounds only.</li>
+    <li>Pessimistic and optimistic bounds always sit next to the estimate. A contrast is "robust" only if the pessimistic-bound CI excludes 0.</li>
+    <li>Confirmatory evaluation needs at least 95% valid (arm, task) cells after retries, else the suite is re-executed or declared invalid for the headline. Coverage is computed on the paired intersection.</li>
+  </ul>
+
+  <h3>Minimum detectable effect (reward points, S=3, alpha 0.05 two-sided, power 0.80)</h3>
+  <div class="callout">
+    <strong class="t">Pending: placeholders and design-specific rows</strong>
+    <p>The inputs are placeholders until the development pilot reports them: SD of true per-task advantage 0.15, seed x task interaction 0.10, SD of champion quality across seeds 0.03, trial noise 0.297 / n, family size 5 with ICC 0.10 (design effect 1.4). The table has no row for the designed Suite A final (T about 150, n=2) or Suite B (T=40, n=4). Suite B lies between the n=3 and n=5 rows at T=40. Re-running <span class="mono">sim_mde.py</span> with pilot estimates and the actual T and n is required before freeze.</p>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th class="num">T tasks</th><th class="num">n trials</th><th class="num">Artifact-level</th><th class="num">Artifact-level, Holm m=3</th><th class="num">Pipeline-level t(2)</th><th class="num">Pipeline-level, Holm m=3</th></tr></thead>
+    <tbody>
+      <tr><td class="num">40</td><td class="num">3</td><td class="num">0.127</td><td class="num">0.147</td><td class="num">0.261</td><td class="num">0.423</td></tr>
+      <tr><td class="num">40</td><td class="num">5</td><td class="num">0.112</td><td class="num">0.129</td><td class="num">0.234</td><td class="num">0.379</td></tr>
+      <tr><td class="num">100</td><td class="num">3</td><td class="num">0.080</td><td class="num">0.093</td><td class="num">0.180</td><td class="num">0.292</td></tr>
+      <tr><td class="num">100</td><td class="num">5</td><td class="num">0.071</td><td class="num">0.082</td><td class="num">0.164</td><td class="num">0.267</td></tr>
+      <tr><td class="num">280</td><td class="num">3</td><td class="num">0.048</td><td class="num">0.055</td><td class="num">0.131</td><td class="num">0.212</td></tr>
+      <tr><td class="num">280</td><td class="num">5</td><td class="num">0.042</td><td class="num">0.049</td><td class="num">0.123</td><td class="num">0.200</td></tr>
+    </tbody>
+    <caption>analysis_plan.md section 7 and analysis/out/sim_mde.md. At n=5 the pipeline-level MDE at S=5 is 0.142, 0.098 and 0.071 for T=40, 100 and 280. Method-vs-method gaps of 2 to 5 points are undetectable at T of 100 or fewer.</caption>
+  </table></div>
+  <p>Reading: with 3 seeds, no pipeline-level claim below about 12 points is powered at any plausible T. The design therefore claims only artifact-level effects at S=3 and reports raw per-seed values. The Suite B final set (40 tasks) has an artifact-level MDE of about 0.11 to 0.13, so small gaps there are descriptive.</p>
+</section>
+
+<!-- ============================ 15 ============================ -->
+<section id="cost">
+  <h2>Cost accounting</h2>
+  <p class="lede">Source: analysis_plan.md section 9. Money is metered from provider usage logs.</p>
+  <ul>
+    <li><strong>Per role:</strong> optimizer, target, simulator, judge, diagnostics. Optimizer-model cost and deployed-target cost are separate columns. A combined column appears only when both are fully priced.</li>
+    <li><strong>Optimization cost C_opt(method, seed):</strong> proposer plus target rollouts on dev data (screening and confirmation included) plus judges and diagnostics. Tokens, USD, rollouts and wall hours, mean and SD over seeds. Failed and aborted searches are included.</li>
+    <li><strong>Cost per usable champion</strong> for "run S searches, deploy the best on dev" is S x mean C_opt. Its accuracy has a winner's-curse bias, so it gets its own final-set row.</li>
+    <li><strong>Deployment cost:</strong> metered target cost of one deployed task attempt on the final tasks, including failures and retries; also cost per success.</li>
+    <li><strong>Net value</strong> per task v(a) = R x p_a - c_a, with the task reward R declared in advance. R=0 gives the cost-only view.</li>
+    <li><strong>Break-even volume</strong> V* = C_opt / (v(champion) - v(baseline)) tasks. Defined only when the lower CI bound of the value difference is above 0; otherwise "no break-even established" with the denominator's interval. Never a delta-method interval when the denominator CI includes 0.</li>
+    <li><strong>Unknown prices:</strong> RITS targets and GPT-5.5 are "unknown". Sums that include them are flagged "lower bound". Token counts and wall time are always reported. Optimizer cost is shown at proxy price, labelled as proxy.</li>
+  </ul>
+  <p><strong>Bound on optimizer spend (arithmetic on the proxy price).</strong> One search at the 4M-token ceiling costs between $8 (all input at $2/MTok) and $40 (all output at $10/MTok). The measured input/output mix from the pilot decides where inside this range a search falls. Thirty searches at the ceiling would be between $240 and $1,200, so the $1000 cap can bind. <span class="chip pending">pending</span> pilot mix.</p>
+</section>
+
+<!-- ============================ 16 ============================ -->
+<section id="registry">
+  <h2>Experiment registry and forecast</h2>
+  <p class="lede">Status uses the three states planned, running, done. Rollout forecasts are arithmetic: counts of arms x seeds x 600 for searches, artifacts x tasks x trials for evaluations. Tokens use 41k per Gemma SpreadsheetBench rollout, hours use 3 minutes per rollout divided by 4 slots. These are forecasts, not measurements. Suite B per-rollout tokens and time have not been measured (pending).</p>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Experiment</th><th>Status</th><th class="num">Target rollouts</th><th class="num">Gemma tokens</th><th class="num">Hours at c=4 / c=32</th><th>Basis</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">E00</td><td class="mid">Scorer and adapter audit</td><td><span class="chip done">done</span></td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="mid">scorer_audit.md, defects.csv. Zero LLM spend.</td></tr>
+      <tr><td class="mono">E01</td><td class="mid">Model and concurrency preflight</td><td><span class="chip done">done</span></td><td class="num">small probes</td><td class="num">n/a</td><td class="num">n/a</td><td class="mid">model_registry.json probes (8 requests per model).</td></tr>
+      <tr><td class="mono">E02</td><td class="mid">No-op repeated evaluation (noise floor of the seed)</td><td><span class="chip planned">planned</span></td><td class="num"><span class="pend">pending</span></td><td class="num">-</td><td class="num">-</td><td class="mid">Size depends on repeats; supplies the MDE inputs.</td></tr>
+      <tr><td class="mono">E03</td><td class="mid">Scorer-compliance diagnostic: seed vs compliance instruction vs historical champions, both scorers, dev data</td><td><span class="chip planned">planned</span></td><td class="num">120 per artifact per trial</td><td class="num">4.9M per artifact per trial</td><td class="num">1.5 / 0.19 per artifact per trial</td><td class="mid">Train 80 + val 40 = 120 tasks. Number of historical champions pending. One rollout yields both scorers.</td></tr>
+      <tr><td class="mono">E04 to E07</td><td class="mid">Measurement controls</td><td><span class="chip planned">planned</span></td><td class="num"><span class="pend">pending</span></td><td class="num">-</td><td class="num">-</td><td class="mid">Proposed IDs.</td></tr>
+      <tr><td class="mono">E10 (A)</td><td class="mid">Main comparison, Suite A: 19 search or best-of-K arms x 3 seeds, 600 each</td><td><span class="chip running">running</span></td><td class="num">34,200 if all 19 arms run (1,800 per arm)</td><td class="num">1.40B (73.8M per arm)</td><td class="num">427 / 53 (22.5 / 2.8 per arm)</td><td class="mid">Running: SkillOpt and GEPA, launched 2026-10-11. Other methods are in adaptation. Arms: hill-climb, agent-optimize, 15 official methods beyond those, WikiSkill reimplementation, best-of-K.</td></tr>
+      <tr><td class="mono">E10 (B)</td><td class="mid">Main comparison, Suite B: 6 to 12 arms x 3 seeds, 600 each</td><td><span class="chip running">running</span></td><td class="num">10,800 to 21,600</td><td class="num"><span class="pend">pending</span></td><td class="num"><span class="pend">pending</span></td><td class="mid">Arms: hill-climb, agent-optimize, GEPA, MIPROv2, ACE, best-of-K, plus up to six harness or context methods (Meta-Harness, HarnessLens, AHE, MCE, RHO, Memento-Skills) if adaptable. Needs a measured tau2 retail cost. Gpt-oss deployment, parallel with Suite A. Not started.</td></tr>
+      <tr><td class="mono">E10 final (A)</td><td class="mid">Final scoring, Suite A: up to 62 artifacts x about 150 tasks x 2 trials</td><td><span class="chip planned">planned</span></td><td class="num">up to 18,600</td><td class="num">up to 763M</td><td class="num">up to 233 / 29</td><td class="mid">62 = seed, compliance, 3 one-shot, 3 best-of-K, 54 search champions (18 arms x 3). Fewer if adaptations fail. T is pending. Same Gemma deployment as the searches.</td></tr>
+      <tr><td class="mono">E10 final (B)</td><td class="mid">Final scoring, Suite B: 22 to 40 artifacts x 40 tasks x 4 trials</td><td><span class="chip planned">planned</span></td><td class="num">3,520 to 6,400</td><td class="num"><span class="pend">pending</span></td><td class="num"><span class="pend">pending</span></td><td class="mid">22 to 40 = seed, 3 one-shot, 3 best-of-K, 15 to 33 search champions. Judge tokens on the gateway.</td></tr>
+      <tr><td class="mono">E11 to E15</td><td class="mid">Suite A ablations including the algorithm improvements, 9 to 10 added arms x 3 seeds x 600</td><td><span class="chip planned">planned</span></td><td class="num">16,200 to 18,000 (1,800 per arm)</td><td class="num">664M to 738M (73.8M per arm)</td><td class="num">203 to 225 / 25 to 28 (22.5 / 2.8 per arm)</td><td class="mid">Not all will run. The three with the strongest mechanism evidence go to 3 seeds.</td></tr>
+      <tr><td class="mono">E16</td><td class="mid">Surface width, Suite B, 2 added arms x 3 seeds x 600</td><td><span class="chip planned">planned</span></td><td class="num">3,600</td><td class="num"><span class="pend">pending</span></td><td class="num"><span class="pend">pending</span></td><td class="mid">Per-surface budgets reported.</td></tr>
+      <tr><td class="mono">E17</td><td class="mid">Optimizer mechanics 2x2, Gemma optimizer</td><td><span class="chip planned">planned</span></td><td class="num">7,200 if 4 arms x 3 seeds x 600</td><td class="num">295M</td><td class="num">90 / 11</td><td class="mid">Lower priority. Cut first.</td></tr>
+      <tr><td class="mono">E20</td><td class="mid">Transfer to Qwen3.6-35B-A3B</td><td><span class="chip planned">planned</span></td><td class="num">up to 18,600 (artifacts x T x n)</td><td class="num"><span class="pend">pending</span></td><td class="num"><span class="pend">pending</span></td><td class="mid">Reasoning tokens not yet measured. Own RITS deployment.</td></tr>
+      <tr><td class="mono">E21</td><td class="mid">Transfer to GPT-5.5</td><td><span class="chip planned">planned</span></td><td class="num">up to 18,600</td><td class="num">non-RITS: counts toward the 100M cap</td><td class="num"><span class="pend">pending</span></td><td class="mid">About 2,400 rollouts if 41k tokens each (unmeasured for GPT-5.5). Price unknown.</td></tr>
+      <tr><td class="mono">E22</td><td class="mid">Transfer to SpreadsheetBench 2</td><td><span class="chip planned">planned</span></td><td class="num"><span class="pend">pending</span></td><td class="num"><span class="pend">pending</span></td><td class="num"><span class="pend">pending</span></td><td class="mid">Needs adapter and partition.</td></tr>
+      <tr><td class="mono">E30</td><td class="mid">Enterprise case study</td><td><span class="chip planned">planned</span></td><td class="num">-</td><td class="num">-</td><td class="num">-</td><td class="mid">Out of scope unless time allows.</td></tr>
+    </tbody>
+    <caption>IDs E08, E09, E18 to E19 and E23 to E29 are unused. Hours assume 3 minutes per rollout on one deployment, at 4 slots (original cap) and at 32 slots (Gemma after the 2026-10-11 raise); the 32-slot figure assumes latency does not rise under load, which is unmeasured. Hours are not additive across deployments.</caption>
+  </table></div>
+  <div class="callout">
+    <strong class="t">Pending: what fits</strong>
+    <p>One Gemma deployment holds 46,080 rollouts in 72 h at concurrency 32 (5,760 at 4), if per-rollout latency holds. The Gemma rows above (E10 A 34,200; E10 final A up to 18,600; E11 to E15 16,200 to 18,000) sum to 69,000 to 70,800, about 1.5 times that, before E03 and E17. The final campaign must also fit in the 18 h reserve. Decisions that follow from this table: a latency measurement at concurrency 32, the number of Suite A competitors and seeds that actually complete adaptation, the ablation selection, and the Suite A final set size. The forecast is the input to those decisions.</p>
+    </div>
+</section>
+
+<!-- ============================ 17 ============================ -->
+<section id="integrity">
+  <h2>Integrity map: defects and the design rule that mitigates each</h2>
+  <p class="lede">Defects D01 to D11 and D14 were filed as issues #755 to #766 (<span class="src">audit/defects.csv</span>, <span class="src">issues.json</span>). Provenance problems #767 to #778 come from <span class="src">audit/historical_results.md</span>. #782 is the gold-in-sandbox finding. A mitigation marked pending depends on a patch or measurement not yet recorded in the sources.</p>
+
+  <h3>Algorithm defects</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Issue</th><th>Defect</th><th>Design rule</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">#755 D01</td><td class="mid">Footprint masking, on by default with no off switch, can accept a net-negative edit.</td><td class="wide">Unmasked vector in all CapEvolve arms (rule P, paper mode). E11 ablation. E07 audit.</td><td><span class="chip pending">pending</span> PR #779 review</td></tr>
+      <tr><td class="mono">#756 D02</td><td class="mid">One-SE gate: about 16% single-test and about 50% per-10-iteration false accept.</td><td class="wide">Rule P; E12 ablation; E04 null edits.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#757 D03</td><td class="mid">Val is both feedback source and acceptance split (adaptive reuse).</td><td class="wide">Train-80 feeds the optimizer, val-40 selects, fresh final set for results. Dev-val numbers are search diagnostics only.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#758 D04</td><td class="mid">Coverage guard candidate-marginal; errored trials silently dropped.</td><td class="wide">Joint coverage at least 0.95 on the paired intersection; artifact-induced failures count as 0; frozen classifier; bounds.</td><td><span class="chip pending">pending</span> classifier and switch</td></tr>
+      <tr><td class="mono">#759 D05</td><td class="mid">Agent-optimize "confirmation" pools selection-era trials with fresh ones.</td><td class="wide"><span class="mono">confirm_fresh_only</span>; new seeds for every confirmation.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#760 D06</td><td class="mid">reward_gated promote has a hard-coded SE floor (0.031): minimum accepted effect about 0.085 at any sample size.</td><td class="wide">Agent-optimize keeps its stock gate but accepts only through rule P's fresh confirmation. Gate strictness is reported as a controlled factor and each gate's operating characteristic is published.</td><td><span class="chip pending">pending</span> exact interaction</td></tr>
+      <tr><td class="mono">#761 D07</td><td class="mid">Test seal per run directory; <span class="mono">--reuse-baseline</span> resets it.</td><td class="wide">Campaign-level test-event ledger; frozen manifest scored once.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#762 D08</td><td class="mid">Optimizer subprocess not isolated from adapter and scorer; integrity seal off by default.</td><td class="wide">Final evaluator and labels unreadable from optimizer workspaces, audited and recorded; E06 negative test; tau2 pristine evaluator constructor.</td><td><span class="chip pending">pending</span> patches</td></tr>
+      <tr><td class="mono">#763 D09</td><td class="mid"><span class="mono">commit.py --decision accept</span> performs no gate check.</td><td class="wide">Only accepts produced by a recorded passing gate row count as gated; others are labelled.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#764 D10</td><td class="mid">agent-optimize needs switches that are off by default (<span class="mono">active_eval</span>); docs overstate the posterior.</td><td class="wide">Stock defaults plus <span class="mono">confirm_fresh_only</span>; full ablation vector published; E15; posterior never called a frequentist guarantee.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#765 D11</td><td class="mid"><span class="mono">combined_stderr</span> double-counts within-task trial variance.</td><td class="wide">Never reported. Cluster-robust task-level paired SEs.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">#766 D14</td><td class="mid">Single-task gain acceptance is arbitrary (float rounding); #351 closed but reproduces.</td><td class="wide">Rule P requires minimum delta 0.02 and z of at least 2.0 on fresh trials.</td><td><span class="chip frozen">frozen</span></td></tr>
+      <tr><td class="mono">D12, D13</td><td class="mid">In-repo GEPA and SkillOpt are not the official algorithms.</td><td class="wide">Run the official code; label the in-repo versions.</td><td><span class="chip frozen">frozen</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Provenance and measurement problems</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Issue</th><th>Problem</th><th>Design rule</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">#767</td><td class="mid">SpreadsheetBench scorer conflation (as-saved vs recalculated).</td><td class="wide">Recalculated primary, as-saved secondary, always both. E03.</td></tr>
+      <tr><td class="mono">#768</td><td class="mid">Split provenance (seed-42 vs SkillOpt's split).</td><td class="wide">SkillOpt split pinned by hash; no mixing across eras.</td></tr>
+      <tr><td class="mono">#769</td><td class="mid">Test-set exposure (every earlier task set is dev-exposed).</td><td class="wide">Dev-exposed sets reclassified; test-280 and airline only in historical tables; fresh final sets with provenance records.</td></tr>
+      <tr><td class="mono">#770</td><td class="mid">Unreported 85.6 from a hill-climb run versus 76.4 for agent-optimize.</td><td class="wide">RQ2 compares both methods at matched budget on equal terms; all runs reported.</td></tr>
+      <tr><td class="mono">#771</td><td class="mid">Aggregation and CI method (pooled-observation bootstrap).</td><td class="wide">Family-cluster-robust intervals; seeds a separate level.</td></tr>
+      <tr><td class="mono">#772</td><td class="mid">A run excluded for the wrong stated reason (budget-exceeded failures).</td><td class="wide">Frozen failure classifier; per-arm attempted, retried, missing and failed counts by class.</td></tr>
+      <tr><td class="mono">#773</td><td class="mid">Small-optimizer ablation mislabelled; no control replicate (3.0 point control-to-control spread).</td><td class="wide">Every ablation with a replicated reference and equal budgets; 3 seeds.</td></tr>
+      <tr><td class="mono">#774, #775, #777</td><td class="mid">RH-SWE artifact conflict; SkillsBench selection; GLM SWE-bench unsupported and leakage.</td><td class="wide">Out of scope. These benchmarks are not in the design.</td></tr>
+      <tr><td class="mono">#776, #778</td><td class="mid">tau2 held-out claims without artifacts; agent-optimize c_win raw blocks uncommitted.</td><td class="wide">Freeze list with artifact hashes; everything committed or reported as unverifiable.</td></tr>
+      <tr><td class="mono">#782</td><td class="mid">Gold answers visible in the agent sandbox (critical).</td><td class="wide">Gold-free sandbox; E06 negative test before any search. The trajectory scan found no gold access in 2,049 retained agent rollouts, which is absence of evidence only; the scan found gold use documented by the optimizer in at least 6 Opus 5 runs and one run that read a prior sealed-test evaluation (<span class="src">audit/gold_access_scan.md</span>; scan complete; optimizer findings filed as issue #784). Every agentic proposer in this campaign (CapEvolve, Meta-Harness, AHE, EvoSkill and similar) must run without read access to gold, split and test files, verified by a negative test before launch.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================ 18 ============================ -->
+<section id="timeline">
+  <h2>Timeline and dependencies</h2>
+  <p class="lede">The diagram shows the three evaluator boundaries and the dependency order. No experiment crosses a boundary without a freeze. Windows below are budget allocations, not a schedule: 54 h for development and search, 18 h reserved for final evaluation and analysis.</p>
+  <div class="mm"><pre class="mermaid">
+flowchart LR
+  subgraph PRE["Gates before any search rollout"]
+    G782["Gold-free sandbox, issue 782"]
+    P779["Paper-mode switches, PR 779"]
+    PROV["Fresh set provenance checks A and B"]
+    ADP["Retail adapter and pristine evaluator"]
+  end
+  subgraph DEV["Dev boundary: train feedback, val selection, recalculated scorer"]
+    E00["E00 audit, done"]
+    E01["E01 preflight, done"]
+    E02["E02 no-op noise"]
+    E03["E03 compliance diagnostic"]
+    E0407["E04 to E07 measurement controls"]
+    PILOT["Pilots: trials per screen, tokens, MDE inputs"]
+    E10["E10 main comparison, running"]
+    ABL["E11 to E17 ablations and algorithm improvements"]
+  end
+  subgraph FINAL["Final boundary: frozen manifest, one randomized window"]
+    FRZ["Freeze list hashed"]
+    FIN["Final scoring, interleaved"]
+  end
+  subgraph TR["Transfer boundary: frozen artifacts, no re-optimization"]
+    E20["E20 Qwen3.6"]
+    E21["E21 GPT-5.5"]
+    E22["E22 SpreadsheetBench 2"]
+  end
+  E00 --> E02
+  E01 --> E02
+  E00 --> E03
+  G782 --> E0407
+  G782 --> E10
+  P779 --> E10
+  E02 --> PILOT
+  E03 --> PILOT
+  E0407 --> E10
+  PILOT --> E10
+  PILOT --> ABL
+  E10 --> ABL
+  E10 --> FRZ
+  ABL --> FRZ
+  PROV --> FRZ
+  ADP --> E10
+  FRZ --> FIN
+  FIN --> E20
+  FIN --> E21
+  FIN --> E22
+  FIN --> ANA["Analysis, route A, B or C"]
+  E20 --> ANA
+  E21 --> ANA
+  E22 --> ANA
+  </pre></div>
+  <div class="tw"><table>
+    <thead><tr><th>Dependency</th><th>Blocks</th><th>Decided by</th></tr></thead>
+    <tbody>
+      <tr><td class="mid">Gold isolation patch (#782)</td><td class="mid">E06, all search rollouts</td><td>bench-steward PR and the E06 negative test</td></tr>
+      <tr><td class="mid">Paper-mode switches (#779)</td><td class="mid">CapEvolve arms in E10, E11, E12</td><td>Independent review of PR #779</td></tr>
+      <tr><td class="mid">Fresh set provenance (A and B)</td><td class="mid">Freeze list, final scoring</td><td>provenance-auditor</td></tr>
+      <tr><td class="mid">Retail adapter and pristine evaluator constructor</td><td class="mid">Suite B searches</td><td>Adapter work, E05 fault case</td></tr>
+      <tr><td class="mid">Pilot</td><td class="mid">Trials per screen, final T and n, MDE re-run, ablation selection</td><td>Measured tokens, time, noise</td></tr>
+      <tr><td class="mid">E10 results</td><td class="mid">Which ablations run, which artifacts transfer, paper route</td><td>Evidence under the frozen analysis plan</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================ 19 ============================ -->
+<section id="pending">
+  <h2>All pending items</h2>
+  <p class="lede">Each pending item with what decides it.</p>
+  <div class="tw"><table>
+    <thead><tr><th class="num">#</th><th>Pending item</th><th>Decided by</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td class="mid">Suite A fresh final set (912 residual vs SpreadsheetBench 2) and its size T, stratification, family ids and manifest hash</td><td class="wide">Provenance check outcome; pilot MDE; budget</td></tr>
+      <tr><td class="num">2</td><td class="mid">Suite B retail test is untouched</td><td class="wide">Exposure check confirmation (audit found none on record)</td></tr>
+      <tr><td class="num">3</td><td class="mid">Suite B optimization/selection partition: <strong>resolved</strong>, opt 49 / sel 25 (seed 42), hashed</td><td class="wide">Done</td></tr>
+      <tr><td class="num">4</td><td class="mid">Gold-free sandbox patch landed and verified (#782)</td><td class="wide">bench-steward PR plus E06</td></tr>
+      <tr><td class="num">5</td><td class="mid">Paper-mode switches PR #779 merged</td><td class="wide">Independent review</td></tr>
+      <tr><td class="num">6</td><td class="mid">tau2 retail adapter, seed capability, pristine evaluator constructor, and the max_steps / ###STOP### disclosure choice</td><td class="wide">Adapter work and E05</td></tr>
+      <tr><td class="num">7</td><td class="mid">LibreOffice 25.8 gold-as-output exclusion list by split; HF mirror vs GitHub blob equality</td><td class="wide">Scorer steward re-run on 25.8</td></tr>
+      <tr><td class="num">8</td><td class="mid">Adaptation of the 13 official Suite A competitors not yet running (EvoSkill, Trace2Skill, CoEvoSkills, GraphSkillEvo, ACE, MIPROv2, Meta-Harness, HarnessLens, VERSE, AHE, MCE, RHO, Memento-Skills), the WikiSkill reimplementation, and the Suite B subset (MIPROv2 and ACE; harness methods if adaptable). RHO may be blocked by its Codex CLI dependency. GEPA and SkillOpt are already running.</td><td class="wide">baseline-eng adapters; failed reproductions are reported with attempts, errors and cost</td></tr>
+      <tr><td class="num">9</td><td class="mid">Conditional arms: ActiveSaddler (curriculum claim), HGM-style allocator and CAPO/BudgetAPO (allocation claim)</td><td class="wide">Which claim the paper makes after E10</td></tr>
+      <tr><td class="num">10</td><td class="mid">Extension of all search arms from 3 to 5 seeds</td><td class="wide">Remaining budget after the feasibility fit</td></tr>
+      <tr><td class="num">11</td><td class="mid">Wall time and RITS concurrency; whether the 10,000 rollout cap still applies</td><td class="wide">Concurrency measurement; user decision</td></tr>
+      <tr><td class="num">12</td><td class="mid">Non-RITS token fit: 4M x searches vs the 100M cap; whether the reserve applies to tokens; USD mix</td><td class="wide">Pilot optimizer tokens and input/output mix</td></tr>
+      <tr><td class="num">13</td><td class="mid">Trials per screen, K for best-of-K, rollouts for one-shot repair, whether 600 funds rule P's confirmations</td><td class="wide">Pilot</td></tr>
+      <tr><td class="num">14</td><td class="mid">Suite B per-rollout tokens and time; Qwen reasoning tokens; GPT-5.5 tokens</td><td class="wide">Measurement runs</td></tr>
+      <tr><td class="num">15</td><td class="mid">MDE re-run with pilot estimates and the designed T and n (Suite A about 150 x 2, Suite B 40 x 4)</td><td class="wide">sim_mde.py with pilot inputs</td></tr>
+      <tr><td class="num">16</td><td class="mid">Holm comparison family (list of contrasts) and non-inferiority margin</td><td class="wide">stats-reviewer before freeze</td></tr>
+      <tr><td class="num">17</td><td class="mid">Missingness classifier code and the joint-coverage switch</td><td class="wide">Implementation, published before freeze</td></tr>
+      <tr><td class="num">18</td><td class="mid">Model registry freeze (currently PROVISIONAL)</td><td class="wide">Preregistration</td></tr>
+      <tr><td class="num">19</td><td class="mid">Transfer: artifact subset, SpreadsheetBench 2 adapter and partition, GPT-5.5 budget</td><td class="wide">E10 outcome and budget</td></tr>
+      <tr><td class="num">20</td><td class="mid">Ablation selection (top three mechanisms) and the proposed IDs E04 to E07 and E11 to E17</td><td class="wide">E10 evidence; coordinator confirmation</td></tr>
+      <tr><td class="num">21</td><td class="mid">E02 and E04 to E07 sizes; E22 size</td><td class="wide">Pilot; adapter</td></tr>
+      <tr><td class="num">22</td><td class="mid">Whether retail uses NL-assertion criteria, and gpt-5.5 judge token and cost impact on the 100M cap</td><td class="wide">Retail task inspection and a measurement run</td></tr>
+      <tr><td class="num">23</td><td class="mid">Design issues, acceptance criteria and E-ID mapping for the three CapEvolve algorithm improvements</td><td class="wide">Coordinator and repo-auditor review</td></tr>
+      <tr><td class="num">24</td><td class="mid">Latency of the Gemma deployment at concurrency 32; whether the forecast hours hold</td><td class="wide">Load measurement</td></tr>
+      <tr><td class="num">25</td><td class="mid">E30 enterprise case study</td><td class="wide">Out of scope unless time allows</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================ 20 ============================ -->
+<section id="sources">
+  <h2>Sources</h2>
+  <p class="lede">All paths are relative to <span class="mono">/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/</span>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Path</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">campaign.yaml, decisions.md, STATUS.md, issues.json</td><td class="wide">Budget envelope, token accounting, measured rollout cost, defect and issue numbers.</td></tr>
+      <tr><td class="mono">protocol/analysis_plan.md</td><td class="wide">Estimands, estimators, multiplicity, missingness, MDE, rule P, cost, freeze list.</td></tr>
+      <tr><td class="mono">protocol/benchmarks.md, protocol/scorer_audit.md</td><td class="wide">Pins, splits, hashes, scorer behavior, exclusions, isolation.</td></tr>
+      <tr><td class="mono">protocol/model_registry.json, protocol/pricing.json</td><td class="wide">Models, probes, proxy prices.</td></tr>
+      <tr><td class="mono">reviews/methodology_preflight.md</td><td class="wide">Protocol rules R1 to R22.</td></tr>
+      <tr><td class="mono">audit/algorithm_audit.md, audit/defects.csv</td><td class="wide">Defects D01 to D16.</td></tr>
+      <tr><td class="mono">audit/historical_results.md, audit/recomputed_numbers.csv, audit/exposure_ledger.csv</td><td class="wide">Historical gains under both scorers, provenance conflicts, exposure of every split.</td></tr>
+      <tr><td class="mono">audit/fresh_test_candidates.md, audit/sb912_residual_exposure.csv, audit/gold_access_scan.md</td><td class="wide">Fresh-set candidates, tau2 retail exposure, gold access.</td></tr>
+      <tr><td class="mono">literature/novelty_matrix.md (sections 3 to 5), novelty_matrix.csv</td><td class="wide">Narrow claims S1 to S6, competitor ranking and feasibility.</td></tr>
+      <tr><td class="mono">analysis/out/sim_gate.md, sim_footprint.md, sim_promotion.md, sim_mde.md, sim_stderr.md, sim_posterior.md</td><td class="wide">Simulated operating characteristics on the real code.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="src">The competitor roster, the WikiSkill reimplementation and its published Table 1 numbers, the algorithm-improvement list, the raised concurrency, the Suite B judge decision, and E10 run status (SkillOpt and GEPA running since 2026-10-11) come from the coordinator's update on 2026-10-11, not from files in the repository.</p>
+  <p class="src">The prior plan (campaign-scratch/inputs/research_pkg/documents/CapEvolve_Paper_Plan.md) was treated as untrusted and used for structure only. The coordinator's frozen decisions govern where they differ from any source.</p>
+  <footer>CapEvolve paper campaign, design written 2026-10-11. Pending items are marked in amber with a dashed edge and listed together above.</footer>
+</section>
+</main>
+</div>
