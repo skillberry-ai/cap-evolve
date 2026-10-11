@@ -283,7 +283,13 @@ class _Vendor:
 
 
 _GOLD_FILE_RE = re.compile(r"(_answer|_golden|^golden|^answer)", re.I)
-_VIEWS: dict[str, Path] = {}
+# ALLOWLIST of what the agent's mount may hold under spreadsheet/<id>/: indexed input workbooks of every release
+# (`1_<id>_input.xlsx`, `1_<id>_init.xlsx`, tolerating the 912 set's stray space / .xlsm), the bare
+# `initial.xlsx`, and the verified-400's `prompt.txt`. Checked on all three shipped datasets: every non-gold file
+# matches. Anything else is refused by the startup assertion, so a new file type upstream cannot leak by default.
+_INPUT_FILE_RE = re.compile(r"^(\d+_.+?_(input|init)\s*\.xls[xm]?|initial\.xls[xm]?|prompt\.txt)$", re.I)
+_VIEW_MARKER = ".capevolve_agent_view"
+_VIEWS: dict[tuple, Path] = {}
 _VIEW_LOCK = threading.Lock()
 
 
@@ -302,20 +308,45 @@ def _source_dir() -> Path:
 
 
 def _build_agent_view(src: Path, dst: Path) -> Path:
-    """Copy dataset.json and every NON-gold file of the (selected) tasks into dst, plus an empty outputs/."""
+    """Copy dataset.json and the ALLOWLISTED input files of the (selected) tasks into dst, plus an empty outputs/.
+
+    Refuses symlinks in the source task dirs (copy2 would follow one and copy gold content under an input name).
+    An existing dst is replaced only if it is empty or carries our marker file; anything else is somebody's
+    data and is never deleted.
+    """
     if dst.exists():
+        if not dst.is_dir() or dst.is_symlink():
+            raise RuntimeError(f"agent view dir {dst} exists and is not a plain directory; refusing to replace it")
+        if any(dst.iterdir()) and not (dst / _VIEW_MARKER).exists():
+            raise RuntimeError(
+                f"agent view dir {dst} is not empty and was not created by this adapter (no {_VIEW_MARKER} "
+                "marker); refusing to delete it. Point SPREADSHEETBENCH_AGENT_VIEW_DIR at an empty or new dir."
+            )
         shutil.rmtree(dst)
     dst.mkdir(parents=True)
+    (dst / _VIEW_MARKER).write_text("created by templates/adapters/spreadsheetbench/adapter.py\n")
     shutil.copy2(src / "dataset.json", dst / "dataset.json")
     wanted = set(TASK_IDS)
+    skipped = 0
     for sd in sorted((src / "spreadsheet").iterdir()):
+        if sd.is_symlink():
+            raise RuntimeError(f"{sd} is a symlink; refusing to build an agent view from a dataset with symlinks")
         if not sd.is_dir() or (wanted and sd.name not in wanted):
             continue
         dd = dst / "spreadsheet" / sd.name
         dd.mkdir(parents=True)
         for f in sorted(sd.iterdir()):
-            if f.is_file() and not _GOLD_FILE_RE.search(f.name):
+            if f.is_symlink():
+                raise RuntimeError(f"{f} is a symlink; refusing to copy it into the agent view (it could point at gold)")
+            if not f.is_file():
+                continue
+            if _INPUT_FILE_RE.match(f.name) and not _GOLD_FILE_RE.search(f.name):
                 shutil.copy2(f, dd / f.name)
+            else:
+                skipped += 1
+    if skipped:
+        print(f"spreadsheetbench: agent view withheld {skipped} non-input file(s) (gold and unrecognised names)",
+              file=sys.stderr)
     (dst / "outputs").mkdir()
     # the executor container runs as another uid: it needs traverse/read on the tree and write on outputs/
     for dp, _dn, _fn in os.walk(dst):
@@ -325,12 +356,16 @@ def _build_agent_view(src: Path, dst: Path) -> Path:
 
 
 def _agent_view(src: Path) -> Path:
-    key = str(src.resolve())
+    # keyed by the task selection too: the copy only holds the selected tasks
+    key = (str(src.resolve()), tuple(sorted(TASK_IDS)))
     with _VIEW_LOCK:
         if key not in _VIEWS:
             if AGENT_VIEW_DIR:
                 dst = Path(AGENT_VIEW_DIR).expanduser()
             else:
+                # NB the default view is a temp dir deleted at interpreter exit, and the per-rollout outputs live in
+                # it, so they are gone afterwards. run_suite.sh pins SPREADSHEETBENCH_AGENT_VIEW_DIR (and moves the
+                # outputs into the kept-run slot) for exactly that reason; set it yourself if you need the workbooks.
                 dst = Path(tempfile.mkdtemp(prefix="capevolve_sb_view_")) / "view"
                 import atexit
                 atexit.register(shutil.rmtree, dst.parent, True)
@@ -348,32 +383,48 @@ def _gold_dir() -> Path:
 _MOUNT_CHECKED: set[str] = set()
 
 
-def _gold_files_under(mount: Path) -> list[Path]:
+def _offending_files_under(mount: Path) -> tuple[list[Path], list[Path], list[Path]]:
+    """(gold-named files, files whose name is not on the input allowlist, symlinks) under mount/spreadsheet."""
+    gold: list[Path] = []
+    unexpected: list[Path] = []
+    links: list[Path] = []
     root = mount / "spreadsheet"
     if not root.is_dir():
-        return []
-    return [p for p in root.rglob("*") if p.is_file() and _GOLD_FILE_RE.search(p.name)]
+        return gold, unexpected, links
+    for p in root.rglob("*"):
+        if p.is_symlink():
+            links.append(p)
+        elif p.is_file():
+            if _GOLD_FILE_RE.search(p.name):
+                gold.append(p)
+            elif not _INPUT_FILE_RE.match(p.name):
+                unexpected.append(p)
+    return gold, unexpected, links
 
 
 def _check_mount_is_gold_free(mount: Path) -> None:
-    """Startup assertion: nothing gold-named may exist under the directory the agent's sandbox will mount.
+    """Startup assertion on the directory the agent's sandbox will mount (allowlist, not denylist).
 
-    Covers every way of getting it wrong: the historical shared mount, GOLD_DIR set while DATA_DIR still holds
-    gold, a stale hand-built view. ALLOW_GOLD_IN_MOUNT=1 downgrades it to a warning.
+    Refuses: gold-named files (answer/golden), ANY file whose name is not a recognised input name, and symlinks
+    (which could point at gold). Covers the historical shared mount, GOLD_DIR set while DATA_DIR still holds
+    gold, and a stale or hand-built view. ALLOW_GOLD_IN_MOUNT=1 downgrades it to a warning.
     """
     key = str(mount.resolve())
     if key in _MOUNT_CHECKED:
         return
-    found = _gold_files_under(mount)
-    if found and not ALLOW_GOLD_IN_MOUNT:
+    gold, unexpected, links = _offending_files_under(mount)
+    bad = gold + unexpected + links
+    if bad and not ALLOW_GOLD_IN_MOUNT:
         raise RuntimeError(
-            f"{len(found)} gold-named file(s) (answer/golden) exist under the directory the agent sandbox mounts "
-            f"({mount}), e.g. {found[0].name}. Agent-generated code could read them (#782). Use "
-            "SPREADSHEETBENCH_AGENT_VIEW=1 (default) or point SPREADSHEETBENCH_DATA_DIR at a gold-free view, or set "
-            "SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1 to accept the leak knowingly."
+            f"the directory the agent sandbox mounts ({mount}) holds {len(gold)} gold-named file(s), "
+            f"{len(unexpected)} file(s) with an unrecognised name and {len(links)} symlink(s), e.g. {bad[0].name}. "
+            "Agent-generated code could read them (#782). Use SPREADSHEETBENCH_AGENT_VIEW=1 (default) or point "
+            "SPREADSHEETBENCH_DATA_DIR at a clean view, or set SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1 to accept "
+            "the leak knowingly."
         )
-    if found:
-        print(f"spreadsheetbench: WARNING: {len(found)} gold file(s) are visible to the agent's sandbox under {mount} "
+    if bad:
+        print(f"spreadsheetbench: WARNING: {len(gold)} gold file(s), {len(unexpected)} unrecognised file(s) and "
+              f"{len(links)} symlink(s) are visible to the agent's sandbox under {mount} "
               "(SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1). Results are NOT comparable to a gold-free run.",
               file=sys.stderr)
     _MOUNT_CHECKED.add(key)

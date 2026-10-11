@@ -270,11 +270,13 @@ def _runtime_or_skip():
         pytest.skip(f"no docker-compatible runtime with the executor image: {type(e).__name__}")
 
 
+@pytest.mark.parametrize("layout,needle", [("v400", "golden"), ("x912", "answer")])
 @pytest.mark.parametrize("agent_view,expect_gold", [(False, True), (True, False)])
-def test_sandbox_listing_shows_gold_only_without_the_agent_view(mod, monkeypatch, tmp_path, agent_view, expect_gold):
+def test_sandbox_listing_shows_gold_only_without_the_agent_view(mod, monkeypatch, tmp_path, agent_view, expect_gold,
+                                                                layout, needle):
     _runtime_or_skip()
     src = tmp_path / "src"
-    _dataset(src, "v400")
+    _dataset(src, layout)
     for p in [src, *src.rglob("*")]:
         os.chmod(p, 0o755 if p.is_dir() else 0o644)
     monkeypatch.setattr(mod, "DATA_DIR", str(src))
@@ -292,5 +294,81 @@ def test_sandbox_listing_shows_gold_only_without_the_agent_view(mod, monkeypatch
         sb.release(conv)
         sb.shutdown()
     listing = out[out.index("LS"):]
-    assert ("golden" in listing) is expect_gold, listing
-    assert "1_t1_init.xlsx" in listing           # the input is always there
+    assert (needle in listing) is expect_gold, listing
+    assert ("1_t1_init.xlsx" if layout == "v400" else "1_t1_input.xlsx") in listing   # the input is always there
+
+
+# ---------------------------------------------------------------------------------------------
+# review hardening: allowlist, symlinks, rmtree guard, cache key
+# ---------------------------------------------------------------------------------------------
+
+def test_the_input_allowlist_accepts_every_shipped_input_name_and_no_gold(mod):
+    ok = ["1_13-1_init.xlsx", "2_59196_input.xlsx", "1_x_input .xlsx", "3_9_input.xlsm", "initial.xlsx", "prompt.txt"]
+    bad = ["1_13-1_golden.xlsx", "1_9_answer.xlsx", "golden.xlsx", "answer.xlsx", "1_9_ANSWER.XLSX", "notes.txt",
+           "1_9_solution.xlsx", "1_9_output.xlsx", ".hidden"]
+    assert all(mod._INPUT_FILE_RE.match(n) and not mod._GOLD_FILE_RE.search(n) for n in ok)
+    assert not any(mod._INPUT_FILE_RE.match(n) and not mod._GOLD_FILE_RE.search(n) for n in bad)
+
+
+def test_startup_assertion_is_an_allowlist_not_a_denylist(mod, monkeypatch, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "v400")
+    view = mod._build_agent_view(src, tmp_path / "view")
+    (view / "spreadsheet" / "t1" / "1_t1_solution.xlsx").write_bytes(b"x")   # not gold-NAMED, not an input name
+    monkeypatch.setattr(mod, "DATA_DIR", str(view))
+    monkeypatch.setattr(mod, "GOLD_DIR", str(src))
+    with pytest.raises(RuntimeError, match="unrecognised name"):
+        mod._data_dir()
+
+
+def test_symlinks_are_refused_when_building_and_when_checking(mod, monkeypatch, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "v400")
+    d = src / "spreadsheet" / "t1"
+    (d / "1_t1_init.xlsx").unlink()
+    (d / "1_t1_init.xlsx").symlink_to(d / "1_t1_golden.xlsx")           # input-named link to gold
+    with pytest.raises(RuntimeError, match="symlink"):
+        mod._build_agent_view(src, tmp_path / "view")
+    # and a view someone assembled by hand with a link in it is caught at startup
+    clean = tmp_path / "clean"
+    _dataset(clean, "v400")
+    (clean / "spreadsheet" / "t1" / "1_t1_init.xlsx").unlink()
+    (clean / "spreadsheet" / "t1" / "1_t1_init.xlsx").symlink_to(tmp_path / "elsewhere.xlsx")
+    for f in (clean / "spreadsheet").rglob("*golden*"):
+        f.unlink()
+    monkeypatch.setattr(mod, "DATA_DIR", str(clean))
+    monkeypatch.setattr(mod, "GOLD_DIR", str(src))
+    with pytest.raises(RuntimeError, match="symlink"):
+        mod._data_dir()
+
+
+def test_view_dir_is_only_replaced_when_empty_or_ours(mod, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "v400")
+    precious = tmp_path / "precious"
+    precious.mkdir()
+    (precious / "keep.txt").write_text("mine")
+    with pytest.raises(RuntimeError, match="refusing to delete"):
+        mod._build_agent_view(src, precious)
+    assert (precious / "keep.txt").read_text() == "mine"
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    mod._build_agent_view(src, empty)                                    # empty: fine
+    mod._build_agent_view(src, empty)                                    # ours (marker): rebuilt
+    assert (empty / mod._VIEW_MARKER).exists()
+    link = tmp_path / "link"
+    link.symlink_to(precious)
+    with pytest.raises(RuntimeError, match="not a plain directory"):
+        mod._build_agent_view(src, link)
+
+
+def test_changing_task_ids_does_not_reuse_a_stale_view(mod, monkeypatch, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "v400")
+    monkeypatch.setattr(mod, "DATA_DIR", str(src))
+    monkeypatch.setattr(mod, "TASK_IDS", ["t1"])
+    v1 = mod._data_dir()
+    assert {p.name for p in (v1 / "spreadsheet").iterdir()} == {"t1"}
+    monkeypatch.setattr(mod, "TASK_IDS", ["t1", "t2"])
+    v2 = mod._data_dir()
+    assert v2 != v1 and {p.name for p in (v2 / "spreadsheet").iterdir()} == {"t1", "t2"}
