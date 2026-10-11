@@ -74,13 +74,13 @@ def table(suites, data, label, caption):
 
 def main():
     data = json.loads((PAPER / "results_data.json").read_text())
-    cap_common = (r"Score is the mean final-set reward in percent. $\Delta$ is the paired difference to the seed in points with a "
-                  r"family-cluster-robust 95\% interval, and $p_{\mathrm{Holm}}$ is Holm-adjusted within the suite. "
-                  r"Rollouts are target rollouts spent at the matched checkpoint $B^\ast$. Token columns count optimizer "
-                  r"tokens in millions (uncached input, cache read, cache write). USD uses Sonnet list prices as a proxy. "
-                  r"Missing is missing cells over scheduled cells, bounded in the analysis rather than imputed.")
+    cap_common = (r"Score is the final-set reward in percent. $\Delta$ is the paired difference to the seed in points, "
+                  r"with a family-cluster-robust 95\% interval and a Holm-adjusted $p$. Rollouts are target rollouts at $B^\ast$. "
+                  r"Token columns are optimizer tokens in millions, and USD uses Sonnet list prices. "
+                  r"Missing counts missing over scheduled cells.")
+    cap_bc = r"Same columns as Table~\ref{tab:main_a}."
     (PAPER / "tables" / "main_A.tex").write_text(table(["A"], data, "tab:main_a", "Suite A final-set results. " + cap_common))
-    (PAPER / "tables" / "main_BC.tex").write_text(table(["B", "C"], data, "tab:main_bc", r"Suites B and C final-set results. " + cap_common))
+    (PAPER / "tables" / "main_BC.tex").write_text(table(["B", "C"], data, "tab:main_bc", r"Suites B and C final-set results. " + cap_bc))
     print("tables written, source =", data["source"])
 
 

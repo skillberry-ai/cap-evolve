@@ -7,7 +7,7 @@ This section compares every arm with the seed on three suites, prices the compar
 Each difference is paired with the seed on the same tasks.
 Intervals are family-cluster-robust, and p-values are Holm-adjusted within the suite (Section~\ref{sec:setup:stats}).
 All arms are compared at the matched checkpoint $B^\ast$, the largest budget that every arm reached: \mockBstarA, \mockBstarB and \mockBstarC target rollouts on Suites A, B and C.
-Red numbers with a dagger are placeholders that the final evaluation replaces, and orange numbers are real but still change while searches run.
+Red numbers with a dagger are placeholders, and orange numbers are real but still change.
 
 \subsection{Suite A, SpreadsheetBench}
 \label{sec:results:a}
@@ -42,13 +42,12 @@ Even at 40 tasks the simulated minimum detectable effect of a single comparison 
 \subsection{Cost}
 \label{sec:results:cost}
 
-Arms differ in what they spend, and the tables report optimizer tokens in three classes because cache reads and cache writes are priced differently from uncached input.
 Figure~\ref{fig:pareto} plots delta against cost and Figure~\ref{fig:anytime} plots score against rollouts, both in Appendix~\ref{app:results}.
 \needs{Say which arms lie on the cost-quality frontier on each suite, and whether the frontier changes between USD and tokens as the cost axis.}
 Across the whole campaign the gateway has metered \realCostCalls{} calls and \realCostLedgerMtok{} million ledger tokens, and \realCostWasteShare{}\% of those tokens went to smoke tests, restarts and superseded runs.
 These count toward campaign cost but toward no arm's cost in the tables.
 The metered optimizer spend at Sonnet list prices is at least \$\realCostUsdLower{}, a lower bound because RITS and GPT-5.5 calls have no price available to us.
-Table~\ref{tab:cost_so_far} gives the per-arm breakdown and Figure~\ref{fig:roles} the split by role.
+Table~\ref{tab:cost_so_far} and Figure~\ref{fig:roles} in Appendix~\ref{app:results} give the per-arm and per-role breakdown.
 
 \subsection{Rule P cuts false promotion and costs power}
 \label{sec:results:p}
@@ -56,8 +55,7 @@ Table~\ref{tab:cost_so_far} gives the per-arm breakdown and Figure~\ref{fig:role
 In simulation, rule P (Section~\ref{sec:method:P}) promotes a null candidate far less often than the one-stage gate, and it promotes a real improvement less often too (Figure~\ref{fig:rulep}).
 With the campaign setting (three confirmation trials, $z=1.282$), a search of six all-null candidates produces at least one false promotion with probability 0.050, against 0.434 for the one-stage gate with $k=1$ and 0.199 with $k=1.645$.
 For a single candidate with a true effect of ten points, rule P promotes it with probability 0.41 and the one-stage $k=1$ gate with probability 0.54.
-The simulations run the real gate code (\texttt{analysis/out/sim\_budget.md}).
-They show the trade, not an improvement in final scores.
+The simulations run the real gate code (\texttt{analysis/out/sim\_budget.md}) and show a trade, not an improvement in final scores.
 \needs{Add the E12 ablation (one-stage gate against rule P) once its final evaluation exists, or state that the campaign has no such ablation.}
 
 \subsection{Most of the historical gain was scorer compliance}
@@ -68,10 +66,9 @@ The historical scorer reads the workbook as saved, so a model that writes a valu
 Both scorers were applied to the same output files, so each comparison is fair inside its scorer, but most of the as-saved gain is compliance with a scoring convention and not task skill.
 
 The arithmetic was mostly right.
-Of \realAuditClaims{} recomputed claims, \realAuditReproduced{} reproduce to the decimal, \realAuditContradicted{} are contradicted in framing and \realAuditNoArtifact{} have no artifact that produces them (Table~\ref{tab:audit}).
+Of \realAuditClaims{} recomputed claims, \realAuditReproduced{} reproduce to the decimal, \realAuditContradicted{} are contradicted in framing and \realAuditNoArtifact{} have no artifact that produces them (Table~\ref{tab:audit} in Appendix~\ref{app:results}).
 One contradiction matters for the comparison with simpler methods: a hill-climb control from the same empty seed reached 85.6 on the same test tasks where the headline agent-optimize run reached 76.4, and the earlier write-up omitted it.
-Earlier optimizer runs had also seen the test sets, so no clean split remained, which is why Suites A and B use fresh final sets.
-No historical number appears in the result tables.
+Earlier optimizer runs had also seen the test sets, which is why Suites A and B use fresh final sets.
 
 \begin{figure*}[t]
 \centering
@@ -80,25 +77,10 @@ No historical number appears in the result tables.
 \label{fig:audit}
 \end{figure*}
 
-\input{tables/audit}
-
 \subsection{Infrastructure incidents shaped what the data supports}
 \label{sec:results:ops}
 
-Five incidents changed the data, and Appendix~\ref{app:incidents} lists each with its effect.
-Gateway priority was a hidden treatment: a stale low-priority tag kept EvoSkill rollouts queued from 13:05 to 18:40 UTC on the first day, so all its rollouts after 13:05 are invalid and its three seeds restarted from scratch.
-EvoSkill was expected to finish about five and a half hours behind the other Tier 1 arms and so to bind $B^\ast$.
-Gateway 502 errors hit 1 to 2.5\% of Gemma calls until a transparent retry went in at 13:11.
-Before then, the shared adapter scored a failed rollout as zero for competitor arms but dropped it for CapEvolve, so the bias fell on competitors and grew with rollout length.
-The retry is identical for every arm, and we report a sensitivity analysis that treats the earlier failures as missing.
-
-Three more incidents were contained by restarts and policy.
-The first Suite B launch used the wrong judge and no rule P, so we discarded it and relaunched.
-Hung rollouts, up to 114 minutes on ACE and MIPROv2, led to one rule for all arms: a timeout is an infrastructure error with one retry, counted outside the rollout budget, and never reward zero.
-ACE and HarnessLens needed prompt and retry changes recorded as deviations.
-
-One isolation gap remains open and disclosed.
-On Suite B, the CapEvolve optimizer could initially read the task file with gold actions, including the sealed test tasks.
-We relaunched both arms inside a mount-namespace shim, and a scan of every earlier optimizer transcript found no read of the task files.
-The agent-optimize arm still runs the evaluator in its own shell, so its sandbox holds gold actions for its 74 optimization and selection tasks, never for the sealed test set.
-Selection-time comparisons for that arm on Suite B are flagged for that reason.
+Gateway priority acted as a hidden treatment: a stale low-priority tag kept EvoSkill rollouts queued from 13:05 to 18:40 UTC on the first day, so all its rollouts after 13:05 are invalid and its three seeds restarted from scratch.
+Gateway 502 errors hit 1 to 2.5\% of Gemma calls until a transparent retry went in at 13:11, and before then a failed rollout scored zero for competitor arms but was dropped for CapEvolve.
+On Suite B, the agent-optimize arm still runs the evaluator in its own shell, so it can read gold actions for its 74 optimization and selection tasks, never for the sealed test set.
+Appendix~\ref{app:incidents} lists every incident, including the Suite B relaunch, the hang policy and the ACE and HarnessLens changes, with their effect on the data.

@@ -157,16 +157,23 @@ def cost():
             opt[k]["cw"] += f(r["cache_write_5m"]) + f(r["cache_write_1h"])
             opt[k]["calls"] += f(r["calls"])
     # Optimizer usage that bypassed the gateway, recovered from CLI transcripts by the metering audit.
-    # Expected columns: suite,arm,seed,in_uncached,cache_read,cache_write,output,usd_total (one row per seed; blanks = 0).
+    # Columns: suite (E10/E10B/E10C), arm, seed, bypassed_input, bypassed_output, bypassed_cache_read,
+    # bypassed_cache_creation, bypassed_usd. Added on top of the gateway-metered optimizer usage.
+    SUITE_MAP = {"E10": "A", "E10B": "B", "E10C": "C"}
+    ARM_MAP = {"hill-climb": "hc", "agent-optimize": "ao"}
     rec = collections.defaultdict(lambda: collections.defaultdict(float))
     bp = OUTM / "bypassed_usage.csv"
     if bp.exists():
         for r in read_csv(bp):
-            k = (r["suite"], r["arm"])
-            for fld in ("in_uncached", "cache_read", "output", "usd_total"):
-                rec[k][fld] += f(r.get(fld))
-            rec[k]["cw"] += f(r.get("cache_write"))
-            rec[k]["calls"] += 1
+            k = (SUITE_MAP.get(r["suite"], r["suite"]), ARM_MAP.get(r["arm"], r["arm"]))
+            rec[k]["in_uncached"] += f(r.get("bypassed_input"))
+            rec[k]["output"] += f(r.get("bypassed_output"))
+            rec[k]["cache_read"] += f(r.get("bypassed_cache_read"))
+            rec[k]["cw"] += f(r.get("bypassed_cache_creation"))
+            rec[k]["usd_total"] += f(r.get("bypassed_usd"))
+    for k in list(rec):
+        if not any(rec[k][x] for x in ("in_uncached", "output", "cache_read", "cw")):
+            del rec[k]  # the audit found nothing outside the gateway for this arm
     g = collections.defaultdict(lambda: collections.defaultdict(float))
     for r in arm_rows:
         k = (r["suite"], r["arm"])
@@ -184,8 +191,7 @@ def cost():
     L = [r"\begin{table*}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}",
          r"\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still "
          r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. "
-         r"``n/m'' means the optimizer session is not metered by the gateway (Claude Code runs started with their own client). "
-         r"A dagger marks usage recovered from CLI transcripts by the metering audit (\texttt{bypassed\_usage.csv}) instead of the gateway. "
+         r"``n/m'' means the gateway ledger holds no optimizer-role call for the arm so far. The metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway, so these cells are not hidden spend. A dagger would mark usage recovered from CLI transcripts. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
          r"evaluated model. Wall is hours since launch, longest seed. Rows count seeds that exist in the ledger.}",
          r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrr}", r"\toprule",
@@ -201,8 +207,10 @@ def cost():
             v, o = g[(su, a)], opt.get((su, a))
             nm = o is None or o["calls"] == 0
             recovered = False
-            if nm and (su, a) in rec:
-                o, nm, recovered = rec[(su, a)], False, True
+            if (su, a) in rec:
+                base = dict(o) if o else collections.defaultdict(float)
+                o = collections.defaultdict(float, {x: base.get(x, 0.0) + rec[(su, a)][x] for x in ("in_uncached", "cache_read", "cw", "usd_total")})
+                nm, recovered = False, True
             m = lambda x: f"{x / 1e6:.2f}"
             cells = [su, nice[a] + (r"$^\dagger$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
                      "n/m" if nm else m(o["in_uncached"]), "n/m" if nm else m(o["cache_read"]), "n/m" if nm else m(o["cw"]),

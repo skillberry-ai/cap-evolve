@@ -2,7 +2,7 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.5pt}
-\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. ``n/m'' means the optimizer session is not metered by the gateway (Claude Code runs started with their own client). A dagger marks usage recovered from CLI transcripts by the metering audit (\texttt{bypassed\_usage.csv}) instead of the gateway. USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the evaluated model. Wall is hours since launch, longest seed. Rows count seeds that exist in the ledger.}
+\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. ``n/m'' means the gateway ledger holds no optimizer-role call for the arm so far. The metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway, so these cells are not hidden spend. A dagger would mark usage recovered from CLI transcripts. USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the evaluated model. Wall is hours since launch, longest seed. Rows count seeds that exist in the ledger.}
 \label{tab:cost_so_far}
 \begin{tabular}{llrrrrrrrrr}
 \toprule
