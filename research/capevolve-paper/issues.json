@@ -34,5 +34,19 @@
   "D10": 764,
   "D11": 765,
   "D14": 766
+ },
+ "provenance": {
+  "01-spreadsheetbench-scorer-conflation": 767,
+  "02-spreadsheetbench-split-provenance": 768,
+  "03-spreadsheetbench-test-exposure": 769,
+  "04-agent-mode-vs-1iter-hillclimb-unreported-85.6": 770,
+  "05-spreadsheetbench-aggregation-and-ci-method": 771,
+  "06-gpt55-run-36711181652-wrong-exclusion-reason": 772,
+  "07-small-optimizer-ablation-labelling-and-replicates": 773,
+  "08-rh-swe-artifact-and-chart-conflict": 774,
+  "09-skillsbench-selection-and-three-task-holdout": 775,
+  "10-tau2-heldout-claims-without-artifacts": 776,
+  "11-glm-swebench-verified-unsupported-and-leakage": 777,
+  "12-agent-optimize-tau2-c_win-and-uncommitted-blocks": 778
  }
 }
