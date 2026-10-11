@@ -222,3 +222,10 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - A's END is dropped, with disclosure, if it would pass 2026-10-14 05:00 UTC.
   - Capacity estimate: A about 11-18 h is the critical path; B+C about 9 h on gpt-oss at the pinned n=3.
 - 2026-10-11T22:20 — Trace2Skill scan (bl-skills): the LLM-only analysts were used, and the bash-tool ReAct analyst was never run. No file access outside the workspace and no access to final_set, test, gold or credentials. This corrects the metering audit's assumption of a bash-tool exposure for Trace2Skill. Its env still inherited the credential, but no tool existed to read it.
+- 2026-10-11T22:22 — Egress finding: uid capopt (the CapEvolve Suite A shim, EvoSkill, and probably the B/C shims) had open internet until now (github.com and huggingface.co returned 200). The campaign repo is public, and SpreadsheetBench and tau2 gold are public on GitHub.
+  - Fixed host-wide: iptables/ip6tables owner match for uid capopt, accept only 127.0.0.1:4111, reject everything else. Being made persistent.
+  - Still open: Meta-Harness (podman --network host, non-capopt user) and the HarnessLens sandbox (uid dev). bl-harness is fixing both.
+  - Scans in progress for web access in every agentic-proposer transcript (MH, HL, B/C hc/ao/ctl, E12C). EvoSkill and Suite A CapEvolve had made no proposer calls yet, so they have no exposure.
+  - This goes into the paper's limitations whatever the scans find.
+  - Trace2Skill, GEPA, SkillOpt, ACE, MIPROv2 and WikiSkill proposers have no tools, so no web access is possible.
+- 2026-10-11T22:22 — EvoSkill isolation (baseline-eng): empty tmpfs /home and /tmp. The extended negtest passes (final_set, other runs, archives, gold, settings all denied). Transcripts are now persisted and scanned every 15 min, with 0 sessions so far.
