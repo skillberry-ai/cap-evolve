@@ -8,6 +8,21 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- **Opt-in measurement switches for the acceptance gate** (#755, #758, #759): spec keys
+  `gate_footprint`, `gate_min_coverage`, `gate_coverage: joint`, `errored_trial_policy: fail|drop`,
+  `confirm_fresh_only`, plus step-event fields `delta_full`, `delta_masked`, `se_full`,
+  `se_masked`, `joint_coverage`. Absent keys change nothing. `errored_trial_policy: fail` counts
+  trials tagged `Rollout.metadata.error_kind = "candidate"` as reward 0 (the SpreadsheetBench adapter
+  tags its unusable-template error as `candidate` and provider/sandbox failures as `infra`); one
+  rule applies to baseline, candidates, resume, `gate_check` and finalize, and a run logs how many
+  trials were reclassified (and warns when it is 0).
+### Changed
+- **`cap-evolve run` now forwards `gate_no_regression` and `gate_max_broke`** from the spec to
+  hill-climb, skillopt and gepa (`--no-regression`, `--gate-max-broke`). Before, those flags existed
+  on the algorithm scripts but the CLI never passed them, so a spec could not enable them. Both are
+  off unless the spec sets them, so existing specs behave as before; a spec that already carried
+  either key (previously ignored) will now take effect.
 ### Fixed
 - **Leaked dashboard servers exhausted the port range, so a run got no live dashboard at
   all** (#628). Every run spawned a new server on a new port and none ever exited, so 25

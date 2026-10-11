@@ -286,6 +286,20 @@ def _aggregate_metrics(per_trial_metrics: list, reduced_reward: float) -> list:
 #: may equally be infrastructure. Absent/anything else = exogenous = missing data.
 CANDIDATE_ERROR_KIND = "candidate"
 ERRORED_POLICIES = ("drop", "fail")
+ERRORED_POLICY_ENV = "CAPEVOLVE_ERRORED_TRIAL_POLICY"
+
+
+def resolve_errored_policy(explicit=None) -> str:
+    """explicit argument > env ``CAPEVOLVE_ERRORED_TRIAL_POLICY`` > ``drop``.
+
+    The env var is how ONE rule reaches every evaluation of a run: ``cap-evolve run`` and the
+    algorithm scripts export it, so baseline/seed, resume, candidates, ``gate_check`` and the
+    finalize bookend all read trials the same way (both sides of every pair).
+    """
+    pol = explicit or os.environ.get(ERRORED_POLICY_ENV) or "drop"
+    if pol not in ERRORED_POLICIES:
+        raise ValueError(f"errored_trial_policy must be one of {ERRORED_POLICIES}, got {pol!r}")
+    return pol
 
 
 def candidate_attributed_error(metadata) -> bool:
@@ -306,7 +320,7 @@ def evaluate_candidate(
     workers: int | None = None,
     ids: list | None = None,
     trial_offset: int = 0,
-    errored_policy: str = "drop",
+    errored_policy: str | None = None,
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
 
@@ -350,6 +364,8 @@ def evaluate_candidate(
     existing tag add rollouts with fresh seeds instead of replacing ``t0..`` or repeating them.
     """
     workers = _resolve_workers(workers)
+    errored_policy = resolve_errored_policy(errored_policy)
+    n_reclassified = 0      # candidate-attributed errors counted as 0.0 (policy=fail)
     if split == "test":
         run_dir.reserve_test()  # raises TestSealError on reuse; does NOT burn the seal yet
 
@@ -444,6 +460,7 @@ def evaluate_candidate(
         swebench) instead of one ``adapter.score()`` call per task. Any task id the
         batch omits falls back to a single ``adapter.score()`` call, so a partial
         implementation can never silently drop a score."""
+        nonlocal n_reclassified
         filled = {
             tid: (rollouts_for_k.get(tid) or Rollout(task_id=tid, error="omitted from batch result"))
             for tid in task_by_id
@@ -465,6 +482,7 @@ def evaluate_candidate(
                          and candidate_attributed_error(getattr(rollout, "metadata", None)))
             if cand_fail:
                 errored = False
+                n_reclassified += 1
             if errored:
                 per_task_errored[tid] = True
                 per_task_errored_trials[tid] += 1
@@ -638,6 +656,17 @@ def evaluate_candidate(
     result = aggregate_scores(split, scores, ks=ks)
     result.cost_usd, result.tokens, result.seconds = run_cost, run_tokens, elapsed
     result.cost_source = cost_source_counts
+    if errored_policy == "fail":
+        n_dropped = sum(per_task_errored_trials.values())
+        run_dir.log_event("errored_trial_policy", split=split, tag=tag, policy="fail",
+                          reclassified_trials=n_reclassified, still_missing_trials=n_dropped)
+        if n_reclassified == 0:
+            run_dir.log_event(
+                "gate_warning", mode="errored_trial_policy", context=f"split={split} tag={tag}",
+                reason=("errored_trial_policy=fail reclassified 0 trials as candidate failures "
+                        f"({n_dropped} errored trials stay missing). Either nothing errored, or the "
+                        "adapter never sets Rollout.metadata['error_kind']='candidate', in which "
+                        "case this policy is a no-op for this run."))
     run_dir.log_event("evaluate", split=split, tag=tag, reward=result.reward,
                       stderr=result.stderr, cost_usd=run_cost, tokens=run_tokens,
                       seconds=round(elapsed, 2),
@@ -660,7 +689,7 @@ def parse_tags(s) -> list[str]:
 
 
 def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2),
-                               errored_policy: str = "drop", min_trial: int = 0) -> SplitResult:
+                               errored_policy: str | None = None, min_trial: int = 0) -> SplitResult:
     """Reconstruct a candidate's SplitResult from its persisted rollouts.
 
     Used to RESUME a run from the current best candidate (its val score is read
@@ -677,6 +706,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     """
     import json as _json
     from .stats import mean, stderr
+    errored_policy = resolve_errored_policy(errored_policy)
     tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
     vdir = run_dir.rollouts / split
     by_task: dict[str, list[float]] = {}
@@ -1066,10 +1096,10 @@ def pop_paper_switches(gate_kwargs: dict) -> dict:
     """Remove the measurement switches from ``gate_kwargs`` (in place) and return them validated."""
     fp = gate_kwargs.pop("gate_footprint", None)
     cov = gate_kwargs.pop("gate_coverage", None) or "candidate"
-    pol = gate_kwargs.pop("errored_trial_policy", None) or "drop"
+    pol = gate_kwargs.pop("errored_trial_policy", None)     # None = env / default (resolve_errored_policy)
     if cov not in ("candidate", "joint"):
         raise ValueError(f"gate_coverage must be 'candidate' or 'joint', got {cov!r}")
-    if pol not in ERRORED_POLICIES:
+    if pol is not None and pol not in ERRORED_POLICIES:
         raise ValueError(f"errored_trial_policy must be one of {ERRORED_POLICIES}, got {pol!r}")
     return {"footprint": None if fp is None else bool(fp), "coverage": cov,
             "errored_trial_policy": pol}
@@ -1091,7 +1121,10 @@ def add_paper_switch_arguments(p) -> None:
 
 
 def paper_switch_kwargs(args) -> dict:
-    """``gate_kwargs`` entries for the flags above — only those the user set."""
+    """``gate_kwargs`` entries for the flags above — only those the user set.
+
+    Side effect: ``--errored-trial-policy`` is also exported as ``CAPEVOLVE_ERRORED_TRIAL_POLICY`` so
+    resume / ``gate_check`` / finalize in this process tree read trials by the same rule."""
     out: dict = {}
     if getattr(args, "gate_footprint", None) is not None:
         out["gate_footprint"] = args.gate_footprint == "on"
@@ -1101,7 +1134,13 @@ def paper_switch_kwargs(args) -> dict:
         out["gate_coverage"] = args.gate_coverage
     if getattr(args, "errored_trial_policy", None) is not None:
         out["errored_trial_policy"] = args.errored_trial_policy
+        os.environ[ERRORED_POLICY_ENV] = args.errored_trial_policy
     return out
+
+
+def planned_val_ids(run_dir) -> list:
+    """The frozen val ids: the denominator of joint coverage (a task neither side attempted counts)."""
+    return list(run_dir.read_splits().ids("val"))
 
 
 def joint_coverage(current_val: SplitResult, cand_val: SplitResult, planned=None) -> float:
@@ -1120,10 +1159,11 @@ def joint_coverage(current_val: SplitResult, cand_val: SplitResult, planned=None
     return len(both & ids) / len(ids)
 
 
-def gate_statistics(current_val: SplitResult, cand_val: SplitResult, fp=None, se_floor: float = 0.0) -> dict:
+def gate_statistics(current_val: SplitResult, cand_val: SplitResult, fp=None, se_floor: float = 0.0,
+                    planned=None) -> dict:
     """``delta_full`` (unmasked) and ``delta_masked`` (what the gate saw), their SEs, joint coverage."""
     from .gate import _paired_mean_se
-    out = {"joint_coverage": round(joint_coverage(current_val, cand_val), 6),
+    out = {"joint_coverage": round(joint_coverage(current_val, cand_val, planned), 6),
            "delta_full": None, "delta_masked": None, "se_full": None, "se_masked": None}
     full = _paired_deltas(current_val, cand_val, footprint=None)
     if full:
@@ -3132,7 +3172,8 @@ def run_step(
     # every other mode, so an existing single-metric config's gate call is unchanged.
     pareto_metrics = (_pareto_metrics_kwargs(current_val, cand_val)
                       if gate_kwargs.get("mode") == "pareto" else {})
-    jcov = joint_coverage(current_val, cand_val)
+    planned = planned_val_ids(run_dir)
+    jcov = joint_coverage(current_val, cand_val, planned)
     decision = gate_mod.decide(
         current_val.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=current_val.stderr,
@@ -3200,7 +3241,8 @@ def run_step(
     # Both statistics, always: the unmasked mean paired delta and the one the gate used, with
     # the SE behind each and the joint (parent ∩ candidate) coverage. See ``gate_statistics``.
     _step_extra.update(gate_statistics(current_val, cand_val, fp,
-                                       se_floor=gate_kwargs.get("paired_se_floor", 0.0)))
+                                       se_floor=gate_kwargs.get("paired_se_floor", 0.0),
+                                       planned=planned))
     if mv["n_shared"]:
         _step_extra.update(broke=mv["broke"], fixed=mv["fixed"],
                            n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]))

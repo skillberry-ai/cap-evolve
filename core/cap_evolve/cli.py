@@ -754,6 +754,11 @@ def _cmd_run(argv):
     # then hands off — see the short-circuit after baseline).
     orchestration_mode = str(spec.get("orchestration_mode", "deterministic")).strip() or "deterministic"
     py = sys.executable
+    if spec.get("errored_trial_policy"):
+        # ONE rule for every evaluation in this run (baseline/seed, candidates, resume, gate_check,
+        # finalize bookends): the phase scripts read it from the environment they inherit.
+        from .harness import ERRORED_POLICY_ENV, resolve_errored_policy
+        os.environ[ERRORED_POLICY_ENV] = resolve_errored_policy(str(spec["errored_trial_policy"]))
 
     def run(cmd):
         proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(workdir))

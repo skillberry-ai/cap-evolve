@@ -524,6 +524,11 @@ def finalize(a, ctx):
     d = digest.cand_dir(run_dir, champ)   # the committed snapshot: the bytes the finalize phase seals
     out = {"champion": champ}
     if a.n_confirm > 0 and champ != "seed":
+        if (a.confirm_fresh_only or ctx.spec.get("confirm_fresh_only")) and not ctx.cfg["cost_gating"]:
+            # Refuse BEFORE the paid top-up: the posterior judge pools the ledger by capability
+            # hash and cannot isolate fresh trials, so the confirmation could not honour the flag.
+            raise Refused("confirm_fresh_only needs the reward_gated judge (cost_gating on); "
+                          "nothing was spent")
         ctx.check_budget(a)
         have = eval_index.counts(run_dir, eval_index.cap_hash(d), "val")
         fresh_only = bool(a.confirm_fresh_only or ctx.spec.get("confirm_fresh_only"))

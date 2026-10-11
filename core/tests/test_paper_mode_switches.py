@@ -282,3 +282,143 @@ def test_act_finalize_exposes_confirm_fresh_only():
     assert "--confirm-fresh-only" in src and "cand_min_trial=fresh_from" in src
     gc = (REPO / "skills" / "algorithms" / "agent-optimize" / "scripts" / "gate_check.py").read_text()
     assert "--candidate-min-trial" in gc
+
+
+# ---- review round: one rule on both sides, planned ids, gepa, spreadsheetbench tag ------------
+
+@pytest.fixture
+def _policy_env(monkeypatch):
+    monkeypatch.delenv("CAPEVOLVE_ERRORED_TRIAL_POLICY", raising=False)
+    return monkeypatch
+
+
+def test_env_policy_reaches_the_baseline_and_resume_reads(tmp_path, _policy_env):
+    """No explicit argument anywhere: the env var alone makes seed and candidate use one rule."""
+    from cap_evolve import harness
+    _policy_env.setenv("CAPEVOLVE_ERRORED_TRIAL_POLICY", "fail")
+    cfg = {"pass": SEED_PASS, "err_candidate": TASKS[:3]}
+    adapter, run_dir, base = _setup(tmp_path, cfg)         # baseline evaluated with NO argument
+    assert base.n_scored == 30                              # the 3 tagged trials count as 0.0
+    assert harness.split_result_from_rollouts(run_dir, "seed", "val").n_scored == 30   # resume path
+    _policy_env.delenv("CAPEVOLVE_ERRORED_TRIAL_POLICY")
+    assert harness.split_result_from_rollouts(run_dir, "seed", "val").n_scored == 27
+
+
+def test_fail_policy_logs_the_reclassified_count_and_warns_when_zero(tmp_path, _policy_env):
+    from cap_evolve import harness
+    adapter, run_dir, _ = _setup(tmp_path, {"pass": SEED_PASS})
+    c = tmp_path / "c"
+    c.mkdir()
+    (c / "cfg.json").write_text(json.dumps({"pass": SEED_PASS, "err_infra": TASKS[:2]}))
+    harness.evaluate_candidate(adapter, c, run_dir=run_dir, split="val", tag="c", errored_policy="fail")
+    evs = [json.loads(l) for l in run_dir.events_path.read_text().splitlines() if l.strip()]
+    ep = [e for e in evs if e.get("kind") == "errored_trial_policy"][-1]
+    assert ep["reclassified_trials"] == 0 and ep["still_missing_trials"] == 2
+    assert any(e.get("kind") == "gate_warning" and e.get("mode") == "errored_trial_policy" for e in evs)
+    (c / "cfg.json").write_text(json.dumps({"pass": SEED_PASS, "err_candidate": TASKS[:2]}))
+    harness.evaluate_candidate(adapter, c, run_dir=run_dir, split="val", tag="c2", errored_policy="fail")
+    evs = [json.loads(l) for l in run_dir.events_path.read_text().splitlines() if l.strip()]
+    assert [e for e in evs if e.get("kind") == "errored_trial_policy"][-1]["reclassified_trials"] == 2
+    assert sum(1 for e in evs if e.get("kind") == "gate_warning" and e.get("mode") == "errored_trial_policy") == 1
+
+
+def test_joint_coverage_counts_unattempted_planned_tasks():
+    from cap_evolve import harness
+    from cap_evolve.loop import SplitResult
+    pt = lambda t: {"task_id": t, "reward": 1.0, "raw": {"valid_trials": 1, "n_trials": 1}}
+    a = SplitResult("val", 1.0, 0.0, per_task=[pt(t) for t in TASKS[:10]], n_tasks=10, n_scored=10)
+    b = SplitResult("val", 1.0, 0.0, per_task=[pt(t) for t in TASKS[:10]], n_tasks=10, n_scored=10)
+    assert harness.joint_coverage(a, b) == 1.0                       # union of attempted: looks perfect
+    assert harness.joint_coverage(a, b, TASKS) == pytest.approx(10 / 30)   # frozen val ids
+
+
+def test_run_step_uses_the_frozen_planned_ids(tmp_path):
+    """Both sides ran only 10 of 30 planned tasks: joint coverage must be 1/3, not 1.0."""
+    cfg = {"pass": SEED_PASS, "err_infra": TASKS[10:]}
+    run_dir, step = _step(tmp_path, cfg, cfg, gate_kwargs={"gate_footprint": False})
+    assert _step_event(run_dir)["joint_coverage"] == pytest.approx(10 / 30, abs=1e-5)
+
+
+def test_gepa_rejects_gate_footprint_true_before_spending():
+    from cap_evolve import gepa
+    with pytest.raises(ValueError, match="gate_footprint"):
+        gepa.gepa_loop(None, run_dir=None, optimizer=None, seed_val=None,
+                       gate_kwargs={"gate_footprint": True})
+
+
+def test_gepa_full_val_gate_logs_the_same_statistics(tmp_path):
+    from cap_evolve import gepa, harness
+    adapter, run_dir, base = _setup(tmp_path, {"pass": SEED_PASS})
+    w = tmp_path / "w"
+    w.mkdir()
+    (w / "cfg.json").write_text(json.dumps({"pass": SEED_PASS + TASKS[:2]}))
+    gepa._full_val_gate(adapter, run_dir=run_dir, workdir=w, parent_result=base, cid="g1", n_trials=1,
+                        gate_kwargs={"gate_coverage": "joint", "errored_trial_policy": "drop"},
+                        no_regression=False, parent_id="seed")
+    ev = _step_event(run_dir)
+    for key in ("delta_full", "delta_masked", "se_full", "se_masked", "joint_coverage"):
+        assert key in ev, key
+    assert ev["delta_full"] == ev["delta_masked"]
+
+
+def test_spreadsheetbench_tags_candidate_vs_infra_errors():
+    src = (REPO / "templates" / "adapters" / "spreadsheetbench" / "adapter.py").read_text()
+    # the candidate's own unusable template is the candidate error ...
+    i = src.index("return Rollout(task_id=task.id, error=tmpl_error")
+    assert '"error_kind": "candidate"' in src[i:i + 200]
+    # ... and every provider / sandbox / container failure is explicitly exogenous
+    assert src.count('"error_kind": "infra"') >= 4
+
+
+# ---- #759 behavioural: agent-optimize finalize --------------------------------------------------
+
+def _fin_env(monkeypatch):
+    sys.path.insert(0, str(REPO / "skills" / "algorithms" / "agent-optimize" / "scripts"))
+    sys.path.insert(0, str(CORE / "tests"))
+    monkeypatch.setenv("CAPEVOLVE_OPTIMIZER_COST", "off")
+    for k in ("COST_GATING", "ACTIVE_EVAL"):
+        monkeypatch.delenv(f"CAPEVOLVE_{k}", raising=False)
+
+
+def test_finalize_confirm_fresh_only_gates_on_fresh_trials_and_records_pooled(tmp_path, capsys, monkeypatch):
+    _fin_env(monkeypatch)
+    import test_digest_and_act_verbs as T
+    rd, project, _, val = T._run(tmp_path)
+    rd.snapshot("seed", rd.candidate_dir("cur"))
+    T._ledger(rd, T._h(rd, "cur"), {v: [1, 0] for v in val})
+    for v in val[:2]:                                   # selection-era trials t0, t1 on disk
+        for k in (0, 1):
+            _write_trial(rd, v, "cur", k, 1.0)
+    sh = T.Sh(**{"gate_check.py": T._gate("accept"), "run.py": (0, json.dumps({"test_reward": 0.7}), "")})
+    rc, out = T._act(monkeypatch, capsys, ["finalize", "--confirm-fresh-only", *T._args(rd, project)], sh)
+    assert rc == 0, out
+    gates = [c for c in sh.calls if any(x.endswith("gate_check.py") for x in c)]
+    assert len(gates) == 2
+    assert gates[0][gates[0].index("--candidate-min-trial") + 1] == "2"     # 1 + max existing k
+    assert "--candidate-min-trial" not in gates[1]                         # pooled, secondary
+    c = out["result"]["confirm"]
+    assert c["fresh_only"] is True and c["fresh_from_trial"] == 2 and "pooled_verdict_vs_seed" in c
+
+
+def test_finalize_confirm_fresh_only_refuses_before_any_spend_when_cost_gating_off(tmp_path, capsys, monkeypatch):
+    _fin_env(monkeypatch)
+    import test_digest_and_act_verbs as T
+    monkeypatch.setenv("CAPEVOLVE_COST_GATING", "0")
+    rd, project, _, val = T._run(tmp_path)
+    rd.snapshot("seed", rd.candidate_dir("cur"))
+    sh = T.Sh()
+    rc, out = T._act(monkeypatch, capsys, ["finalize", "--confirm-fresh-only", *T._args(rd, project)], sh)
+    assert rc == 2 and "nothing was spent" in out["error"]
+    assert not any("--topup-to" in c for c in sh.calls)
+
+
+def test_finalize_default_is_unchanged_without_the_flag(tmp_path, capsys, monkeypatch):
+    _fin_env(monkeypatch)
+    import test_digest_and_act_verbs as T
+    rd, project, _, val = T._run(tmp_path)
+    rd.snapshot("seed", rd.candidate_dir("cur"))
+    T._ledger(rd, T._h(rd, "cur"), {v: [1, 0] for v in val})
+    sh = T.Sh(**{"gate_check.py": T._gate("accept"), "run.py": (0, json.dumps({"test_reward": 0.7}), "")})
+    rc, out = T._act(monkeypatch, capsys, ["finalize", *T._args(rd, project)], sh)
+    assert rc == 0 and out["result"]["confirm"]["fresh_only"] is False
+    assert sum(any(x.endswith("gate_check.py") for x in c) for c in sh.calls) == 1
