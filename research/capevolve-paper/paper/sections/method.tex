@@ -159,13 +159,7 @@ measurement is read back.
 % src: core/cap_evolve/harness.py:1128-1135 (resume_val reads <tag>__conf when rule P is on); core/cap_evolve/harness.py:4618
 Parameter values used in the experiments: $k=1$, $n_{\mathrm{conf}}=3$, $\delta_{\min}=0$,
 $z_{\mathrm{conf}}=1.282$ (the one-sided $90\%$ normal quantile), $\rho=0.95$ (the library defaults are $n_{\mathrm{conf}}=10$,
-$\delta_{\min}=0.02$, $z_{\mathrm{conf}}=2$, $\rho=0.6$). The values were chosen by a budget-exact simulation of a
-600-rollout search, in which an all-null search of $12$ candidates falsely promotes at least one candidate with
-probability \simKoneFalse{} under the one-stage $k=1$ gate and \simPFalse{} under rule P at these values, with power
-\simPPowerFour{}/\simPPowerSix{}/\simPPowerEight{}/\simPPowerTen{} against true edits of $+0.04/+0.06/+0.08/+0.10$; the stricter setting ($z_{\mathrm{conf}}=2$,
-$\delta_{\min}=0.02$) gives \simAFalse{} with power \simAPowerFour{}/\simAPowerSix{}/\simAPowerEight{}/\simAPowerTen{}. Five confirmation trials at $z_{\mathrm{conf}}=1.645$ would give \simDFalse{} with power \simDPowerFour{}/\simDPowerSix{}/\simDPowerEight{}/\simDPowerTen{}, but each confirmation would cost $2\cdot 40\cdot 5=400$ of the 600 rollouts instead of 240, so we did not choose it. The design is therefore deliberately underpowered
-for small edits under a 600-rollout budget: it trades power for a low false-promotion rate, and we report null and small
-effects as undetected rather than as absent.
+$\delta_{\min}=0.02$, $z_{\mathrm{conf}}=2$, $\rho=0.6$). We chose them by a budget-exact simulation of one search per suite, using the difficulty observed on the seed artifact (Appendix~\ref{app:sim}). The error rate is per search, not per edit: in an all-null search of about ten candidates, rule P falsely promotes at least once with probability \simPFalseA{}, \simPFalseB{} and \simPFalseC{} on Suites A, B and C, about one percent per candidate. The one-stage $k=1$ gate does so with probability \simKoneFalseA{}, \simKoneFalseB{} and \simKoneFalseC{}. Rule P promotes a single candidate with a true gain of $+0.08$ with probability \simPPowerEightA{}, \simPPowerEightB{} and \simPPowerEightC{} on Suites A, B and C, against \simKonePowerEightA{}, \simKonePowerEightB{} and \simKonePowerEightC{} for the one-stage gate. Rule P gives up power by design. Appendix~\ref{app:sim} explains why we did not choose five confirmation trials.
 % src (numbers): research/capevolve-paper/analysis/out/sim_budget.md (rows "f: one-stage k=1", "c: P n_conf=3 z=1.282 dmin=0",
 %   "a: P n_conf=3 z=2.0 dmin=.02"; power table), produced by research/capevolve-paper/analysis/scripts/sim_budget.py; these are
 %   simulation outputs under that script's generative assumptions, not measurements on the benchmark.
@@ -233,7 +227,7 @@ final-split task ids, recording run, arm and time, and we report the reuse count
 
 We make no statistical guarantee for the search-time rules; they are heuristics with measured operating characteristics.
 The paired one-SE gate accepts when $\bar\Delta>\SE$; under a normal approximation and a true null this fires with
-probability $\Pr(Z>1)\approx0.16$ per test, and repeated looks compound it (in the budget-exact simulation of Section~\ref{sec:method:P}, an all-null search of $12$ candidates falsely promotes at least once with probability \simKoneFalse{} under the one-stage $k=1$ gate).
+probability $\Pr(Z>1)\approx0.16$ per test, and repeated looks compound it (in the budget-exact simulation of Section~\ref{sec:method:P}, an all-null search of about ten candidates falsely promotes at least once with probability \simKoneFalseB{} to \simKoneFalseA{} under the one-stage $k=1$ gate, depending on the suite).
 % src: core/cap_evolve/gate.py:451-452; the 0.16 is the standard normal tail Pr(Z>1)=0.1587. Simulated rates:
 %   research/capevolve-paper/analysis/out/sim_promotion.md, sim_gate.md
 The Beta-posterior rule is a Bayesian decision rule under a modelling assumption; we make no frequentist claim for it,

@@ -1,16 +1,16 @@
 \section{Gate Simulation and Statistical Power}
 \label{app:sim}
 
-Rule P was chosen before any main \capevolve{} seed from a budget-exact simulation on the real promotion and gate code (val-40, one screening trial per task, 12 candidates per search, 22{,}400 searches per cell). The pre-declared criterion was to maximise the expected true new-task gain of the final champion subject to a probability of at least one false promotion in an all-null search of at most 0.15. Table~\ref{tab:sim} shows the options that were considered. Rule P at $z=1.282$ meets the constraint with 0.055. It is underpowered by design: a single diffuse edit of true size $+0.08$ is promoted 27\% of the time. The one-stage gate has higher power and a false-promotion probability of 0.565.
+We chose rule P before any main \capevolve{} seed, from a budget-exact simulation on the real promotion and gate code. We then re-ran it at each suite's observed difficulty: the seed artifact's mean reward and trial-level variance on the search split (Suite A: 40 validation tasks, 600 rollouts; Suite B: 49 optimization tasks, 550 rollouts; Suite C: 20 tasks), one screening trial per task, about ten candidates per search and 22{,}400 searches per cell. The pre-declared criterion was to maximise the expected true new-task gain of the final artifact subject to at most 0.15 probability of a false promotion in an all-null search. A search screens 6.7 to 9.4 candidates on average. Table~\ref{tab:sim} gives rule P and the one-stage gate. The false-promotion probability is per search, about one percent per candidate. The gain column is the expected true new-task gain of the final artifact when 60\% of proposed edits are null. The one-stage gate has the larger expected gain and the higher power, and it falsely promotes in about half of all-null searches; rule P gives up power to avoid that. Five confirmation trials at $z_{\mathrm{conf}}=1.645$ would cost $2\cdot 40\cdot 5=400$ of the 600 rollouts per confirmation on Suite A instead of 240, so fewer candidates are screened and the expected gain halves; on Suite B the 490 rollouts exceed the 452 left after the baseline and one screen, so that setting could never promote.
 
 \begin{table}[h]
-\caption{Promotion options, 12 candidates per search. False prom.\ is the probability of at least one false promotion in an all-null search; the remaining columns give the probability of promoting a single candidate with the stated true gain. One-stage rows use the paired gate with threshold $k$ standard errors.}
+\caption{Rule P ($n_{\mathrm{conf}}=3$, $z_{\mathrm{conf}}=1.282$) and the one-stage $k=1$ gate, per suite, from simulation at observed difficulty. False prom.\ is the probability of at least one false promotion in an all-null search of about ten candidates. The four power columns give the probability of promoting one candidate with the stated true gain. Gain is the expected true new-task gain of the final artifact.}
 \label{tab:sim}
 \centering\small
 \input{appendix/sim_table}
 \end{table}
 
-The minimum detectable effect depends on variance inputs that were fixed before any pilot (SD of per-task advantage 0.15, seed-by-task interaction 0.10, seed SD 0.03, family size 5 with intraclass correlation 0.10). With three trials and three seeds the artifact-level effect is \mdeFortyArtifact{}, \mdeHundredArtifact{} and \mdeTwoEightyArtifact{} at 40, 100 and 280 tasks. The pipeline-level effect, which includes seed variance and uses $t$ with two degrees of freedom, is \mdeFortyPipeline{} at 40 tasks and \mdeTwoEightyPipeline{} at 280. \needs{Replace with estimates from the no-op repeated-evaluation pilot (E02).}
+Seed-artifact variance replaces the earlier assumptions (mean 0.55, within-task variance 0.149). The observed within-task variance is 0.088, 0.148 and 0.124 on Suites A, B and C, and the standard deviation of the true pass rate across tasks is 0.40, 0.31 and 0.37. With three search seeds, 80\% power, $\alpha=0.05$ and a task-level effect spread of 0.15, the minimum detectable effect for contrasts between the three frozen artifacts is \mdeACondOne{} on Suite A (\mdeATasks{} tasks, one trial), \mdeBCondOne{}, \mdeBCondTwo{} and \mdeBCondThree{} on Suite B (40 tasks, one to three trials) and \mdeCCondOne{}, \mdeCCondTwo{} and \mdeCCondThree{} on Suite C (20 tasks). For claims about the optimizer, which include seed variance and use $t$ with two degrees of freedom, it is \mdeAPipeOne{} on A, \mdeBPipeOne{} to \mdeBPipeThree{} on B and \mdeCPipeOne{} to \mdeCPipeThree{} on C. With Holm correction over the primary family the first-step values rise to \mdeAHolmOne{} on A, \mdeBHolmOne{} on B and \mdeCHolmOne{} on C with one trial. The task-level effect spread, seed-by-task interaction and seed variance cannot be estimated from seed-artifact data and remain assumptions.
 
 The shared standard-error helper adds a within-task term to a variance of task means that already contains it. In simulation (mean reward 0.55, dispersion 1.5, 40 to 280 tasks) its variance is 1.00 times the correct value at one trial per task, 1.33 times at three trials, 1.24 at five and 1.13 at ten for the new-task estimand, and 1.6 to 8.6 times too large for the fixed-task estimand. Its coverage of a new-task target is 0.94 to 0.97. At one trial it equals the between-task term alone.
 
@@ -56,52 +56,23 @@ Times are UTC on 2026-10-11 unless stated. Each incident lists its effect on the
 Before the 3-hour hang rule, ACE and MIPROv2 first ran with a 40-minute watchdog that scored a timeout as reward zero.
 The coordinator rejected it as asymmetric before it produced results: the six 40-minute runs (three seeds per arm) were killed after one counted rollout each, and their event logs hold no watchdog zero.
 Zeros that did reach the search come from other adapter paths.
-The adapter returns reward 0 with an error string when an LLM call times out at the client (\texttt{litellm.Timeout}) or the sandbox returns HTTP 500.
-Each such rollout is logged with reward 0.0 and counts against the budget, so the search saw it as a score and not as a missing cell.
+An adapter returns reward 0 with an error string when an LLM call times out at the client or the sandbox returns HTTP 500.
+Each such rollout counts against the budget, so the search saw a score and not a missing cell.
 We did not check whether the ACE reflector or the MIPROv2 bootstrap showed the error text.
-Table~\ref{tab:zeros} counts these rollouts from the event logs and from each arm's \texttt{llm\_failure\_counts.json}.
-Gateway counts are upper bounds, because a failed call does not always end a rollout.
 
-\begin{table}[h]
-\caption{Rollouts scored zero after an infrastructure error. Counts come from the error strings in event logs (ACE, MIPROv2) and rollout pools (Trace2Skill), from the error label of the rollout metrics when no string is stored (Meta-Harness, WikiSkill), and from exact failure counts (SkillOpt, GEPA, EvoSkill). ``Superseded'' lists restarted attempts that are not used.}
-\label{tab:zeros}
-\centering\scriptsize
-\begin{tabular}{@{}llrrrl@{}}
-\toprule
-Arm & Seed & Timeout & Sandbox 500 & No string & Run \\
-\midrule
-ACE & 1 & 0 & 1 & -- & live \\
-ACE & 2 & 0 & 1 & -- & live \\
-ACE & 1 & 1 & 0 & -- & superseded \\
-MIPROv2 & 0 & 1 & 2 & -- & live \\
-MIPROv2 & 1 & 0 & 4 & -- & live \\
-MIPROv2 & 0 & 1 & 0 & -- & superseded \\
-MIPROv2 & 1 & 0 & 1 & -- & superseded \\
-MIPROv2 & 2 & 1 & 0 & -- & superseded \\
-Trace2Skill & 0 & 2 & 5 & -- & live \\
-Trace2Skill & 1 & 1 & 4 & -- & live \\
-Trace2Skill & 2 & 5 & 9 & -- & live \\
-Meta-Harness & 0 & -- & -- & 6 & live \\
-Meta-Harness & 1 & -- & -- & 15 & live \\
-Meta-Harness & 2 & -- & -- & 9 & live \\
-WikiSkill & 0 & -- & -- & 3 & live \\
-WikiSkill & 1 & -- & -- & 2 & live \\
-WikiSkill & 2 & -- & -- & 3 & live \\
-SkillOpt & 1 & 1 & -- & -- & live \\
-SkillOpt & 2 & 3 & -- & -- & live \\
-GEPA, EvoSkill & 0 to 2 & 0 & -- & -- & live \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-GEPA persists outputs only for its best program, so its zero count covers one program per seed and the gateway gives the upper bound.
-Meta-Harness and WikiSkill store an error label but no error string, so their counts come from the label.
-All 30 Meta-Harness errors are labelled infrastructure, and 27 of them made no LLM call.
-All 8 WikiSkill errors made no LLM call, but its adapter labels them as candidate faults, so a reader of the label alone would miss them as infrastructure.
-Trace2Skill labels its 27 errors as candidate faults too, although the stored strings of 26 of them are 8 client timeouts and 18 sandbox 500 errors.
-Whether these labels change which rollouts the analysis drops is an open check for the metrics owner.
-The one live timeout zero after the 13:11 gateway fix is MIPROv2 seed 0 at 13:20, a client timeout.
+Adapters label these errors differently, so we classify every error row with one rule and keep the adapter label beside it (Table~\ref{tab:zeros}).
+Search-time feedback used each method's native handling, and only the reporting is unified.
+The rule changes four arms.
+Trace2Skill and WikiSkill label all their errors as candidate faults, yet the rule moves 26 and 8 of them to infrastructure: the stored Trace2Skill strings are 8 client timeouts and 18 sandbox 500 errors, and the WikiSkill errors made no target call.
+Meta-Harness keeps 27 of its 30 infrastructure labels.
+SkillOpt has 27 infrastructure errors and 120 candidate errors, and the 120 are rows where the task template broke its placeholder contract, with no target call.
+GEPA's 7 infrastructure labels become candidate errors because they have no string and an unknown call count, and the same happens to 3 Meta-Harness rows and a few Suite B and C rows.
+These 18 rows are listed as unverifiable, and raw-log strings would let us reclassify them.
+GEPA persists outputs only for its best program, so its counts are incomplete.
+The one live timeout zero after the 13:11 gateway fix is MIPROv2 seed 0 at 13:20.
 Every other timeout zero before 13:11 enters the sensitivity analysis that treats such rollouts as missing.
+
+\input{tables/zeros}
 
 \section{Cost and Token Totals}
 \label{app:cost}
