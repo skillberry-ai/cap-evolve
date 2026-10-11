@@ -385,7 +385,7 @@ def probe(a, ctx):
 GATE_KEYS = ("accept", "indecisive", "delta", "se", "z", "reason")
 
 
-def judge(ctx, tag, ref) -> dict:
+def judge(ctx, tag, ref, cand_min_trial: int = 0) -> dict:
     """The accept test for ``tag`` vs ``ref``; ALWAYS sequentially valid (promote and finalize are
     re-run as evidence grows). cost_gating on: gate_check --mode reward_gated (Bonferroni over its
     looks). cost_gating off: the posterior rule (posterior.py: accept needs P(D>dmin)>=0.95 and canary
@@ -394,9 +394,13 @@ def judge(ctx, tag, ref) -> dict:
     P = digest.pair(ctx.run_dir, tag, ref, ctx.val_ids())
     v = P.verdict(random.Random(0), int(sum(P.nc)))
     base = {"p_beat": round(v["p_beat"], 3)}
+    if cand_min_trial and not ctx.cfg["cost_gating"]:
+        raise Refused("confirm_fresh_only needs the reward_gated judge (cost_gating on): the posterior "
+                      "rule pools the ledger by capability hash and cannot isolate fresh trials")
     if ctx.cfg["cost_gating"]:
         rc, so, se = sh([PY, HERE / "gate_check.py", "--run-dir", ctx.root, "--candidate", tag,
-                         "--current", ref, "--mode", "reward_gated"])
+                         "--current", ref, "--mode", "reward_gated",
+                         *(["--candidate-min-trial", str(cand_min_trial)] if cand_min_trial else [])])
         g = jload(so)
         if g is None or "error" in g:
             raise Refused(f"gate_check could not judge {tag}: {(g or {}).get('error') or se[-300:]}")
@@ -522,13 +526,21 @@ def finalize(a, ctx):
     if a.n_confirm > 0 and champ != "seed":
         ctx.check_budget(a)
         have = eval_index.counts(run_dir, eval_index.cap_hash(d), "val")
+        fresh_only = bool(a.confirm_fresh_only or ctx.spec.get("confirm_fresh_only"))
+        # first trial index the top-up will write (evaluate/run.py --topup-to: 1 + max existing)
+        fresh_from = 1 + max((int(f.stem.rsplit("__t", 1)[1])
+                              for f in (run_dir.rollouts / "val").glob(f"*__{champ}__t*.json")), default=-1)
         want = max((n for _, n in have.values()), default=0) + a.n_confirm  # fresh seeds: ledger trial_idx continues
         rc, so, se = sh(topup_cmd(ctx, champ, want, ctx.val_ids()))
         if rc != 0:
             raise Refused(f"confirm evaluation failed rc={rc}", stderr=(se or so)[-500:])
-        j = judge(ctx, champ, "seed")
+        j = judge(ctx, champ, "seed", cand_min_trial=fresh_from if fresh_only else 0)
         out["confirm"] = {"n_trials": want, "verdict_vs_seed": j["verdict"], "gate_mode": j["gate_mode"],
-                          "p_beat_seed": j["p_beat"], "gate": j["gate"]}
+                          "p_beat_seed": j["p_beat"], "gate": j["gate"], "fresh_only": fresh_only}
+        if fresh_only:
+            # the pooled verdict stays on record as the secondary statistic
+            out["confirm"]["fresh_from_trial"] = fresh_from
+            out["confirm"]["pooled_verdict_vs_seed"] = judge(ctx, champ, "seed")["verdict"]
         if j["verdict"] != "accept":
             if not (a.seal_anyway or "").strip():
                 raise Refused(f"confirm gate says {j['verdict']} vs the seed: test NOT sealed", confirm=out["confirm"],
@@ -576,6 +588,9 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("finalize", parents=[common])
     s.add_argument("--n-confirm", type=int, default=3, help="extra full-val trials on the champion (0 = skip)")
     s.add_argument("--n-trials", type=int, default=0, help="test trials (default: spec num_trials)")
+    s.add_argument("--confirm-fresh-only", action="store_true",
+                   help="gate the confirmation on the FRESH trials only (also spec confirm_fresh_only); "
+                        "the pooled verdict is recorded as secondary")
     s.add_argument("--seal-anyway", metavar="REASON", help="seal test although the confirm gate did not accept (recorded)")
     s.add_argument("--over-budget", metavar="REASON")
     return p

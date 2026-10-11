@@ -280,6 +280,19 @@ def _aggregate_metrics(per_trial_metrics: list, reduced_reward: float) -> list:
     return out
 
 
+#: ``Rollout.metadata["error_kind"]`` value an adapter sets when a trial errored because of the
+#: CANDIDATE's own code (exception in a candidate tool, candidate-induced timeout). The framework
+#: cannot infer this: ``trials.run_trials_pool`` turns any exception into an error rollout, which
+#: may equally be infrastructure. Absent/anything else = exogenous = missing data.
+CANDIDATE_ERROR_KIND = "candidate"
+ERRORED_POLICIES = ("drop", "fail")
+
+
+def candidate_attributed_error(metadata) -> bool:
+    """Did the adapter attribute this trial's error to the candidate (see ``CANDIDATE_ERROR_KIND``)?"""
+    return isinstance(metadata, dict) and metadata.get("error_kind") == CANDIDATE_ERROR_KIND
+
+
 def evaluate_candidate(
     adapter,
     candidate_dir: Path,
@@ -293,8 +306,15 @@ def evaluate_candidate(
     workers: int | None = None,
     ids: list | None = None,
     trial_offset: int = 0,
+    errored_policy: str = "drop",
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
+
+    ``errored_policy`` (``drop`` = default, today's behaviour | ``fail``): what an errored trial
+    is. ``drop`` treats every errored trial as missing data. ``fail`` counts a trial whose error
+    the adapter attributed to the CANDIDATE (``Rollout.metadata["error_kind"] == "candidate"``;
+    see ``candidate_attributed_error``) as reward 0.0, a measured failure; every other error
+    stays missing, so exogenous infra errors remain retryable.
 
     Writes per-rollout JSON under the run dir, returns the aggregate SplitResult.
 
@@ -440,6 +460,11 @@ def evaluate_candidate(
             # re-run it here, which would add a slow tail to every batch evaluation.
             rollout = filled[tid]
             errored = bool(getattr(rollout, "error", None))
+            # errored_policy=fail: a candidate-attributed error is a measured failure (0.0).
+            cand_fail = (errored and errored_policy == "fail"
+                         and candidate_attributed_error(getattr(rollout, "metadata", None)))
+            if cand_fail:
+                errored = False
             if errored:
                 per_task_errored[tid] = True
                 per_task_errored_trials[tid] += 1
@@ -475,7 +500,7 @@ def evaluate_candidate(
             # tasks whose patches were never graded at all — the run_evaluation harness
             # died with `Some instance IDs not found in dataset!` while $3.44 of
             # optimizer budget chased feedback that contained no signal.
-            if not errored and (getattr(sc, "raw", None) or {}).get("errored"):
+            if not errored and not cand_fail and (getattr(sc, "raw", None) or {}).get("errored"):
                 errored = True
                 per_task_errored[tid] = True
                 per_task_errored_trials[tid] += 1
@@ -486,8 +511,8 @@ def evaluate_candidate(
             # optimizer to "fix" content that was never at fault. Keep the rollout
             # file (written below) for forensics, but leave the number out.
             if not errored:
-                per_task_trials[tid].append(sc.reward)
-                per_task_metrics[tid].append(sc.metrics)
+                per_task_trials[tid].append(0.0 if cand_fail else sc.reward)
+                per_task_metrics[tid].append([] if cand_fail else sc.metrics)
             per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
             # #589: per-task/per-trial detail, opt-in via CAPEVOLVE_LOG_LEVEL=DEBUG
             # (see cap_evolve/__init__.py) — a no-op call when logging isn't enabled.
@@ -634,7 +659,8 @@ def parse_tags(s) -> list[str]:
     return [t.strip() for t in (s or "").split(",") if t.strip()]
 
 
-def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2)) -> SplitResult:
+def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2),
+                               errored_policy: str = "drop", min_trial: int = 0) -> SplitResult:
     """Reconstruct a candidate's SplitResult from its persisted rollouts.
 
     Used to RESUME a run from the current best candidate (its val score is read
@@ -660,6 +686,8 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     cost_by_task: dict[str, list[float]] = {}  # #676: per-task cost, every trial counts
     if vdir.exists():
         for f in sorted(g for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
+            if min_trial and int(f.stem.rsplit("__t", 1)[1]) < min_trial:
+                continue   # not a fresh trial (see ``min_trial``)
             rec = _json.loads(f.read_text(encoding="utf-8"))
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
@@ -680,6 +708,11 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             # carry across.
             errored = bool((rec.get("rollout") or {}).get("error")
                            or (sc.get("raw") or {}).get("errored"))
+            cand_fail = (errored and errored_policy == "fail" and (rec.get("rollout") or {}).get("error")
+                         and candidate_attributed_error((rec.get("rollout") or {}).get("metadata")))
+            if cand_fail:
+                errored = False
+                sc = {**sc, "reward": 0.0, "metrics": []}
             r0 = raw.setdefault(tid, {})
             r0["n_trials"] = int(r0.get("n_trials", 0)) + 1
             by_task.setdefault(tid, [])
@@ -1020,6 +1053,85 @@ def _optimizer_failure_detail(proc: "subprocess.CompletedProcess") -> str:
 
 
 # ---- one propose -> gate step ---------------------------------------------
+
+#: Spec keys (via ``gate_kwargs``) that configure MEASUREMENT rather than ``gate.decide``; popped
+#: before the rest reach ``decide``. All default to today's behaviour.
+#:   gate_footprint        bool|None  None = engine default (footprint masking on)
+#:   gate_coverage         "candidate" (default: candidate's own n_scored/n_tasks) | "joint"
+#:   errored_trial_policy  "drop" (default) | "fail" (see ``evaluate_candidate``)
+PAPER_SWITCH_KEYS = ("gate_footprint", "gate_coverage", "errored_trial_policy")
+
+
+def pop_paper_switches(gate_kwargs: dict) -> dict:
+    """Remove the measurement switches from ``gate_kwargs`` (in place) and return them validated."""
+    fp = gate_kwargs.pop("gate_footprint", None)
+    cov = gate_kwargs.pop("gate_coverage", None) or "candidate"
+    pol = gate_kwargs.pop("errored_trial_policy", None) or "drop"
+    if cov not in ("candidate", "joint"):
+        raise ValueError(f"gate_coverage must be 'candidate' or 'joint', got {cov!r}")
+    if pol not in ERRORED_POLICIES:
+        raise ValueError(f"errored_trial_policy must be one of {ERRORED_POLICIES}, got {pol!r}")
+    return {"footprint": None if fp is None else bool(fp), "coverage": cov,
+            "errored_trial_policy": pol}
+
+
+def add_paper_switch_arguments(p) -> None:
+    """The measurement-switch flags every gate-using algorithm ``run.py`` shares."""
+    p.add_argument("--gate-footprint", choices=("on", "off"), default=None,
+                   help="causal-footprint masking of the paired delta vector (unset = engine "
+                        "default, on). hill-climb and skillopt honour it; gepa never masks.")
+    p.add_argument("--min-coverage", type=float, default=None,
+                   help="gate.decide min_coverage (unset = 0.6); 0 disables the guard")
+    p.add_argument("--gate-coverage", choices=("candidate", "joint"), default=None,
+                   help="candidate (default): the candidate's own valid fraction; joint: tasks "
+                        "valid on BOTH sides over all planned tasks")
+    p.add_argument("--errored-trial-policy", choices=ERRORED_POLICIES, default=None,
+                   help="drop (default): errored trials are missing data; fail: errors the adapter "
+                        "attributes to the candidate (Rollout.metadata.error_kind=candidate) score 0.0")
+
+
+def paper_switch_kwargs(args) -> dict:
+    """``gate_kwargs`` entries for the flags above — only those the user set."""
+    out: dict = {}
+    if getattr(args, "gate_footprint", None) is not None:
+        out["gate_footprint"] = args.gate_footprint == "on"
+    if getattr(args, "min_coverage", None) is not None:
+        out["min_coverage"] = float(args.min_coverage)
+    if getattr(args, "gate_coverage", None) is not None:
+        out["gate_coverage"] = args.gate_coverage
+    if getattr(args, "errored_trial_policy", None) is not None:
+        out["errored_trial_policy"] = args.errored_trial_policy
+    return out
+
+
+def joint_coverage(current_val: SplitResult, cand_val: SplitResult, planned=None) -> float:
+    """Fraction of the PLANNED tasks that are valid on BOTH sides (the tasks a paired test can use).
+
+    ``planned`` defaults to the union of task ids either side attempted. Unlike
+    ``SplitResult.coverage`` (one side's n_scored/n_tasks) this cannot read 0.7 and 0.7 as healthy
+    when the two sides' valid sets barely overlap.
+    """
+    cur = {pt.get("task_id"): pt for pt in (current_val.per_task or [])}
+    cand = {pt.get("task_id"): pt for pt in (cand_val.per_task or [])}
+    ids = set(map(str, planned)) if planned is not None else {str(t) for t in (*cur, *cand)}
+    if not ids:
+        return 1.0
+    both = {str(t) for t in cand if t in cur and has_valid_trials(cand[t]) and has_valid_trials(cur[t])}
+    return len(both & ids) / len(ids)
+
+
+def gate_statistics(current_val: SplitResult, cand_val: SplitResult, fp=None, se_floor: float = 0.0) -> dict:
+    """``delta_full`` (unmasked) and ``delta_masked`` (what the gate saw), their SEs, joint coverage."""
+    from .gate import _paired_mean_se
+    out = {"joint_coverage": round(joint_coverage(current_val, cand_val), 6),
+           "delta_full": None, "delta_masked": None, "se_full": None, "se_masked": None}
+    full = _paired_deltas(current_val, cand_val, footprint=None)
+    if full:
+        out["delta_full"], out["se_full"] = (round(v, 6) for v in _paired_mean_se(full))
+        masked = _paired_deltas(current_val, cand_val, footprint=fp) if fp is not None else full
+        out["delta_masked"], out["se_masked"] = (round(v, 6) for v in _paired_mean_se(masked, se_floor))
+    return out
+
 
 def _paired_deltas(current_val: SplitResult, cand_val: SplitResult,
                    footprint=None) -> list | None:
@@ -2858,6 +2970,9 @@ def run_step(
     cannot be established, and ``footprint_gate=False`` forces the full-vector behaviour.
     """
     gate_kwargs = dict(gate_kwargs or {})
+    sw = pop_paper_switches(gate_kwargs)
+    if sw["footprint"] is not None:
+        footprint_gate = sw["footprint"]
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
     # Lineage edge for the dashboard/report: the parent is the candidate this step
     # was forked from (the current best by default in a global hill-climb). Captured
@@ -2948,7 +3063,8 @@ def run_step(
 
     try:
         cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
-                                      n_trials=n_trials, tag=cid)
+                                      n_trials=n_trials, tag=cid,
+                                      errored_policy=sw["errored_trial_policy"])
     except Exception as e:  # noqa: BLE001
         # Mirrors the optimizer-call protection above (#286): an adapter can raise
         # from live()/rollout setup for a reason specific to ONE candidate (a bad
@@ -3016,10 +3132,12 @@ def run_step(
     # every other mode, so an existing single-metric config's gate call is unchanged.
     pareto_metrics = (_pareto_metrics_kwargs(current_val, cand_val)
                       if gate_kwargs.get("mode") == "pareto" else {})
+    jcov = joint_coverage(current_val, cand_val)
     decision = gate_mod.decide(
         current_val.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=current_val.stderr,
-        paired_deltas=paired_deltas, coverage=cand_val.coverage, run_dir=run_dir,
+        paired_deltas=paired_deltas,
+        coverage=jcov if sw["coverage"] == "joint" else cand_val.coverage, run_dir=run_dir,
         broke=mv["broke"], fixed=mv["fixed"],
         **pareto_metrics,
         **gate_kwargs,
@@ -3079,6 +3197,10 @@ def run_step(
     # now none of them could see that an accept had broken a previously-solved task.
     # Only when both sides actually shared a measured task: an empty ``broke`` must mean
     # "measured, broke nothing", never "there was nothing to compare".
+    # Both statistics, always: the unmasked mean paired delta and the one the gate used, with
+    # the SE behind each and the joint (parent ∩ candidate) coverage. See ``gate_statistics``.
+    _step_extra.update(gate_statistics(current_val, cand_val, fp,
+                                       se_floor=gate_kwargs.get("paired_se_floor", 0.0)))
     if mv["n_shared"]:
         _step_extra.update(broke=mv["broke"], fixed=mv["fixed"],
                            n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]))

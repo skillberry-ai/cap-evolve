@@ -154,6 +154,10 @@ def build_parser() -> argparse.ArgumentParser:
                         "no-op whenever the edit's surface cannot be determined; see "
                         "cap_evolve.footprint for why the unrestricted vector buries real "
                         "effects in the noise of tasks the edit never touched.")
+    p.add_argument("--candidate-min-trial", type=int, default=0,
+                   help="use only the candidate's trials with index >= N (the FRESH trials of a "
+                        "top-up); 0 = every trial of the tag, as before. The reference side is "
+                        "unaffected.")
     p.add_argument("--mode", default="paired", choices=GATE_MODES)
     p.add_argument("--k-se", type=float, default=1.0)
     p.add_argument("--threshold", type=float, default=0.0)
@@ -218,7 +222,8 @@ def main(argv=None) -> int:
     cur_tag = ",".join(cur_tags)
 
     cur = harness.split_result_from_rollouts(run_dir, cur_tags, "val")
-    cand = harness.split_result_from_rollouts(run_dir, args.candidate, "val")
+    cand = harness.split_result_from_rollouts(run_dir, args.candidate, "val",
+                                              min_trial=args.candidate_min_trial)
     if not cand.per_task:
         print(json.dumps({"error": f"no val rollouts for tag {args.candidate!r} — run the "
                                    "evaluate phase on FULL val first"}, indent=2))
@@ -257,7 +262,8 @@ def main(argv=None) -> int:
     if args.mode == "reward_gated":
         spec = spec_for_run(run_dir)
         rg = dict(task_records=(objectives.load_trials(run_dir, cur_tags),
-                                objectives.load_trials(run_dir, args.candidate)),
+                                objectives.load_trials(run_dir, args.candidate,
+                                                       min_trial=args.candidate_min_trial)),
                   reward_gated_cfg=objectives.cfg_from_spec(spec),
                   cost_gating=objectives.cost_gating_enabled(spec))
     try:
