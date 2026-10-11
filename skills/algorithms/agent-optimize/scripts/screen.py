@@ -188,7 +188,9 @@ def main(argv=None) -> int:
         from cap_evolve import screen_accounting as sacc
         from cap_evolve.subsample import _valid
         pool = [str(pt["task_id"]) for pt in parent.per_task if pt.get("task_id") and _valid(pt)]
-        seed = args.seed if args.seed is not None else int(run_dir.read_splits().seed) + args.tier
+        run_seed = int(run_dir.read_splits().seed)
+        seed = args.seed if args.seed is not None else sacc.derive_seed(run_seed, args.tier, tag)
+        ctl_seed = args.seed if args.seed is not None else sacc.derive_seed(run_seed, args.tier, tag, "control")
         k_total = args.k or max(MIN_K, int(round(TIER_FRAC[args.tier] * len(val_ids))))
         sentinels = csv(args.sentinels) or csv(args.broken)
         k_rand = args.k_random if args.k_random is not None else max(1, int(round(0.25 * k_total)))
@@ -198,9 +200,12 @@ def main(argv=None) -> int:
                                             seed=seed, holdout_frac=0.0, broken_ids=[])["informative"]
         scr = sacc.build_screen(pool, affected, sentinels, k_rand, seed)
         if args.screen_control == "random_subset":
-            scr = sacc.build_control(pool, len(scr["ids"]), seed)
-        sub = {"ids": scr["ids"], "broken": sentinels, "holdout": [t for t, c in scr["components"].items() if c == "random"],
-               "informative": affected, "k": len(scr["ids"]), "requested_k": k_total, "seed": seed,
+            scr = sacc.build_control(pool, len(scr["ids"]), ctl_seed)
+        ctl = scr["mode"] == "random_subset"
+        sub = {"ids": scr["ids"], "broken": [] if ctl else sentinels,
+               "holdout": [t for t, c in scr["components"].items() if c == "random"],
+               "informative": [] if ctl else affected, "k": len(scr["ids"]), "requested_k": k_total,
+               "seed": scr["seed"],
                "holdout_frac": None, "pool_n": len(pool),
                "rationale": (f"accounted screen: {len(affected)} predicted-affected, {len(sentinels)} sentinel, "
                              f"{scr['k_random']} random of {scr['n_rest']} remaining (seed {seed})"
@@ -278,7 +283,9 @@ def main(argv=None) -> int:
 
     accounting = None
     if scr is not None:
-        accounting = sacc.record(scr, sacc.ht_estimate(dict(zip(pair["ids"], pair["deltas"])), scr))
+        accounting = sacc.record(scr, sacc.ht_estimate(dict(zip(pair["ids"], pair["deltas"])), scr),
+                                 n_val=len(val_ids),
+                                 pool_excluded=[str(i) for i in val_ids if str(i) not in set(pool)])
     payload = {
         "tag": tag, "screen_tag": screen_tag, "tier": args.tier,
         "current": cur_tag,

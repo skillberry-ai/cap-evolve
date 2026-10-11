@@ -23,10 +23,19 @@ Pure, stdlib-only, deterministic given ``seed``. Prior art: stratified / Horvitz
 
 from __future__ import annotations
 
+import hashlib
 import math
 import random
 
 ROLE = "scheduling_signal"
+
+
+def derive_seed(run_seed: int, tier: int, tag: str, salt: str = "accounted") -> int:
+    """Per-candidate seed: every candidate draws its OWN random stratum (a draw shared by all candidates
+    would make 'the candidate that wins this one draw' a selection on that draw, adding winner's-curse
+    bias to the estimate). ``salt`` keeps the control's draw independent of the accounted screen's."""
+    h = hashlib.sha256(f"{run_seed}|{tier}|{tag}|{salt}".encode()).hexdigest()
+    return int(h[:12], 16)
 
 
 def build_screen(pool_ids, affected, sentinels, k_random: int, seed: int = 0) -> dict:
@@ -72,30 +81,42 @@ def ht_estimate(deltas: dict, screen: dict) -> dict:
     got = {t: float(d) for t, d in deltas.items() if t in comp}
     by = {c: [d for t, d in got.items() if comp[t] == c] for c in ("affected", "sentinel", "random")}
     counts = {c: len(v) for c, v in by.items()}
+    planned = {c: sum(1 for x in comp.values() if x == c) for c in ("affected", "sentinel", "random")}
+    complete = counts == planned          # every screened task was actually measured
     if not n_pool:
-        return {"estimate": None, "se_random": None, "n_by_component": counts, "unbiased": False}
+        return {"estimate": None, "se_random": None, "n_by_component": counts, "unbiased": False,
+                "n_random_measured": counts["random"], "k_random": k}
     if screen["mode"] == "random_subset":
         v = by["random"]
         if not v:
-            return {"estimate": None, "se_random": None, "n_by_component": counts, "unbiased": False}
+            return {"estimate": None, "se_random": None, "n_by_component": counts, "unbiased": False,
+                    "n_random_measured": 0, "k_random": k}
         fpc = 1 - len(v) / n_pool
         return {"estimate": sum(v) / len(v), "se_random": math.sqrt(max(fpc, 0.0)) * _sd(v) / math.sqrt(len(v)),
-                "n_by_component": counts, "unbiased": True}
+                "n_by_component": counts, "unbiased": complete, "n_random_measured": len(v), "k_random": k}
     det = sum(by["affected"]) + sum(by["sentinel"])
     r = by["random"]
     if n_rest and not r:
-        return {"estimate": None, "se_random": None, "n_by_component": counts, "unbiased": False}
+        return {"estimate": None, "se_random": None, "n_by_component": counts, "unbiased": False,
+                "n_random_measured": 0, "k_random": k}
     rest_total = (n_rest / len(r)) * sum(r) if r else 0.0
     se = 0.0
     if r and n_rest:
         fpc = max(1 - len(r) / n_rest, 0.0)
         se = (n_rest / n_pool) * math.sqrt(fpc) * _sd(r) / math.sqrt(len(r))
-    return {"estimate": (det + rest_total) / n_pool, "se_random": se, "n_by_component": counts, "unbiased": True}
+    # Scaled by the measured count: a missing random task is treated as missing at random, so the
+    # estimate stays usable but is NOT design-unbiased -> ``unbiased`` False and the counts say why.
+    return {"estimate": (det + rest_total) / n_pool, "se_random": se, "n_by_component": counts,
+            "unbiased": complete, "n_random_measured": len(r), "k_random": k}
 
 
-def record(screen: dict, estimate: dict | None = None) -> dict:
-    """The auditable accounting block for a screen record. A scheduling signal; never a result."""
+def record(screen: dict, estimate: dict | None = None, *, n_val: int | None = None,
+           pool_excluded=()) -> dict:
+    """The auditable accounting block for a screen record. A scheduling signal; never a result.
+    The pool is the val tasks with a valid PARENT measurement; ``n_val`` and ``pool_excluded`` record
+    how many val tasks (and which) fell outside it, so the estimate's target population is explicit."""
     return {"role": ROLE, "result": False, "control": screen["mode"] == "random_subset",
             "mode": screen["mode"], "components": screen["components"], "inclusion": screen["inclusion"],
             "n_pool": screen["n_pool"], "n_rest": screen["n_rest"], "k_random": screen["k_random"],
-            "seed": screen["seed"], "estimate": estimate}
+            "seed": screen["seed"], "estimate": estimate, "n_val": n_val,
+            "pool_excluded": sorted(map(str, pool_excluded))}
