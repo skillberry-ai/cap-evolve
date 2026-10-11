@@ -1,0 +1,24 @@
+# adagepa (FULL)
+Exact title: AdaGEPA: Adaptive Feedback Allocation for Reflective Prompt Optimization
+Authors: Junyang Chen, Zecheng Wang, Jingbang Chen (CUHK-Shenzhen; Shenzhen Loop Area Institute)
+arXiv id + version read: 2609.39927 v1 (only)
+First date / latest date: 2026-09-30 / 2026-09-30
+Venue/status + source: arXiv preprint; no arXiv comment or journal_ref.
+Code URL + license: none stated in text (no github string found). OpenAI-compatible: unverified (uses gpt-4.1-mini task LM, gpt-5.1 reflection LM).
+Citation count: unavailable
+Editable surface: prompt(s) of a compound AI system (task-specific "prompt configuration"); non-prompt components fixed.
+Search method: GEPA unchanged (candidate pool, Pareto parent selection, reflective mutation, child checked on the minibatch then full validation only if it passes a local gate). AdaGEPA changes only WHICH examples form the feedback minibatch: replaces at most the final one of b=3 minibatch slots with an example chosen by a hand-designed, task-specific adapter (service/behavior/stage weaknesses from the parent's cached evaluations); SGD adapter uses two frozen ridge models fitted on development searches (Table 7 p16). No merge, no memory of failed edits.
+Feedback signal: scalar task metric in [0,1] + textual evaluator feedback.
+Task splits / held-out protocol: selection on a full-validation Pareto set D_pareto (sizes in Table 10 p18); search-external panels of new examples for SGD (104-example in-domain train-derived panel + 104-example official-test unseen-service panel), MultiWOZ (104 official test dialogues), HoVer (App B.8, p16). Test not used for selection. IFBench, PUPA, TACO main results are development-validation only (no search-external panel).
+Benchmarks and models: SGD, MultiWOZ, HoVer, IFBench, PUPA, TACO (+ design studies AIME, LiveBenchMath); gpt-4.1-mini task, gpt-5.1 reflection.
+Metrics: best-so-far full-validation score at matched rollout checkpoints, budget-normalized Gain-AUC, paired seed differences with bootstrap CIs (5 or 10 paired runs; 100k bootstrap for ten-run analyses, p18).
+Budget/cost reporting: B counts logical candidate-example evaluations (rollouts); reflection-LM calls, tokens, retries are counted separately and NOT in B (p3, p18); runner reserves budget for full validation of child (p5). No dollar/token comparison in main text.
+Reported limitations: endpoint gaps narrow as default GEPA keeps improving; lead concentrated early; benefit greatest when default schedule covers little of the feedback pool (p9); child may not lie on winner lineage (PUPA).
+Key quantitative results: Table 1 p7 (paired mean diff AdaGEPA-GEPA, n=5 unless noted): SGD initial B=560 +3.98 pp, endpoint B=1120 +2.46; SGD extension endpoint -0.40; SGD replication (n=10) endpoint -0.03; MultiWOZ +2.75 / +1.79; HoVer +3.87 / +2.47; IFBench 0.00 / +2.96; PUPA +0.09 / +1.26 (Gain-AUC -0.11); TACO +0.64 / +0.72. Table 2 p8 search-external: SGD initial in-domain +6.91 (B=560) and +5.38 (B=1120) Balanced DST; extension +2.61/+0.13; replication +3.19/+1.04; half-budget AdaGEPA beats full-budget GEPA by 7.69 JGA (in-domain) and 5.19 (unseen service) in the initial SGD study only (p7).
+Candidate-evaluation allocation: none across candidates; allocation of FEEDBACK examples within a reflection minibatch. Candidate gating is GEPA's default (minibatch then full val).
+Task selection/curriculum: yes in a narrow sense (which tasks feed reflection) via fixed task adapters; not a curriculum over train/val.
+Merge/composition (verified?): none.
+Optimizer self-modification: none.
+Overlap with CapEvolve: (a) partially, in the "task-level allocation" sense (weakness-targeted task/example selection for the next edit, analogous to our failure clusters). Related work p3 also lists RLMOpt, "The optimizer is the agent" (ReASearch, Li et al., arXiv 2608.06714), OEO "Rethinking self-evolving agents: do we still need prescribed optimization pipelines?" (Xue & Yang, arXiv 2608.09629) and DIVE (arXiv 2608.12486) as controller-in-the-loop works -- NOT in our list; flagged for lead (threaten claim (f)).
+What it means for our claims: (a) must be worded as posterior-based allocation of EVALUATION across candidates and tasks, not feedback selection; cite as feedback-allocation baseline; also corroborates that early gains from targeted example selection vanish at larger budgets (supports our full-val confirmation). Required comparison: GEPA with weakness-targeted minibatch vs ours; likely low priority. Reproduction feasibility: MED (task adapters are hand-written per benchmark).
+Notes on evidence quality: paired seeds (5-10), CIs, search-external panels (good); but endpoint gains mixed (two SGD runs ~0 or negative), per-task adapters hand-designed and fitted on SGD development runs (potential tuning on the same task), no MIPRO and only GEPA baseline, rollouts exclude reflection cost.

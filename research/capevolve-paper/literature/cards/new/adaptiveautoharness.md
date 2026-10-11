@@ -1,0 +1,11 @@
+# adaptiveautoharness (SHORT) -- arXiv 2606.01770v2
+- Title: Adaptive Auto-Harness: Sustained Self-Improvement for Agentic System Deployment on Open-Ended Task Streams
+- Authors: Zewen Liu, Zhan Shi, Yisi Sang et al. (10 authors; Emory, Amazon, Penn State, UIUC, Northeastern)
+- arXiv 2606.01770 v2 read; first 2026-06-01, latest 2026-06-03; venue: arXiv preprint (no comment); code: PDF says "Code is available in Link" with no resolvable URL in extracted text (UNVERIFIED).
+- Editable surface: harness = prompts, skills, tools, memory, supporting infrastructure (multi-file workspace) under capacity budget K; a harness TREE of regime-specific branches with agentic solve-time routing.
+- Search: stateful 4-phase multi-agent evolver (Analyze -> Research -> Build -> Verify) with parallel Researchers, a task board, temporal-reveal feedback gate (labels shown only after resolution date) and persistent cross-cycle memory; solve-time routing picks a branch per task; optional human-in-the-loop steering hooks; regret decomposition Regret = L_evo + L_adapt (Prop. 1, p4).
+- Evaluation/held-out: chronological task streams (PolyBench 5,075 prediction-market tasks Feb 2026; CTF-Dojo 261; FutureX 503), strict temporal order, no sealed test set (stream evaluation / online); temperature 0; Sonnet 4.6 solver, Opus 4.6 evolver; batch sizes 100/20/20.
+- Headline (Table 2 p6): PolyBench accuracy no-evolution Sonnet 22.2 -> Full System 80.9 (Meta-Harness 50.8, A-Evolve 18.4, GEPA 13.4); CTF-Dojo Pass@1 37.2 -> 50.2 (A-Evolve 45.2); FutureX 31.0 -> 47.3 (A-Evolve 47.5, Multiagent-only 49.5).
+- Budget/cost: not itemised in text read; baselines share the batch size and loop.
+- Limitations (p7): three streams only; L_evo and L_adapt are analytical not estimated.
+- RELEVANCE: MED-LOW. Closest to (c) for multi-file heterogeneous harness (prompts/skills/tools/memory) under one evolver, and to (b)-adjacent: a TREE of branches (not merged) selected per task at solve time. Different regime (online streams, no sealed test, human hooks). No threat to (a) or (d); it is a cautionary baseline for sustained-evolution degradation (Fig 1: unbounded evolution grows prompt 2KB -> 68KB, gains fade after cycle ~15).

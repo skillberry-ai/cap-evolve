@@ -1,0 +1,24 @@
+# Agent Skill Evolution: How Revisions Affect Coding Agents (slug: skillrevisions)
+- Exact title: Agent Skill Evolution: How Revisions Affect Coding Agents
+- Authors: Jiajie Wang, Yutong Zhao, Tianlin Li, Huashan Chen, Jinfu Chen, Kebin Peng, Sen He (7; Arizona, CSULB, NTU, CAS, Wuhan, ECU)
+- arXiv id + version read: 2610.04832v1 (cs.SE)
+- First date / latest date: 2026-10-04 / 2026-10-04
+- Venue/status + source: preprint; PDF says "Vol. 1, No. 1, Article. Publication date: October 2026" (journal-style template, no venue named); arXiv API: no comment/journal_ref
+- Code URL + license: replication package only: https://figshare.com/s/1fd1668be2b3b5081ad6 (p18 Data Availability); no GitHub repo, license unverified. OpenAI-compatible: n/a.
+- Citation count: unavailable
+- Editable surface: studied artifact = human-authored SKILL.md revisions (rules/commands/paths) plus harness config (CLAUDE.md, AGENTS.md, hooks, MCP config) co-evolution (RQ1, p2). No automated optimizer.
+- Search method: none. Empirical study: 3,159 Skills in 856 repos (2,608 first/last revision pairs) from SkillMD-138K; 6,957 revision commits labelled by 3 LLMs (kappa 0.61 vs human, p4); probes built from added/deleted directives (396 added, 245 deleted, 1,349 dilution) and 80 executable sandbox tasks (p5 Table 1). Archive/selection/merge/memory: n/a.
+- Feedback signal: string-match compliance (Level 1), required-action rate of executing agents (Level 2), blind-judge final correctness (Level 3) (p7).
+- Task splits / held-out protocol: no train/val/test; old-vs-new paired comparison on same probes; repository-clustered bootstrap CIs (4000 resamples), Holm correction; main set 300 probes for 16 open models, 160-probe subset for closed models (p7-8).
+- Benchmarks and models: 16 open-weight (3.8B-32B; Llama, Mistral, OLMo, Phi, Qwen, Gemma), 5 closed (Claude Sonnet 3.5/3.7/4.5, Haiku 4.5, GPT-5.5), Devstral-Small-2507 in sandbox; four agents in sandbox incl. mini-SWE-agent scaffold; temperature 0.7, 5 samples (p6-7).
+- Metrics: compliance delta (new-old), action rate, correctness, input/output tokens, tokens per added compliant response, latency.
+- Budget/cost reporting: yes for the studied artifact (token overhead of a revision), not for an optimizer: revision adds 18-19% input tokens per single answer, no detectable cost per agent episode; loading a Skill body raises episode tokens ~50% (abstract p1; RQ3 p2 says 37-57%).
+- Reported limitations: Sec 7.1 p17-18: string-check grader misses compliant answers (recall 0.65-0.82), probes written by Qwen 3.5-27B, only concrete checkable rules (filter keeps 17% of candidates), small models, no reasoning mode, 5 samples per condition.
+- Key quantitative results: added rule raises single-answer compliance +0.41 avg over 16 open models (abstract p1); four agents' required-action rate +0.23 (range +0.16 to +0.36); correctness +0.10 (+0.06 to +0.14) for the three blind-judged agents; with on-demand loading agents keep 51% of action gain, three open models 38%; 55% of revisions change a rule or procedure (p1).
+- Candidate-evaluation allocation: n/a.
+- Task selection/curriculum: n/a.
+- Merge/composition (verified?): n/a.
+- Optimizer self-modification: n/a.
+- Overlap with CapEvolve: none on (a)-(f) as method. Context only for surface (c): reports that Skill revisions co-change harness config (CLAUDE.md etc.) more than comparable commits (p2).
+- What it means for our claims: no claim threatened. Useful empirical support that (i) gains from skill edits come mainly from rules naming concrete commands/paths, (ii) progressive-disclosure loading halves the gain (51%), so a CapEvolve skill-package evaluation must load skills in the same mode as deployment, and (iii) skill revisions have token costs worth reporting. Reproduction feasibility: medium-high (figshare package, local small models).
+- Notes on evidence quality: observational on human revisions; probes LLM-generated and literal-string graded (recall 0.73/0.82 per annotator; string check understates human-judged gain +0.52 vs +0.41, p6); sandbox agent counts small (80 tasks, 3 episodes/cell); effects are conditional on requests that need the rule (p5).

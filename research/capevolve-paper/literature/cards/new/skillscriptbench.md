@@ -1,0 +1,24 @@
+# SkillScriptBench (slug: skillscriptbench)
+- Exact title: SkillScriptBench: Benchmarking Self-Evolution of Executable Agent Skill Packages Beyond Markdown
+- Authors: Yuxuan Liu, Haoran Li, Yuhao Zhang, Jiahe Guo, Hongyu Luo, Wenbin Hu, Huihao Jing, Kawai Chung, Junle Chen, Changxuan Fan, Qing Zong, Lingyun Xie, Yangqiu Song (13; HKUST, HIT)
+- arXiv id + version read: 2610.04008v1
+- First date / latest date: 2026-10-02 / 2026-10-02
+- Venue/status + source: preprint; arXiv comment "33 pages, including references and appendices"; no journal_ref
+- Code URL + license: none stated in text (grep for github.com/release found none) -> unverified; license n/a. OpenAI-compatible: unverified.
+- Citation count: unavailable
+- Editable surface: whole executable skill package: SKILL.md plus scripts/ (Python/JS/Shell), i.e. multi-file package; docs and code edited jointly (p3 Sec 2.1).
+- Search method: NOT a search/optimization paper. Benchmark of single-shot package revision given a maintenance request; the proposed AST-Guided Skill Revision is a one-pass pipeline (requirement-structure grounding via AST/call graph -> repair targets + preservation constraints -> node-level script edits accepted only if syntax and interface-preservation checks pass -> Markdown alignment) layered on a base reviser (Raw Package or adapted CoEvoSkills) (p5-6). Archive: none. Selection: none across candidates. Merge: "assembly uses initial revision as base, retaining its validated edits and incorporating compatible edits from S through unique source matching" (p5) - a rule-based merge of two revisions with syntax/interface checks, not behaviorally validated. Memory: none.
+- Feedback signal: hidden executable behavioral tests + documentation-driven tests (SKILL.md invocations executed against revised scripts); CoEvoSkills variant uses a surrogate verifier (p4, p6).
+- Task splits / held-out protocol: 350 tasks (150 In-the-Wild from 100 packages, 200 Controlled from 50 packages x 4 states); no train/val; evaluation tests hidden from methods; reference packages must pass, faulty must fail (p3). Faults are injected (synthetic), stated as limitation (p33 App D).
+- Benchmarks and models: GPT-5.5, GPT-5.6-Sol, Claude Opus 5, DeepSeek V4 Pro; 3 runs per model-method-task (p7). Temperature 0.
+- Metrics: Avg (Pass@1 over 3 runs), P@3 (any of 3), Hit3 (all 3); preservation on 50 Clean tasks; paired source-package bootstrap CIs (App Table 17, 10,000 resamples).
+- Budget/cost reporting: per-stage model-call and edit budgets for AST revision (App Table 11) and completion-token limit 16,384 (Table 13); no USD / token totals found (UNVERIFIED).
+- Reported limitations: Python-dominated, injected faults rather than natural failures, long-horizon downstream workflows not evaluated (p33 App D).
+- Key quantitative results: Overall Avg pooled over 4 models: Raw 54.8% -> Raw+AST 76.7% (+21.9pp); CoEvoSkills 48.8% -> 76.5% (+27.7pp) (p7 Sec 4.2, Table 2 p6). Hit3 +20.8 / +31.5 pp. Markdown-only: 0% on script/joint faults; doc repair avg 27.0% vs Raw 27.3% vs CoEvo 23.2% (p7). Preservation: Raw and CoEvo score below MD-only on Clean tasks by 7.8 and 3.7 pp (p7-8). Ablation GPT-5.6-Sol controlled: 84.8 full vs 69.2 w/o structural feedback vs 67.3 w/o call context (p8).
+- Candidate-evaluation allocation: n/a (one candidate per task per run).
+- Task selection/curriculum: n/a.
+- Merge/composition (verified?): rule-based assembly of two revisions with syntax/interface checks (p5); not behavior-gated per merge.
+- Optimizer self-modification: none.
+- Overlap with CapEvolve: modest; evidence for claim (c)-adjacent need: shows script+doc skill packages are an evaluated surface and that package-level edits can regress clean behavior (preservation). No overlap with (a),(b),(d),(e),(f).
+- What it means for our claims: does not threaten any narrow claim, but (c) "multi-file skill packages" is not novel as an editable surface (CoEvoSkills, SkillEvolver per related work p9). Useful as an external benchmark for the skill-package surface and for a preservation/regression metric (paired kept-pass vs regressed, Fig 4). Required comparison: none; optional evaluation target. Reproduction feasibility: medium (no code link found; benchmark needs release).
+- Notes on evidence quality: 3 runs, bootstrap CIs in appendix; faults synthetic; models newly named (GPT-5.6-Sol, Claude Opus 5) cannot be cross-checked; base methods re-implemented/adapted by authors (CoEvoSkills adapted, p6).

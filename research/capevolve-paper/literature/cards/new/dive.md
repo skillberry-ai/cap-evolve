@@ -1,0 +1,10 @@
+# dive (SHORT)
+- Title: DIVE: Unlocking Self-Improvement in Frozen Language Models Through Diversity-Driven Skill Evolution
+- Authors: Siheng Xiong, Ali Payani, Oguzhan Gungordu, Faramarz Fekri (4; Georgia Tech / Cisco Research)
+- arXiv 2608.12486 v1; first = latest 2026-08-12. Venue: none stated (AAAI-style format; no venue claimed). Code URL: none found.
+- Surface: persistent natural-language "skills" (reasoning procedures, verification strategies, failure modes, output constraints), executed and revised by the same frozen model; not tool code/MCP/multi-file packages.
+- Search: K independent skill populations evolved from bootstrapped experience; heterogeneous evolution operators incl. Multi-Parent Recombination and Compression; UCB policy adaptively allocates PROPOSAL budget across operators; LLM-generated new operators from evolution history (Alg.1, p.4); final complementary skill SET chosen greedily by marginal improvement on a shared validation set; at inference all skills answer and the model ranks (Eq.15-18, p.5).
+- Evaluation/held-out: evolution/validation/test splits; validation never in revision prompts; test strictly held out, only for final eval (p.5). Baselines (SkillOpt, GEPA) budget-matched, tuned on validation only (p.20).
+- Headline: Table 1 p.5 avg over 6 tasks: GPT-5-nano zero-shot 52.3 -> DIVE(M=10) 81.5 (SkillOpt 59.7, GEPA 55.1, SC 67.7, ToT 74.3); DeepSeek-v4-flash 73.9 -> 96.4 (SkillOpt 81.2). NOTE M=10 uses ~10.9 calls/example at inference (Table 2 p.6: $0.088 vs $0.008 zero-shot) so gain is confounded with test-time ensembling; M=1 gives 60.7 (nano).
+- Budget: reports calls/tokens/$ per example at inference (Table 2 p.6) and rollouts-vs-accuracy curves vs SFT/GRPO/GEPA (Fig.1 p.1).
+- RELEVANCE: MED. Touches (a) (UCB bandit allocation, but over evolution operators, not over candidates/tasks) and (b) (multi-parent recombination operator; no verified merge, selected by validation score) and (e)/(c) weakly. Not on heterogeneous surfaces; reasoning tasks only. Cite for "bandit allocation of proposal budget" prior art and the complementary-set selection idea (portfolio instead of single incumbent).

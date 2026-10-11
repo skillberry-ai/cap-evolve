@@ -1,0 +1,8 @@
+# harnessupdating (SHORT)
+- Title: Harness Updating Is Not Harness Benefit: Disentangling Evolution Capabilities in Self-Evolving LLM Agents
+- Authors: Minhua Lin, Juncheng Wu, Zijun Wang, et al. (18 authors; Penn State / UCSC / Amazon / ...). arXiv 2605.30621 v1; first = latest 2026-05-28. arXiv comment: 24 pages, 9 figures, 12 tables. Venue: none stated. Code: "publicly available at here" (hyperlink text only; URL not in extracted text).
+- Surface: harness artifacts evolved by an LLM "evolver": skills (SWE-bench Verified, SkillsBench) and skills+prompts+memories (MCP-Atlas, real MCP servers) (p.5). Not tool code / MCP description editing.
+- Method: study, not new optimizer: 7 LLMs x {agent, evolver} grid on 3 benchmarks, same initial harness H0, task stream and evolution budget beta.
+- Findings: harness-updating is flat in base capability (evolver gap <= 3.1 pp on any benchmark, p.2; Qwen3.5-9B evolver ~ Opus 4.6); harness-benefit non-monotonic (Table 1 p.7: e.g. SWE delta 19.3 pp for Qwen3-235B vs 2.6 for Opus 4.6; SkillsBench Haiku 4.5 +15.1); weak models fail at skill activation (skill-load rate 0.251 for Qwen3-32B vs ~0.96 for Opus) or adherence.
+- Budget: evolution budget held fixed across pairs; no $ reporting located.
+- RELEVANCE: LOW-MED. Not a competitor. Supports a caveat for (f): controller model strength matters little for the quality of edits (flat evolver curve), while the executing agent's ability to activate/follow artifacts matters; CapEvolve should report which model is the controller vs the target agent and whether skill activation is checked. Mentions MCP-Atlas as a benchmark with real MCP servers (candidate benchmark for MCP-description surface).

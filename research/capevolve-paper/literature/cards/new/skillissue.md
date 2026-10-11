@@ -1,0 +1,24 @@
+# Skill Issue (slug: skillissue)
+- Exact title: Skill Issue: Lessons from Optimizing Repository SKILLs for Coding Agents
+- Authors: Mykhailo Kozyrev, Andrei Kozyrev, Anton Podkopaev (3; TU Munich/JetBrains Research, Constructor U.)
+- arXiv id + version read: 2609.12742v1
+- First date / latest date: 2026-09-11 / 2026-09-11
+- Venue/status + source: preprint (PDF says "Preprint."); arXiv API: no comment/journal_ref
+- Code URL + license: none for the authors' pipeline found in text (only third-party repository URLs in references) -> unverified. OpenAI-compatible: n/a (Claude Code harness).
+- Citation count: unavailable
+- Editable surface: one repository SKILL .md document (seed = empty document with header); agent topology and model fixed (p4).
+- Search method: instruments two existing optimizers, GEPA (Pareto-frontier candidate pool, minibatch gate then larger selection set; 200 scored attempts per repo) and SkillOpt (3 epochs, bounded edits, strict-improvement selection gate, epoch-local rejected-edit buffer, slow/meta update) (p3-4, p6). No new search. Merge: GEPA's/SkillOpt's native only (SkillOpt merges+ranks edits); not evaluated separately.
+- Feedback signal: per-task PAIRED comparison of each candidate rollout vs the stored empty-seed rollout on the same task (hidden FAIL_TO_PASS tests, honesty/test-editing penalty, tie-breaks), seed vs itself = exactly 0.5; they reject absolute scores (solved count gives near-zero signal; judge/document-grade scores don't change the agent) (p5).
+- Task splits / held-out protocol: tasks mined from merged PRs reverse-applied at a single frozen base commit; per repo one-time seeded split train/validation/test; sizes: 119 tasks for koog (of 660 PRs), 131 for ktor (of 452), 100 for kotest (seeded sample); held-out test sets of 23, 26, 20 tasks (p6, 13/20 etc.). Test split unseen by both proposers (p6, p12 Limitations). Agent Claude Code with Sonnet 4.6; baseline no-skill resolves 40% koog, 51% kotest, 66% ktor (53% pooled).
+- Benchmarks and models: Kotlin repos kotest/kotest, ktorio/ktor, JetBrains/koog; Claude Code + Sonnet 4.6; reflection/proposer model not extracted here (see paper §3-4).
+- Metrics: paired score (0.5 = no change); resolved tasks; sign test p-values on disagreeing tasks; detectability (minimum win share).
+- Budget/cost reporting: YES and explicit: total agent API spend $2,013.98 and 69.2 h across six optimization runs (Table 1 p6): koog GEPA $368.82/4.7 h, SkillOpt $401.44/8.14 h; kotest GEPA $182.48/4.9 h, SkillOpt $263.56/13.3 h; ktor GEPA $312.87/13.0 h, SkillOpt $484.81/25.2 h; $0.84 per scored rollout on average (p3). This is the full cost of the search including rejected candidates.
+- Reported limitations: need >=100 graded tasks for three disjoint splits; two repos (tracy, http4k) failed mining checks; only Kotlin; held-out splits of 20-26 tasks cannot separate a few-point gain from agent variance (p12).
+- Key quantitative results: paired test score GEPA 0.554 kotest, 0.567 ktor, 0.525 koog (resolved 13->16/20, 16->20/26, 14->15/23); SkillOpt 0.519 kotest, 0.437 ktor, 0.546 koog (p6-7, Table 1). Mean gains +4.9pp GEPA, +0.1pp SkillOpt (abstract p1). Sign test: no run reaches p=0.05, best p=0.29; at 20-26 tasks the test rejects only when the document wins 4 of every 5 disagreements, pooled over 69 tasks two of three (p7). Maintainer review: with a SKILL agent finished in 6-8 min vs 15-20 min and cost $2.44-4.20 vs $4.85-6.06 on two open issues (p7).
+- Candidate-evaluation allocation: GEPA minibatch-then-selection screen (as in its native design); fixed 200-attempt budget; no adaptivity added.
+- Task selection/curriculum: paired against the seed rollout so tasks the agent solves anyway contribute nothing; no curriculum.
+- Merge/composition (verified?): n/a.
+- Optimizer self-modification: none.
+- Overlap with CapEvolve: supports (d) rather than threatens it: honest cost of unsuccessful search ($2,014 and 69 h for six runs) and power analysis of tiny held-out sets are exactly the accounting we claim; also uses a paired seed-relative objective (close to our paired gate). Note SkillOpt's rejected-edit buffer is prior art for (e) (epoch-local only).
+- What it means for our claims: (d) is not unique: this paper already reports full spend including failed searches and a sign-test power bound on held-out; our novelty must be the sealed split plus accounting across all candidates inside one framework. Cite for held-out size/power argument and for cost per rollout. Required comparison: report detectable effect size for our test sets. Reproduction feasibility: medium (needs mining pipeline; Claude Code runs cost ~$0.84/rollout).
+- Notes on evidence quality: 3 repos, one run per optimizer-repo cell (no seeds), held-out n=20-26, no significant result (authors say so); strong honest negative framing; GEPA and SkillOpt run by authors (not original harness).

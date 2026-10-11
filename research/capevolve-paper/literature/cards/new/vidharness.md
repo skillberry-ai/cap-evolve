@@ -1,0 +1,9 @@
+# vidharness (SHORT, extra find)
+- Title: VidHarness: Evolving Agent Harnesses for Cost-Efficient Long Video Understanding
+- Authors: Susan Liang, Jianmin Wu, Daxiang Dong (3; Baidu). arXiv 2609.38413 v1; first = latest 2026-09-29. Venue: none stated (ICLR-style preprint). Code URL: none stated (validation set "we will release").
+- Surface: executable harness programs (video-agent code: observation strategy, tool use, answer policy) around a frozen VLM; plus mixture-of-harness routing by frame budget. Not prompts/MCP/skills.
+- Search: harness proposer LLM in an "evolution environment"; evolution organized as MCTS over a harness tree; UNCERTAINTY-AWARE MULTI-FIDELITY VALIDATION: new harness validated on a few questions, promoted to more only if promising, accuracy measured on few questions is penalized in node selection (p.2, p.6); final harnesses ranked by penalized accuracy.
+- Evaluation: curated 1,000-QA validation set drives evolution; held-out/out-of-domain benchmarks Video-MMMU, MMVU; reports LongVideoBench, Video-MME, Video-Holmes test-style numbers (p.2, Table 1 p.7).
+- Headline: Table 3 p.9 (Video-Holmes, Qwen-3.6-27B): vanilla Meta-Harness-style single lineage 57.3% in 75.5h/40.0K val samples; MCTS 58.4% 71.9h/40.0K; MCTS+MF 59.4% in 34.9h with 7.8K val samples. SOTA claims: LongVideoBench 72.0, Video-MME 73.1/83.2, Video-Holmes 60.8 (p.2).
+- Budget: reports evolution hours and validation samples consumed (Table 3).
+- RELEVANCE: HIGH for (a): cheap-subset screening -> promote -> uncertainty-penalized selection over a tree of candidates is the same structure as our triage + full-val confirmation + posterior signals. Also tree/DAG search (not single lineage). Does not cover multi-surface joint edits, merge, sealed test accounting. Must be cited; (a) must be narrowed to Bayesian per-task pooled evidence and agent-driven control.

@@ -1,0 +1,25 @@
+# compound_tb2 (FULL) -- arXiv 2607.14004v1
+- Exact title: Do Agent Optimizers Compound? A Continual-Learning Evaluation on Terminal-Bench 2.0
+- Authors: Wenxiao Wang, Priyatham Kattakinda, Soheil Feizi (RELAI.ai)
+- arXiv id + version read: 2607.14004 v1
+- First / latest date: 2026-07-15 / 2026-07-15
+- Venue/status + source: "Technical Report" by RELAI (arXiv comment: "Technical Report by RELAI (relai.ai)"); no venue
+- Code URL + license: https://github.com/relai-ai/Continual-Learning-Terminal-Bench (public; releases Baseline/Phase1/Phase2 AGENT ARTIFACTS for all three optimizers, footnote p1; not the optimizer code). License: none detected by GitHub API (404). OpenAI-compatible: unverified.
+- Citation count: unavailable
+- Editable surface: baseline terminal agent (Harbor Terminus2 + native tool calling): system prompt, tool definitions, control code. GEPA prompt-only; GEPA-code (failed, excluded); Meta Harness harness code; RELAI-VCL "prompt, tool, workflow, memory, skill, code" (Table 2 p6; descriptive claim only).
+- Search method: compares GEPA, Meta Harness (Codex/GPT-5.5 proposer), and proprietary RELAI-VCL (regression-aware: rejects any candidate that improves new tasks but regresses previously solved ones, enforced IN the loop, p6, Sec 2.5). VCL internals not described beyond that (UNVERIFIED mechanism).
+- Archive / selection / merge / memory: not described for VCL. Meta Harness: two accepted candidates only.
+- Feedback signal: pass/fail per task; 2 trials per task (score 0, 1/2, 1; p4).
+- Task splits / held-out: NO sealed test. T1 = 12 hard TB2.0 tasks (900 s timeout), T2 = 10 additional hard tasks (1800 s); union 22 (p6-7). Phase-1 metric = pass rate on T1 AFTER optimizing on T1 (i.e. training tasks); Transfer = union before re-opt (T2 unseen but T1 seen); Final = union after phase-2 optimization on the union (i.e. all tasks seen). Only the Transfer-on-T2 number (VCL 65.0%, p8) is genuinely unseen.
+- Benchmarks and models: Terminal-Bench 2.0 hard subset (22 of 30 hard tasks); GPT-5.5 for agent and proposers.
+- Metrics: pass rate; LifelongAvg = (Phase1 + Transfer + Final)/3 (p5).
+- Budget/cost reporting: rollouts only: 200 rollouts per phase per method (Table 2 p6; Sec 5.2 p7). No dollar/token cost.
+- Reported limitations (Sec 7 p10): loosely related tasks; verifier/repeatability assumed; short 2-phase protocol; authors state protocol cannot distinguish "generalization filter" from other explanations; interpretation not a general claim.
+- Key results: Table 8 p9: Baseline 62.5 / 56.8 / 56.8 / LA 58.7; GEPA 70.8 / 54.5 / 72.7 / 66.0; Meta Harness 66.6 / 68.2 / 59.1 / 64.6; RELAI-VCL 79.2 / 72.7 / 77.3 / 76.4. GEPA prompt grew 5 -> 103 -> 195 lines with per-task lessons (p5, App C). Meta Harness phase-2: all candidates worse than incumbent, score fell to 59.1 (p9). Granularity: with 12 and 22 tasks x2 trials each point is ~ 1/24 or 1/44.
+- Candidate-evaluation allocation: fixed 200 rollouts per phase; no allocation scheme stated.
+- Task selection/curriculum: sequential task arrival (T1 then T1+T2); no selection.
+- Merge/composition: none described.
+- Optimizer self-modification: none (mentions Hyperagents in related work only).
+- Overlap with CapEvolve: protocol-level. In-loop no-regression gate is a stronger version of our paired val gate (regression on previously solved tasks) and relates to (a) task-level evidence use and (d) honest held-out claims. Note conflict of interest: authors' own product wins.
+- What it means for our claims: (d) caution: the paper shows optimized gains reported on optimization tasks are not evidence; our sealed-test claim is consistent but not new. Needs a regression-aware gate comparison (RELAI-VCL-style per-task no-regress rule vs mean(delta)>k*SE). (a) mild threat: per-task regression constraint is a task-level allocation/accept rule. Required comparison: continual two-phase task-arrival experiment with our optimizer. Reproduction: low for VCL (proprietary), med for GEPA/MH baselines.
+- Evidence quality: single run per method (no seeds/CI), 12/22 tiny tasks, 2 trials, headline metric mixes training-task and unseen-task numbers, vendor-authored comparison, GEPA-code failure excluded, per-method proposer differs (Codex vs GPT-5.5), no cost accounting beyond rollouts.

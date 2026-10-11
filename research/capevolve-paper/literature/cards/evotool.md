@@ -3,7 +3,7 @@
 - Authors: Shuo Yang, Soyeon Caren Han, Xueqi Ma, Yan Li, Mohammad Reza Ghasemi Madani, Eduard Hovy (arXiv API)
 - arXiv id + version read: 2603.04900, v1 (no version stamp in PDF text; catalog says v1; arXiv API shows only v1), 20 pages
 - First date (v1) / latest: 2026-03-05 / 2026-03-05 (arXiv API)
-- Venue/status: arXiv comment "Work under review, 9 pages, 5 figures". An OpenReview "Archive Direct_Upload" record (note 0sphfZZy4W, api2.openreview.net 2026-10-11) lists venue "ACL 2026 Main" -- a self-declared archive upload, NOT confirmed against ACL Anthology/proceedings (my search of the ACL Anthology 2026.acl-long volume page found no EvoTool entry on 2026-10-11; inconclusive). Treat as: acceptance claimed (ACL 2026 main), not independently verified. PDF is in ACL/ARR format (Limitations section, no venue stamp).
+- Venue/status: ACL 2026 main conference (Long Papers), Proceedings of the 64th Annual Meeting of the ACL (Vol. 1), San Diego, July 2026, pp. 43553-43572, doi 10.18653/v1/2026.acl-long.2016. VERIFIED 2026-10-11 from the ACL Anthology page and its BibTeX export (https://aclanthology.org/2026.acl-long.2016/ and .bib). The arXiv comment ("Work under review") is stale and the earlier OpenReview upload claim is now confirmed. Correction to earlier lit-lead note: the Anthology entry does exist.
 - Code URL + license + endpoint note: none in PDF (no github/code statement) and none located -> UNVERIFIED; license unknown.
 - Citation count: unavailable (Semantic Scholar 429)
 - Editable surface: four natural-language module prompts of a tool-use policy: Planner, Selector, Caller, Synthesizer (Sec 3-4). Edits are prompt text only; "do not add new tools or environments" (Mutator prompt A.5 p.15). Tool code / tool descriptions are NOT edited.

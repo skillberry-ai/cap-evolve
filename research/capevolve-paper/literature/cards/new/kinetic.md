@@ -1,0 +1,22 @@
+# kinetic (FULL)
+- Exact title: A Kinetic Theory of the Gated Self-Evolving LLM Agent
+- Authors: Haipeng Wang (Neusoft Corporation; single author)
+- arXiv 2610.03243 v1 read. First = latest = 2026-10-02. arXiv comment: main text 9 pages plus appendices; 9 figures; code, pre-registered experiment drivers, raw artifacts "in the supplementary materials" (no public URL stated).
+- Venue/status: "Under review as a conference paper at ICLR 2027" (PDF p.1) - under review, not accepted.
+- Code URL: none public stated. License: n/a. OpenAI-compatible: unverified.
+- Citation count: unavailable.
+- Editable surface: skill plugins ("plugin cards", four-parameter skill plugins in the measured minimal instance) in a DeepSeek Harness (DSH) plugin registry (p.1, p.7). Theory scoped to "DSH-class plugin populations" with 4 architectural axioms A1-A4.
+- Search method: not an optimizer proposal. Models a gated loop: agent edits plugin cards; a validation gate (strict improvement on held-out validation) acts as external "Maxwell daemon" admitting improving cards (p.2-3). Master equation over plugin x version x task grid with collision (co-activation), reaction, external field, gate operators (abstract p.1). Inherits SkillOpt's discipline: bounded edits, strict gate, rejected-edit buffer (p.2).
+- Feedback signal: held-out validation score; WebShop reward.
+- Held-out protocol: gate evaluates on held-out validation; "separation theorem": evaluator must stay OUTSIDE the evolving population, otherwise the certificate is void (abstract p.1). Resolution law prices validation budgets (min detectable delta_min(n, sigma)), p.2. Final test split use: UNVERIFIED (finals are "validation measurements", p.8).
+- Benchmarks/models: one model, one task family, WebShop minimal training loop (p.7); populations N in {5,50,500} x seeds {11,21}, 10-round and 500-round runs (p.8).
+- Metrics: fluctuation scaling exponent, NESS relaxation, gate-vs-independent score split.
+- Budget/cost: not reported as $; theory prices validation budgets.
+- Reported limitations: analogy only (momentum not conserved, no Navier-Stokes limit, p.1); gas-like statistics density-conditional - invisible at sparse edit density (abstract p.1); fluctuation-scaling fit flat at beta-hat = -0.04, r^2=0.12, 3 points, J=2 seeds (p.8); dynamical equivalence with production loop not claimed (p.2).
+- Key results: (theory) any-time hitting-time certificate bounding expected rounds to a prescribed improvement; resolution law for validation budgets; separation theorem (abstract p.1). (measured) directional evidence only, tiny seeds (p.8).
+- Statistical-gating context stated by the paper: acknowledges SGM (Wu et al. 2025; e-wealth supermartingales for recursive self-modification) and SEA (Sengupta 2026, e-values for LLM self-evolution) and notes that multi-candidate selection bias (planners proposing 5-8 pipelines/round) requires a Vovk-Wang e-value merge, "made explicit in our gate" (p.2-3). Claims no priority in gating statistics.
+- Candidate-evaluation allocation: none (single gate; validation budget priced by theory).
+- Task selection: none. Merge: only statistical e-value merge across candidates in a round (not artifact merge). Self-modification: agent edits its own skills.
+- Overlap with CapEvolve: conceptually supports (d) (evaluator outside the optimized population; validation budget pricing) and (e) (rejected-edit buffer inherited from SkillOpt). Not an engineering competitor.
+- What it means for our claims: (d) cannot claim "separating evaluator from search" as novel conceptually; our contribution = concrete sealed-test protocol + accounting of failed search. Cite as theory background; do not rely on it for empirical comparison. Leads: SkillOpt (already in corpus 2605.23904), SEA (arXiv 2607.00871 "Self-Evolving Agents with Anytime-Valid Certificates", Sengupta, found by title search in this task; not triaged), SGM (Wu et al. 2025; id not located). Reproduction feasibility: low (theory, WebShop minimal instance, no public code).
+- Evidence quality: theory paper; measurements 2 seeds, one model, one task family; authors label results directional; "machine-checked theorems" claimed (p.2) but not verified by me.

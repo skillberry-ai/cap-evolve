@@ -1,0 +1,25 @@
+# lots_toolspace (FULL) -- arXiv 2609.34151v1
+- Exact title: Self-Evolving Agents via Likelihood-Guided Tool-Space Optimization (method named LOTS, Likelihood-Only Tool Scoring)
+- Authors: Xuanqi Zhang, Ruinan Jin, Running Yang, Yuxuan Zhang, Minghui Chen, Wenlong Deng, Xiaoxiao Li (UBC, Vector Institute, Columbia)
+- arXiv id + version read: 2609.34151 v1
+- First / latest date: 2026-09-28 / 2026-09-28
+- Venue/status + source: arXiv preprint, comment "39 pages"; no venue
+- Code URL + license: none found in PDF text (no github link; reproducibility statement p.~10 describes appendices only). License n/a; OpenAI-compatible: n/a.
+- Citation count: unavailable
+- Editable surface: WHICH tools from a registry are exposed per recurring task type (tool-space subset / exposure). Not tool code, not descriptions, not prompts, not skills. Model weights frozen. This is the closest in this group to the "MCP tool exposure" surface in claim (c), but only as a pruning/ranking decision.
+- Search method: not search over candidates. Score each tool by leave-one-out answer log-likelihood: I(s)=L(y|h)-L(y|h without tool s output) on the model's own FROZEN generated answer (no extra rollouts, Eq.2 p4); average per task (Eq.3), keep Top-K (Eq.4); K selected on a predefined grid by fitting accuracy (App. C.2, p5). Persistent per-task spaces; Theorem 1 gives a bound under bounded second-order tool interactions (p5).
+- Archive / selection / merge / memory: per-task space E_t stored; new batches update running scores (Eq.6); no candidate archive, no merging, no failed-edit memory (correct and incorrect outputs both used; "does not observe correctness", p4).
+- Feedback signal: model likelihood of its own output (label-free scoring); correctness labels only for choosing K on fitting requests (p5).
+- Task splits / held-out: per-task fit vs eval splits: TGB 80 fit / 320 eval per family (4,000 requests, 10 families, 15 tools); BFCL-v4 multi-turn 10 fit / 40 eval per API class (160 records); GTA-Atomic 112 pooled eval requests, one serving session per model (p5-7). No separate validation/test; K chosen on fit labels.
+- Benchmarks and models: TGB (synthetic), BFCL-v4 multi_turn, GTA-Atomic; 8+ small open models (Qwen2.5/3/3.5 3B-14B, Llama3.1-8B, Mistral-7B, Phi-4, Gemma4-12B); open-weight needed for likelihood access (p8).
+- Metrics: accuracy, prompt tokens per test task.
+- Budget/cost reporting: serving-token savings (Fig 7 p9) and no additional rollouts for scoring; fitting cost not totaled (UNVERIFIED beyond statement). Baselines TTO/Beam Search use labels + costly search (Fig.5).
+- Reported limitations: Ethics/Reproducibility statements only; no limitations section located. Notes likelihood scores do not certify correctness or safety.
+- Key results: Table 1 p6 TGB: LOTS 82.9 / 91.8 / 84.8 / 65.8 / 65.2 / 81.5 / 92.1 / 91.4 across 8 models vs Keep-all 69.6 / 88.0 / 77.7 / 46.4 / 50.9 / 56.5 / 79.7 / 86.7. Table 2 p7 BFCL (3 seeds) Qwen3.5-9B: LOTS 29.38+-0.62 vs Keep all 23.12+-0.63; Phi-4-mini 5.00 vs 3.33. Table 3 p8 GTA: LOTS improves over Keep all on 6 of 7 models; Qwen2.5-14B keep-all stays ahead 8.04 vs 7.14. Fig 1c p2: registry 30->240 tools, keep-all falls to 34.5% while LOTS stays >=53.8% (Qwen3.5-9B).
+- Candidate-evaluation allocation: n/a (no candidate evaluations; no-extra-rollout scoring).
+- Task selection/curriculum: tasks arrive continually; space per task; no curriculum.
+- Merge/composition: none (spaces are per task, earlier spaces unchanged, Eq.5).
+- Optimizer self-modification: none.
+- Overlap with CapEvolve: low; shares only the "tool exposure" idea. 
+- What it means for our claims: (c) weak: a prior art that tool-space exposure alone can be optimized per task, but not jointly with prompts/code/descriptions under one gate. Cite as related for MCP exposure. Required comparison: a keep-all vs top-K exposure baseline on our MCP tasks if exposure is a surface. Reproduction: low-med (no code; needs open-weight likelihoods).
+- Evidence quality: small models only; no held-out test separate from per-task eval; K tuned on fit labels; 3 seeds on BFCL, single session on GTA; baselines re-implemented (TTO, Beam Search).

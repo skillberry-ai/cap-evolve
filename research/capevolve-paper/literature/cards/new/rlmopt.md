@@ -1,0 +1,10 @@
+# rlmopt (SHORT)
+Title: RLMOpt: Adaptive Prompt Optimization via Recursive Language Models
+Authors: Subhash Bangalore Satheesha, Nirvik Pande, Deepthi Duddempudi, Bharath Dandala (4; Autonomize AI, CMU)
+arXiv: 2608.10471 v1; first posted 2026-08-11. Venue: preprint (no comment/journal_ref). Code URL: none stated.
+Surface: prompt (+ optional demonstrations component, Sec 3.7); multi-field prompts for extraction/agentic tool-calling (BFCL multi-turn).
+Method: an RLM agent (gpt-5.1) writes REPL code calling tools (inspect data, search traces, synthesize_failures, merge_candidates [sub-LM merges two candidates, not verified], run_candidate, commit_prompt, remaining_budget, pareto_frontier_status, scratchpad notes) and decides what to evaluate, how to spend a budget of B=500 task-LM evals, and when to stop (Table 1 p4, App. D p24). Deterministic harness gates commits: per-field regression floor 0.05 and paired-improvement > 1.65 SE vs running best (Sec 3.4 p5); test split sealed at the tool boundary (App. D p24).
+Held-out: fixed train/val/test; selection on val only, report on test (p7). Evaluation is full-val per run_candidate call on n val examples; no bandit/racing.
+Headline: Table 2 (p9) single seed mean test 0.610 vs GEPA-light 0.589, seed 0.542; margins mostly < 1 paired SE (BFCL +0.033 = 1.83 SE). Table 4: 9/11 matched seed-benchmark wins; GEPA fell below seed twice, RLMOpt never.
+Cost: Table 5 p10: rollouts 500 vs ~780-840 (GEPA-light), plus tokens and wall-clock; authors note harness-side scoring is ~67% of task-LM calls, and optimizer-agent reasoning tokens counted separately.
+RELEVANCE: HIGH. Closest competitor to agent-optimize: threatens (f) agent as search controller, part of (a) (agent allocates eval budget), (d) sealed test via tools, and has paired SE gate like our hill-climb. Weaknesses to exploit: prompt-only surface, single-gate not heterogeneous (c), merge unverified (b), no ablation isolating adaptive policy (Limitations p12), cross-run skill library disabled in comparisons (memory, partial (e)).

@@ -1,0 +1,513 @@
+id,category,in_sample200,full_split,top_role,roles,full_val_runs,pilot_val_runs,smoke_runs
+102-20,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+10281,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+10493,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+105-13,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+10660,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+110-2,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+110-6,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+115-31,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+118-10,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+118-8,Sheet-Level Manipulation,False,train,train-assigned-only,pilot-test,0,0,0
+122-39,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+122-5,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+124-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+124-9,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+127-32,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+130-3,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+131-38,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+132-4,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+134-14,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+13894,Cell-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+139-16,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+142-32,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+14207,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+145-13,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+14625,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+147-7,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+15027,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+151-13,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+1530,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+156-8,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+157-37,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+15825,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+15827,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+15829,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+159-7,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+164-22,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+166-27,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+17047,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+17049,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+172-10,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+17251,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+1726,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+175-10,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+18137,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+18385,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+184-45,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+184-6,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+1845,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+185-13,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+188-45,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+188-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+188-47,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+189-9,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+19-16,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+19-7,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+19032,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+193-42,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+196-35,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+200-27,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+2015,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+203-16,Sheet-Level Manipulation,False,train,train-assigned-only,pilot-test,0,0,0
+203-33,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+204-39,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+207-25,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+21-16,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+211-13,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+212-20,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+212-40,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+212-45,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+212-7,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+22-12,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+2212,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+225-4,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+225-40,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+228-19,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+23-28,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+234-30,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+237-21,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+239-15,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+239-25,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+243-30,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+247-14,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+248-48,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+249-48,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+253-22,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+260-16,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+275-49,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+281-14,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+282-45,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+283-7,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+289-3,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+291-23,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+298-22,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+30-27,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+300-19,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+300-35,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+30468,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+3048,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+307-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+30709,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+31184,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+312-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+31420,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+315-23,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+31745,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+319-11,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+321-9,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+32468,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection);opt-fit(smoke: train=val=test),2,0,8
+32764,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+32895,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+32975,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+330-23,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+33036,Cell-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+33094,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+33355,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+33471,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+336-1,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+33791,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+33935,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+34-5,Sheet-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+340-2,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+34180,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+342-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+34365,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+344-21,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+34435,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+34467,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+34469,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+34493,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+347-49,Sheet-Level Manipulation,True,val,optimization,opt-val(full: selection);opt-fit(smoke: train=val=test),2,0,8
+35207,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+353-19,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+353-50,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+35387,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+355-29,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+36170,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+36236,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+36281,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+36478,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+36745,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+368-44,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+36842,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+37-23,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+37062,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+371-33,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+37228,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+374-9,Sheet-Level Manipulation,True,test,optimization,opt-fit(smoke: train=val=test);finalize-score-only(full test x2 runs),0,0,8
+37609,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+37615,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+37764,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+37962,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+383-16,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+38332,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+38655,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+38662,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+39180,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+39272,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+39490,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+395-48,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+39604,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+398-22,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+398-47,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+399-8,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+39946,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+40-43,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+40234,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+404-14,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+40467,Cell-Level Manipulation,True,train,optimization,opt-fit(smoke: train=val=test),0,0,8
+40510,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+40536,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+40758,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+40809,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+40943,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+41-12,Sheet-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+41297,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+413-15,Sheet-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+415-45,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+41575,Cell-Level Manipulation,True,train,optimization,opt-train(pilot),0,0,0
+41680,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+41692,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+418-25,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+418-29,Sheet-Level Manipulation,True,train,optimization,opt-fit(smoke: train=val=test),0,0,8
+41801,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+41857,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+41937,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+42034,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+42058,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+42110,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+42217,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+4225,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+42378,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+42566,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+427-35,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+42798,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+42897,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+430-1,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+430-39,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+430-43,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+43026,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+43227,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+434-7,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+43406,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+435-36,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+435-38,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+43695,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+43775,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+438-24,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+43939,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+441-38,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+44264,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+44278,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+44287,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+44344,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+444-14,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+444-27,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+450-9,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+45025,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+45030,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+45181,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+45194,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+453-49,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+45581,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+456-19,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+4562,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+458-24,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+458-49,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+46058,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+462-45,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+46444,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+46495,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+46856,Cell-Level Manipulation,True,train,optimization,opt-train(pilot),0,0,0
+470-22,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+47353,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+47360,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+47484,Cell-Level Manipulation,True,test,optimization,opt-fit(smoke: train=val=test);finalize-score-only(full test x2 runs),0,0,8
+47699,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+477-40,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+47741,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+48034,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+482-22,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+48354,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+48357,Cell-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+48378,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+48685,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+48715,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+48735,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+48799,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+488-29,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+48930,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+48950,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+48968,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+490-49,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+491-6,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+49118,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+49246,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+49278,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+494-13,Sheet-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+49455,Cell-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+49467,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+49490,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+495-31,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+495-40,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+49613,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+49654,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+49665,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+49709,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+49782,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+49834,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+49859,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+499-10,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+49939,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+5-33,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+50066,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50154,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50179,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50232,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50233,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50322,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50329,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+504-10,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+50442,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50452,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+50472,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50534,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50573,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+50577,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+50630,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+50641,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50681,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+50755,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+50816,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51030,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+51313,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+51661,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51741,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51807,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51811,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51859,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+51863,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51894,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51899,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+51913,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+5192,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+51958,Cell-Level Manipulation,True,train,optimization,opt-val(pilot: selection),0,7,0
+520-31,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52021,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+52292,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52379,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+524-2,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52450,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52633,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52640,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52658,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+52763,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+528-20,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52841,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52888,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+52931,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53-12,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53-14,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+530-28,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53023,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+53062,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+53068,Cell-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+531-48,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53174,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+532-24,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+532-3,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53280,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53305,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+53367,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+534-40,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53533,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+536-37,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53636,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+53860,Cell-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+53957,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+53965,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54057,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54105,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54201,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54205,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54238,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+54337,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54490,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54640,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54747,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+54781,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55039,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+55126,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55135,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55224,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+55258,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+55392,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55399,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55457,Cell-Level Manipulation,True,test,optimization,opt-fit(smoke: train=val=test);finalize-score-only(full test x2 runs),0,0,8
+55515,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55535,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55572,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+556-37,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55609,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+55610,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55667,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+55794,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55834,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+55860,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55877,Cell-Level Manipulation,False,train,optimization,opt-train(pilot),0,0,0
+55883,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+55912,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+55931,Cell-Level Manipulation,True,train,optimization,opt-val(pilot: selection),0,7,0
+56-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+560-16,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+56451,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+56475,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+565-19,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+56561,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+56576,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+56597,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+566-40,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+56637,Cell-Level Manipulation,True,train,optimization,opt-val(pilot: selection),0,7,0
+56855,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+56975,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+56995,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+56996,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+570-43,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57026,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57029,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57072,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57090,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+57105,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+57137,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+57225,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57275,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57317,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+57376,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+57427,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57448,Cell-Level Manipulation,False,train,train-assigned-only,pilot-test,0,0,0
+575-15,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+575-16,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+575-25,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+57662,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+57716,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57728,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57771,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57783,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+57866,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+57928,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58047,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+581-46,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58114,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58138,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58221,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+58296,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58523,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58568,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58570,Cell-Level Manipulation,True,val,optimization,opt-val(full: selection),2,0,0
+58613,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+58629,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58656,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58667,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58669,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+587-38,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+58781,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58829,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+58890,Cell-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+58994,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59-21,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59055,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+591-29,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59185,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+592-34,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59259,Cell-Level Manipulation,True,train,optimization,opt-val(pilot: selection),0,7,0
+59279,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59340,Cell-Level Manipulation,False,train,optimization,opt-train(pilot),0,0,0
+59433,Cell-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+596-20,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+596-28,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59626,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59643,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59654,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+59667,Cell-Level Manipulation,True,train,optimization,opt-val(pilot: selection),0,7,0
+59743,Cell-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+59787,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59791,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+598-14,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+598-46,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59932,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59969,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+59979,Cell-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+601-4,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+61-1,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+62-3,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+62-48,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+6435,Cell-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+66-1,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+68-47,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+69-17,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+7-5,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+70-3,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+71-30,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+74-47,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+76-42,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+76-43,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+81-41,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+84-38,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+85-38,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+91-3,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+94-28,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+94-8,Sheet-Level Manipulation,False,train,optimization,opt-val(pilot: selection),0,7,0
+98-21,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+99-24,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+99-3,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_10214,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_11072,Sheet-Level Manipulation,True,train,optimization,opt-val(pilot: selection),0,7,0
+CF_11177,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_12196,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+CF_12429,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_12518,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_13024,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_13984,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_13993,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_15439,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_15571,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+CF_16840,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_17940,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_18814,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_18989,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_19190,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_21040,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+CF_21524,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_22493,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_24632,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_24784,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_25745,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_26100,Sheet-Level Manipulation,False,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+CF_26944,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_28312,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_28766,Sheet-Level Manipulation,True,train,train-assigned-only,"full-train: assigned, never evaluated in a completed run",0,0,0
+CF_2919,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_29431,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_357,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_3575,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_3712,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_4909,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_513,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_5348,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_6540,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_7349,Sheet-Level Manipulation,False,val,optimization,opt-val(full: selection),2,0,0
+CF_7938,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_8276,Sheet-Level Manipulation,False,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_8830,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0
+CF_9945,Sheet-Level Manipulation,True,test,finalize-score-only,finalize-score-only(full test x2 runs),0,0,0

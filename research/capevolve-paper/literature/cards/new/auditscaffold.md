@@ -1,0 +1,21 @@
+# auditscaffold (FULL)
+- Exact title: Audit the Scaffold, Not the Checkpoint: A Stationarity Dichotomy for Recursive Self-Improvement in Agentic Coding
+- Authors: Sebastian Bobadilla-Suarez, Bob Suh, Ryan Fortin (3; OnCorps)
+- arXiv 2609.34924 v1 read; first = latest 2026-09-28. arXiv comment: 9 pages main text, 46 pages total, 9 figures, 5 tables.
+- Venue/status: "Preprint." (PDF p.1).
+- Code: "All code, processed data, figure inputs, and the raw LLM response cache are in the supplementary repository" (p.6); no public URL found. License: n/a. OpenAI-compatible: unverified.
+- Citation count: unavailable.
+- Editable surface: conceptual "scaffold" = tools, verifiers, decomposition; empirical part uses mini-swe-agent as weak learner in a T=4-round refinement loop (patch = git diff) (p.6). Not a harness optimizer.
+- Search method: none proposed; formal analysis (refinement game Thm. 2, stationarity dichotomy Prop. 3, Cor. 4, best-of-k Prop. 5, vote error Prop. 6, reused-pool dichotomy Prop. 7) reading refinement as gradient boosting on the residual patch (p.2-5).
+- Feedback signal: SWE-bench test outcomes; production-session churn metrics.
+- Splits/held-out: Part B uses K=55 SWE-bench Lite tasks x 5 seeds (p.6); train/held-out test for the boosting machinery on full SWE-bench split with disjoint held-out test set (App. p.27); production-session KS fit held-out p-values 0.0003-0.44 over 8 seeds, "marginal" (p.32).
+- Benchmarks/models: SWE-bench Lite; 401 production coding sessions vs a 9,395-session pre-AI baseline; Opus vs Sonnet tiers (p.8).
+- Metrics: per-round improvement, vote error, failure overlap m*, churn survivor ratio.
+- Budget/cost: "width buys rate, not budget" (p.5); no $ numbers located.
+- Limitations: no clean unconditional per-round edge estimate (harness stops calling model once task passes, p.8); production dynamics consistent with but not causally identifying a bounded regime (p.2); scaffold-immutability only a proxy.
+- Key results: on 30 same-family workers (6 arms x 5 seeds) over a shared 55-task pool, failure overlap is at maximum and a majority vote fails 23/55 (42%) of tasks (abstract p.1, Fig.1 p.6); per-round improvement decays toward zero on SWE-bench; churn decays geometrically across 401 sessions (rho Opus 0.80 vs Sonnet 0.75, p=0.54; survivor ratio psi 0.55 vs 0.55, gap -0.003, 95% CI [-0.075,+0.069], p.8).
+- Candidate-evaluation allocation, task selection, merge: not studied as method; note: refinement composes patches sequentially (order-dependent) whereas boosting retains all learners (p.3) - argues that retention of ALL proposals with an explicit reweighted distribution over failing specs is what a principled loop would need (Algorithm 1, p.3).
+- Optimizer self-modification: yes in the conceptual sense (scaffold rewriting expands reachable edit set), no experiment.
+- Overlap with CapEvolve: conceptual only. Supports the framing that editing scaffold surfaces (tools, verifiers, decomposition) expands the reachable set - rationale for (c) heterogeneous surfaces; also warns that best-of-k width buys no ceiling (relevant to matched-budget baselines, cf. rethinkharness). Algorithm 1's retention + reweighting toward still-failing specs resembles our failure clusters + task posteriors but is unbuilt ("we are not aware of anyone having built" it, p.3).
+- What it means for our claims: no claim becomes unsafe. Possible citation for why surface heterogeneity matters; reproduction feasibility: low/not applicable. Caution: avoid citing it as empirical evidence for harness optimization.
+- Evidence quality: theory plus small empirical studies (55 tasks, same-family workers, production-session observational data); authors flag confounding and marginal fits.

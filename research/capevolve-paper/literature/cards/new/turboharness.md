@@ -1,0 +1,25 @@
+# turboharness (FULL) -- arXiv 2609.40330v1
+- Exact title: Turbo Harness: Instance-Adaptive Harness Optimization
+- Authors: Tunyu Zhang, Hao Wang, Kai Xu, Dimitris N. Metaxas (Rutgers; Red Hat AI Innovation; MIT-IBM Watson AI Lab)
+- arXiv id + version read: 2609.40330 v1 (only version)
+- First / latest date: 2026-09-30 / 2026-09-30
+- Venue/status + source: arXiv preprint; no comment/journal_ref in arXiv API (checked 2026-10-11)
+- Code: github.com/Tyrion58/turbo-harness (stated p1); license MIT (GitHub API); OpenAI-compatible endpoint: unverified (README has no openai/base_url/vllm mention)
+- Citation count: unavailable
+- Editable surface: harness source code (a per-instance PATCH to a globally optimized Meta-Harness program: workflow text, command examples, code). Not prompt+tool+MCP+skill jointly under one gate; one program.
+- Search method: two stage. (1) Run Meta-Harness (external coding agent, Claude Sonnet 4.5; Opus 4.6 on TB2.1) to get global H*, archive A of all evaluated candidates incl. discarded. (2) Summarize A into an ACE-style "playbook" of successful/failed edit strategies (p4-5); train small editor (Qwen3.5-9B) with GRPO, G candidate patches per training instance, reward = task result of frozen executor (Alg.1 p5). Inference: one editor call per instance -> H_x = H* (+) p_x.
+- Archive / selection / merge: archive reused only as playbook text; no merge of branches; no verification gate on patch (fallback to H* only if patch fails to apply, p6). Memory of failed edits: YES, the playbook records unsuccessful edits (p2, p5) -- relevant to claim (e).
+- Feedback signal: pass/fail or task score from executor rollouts; reward shaping with abstention penalty/improvement bonus (App. B.3, p16); source checks to block reward hacking (p17).
+- Task splits / held-out: ALFWorld 100 train / 169 val / 150 test; ScienceWorld 120/60/149; SWE-smith-MR 50 train/50 test (no val stated); SWE-bench Verified 251 train / 99 val / 150 test (repo-stratified); TB2.1 44-task test (p6, p14). Checkpoint selection on val for ALFWorld, ScienceWorld, SWE-V; for SWE-smith-MR, DBBench, WebShop, TB2.1 reports a fixed/final or early-stopped step (App. B.4, p17); TB2.1 train/val split not clear from text read (UNVERIFIED).
+- Benchmarks and models: ALFWorld, ScienceWorld, DBBench, WebShop (Qwen3.5-9B executor); SWE-smith-MR, SWE-bench Verified (Claude Haiku 4.5, Gemini 3.7 Flash); Terminal-Bench 2.1 (Claude Sonnet 4.5). Editor Qwen3.5-9B.
+- Metrics: success rate / score / accuracy / Success@1; pass rate, steps, $ per issue, mean +- SEM over 3 runs (coding) or 5 runs (TB2.1).
+- Budget/cost reporting: execution cost/steps reported (Tables 2-3, p8); costs EXCLUDE offline Meta-Harness optimization and one-time per-instance editor call (p8). Training needs extra environment rollouts (limitation, p9-10). No total search-spend accounting.
+- Reported limitations (p9-10): depends on quality/diversity of the prior global search; editor training requires additional rollouts.
+- Key results: Table 1 p7 avg over 4 agentic benches: Default 39.6, Meta-Harness 50.2, Turbo 56.1 (ALFWorld 70.7 vs 60.7). Table 2 p8 SWE-smith-MR Haiku: Meta-Harness 50.7+-2.9 vs Turbo 64.0+-1.2; Gemini 70.7 vs 88.0; SWE-bench Verified Haiku 56.7 vs 59.3; Gemini 38.4 vs 54.4. Table 3 p8 TB2.1 Sonnet 4.5: Turbo 55.5+-1.4, Terminus-Kira 52.3, Terminus-2 50.9, Meta-Harness 50.5+-1.7. Ablation Fig.3 p9: RL-only 49.3, playbook-only 50.0, both 64.0 (Meta-Harness 50.7).
+- Candidate-evaluation allocation: none adaptive; Meta-Harness stage details not given in main text; GRPO G=4-16 samples/instance (Table 4 p16).
+- Task selection/curriculum: WebShop run keeps 65 training goals whose global-harness scores lie strictly in (0,1) (p16) -- a difficulty filter; otherwise full train splits.
+- Merge/composition (verified?): none.
+- Optimizer self-modification: none of the optimizer itself; editor weights are RL-trained; the controller is a trained small LLM, not a coding agent.
+- Overlap with CapEvolve: reuses a failed/successful-edit archive (claim e) and per-instance adaptation; shares the Meta-Harness-style archive lineage. Different goal (test-time per-instance patching, needs weight training).
+- What it means for our claims: (e) memory of failed edits is no longer unique if stated generally; must cite as prior art that records unsuccessful edits as a playbook. Not a threat to (a)(b)(c)(d)(f). Required comparison: Meta-Harness and a playbook-conditioned frozen editor (their own Fig.3b shows Opus-as-editor 61.3 without RL). Reproduction feasibility: low-med (needs GRPO training, MIT code available).
+- Evidence quality: 3 seeds (coding), 5 (TB2.1) SEM; baselines Harness-R1 run in different runtime/rollout budget (p18, acknowledged); checkpoint chosen on val for some sets but fixed/final for others; costs exclude search; SWE-smith-MR test only 50 issues.

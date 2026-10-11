@@ -1,0 +1,11 @@
+# whale (SHORT) -- arXiv 2609.00196v1
+- Title: WHALE: A Simple Recipe for Joint Harness-Weight Optimization
+- Authors: Haechan Kim, Yoonho Lee, Gisang Lee et al. (5 authors; KRAFTON, KAIST, Stanford; Chelsea Finn, Kangwook Lee)
+- arXiv 2609.00196 v1 (cs.LG); first/latest 2026-08-31; venue: arXiv preprint (no comment); code https://github.com/krafton-ai/WHALE (Apache-2.0 per GitHub API; OpenAI-compatible: unverified).
+- Editable surface: model WEIGHTS (online rejection-sampling fine-tuning) alternating with Meta-Harness code search over the harness; Qwen3.5-2B/4B agents. Weights are trained, so outside CapEvolve's frozen-weight scope.
+- Search: alternating cycles theta_{k+1}=ModelUpdate(theta_k;h_k), h_{k+1}=HarnessSearch(h_k;theta_{k+1}) (Eq.4 p4); fixed phase budgets (E epochs, I Meta-Harness iterations, M candidates/iter) or adaptive patience rule "driven only by training signals, never by a validation dataset" (p4).
+- Evaluation/held-out: SearchQA (7 datasets), Math (2 AIME sets), Lichess chess puzzles; reports test mean@8 accuracy; "best mean@8" wording suggests best-over-training checkpoints (whether chosen on test UNVERIFIED); rollout-matched budgets (rollout curves p6; stagewise vs alternation compared at equal rollouts).
+- Headline: abstract/p2: WHALE beats weight-only, harness-only and Fast-Slow Training by 4.15-24.38 pp; Fig 1b p1 test acc SearchQA 48.3 vs 38.3 (Meta-Harness) vs 35.3; alternation beats stagewise by 5.32 (SearchQA) and 9.16 pp (Math) and reaches stagewise result with 29% / 49% of rollouts (p2); Math: 60-iteration stagewise harness search gains only +0.21pp test over weight-only (15.63 vs 15.42, p8).
+- Budget/cost: rollouts counted and matched (budget-matched study); no dollars.
+- Limitations: not read in detail (UNVERIFIED).
+- RELEVANCE: LOW. Different problem (co-training weights). Only side value: evidence that harness search over-optimizes training score (+0.21pp test) and rollout-matched protocol; no threat to claims (a)-(f) beyond reusing Meta-Harness as search.

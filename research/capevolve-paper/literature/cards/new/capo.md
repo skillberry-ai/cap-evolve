@@ -1,0 +1,9 @@
+# capo (SHORT)
+- Title: CAPO: Cost-Aware Prompt Optimization
+- Authors: Tom Zehle, Moritz Schlager, Timo Heiss, Matthias Feurer (4; LMU Munich / MCML). arXiv 2504.16005, read v4; first 2025-04-22, latest v4 2025-06-17. Venue: PDF p.1 footer "AutoML 2025 (c) 2025 the authors, CC BY 4.0"; arXiv comment "Submitted to AutoML 2025" (acceptance wording taken from PDF footer only; UNVERIFIED beyond that). Code: https://github.com/finitearth/capo/ , Apache 2.0 (p.2 claim; license not independently fetched).
+- Surface: prompt instructions + few-shot examples only.
+- Search: evolutionary with LLMs as operators (crossover/mutation); population-based RACING (paired t-test alpha=0.2 on blocks of examples; eliminate candidates against the whole population until mu survivors or z_max blocks, p.6) + multi-objective length penalty + task descriptions (p.1, p.6).
+- Evaluation: dev set 300 samples for optimization, 200 for few-shot pool, 500 holdout test set, three seeds; best prompt per seed chosen from last population by dev score; test never used for selection (p.7-8).
+- Headline: beats OPRO/EvoPrompt/PromptWizard-style baselines in 11/15 dataset-model cases, up to +21 pp (Llama-3.3-70B on GSM8K), at a 5M-input-token budget; Table 2 p.8.
+- Budget: explicit input-token budget (5M), cost examples ~$34 vs ~$300 for frontier models (footnote p.2).
+- RELEVANCE: HIGH as prior art for (a): racing (statistical elimination with paired tests) over a candidate population within a token budget is established for prompts (2025). Does not cover heterogeneous surfaces, agentic controller, merge, sealed test accounting. CapEvolve must cite CAPO/TRIPLE/irace lineage when claiming budget-aware allocation, and distinguish: per-task Bayesian posteriors + agent decision-making + triage-to-full-val on agent artifacts.

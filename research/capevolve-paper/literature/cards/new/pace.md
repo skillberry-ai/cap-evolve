@@ -1,0 +1,23 @@
+# pace (FULL)
+- Exact title: PACE: Anytime-Valid Acceptance Tests for Self-Evolving Agents (Paired Anytime-valid Commit Evaluation)
+- Authors: Zayx Shawn (single author, "Independent Researcher"; author name as printed on PDF p.1 and arXiv API: "Zayx Shawn")
+- arXiv 2606.08106 v1 read. First = latest = 2026-06-06. No arXiv comment / journal_ref.
+- Venue/status: none claimed (preprint).
+- Code URL: none found in PDF text. License: n/a. OpenAI-compatible: n/a (no repo).
+- Citation count: unavailable.
+- Editable surface: system prompt only (prompt-level self-evolution) of frozen Qwen2.5-Instruct 0.5B/1.5B/3B (p.6). Skills/code/workflows "argued, not shown" (p.3, Table 3 p.9).
+- Search method: not a search algorithm - a commit gate wrapped around any propose loop. A separate LLM proposes one prompt edit per round; single incumbent c; candidate c' (Alg.1 p.5). No archive, merge, memory.
+- Acceptance rule: paired McNemar-style discordant-pair comparison on identical instances; testing-by-betting e-process E <- E(1+lambda(2w-1)), alpha=0.05, lambda=0.5; commit when E >= 1/alpha; reject if evaluation budget exhausted first; Ville's inequality gives per-candidate false-commit prob <= alpha under optional stopping (p.4-5). Explicitly NOT a run-level familywise bound (p.5).
+- Feedback signal: binary correctness on shared dev instances (GSM8K exact match, SVAMP, ARC-Challenge).
+- Task splits: small reused dev set n=40, plus fresh audit pool n=120 used only for measurement, never seen by the accept rule (p.6). Test-like audit not used for selection.
+- Benchmarks/models: GSM8K, SVAMP, ARC-Challenge; Qwen2.5-Instruct 0.5B/1.5B/3B (p.6, p.8).
+- Metrics: false-commit and harmful-commit rates (audit-labelled, temp-0), delta accuracy on audit pool, evaluation cost = number of dev problems scored (p.6).
+- Budget: ~18% fewer dev evaluations than greedy (1712 vs 2080 paired problems at 1.5B, p.6); no $.
+- Reported limitations: prompt-level only, one model family, 3-5 seeds, per-decision (not run-level) guarantee, audit labels are estimates, power loss on small gains (keeps ~78% of +0.18 gain), cannot certify improvements dev set cannot see (p.6, p.9).
+- Key results: controlled regime Table 1 p.7: greedy 3.4 commits/run, 42% false, 33% harmful at 1.5B; PACE 1.0 commit, 0% false, delta +0.57 (same as greedy); 3B: delta +0.74+/-0.04 (PACE) vs +0.54+/-0.30 (greedy). Stochastic regime Table 2 p.7: greedy 13.3-20.7 commits/run, 72-100% false; PACE <=0.3 commits; greedy degrades 0.5B by 4.9+/-3.0 points (p.7). Abstract: 0/5 audit-labelled false commits.
+- Candidate-evaluation allocation: sequential per-candidate early stopping (anytime-valid), shared paired instances; no cross-candidate allocation, no task selection.
+- Task selection: none (draw instances from dev).
+- Merge/composition: none. Self-modification of optimizer: none.
+- Overlap with CapEvolve: our hill-climb paired val gate mean(delta) > k*SE is a fixed-n paired gate; PACE is its sequential, anytime-valid, formally calibrated upgrade. Threatens (d) only partially (statistical gating/guarantee, not sealed test or accounting of unsuccessful search).
+- What it means for our claims: the claim that a paired SE-based gate is principled/novel must not be made; cite PACE as the principled form and describe k*SE as a heuristic fixed-n gate (PACE Table 1 shows fixed-n paired test ties with PACE when the gain is obvious, p.5). A required (cheap) comparison: PACE e-process gate as an alternative acceptor in hill-climb; reproduction feasibility high (10 lines). It also supports our narrative that greedy "keep if score went up" accumulates false commits (selection bias) - relevant to the honest-held-out accounting claim (d).
+- Evidence quality: tiny models (<=3B), prompt-only, 3-5 seeds, dev n=40, planted-gain controlled regime; no agent-system deployment (stated p.6). Preprint by single independent author.

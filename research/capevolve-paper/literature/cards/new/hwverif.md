@@ -1,0 +1,23 @@
+# hwverif (FULL)
+- Exact title: Automatic Harness Evolution for Hardware Design Verification: Can LLMs Consolidate Gains Across Discovered Harnesses?
+- Authors: Kidus Seyoum (NVIDIA, internship), Ajay Mittur (NVIDIA)
+- arXiv 2609.28908 v1 read (only version). First/latest: 2026-09-24. Comment: none.
+- Venue/status: "Preprint." (PDF p.1); no venue claimed.
+- Code URL: none stated. License: n/a. OpenAI-compatible: unverified (custom harness uses OpenAI Agents SDK, p.4; no repo).
+- Citation count: unavailable.
+- Editable surface: versioned "agent package" = runtime harness + scaffold: instructions/prompts, skills, retrieval/search tools, turn handling, runner behavior, tool policy, sub-agent defs, finalization (p.2-4). Varies by experiment.
+- Search method: LLM proposer (Claude Opus 4.8 / Opus 5) generates sibling candidate branches from incumbent/earlier branch; activation check; evaluate Rs trials; SelectPromising; confirm Rc=5 trials; Promote rule; every candidate retained in archive with lineage/traces (Alg.1 p.3). Archive is "first-class" but not merged; paper's thesis is consolidation FAILS; recommends routing/archive-aware selection (p.1, p.8). Memory: archive of failure labels/traces fed as evidence.
+- Feedback signal: task-level exact-match/graded score, structured failure classes (malformed, activation failure, provider/env failure, timeout, wrong, correct) (p.4).
+- Splits/held-out: primary result is on the SAME 12 tasks used for search and final eval ("primary results measure optimization-set performance", p.2). Auxiliary: 8 search + 4 validation tasks; selection used the 4-task validation set; replay on all 12 is "not independent" (p.5). CVDP 142-task follow-up: functional verifier not shown to subject (p.1, p.5). No sealed test.
+- Benchmarks/models: 12 proprietary DV root-cause tasks; CVDP v1.1.0 (12-task subset, 142 tasks). Subject models Kimi K3, DeepSeek V4 Pro, MiniMax M3; Codex+GPT-5.5 reference (p.4-6).
+- Metrics: first-trial success, Success>=2/5, pass@5, correct attempts, completion, archive union (p.5).
+- Budget/cost: not reported as dollars; evolved domain scaffolds used ~30% more input tokens, 28% more agent time (p.9, Table 8 p.15); 72 generations x 10 branches MiniMax run stopped early (p.6).
+- Limitations: 12 proprietary tasks, no independent test, single-trial promotion has no uncertainty (p.6, p.11).
+- Key results: Kimi K3 baseline vs evidence-grounded vs batched-causal: first trial 2/12 -> 6/12 -> 5/12; pass@5 5/12 -> 9/12 -> 10/12; correct attempts 17/60 -> 20/60 -> 21/60; completed 34/60 -> 58/60 -> 60/60 (Table 2, p.5). Two evolved harnesses jointly solve 11/12 (p.6). DeepSeek candidate 0.375 -> 0.725 mean score on 4-task validation but tied 2/12 vs 2/12 on all-12 replay (p.6). CVDP: +35.6% functional passes vs 142-task baseline (abstract p.1).
+- Candidate-evaluation allocation: cheap discovery (1 trial) then 5-trial confirmation of promising candidates (p.3-4); no bandit/posterior.
+- Task selection: none; fixed 12 tasks.
+- Merge/composition: none verified; reports that useful behaviors in sibling candidates did not consolidate when inherited (p.2, p.6). Evidence AGAINST naive merge/accumulation, FOR portfolio/routing.
+- Optimizer self-modification: none.
+- Overlap with CapEvolve: heterogeneous editable surface incl. prompts, skills, tool/runtime code; separate search vs confirmation stages; archive of candidates; honest reporting of optimization-set vs generalization.
+- Claims: (b) verified merging: NOT threatened, rather motivates it (shows unverified inheritance loses gains; supports our verified-merge rationale, cite as motivating evidence). (d): partially overlaps in honesty about selection peaks not persisting; but no sealed test. (a): confirm-after-cheap-discovery is a coarse form of triage. Required comparison: none (not reproducible, proprietary tasks). Reproduction feasibility: low.
+- Evidence quality: small N (12), same tasks for search and eval, repeated 5 trials for final table only, single proposer runs, no CIs, models differ across experiments (explicitly "not matched").
