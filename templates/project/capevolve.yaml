@@ -105,6 +105,8 @@ gate_k_se: 1.0
 # promotion_n_conf: 10          #   fresh trials per task for the confirmation
 # promotion_dmin: 0.02          #   minimum confirmed mean delta
 # promotion_z_conf: 2.0         #   minimum confirmed z (mean / paired SE)
+# merge_verify: true            # agent-optimize: `act.py verify-merge` (parent + both branches + merge on the same fresh block,
+#                               #   interaction estimate, bounded delta-debugging on a loss); `promote` of a merge needs a pass
 # Optional, pareto gate_mode only (cap_evolve.gate.decide / cap_evolve.pareto_archive): the
 # objectives to balance. Omit for the default (reward maximize + cost minimize, with a
 # cost->latency->tokens fallback). round.py persists a bounded non-dominated frontier
