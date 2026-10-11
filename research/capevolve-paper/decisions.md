@@ -103,3 +103,10 @@ Format: date (UTC) — decision — rationale — reversible?
   - Gateway log since 13:11: streamed RITS target calls come only from HarnessLens (OpenCode), 1 of 98 without usage. Every other arm calls the target unstreamed, so no other arm is exposed.
   - The gateway cannot retry a stream once it has started sending bytes to the client, so mitigation is the trial-level retry-once policy (above).
   - Known gateway limitation: a truncated stream is logged as status 200 with usage=null rather than flagged as an error. The metrics script should count those cases as stream_truncated.
+- 2026-10-11 20:30 — Paper writing starts now (user request), before results exist.
+  - Format: the user's MLSys 2027 template (campaign-scratch/inputs/paper_zip). Its numbers are untrusted.
+  - Agents: paper-lit (style notes from real papers, related work, bib), paper-core (scaffold and core sections), paper-results (tables, plots, mocks). Adversarial reviewers will run on the first full draft.
+  - Every pending result is a \pend macro from the generated numbers_pending.tex and renders red in draft. check_paper.py fails if any survive camera-ready. Mock plots are watermarked. Prose must be outcome-agnostic.
+  - Style: no em dashes, AI-slop word list banned. Brief: campaign-scratch/baselines/PAPER_BRIEF.txt.
+  - User's writing-skills zip is not readable from uid dev (permission denied); requested from the user.
+- 2026-10-11 20:30 — Azure OpenAI direct endpoint checked: 17 common deployment names (gpt-5.5/5.4/5.x, gpt-4.1, gpt-4o, o3, o4-mini, gpt-oss, gemini-*) return DeploymentNotFound. The listing is not exposed. Deployment names have been requested from the user. Until then GPT-5.5 and Gemini go through the LiteLLM gateway (azure/gpt-5.5, gcp/gemini-*). Gemini is not an Azure OpenAI model.
