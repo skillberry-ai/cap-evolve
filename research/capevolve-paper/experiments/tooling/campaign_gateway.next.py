@@ -220,6 +220,12 @@ class H(BaseHTTPRequestHandler):
                 try:
                     js = json.loads(payload)
                     usage = js.get("usage")
+                    ch = (js.get("choices") or [{}])[0] if isinstance(js.get("choices"), list) else {}
+                    finish = ch.get("finish_reason") or js.get("stop_reason")
+                    msg = ch.get("message") or {}
+                    empty = (not (msg.get("content") or msg.get("tool_calls"))) if ch else (not js.get("content"))
+                    if finish in ("content_filter", "refusal") or (status == 200 and empty):
+                        err = f"finish={finish} empty={empty}"
                     if status != 200:
                         err = str(js.get("error"))[:300]
                 except Exception:
