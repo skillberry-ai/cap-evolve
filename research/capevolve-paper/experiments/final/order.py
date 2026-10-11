@@ -125,6 +125,7 @@ def main(argv=None):
     ap.add_argument("--trials-arm", type=int, default=None)
     ap.add_argument("--trials-seed", type=int, default=None)
     ap.add_argument("--extra", choices=sorted(EXTRA), default=None)
+    ap.add_argument("--end-only", action="store_true", help="write only the distinct END (5D) jobs: run after the primary window (decisions 22:50)")
     ap.add_argument("--no-end", action="store_true", help="skip the native end-of-run (5D) artifacts")
     ap.add_argument("--arms", default=None, help="restrict to these arms (dry runs)")
     ap.add_argument("--tag-exp", default=None)
@@ -183,7 +184,8 @@ def main(argv=None):
     seed_art = man["seed_artifact"]
     if seed_art.get("status") not in ("ok", "partial"):
         sys.exit("no usable seed artifact in manifest")
-    add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
+    if not a.end_only:
+        add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
     entries = {(e["mode"], e["arm"], e["seed"]): e for e in man["entries"]}
     arms = a.arms.split(",") if a.arms else C.suite_arms(suite)
     for arm in arms:
@@ -194,12 +196,12 @@ def main(argv=None):
                 skipped.append({"arm": arm, "seed": seed, "mode": "B", "reason": (b or {}).get("reason", "no entry")})
                 b = None
             same = b and e and e.get("tree_sha256") == b.get("tree_sha256") and e["status"] != "impossible"
-            if b:
+            if b and not a.end_only:
                 add_cell(arm, seed, "B", b, n_arm, also_end=bool(same) or arm == "oneshot")
             if e and not a.no_end and (not a.extra or a.extra == "dryazure") and arm != "oneshot":
                 if e["status"] == "impossible":
                     skipped.append({"arm": arm, "seed": seed, "mode": "END", "reason": e.get("reason", "")})
-                elif not same:
+                elif not same and a.end_only:
                     add_cell(arm, seed, "END", e, n_arm)
     # one permutation of everything (sorted first so the input order is canonical)
     jobs.sort(key=lambda j: (j["arm_label"], j["seed"], str(j["task"]), j["trial"], j["mode"]))
@@ -207,7 +209,7 @@ def main(argv=None):
     for i, j in enumerate(jobs):
         j["idx"] = i
     canary = []
-    if not a.extra or a.extra == "dryazure":
+    if (not a.extra or a.extra == "dryazure") and not a.end_only:
         crng = HashRng(C.ORDER_SEED, "%s|canary" % suite)
         for tid in canary_tasks(suite, crng):
             cj = make_job("seed", 0, "B", seed_art, {"id": tid, "family": family_of_sb_id(tid) if suite == "A" else tid}, 0, 1)
@@ -227,7 +229,7 @@ def main(argv=None):
     for j in jobs:
         k = "%s/s%d" % (j["arm_label"], j["seed"])
         meta["counts_by_arm"][k] = meta["counts_by_arm"].get(k, 0) + 1
-    out = Path(a.out) if a.out else C.MANIFESTS / ("order_%s%s.jsonl" % (suite, ("_" + a.extra) if a.extra else ""))
+    out = Path(a.out) if a.out else C.MANIFESTS / ("order_%s%s%s.jsonl" % (suite, ("_" + a.extra) if a.extra else "", "_end" if a.end_only else ""))
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
         f.write(json.dumps(meta, sort_keys=True) + "\n")

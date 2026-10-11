@@ -23,6 +23,13 @@ for S in A B C; do python3 -u -I run_final.py run --suite $S --order manifests/o
 
 `FINAL_EVAL_ROOT` defaults to `campaign-scratch/final_eval`; results land in `{A,B,C}/results_long.csv`.
 
+## Phase ordering (decisions 22:50)
+
+The primary B* window runs first on every suite (`order_<S>.jsonl`: B* artifacts, seed, one-shot; END artifacts identical to B* ride along).
+The distinct native end-of-run (5D) jobs are a separate file (`order.py ... --end-only` -> `order_<S>_end.jsonl`, run with `run_final.py run --extra end`)
+and start only after the primary window is complete; if A's END would run past 2026-10-14 05:00 UTC it is dropped and disclosed.
+HarnessLens/hl-v0 evaluation and the Azure transfer extras run after B and C primary.  `prepare` (Suite A) also checks that the sandbox has no internet egress.
+
 ## Files
 
 | file | role |

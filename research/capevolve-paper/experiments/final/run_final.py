@@ -580,6 +580,14 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
     except Exception as exc:
         prob.append("gateway health failed: %s" % exc)
     if suite == "A":
+        try:    # baseline-eng: sandbox must have no internet (podman network sb_internal) for the final evaluation
+            img = "docker.io/xingyaoww/codeact-executor:latest"
+            r = subprocess.run(["podman", "run", "--rm", img, "bash", "-c", "curl -m 8 -s -o /dev/null -w %{http_code} https://github.com || true"],
+                               capture_output=True, text=True, timeout=120)
+            if r.stdout.strip() not in ("000", ""):
+                prob.append("sandbox has internet egress (curl github -> %s); see baselines/EGRESS_SWITCH.txt" % r.stdout.strip())
+        except Exception as exc:
+            prob.append("egress check failed: %r" % exc)
         for p in (SB_LO_BIN,):
             if not Path(p).exists():
                 prob.append("LibreOffice missing: %s" % p)
