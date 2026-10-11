@@ -42,6 +42,7 @@ OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "opt
 TARGET_ROLES = {"target"}
 USER_ROLES = {"user", "usersim"}
 JUDGE_ROLES = {"judge"}
+NON_OPT_ROLES = TARGET_ROLES | USER_ROLES | JUDGE_ROLES | {"probe", ""}
 MAIN_CATS = ("main", "chaser_eval")
 # Restart cutoffs that cannot be derived from file birth times (source: run-dir notes).
 MANUAL_CUTOFFS = {
@@ -845,14 +846,14 @@ def main():
         row["rits_ledger_tokens"] = sum(r["ledger_tokens"] for r in rs if r["rits"])
         row["nonrits_ledger_tokens"] = row["ledger_tokens"] - row["rits_ledger_tokens"]
         for cls, roles in (("target", TARGET_ROLES), ("user", USER_ROLES), ("judge", JUDGE_ROLES), ("optimizer", OPT_ROLES)):
-            sel = [r for r in rs if r["role"] in roles]
+            sel = [r for r in rs if (r["role"] in roles if cls != "optimizer" else r["role"] not in NON_OPT_ROLES)]
             row[cls + "_calls"] = sum(r["calls"] for r in sel)
             row[cls + "_noncache_tokens"] = sum(r["noncache_tokens"] for r in sel)
             pr = [r["usd_total"] for r in sel if r["usd_total"] is not None]
             unp = sum(r["noncache_tokens"] for r in sel if r["usd_total"] is None)
             row[cls + "_usd_priced"] = sum(pr) if pr else None
             row[cls + "_unpriced_noncache_tokens"] = unp
-        other = [r for r in rs if r["role"] not in TARGET_ROLES | USER_ROLES | JUDGE_ROLES | OPT_ROLES]
+        other = [r for r in rs if r["role"] not in TARGET_ROLES | USER_ROLES | JUDGE_ROLES | OPT_ROLES]  # roles counted as optimizer if not target/user/judge/probe
         row["other_role_calls"] = sum(r["calls"] for r in other)
         for comp in ("usd_input", "usd_output", "usd_cache_read", "usd_cache_write"):
             v = [r[comp] for r in rs if r[comp] is not None]
@@ -944,7 +945,7 @@ def write_csv(path, rows, cols=None):
 def build_totals(role_rows, lines, h1, h2):
     def blank():
         return {"calls": 0, "errors": 0, "ledger_tokens": 0, "rits_ledger_tokens": 0, "nonrits_ledger_tokens": 0,
-                "in_uncached": 0, "cache_read": 0, "cache_write": 0, "output": 0, "reasoning": 0,
+                "component_noncache_tokens": 0, "in_uncached": 0, "cache_read": 0, "cache_write": 0, "output": 0, "reasoning": 0,
                 "usd_priced_proxy": 0.0, "usd_priced_calls_models": [], "unpriced_noncache_tokens": 0, "usd_lower_bound": False}
     T = {"by_suite_category": {}, "by_suite": {}, "overall": blank()}
     models_priced = defaultdict(set)
@@ -959,6 +960,7 @@ def build_totals(role_rows, lines, h1, h2):
                 tgt["rits_ledger_tokens"] += r["ledger_tokens"]
             else:
                 tgt["nonrits_ledger_tokens"] += r["ledger_tokens"]
+            tgt["component_noncache_tokens"] += r["noncache_tokens"]
             tgt["in_uncached"] += r["in_uncached"]
             tgt["cache_read"] += r["cache_read"]
             tgt["cache_write"] += r["cache_write_5m"] + r["cache_write_1h"]
@@ -1036,10 +1038,10 @@ def write_report(arm_rows, role_rows, totals, waste_dirs, run_facts, main_runs, 
     ov = totals["overall"]
     A("## Campaign totals")
     A("")
-    A("| scope | calls | errors | ledger tokens | RITS tokens | non-RITS tokens | proxy USD (priced) | unpriced non-cache tokens |")
-    A("|---|---:|---:|---:|---:|---:|---:|---:|")
+    A("| scope | calls | errors | component non-cache tokens (basis for all sums) | ledger tokens (gateway basis) | RITS tokens | non-RITS tokens | proxy USD (priced) | unpriced non-cache tokens |")
+    A("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     for name, v in [("overall", ov)] + [("suite " + k, v) for k, v in sorted(totals["by_suite"].items())]:
-        A("| %s | %s | %s | %s | %s | %s | %s lb | %s |" % (name, format(v["calls"], ","), format(v["errors"], ","), format(v["ledger_tokens"], ","),
+        A("| %s | %s | %s | %s | %s | %s | %s | %s lb | %s |" % (name, format(v["calls"], ","), format(v["errors"], ","), format(v["component_noncache_tokens"], ","), format(v["ledger_tokens"], ","),
                                                          format(v["rits_ledger_tokens"], ","), format(v["nonrits_ledger_tokens"], ","),
                                                          "$%.2f" % v["usd_priced_proxy"], format(v["unpriced_noncache_tokens"], ",")))
     A("")
