@@ -119,6 +119,10 @@ Any sentence that generalizes beyond the three artifacts (about the method, the 
 
 **5M-4. Promotion count per search (reported for every arm).** For every arm and seed at the comparison point: the number of candidates screened, the number promoted/accepted under the arm's native rule, and whether the returned artifact is byte-identical to the seed artifact (content hash). Table in the main text next to the scores (an arm that returned the seed on most seeds is visible); per-seed values in the appendix. Descriptive only; no test. Arms without a native accept notion report artifacts whose content hash differs from the seed.
 
+### 5-AMENDMENT 4 (2026-10-11 23:05 UTC; before the search cutoff; no final-set data seen)
+
+**5N. B* is computed over primary-family arms only** (decisions.md, 23:00 UTC entry): the matched checkpoint B* of each suite is the largest rollout count reached by every seed of every arm that appears in the primary family 5A. Secondary and exploratory arms (cheap arms, E12A/E12C, Tier 2) are compared at min(B*, their own counted rollouts at the cutoff); where that is below B*, the shorter count is disclosed per seed beside every number. The B* rule of decisions.md (rounded down to a multiple of 50, floor 200) is otherwise unchanged.
+
 ## 6. Missingness and invalid rollouts
 The harness averages only valid trials (harness.py:587-601), drops a task from a paired vector when either side has zero valid trials (harness.py:1060-1065), and the coverage guard (harness.py:3022, gate.py:397) looks only at the candidate side and whole tasks. Simulation (sim_footprint.md d): dropped candidate-induced errors turn a null edit into 52-89% acceptance while coverage stays >=0.96.
 1. Classification by a frozen deterministic classifier (error class, exit code, exception-type allowlist), applied blind to arm and reward, published with the code. Anything unclassified counts as a failure.
