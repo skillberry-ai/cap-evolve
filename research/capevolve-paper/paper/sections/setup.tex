@@ -33,7 +33,7 @@
 Table~\ref{tab:suites} lists the three suites. Suite A edits spreadsheets with a code-execution agent: the target is Gemma-4-31B-it, served by one IBM RITS (Research Inference Service) deployment, on the 400-task verified subset of the 912 SpreadsheetBench questions \citep{spreadsheetbench}\footnote{File \texttt{spreadsheetbench\_verified\_400.tar.gz} (sha256 \texttt{10ef893d}\ldots) in \texttt{github.com/RUCKBReasoning/SpreadsheetBench}, \texttt{data/} directory.}. Suites B and C are customer-service dialogue in $\tau^2$-bench retail and airline \citep{tau2-bench,tau_bench}, pinned at commit 8ebb7499, with gpt-oss-120b as target and user simulator. Suites B and C are descriptive: with 40 and 20 final tasks and a simulated user they cannot resolve small differences, so they show that the protocol transfers, and inference there is at the artifact level only. GPT-5.5 grades natural-language assertions for every arm, because the benchmark's default judge is not served by our gateway and the target should not grade itself. Claude Sonnet 5.5 is the optimizer or reflection model for every matched arm. One metering gateway tags every model call with suite, arm, search seed and role.
 
 \begin{table}[t]
-\caption{Suites. Opt is the tasks whose rollouts the optimizer reads; sel is the tasks that gate acceptance; final is scored once per artifact. Final size is tasks $\times$ trials per task. Stock \capevolve{} reads and gates on one validation set. Suite A's final set is a stratified sample of 239 ids from the 912-question release, each scored at most twice before (score only).}
+\caption{Suites. Opt is the tasks whose rollouts the optimizer reads; sel is the tasks that gate acceptance; final is scored once per artifact. Final size is tasks $\times$ trials per task. *Sealed against scoring and selection; the task files were filesystem-visible to the optimizer, and no access was observed. Stock \capevolve{} reads and gates on one validation set. Suite A's final set is a stratified sample of 239 ids from the 912-question release, each scored at most twice before (score only).}
 \label{tab:suites}
 \centering\small
 \begin{tabularx}{\columnwidth}{@{}lXlll@{}}
@@ -41,7 +41,7 @@ Table~\ref{tab:suites} lists the three suites. Suite A edits spreadsheets with a
  & Target & Opt / sel & Final & Exposure \\
 \midrule
 A & Gemma-4-31B-it & 80 / 40 & $70\times 1$ & score-only exposed \\
-B & gpt-oss-120b & 49 / 25 & $40\times 3$ & sealed (provenance check pending) \\
+B & gpt-oss-120b & 49 / 25 & $40\times 3$ & sealed* \\
 C & gpt-oss-120b & 20 / 10 & $20\times 3$ & development-exposed \\
 \bottomrule
 \end{tabularx}

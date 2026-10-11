@@ -3,10 +3,9 @@
 
 \begin{itemize}[leftmargin=*,nosep]
 \item \emph{Power.} Three search seeds give two degrees of freedom for pipeline-level claims, and the artifact-level minimum detectable effect is \mdeBCondThree{} points on Suite B and \mdeCCondThree{} on Suite C. We claim at the artifact level and call smaller gaps undetected.
-\item \emph{Exposure.} The Suite A final set samples an older 912-question release whose ids were scored at most twice before, score only. We exclude 55 ids by family prefix. Suite C's test split is development-exposed, Suite B's is sealed, and off-repository use of the retail test split is invisible to us.
-\item \emph{Absence-of-evidence scans.} Our scans of retained rollouts found no gold read by the target agents, but they cover validation rollouts only, so they are not proof. Proposer isolation was verified by negative tests per arm, and Suite B agent-optimize has the residual gap above.
+\item \emph{Exposure.} The Suite A final set samples an older 912-question release whose ids were scored at most twice before, score only. We exclude 55 ids by family prefix. Suite C's test split is development-exposed. Suite B's is sealed against scoring and selection, but its task files were visible on the runner filesystem; our scan of 68 optimizer transcripts and the run directories found no access, which is absence of evidence. Likewise, our scans of retained target rollouts found no gold read but cover validation rollouts only, and pretraining contamination cannot be checked.
 \item \emph{Native-design differences.} The stock \capevolve{} arms see 40 validation tasks and competitors 120. Competitors keep their native gates. On Suite B, agent-optimize can read gold actions of its own 74 optimization and selection tasks (never the sealed test 40), so its selection-time numbers are flagged.
 \item \emph{Matched checkpoint.} Capacity bound the search, so $B^\star$ falls below 600 and results say little about larger budgets.
 \item \emph{Scorer and judge.} LibreOffice 25.8 fails 19 of 400 official gold files as outputs, so some tasks are unwinnable on the recalculated scale. GPT-5.5 judges the $\tau^2$ assertions; a stored verdict sample will test judge sensitivity. \needs{Judge sensitivity result.}
 \item \emph{Coverage.} One optimizer model, two target models, a community port of WikiSkill, five one-seed methods, and unpriced RITS tokens.
-\end{itemize}
+\end{itemize} An artifact optimized against a reward can score well for the wrong reasons, so it needs human review before deployment.
