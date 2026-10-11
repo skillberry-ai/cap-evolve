@@ -68,6 +68,22 @@ def _tool_text_flags(trace):
     return {"raw_tool_text_last": RAW_TOOL_TEXT in last, "raw_tool_text_any": any(RAW_TOOL_TEXT in t for t in texts), "n_assistant_turns": len(texts)}
 
 
+def _empty_completion(trace, termination):
+    """descriptive flag (coordinator decision): conversation not ended by USER_STOP and the last turn has no text and no tool call
+    (ends on a tool result or an empty assistant message).  Scored as a normal failure; recorded only."""
+    if "USER_STOP" in str(termination) or not trace:
+        return False
+    last = trace[-1]
+    if not isinstance(last, dict):
+        return False
+    if last.get("role") == "tool":
+        return True
+    if last.get("role") == "assistant":
+        c = last.get("content")
+        return not (c if isinstance(c, str) else json.dumps(c or "")).strip().strip('"[]') and not last.get("tool_calls")
+    return False
+
+
 def _stage_candidate(job, dest):
     """dest/<files>: A = the two capability files; B/C = the seed capability tree with policy/ and tools/ replaced by the artifact's."""
     import shutil
@@ -207,6 +223,7 @@ def worker_tau(job, attempt_dir):
     res = {"t_start": t0, "t_end": t1, "error": ro.error, "tokens": int(ro.tokens or 0), "reward": float(sc.reward), "reward_as_saved": float(sc.reward),
            "error_kind_adapter": meta.get("error_kind") if ro.error else None, "termination": meta.get("termination_reason"),
            "n_llm_calls": fl["n_assistant_turns"], "empty_output": False, **fl,
+           "empty_completion": _empty_completion(ro.trace, meta.get("termination_reason")),
            "judge_model": (meta.get("judge") or {}).get("model"), "feedback": (sc.feedback or "")[:1000]}
     ri = meta.get("tau2_reward_info") or {}
     res["tau2_reward_breakdown"] = ri.get("reward_breakdown")
@@ -406,7 +423,7 @@ def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
            "reward": res.get("reward"), "reward_as_saved": res.get("reward_as_saved"), "error_class": cls, "error_rule": rule,
            "error_text": (res.get("error") or res.get("worker_exception") or ""), "hang": hang, "worker_ok": res.get("worker_ok"),
            "tokens": res.get("tokens"), "raw_tool_text_last": res.get("raw_tool_text_last"), "raw_tool_text_any": res.get("raw_tool_text_any"),
-           "empty_output": res.get("empty_output"), "n_llm_calls": res.get("n_llm_calls"), "termination": res.get("termination"),
+           "empty_output": res.get("empty_output"), "empty_completion": res.get("empty_completion"), "n_llm_calls": res.get("n_llm_calls"), "termination": res.get("termination"),
            "tag": job["tag"], "attempt_dir": str(ad), "extra_set": job.get("extra_set")}
     return rec
 
@@ -466,17 +483,18 @@ def aggregate(suite, root, meta, jobs):
         r["done"] += 1
         r["candidate_errors"] += 1 if t["error_class"] in ("candidate", "unverifiable") else 0
         r["empty_output"] += 1 if t.get("empty_output") else 0
+        r["empty_completion"] = r.get("empty_completion", 0) + (1 if t.get("empty_completion") else 0)
         r["raw_tool_text_last"] += 1 if t.get("raw_tool_text_last") else 0
         for _m in (["B", "END"] if j.get("also_end") else [j["mode"]]):
           trial_rows[_m].append(dict(arm=j.get("arm"), seed=j["seed"], task=j["task"], trial=j["trial"], reward=t["reward"], family=j.get("family"),
                                             reward_as_saved=t["reward_as_saved"], t_start=_iso(t["t_start"]), t_end=_iso(t["t_end"]), error_class=t["error_class"],
-                                            error_text=(t["error_text"] or "").replace("\n", " ")[:500], attempts=len(allr), empty_output=int(bool(t.get("empty_output"))),
+                                            error_text=(t["error_text"] or "").replace("\n", " ")[:500], attempts=len(allr), empty_output=int(bool(t.get("empty_output"))), empty_completion=int(bool(t.get("empty_completion"))),
                                             raw_tool_text_last=int(bool(t.get("raw_tool_text_last"))), tag=t["tag"], job_id=j["job_id"]))
     out = {}
     for mode, suffix in (("B", ""), ("END", "_end")):
         rows = trial_rows[mode]
         _write_csv(root / ("results_trials%s.csv" % suffix), rows,
-                   ["arm", "seed", "task", "trial", "reward", "family", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output",
+                   ["arm", "seed", "task", "trial", "reward", "family", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output", "empty_completion",
                     "raw_tool_text_last", "tag", "job_id"])
         agg = {}
         for x in rows:
