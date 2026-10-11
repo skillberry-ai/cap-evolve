@@ -192,15 +192,15 @@ def cost():
     nice = {"ctl-oneshot": "one-shot ctrl", "ctl-seed": "seed ctrl", "hc": "CapEvolve HC", "ao": "CapEvolve AO",
             "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness", "evoskill": "EvoSkill",
             "wikiskill": "WikiSkill", "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2"}
-    L = [r"\begin{table*}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}",
+    L = [r"\begin{table*}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
          r"\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still "
          r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles over seeds, in millions of tokens. "
          r"The optimizer cap counts non-cache-read tokens, which are uncached input plus output plus cache writes, and applies to each search separately; the table shows the largest seed against the cap of 4M. Cache reads are listed apart and are not counted by the cap. "
          r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
          r"evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}",
-         r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrrrr}", r"\toprule",
-         r"Suite & Arm & Seeds & Rollouts & Opt.\ non-cache-read & Opt.\ cache write & Opt.\ cache read & Opt.\ incl.\ cache read & Cap used (\%) & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
+         r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrrr}", r"\toprule",
+         r"Suite & Arm & Seeds & Rollouts & Opt.\ non-cache-read & Opt.\ cache write & Opt.\ cache read & Cap used (\%) & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
     first = True
     for su in "ABC":
         if not first:
@@ -219,7 +219,7 @@ def cost():
             m = lambda x: f"{x / 1e6:.2f}"
             cells = [su, nice[a] + (r"$^{\ddagger}$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
                      ("0 (no optimizer)" if a == "ctl-seed" else "0 (not started)") if nm else m(o["in_uncached"] + o["output"] + o["cw"]),
-                     "0" if nm else m(o["cw"]), "0" if nm else m(o["cache_read"]), "0" if nm else m(o["in_uncached"] + o["output"] + o["cw"] + o["cache_read"]),
+                     "0" if nm else m(o["cw"]), "0" if nm else m(o["cache_read"]),
                      "0" if nm else f"{100 * max([x for (a1, a2, _), x in seed_nc.items() if (a1, a2) == (su, a)] or [0]) / cap:.0f}",
                      "0" if nm else f"{o['usd_total']:.2f}", m(v["tgt"]), f"{v['wall']:.1f}", f"{int(v['err'])}"]
             L.append(" & ".join(f"\\prov{{{c}}}" if i >= 3 else c for i, c in enumerate(cells)) + r" \\")
