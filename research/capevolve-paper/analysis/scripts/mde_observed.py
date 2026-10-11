@@ -90,8 +90,8 @@ def eval_mean_sd(evals, T):
     return (mean(ms), math.sqrt(var(ms)), len(ms)) if len(ms) > 1 else (None, None, len(ms))
 
 
-def mde(T, S, n, w, *, tau, tau_int=0.10, sig_s=0.03, deff=1.0, m_cmp=1, flavour, sig_b=0.0):
-    noise = 2 * w                                              # two arms, independent trials
+def mde(T, S, n, w, *, n_seed=None, tau, tau_int=0.10, sig_s=0.03, deff=1.0, m_cmp=1, flavour, sig_b=0.0):
+    noise = w * (1 + n / n_seed) if n_seed else 2 * w              # arm at n trials vs seed at n_seed trials (noise/n below)
     if flavour == "conditional":
         v = deff * (tau ** 2 + (tau_int ** 2 + noise / n) / S) / T
         v += sig_b ** 2 * (1 + 1 / S)                         # evaluation-batch shift: S champions in own batches vs one baseline batch
@@ -155,6 +155,19 @@ def main():
             brow.append(["A", 70, 1, tau, fl, f"{mde(70, 3, 1, est['A val-40']['within_var_per_trial'], tau=tau, deff=1.4, flavour=fl):.3f}",
                          f"{mde(70, 3, 1, est['A val-40']['within_var_per_trial'], tau=tau, deff=1.4, flavour=fl, sig_b=sig_b):.3f}"])
     out["A_batch_effect"] = {"sig_b": sig_b}
+    PLAN = {"A": dict(T=70, n=1, n_seed=2, key="A val-40", deff=1.4, holm_m=12), "B": dict(T=40, n=3, n_seed=3, key="B opt-49", deff=1.0, holm_m=8),
+            "C": dict(T=20, n=3, n_seed=3, key="C opt-20", deff=1.0, holm_m=6)}
+    planned, prow = {}, []
+    for suite, c in PLAN.items():
+        w = est[c["key"]]["within_var_per_trial"]
+        planned[suite] = {k: c[k] for k in ("T", "n", "n_seed", "holm_m")}
+        planned[suite]["mde"] = {}
+        for tau in (0.0, 0.10, 0.15, 0.25):
+            r = {fl: mde(c["T"], 3, c["n"], w, n_seed=c["n_seed"], tau=tau, deff=c["deff"], flavour=fl) for fl in ("conditional", "pipeline")}
+            r.update({fl + "_holm": mde(c["T"], 3, c["n"], w, n_seed=c["n_seed"], tau=tau, deff=c["deff"], m_cmp=c["holm_m"], flavour=fl) for fl in ("conditional", "pipeline")})
+            planned[suite]["mde"][str(tau)] = r
+            prow.append([suite, c["T"], c["n"], c["n_seed"], tau] + [f"{r[k]:.3f}" for k in ("conditional", "conditional_holm", "pipeline", "pipeline_holm")])
+    out["planned"] = planned
     (OUT / "mde_observed.json").write_text(json.dumps({"estimates": est, "mde": out}, indent=1))
     md = ["# mde_observed: MDE from the observed per-task variance of the unmodified seed artifact\n",
           "Data: search-split evaluations of the seed artifact only (no final-set data). Each row pools every re-measurement of the same seed "
@@ -172,7 +185,9 @@ def main():
           "(smallest p) critical level alpha/m.\n",
           md_table(["suite", "final tasks T", "trials n", "tau", "MDE conditional (the 3 champions)", "same, Holm first step", "MDE pipeline-level t(2)", "same, Holm first step"], mrows),
           f"\n## Suite A evaluation-batch effect\n\nThe six seed-artifact evaluations on Suite A val-40 (3 hill-climb, 3 agent-optimize runs, same artifact) have split means 0.579, 0.590, 0.568, 0.462, 0.447, 0.684: SD {est['A val-40']['sd_of_split_mean_across_evals']:.3f} against a binomial prediction of {est['A val-40']['predicted_sd_of_split_mean']:.3f}. The excess is an evaluation-batch SD of about {sig_b:.3f} (5 df, very imprecise; likely gateway load / time of day on the single Gemma deployment). Suites B and C show no excess (observed at or below prediction). If arms are scored in different batches, the contrast variance gains sig_b^2 (1 + 1/S); interleaving all arms in randomized order within one window cancels it, so the protocol requires it. MDE at T=70, n=1, S=3 with and without the batch term:\n",
-          md_table(["suite", "T", "n", "tau", "flavour", "MDE no batch effect", f"MDE with sig_b={sig_b:.3f}"], brow)]
+          md_table(["suite", "T", "n", "tau", "flavour", "MDE no batch effect", f"MDE with sig_b={sig_b:.3f}"], brow),
+          "\n## Planned final sizes (pinned in decisions.md 22:30): A T=70 n=1 (seed n=2), B T=40 n=3, C T=20 n=3\n\nContrast vs the seed artifact: noise = within var x (1/n_arm + 1/n_seed). Same variance model; S=3; Holm m = 12 / 8 / 6.\n",
+          md_table(["suite", "T", "n arm", "n seed", "tau", "MDE conditional", "same, Holm first step", "MDE pipeline t(2)", "same, Holm first step"], prow)]
     (OUT / "mde_observed.md").write_text("\n".join(md))
     print("\n".join(md))
 

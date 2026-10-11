@@ -64,3 +64,22 @@ The six seed-artifact evaluations on Suite A val-40 (3 hill-climb, 3 agent-optim
 | A | 70 | 1 | 0.15 | pipeline | 0.239 | 0.521 |
 | A | 70 | 1 | 0.25 | conditional | 0.142 | 0.284 |
 | A | 70 | 1 | 0.25 | pipeline | 0.283 | 0.543 |
+
+## Planned final sizes (pinned in decisions.md 22:30): A T=70 n=1 (seed n=2), B T=40 n=3, C T=20 n=3
+
+Contrast vs the seed artifact: noise = within var x (1/n_arm + 1/n_seed). Same variance model; S=3; Holm m = 12 / 8 / 6.
+
+| suite | T | n arm | n seed | tau | MDE conditional | same, Holm first step | MDE pipeline t(2) | same, Holm first step |
+|---|---|---|---|---|---|---|---|---|
+| A | 70 | 1 | 2 | 0.0 | 0.087 | 0.117 | 0.189 | 0.582 |
+| A | 70 | 1 | 2 | 0.1 | 0.096 | 0.129 | 0.204 | 0.627 |
+| A | 70 | 1 | 2 | 0.15 | 0.106 | 0.142 | 0.221 | 0.679 |
+| A | 70 | 1 | 2 | 0.25 | 0.133 | 0.178 | 0.268 | 0.824 |
+| B | 40 | 3 | 3 | 0.0 | 0.086 | 0.113 | 0.186 | 0.474 |
+| B | 40 | 3 | 3 | 0.1 | 0.098 | 0.127 | 0.205 | 0.521 |
+| B | 40 | 3 | 3 | 0.15 | 0.110 | 0.143 | 0.225 | 0.574 |
+| B | 40 | 3 | 3 | 0.25 | 0.143 | 0.186 | 0.282 | 0.718 |
+| C | 20 | 3 | 3 | 0.0 | 0.116 | 0.149 | 0.230 | 0.512 |
+| C | 20 | 3 | 3 | 0.1 | 0.133 | 0.172 | 0.259 | 0.578 |
+| C | 20 | 3 | 3 | 0.15 | 0.152 | 0.196 | 0.292 | 0.651 |
+| C | 20 | 3 | 3 | 0.25 | 0.202 | 0.260 | 0.378 | 0.842 |
