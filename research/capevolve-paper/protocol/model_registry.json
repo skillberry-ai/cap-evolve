@@ -1,0 +1,211 @@
+{
+ "status": "PROVISIONAL \u2014 selection not frozen; frozen copy goes in preregistration",
+ "probed_utc": "2026-10-11",
+ "selection_rule": "one fixed optimizer across matched arms; no silent substitution after outages (an outage pauses the arm)",
+ "candidates": {
+  "optimizer": {
+   "primary": "aws/claude-sonnet-5-5 (LiteLLM gateway)",
+   "alt": "aws/claude-opus-5-5",
+   "why": "fast, priced (proxy), tool-capable; Opus historical but 2x price"
+  },
+  "historical_open_target": {
+   "id": "RITS google/gemma-4-31B-it (alias /google-gemma-4-31b-it-a100)",
+   "max_model_len": 262144,
+   "why": "continuity with SpreadsheetBench history"
+  },
+  "cross_family_open_target": {
+   "id": "RITS Qwen/Qwen3.6-35B-A3B (alias /qwen3-6-35b-a3b-a100)",
+   "max_model_len": 262144,
+   "note": "thinking model; emits reasoning tokens"
+  },
+  "tau_target": {
+   "id": "RITS openai/gpt-oss-120b-a100",
+   "max_model_len": 40144,
+   "note": "CI default agent is gateway aws/gpt-oss-120b \u2014 different serving stack; never mix (model_catalog.txt)"
+  },
+  "proprietary_transfer_target": {
+   "id": "azure/gpt-5.5 or gcp/gemini-3.6-flash (gateway)",
+   "note": "price unknown"
+  }
+ },
+ "unavailable": {
+  "/gpt-oss-20b-a100": "404 model does not exist",
+  "/devstral-small-2-24b-2512": "404",
+  "/qwen3-5-9b": "timeout 120s",
+  "/google-gemma-4-12b-it,/devstral-2-123b-2512-a100,/granite-4-1-20b,/granite-4-2-8b,/deepseek-v3-2,/minimax-m2-5": "not yet probed successfully",
+  "azure_direct": "deployment names not discoverable (deployments listing 404; common names DeploymentNotFound); gateway azure/* used instead"
+ },
+ "probes": [
+  {
+   "t": "2026-10-11T00:30:47Z",
+   "provider": "rits",
+   "model": "/qwen3-6-35b-a3b-a100|Qwen/Qwen3.6-35B-A3B",
+   "concurrency": 4,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 5.96,
+   "p95": 6.12,
+   "wall_s": 11.9,
+   "req_per_min": 40.2,
+   "mean_completion_tokens": 600,
+   "mean_prompt_tokens": 1310,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:30:56Z",
+   "provider": "rits",
+   "model": "/google-gemma-4-31b-it-a100|google/gemma-4-31B-it",
+   "concurrency": 4,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 4.23,
+   "p95": 5.51,
+   "wall_s": 8.5,
+   "req_per_min": 56.5,
+   "mean_completion_tokens": 91,
+   "mean_prompt_tokens": 1223,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:31:09Z",
+   "provider": "rits",
+   "model": "/gpt-oss-120b-a100|openai/gpt-oss-120b-a100",
+   "concurrency": 4,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 6.19,
+   "p95": 6.45,
+   "wall_s": 12.7,
+   "req_per_min": 37.8,
+   "mean_completion_tokens": 156.1,
+   "mean_prompt_tokens": 1166,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:31:16Z",
+   "provider": "litellm",
+   "model": "aws/claude-sonnet-5-5",
+   "concurrency": 8,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 2.52,
+   "p95": 6.8,
+   "wall_s": 7.0,
+   "req_per_min": 68.6,
+   "mean_completion_tokens": 158.2,
+   "mean_prompt_tokens": 2378,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:31:21Z",
+   "provider": "litellm",
+   "model": "azure/gpt-5.5",
+   "concurrency": 8,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 3.33,
+   "p95": 4.74,
+   "wall_s": 4.7,
+   "req_per_min": 101.1,
+   "mean_completion_tokens": 76.5,
+   "mean_prompt_tokens": 1170,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:31:27Z",
+   "provider": "litellm",
+   "model": "aws/gpt-oss-120b",
+   "concurrency": 8,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 2.79,
+   "p95": 5.29,
+   "wall_s": 6.3,
+   "req_per_min": 75.9,
+   "mean_completion_tokens": 173,
+   "mean_prompt_tokens": 1166,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:31:33Z",
+   "provider": "litellm",
+   "model": "gcp/gemini-3.6-flash",
+   "concurrency": 8,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 4.21,
+   "p95": 5.23,
+   "wall_s": 5.3,
+   "req_per_min": 90.5,
+   "mean_completion_tokens": 451.2,
+   "mean_prompt_tokens": 1185,
+   "tool_call_rate": 0.62
+  },
+  {
+   "t": "2026-10-11T00:31:46Z",
+   "provider": "litellm",
+   "model": "azure/FW-GLM-5.3-Flash",
+   "concurrency": 8,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 5.06,
+   "p95": 13.19,
+   "wall_s": 13.2,
+   "req_per_min": 36.3,
+   "mean_completion_tokens": 359,
+   "mean_prompt_tokens": 1198,
+   "tool_call_rate": 0.0
+  },
+  {
+   "t": "2026-10-11T00:31:57Z",
+   "provider": "litellm",
+   "model": "azure/DeepSeek-V4-Flash",
+   "concurrency": 8,
+   "n": 8,
+   "ok": 8,
+   "errors": [],
+   "status_counts": {
+    "200": 8
+   },
+   "p50": 4.08,
+   "p95": 4.6,
+   "wall_s": 10.6,
+   "req_per_min": 45.3,
+   "mean_completion_tokens": 117.4,
+   "mean_prompt_tokens": 1320,
+   "tool_call_rate": 0.5
+  }
+ ]
+}

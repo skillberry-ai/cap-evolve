@@ -1,0 +1,6 @@
+{"_source": "Anthropic first-party list prices from the claude-api skill model table (cached 2026-10-06), retrieved 2026-10-11. The IBM LiteLLM gateway's internal billing is not visible to us; these are a PROXY price, labeled as such in every cost table. Cache write assumed 1.25x input (5-min TTL). Non-Anthropic gateway models and RITS: price UNKNOWN (reported as unknown, never 0).",
+ "usd_per_mtok": {
+  "aws/claude-opus-5-5":   {"input": 4.0, "output": 20.0, "cache_read": 0.20, "cache_write_5m": 5.0},
+  "aws/claude-sonnet-5-5": {"input": 2.0, "output": 10.0, "cache_read": 0.20, "cache_write_5m": 2.5},
+  "aws/claude-haiku-4-5":  {"input": 1.0, "output": 5.0,  "cache_read": 0.10, "cache_write_5m": 1.25}},
+ "unknown": ["azure/gpt-5.5", "azure/FW-GLM-5.3-Flash", "azure/DeepSeek-V4-Flash", "gcp/gemini-3.6-flash", "aws/gpt-oss-120b", "rits/*"]}
