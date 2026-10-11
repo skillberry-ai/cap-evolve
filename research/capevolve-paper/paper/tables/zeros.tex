@@ -1,27 +1,50 @@
-\begin{table}[h]
-\caption{Rollouts scored zero after an error, by arm, under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string; every other error is a candidate error. ``Unverifiable'' counts rows an adapter labelled infrastructure that have no string and some or unknown target calls, which the rule treats as candidate errors. Live runs only.}
-\label{tab:zeros}
+\begin{table*}[t]
 \centering\scriptsize
-\begin{tabular}{@{}llrrrrrr@{}}
+\setlength{\tabcolsep}{4pt}
+\caption{Error rows per arm and seed under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string. Every other error is a candidate error, except rows an adapter labelled infrastructure that have no string and some or unknown target calls, which stay unverifiable. Changed counts rows whose class differs from the adapter label. Search used each method's native handling of these errors, and only the reporting is unified. Live runs only.}
+\label{tab:zeros}
+\begin{tabular}{@{}llrrrrrrrr@{}}
 \toprule
-Suite & Arm & Rollouts & Errors & Adapter infra & Adapter candidate & Uniform infra & Uniform candidate (unverifiable) \\
+Suite & Arm & Seed & Errors & Adapter infra & Adapter candidate & Uniform infra & Uniform candidate & Unverifiable & Changed \\
 \midrule
-A & ACE & 72 & 2 & 2 & 0 & 2 & 0 (0) \\
-A & CapEvolve AO & 120 & 5 & 5 & 0 & 5 & 0 (0) \\
-A & EvoSkill & 107 & 5 & 5 & 0 & 5 & 0 (0) \\
-A & GEPA & 172 & 7 & 7 & 0 & 0 & 7 (7) \\
-A & CapEvolve HC & 120 & 6 & 6 & 0 & 6 & 0 (0) \\
-A & Meta-Harness & 360 & 30 & 30 & 0 & 27 & 3 (3) \\
-A & MIPROv2 & 120 & 7 & 7 & 0 & 7 & 0 (0) \\
-A & SkillOpt & 560 & 147 & 27 & 120 & 27 & 120 (0) \\
-A & Trace2Skill & 278 & 27 & 0 & 27 & 26 & 1 (0) \\
-A & WikiSkill & 151 & 8 & 0 & 8 & 8 & 0 (0) \\
+A & ACE & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+A & ACE & 2 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+A & CapEvolve AO & 0 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+A & CapEvolve AO & 1 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+A & CapEvolve AO & 2 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+A & EvoSkill & 0 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+A & EvoSkill & 1 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+A & EvoSkill & 2 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+A & GEPA & 0 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
+A & GEPA & 1 & 4 & 4 & 0 & 0 & 0 & 4 & 4 \\
+A & GEPA & 2 & 2 & 2 & 0 & 0 & 0 & 2 & 2 \\
+A & CapEvolve HC & 0 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+A & CapEvolve HC & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+A & CapEvolve HC & 2 & 3 & 3 & 0 & 3 & 0 & 0 & 0 \\
+A & Meta-Harness & 0 & 6 & 6 & 0 & 6 & 0 & 0 & 0 \\
+A & Meta-Harness & 1 & 15 & 15 & 0 & 13 & 0 & 2 & 2 \\
+A & Meta-Harness & 2 & 9 & 9 & 0 & 8 & 0 & 1 & 1 \\
+A & MIPROv2 & 0 & 3 & 3 & 0 & 3 & 0 & 0 & 0 \\
+A & MIPROv2 & 1 & 4 & 4 & 0 & 4 & 0 & 0 & 0 \\
+A & SkillOpt & 0 & 85 & 5 & 80 & 5 & 80 & 0 & 0 \\
+A & SkillOpt & 1 & 9 & 9 & 0 & 9 & 0 & 0 & 0 \\
+A & SkillOpt & 2 & 53 & 13 & 40 & 13 & 40 & 0 & 0 \\
+A & Trace2Skill & 0 & 7 & 0 & 7 & 7 & 0 & 0 & 7 \\
+A & Trace2Skill & 1 & 6 & 0 & 6 & 5 & 1 & 0 & 5 \\
+A & Trace2Skill & 2 & 14 & 0 & 14 & 14 & 0 & 0 & 14 \\
+A & WikiSkill & 0 & 3 & 0 & 3 & 3 & 0 & 0 & 3 \\
+A & WikiSkill & 1 & 2 & 0 & 2 & 2 & 0 & 0 & 2 \\
+A & WikiSkill & 2 & 3 & 0 & 3 & 3 & 0 & 0 & 3 \\
 \midrule
-B & CapEvolve AO & 369 & 2 & 2 & 0 & 0 & 2 (2) \\
-B & One-shot control & 394 & 8 & 8 & 0 & 6 & 2 (2) \\
-B & CapEvolve HC & 441 & 4 & 4 & 0 & 1 & 3 (3) \\
+B & CapEvolve AO & 0 & 2 & 2 & 0 & 0 & 0 & 2 & 2 \\
+B & One-shot control & 0 & 7 & 7 & 0 & 6 & 0 & 1 & 1 \\
+B & One-shot control & 1 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
+B & CapEvolve HC & 0 & 2 & 2 & 0 & 1 & 0 & 1 & 1 \\
+B & CapEvolve HC & 1 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
+B & CapEvolve HC & 2 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
 \midrule
-C & One-shot control & 100 & 2 & 2 & 0 & 1 & 1 (1) \\
+C & One-shot control & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+C & One-shot control & 2 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
