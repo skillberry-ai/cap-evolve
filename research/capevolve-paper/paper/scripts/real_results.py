@@ -158,6 +158,17 @@ def cost():
                 opt[k][fld] += f(r[fld])
             opt[k]["cw"] += f(r["cache_write_5m"]) + f(r["cache_write_1h"])
             opt[k]["calls"] += f(r["calls"])
+    # Optimizer usage that bypassed the gateway, recovered from CLI transcripts by the metering audit.
+    # Expected columns: suite,arm,seed,in_uncached,cache_read,cache_write,output,usd_total (one row per seed; blanks = 0).
+    rec = collections.defaultdict(lambda: collections.defaultdict(float))
+    bp = OUTM / "bypassed_usage.csv"
+    if bp.exists():
+        for r in read_csv(bp):
+            k = (r["suite"], r["arm"])
+            for fld in ("in_uncached", "cache_read", "output", "usd_total"):
+                rec[k][fld] += f(r.get(fld))
+            rec[k]["cw"] += f(r.get("cache_write"))
+            rec[k]["calls"] += 1
     g = collections.defaultdict(lambda: collections.defaultdict(float))
     for r in arm_rows:
         k = (r["suite"], r["arm"])
@@ -176,6 +187,7 @@ def cost():
          r"\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still "
          r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. "
          r"``n/m'' means the optimizer session is not metered by the gateway (Claude Code runs started with their own client). "
+         r"A dagger marks usage recovered from CLI transcripts by the metering audit (\texttt{bypassed\_usage.csv}) instead of the gateway. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
          r"evaluated model. Wall is hours since launch, longest seed. Rows count seeds that exist in the ledger.}",
          r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrr}", r"\toprule",
@@ -190,8 +202,11 @@ def cost():
                 continue
             v, o = g[(su, a)], opt.get((su, a))
             nm = o is None or o["calls"] == 0
+            recovered = False
+            if nm and (su, a) in rec:
+                o, nm, recovered = rec[(su, a)], False, True
             m = lambda x: f"{x / 1e6:.2f}"
-            cells = [su, nice[a], f"{int(v['n'])}", f"{int(v['roll'])}",
+            cells = [su, nice[a] + (r"$^\dagger$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
                      "n/m" if nm else m(o["in_uncached"]), "n/m" if nm else m(o["cache_read"]), "n/m" if nm else m(o["cw"]),
                      "n/m" if nm else f"{o['usd_total']:.2f}", m(v["tgt"]), f"{v['wall']:.1f}", f"{int(v['err'])}"]
             L.append(" & ".join(f"\\prov{{{c}}}" if i >= 3 else c for i, c in enumerate(cells)) + r" \\")

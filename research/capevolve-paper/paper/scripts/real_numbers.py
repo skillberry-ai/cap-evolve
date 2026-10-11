@@ -1,4 +1,15 @@
-"""STUB. Replaces mock_numbers.py after the final evaluation (cutoff 2026-10-13 06:00 UTC).
+"""STUB.
+
+CONTRACT (agreed with team-lead; the final-eval runner must write exactly this)
+  path    /home/dev/projects2/campaign-scratch/final_eval/{A,B,C}/results_long.csv
+  columns arm,seed,task,reward,family
+    arm     registry key: hc ao gepa skillopt metaharness evoskill wikiskill trace2skill ace mipro harnesslens oneshot seed
+    seed    search seed index (0,1,2); the seed arm uses 0
+    task    final-set task id
+    reward  mean over execution trials, in [0,1]
+    family  cluster id (task family)
+  One row per (arm, seed, task); a missing cell is an absent row, never a zero.
+ Replaces mock_numbers.py after the final evaluation (cutoff 2026-10-13 06:00 UTC).
 
 Contract: write the SAME files as mock_numbers.py, with source = "real":
   ../results_data.json     schema below; plots/make_plots.py and make_tables.py then drop the watermark and the \\pend wrappers
