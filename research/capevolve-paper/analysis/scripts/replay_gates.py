@@ -172,12 +172,19 @@ def masking_audit(row, r, algo) -> dict:
     se_un = paired_gate_se(row)
     n = r.get("n") or row["unmasked_n"]
     diff = um - r["delta"]
-    masked = abs(diff) > EPS or abs(se_un - r["stderr"]) > EPS
+    differs = abs(diff) > EPS or abs(se_un - r["stderr"]) > EPS
+    n_unmasked = row["unmasked_n"]
+    # A recorded vector with FEWER tasks than the unmasked one is a dropped task (errored/unscored), not proof of
+    # footprint masking; only an equal-n value mismatch is consistent with masking and/or an SE floor.
+    kind = None if not differs else ("n_differs: a task is missing from the recorded vector (dropped task; not evidence of masking)"
+                                     if n != n_unmasked else "equal_n_value_mismatch: consistent with footprint masking and/or an SE floor")
+    masked = differs and n == n_unmasked
     mass = n * diff
-    out.update(applicable=True, masked_or_floored_inferred=bool(masked), recorded_delta=r["delta"], recorded_se=r["stderr"],
+    out.update(applicable=True, mismatch=kind, dropped_task_inferred=bool(differs and n != n_unmasked),
+               masked_or_floored_inferred=bool(masked), recorded_delta=r["delta"], recorded_se=r["stderr"],
                unmasked_delta=um, unmasked_se=se_un, n_recorded=n,
-               excluded_net_delta_mass=mass if masked else 0.0,
-               excluded_tasks_lower_bound=int(math.ceil(abs(mass) - 1e-9)) if masked and abs(mass) > EPS * n else 0,
+               excluded_net_delta_mass=mass if differs else 0.0,
+               excluded_tasks_lower_bound=int(math.ceil(abs(mass) - 1e-9)) if differs and abs(mass) > EPS * n else 0,
                inference="Σ over tasks outside the footprint of (cand-parent) = n*(unmasked mean - recorded mean); "
                          "task count is a lower bound assuming |per-task delta| <= 1 (INFERRED; footprint set not recorded)")
     return out
@@ -217,7 +224,7 @@ def aggregate(replays):
     agg = {"runs": len(replays), "candidates": 0, "accepts": Counter(), "decided_by_algorithm": defaultdict(Counter),
            "flips": Counter(), "flip_pairs": Counter(), "path": {}, "masking": {}}
     path_tbl = {k: {"survives": [], "fails": []} for k in RULES if k != "recorded"}
-    mask = {"hill_climb_decisions": 0, "masked_or_floored": 0, "accepted_masked": 0,
+    mask = {"hill_climb_decisions": 0, "dropped_task_mismatches": 0, "masked_or_floored": 0, "accepted_masked": 0,
             "accepted_masked_unmasked_would_reject": 0, "net_mass_sum": 0.0, "net_neg_mass_decisions": 0, "net_pos_mass_decisions": 0,
             "tasks_lower_bound_sum": 0, "records": []}
     for r in replays:
@@ -231,8 +238,9 @@ def aggregate(replays):
             m = c["masking"]
             if m["applicable"]:
                 mask["hill_climb_decisions"] += 1
-                if m["masked_or_floored_inferred"]:
-                    mask["masked_or_floored"] += 1
+                mask["dropped_task_mismatches"] += int(m["dropped_task_inferred"])
+                if m["masked_or_floored_inferred"] or m["dropped_task_inferred"]:
+                    mask["masked_or_floored"] += int(m["masked_or_floored_inferred"])
                     mask["net_mass_sum"] += m["excluded_net_delta_mass"]
                     mask["net_neg_mass_decisions"] += int(m["excluded_net_delta_mass"] < -EPS)
                     mask["net_pos_mass_decisions"] += int(m["excluded_net_delta_mass"] > EPS)
@@ -242,7 +250,7 @@ def aggregate(replays):
                         if not c["outcomes"]["unmasked_k1"]:
                             mask["accepted_masked_unmasked_would_reject"] += 1
                     mask["records"].append({"run_id": r["run_id"], "candidate": c["candidate"], "recorded_accept": c["recorded_accept"],
-                                            "unmasked_k1_accept": c["outcomes"]["unmasked_k1"], **{k: m[k] for k in (
+                                            "unmasked_k1_accept": c["outcomes"]["unmasked_k1"], "mismatch": m["mismatch"], **{k: m[k] for k in (
                                                 "recorded_delta", "unmasked_delta", "recorded_se", "unmasked_se",
                                                 "excluded_net_delta_mass", "excluded_tasks_lower_bound")},
                                             "n_broke_full_val_recorded": None})
@@ -317,25 +325,35 @@ def render(replays, agg, history) -> str:
     rows = []
     for rule, v in agg["path"].items():
         s, b = v["champion_path_survives"], v["champion_path_blocked"]
-        rows.append([rule, s["runs"], fnum(s["mean_test_delta"]), b["runs"], fnum(b["mean_test_delta"]), b["test_deltas"]])
-    L += [md_table(["rule", "path survives: runs", "mean test delta", "path blocked: runs", "mean test delta", "test deltas of blocked runs"], rows), ""]
+        rows.append([rule, s["runs"], f"{fnum(s['mean_test_delta'])} (n={s['runs']})", b["runs"],
+                     f"{fnum(b['mean_test_delta'])} (n={b['runs']})", b["test_deltas"]])
+    L += [md_table(["rule", "path survives: runs", "mean test delta (group n)", "path blocked: runs", "mean test delta (group n)", "test deltas of blocked runs"], rows), ""]
     L += ["A blocked run whose champion nevertheless gained on test is a gain the stricter rule would have forfeited; a blocked run with "
-          "test delta <= 0 is a loss it would have avoided.", ""]
+          "test delta <= 0 is a loss it would have avoided. **Do not compare the survive/blocked group means as a rule effect**: groups are "
+          "small and unequal (e.g. k=0.2 blocks 1 run vs unmasked k=1 blocks 6), the grouping is confounded with run, benchmark split, optimizer "
+          "trajectory and the number of steps on the champion path, and each blocked-run test delta is one champion per run. "
+          "**No dependence-adjusted uncertainty is attached to any pooled number here** (runs share the benchmark, seed split and optimizer family, "
+          "and several share identical baselines and candidates); the tables are descriptive counts. The counterfactual assumes the optimizer "
+          "would have made the same proposals under a different gate, which it need not (a stricter gate changes the parent of every later proposal).", ""]
     m = agg["masking"]
-    L += ["## E07 footprint false-exclusion audit (hill-climb)", "",
-          f"Decisions with a recorded paired delta/SE: {m['hill_climb_decisions']}. In {m['masked_or_floored']} the recorded delta or SE differs from "
-          "the unmasked one by more than rounding: the live gate saw a footprint-masked and/or SE-floored vector [INFERRED from the mismatch].", "",
-          f"- accepted while masked: {m['accepted_masked']}; of these the unmasked k_se=1 gate would reject: **{m['accepted_masked_unmasked_would_reject']}**",
-          f"- masked decisions whose excluded tasks carried net NEGATIVE delta (masking hid regressions): {m['net_neg_mass_decisions']}; net positive: {m['net_pos_mass_decisions']}",
-          f"- sum of excluded net delta mass (task-delta units, + = gain hidden): {m['net_mass_sum']:+.3f} [INFERRED = n*(unmasked mean - recorded mean)]",
-          f"- lower bound on excluded tasks with nonzero delta, summed over decisions: {m['tasks_lower_bound_sum']} [INFERRED, assumes |delta| <= 1 per task]", ""]
+    L += ["## E07 audit: recorded vs unmasked delta/SE (hill-climb)", "",
+          f"Decisions with a recorded paired delta/SE: {m['hill_climb_decisions']}. The recorded vector can differ from the full unmasked one in two ways, "
+          "which the artifacts let us tell apart only by the recorded n [INFERRED]:", "",
+          f"- **fewer tasks in the recorded vector** (a task dropped, e.g. errored/unscored): {m['dropped_task_mismatches']} decisions. This is NOT evidence of footprint masking.",
+          f"- **same n, different value** (consistent with footprint masking and/or an SE floor): {m['masked_or_floored']} decisions.", "",
+          f"- recorded accepts among the mismatching decisions: {m['accepted_masked']}; of these the unmasked k_se=1 gate would reject: {m['accepted_masked_unmasked_would_reject']}",
+          f"- mismatching decisions whose missing/excluded part carried net negative delta: {m['net_neg_mass_decisions']}; net positive: {m['net_pos_mass_decisions']}",
+          f"- sum of that net delta mass (task-delta units, + = gain absent from the recorded vector): {m['net_mass_sum']:+.3f} [INFERRED = n*(unmasked mean - recorded mean)]",
+          f"- lower bound on the number of tasks with nonzero delta behind it, summed: {m['tasks_lower_bound_sum']} [INFERRED, assumes |delta| <= 1 per task]", "",
+          "The footprint SET is not in the artifacts, so a false exclusion (a task outside the predicted footprint with nonzero delta) cannot be shown directly; "
+          "this table bounds what is missing from the vector the gate used.", ""]
     if m["records"]:
-        L += [md_table(["run", "candidate", "recorded accept", "unmasked k1 accept", "recorded delta", "unmasked delta", "recorded SE", "unmasked SE", "excluded net mass", ">= tasks"],
-                       [[x["run_id"], x["candidate"], x["recorded_accept"], x["unmasked_k1_accept"], fnum(x["recorded_delta"]), fnum(x["unmasked_delta"]),
+        L += [md_table(["run", "candidate", "recorded accept", "unmasked k1 accept", "mismatch kind", "recorded delta", "unmasked delta", "recorded SE", "unmasked SE", "net mass", ">= tasks"],
+                       [[x["run_id"], x["candidate"], x["recorded_accept"], x["unmasked_k1_accept"], (x["mismatch"] or "").split(":")[0], fnum(x["recorded_delta"]), fnum(x["unmasked_delta"]),
                          f"{x['recorded_se']:.4f}", f"{x['unmasked_se']:.4f}", fnum(x["excluded_net_delta_mass"], 3), x["excluded_tasks_lower_bound"]]
                         for x in m["records"]]), ""]
     else:
-        L += ["No decision shows evidence of masking in these artifacts.", ""]
+        L += ["No decision shows a recorded-vs-unmasked mismatch in these artifacts.", ""]
     L += ["## Per run", ""]
     for r in replays:
         t = r["test"]
@@ -353,6 +371,17 @@ def render(replays, agg, history) -> str:
     return "\n".join(L)
 
 
+def _round(o, sig=6):
+    """6 significant digits everywhere, so the JSON is identical across Python/libm builds."""
+    if isinstance(o, float):
+        return o if not math.isfinite(o) or o == 0 else float(f"{o:.{sig}g}")
+    if isinstance(o, dict):
+        return {k: _round(v, sig) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_round(v, sig) for v in o]
+    return o
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--history", default=str(DEFAULT_HISTORY))
@@ -366,7 +395,7 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     payload = {"history": a.history, "rules": RULES, "aggregate": agg, "runs": replays,
                "not_replayable": ["rule_P confirmation", "reward_gated cost conditions", "E07 footprint set (no traces)", "per-candidate test"]}
-    (out / "replay_gates.json").write_text(json.dumps(payload, indent=1, default=str), encoding="utf-8")
+    (out / "replay_gates.json").write_text(json.dumps(_round(payload), indent=1, default=str), encoding="utf-8")
     (out / "replay_gates.md").write_text(render(replays, agg, a.history), encoding="utf-8")
     print(f"{agg['runs']} runs, {agg['candidates']} decisions -> {out}/replay_gates.{{json,md}}")
 

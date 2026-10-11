@@ -53,3 +53,15 @@ def test_main_writes_outputs(tmp_path):
     rg.main(["--history", str(hist), "--out", str(tmp_path / "out")])
     d = json.loads((tmp_path / "out" / "replay_gates.json").read_text())
     assert d["aggregate"]["candidates"] == 3 and (tmp_path / "out" / "replay_gates.md").exists()
+
+
+def test_fewer_recorded_tasks_is_a_dropped_task_not_masking(tmp_path):
+    hist = _tree(tmp_path)
+    f = hist / "111" / "bench" / "ui" / "data" / "runs_run_suite.json"
+    d = json.loads(f.read_text())
+    d["summary"]["gate_decisions"][0]["n"] = 19
+    f.write_text(json.dumps(d))
+    r = rg.replay_run(rg.load_runs(hist)[0])
+    m = {c["candidate"]: c for c in r["candidates"]}["c3"]["masking"]
+    assert m["dropped_task_inferred"] is True and m["masked_or_floored_inferred"] is False
+    assert m["mismatch"].startswith("n_differs")

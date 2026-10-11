@@ -60,30 +60,35 @@ Runs are replicates on the same benchmark/seed split with the same optimizer fam
 
 Only each run's FINAL champion is measured on test (vs the seed on the same test tasks). For a rule, the champion's ancestry (seed -> ... -> champion) either passes every step under that rule (the run would have reached the same champion; [INFERRED] assuming the optimizer proposes the same candidates) or is blocked at some step. Runs pooled; runs are not independent (shared seed/benchmark/optimizer), so this is descriptive.
 
-| rule | path survives: runs | mean test delta | path blocked: runs | mean test delta | test deltas of blocked runs |
+| rule | path survives: runs | mean test delta (group n) | path blocked: runs | mean test delta (group n) | test deltas of blocked runs |
 |---|---|---|---|---|---|
-| unmasked_k1 | 10 | +0.3552 | 6 | +0.1717 | [0.0329, 0.1623, 0.1745, 0.1331, 0.2981, 0.2295] |
-| k0.2 | 15 | +0.2946 | 1 | +0.1623 | [0.1623] |
-| k0.3 | 14 | +0.3133 | 2 | +0.0976 | [0.0329, 0.1623] |
-| reward_gated_reward_stage | 4 | +0.3235 | 12 | +0.2740 | [0.0329, 0.1321, 0.3188, 0.3358, 0.4964, 0.4893, 0.4853, 0.1623, 0.1745, 0.1331, 0.2981, 0.2295] |
+| unmasked_k1 | 10 | +0.3552 (n=10) | 6 | +0.1717 (n=6) | [0.0329, 0.1623, 0.1745, 0.1331, 0.2981, 0.2295] |
+| k0.2 | 15 | +0.2946 (n=15) | 1 | +0.1623 (n=1) | [0.1623] |
+| k0.3 | 14 | +0.3133 (n=14) | 2 | +0.0976 (n=2) | [0.0329, 0.1623] |
+| reward_gated_reward_stage | 4 | +0.3235 (n=4) | 12 | +0.2740 (n=12) | [0.0329, 0.1321, 0.3188, 0.3358, 0.4964, 0.4893, 0.4853, 0.1623, 0.1745, 0.1331, 0.2981, 0.2295] |
 
-A blocked run whose champion nevertheless gained on test is a gain the stricter rule would have forfeited; a blocked run with test delta <= 0 is a loss it would have avoided.
+A blocked run whose champion nevertheless gained on test is a gain the stricter rule would have forfeited; a blocked run with test delta <= 0 is a loss it would have avoided. **Do not compare the survive/blocked group means as a rule effect**: groups are small and unequal (e.g. k=0.2 blocks 1 run vs unmasked k=1 blocks 6), the grouping is confounded with run, benchmark split, optimizer trajectory and the number of steps on the champion path, and each blocked-run test delta is one champion per run. **No dependence-adjusted uncertainty is attached to any pooled number here** (runs share the benchmark, seed split and optimizer family, and several share identical baselines and candidates); the tables are descriptive counts. The counterfactual assumes the optimizer would have made the same proposals under a different gate, which it need not (a stricter gate changes the parent of every later proposal).
 
-## E07 footprint false-exclusion audit (hill-climb)
+## E07 audit: recorded vs unmasked delta/SE (hill-climb)
 
-Decisions with a recorded paired delta/SE: 67. In 4 the recorded delta or SE differs from the unmasked one by more than rounding: the live gate saw a footprint-masked and/or SE-floored vector [INFERRED from the mismatch].
+Decisions with a recorded paired delta/SE: 67. The recorded vector can differ from the full unmasked one in two ways, which the artifacts let us tell apart only by the recorded n [INFERRED]:
 
-- accepted while masked: 1; of these the unmasked k_se=1 gate would reject: **1**
-- masked decisions whose excluded tasks carried net NEGATIVE delta (masking hid regressions): 4; net positive: 0
-- sum of excluded net delta mass (task-delta units, + = gain hidden): -3.748 [INFERRED = n*(unmasked mean - recorded mean)]
-- lower bound on excluded tasks with nonzero delta, summed over decisions: 4 [INFERRED, assumes |delta| <= 1 per task]
+- **fewer tasks in the recorded vector** (a task dropped, e.g. errored/unscored): 4 decisions. This is NOT evidence of footprint masking.
+- **same n, different value** (consistent with footprint masking and/or an SE floor): 0 decisions.
 
-| run | candidate | recorded accept | unmasked k1 accept | recorded delta | unmasked delta | recorded SE | unmasked SE | excluded net mass | >= tasks |
-|---|---|---|---|---|---|---|---|---|---|
-| 36523096755 | cand_0004 | False | False | -0.0769 | -0.1000 | 0.0432 | 0.0480 | -0.901 | 1 |
-| 37204406089 | cand_0003 | False | False | -0.0513 | -0.0750 | 0.0631 | 0.0659 | -0.924 | 1 |
-| 37204406089 | cand_0005 | True | False | +0.0256 | +0.0000 | 0.0579 | 0.0620 | -0.998 | 1 |
-| 37294448854 | cand_0004 | False | False | -0.0513 | -0.0750 | 0.0631 | 0.0659 | -0.924 | 1 |
+- recorded accepts among the mismatching decisions: 1; of these the unmasked k_se=1 gate would reject: 1
+- mismatching decisions whose missing/excluded part carried net negative delta: 4; net positive: 0
+- sum of that net delta mass (task-delta units, + = gain absent from the recorded vector): -3.748 [INFERRED = n*(unmasked mean - recorded mean)]
+- lower bound on the number of tasks with nonzero delta behind it, summed: 4 [INFERRED, assumes |delta| <= 1 per task]
+
+The footprint SET is not in the artifacts, so a false exclusion (a task outside the predicted footprint with nonzero delta) cannot be shown directly; this table bounds what is missing from the vector the gate used.
+
+| run | candidate | recorded accept | unmasked k1 accept | mismatch kind | recorded delta | unmasked delta | recorded SE | unmasked SE | net mass | >= tasks |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 36523096755 | cand_0004 | False | False | n_differs | -0.0769 | -0.1000 | 0.0432 | 0.0480 | -0.901 | 1 |
+| 37204406089 | cand_0003 | False | False | n_differs | -0.0513 | -0.0750 | 0.0631 | 0.0659 | -0.924 | 1 |
+| 37204406089 | cand_0005 | True | False | n_differs | +0.0256 | +0.0000 | 0.0579 | 0.0620 | -0.998 | 1 |
+| 37294448854 | cand_0004 | False | False | n_differs | -0.0513 | -0.0750 | 0.0631 | 0.0659 | -0.924 | 1 |
 
 ## Per run
 
