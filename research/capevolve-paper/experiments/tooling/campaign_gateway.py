@@ -45,6 +45,8 @@ CFG = load_all()
 _lock = threading.Lock()
 _sems = {}
 _limits = dict(DEFAULT_LIMITS)
+_reserve = {}
+_low_tags = []
 _ledger = {"total_tokens": 0, "capped_tokens": 0, "rits_tokens": 0, "calls": 0, "blocked": False, "reason": ""}
 
 
@@ -54,9 +56,15 @@ class _LiveSem:
     def __init__(self, key):
         self.key, self.n, self.cv = key, 0, threading.Condition()
 
-    def acquire(self):
+    def acquire(self, low=False):
+        """Low-priority callers (tags matching caps.json `low_priority_tags`) may only use slots
+        beyond `reserve_high[key]`; high-priority callers may use all slots."""
         with self.cv:
-            while self.n >= int(_limits.get(self.key, _limits["litellm"])):
+            while True:
+                lim = int(_limits.get(self.key, _limits["litellm"]))
+                res = int(_reserve.get(self.key, 0)) if low else 0
+                if self.n < max(1, lim - res):
+                    break
                 self.cv.wait(timeout=5)
             self.n += 1
 
@@ -97,6 +105,8 @@ def _caps_watch():
             lim = caps.get("concurrency")
             if lim:
                 _limits.update(lim)
+            _reserve.clear(); _reserve.update(caps.get("reserve_high", {}))
+            _low_tags[:] = caps.get("low_priority_tags", [])
             cap = caps.get("max_nonrits_tokens_ex_cache_read")
             if cap and _ledger["capped_tokens"] >= cap:
                 _ledger["blocked"], _ledger["reason"] = True, f"token cap {cap} reached"
@@ -175,16 +185,32 @@ class H(BaseHTTPRequestHandler):
         data = json.dumps(body).encode()
         t_q = time.time()
         sem = _sem(key)
-        sem.acquire()
+        low = any(pat in tag for pat in _low_tags)
+        sem.acquire(low=low)
         t0 = time.time()
-        status, usage, err = None, None, None
+        status, usage, err, attempts = None, None, None, 0
         try:
-            req = urllib.request.Request(url, data=data, headers=hdr, method="POST")
-            try:
-                resp = urllib.request.urlopen(req, timeout=900)
-                status = resp.status
-            except urllib.error.HTTPError as e:
-                resp, status = e, e.code
+            # Transparent upstream retry for exogenous transport failures (connection reset, read
+            # timeout, 502/503/504) BEFORE any byte is sent to the client: chat/messages requests are
+            # idempotent from the caller's view, so every arm gets identical, invisible retries.
+            while True:
+                attempts += 1
+                req = urllib.request.Request(url, data=data, headers=hdr, method="POST")
+                try:
+                    resp = urllib.request.urlopen(req, timeout=1800)
+                    status = resp.status
+                    if status in (502, 503, 504) and attempts < 4:
+                        resp.read(); time.sleep(2 ** attempts); continue
+                    break
+                except urllib.error.HTTPError as e:
+                    if e.code in (502, 503, 504) and attempts < 4:
+                        e.read(); time.sleep(2 ** attempts); continue
+                    resp, status = e, e.code
+                    break
+                except (ConnectionError, TimeoutError, urllib.error.URLError) as e:
+                    if attempts < 4:
+                        time.sleep(2 ** attempts); continue
+                    raise
             self.send_response(status)
             ctype = resp.headers.get("Content-Type", "application/json")
             self.send_header("Content-Type", ctype)
@@ -209,6 +235,12 @@ class H(BaseHTTPRequestHandler):
                 try:
                     js = json.loads(payload)
                     usage = js.get("usage")
+                    ch = (js.get("choices") or [{}])[0] if isinstance(js.get("choices"), list) else {}
+                    finish = ch.get("finish_reason") or js.get("stop_reason")
+                    msg = ch.get("message") or {}
+                    empty = (not (msg.get("content") or msg.get("tool_calls"))) if ch else (not js.get("content"))
+                    if finish in ("content_filter", "refusal") or (status == 200 and empty):
+                        err = f"finish={finish} empty={empty}"
                     if status != 200:
                         err = str(js.get("error"))[:300]
                 except Exception:
@@ -230,7 +262,7 @@ class H(BaseHTTPRequestHandler):
                 _ledger["calls"] += 1
             _log({"t": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "tag": tag, "model": model,
                   "upstream": key, "api": "anthropic" if is_anthropic else "openai", "stream": stream,
-                  "status": status, "queue_s": round(t0 - t_q, 3), "latency_s": round(time.time() - t0, 3),
+                  "status": status, "attempts": attempts, "queue_s": round(t0 - t_q, 3), "latency_s": round(time.time() - t0, 3),
                   "usage": usage, "error": err})
 
 
@@ -276,7 +308,17 @@ if __name__ == "__main__":
     ap.add_argument("--port", type=int, default=4111)
     a = ap.parse_args()
     threading.Thread(target=_caps_watch, daemon=True).start()
-    srv = ThreadingHTTPServer(("127.0.0.1", a.port), H)
+    class _Srv(ThreadingHTTPServer):
+        allow_reuse_address = True
+
+        def server_bind(self):
+            import socket
+            # SO_REUSEPORT lets a new gateway bind beside an old one, so a restart can drain the old
+            # process (stop accepting, finish in-flight calls) instead of dropping them.
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            super().server_bind()
+
+    srv = _Srv(("127.0.0.1", a.port), H)
     srv.daemon_threads = True
     print(f"campaign gateway on 127.0.0.1:{a.port}", flush=True)
     srv.serve_forever()
