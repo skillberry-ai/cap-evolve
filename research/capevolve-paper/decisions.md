@@ -157,3 +157,12 @@ Format: date (UTC) — decision — rationale — reversible?
     - (3) The paper reframes CapEvolve-with-rule-P as a deliberately conservative configuration, reports its observed promotions, and uses E12A/E12C to show the other side of the trade.
   - Known cost: 3 more Gemma searches lower every Suite A arm's throughput by about 10%, so B* drops by about 10%.
   - Not done: E12B. gpt-oss queue median is 33.7 s, and HarnessLens still has to launch on B.
+
+## E12A launched (runner, 2026-10-12): stock-gate hill-climb on Suite A
+Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,optimizer}, normal priority. Identical to E10 hill-climb main seeds (SHA ec12d36c9, Gemma target, val-40, daemon sandbox, capopt shim + negtest, 600-rollout cap, 3.9M optimizer-token guard, hang rule, candidates.jsonl, rollouts_metrics.jsonl) EXCEPT the gate: hill-climb/scripts/run.py flags are `--gate-mode auto --k-se 1.0 --errored-trial-policy fail` only; no promotion_* (rule P off); footprint masking, candidate-only coverage and min_coverage 0.6 are the repo defaults. Seed baseline NOT reused from E10 (E10 baselines unfinished and --reuse-baseline copies run state; fresh val-40 + train-80 baseline paid, 120 rollouts). Exploratory; comparison point min(B*, own count at cutoff).
+- 2026-10-11 22:55 — Analysis plan amendment 3 (5M, commit 00bd6652f) adopted.
+  - Equivalence: TOST at alpha .05 on the artifact-level contrast with margin ±0.10 on A and B. C is descriptive only. "No difference", "matches" and "as good as" are banned unless the TOST passes; otherwise "inconclusive".
+  - Each primary row gets two intervals: artifact-level (the headline) and pipeline-level t(S-1). A method-level sentence requires the pipeline interval.
+  - E12A and E12C are descriptive, compared at min(B*, own count).
+  - Promotions per search (screened, promoted, returned-seed hash) are reported for every arm.
+  - HarnessLens: the unmodified-harness reference arm hl-v0 is added to Suite B final scoring as a within-method reference. It is not in the Holm family.
