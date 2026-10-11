@@ -55,8 +55,10 @@ def anytime():
 
 
 def forest():
-    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 2.9), gridspec_kw=dict(width_ratios=[10, 5, 5]))
-    for ax, su in zip(axes, SUITES):
+    # Panels share the row order of their arm list. B and C share the same arms, so they also share the y axis and align row for row.
+    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 3.0), gridspec_kw=dict(width_ratios=[10, 6, 6]))
+    axes[2].sharey(axes[1])
+    for ax, su, tag in zip(axes, SUITES, "abc"):
         s = data["suites"][su]
         arms = [a for a in C.SUITE_ARMS[su] if a != "seed"]
         for i, a in enumerate(arms):
@@ -68,12 +70,40 @@ def forest():
             ax.plot(v["delta"] * 100, y, marker=mk, color=col, mfc=col if sig else "white", ms=6 if a in C.CAP else 4.5, mew=1.0)
         ax.axvline(0, color="k", lw=0.7)
         ax.set_yticks(range(len(arms)))
-        ax.set_yticklabels([C.ARMS[a][0] for a in reversed(arms)] if su == "A" else [""] * len(arms))
-        ax.set_title(C.SUITE_NAME[su])
+        ax.set_yticklabels([C.ARMS[a][0] for a in reversed(arms)])
+        ax.set_title(f"({tag}) {C.SUITE_NAME[su]}")
         ax.grid(axis="y", alpha=0)
+    plt.setp(axes[2].get_yticklabels(), visible=False)
     fig.tight_layout()
     fig.supxlabel("Paired difference to seed (points). Filled markers: Holm-adjusted p < 0.05", fontsize=8.5, y=-0.04)
     C.save(fig, "fig_forest", MOCK)
+
+
+def contrast():
+    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 3.0), gridspec_kw=dict(width_ratios=[10, 6, 6]))
+    axes[2].sharey(axes[1])
+    for ax, su, tag in zip(axes, SUITES, "abc"):
+        s = data["suites"][su]
+        others = [a for a in C.SUITE_ARMS[su] if a not in ("hc", "ao", "seed")]
+        for i, a in enumerate(others):
+            y = len(others) - 1 - i
+            for off, cap in ((0.17, "hc"), (-0.17, "ao")):
+                c = s["contrasts"][f"{cap}-{a}"]
+                col, mk = C.ARMS[cap][1], C.ARMS[cap][2]
+                ax.plot([c["lo"] * 100, c["hi"] * 100], [y + off, y + off], color=col, lw=1.8)
+                ax.plot(c["delta"] * 100, y + off, marker=mk, color=col, ms=5, mfc="white" if c["lo"] < 0 < c["hi"] else col)
+        ax.axvline(0, color="k", lw=0.7)
+        ax.set_yticks(range(len(others)))
+        ax.set_yticklabels([C.ARMS[a][0] for a in reversed(others)])
+        ax.set_title(f"({tag}) {C.SUITE_NAME[su]}")
+        ax.grid(axis="y", alpha=0)
+    plt.setp(axes[2].get_yticklabels(), visible=False)
+    axes[0].plot([], [], color=C.ARMS["hc"][1], marker="o", label="CapEvolve HC minus arm")
+    axes[0].plot([], [], color=C.ARMS["ao"][1], marker="s", label="CapEvolve AO minus arm")
+    axes[0].legend(loc="lower right", frameon=False)
+    fig.tight_layout()
+    fig.supxlabel("Difference in paired delta (points). Filled markers: interval excludes zero", fontsize=8.5, y=-0.04)
+    C.save(fig, "fig_contrast", MOCK)
 
 
 def pareto():
@@ -133,5 +163,5 @@ def families():
 
 
 if __name__ == "__main__":
-    anytime(); forest(); pareto(); families()
+    anytime(); forest(); contrast(); pareto(); families()
     print("mock plots written" if MOCK else "real plots written")

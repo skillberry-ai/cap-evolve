@@ -111,7 +111,28 @@ def build():
                           wall_h=rng.uniform(6, 30) if a != "oneshot" else rng.uniform(0.4, 1.5),
                           missing=rng.randint(0, 9), cells=total_cells,
                           curve=curve(rng, P["seed_score"], r["delta"], P["bstar"]) if a != "oneshot" else None)
-        s = dict(params=P, arms=out)
+        # delta vs one-shot, per-seed deltas, missingness bounds, CapEvolve contrasts (all mock)
+        os_ = out["oneshot"]
+        for a, v in out.items():
+            if a == "seed":
+                continue
+            if a != "oneshot":
+                se_c = rows[a]["se"] * 1.1
+                dd = v["delta"] - os_["delta"]
+                v["vs_oneshot"] = dict(delta=dd, lo=dd - 2.05 * se_c, hi=dd + 2.05 * se_c)
+            v["seed_deltas"] = [v["delta"] + rng.gauss(0, 0.015) for _ in range(P["seeds"])]
+            frac = v["missing"] / v["cells"]
+            v["bound_pess"] = v["delta"] - frac
+            v["bound_opt"] = v["delta"] + frac
+        contrasts = {}
+        for cap in ("hc", "ao"):
+            for a in arms:
+                if a in ("hc", "ao", "seed"):
+                    continue
+                se_c = P["se"] * 1.25
+                dd = out[cap]["delta"] - out[a]["delta"]
+                contrasts[f"{cap}-{a}"] = dict(delta=dd, lo=dd - 2.05 * se_c, hi=dd + 2.05 * se_c)
+        s = dict(params=P, arms=out, contrasts=contrasts)
         if suite == "A":
             fams = {}
             for fname, n in FAMILIES:

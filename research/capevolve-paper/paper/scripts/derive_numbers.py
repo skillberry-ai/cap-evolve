@@ -57,6 +57,13 @@ P = sb["c: P n_conf=3 z=1.282 dmin=0"]
 K1 = sb["f: one-stage k=1"]
 put("simPFalse", f(P["N=12"]["p_any_false_null_search"], 3))
 put("simKoneFalse", f(K1["N=12"]["p_any_false_null_search"], 3))
+A = sb["a: P n_conf=3 z=2.0 dmin=.02"]
+D = sb["d: P n_conf=5 z=1.645 dmin=0"]
+put("simAFalse", f(A["N=12"]["p_any_false_null_search"], 3))
+put("simDFalse", f(D["N=12"]["p_any_false_null_search"], 3))
+for key, nm in (("0.04", "Four"), ("0.06", "Six"), ("0.08", "Eight"), ("0.1", "Ten")):
+    put("simAPower" + nm, f(A["power"][key], 2))
+    put("simDPower" + nm, f(D["power"][key], 2))
 for key, nm in (("0.04", "Four"), ("0.06", "Six"), ("0.08", "Eight"), ("0.1", "Ten")):
     put("simPPower" + nm, f(P["power"][key], 2))
     put("simKonePower" + nm, f(K1["power"][key], 2))
