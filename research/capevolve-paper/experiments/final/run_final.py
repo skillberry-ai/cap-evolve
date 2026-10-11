@@ -518,6 +518,34 @@ def canary_loop(suite, root, meta, stop, cm, every, py, hang_s):
 
 
 # --------------------------------------------------------------------------------------------------------- commands
+def sealed_ids(suite):
+    if suite == "A":
+        d = C.jload(C.PAPER / "protocol/final_set/suiteA_final_tasks.json") or {}
+        return {str(t["id"]) for t in d.get("tasks", [])}
+    cfg = TAU[suite]
+    return {str(x) for x in (C.jload(WT_TAU / "protocol" / cfg["splits"]) or {}).get("sealed_test", [])}
+
+
+def tag_guard(suite, jobs):
+    """real final runs carry FINAL-<suite> tags; dry runs (FE-*) must never touch final-set ids (ids are never printed)."""
+    prob = []
+    sealed = sealed_ids(suite)
+    for j in jobs:
+        tag = j["tag"].split(":")[1] if ":" in j["tag"] else j["tag"]
+        if j.get("final_split"):
+            if not tag.startswith("FINAL-%s" % suite):
+                prob.append("final-set job without FINAL-%s tag: %s" % (suite, j["job_id"]))
+                break
+        else:
+            if tag.startswith("FINAL-"):
+                prob.append("search-split job carries a FINAL tag: %s" % j["job_id"])
+                break
+            if str(j["task"]) in sealed:
+                prob.append("dry/search job touches a final-set id (job %s)" % j["job_id"])
+                break
+    return prob
+
+
 def preflight(suite, order_path, meta, jobs, expect_sha=None):
     prob = []
     sha = sha_of_file(order_path)
@@ -533,6 +561,7 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
         if not d.is_dir():
             prob.append("artifact dir missing: %s" % d)
             break
+    prob += tag_guard(suite, jobs)
     seen = set()
     for j in jobs:
         key = (j["artifact_dir"], j["artifact_tree_sha256"])

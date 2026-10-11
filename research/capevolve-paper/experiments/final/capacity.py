@@ -57,8 +57,8 @@ def main():
     # cells: A 7 main + 3 cheap = 10 arms x 3 seeds; B hc ao gepa harnesslens x3 + oneshot x3; C hc ao gepa x3 + oneshot x3
     cells = {"A": 30, "B": 15, "C": 12}
     T = {"A": a.TA, "B": a.TB, "C": a.TC}
-    n_arm = {"A": 1, "B": 2, "C": 3}
-    n_seed = {"A": 2, "B": 2, "C": 3}
+    n_arm = {"A": 1, "B": 3, "C": 3}
+    n_seed = {"A": 2, "B": 3, "C": 3}
     res = {}
     for s in "ABC":
         prim = cells[s] * T[s] * n_arm[s]

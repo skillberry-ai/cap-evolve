@@ -30,7 +30,7 @@ import fe_common as C  # noqa: E402
 WT_TAU = Path("/home/dev/projects2/wt-tau")
 SPLIT_FILE_A = C.REPO / "ci/benchmarks/spreadsheetbench/full_verified/split_ids.json"
 FINAL_A_TASKS = C.PAPER / "protocol/final_set/suiteA_final_tasks.json"
-DEFAULT_TRIALS = {"A": (1, 2), "B": (2, 2), "C": (3, 3)}          # (trials per task for a method artifact, for the seed artifact)
+DEFAULT_TRIALS = {"A": (1, 2), "B": (3, 3), "C": (3, 3)}   # pinned in decisions.md 22:30          # (trials per task for a method artifact, for the seed artifact)
 TAU_SPLITS = {"B": "tau_retail_splits.json", "C": "tau_airline_splits.json"}
 EXTRA = {
     "transfer": {"A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer",
