@@ -1,4 +1,1 @@
-\section{Ethical Considerations}
-\label{sec:ethics}
-
-An artifact optimized against a reward can score well for the wrong reasons and needs human review and a rollback path before deployment.
+An artifact optimized against a reward can score well for the wrong reasons, and edits to tool code change what an agent can do, so optimizers of this kind are dual use. Any optimized artifact needs human review and a rollback path before deployment. We loaded provider credentials only through a script that never prints them, kept them out of proposer environments, and scanned likely locations for leaked credentials (no hits). We disclose the gold access by optimizers that we found, and the isolation tests are in the repository. Benchmark tasks drawn from operational systems must be screened for secrets and personal data before release.
