@@ -1,1 +1,40 @@
-% stub: paper-results owns this file
+\section{Additional results}
+\label{app:results}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_anytime.pdf}
+\caption{Best-so-far score against target rollouts, mean over seeds with the min-to-max band. The dashed line marks the matched checkpoint $B^\ast$. The one-shot control has no curve because it makes one optimizer pass (placeholder).}
+\label{fig:anytime}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_pareto.pdf}
+\caption{Paired delta against optimizer cost in USD at Sonnet list prices, log axis. Vertical bars are the 95\% interval. The dashed line connects non-dominated arms (placeholder).}
+\label{fig:pareto}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_families.pdf}
+\caption{Suite A paired delta by task family for the main arms. Families are the cluster unit of the intervals (placeholder).}
+\label{fig:families}
+\end{figure}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_rulep.pdf}
+\caption{Operating characteristic of promotion rule P from simulation: probability of at least one false promotion in an all-null search of six candidates (left) and probability of promoting a single candidate against its true effect (right). Source: \texttt{analysis/out/sim\_budget.md}.}
+\label{fig:rulep}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_roles.pdf}
+\caption{Token and latency breakdown by role over the main-category runs so far (in progress). Left and middle: tokens by kind for Suites A and B on a symmetric log axis. Right: call-weighted p50 and p95 latency per role.}
+\label{fig:roles}
+\end{figure*}
+
+
+\input{tables/cost_so_far}

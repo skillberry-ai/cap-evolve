@@ -1,0 +1,35 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. ``n/m'' means the optimizer session is not metered by the gateway (Claude Code runs started with their own client). USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the evaluated model. Wall is hours since launch, longest seed. Rows count seeds that exist in the ledger.}
+\label{tab:cost_so_far}
+\begin{tabular}{llrrrrrrrrr}
+\toprule
+Suite & Arm & Seeds & Rollouts & Opt.\ uncached & Opt.\ cache rd & Opt.\ cache wr & Opt.\ USD & Target tok. & Wall (h) & Errors \\
+\midrule
+A & CapEvolve HC & 3 & \prov{201} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{12.50} & \prov{5.5} & \prov{0} \\
+A & CapEvolve AO & 3 & \prov{181} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{12.55} & \prov{5.4} & \prov{0} \\
+A & GEPA & 3 & \prov{576} & \prov{0.25} & \prov{0.00} & \prov{0.00} & \prov{1.00} & \prov{17.65} & \prov{11.8} & \prov{14} \\
+A & SkillOpt & 3 & \prov{459} & \prov{1.99} & \prov{0.00} & \prov{0.00} & \prov{4.80} & \prov{23.82} & \prov{11.8} & \prov{25} \\
+A & Meta-Harness & 3 & \prov{502} & \prov{0.00} & \prov{0.55} & \prov{0.12} & \prov{0.59} & \prov{25.19} & \prov{9.2} & \prov{15} \\
+A & EvoSkill & 3 & \prov{93} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{3.71} & \prov{1.7} & \prov{0} \\
+A & WikiSkill & 3 & \prov{261} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{14.94} & \prov{7.1} & \prov{0} \\
+A & Trace2Skill & 3 & \prov{368} & \prov{3.08} & \prov{0.00} & \prov{0.00} & \prov{10.85} & \prov{19.67} & \prov{11.3} & \prov{26} \\
+A & ACE & 3 & \prov{61} & \prov{0.77} & \prov{0.00} & \prov{0.00} & \prov{2.31} & \prov{6.51} & \prov{7.1} & \prov{0} \\
+A & MIPROv2 & 3 & \prov{107} & \prov{0.45} & \prov{0.00} & \prov{0.00} & \prov{1.77} & \prov{4.46} & \prov{7.1} & \prov{1} \\
+\midrule
+B & CapEvolve HC & 3 & \prov{441} & \prov{0.01} & \prov{9.96} & \prov{0.76} & \prov{4.91} & \prov{56.12} & \prov{7.5} & \prov{56} \\
+B & CapEvolve AO & 3 & \prov{320} & \prov{0.02} & \prov{29.92} & \prov{1.61} & \prov{12.06} & \prov{44.43} & \prov{7.5} & \prov{53} \\
+B & GEPA & 3 & \prov{468} & \prov{0.43} & \prov{0.00} & \prov{0.00} & \prov{1.90} & \prov{36.67} & \prov{7.5} & \prov{42} \\
+B & one-shot ctrl & 3 & \prov{394} & \prov{0.01} & \prov{6.90} & \prov{0.43} & \prov{3.15} & \prov{36.02} & \prov{5.1} & \prov{21} \\
+B & seed ctrl & 3 & \prov{294} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{33.13} & \prov{6.8} & \prov{27} \\
+\midrule
+C & CapEvolve HC & 3 & \prov{60} & \prov{0.00} & \prov{3.51} & \prov{0.27} & \prov{1.81} & \prov{7.11} & \prov{1.8} & \prov{18} \\
+C & CapEvolve AO & 3 & \prov{60} & \prov{0.00} & \prov{7.18} & \prov{0.34} & \prov{2.86} & \prov{5.71} & \prov{1.8} & \prov{4} \\
+C & GEPA & 3 & \prov{58} & \prov{0.03} & \prov{0.00} & \prov{0.00} & \prov{0.13} & \prov{3.48} & \prov{1.8} & \prov{0} \\
+C & one-shot ctrl & 3 & \prov{60} & \prov{0.00} & \prov{4.58} & \prov{0.27} & \prov{2.13} & \prov{7.30} & \prov{1.8} & \prov{7} \\
+C & seed ctrl & 3 & \prov{0} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{n/m} & \prov{5.55} & \prov{1.8} & \prov{5} \\
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\scriptsize
+\caption{Selected historical claims and their recomputation from archived artifacts (\texttt{audit/recomputed\_numbers.csv}, 40 claims in total).}
+\label{tab:audit}
+\begin{tabularx}{\columnwidth}{@{}p{0.9in}X@{}}
+\toprule
+Claim & Recomputation \\
+\midrule
+Gemma +33.0 [29.1, 36.8] & reproduces; interval is pooled over observations, task-clustered is [26.9, 39.2]; +18.7 under recalculation \\
+GPT-5.5 +49.1 [45.5, 52.8] & reproduces; recalculated gain is +9.9 \\
+GPT-5.5 recalculated baseline 77.5 & reproduces; 110 of 217 recalculated passes need formulas \\
+no-capability control 62.9 & same run's one-iteration hill climb scores 85.6, absent from the draft \\
+run excluded for different commit & 55 of 280 rollouts hit a budget error; baseline 28.9 is on 225 tasks \\
+SkillsBench 55.6 to 66.7 held out & the whole delta is one trial of one task \\
+SWE-bench pilot 68.0, candidate 72.0 & candidate rejected; the seed scores 63.6 and 70.5 on the same 44 tasks \\
+$\tau^2$ retail 0.460 to 0.545 & arithmetic only; no per-task artifact exists \\
+$\tau^2$ held-out 30.0 to 47.5 & artifact never landed; runner identity differs between docs \\
+\bottomrule
+\end{tabularx}
+\end{table}
