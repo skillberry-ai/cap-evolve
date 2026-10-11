@@ -1,0 +1,9 @@
+% Minimal local replacement for the forloop package (not installed here).
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{forloop}[2026/10/11 minimal shim]
+\newcommand{\forloop}[4]{%
+  \setcounter{#1}{#2}%
+  \long\def\@forloop@body{#4}%
+  \def\@forloop@ctr{#1}%
+  \def\@forloop@iter{\ifnum #3\relax\@forloop@body\stepcounter{#1}\expandafter\@forloop@iter\fi}%
+  \@forloop@iter}

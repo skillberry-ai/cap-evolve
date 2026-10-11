@@ -1,0 +1,88 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{mlsys2025}
+\usetikzlibrary{arrows.meta,positioning,shapes.misc,fit,backgrounds}
+
+% ---------------------------------------------------------------- names
+\newcommand{\capevolve}{\textsc{CapEvolve}}
+\newcommand{\tautwo}{$\tau^2$-bench}
+\providecommand{\RETURN}{\STATE \textbf{return} }
+
+% ------------------------------------------------- draft / evidence machinery
+% \draftmodetrue  -> placeholders and evidence gaps are flagged in the PDF.
+% \draftmodefalse -> camera-ready. A surviving \pend prints [[PEND]] so that
+%                    scripts/check_paper.py fails the build.
+\newif\ifdraftmode
+\draftmodetrue
+
+% In-progress real value, expected to move before the final run.
+\newcommand{\prov}[1]{\ifdraftmode\textcolor{orange!85!black}{#1}\else#1\fi}
+% Evidence gap that must be closed before submission.
+\newcommand{\needs}[1]{\ifdraftmode\textcolor{red!80!black}{\textsuperscript{$\triangle$}\footnote{\textcolor{red!80!black}{\textbf{EVIDENCE NEEDED:} #1}}}\else\fi}
+% Inline editorial note.
+\newcommand{\note}[1]{\ifdraftmode\textcolor{blue!65!black}{[#1]}\else\fi}
+% Mock placeholder for a result that does not exist yet.
+\newcommand{\pend}[1]{\ifdraftmode\textcolor{red!80!black}{#1\textsuperscript{\dag}}\else[[PEND]]\fi}
+
+% Real values (derive_numbers.py) and mock values (mock_numbers.py).
+\input{numbers}
+\input{numbers_pending}
+
+\mlsystitlerunning{CapEvolve: A Measurement-First Comparison of Agent Capability Optimizers}
+
+\begin{document}
+\twocolumn[
+\mlsystitle{\capevolve: A Measurement-First Comparison of\\Agent Capability Optimizers}
+
+\begin{mlsysauthorlist}
+\mlsysauthor{Anonymous Author}{anon}
+\end{mlsysauthorlist}
+\mlsysaffiliation{anon}{Anonymous Institution}
+\mlsyscorrespondingauthor{Anonymous Author}{anon@example.com}
+\mlsyskeywords{agent optimization, evaluation methodology, skills, prompt optimization, benchmarks}
+
+\vskip 0.3in
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+]
+
+\printAffiliationsAndNotice{}
+
+\input{sections/intro}
+\input{sections/related}
+\input{sections/problem}
+\input{sections/method}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/limitations}
+\input{sections/ethics}
+\input{sections/conclusion}
+
+% Marks the last body page for scripts/check_paper.py.
+\label{paper:endofbody}
+
+\bibliography{references}
+\bibliographystyle{mlsys2025}
+
+\clearpage
+\appendix
+\input{appendix/config}
+\input{appendix/protocol}
+\input{appendix/results_extra}
+
+\end{document}
