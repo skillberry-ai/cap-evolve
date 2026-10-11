@@ -126,6 +126,7 @@ def main(argv=None):
     ap.add_argument("--trials-seed", type=int, default=None)
     ap.add_argument("--extra", choices=sorted(EXTRA), default=None)
     ap.add_argument("--end-only", action="store_true", help="write only the distinct END (5D) jobs: run after the primary window (decisions 22:50)")
+    ap.add_argument("--hl-v0", action="store_true", help="Suite B: add arm hl-v0 (HarnessLens's unmodified OpenCode harness, run_test_baseline path)")
     ap.add_argument("--no-end", action="store_true", help="skip the native end-of-run (5D) artifacts")
     ap.add_argument("--arms", default=None, help="restrict to these arms (dry runs)")
     ap.add_argument("--tag-exp", default=None)
@@ -171,6 +172,9 @@ def main(argv=None):
         if suite == "A":
             j.update(agent_view=agent_view, gold_dir=gold_dir, adapter_path=a.adapter_path)
         j["job_id"] = "%s|%s|s%d|%s|%s|t%d" % (suite, label, seed, task["id"], mode, trial)
+        if arm in ("harnesslens", "hl-v0"):
+            j["hl"] = {"version": art.get("candidate_id") if arm == "harnesslens" else "v0",
+                       "src_run_dir": (None if arm == "hl-v0" else str(Path(art.get("run_dir", "")) / ("hl_s%d" % seed) / "runs/train" / ("e10b-hl-s%d" % seed)))}
         for k in ("target_model", "gateway", "env", "user_model", "judge_model"):
             if ex.get(k):
                 j[k] = ex[k]
@@ -186,6 +190,8 @@ def main(argv=None):
         sys.exit("no usable seed artifact in manifest")
     if not a.end_only:
         add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
+    if a.hl_v0 and suite == "B" and not a.end_only:
+        add_cell("hl-v0", 0, "B", {"frozen_dir": str(C.final_dir("B") / "artifacts/hl-v0"), "tree_sha256": "hl-v0-unmodified", "candidate_id": "v0"}, n_seed, also_end=True)
     entries = {(e["mode"], e["arm"], e["seed"]): e for e in man["entries"]}
     arms = a.arms.split(",") if a.arms else C.suite_arms(suite)
     for arm in arms:

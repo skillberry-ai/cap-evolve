@@ -217,11 +217,41 @@ def worker_tau(job, attempt_dir):
     return res
 
 
+def worker_hl(job, attempt_dir):
+    """HarnessLens / hl-v0 (Suite B): bl-harness's sealed-test entrypoint hl_final_eval.py runs ONE (task, trial) in its sandboxed OpenCode tree.
+    Its trial index sets the seed, so a retry uses trial + 10 x attempt (a new seed)."""
+    hl = job["hl"]
+    out = Path(attempt_dir) / "hl_out"
+    trial = int(job["trial"]) + 10 * int(job.get("attempt", 0))
+    cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_final_eval.py"), "--out", str(out), "--tag-prefix", job["tag"].split(":")[1],
+           "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1"]
+    if hl.get("src_run_dir"):
+        cmd += ["--src-run-dir", hl["src_run_dir"]]
+    t0 = time.time()
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    t1 = time.time()
+    rows = C.jsonl(out / "fe_results.jsonl")
+    row = next((x for x in rows if str(x.get("task_id")) == str(job["task"]) and int(x.get("trial", -1)) == trial), None)
+    if row is None:
+        return {"t_start": t0, "t_end": t1, "error": "hl_final_eval produced no result (exit %d): %s" % (r.returncode, (r.stdout + r.stderr)[-500:]),
+                "error_kind_adapter": "infra", "force_infra": True, "reward": 0.0, "reward_as_saved": 0.0, "tokens": 0, "n_llm_calls": 0, "empty_output": False}
+    err = row.get("error")
+    return {"t_start": t0, "t_end": t1, "error": err, "error_kind_adapter": "infra" if err else None, "force_infra": bool(err), "reward": float(row.get("reward") or 0.0),
+            "reward_as_saved": float(row.get("reward") or 0.0), "tokens": 0, "n_llm_calls": 0, "empty_output": False, "hl_run_id": row.get("run_id")}
+
+
 def cmd_worker(a):
     job = json.loads(Path(a.job).read_text())
     ad = Path(job["attempt_dir"])
     ad.mkdir(parents=True, exist_ok=True)
     try:
+        if job.get("hl"):
+            res = worker_hl(job, ad)
+            res["worker_ok"] = True
+            tmp = ad / "result.json.tmp"
+            tmp.write_text(json.dumps(res))
+            os.replace(tmp, ad / "result.json")
+            return 0
         _verify_artifact(job)
         if job["suite"] == "A":
             res = worker_A(job, ad)
@@ -278,6 +308,8 @@ class Store:
 
 def classify(res, cm):
     """returns (class, rule).  class in '', infra, candidate, unverifiable"""
+    if res.get("force_infra"):
+        return "infra", "hl_worker_error"             # HarnessLens-side worker errors (opencode exit, no result) are never a score
     if res.get("hang"):
         return "infra", "hang_rule_3h"                # HUNG_ROLLOUT_RULE.txt: a watchdog timeout is an infra error, never a 0
     if not res.get("worker_ok"):
@@ -556,14 +588,14 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
         want = ref.read_text().split()[0]
         if want != sha:
             prob.append("order sha256 %s != recorded %s" % (sha, want))
-    for j in jobs:
+    for j in [x for x in jobs if not x.get("hl")]:
         d = Path(j["artifact_dir"])
         if not d.is_dir():
             prob.append("artifact dir missing: %s" % d)
             break
     prob += tag_guard(suite, jobs)
     seen = set()
-    for j in jobs:
+    for j in [x for x in jobs if not x.get("hl")]:
         key = (j["artifact_dir"], j["artifact_tree_sha256"])
         if key in seen:
             continue
