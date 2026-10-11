@@ -62,7 +62,7 @@ We did not check whether the ACE reflector or the MIPROv2 bootstrap showed the e
 
 Adapters label these errors differently, so we classify every error row with one rule and keep the adapter label beside it (Table~\ref{tab:zeros}).
 Search-time feedback used each method's native handling, and only the reporting is unified.
-The rule changes four arms.
+The rule changes Trace2Skill, WikiSkill, Meta-Harness and GEPA, and leaves SkillOpt as labelled.
 Trace2Skill and WikiSkill label all their errors as candidate faults, yet the rule moves 26 and 8 of them to infrastructure: the stored Trace2Skill strings are 8 client timeouts and 18 sandbox 500 errors, and the WikiSkill errors made no target call.
 Meta-Harness keeps 27 of its 30 infrastructure labels.
 SkillOpt has 27 infrastructure errors and 120 candidate errors, and the 120 are rows where the task template broke its placeholder contract, with no target call.

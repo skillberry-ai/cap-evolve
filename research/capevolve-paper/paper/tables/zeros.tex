@@ -1,0 +1,27 @@
+\begin{table}[h]
+\caption{Rollouts scored zero after an error, by arm, under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string; every other error is a candidate error. ``Unverifiable'' counts rows an adapter labelled infrastructure that have no string and some or unknown target calls, which the rule treats as candidate errors. Live runs only.}
+\label{tab:zeros}
+\centering\scriptsize
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Suite & Arm & Rollouts & Errors & Adapter infra & Adapter candidate & Uniform infra & Uniform candidate (unverifiable) \\
+\midrule
+A & ACE & 72 & 2 & 2 & 0 & 2 & 0 (0) \\
+A & CapEvolve AO & 120 & 5 & 5 & 0 & 5 & 0 (0) \\
+A & EvoSkill & 107 & 5 & 5 & 0 & 5 & 0 (0) \\
+A & GEPA & 172 & 7 & 7 & 0 & 0 & 7 (7) \\
+A & CapEvolve HC & 120 & 6 & 6 & 0 & 6 & 0 (0) \\
+A & Meta-Harness & 360 & 30 & 30 & 0 & 27 & 3 (3) \\
+A & MIPROv2 & 120 & 7 & 7 & 0 & 7 & 0 (0) \\
+A & SkillOpt & 560 & 147 & 27 & 120 & 27 & 120 (0) \\
+A & Trace2Skill & 278 & 27 & 0 & 27 & 26 & 1 (0) \\
+A & WikiSkill & 151 & 8 & 0 & 8 & 8 & 0 (0) \\
+\midrule
+B & CapEvolve AO & 369 & 2 & 2 & 0 & 0 & 2 (2) \\
+B & One-shot control & 394 & 8 & 8 & 0 & 6 & 2 (2) \\
+B & CapEvolve HC & 441 & 4 & 4 & 0 & 1 & 3 (3) \\
+\midrule
+C & One-shot control & 100 & 2 & 2 & 0 & 1 & 1 (1) \\
+\bottomrule
+\end{tabular}
+\end{table}

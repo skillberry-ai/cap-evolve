@@ -228,6 +228,38 @@ def cost():
     return opt
 
 
+def table_zeros():
+    """Error rows per arm under the adapter's own label and under the uniform classifier (analysis/out/metrics/error_label_parity.csv)."""
+    c = collections.defaultdict(collections.Counter)
+    for r in read_csv(OUTM / "error_label_parity.csv"):
+        if r["category"] != "main":
+            continue
+        for fld in ("rollouts", "errors", "adapter_infra", "adapter_candidate", "uniform_infra", "uniform_candidate_error", "adapter_infra_unverifiable"):
+            c[(r["suite"], r["arm"])][fld] += int(r[fld] or 0)
+    nice = {"ctl-oneshot": "One-shot control", "ctl-seed": "Seed control", "hc": "CapEvolve HC", "ao": "CapEvolve AO", "gepa": "GEPA",
+            "skillopt": "SkillOpt", "metaharness": "Meta-Harness", "evoskill": "EvoSkill", "wikiskill": "WikiSkill",
+            "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2", "harnesslens": "HarnessLens"}
+    L = [r"\begin{table}[h]",
+         r"\caption{Rollouts scored zero after an error, by arm, under each adapter's own label and under one uniform rule "
+         r"(\texttt{error\_label\_parity.csv}). The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, "
+         r"or made no target call and kept no string; every other error is a candidate error. ``Unverifiable'' counts rows an adapter labelled infrastructure "
+         r"that have no string and some or unknown target calls, which the rule treats as candidate errors. Live runs only.}",
+         r"\label{tab:zeros}", r"\centering\scriptsize", r"\begin{tabular}{@{}llrrrrrr@{}}", r"\toprule",
+         r"Suite & Arm & Rollouts & Errors & Adapter infra & Adapter candidate & Uniform infra & Uniform candidate (unverifiable) \\", r"\midrule"]
+    first = True
+    for su in "ABC":
+        if not first:
+            L.append(r"\midrule")
+        first = False
+        for (s_, a), v in sorted(c.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+            if s_ != su or v["errors"] == 0:
+                continue
+            L.append(f"{su} & {nice.get(a, a)} & {v['rollouts']} & {v['errors']} & {v['adapter_infra']} & {v['adapter_candidate']} & "
+                     f"{v['uniform_infra']} & {v['uniform_candidate_error']} ({v['adapter_infra_unverifiable']}) \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (PAPER / "tables" / "zeros.tex").write_text("\n".join(L) + "\n")
+
+
 def fig_roles():
     rows = [r for r in read_csv(OUTM / "metrics_by_role.csv") if r["category"] == "main"]
     agg = collections.defaultdict(lambda: collections.defaultdict(float))
@@ -287,5 +319,5 @@ def numbers(a):
 
 if __name__ == "__main__":
     a = audit()
-    fig_audit(a); table_audit(a); fig_rulep(); cost(); fig_roles(); numbers(a)
+    table_zeros(); fig_audit(a); table_audit(a); fig_rulep(); cost(); fig_roles(); numbers(a)
     print("real results written")
