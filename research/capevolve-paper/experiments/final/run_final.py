@@ -254,10 +254,25 @@ def worker_hl(job, attempt_dir):
         return {"t_start": t0, "t_end": t1, "error": "hl_final_eval produced no result (exit %d): %s" % (r.returncode, (r.stdout + r.stderr)[-500:]),
                 "error_kind_adapter": "infra", "force_infra": True, "force_rule": "hl_wrapper_error", "reward": 0.0, "reward_as_saved": 0.0, "tokens": 0, "n_llm_calls": 0, "empty_output": False}
     err = row.get("error")
-    return {"t_start": t0, "t_end": t1, "error": err, "error_kind_adapter": "infra" if err else None,
-            # (b) errors during the harness run follow the uniform rule; a worker exit is assumed to have made no target calls (not logged) -> infra
-            "force_infra": bool(err and re.search(r"exit[_ ]?(code[_ ]?)?\d|worker exit", str(err), re.I)), "force_rule": "hl_worker_exit_no_target_calls_assumed", "reward": float(row.get("reward") or 0.0),
-            "reward_as_saved": float(row.get("reward") or 0.0), "tokens": 0, "n_llm_calls": 0, "empty_output": False, "hl_run_id": row.get("run_id")}
+    tc = row.get("target_calls")
+    trunc = bool(row.get("truncated_stream"))
+    exit_like = bool(re.search(r"exit[_ ]?(code[_ ]?)?\d|worker exit", str(err or ""), re.I))
+    if tc is not None:         # real rule: exit with 0 target calls, or a truncated stream, is infra; exit after target calls is a candidate fault
+        force, frule = bool(err and (trunc or (exit_like and int(tc) == 0))), "hl_exit_zero_target_calls_or_truncated_stream"
+    else:                      # fe_results rows without target_calls: assume an exit made no target calls
+        force, frule = bool(err and exit_like), "hl_worker_exit_no_target_calls_assumed"
+    flags = {}
+    try:                       # bl-harness's per-trial descriptive flags (empty_completion, truncated_stream, worker_error)
+        fo = Path(attempt_dir) / "hl_flags.jsonl"
+        subprocess.run([sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_trial_flags.py"), str(out / "tree"), str(fo)], capture_output=True, text=True, timeout=300)
+        for x in C.jsonl(fo):
+            if str(x.get("task_id")) == str(job["task"]) and int(x.get("trial", -1)) == trial:
+                flags = x
+    except Exception:
+        pass
+    return {"t_start": t0, "t_end": t1, "error": err, "error_kind_adapter": "infra" if err else None, "force_infra": force, "force_rule": frule,
+            "n_llm_calls": tc, "reward": float(row.get("reward") or 0.0), "reward_as_saved": float(row.get("reward") or 0.0), "tokens": 0, "empty_output": False,
+            "empty_completion": bool(flags.get("empty_completion")), "hl_run_id": row.get("run_id"), "hl_flags": flags or None}
 
 
 def cmd_worker(a):
