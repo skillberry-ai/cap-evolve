@@ -5,17 +5,17 @@
 \centering
 \begin{tikzpicture}[
     font=\scriptsize,
-    box/.style={draw,rounded corners=1.5pt,minimum height=8mm,minimum width=22mm,align=center,inner sep=2.5pt,fill=black!4},
+    box/.style={draw,rounded corners=1.5pt,minimum height=8mm,minimum width=19mm,align=center,inner sep=2.5pt,fill=black!4},
     sec/.style={box,fill=teal!14,draw=teal!55!black},
     ar/.style={-{Stealth[length=4pt]},draw=black!60}
   ]
   \node[sec] (splits) {frozen splits\\{\tiny opt / sel / final, hashed}};
-  \node[sec,right=6mm of splits] (iso) {isolation\\{\tiny agent view, uid, mount;}\\{\tiny negative test}};
-  \node[box,right=6mm of iso] (search) {search\\{\tiny one optimizer,}\\{\tiny 3 seeds per arm}};
-  \node[sec,right=6mm of search] (rule) {promotion\\{\tiny rule P or native}\\{\tiny rule per arm}};
-  \node[sec,right=6mm of rule] (bstar) {matched\\{\tiny checkpoint $N^\star$}\\{\tiny from counters only}};
-  \node[sec,right=6mm of bstar] (final) {final set\\{\tiny not used by search,}\\{\tiny scored once}};
-  \node[sec,right=6mm of final] (stats) {statistics\\{\tiny paired, family-}\\{\tiny clustered, Holm-adjusted}};
+  \node[sec,right=4.5mm of splits] (iso) {isolation\\{\tiny agent view, uid, mount;}\\{\tiny negative test}};
+  \node[box,right=4.5mm of iso] (search) {search\\{\tiny one optimizer,}\\{\tiny 3 seeds per arm}};
+  \node[sec,right=4.5mm of search] (rule) {promotion\\{\tiny rule P or native}\\{\tiny rule per arm}};
+  \node[sec,right=4.5mm of rule] (bstar) {matched\\{\tiny checkpoint $N^\star$}\\{\tiny from counters only}};
+  \node[sec,right=4.5mm of bstar] (final) {final set\\{\tiny not used by search,}\\{\tiny scored once}};
+  \node[sec,right=4.5mm of final] (stats) {statistics\\{\tiny paired, family-}\\{\tiny clustered, Holm-adjusted}};
   \foreach \a/\b in {splits/iso,iso/search,search/rule,rule/bstar,bstar/final,final/stats}
     \draw[ar] (\a) -- (\b);
   \draw[ar] (rule.north) to[bend right=35] node[above,font=\tiny] {reject / promote, next candidate} (search.north);
