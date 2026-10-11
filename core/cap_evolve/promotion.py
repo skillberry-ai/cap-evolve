@@ -30,6 +30,7 @@ class PromotionParams:
     n_conf: int = 10
     dmin: float = 0.02
     z_conf: float = 2.0
+    min_coverage: float = 0.6       # confirmation must cover this fraction of the screen's task set
 
     @classmethod
     def from_spec(cls, spec: dict | None):
@@ -44,7 +45,8 @@ class PromotionParams:
         out = cls(k_se=float(spec.get("promotion_k_se", d.k_se)),
                   n_conf=int(spec.get("promotion_n_conf", d.n_conf)),
                   dmin=float(spec.get("promotion_dmin", d.dmin)),
-                  z_conf=float(spec.get("promotion_z_conf", d.z_conf)))
+                  z_conf=float(spec.get("promotion_z_conf", d.z_conf)),
+                  min_coverage=float(spec.get("promotion_min_coverage", d.min_coverage)))
         if out.n_conf < 1:
             raise ValueError("promotion_n_conf must be >= 1")
         return out
@@ -75,12 +77,18 @@ def screen(deltas, k_se: float = 1.0) -> dict:
     return {"pass": bool(ok), "mean": m, "se": se, "z": _z(m, se), "n": n, "k_se": k_se}
 
 
-def confirm(deltas, dmin: float = 0.02, z_conf: float = 2.0) -> dict:
-    """Stage 2 on FRESH-trial deltas: mean >= dmin and mean/SE >= z_conf (SE=0 with mean>0 passes)."""
+def confirm(deltas, dmin: float = 0.02, z_conf: float = 2.0, n_planned: int | None = None,
+            min_coverage: float = 0.6) -> dict:
+    """Stage 2 on FRESH-trial deltas: mean >= dmin and mean/SE >= z_conf (SE=0 with mean>0 passes).
+    ``n_planned`` = the screen's task count: if fewer than ``min_coverage`` of them survived the
+    confirmation (errored trials dropped from the paired vector), the confirmation is void, never a
+    pass on whichever tasks happened to survive."""
     m, se, n = paired_stats(deltas)
     z = _z(m, se)
-    ok = n >= 2 and m >= dmin and m > 0 and z >= z_conf
-    return {"pass": bool(ok), "mean": m, "se": se, "z": z, "n": n, "dmin": dmin, "z_conf": z_conf}
+    cov = 1.0 if not n_planned else n / n_planned
+    ok = n >= 2 and m >= dmin and m > 0 and z >= z_conf and cov >= min_coverage
+    return {"pass": bool(ok), "mean": m, "se": se, "z": z, "n": n, "dmin": dmin, "z_conf": z_conf,
+            "coverage": cov, "min_coverage": min_coverage}
 
 
 @dataclass
@@ -100,7 +108,8 @@ class PromotionResult:
                 "confirm": clean(self.confirm), "reason": self.reason, "params": self.params}
 
 
-def decide(screen_deltas, confirm_fn, params: PromotionParams | None = None) -> PromotionResult:
+def decide(screen_deltas, confirm_fn, params: PromotionParams | None = None,
+           n_planned: int | None = None) -> PromotionResult:
     """Run rule P. ``confirm_fn() -> fresh paired delta vector`` is called only after a screen pass."""
     p = params or PromotionParams()
     s = screen(screen_deltas, p.k_se)
@@ -108,10 +117,11 @@ def decide(screen_deltas, confirm_fn, params: PromotionParams | None = None) -> 
     if not s["pass"]:
         return PromotionResult(False, "screen_reject", s, None,
                                f"P screen: mean {s['mean']:+.4f} <= {p.k_se:g}*SE {s['se']:.4f} (n={s['n']})", pd)
-    c = confirm(confirm_fn(), p.dmin, p.z_conf)
+    c = confirm(confirm_fn(), p.dmin, p.z_conf, n_planned or s["n"], p.min_coverage)
     if not c["pass"]:
         return PromotionResult(False, "confirm_reject", s, c,
                                f"P confirm: fresh mean {c['mean']:+.4f}, z {c['z']:.2f} "
-                               f"(need >= {p.dmin:g} and z >= {p.z_conf:g}; n={c['n']})", pd)
+                               f"(need >= {p.dmin:g} and z >= {p.z_conf:g}; n={c['n']}, "
+                               f"coverage {c['coverage']:.2f} of the screen's tasks, need >= {p.min_coverage:g})", pd)
     return PromotionResult(True, "promoted", s, c,
                            f"P promoted: screen {s['mean']:+.4f}, fresh {c['mean']:+.4f}, z {c['z']:.2f}", pd)

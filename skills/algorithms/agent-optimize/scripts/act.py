@@ -430,8 +430,34 @@ def _p_state(ctx) -> dict:
 
 
 def _next_trial(ctx, tag) -> int:
-    return 1 + max((int(f.stem.rsplit("__t", 1)[1]) for f in (ctx.run_dir.rollouts / "val").glob(f"*__{tag}__t*.json")),
-                   default=-1)
+    """First trial index not yet written for EXACTLY ``tag`` (``<task>__<tag>__t<k>.json``; a tag that merely
+    ends in or contains ``tag`` is not a match)."""
+    ks = [-1]
+    for f in (ctx.run_dir.rollouts / "val").glob(f"*__{tag}__t*.json"):
+        head, _, k = f.stem.rpartition("__t")
+        if k.isdigit() and head.endswith(f"__{tag}"):
+            ks.append(int(k))
+    return 1 + max(ks)
+
+
+def _first_free_trial(ctx, *tags) -> int:
+    """One trial index beyond everything any of ``tags`` has on disk or in the evidence ledger: the common
+    ``--trial-offset`` for a paired comparison (run with ``--fixed-seeds`` so every arm gets the same seeds)."""
+    free = 0
+    for t in tags:
+        h = eval_index.cap_hash(digest.cand_dir(ctx.run_dir, t))
+        free = max(free, _next_trial(ctx, t), eval_index.next_trial_idx(ctx.run_dir, h))
+    return free
+
+
+def _eval_fresh(ctx, tag, ids, offset, n):
+    """Run ``tag`` on ``ids`` for trial indices [offset, offset+n) with seeds fixed to base+offset+k."""
+    cmd = eval_index.eval_cmd(ctx.root, ctx.need_project(), tag, "val", n, ids=ids, trial_offset=offset,
+                              fixed_seeds=True, skills_dir=SKILLS)
+    cmd[cmd.index("--candidate") + 1] = str(digest.cand_dir(ctx.run_dir, tag))
+    rc, so, se = sh(cmd)
+    if rc != 0:
+        raise Refused(f"fresh-trial evaluation of {tag} failed rc={rc}", stderr=(se or so)[-500:])
 
 
 def judge_p(ctx, a, tag, ref, params) -> dict:
@@ -448,19 +474,17 @@ def judge_p(ctx, a, tag, ref, params) -> dict:
     fresh = {}
 
     def confirm_fn():
-        ctx.check_budget(a)
+        k0 = _first_free_trial(ctx, tag, ref)           # ONE offset and fixed seeds for both arms
         for t in (tag, ref):
-            fresh[t] = _next_trial(ctx, t)
-            have = eval_index.counts(run_dir, eval_index.cap_hash(digest.cand_dir(run_dir, t)), "val")
-            want = max((n for _, n in have.values()), default=0) + params.n_conf
-            rc, so, se = sh(topup_cmd(ctx, t, want, ids))
-            if rc != 0:
-                raise Refused(f"rule P confirmation evaluation failed for {t} rc={rc}", stderr=(se or so)[-500:])
-        c = harness.split_result_from_rollouts(run_dir, tag, "val", min_trial=fresh[tag])
-        r = harness.split_result_from_rollouts(run_dir, ref, "val", min_trial=fresh[ref])
+            ctx.check_budget(a)                          # before EACH paid top-up
+            _eval_fresh(ctx, t, ids, k0, params.n_conf)
+        fresh[tag] = fresh[ref] = k0
+        c = harness.split_result_from_rollouts(run_dir, tag, "val", min_trial=k0)
+        r = harness.split_result_from_rollouts(run_dir, ref, "val", min_trial=k0)
         return harness._paired_deltas(r, c) or []
 
-    res = promotion.decide(harness._paired_deltas(cur, cand) or [], confirm_fn, params)
+    screen_d = harness._paired_deltas(cur, cand) or []
+    res = promotion.decide(screen_d, confirm_fn, params, n_planned=len(screen_d))
     out = res.to_dict()
     if res.promote:
         st = _p_state(ctx)
