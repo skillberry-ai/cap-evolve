@@ -5,4 +5,4 @@ reserve_high), which an earlier attempt on the RITS target showed (infra timeout
 reconstruction, order, worker per rollout, adapters, LibreOffice 25.8 scorer, tau2 scorer, classifier, retry/hang rule, aggregation) is the production code.
 hang_rule_rollouts.jsonl: run with --hang-s 6 (two hangs -> missing cell, no row).  pcb_*.json: paired_cluster_bootstrap on results_long.csv (gepa vs seed).
 B/rejudge_trials.csv: rejudge.py --all on the saved simulations; 16/16 rewards reproduce.
-dryrun/rits: same production path on the RITS targets (A Gemma, B/C gpt-oss-120b + judge gpt-5.5), tags FE-dry-<S>, <=4 concurrent, 8 jobs per suite, search-split ids only; remaining jobs of the limit-8 window were still running at snapshot.
+dryrun/rits: same production path on the RITS targets (A Gemma, B/C gpt-oss-120b + judge gpt-5.5), tags FE-dry-<S>, <=4 concurrent, 8 jobs per suite, search-split ids only. Corrected after re-check: all 8 jobs per suite (24 total) are terminal, 0 errors, 0 retries (rollouts.jsonl in each folder). An earlier snapshot taken while the last jobs were still running showed 8/7/7.

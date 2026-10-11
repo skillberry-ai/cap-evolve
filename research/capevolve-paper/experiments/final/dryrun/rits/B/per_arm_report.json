@@ -1,14 +1,14 @@
 {
  "B|gepa": {
-  "attempts": 4,
+  "attempts": 5,
   "candidate_errors": 0,
-  "done": 4,
+  "done": 5,
   "empty_output": 0,
   "hangs": 0,
   "infra_attempts": 0,
   "jobs": 6,
   "missing": 0,
-  "pending": 2,
+  "pending": 1,
   "raw_tool_text_last": 0,
   "retried_jobs": 0
  },
