@@ -47,18 +47,18 @@ $J_{S}(\artifact)=\frac1{|S|}\sum_{x\in S}\mathbb{E}_\omega\, r(\artifact,x,\ome
 The quantity of scientific interest is $J_{\Dfin}$ of the artifact the search returns.
 
 \emph{Objective and budget.}
-A search receives a budget $B$ that caps evaluation calls, dollars, optimizer dollars, iterations, and consecutive
+A search receives a budget $N$ that caps evaluation calls, dollars, optimizer dollars, iterations, and consecutive
 rejects; the loop stops when any cap is reached.
 % src: core/cap_evolve/rundir.py:368-383 (budget_exhausted: stop_at_reward, max_iterations, max_metric_calls, max_usd,
 % max_optimizer_usd, stall)
 The goal is
 \begin{equation}
   \max_{\artifact\in\mathcal{A}}\; J_{\Dfin}(\artifact)
-  \quad\text{subject to}\quad C_{\mathrm{opt}}(\text{search})\le B,
+  \quad\text{subject to}\quad C_{\mathrm{opt}}(\text{search})\le N,
 \end{equation}
 where $C_{\mathrm{opt}}$ counts \emph{every} evaluation the search spends (screening, confirmation, merge verification,
 probes) plus proposer cost. The method returns the last promoted candidate, never the best-looking candidate on
-$\Dsel$. Deployment cost per task is reported separately and is not part of $B$.
+$\Dsel$. Deployment cost per task is reported separately and is not part of $N$.
 % src: core/cap_evolve/harness.py:3315-3316 (set_best only on accept); core/cap_evolve/harness.py:4676-4752 (finalize
 % scores best_dir, not a re-selected maximum)
 
@@ -157,14 +157,14 @@ measurement is read back.
 % src: core/cap_evolve/harness.py:1128-1135 (resume_val reads <tag>__conf when rule P is on); core/cap_evolve/harness.py:4618
 Parameter values used in the experiments: $k=1$, $n_{\mathrm{conf}}=3$, $\delta_{\min}=0$,
 $z_{\mathrm{conf}}=1.282$ (the one-sided $90\%$ normal quantile), $\rho=0.95$ (the library defaults are $n_{\mathrm{conf}}=10$,
-$\delta_{\min}=0.02$, $z_{\mathrm{conf}}=2$, $\rho=0.6$). We chose them by a budget-exact simulation of one search per suite, using the difficulty observed on the seed artifact (Appendix~\ref{app:sim}). The error rate is per search, not per edit: in an all-null search of about ten candidates, rule P falsely promotes at least once with probability \simPFalseA{}, \simPFalseB{} and \simPFalseC{} on Suites A, B and C, about one percent per candidate. The one-stage $k=1$ gate does so with probability \simKoneFalseA{}, \simKoneFalseB{} and \simKoneFalseC{}. Rule P promotes a single candidate with a true gain of $+0.08$ with probability \simPPowerEightA{}, \simPPowerEightB{} and \simPPowerEightC{} on Suites A, B and C, against \simKonePowerEightA{}, \simKonePowerEightB{} and \simKonePowerEightC{} for the one-stage gate. Rule P gives up power by design. Appendix~\ref{app:sim} explains why we did not choose five confirmation trials.
+$\delta_{\min}=0.02$, $z_{\mathrm{conf}}=2$, $\rho=0.6$). We chose them by a budget-exact simulation of one search per suite, using the difficulty observed on the seed artifact (Appendix~\ref{app:sim}). The error rate is per search, not per edit: in an all-null search of about ten candidates, rule P falsely promotes at least once with probability \simPFalseA{}, \simPFalseB{} and \simPFalseC{} on Suites A, B and C, about one percent per candidate. The one-stage $k=1$ gate does so with probability \simKoneFalseA{}, \simKoneFalseB{} and \simKoneFalseC{}. Rule P promotes a single candidate with a true gain of 8 points with probability \simPPowerEightA{}, \simPPowerEightB{} and \simPPowerEightC{} on Suites A, B and C, against \simKonePowerEightA{}, \simKonePowerEightB{} and \simKonePowerEightC{} for the one-stage gate. Rule P gives up power by design, and stock \capevolve{} screens and confirms on the validation tasks it also reads for feedback, so a candidate can overfit them and pass both stages; only the final set is clean. Appendix~\ref{app:sim} explains why we did not choose five confirmation trials.
 % src (numbers): research/capevolve-paper/analysis/out/sim_budget.md (rows "f: one-stage k=1", "c: P n_conf=3 z=1.282 dmin=0",
 %   "a: P n_conf=3 z=2.0 dmin=.02"; power table), produced by research/capevolve-paper/analysis/scripts/sim_budget.py; these are
 %   simulation outputs under that script's generative assumptions, not measurements on the benchmark.
 % src (library defaults): core/cap_evolve/promotion.py:28-35
 Both \capevolve{} arms judge through rule P with the footprint mask off and joint coverage, so the two algorithms share one
 acceptance rule. The confirmation costs $2\,|\Dsel|\,n_{\mathrm{conf}}$ rollouts per candidate that passes the screen and
-nothing for candidates that do not; these rollouts are charged to the budget $B$.
+nothing for candidates that do not; these rollouts are charged to the budget $N$.
 % src (values): frozen E10 configuration communicated by the campaign lead; research/capevolve-paper/decisions.md (gate parity entry)
 % src: core/cap_evolve/harness.py:3270-3300; test core/tests/test_promotion_rule_p.py::test_confirmation_cost_is_charged_to_the_budget
 % (spent.metric_calls grows by exactly 2*T*n_conf); research/capevolve-paper/decisions.md (campaign parameter choice)

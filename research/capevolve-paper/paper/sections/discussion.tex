@@ -1,8 +1,10 @@
 \section{Discussion}
 \label{sec:discussion}
 
-A gain here is the paired difference from the seed artifact on tasks that search did not use for design, on the recalculated scale. It is not comparable to as-saved gains (Appendix~\ref{app:hist}). When an optimizer is within the minimum detectable effect of the seed artifact or of the one-shot control, we report it as not distinguishable there. \needs{Which arms are distinguishable from the controls, per suite, after the final evaluation.}
+\subsection{The gate trades false promotions for power}
 
-Rule P trades power for few false promotions. On Suite B a true gain of $+0.08$ is promoted with probability \simPPowerEightB{} under rule P and \simKonePowerEightB{} under the one-stage gate, which in turn falsely promotes in \simKoneFalseB{} of null searches. Per-search gains should therefore be small, and a competitor with a looser gate may promote more edits, real and spurious. Per-arm accepted-candidate counts and null-edit false-accept rates separate search quality from gate strictness. \needs{Per-arm accepted-candidate counts and null-edit false-accept rates.}
+Rule P is a deliberately conservative gate. In a null search of about ten candidates it falsely promotes in \simPFalseB{} (Suite B) to \simPFalseC{} (Suite C) of searches, against \simKoneFalseB{} to \simKoneFalseA{} for the one-standard-error gate, a ratio of \simRatioLo{} to \simRatioHi{}. The price is power: a true 8-point gain is promoted with probability \simPPowerEightB{} on Suite B under rule P and \simKonePowerEightB{} under the stock gate, and the stock gate has the larger expected gain in our simulation (Appendix~\ref{app:sim}). The stock-gate runs on Suites A and C measure this trade on real searches. \needs{E12A and E12C: promotions per search, returned-artifact equality with the seed artifact, and the gain difference between stock-gate and rule-P hill-climb, descriptive, after the cutoff.} Whether a competitor's gap to \capevolve{} reflects its search or its gate is answered only by these runs and by the promotions-per-search counts we report for every arm.
 
-Gateway priority and retry choices also changed outcomes for individual arms, so we audit them per arm (Appendix~\ref{app:incidents}).
+\subsection{What a number means here}
+
+A gain is the paired difference from the seed artifact on tasks that search did not use for design, on the recalculated scale. It is not comparable to as-saved gains (Appendix~\ref{app:hist}). When two artifacts are not shown equivalent and not shown different, we report the contrast as inconclusive. Gateway priority and retry choices also changed outcomes for individual arms, so we audit them per arm (Appendix~\ref{app:incidents}).

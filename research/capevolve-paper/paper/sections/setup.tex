@@ -13,7 +13,7 @@
   \node[sec,right=6mm of splits] (iso) {isolation\\{\tiny agent view, uid, mount;}\\{\tiny negative test}};
   \node[box,right=6mm of iso] (search) {search\\{\tiny one optimizer,}\\{\tiny 3 seeds per arm}};
   \node[sec,right=6mm of search] (rule) {promotion\\{\tiny rule P or native}\\{\tiny rule per arm}};
-  \node[sec,right=6mm of rule] (bstar) {matched\\{\tiny checkpoint $B^\star$}\\{\tiny from counters only}};
+  \node[sec,right=6mm of rule] (bstar) {matched\\{\tiny checkpoint $N^\star$}\\{\tiny from counters only}};
   \node[sec,right=6mm of bstar] (final) {final set\\{\tiny fresh, scored once,}\\{\tiny both scorers}};
   \node[sec,right=6mm of final] (stats) {statistics\\{\tiny paired, family-}\\{\tiny clustered, Holm}};
   \foreach \a/\b in {splits/iso,iso/search,search/rule,rule/bstar,bstar/final,final/stats}
@@ -33,27 +33,27 @@
 Table~\ref{tab:suites} lists the three suites. Suite A edits spreadsheets with a code-execution agent: the target is Gemma-4-31B-it, served by one IBM RITS (Research Inference Service) deployment, on the 400-task verified subset of the 912 SpreadsheetBench questions \citep{spreadsheetbench}\footnote{File \texttt{spreadsheetbench\_verified\_400.tar.gz} (sha256 \texttt{10ef893d}\ldots) in \texttt{github.com/RUCKBReasoning/SpreadsheetBench}, \texttt{data/} directory.}. Suites B and C are customer-service dialogue in $\tau^2$-bench retail and airline \citep{tau2-bench,tau_bench}, pinned at commit 8ebb7499, with gpt-oss-120b as target and user simulator. Suites B and C are descriptive: with 40 and 20 final tasks and a simulated user they cannot resolve small differences, so they show that the protocol transfers, and inference there is at the artifact level only. GPT-5.5 grades natural-language assertions for every arm, because the benchmark's default judge is not served by our gateway and the target should not grade itself. Claude Sonnet 5.5 is the optimizer or reflection model for every matched arm. One metering gateway tags every model call with suite, arm, search seed and role.
 
 \begin{table}[t]
-\caption{Suites. The Suite A final set is a seeded stratified sample from the 239-id residual pool of the 912-task SpreadsheetBench release (ids whose task family shares a prefix with a development-exposed task are removed first). Suite C's test split was used in earlier \capevolve{} development and is development-exposed. Suite B's test split is sealed.}
+\caption{Suites. Opt is the tasks whose rollouts the optimizer reads; sel is the tasks that gate acceptance; final is scored once per artifact. Final size is tasks $\times$ trials per task. Stock \capevolve{} reads and gates on one validation set. Suite A's final set is a stratified sample of 239 ids from the 912-question release, each scored at most twice before (score only).}
 \label{tab:suites}
 \centering\small
-\begin{tabularx}{\columnwidth}{@{}lXll@{}}
+\begin{tabularx}{\columnwidth}{@{}lXlll@{}}
 \toprule
- & Target & Opt / sel & Final \\
+ & Target & Opt / sel & Final & Exposure \\
 \midrule
-A & Gemma-4-31B-it & 80 / 40 & \mockTA{} score-only exposed \\
-B & gpt-oss-120b & 49 / 25 & 40 sealed \\
-C & gpt-oss-120b & 20 / 10 & 20 exposed \\
+A & Gemma-4-31B-it & 80 / 40 & $70\times 1$ & score-only exposed \\
+B & gpt-oss-120b & 49 / 25 & $40\times 3$ & sealed \\
+C & gpt-oss-120b & 20 / 10 & $20\times 3$ & development-exposed \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-On Suite A the reward is the LibreOffice-recalculated hard score; the as-saved score is logged for every rollout. The SkillOpt split (80 train, 40 validation) supplies optimization and selection. Competitors read train traces and select on validation. The stock \capevolve{} algorithms read validation traces and gate on validation, so they see 40 tasks where competitors see 120. This disadvantages \capevolve{}, and we keep it as the native design. Every arm receives the same scorer feedback, which carries gold-derived facts such as fill counts and error direction but no gold values.
+On Suite A the reward is the LibreOffice-recalculated hard score; the as-saved score is logged for every rollout. The SkillOpt split (80 train, 40 validation) supplies optimization and selection. Competitors read train traces and select on validation. The stock \capevolve{} algorithms read validation traces and gate on validation, so they see 40 tasks where competitors see 120. This disadvantages \capevolve{}, and we keep it as the native design. Proposers are isolated by user id or mount namespace with a negative test before launch, except where Appendix~\ref{app:incidents} records a gap: on Suite B, agent-optimize can read gold actions of its own optimization and selection tasks. Every arm receives the same scorer feedback, which carries gold-derived facts such as fill counts and error direction but no gold values.
 
 The Suite A final set is a stratified sample from the 239 ids of the 912-question release that remain after removing development-exposed families. Each id was scored at most in two earlier runs, score only, never used for design. We call it score-only exposed, not fresh. We fix the sampling rule and seed, and hash the sample, before any final-set rollout is scored.
 
 \subsection{Arms}
 
-Table~\ref{tab:arms} lists the arms. Competitors run from official repositories at pinned commits (Appendix~\ref{app:config}); WikiSkill has no official code, so we run a community port. VERSE, CoEvoSkills, and HarnessLens on Suite A failed to reproduce (Appendix~\ref{app:incidents}). Five more methods (AHE, MCE, RHO, Memento-Skills, GraphSkillEvo) are one-seed exploratory runs, fixed before any outcome, outside the headline tables. Eight competing methods run on Suite A, GEPA on Suites B and C, and HarnessLens on Suite B.
+Table~\ref{tab:arms} lists the arms; an arm is one method with its configuration, and the seed artifact is the unoptimized starting point of every arm. Competitors run from official repositories at pinned commits (Appendix~\ref{app:config}); WikiSkill has no official code, so we run a community port. VERSE, CoEvoSkills, and HarnessLens on Suite A failed to reproduce (Appendix~\ref{app:incidents}). Five more methods (AHE, MCE, RHO, Memento-Skills, GraphSkillEvo) are one-seed exploratory runs, fixed before any outcome, outside the headline tables. Eight competing methods run on Suite A, GEPA on Suites B and C, and HarnessLens on Suite B.
 
 \begin{table}[t]
 \caption{Arms. Main arms run three search seeds to the matched checkpoint; ``cheap'' arms run three search seeds with a native budget that is usually below the cap and report actual rollouts. Pins are in Appendix~\ref{app:config}.}
@@ -82,9 +82,9 @@ One-shot repair & one optimizer step, accepted unconditionally & B C \\
 
 \subsection{Matched checkpoint and acceptance rules}
 
-Each search may count 600 target rollouts, every evaluation included, and up to 4M non-cache-read optimizer tokens. One Gemma deployment gives about 12 rollouts per hour per search, so slow arms miss 600. We therefore compare at a matched checkpoint $B^\star$: the largest rollout count that every main seed of every main arm reaches by the search cutoff (2026-10-13 06:00 UTC), rounded down to a multiple of 50 and floored at 200. $B^\star$ comes from rollout counters only. Each arm is scored on what its own selection rule would have deployed at $B^\star$, using only information produced inside its first $B^\star$ rollouts. A seed below 200 rollouts is reported as incomplete and its arm leaves the table. The placeholder values are $B^\star=$ \mockBstarA{}, \mockBstarB{} and \mockBstarC{} for Suites A, B and C. \needs{Final $B^\star$ and the list of incomplete seeds, after the search cutoff.}
+Each search may count a budget of $N=600$ target rollouts, every evaluation included, and up to 4M non-cache-read optimizer tokens. One Gemma deployment gives about 12 rollouts per hour per search, so slow arms miss 600. We therefore compare at a matched checkpoint $N^\star$: the largest rollout count that every main seed of every main arm reaches by the search cutoff (2026-10-13 06:00 UTC), rounded down to a multiple of 50 and floored at 200. $N^\star$ comes from rollout counters only. Each arm is scored on what its own selection rule would have deployed at $N^\star$, using only information produced inside its first $N^\star$ rollouts. A seed below 200 rollouts is reported as incomplete and its arm leaves the table. The placeholder values are $N^\star=$ \mockBstarA{}, \mockBstarB{} and \mockBstarC{} for Suites A, B and C. \needs{Final $N^\star$ and the list of incomplete seeds, after the search cutoff.}
 
-The matching is on target rollouts. It is not on optimizer compute, which differs by arm, so we report optimizer tokens and dollars per arm and make no claim of compute parity. It is also not on acceptance rules: \capevolve{} judges candidates with rule P and competitors keep their native rules. The comparison is therefore of each method together with its own acceptance rule. Exploratory stock-gate hill-climb arms on Suites A and C (three search seeds) bound how much of any gap the rule explains; we compare them with rule-P hill-climb at the same rollout count, descriptively, without p-values. For every arm and seed we report candidates screened, candidates promoted under the native rule, and whether the returned artifact equals the seed artifact. Truncation at $B^\star$ can penalise arms whose schedule depends on the full budget (SkillOpt's cosine schedule, EvoSkill's iteration cap), so a secondary analysis scores each arm's native end-of-run artifact at the cutoff, labelled as unmatched.
+The matching is on target rollouts. It is not on optimizer compute, which differs by arm, so we report optimizer tokens and dollars per arm and make no claim of compute parity. It is also not on acceptance rules: \capevolve{} judges candidates with rule P and competitors keep their native rules. We therefore compare each method together with its own acceptance rule, and treat rule P as a deliberately conservative configuration. Exploratory stock-gate hill-climb arms on Suites A and C (three search seeds) show what the rule costs and buys; we compare them with rule-P hill-climb at the same rollout count, descriptively, without p-values. For every arm and seed we report candidates screened, candidates promoted under the native rule, and whether the returned artifact equals the seed artifact. Truncation at $N^\star$ can penalise arms whose schedule depends on the full budget (SkillOpt's cosine schedule, EvoSkill's iteration cap), so a secondary analysis scores each arm's native end-of-run artifact at the cutoff, labelled as unmatched.
 
 \subsection{Statistics}
 \label{sec:setup:stats}
@@ -93,7 +93,7 @@ The unit of inference is the task, clustered by task family. We separate three q
 
 Each primary row carries two intervals. The artifact-level interval, used for tests and the Holm correction, supports statements about the three frozen artifacts as found in these runs. Any statement about the method needs the pipeline-level interval ($t$ with two degrees of freedom, adding seed variance); if it includes zero, we restrict the statement to the frozen artifacts. Per-seed values accompany every mean. A win needs a Holm-adjusted $p<0.05$ and an interval that excludes zero under the pessimistic missingness bound, where the evaluated arm's missing cells score 0 and the comparator's score 1. Two artifacts are equivalent only if two one-sided tests at $\alpha=0.05$ both reject for a margin of $0.10$ (Suites A and B); otherwise the result is inconclusive, and we do not write ``no difference''.
 
-Variance comes from the seed artifact's observed evaluations, not assumptions (Appendix~\ref{app:sim}). The minimum detectable effect (MDE) for contrasts between the three frozen artifacts, at 80\% power and $\alpha=0.05$ before Holm, is \mdeACondOne{} on Suite A (\mdeATasks{} final tasks, one trial), \mdeBCondOne{} on B (40 tasks) and \mdeCCondOne{} on C (20 tasks); claims about the optimizer itself need \mdeAPipeOne{}, \mdeBPipeOne{} and \mdeCPipeOne{}. Suite A's seed-artifact mean moved by 0.088 across six evaluation batches, so we score all arms interleaved. \needs{Final task counts and trials per task.}
+Variance comes from the seed artifact's observed evaluations, not assumptions (Appendix~\ref{app:sim}). The minimum detectable effect (MDE) for contrasts between the three frozen artifacts, at 80\% power and $\alpha=0.05$ before Holm, is \mdeACondOne{} points on Suite A (70 tasks, one trial), \mdeBCondThree{} on B (40 tasks, three trials) and \mdeCCondThree{} on C (20 tasks, three trials); claims about the optimizer itself need \mdeAPipeOne{}, \mdeBPipeThree{} and \mdeCPipeThree{} points. Suite A's seed-artifact mean moved by 8.8 points across six evaluation batches, so we score all arms interleaved in one window, with the seed artifact scored twice. 
 
 \subsection{Cost accounting}
 
