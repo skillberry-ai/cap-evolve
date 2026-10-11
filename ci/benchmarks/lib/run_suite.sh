@@ -810,7 +810,7 @@ OPTNOTE
     SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-$SB_DEFAULT}"
     # The agent's sandbox mounts a gold-free COPY of the data (inputs + writable outputs/), not $SB_DATA, whose
     # answer workbooks would otherwise be listable and readable by agent-generated code (#782). Gold is still read
-    # from $SB_DATA at scoring time. SB_AGENT_VIEW=0 restores the old shared mount. Per-rollout outputs now live in
+    # from $SB_DATA at scoring time. SB_AGENT_VIEW=0 (with SB_ALLOW_GOLD_IN_MOUNT=1) restores the old shared mount. Per-rollout outputs now live in
     # the view, so the kept-run slot below reads them from there.
     SB_AGENT_VIEW="${SB_AGENT_VIEW:-1}"
     SB_VIEW_DIR="$WORK/sb_agent_view"
@@ -841,6 +841,7 @@ TEMPERATURE=0.0
 SPREADSHEETBENCH_HARNESS_DIR=$REPO/third_party/spreadsheetbench
 SPREADSHEETBENCH_DATA_DIR=$SB_DATA
 SPREADSHEETBENCH_AGENT_VIEW=$SB_AGENT_VIEW
+SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=${SB_ALLOW_GOLD_IN_MOUNT:-0}
 SPREADSHEETBENCH_AGENT_VIEW_DIR=$SB_VIEW_DIR
 SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
 SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}
@@ -851,6 +852,17 @@ ENV
     export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
     export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
     export SPREADSHEETBENCH_AGENT_VIEW="$SB_AGENT_VIEW" SPREADSHEETBENCH_AGENT_VIEW_DIR="$SB_VIEW_DIR"
+    export SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT="${SB_ALLOW_GOLD_IN_MOUNT:-0}"
+    if [ "$SB_AGENT_VIEW" != "1" ] && [ "${SB_ALLOW_GOLD_IN_MOUNT:-0}" != "1" ]; then
+      echo "::error:: SB_AGENT_VIEW=0 mounts the gold answers into the agent sandbox (#782); also set SB_ALLOW_GOLD_IN_MOUNT=1 to accept that." >&2
+      exit 1
+    fi
+    if [ "$SB_AGENT_VIEW" != "1" ]; then
+      echo "::warning:: spreadsheetbench: gold answers are VISIBLE to the agent sandbox (SB_ALLOW_GOLD_IN_MOUNT=1); results are not comparable to gold-free runs" >&2
+      printf 'false' > "$OUT/gold_separate_from_agent_mount"
+    else
+      printf 'true' > "$OUT/gold_separate_from_agent_mount"
+    fi
     export SPREADSHEETBENCH_CONCURRENCY="${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}"
     export SPREADSHEETBENCH_MAX_TURNS="${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}"
     # soft (default, matches this benchmark's own headline) | hard (all 3 test cases must
@@ -1222,7 +1234,7 @@ if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && 
 {"bench": "$BENCH", "tier": "$TIER", "run_id": "${GITHUB_RUN_ID:-local}",
  "run_url": "${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}",
  "sha": "${GITHUB_SHA:-}", "agent_model": "$AGENT_MODEL", "iterations": "$ITER",
- "empty_seed": "${SB_EMPTY_SEED:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+ "empty_seed": "${SB_EMPTY_SEED:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "gold_separate_from_agent_mount": "$(cat "$OUT/gold_separate_from_agent_mount" 2>/dev/null)", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 JSON
     _discard_dir "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
       && echo ">>> kept as the latest spreadsheetbench run: $SB_LATEST_DIR ($(du -sh "$SB_LATEST_DIR" | cut -f1))" >&2

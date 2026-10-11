@@ -32,6 +32,10 @@ HARNESS = REPO / "third_party" / "spreadsheetbench"
 GOLD_RE = re.compile(r"(_answer|_golden|^golden|^answer)", re.I)
 
 
+_ENV = ("SPREADSHEETBENCH_AGENT_VIEW", "SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT", "SPREADSHEETBENCH_GOLD_DIR",
+        "SPREADSHEETBENCH_AGENT_VIEW_DIR")
+
+
 def _load():
     for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
         if str(p) not in sys.path:
@@ -44,6 +48,8 @@ def _load():
 
 @pytest.fixture()
 def mod(monkeypatch):
+    for k in _ENV:                      # the real defaults, not the session-wide legacy opt-out in conftest.py
+        monkeypatch.delenv(k, raising=False)
     m = _load()
     monkeypatch.setattr(m, "HARNESS_DIR", str(HARNESS))
     monkeypatch.setattr(m, "_dataset_cache", None)
@@ -113,13 +119,68 @@ def test_agent_view_honours_task_ids_and_is_built_once(mod, monkeypatch, tmp_pat
     assert {p.name for p in (v1 / "spreadsheet").iterdir()} == {"t2"}
 
 
-def test_default_behaviour_is_unchanged_without_the_flags(mod, monkeypatch, tmp_path):
+def test_the_safe_layout_is_the_default(mod, monkeypatch, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "v400")
+    monkeypatch.setattr(mod, "DATA_DIR", str(src))
+    assert mod.AGENT_VIEW is True and mod.ALLOW_GOLD_IN_MOUNT is False and mod.GOLD_DIR == ""
+    view = mod._data_dir()
+    assert view != src and not [p for p in _tree_files(view) if GOLD_RE.search(p.name)]
+    assert mod._gold_dir() == src
+
+
+def test_the_historical_layout_needs_an_explicit_allow_and_warns(mod, monkeypatch, tmp_path, capsys):
     src = tmp_path / "src"
     _dataset(src, "v400")
     monkeypatch.setattr(mod, "DATA_DIR", str(src))
     monkeypatch.setattr(mod, "AGENT_VIEW", False)
-    monkeypatch.setattr(mod, "GOLD_DIR", "")
-    assert mod._data_dir() == src and mod._gold_dir() == src
+    with pytest.raises(RuntimeError, match="ALLOW_GOLD_IN_MOUNT"):
+        mod._data_dir()
+    monkeypatch.setattr(mod, "ALLOW_GOLD_IN_MOUNT", True)
+    assert mod._data_dir() == src
+    assert "WARNING" in capsys.readouterr().err
+
+
+def test_startup_assertion_catches_gold_in_the_mount_even_when_gold_dir_is_set(mod, monkeypatch, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "v400")
+    monkeypatch.setattr(mod, "DATA_DIR", str(src))          # still holds gold ...
+    monkeypatch.setattr(mod, "GOLD_DIR", str(tmp_path / "elsewhere"))   # ... though gold is declared elsewhere
+    with pytest.raises(RuntimeError, match="gold-named file"):
+        mod._data_dir()
+    # a genuine view passes the same check
+    clean = mod._build_agent_view(src, tmp_path / "clean")
+    monkeypatch.setattr(mod, "DATA_DIR", str(clean))
+    monkeypatch.setattr(mod, "_MOUNT_CHECKED", set())
+    assert mod._data_dir() == clean
+
+
+def test_a_late_gold_file_in_a_pinned_view_is_caught(mod, monkeypatch, tmp_path):
+    src = tmp_path / "src"
+    _dataset(src, "x912")
+    monkeypatch.setattr(mod, "DATA_DIR", str(src))
+    monkeypatch.setattr(mod, "AGENT_VIEW_DIR", str(tmp_path / "pinned"))
+    v = mod._data_dir()
+    (v / "spreadsheet" / "t1" / "1_t1_answer.xlsx").write_bytes(b"x")
+    monkeypatch.setattr(mod, "_MOUNT_CHECKED", set())
+    with pytest.raises(RuntimeError, match="gold-named file"):
+        mod._check_mount_is_gold_free(v)
+
+
+def test_ci_records_gold_separation_in_the_run_metadata(capsys):
+    rs = (REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh").read_text(encoding="utf-8")
+    assert "gold_separate_from_agent_mount" in rs and "SB_ALLOW_GOLD_IN_MOUNT" in rs
+    # runmeta.json is assembled by the workflow, which this change cannot edit (token lacks `workflow` scope);
+    # record.py folds the flag file run_suite.sh writes beside runmeta.json into the record instead.
+    sys.path.insert(0, str(REPO / "ci" / "benchmarks" / "lib"))
+    import record
+    d = Path(tempfile.mkdtemp())
+    (d / "runmeta.json").write_text(json.dumps({"conclusion": "success", "bench": "spreadsheetbench"}))
+    (d / "gold_separate_from_agent_mount").write_text("true")
+    (d / "metrics.jsonl").write_text("")
+    rc = record.main(["record.py", "build", str(d / "metrics.jsonl"), "--runmeta", str(d / "runmeta.json")])
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out)["gold_separate_from_agent_mount"] is True
 
 
 def _score_all(mod, monkeypatch, src: Path, *, view: bool, explicit_gold: bool):
@@ -130,6 +191,8 @@ def _score_all(mod, monkeypatch, src: Path, *, view: bool, explicit_gold: bool):
     monkeypatch.setattr(mod, "_dataset_cache", None)
     monkeypatch.setattr(mod, "_VIEWS", {})
     monkeypatch.setattr(mod, "AGENT_VIEW", view)
+    monkeypatch.setattr(mod, "ALLOW_GOLD_IN_MOUNT", not view)
+    monkeypatch.setattr(mod, "_MOUNT_CHECKED", set())
     monkeypatch.setattr(mod, "GOLD_DIR", "")
     if explicit_gold:
         mod._VIEWS.clear()
@@ -216,6 +279,7 @@ def test_sandbox_listing_shows_gold_only_without_the_agent_view(mod, monkeypatch
         os.chmod(p, 0o755 if p.is_dir() else 0o644)
     monkeypatch.setattr(mod, "DATA_DIR", str(src))
     monkeypatch.setattr(mod, "AGENT_VIEW", agent_view)
+    monkeypatch.setattr(mod, "ALLOW_GOLD_IN_MOUNT", not agent_view)
     monkeypatch.setattr(mod, "GOLD_DIR", "")
     monkeypatch.setattr(mod, "_dataset_cache", None)
     monkeypatch.setattr(mod, "_VIEWS", {})

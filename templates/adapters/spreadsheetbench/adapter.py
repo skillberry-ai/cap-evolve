@@ -46,7 +46,7 @@ SETUP:
        SPREADSHEETBENCH_CONCURRENCY=4                # parallel tasks (each = one Docker container)
        SPREADSHEETBENCH_EXEC_TIMEOUT=180             # per code-exec call timeout (s)
        SPREADSHEETBENCH_LIBREOFFICE_BIN=/path/to/soffice
-       SPREADSHEETBENCH_AGENT_VIEW=1                 # sandbox sees a gold-free copy of the data (recommended; see #782)
+       SPREADSHEETBENCH_AGENT_VIEW=1                 # default: sandbox sees a gold-free copy of the data (#782); 0 needs ALLOW_GOLD_IN_MOUNT=1
        SPREADSHEETBENCH_GOLD_DIR=/path/to/pristine   # read gold from here instead (DATA_DIR is then the agent's view)
 
   8. Run: cap-evolve check && cap-evolve run
@@ -135,13 +135,16 @@ DATA_DIR = os.environ.get("SPREADSHEETBENCH_DATA_DIR", "")
 # lets DATA_DIR be a gold-free "agent view" (inputs + writable outputs/ only). Layout is identical:
 # <GOLD_DIR>/spreadsheet/<id>/<n>_<id>_{answer|golden}.xlsx.
 GOLD_DIR = os.environ.get("SPREADSHEETBENCH_GOLD_DIR", "")
-# SPREADSHEETBENCH_AGENT_VIEW=1: the sandbox mounts a gold-free COPY of the dataset (inputs + dataset.json +
-# a writable outputs/) instead of SPREADSHEETBENCH_DATA_DIR itself, and gold is read from the original dir.
-# Without it the answer workbooks sit next to the inputs inside the read-write /mnt/data mount, where
-# agent-generated code can list and read them. SPREADSHEETBENCH_AGENT_VIEW_DIR pins where the copy is built
-# (default: a temp dir removed at exit). Ignored when SPREADSHEETBENCH_GOLD_DIR is set (DATA_DIR is then
-# assumed to be a view already).
-AGENT_VIEW = os.environ.get("SPREADSHEETBENCH_AGENT_VIEW", "0") == "1"
+# SAFE BY DEFAULT (#782): the sandbox mounts a gold-free COPY of the dataset (inputs + dataset.json + a
+# writable outputs/) instead of SPREADSHEETBENCH_DATA_DIR itself, and gold is read from the original dir at
+# scoring time. Otherwise the answer workbooks sit next to the inputs inside the read-write /mnt/data mount,
+# where agent-generated code can list and read them. SPREADSHEETBENCH_AGENT_VIEW_DIR pins where the copy is
+# built (default: a temp dir removed at exit). SPREADSHEETBENCH_GOLD_DIR names the gold dir explicitly (DATA_DIR
+# is then taken to be the agent's view). The historical shared mount needs BOTH SPREADSHEETBENCH_AGENT_VIEW=0 and
+# SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1, and logs a loud warning. Whatever is mounted is scanned: a gold-named
+# file under it stops the run unless ALLOW_GOLD_IN_MOUNT=1.
+AGENT_VIEW = os.environ.get("SPREADSHEETBENCH_AGENT_VIEW", "1") == "1"
+ALLOW_GOLD_IN_MOUNT = os.environ.get("SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT", "0") == "1"
 AGENT_VIEW_DIR = os.environ.get("SPREADSHEETBENCH_AGENT_VIEW_DIR", "")
 TASK_IDS = [s.strip() for s in os.environ.get("SPREADSHEETBENCH_TASK_IDS", "").split(",") if s.strip()]
 MAX_TURNS = int(os.environ.get("SPREADSHEETBENCH_MAX_TURNS", "5"))
@@ -342,12 +345,56 @@ def _gold_dir() -> Path:
     return _source_dir()
 
 
+_MOUNT_CHECKED: set[str] = set()
+
+
+def _gold_files_under(mount: Path) -> list[Path]:
+    root = mount / "spreadsheet"
+    if not root.is_dir():
+        return []
+    return [p for p in root.rglob("*") if p.is_file() and _GOLD_FILE_RE.search(p.name)]
+
+
+def _check_mount_is_gold_free(mount: Path) -> None:
+    """Startup assertion: nothing gold-named may exist under the directory the agent's sandbox will mount.
+
+    Covers every way of getting it wrong: the historical shared mount, GOLD_DIR set while DATA_DIR still holds
+    gold, a stale hand-built view. ALLOW_GOLD_IN_MOUNT=1 downgrades it to a warning.
+    """
+    key = str(mount.resolve())
+    if key in _MOUNT_CHECKED:
+        return
+    found = _gold_files_under(mount)
+    if found and not ALLOW_GOLD_IN_MOUNT:
+        raise RuntimeError(
+            f"{len(found)} gold-named file(s) (answer/golden) exist under the directory the agent sandbox mounts "
+            f"({mount}), e.g. {found[0].name}. Agent-generated code could read them (#782). Use "
+            "SPREADSHEETBENCH_AGENT_VIEW=1 (default) or point SPREADSHEETBENCH_DATA_DIR at a gold-free view, or set "
+            "SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1 to accept the leak knowingly."
+        )
+    if found:
+        print(f"spreadsheetbench: WARNING: {len(found)} gold file(s) are visible to the agent's sandbox under {mount} "
+              "(SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1). Results are NOT comparable to a gold-free run.",
+              file=sys.stderr)
+    _MOUNT_CHECKED.add(key)
+
+
 def _data_dir() -> Path:
-    """The directory the agent's sandbox sees (inputs + outputs/). A gold-free view when AGENT_VIEW is on."""
+    """The directory the agent's sandbox sees (inputs + outputs/): a gold-free view by default."""
     d = _source_dir()
-    if AGENT_VIEW and not GOLD_DIR:
-        return _agent_view(d)
-    return d
+    if GOLD_DIR:
+        mount = d                       # explicit: DATA_DIR is the agent's view, gold lives in GOLD_DIR
+    elif AGENT_VIEW:
+        mount = _agent_view(d)
+    elif ALLOW_GOLD_IN_MOUNT:
+        mount = d
+    else:
+        raise RuntimeError(
+            "SPREADSHEETBENCH_AGENT_VIEW=0 would mount the gold answers into the agent sandbox (#782). "
+            "Set SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT=1 as well if that is really intended."
+        )
+    _check_mount_is_gold_free(mount)
+    return mount
 
 
 _dataset_cache: list[dict] | None = None
@@ -1765,7 +1812,8 @@ def _scorer_provenance() -> dict:
         return _PROVENANCE
     import hashlib
     info: dict = {"reward_recalc": REWARD_RECALC, "scoring": SCORING,
-                  "gold_separate_from_agent_mount": bool(GOLD_DIR) or AGENT_VIEW}
+                  "gold_separate_from_agent_mount": bool(GOLD_DIR) or AGENT_VIEW,
+                  "gold_in_mount_allowed": ALLOW_GOLD_IN_MOUNT}
     try:
         info["evaluation_py_sha256"] = hashlib.sha256(
             (Path(HARNESS_DIR).expanduser() / "evaluation" / "evaluation.py").read_bytes()).hexdigest()

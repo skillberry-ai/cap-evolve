@@ -122,6 +122,11 @@ def main(argv: list[str]) -> int:
 
     if ns.cmd == "build":
         runmeta = json.loads(Path(ns.runmeta).read_text(encoding="utf-8"))
+        # run_suite.sh (spreadsheetbench) leaves gold_separate_from_agent_mount next to runmeta.json: whether the
+        # agent's sandbox could see the gold answers (#782). Folded in here so the record carries it.
+        gold_flag = Path(ns.runmeta).parent / "gold_separate_from_agent_mount"
+        if "gold_separate_from_agent_mount" not in runmeta and gold_flag.is_file():
+            runmeta["gold_separate_from_agent_mount"] = gold_flag.read_text(encoding="utf-8").strip() == "true"
         steps_path = Path(ns.steps) if ns.steps else None
         print(json.dumps(build_record(Path(ns.metrics), runmeta, steps_path, has_ui=ns.has_ui)))
         return 0
