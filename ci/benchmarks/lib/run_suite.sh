@@ -808,6 +808,13 @@ OPTNOTE
     # ci_setup.sh, which calls fetch_data.sh and echoes the resolved path. When running
     # locally without ci_setup.sh, the SB_DEFAULT fallback is used instead.
     SB_DATA="${SPREADSHEETBENCH_DATA_DIR:-$SB_DEFAULT}"
+    # The agent's sandbox mounts a gold-free COPY of the data (inputs + writable outputs/), not $SB_DATA, whose
+    # answer workbooks would otherwise be listable and readable by agent-generated code (#782). Gold is still read
+    # from $SB_DATA at scoring time. SB_AGENT_VIEW=0 restores the old shared mount. Per-rollout outputs now live in
+    # the view, so the kept-run slot below reads them from there.
+    SB_AGENT_VIEW="${SB_AGENT_VIEW:-1}"
+    SB_VIEW_DIR="$WORK/sb_agent_view"
+    SB_OUT_ROOT="$SB_DATA"; [ "$SB_AGENT_VIEW" = "1" ] && SB_OUT_ROOT="$SB_VIEW_DIR"
     [ -f "$SB_DATA/dataset.json" ] || { echo "::error:: spreadsheetbench dataset not found at $SB_DATA (run ci/benchmarks/spreadsheetbench/fetch_data.sh or set SPREADSHEETBENCH_DATA_DIR)"; exit 1; }
     # full runs 912 tasks in one go — bump container concurrency over smoke's default
     # (still bounded; each container is ~8GB RAM / 2 CPU, see adapter.py's NOTE ON SCORING)
@@ -833,6 +840,8 @@ MAX_TOKENS=8000
 TEMPERATURE=0.0
 SPREADSHEETBENCH_HARNESS_DIR=$REPO/third_party/spreadsheetbench
 SPREADSHEETBENCH_DATA_DIR=$SB_DATA
+SPREADSHEETBENCH_AGENT_VIEW=$SB_AGENT_VIEW
+SPREADSHEETBENCH_AGENT_VIEW_DIR=$SB_VIEW_DIR
 SPREADSHEETBENCH_TASK_IDS=$IDS_CSV
 SPREADSHEETBENCH_CONCURRENCY=${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}
 SPREADSHEETBENCH_MAX_TURNS=${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}
@@ -841,6 +850,7 @@ SPREADSHEETBENCH_REWARD_RECALC=${SB_REWARD_RECALC:-0}
 ENV
     export SPREADSHEETBENCH_HARNESS_DIR="$REPO/third_party/spreadsheetbench"
     export SPREADSHEETBENCH_DATA_DIR="$SB_DATA"
+    export SPREADSHEETBENCH_AGENT_VIEW="$SB_AGENT_VIEW" SPREADSHEETBENCH_AGENT_VIEW_DIR="$SB_VIEW_DIR"
     export SPREADSHEETBENCH_CONCURRENCY="${SPREADSHEETBENCH_CONCURRENCY:-$SB_CONCURRENCY_DEFAULT}"
     export SPREADSHEETBENCH_MAX_TURNS="${SPREADSHEETBENCH_MAX_TURNS:-$SB_MAX_TURNS_DEFAULT}"
     # soft (default, matches this benchmark's own headline) | hard (all 3 test cases must
@@ -870,7 +880,7 @@ ENV
       export SPREADSHEETBENCH_KEEP_OUTPUTS=1
       echo "SPREADSHEETBENCH_KEEP_OUTPUTS=1" >> "$WORK/.env"
       # Kept outputs accumulate in the shared data dir, so start this run from an empty one.
-      _discard_dir "${SB_DATA:?}/outputs" || exit 1
+      _discard_dir "${SB_OUT_ROOT:?}/outputs" || exit 1
     fi
     ;;
   rfe-creator)
@@ -1205,7 +1215,7 @@ fi
 if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && [ -d "$RUN_DIR" ]; then
   STAGE="$SB_LATEST_DIR.staging"
   _discard_dir "$STAGE" && mkdir -p "$STAGE" && cp -a "$RUN_DIR" "$STAGE/run_suite" \
-    && { [ ! -d "$SB_DATA/outputs" ] || mv "$SB_DATA/outputs" "$STAGE/outputs"; } \
+    && { [ ! -d "${SB_OUT_ROOT:-$SB_DATA}/outputs" ] || mv "${SB_OUT_ROOT:-$SB_DATA}/outputs" "$STAGE/outputs"; } \
     && cp "$OUT/metrics.jsonl" "$OUT/report.md" "$STAGE/" 2>/dev/null
   if [ -d "$STAGE/run_suite" ]; then
     cat > "$STAGE/latest.json" <<JSON

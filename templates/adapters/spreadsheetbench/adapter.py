@@ -46,6 +46,8 @@ SETUP:
        SPREADSHEETBENCH_CONCURRENCY=4                # parallel tasks (each = one Docker container)
        SPREADSHEETBENCH_EXEC_TIMEOUT=180             # per code-exec call timeout (s)
        SPREADSHEETBENCH_LIBREOFFICE_BIN=/path/to/soffice
+       SPREADSHEETBENCH_AGENT_VIEW=1                 # sandbox sees a gold-free copy of the data (recommended; see #782)
+       SPREADSHEETBENCH_GOLD_DIR=/path/to/pristine   # read gold from here instead (DATA_DIR is then the agent's view)
 
   8. Run: cap-evolve check && cap-evolve run
 
@@ -127,6 +129,20 @@ import model_config
 # --- configuration -----------------------------------------------------------
 HARNESS_DIR = os.environ.get("SPREADSHEETBENCH_HARNESS_DIR", "")
 DATA_DIR = os.environ.get("SPREADSHEETBENCH_DATA_DIR", "")
+# Where the GOLD answer workbooks are read from at SCORING time. Unset (default) = DATA_DIR, i.e. the
+# historical behaviour in which the gold sits inside the very directory that is bind-mounted read-write
+# into the agent's sandbox at /mnt/data. Setting it to a separate, read-only, evaluator-owned tree
+# lets DATA_DIR be a gold-free "agent view" (inputs + writable outputs/ only). Layout is identical:
+# <GOLD_DIR>/spreadsheet/<id>/<n>_<id>_{answer|golden}.xlsx.
+GOLD_DIR = os.environ.get("SPREADSHEETBENCH_GOLD_DIR", "")
+# SPREADSHEETBENCH_AGENT_VIEW=1: the sandbox mounts a gold-free COPY of the dataset (inputs + dataset.json +
+# a writable outputs/) instead of SPREADSHEETBENCH_DATA_DIR itself, and gold is read from the original dir.
+# Without it the answer workbooks sit next to the inputs inside the read-write /mnt/data mount, where
+# agent-generated code can list and read them. SPREADSHEETBENCH_AGENT_VIEW_DIR pins where the copy is built
+# (default: a temp dir removed at exit). Ignored when SPREADSHEETBENCH_GOLD_DIR is set (DATA_DIR is then
+# assumed to be a view already).
+AGENT_VIEW = os.environ.get("SPREADSHEETBENCH_AGENT_VIEW", "0") == "1"
+AGENT_VIEW_DIR = os.environ.get("SPREADSHEETBENCH_AGENT_VIEW_DIR", "")
 TASK_IDS = [s.strip() for s in os.environ.get("SPREADSHEETBENCH_TASK_IDS", "").split(",") if s.strip()]
 MAX_TURNS = int(os.environ.get("SPREADSHEETBENCH_MAX_TURNS", "5"))
 PREVIEW_ROWS = int(os.environ.get("SPREADSHEETBENCH_ROWS", "5"))
@@ -263,7 +279,13 @@ class _Vendor:
         return cls._mod
 
 
-def _data_dir() -> Path:
+_GOLD_FILE_RE = re.compile(r"(_answer|_golden|^golden|^answer)", re.I)
+_VIEWS: dict[str, Path] = {}
+_VIEW_LOCK = threading.Lock()
+
+
+def _source_dir() -> Path:
+    """The pristine dataset dir (SPREADSHEETBENCH_DATA_DIR), validated."""
     if not DATA_DIR:
         raise RuntimeError(
             "SPREADSHEETBENCH_DATA_DIR is not set. Run "
@@ -273,6 +295,58 @@ def _data_dir() -> Path:
     d = Path(DATA_DIR).expanduser()
     if not (d / "dataset.json").exists():
         raise RuntimeError(f"SPREADSHEETBENCH_DATA_DIR={d} has no dataset.json.")
+    return d
+
+
+def _build_agent_view(src: Path, dst: Path) -> Path:
+    """Copy dataset.json and every NON-gold file of the (selected) tasks into dst, plus an empty outputs/."""
+    if dst.exists():
+        shutil.rmtree(dst)
+    dst.mkdir(parents=True)
+    shutil.copy2(src / "dataset.json", dst / "dataset.json")
+    wanted = set(TASK_IDS)
+    for sd in sorted((src / "spreadsheet").iterdir()):
+        if not sd.is_dir() or (wanted and sd.name not in wanted):
+            continue
+        dd = dst / "spreadsheet" / sd.name
+        dd.mkdir(parents=True)
+        for f in sorted(sd.iterdir()):
+            if f.is_file() and not _GOLD_FILE_RE.search(f.name):
+                shutil.copy2(f, dd / f.name)
+    (dst / "outputs").mkdir()
+    # the executor container runs as another uid: it needs traverse/read on the tree and write on outputs/
+    for dp, _dn, _fn in os.walk(dst):
+        os.chmod(dp, 0o755)
+    os.chmod(dst / "outputs", 0o777)
+    return dst
+
+
+def _agent_view(src: Path) -> Path:
+    key = str(src.resolve())
+    with _VIEW_LOCK:
+        if key not in _VIEWS:
+            if AGENT_VIEW_DIR:
+                dst = Path(AGENT_VIEW_DIR).expanduser()
+            else:
+                dst = Path(tempfile.mkdtemp(prefix="capevolve_sb_view_")) / "view"
+                import atexit
+                atexit.register(shutil.rmtree, dst.parent, True)
+            _VIEWS[key] = _build_agent_view(src, dst)
+        return _VIEWS[key]
+
+
+def _gold_dir() -> Path:
+    """Directory holding the gold answers: SPREADSHEETBENCH_GOLD_DIR if set, else the pristine data dir."""
+    if GOLD_DIR:
+        return Path(GOLD_DIR).expanduser()
+    return _source_dir()
+
+
+def _data_dir() -> Path:
+    """The directory the agent's sandbox sees (inputs + outputs/). A gold-free view when AGENT_VIEW is on."""
+    d = _source_dir()
+    if AGENT_VIEW and not GOLD_DIR:
+        return _agent_view(d)
     return d
 
 
@@ -1574,7 +1648,7 @@ class Adapter(CapabilityAdapter):
         # How many copies this task is graded on comes from the dataset, not from a constant:
         # the 912 set ships three, the verified 400 ships one. See _case_indices.
         for idx in _case_indices(data_dir / "spreadsheet" / sid, sid):
-            gt_path = _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "answer")
+            gt_path = _resolve_case_file(_gold_dir() / "spreadsheet" / sid, idx, sid, "answer")
             proc_path = data_dir / "outputs" / run_tag / f"{idx}_{sid}_output.xlsx"
             if not proc_path.exists():
                 missing.append(idx)
@@ -1635,7 +1709,7 @@ class Adapter(CapabilityAdapter):
                     entry,
                     data_dir / "outputs" / run_tag / f"{idx}_{sid}_output.xlsx",
                     _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "input"),
-                    _resolve_case_file(data_dir / "spreadsheet" / sid, idx, sid, "answer"),
+                    _resolve_case_file(_gold_dir() / "spreadsheet" / sid, idx, sid, "answer"),
                 )
             except Exception:  # noqa: BLE001
                 localized = []
@@ -1659,7 +1733,8 @@ class Adapter(CapabilityAdapter):
             feedback=feedback,
             raw={"test_case_results": test_results,
                  "test_case_results_no_recalc": no_recalc_results,
-                 "reward_recalc": REWARD_RECALC},
+                 "reward_recalc": REWARD_RECALC,
+                 "scorer": _scorer_provenance()},
             # All four are always recorded, whichever is the target — so the other metrics can
             # be recovered from any past run's rollouts without re-running it.
             metrics=[
@@ -1673,6 +1748,39 @@ class Adapter(CapabilityAdapter):
                  "primary": not REWARD_RECALC and SCORING == "hard", "direction": "higher"},
             ],
         )
+
+
+_PROVENANCE: dict | None = None
+
+
+def _scorer_provenance() -> dict:
+    """What produced this score: recorded on every rollout so runs are comparable and auditable.
+
+    LibreOffice's version changes the recalculated metrics (7.1.8.1 evaluates fewer functions than 25.8),
+    REWARD_RECALC changes which metric is the reward, and the vendored evaluation.py is the comparator.
+    Computed once per process; a failure to determine any field yields None for it, never an exception.
+    """
+    global _PROVENANCE
+    if _PROVENANCE is not None:
+        return _PROVENANCE
+    import hashlib
+    info: dict = {"reward_recalc": REWARD_RECALC, "scoring": SCORING,
+                  "gold_separate_from_agent_mount": bool(GOLD_DIR) or AGENT_VIEW}
+    try:
+        info["evaluation_py_sha256"] = hashlib.sha256(
+            (Path(HARNESS_DIR).expanduser() / "evaluation" / "evaluation.py").read_bytes()).hexdigest()
+    except Exception:  # noqa: BLE001
+        info["evaluation_py_sha256"] = None
+    try:
+        libre = _libreoffice_bin()
+        info["libreoffice_bin"] = libre
+        info["libreoffice_version"] = (subprocess.run([libre, "--version"], capture_output=True, text=True,
+                                                      timeout=60).stdout.strip() or None) if libre else None
+    except Exception:  # noqa: BLE001
+        info.setdefault("libreoffice_bin", None)
+        info["libreoffice_version"] = None
+    _PROVENANCE = info
+    return info
 
 
 def _range_cells(answer_position: str):
