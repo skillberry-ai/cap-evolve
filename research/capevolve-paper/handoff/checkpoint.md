@@ -59,3 +59,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
   - final-eval machinery dry run.
 - Token budget plan in decisions.md (65M stop order).
 - Session-only crons: 3-hourly check and the cutoff one-shot. Re-create them if the session restarts.
+
+## Host changes to undo after the campaign (2026-10-11T22:22)
+- systemd unit e10-capopt-egress.service (enabled) and /etc/e10-capopt-ip{,6}tables.rules: gateway-only egress for uid capopt. Remove after the campaign: `systemctl disable --now e10-capopt-egress`, then delete the rules files and flush the capopt OUTPUT rules.
+- Check during every periodic check: campaign-scratch/runs/E10/_tools/capopt_egress.sh check.
