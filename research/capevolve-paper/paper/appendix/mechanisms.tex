@@ -1,0 +1,55 @@
+\section{Optional Mechanisms (Default Off)}
+\label{app:optional}
+
+Both mechanisms below are behind spec switches and change no decision when absent. We do not claim them as new
+statistics: merging and subset selection have precedent
+\citep{gepa,darwinx,park2026autosaddler,shastri2026bonsai,hgm,xu2026harnesslens}, and our contribution here is
+measurement discipline around them.
+
+\emph{Merge verification (\texttt{merge\_\allowbreak verify: true}).}
+Given a merge $M$ of branches $A,B$ with common ancestor $P$, the question is whether $A$ and $B$ compose. We evaluate
+$P,A,B,M$ on one task block with the \emph{same} fresh trials (one common trial offset, fixed seeds, a runtime check that
+the ledger recorded each cell at the offset), and estimate over the block $\mathcal{B}$
+\begin{align}
+  I &= \mathbb{E}_{x\in\mathcal{B}}\big[\Delta_M(x)-\Delta_A(x)-\Delta_B(x)\big], &
+  g &= \mathbb{E}_{x\in\mathcal{B}}\big[\rbar_M(x)-\rbar_{b}(x)\big],
+\end{align}
+with $\Delta_Y=\rbar_Y-\rbar_P$ and $b$ the parent with the larger block mean. The block is the union of each branch's
+observed wins and known losses and $k_s$ seeded random sentinels. The verdict is \emph{pass} iff $|\mathcal{B}|\ge m$,
+$g\ge\delta_{\min}$, $z_g\ge z_{\mathrm{pass}}$ and not ($z_I\le -z_{\mathrm{int}}$ and $I\le-\delta_{\min}$);
+\emph{loses} if $g<0$ with $z_g\le -z_{\mathrm{lose}}$ or the interaction is significantly negative ($z_I\le -z_{\mathrm{int}}$ and $I\le-\delta_{\min}$) while $g<\delta_{\min}$;
+otherwise \emph{inconclusive}, which buys another round of fresh trials up to a cap and then stops, unpromoted. On a loss,
+a bounded Zeller delta-debugging search over merged hunks (markdown sections, Python definitions, else files)
+localizes the interfering hunks. The parents are always retained, the budget is checked before every arm evaluation and
+every debugging test, and the verdict is bound to the content hashes of $P,A,B,M$, which \texttt{promote} re-checks.
+% src: AO/merge_verify.py:38-48 (params: n=3, max_rounds=3, n_sentinels=3, dmin=.02, z_pass=1.645, z_lose=1, z_int=1.645,
+%   min_block=5, dd_budget=12), 74-89 (select_block), 119-138 (analyse), 141-150 (verdict), 153-173 (run_verification),
+%   176-217 (ddmin), 246-272 (hunks); AO/act.py:666-745 (verify_merge: hashes, per-spend check_budget, scratch purge),
+%   AO/act.py:518-531 (promote refuses an unverified merge or any hash mismatch); core/cap_evolve/harness.py:371-376 (fixed_seeds)
+\emph{Estimand and caveat.} $I$ and $g$ describe the \emph{block}, which is enriched in tasks where $A$ or $B$ won, so
+they are not estimates of the population effect of the merge; the population-level decision is the full-split
+promotion that follows (rule P when enabled). Fresh trials are what keeps $I$ from being biased negative by selecting
+the block on the branches' own wins.
+
+\emph{Screen accounting (\texttt{screen\_\allowbreak accounting: true}).}
+A subset screen is treated as a sampling design: its tasks are \emph{affected} (predicted to be reached by the edit),
+\emph{sentinels} (regression checks), and a \emph{random} component of $k$ tasks drawn uniformly without replacement
+from the remaining pool of size $N_r$, giving inclusion probability $1$ to the first two strata and $k/N_r$ to the third.
+The Horvitz--Thompson estimate of the pool-mean delta is
+\begin{equation}
+  \hat\Delta=\frac1N\Big(\sum_{t\in\text{det}}\Delta_t+\frac{N_r}{k}\sum_{t\in\text{rand}}\Delta_t\Big),
+\end{equation}
+unbiased over the random draw only if every screened task was measured (otherwise the code clears an \texttt{unbiased}
+flag and reports the measured count). The random seed is derived per candidate, and an equal-size uniform subset with an
+independent seed is the ablation control. The pool is the validation tasks with a valid parent measurement, and the
+record states how many validation tasks fall outside it.
+% src: core/cap_evolve/screen_accounting.py:33-38 (derive_seed per candidate), 41-55 (build_screen, pi), 57-66 (build_control),
+%   76-111 (ht_estimate, unbiased flag, n_random_measured), 113-130 (record: role scheduling_signal, result false, n_val,
+%   pool_excluded); AO/screen.py:183-210 (wiring), 286-289 (record)
+\emph{Estimand and caveat.} The estimand is the pool-mean delta of the screened candidate against its parent. A screen
+score is a \emph{scheduling signal}: it decides which candidate deserves a full evaluation and is never reported as a
+result, and the existing kill-only rule is unchanged (a screen may kill or promote to full evaluation, never accept).
+% src: core/cap_evolve/subsample.py:1-40 (kill-only rule); core/cap_evolve/screen_accounting.py:113-130
+Selecting among candidates on a fixed draw would still add selection bias to $\hat\Delta$, which the per-candidate seed
+mitigates but does not remove.
+

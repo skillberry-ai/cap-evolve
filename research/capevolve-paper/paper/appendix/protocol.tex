@@ -1,1 +1,74 @@
-\section{Protocol details}
+\section{Gate Simulation and Statistical Power}
+\label{app:sim}
+
+Rule P was chosen before any main \capevolve{} seed from a budget-exact simulation on the real promotion and gate code (val-40, one screening trial per task, 12 candidates per search, 22{,}400 searches per cell). The pre-declared criterion was to maximise the expected true new-task gain of the final champion subject to a probability of at least one false promotion in an all-null search of at most 0.15. Table~\ref{tab:sim} shows the options that were considered. Rule P at $z=1.282$ meets the constraint with 0.055. It is underpowered by design: a single diffuse edit of true size $+0.08$ is promoted 27\% of the time. The one-stage gate has higher power and a false-promotion probability of 0.565.
+
+\begin{table}[h]
+\caption{Promotion options, 12 candidates per search. False prom.\ is the probability of at least one false promotion in an all-null search; the remaining columns give the probability of promoting a single candidate with the stated true gain. One-stage rows use the paired gate with threshold $k$ standard errors.}
+\label{tab:sim}
+\centering\small
+\input{appendix/sim_table}
+\end{table}
+
+The minimum detectable effect depends on variance inputs that were fixed before any pilot (SD of per-task advantage 0.15, seed-by-task interaction 0.10, seed SD 0.03, family size 5 with intraclass correlation 0.10). With three trials and three seeds the artifact-level effect is \mdeFortyArtifact{}, \mdeHundredArtifact{} and \mdeTwoEightyArtifact{} at 40, 100 and 280 tasks. The pipeline-level effect, which includes seed variance and uses $t$ with two degrees of freedom, is \mdeFortyPipeline{} at 40 tasks and \mdeTwoEightyPipeline{} at 280. \needs{Replace with estimates from the no-op repeated-evaluation pilot (E02).}
+
+The shared standard-error helper adds a within-task term to a variance of task means that already contains it. In simulation (mean reward 0.55, dispersion 1.5, 40 to 280 tasks) its variance is 1.00 times the correct value at one trial per task, 1.33 times at three trials, 1.24 at five and 1.13 at ten for the new-task estimand, and 1.6 to 8.6 times too large for the fixed-task estimand. Its coverage of a new-task target is 0.94 to 0.97. At one trial it equals the between-task term alone.
+
+\section{Scorer Audit}
+\label{app:scorer}
+
+The default SpreadsheetBench reward is \texttt{hard\_no\_recalc}: cached values as saved. Correct formula outputs without cached values passed 0 of 30 checks under it and 25 of 30 (LibreOffice 7.1.8.1) to 29 or 30 of 30 (LibreOffice 25.8.7.3) under recalculation. The recalculation path recalculates the candidate output only and uses gold as shipped. With LibreOffice 7.1.8.1 the official gold file used as output fails on 32 of 400 verified tasks, and with 25.8.7.3 on 19. Four verified tasks (130-9, 283-32, 45944, 49300) are unscorable on every path because of malformed answer-position strings, all four in the SkillOpt test split. Scoring was deterministic: 333 records were scored twice with fresh profiles and none differed. The gold workbooks sat in the directory bind-mounted read-write into the agent container; the campaign runs agents on a gold-free copy and scores on the pristine tree.
+
+\section{Historical Results Under Both Scorers}
+\label{app:hist}
+
+\begin{table}[h]
+\caption{Historical SpreadsheetBench runs (SkillOpt split, 280 test tasks, three optimization runs per row, Opus 5 optimizer) recomputed from run artifacts. Test-280 was development-exposed, so these are fit-quality figures, not held-out results. Paired means; the as-saved delta is the anti-conservative pooled-observation figure of the earlier draft.}
+\label{tab:hist}
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Target & Baseline as saved & Gain as saved & Baseline recalc. & Gain recalc. \\
+\midrule
+Gemma-4-31B & \histGemmaBaseSaved{} & +\histGemmaDeltaSaved{} & \histGemmaBaseRecalc{} & +\histGemmaDeltaRecalc{} \\
+GPT-5.5 & \histGptBaseSaved{} & +\histGptDeltaSaved{} & \histGptBaseRecalc{} & +\histGptDeltaRecalc{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Disputed and withdrawn claims: the earlier draft quoted 76.5 for Gemma while a blog post quoted 76.8 for the same data (a denominator definition: the post counts the champion on all champion-scored tasks, including four whose seed rollout failed for infrastructure reasons). A GPT-5.5 run with a champion test score of 89.8 against a baseline of 28.9 is excluded: it is a 225-task subset in which 55 champion rollouts failed on a budget error, and the seed scores 38.6 on all 280. Full lists are in \texttt{audit/recomputed\_numbers.csv}.
+
+\section{Infrastructure Incidents}
+\label{app:incidents}
+
+Times are UTC on 2026-10-11 unless stated. Each incident lists its effect on the data.
+\begin{itemize}[leftmargin=*,nosep]
+\item[\emph{EvoSkill priority starvation.}] The gateway's low-priority tag list still contained EvoSkill after its promotion to Tier 1, so under reserved capacity its calls never got a slot between 13:05 and 18:40. Those rollouts show as 1800-second timeouts with zero model calls. They are invalid and kept as \texttt{INVALID} directories; EvoSkill restarted from scratch at 18:25 to 18:55 and is about 5.5 hours behind the other arms.
+\item[\emph{Suite B relaunch.}] The first Suite B runs (09:40) used the wrong judge, a pre-merge worktree without rule P, and untagged candidate-tool errors. They were stopped at 12:38, labelled superseded and not used. A second correction restored the agent-optimize seed capability and archived two sessions that ran the archived legacy engine.
+\item[\emph{Content-filter rename for ACE.}] Through the gateway, Claude Sonnet 5.5 returns an empty content-filter response when a prompt asks for a chain-of-thought or reasoning field in the output; prose mentions pass. ACE's prompts requested such a field. Its output field was renamed to ``analysis'' with the diff and affected-call count recorded. No other arm was affected.
+\item[\emph{HarnessLens retry policy.}] Upstream aborts a whole baseline stage on one worker error. One of six trial rollouts ended with \texttt{opencode\_exit\_1} after a streamed gpt-oss response ended with only reasoning content and no finish reason. HarnessLens is the only arm that streams the target (1 of 98 streamed calls lacked usage). The campaign policy retries a worker error once inside the rollout budget, scores a second error as zero for HarnessLens's internal selection only, and logs every occurrence.
+\item[\emph{Gateway call failures.}] At 13:11 we added a transparent retry (three retries, exponential backoff) for connection resets, read timeouts and 502 to 504 responses, and raised the upstream timeout from 900 to 1800 s. Before that, 1 to 2.5\% of Gemma calls failed, and the shared SpreadsheetBench adapter scored such failures as zero for competitor arms while \capevolve{} dropped them. Pre-13:11 zeros remain in competitor histories and are labelled.
+\item[\emph{Gold and split-file readability.}] On Suite A the shared proposer user could read split-id files in world-readable checkouts until 10:00; gold and credentials were already denied. A Suite B agent-optimize transcript scan found no read of task or split files, and the arm was moved into a mount-namespace shim at 15:00. Meta-Harness first launched with a gold-readable proposer, stopped before any proposer iteration, and was relaunched container-isolated at 09:38.
+\item[\emph{Failed reproductions.}] VERSE needs SWE-rebench or Terminal-Bench docker sessions; CoEvoSkills needs a Harbor per-task loop; HarnessLens on Suite A evolves only OpenCode, Codex and Pi runtimes. Blocker files are in the campaign scratch store.
+\end{itemize}
+
+\section{Cost and Token Totals}
+\label{app:cost}
+
+\begin{table}[h]
+\caption{Metered usage so far (in progress; final totals follow the search cutoff). Tokens exclude cache reads. Calls include smoke tests, restarts and waste, which the metrics report separately. USD is a Claude-only list-price proxy and a lower bound.}
+\label{tab:cost}
+\centering\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Scope & Calls & Non-cache tokens (M) \\
+\midrule
+Suite A & \costACalls{} & \costATokensM{} \\
+Suite B & \costBCalls{} & \costBTokensM{} \\
+Suite C & \costCCalls{} & \costCTokensM{} \\
+All, incl.\ smoke and untagged & \costCalls{} & \costTokensM{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Of the total, \costRitsM{}M tokens were served by RITS (uncapped by user decision) and \costNonRitsM{}M by capped gateway models. The proxy-priced total is \$\costUsdProxy{}. \needs{Final per-arm cost table: tokens by role, proxy USD, wall hours and cost per accepted candidate, from analysis/out/metrics after the cutoff.}

@@ -1,0 +1,27 @@
+\section{Measurement Contract Clauses}
+\label{app:contract}
+
+\emph{Errored-trial policy.}
+A trial that errors is, by default, missing data: it is dropped from the task mean, and a task with no valid trial is
+dropped from the paired vector. With \texttt{errored\_\allowbreak trial\_\allowbreak policy: fail}, a trial whose adapter marks the error as
+caused by the candidate (\texttt{Rollout.metadata.error\_\allowbreak kind="candidate"}) scores $0$, while every other error stays
+missing, so infrastructure faults remain retryable. The framework cannot infer attribution; adapters must set it.
+% src: core/cap_evolve/harness.py:287-313 (CANDIDATE_ERROR_KIND, ERRORED_POLICIES, candidate_attributed_error), 496-503
+%   (cand_fail reclassification); core/cap_evolve/harness.py:1224-1260 (_paired_deltas drops a task unless both sides have valid trials)
+The drop rule is not neutral: a candidate-induced failure treated as missing can raise the apparent delta, which is why
+the policy is a switch we report per experiment.
+
+\emph{Joint coverage.}
+Coverage is the fraction of \emph{planned} tasks that are valid on \emph{both} sides of the pair. The gate refuses to
+judge (returns \emph{indecisive}, which is neither accept nor a rejection of the edit) when coverage is below a floor.
+The default coverage is the candidate's own valid fraction; \texttt{gate\_\allowbreak coverage: joint} switches to the paired
+definition, and rule P applies its own floor $\rho$ to the confirmation.
+% src: core/cap_evolve/harness.py:1189-1220 (planned_val_ids, joint_coverage), 3229-3234 (coverage=jcov when joint, else
+%   cand_val.coverage); core/cap_evolve/gate.py:397-406 (coverage < min_coverage -> indecisive); core/cap_evolve/promotion.py:80-92
+
+\emph{Fresh-trial confirmation.}
+Rule P's confirmation is the contract's answer to winner's curse within a fixed task set: the evidence that selects a
+candidate is not the evidence that promotes it. Seeds are aligned across the two arms so the pair is a true paired
+comparison regardless of each artifact's evidence-ledger history.
+% src: core/cap_evolve/harness.py:371-376 and 3278-3279; AO/act.py:443-460 (_first_free_trial, _eval_fresh with fixed seeds)
+

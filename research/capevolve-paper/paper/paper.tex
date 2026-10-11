@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{longtable}
 \usepackage{enumitem}
 \usepackage{amsmath,amssymb}
 \usepackage{xcolor}
@@ -80,9 +81,12 @@
 \bibliographystyle{mlsys2025}
 
 \clearpage
+\onecolumn
 \appendix
 \input{appendix/config}
 \input{appendix/protocol}
+\input{appendix/mechanisms}
+\input{appendix/contract}
 \input{appendix/results_extra}
 
 \end{document}

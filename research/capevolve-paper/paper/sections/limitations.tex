@@ -1,1 +1,14 @@
 \section{Limitations}
+\label{sec:limitations}
+
+Each limit below says what we did about it and what remains.
+\begin{itemize}[leftmargin=*,nosep]
+\item[\emph{Power.}] Three seeds give two degrees of freedom for pipeline-level claims, and the artifact-level minimum detectable effect is \mdeFortyArtifact{} at 40 final tasks (three trials, placeholder variance inputs). We make artifact-level claims, report all per-seed values, and label smaller gaps as undetected. Suite B and C finals are 40 and 20 tasks, with a simulated user, so noise is high.
+\item[\emph{Exposure.}] The Suite A final set is a sample from an older 912-task release whose residual ids were scored in at most two earlier runs (score only, never for design). Suite C's test split is development-exposed. We exclude 55 ids by family prefix and label both. We cannot see off-repository use of the tau retail test split.
+\item[\emph{Native-design differences.}] The stock \capevolve{} arms see 40 validation tasks and competitors see 120. Competitors keep native gates. On Suite B, agent-optimize runs its evaluator inside its shell and can read gold actions of its own 74 optimization and selection tasks, never the sealed test 40, so selection-time comparisons for that arm are flagged. A scorer feedback channel shared by all arms carries gold-derived facts such as fill counts and error direction, though no gold values.
+\item[\emph{Matched checkpoint.}] Capacity, not the cap, bound the search. $B^\star$ falls below 600, so results say little about larger budgets, and the slowest arm sets $B^\star$ for all.
+\item[\emph{Scorer and judge.}] LibreOffice 25.8 fails 19 of 400 official gold files as outputs, so some tasks are unwinnable on the recalculated scale. The tau natural-language judge is GPT-5.5; a verdict sample for a judge sensitivity check is stored and \needs{judge sensitivity result}.
+\item[\emph{Coverage.}] One optimizer model, two targets, one community port instead of official WikiSkill, and five methods stopped at one seed. Cost totals for RITS-served models are token counts without prices.
+\end{itemize}
+
+A larger final set would shrink intervals more than a fourth seed, since the pipeline interval has two degrees of freedom; a larger budget, a second optimizer model or other targets could reorder arms, and we did not test them. Under a finite budget, any optimizer here returns the best artifact it found under a stated distribution, surface and gate. A higher reward can still encode a shortcut or overfit a scorer; the compliance diagnostic (Appendix~\ref{app:scorer}) tests one such shortcut and not others.

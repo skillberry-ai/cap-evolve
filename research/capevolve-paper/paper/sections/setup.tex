@@ -1,1 +1,92 @@
-\section{Setup}
+\section{Experimental Setup}
+\label{sec:setup}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    font=\scriptsize,
+    box/.style={draw,rounded corners=1.5pt,minimum height=8mm,minimum width=22mm,align=center,inner sep=2.5pt,fill=black!4},
+    sec/.style={box,fill=teal!14,draw=teal!55!black},
+    ar/.style={-{Stealth[length=4pt]},draw=black!60}
+  ]
+  \node[sec] (splits) {frozen splits\\{\tiny opt / sel / final, hashed}};
+  \node[sec,right=6mm of splits] (iso) {isolation\\{\tiny agent view, uid, mount;}\\{\tiny negative test}};
+  \node[box,right=6mm of iso] (search) {search\\{\tiny one optimizer,}\\{\tiny 3 seeds per arm}};
+  \node[sec,right=6mm of search] (rule) {promotion\\{\tiny rule P or native}\\{\tiny rule per arm}};
+  \node[sec,right=6mm of rule] (bstar) {matched\\{\tiny checkpoint $B^\star$}\\{\tiny from counters only}};
+  \node[sec,right=6mm of bstar] (final) {final set\\{\tiny fresh, scored once,}\\{\tiny both scorers}};
+  \node[sec,right=6mm of final] (stats) {statistics\\{\tiny paired, family-}\\{\tiny clustered, Holm}};
+  \foreach \a/\b in {splits/iso,iso/search,search/rule,rule/bstar,bstar/final,final/stats}
+    \draw[ar] (\a) -- (\b);
+  \draw[ar] (rule.north) to[bend right=35] node[above,font=\tiny] {reject / promote, next candidate} (search.north);
+  \fill[teal!25,draw=teal!55!black] (0,-1.1) rectangle ++(0.26,0.13);
+  \node[anchor=west,font=\tiny] at (0.34,-1.04) {fixed by the protocol before any outcome};
+  \fill[black!4,draw=black!60] (6.6,-1.1) rectangle ++(0.26,0.13);
+  \node[anchor=west,font=\tiny] at (6.94,-1.04) {the method under test};
+\end{tikzpicture}
+\caption{The measurement pipeline. Everything shaded teal is fixed before any search outcome is seen and is identical across arms, except that competitors keep their native acceptance rule. Search sees only the optimization and selection splits. The final set is scored once per frozen artifact.}
+\label{fig:pipeline}
+\end{figure*}
+
+\subsection{Suites, models and splits}
+
+Table~\ref{tab:suites} lists the three suites. Suite A is SpreadsheetBench verified-400 \citep{spreadsheetbench} with Gemma-4-31B-it as the target, served by one RITS deployment. Suites B and C are $\tau^2$-bench retail and airline \citep{tau2-bench}, pinned at commit 8ebb7499, with gpt-oss-120b as target and user simulator. Natural-language assertions are graded by GPT-5.5 for every arm, because the benchmark default judge is not served by our gateway and the target model should not grade itself. Claude Sonnet 5.5 is the optimizer or reflection model for every matched arm. All model calls pass through one metering gateway, which tags each call with suite, arm, seed and role.
+
+\begin{table}[t]
+\caption{Suites. The Suite A final set is a seeded stratified sample from the 239-id residual pool of the 912-task SpreadsheetBench release (ids whose task family shares a prefix with a development-exposed task are removed first). Suite C's test split is development-exposed from earlier \capevolve{} work and is not the sole basis of any claim.}
+\label{tab:suites}
+\centering\small
+\begin{tabularx}{\columnwidth}{@{}lXll@{}}
+\toprule
+ & Target & Opt / sel & Final \\
+\midrule
+A & Gemma-4-31B-it & 80 / 40 & \mockTA{} fresh \\
+B & gpt-oss-120b & 49 / 25 & 40 sealed \\
+C & gpt-oss-120b & 20 / 10 & 20 exposed \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+On Suite A the reward is the LibreOffice-recalculated hard score, and the as-saved score is logged for every rollout so that compliance can be measured per artifact. The SkillOpt split (80 train, 40 validation) supplies optimization and selection. Competitors read train-80 traces and select on val-40. The stock \capevolve{} algorithms read validation traces and gate on validation, so they see 40 tasks where competitors see 120. We keep this native difference and report it.
+
+\subsection{Arms}
+
+Table~\ref{tab:arms} lists the arms. GEPA, SkillOpt, Meta-Harness and the other methods run from their official repositories at pinned commits (Appendix~\ref{app:config}). WikiSkill has no official code; we run the most complete community port and label it so. Three reproductions failed and are listed in Appendix~\ref{app:incidents}: VERSE, CoEvoSkills, and HarnessLens on Suite A. Methods that could not be run within capacity (AHE, MCE, RHO, Memento-Skills, GraphSkillEvo) were fixed as one-seed exploratory runs before any outcome and never enter the headline tables.
+
+\begin{table}[t]
+\caption{Arms. Tier 1 arms run three seeds to the matched checkpoint; ``cheap'' arms run three seeds with a native budget that is usually below the cap and report actual rollouts. Pins are in Appendix~\ref{app:config}.}
+\label{tab:arms}
+\centering\small
+\begin{tabularx}{\columnwidth}{@{}lXc@{}}
+\toprule
+Arm & Notes & Suites \\
+\midrule
+\capevolve{} hill-climb & rule P, last promoted candidate & A B C \\
+\capevolve{} agent-optimize & digest/act engine, rule P & A B C \\
+GEPA \citep{gepa} & v0.1.4, Pareto reflective search & A B C \\
+SkillOpt \citep{skillopt} & train feedback, val selection & A \\
+Meta-Harness \citep{meta-harness} & container-isolated proposer & A \\
+EvoSkill \citep{evoskill} & official loop, capopt sandbox & A \\
+WikiSkill \citep{wikiskill} & community port, no official code & A \\
+Trace2Skill \citep{trace2skill} & cheap, about 200 rollouts & A \\
+ACE \citep{ace} & cheap, field renamed (App.~\ref{app:incidents}) & A \\
+MIPROv2 \citep{miprov2-dspy} & cheap & A \\
+HarnessLens \citep{xu2026harnesslens} & native tau2 fit & B \\
+Unoptimized seed & one shared measurement per suite & A B C \\
+One-shot repair & one optimizer step, accepted unconditionally & B C \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Budget and matched checkpoint}
+
+Each search may count 600 target rollouts, every evaluation included, and up to 4M non-cache optimizer tokens, with seeds 0, 1 and 2. Throughput on the single Gemma deployment (about 12 rollouts per hour per search) means slow arms will not reach 600. The user-approved protocol therefore compares at a matched checkpoint $B^\star$: the largest rollout count reached by every Tier 1 seed of every Tier 1 arm at the search cutoff (2026-10-13 06:00 UTC), rounded down to a multiple of 50 and floored at 200. $B^\star$ is computed from rollout counters only. The artifact scored for each arm is what that method would have deployed at $B^\star$ under its own native selection rule, using only information produced inside its first $B^\star$ counted rollouts. A seed below 200 rollouts is reported as incomplete and the arm is dropped from the matched table with the reason. The placeholder values are $B^\star=$ \mockBstarA{}, \mockBstarB{} and \mockBstarC{} for Suites A, B and C. \needs{Final $B^\star$ and the list of incomplete seeds, after the search cutoff.}
+
+\subsection{Statistics}
+\label{sec:setup:stats}
+
+The unit of inference is the task, clustered by task family. We report three estimands. E1 is the score on the fixed final set, with execution noise only. E2 is the score on the population the final set was drawn from, with a family-clustered interval. E3 is the spread of champions across search seeds. The headline is the paired E2 contrast of each arm's artifact with the shared seed measurement, computed with cluster-robust (CR1) standard errors and a $t$ interval, and Holm-adjusted within each suite. With three seeds the pipeline-level interval has two degrees of freedom, so we report the three raw per-seed values next to every mean and make artifact-level claims only. We never report the standard error of the shared helper. A win requires a Holm-adjusted $p<0.05$ and an interval that excludes zero under the pessimistic missingness bound, where missing cells of the evaluated arm score 0 and those of the comparator score 1. Otherwise we write ``no detectable difference'' and give the minimum detectable effect, which is \mdeTwoEightyArtifact{} at $T=280$ and \mdeFortyArtifact{} at $T=40$ for artifact-level contrasts with three trials and three seeds. These values use variance inputs fixed before any pilot (Appendix~\ref{app:sim}). \needs{MDE recomputed from the no-op repeated-evaluation pilot (E02) and the final trial count.}
+
+\subsection{Cost accounting}
+
+Every call is priced from the gateway log. Claude models use list prices as a proxy; RITS and Azure-served models have no visible price, so their tokens are reported and never counted as zero, and totals that include them are marked lower bounds. So far the campaign has metered \costCalls{} calls and \costTokensM{}M non-cache tokens (Appendix~\ref{app:cost}).

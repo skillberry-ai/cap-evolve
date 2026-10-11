@@ -17,7 +17,7 @@
 \subsection{Problem formalization}
 \label{sec:method:problem}
 
-\paragraph{Frozen model, editable artifact.}
+\emph{Frozen model, editable artifact.}
 The target model weights $\theta$ are frozen throughout. What changes is an \emph{artifact} $\artifact\in\mathcal{A}$, a
 set of files from which the agent harness is assembled at run time: the system prompt, agent-side tool definitions
 (code and schemas), MCP server tool descriptions, and skill packages (instruction files plus helper scripts).
@@ -28,7 +28,7 @@ seed $\omega$ yields a scalar reward $r(\artifact,x,\omega)\in[0,1]$ from the be
 vector (tokens, dollars, wall time).
 % src: core/cap_evolve/harness.py:318-640 (per-trial rollouts, scores and costs persisted per task and trial)
 
-\paragraph{Tasks and splits.}
+\emph{Tasks and splits.}
 Let $\mathcal{D}$ be a distribution over tasks. We use three disjoint task sets, drawn once and frozen by a split seed:
 an optimization set $\Dopt$ whose rollouts the proposer may read, a selection set $\Dsel$ on which candidates are
 compared and promoted, and a final set $\Dfin$ that is scored once per run at the end.
@@ -46,7 +46,7 @@ Write $\rbar_n(\artifact,x)=\frac1n\sum_{j=1}^{n}r(\artifact,x,\omega_j)$ for th
 $J_{S}(\artifact)=\frac1{|S|}\sum_{x\in S}\mathbb{E}_\omega\, r(\artifact,x,\omega)$ for the mean reward on a set $S$.
 The quantity of scientific interest is $J_{\Dfin}$ of the artifact the search returns.
 
-\paragraph{Objective and budget.}
+\emph{Objective and budget.}
 A search receives a budget $B$ that caps evaluation calls, dollars, optimizer dollars, iterations, and consecutive
 rejects; the loop stops when any cap is reached.
 % src: core/cap_evolve/rundir.py:368-383 (budget_exhausted: stop_at_reward, max_iterations, max_metric_calls, max_usd,
@@ -124,7 +124,7 @@ Stopping & budget caps, consecutive rejects, optional convergence monitor & budg
 %   core/cap_evolve/harness.py:3118-3150 (a tampered step is discarded through _tamper_step, not scored 0),
 %   core/cap_evolve/harness.py:4676-4752 (finalize scores best and seed on test, then commit_test).
 
-\paragraph{Hill-climb.}
+\emph{Hill-climb.}
 Each iteration forks the incumbent into a working directory, injects its validation trajectories and a focus
 description (all failing tasks, or one task in a cyclic or hardest-first schedule), runs the proposer subprocess, and
 evaluates the result on the full validation split with $n$ trials per task. The per-task rewards of candidate and
@@ -141,7 +141,7 @@ The default decision is the paired one-SE test: with $\Delta_t=\rbar'_t-\rbar^\s
 accept iff $\bar\Delta > k_{\mathrm{se}}\,\SE(\Delta)$.
 % src: core/cap_evolve/gate.py:422-459 (mean_d > k_se*se; SE = sqrt(var/n) across tasks)
 
-\paragraph{Agent-optimize.}
+\emph{Agent-optimize.}
 A driver agent owns the search; scripts decide and record. After a digest, the driver proposes an edit for a
 failure-cluster hypothesis, creating a node whose parent may be any existing node. Evaluation is lazy: a \emph{probe}
 runs only the (task, trial) cells missing from an evidence ledger keyed by the content hash of the candidate, so
@@ -171,11 +171,11 @@ $(k,\ n_{\mathrm{conf}},\ \delta_{\min},\ z_{\mathrm{conf}})$ plus a coverage fl
 \begin{algorithmic}[1]
 \REQUIRE screen measurements $m',m^\star$ on $\Dsel$; $k,\ n_{\mathrm{conf}},\ \delta_{\min},\ z_{\mathrm{conf}},\ \rho$
 \STATE $\Delta_t\gets m'_t-m^\star_t$ for $t$ scored on both sides (\emph{unmasked}: no footprint restriction)
-\IF{$|\Delta|<2$ \textbf{or} $\bar\Delta\le 0$ \textbf{or} $\bar\Delta\le k\,\SE(\Delta)$} \RETURN reject \ENDIF
+\IF{$|\Delta|<2$ \textbf{or} $\bar\Delta\le 0$ \textbf{or} $\bar\Delta\le k\,\SE(\Delta)$} \STATE \textbf{return} reject \ENDIF
 \STATE draw one trial offset $o$ (agent-optimize: beyond every trial either artifact has; hill-climb: $o=1000+i\,n_{\mathrm{conf}}$ at iteration $i$); fix seeds as $\mathrm{base}+o+j$
 \STATE $m'_{\mathrm{c}}\gets \mathrm{Eval}(\artifact',\Dsel,n_{\mathrm{conf}};o)$;\quad $m^\star_{\mathrm{c}}\gets \mathrm{Eval}(\artifact^\star,\Dsel,n_{\mathrm{conf}};o)$
 \STATE $\Delta^{c}_t\gets m'_{\mathrm{c},t}-m^\star_{\mathrm{c},t}$;\quad $\mathrm{cov}\gets |\Delta^{c}|/|\Delta|$
-\IF{$\mathrm{cov}<\rho$ \textbf{or} $\bar\Delta^{c}<\delta_{\min}$ \textbf{or} $\bar\Delta^{c}/\SE(\Delta^{c})<z_{\mathrm{conf}}$} \RETURN reject \ENDIF
+\IF{$\mathrm{cov}<\rho$ \textbf{or} $\bar\Delta^{c}<\delta_{\min}$ \textbf{or} $\bar\Delta^{c}/\SE(\Delta^{c})<z_{\mathrm{conf}}$} \STATE \textbf{return} reject \ENDIF
 \RETURN promote, with new baseline $m^\star\gets m'_{\mathrm{c}}$
 \end{algorithmic}
 \end{algorithm}
@@ -215,7 +215,7 @@ nothing for candidates that do not; these rollouts are charged to the budget $B$
 % src: core/cap_evolve/harness.py:3270-3300; test core/tests/test_promotion_rule_p.py::test_confirmation_cost_is_charged_to_the_budget
 % (spent.metric_calls grows by exactly 2*T*n_conf); research/capevolve-paper/decisions.md (campaign parameter choice)
 
-\paragraph{Experimental configuration (frozen before the search runs).}
+\emph{Experimental configuration (frozen before the search runs).}
 Screening evaluates each validation task with one trial on the 40 validation tasks. Each search is limited to
 $600$ target rollouts, counting every evaluation including confirmations, and at most $4\mathrm{M}$ non-cache-read
 optimizer tokens. The target is Gemma-4-31B-it with a limit of $30$ turns and temperature $0$. The reward is the
@@ -232,7 +232,7 @@ cost gating, failure clustering, pregate and context digest on; \texttt{active\_
 The statistics above are only as good as the measurements they consume. We state the contract each run must satisfy and,
 for each clause, where it is enforced and where it is only a deployment requirement.
 
-\paragraph{Evaluator isolation.}
+\emph{Evaluator isolation.}
 (i) \emph{Gold-free sandbox.} The agent's sandbox must not contain the gold answers. This is benchmark-specific and
 lives in the adapter: for SpreadsheetBench the default mounts a gold-free copy of the dataset (inputs and a writable
 output directory), reads gold from the pristine directory at scoring time, and refuses a mount that contains
@@ -245,7 +245,7 @@ therefore a deployment requirement, which our experiments satisfy by running the
 verifying denial with a negative test before launch; this is a property of the harness around the library, not of the
 algorithms.
 % src: research/capevolve-paper/audit/algorithm_audit.md:55 and :182 (unsandboxed subprocess inheriting os.environ);
-%   research/capevolve-paper/decisions.md (INTEGRITY entry: separate uid, negative test). \TODO{cite E06 negative-test result}
+%   research/capevolve-paper/decisions.md (INTEGRITY entry: separate uid, negative test). See Appendix~\ref{app:incidents} for the negative-test record.
 (iii) \emph{Tamper detection.} Optionally, a content-hash manifest over the eval surface (gold, task data, tests,
 scorers, adapters, split files) is taken before the proposer runs, the files are set read-only, and the manifest is
 verified before the gate; a changed, added or deleted protected file voids the measurement. A voided candidate is
@@ -253,31 +253,9 @@ discarded, not scored $0$, because a tampered number describes a compromised har
 % src: core/cap_evolve/integrity.py:1-60 (semantics), 65-77 (DEFAULT_PATTERNS); core/cap_evolve/harness.py:3093-3096, 3130-3150
 Detection is host-independent but it is detection after the fact and does not stop reads.
 
-\paragraph{Errored-trial policy.}
-A trial that errors is, by default, missing data: it is dropped from the task mean, and a task with no valid trial is
-dropped from the paired vector. With \texttt{errored\_\allowbreak trial\_\allowbreak policy: fail}, a trial whose adapter marks the error as
-caused by the candidate (\texttt{Rollout.metadata.error\_\allowbreak kind="candidate"}) scores $0$, while every other error stays
-missing, so infrastructure faults remain retryable. The framework cannot infer attribution; adapters must set it.
-% src: core/cap_evolve/harness.py:287-313 (CANDIDATE_ERROR_KIND, ERRORED_POLICIES, candidate_attributed_error), 496-503
-%   (cand_fail reclassification); core/cap_evolve/harness.py:1224-1260 (_paired_deltas drops a task unless both sides have valid trials)
-The drop rule is not neutral: a candidate-induced failure treated as missing can raise the apparent delta, which is why
-the policy is a switch we report per experiment.
+Three further clauses (errored-trial policy, joint coverage, fresh-trial confirmation) are specified in Appendix~\ref{app:contract}; the per-arm settings are in Appendix~\ref{app:config}.
 
-\paragraph{Joint coverage.}
-Coverage is the fraction of \emph{planned} tasks that are valid on \emph{both} sides of the pair. The gate refuses to
-judge (returns \emph{indecisive}, which is neither accept nor a rejection of the edit) when coverage is below a floor.
-The default coverage is the candidate's own valid fraction; \texttt{gate\_\allowbreak coverage: joint} switches to the paired
-definition, and rule P applies its own floor $\rho$ to the confirmation.
-% src: core/cap_evolve/harness.py:1189-1220 (planned_val_ids, joint_coverage), 3229-3234 (coverage=jcov when joint, else
-%   cand_val.coverage); core/cap_evolve/gate.py:397-406 (coverage < min_coverage -> indecisive); core/cap_evolve/promotion.py:80-92
-
-\paragraph{Fresh-trial confirmation.}
-Rule P's confirmation is the contract's answer to winner's curse within a fixed task set: the evidence that selects a
-candidate is not the evidence that promotes it. Seeds are aligned across the two arms so the pair is a true paired
-comparison regardless of each artifact's evidence-ledger history.
-% src: core/cap_evolve/harness.py:371-376 and 3278-3279; AO/act.py:443-460 (_first_free_trial, _eval_fresh with fixed seeds)
-
-\paragraph{Test seal and the campaign-level ledger.}
+\emph{Test seal and the campaign-level ledger.}
 Within a run, the final split is sealed: finalize reserves the seal, refuses a second attempt once test rollouts exist,
 scores the best artifact and the seed on the same test tasks, and burns the seal only after the results are written.
 % src: core/cap_evolve/rundir.py:428-477 (reserve_test, begin_test_attempt, commit_test); core/cap_evolve/harness.py:4707-4752
@@ -287,62 +265,12 @@ repeatedly, and any decision informed by an earlier final score is adaptive reus
 final-split task ids, recording run, arm and time, and we report the reuse count with every headline number.
 % src: research/capevolve-paper/audit/defects.csv (D07: test_used is per run; reuse_baseline resets it; no cross-run ledger);
 %   research/capevolve-paper/audit/issue_drafts/D07.md:21 (proposal). The ledger is a campaign-protocol record, not library code
-%   at this commit. \TODO{state the ledger file and the exposure table, research/capevolve-paper/audit/exposure_ledger.csv}
+%   at this commit. The exposure table is research/capevolve-paper/audit/exposure_ledger.csv.
 
-\subsection{Optional mechanisms (default off)}
+\subsection{Optional mechanisms}
 \label{sec:method:optional}
 
-Both mechanisms below are behind spec switches and change no decision when absent. We do not claim them as new
-statistics: merging and subset selection have precedent
-\citep{gepa,darwinx,park2026autosaddler,shastri2026bonsai,hgm,xu2026harnesslens}, and our contribution here is
-measurement discipline around them.
-
-\paragraph{Merge verification (\texttt{merge\_\allowbreak verify: true}).}
-Given a merge $M$ of branches $A,B$ with common ancestor $P$, the question is whether $A$ and $B$ compose. We evaluate
-$P,A,B,M$ on one task block with the \emph{same} fresh trials (one common trial offset, fixed seeds, a runtime check that
-the ledger recorded each cell at the offset), and estimate over the block $\mathcal{B}$
-\begin{align}
-  I &= \mathbb{E}_{x\in\mathcal{B}}\big[\Delta_M(x)-\Delta_A(x)-\Delta_B(x)\big], &
-  g &= \mathbb{E}_{x\in\mathcal{B}}\big[\rbar_M(x)-\rbar_{b}(x)\big],
-\end{align}
-with $\Delta_Y=\rbar_Y-\rbar_P$ and $b$ the parent with the larger block mean. The block is the union of each branch's
-observed wins and known losses and $k_s$ seeded random sentinels. The verdict is \emph{pass} iff $|\mathcal{B}|\ge m$,
-$g\ge\delta_{\min}$, $z_g\ge z_{\mathrm{pass}}$ and not ($z_I\le -z_{\mathrm{int}}$ and $I\le-\delta_{\min}$);
-\emph{loses} if $g<0$ with $z_g\le -z_{\mathrm{lose}}$ or the interaction is significantly negative ($z_I\le -z_{\mathrm{int}}$ and $I\le-\delta_{\min}$) while $g<\delta_{\min}$;
-otherwise \emph{inconclusive}, which buys another round of fresh trials up to a cap and then stops, unpromoted. On a loss,
-a bounded Zeller delta-debugging search over merged hunks (markdown sections, Python definitions, else files)
-localizes the interfering hunks. The parents are always retained, the budget is checked before every arm evaluation and
-every debugging test, and the verdict is bound to the content hashes of $P,A,B,M$, which \texttt{promote} re-checks.
-% src: AO/merge_verify.py:38-48 (params: n=3, max_rounds=3, n_sentinels=3, dmin=.02, z_pass=1.645, z_lose=1, z_int=1.645,
-%   min_block=5, dd_budget=12), 74-89 (select_block), 119-138 (analyse), 141-150 (verdict), 153-173 (run_verification),
-%   176-217 (ddmin), 246-272 (hunks); AO/act.py:666-745 (verify_merge: hashes, per-spend check_budget, scratch purge),
-%   AO/act.py:518-531 (promote refuses an unverified merge or any hash mismatch); core/cap_evolve/harness.py:371-376 (fixed_seeds)
-\emph{Estimand and caveat.} $I$ and $g$ describe the \emph{block}, which is enriched in tasks where $A$ or $B$ won, so
-they are not estimates of the population effect of the merge; the population-level decision is the full-split
-promotion that follows (rule P when enabled). Fresh trials are what keeps $I$ from being biased negative by selecting
-the block on the branches' own wins.
-
-\paragraph{Screen accounting (\texttt{screen\_\allowbreak accounting: true}).}
-A subset screen is treated as a sampling design: its tasks are \emph{affected} (predicted to be reached by the edit),
-\emph{sentinels} (regression checks), and a \emph{random} component of $k$ tasks drawn uniformly without replacement
-from the remaining pool of size $N_r$, giving inclusion probability $1$ to the first two strata and $k/N_r$ to the third.
-The Horvitz--Thompson estimate of the pool-mean delta is
-\begin{equation}
-  \hat\Delta=\frac1N\Big(\sum_{t\in\text{det}}\Delta_t+\frac{N_r}{k}\sum_{t\in\text{rand}}\Delta_t\Big),
-\end{equation}
-unbiased over the random draw only if every screened task was measured (otherwise the code clears an \texttt{unbiased}
-flag and reports the measured count). The random seed is derived per candidate, and an equal-size uniform subset with an
-independent seed is the ablation control. The pool is the validation tasks with a valid parent measurement, and the
-record states how many validation tasks fall outside it.
-% src: core/cap_evolve/screen_accounting.py:33-38 (derive_seed per candidate), 41-55 (build_screen, pi), 57-66 (build_control),
-%   76-111 (ht_estimate, unbiased flag, n_random_measured), 113-130 (record: role scheduling_signal, result false, n_val,
-%   pool_excluded); AO/screen.py:183-210 (wiring), 286-289 (record)
-\emph{Estimand and caveat.} The estimand is the pool-mean delta of the screened candidate against its parent. A screen
-score is a \emph{scheduling signal}: it decides which candidate deserves a full evaluation and is never reported as a
-result, and the existing kill-only rule is unchanged (a screen may kill or promote to full evaluation, never accept).
-% src: core/cap_evolve/subsample.py:1-40 (kill-only rule); core/cap_evolve/screen_accounting.py:113-130
-Selecting among candidates on a fixed draw would still add selection bias to $\hat\Delta$, which the per-candidate seed
-mitigates but does not remove.
+Two mechanisms are behind spec switches and change no decision when absent: merge verification for composed branches and screen accounting for subset screens. Neither is used in the main comparison arms except where Appendix~\ref{app:optional} says so, and we do not claim them as new statistics.
 
 \subsection{Threat model and what is not guaranteed}
 \label{sec:method:threat}
@@ -373,5 +301,5 @@ guarantee that a promoted edit transfers beyond the final tasks.
 %   documented in several runs; one run read a prior run's sealed-test results); core/cap_evolve/adapter.py:104 (adapters
 %   must not leak gold into feedback; not enforced); research/capevolve-paper/audit/algorithm_audit.md:182
 Finally, the benchmarks we use were partly exposed to earlier development; which final sets are development-exposed is
-tabulated in \TODO{exposure table} and the headline claims are restricted to sets that were not.
+tabulated in \texttt{audit/exposure\_ledger.csv} (Section~\ref{sec:problem}) and the headline claims are restricted to sets that were not.
 % src: research/capevolve-paper/decisions.md (development-exposed sets); research/capevolve-paper/audit/exposure_ledger.csv

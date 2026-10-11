@@ -15,7 +15,7 @@ import sys
 PAGE_LIMIT = 10
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BANNED = [
-    r"\bdelve", r"\bleverag", r"\brobust", r"\bseamless", r"\bcrucial", r"\bpivotal",
+    r"\bdelve", r"\bleverag", r"(?<!cluster-)\brobust", r"\bseamless", r"\bcrucial", r"\bpivotal",
     r"\blandscape", r"\btapestry", r"\brealm", r"\bunderscor", r"\bshowcas",
     r"\bunlock", r"in today's", r"it is worth noting", r"\bnotably",
     r"^\s*furthermore", r"\bmoreover", r"not only .{0,80} but also",

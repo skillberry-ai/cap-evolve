@@ -1,1 +1,57 @@
-\section{Configuration}
+\section{Configurations}
+\label{app:config}
+
+\subsection{Models and decoding}
+
+\begin{table}[h]
+\caption{Models and decoding settings as recorded in the model registry and adapters. Prices for Claude models are list-price proxies; other models have no visible price and are reported in tokens only.}
+\label{tab:models}
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lllX@{}}
+\toprule
+Role & Model & Served by & Settings \\
+\midrule
+Suite A target & Gemma-4-31B-it & RITS & temperature 0, max tokens 8000, 30 turns, rollout seed 0 \\
+Suite B and C target, user simulator & gpt-oss-120b & RITS & temperature 0, max tokens 8000, max steps 100, max errors 10, simulator timeout 7200 s, provider-default reasoning effort \\
+Natural-language judge (B, C) & GPT-5.5 & LiteLLM gateway & no temperature sent (the benchmark pins it for this family) \\
+Optimizer, all matched arms & Claude Sonnet 5.5 & LiteLLM gateway & Claude Code with 80 turns (Suite A) or 300 turns (Suite B agent-optimize); GEPA reflection 16000 max tokens; SkillOpt optimizer temperature 0.7, 16000 max tokens; MIPROv2 proposer 8000 max tokens; Meta-Harness effort high \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Shared settings}
+
+Search budget: 600 counted target rollouts, at most 4M non-cache optimizer tokens, seeds 0, 1, 2. Rule P for both \capevolve{} algorithms: $k_{\mathrm{se}}=1$, $n_{\mathrm{conf}}=3$, $z_{\mathrm{conf}}=1.282$, $\delta_{\min}=0$, minimum joint coverage 0.95, footprint gate off, errored trials failed, not dropped. The agent-optimize arm runs the digest/act engine with parallel DAG and active evaluation switched on and confirmation on fresh trials only. Hung rollouts (3 hours or more) are an infrastructure error with one retry on a new trial seed, counted outside the budget.
+
+Suite A uses the SkillOpt split file (80 train, 40 validation, 280 test; file sha256 \texttt{fd40cc4e}\ldots). The seed artifact is \texttt{prompt.md} (sha256 \texttt{aacc289b}\ldots) plus \texttt{task\_template.md} (\texttt{84196741}\ldots). Suite B and C use $\tau^2$-bench at commit \texttt{8ebb7499}. The retail split file hash is \texttt{07d013b7}\ldots; opt, sel and test id-list hash prefixes are \texttt{6d4ef752}, \texttt{694b911b} and \texttt{1e26a51b}. Suite B's 49 optimization tasks are the first 49 of a seeded shuffle (seed 42) of the 74 training ids. Adapter limits differ from benchmark defaults (max steps 100 instead of 200) and are disclosed in every Suite B table.
+
+\subsection{Code pins}
+
+Table~\ref{tab:pins} gives the commits or releases that ran. For each pinned repository, the running copy was compared blob by blob with the tagged tree.
+
+\begin{table}[h]
+\caption{Code that ran. ``Blobs'' counts files identical to the pinned tree.}
+\label{tab:pins}
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+Arm & Source and pin & Check \\
+\midrule
+GEPA & gepa-ai/gepa v0.1.4, commit 8b0ce6c (PyPI 0.1.4); newer head changes resume, cache and engines, not the search loop & 92 of 92 blobs \\
+SkillOpt & microsoft/SkillOpt 79124b37; head 343db229 differs in plumbing and docs only & 442 of 442 blobs \\
+Meta-Harness & stanford-iris-lab/meta-harness 8123cca, equal to upstream head & clone \\
+WikiSkill & community port Stahl-G/wikiskill da6984ca (MIT); no official code exists & clone \\
+\capevolve{}, Suite A & campaign branch integration commit ec12d36c9 & merged PRs \\
+\capevolve{}, Suite B & campaign head 80aa7ed0c plus tau commit befd2c2b8 & worktree \\
+EvoSkill, Trace2Skill, ACE, MIPROv2, HarnessLens & official repositories \needs{pinned commit for each; run records say ``not recorded''} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Per-arm settings from run records}
+
+The tables below are generated from the run records by \texttt{scripts/gen\_config\_tables.py}. They list every setting the records contain; settings the records do not contain are absent.
+
+{\setlength{\tabcolsep}{3pt}
+\input{appendix/config_generated}
+}
