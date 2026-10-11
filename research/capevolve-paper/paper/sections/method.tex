@@ -107,23 +107,21 @@ accept iff $\bar\Delta > k_{\mathrm{se}}\,\SE(\Delta)$.
 A driver agent owns the search; scripts decide and record. After a digest, the driver proposes an edit for a
 failure-cluster hypothesis, creating a node whose parent may be any existing node. Evaluation is lazy: a \emph{probe}
 runs only the (task, trial) cells missing from an evidence ledger keyed by the content hash of the candidate, so
-byte-identical candidates share evidence. \texttt{promote} requires full-split ledger coverage and then calls a judge.
+byte-identical candidates share evidence. Promotion requires full-split ledger coverage and then calls a judge.
 % src: AO/act.py:183-246 (propose, 2-call protocol); AO/act.py:329-385 (probe over missing ledger cells);
 %   core/cap_evolve/eval_index.py:55-80 (counts/missing pooled by cap_hash); AO/act.py:512-535 (coverage check then judge)
 Without opt-in switches the judge is a Bonferroni-corrected $z$-test on the reward difference with a fixed SE floor
-(\texttt{reward\_gated}), and a Beta-posterior rule is used only when cost gating is switched off; with
-\texttt{promotion\_\allowbreak rule: P} the judge is the same function hill-climb calls.
+(the reward-gated judge), and a Beta-posterior rule is used only when cost gating is switched off; with rule P switched on, the judge is the same function hill-climb calls.
 % src: AO/act.py:400-411; core/cap_evolve/objectives.py:41,84,166-176 (NOISE_FLOOR=0.031 floors the SE);
 %   core/cap_evolve/posterior.py:17-19 (DMIN, P_ACC, canary constants); AO/act.py:512-520 (judge_p when promotion_params)
-\texttt{finalize} seals and scores the test split once.
+Finalization seals and scores the test split once.
 % src: AO/act.py:749-845
 
 \subsection{Promotion rule P}
 \label{sec:method:P}
 
 Because the two default gates have different effective bars, comparing the algorithms would compare gate strictness as
-well as search. Rule P is a single function both algorithms can call (spec key \texttt{promotion\_\allowbreak rule: P}, default
-off; implemented as the shared module of issues \#785/\#786). It has two stages and four parameters
+well as search. Rule P is a single function both algorithms can call (a switch that is off by default). It has two stages and four parameters
 $(k,\ n_{\mathrm{conf}},\ \delta_{\min},\ z_{\mathrm{conf}})$ plus a coverage floor $\rho$.
 % src: core/cap_evolve/promotion.py:28-52 (PromotionParams: k_se=1.0, n_conf=10, dmin=0.02, z_conf=2.0, min_coverage=0.6)
 
