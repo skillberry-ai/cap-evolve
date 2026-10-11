@@ -150,7 +150,7 @@ _EVALUATE = Path(__file__).resolve().parents[2] / "skills" / "phases" / "evaluat
 
 
 def eval_cmd(run_dir, project, tag: str, split: str, n_trials: int, *, ids=None,
-             trial_offset: int = 0, skills_dir=None) -> list[str]:
+             trial_offset: int = 0, fixed_seeds: bool = False, skills_dir=None) -> list[str]:
     script = (Path(skills_dir) / "phases" / "evaluate" / "scripts" / "run.py") if skills_dir else _EVALUATE
     cmd = [sys.executable, str(script), "--run-dir", str(run_dir), "--project", str(project),
            "--candidate", str(Path(run_dir) / "work" / tag), "--split", split,
@@ -159,4 +159,6 @@ def eval_cmd(run_dir, project, tag: str, split: str, n_trials: int, *, ids=None,
         cmd += ["--ids", ",".join(map(str, ids))]
     if trial_offset:
         cmd += ["--trial-offset", str(trial_offset)]
+    if fixed_seeds:
+        cmd += ["--fixed-seeds"]
     return cmd

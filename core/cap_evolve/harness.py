@@ -328,6 +328,7 @@ def evaluate_candidate(
     workers: int | None = None,
     ids: list | None = None,
     trial_offset: int = 0,
+    fixed_seeds: bool = False,
     errored_policy: str | None = None,
 ) -> SplitResult:
     """Run + score a candidate on a split with multi-trial honesty.
@@ -367,6 +368,12 @@ def evaluate_candidate(
     use its own ``tag`` so a later full-split eval's rollouts are not mixed with it.
     ``ids`` never widens a split: an id outside the frozen split is ignored.
 
+    ``fixed_seeds`` (default False = legacy) makes the seed of trial ``k`` exactly
+    ``base_seed + trial_offset + k``, ignoring the evidence ledger's next free index. A comparison
+    that must be PAIRED (candidate vs incumbent confirmation, the four arms of a merge
+    verification) passes the same ``trial_offset`` and ``fixed_seeds=True`` to every arm, so the arms
+    see identical seeds whatever each one's ledger history is.
+
     ``trial_offset`` (default 0 = legacy) makes this a TOP-UP: trial ``k`` is written as
     ``t{trial_offset + k}`` and seeded ``base_seed + trial_offset + k``, so extra trials on an
     existing tag add rollouts with fresh seeds instead of replacing ``t0..`` or repeating them.
@@ -389,7 +396,7 @@ def evaluate_candidate(
     # same capability is MORE independent trials, not a copy of the old draws). Re-evaluating an
     # existing tag at offset 0 still replaces t0.. with the same seeds, as before.
     seed_off = trial_offset
-    if split != "test" and eval_index.enabled() and (
+    if split != "test" and not fixed_seeds and eval_index.enabled() and (
             trial_offset or not list((run_dir.rollouts / split).glob(f"*__{tag}__t*.json"))):
         seed_off = max(trial_offset, eval_index.next_trial_idx(
             run_dir, eval_index.cap_hash(candidate_dir), split=split))
@@ -1114,7 +1121,18 @@ def pop_paper_switches(gate_kwargs: dict) -> dict:
 
 
 #: Spec keys for the shared promotion rule P (``cap_evolve.promotion``); popped from ``gate_kwargs``.
-PROMOTION_KEYS = ("promotion_rule", "promotion_k_se", "promotion_n_conf", "promotion_dmin", "promotion_z_conf")
+PROMOTION_KEYS = ("promotion_rule", "promotion_k_se", "promotion_n_conf", "promotion_dmin", "promotion_z_conf",
+                  "promotion_min_coverage")
+
+
+def resume_val(run_dir, tag, promotion_on: bool = False):
+    """The incumbent's measurement to resume from. Under rule P the baseline is the incumbent's FRESH
+    confirmation (tag ``<tag>__conf``) when one exists, not the selection-era trials that chose it."""
+    if promotion_on:
+        sr = split_result_from_rollouts(run_dir, f"{tag}__conf", "val")
+        if sr.per_task:
+            return sr
+    return split_result_from_rollouts(run_dir, tag, "val")
 
 
 def pop_promotion(gate_kwargs: dict):
@@ -1144,6 +1162,7 @@ def add_paper_switch_arguments(p) -> None:
     p.add_argument("--promotion-n-conf", type=int, default=None)
     p.add_argument("--promotion-dmin", type=float, default=None)
     p.add_argument("--promotion-z-conf", type=float, default=None)
+    p.add_argument("--promotion-min-coverage", type=float, default=None)
 
 
 def paper_switch_kwargs(args) -> dict:
@@ -3257,13 +3276,14 @@ def run_step(
             # New seeds on both sides (explicit trial_offset: independent of the eval ledger), under
             # fresh tags so the selection-era rollouts are never pooled into the confirmation.
             kw = dict(run_dir=run_dir, split="val", n_trials=promo.n_conf, trial_offset=fresh_from,
-                      errored_policy=sw["errored_trial_policy"])
+                      fixed_seeds=True, errored_policy=sw["errored_trial_policy"])
             held["cand"] = evaluate_candidate(adapter, workdir, tag=f"{cid}__conf", **kw)
             held["par"] = evaluate_candidate(adapter, parent_dir, tag=f"{cid}__confbase", **kw)
             return _paired_deltas(held["par"], held["cand"], footprint=None) or []
 
         if accepted:
-            pres = promotion_mod.decide(paired_deltas or [], _fresh_deltas, promo)
+            pres = promotion_mod.decide(paired_deltas or [], _fresh_deltas, promo,
+                                        n_planned=len(paired_deltas or []))
         else:
             sc = promotion_mod.screen(paired_deltas or [], promo.k_se)
             pres = promotion_mod.PromotionResult(

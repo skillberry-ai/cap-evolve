@@ -1055,7 +1055,7 @@ def _cmd_run(argv):
             alg_cmd += ["--gate-max-broke", str(int(spec["gate_max_broke"]))]
         if spec.get("promotion_rule"):
             alg_cmd += ["--promotion-rule", str(spec["promotion_rule"])]
-            for key in ("k_se", "n_conf", "dmin", "z_conf"):
+            for key in ("k_se", "n_conf", "dmin", "z_conf", "min_coverage"):
                 if spec.get(f"promotion_{key}") is not None:
                     alg_cmd += [f"--promotion-{key.replace('_', '-')}", str(spec[f"promotion_{key}"])]
     if spec.get("convergence"):

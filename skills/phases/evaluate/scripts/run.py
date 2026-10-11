@@ -41,6 +41,9 @@ def main(argv=None) -> int:
                    help="first trial index to write (default 0). A top-up of an existing tag "
                         "passes the trials it already has, so new rollouts add t<offset>.. with "
                         "fresh seeds instead of replacing t0..")
+    p.add_argument("--fixed-seeds", action="store_true",
+                   help="seed trial k exactly base_seed + --trial-offset + k, ignoring the ledger's next "
+                        "free index (paired comparisons give every arm the same offset)")
     p.add_argument("--topup-to", type=int, default=0,
                    help="evidence-ledger top-up: run only the tasks whose pooled trials for this "
                         "candidate's bytes are below N, for just the missing trials (ids and "
@@ -82,7 +85,7 @@ def main(argv=None) -> int:
     result = harness.evaluate_candidate(adapter, cand_dir, run_dir=run_dir,
                                         split=args.split, n_trials=args.n_trials,
                                         ks=ks, tag=cand_dir.name, ids=ids,
-                                        trial_offset=offset)
+                                        trial_offset=offset, fixed_seeds=args.fixed_seeds)
     print(json.dumps(result.to_dict(), indent=2))
     return 0
 
