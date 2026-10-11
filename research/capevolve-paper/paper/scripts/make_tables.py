@@ -14,16 +14,21 @@ PAPER = Path(__file__).resolve().parents[1]
 LABEL = {"hc": "CapEvolve HC", "ao": "CapEvolve AO", "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness",
          "evoskill": "EvoSkill", "wikiskill": "WikiSkill (community)", "trace2skill": "Trace2Skill", "ace": "ACE",
          "mipro": "MIPROv2", "harnesslens": "HarnessLens", "oneshot": "One-shot control", "seed": "Seed (no search)",
-         "hcstock": r"CapEvolve HC, stock gate \textit{(exploratory)}"}
+         "hcstock": r"CapEvolve HC, stock gate", "bestofk": r"One-shot best of $k$"}
 SUITE_TITLE = {"A": "Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)",
                "B": r"Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)",
                "C": r"Suite C, $\tau^2$ airline, official test-20 (development-exposed)"}
 
 
+GROUP = {"seed": "ref", "oneshot": "ref", "hc": "primary", "ao": "primary", "hcstock": "explor", "bestofk": "explor"}
+GROUP_TITLE = {"ref": "Reference arms", "secondary": "Competitors, secondary family", "primary": "CapEvolve, primary family",
+               "explor": "Exploratory, outside the Holm family"}
+
+
 def order(s):
     arms = s["arms"]
-    base = sorted((a for a in arms if a not in ("seed", "oneshot", "hc", "ao", "hcstock")), key=lambda a: arms[a]["delta"])
-    return ["seed"] + (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hc", "ao") if a in arms] + (["hcstock"] if "hcstock" in arms else [])
+    base = sorted((a for a in arms if a not in ("seed", "oneshot", "hc", "ao", "hcstock", "bestofk")), key=lambda a: arms[a]["delta"])
+    return ["seed"] + (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hc", "ao") if a in arms] + [a for a in ("hcstock", "bestofk") if a in arms]
 
 
 def pct(x):
@@ -66,8 +71,13 @@ def main_table(suites, data, label, cap):
         if i:
             body.append(r"\midrule")
         body += [rf"\multicolumn{{{ncol}}}{{l}}{{\textit{{{SUITE_TITLE[su]}}}}} \\", r"\midrule"]
+        group = None
         for a in order(s):
             v = s["arms"][a]
+            g = GROUP[a] if a in GROUP else "secondary"
+            if g != group:
+                group = g
+                body.append(rf"\multicolumn{{{ncol}}}{{l}}{{\textit{{{GROUP_TITLE[g]}}}}} \\")
             miss = w(f"{v['missing']}/{v['cells']}")
             if a == "seed":
                 cells = [w(pct(v["score"])), "ref."] + ([w(sd(-s["arms"]["oneshot"]["delta"]))] if has_os else []) + ["--", "--", miss]
@@ -77,8 +87,8 @@ def main_table(suites, data, label, cap):
                 p = w(pf(v["p_holm"])) if v["p_holm"] is not None else "--"
                 cells = [w(pct(v["score"])), w(ci(v))] + ([w(ci(v["vs_oneshot"]))] if has_os else []) + [p, w(f"{v['usd']:.0f}"), miss]
             body.append(" & ".join([LABEL[a]] + cells) + r" \\")
-    head = (r"Arm & Score (\%) & $\Delta$ vs seed [CI] & " + (r"$\Delta$ vs one-shot [CI] & " if has_os else "") + r"$p_{\mathrm{Holm}}$ & USD & Missing \\")
-    return tabular("lccc" + ("c" if has_os else "") + "rrr", head, body, cap, label, mock)
+    head = (r"Arm & Score (\%) & $\Delta$ vs seed [CI] & " + (r"$\Delta$ vs one-shot [CI] & " if has_os else "") + r"$p_{\mathrm{Holm}}$ in family & USD & Missing \\")
+    return tabular("lcc" + ("c" if has_os else "") + "rrr", head, body, cap, label, mock)
 
 
 def promotions_table(data):
@@ -89,20 +99,44 @@ def promotions_table(data):
         s = data["suites"][su]
         if i:
             body.append(r"\midrule")
-        body += [rf"\multicolumn{{7}}{{l}}{{\textit{{{SUITE_TITLE[su]}}}}} \\", r"\midrule"]
+        body += [rf"\multicolumn{{6}}{{l}}{{\textit{{{SUITE_TITLE[su]}}}}} \\", r"\midrule"]
         for a in order(s):
-            if a == "seed":
+            if a in ("seed", "oneshot", "bestofk"):
                 continue
             v = s["arms"][a]
             pr, ca = v["promotions"], v["candidates"]
-            body.append(" & ".join([LABEL[a]] + [w(str(x)) for x in pr] + [w(f"{sum(pr) / len(pr):.1f}"), w(f"{sum(ca) / len(ca):.1f}"),
-                                    w(f"{100 * sum(pr) / max(sum(ca), 1):.0f}")]) + r" \\")
-    head = r"Arm & Seed 0 & Seed 1 & Seed 2 & Mean per search & Candidates evaluated & Promoted (\%) \\"
-    cap = ("Promotions per search for every arm, from the candidate logs, with the mean number of candidates evaluated. "
-           "A promotion is a candidate that the arm's own acceptance rule put on its lineage. "
-           "CapEvolve with rule P is a deliberately conservative configuration and is expected to promote rarely, "
-           "and the stock-gate rows (E12) show the other side of that trade.")
-    return tabular("lcccccr", head, body, cap, "tab:promotions", mock)
+            ret = sum(1 for x in pr if x == 0)
+            body.append(" & ".join([LABEL[a], w(f"{sum(ca) / len(ca):.1f}"), w("/".join(str(x) for x in ca)), w(f"{sum(pr) / len(pr):.1f}"),
+                                    w("/".join(str(x) for x in pr)), w(f"{ret} of {len(pr)}")]) + r" \\")
+    head = r"Arm & Screened, mean & Screened per seed & Promoted, mean & Promoted per seed & Returned artifact equals seed \\"
+    cap = ("Promotions per search for every arm at the matched checkpoint: candidates screened, candidates promoted under the arm's own rule, "
+           "and the number of seeds whose returned artifact is byte-identical to the seed artifact. "
+           "CapEvolve with rule P is a deliberately conservative configuration, and the stock-gate rows show the other side of that trade.")
+    return tabular("lccccc", head, body, cap, "tab:promotions", mock)
+
+
+def e12_table(data):
+    mock = data["source"] == "mock"
+    w = wrap(mock)
+    body = []
+    for su in "AC":
+        s = data["suites"][su]
+        body += [rf"\multicolumn{{7}}{{l}}{{\textit{{{SUITE_TITLE[su].split(',')[0]}}}}} \\"]
+        for a, nm in (("hc", "Rule P"), ("hcstock", "Stock gate")) + ((("bestofk", r"Best of $k$"),) if su == "C" else ()):
+            v = s["arms"][a]
+            sdl = v["seed_deltas"]
+            if a == "bestofk":
+                cells = [w(sd(x)) for x in sdl] + ["--", "--", "--"]
+            else:
+                pr, ca = v["promotions"], v["candidates"]
+                cells = [w(sd(x)) for x in sdl] + [w(f"{sum(ca) / len(ca):.1f}"), w(f"{sum(pr) / len(pr):.1f}"), w(f"{sum(1 for x in pr if x == 0)} of {len(pr)}")]
+            body.append(" & ".join([nm] + cells) + r" \\")
+        if su == "A":
+            body.append(r"\midrule")
+    head = r"Arm & Seed 0 & Seed 1 & Seed 2 & Screened & Promoted & Returned = seed \\"
+    cap = (r"Stock-gate and rule-P hill-climb at the same rollout count, with per-seed paired deltas to the seed in points and promotion counts (means per search). "
+           r"Descriptive and exploratory: no tests. The best-of-$k$ row draws $k$ independent one-shot proposals per seed on Suite C and keeps the best on the optimization set.")
+    return tabular("lcccccc", head, body, cap, "tab:e12", mock, star=False)
 
 
 def cost_table(data):
@@ -113,19 +147,20 @@ def cost_table(data):
         s = data["suites"][su]
         if i:
             body.append(r"\midrule")
-        body += [rf"\multicolumn{{7}}{{l}}{{\textit{{{SUITE_TITLE[su]}}}}} \\", r"\midrule"]
+        body += [rf"\multicolumn{{9}}{{l}}{{\textit{{{SUITE_TITLE[su]}}}}} \\", r"\midrule"]
         for a in order(s):
             if a == "seed":
                 continue
             v = s["arms"][a]
-            nc = v["tok_unc"] + v["tok_cw"] + v.get("tok_out", 0.0)
-            body.append(" & ".join([LABEL[a], w(str(v["rollouts"])), w(f"{nc:.1f}"), w(f"{v['tok_cr']:.1f}"), w(f"{nc + v['tok_cr']:.1f}"),
-                                    w(f"{v['cap_used']:.0f}"), w(f"{v['wall_h']:.1f}")]) + r" \\")
-    head = r"Arm & Rollouts at $B^\ast$ & Non-cache-read & Cache read & Incl.\ cache read & Cap used (\%) & Wall clock (h) \\"
-    cap = ("Optimizer tokens in millions and wall clock per arm, summed over seeds. Non-cache-read tokens are uncached input, output and cache writes, "
-           "the quantity the optimizer cap of 4M per search counts. The last token column adds cache reads, which the cap ignores. "
+            out = v.get("tok_out", 0.0)
+            nc = v["tok_unc"] + v["tok_cw"] + out
+            body.append(" & ".join([LABEL[a], w(str(v["rollouts"])), w(f"{v['tok_unc']:.1f}"), w(f"{out:.1f}"), w(f"{v['tok_cw']:.1f}"),
+                                    w(f"{nc:.1f}"), w(f"{v['tok_cr']:.1f}"), w(f"{v['cap_used']:.0f}"), w(f"{v['wall_h']:.1f}")]) + r" \\")
+    head = (r"Arm & Rollouts at \ckpt{} & Uncached input & Output & Cache write & Non-cache-read & Cache read & Cap used (\%) & Wall clock (h) \\")
+    cap = ("Optimizer tokens in millions and wall clock per arm, summed over seeds. Non-cache-read is uncached input plus output plus cache write, "
+           "the quantity the optimizer cap of 4M per search counts. Cache read is priced apart and not counted by the cap. "
            "Cap used is the largest seed as a share of the cap.")
-    return tabular("lrrrrrr", head, body, cap, "tab:cost_tokens", mock)
+    return tabular("lrrrrrrrr", head, body, cap, "tab:cost_tokens", mock)
 
 
 def perseed_table(data):
@@ -161,6 +196,7 @@ def main():
     (T / "main_BC.tex").write_text(main_table(["B", "C"], data, "tab:main_bc", r"Suites B and C results. Columns as in Table~\ref{tab:main_a}."))
     (T / "cost_tokens.tex").write_text(cost_table(data))
     (T / "promotions.tex").write_text(promotions_table(data))
+    (T / "e12.tex").write_text(e12_table(data))
     (T / "perseed.tex").write_text(perseed_table(data))
     print("tables written, source =", data["source"])
 

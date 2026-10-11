@@ -25,7 +25,7 @@ SEED = 20261013
 SUITE_ARMS = {
     "A": ["hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill", "trace2skill", "ace", "mipro", "hcstock", "seed"],
     "B": ["hc", "ao", "gepa", "harnesslens", "oneshot", "seed"],
-    "C": ["hc", "ao", "gepa", "harnesslens", "oneshot", "hcstock", "seed"],
+    "C": ["hc", "ao", "gepa", "harnesslens", "oneshot", "hcstock", "bestofk", "seed"],
 }
 SUITE_PARAM = {  # seed score, SE of a paired delta, tasks, trials per task, seeds, B* rollouts
     "A": dict(seed_score=0.50, se=0.030, tasks=70, trials=1, seed_trials=2, seeds=3, bstar=400, clusters=24),
@@ -36,7 +36,7 @@ PRICE = dict(unc=2.0, out=10.0, cr=0.2, cw=2.5)  # USD per Mtok, Sonnet 5.5 list
 FAMILIES = [("F1", 31), ("F2", 24), ("F3", 21), ("F4", 17), ("F5", 15), ("F6", 12)]
 LABEL = {"hc": "CapEvolve HC", "ao": "CapEvolve AO", "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness",
          "evoskill": "EvoSkill", "wikiskill": "WikiSkill", "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2",
-         "harnesslens": "HarnessLens", "oneshot": "the one-shot control", "seed": "the seed", "hcstock": "CapEvolve HC with the stock gate"}
+         "harnesslens": "HarnessLens", "oneshot": "the one-shot control", "seed": "the seed", "hcstock": "CapEvolve HC with the stock gate", "bestofk": "the best-of-k control"}
 FAM_ARMS = ["hc", "ao", "gepa", "skillopt", "mipro"]
 
 
@@ -86,13 +86,14 @@ def build():
             df = max(P["clusters"] - 1, 2)
             tcrit = {2: 4.30, 19: 2.09, 23: 2.07, 39: 2.02}.get(df, 2.05)
             rows[a] = dict(delta=d, se=se, lo=d - tcrit * se, hi=d + tcrit * se, p=norm_p(d / se))
-            if a != "hcstock":
+            if a not in ("hcstock", "bestofk"):
                 ps.append((a, rows[a]["p"]))
         adj = holm([p for _, p in ps])
         for (a, _), q in zip(ps, adj):
             rows[a]["p_holm"] = q
-        if "hcstock" in rows:
-            rows["hcstock"]["p_holm"] = None  # exploratory arm: outside the Holm family
+        for x in ("hcstock", "bestofk"):
+            if x in rows:
+                rows[x]["p_holm"] = None  # exploratory arms: outside the Holm family
         total_cells = P["tasks"] * P["trials"] * P["seeds"]
         out = {}
         for a in arms:
@@ -102,19 +103,19 @@ def build():
                               missing=rng.randint(0, 3), cells=P["tasks"] * P["seed_trials"])
                 continue
             r = rows[a]
-            agentic = a in ("hc", "ao", "metaharness", "evoskill", "hcstock")
+            agentic = a in ("hc", "ao", "metaharness", "evoskill", "hcstock", "bestofk")
             unc = rng.uniform(1.5, 5.0) * (1.3 if agentic else 1.0) * (0.15 if a == "oneshot" else 1.0)  # millions, summed over 3 seeds; cap is 4M per search
             cr = rng.uniform(20, 120) if agentic else rng.uniform(0, 8)
             cw = rng.uniform(0.3, 1.5) if agentic else rng.uniform(0, 0.3)
             outt = unc * rng.uniform(0.08, 0.16)
             usd = unc * PRICE["unc"] + outt * PRICE["out"] + cr * PRICE["cr"] + cw * PRICE["cw"]
             out[a] = dict(score=P["seed_score"] + r["delta"], delta=r["delta"], lo=r["lo"], hi=r["hi"],
-                          p_holm=r["p_holm"], rollouts=P["bstar"] - (rng.randint(0, 14) if a != "oneshot" else P["bstar"] - 10),
+                          p_holm=r["p_holm"], rollouts=P["bstar"] - (rng.randint(0, 14) if a not in ("oneshot", "bestofk") else P["bstar"] - 10) if a != "bestofk" else 550,
                           tok_unc=unc, tok_cr=cr, tok_cw=cw, tok_out=outt, usd=usd, cap_used=100 * (unc + cw + outt) / 3 * 1.2 / 4.0,
-                          wall_h=rng.uniform(6, 30) if a != "oneshot" else rng.uniform(0.4, 1.5),
+                          wall_h=(P["bstar"] - 7) / (rng.uniform(11, 13) if a in ("hc", "ao", "hcstock") else rng.uniform(12, 40)) if a not in ("oneshot", "bestofk") else rng.uniform(0.4, 3.0),
                           missing=rng.randint(0, 9), cells=total_cells,
                           promotions=[rng.randint(0, 3) if a in ("hc", "ao") else rng.randint(1, 7) for _ in range(P["seeds"])],
-                          candidates=[rng.randint(5, 14) for _ in range(P["seeds"])], exploratory=(a == "hcstock"),
+                          candidates=[rng.randint(5, 14) for _ in range(P["seeds"])], exploratory=(a in ("hcstock", "bestofk")),
                           curve=curve(rng, P["seed_score"], r["delta"], P["bstar"]) if a != "oneshot" else None)
         # delta vs one-shot, per-seed deltas, missingness bounds, CapEvolve contrasts (all mock)
         os_ = out.get("oneshot")
@@ -126,13 +127,21 @@ def build():
                 dd = v["delta"] - os_["delta"]
                 v["vs_oneshot"] = dict(delta=dd, lo=dd - 2.05 * se_c, hi=dd + 2.05 * se_c)
             v["seed_deltas"] = [v["delta"] + rng.gauss(0, 0.015) for _ in range(P["seeds"])]
+            if v.get("promotions"):
+                # a seed that promoted nothing returns the seed artifact, so its paired delta is exactly zero
+                v["seed_deltas"] = [0.0 if p == 0 else d for p, d in zip(v["promotions"], v["seed_deltas"])]
+                shift = sum(v["seed_deltas"]) / len(v["seed_deltas"]) - v["delta"]
+                v["delta"] += shift
+                v["lo"] += shift
+                v["hi"] += shift
+                v["score"] += shift
             frac = v["missing"] / v["cells"]
             v["bound_pess"] = v["delta"] - frac
             v["bound_opt"] = v["delta"] + frac
         contrasts = {}
         for cap in ("hc", "ao"):
             for a in arms:
-                if a in ("hc", "ao", "seed", "hcstock"):
+                if a in ("hc", "ao", "seed", "hcstock", "bestofk"):
                     continue
                 se_c = P["se"] * 1.25
                 dd = out[cap]["delta"] - out[a]["delta"]
@@ -171,7 +180,7 @@ def macros(data):
         m[f"mockTrials{suite}"] = str(P["trials"])
         m[f"mockSeeds{suite}"] = str(P["seeds"])
         m[f"mockBstar{suite}"] = str(P["bstar"])
-        best = max((k for k in s["arms"] if k not in ("seed", "oneshot", "hcstock")), key=lambda k: s["arms"][k]["delta"])
+        best = max((k for k in s["arms"] if k not in ("seed", "oneshot", "hcstock", "bestofk")), key=lambda k: s["arms"][k]["delta"])
         m[f"mockTopDelta{suite}"] = fmt_d(s["arms"][best]["delta"])
         m[f"mockTopArm{suite}"] = LABEL[best]
         m[f"mockNsig{suite}"] = str(sum(1 for k, v in s["arms"].items() if v["p_holm"] is not None and v["p_holm"] < 0.05))

@@ -1,22 +1,24 @@
 \section{Additional results}
 \label{app:results}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_contrast.pdf}
-\caption{Each CapEvolve arm minus each baseline, in paired-delta points with 95\% intervals. Filled markers have intervals that exclude zero. Panels (b) and (c) share their rows (placeholder).}
-\label{fig:contrast}
-\end{figure*}
 
 \input{tables/cost_tokens}
 \input{tables/promotions}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_audit.pdf}
+\caption{Recalculation removes most of the historical gain. Left: reported and recalculated gains of the two SpreadsheetBench headline runs. Right: outcome of recomputing every historical claim from archived artifacts (\texttt{audit/recomputed\_numbers.csv}).}
+\label{fig:audit}
+\end{figure*}
+
 \input{appendix/deviations_table}
 \input{tables/perseed}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_anytime.pdf}
-\caption{Best selection-set score so far against target rollouts, with the matched checkpoint $B^\ast$ dashed. The selection set is the 40 validation tasks on Suite A and the selection split on Suites B and C. Lines are averages over seeds, and bands are the minimum to maximum of the CapEvolve arms. The one-shot control has no curve because it makes one optimizer pass, and Suite A has no such control (placeholder).}
+\caption{Best selection-set score so far against target rollouts, with the matched checkpoint \ckpt{} dashed. The selection set is the 40 validation tasks on Suite A and the selection split on Suites B and C. Lines are averages over seeds, and bands are the minimum to maximum of the CapEvolve arms. The one-shot control has no curve because it makes one optimizer pass, and Suite A has no such control (placeholder).}
 \label{fig:anytime}
 \end{figure*}
 

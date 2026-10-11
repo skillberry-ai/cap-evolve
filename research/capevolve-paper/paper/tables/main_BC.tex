@@ -4,28 +4,36 @@
 \setlength{\tabcolsep}{3.5pt}
 \caption{Suites B and C results. Columns as in Table~\ref{tab:main_a}. (placeholder)}
 \label{tab:main_bc}
-\begin{tabular}{lccccrrr}
+\begin{tabular}{lcccrrr}
 \toprule
-Arm & Score (\%) & $\Delta$ vs seed [CI] & $\Delta$ vs one-shot [CI] & $p_{\mathrm{Holm}}$ & USD & Missing \\
+Arm & Score (\%) & $\Delta$ vs seed [CI] & $\Delta$ vs one-shot [CI] & $p_{\mathrm{Holm}}$ in family & USD & Missing \\
 \midrule
 \multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
 \midrule
-Seed (no search) & \pend{55.0} & ref. & \pend{$-$1.7} & -- & -- & \pend{2/120} \\
-One-shot control & \pend{56.7} & \pend{+1.7 [$-$7.3, +10.8]} & ref. & \pend{1.000} & \pend{2} & \pend{5/360} \\
-GEPA & \pend{56.7} & \pend{+1.7 [$-$7.0, +10.3]} & \pend{$-$0.1 [$-$9.7, +9.6]} & \pend{1.000} & \pend{10} & \pend{6/360} \\
-HarnessLens & \pend{60.7} & \pend{+5.7 [$-$1.4, +12.7]} & \pend{+3.9 [$-$3.9, +11.8]} & \pend{0.521} & \pend{15} & \pend{2/360} \\
-CapEvolve HC & \pend{57.8} & \pend{+2.8 [$-$4.9, +10.4]} & \pend{+1.1 [$-$7.5, +9.6]} & \pend{1.000} & \pend{46} & \pend{9/360} \\
-CapEvolve AO & \pend{57.4} & \pend{+2.4 [$-$5.7, +10.4]} & \pend{+0.6 [$-$8.3, +9.6]} & \pend{1.000} & \pend{33} & \pend{0/360} \\
+\multicolumn{7}{l}{\textit{Reference arms}} \\
+Seed (no search) & \pend{55.0} & ref. & \pend{$-$2.7} & -- & -- & \pend{2/120} \\
+One-shot control & \pend{57.7} & \pend{+2.7 [$-$6.4, +11.7]} & ref. & \pend{1.000} & \pend{2} & \pend{5/360} \\
+\multicolumn{7}{l}{\textit{Competitors, secondary family}} \\
+GEPA & \pend{57.5} & \pend{+2.5 [$-$6.2, +11.2]} & \pend{$-$0.1 [$-$9.7, +9.6]} & \pend{1.000} & \pend{10} & \pend{6/360} \\
+HarnessLens & \pend{61.6} & \pend{+6.6 [$-$0.5, +13.6]} & \pend{+3.9 [$-$3.9, +11.8]} & \pend{0.521} & \pend{15} & \pend{2/360} \\
+\multicolumn{7}{l}{\textit{CapEvolve, primary family}} \\
+CapEvolve HC & \pend{57.2} & \pend{+2.2 [$-$5.5, +9.8]} & \pend{+1.1 [$-$7.5, +9.6]} & \pend{1.000} & \pend{46} & \pend{9/360} \\
+CapEvolve AO & \pend{55.3} & \pend{+0.3 [$-$7.7, +8.3]} & \pend{+0.6 [$-$8.3, +9.6]} & \pend{1.000} & \pend{33} & \pend{0/360} \\
 \midrule
 \multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
 \midrule
-Seed (no search) & \pend{40.0} & ref. & \pend{+2.4} & -- & -- & \pend{0/60} \\
-One-shot control & \pend{37.6} & \pend{$-$2.4 [$-$16.7, +11.9]} & ref. & \pend{1.000} & \pend{3} & \pend{2/180} \\
-HarnessLens & \pend{41.7} & \pend{+1.7 [$-$11.8, +15.2]} & \pend{+4.1 [$-$10.4, +18.6]} & \pend{1.000} & \pend{6} & \pend{0/180} \\
-GEPA & \pend{46.5} & \pend{+6.5 [$-$4.2, +17.2]} & \pend{+8.9 [$-$2.7, +20.5]} & \pend{1.000} & \pend{16} & \pend{8/180} \\
-CapEvolve HC & \pend{47.5} & \pend{+7.5 [$-$6.8, +21.7]} & \pend{+9.9 [$-$5.5, +25.3]} & \pend{1.000} & \pend{34} & \pend{6/180} \\
-CapEvolve AO & \pend{46.7} & \pend{+6.7 [$-$7.1, +20.5]} & \pend{+9.2 [$-$5.7, +24.0]} & \pend{1.000} & \pend{37} & \pend{7/180} \\
-CapEvolve HC, stock gate \textit{(exploratory)} & \pend{45.1} & \pend{+5.1 [$-$8.2, +18.4]} & \pend{+7.5 [$-$6.9, +21.8]} & -- & \pend{36} & \pend{1/180} \\
+\multicolumn{7}{l}{\textit{Reference arms}} \\
+Seed (no search) & \pend{40.0} & ref. & \pend{+3.6} & -- & -- & \pend{2/60} \\
+One-shot control & \pend{36.4} & \pend{$-$3.6 [$-$17.9, +10.8]} & ref. & \pend{1.000} & \pend{3} & \pend{2/180} \\
+\multicolumn{7}{l}{\textit{Competitors, secondary family}} \\
+HarnessLens & \pend{42.0} & \pend{+2.0 [$-$11.5, +15.4]} & \pend{+4.1 [$-$10.4, +18.6]} & \pend{1.000} & \pend{6} & \pend{0/180} \\
+GEPA & \pend{44.1} & \pend{+4.1 [$-$6.6, +14.9]} & \pend{+8.9 [$-$2.7, +20.5]} & \pend{1.000} & \pend{13} & \pend{8/180} \\
+\multicolumn{7}{l}{\textit{CapEvolve, primary family}} \\
+CapEvolve HC & \pend{40.0} & \pend{+0.0 [$-$14.3, +14.3]} & \pend{+9.9 [$-$5.5, +25.3]} & \pend{1.000} & \pend{31} & \pend{3/180} \\
+CapEvolve AO & \pend{43.9} & \pend{+3.9 [$-$9.9, +17.7]} & \pend{+9.2 [$-$5.7, +24.0]} & \pend{1.000} & \pend{16} & \pend{0/180} \\
+\multicolumn{7}{l}{\textit{Exploratory, outside the Holm family}} \\
+CapEvolve HC, stock gate & \pend{44.9} & \pend{+4.9 [$-$8.4, +18.2]} & \pend{+8.6 [$-$5.7, +23.0]} & -- & \pend{36} & \pend{1/180} \\
+One-shot best of $k$ & \pend{44.5} & \pend{+4.5 [$-$7.1, +16.0]} & \pend{+8.0 [$-$4.5, +20.5]} & -- & \pend{23} & \pend{9/180} \\
 \bottomrule
 \end{tabular}
 \end{table*}

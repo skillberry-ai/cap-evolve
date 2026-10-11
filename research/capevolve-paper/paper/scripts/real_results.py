@@ -199,8 +199,8 @@ def cost():
          r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
          r"evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}",
-         r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrrr}", r"\toprule",
-         r"Suite & Arm & Seeds & Rollouts & Opt.\ non-cache-read & Opt.\ cache read & Opt.\ incl.\ cache read & Cap used (\%) & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
+         r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrrrr}", r"\toprule",
+         r"Suite & Arm & Seeds & Rollouts & Opt.\ non-cache-read & Opt.\ cache write & Opt.\ cache read & Opt.\ incl.\ cache read & Cap used (\%) & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
     first = True
     for su in "ABC":
         if not first:
@@ -219,7 +219,7 @@ def cost():
             m = lambda x: f"{x / 1e6:.2f}"
             cells = [su, nice[a] + (r"$^{\ddagger}$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
                      ("0 (no optimizer)" if a == "ctl-seed" else "0 (not started)") if nm else m(o["in_uncached"] + o["output"] + o["cw"]),
-                     "0" if nm else m(o["cache_read"]), "0" if nm else m(o["in_uncached"] + o["output"] + o["cw"] + o["cache_read"]),
+                     "0" if nm else m(o["cw"]), "0" if nm else m(o["cache_read"]), "0" if nm else m(o["in_uncached"] + o["output"] + o["cw"] + o["cache_read"]),
                      "0" if nm else f"{100 * max([x for (a1, a2, _), x in seed_nc.items() if (a1, a2) == (su, a)] or [0]) / cap:.0f}",
                      "0" if nm else f"{o['usd_total']:.2f}", m(v["tgt"]), f"{v['wall']:.1f}", f"{int(v['err'])}"]
             L.append(" & ".join(f"\\prov{{{c}}}" if i >= 3 else c for i, c in enumerate(cells)) + r" \\")

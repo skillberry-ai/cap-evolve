@@ -2,23 +2,21 @@
 \label{sec:results}
 \input{numbers_real_results}
 
-This section compares every arm with the seed on three suites, prices the comparison, and then reports two measurements that justify the protocol: the operating characteristic of rule P and the audit of earlier CapEvolve gains.
+This section compares every arm with the seed on three suites, prices the comparison, and reports the gate trade-off between rule P and the stock gate.
 \needs{One sentence with the headline result of the final evaluation: which arm leads on which suite, and by how much. Write it only after the numbers exist.}
-Each difference is paired with the seed on the same tasks.
-Intervals are family-cluster-robust, and p-values are Holm-adjusted within the suite (Section~\ref{sec:setup:stats}).
-All arms are compared at the matched checkpoint $B^\ast$, the largest budget that every arm reached: \mockBstarA, \mockBstarB and \mockBstarC target rollouts on Suites A, B and C.
+Each difference is paired with the seed on the same tasks, intervals are family-cluster-robust, and p-values are Holm-adjusted inside their family (Section~\ref{sec:setup:stats}).
+All arms are compared at the matched checkpoint \ckpt{}, the largest budget that every arm reached: \mockBstarA, \mockBstarB and \mockBstarC{} target rollouts on Suites A, B and C.
 Red numbers with a dagger are placeholders, and orange numbers are real but still change.
+The scorer audit that motivates the protocol is in Section~\ref{sec:problem} and Appendix~\ref{app:hist}.
 
 \subsection{Suite A, SpreadsheetBench}
 \label{sec:results:a}
 
-On Suite A, \mockNsigA{} of the ten optimizer arms beat the seed with Holm-adjusted $p<0.05$, and the largest paired delta is \mockTopDeltaA{} points, held by \mockTopArmA{} (Table~\ref{tab:main_a}, Figure~\ref{fig:forest}).
-The final set has \mockTA{} tasks scored once per task, with \mockSeedsA{} search seeds per arm and two evaluations of the seed.
+On Suite A, \mockNsigA{} of the ten optimizer arms beat the seed with Holm-adjusted $p<0.05$, and the largest paired delta is \mockTopDeltaA{} points, held by \mockTopArmA{} (Table~\ref{tab:main_a}).
+The final set has \mockTA{} tasks scored once each, for \mockSeedsA{} search seeds per arm, and the seed is scored twice.
 \needs{State whether the CapEvolve arms are above, level with or below the best baseline, and whether their intervals exclude it.}
-CapEvolve with rule P is a deliberately conservative configuration, so we also ran the stock gate as an exploratory arm (E12A), shown below the main rows and outside the Holm family.
-Table~\ref{tab:promotions} in Appendix~\ref{app:results} reports promotions per search for every arm, and Figure~\ref{fig:contrast} contrasts each CapEvolve arm with every baseline.
-Suite A has no one-shot control, so the question of whether search pays is answered on Suites B and C.
-\needs{Report the stock-gate arm against rule P with the pre-specified equivalence margin, and use the word inconclusive when the margin is not met.}
+Suite A has no one-shot control, so whether search pays is answered on Suites B and C.
+Figure~\ref{fig:contrast} contrasts each CapEvolve arm with every baseline, which is the primary family.
 
 \input{tables/main_A}
 
@@ -26,63 +24,49 @@ Suite A has no one-shot control, so the question of whether search pays is answe
 \label{sec:results:bc}
 
 Suite B has \mockTB{} sealed test tasks, each scored \mockTrialsB{} times, and it carries the one-shot control (Table~\ref{tab:main_bc}).
-There the largest paired delta is \mockTopDeltaB{} points (\mockTopArmB), and \mockNsigB{} arms clear Holm-adjusted $p<0.05$.
-Suite C reuses the official airline test set of \mockTC{} tasks, scored \mockTrialsC{} times each. Earlier work optimized against that set, so we call it development-exposed and do not rank arms on it. Its stock-gate arm (E12C) is exploratory.
+There the largest paired delta is \mockTopDeltaB{} points (\mockTopArmB), and \mockNsigB{} arms clear $p<0.05$.
+Suite C reuses the official airline test set of \mockTC{} tasks, which earlier work optimized against, so it is development-exposed and arms are not ranked on it.
 Its largest delta is \mockTopDeltaC{} points (\mockTopArmC), and \mockNsigC{} arms clear $p<0.05$.
-Suite C has half as many tasks as Suite B, so we read it descriptively (minimum detectable effects are in Appendix~\ref{app:sim}).
 \needs{State whether the arm ordering on B and C agrees with Suite A, using rank correlation of the paired deltas.}
 
 \input{tables/main_BC}
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figures/fig_forest.pdf}
-\caption{Paired delta to the seed, per suite, with 95\% intervals. CapEvolve arms are drawn thick, and rows follow the order of the results tables. Filled markers have Holm-adjusted $p<0.05$; the exploratory stock-gate arm is outside the Holm family. An interval that crosses zero is not evidence of a gain (placeholder).}
-\label{fig:forest}
+\includegraphics[width=\textwidth]{figures/fig_contrast.pdf}
+\caption{CapEvolve against each baseline, as the difference in paired delta in points with 95\% intervals. Filled markers have intervals that exclude zero. These contrasts are the primary family (placeholder).}
+\label{fig:contrast}
 \end{figure*}
 
 \subsection{Cost}
 \label{sec:results:cost}
 
-Figure~\ref{fig:pareto} plots delta against cost and Figure~\ref{fig:anytime} plots score against rollouts, both in Appendix~\ref{app:results}.
-\needs{Say which arms lie on the cost-quality frontier on each suite, and whether the frontier changes between USD and tokens as the cost axis.}
 Across the whole campaign the gateway has metered \costCalls{} calls and \costTokensM{} million non-cache tokens, which cost at least \$\costUsdProxy{} at Sonnet list prices.
-This is a lower bound, because RITS and GPT-5.5 calls have no price available to us, and it includes smoke tests, restarts and superseded runs that belong to no arm.
-The optimizer cap counts non-cache-read tokens (uncached input, output and cache writes) per search, and the cost table checks each arm against it.
-Table~\ref{tab:cost_so_far} and Figure~\ref{fig:roles} in Appendix~\ref{app:results} give the per-arm and per-role breakdown.
+This lower bound leaves out RITS and GPT-5.5 calls, which have no price available to us, and includes smoke tests and restarts that belong to no arm.
+Per-arm tokens, USD and wall clock are in Table~\ref{tab:cost_tokens}, and the optimizer cap counts non-cache-read tokens only.
+\needs{Say which arms lie on the cost-quality frontier on each suite (Figure~\ref{fig:pareto}).}
 
-\subsection{Rule P cuts false promotion and costs power}
+\subsection{Rule P trades power for fewer false promotions}
 \label{sec:results:p}
 
-In simulation, rule P (Section~\ref{sec:method:P}) promotes a null candidate far less often than the one-stage gate, and it promotes a real improvement less often too (Figure~\ref{fig:rulep}).
-With the campaign setting (three confirmation trials, $z=1.282$), a search of six all-null candidates produces at least one false promotion with probability 0.050, against 0.434 for the one-stage gate with $k=1$ and 0.199 with $k=1.645$.
-For a single candidate with a true effect of ten points, rule P promotes it with probability 0.41 and the one-stage $k=1$ gate with probability 0.54.
-The simulations run the real gate code (\texttt{analysis/out/sim\_budget.md}) and show a trade, not an improvement in final scores.
-\needs{Add the E12 ablation (one-stage gate against rule P) once its final evaluation exists, or state that the campaign has no such ablation.}
+In simulation with ten candidates and the real task counts, rule P (Section~\ref{sec:method:P}) promotes a null candidate in \simPFalseA{} of searches on Suite A, against \simKoneFalseA{} for the one-stage gate.
+It promotes a candidate with a true gain of eight points with probability \simPPowerEightA{}, against \simKonePowerEightA{} for the one-stage gate.
+Suites B and C give \simPFalseB{} and \simPFalseC{} against \simKoneFalseB{} and \simKoneFalseC{} (Appendix~\ref{app:sim}).
 
-\subsection{Most of the historical gain was scorer compliance}
-\label{sec:results:audit}
+\subsection{The gate trade-off on Suites A and C}
+\label{sec:results:gate}
 
-Recomputed under the SpreadsheetBench recalculation scorer, the historical CapEvolve gains shrink from +\realAuditGemmaReported{} to +\realAuditGemmaRecalc{} points on Gemma-4-31B and from +\realAuditGptReported{} to +\realAuditGptRecalc{} points on GPT-5.5 (Figure~\ref{fig:audit}).
-The historical scorer reads the workbook as saved, so a model that writes a value in place of a formula passes.
-Both scorers were applied to the same output files, so each comparison is fair inside its scorer, but most of the as-saved gain is compliance with a scoring convention and not task skill.
+CapEvolve with rule P is a deliberately conservative configuration, so we ran the stock gate at the same rollout count as an exploratory arm (E12A on Suite A, E12C on Suite C).
+Table~\ref{tab:e12} lists the per-seed deltas next to the promotion counts: candidates screened, candidates promoted, and seeds whose returned artifact equals the seed artifact.
+\needs{Describe the result without p-values: whether the stock gate promotes more, and whether its deltas differ from rule P by more than the equivalence margin. Use the word inconclusive when the margin is not met.}
+Table~\ref{tab:promotions} in Appendix~\ref{app:results} gives the same counts for every arm.
 
-The arithmetic was mostly right.
-Of \realAuditClaims{} recomputed claims, \realAuditReproduced{} reproduce to the decimal, \realAuditContradicted{} are contradicted in framing and \realAuditNoArtifact{} have no artifact that produces them (Table~\ref{tab:audit} in Appendix~\ref{app:results}).
-One contradiction matters for the comparison with simpler methods: a hill-climb control from the same empty seed reached 85.6 on the same test tasks where the headline agent-optimize run reached 76.4, and the earlier write-up omitted it.
-Earlier optimizer runs had also seen the test sets, which is why Suites A and B use fresh final sets.
+\input{tables/e12}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_audit.pdf}
-\caption{Recalculation removes most of the historical gain. Left: reported and recalculated gains of the two SpreadsheetBench headline runs. Right: outcome of recomputing every historical claim from archived artifacts (\texttt{audit/recomputed\_numbers.csv}).}
-\label{fig:audit}
-\end{figure*}
-
-\subsection{Infrastructure incidents shaped what the data supports}
+\subsection{Infrastructure incidents}
 \label{sec:results:ops}
 
-Gateway priority acted as a hidden treatment: a stale low-priority tag kept EvoSkill rollouts queued from 13:05 to 18:40 UTC on the first day, so all its rollouts after 13:05 are invalid and its three seeds restarted from scratch.
-Gateway 502 errors hit 1 to 2.5\% of Gemma calls until a transparent retry went in at 13:11, and before then a failed rollout scored zero for competitor arms but was dropped for CapEvolve.
-On Suite B, the agent-optimize arm still runs the evaluator in its own shell, so it can read gold actions for its 74 optimization and selection tasks, never for the sealed test set.
-Appendix~\ref{app:incidents} lists every incident, including the Suite B relaunch, the hang policy and the ACE and HarnessLens changes, with their effect on the data.
+A stale gateway priority tag kept EvoSkill rollouts queued from 13:05 to 18:40 UTC on the first day, so its three seeds restarted from scratch.
+Gateway 502 errors hit 1 to 2.5\% of Gemma calls until a retry went in at 13:11, and until then a failed rollout scored zero for competitor arms but was dropped for CapEvolve.
+On Suite B, the agent-optimize arm can read gold actions for its 74 optimization and selection tasks, never for the sealed test set.
+Appendix~\ref{app:incidents} lists every incident with its effect on the data.
