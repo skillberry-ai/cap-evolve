@@ -120,3 +120,13 @@ Format: date (UTC) — decision — rationale — reversible?
   - Planned uses, at final evaluation and not during search:
     - (a) Suite B and C judge sensitivity: re-judge with gpt-4.1-2025-04-14, which is tau2's default judge and so removes the judge-substitution deviation from the sensitivity analysis. GPT-5.5 stays primary, as frozen.
     - (b) Transfer table: evaluate each arm's B* artifact with a second target (Azure gpt-4.1 or gpt-5-mini on B/C; gpt-5-mini on A). These are exploratory and outside the Holm family.
+- 2026-10-11 21:30 — Metering and routing audit (audit/metering_routing_audit.md):
+  - No optimizer usage bypassed the gateway: 0 missed tokens and $0.
+  - The Suite A HC, AO, EvoSkill and WikiSkill optimizers have not been called yet, because those arms are still in their baseline phase.
+  - On Suite B the gateway ledger is 20-60% above the CLI transcripts. That direction over-counts spend; the cause is unverified.
+  - Credential exposure, where tool subprocesses could see the real LiteLLM token through the environment:
+    - (1) HarnessLens trial sandbox. Fixed 21:25 with env -i plus an allowlist and a negtest that hashes and compares the token. A scan of trial e2e9/e2e10 (206 files) found no env-reading command, no bash tool use, and the token in no file.
+    - (2) Trace2Skill's error-analysis bash tool, which inherited the env and ran as uid dev. A grep of the s0-s2 logs found no access, and that stage has finished.
+  - No credential is known to have leaked. Token rotation after the campaign is left to the user.
+  - The fix for Trace2Skill if it is ever re-run: scrubbed env= for the tool.
+- 2026-10-11 21:30 — Paper draft 1 frozen at campaign-scratch/reviews/draft1 for five independent reviews. R1-R3 use the user's paper-review skill personas verbatim and template. R4 is an adversarial methodologist, and R5 a writing editor applying the user's writing guide and the slop bans. Related Work moves before the conclusion (writing guide).
