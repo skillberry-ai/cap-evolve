@@ -1,0 +1,24 @@
+\section{Shared Search Skeleton}
+\label{app:skeleton}
+
+\begin{algorithm}[h]
+\caption{Shared search skeleton (hill-climb and agent-optimize).}
+\label{alg:skeleton}
+\begin{algorithmic}[1]
+\REQUIRE seed artifact $\artifact_0$, budget $B$, splits $(\Dopt,\Dsel,\Dfin)$, promotion rule $\Pi$
+\STATE $\artifact^\star\gets\artifact_0$;\quad $m^\star\gets \mathrm{Eval}(\artifact_0,\Dsel,n_0)$ \COMMENT{baseline measurement}
+\WHILE{budget $B$ not exhausted}
+  \STATE $\artifact_p\gets \mathrm{SelectParent}()$ \COMMENT{hill-climb: $\artifact^\star$; agent-optimize: any node}
+  \STATE $\artifact'\gets \mathrm{Propose}(\artifact_p,\ F_{\Dopt}(\artifact_p))$ \COMMENT{$F$: feedback the proposer may read}
+  \IF{protected files of $\artifact'$ were modified}
+     \STATE discard $\artifact'$; \textbf{continue} \COMMENT{measurement void, not a zero score}
+  \ENDIF
+  \STATE $m'\gets \mathrm{Screen}(\artifact',\Dsel)$ \COMMENT{full split or probed cells}
+  \IF{$\Pi(\artifact^\star,m^\star,\artifact',m')$ promotes}
+     \STATE $\artifact^\star\gets\artifact'$;\quad $m^\star\gets$ the measurement $\Pi$ returns \COMMENT{Algorithm~\ref{alg:P}}
+  \ENDIF
+\ENDWHILE
+\STATE $\mathrm{Finalize}$: score $\artifact^\star$ and $\artifact_0$ once on $\Dfin$ \COMMENT{seal}
+\RETURN $\artifact^\star$
+\end{algorithmic}
+\end{algorithm}

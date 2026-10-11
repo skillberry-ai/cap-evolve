@@ -69,7 +69,7 @@ Both algorithms follow the propose--evaluate--promote pattern of reflective prom
 together with the incumbent's measurement $m^\star$ (per-task means on $\Dsel$). They differ in who proposes, what the
 proposer sees, how parents are chosen, and how evaluation effort is allocated; they can share one promotion rule
 (Section~\ref{sec:method:P}). Table~\ref{tab:method:algs} summarizes the differences and
-Algorithm~\ref{alg:skeleton} gives the shared skeleton.
+Algorithm~\ref{alg:skeleton} (Appendix~\ref{app:skeleton}) gives the shared skeleton.
 
 \begin{table}[t]
 \centering\small
@@ -99,27 +99,7 @@ Stopping & budget caps, consecutive rejects, optional convergence monitor & budg
 %   AO/SKILL.md:15-21 ("never view test traces" is an instruction); core/cap_evolve/posterior.py:1-10.
 % Default k_se: the CLI forwards spec gate_k_se (default 1.0): research/capevolve-paper/audit/algorithm_audit.md:15-20.
 
-\begin{algorithm}[t]
-\caption{Shared search skeleton (hill-climb and agent-optimize).}
-\label{alg:skeleton}
-\begin{algorithmic}[1]
-\REQUIRE seed artifact $\artifact_0$, budget $B$, splits $(\Dopt,\Dsel,\Dfin)$, promotion rule $\Pi$
-\STATE $\artifact^\star\gets\artifact_0$;\quad $m^\star\gets \mathrm{Eval}(\artifact_0,\Dsel,n_0)$ \COMMENT{baseline measurement}
-\WHILE{budget $B$ not exhausted}
-  \STATE $\artifact_p\gets \mathrm{SelectParent}()$ \COMMENT{hill-climb: $\artifact^\star$; agent-optimize: any node}
-  \STATE $\artifact'\gets \mathrm{Propose}(\artifact_p,\ F_{\Dopt}(\artifact_p))$ \COMMENT{$F$: feedback the proposer may read}
-  \IF{protected files of $\artifact'$ were modified}
-     \STATE discard $\artifact'$; \textbf{continue} \COMMENT{measurement void, not a zero score}
-  \ENDIF
-  \STATE $m'\gets \mathrm{Screen}(\artifact',\Dsel)$ \COMMENT{full split or probed cells}
-  \IF{$\Pi(\artifact^\star,m^\star,\artifact',m')$ promotes}
-     \STATE $\artifact^\star\gets\artifact'$;\quad $m^\star\gets$ the measurement $\Pi$ returns \COMMENT{Algorithm~\ref{alg:P}}
-  \ENDIF
-\ENDWHILE
-\STATE $\mathrm{Finalize}$: score $\artifact^\star$ and $\artifact_0$ once on $\Dfin$ \COMMENT{seal}
-\RETURN $\artifact^\star$
-\end{algorithmic}
-\end{algorithm}
+
 % src: core/cap_evolve/harness.py:4581-4618 (loop), 3093-3096 and 3130 (integrity snapshot and verify around the proposer),
 %   core/cap_evolve/harness.py:3118-3150 (a tampered step is discarded through _tamper_step, not scored 0),
 %   core/cap_evolve/harness.py:4676-4752 (finalize scores best and seed on test, then commit_test).
