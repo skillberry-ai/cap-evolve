@@ -514,6 +514,13 @@ def promote(a, ctx):
     champ = ctx.champion()
     if tag == champ:
         raise Refused(f"{tag} is already the champion")
+    import merge_verify
+    if merge_verify.enabled(ctx.spec) and (graph.latest_node(run_dir, tag) or {}).get("edit_kind") == "merge":
+        v = _read_json(verify_path(ctx, tag))
+        if not v or v.get("verdict") != "pass":
+            raise Refused(f"{tag} is a merge and merge_verify is on: it needs a passing verification "
+                          f"(have: {(v or {}).get('verdict', 'none')})",
+                          next=f"act.py verify-merge {tag} --parents <A> <B>")
     d = digest.cand_dir(run_dir, tag)
     miss = eval_index.missing(run_dir, eval_index.cap_hash(d), ctx.val_ids(), 1)
     if miss:
@@ -605,6 +612,115 @@ def merge(a, ctx):
     return (0 if res["built"] else 1), out
 
 
+def _read_json(path):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _next_trial(ctx, tag) -> int:
+    """First trial index not yet written for ``tag`` (1 + max existing ``__t<k>`` rollout file)."""
+    return 1 + max((int(f.stem.rsplit("__t", 1)[1]) for f in (ctx.run_dir.rollouts / "val").glob(f"*__{tag}__t*.json")),
+                   default=-1)
+
+
+# ---- verify-merge ----------------------------------------------------------------------------
+
+def _measure(ctx, tag, ids, offset, n) -> dict:
+    """Run ``tag`` on ``ids`` at trial indices [offset, offset+n) and return {(task, k): reward}."""
+    from cap_evolve import objectives
+    cmd = eval_index.eval_cmd(ctx.root, ctx.need_project(), tag, "val", n, ids=ids, trial_offset=offset,
+                              skills_dir=SKILLS)
+    cmd[cmd.index("--candidate") + 1] = str(digest.cand_dir(ctx.run_dir, tag))
+    rc, so, se = sh(cmd)
+    if rc != 0:
+        raise Refused(f"verify-merge evaluation of {tag} failed rc={rc}", stderr=(se or so)[-500:])
+    want = set(map(str, ids))
+    return {(r.task, r.k): r.reward for r in objectives.load_trials(ctx.run_dir, tag)
+            if r.task in want and offset <= r.k < offset + n}
+
+
+def _first_free_trial(ctx, tag) -> int:
+    h = eval_index.cap_hash(digest.cand_dir(ctx.run_dir, tag))
+    return max(_next_trial(ctx, tag), eval_index.next_trial_idx(ctx.run_dir, h))
+
+
+def verify_path(ctx, tag) -> Path:
+    return ctx.root / "merge_verify" / f"{tag}.json"
+
+
+def verify_merge(a, ctx):
+    """Measure P, A, B and the merge M on the SAME fresh block (merge_verify.py), buy rounds while
+    inconclusive, and on a loss localize the interfering hunks by bounded ddmin. Never prunes a parent."""
+    import merge_verify as mvf
+    from cap_evolve import lineage, objectives
+    if not mvf.enabled(ctx.spec):
+        raise Refused("merge_verify is off (spec merge_verify: true / CAPEVOLVE_MERGE_VERIFY=1)")
+    A, B = a.parents
+    M = a.tag
+    run_dir = ctx.run_dir
+    g = CandidateGraph.load(run_dir)
+    P = a.base or lineage.merge_base(g, A, B)
+    if P in (A, B):
+        raise Refused(f"{A if P == A else B} is an ancestor of the other branch: nothing to compose")
+    if not digest.cand_dir(run_dir, M).is_dir():
+        raise Refused(f"merge candidate {M!r} has no directory (build it with act.py merge first)")
+    p = mvf.params_from_spec(ctx.spec)
+    if a.n or a.max_rounds:
+        from dataclasses import replace
+        p = replace(p, n=a.n or p.n, max_rounds=a.max_rounds or p.max_rounds)
+    ids_all = ctx.val_ids()
+    rew = {}
+    for t in (P, A, B):
+        rows = harness.split_result_from_rollouts(run_dir, t, "val").per_task or []
+        if not rows:
+            raise Refused(f"no val evidence for {t}: evaluate it on val first")
+        rew[t] = {str(r["task_id"]): float(r.get("reward", 0.0) or 0.0) for r in rows}
+    wl = {t: mvf.wins_losses(rew[t], rew[P]) for t in (A, B)}
+    block = mvf.select_block({t: wl[t][0] for t in wl}, {t: wl[t][1] for t in wl}, ids_all,
+                             p.n_sentinels, p.seed)
+    k0 = max(_first_free_trial(ctx, t) for t in (P, A, B, M))
+    ctx.check_budget(a)
+    tags = {"P": P, "A": A, "B": B, "M": M}
+    res = mvf.run_verification(lambda arm, ids, off, n: _measure(ctx, tags[arm], ids, off, n),
+                               block["ids"], k0, p)
+    out = {"merge": M, "parents": [A, B], "base": P, "block": block, "params": vars(p),
+           **{k: res[k] for k in ("verdict", "reason", "rounds", "k0", "n", "stats", "rollouts")},
+           "retained": [A, B]}
+    if res["verdict"] == "loses" and a.dd_budget:
+        tasks = res["stats"]["interference_tasks"]
+        mm = res["means"]
+        best = mm[res["stats"]["best_parent"]]
+        ref = sum(best[t] for t in tasks) / len(tasks)
+        mer = sum(mm["M"][t] for t in tasks) / len(tasks)
+        cut = ref - 0.5 * (ref - mer)           # bad = keeps at least half of the observed damage
+        base_d, mer_d = digest.cand_dir(run_dir, P), digest.cand_dir(run_dir, M)
+        units = [h["id"] for h in mvf.hunks(base_d, mer_d)]
+        off = k0 + res["rounds"] * res["n"]
+        count = [0]
+
+        def is_bad(subset):
+            count[0] += 1
+            tag = f"{M}__dd{count[0]}"
+            mvf.materialize(base_d, mer_d, set(subset), ctx.work(tag))
+            c = _measure(ctx, tag, tasks, off, res["n"])
+            return bool(c) and sum(c.values()) / len(c) <= cut
+        dd = mvf.ddmin(units, is_bad, a.dd_budget)
+        out["delta_debug"] = {"hunks": units, "minimal": dd["minimal"], "tests": dd["tests"],
+                              "exhausted": dd["exhausted"], "reproducible": dd["reproducible"],
+                              "interference_tasks": tasks, "bad_if_mean_le": round(cut, 4)}
+    verify_path(ctx, M).parent.mkdir(parents=True, exist_ok=True)
+    verify_path(ctx, M).write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
+    ctx.decision("merge", M, verification=res["verdict"], interaction=res["stats"]["interaction"]["mean"],
+                 gain=res["stats"]["gain"]["mean"])
+    out["next"] = (f"act.py promote {M}  (full unmasked val)" if res["verdict"] == "pass" else
+                   "merge NOT promoted; parents retained: " + ("see delta_debug.minimal for the interfering hunks"
+                                                              if res["verdict"] == "loses" else
+                                                              "still inconclusive after max_rounds"))
+    return (0 if res["verdict"] == "pass" else 1), out
+
+
 # ---- finalize --------------------------------------------------------------------------------
 
 def finalize(a, ctx):
@@ -687,6 +803,13 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("prune", parents=[common]); s.add_argument("tag")
     s.add_argument("--reason", required=True); s.add_argument("--commit-extra")
     s = sub.add_parser("merge", parents=[common]); s.add_argument("tags", nargs="+"); s.add_argument("--tag")
+    s = sub.add_parser("verify-merge", parents=[common]); s.add_argument("tag", help="the merged candidate")
+    s.add_argument("--parents", nargs=2, required=True, metavar=("A", "B"))
+    s.add_argument("--base", help="common ancestor (default: lineage merge base)")
+    s.add_argument("--n", type=int, default=0, help="fresh trials per cell per round (spec merge_verify.n, default 3)")
+    s.add_argument("--max-rounds", type=int, default=0, help="rounds of fresh evidence while inconclusive (default 3)")
+    s.add_argument("--dd-budget", type=int, default=12, help="max delta-debugging evaluations on a loss (0 = skip)")
+    s.add_argument("--over-budget", metavar="REASON")
     s = sub.add_parser("finalize", parents=[common])
     s.add_argument("--n-confirm", type=int, default=3, help="extra full-val trials on the champion (0 = skip)")
     s.add_argument("--n-trials", type=int, default=0, help="test trials (default: spec num_trials)")
@@ -699,7 +822,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 VERBS = {"propose": propose, "probe": probe, "promote": promote, "prune": prune, "merge": merge,
-         "finalize": finalize}
+         "verify-merge": verify_merge, "finalize": finalize}
 
 
 def main(argv=None) -> int:
