@@ -39,12 +39,23 @@ SUITE_NAME = {"A": "Suite A (SpreadsheetBench)", "B": r"Suite B ($\tau^2$ retail
 ROLE_COLOR = {"target": "#0072B2", "user": "#56B4E9", "judge": "#E69F00", "optimizer": "#D55E00", "other": "#999999"}
 
 
+CAP = ("hc", "ao")  # CapEvolve arms are drawn thick and opaque, all others thinner, so the key comparison stands out
+
+
+def lw(a):
+    return 2.0 if a in CAP else 0.9
+
+
+def alpha(a):
+    return 1.0 if a in CAP else 0.75
+
+
 def style():
     import matplotlib as mpl
     mpl.use("Agg")
     mpl.rcParams.update({
-        "font.size": 7, "axes.labelsize": 7, "axes.titlesize": 7.5, "legend.fontsize": 6,
-        "xtick.labelsize": 6.5, "ytick.labelsize": 6.5, "axes.linewidth": 0.6,
+        "font.size": 8.5, "axes.labelsize": 8.5, "axes.titlesize": 8.5, "legend.fontsize": 7.5,
+        "xtick.labelsize": 8, "ytick.labelsize": 8, "axes.linewidth": 0.6,
         "axes.spines.top": False, "axes.spines.right": False, "lines.linewidth": 1.1,
         "pdf.fonttype": 42, "ps.fonttype": 42, "figure.dpi": 150, "savefig.bbox": "tight",
         "savefig.pad_inches": 0.02, "axes.grid": True, "grid.linewidth": 0.3, "grid.alpha": 0.5,

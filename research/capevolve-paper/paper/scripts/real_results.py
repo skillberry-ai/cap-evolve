@@ -61,31 +61,29 @@ def audit():
 
 
 def fig_audit(a):
-    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.0), gridspec_kw=dict(width_ratios=[1.3, 1]))
-    names = ["Gemma-4-31B\n(SkillOpt split)", "GPT-5.5\n(SkillOpt split)"]
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.3), gridspec_kw=dict(width_ratios=[1.3, 1]))
+    names = ["Gemma-4-31B", "GPT-5.5"]
     rep = [a["gemma_rep"], a["gpt_rep"]]
     rec = [a["gemma_recalc"], a["gpt_recalc"]]
     x = range(2)
-    ax.bar([i - 0.19 for i in x], rep, 0.36, color="#999999", label="reported (as-saved scorer)")
-    ax.bar([i + 0.19 for i in x], rec, 0.36, color="#0072B2", label="recalculated scorer")
+    ax.bar([i - 0.19 for i in x], rep, 0.36, color="#999999", label="Reported (as-saved scorer)")
+    ax.bar([i + 0.19 for i in x], rec, 0.36, color="#0072B2", label="Recalculated scorer")
     for i in x:
-        ax.text(i - 0.19, rep[i] + 0.8, f"+{rep[i]:.1f}", ha="center", fontsize=6.5)
-        ax.text(i + 0.19, rec[i] + 0.8, f"+{rec[i]:.1f}", ha="center", fontsize=6.5)
+        ax.text(i - 0.19, rep[i] + 0.8, f"+{rep[i]:.1f}", ha="center", fontsize=8)
+        ax.text(i + 0.19, rec[i] + 0.8, f"+{rec[i]:.1f}", ha="center", fontsize=8, weight="bold")
     ax.set_xticks(list(x)); ax.set_xticklabels(names)
-    ax.set_ylabel("gain over seed (points)")
-    ax.set_ylim(0, 80)
+    ax.set_ylabel("Gain over seed (points)")
+    ax.set_ylim(0, 70)
     ax.legend(frameon=False, loc="upper center")
     ax.grid(axis="x", alpha=0)
-    ax.set_title("SpreadsheetBench gains, historical runs")
     v = a["verdict"]
-    labs = ["reproduced", "contradicted", "no artifact"]
+    labs = ["Reproduced", "Contradicted", "No artifact"]
     vals = [v["yes"], v["no"], v["unverifiable"]]
     cols = ["#009E73", "#D55E00", "#999999"]
     bx.barh(labs[::-1], vals[::-1], color=cols[::-1])
     for i, val in enumerate(vals[::-1]):
-        bx.text(val + 0.3, i, str(val), va="center", fontsize=6.5)
-    bx.set_xlabel(f"claims (of {a['n']})")
-    bx.set_title("Recomputation of prior claims")
+        bx.text(val + 0.3, i, str(val), va="center", fontsize=8)
+    bx.set_xlabel(f"Historical claims recomputed (of {a['n']})")
     bx.grid(axis="y", alpha=0)
     fig.tight_layout()
     C.save(fig, "fig_audit", False)
@@ -119,29 +117,29 @@ def table_audit(a):
 # ---------------------------------------------------------------- rule P
 def fig_rulep():
     d = json.loads((REPO / "analysis" / "out" / "sim_budget.json").read_text())
-    opts = {"c: P n_conf=3 z=1.282 dmin=0": ("rule P (z=1.282, n_conf=3)", "#0072B2", "o"),
-            "a: P n_conf=3 z=2.0 dmin=.02": ("P, z=2.0, dmin=.02", "#009E73", "s"),
-            "b: P n_conf=3 z=1.645 dmin=0": ("P, z=1.645", "#E69F00", "^"),
-            "g: one-stage k=1.645": ("one-stage k=1.645", "#CC79A7", "v"),
-            "f: one-stage k=1": ("one-stage k=1", "#D55E00", "D")}
-    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.1))
+    opts = {"c: P n_conf=3 z=1.282 dmin=0": ("Rule P, campaign setting", "#0072B2", "o"),
+            "a: P n_conf=3 z=2.0 dmin=.02": ("Rule P, stricter", "#009E73", "s"),
+            "b: P n_conf=3 z=1.645 dmin=0": ("Rule P, z = 1.645", "#E69F00", "^"),
+            "g: one-stage k=1.645": ("One-stage gate, k = 1.645", "#CC79A7", "v"),
+            "f: one-stage k=1": ("One-stage gate, k = 1", "#D55E00", "D")}
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.4))
     names, fp = [], []
     for k, (lab, col, mk) in opts.items():
         keys = sorted(d[k]["power"], key=float)
         eff = [float(e) for e in keys]
-        pw = [d[k]["power"][e] for e in keys]
+        pw = [100 * d[k]["power"][e] for e in keys]
         bx.plot([e * 100 for e in eff], pw, color=col, marker=mk, ms=3.5, label=lab)
-        fp.append((lab, d[k]["N=6"]["p_any_false_null_search"], col))
+        fp.append((lab, 100 * d[k]["N=6"]["p_any_false_null_search"], col))
     ax.barh([x[0] for x in fp][::-1], [x[1] for x in fp][::-1], color=[x[2] for x in fp][::-1])
     for i, x in enumerate(fp[::-1]):
-        ax.text(x[1] + 0.01, i, f"{x[1]:.3f}", va="center", fontsize=6.5)
-    ax.set_xlabel("P(at least one false promotion), all-null search")
-    ax.set_xlim(0, 0.55)
+        ax.text(x[1] + 1, i, f"{x[1]:.1f}%", va="center", fontsize=7.5)
+    ax.set_xlabel("Searches with a false promotion (%)")
+    ax.set_xlim(0, 55)
     ax.grid(axis="y", alpha=0)
-    bx.set_xlabel("true effect of a single candidate (points)")
-    bx.set_ylabel("power (probability of promotion)")
-    bx.set_ylim(0, 0.8)
-    bx.legend(frameon=False, fontsize=5.5, loc="upper left", ncol=2)
+    bx.set_xlabel("True effect of the candidate (points)")
+    bx.set_ylabel("Candidates promoted (%)")
+    bx.set_ylim(0, 80)
+    bx.legend(frameon=False, fontsize=7, loc="upper left")
     fig.tight_layout()
     C.save(fig, "fig_rulep", False)
 
@@ -230,7 +228,7 @@ def fig_roles():
     kinds = ["Uncached input", "Cache read", "Cache write", "Output"]
     kcol = ["#0072B2", "#56B4E9", "#E69F00", "#D55E00"]
     roles = ["target", "user", "judge", "optimizer"]
-    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 2.2), gridspec_kw=dict(width_ratios=[1, 1, 1]))
+    fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 2.5), gridspec_kw=dict(width_ratios=[1, 1, 1]))
     for ax, su in zip(axes[:2], "AB"):
         bottom = [0.0] * len(roles)
         for kd, kc in zip(kinds, kcol):
@@ -239,20 +237,20 @@ def fig_roles():
             bottom = [b + v for b, v in zip(bottom, vals)]
         ax.set_yscale("symlog", linthresh=1)
         ax.set_title(C.SUITE_NAME[su])
-        ax.set_ylabel("tokens so far (M)" if su == "A" else "")
+        ax.set_ylabel("Tokens so far (millions)" if su == "A" else "")
         ax.tick_params(axis="x", rotation=30)
         ax.grid(axis="x", alpha=0)
-    axes[0].legend(frameon=False, fontsize=5.5)
+    axes[0].legend(frameon=False, fontsize=7)
     ax = axes[2]
     xs = range(len(roles))
     p50 = [lat[r][1] / lat[r][0] if lat[r][0] else 0 for r in roles]
     p95 = [lat[r][2] / lat[r][0] if lat[r][0] else 0 for r in roles]
-    ax.bar([i - 0.2 for i in xs], p50, 0.38, color="#0072B2", label="p50")
-    ax.bar([i + 0.2 for i in xs], p95, 0.38, color="#D55E00", label="p95")
+    ax.bar([i - 0.2 for i in xs], p50, 0.38, color="#0072B2", label="Median")
+    ax.bar([i + 0.2 for i in xs], p95, 0.38, color="#D55E00", label="95th percentile")
     ax.set_xticks(list(xs)); ax.set_xticklabels(roles, rotation=30)
-    ax.set_ylabel("call latency (s)")
-    ax.set_title("Latency by role (all suites)")
-    ax.legend(frameon=False, fontsize=6)
+    ax.set_ylabel("Call latency (seconds)")
+    ax.set_title("All suites")
+    ax.legend(frameon=False, fontsize=7)
     ax.grid(axis="x", alpha=0)
     fig.tight_layout()
     C.save(fig, "fig_roles", False)

@@ -4,35 +4,35 @@
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_anytime.pdf}
-\caption{Best-so-far score against target rollouts, mean over seeds with the min-to-max band. The dashed line marks the matched checkpoint $B^\ast$. The one-shot control has no curve because it makes one optimizer pass (placeholder).}
+\caption{Score against rollouts, with the matched checkpoint $B^\ast$ dashed. Lines show the best score so far, averaged over seeds, and bands show the minimum to maximum of the CapEvolve arms. The one-shot control has no curve because it makes one optimizer pass (placeholder).}
 \label{fig:anytime}
 \end{figure*}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_pareto.pdf}
-\caption{Paired delta against optimizer cost in USD at Sonnet list prices, log axis. Vertical bars are the 95\% interval. The dashed line connects non-dominated arms (placeholder).}
+\caption{Delta against optimizer cost, with the non-dominated arms joined by a dashed line. Cost is USD at Sonnet list prices on a log axis, and vertical bars are 95\% intervals (placeholder).}
 \label{fig:pareto}
 \end{figure*}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig_families.pdf}
-\caption{Suite A paired delta by task family for the main arms. Families are the cluster unit of the intervals (placeholder).}
+\caption{Delta by task family on Suite A for the main arms. Families are the cluster unit of the intervals (placeholder).}
 \label{fig:families}
 \end{figure}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_rulep.pdf}
-\caption{Operating characteristic of promotion rule P from simulation: probability of at least one false promotion in an all-null search of six candidates (left) and probability of promoting a single candidate against its true effect (right). Source: \texttt{analysis/out/sim\_budget.md}.}
+\caption{Rule P promotes false candidates rarely and real ones less often than the one-stage gate. Left: share of all-null searches of six candidates with at least one false promotion. Right: share of single candidates promoted, against their true effect. Source: \texttt{analysis/out/sim\_budget.md}.}
 \label{fig:rulep}
 \end{figure*}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_roles.pdf}
-\caption{Token and latency breakdown by role over the main-category runs so far (in progress). Left and middle: tokens by kind for Suites A and B on a symmetric log axis. Right: call-weighted p50 and p95 latency per role.}
+\caption{Target calls dominate tokens, and target calls are the slowest. Left and middle: tokens by kind for Suites A and B on a symmetric log axis. Right: call-weighted median and 95th-percentile latency per role. Main-category runs so far, in progress.}
 \label{fig:roles}
 \end{figure*}
 
