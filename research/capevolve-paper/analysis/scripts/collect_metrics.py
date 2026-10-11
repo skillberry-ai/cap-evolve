@@ -586,11 +586,13 @@ def rollout_rows(rd):
 # ONE rule for every arm (analysis_plan.md section 6, R14).  The adapter's own label is kept in `error_kind_adapter`.
 #   infra     = a transport / timeout / sandbox-HTTP error string, OR zero target-LLM calls together with an error
 #   candidate = any other failure or error (reward < 1 without an infra cause)
+#   unverifiable = the adapter said "infra" but no string survives and the call count is not zero: neither confirmed nor refuted.
+#                  Reported per arm; pessimistic bound counts it as a failure, optimistic bound drops it (analysis_plan section 6.5).
 #   ""        = no error and reward >= 1
 # "zero calls" is only used when the call count is known (n_target_calls, else n_llm_calls); None never counts as zero.
 INFRA_RE = re.compile(
     r"timed? ?out|timeout|connection ?(error|reset|refused|aborted)|connecterror|apiconnection|remoteprotocol|read ?error|broken pipe|"
-    r"infrastructure|sandbox exec failed|server error|internal ?server|service ?unavailable|bad gateway|gateway time|rate ?limit|"
+    r"infrastructure|user.?simulator|sandbox exec failed|server error|internal ?server|service ?unavailable|bad gateway|gateway time|rate ?limit|"
     r"\b(429|500|502|503|504)\b|container (pull|start)|oom|out of memory|ratelimit|upstream", re.I)
 
 
@@ -603,7 +605,7 @@ def _calls(r):
 
 
 def uniform_class(r):
-    """returns (class, rule) with class in {"", "infra", "candidate"}"""
+    """returns (class, rule) with class in {"", "infra", "candidate", "unverifiable"}"""
     txt = str(r.get("error_text") or "")
     adapter = r.get("error_kind_adapter")
     has_err = bool(adapter or txt)
@@ -614,7 +616,9 @@ def uniform_class(r):
         # the zero-call rule only decides label-only errors whose text the adapter did not keep
         if not txt and _calls(r) == 0:
             return "infra", "zero_target_calls_with_error"
-        return "candidate", ("adapter_infra_unverifiable" if adapter == "infra" and not txt else "error_other")
+        if adapter == "infra" and not txt:
+            return "unverifiable", "adapter_infra_unverifiable"
+        return "candidate", "error_other"
     rw = r.get("reward")
     if isinstance(rw, (int, float)) and rw >= 1.0:
         return "", ""
@@ -640,6 +644,47 @@ def attach_pool_error_text(rd, rows):
     for r in rows:
         if r.get("error_kind") and not r.get("error_text") and by.get(str(r.get("task_id"))):
             r["error_text"] = by[str(r["task_id"])].pop(0)
+
+
+def attach_raw_error_text(rd, rows):
+    """Last-resort string recovery for rows that carry an adapter label but no text: tau2 rollout JSONs (CapEvolve B/C arms),
+    Meta-Harness train/val result files, GEPA best-output files.  Search-time rows only; the final evaluation records every string."""
+    need = [r for r in rows if r.get("error_kind") and not r.get("error_text")]
+    if not need:
+        return
+    # (a) CapEvolve rollout JSONs: .capevolve/run_*/rollouts/*/<task>__<cand>__t<trial>.json
+    idx = {}
+    for f in rd.glob(".capevolve/run_*/rollouts/*/*__*__t*.json"):
+        idx[f.stem] = f
+    for r in need:
+        stem = "%s__%s__t%s" % (r.get("task_id"), r.get("candidate_id"), r.get("trial_seed") if r.get("trial_seed") is not None else 0)
+        f = idx.get(stem)
+        if f:
+            d = jload(f) or {}
+            r["error_text"] = ((d.get("rollout") or {}).get("error") or (d.get("score") or {}).get("feedback") or r.get("error_text"))
+    # (b) Meta-Harness: workspace/logs/<cand>/train_results.json and private/<split>/<cand>.json (lists of {id, error})
+    mh = defaultdict(list)
+    for f in list(rd.glob("workspace/logs/*/*results*.json")) + list(rd.glob("private/*/*.json")):
+        d = jload(f)
+        if isinstance(d, list):
+            cand = f.parent.name if f.name.endswith("results.json") else f.stem
+            for x in d:
+                if isinstance(x, dict) and x.get("error") not in (None, "None", ""):
+                    mh[(str(x.get("id")), cand)].append(x["error"])
+    # (c) GEPA: gepa_run/generated_best_outputs_valset/task_*/iter_*.json ({id, reward, error})
+    ge = defaultdict(list)
+    for f in rd.glob("gepa_run/generated_best_outputs_valset/*/*.json"):
+        x = jload(f)
+        if isinstance(x, dict) and x.get("error") not in (None, "None", ""):
+            ge[str(x.get("id"))].append(x["error"])
+    for r in need:
+        if r.get("error_text"):
+            continue
+        k = (str(r.get("task_id")), str(r.get("candidate_id")))
+        if mh.get(k):
+            r["error_text"] = mh[k][0]
+        elif ge.get(str(r.get("task_id"))) and str(r.get("candidate_id", "")).startswith("best-at-conversion"):
+            r["error_text"] = ge[str(r["task_id"])][0]
 
 
 # ----------------------------------------------------------------------------------------------- run-level facts
@@ -897,6 +942,7 @@ def main():
         st = capevolve_state(rd)
         cat = "stopped" if info["stopped"] else ("superseded" if info["superseded_note"] else "main")
         attach_pool_error_text(rd, rows)
+        attach_raw_error_text(rd, rows)
         for r in rows:
             r2 = dict(r)
             r2["error_kind_adapter"] = r2.get("error_kind")
@@ -1038,6 +1084,7 @@ def write_error_parity(rows):
             c["errors"] += 1
             c["uniform_infra"] += u == "infra"
             c["uniform_candidate_error"] += u == "candidate"
+            c["uniform_unverifiable"] += u == "unverifiable"
             if a == "candidate" and u == "infra": c["changed_candidate_to_infra"] += 1
             if a == "infra" and u == "candidate": c["changed_infra_to_candidate"] += 1
             if not a and u == "infra": c["changed_unlabelled_to_infra"] += 1
@@ -1047,19 +1094,19 @@ def write_error_parity(rows):
             if r.get("error_rule_uniform") == "adapter_infra_unverifiable": c["adapter_infra_unverifiable"] += 1
         if u == "candidate" and not has: c["failures_without_error"] += 1
     cols = ["suite", "arm", "seed", "category", "rollouts", "errors", "errors_without_string", "adapter_infra", "adapter_candidate",
-            "uniform_infra", "uniform_candidate_error", "changed_candidate_to_infra", "changed_infra_to_candidate",
+            "uniform_infra", "uniform_candidate_error", "uniform_unverifiable", "changed_candidate_to_infra", "changed_infra_to_candidate",
             "changed_unlabelled_to_infra", "infra_by_zero_calls_no_string", "adapter_infra_unverifiable", "failures_without_error"]
     out = [dict(zip(cols[:4], k), **{c: v[c] for c in cols[4:]}) for k, v in sorted(g.items(), key=lambda kv: tuple(str(x) for x in kv[0]))]
     write_csv(OUT / "error_label_parity.csv", out, cols=cols)
     lines = ["# Error-label parity: adapter label vs uniform classifier", "",
              "Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero target-LLM calls with an error; otherwise candidate. "
              "Adapter label kept in `error_kind_adapter` of rollout_metrics.csv. Only rows with an adapter label or an error string are counted in `errors`.", "",
-             "| suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |",
-             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+             "| suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | uniform unverifiable | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in out:
         if r["errors"] or r["adapter_infra"] or r["adapter_candidate"]:
             lines.append("| " + " | ".join(str(r[c]) for c in ["suite", "arm", "seed", "category", "rollouts", "errors", "adapter_infra", "adapter_candidate",
-                         "uniform_infra", "uniform_candidate_error", "changed_candidate_to_infra", "changed_infra_to_candidate",
+                         "uniform_infra", "uniform_candidate_error", "uniform_unverifiable", "changed_candidate_to_infra", "changed_infra_to_candidate",
                          "changed_unlabelled_to_infra", "infra_by_zero_calls_no_string", "adapter_infra_unverifiable"]) + " |")
     (OUT / "error_label_parity.md").write_text("\n".join(lines) + "\n")
 

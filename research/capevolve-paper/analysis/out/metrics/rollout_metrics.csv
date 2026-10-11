@@ -105,7 +105,7 @@ A,ao,0,main,unified:rollouts_metrics.jsonl,560-12,val,0,seed,2026-10-11T15:29:27
 A,ao,0,main,unified:rollouts_metrics.jsonl,56563,val,0,seed,2026-10-11T17:57:24Z,2026-10-11T17:59:18Z,113.6,3,3,,,4028,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,0,main,unified:rollouts_metrics.jsonl,59196,val,0,seed,2026-10-11T17:51:14Z,2026-10-11T17:59:51Z,517.4,6,6,,,12712,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,0,main,unified:rollouts_metrics.jsonl,59595,val,0,seed,2026-10-11T17:55:31Z,2026-10-11T18:06:27Z,655.2,8,8,,,38232,1.0,1.0,,,,,,False,True,,,,,
-A,ao,0,main,unified:rollouts_metrics.jsonl,6698,val,,seed,,,,0,0,,,4000,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,ao,0,main,unified:rollouts_metrics.jsonl,6698,val,,seed,,,,0,0,,,4000,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:43577/execute,False,True,,,,,
 A,ao,0,main,unified:rollouts_metrics.jsonl,7902,val,0,seed,2026-10-11T17:05:30Z,2026-10-11T17:11:51Z,380.7,3,3,,,9458,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,0,main,unified:rollouts_metrics.jsonl,80-42,val,0,seed,2026-10-11T14:41:27Z,2026-10-11T14:55:42Z,855.2,4,4,,,21643,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,0,main,unified:rollouts_metrics.jsonl,8942,val,0,seed,2026-10-11T17:07:42Z,2026-10-11T17:15:34Z,471.4,3,3,,,6605,1.0,1.0,,,,,,False,True,,,,,
@@ -136,7 +136,7 @@ A,ao,1,main,unified:rollouts_metrics.jsonl,48620,val,1,seed,2026-10-11T16:29:19Z
 A,ao,1,main,unified:rollouts_metrics.jsonl,48921,val,1,seed,2026-10-11T16:46:54Z,2026-10-11T16:54:01Z,427.2,3,3,,,5062,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,50768,val,1,seed,2026-10-11T16:49:59Z,2026-10-11T17:46:53Z,3414.1,30,30,,,310374,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,51-12,val,1,seed,2026-10-11T14:39:46Z,2026-10-11T14:58:44Z,1137.5,6,6,,,13973,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,ao,1,main,unified:rollouts_metrics.jsonl,53383,val,,seed,,,,0,0,,,4395,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,ao,1,main,unified:rollouts_metrics.jsonl,53383,val,,seed,,,,0,0,,,4395,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39859/execute,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,53647,val,1,seed,2026-10-11T17:50:00Z,2026-10-11T17:55:02Z,301.2,4,4,,,12792,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,54144,val,1,seed,2026-10-11T16:54:01Z,2026-10-11T17:43:31Z,2970.3,30,30,,,271833,1.0,1.0,,,,,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,55049,val,1,seed,2026-10-11T17:50:12Z,2026-10-11T18:33:21Z,2588.9,30,30,,,273289,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -144,7 +144,7 @@ A,ao,1,main,unified:rollouts_metrics.jsonl,55979,val,1,seed,2026-10-11T17:53:39Z
 A,ao,1,main,unified:rollouts_metrics.jsonl,560-12,val,1,seed,2026-10-11T15:05:04Z,2026-10-11T16:49:59Z,6295.2,30,30,,,261690,1.0,1.0,,,,,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,56563,val,1,seed,2026-10-11T17:59:11Z,2026-10-11T18:00:41Z,90.5,3,3,,,4162,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,59196,val,1,seed,2026-10-11T17:55:02Z,2026-10-11T17:59:11Z,249.3,6,6,,,15116,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,ao,1,main,unified:rollouts_metrics.jsonl,59595,val,,seed,,,,0,0,,,14409,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,ao,1,main,unified:rollouts_metrics.jsonl,59595,val,,seed,,,,0,0,,,14409,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39859/execute,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,6698,val,1,seed,2026-10-11T17:03:38Z,2026-10-11T17:08:37Z,299.3,4,4,,,8991,1.0,1.0,,,,,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,7902,val,1,seed,2026-10-11T17:08:37Z,2026-10-11T17:14:54Z,376.9,3,3,,,8317,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,1,main,unified:rollouts_metrics.jsonl,80-42,val,1,seed,2026-10-11T14:39:46Z,2026-10-11T14:47:57Z,491.2,4,4,,,19360,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -183,8 +183,8 @@ A,ao,2,main,unified:rollouts_metrics.jsonl,55049,val,2,seed,2026-10-11T18:07:08Z
 A,ao,2,main,unified:rollouts_metrics.jsonl,55979,val,2,seed,2026-10-11T18:08:37Z,2026-10-11T18:10:49Z,132.0,4,4,,,10386,1.0,1.0,,,,,,False,True,,,,,
 A,ao,2,main,unified:rollouts_metrics.jsonl,560-12,val,2,seed,2026-10-11T15:24:57Z,2026-10-11T17:01:57Z,5819.7,30,30,,,254202,1.0,1.0,,,,,,False,True,,,,,
 A,ao,2,main,unified:rollouts_metrics.jsonl,56563,val,2,seed,2026-10-11T18:18:39Z,2026-10-11T18:20:38Z,119.0,3,3,,,4189,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,ao,2,main,unified:rollouts_metrics.jsonl,59196,val,,seed,,,,0,0,,,4910,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,ao,2,main,unified:rollouts_metrics.jsonl,59595,val,,seed,,,,0,0,,,5511,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,ao,2,main,unified:rollouts_metrics.jsonl,59196,val,,seed,,,,0,0,,,4910,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:34155/execute,False,True,,,,,
+A,ao,2,main,unified:rollouts_metrics.jsonl,59595,val,,seed,,,,0,0,,,5511,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:34155/execute,False,True,,,,,
 A,ao,2,main,unified:rollouts_metrics.jsonl,6698,val,2,seed,2026-10-11T17:47:23Z,2026-10-11T17:50:39Z,196.0,4,4,,,8818,1.0,1.0,,,,,,False,True,,,,,
 A,ao,2,main,unified:rollouts_metrics.jsonl,7902,val,2,seed,2026-10-11T17:47:57Z,2026-10-11T17:50:44Z,167.1,3,3,,,7438,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,ao,2,main,unified:rollouts_metrics.jsonl,80-42,val,2,seed,2026-10-11T14:39:46Z,2026-10-11T16:23:55Z,6249.0,29,29,,,386887,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -231,6 +231,9 @@ A,evoskill,0,main,unified:rollouts_metrics.jsonl,48921,val,0,c476860c5de3bbe4,20
 A,evoskill,0,main,unified:rollouts_metrics.jsonl,43436,val,0,c476860c5de3bbe4,2026-10-11T20:52:29Z,2026-10-11T21:01:25Z,536.1,3,3,,,5913,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,evoskill,0,main,unified:rollouts_metrics.jsonl,50768,val,0,c476860c5de3bbe4,2026-10-11T20:49:20Z,2026-10-11T21:01:51Z,750.9,5,5,,,11963,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,0,main,unified:rollouts_metrics.jsonl,416-15,val,0,c476860c5de3bbe4,2026-10-11T20:14:03Z,2026-10-11T21:05:11Z,3067.7,30,30,,,283872,1.0,1.0,,,,,,False,True,,,,,
+A,evoskill,0,main,unified:rollouts_metrics.jsonl,433-47,train,0,c476860c5de3bbe4,2026-10-11T21:05:11Z,2026-10-11T21:14:56Z,585.2,4,4,,,20427,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
+A,evoskill,0,main,unified:rollouts_metrics.jsonl,46121,train,0,c476860c5de3bbe4,2026-10-11T21:05:11Z,2026-10-11T21:15:30Z,619.2,3,3,,,12996,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
+A,evoskill,0,main,unified:rollouts_metrics.jsonl,51249,train,0,c476860c5de3bbe4,2026-10-11T21:05:11Z,2026-10-11T21:15:57Z,645.9,6,6,,,14157,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,1,main,unified:rollouts_metrics.jsonl,51-12,val,0,c476860c5de3bbe4,2026-10-11T18:28:14Z,2026-10-11T18:31:08Z,174.0,3,3,,,5210,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,evoskill,1,main,unified:rollouts_metrics.jsonl,2768,val,0,c476860c5de3bbe4,2026-10-11T18:28:14Z,2026-10-11T18:31:14Z,179.9,3,3,,,7689,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,evoskill,1,main,unified:rollouts_metrics.jsonl,45635,val,0,c476860c5de3bbe4,2026-10-11T18:28:14Z,2026-10-11T18:32:37Z,262.6,3,3,,,6051,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -267,6 +270,8 @@ A,evoskill,1,main,unified:rollouts_metrics.jsonl,416-15,val,0,c476860c5de3bbe4,2
 A,evoskill,1,main,unified:rollouts_metrics.jsonl,560-12,val,0,c476860c5de3bbe4,2026-10-11T20:05:10Z,2026-10-11T21:00:00Z,3289.9,30,30,,,250350,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,1,main,unified:rollouts_metrics.jsonl,31628,val,0,c476860c5de3bbe4,2026-10-11T20:54:36Z,2026-10-11T21:00:30Z,353.8,3,3,,,4424,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,1,main,unified:rollouts_metrics.jsonl,59196,val,0,c476860c5de3bbe4,2026-10-11T21:00:00Z,2026-10-11T21:10:48Z,648.6,7,7,,,23880,1.0,1.0,,,,,,False,True,,,,,
+A,evoskill,1,main,unified:rollouts_metrics.jsonl,43436,val,0,c476860c5de3bbe4,2026-10-11T21:10:48Z,2026-10-11T21:16:34Z,345.5,3,3,,,7797,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
+A,evoskill,1,main,unified:rollouts_metrics.jsonl,50768,val,0,c476860c5de3bbe4,2026-10-11T21:00:30Z,2026-10-11T21:17:48Z,1038.4,5,5,,,11979,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,2,main,unified:rollouts_metrics.jsonl,2768,val,0,c476860c5de3bbe4,2026-10-11T18:28:15Z,2026-10-11T18:32:01Z,226.2,3,3,,,8203,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,evoskill,2,main,unified:rollouts_metrics.jsonl,51-12,val,0,c476860c5de3bbe4,2026-10-11T18:28:15Z,2026-10-11T18:34:09Z,353.7,6,6,,,13135,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,evoskill,2,main,unified:rollouts_metrics.jsonl,45635,val,0,c476860c5de3bbe4,2026-10-11T18:28:15Z,2026-10-11T18:35:08Z,412.6,3,3,,,10419,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -298,6 +303,7 @@ A,evoskill,2,main,unified:rollouts_metrics.jsonl,9726,val,0,c476860c5de3bbe4,202
 A,evoskill,2,main,unified:rollouts_metrics.jsonl,39046,val,0,c476860c5de3bbe4,2026-10-11T19:44:07Z,2026-10-11T20:30:58Z,2811.3,30,30,,,272505,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,2,main,unified:rollouts_metrics.jsonl,12864,val,0,c476860c5de3bbe4,2026-10-11T20:17:11Z,2026-10-11T21:04:09Z,2817.9,30,30,,,178136,1.0,1.0,,,,,,False,True,,,,,
 A,evoskill,2,main,unified:rollouts_metrics.jsonl,56563,val,0,c476860c5de3bbe4,2026-10-11T21:04:09Z,2026-10-11T21:11:55Z,465.6,3,3,,,4193,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
+A,evoskill,2,main,unified:rollouts_metrics.jsonl,48620,val,0,c476860c5de3bbe4,2026-10-11T20:26:10Z,2026-10-11T21:16:59Z,3049.5,30,30,,,294526,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,12864,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,142-12,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,39046,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,1.0,,,,,,,False,True,,,,,
@@ -335,7 +341,7 @@ A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,560-12,val,0,best-at-conv
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,56563,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,56563,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T15:46:17Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,59196,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:47503/execute,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:10:26Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,6698,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,0,main,unified:rollouts_metrics_converted.jsonl,7902,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:34:07Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
@@ -376,13 +382,13 @@ A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,48588,val,0,best-at-conve
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,48620,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,48620,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,48921,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,50768,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,50768,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59313/execute,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,51-12,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,51-12,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,53383,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,53647,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,53647,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,54144,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,54144,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59313/execute,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,54144,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,55049,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,55979,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,1.0,,,,,,,False,True,,,,,
@@ -391,14 +397,14 @@ A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,560-12,val,0,best-at-conv
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,56563,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,56563,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,59196,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59313/execute,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,6698,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,7902,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,7902,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,80-42,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,80-42,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T19:31:15Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,8942,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,8942,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59313/execute,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,8942,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,9569,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T10:32:46Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,1,main,unified:rollouts_metrics_converted.jsonl,9569,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T18:05:06Z,,,,,,,1.0,,,,,,,False,True,,,,,
@@ -436,7 +442,7 @@ A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,48921,val,0,best-at-conve
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,50768,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,51-12,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,51-12,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T16:26:28Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,53383,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,53383,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:36723/execute,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,53383,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T13:58:02Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,53647,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,53647,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T13:58:02Z,,,,,,,1.0,,,,,,,False,True,,,,,
@@ -448,7 +454,7 @@ A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,267-18,val,0,best-at-conv
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,560-12,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,56563,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,,,candidate,failure_no_error,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,56563,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T13:58:02Z,,,,,,,1.0,,,,,,,False,True,,,,,
-A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,59196,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,59196,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:36723/execute,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,59196,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T13:58:02Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,59595,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,1.0,,,,,,,False,True,,,,,
 A,gepa,2,main,unified:rollouts_metrics_converted.jsonl,6698,val,0,best-at-conversion (see candidates.jsonl),,2026-10-11T11:33:59Z,,,,,,,1.0,,,,,,,False,True,,,,,
@@ -504,12 +510,12 @@ A,hc,0,main,unified:rollouts_metrics.jsonl,560-12,val,0,seed,2026-10-11T15:17:38
 A,hc,0,main,unified:rollouts_metrics.jsonl,56563,val,0,seed,2026-10-11T17:42:58Z,2026-10-11T17:46:58Z,239.4,3,3,,,4160,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,0,main,unified:rollouts_metrics.jsonl,59196,val,0,seed,2026-10-11T17:40:56Z,2026-10-11T17:45:44Z,287.7,6,6,,,12241,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,0,main,unified:rollouts_metrics.jsonl,59595,val,0,seed,2026-10-11T17:40:57Z,2026-10-11T17:48:23Z,445.5,6,6,,,23981,1.0,1.0,,,,,,False,True,,,,,
-A,hc,0,main,unified:rollouts_metrics.jsonl,6698,val,,seed,,,,0,0,,,3887,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,hc,0,main,unified:rollouts_metrics.jsonl,6698,val,,seed,,,,0,0,,,3887,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39899/execute,False,True,,,,,
 A,hc,0,main,unified:rollouts_metrics.jsonl,7902,val,0,seed,2026-10-11T17:05:42Z,2026-10-11T17:13:29Z,467.6,3,3,,,7497,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,0,main,unified:rollouts_metrics.jsonl,80-42,val,0,seed,2026-10-11T14:41:27Z,2026-10-11T16:15:13Z,5625.4,30,30,,,374969,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,0,main,unified:rollouts_metrics.jsonl,8942,val,0,seed,2026-10-11T17:09:41Z,2026-10-11T17:15:06Z,324.7,3,3,,,7052,1.0,1.0,,,,,,False,True,,,,,
 A,hc,0,main,unified:rollouts_metrics.jsonl,9569,val,0,seed,2026-10-11T17:13:29Z,2026-10-11T17:27:25Z,835.4,3,3,,,6549,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,hc,0,main,unified:rollouts_metrics.jsonl,9726,val,,seed,,,,0,0,,,4707,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,hc,0,main,unified:rollouts_metrics.jsonl,9726,val,,seed,,,,0,0,,,4707,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39899/execute,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,12864,val,1,seed,2026-10-11T17:37:27Z,2026-10-11T17:40:41Z,193.8,3,3,,,4592,1.0,1.0,,,,,,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,142-12,val,1,seed,2026-10-11T14:39:46Z,2026-10-11T14:54:58Z,912.2,5,5,,,10114,1.0,1.0,,,,,,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,227-40,val,1,seed,2026-10-11T14:48:13Z,2026-10-11T14:56:19Z,486.4,3,3,,,5265,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -544,7 +550,7 @@ A,hc,1,main,unified:rollouts_metrics.jsonl,560-12,val,1,seed,2026-10-11T16:02:11
 A,hc,1,main,unified:rollouts_metrics.jsonl,56563,val,1,seed,2026-10-11T17:58:07Z,2026-10-11T18:00:18Z,131.9,3,3,,,4176,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,59196,val,1,seed,2026-10-11T17:54:26Z,2026-10-11T17:58:07Z,221.0,7,7,,,19388,1.0,1.0,,,,,,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,59595,val,1,seed,2026-10-11T17:54:38Z,2026-10-11T18:04:09Z,570.8,6,6,,,27156,1.0,1.0,,,,,,False,True,,,,,
-A,hc,1,main,unified:rollouts_metrics.jsonl,6698,val,,seed,,,,0,0,,,3728,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,hc,1,main,unified:rollouts_metrics.jsonl,6698,val,,seed,,,,0,0,,,3728,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:33047/execute,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,7902,val,1,seed,2026-10-11T17:31:42Z,2026-10-11T17:37:21Z,338.5,3,3,,,8096,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,80-42,val,1,seed,2026-10-11T14:39:46Z,2026-10-11T16:35:20Z,6934.4,30,30,,,410021,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,1,main,unified:rollouts_metrics.jsonl,8942,val,1,seed,2026-10-11T17:32:11Z,2026-10-11T17:37:27Z,315.9,4,4,,,9908,1.0,1.0,,,,,,False,True,,,,,
@@ -573,13 +579,13 @@ A,hc,2,main,unified:rollouts_metrics.jsonl,48527,val,2,seed,2026-10-11T17:21:52Z
 A,hc,2,main,unified:rollouts_metrics.jsonl,48588,val,2,seed,2026-10-11T16:31:51Z,2026-10-11T16:38:50Z,419.4,4,4,,,5222,1.0,1.0,,,,,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,48620,val,2,seed,2026-10-11T16:32:33Z,2026-10-11T17:26:52Z,3259.0,30,30,,,331815,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,48921,val,2,seed,2026-10-11T16:32:55Z,2026-10-11T17:19:52Z,2816.8,30,30,,,203447,1.0,1.0,,,,,,False,True,,,,,
-A,hc,2,main,unified:rollouts_metrics.jsonl,50768,val,,seed,,,,0,0,,,9957,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,hc,2,main,unified:rollouts_metrics.jsonl,50768,val,,seed,,,,0,0,,,9957,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:52409/execute,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,51-12,val,2,seed,2026-10-11T14:39:46Z,2026-10-11T14:49:13Z,566.9,3,3,,,5392,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,53383,val,2,seed,2026-10-11T17:24:12Z,2026-10-11T17:31:01Z,409.0,6,6,,,19218,1.0,1.0,,,,,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,53647,val,2,seed,2026-10-11T17:24:50Z,2026-10-11T17:28:34Z,224.9,4,4,,,11700,1.0,0.0,,,,,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,54144,val,2,seed,2026-10-11T16:38:50Z,2026-10-11T16:45:35Z,404.8,4,4,,,10694,1.0,1.0,,,,,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,55049,val,2,seed,2026-10-11T17:26:36Z,2026-10-11T17:32:03Z,327.7,4,4,,,11697,1.0,1.0,,,,,,False,True,,,,,
-A,hc,2,main,unified:rollouts_metrics.jsonl,55979,val,,seed,,,,0,0,,,4740,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,hc,2,main,unified:rollouts_metrics.jsonl,55979,val,,seed,,,,0,0,,,4740,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:52409/execute,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,560-12,val,2,seed,2026-10-11T15:53:29Z,2026-10-11T16:06:35Z,786.2,4,4,,,10012,1.0,1.0,,,,,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,56563,val,2,seed,2026-10-11T17:31:01Z,2026-10-11T17:33:06Z,125.0,3,3,,,3640,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,59196,val,2,seed,2026-10-11T17:28:34Z,2026-10-11T17:36:42Z,487.6,7,7,,,19783,1.0,1.0,,,,,,False,True,,,,,
@@ -589,7 +595,7 @@ A,hc,2,main,unified:rollouts_metrics.jsonl,7902,val,2,seed,2026-10-11T16:51:29Z,
 A,hc,2,main,unified:rollouts_metrics.jsonl,80-42,val,2,seed,2026-10-11T14:39:46Z,2026-10-11T15:59:39Z,4793.1,30,30,,,357356,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,8942,val,2,seed,2026-10-11T16:52:22Z,2026-10-11T16:55:20Z,177.7,3,3,,,7011,1.0,1.0,,,,,,False,True,,,,,
 A,hc,2,main,unified:rollouts_metrics.jsonl,9569,val,2,seed,2026-10-11T16:55:20Z,2026-10-11T17:09:02Z,822.7,3,3,,,31917,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,hc,2,main,unified:rollouts_metrics.jsonl,9726,val,,seed,,,,0,0,,,4707,0.0,,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,hc,2,main,unified:rollouts_metrics.jsonl,9726,val,,seed,,,,0,0,,,4707,0.0,,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:52409/execute,False,True,,,,,
 A,memento,0,stopped,rollouts.jsonl,12864,val,,c476860c5de3,2026-10-11T09:52:43Z,2026-10-11T09:58:12Z,328.2,,,,,4538,1.0,1.0,,,,,,,True,,,,,
 A,memento,0,stopped,rollouts.jsonl,227-40,val,,c476860c5de3,2026-10-11T09:52:43Z,2026-10-11T09:59:05Z,381.9,,,,,5385,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39827/execute,,True,,,,,
 A,memento,0,stopped,rollouts.jsonl,267-18,val,,c476860c5de3,2026-10-11T09:52:43Z,2026-10-11T10:03:02Z,618.9,,,,,9437,1.0,0.0,,,,,,,True,,,,,
@@ -641,7 +647,7 @@ A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,39931,train,0,seed
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,408-39,train,0,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,40892,train,0,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,414-20,train,0,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,42354,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,42354,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:34101/execute,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,433-47,train,0,seed,,,,5,5,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,43589,train,0,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,45372,train,0,seed,,,,6,6,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -655,9 +661,9 @@ A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,48745,train,0,seed
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,48983,train,0,seed,,,,5,5,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,493-18,train,0,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,49333,train,0,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,50916,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,51090,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,51249,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,50916,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
+A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,51090,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
+A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,51249,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,52216,train,0,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,54085,train,0,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,54638,train,0,seed,,,,30,30,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -666,7 +672,7 @@ A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,55421,train,0,seed
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,55427,train,0,seed,,,,6,6,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,55965,train,0,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,56274,train,0,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,56427,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,56427,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:34101/execute,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,56786,train,0,seed,,,,4,4,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,57113,train,0,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,57445,train,0,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -674,7 +680,7 @@ A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,57558,train,0,seed
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,577-40,train,0,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,57743,train,0,seed,,,,7,7,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,58109,train,0,seed,,,,30,30,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,58484,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,58484,train,0,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,58499,train,0,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,585-41,train,0,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,0,main,unified:rollouts_metrics_converted.jsonl,58949,train,0,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -732,7 +738,7 @@ A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,165-23,train,1,see
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,170-13,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,1818,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,192-22,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,194-19,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,194-19,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,22-47,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,247-24,train,1,seed,,,,5,5,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,250-20,train,1,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -744,27 +750,27 @@ A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,31011,train,1,seed
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,31915,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32023,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32255,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32337,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32337,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32438,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,325-44,train,1,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32612,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,32902,train,1,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,34033,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,3413,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,34033,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,3413,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,35742,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,36097,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,370-43,train,1,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,379-36,train,1,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,398-14,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,398-14,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,39903,train,1,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,39931,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,408-39,train,1,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,40892,train,1,seed,,,,8,8,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,414-20,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,42354,train,1,seed,,,,5,5,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,433-47,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,433-47,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,43589,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,45372,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,45372,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,46121,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,46646,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,472-15,train,1,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -775,8 +781,8 @@ A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,48745,train,1,seed
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,48983,train,1,seed,,,,6,6,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,493-18,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,49333,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,50916,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,51090,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,50916,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,51090,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,51249,train,1,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,52216,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,54085,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -785,9 +791,9 @@ A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55060,train,1,seed
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55421,train,1,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55427,train,1,seed,,,,30,30,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55965,train,1,seed,,,,4,4,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56274,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56427,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56786,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56274,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56427,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56786,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,57113,train,1,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,57445,train,1,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,57558,train,1,seed,,,,7,7,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -798,7 +804,7 @@ A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,58484,train,1,seed
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,58499,train,1,seed,,,,4,4,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,585-41,train,1,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,58949,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,6239,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,6239,train,1,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,66-24,train,1,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,82-30,train,1,seed,,,,30,30,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,12864,val,1,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -830,11 +836,11 @@ A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,53383,val,1,seed,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,53647,val,1,seed,,,,,,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,54144,val,1,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55049,val,1,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55979,val,1,seed,,,,,,,,,0.0,0.0,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,55979,val,1,seed,,,,,,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,560-12,val,1,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,56563,val,1,seed,,,,,,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,59196,val,1,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,59595,val,1,seed,,,,,,,,,0.0,0.0,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,59595,val,1,seed,,,,,,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:59617/execute,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,6698,val,1,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,7902,val,1,seed,,,,,,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,1,main,unified:rollouts_metrics_converted.jsonl,80-42,val,1,seed,,,,,,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -864,18 +870,18 @@ A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,31011,train,2,seed
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,31915,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32023,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32255,train,2,seed,,,,30,30,,,,1.0,0.0,,,,,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32337,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32337,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32438,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,325-44,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32612,train,2,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,32902,train,2,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,34033,train,2,seed,,,,9,9,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,3413,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,3413,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,35742,train,2,seed,,,,8,8,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,36097,train,2,seed,,,,7,7,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,370-43,train,2,seed,,,,6,6,,,,1.0,0.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,379-36,train,2,seed,,,,6,6,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,398-14,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,398-14,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:41097/execute,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,39903,train,2,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,39931,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,408-39,train,2,seed,,,,6,6,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
@@ -888,7 +894,7 @@ A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,45372,train,2,seed
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,46121,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,46646,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,472-15,train,2,seed,,,,4,4,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,47766,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,47766,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,48080,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,48365,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,48745,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -906,25 +912,25 @@ A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,55421,train,2,seed
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,55427,train,2,seed,,,,6,6,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,55965,train,2,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,56274,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,56427,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,56427,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,56786,train,2,seed,,,,30,30,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,57113,train,2,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,57445,train,2,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,57558,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,57558,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,577-40,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,57743,train,2,seed,,,,7,7,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,58109,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,58109,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:41097/execute,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,58484,train,2,seed,,,,3,3,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,58499,train,2,seed,,,,5,5,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,585-41,train,2,seed,,,,3,3,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,58949,train,2,seed,,,,30,30,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,6239,train,2,seed,,,,30,30,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,66-24,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,zero_target_calls_with_error,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,66-24,train,2,seed,,,,0,0,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:41097/execute,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,82-30,train,2,seed,,,,6,6,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,12864,val,2,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,142-12,val,2,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,227-40,val,2,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
-A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,267-18,val,2,seed,,,,,,,,,0.0,0.0,candidate,infra,candidate,adapter_infra_unverifiable,,False,True,,,,,
+A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,267-18,val,2,seed,,,,,,,,,0.0,0.0,infra,infra,infra,error_string,sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:41097/execute,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,2768,val,2,seed,,,,,,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,31628,val,2,seed,,,,,,,,,0.0,0.0,,,candidate,failure_no_error,,False,True,,,,,
 A,metaharness,2,main,unified:rollouts_metrics_converted.jsonl,37378,val,2,seed,,,,,,,,,1.0,1.0,,,,,,False,True,,,,,
@@ -1038,6 +1044,7 @@ A,mipro,1,main,events.jsonl(ev=rollout),31628,,,3d5fee3dfdc1,,2026-10-11T20:17:4
 A,mipro,1,main,events.jsonl(ev=rollout),382-10,,,3d5fee3dfdc1,,2026-10-11T20:19:37Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,1,main,events.jsonl(ev=rollout),38462,,,3d5fee3dfdc1,,2026-10-11T20:24:28Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,1,main,events.jsonl(ev=rollout),402-43,,,3d5fee3dfdc1,,2026-10-11T20:32:43Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
+A,mipro,1,main,events.jsonl(ev=rollout),39046,,,3d5fee3dfdc1,,2026-10-11T21:17:48Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),10452,,,3d5fee3dfdc1,,2026-10-11T13:05:06Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),108-24,,,3d5fee3dfdc1,,2026-10-11T13:13:37Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),10452,,,3d5fee3dfdc1,,2026-10-11T13:18:48Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
@@ -1081,6 +1088,8 @@ A,mipro,2,main,events.jsonl(ev=rollout),48620,,,3d5fee3dfdc1,,2026-10-11T20:11:5
 A,mipro,2,main,events.jsonl(ev=rollout),39046,,,3d5fee3dfdc1,,2026-10-11T20:15:08Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),50768,,,3d5fee3dfdc1,,2026-10-11T20:23:31Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),48921,,,3d5fee3dfdc1,,2026-10-11T21:02:38Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
+A,mipro,2,main,events.jsonl(ev=rollout),53647,,,3d5fee3dfdc1,,2026-10-11T21:15:47Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
+A,mipro,2,main,events.jsonl(ev=rollout),53383,,,3d5fee3dfdc1,,2026-10-11T21:16:38Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,skillopt,0,main,unified:rollouts_metrics_converted.jsonl,12864,val,0,base,,2026-10-11T10:54:44Z,,3,3,,,4543,1.0,1.0,,,,,,False,True,,,,,
 A,skillopt,0,main,unified:rollouts_metrics_converted.jsonl,142-12,val,0,base,,2026-10-11T10:54:44Z,,3,3,,,5112,1.0,1.0,,,,,,False,True,,,,,
 A,skillopt,0,main,unified:rollouts_metrics_converted.jsonl,227-40,val,0,base,,2026-10-11T10:54:44Z,,8,8,,,20858,1.0,1.0,,,,,,False,True,,,,,
@@ -2208,12 +2217,12 @@ B,ao,0,main,unified:rollouts_metrics.jsonl,82,opt,0,cand_6,2026-10-11T19:25:48Z,
 B,ao,0,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:36:35Z,2026-10-11T13:41:49Z,314.7598490715027,16,11,29802,984,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,2905,555
 B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_5,2026-10-11T17:36:46Z,2026-10-11T17:39:34Z,167.49687695503235,14,9,29033,1056,,0.0,,,,candidate,failure_no_error,,,True,6,3,0,2079,470
 B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_6,2026-10-11T19:59:05Z,2026-10-11T20:15:18Z,972.6848740577698,24,17,64426,3125,,1.0,,,,,,,,True,11,6,0,6906,1596
-B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:41:02Z,2026-10-11T13:47:21Z,378.5080440044403,16,11,29805,989,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,7,4,0,2826,814
+B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:41:02Z,2026-10-11T13:47:21Z,378.5080440044403,16,11,29805,989,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,7,4,0,2826,814
 B,ao,0,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_5,2026-10-11T17:38:22Z,2026-10-11T17:48:30Z,608.7253398895264,28,20,75351,2342,,1.0,,,,,,,,True,13,7,0,7492,1193
 B,ao,0,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_6,2026-10-11T19:26:36Z,2026-10-11T19:35:14Z,518.1831929683685,24,17,64380,2107,,1.0,,,,,,,,True,11,6,0,6149,973
 B,ao,0,main,unified:rollouts_metrics.jsonl,84,opt,0,seed,2026-10-11T13:41:50Z,2026-10-11T13:53:24Z,694.4216570854187,34,25,91072,4058,,1.0,,,,,,,,True,16,9,0,13486,1989
 B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_5,2026-10-11T17:59:14Z,2026-10-11T18:07:20Z,486.392019033432,28,18,71635,2134,,0.0,,,,candidate,failure_no_error,,,True,13,5,0,3593,792
-B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_6,2026-10-11T19:34:39Z,2026-10-11T19:48:08Z,809.7869410514832,24,17,60484,2127,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,11,6,0,5404,1873
+B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_6,2026-10-11T19:34:39Z,2026-10-11T19:48:08Z,809.7869410514832,24,17,60484,2127,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,11,6,0,5404,1873
 B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,seed,2026-10-11T13:42:15Z,2026-10-11T13:55:51Z,815.9617240428925,36,24,95310,3691,,1.0,,,,,,,,True,17,7,0,7706,1595
 B,ao,0,main,unified:rollouts_metrics.jsonl,88,opt,0,cand_5,2026-10-11T17:39:36Z,2026-10-11T17:46:50Z,434.09986209869385,22,15,54266,2129,,1.0,,,,,,,,True,10,5,0,4459,633
 B,ao,0,main,unified:rollouts_metrics.jsonl,88,opt,0,cand_6,2026-10-11T19:52:21Z,2026-10-11T20:04:35Z,734.5315001010895,26,17,69019,1931,,1.0,,,,,,,,True,12,5,0,3834,698
@@ -2474,7 +2483,7 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,106,opt,0,cand_0001,2026-10-
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,106,opt,0,seed,2026-10-11T14:00:21Z,2026-10-11T14:10:04Z,582.9984159469604,30,21,65514,2352,,1.0,,,,,,,,True,14,7,1,5904,1323
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,107,opt,0,cand_0001,2026-10-11T16:51:37Z,2026-10-11T17:01:54Z,617.635824918747,34,22,105960,6335,,1.0,,,,,,,,True,16,6,1,7484,1202
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,107,opt,0,seed,2026-10-11T14:02:47Z,2026-10-11T14:12:21Z,573.9649980068207,30,21,88341,3859,,1.0,,,,,,,,True,14,7,1,9852,1213
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,109,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,109,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,109,opt,0,seed,2026-10-11T14:08:07Z,2026-10-11T14:14:24Z,377.11341094970703,30,19,74049,4259,,0.0,,,,candidate,failure_no_error,,,True,14,5,1,6474,1251
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,10,opt,0,cand_0001,2026-10-11T14:56:53Z,2026-10-11T15:00:43Z,230.03884100914001,14,10,29384,834,,1.0,,,,,,,,True,6,4,0,2496,769
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,10,opt,0,seed,2026-10-11T12:44:04Z,2026-10-11T12:48:10Z,245.34795689582825,16,11,26749,1283,,1.0,,,,,,,,True,7,4,0,2619,792
@@ -2482,9 +2491,9 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,11,opt,0,cand_0001,2026-10-1
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,11,opt,0,seed,2026-10-11T12:44:04Z,2026-10-11T12:54:08Z,603.2435019016266,24,16,51395,2199,,1.0,,,,,,,,True,11,5,0,4110,800
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,13,opt,0,cand_0001,2026-10-11T15:00:44Z,2026-10-11T15:13:42Z,778.0457780361176,36,25,106707,4665,,1.0,,,,,,,,True,17,8,0,10731,3134
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,13,opt,0,seed,2026-10-11T12:48:10Z,2026-10-11T13:00:21Z,731.072546005249,24,18,51273,2452,,1.0,,,,,,,,True,11,7,0,7499,1022
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,20,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,20,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,20,opt,0,seed,2026-10-11T12:52:34Z,2026-10-11T13:04:53Z,739.2697660923004,32,20,97341,5405,,0.0,,,,candidate,failure_no_error,,,True,15,5,0,5188,1080
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,21,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,21,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,21,opt,0,seed,2026-10-11T12:53:00Z,2026-10-11T13:03:42Z,641.8214149475098,28,20,66762,3366,,1.0,,,,,,,,True,13,7,1,9284,1759
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,23,opt,0,cand_0001,2026-10-11T15:36:07Z,2026-10-11T15:47:15Z,668.4885559082031,38,24,130843,6089,,0.0,,,,candidate,failure_no_error,,,True,18,6,0,7045,804
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,23,opt,0,seed,2026-10-11T12:54:08Z,2026-10-11T13:12:34Z,1105.917881011963,38,25,121343,6039,,1.0,,,,,,,,True,18,7,0,10204,1580
@@ -2508,7 +2517,7 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,37,opt,0,cand_0001,2026-10-1
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,37,opt,0,seed,2026-10-11T13:12:34Z,2026-10-11T13:25:59Z,804.6445479393005,34,23,89124,4233,,1.0,,,,,,,,True,16,7,1,7085,704
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,43,opt,0,cand_0001,2026-10-11T15:35:48Z,2026-10-11T15:42:48Z,419.5851380825043,24,17,67394,2441,,1.0,,,,,,,,True,11,6,1,7834,1596
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,43,opt,0,seed,2026-10-11T13:12:55Z,2026-10-11T13:27:53Z,897.470027923584,30,21,87613,5750,,0.0,,,,candidate,failure_no_error,,,True,14,7,1,14471,2583
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,44,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,44,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,44,opt,0,seed,2026-10-11T13:20:29Z,2026-10-11T13:25:22Z,293.6264798641205,18,12,36216,1628,,1.0,,,,,,,,True,8,4,1,3116,638
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,48,opt,0,cand_0001,2026-10-11T15:40:41Z,2026-10-11T15:46:24Z,343.26062083244324,20,13,50789,1370,,1.0,,,,,,,,True,9,4,0,3321,782
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,48,opt,0,seed,2026-10-11T13:22:07Z,2026-10-11T13:28:27Z,380.70608592033386,20,13,41640,1955,,1.0,,,,,,,,True,9,4,0,4046,665
@@ -2528,7 +2537,7 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,75,opt,0,cand_0001,2026-10-1
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,75,opt,0,seed,2026-10-11T13:30:55Z,2026-10-11T13:34:57Z,242.45485520362854,16,11,31857,1342,,1.0,,,,,,,,True,7,4,0,3301,610
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,76,opt,0,cand_0001,2026-10-11T15:49:23Z,2026-10-11T15:59:05Z,582.402761220932,32,19,102583,4691,,1.0,,,,,,,,True,15,4,1,3806,718
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,76,opt,0,seed,2026-10-11T13:31:48Z,2026-10-11T13:42:59Z,670.7725148200989,34,22,97369,4079,,0.0,,,,candidate,failure_no_error,,,True,16,6,1,7168,1004
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,78,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,78,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,78,opt,0,seed,2026-10-11T13:34:01Z,2026-10-11T13:43:16Z,555.0115170478821,28,18,68784,3186,,1.0,,,,,,,,True,13,5,0,4780,946
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,7,opt,0,cand_0001,2026-10-11T14:56:53Z,2026-10-11T15:07:18Z,624.8857350349426,28,20,84763,3322,,1.0,,,,,,,,True,13,7,0,7736,999
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,7,opt,0,seed,2026-10-11T12:44:04Z,2026-10-11T12:56:38Z,753.9002110958099,26,19,66370,2843,,1.0,,,,,,,,True,12,7,0,8222,1128
@@ -2537,7 +2546,7 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,80,opt,0,seed,2026-10-11T13:
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,81,opt,0,cand_0001,2026-10-11T15:55:30Z,2026-10-11T16:05:55Z,625.4513628482819,34,23,106655,2540,,0.0,,,,candidate,failure_no_error,,,True,16,7,0,6550,1012
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,81,opt,0,seed,2026-10-11T13:35:21Z,2026-10-11T13:39:39Z,258.4179539680481,16,11,29665,949,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,2723,451
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,82,opt,0,cand_0001,2026-10-11T15:58:24Z,2026-10-11T16:09:41Z,676.8360369205475,26,19,71715,2259,,0.0,,,,candidate,failure_no_error,,,True,12,7,0,6706,1475
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:35:31Z,2026-10-11T13:40:32Z,301.05253505706787,16,11,29624,1109,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,7,4,0,2760,553
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:35:31Z,2026-10-11T13:40:32Z,301.05253505706787,16,11,29624,1109,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,7,4,0,2760,553
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_0001,2026-10-11T15:59:09Z,2026-10-11T16:05:48Z,399.3943998813629,18,12,43531,1346,,0.0,,,,candidate,failure_no_error,,,True,8,4,0,2831,553
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:39:40Z,2026-10-11T13:43:54Z,253.79677295684814,16,11,30098,1255,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,3056,587
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_0001,2026-10-11T16:04:58Z,2026-10-11T16:15:29Z,630.1929609775543,26,18,71117,2271,,0.0,,,,candidate,failure_no_error,,,True,12,6,0,5272,814
@@ -2556,7 +2565,7 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,92,opt,0,cand_0001,2026-10-1
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,92,opt,0,seed,2026-10-11T13:50:04Z,2026-10-11T14:00:20Z,615.8784229755402,24,18,54674,3195,,0.0,,,,candidate,failure_no_error,,,True,11,7,0,8933,1361
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,95,opt,0,cand_0001,2026-10-11T16:16:10Z,2026-10-11T16:27:40Z,689.7456519603729,32,21,114131,6087,,1.0,,,,,,,,True,15,6,1,9317,1497
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,95,opt,0,seed,2026-10-11T13:50:59Z,2026-10-11T14:02:40Z,700.4821701049805,30,19,86995,3749,,0.0,,,,candidate,failure_no_error,,,True,14,5,1,6450,1662
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,96,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,96,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,96,opt,0,seed,2026-10-11T13:54:21Z,2026-10-11T14:00:18Z,356.57627606391907,18,12,38736,1864,,0.0,,,,candidate,failure_no_error,,,True,8,4,0,4197,1000
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,98,opt,0,cand_0001,2026-10-11T16:23:00Z,2026-10-11T16:40:31Z,1050.7451128959656,42,27,163154,8370,,0.0,,,,candidate,failure_no_error,,,True,20,7,0,12113,1737
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,98,opt,0,seed,2026-10-11T13:56:01Z,2026-10-11T14:09:09Z,788.5688240528107,34,22,106038,6493,,0.0,,,,candidate,failure_no_error,,,True,16,6,0,10900,1655
@@ -2566,7 +2575,7 @@ B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,105,sel,0,FINAL,2026-10-11T1
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,105,sel,0,FINAL_seed,2026-10-11T17:18:20Z,2026-10-11T17:29:19Z,658.3319039344788,30,21,82726,4259,,0.0,,,,candidate,failure_no_error,,,True,14,7,1,11350,2009
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,110,sel,0,FINAL,2026-10-11T16:44:55Z,2026-10-11T16:55:51Z,656.4350562095642,34,27,109344,4232,,0.0,,,,candidate,failure_no_error,,,True,16,11,1,18392,2864
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,110,sel,0,FINAL_seed,2026-10-11T17:20:32Z,2026-10-11T17:27:48Z,435.52532505989075,26,17,66023,3474,,0.0,,,,candidate,failure_no_error,,,True,12,5,1,5108,898
-B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,112,sel,0,FINAL,2026-10-11T16:47:13Z,2026-10-11T16:58:13Z,659.95605301857,30,21,87999,5080,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,14,7,0,7973,1676
+B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,112,sel,0,FINAL,2026-10-11T16:47:13Z,2026-10-11T16:58:13Z,659.95605301857,30,21,87999,5080,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,14,7,0,7973,1676
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,112,sel,0,FINAL_seed,2026-10-11T17:20:50Z,2026-10-11T17:35:07Z,857.2704298496246,40,28,115947,4965,,0.0,,,,candidate,failure_no_error,,,True,19,9,0,12736,2253
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,113,sel,0,FINAL,2026-10-11T16:47:43Z,2026-10-11T16:51:18Z,214.94821691513062,18,13,41557,1323,,1.0,,,,,,,,True,8,5,1,3255,472
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,113,sel,0,FINAL_seed,2026-10-11T17:21:02Z,2026-10-11T17:26:02Z,299.77255606651306,24,15,53400,1394,,1.0,,,,,,,,True,11,4,1,2914,416
@@ -3881,7 +3890,7 @@ B,hc,0,main,unified:rollouts_metrics.jsonl,8,opt,0,cand_0001,2026-10-11T14:49:30
 B,hc,0,main,unified:rollouts_metrics.jsonl,8,opt,0,cand_0002,2026-10-11T16:22:42Z,2026-10-11T16:29:15Z,392.9907159805298,20,13,50621,2850,,0.0,,,,candidate,failure_no_error,,,True,9,4,0,3054,407
 B,hc,0,main,unified:rollouts_metrics.jsonl,8,opt,0,seed,2026-10-11T12:43:53Z,2026-10-11T12:53:33Z,579.8430199623108,24,17,58861,3058,,0.0,,,,candidate,failure_no_error,,,True,11,6,0,6523,922
 B,hc,0,main,unified:rollouts_metrics.jsonl,91,opt,0,cand_0001,2026-10-11T15:55:20Z,2026-10-11T16:12:10Z,1009.4157950878143,36,24,120562,6885,,0.0,,,,candidate,failure_no_error,,,True,17,7,0,10556,2044
-B,hc,0,main,unified:rollouts_metrics.jsonl,91,opt,0,cand_0002,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+B,hc,0,main,unified:rollouts_metrics.jsonl,91,opt,0,cand_0002,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 B,hc,0,main,unified:rollouts_metrics.jsonl,91,opt,0,seed,2026-10-11T13:40:43Z,2026-10-11T13:50:41Z,597.1060168743134,26,18,65702,4048,,0.0,,,,candidate,failure_no_error,,,True,12,6,0,8534,1584
 B,hc,0,main,unified:rollouts_metrics.jsonl,92,opt,0,cand_0001,2026-10-11T15:44:18Z,2026-10-11T15:53:56Z,578.6065700054169,24,18,59897,2217,,0.0,,,,candidate,failure_no_error,,,True,11,7,0,7990,1793
 B,hc,0,main,unified:rollouts_metrics.jsonl,92,opt,0,cand_0002,2026-10-11T17:17:31Z,2026-10-11T17:26:17Z,525.4419980049133,28,21,77398,2901,,1.0,,,,,,,,True,13,8,0,10207,1830
@@ -3896,7 +3905,7 @@ B,hc,0,main,unified:rollouts_metrics.jsonl,98,opt,0,cand_0001,2026-10-11T15:46:2
 B,hc,0,main,unified:rollouts_metrics.jsonl,98,opt,0,cand_0002,2026-10-11T17:22:47Z,2026-10-11T17:35:15Z,747.82377409935,34,21,119248,6814,,0.0,,,,candidate,failure_no_error,,,True,16,5,0,8503,1820
 B,hc,0,main,unified:rollouts_metrics.jsonl,98,opt,0,seed,2026-10-11T13:46:45Z,2026-10-11T13:54:31Z,465.8728129863739,22,13,50864,3585,,0.0,,,,candidate,failure_no_error,,,True,10,3,0,2980,745
 B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,cand_0001,2026-10-11T15:47:37Z,2026-10-11T16:10:26Z,1369.6400158405304,44,30,191177,7787,,1.0,,,,,,,,True,21,9,0,28240,4973
-B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,cand_0002,2026-10-11T17:26:17Z,2026-10-11T17:37:29Z,671.3803029060364,28,18,92078,5829,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,13,5,0,10791,2346
+B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,cand_0002,2026-10-11T17:26:17Z,2026-10-11T17:37:29Z,671.3803029060364,28,18,92078,5829,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,13,5,0,10791,2346
 B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,seed,2026-10-11T13:50:41Z,2026-10-11T14:06:00Z,918.8421819210052,30,19,91014,5310,,1.0,,,,,,,,True,14,5,0,9731,1850
 B,hc,1,main,unified:rollouts_metrics.jsonl,0,opt,0,cand_0001,2026-10-11T14:50:31Z,2026-10-11T15:00:11Z,580.0059869289398,24,17,80056,4518,,1.0,,,,,,,,True,11,6,0,9597,1280
 B,hc,1,main,unified:rollouts_metrics.jsonl,0,opt,0,cand_0002,2026-10-11T16:19:48Z,2026-10-11T16:25:19Z,330.8188419342041,20,14,57198,2689,,1.0,,,,,,,,True,9,5,0,7042,1059
@@ -3999,7 +4008,7 @@ B,hc,1,main,unified:rollouts_metrics.jsonl,54,opt,0,cand_0002,2026-10-11T16:49:2
 B,hc,1,main,unified:rollouts_metrics.jsonl,54,opt,0,cand_0003,2026-10-11T18:08:01Z,2026-10-11T18:11:38Z,216.53945803642273,14,10,24685,570,,0.0,,,,candidate,failure_no_error,,,True,6,4,1,2713,337
 B,hc,1,main,unified:rollouts_metrics.jsonl,54,opt,0,seed,2026-10-11T13:15:27Z,2026-10-11T13:19:49Z,262.1797490119934,12,9,18844,476,,0.0,,,,candidate,failure_no_error,,,True,5,4,1,2681,379
 B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0001,2026-10-11T15:18:22Z,2026-10-11T15:24:54Z,391.572212934494,14,10,31345,1454,,1.0,,,,,,,,True,6,4,0,2811,498
-B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0002,2026-10-11T16:50:05Z,2026-10-11T16:56:12Z,367.02173686027527,26,19,60801,2180,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,12,7,0,6290,1320
+B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0002,2026-10-11T16:50:05Z,2026-10-11T16:56:12Z,367.02173686027527,26,19,60801,2180,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,12,7,0,6290,1320
 B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0003,2026-10-11T18:08:08Z,2026-10-11T18:12:27Z,259.01530408859253,12,9,21142,883,,1.0,,,,,,,,True,5,4,0,2686,407
 B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,seed,2026-10-11T13:15:36Z,2026-10-11T13:20:04Z,267.78010988235474,14,10,24535,1485,,1.0,,,,,,,,True,6,4,0,2995,541
 B,hc,1,main,unified:rollouts_metrics.jsonl,59,opt,0,cand_0001,2026-10-11T15:21:01Z,2026-10-11T15:28:33Z,451.8784878253937,20,15,52599,2782,,0.0,,,,candidate,failure_no_error,,,True,9,6,1,9019,1562
@@ -4169,7 +4178,7 @@ B,hc,2,main,unified:rollouts_metrics.jsonl,81,opt,0,seed,2026-10-11T13:31:27Z,20
 B,hc,2,main,unified:rollouts_metrics.jsonl,82,opt,0,cand_0001,2026-10-11T15:36:34Z,2026-10-11T15:44:54Z,500.22065114974976,22,17,56124,2245,,1.0,,,,,,,,True,10,7,0,8882,1255
 B,hc,2,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:37:14Z,2026-10-11T13:53:06Z,951.5454368591309,32,24,82601,4202,,0.0,,,,candidate,failure_no_error,,,True,15,9,0,13231,2852
 B,hc,2,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_0001,2026-10-11T15:39:03Z,2026-10-11T15:45:43Z,399.4492521286011,24,18,61953,2107,,0.0,,,,candidate,failure_no_error,,,True,11,7,0,7532,1257
-B,hc,2,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:37:49Z,2026-10-11T13:48:37Z,647.7425220012665,26,20,60583,2061,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,12,8,0,9960,1696
+B,hc,2,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:37:49Z,2026-10-11T13:48:37Z,647.7425220012665,26,20,60583,2061,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,12,8,0,9960,1696
 B,hc,2,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_0001,2026-10-11T15:39:09Z,2026-10-11T15:45:51Z,401.1487078666687,24,16,62618,2203,,1.0,,,,,,,,True,11,5,0,4535,799
 B,hc,2,main,unified:rollouts_metrics.jsonl,84,opt,0,seed,2026-10-11T13:38:59Z,2026-10-11T13:46:32Z,453.6539189815521,18,12,34556,1644,,0.0,,,,candidate,failure_no_error,,,True,8,4,0,3619,917
 B,hc,2,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_0001,2026-10-11T15:39:46Z,2026-10-11T15:47:12Z,445.9627890586853,32,22,88879,2844,,0.0,,,,candidate,failure_no_error,,,True,15,7,0,6577,2202
@@ -4314,7 +4323,7 @@ C,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,7,opt,0,seed,2026-10-11T18:2
 C,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,9,opt,0,seed,2026-10-11T18:20:53Z,2026-10-11T18:32:48Z,715.1261439323425,16,10,27118,1604,,1.0,,,,,,,,True,7,3,0,2137,653
 C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,12,opt,0,cand_0001,2026-10-11T19:48:36Z,2026-10-11T20:03:54Z,917.5688390731812,22,15,53842,3550,,1.0,,,,,,,,True,10,5,0,5394,1234
 C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,12,opt,0,seed,2026-10-11T18:21:04Z,2026-10-11T18:42:03Z,1259.115539073944,22,17,43446,3966,,1.0,,,,,,,,True,10,7,0,8793,1189
-C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,14,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,zero_target_calls_with_error,,,True,0,0,0,0,0
+C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,14,opt,0,cand_0001,,,,0,0,0,0,,0.0,,infra,infra,infra,error_string,tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR,,True,0,0,0,0,0
 C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,14,opt,0,seed,2026-10-11T18:21:04Z,2026-10-11T18:51:46Z,1841.461107969284,28,18,78123,9567,,0.0,,,,candidate,failure_no_error,,,True,13,5,0,7009,931
 C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,15,opt,0,cand_0001,2026-10-11T19:34:09Z,2026-10-11T19:45:00Z,650.5621089935303,22,14,65795,6697,,1.0,,,,,,,,True,10,4,0,3518,781
 C,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,15,opt,0,seed,2026-10-11T18:23:10Z,2026-10-11T18:36:05Z,774.586452960968,18,12,38295,3249,,1.0,,,,,,,,True,8,4,0,3623,773
@@ -4365,7 +4374,7 @@ C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,1,opt,0,seed,2026-10-11T18:2
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,20,opt,0,cand_0001,2026-10-11T19:55:38Z,2026-10-11T20:11:27Z,949.4783899784088,16,12,35652,2243,,0.0,,,,candidate,failure_no_error,,,True,7,5,0,5163,980
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,20,opt,0,seed,2026-10-11T18:39:13Z,2026-10-11T19:01:33Z,1339.6905889511108,22,15,42180,3210,,0.0,,,,candidate,failure_no_error,,,True,10,5,0,4800,1065
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,21,opt,0,cand_0001,2026-10-11T19:57:42Z,2026-10-11T20:17:13Z,1171.7492508888245,26,17,81418,6313,,0.0,,,,candidate,failure_no_error,,,True,12,5,0,4579,1167
-C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,21,opt,0,seed,2026-10-11T18:41:54Z,2026-10-11T19:11:28Z,1774.688887834549,40,29,114385,5715,,0.0,,candidate,infra,candidate,adapter_infra_unverifiable,,,True,19,10,0,12858,2147
+C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,21,opt,0,seed,2026-10-11T18:41:54Z,2026-10-11T19:11:28Z,1774.688887834549,40,29,114385,5715,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,19,10,0,12858,2147
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,23,opt,0,cand_0001,2026-10-11T20:01:55Z,2026-10-11T20:21:11Z,1156.1192710399628,28,17,106500,7438,,1.0,,,,,,,,True,13,4,0,6215,1563
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,23,opt,0,seed,2026-10-11T18:42:23Z,2026-10-11T19:00:22Z,1079.0038919448853,32,20,96300,8550,,0.0,,,,candidate,failure_no_error,,,True,15,5,0,7597,1635
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,27,opt,0,cand_0001,2026-10-11T20:02:33Z,2026-10-11T20:08:46Z,373.3975739479065,12,8,25004,1270,,1.0,,,,,,,,True,5,3,0,1985,432
@@ -4476,6 +4485,9 @@ C,gepa,2,main,unified:rollouts_metrics.jsonl,33,opt,2000500,cand_0001,2026-10-11
 C,gepa,2,main,unified:rollouts_metrics.jsonl,20,opt,2000600,cand_0002,2026-10-11T20:24:38Z,2026-10-11T20:36:42Z,724.2059609889984,20,15,53964,3640,,0.0,,,,candidate,failure_no_error,,False,True,9,6,0,6982,1657
 C,gepa,2,main,unified:rollouts_metrics.jsonl,38,opt,2000600,cand_0002,2026-10-11T20:24:38Z,2026-10-11T20:47:55Z,1397.0136659145355,30,22,89082,3626,,1.0,,,,,,,False,True,14,8,0,9816,1539
 C,gepa,2,main,unified:rollouts_metrics.jsonl,33,opt,2000600,cand_0002,2026-10-11T20:24:38Z,2026-10-11T20:42:22Z,1064.3999481201172,24,17,74545,7040,,0.0,,,,candidate,failure_no_error,,False,True,11,6,0,11340,1983
+C,gepa,2,main,unified:rollouts_metrics.jsonl,42,opt,2000700,cand_0001,2026-10-11T20:47:57Z,2026-10-11T21:16:42Z,1725.1284129619598,42,25,167581,7726,,0.0,,unverifiable,infra,unverifiable,adapter_infra_unverifiable,,False,True,20,5,0,9087,1475
+C,gepa,2,main,unified:rollouts_metrics.jsonl,15,opt,2000700,cand_0001,2026-10-11T20:47:57Z,2026-10-11T21:09:53Z,1316.1139810085297,28,20,105833,7242,,1.0,,,,,,,False,True,13,7,0,10803,1322
+C,gepa,2,main,unified:rollouts_metrics.jsonl,46,opt,2000700,cand_0001,2026-10-11T20:47:57Z,2026-10-11T20:52:02Z,244.81610989570618,8,6,14094,608,,1.0,,,,,,,False,True,3,3,0,1695,331
 C,hc,0,main,unified:rollouts_metrics.jsonl,12,opt,0,seed,2026-10-11T18:20:43Z,2026-10-11T18:39:31Z,1128.1642920970917,24,18,50035,3866,,1.0,,,,,,,,True,11,7,0,8843,1309
 C,hc,0,main,unified:rollouts_metrics.jsonl,14,opt,0,seed,2026-10-11T18:20:43Z,2026-10-11T18:42:09Z,1285.9392321109772,22,14,48080,4618,,0.0,,,,candidate,failure_no_error,,,True,10,4,0,4866,830
 C,hc,0,main,unified:rollouts_metrics.jsonl,15,opt,0,seed,2026-10-11T18:25:39Z,2026-10-11T18:52:55Z,1635.5635089874268,28,19,92975,4407,,0.0,,,,candidate,failure_no_error,,,True,13,6,0,10057,1101

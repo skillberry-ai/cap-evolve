@@ -154,7 +154,32 @@ Outputs (columns in `rollout_metrics.csv`: `error_kind_adapter` = original label
 | CapEvolve hc / ao, EvoSkill (A) | 10 / 7 / 5 | all infra | hc 7/3, ao 5/2, evoskill 5/0 | 0 | hc 3, ao 2 | 0-call rows kept infra |
 | Suites B, C (hc, ao, ctl-oneshot) | 10 B + 2 C ctl | all infra | see CSV | 0 | a few | B rows with calls > 0 and no string |
 
-Open decision for the owner of R14: 18 rows are labelled infra by their adapter but have no error string and either more than zero or an
-unknown number of target calls (GEPA 7, Meta-Harness 3, hc 3, ao 2, ctl-oneshot 3; column `adapter_infra_unverifiable`). The
-rule as specified counts them as candidate. If the tau2/GEPA/Meta-Harness raw logs can supply the string, rerun `refresh_metrics.sh --once`;
-the column `error_rule_uniform=adapter_infra_unverifiable` marks exactly these rows.
+Update after the team lead's decision: the adapter-infra rows without a string are no longer forced to candidate. They get a third
+class, **unverifiable** (`error_class_uniform=unverifiable`), counted per arm and carried into both missingness bounds of
+analysis_plan.md section 6.5 (pessimistic: counted as failures; optimistic: dropped). Before classifying, strings were recovered from the
+raw search-time records:
+- tau2 rollout JSONs (`.capevolve/run_*/rollouts/*/<task>__<cand>__t<k>.json`) for hc, ao and ctl-oneshot on B and C: 8 rows. Every string is
+  "tau2 user-simulator emitted ###STOP### alongside leaked reasoning ..." (a documented simulator artifact). The pattern `user.?simulator`
+  was added to the infra list, so these 8 are infra. This extends "transport/timeout/sandbox" to a simulated-user malfunction; say so
+  if R14 should not include it (they would then be candidate).
+- Meta-Harness `private/val/seed.json` and `workspace/logs/*/train_results.json`: 3 rows, all "sandbox exec failed: 500" (infra).
+  All 30 Meta-Harness errors are now infra with strings where the files have them.
+- GEPA Suite A `gepa_run/generated_best_outputs_valset/*/iter_*.json`: 7 rows, sandbox 500 or timeout strings (infra).
+- GEPA Suite C (`E10C/gepa/s2`, task 42, cand_0001, trial 2000700): the run stores no string and the rollout made 20 target calls.
+  This is the only **unverifiable** row left.
+
+Final counts (rollouts with an error; live seeds, search-time rows):
+
+| arm | errors | infra | candidate | unverifiable |
+|---|---|---|---|---|
+| Trace2Skill | 27 | 26 | 1 | 0 |
+| WikiSkill | 8 | 8 | 0 | 0 |
+| Meta-Harness | 30 | 30 | 0 | 0 |
+| SkillOpt | 147 | 27 | 120 | 0 |
+| ACE | 2 | 2 | 0 | 0 |
+| MIPROv2 | 7 | 7 | 0 | 0 |
+| GEPA (A and C) | 8 | 7 | 0 | 1 |
+| EvoSkill (A) | 5 | 5 | 0 | 0 |
+| CapEvolve hc / ao / ctl-oneshot (A, B, C) | 10 / 7 / 10 | 10 / 7 / 10 | 0 | 0 |
+
+These are search-time rows only; the final evaluation will record a string for every error.
