@@ -213,7 +213,7 @@ def cost():
                 nm, recovered = False, True
             m = lambda x: f"{x / 1e6:.2f}"
             cells = [su, nice[a] + (r"$^\dagger$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
-                     "0 (not started)" if nm else m(o["in_uncached"]), "0" if nm else m(o["cache_read"]), "0" if nm else m(o["cw"]),
+                     ("0 (no optimizer)" if a == "ctl-seed" else "0 (not started)") if nm else m(o["in_uncached"]), "0" if nm else m(o["cache_read"]), "0" if nm else m(o["cw"]),
                      "0" if nm else f"{o['usd_total']:.2f}", m(v["tgt"]), f"{v['wall']:.1f}", f"{int(v['err'])}"]
             L.append(" & ".join(f"\\prov{{{c}}}" if i >= 3 else c for i, c in enumerate(cells)) + r" \\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
