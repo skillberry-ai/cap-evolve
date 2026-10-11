@@ -144,3 +144,9 @@ Format: date (UTC) — decision — rationale — reversible?
   - Rows the adapter labelled infra but that have no string and made target calls are "unverifiable". They are counted as failures in the pessimistic bound and dropped in the optimistic bound.
   - Search-phase counts: Trace2Skill 26/27 infra; WikiSkill 8/8; Meta-Harness 30/30; SkillOpt 27 infra and 120 candidate (task template broke before any call); GEPA 7 infra and 1 unverifiable; EvoSkill 5; CapEvolve hc/ao/ctl all infra.
   - The final evaluation uses the same classifier.
+- 2026-10-11 22:30 — Final-set sizes (planning values, pinned now so that paper, analysis plan and runner agree; final-eval-eng's capacity estimate may lower n before freeze, never raise T).
+  - Suite A: T=70 tasks, a seeded stratified sample from the 239-id residual pool, seed 20261013. n=1 trial per arm-seed artifact; the seed artifact gets n=2 inside the window.
+  - Suite B: the sealed retail test-40, n=3.
+  - Suite C: the airline test-20 (development-exposed), n=3.
+  - Rationale: Gemma throughput of about 200 rollouts/h makes A about 31 artifacts x 70 tasks = about 11 h. gpt-oss makes B plus C about 2,700 rollouts = about 13 h. Both must fit between the cutoff (10-13 06:00) and the 72 h stop (about 10-14 07:00), with retries.
+  - MDEs in the paper must use these values.
