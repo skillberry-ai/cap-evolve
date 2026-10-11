@@ -704,20 +704,27 @@ def cmd_run(a):
     if a.canary_every and meta.get("canary_jobs"):
         cl = threading.Thread(target=canary_loop, args=(suite, root, meta, stop, cm, a.canary_every, py, a.hang_s), daemon=True)
         cl.start()
-    idx = [0]
     lk = threading.Lock()
     done_n = [0]
+    # one interleaved stream per suite; worker pools per arm class (e.g. hl=24,default=12) so slow HarnessLens cells do not starve the tau-agent cells
+    caps = {"default": a.workers}
+    if a.class_caps:
+        caps = {k: int(v) for k, v in (x.split("=") for x in a.class_caps.split(","))}
+        caps.setdefault("default", a.workers)
+    klass = lambda j: "hl" if (j.get("hl") and "hl" in caps) else "default"
+    queues = {k: [j for j in todo if klass(j) == k] for k in caps}
+    qidx = {k: 0 for k in caps}
 
     def logf(s):
         print(time.strftime("%H:%M:%S"), s, flush=True)
 
-    def worker_thread():
+    def worker_thread(k):
         while not stop.is_set():
             with lk:
-                if idx[0] >= len(todo):
+                if qidx[k] >= len(queues[k]):
                     return
-                j = todo[idx[0]]
-                idx[0] += 1
+                j = queues[k][qidx[k]]
+                qidx[k] += 1
             try:
                 execute_job(j, store, cm, py, a.hang_s, logf)
             except Exception as exc:               # noqa: BLE001 - orchestrator bug must not lose the run
@@ -727,7 +734,7 @@ def cmd_run(a):
                 if done_n[0] % 25 == 0:
                     aggregate(suite, root, meta, jobs)
 
-    ths = [threading.Thread(target=worker_thread, daemon=True) for _ in range(a.workers)]
+    ths = [threading.Thread(target=worker_thread, args=(k,), daemon=True) for k, n in caps.items() for _ in range(n)]
     try:
         for t in ths:
             t.start()
@@ -767,6 +774,7 @@ def main(argv=None):
         p.add_argument("--extra", default=None, help="name of an exploratory extra set -> root/extra_<name>")
         p.add_argument("--workers", type=int, default=16)
         p.add_argument("--limit", type=int, default=0)
+        p.add_argument("--class-caps", default=None, help="per arm-class worker pools, e.g. hl=24,default=12 (HarnessLens cells vs everything else)")
         p.add_argument("--canary-every", type=int, default=3600)
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)

@@ -30,6 +30,13 @@ The distinct native end-of-run (5D) jobs are a separate file (`order.py ... --en
 and start only after the primary window is complete; if A's END would run past 2026-10-14 05:00 UTC it is dropped and disclosed.
 HarnessLens/hl-v0 evaluation and the Azure transfer extras run after B and C primary.  `prepare` (Suite A) also checks that the sandbox has no internet egress.
 
+## Suite B concurrency (decision 2026-10-12)
+
+One interleaved stream per suite (drift control across arms), n=3 kept.  `run_final.py run --suite B ... --class-caps hl=24,default=12` gives HarnessLens/hl-v0
+cells (33 min per rollout) their own pool of up to 24 workers next to 12 for the tau-agent cells; jobs are still dispatched in order within each class.  The shared
+gpt-oss cap is the gateway's 24 in flight.  Fallback only: a separate HL order file (`order.py --arms harnesslens,hl-v0`) if the single stream measurably cannot absorb it.
+Estimate to redo when FE_dry_hl10 lands (HL timing is from 4 rollouts).  bl-harness to confirm 24 concurrent HL sandboxes (memory, PIDs).
+
 ## Files
 
 | file | role |
