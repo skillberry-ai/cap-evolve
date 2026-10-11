@@ -1,0 +1,42 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Paired delta to the seed for each search seed, in points, with the pessimistic and optimistic bounds on the mean. The pessimistic bound scores every missing cell of the arm as a loss and of the comparator as a win, and the optimistic bound does the reverse. Missing is missing over scheduled cells. (placeholder)}
+\label{tab:perseed}
+\begin{tabular}{lcccccr}
+\toprule
+Arm & Seed 0 & Seed 1 & Seed 2 & Mean $\Delta$ & Missingness bounds & Missing \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\midrule
+One-shot control & \pend{+2.4} & \pend{+0.2} & \pend{+0.7} & \pend{+1.9} & \pend{[+1.6, +2.2]} & \pend{2/720} \\
+Meta-Harness & \pend{+2.0} & \pend{+0.8} & \pend{+0.5} & \pend{+1.1} & \pend{[+0.8, +1.4]} & \pend{2/720} \\
+EvoSkill & \pend{+1.4} & \pend{+4.3} & \pend{+3.5} & \pend{+2.2} & \pend{[+1.6, +2.8]} & \pend{4/720} \\
+GEPA & \pend{+1.7} & \pend{+3.8} & \pend{+3.5} & \pend{+3.3} & \pend{[+3.2, +3.5]} & \pend{1/720} \\
+Trace2Skill & \pend{+5.6} & \pend{+5.7} & \pend{+5.3} & \pend{+5.2} & \pend{[+4.4, +6.0]} & \pend{6/720} \\
+MIPROv2 & \pend{+5.3} & \pend{+5.8} & \pend{+4.7} & \pend{+5.5} & \pend{[+5.0, +6.1]} & \pend{4/720} \\
+ACE & \pend{+7.8} & \pend{+3.6} & \pend{+4.5} & \pend{+5.8} & \pend{[+5.3, +6.4]} & \pend{4/720} \\
+WikiSkill (community) & \pend{+5.2} & \pend{+4.3} & \pend{+5.0} & \pend{+5.9} & \pend{[+5.8, +6.0]} & \pend{1/720} \\
+SkillOpt & \pend{+6.7} & \pend{+8.4} & \pend{+7.8} & \pend{+6.7} & \pend{[+5.9, +7.5]} & \pend{6/720} \\
+CapEvolve HC & \pend{+1.6} & \pend{+3.4} & \pend{+4.2} & \pend{+3.4} & \pend{[+2.7, +4.1]} & \pend{5/720} \\
+CapEvolve AO & \pend{+0.5} & \pend{+6.4} & \pend{+4.0} & \pend{+3.6} & \pend{[+3.2, +4.0]} & \pend{3/720} \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
+\midrule
+One-shot control & \pend{+1.6} & \pend{+1.4} & \pend{$-$0.3} & \pend{+0.8} & \pend{[$-$0.3, +2.0]} & \pend{4/360} \\
+GEPA & \pend{+2.6} & \pend{+2.9} & \pend{+2.0} & \pend{+2.9} & \pend{[+1.5, +4.3]} & \pend{5/360} \\
+HarnessLens & \pend{+4.0} & \pend{+5.0} & \pend{+4.5} & \pend{+6.3} & \pend{[+6.3, +6.3]} & \pend{0/360} \\
+CapEvolve HC & \pend{+5.3} & \pend{+7.2} & \pend{+2.3} & \pend{+4.0} & \pend{[+2.3, +5.6]} & \pend{6/360} \\
+CapEvolve AO & \pend{+5.4} & \pend{+4.5} & \pend{+7.3} & \pend{+5.5} & \pend{[+5.5, +5.5]} & \pend{0/360} \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
+\midrule
+One-shot control & \pend{+0.6} & \pend{$-$1.0} & \pend{+1.3} & \pend{$-$0.2} & \pend{[$-$3.0, +2.6]} & \pend{5/180} \\
+GEPA & \pend{$-$1.2} & \pend{$-$0.8} & \pend{$-$0.5} & \pend{$-$0.3} & \pend{[$-$4.2, +3.6]} & \pend{7/180} \\
+HarnessLens & \pend{+8.3} & \pend{+6.9} & \pend{+10.6} & \pend{+8.5} & \pend{[+4.7, +12.4]} & \pend{7/180} \\
+CapEvolve HC & \pend{+6.7} & \pend{+8.6} & \pend{+6.3} & \pend{+7.1} & \pend{[+7.1, +7.1]} & \pend{0/180} \\
+CapEvolve AO & \pend{+2.2} & \pend{+3.8} & \pend{+6.0} & \pend{+5.0} & \pend{[$-$0.0, +10.0]} & \pend{9/180} \\
+\bottomrule
+\end{tabular}
+\end{table*}

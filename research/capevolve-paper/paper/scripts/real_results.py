@@ -191,11 +191,11 @@ def cost():
     L = [r"\begin{table*}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}",
          r"\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still "
          r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. "
-         r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A dagger would mark usage recovered from CLI transcripts. "
+         r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
-         r"evaluated model. Wall is hours since launch, longest seed. Rows count seeds that exist in the ledger.}",
+         r"evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}",
          r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrr}", r"\toprule",
-         r"Suite & Arm & Seeds & Rollouts & Opt.\ uncached & Opt.\ cache rd & Opt.\ cache wr & Opt.\ USD & Target tok. & Wall (h) & Errors \\", r"\midrule"]
+         r"Suite & Arm & Seeds & Rollouts & Opt.\ uncached & Opt.\ cache rd & Opt.\ cache wr & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
     first = True
     for su in "ABC":
         if not first:
@@ -212,7 +212,7 @@ def cost():
                 o = collections.defaultdict(float, {x: base.get(x, 0.0) + rec[(su, a)][x] for x in ("in_uncached", "cache_read", "cw", "usd_total")})
                 nm, recovered = False, True
             m = lambda x: f"{x / 1e6:.2f}"
-            cells = [su, nice[a] + (r"$^\dagger$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
+            cells = [su, nice[a] + (r"$^{\ddagger}$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
                      ("0 (no optimizer)" if a == "ctl-seed" else "0 (not started)") if nm else m(o["in_uncached"]), "0" if nm else m(o["cache_read"]), "0" if nm else m(o["cw"]),
                      "0" if nm else f"{o['usd_total']:.2f}", m(v["tgt"]), f"{v['wall']:.1f}", f"{int(v['err'])}"]
             L.append(" & ".join(f"\\prov{{{c}}}" if i >= 3 else c for i, c in enumerate(cells)) + r" \\")

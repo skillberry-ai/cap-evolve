@@ -1,30 +1,30 @@
 \begin{table*}[t]
 \centering
 \scriptsize
-\setlength{\tabcolsep}{3.2pt}
-\caption{Suites B and C final-set results. Same columns as Table~\ref{tab:main_a}. (placeholder)}
+\setlength{\tabcolsep}{3.5pt}
+\caption{Suites B and C results. Columns as in Table~\ref{tab:main_a}. (placeholder)}
 \label{tab:main_bc}
-\begin{tabular}{lcccrrrrrrr}
+\begin{tabular}{lcccrrr}
 \toprule
-Arm & Score & $\Delta$ vs seed [CI] & $p_{\mathrm{Holm}}$ & Rollouts & Uncached & Cache rd & Cache wr & USD & Wall (h) & Missing \\
+Arm & Score (\%) & $\Delta$ vs seed [CI] & $\Delta$ vs one-shot [CI] & $p_{\mathrm{Holm}}$ & USD & Missing \\
 \midrule
-\multicolumn{11}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
+\multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
 \midrule
-CapEvolve HC & \pend{60.2} & \pend{+5.2 [$-$3.1, +13.5]} & \pend{0.831} & \pend{478} & \pend{40.8} & \pend{79.5} & \pend{8.7} & \pend{161} & \pend{21.1} & \pend{5/360} \\
-CapEvolve AO & \pend{56.8} & \pend{+1.8 [$-$7.2, +10.8]} & \pend{1.000} & \pend{470} & \pend{44.5} & \pend{120.0} & \pend{8.9} & \pend{194} & \pend{18.3} & \pend{8/360} \\
-GEPA & \pend{56.8} & \pend{+1.8 [$-$7.4, +11.1]} & \pend{1.000} & \pend{467} & \pend{17.2} & \pend{4.4} & \pend{0.5} & \pend{52} & \pend{23.4} & \pend{0/360} \\
-HarnessLens & \pend{63.0} & \pend{+8.0 [$-$1.0, +17.1]} & \pend{0.369} & \pend{469} & \pend{18.3} & \pend{7.3} & \pend{0.9} & \pend{66} & \pend{14.9} & \pend{4/360} \\
-One-shot control & \pend{58.4} & \pend{+3.4 [$-$5.1, +11.9]} & \pend{1.000} & \pend{10} & \pend{10.0} & \pend{4.1} & \pend{0.5} & \pend{32} & \pend{1.1} & \pend{7/360} \\
-Seed (no search) & \pend{55.0} & \pend{0} & -- & -- & -- & -- & -- & -- & -- & \pend{3/120} \\
+Seed (no search) & \pend{55.0} & ref. & \pend{$-$0.8} & -- & -- & \pend{0/120} \\
+One-shot control & \pend{55.8} & \pend{+0.8 [$-$7.3, +8.9]} & ref. & \pend{1.000} & \pend{19} & \pend{4/360} \\
+GEPA & \pend{57.9} & \pend{+2.9 [$-$4.5, +10.3]} & \pend{+2.1 [$-$6.1, +10.3]} & \pend{1.000} & \pend{53} & \pend{5/360} \\
+HarnessLens & \pend{61.3} & \pend{+6.3 [$-$0.6, +13.2]} & \pend{+5.4 [$-$2.2, +13.1]} & \pend{0.325} & \pend{15} & \pend{0/360} \\
+CapEvolve HC & \pend{59.0} & \pend{+4.0 [$-$4.5, +12.4]} & \pend{+3.1 [$-$6.3, +12.6]} & \pend{1.000} & \pend{173} & \pend{6/360} \\
+CapEvolve AO & \pend{60.5} & \pend{+5.5 [$-$1.8, +12.7]} & \pend{+4.6 [$-$3.5, +12.8]} & \pend{0.520} & \pend{34} & \pend{0/360} \\
 \midrule
-\multicolumn{11}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
+\multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
 \midrule
-CapEvolve HC & \pend{44.1} & \pend{+4.1 [$-$7.1, +15.3]} & \pend{1.000} & \pend{415} & \pend{34.0} & \pend{43.2} & \pend{6.2} & \pend{133} & \pend{23.0} & \pend{6/180} \\
-CapEvolve AO & \pend{45.3} & \pend{+5.3 [$-$6.4, +17.0]} & \pend{1.000} & \pend{415} & \pend{19.3} & \pend{77.4} & \pend{3.0} & \pend{83} & \pend{13.2} & \pend{7/180} \\
-GEPA & \pend{41.3} & \pend{+1.3 [$-$11.2, +13.8]} & \pend{1.000} & \pend{407} & \pend{22.3} & \pend{5.1} & \pend{0.8} & \pend{68} & \pend{21.3} & \pend{8/180} \\
-HarnessLens & \pend{42.1} & \pend{+2.1 [$-$8.8, +12.9]} & \pend{1.000} & \pend{406} & \pend{19.1} & \pend{3.9} & \pend{0.7} & \pend{69} & \pend{18.3} & \pend{0/180} \\
-One-shot control & \pend{42.8} & \pend{+2.8 [$-$7.9, +13.4]} & \pend{1.000} & \pend{10} & \pend{27.5} & \pend{2.1} & \pend{0.8} & \pend{94} & \pend{0.6} & \pend{0/180} \\
-Seed (no search) & \pend{40.0} & \pend{0} & -- & -- & -- & -- & -- & -- & -- & \pend{0/60} \\
+Seed (no search) & \pend{40.0} & ref. & \pend{+0.2} & -- & -- & \pend{1/60} \\
+One-shot control & \pend{39.8} & \pend{$-$0.2 [$-$13.5, +13.1]} & ref. & \pend{1.000} & \pend{73} & \pend{5/180} \\
+GEPA & \pend{39.7} & \pend{$-$0.3 [$-$14.5, +13.8]} & \pend{$-$0.1 [$-$15.4, +15.2]} & \pend{1.000} & \pend{21} & \pend{7/180} \\
+HarnessLens & \pend{48.5} & \pend{+8.5 [$-$5.9, +22.9]} & \pend{+8.7 [$-$6.8, +24.3]} & \pend{1.000} & \pend{102} & \pend{7/180} \\
+CapEvolve HC & \pend{47.1} & \pend{+7.1 [$-$5.3, +19.6]} & \pend{+7.3 [$-$6.1, +20.8]} & \pend{1.000} & \pend{126} & \pend{0/180} \\
+CapEvolve AO & \pend{45.0} & \pend{+5.0 [$-$6.9, +16.9]} & \pend{+5.2 [$-$7.6, +18.0]} & \pend{1.000} & \pend{174} & \pend{9/180} \\
 \bottomrule
 \end{tabular}
 \end{table*}

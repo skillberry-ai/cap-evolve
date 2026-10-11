@@ -3,6 +3,16 @@
 
 \begin{figure*}[t]
 \centering
+\includegraphics[width=\textwidth]{figures/fig_contrast.pdf}
+\caption{Each CapEvolve arm minus each baseline, in paired-delta points with 95\% intervals. Filled markers have intervals that exclude zero. Panels (b) and (c) share their rows (placeholder).}
+\label{fig:contrast}
+\end{figure*}
+
+\input{tables/cost_tokens}
+\input{tables/perseed}
+
+\begin{figure*}[t]
+\centering
 \includegraphics[width=\textwidth]{figures/fig_anytime.pdf}
 \caption{Score against rollouts, with the matched checkpoint $B^\ast$ dashed. Lines show the best score so far, averaged over seeds, and bands show the minimum to maximum of the CapEvolve arms. The one-shot control has no curve because it makes one optimizer pass (placeholder).}
 \label{fig:anytime}

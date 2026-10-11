@@ -1,27 +1,27 @@
 \begin{table*}[t]
 \centering
 \scriptsize
-\setlength{\tabcolsep}{3.2pt}
-\caption{Suite A final-set results. Score is the final-set reward in percent. $\Delta$ is the paired difference to the seed in points, with a family-cluster-robust 95\% interval and a Holm-adjusted $p$. Rollouts are target rollouts at $B^\ast$. Token columns are optimizer tokens in millions, and USD uses Sonnet list prices. Missing counts missing over scheduled cells. (placeholder)}
+\setlength{\tabcolsep}{3.5pt}
+\caption{Suite A results, baselines by ascending delta and CapEvolve last. Score is the final-set reward. $\Delta$ is the paired difference in points with a family-cluster-robust 95\% interval, $p_{\mathrm{Holm}}$ is Holm-adjusted within the suite, and USD is optimizer cost at Sonnet list prices. Missing is missing over scheduled cells. Tokens and wall clock are in Table~\ref{tab:cost_tokens}, per-seed values in Table~\ref{tab:perseed}. (placeholder)}
 \label{tab:main_a}
-\begin{tabular}{lcccrrrrrrr}
+\begin{tabular}{lcccrrr}
 \toprule
-Arm & Score & $\Delta$ vs seed [CI] & $p_{\mathrm{Holm}}$ & Rollouts & Uncached & Cache rd & Cache wr & USD & Wall (h) & Missing \\
+Arm & Score (\%) & $\Delta$ vs seed [CI] & $\Delta$ vs one-shot [CI] & $p_{\mathrm{Holm}}$ & USD & Missing \\
 \midrule
-\multicolumn{11}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
 \midrule
-CapEvolve HC & \pend{53.4} & \pend{+3.4 [$-$1.7, +8.5]} & \pend{0.738} & \pend{534} & \pend{14.7} & \pend{78.6} & \pend{6.3} & \pend{76} & \pend{24.1} & \pend{5/720} \\
-CapEvolve AO & \pend{53.6} & \pend{+3.6 [$-$1.5, +8.7]} & \pend{0.738} & \pend{536} & \pend{19.5} & \pend{68.4} & \pend{7.8} & \pend{98} & \pend{25.6} & \pend{3/720} \\
-GEPA & \pend{53.3} & \pend{+3.3 [$-$1.1, +7.8]} & \pend{0.724} & \pend{529} & \pend{28.1} & \pend{4.3} & \pend{0.8} & \pend{86} & \pend{20.2} & \pend{1/720} \\
-SkillOpt & \pend{56.7} & \pend{+6.7 [+2.0, +11.4]} & \pend{0.033} & \pend{528} & \pend{15.0} & \pend{7.6} & \pend{0.6} & \pend{49} & \pend{22.0} & \pend{6/720} \\
-Meta-Harness & \pend{51.1} & \pend{+1.1 [$-$4.0, +6.2]} & \pend{1.000} & \pend{528} & \pend{43.1} & \pend{27.0} & \pend{2.8} & \pend{162} & \pend{27.4} & \pend{2/720} \\
-EvoSkill & \pend{52.2} & \pend{+2.2 [$-$2.8, +7.2]} & \pend{1.000} & \pend{538} & \pend{31.4} & \pend{87.2} & \pend{7.2} & \pend{146} & \pend{28.7} & \pend{4/720} \\
-WikiSkill (community) & \pend{55.9} & \pend{+5.9 [+1.0, +10.8]} & \pend{0.098} & \pend{533} & \pend{4.4} & \pend{0.1} & \pend{0.5} & \pend{16} & \pend{26.7} & \pend{1/720} \\
-Trace2Skill & \pend{55.2} & \pend{+5.2 [+0.2, +10.2]} & \pend{0.220} & \pend{536} & \pend{14.4} & \pend{3.3} & \pend{0.7} & \pend{49} & \pend{11.6} & \pend{6/720} \\
-ACE & \pend{55.8} & \pend{+5.8 [+1.8, +9.9]} & \pend{0.032} & \pend{536} & \pend{25.4} & \pend{4.2} & \pend{1.0} & \pend{87} & \pend{21.7} & \pend{4/720} \\
-MIPROv2 & \pend{55.5} & \pend{+5.5 [+1.0, +10.0]} & \pend{0.098} & \pend{532} & \pend{26.3} & \pend{1.1} & \pend{0.7} & \pend{78} & \pend{27.6} & \pend{4/720} \\
-One-shot control & \pend{51.9} & \pend{+1.9 [$-$2.9, +6.7]} & \pend{1.000} & \pend{10} & \pend{18.9} & \pend{5.6} & \pend{0.4} & \pend{58} & \pend{1.0} & \pend{2/720} \\
-Seed (no search) & \pend{50.0} & \pend{0} & -- & -- & -- & -- & -- & -- & -- & \pend{0/240} \\
+Seed (no search) & \pend{50.0} & ref. & \pend{$-$1.9} & -- & -- & \pend{0/240} \\
+One-shot control & \pend{51.9} & \pend{+1.9 [$-$2.9, +6.7]} & ref. & \pend{1.000} & \pend{58} & \pend{2/720} \\
+Meta-Harness & \pend{51.1} & \pend{+1.1 [$-$4.0, +6.2]} & \pend{$-$0.8 [$-$6.4, +4.7]} & \pend{1.000} & \pend{162} & \pend{2/720} \\
+EvoSkill & \pend{52.2} & \pend{+2.2 [$-$2.8, +7.2]} & \pend{+0.3 [$-$5.2, +5.8]} & \pend{1.000} & \pend{146} & \pend{4/720} \\
+GEPA & \pend{53.3} & \pend{+3.3 [$-$1.1, +7.8]} & \pend{+1.4 [$-$3.4, +6.3]} & \pend{0.724} & \pend{86} & \pend{1/720} \\
+Trace2Skill & \pend{55.2} & \pend{+5.2 [+0.2, +10.2]} & \pend{+3.3 [$-$2.2, +8.7]} & \pend{0.220} & \pend{49} & \pend{6/720} \\
+MIPROv2 & \pend{55.5} & \pend{+5.5 [+1.0, +10.0]} & \pend{+3.6 [$-$1.3, +8.5]} & \pend{0.098} & \pend{78} & \pend{4/720} \\
+ACE & \pend{55.8} & \pend{+5.8 [+1.8, +9.9]} & \pend{+3.9 [$-$0.5, +8.3]} & \pend{0.032} & \pend{87} & \pend{4/720} \\
+WikiSkill (community) & \pend{55.9} & \pend{+5.9 [+1.0, +10.8]} & \pend{+4.0 [$-$1.3, +9.3]} & \pend{0.098} & \pend{16} & \pend{1/720} \\
+SkillOpt & \pend{56.7} & \pend{+6.7 [+2.0, +11.4]} & \pend{+4.8 [$-$0.3, +9.9]} & \pend{0.033} & \pend{49} & \pend{6/720} \\
+CapEvolve HC & \pend{53.4} & \pend{+3.4 [$-$1.7, +8.5]} & \pend{+1.5 [$-$4.0, +7.0]} & \pend{0.738} & \pend{76} & \pend{5/720} \\
+CapEvolve AO & \pend{53.6} & \pend{+3.6 [$-$1.5, +8.7]} & \pend{+1.7 [$-$3.9, +7.2]} & \pend{0.738} & \pend{98} & \pend{3/720} \\
 \bottomrule
 \end{tabular}
 \end{table*}

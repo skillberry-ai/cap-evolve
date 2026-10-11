@@ -15,7 +15,8 @@ Red numbers with a dagger are placeholders, and orange numbers are real but stil
 On Suite A, \mockNsigA{} of the ten optimizer arms beat the seed with Holm-adjusted $p<0.05$, and the largest paired delta is \mockTopDeltaA{} points, held by \mockTopArmA{} (Table~\ref{tab:main_a}, Figure~\ref{fig:forest}).
 The final set has \mockTA{} tasks, each scored with \mockTrialsA{} trials, for \mockSeedsA{} search seeds per arm.
 \needs{State whether the CapEvolve arms are above, level with or below the best baseline, and whether their intervals exclude it.}
-The one-shot control makes a single optimizer pass with no search, so it sets the floor that search must clear to justify its rollouts.
+The one-shot control makes a single optimizer pass with no search, so the second delta column in the table, the difference to that control, is the test of whether search pays.
+Figure~\ref{fig:contrast} in Appendix~\ref{app:results} contrasts each CapEvolve arm with every baseline directly.
 \needs{Report the one-shot control against the best search arm. If it is within one interval of the best arm, say that search adds nothing measurable here.}
 
 \input{tables/main_A}

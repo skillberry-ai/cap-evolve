@@ -1,0 +1,42 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\caption{Optimizer tokens in millions and wall clock per arm, summed over seeds. Cache reads and writes are listed apart because they are priced differently from uncached input. (placeholder)}
+\label{tab:cost_tokens}
+\begin{tabular}{lrrrrrr}
+\toprule
+Arm & Rollouts at $B^\ast$ & Uncached & Cache read & Cache write & Output & Wall clock (h) \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\midrule
+One-shot control & \pend{10} & \pend{18.9} & \pend{5.6} & \pend{0.4} & \pend{1.8} & \pend{1.0} \\
+Meta-Harness & \pend{528} & \pend{43.1} & \pend{27.0} & \pend{2.8} & \pend{6.3} & \pend{27.4} \\
+EvoSkill & \pend{538} & \pend{31.4} & \pend{87.2} & \pend{7.2} & \pend{4.8} & \pend{28.7} \\
+GEPA & \pend{529} & \pend{28.1} & \pend{4.3} & \pend{0.8} & \pend{2.7} & \pend{20.2} \\
+Trace2Skill & \pend{536} & \pend{14.4} & \pend{3.3} & \pend{0.7} & \pend{1.8} & \pend{11.6} \\
+MIPROv2 & \pend{532} & \pend{26.3} & \pend{1.1} & \pend{0.7} & \pend{2.3} & \pend{27.6} \\
+ACE & \pend{536} & \pend{25.4} & \pend{4.2} & \pend{1.0} & \pend{3.3} & \pend{21.7} \\
+WikiSkill (community) & \pend{533} & \pend{4.4} & \pend{0.1} & \pend{0.5} & \pend{0.6} & \pend{26.7} \\
+SkillOpt & \pend{528} & \pend{15.0} & \pend{7.6} & \pend{0.6} & \pend{1.6} & \pend{22.0} \\
+CapEvolve HC & \pend{534} & \pend{14.7} & \pend{78.6} & \pend{6.3} & \pend{1.6} & \pend{24.1} \\
+CapEvolve AO & \pend{536} & \pend{19.5} & \pend{68.4} & \pend{7.8} & \pend{2.6} & \pend{25.6} \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
+\midrule
+One-shot control & \pend{10} & \pend{5.8} & \pend{5.8} & \pend{0.5} & \pend{0.5} & \pend{1.2} \\
+GEPA & \pend{476} & \pend{17.2} & \pend{2.5} & \pend{0.4} & \pend{1.7} & \pend{12.5} \\
+HarnessLens & \pend{475} & \pend{4.9} & \pend{4.5} & \pend{0.0} & \pend{0.4} & \pend{13.4} \\
+CapEvolve HC & \pend{480} & \pend{43.1} & \pend{109.5} & \pend{5.2} & \pend{5.2} & \pend{19.4} \\
+CapEvolve AO & \pend{471} & \pend{6.1} & \pend{23.3} & \pend{4.3} & \pend{0.6} & \pend{22.5} \\
+\midrule
+\multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
+\midrule
+One-shot control & \pend{10} & \pend{23.4} & \pend{6.3} & \pend{0.0} & \pend{2.5} & \pend{0.7} \\
+GEPA & \pend{409} & \pend{5.8} & \pend{3.6} & \pend{1.0} & \pend{0.6} & \pend{16.3} \\
+HarnessLens & \pend{420} & \pend{29.7} & \pend{2.9} & \pend{0.4} & \pend{4.1} & \pend{8.0} \\
+CapEvolve HC & \pend{408} & \pend{32.4} & \pend{118.3} & \pend{3.3} & \pend{3.0} & \pend{29.7} \\
+CapEvolve AO & \pend{415} & \pend{44.1} & \pend{104.5} & \pend{6.4} & \pend{4.9} & \pend{11.2} \\
+\bottomrule
+\end{tabular}
+\end{table*}

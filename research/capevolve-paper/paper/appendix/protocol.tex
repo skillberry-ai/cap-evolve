@@ -52,6 +52,44 @@ Times are UTC on 2026-10-11 unless stated. Each incident lists its effect on the
 \item[\emph{Failed reproductions.}] VERSE needs SWE-rebench or Terminal-Bench docker sessions; CoEvoSkills needs a Harbor per-task loop; HarnessLens on Suite A evolves only OpenCode, Codex and Pi runtimes. Blocker files are in the campaign scratch store.
 \end{itemize}
 
+\paragraph{Rollouts scored zero after an infrastructure error.}
+Before the 3-hour hang rule, ACE and MIPROv2 first ran with a 40-minute watchdog that scored a timeout as reward zero.
+The coordinator rejected it as asymmetric before it produced results: the six 40-minute runs (three seeds per arm) were killed after one counted rollout each, and their event logs hold no watchdog zero.
+Zeros that did reach the search come from other adapter paths.
+The adapter returns reward 0 with an error string when an LLM call times out at the client (\texttt{litellm.Timeout}) or the sandbox returns HTTP 500.
+Each such rollout is logged with reward 0.0 and counts against the budget, so the search saw it as a score and not as a missing cell.
+We did not check whether the ACE reflector or the MIPROv2 bootstrap showed the error text.
+Table~\ref{tab:zeros} counts these rollouts from the event logs and from each arm's \texttt{llm\_failure\_counts.json}.
+Gateway counts are upper bounds, because a failed call does not always end a rollout.
+
+\begin{table}[h]
+\caption{Rollouts scored zero after a client timeout or sandbox error, from event logs (ACE, MIPROv2) and exact failure counts (others). ``Superseded'' lists restarted attempts that are not used.}
+\label{tab:zeros}
+\centering\scriptsize
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Arm & Seed & Timeout & Sandbox 500 & Run \\
+\midrule
+ACE & 1 & 0 & 1 & live \\
+ACE & 2 & 0 & 1 & live \\
+ACE & 1 & 1 & 0 & superseded \\
+MIPROv2 & 0 & 1 & 2 & live \\
+MIPROv2 & 1 & 0 & 4 & live \\
+MIPROv2 & 0 & 1 & 0 & superseded \\
+MIPROv2 & 1 & 0 & 1 & superseded \\
+MIPROv2 & 2 & 1 & 0 & superseded \\
+SkillOpt & 1 & 1 & -- & live \\
+SkillOpt & 2 & 3 & -- & live \\
+GEPA, EvoSkill & 0 to 2 & 0 & -- & live \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+GEPA persists outputs only for its best program, so its zero count covers one program per seed and the gateway gives the upper bound.
+Meta-Harness, Trace2Skill and WikiSkill write no failure-count file, so we cannot report them, and we list this as an open check.
+The one live timeout zero after the 13:11 gateway fix is MIPROv2 seed 0 at 13:20, a client timeout.
+Every other timeout zero before 13:11 enters the sensitivity analysis that treats such rollouts as missing.
+
 \section{Cost and Token Totals}
 \label{app:cost}
 
