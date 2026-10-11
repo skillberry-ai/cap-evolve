@@ -22,3 +22,23 @@
 \RETURN $\artifact^\star$
 \end{algorithmic}
 \end{algorithm}
+
+\begin{table}[h]
+\centering\small
+\caption{Hill-climb and agent-optimize in the shared notation. Entries describe the shipped implementations.}
+\label{tab:method:algs}
+\footnotesize\begin{tabular}{p{1.9cm}p{4.4cm}p{4.4cm}}
+\toprule
+ & hill-climb & agent-optimize \\
+\midrule
+Controller & deterministic loop; one proposer subprocess call per iteration & a conversational driver agent chooses verbs (\texttt{propose}, \texttt{probe}, \texttt{promote}, \texttt{prune}, \texttt{merge}, \texttt{finalize}) \\
+Proposer input & instructions rendered from the incumbent's per-task validation rows, and its validation trajectories copied into the working directory & a one-screen digest (budget, noise, failure clusters, branch tips, merge opportunities, pregate warnings) plus validation traces the driver reads itself \\
+Feedback visibility & validation only; test is not provided & validation only; ``never view test'' is a prose instruction, not enforced \\
+Parent selection & incumbent $\artifact^\star$ & any node of a candidate DAG (\texttt{--parent}); incumbent when parallel branching is off \\
+Screen & paired gate on the full validation split for the candidate, optional footprint mask & ledger-driven \emph{probes} of missing (task, trial) cells; optional subset screen (\texttt{screen.py}) \\
+Default accept rule & paired one-SE gate over a footprint-masked delta vector, $k_{\mathrm{se}}=1$ in the CLI default & \texttt{reward\_gated} test with a hard-coded SE floor; Beta-posterior rule only when cost gating is off \\
+Rule P & opt-in (\texttt{promotion\_\allowbreak rule: P}) & opt-in, same function \\
+Stopping & budget caps, consecutive rejects, optional convergence monitor & budget caps; the driver decides when to \texttt{finalize} \\
+\bottomrule
+\end{tabular}
+\end{table}
