@@ -29,3 +29,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Suite B (tau-runner): relaunching HC/GEPA with judge azure/gpt-5.5 + rule P parity; AO, controls, HarnessLens (container-isolated) pending.
 - Failed reproductions: VERSE, CoEvoSkills; HarnessLens Suite A (moved to B).
 - Design page v2: research/capevolve-paper/design/experimental_design.html (+ generator/).
+
+## Update 13:00 UTC (periodic check)
+- No 3h stalls. CapEvolve main seeds not launched (chased capevolve-runner). Suite B relaunch ordered (tau-runner).
+- Tier 2 paused; AHE prepared for Suite B (no launch). RHO paused after smoke.
+- Caps OK: non-RITS 4.5M/100M, $12.81/$1000 proxy.
