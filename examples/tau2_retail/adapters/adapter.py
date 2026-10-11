@@ -51,15 +51,17 @@ import threading as _threading
 GATEWAY = os.environ.get("TAU_GATEWAY", "http://127.0.0.1:4111/v1")
 AGENT_MODEL = os.environ.get("TAU_AGENT_MODEL", "openai/rits/openai/gpt-oss-120b-a100")
 USER_SIM_MODEL = os.environ.get("TAU_USER_MODEL", "openai/rits/openai/gpt-oss-120b-a100")
-JUDGE_MODEL = os.environ.get("TAU_JUDGE_MODEL", "openai/rits/openai/gpt-oss-120b-a100")
+JUDGE_MODEL = os.environ.get("TAU_JUDGE_MODEL", "openai/azure/gpt-5.5")  # lead decision: not the target/user model; default reasoning settings
 SPLITS_JSON = Path(os.environ.get("TAU_SPLITS_JSON", Path(__file__).resolve().parents[3] / "protocol" / "tau_retail_splits.json"))
 MAX_STEPS = int(os.environ.get("TAU_MAX_STEPS", "100"))
 
 
 def _kwargs(role: str) -> dict:
     prefix = os.environ.get("TAU_TAG_PREFIX", "tag:E10B-adhoc-s0:adhoc")
-    kw = {"api_base": GATEWAY, "api_key": f"{prefix}:{role}", "temperature": 0.0,
-          "max_tokens": int(os.environ.get("MAX_TOKENS", "8000"))}
+    kw = {"api_base": GATEWAY, "api_key": f"{prefix}:{role}"}
+    if role == "judge":
+        return kw   # gpt-5.x pins temperature; judge runs with provider-default settings (recorded as such)
+    kw.update(temperature=0.0, max_tokens=int(os.environ.get("MAX_TOKENS", "8000")))
     eff = os.environ.get("TAU_REASONING_EFFORT", "").strip()
     if eff:
         kw["reasoning_effort"] = eff
@@ -330,6 +332,7 @@ def _native_sims_enabled() -> bool:
 class Adapter(CapabilityAdapter):
 
     _original_env_ctor = None
+    _candidate_fault = None
 
     # ---- tasks -----------------------------------------------------------
 
@@ -431,6 +434,9 @@ class Adapter(CapabilityAdapter):
         from tau2.runner import run_tasks
 
         _seal_check([t.id for t in tasks])
+        if Adapter._candidate_fault:
+            return {t.id: Rollout(task_id=t.id, error="candidate tools fault: " + Adapter._candidate_fault,
+                                  metadata={"domain": DOMAIN, "tau2_reward": 0.0, "error_kind": "candidate"}) for t in tasks}
         by_id = self._tau2_tasks_by_id()
         tau2_tasks = [by_id[t.id] for t in tasks if t.id in by_id]
         results: dict[str, Rollout] = {}
@@ -561,6 +567,9 @@ class Adapter(CapabilityAdapter):
             error=error,
             metadata={
                 "domain": DOMAIN,
+                **({"error_kind": "infra"} if error else {}),
+                "judge": {"model": JUDGE_MODEL, "settings": "provider-default (no temperature/max_tokens)",
+                          "nl_assertion_verdicts": (reward_info_dump or {}).get("nl_assertions")},
                 "tau2_reward": reward,
                 "tau2_reward_info": reward_info_dump,
                 "termination_reason": str(term),
@@ -595,6 +604,9 @@ class Adapter(CapabilityAdapter):
             return results
 
         _seal_check([t.id for t in tasks])
+        if Adapter._candidate_fault:
+            return {t.id: [Rollout(task_id=t.id, error="candidate tools fault: " + Adapter._candidate_fault,
+                                  metadata={"domain": DOMAIN, "tau2_reward": 0.0, "error_kind": "candidate"}) for _ in range(max(0, int(n_trials)))] for t in tasks}
         by_id = self._tau2_tasks_by_id()
         tau2_tasks = [by_id[t.id] for t in tasks if t.id in by_id]
         for t in tasks:
@@ -1157,6 +1169,16 @@ class Adapter(CapabilityAdapter):
             _rs._capevolve_pristine_eval = True
 
         policy_text = _read_candidate_policy(candidate_dir)
+        # E05: a candidate whose tools code cannot be imported/constructed/enumerated is a CANDIDATE fault
+        # (scored 0 under errored_trial_policy=fail), not missing data. Checked once per apply, no model calls.
+        Adapter._candidate_fault = None
+        try:
+            _tk = _build_candidate_tools(candidate_dir)
+            _tk.get_tools()
+            if not getattr(_tk, "tools", None) and not _tk.get_tools():
+                raise RuntimeError("candidate toolkit exposes no tools")
+        except BaseException as exc:  # noqa: BLE001 - includes SyntaxError/ImportError from exec_module
+            Adapter._candidate_fault = f"{type(exc).__name__}: {exc}"[:500]
 
         def candidate_get_environment(db=None, solo_mode: bool = False):
             if getattr(_PRISTINE, "on", False):
