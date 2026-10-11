@@ -91,6 +91,15 @@ stop_condition: ""           # agent-mode free-text halt rule, re-read each roun
 # --- acceptance gate --------------------------------------------------------
 gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective, native in round.py's own --mode; hill-climb natively per-iteration) | epsilon_constraint (maximize reward subject to a hard ceiling on another metric, native in round.py's own --mode)
 gate_k_se: 1.0
+# Optional measurement switches (hill-climb, skillopt, gepa). Every key is OFF by default and
+# an absent key leaves behaviour exactly as before. See docs/audit notes #755 / #758 / #759.
+# gate_footprint: false         # true/absent = mask the paired delta vector to the edit's footprint (gepa never masks)
+# gate_min_coverage: 0.6        # gate.decide min_coverage; 0 disables the guard
+# gate_coverage: joint          # joint = tasks valid on BOTH sides / planned tasks (default: candidate-only)
+# errored_trial_policy: fail    # fail = trials the adapter marks Rollout.metadata.error_kind=candidate score 0.0 (default: drop)
+# gate_no_regression: true      # reject a candidate that resolvably breaks a parent-passed val task
+# gate_max_broke: 0             # reject if it breaks more than N val tasks
+# confirm_fresh_only: true      # agent-optimize finalize: confirm on the fresh trials only
 # Optional, pareto gate_mode only (cap_evolve.gate.decide / cap_evolve.pareto_archive): the
 # objectives to balance. Omit for the default (reward maximize + cost minimize, with a
 # cost->latency->tokens fallback). round.py persists a bounded non-dominated frontier

@@ -63,7 +63,9 @@ from .harness import (
     _resolve_workers,
     _SNAPSHOT_IGNORE,
     evaluate_candidate,
+    joint_coverage,
     movement,
+    pop_paper_switches,
     record_iteration,
     split_result_from_rollouts,
 )
@@ -766,9 +768,11 @@ def _full_val_gate(
     minibatch stage). So we eval the existing child on full val and apply the
     identical paired/significance gate + optional no-regression dual gate.
     """
-    cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
-                                  n_trials=n_trials, tag=cid)
     gk = dict(gate_kwargs or {})
+    sw = pop_paper_switches(gk)   # gate_footprint is accepted but moot: this gate never masks
+    cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
+                                  n_trials=n_trials, tag=cid,
+                                  errored_policy=sw["errored_trial_policy"])
     paired = _paired_deltas(parent_result, cand_val)
     if "mode" not in gk and paired is not None:
         gk["mode"] = "paired"
@@ -780,7 +784,9 @@ def _full_val_gate(
     decision = gate_mod.decide(
         parent_result.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=parent_result.stderr,
-        paired_deltas=paired, coverage=cand_val.coverage, run_dir=run_dir,
+        paired_deltas=paired,
+        coverage=(joint_coverage(parent_result, cand_val) if sw["coverage"] == "joint"
+                  else cand_val.coverage), run_dir=run_dir,
         broke=mv["broke"], fixed=mv["fixed"], **gk,
     )
     accepted = decision.accept

@@ -110,11 +110,13 @@ def _latency(trace) -> float:
         return float("nan")
 
 
-def load_trials(run_dir, tags, split: str = "val") -> list[TrialRec]:
+def load_trials(run_dir, tags, split: str = "val", min_trial: int = 0) -> list[TrialRec]:
     """Errored trials are kept as reward 0 (an unmeasured trial is a failure, not a shed task).
     Per-trial records from ``rollouts/<split>/<task>__<tag>__t<k>.json``, POOLED over ``tags``
     (byte-identical replicates are one arm). Errored trials are skipped, as in
-    ``harness.split_result_from_rollouts``."""
+    ``harness.split_result_from_rollouts``. ``min_trial`` (default 0 = all) keeps only trials with
+    index ``k >= min_trial``: the FRESH trials of a top-up, excluding the evidence that selected the
+    candidate."""
     tags = [tags] if isinstance(tags, str) else list(tags)
     vdir = run_dir.rollouts / split
     out: list[TrialRec] = []
@@ -129,6 +131,8 @@ def load_trials(run_dir, tags, split: str = "val") -> list[TrialRec]:
                        if isinstance(m, dict) and "name" in m}
             tid = str(sc.get("task_id") or f.name.split("__")[0])
             k = int(f.stem.rsplit("__t", 1)[1]) if "__t" in f.stem else 0
+            if k < min_trial:
+                continue
             out.append(TrialRec(
                 task=tid, k=k, reward=0.0 if errored else float(sc.get("reward", 0.0)),
                 cost_usd=None if ro.get("cost_usd") is None else float(ro["cost_usd"]),
