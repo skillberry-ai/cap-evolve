@@ -229,3 +229,11 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - This goes into the paper's limitations whatever the scans find.
   - Trace2Skill, GEPA, SkillOpt, ACE, MIPROv2 and WikiSkill proposers have no tools, so no web access is possible.
 - 2026-10-11T22:22 — EvoSkill isolation (baseline-eng): empty tmpfs /home and /tmp. The extended negtest passes (final_set, other runs, archives, gold, settings all denied). Transcripts are now persisted and scanned every 15 min, with 0 sessions so far.
+- 2026-10-11T22:29 — Web-access channels, round 4. All three are closed for every arm uniformly.
+  - (1) Gateway-served web search: the upstream proxy answers Anthropic web_search/web_fetch tools, which bypasses network egress. The campaign gateway now strips any web search or fetch tool from every request and logs stripped_tools. Verified (4112 test: "NO SEARCH"; stripped_tools ["web_search"]). 4112 restarted, then 4111 restarted at about 22:3x with an overlap, and the post-restart calls are all 200.
+    - The gateway log stores no request bodies, so past web-search use cannot be read from it.
+    - Per-arm evidence: EvoSkill and Suite A CapEvolve had no proposer sessions yet. Meta-Harness transcripts show no web calls, and its --tools excluded web tools. HarnessLens has 0 web calls, and OpenCode denies them. The B/C transcripts scan is pending (tau-runner).
+    - Also --disallowedTools WebFetch WebSearch in the EvoSkill and Meta-Harness shims.
+  - (2) Meta-Harness (podman --network host) and the HarnessLens sandbox had open internet. Closed: --network none / unshare --net plus a unix-socket bridge to the gateway, with negtests. MH takes effect at the next proposer iteration; HL takes effect on relaunch.
+  - (3) The shared Gemma code-execution containers have open internet, for all arms including CapEvolve. baseline-eng is closing this from one switch time for all arms. A scan of the candidate artifacts for download instructions is pending. SkillOpt transcripts (722) show 0 web access.
+  - The final evaluation runs with all three closed. The limitations section gets an "open egress during part of the search" item.

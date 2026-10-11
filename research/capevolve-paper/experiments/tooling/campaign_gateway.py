@@ -123,6 +123,32 @@ def _caps_watch():
         time.sleep(30)
 
 
+_WEB_TOOL_HINTS = ("web_search", "web_fetch", "websearch", "webfetch", "web-search", "web-fetch")
+
+
+def _strip_web_tools(body):
+    """Campaign isolation (2026-10-11): no arm may reach the web through the gateway (the upstream proxy
+    can serve web search for Anthropic server tools). Remove any web search/fetch tool from the request,
+    for every arm alike, and return the names removed so the call log records it."""
+    tools = body.get("tools")
+    if not isinstance(tools, list):
+        return []
+    keep, gone = [], []
+    for t in tools:
+        if not isinstance(t, dict):
+            keep.append(t)
+            continue
+        fn = t.get("function") if isinstance(t.get("function"), dict) else {}
+        ident = " ".join(str(x) for x in (t.get("type", ""), t.get("name", ""), fn.get("name", ""))).lower()
+        (gone if any(h in ident for h in _WEB_TOOL_HINTS) else keep).append(t)
+    if gone:
+        body["tools"] = keep
+        if not keep:
+            body.pop("tools", None)
+            body.pop("tool_choice", None)
+    return [str(t.get("name") or t.get("type")) for t in gone]
+
+
 class H(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
@@ -162,6 +188,7 @@ class H(BaseHTTPRequestHandler):
             return self._send(429, {"error": {"message": f"campaign budget guard: {_ledger['reason']}"}})
         model = body.get("model", "")
         path = self.path
+        stripped = _strip_web_tools(body)
         is_anthropic = path.startswith("/v1/messages")
         if model.startswith("azoai/"):
             # Azure OpenAI direct (user decision 2026-10-11 21:05): deployment = dated name, e.g. azoai/gpt-4.1-2025-04-14.
@@ -280,7 +307,7 @@ class H(BaseHTTPRequestHandler):
             _log({"t": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "tag": tag, "model": model,
                   "upstream": key, "api": "anthropic" if is_anthropic else "openai", "stream": stream,
                   "status": status, "attempts": attempts, "queue_s": round(t0 - t_q, 3), "latency_s": round(time.time() - t0, 3),
-                  "usage": usage, "error": err})
+                  "usage": usage, "error": err, **({"stripped_tools": stripped} if stripped else {})})
 
 
 def _parse_stream_usage(buf):
