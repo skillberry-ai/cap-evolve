@@ -1,0 +1,24 @@
+# CapEvolve paper campaign — machine-readable configuration (planning safeguards, not price preferences).
+campaign_id: capevolve-paper-20261011
+branch: research/capevolve-paper-20261011
+base_sha: e3cb513095604f87863c0e3df914ec47f16d0c9d   # origin/main at campaign start; equals the reviewed SHA
+started_utc: "2026-10-11T00:05:00Z"
+coordinator: claude-code main session (Opus 5.5)
+budget:   # fallback envelope from the mandate; no repository/user campaign cap was found. First exhausted limit wins.
+  max_wall_hours: 72
+  preflight_usd_cap: 50
+  total_metered_usd_cap: 1000          # includes preflight; unpriced endpoints are counted as "unknown", never 0
+  max_target_rollouts: 10000
+  max_total_tokens: 100000000           # all roles: proposer, target, simulator, judge, diagnostics
+  final_eval_reserve_fraction: 0.25     # reserved for confirmation, final evaluation and analysis
+concurrency:   # initial conservative caps; tune on 429/timeout/p95 evidence only
+  rits: 4
+  litellm_gateway: 8
+  azure_direct: 8
+  container_slots: 8
+providers:
+  rits:    {cred_file: /home/dev/projects2/rits-env, note: "key field is spelled RITS_API_KET in the file"}
+  azure:   {cred_file: /home/dev/projects2/azure-openai-env}
+  litellm: {cred_file: "~/.claude/settings.json", fields: [ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN]}
+scratch_dir: /home/dev/projects2/campaign-scratch   # raw artifacts, PDFs, venv, logs (NOT committed)
+splits_policy: "optimization / model-selection / untouched final campaign are distinct; previously test-exposed tasks are reclassified as development"
