@@ -150,3 +150,10 @@ Format: date (UTC) — decision — rationale — reversible?
   - Suite C: the airline test-20 (development-exposed), n=3.
   - Rationale: Gemma throughput of about 200 rollouts/h makes A about 31 artifacts x 70 tasks = about 11 h. gpt-oss makes B plus C about 2,700 rollouts = about 13 h. Both must fit between the cutoff (10-13 06:00) and the 72 h stop (about 10-14 07:00), with retries.
   - MDEs in the paper must use these values.
+- 2026-10-11 22:40 — Draft-2 reviews R1, R2 and R4 agree on the main threat: rule P as configured is close to inert. The simulation gives an expected champion gain of about +0.001 to +0.002 and about 0.1 promotions per search. So CapEvolve arms will mostly return the seed, and a CapEvolve-vs-competitor contrast measures gate strictness rather than search quality.
+  - Response, all before the cutoff:
+    - (1) Launch E12A: a stock-gate CapEvolve hill-climb on Suite A, 3 seeds, the same config as E10 hc except the gate. Exploratory; it does not bind B*; its comparison point is min(B*, own count).
+    - (2) Analysis plan 5M: an equivalence rule (TOST, pre-specified margin); promotion count per search reported for every arm; E12A/E12C contrasts are descriptive.
+    - (3) The paper reframes CapEvolve-with-rule-P as a deliberately conservative configuration, reports its observed promotions, and uses E12A/E12C to show the other side of the trade.
+  - Known cost: 3 more Gemma searches lower every Suite A arm's throughput by about 10%, so B* drops by about 10%.
+  - Not done: E12B. gpt-oss queue median is 33.7 s, and HarnessLens still has to launch on B.
