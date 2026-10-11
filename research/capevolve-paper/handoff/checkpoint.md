@@ -34,3 +34,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - No 3h stalls. CapEvolve main seeds not launched (chased capevolve-runner). Suite B relaunch ordered (tau-runner).
 - Tier 2 paused; AHE prepared for Suite B (no launch). RHO paused after smoke.
 - Caps OK: non-RITS 4.5M/100M, $12.81/$1000 proxy.
+
+## Update 16:20 UTC (periodic check)
+- Gateway upgraded 13:11 (transparent upstream retry; priority; finish logging). Since then 0.34% non-200: gpt-oss harmony-parse 500s (Suite B, infra classification being confirmed) + Claude CLI output_config 400s (retried by CLI).
+- AO runs the digest/act engine (active_eval on) with rule P on both suites. CapEvolve Suite A main seeds started 14:42.
+- Suite B v2 (12:44) + isolation shim (14:57) + AO engine correction (15:45).
