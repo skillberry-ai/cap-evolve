@@ -1,0 +1,25 @@
+# sica (Self-Improving Coding Agent)
+- Exact title: A Self-Improving Coding Agent
+- Authors: Maxime Robeyns, Martin Szummer, Laurence Aitchison (arXiv API)
+- arXiv id + version read: 2504.15228, v2 (PDF stamp "16 May 2025"; PDF says "Preprint.")
+- First date / latest: 2025-04-21 (v1) / 2025-05-16 (v2) [arXiv API]
+- Venue/status: ICLR 2025 Workshop (SSI-FM = Scaling Self-Improving Foundation Models), WORKSHOP, listed as "SSI-FM Oral", not main conference. Source: OpenReview record (venueid ICLR.cc/2025/Workshop/SSI-FM, venue "SSI-FM Oral") via api2.openreview.net search 2026-10-11. The arXiv comment (v2) says "Submitted as a preprint to NeurIPS 2025" -- no NeurIPS acceptance verified. The PDF text itself does not mention the workshop. Workshop claim VERIFIED.
+- Code URL + license + endpoint note: https://github.com/MaximeRobeyns/self_improving_coding_agent ; MIT (GitHub API). README lists provider keys (Anthropic, OpenAI, Gemini, Fireworks, DeepSeek); a generic OpenAI-compatible base_url is UNVERIFIED.
+- Citation count: 64 (Semantic Scholar API, retrieved 2026-10-11)
+- Editable surface: the whole agent Python codebase (tools, sub-agents, prompts, overseer), no DSL (p.3).
+- Search method: HILL-CLIMB over an archive: at iteration i the BEST agent so far (by utility) is run as meta-agent to read the archive and write agent i+1 (Algorithm 1 p.5). Archive is kept and inspectable (an `archive analysis` tool), but parent = argmax utility, a single lineage. No merging. Meta-agent = the agent itself (self-referential).
+- Parent selection: greedy argmax of utility U = 0.5*score + 0.25*(1-min(1,cost/$10)) + 0.25*(1-min(1,time/300s)), x0.5 if timed out (Eq.1-2, p.3).
+- Feedback signal: scalar utility (accuracy, $ cost, wall-clock) plus archive traces/logs readable by the agent; async LLM overseer for pathology detection.
+- Task splits / held-out protocol: NONE. Benchmarks are fixed random subsets of 50 (SWE-Bench Verified, 50 LiveCodeBench) plus two self-made synthetic benchmarks (file editing, symbol location), all used for both selection and reporting (p.5-6). No train/val/test split, no held-out tests; headline gain is in-sample.
+- Benchmarks and models: SWE-Bench Verified subset, LiveCodeBench, synthetic file-edit/symbol-location; AIME 2024 and GPQA Diamond in a second run. Sonnet 3.5 (v2) main; o3-mini reasoning sub-agent (p.6).
+- Metrics: accuracy per benchmark, avg $ cost, time, tokens, % cached per problem (Table 1 p.6); utility.
+- Budget / cost reporting: Yes, coarse: ~USD 7,000 API cost for the 15-iteration run (p.6); per-problem cost/time/tokens per iteration (Table 1). Meta-improvement iteration ~1 hour (p.4). No matched-budget baseline.
+- Reported limitations: path dependency and poor "taste" of early ideas; low initial scores due to 5-min/$10 caps; much of the early gain is speed/cost features, not SWE accuracy; reasoning-model saturation (AIME/GPQA show little gain) (pp.7-8).
+- Key quantitative results: SWE-B subset 17% (iter 0) -> 53% (iter 14), 51% at iter 15 [Table 1 p.6]; abstract/p.1 "17% to 53%". Cost/problem $1.91 -> $1.70 and time 130.2s -> 114.5s (iter 0 -> 15) [Table 1]. AIME/GPQA: little improvement; o3-mini alone 87%/79% vs system avg 76% [p.7]. Single trajectory (one run); Figs 3-4 show 95% CI bands on utility/accuracy, basis of the CI not stated.
+- Candidate-evaluation allocation: FULL benchmark suite evaluation of every candidate (Algorithm 1 line 3); no subset/racing/bandit.
+- Task selection / curriculum: fixed subsets; benchmarks are self-curated but not adaptive.
+- Merge/composition: none.
+- Optimizer self-modification: YES in the loose sense (meta-agent is the current best agent and may edit its own meta-improvement prompts/tools), but no analysis separating meta-level from task-level gains.
+- Overlap with CapEvolve: closest to CapEvolve hill-climb (single incumbent lineage, archive-reading proposer, cost/time-aware utility). DGM treats it as the "greedy" baseline (DGM-Greedy, DGM App. A.3 p.25).
+- What it means for our claims: SICA is prior art for "coding-agent proposer reading prior results and iterating on one lineage". Its gains are in-sample, so cannot be cited as evidence of generalisation. Our hill-climb's paired-gate accept (k*SE) and sealed test are differentiators; no such control in SICA. Reproduction feasibility: LOW-MED (USD 7k run; model choices outdated).
+- Discrepancies vs prior review/catalog: Workshop status verified via OpenReview (matches catalog). arXiv comment is "Submitted as a preprint to NeurIPS 2025" (not reflected in catalog); no acceptance there. HGM Table 2 records SICA as failing on SWE-60 with an infinite loop in their re-run (HGM p.9). Otherwise none found.

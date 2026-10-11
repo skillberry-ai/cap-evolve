@@ -1,0 +1,24 @@
+# Reflexion
+- Exact title: Reflexion: Language Agents with Verbal Reinforcement Learning
+- Authors: Noah Shinn, Federico Cassano, Edward Berman, Ashwin Gopinath, Karthik Narasimhan, Shunyu Yao (arXiv API)
+- arXiv id + version read: 2303.11366, PDF stamp v4 (10 Oct 2023), 19 pages; p.1 footer reads "Preprint. Under review."
+- First date (v1) / latest: 2023-03-20 / v4 2023-10-10 (arXiv API; comment "v4 contains a few additional experiments")
+- Venue/status: NeurIPS 2023 (main conference, poster) -- source: OpenReview vAElhFcKW6 venue "NeurIPS 2023 poster" (api2.openreview.net search 2026-10-11). NeurIPS proceedings page itself not fetched by me (catalog says "official proceedings verified"). The PDF read is the arXiv v4 and does not itself say NeurIPS.
+- Code URL + license + endpoint note: https://github.com/noahshinn/reflexion (PDF abstract uses noahshinn024; repo resolves as noahshinn/reflexion); MIT (GitHub license API). README (read) requires OPENAI_API_KEY; custom base_url not verified. Last push 2025-01-14.
+- Citation count: unavailable (Semantic Scholar 429)
+- Editable surface: an episodic memory buffer of natural-language self-reflections (max Omega=1-3 entries) prepended to the actor prompt; no weights, prompts, or tools are edited (Sec 3, p.4-5).
+- Search method: no search. Trial loop (Alg. 1, p.4): Actor generates trajectory, Evaluator scores (EM / heuristic / LLM / self-generated unit tests), Self-Reflection LM writes a verbal summary appended to memory; repeat until success or max trials. Memory = sliding window.
+- Feedback signal: scalar/binary reward turned into verbal feedback; sources include exact-match, heuristics (ALFWorld repeat-action / >30 steps), LLM evaluator, self-written unit tests (p.4-7).
+- Task splits / held-out protocol: none -- learning happens per task instance over repeated trials on the evaluation tasks themselves (test-time, task-specific; e.g. 134 ALFWorld envs, 100 HotpotQA questions, HumanEval/MBPP/LeetcodeHardGym 40 Qs). Evaluator may use environment success signal during trials in decision-making/reasoning (e.g. HotpotQA exact match against ground truth, p.6), so reported gains are with oracle-style feedback; coding uses self-generated tests only.
+- Benchmarks and models: ALFWorld (134), HotpotQA (100 questions, distractor), HumanEval, MBPP (Python, Rust via MultiPL-E), LeetcodeHardGym (new, 40). LLMs: models are not tabulated in the pages read; coding table compares against GPT-4 (Table 1 p.7) -> model per experiment UNVERIFIED here.
+- Metrics: success rate over trials, EM, pass@1.
+- Budget / cost reporting: none beyond max trial counts (ALFWorld 12 trials, HotpotQA until 3 consecutive failures per question, memory 1-3); no tokens/$.
+- Reported limitations: local minima; memory limited to sliding window; code-gen limited by test-suite quality (non-deterministic/impure functions); flaky tests give false positives (Sec 5 p.9, Sec 4.3 p.8).
+- Key quantitative results: ALFWorld ReAct+Reflexion solves 130/134 vs ReAct plateau after trial 6-7 (text p.5; Fig 3 p.6). HotpotQA: Reflexion beats baselines; CoT(GT)+Reflexion +14% and +8% over episodic-memory-only (text p.6-7, Fig 4). Coding pass@1 (Table 1, p.7): HumanEval-Py 91.0 vs prev SOTA 80.1 (GPT-4); HumanEval-Rust 68.0 vs 60.0; MBPP-Py 77.1 vs 80.1 (Reflexion is LOWER than SOTA, omitted from abstract); MBPP-Rust 75.4 vs 70.9; Leetcode Hard 15.0 vs 7.5. Test-gen quality (Table 2, p.8): MBPP-Py FP rate 0.16, FN 0.59.
+- Candidate-evaluation allocation: n/a.
+- Task selection / curriculum: none.
+- Merge/composition: none.
+- Optimizer self-modification: none.
+- Overlap with CapEvolve: verbal reflection on failures as the learning signal (cf. our failure-cluster/trajectory-driven edits and JOURNAL memory), but per-instance and online rather than offline editing of a deployable artifact.
+- What it means for our claims: cannot claim "learning from natural-language reflection on failures" as new; any "memory file" claim must differentiate from Reflexion/ExpeL. Reflexion-style per-task retries are not a deployable single-attempt policy, so pass^k/held-out comparisons need the single-attempt protocol. Reproduction feasibility: high for the method (MIT, small), low for exact numbers (original GPT-4/text-davinci era models; per-experiment model unclear).
+- Discrepancies vs prior review/catalog: review/catalog "NeurIPS 2023; official proceedings verified" -- I confirmed NeurIPS 2023 poster via OpenReview only; the downloaded PDF is arXiv v4 marked "Preprint. Under review." Catalog code_url null -> noahshinn/reflexion. Abstract headline omits MBPP-Python regression (Table 1).

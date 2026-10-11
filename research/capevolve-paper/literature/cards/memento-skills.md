@@ -1,0 +1,24 @@
+# Memento-Skills
+- Exact title: Memento-Skills: Let Agents Design Agents
+- Authors: PDF credits "Memento-Team"; arXiv API lists 17: Huichi Zhou, Siyuan Guo, Anjie Liu, Zhongwei Yu, Ziqin Gong, Bowen Zhao, Zhixun Chen, Menglong Zhang, Yihang Chen, Jinsong Li, Runyu Yang, Qiangbin Liu, Xinlei Yu, Jianmin Zhou, Na Wang, Chunyang Sun, Jun Wang
+- arXiv id + version read: 2603.18743v1 (PDF stamp 19 Mar 2026)
+- First date / latest: 2026-03-19 / 2026-03-19 (arXiv API; comment "Memento-Skills Technical Report")
+- Venue/status: technical report / preprint (arXiv comment). OpenReview shows only a "CoRR 2026" record (vx8ee8Gsl7). Not peer-reviewed as far as verified.
+- Code URL + license: https://github.com/Memento-Teams/Memento-Skills ; Apache-2.0 (GitHub API). OpenAI-compatible: yes -- README profile config has model/api_key/base_url, "other OpenAI-compatible endpoints" (README read).
+- Citation count: 59 (Semantic Scholar API, retrieved 2026-10-11)
+- Editable surface: a growing LIBRARY of skill folders (SKILL.md declarative spec + helper scripts + prompts), file-level rewrites, new-skill discovery; a skill router (contrastive embedding Qwen3-Embedding-0.6B tuned with single-step offline RL/InfoNCE) and a tip memory.
+- Search method: online read-write reflective loop (Alg p.10): observe -> route to skill (CreateOnMiss) -> execute -> LLM judge (with ground-truth answer) -> on failure: tip memory update; failure-attribution selector picks the single responsible skill; if its utility (success ratio) < delta with >= n_min uses -> DiscoverSkill (restructure/new skill) else OptimiseSkill in place; synthetic unit-test gate with rollback; up to K=3 feedback retries. No population, no val-gated acceptance, no merging beyond library growth.
+- Feedback signal: LLM judge comparing to ground-truth answer + execution trace; per-skill success/fail counts.
+- Task splits / held-out [Sec 3.1 p.15]: GAIA validation 165 q -> 100 train / 65 test; HLE subset 1,130 -> 788 train / 342 test (even across 8 subjects). Train and test disjoint; test is used for the final comparison. Whether skills keep updating on test questions is not stated (UNVERIFIED). Training-round accuracies (GAIA 65.1->91.6, HLE 30.8->54.5) use ground-truth judged retries and are not held-out. Single run; no variance.
+- Benchmarks and models: GAIA, Humanity's Last Exam; Gemini-3.1-Flash for all experiments. No SkillsBench, SpreadsheetBench or OfficeQA.
+- Metrics: accuracy; router Recall@K, route hit rate, judge success rate (140 synthetic routing queries).
+- Budget / cost reporting: none (no tokens, $, rollouts, wall-clock).
+- Reported limitations: no limitations section; text notes limited cross-task transfer on GAIA (most trained skills never triggered at test) (p.15).
+- Key quantitative results: GAIA test 66.0% vs Read-Write ablation 52.3% (+13.7 pts) [Fig 10, text p.15]; HLE test 38.7% vs 17.9% (+20.8 pts) [Fig 11, text p.16]; abstract's "26.2% and 116.2% relative" = these vs the Read-Write ablation (not vs no-skills): 13.7/52.3=26.2%, 20.8/17.9=116.2%. Router Recall@1 0.60 vs Qwen3 0.54 vs BM25 0.32 [p.13]; judge success 0.80 vs 0.79 (Qwen3) vs 0.50 (BM25).
+- Candidate-evaluation allocation: none (no candidate comparison; one synthetic unit-test gate per mutation).
+- Task selection / curriculum: stream of training questions in rounds R0-R3; no curriculum.
+- Merge/composition: none.
+- Optimizer self-modification: yes in a loose sense: the agent rewrites skills that govern itself and trains its own router; no optimizer-code editing.
+- Overlap with CapEvolve: low-medium (skill-folder editing with failure attribution to a single skill; unit-test gate before accept). Not a fixed-task held-out optimization protocol.
+- What it means for our claims: little threat to benchmark claims (no overlapping benchmark); cite as related work for continual skill memory/routing. Its Read-Write ablation is a static-library baseline, not "no skills". Reproduction: MED (Apache-2.0, OpenAI-compatible; GAIA/HLE need web tools and an LLM judge).
+- Discrepancies vs prior review/catalog: review only groups it under "agent design through reusable skills" -- consistent. Catalog venue "technical report" confirmed. Catalog authors match arXiv API; PDF shows only "Memento-Team". Review gives no numbers; numbers above are verified.
