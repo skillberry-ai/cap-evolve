@@ -1,5 +1,5 @@
 {
- "_generated_utc": "2026-10-11T18:25:42Z",
+ "_generated_utc": "2026-10-11T19:08:27Z",
  "_note": "values not found in manifests/specs/deviations/launch scripts are 'not recorded'; nothing is guessed",
  "runs": {
   "A/ace/s0": {
@@ -47,7 +47,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 16
+    "rollout_counter": 17
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -113,7 +113,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 6
+    "rollout_counter": 10
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -179,7 +179,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 14
+    "rollout_counter": 20
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -278,7 +278,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 47
+    "rollout_counter": 54
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -390,7 +390,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 40
+    "rollout_counter": 55
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -412,10 +412,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 0,
-    "state_metric_calls": 0,
+    "state_metric_calls": 40,
     "state_iterations": 0,
     "state_optimizer_usd": 0.0,
-    "state_runner_tokens": 0,
+    "state_runner_tokens": 2596271,
     "state_best_val": 0.0
    }
   },
@@ -497,7 +497,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 40
+    "rollout_counter": 50
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -519,10 +519,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 0,
-    "state_metric_calls": 0,
+    "state_metric_calls": 40,
     "state_iterations": 0,
     "state_optimizer_usd": 0.0,
-    "state_runner_tokens": 0,
+    "state_runner_tokens": 3269640,
     "state_best_val": 0.0
    }
   },
@@ -545,18 +545,18 @@
     "live_cmdline_args": {
      "out": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0",
      "seed": "0",
-     "tag-prefix": "E10-evoskill-r2-s0",
+     "tag-prefix": "E10-evoskill-s0",
      "max-iterations": "12",
      "max-rollouts": "600",
      "concurrency": "4"
     }
    },
    "launch_scripts": {
-    "restart_note.txt": "restart note: infrastructure restart #5 (same seed). Previous process (13:05-18:3x) rollouts are INVALID: gateway stalled every request carrying tag E10-evoskill-s0:evoskill:target (zero gateway calls, litellm.Timeout ~1801s); not searches. New tag prefix E10-evoskill-r2-s0. Earlier restarts: tier hold; conc 12->4; candidates logging; hung rule.\n",
-    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-r2-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
+    "restart_note.txt": "restart note: infrastructure restart (same seed, canonical tags E10-evoskill-s0). Cause of earlier invalid rollouts (13:05-18:2x): gateway priority misconfiguration (coordinator): E10-evoskill was on the low-priority tag list, so calls queued until the 1800 s client timeout (3 x 600 s attempts: litellm default 600 s per attempt, OpenAI SDK max_retries=2). Previous: tier hold; conc 12->4; candidates logging; hung rule; r2-tag workaround.\n",
+    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
    },
    "live_process_cmdlines_snapshot": [
-    "2163740 Sun Oct 11 18:24:00 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0 --seed 0 --tag-prefix E10-evoskill-r2-s0 --max-iterations 12 --max-rollouts 600 --concurrency 4"
+    "2289741 Sun Oct 11 18:28:12 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0 --seed 0 --tag-prefix E10-evoskill-s0 --max-iterations 12 --max-rollouts 600 --concurrency 4"
    ],
    "models_by_role_observed_in_gateway": {
     "target": [
@@ -566,7 +566,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 4
+    "rollout_counter": 21
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -666,8 +666,11 @@
       "restarts": [
        "09:4x launch (3 seeds) stopped for Tier-2 hold: infrastructure/isolation, no outcome",
        "10:1x relaunch with concurrency 12 stopped after minutes (lead asked ~4 concurrent), infrastructure, no outcome; dirs s*_infra_restart_conc12",
-       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes"
-      ]
+       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes",
+       "18:2x restart #5: all rollouts of the 13:05-18:2x process were INVALID (gateway stalled requests with tag E10-evoskill-s<seed>:evoskill:target; ~1801 s litellm.Timeout, zero gateway calls). Old dirs s*_INVALID_gateway_tag_stall_since_1305. New tag prefix E10-evoskill-r2-s<seed>.",
+       "invalid period 13:05-18:40 caused by coordinator gateway priority misconfiguration (tags containing 'E10-evoskill' on the low-priority list from 13:11 until 18:40); restart 18:25 (r2 tags, stopped 18:28) and final restart 18:28 on canonical tags E10-evoskill-s<seed>. Calls of the current runs between 18:28 and 18:40 ran at low priority (slower, valid). Old dirs: s*_INVALID_gateway_tag_stall_since_1305, s*_infra_restart_r2tag."
+      ],
+      "gateway_priority_note": "Not a gateway leak: confirmed by coordinator."
      }
     },
     {
@@ -759,8 +762,11 @@
       "restarts": [
        "09:4x launch (3 seeds) stopped for Tier-2 hold: infrastructure/isolation, no outcome",
        "10:1x relaunch with concurrency 12 stopped after minutes (lead asked ~4 concurrent), infrastructure, no outcome; dirs s*_infra_restart_conc12",
-       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes"
-      ]
+       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes",
+       "18:2x restart #5: all rollouts of the 13:05-18:2x process were INVALID (gateway stalled requests with tag E10-evoskill-s<seed>:evoskill:target; ~1801 s litellm.Timeout, zero gateway calls). Old dirs s*_INVALID_gateway_tag_stall_since_1305. New tag prefix E10-evoskill-r2-s<seed>.",
+       "invalid period 13:05-18:40 caused by coordinator gateway priority misconfiguration (tags containing 'E10-evoskill' on the low-priority list from 13:11 until 18:40); restart 18:25 (r2 tags, stopped 18:28) and final restart 18:28 on canonical tags E10-evoskill-s<seed>. Calls of the current runs between 18:28 and 18:40 ran at low priority (slower, valid). Old dirs: s*_INVALID_gateway_tag_stall_since_1305, s*_infra_restart_r2tag."
+      ],
+      "gateway_priority_note": "Not a gateway leak: confirmed by coordinator."
      }
     }
    ],
@@ -769,16 +775,31 @@
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_conc12",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_hung_rule",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_no_candidates_log",
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_r2tag",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_stopped_tier_hold_1009"
    ],
    "restart_cutoff": {
-    "utc": "2026-10-11T18:24:01Z",
+    "utc": "2026-10-11T18:28:13Z",
     "source": "derived: birth time of negtest_before_launch.txt"
    },
    "infra": {
     "infra_retries_in_counter": null,
     "infra_retries_json": null,
-    "llm_failure_counts": null
+    "llm_failure_counts": {
+     "run": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0",
+     "cutoff": "2026-10-11T13:11:00Z",
+     "gateway_by_period": {
+      "before_calls": 265,
+      "before_client_disconnects": 32,
+      "before_upstream_failed_calls": 5,
+      "after_calls": 102
+     },
+     "exact": {
+      "source": "project/.cache/runs (cached val rollouts only; train-sample rollouts are not cached)",
+      "llm_call_failed_rollouts": 0,
+      "cached_rollouts": 17
+     }
+    }
    },
    "capevolve_state": null
   },
@@ -801,18 +822,18 @@
     "live_cmdline_args": {
      "out": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1",
      "seed": "1",
-     "tag-prefix": "E10-evoskill-r2-s1",
+     "tag-prefix": "E10-evoskill-s1",
      "max-iterations": "12",
      "max-rollouts": "600",
      "concurrency": "4"
     }
    },
    "launch_scripts": {
-    "restart_note.txt": "restart note: infrastructure restart #5 (same seed). Previous process (13:05-18:3x) rollouts are INVALID: gateway stalled every request carrying tag E10-evoskill-s1:evoskill:target (zero gateway calls, litellm.Timeout ~1801s); not searches. New tag prefix E10-evoskill-r2-s1. Earlier restarts: tier hold; conc 12->4; candidates logging; hung rule.\n",
-    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-r2-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
+    "restart_note.txt": "restart note: infrastructure restart (same seed, canonical tags E10-evoskill-s1). Cause of earlier invalid rollouts (13:05-18:2x): gateway priority misconfiguration (coordinator): E10-evoskill was on the low-priority tag list, so calls queued until the 1800 s client timeout (3 x 600 s attempts: litellm default 600 s per attempt, OpenAI SDK max_retries=2). Previous: tier hold; conc 12->4; candidates logging; hung rule; r2-tag workaround.\n",
+    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
    },
    "live_process_cmdlines_snapshot": [
-    "2163792 Sun Oct 11 18:24:01 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1 --seed 1 --tag-prefix E10-evoskill-r2-s1 --max-iterations 12 --max-rollouts 600 --concurrency 4"
+    "2289801 Sun Oct 11 18:28:13 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1 --seed 1 --tag-prefix E10-evoskill-s1 --max-iterations 12 --max-rollouts 600 --concurrency 4"
    ],
    "models_by_role_observed_in_gateway": {
     "target": [
@@ -822,7 +843,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 4
+    "rollout_counter": 21
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -922,8 +943,11 @@
       "restarts": [
        "09:4x launch (3 seeds) stopped for Tier-2 hold: infrastructure/isolation, no outcome",
        "10:1x relaunch with concurrency 12 stopped after minutes (lead asked ~4 concurrent), infrastructure, no outcome; dirs s*_infra_restart_conc12",
-       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes"
-      ]
+       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes",
+       "18:2x restart #5: all rollouts of the 13:05-18:2x process were INVALID (gateway stalled requests with tag E10-evoskill-s<seed>:evoskill:target; ~1801 s litellm.Timeout, zero gateway calls). Old dirs s*_INVALID_gateway_tag_stall_since_1305. New tag prefix E10-evoskill-r2-s<seed>.",
+       "invalid period 13:05-18:40 caused by coordinator gateway priority misconfiguration (tags containing 'E10-evoskill' on the low-priority list from 13:11 until 18:40); restart 18:25 (r2 tags, stopped 18:28) and final restart 18:28 on canonical tags E10-evoskill-s<seed>. Calls of the current runs between 18:28 and 18:40 ran at low priority (slower, valid). Old dirs: s*_INVALID_gateway_tag_stall_since_1305, s*_infra_restart_r2tag."
+      ],
+      "gateway_priority_note": "Not a gateway leak: confirmed by coordinator."
      }
     },
     {
@@ -1015,8 +1039,11 @@
       "restarts": [
        "09:4x launch (3 seeds) stopped for Tier-2 hold: infrastructure/isolation, no outcome",
        "10:1x relaunch with concurrency 12 stopped after minutes (lead asked ~4 concurrent), infrastructure, no outcome; dirs s*_infra_restart_conc12",
-       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes"
-      ]
+       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes",
+       "18:2x restart #5: all rollouts of the 13:05-18:2x process were INVALID (gateway stalled requests with tag E10-evoskill-s<seed>:evoskill:target; ~1801 s litellm.Timeout, zero gateway calls). Old dirs s*_INVALID_gateway_tag_stall_since_1305. New tag prefix E10-evoskill-r2-s<seed>.",
+       "invalid period 13:05-18:40 caused by coordinator gateway priority misconfiguration (tags containing 'E10-evoskill' on the low-priority list from 13:11 until 18:40); restart 18:25 (r2 tags, stopped 18:28) and final restart 18:28 on canonical tags E10-evoskill-s<seed>. Calls of the current runs between 18:28 and 18:40 ran at low priority (slower, valid). Old dirs: s*_INVALID_gateway_tag_stall_since_1305, s*_infra_restart_r2tag."
+      ],
+      "gateway_priority_note": "Not a gateway leak: confirmed by coordinator."
      }
     }
    ],
@@ -1025,16 +1052,32 @@
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_conc12",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_hung_rule",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_no_candidates_log",
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_r2tag",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_stopped_tier_hold_1009"
    ],
    "restart_cutoff": {
-    "utc": "2026-10-11T18:24:01Z",
+    "utc": "2026-10-11T18:28:13Z",
     "source": "derived: birth time of negtest_before_launch.txt"
    },
    "infra": {
     "infra_retries_in_counter": null,
     "infra_retries_json": null,
-    "llm_failure_counts": null
+    "llm_failure_counts": {
+     "run": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1",
+     "cutoff": "2026-10-11T13:11:00Z",
+     "gateway_by_period": {
+      "before_calls": 258,
+      "before_client_disconnects": 35,
+      "before_upstream_failed_calls": 8,
+      "after_calls": 83,
+      "after_client_disconnects": 2
+     },
+     "exact": {
+      "source": "project/.cache/runs (cached val rollouts only; train-sample rollouts are not cached)",
+      "llm_call_failed_rollouts": 0,
+      "cached_rollouts": 17
+     }
+    }
    },
    "capevolve_state": null
   },
@@ -1057,18 +1100,18 @@
     "live_cmdline_args": {
      "out": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2",
      "seed": "2",
-     "tag-prefix": "E10-evoskill-r2-s2",
+     "tag-prefix": "E10-evoskill-s2",
      "max-iterations": "12",
      "max-rollouts": "600",
      "concurrency": "4"
     }
    },
    "launch_scripts": {
-    "restart_note.txt": "restart note: infrastructure restart #5 (same seed). Previous process (13:05-18:3x) rollouts are INVALID: gateway stalled every request carrying tag E10-evoskill-s2:evoskill:target (zero gateway calls, litellm.Timeout ~1801s); not searches. New tag prefix E10-evoskill-r2-s2. Earlier restarts: tier hold; conc 12->4; candidates logging; hung rule.\n",
-    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-r2-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
+    "restart_note.txt": "restart note: infrastructure restart (same seed, canonical tags E10-evoskill-s2). Cause of earlier invalid rollouts (13:05-18:2x): gateway priority misconfiguration (coordinator): E10-evoskill was on the low-priority tag list, so calls queued until the 1800 s client timeout (3 x 600 s attempts: litellm default 600 s per attempt, OpenAI SDK max_retries=2). Previous: tier hold; conc 12->4; candidates logging; hung rule; r2-tag workaround.\n",
+    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
    },
    "live_process_cmdlines_snapshot": [
-    "2163843 Sun Oct 11 18:24:01 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2 --seed 2 --tag-prefix E10-evoskill-r2-s2 --max-iterations 12 --max-rollouts 600 --concurrency 4"
+    "2289853 Sun Oct 11 18:28:13 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2 --seed 2 --tag-prefix E10-evoskill-s2 --max-iterations 12 --max-rollouts 600 --concurrency 4"
    ],
    "models_by_role_observed_in_gateway": {
     "target": [
@@ -1078,7 +1121,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 4
+    "rollout_counter": 20
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -1178,8 +1221,11 @@
       "restarts": [
        "09:4x launch (3 seeds) stopped for Tier-2 hold: infrastructure/isolation, no outcome",
        "10:1x relaunch with concurrency 12 stopped after minutes (lead asked ~4 concurrent), infrastructure, no outcome; dirs s*_infra_restart_conc12",
-       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes"
-      ]
+       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes",
+       "18:2x restart #5: all rollouts of the 13:05-18:2x process were INVALID (gateway stalled requests with tag E10-evoskill-s<seed>:evoskill:target; ~1801 s litellm.Timeout, zero gateway calls). Old dirs s*_INVALID_gateway_tag_stall_since_1305. New tag prefix E10-evoskill-r2-s<seed>.",
+       "invalid period 13:05-18:40 caused by coordinator gateway priority misconfiguration (tags containing 'E10-evoskill' on the low-priority list from 13:11 until 18:40); restart 18:25 (r2 tags, stopped 18:28) and final restart 18:28 on canonical tags E10-evoskill-s<seed>. Calls of the current runs between 18:28 and 18:40 ran at low priority (slower, valid). Old dirs: s*_INVALID_gateway_tag_stall_since_1305, s*_infra_restart_r2tag."
+      ],
+      "gateway_priority_note": "Not a gateway leak: confirmed by coordinator."
      }
     },
     {
@@ -1271,8 +1317,11 @@
       "restarts": [
        "09:4x launch (3 seeds) stopped for Tier-2 hold: infrastructure/isolation, no outcome",
        "10:1x relaunch with concurrency 12 stopped after minutes (lead asked ~4 concurrent), infrastructure, no outcome; dirs s*_infra_restart_conc12",
-       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes"
-      ]
+       "11:5x-12:xx restart to apply the hung-rollout rule; dirs s*_infra_restart_hung_rule; no outcomes",
+       "18:2x restart #5: all rollouts of the 13:05-18:2x process were INVALID (gateway stalled requests with tag E10-evoskill-s<seed>:evoskill:target; ~1801 s litellm.Timeout, zero gateway calls). Old dirs s*_INVALID_gateway_tag_stall_since_1305. New tag prefix E10-evoskill-r2-s<seed>.",
+       "invalid period 13:05-18:40 caused by coordinator gateway priority misconfiguration (tags containing 'E10-evoskill' on the low-priority list from 13:11 until 18:40); restart 18:25 (r2 tags, stopped 18:28) and final restart 18:28 on canonical tags E10-evoskill-s<seed>. Calls of the current runs between 18:28 and 18:40 ran at low priority (slower, valid). Old dirs: s*_INVALID_gateway_tag_stall_since_1305, s*_infra_restart_r2tag."
+      ],
+      "gateway_priority_note": "Not a gateway leak: confirmed by coordinator."
      }
     }
    ],
@@ -1281,16 +1330,32 @@
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_conc12",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_hung_rule",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_no_candidates_log",
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_r2tag",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_stopped_tier_hold_1009"
    ],
    "restart_cutoff": {
-    "utc": "2026-10-11T18:24:01Z",
+    "utc": "2026-10-11T18:28:13Z",
     "source": "derived: birth time of negtest_before_launch.txt"
    },
    "infra": {
     "infra_retries_in_counter": null,
     "infra_retries_json": null,
-    "llm_failure_counts": null
+    "llm_failure_counts": {
+     "run": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2",
+     "cutoff": "2026-10-11T13:11:00Z",
+     "gateway_by_period": {
+      "before_calls": 277,
+      "before_client_disconnects": 35,
+      "before_upstream_failed_calls": 5,
+      "after_calls": 92,
+      "after_client_disconnects": 4
+     },
+     "exact": {
+      "source": "project/.cache/runs (cached val rollouts only; train-sample rollouts are not cached)",
+      "llm_call_failed_rollouts": 0,
+      "cached_rollouts": 16
+     }
+    }
    },
    "capevolve_state": null
   },
@@ -1344,7 +1409,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 147
+    "rollout_counter": 162
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -1509,13 +1574,13 @@
       "before_calls": 419,
       "before_client_disconnects": 6,
       "before_upstream_failed_calls": 2,
-      "after_calls": 375,
-      "after_client_disconnects": 5
+      "after_calls": 447,
+      "after_client_disconnects": 7
      },
      "exact": {
       "source": "gepa_run/generated_best_outputs_valset (best program only; GEPA does not persist other rollout outputs)",
       "llm_call_failed_rollouts": 0,
-      "files": 50,
+      "files": 55,
       "note": "exact per-rollout count for non-best evaluations is not persisted by GEPA; use the gateway upper bound"
      }
     }
@@ -1572,7 +1637,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 100
+    "rollout_counter": 128
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -1737,7 +1802,7 @@
       "before_calls": 419,
       "before_upstream_failed_calls": 9,
       "before_client_disconnects": 2,
-      "after_calls": 333,
+      "after_calls": 469,
       "after_client_disconnects": 19
      },
      "exact": {
@@ -1800,7 +1865,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 199
+    "rollout_counter": 223
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -1964,7 +2029,7 @@
      "gateway_by_period": {
       "before_calls": 438,
       "before_upstream_failed_calls": 3,
-      "after_calls": 395,
+      "after_calls": 489,
       "after_client_disconnects": 9
      },
      "exact": {
@@ -2857,7 +2922,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 55
+    "rollout_counter": 59
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -2955,7 +3020,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 40
+    "rollout_counter": 54
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -2977,10 +3042,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 0,
-    "state_metric_calls": 0,
+    "state_metric_calls": 40,
     "state_iterations": 0,
     "state_optimizer_usd": 0.0,
-    "state_runner_tokens": 0,
+    "state_runner_tokens": 2828558,
     "state_best_val": 0.0
    }
   },
@@ -3048,7 +3113,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 52
+    "rollout_counter": 59
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -3975,6 +4040,9 @@
     "1863326 Sun Oct 11 10:56:12 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/metaharness/sb/mh_sb_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0 --seed 0 --tag-prefix E10-metaharness-s0 --arm metaharness --max-rollouts 600 --k 2 --train-batch 20 --workers 3"
    ],
    "models_by_role_observed_in_gateway": {
+    "proposer": [
+     "aws/claude-sonnet-5-5"
+    ],
     "target": [
      "rits/google/gemma-4-31B-it"
     ]
@@ -3982,7 +4050,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 120
+    "rollout_counter": 150
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -4166,7 +4234,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 119
+    "rollout_counter": 120
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -4350,7 +4418,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 113
+    "rollout_counter": 120
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -4533,7 +4601,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 22
+    "rollout_counter": 25
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -4592,7 +4660,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 18
+    "rollout_counter": 21
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -4644,6 +4712,9 @@
     "941555 Sun Oct 11 12:59:42 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/mipro_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/mipro/s2 --seed 2 --tag-prefix E10-mipro-s2 --arm mipro --max-rollouts 600"
    ],
    "models_by_role_observed_in_gateway": {
+    "proposer": [
+     "aws/claude-sonnet-5-5"
+    ],
     "target": [
      "rits/google/gemma-4-31B-it"
     ]
@@ -4651,7 +4722,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 18
+    "rollout_counter": 28
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -4865,7 +4936,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 121
+    "rollout_counter": 130
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5010,13 +5081,13 @@
       "before_calls": 530,
       "before_client_disconnects": 5,
       "before_upstream_failed_calls": 7,
-      "after_calls": 438,
-      "after_client_disconnects": 13
+      "after_calls": 522,
+      "after_client_disconnects": 18
      },
      "exact": {
       "source": "skillopt_out/**/results.jsonl",
       "llm_call_failed_rollouts": 0,
-      "rollout_rows": 120
+      "rollout_rows": 200
      }
     }
    },
@@ -5215,7 +5286,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 120
+    "rollout_counter": 137
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5360,13 +5431,13 @@
       "before_calls": 491,
       "before_upstream_failed_calls": 5,
       "before_client_disconnects": 4,
-      "after_calls": 381,
-      "after_client_disconnects": 11
+      "after_calls": 481,
+      "after_client_disconnects": 12
      },
      "exact": {
       "source": "skillopt_out/**/results.jsonl",
       "llm_call_failed_rollouts": 1,
-      "rollout_rows": 80
+      "rollout_rows": 120
      }
     }
    },
@@ -5565,7 +5636,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 148
+    "rollout_counter": 160
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5710,7 +5781,7 @@
       "before_calls": 552,
       "before_upstream_failed_calls": 13,
       "before_client_disconnects": 4,
-      "after_calls": 463,
+      "after_calls": 585,
       "after_client_disconnects": 8
      },
      "exact": {
@@ -5760,7 +5831,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 111
+    "rollout_counter": 120
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5946,7 +6017,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 109
+    "rollout_counter": 117
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6132,7 +6203,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 111
+    "rollout_counter": 118
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6333,7 +6404,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 58
+    "rollout_counter": 67
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6484,7 +6555,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 69
+    "rollout_counter": 86
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6635,7 +6706,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 59
+    "rollout_counter": 75
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -8058,7 +8129,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 145
+    "rollout_counter": 148
    },
    "concurrency": {
     "manifest.json": 6
@@ -8309,7 +8380,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 126
+    "rollout_counter": 151
    },
    "concurrency": {
     "manifest.json": 6
@@ -8559,7 +8630,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 142
+    "rollout_counter": 148
    },
    "concurrency": {
     "manifest.json": 6
@@ -11050,7 +11121,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 10
+    "rollout_counter": 13
    },
    "concurrency": {
     "manifest.json": 6

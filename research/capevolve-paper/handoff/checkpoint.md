@@ -39,3 +39,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Gateway upgraded 13:11 (transparent upstream retry; priority; finish logging). Since then 0.34% non-200: gpt-oss harmony-parse 500s (Suite B, infra classification being confirmed) + Claude CLI output_config 400s (retried by CLI).
 - AO runs the digest/act engine (active_eval on) with rule P on both suites. CapEvolve Suite A main seeds started 14:42.
 - Suite B v2 (12:44) + isolation shim (14:57) + AO engine correction (15:45).
+
+## Update 19:16 UTC (periodic check)
+- No stalls; gateway healthy (101.7k calls, not blocked). Caps OK: non-RITS 15.2M/100M; $47.18/$1000 proxy.
+- COORDINATOR ERROR fixed 18:40: E10-evoskill/E10-harnesslens/probe were left in caps.json low_priority_tags after EvoSkill promotion; EvoSkill restarted 18:28 on canonical tags (pre-18:28 data invalid).
+- Suite C (airline) launched; tau-runner monitors B and C every 2h. HarnessLens (bl-harness) trial e2e9 still running; hand-over to tau-runner pending.
+- Cron jobs are session-only: cutoff one-shot b76737e4 (2026-10-13 06:00 UTC), 3-hourly check 82e47de9.

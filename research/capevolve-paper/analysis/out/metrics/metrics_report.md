@@ -1,16 +1,16 @@
 # Campaign metrics report
 
-Generated 2026-10-11T18:25:42Z UTC from `/home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl` (newest call 2026-10-11T18:25:42Z). Re-run: `refresh_metrics.sh --once`.
+Generated 2026-10-11T19:08:27Z UTC from `/home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl` (newest call 2026-10-11T19:08:28Z). Re-run: `refresh_metrics.sh --once`.
 USD = proxy Anthropic list prices, Claude models only; RITS/Azure/GCP/gpt-oss are unpriced (tokens only, never $0); `lb` = priced sum is a lower bound.
 
 ## Reconciliation with gateway /health
 
-| quantity | /health | recomputed from log (first 93970 calls) | diff |
+| quantity | /health | recomputed from log (first 101693 calls) | diff |
 |---|---:|---:|---:|
-| total_tokens | 476,378,574 | 476,378,574 | 0 |
-| rits_tokens | 462,321,409 | 462,321,409 | 0 |
-| capped_tokens (non-RITS) | 14,057,165 | 14,057,165 | 0 |
-| calls | 93970 | 93970 | 0 |
+| total_tokens | 517,492,056 | 517,492,056 | 0 |
+| rits_tokens | 502,321,173 | 502,321,173 | 0 |
+| capped_tokens (non-RITS) | 15,170,883 | 15,170,883 | 0 |
+| calls | 101693 | 101693 | 0 |
 
 Gateway ledger counts usage.total_tokens when the upstream supplies it; for non-streamed Anthropic calls total_tokens = input+output and omits cache_creation tokens, so those cache writes are in the usage fields but not in the ledger (see naive_sum_... for the size).
 Naive Anthropic sum (input+output+cache_creation) minus ledger, by model/api/stream: `{"('claude-sonnet-5', 'anthropic', False)": 144064}`
@@ -19,11 +19,11 @@ Naive Anthropic sum (input+output+cache_creation) minus ledger, by model/api/str
 
 | scope | calls | errors | component non-cache tokens (basis for all sums) | ledger tokens (gateway basis) | RITS tokens | non-RITS tokens | proxy USD (priced) | unpriced non-cache tokens |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| overall | 93,970 | 585 | 476,522,638 | 476,378,574 | 462,321,409 | 14,057,165 | $44.58 lb | 466,345,287 |
+| overall | 101,702 | 607 | 517,679,253 | 517,535,189 | 502,364,306 | 15,170,883 | $47.18 lb | 506,555,268 |
 | suite - | 2,019 | 126 | 11,808,886 | 11,664,822 | 9,998,051 | 1,666,771 | $5.36 lb | 9,998,051 |
-| suite A | 19,757 | 136 | 126,266,834 | 126,266,834 | 123,355,444 | 2,911,390 | $7.99 lb | 123,355,444 |
-| suite B | 71,736 | 323 | 337,405,393 | 337,405,393 | 327,926,389 | 9,479,004 | $31.22 lb | 331,950,267 |
-| suite C | 458 | 0 | 1,041,525 | 1,041,525 | 1,041,525 | 0 | $0.00 lb | 1,041,525 |
+| suite A | 22,029 | 137 | 142,418,060 | 142,418,060 | 138,583,341 | 3,834,719 | $10.51 lb | 138,583,341 |
+| suite B | 74,227 | 325 | 350,150,536 | 350,150,536 | 340,481,143 | 9,669,393 | $31.30 lb | 344,672,105 |
+| suite C | 3,427 | 19 | 13,301,771 | 13,301,771 | 13,301,771 | 0 | $0.00 lb | 13,301,771 |
 
 By suite and category (overhead = everything except main/chaser_eval):
 
@@ -31,87 +31,90 @@ By suite and category (overhead = everything except main/chaser_eval):
 |---|---:|---:|---:|---:|
 | -|smoke | 1,968 | 11,352,781 | 9,998,051 | $4.10 |
 | -|untagged | 51 | 312,041 | 0 | $1.26 |
-| A|main | 15,864 | 105,948,135 | 104,095,926 | $4.75 |
-| A|no_run_dir | 95 | 443,146 | 288,858 | $0.33 |
-| A|restart_waste | 3,004 | 15,610,998 | 15,499,749 | $0.35 |
+| A|main | 18,106 | 122,051,649 | 119,276,111 | $7.27 |
+| A|no_run_dir | 123 | 490,818 | 336,530 | $0.33 |
+| A|restart_waste | 3,006 | 15,611,038 | 15,499,789 | $0.35 |
 | A|smoke | 416 | 2,125,526 | 1,382,518 | $2.15 |
 | A|stopped | 378 | 2,139,029 | 2,088,393 | $0.41 |
-| B|chaser_eval | 4,300 | 18,102,761 | 17,815,882 | $0.00 |
-| B|main | 44,604 | 212,232,848 | 204,867,022 | $21.53 |
-| B|no_run_dir | 9 | 23,771 | 23,771 | $0.00 |
+| B|chaser_eval | 4,769 | 20,346,341 | 20,042,829 | $0.00 |
+| B|main | 46,522 | 221,967,252 | 214,427,670 | $21.61 |
+| B|no_run_dir | 113 | 790,930 | 790,930 | $0.00 |
 | B|pilot | 2,246 | 10,600,502 | 10,051,427 | $2.04 |
 | B|restart_waste | 20,275 | 95,165,567 | 93,924,697 | $7.56 |
 | B|smoke | 302 | 1,279,944 | 1,243,590 | $0.09 |
-| C|main | 431 | 945,307 | 945,307 | $0.00 |
+| C|main | 3,400 | 13,205,553 | 13,205,553 | $0.00 |
 | C|smoke | 27 | 96,218 | 96,218 | $0.00 |
 
 ## Per arm x seed (main + chaser evaluation)
 
 | suite | arm | seed | counted rollouts | wall h | rollouts/h | calls | err | target Mtok | user Mtok | optimizer non-cache ktok (cap 4M) | optimizer USD (proxy) | cand created/eval/acc | tok per rollout (all roles) |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|
-| A | ace | 0 | 16 | 5.41 | 3.00 | 151 | 0 | 1.49 | 0.00 | 169 (4.2%) | $0.49 | 0/0/0 | 103568 |
-| A | ace | 1 | 6 | 5.40 | 1.10 | 128 | 0 | 1.51 | 0.00 | 45 (1.1%) | $0.13 | 0/0/0 | 258514 |
-| A | ace | 2 | 14 | 5.42 | 2.60 | 159 | 0 | 1.45 | 0.00 | 186 (4.7%) | $0.51 | 0/0/0 | 116923 |
-| A | ao | 0 | 47 | 3.73 | 12.60 | 389 | 0 | 2.35 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/0 | 49983 |
-| A | ao | 1 | 40 | 3.68 | 10.90 | 371 | 0 | 2.48 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 61899 |
-| A | ao | 2 | 40 | 3.71 | 10.80 | 422 | 0 | 2.84 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 70959 |
-| A | gepa | 0 | 147 | 10.06 | 14.60 | 822 | 2 | 4.52 | 0.00 | 68 (1.7%) | $0.24 | 5/3/3 | 31188 |
-| A | gepa | 1 | 100 | 10.07 | 9.90 | 790 | 9 | 6.13 | 0.00 | 41 (1.0%) | $0.15 | 2/2/2 | 61735 |
-| A | gepa | 2 | 199 | 10.06 | 19.80 | 867 | 3 | 4.70 | 0.00 | 123 (3.1%) | $0.38 | 6/4/4 | 24240 |
-| A | hc | 0 | 55 | 3.72 | 14.80 | 401 | 0 | 2.22 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 40427 |
-| A | hc | 1 | 40 | 3.73 | 10.70 | 396 | 0 | 2.73 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 68128 |
-| A | hc | 2 | 52 | 3.74 | 13.90 | 386 | 0 | 2.15 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 41416 |
-| A | metaharness | 0 | 120 | 7.49 | 16.00 | 969 | 7 | 6.48 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 54005 |
-| A | metaharness | 1 | 119 | 7.49 | 15.90 | 1063 | 2 | 6.75 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 56722 |
-| A | metaharness | 2 | 113 | 7.48 | 15.10 | 1054 | 3 | 7.15 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 63280 |
-| A | mipro | 0 | 22 | 5.40 | 4.10 | 148 | 1 | 1.03 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 46724 |
-| A | mipro | 1 | 18 | 5.38 | 3.30 | 135 | 0 | 1.22 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 68016 |
-| A | mipro | 2 | 18 | 5.39 | 3.30 | 120 | 0 | 0.91 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 50550 |
-| A | skillopt | 0 | 121 | 10.06 | 12.00 | 1018 | 7 | 6.65 | 0.00 | 417 (10.4%) | $0.97 | 2/2/1 | 58395 |
-| A | skillopt | 1 | 120 | 10.06 | 11.90 | 926 | 5 | 6.30 | 0.00 | 437 (10.9%) | $1.00 | 1/1/1 | 56179 |
-| A | skillopt | 2 | 148 | 10.06 | 14.70 | 1077 | 13 | 7.00 | 0.00 | 366 (9.2%) | $0.88 | 2/2/2 | 49769 |
-| A | trace2skill | 0 | 111 | 9.57 | 11.60 | 867 | 2 | 5.67 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 51036 |
-| A | trace2skill | 1 | 109 | 9.58 | 11.40 | 858 | 13 | 5.17 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 47463 |
-| A | trace2skill | 2 | 111 | 9.56 | 11.60 | 829 | 11 | 4.99 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 44970 |
-| A | wikiskill | 0 | 58 | 5.37 | 10.80 | 503 | 0 | 3.54 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/1 | 61014 |
-| A | wikiskill | 1 | 69 | 5.38 | 12.80 | 534 | 0 | 3.36 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/1 | 48693 |
-| A | wikiskill | 2 | 59 | 5.38 | 11.00 | 481 | 0 | 3.31 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/1 | 56106 |
-| B | ao | 0 | 123 | 5.78 | 21.30 | 3254 | 23 | 12.23 | 1.40 | 621 (15.5%) | $3.75 | 2/1/0 | 117867 |
+| A | ace | 0 | 17 | 6.13 | 2.80 | 177 | 0 | 1.93 | 0.00 | 189 (4.7%) | $0.54 | 0/0/0 | 124952 |
+| A | ace | 1 | 10 | 6.03 | 1.70 | 157 | 0 | 1.71 | 0.00 | 93 (2.3%) | $0.27 | 0/0/0 | 180166 |
+| A | ace | 2 | 20 | 6.12 | 3.30 | 189 | 0 | 1.67 | 0.00 | 295 (7.4%) | $0.79 | 0/0/0 | 98024 |
+| A | ao | 0 | 54 | 4.44 | 12.20 | 483 | 0 | 2.95 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/0 | 54621 |
+| A | ao | 1 | 55 | 4.42 | 12.50 | 464 | 0 | 2.96 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/0 | 53746 |
+| A | ao | 2 | 50 | 4.40 | 11.40 | 487 | 0 | 3.36 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/0 | 67205 |
+| A | evoskill | 0 | 21 | 0.66 | 31.90 | 100 | 0 | 0.36 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 17342 |
+| A | evoskill | 1 | 21 | 0.66 | 31.90 | 83 | 0 | 0.24 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 11526 |
+| A | evoskill | 2 | 20 | 0.65 | 30.70 | 91 | 0 | 0.28 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 14123 |
+| A | gepa | 0 | 162 | 10.74 | 15.10 | 871 | 2 | 4.77 | 0.00 | 92 (2.3%) | $0.33 | 5/3/3 | 30026 |
+| A | gepa | 1 | 128 | 10.78 | 11.90 | 890 | 9 | 6.57 | 0.00 | 41 (1.0%) | $0.15 | 2/2/2 | 51674 |
+| A | gepa | 2 | 223 | 10.79 | 20.70 | 934 | 3 | 5.00 | 0.00 | 153 (3.8%) | $0.47 | 6/4/4 | 23087 |
+| A | hc | 0 | 59 | 4.43 | 13.30 | 497 | 0 | 3.29 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 55714 |
+| A | hc | 1 | 54 | 4.45 | 12.10 | 469 | 0 | 3.11 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 57633 |
+| A | hc | 2 | 59 | 4.45 | 13.30 | 476 | 0 | 2.95 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 50009 |
+| A | metaharness | 0 | 150 | 8.20 | 18.30 | 1115 | 8 | 7.09 | 0.00 | 50 (1.2%) | $0.21 | 3/1/1 | 47587 |
+| A | metaharness | 1 | 120 | 8.20 | 14.60 | 1122 | 2 | 7.54 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 62854 |
+| A | metaharness | 2 | 120 | 8.15 | 14.70 | 1139 | 3 | 7.88 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 65665 |
+| A | mipro | 0 | 25 | 6.00 | 4.20 | 173 | 1 | 1.22 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 48918 |
+| A | mipro | 1 | 21 | 6.10 | 3.40 | 149 | 0 | 1.30 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 62070 |
+| A | mipro | 2 | 28 | 6.10 | 4.60 | 199 | 0 | 1.03 | 0.00 | 179 (4.5%) | $0.59 | 1/0/0 | 43333 |
+| A | skillopt | 0 | 130 | 10.75 | 12.10 | 1071 | 7 | 7.00 | 0.00 | 881 (22.0%) | $2.04 | 3/3/1 | 60587 |
+| A | skillopt | 1 | 137 | 10.78 | 12.70 | 984 | 5 | 6.69 | 0.00 | 437 (10.9%) | $1.00 | 2/2/2 | 52047 |
+| A | skillopt | 2 | 160 | 10.78 | 14.80 | 1148 | 13 | 7.96 | 0.00 | 366 (9.2%) | $0.88 | 2/2/2 | 52037 |
+| A | trace2skill | 0 | 120 | 10.25 | 11.70 | 965 | 2 | 6.47 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 53921 |
+| A | trace2skill | 1 | 117 | 10.27 | 11.40 | 950 | 13 | 5.84 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 49885 |
+| A | trace2skill | 2 | 118 | 10.29 | 11.50 | 932 | 11 | 5.89 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 49921 |
+| A | wikiskill | 0 | 67 | 6.07 | 11.00 | 592 | 0 | 4.32 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/1 | 64451 |
+| A | wikiskill | 1 | 86 | 6.08 | 14.10 | 628 | 0 | 3.84 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/1 | 44613 |
+| A | wikiskill | 2 | 75 | 6.08 | 12.30 | 571 | 0 | 4.05 | 0.00 | 0 (0.0%) | n/a (unpriced) | 1/1/1 | 53980 |
+| B | ao | 0 | 123 | 6.49 | 18.90 | 3483 | 23 | 13.25 | 1.48 | 621 (15.5%) | $3.75 | 2/1/0 | 127115 |
 | B | ao | 1 | 123 | 5.49 | 22.40 | 3092 | 17 | 12.16 | 1.39 | 603 (15.1%) | $3.70 | 1/0/0 | 117191 |
-| B | ao | 2 | 74 | 5.78 | 12.80 | 3337 | 10 | 13.67 | 1.36 | 602 (15.0%) | $4.61 | 1/0/0 | 213884 |
+| B | ao | 2 | 74 | 6.50 | 11.40 | 3590 | 10 | 14.77 | 1.47 | 602 (15.0%) | $4.61 | 1/0/0 | 230252 |
 | B | chaser-ao | 0 | n/a | n/a | n/a | 682 | 3 | 2.41 | 0.32 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
 | B | chaser-ao | 1 | n/a | n/a | n/a | 757 | 1 | 2.68 | 0.32 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
 | B | chaser-ao | 2 | n/a | n/a | n/a | 699 | 0 | 2.43 | 0.29 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
-| B | chaser-ctl-oneshot | 0 | n/a | n/a | n/a | 549 | 6 | 2.34 | 0.16 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
-| B | chaser-ctl-oneshot | 1 | n/a | n/a | n/a | 672 | 5 | 2.65 | 0.25 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
+| B | chaser-ctl-oneshot | 0 | n/a | n/a | n/a | 770 | 7 | 3.25 | 0.27 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
+| B | chaser-ctl-oneshot | 1 | n/a | n/a | n/a | 920 | 5 | 3.73 | 0.38 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
 | B | chaser-ctl-oneshot | 2 | n/a | n/a | n/a | 941 | 7 | 3.59 | 0.37 | 0 (0.0%) | n/a (unpriced) | n/a/n/a/n/a | n/a |
 | B | ctl-oneshot | 0 | 123 | 5.12 | 24.00 | 3188 | 4 | 13.65 | 1.42 | 174 (4.4%) | $1.00 | 2/1/0 | 125651 |
 | B | ctl-oneshot | 1 | 148 | 4.94 | 30.00 | 2945 | 12 | 11.77 | 1.32 | 199 (5.0%) | $1.37 | 2/1/1 | 91399 |
 | B | ctl-oneshot | 2 | 123 | 4.41 | 27.90 | 2669 | 5 | 10.60 | 1.19 | 141 (3.5%) | $0.77 | 2/1/0 | 99074 |
-| B | ctl-seed | 0 | 98 | 5.77 | 17.00 | 2726 | 12 | 10.59 | 1.45 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 125672 |
-| B | ctl-seed | 1 | 98 | 5.78 | 17.00 | 2689 | 6 | 10.30 | 1.25 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 120515 |
-| B | ctl-seed | 2 | 98 | 5.78 | 17.00 | 2735 | 9 | 10.64 | 1.39 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 125348 |
-| B | gepa | 0 | 145 | 5.78 | 25.10 | 2558 | 13 | 11.53 | 1.16 | 171 (4.3%) | $0.61 | 7/7/3 | 90184 |
-| B | gepa | 1 | 126 | 5.78 | 21.80 | 2128 | 7 | 9.12 | 0.98 | 169 (4.2%) | $0.62 | 8/8/2 | 82850 |
-| B | gepa | 2 | 142 | 5.78 | 24.60 | 2462 | 17 | 10.65 | 1.06 | 139 (3.5%) | $0.47 | 7/7/2 | 84862 |
-| B | hc | 0 | 147 | 5.78 | 25.40 | 3450 | 13 | 14.88 | 1.74 | 278 (6.9%) | $1.65 | 2/1/0 | 117026 |
-| B | hc | 1 | 147 | 5.78 | 25.40 | 3697 | 18 | 15.18 | 1.74 | 378 (9.4%) | $2.06 | 3/2/0 | 120036 |
-| B | hc | 2 | 98 | 5.78 | 17.00 | 3674 | 21 | 16.55 | 2.48 | 154 (3.9%) | $0.92 | 1/0/0 | 198980 |
-| C | ao | 0 | 0 | 0.07 | n/a | 29 | 0 | 0.06 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | ao | 1 | 0 | 0.07 | n/a | 32 | 0 | 0.08 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | ao | 2 | 0 | 0.07 | n/a | 22 | 0 | 0.04 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | ctl-oneshot | 0 | 0 | 0.08 | n/a | 23 | 0 | 0.05 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | ctl-oneshot | 1 | 0 | 0.07 | n/a | 34 | 0 | 0.07 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | ctl-oneshot | 2 | 0 | 0.06 | n/a | 21 | 0 | 0.04 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | ctl-seed | 0 | n/a | 0.06 | n/a | 21 | 0 | 0.03 | 0.01 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | n/a |
-| C | ctl-seed | 1 | n/a | 0.06 | n/a | 14 | 0 | 0.01 | 0.00 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | n/a |
-| C | ctl-seed | 2 | n/a | 0.06 | n/a | 28 | 0 | 0.04 | 0.01 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | n/a |
-| C | gepa | 0 | 10 | 0.08 | n/a | 44 | 0 | 0.08 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 9004 |
-| C | gepa | 1 | 10 | 0.07 | n/a | 39 | 0 | 0.06 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 7318 |
-| C | gepa | 2 | 10 | 0.07 | n/a | 33 | 0 | 0.05 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 6145 |
-| C | hc | 0 | 0 | 0.08 | n/a | 32 | 0 | 0.07 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | hc | 1 | 0 | 0.08 | n/a | 34 | 0 | 0.08 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
-| C | hc | 2 | 0 | 0.07 | n/a | 25 | 0 | 0.05 | 0.01 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| B | ctl-seed | 0 | 98 | 6.48 | 15.10 | 2850 | 12 | 11.06 | 1.51 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 131102 |
+| B | ctl-seed | 1 | 98 | 6.46 | 15.20 | 2758 | 6 | 10.64 | 1.37 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 125252 |
+| B | ctl-seed | 2 | 98 | 6.49 | 15.10 | 2845 | 9 | 11.10 | 1.49 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | 131125 |
+| B | gepa | 0 | 148 | 6.49 | 22.80 | 2658 | 13 | 12.09 | 1.20 | 171 (4.3%) | $0.61 | 8/8/3 | 92463 |
+| B | gepa | 1 | 151 | 6.49 | 23.20 | 2328 | 8 | 10.06 | 1.05 | 169 (4.2%) | $0.62 | 9/9/2 | 75873 |
+| B | gepa | 2 | 148 | 6.48 | 22.80 | 2549 | 17 | 11.09 | 1.10 | 163 (4.1%) | $0.55 | 7/7/3 | 84769 |
+| B | hc | 0 | 147 | 6.50 | 22.60 | 3715 | 13 | 16.09 | 1.88 | 278 (6.9%) | $1.65 | 2/1/0 | 126376 |
+| B | hc | 1 | 147 | 6.49 | 22.60 | 3942 | 18 | 16.26 | 1.89 | 378 (9.4%) | $2.06 | 3/2/0 | 128435 |
+| B | hc | 2 | 98 | 6.49 | 15.10 | 3910 | 21 | 17.52 | 2.59 | 154 (3.9%) | $0.92 | 1/0/0 | 210136 |
+| C | ao | 0 | 0 | 0.79 | n/a | 238 | 0 | 0.84 | 0.11 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | ao | 1 | 0 | 0.79 | n/a | 259 | 1 | 0.98 | 0.12 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | ao | 2 | 0 | 0.78 | n/a | 245 | 0 | 0.82 | 0.10 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | ctl-oneshot | 0 | 0 | 0.79 | n/a | 243 | 0 | 0.84 | 0.10 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | ctl-oneshot | 1 | 0 | 0.78 | n/a | 242 | 1 | 0.83 | 0.12 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | ctl-oneshot | 2 | 0 | 0.78 | n/a | 255 | 1 | 0.96 | 0.11 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | ctl-seed | 0 | n/a | 0.78 | n/a | 167 | 1 | 0.59 | 0.09 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | n/a |
+| C | ctl-seed | 1 | n/a | 0.78 | n/a | 173 | 0 | 0.57 | 0.06 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | n/a |
+| C | ctl-seed | 2 | n/a | 0.78 | n/a | 186 | 0 | 0.67 | 0.10 | 0 (0.0%) | n/a (unpriced) | 0/0/0 | n/a |
+| C | gepa | 0 | 10 | 0.79 | 12.60 | 196 | 0 | 0.54 | 0.10 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 64273 |
+| C | gepa | 1 | 10 | 0.79 | 12.70 | 222 | 0 | 0.69 | 0.11 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | 79947 |
+| C | gepa | 2 | 13 | 0.78 | 16.60 | 193 | 0 | 0.50 | 0.08 | 0 (0.0%) | n/a (unpriced) | 1/1/0 | 44145 |
+| C | hc | 0 | 0 | 0.79 | n/a | 246 | 9 | 0.81 | 0.11 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | hc | 1 | 0 | 0.79 | n/a | 262 | 1 | 1.01 | 0.11 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
+| C | hc | 2 | 0 | 0.78 | n/a | 273 | 5 | 1.02 | 0.11 | 0 (0.0%) | n/a (unpriced) | 1/0/0 | n/a |
 
 ## Deployment cost per task (target tokens per counted rollout) and cost per rollout, mean over seeds
 
@@ -119,21 +122,22 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 
 | suite | arm | seeds | target tok/rollout | target+user tok/rollout | all-role tok/rollout | optimizer non-cache tok per search | optimizer USD per search (proxy) |
 |---|---|---:|---:|---:|---:|---:|---:|
-| A | ace | 3 | 149204 | 149204 | 159668 | 133424 | $0.38 |
-| A | ao | 3 | 60947 | 60947 | 60947 | 0 | n/a |
-| A | gepa | 3 | 38557 | 38557 | 39054 | 77460 | $0.26 |
-| A | hc | 3 | 49990 | 49990 | 49990 | 0 | n/a |
-| A | metaharness | 3 | 58002 | 58002 | 58002 | 0 | n/a |
-| A | mipro | 3 | 55097 | 55097 | 55097 | 0 | n/a |
-| A | skillopt | 3 | 51595 | 51595 | 54781 | 406519 | $0.95 |
-| A | trace2skill | 3 | 47823 | 47823 | 47823 | 0 | n/a |
-| A | wikiskill | 3 | 55271 | 55271 | 55271 | 0 | n/a |
-| B | ao | 3 | 127655 | 141324 | 149647 | 608700 | $4.02 |
+| A | ace | 3 | 122662 | 122662 | 134381 | 192394 | $0.53 |
+| A | ao | 3 | 58524 | 58524 | 58524 | 0 | n/a |
+| A | evoskill | 3 | 14330 | 14330 | 14330 | 0 | n/a |
+| A | gepa | 3 | 34405 | 34405 | 34929 | 95243 | $0.32 |
+| A | hc | 3 | 54452 | 54452 | 54452 | 0 | n/a |
+| A | metaharness | 3 | 58591 | 58591 | 58702 | 16589 | $0.21 |
+| A | mipro | 3 | 49311 | 49311 | 51440 | 59609 | $0.59 |
+| A | skillopt | 3 | 50805 | 50805 | 54890 | 561345 | $1.31 |
+| A | trace2skill | 3 | 51242 | 51242 | 51242 | 0 | n/a |
+| A | wikiskill | 3 | 54348 | 54348 | 54348 | 0 | n/a |
+| B | ao | 3 | 135389 | 149758 | 158186 | 608700 | $4.02 |
 | B | ctl-oneshot | 3 | 92234 | 102285 | 105375 | 171421 | $1.05 |
-| B | ctl-seed | 3 | 107270 | 121184 | 123845 | 0 | n/a |
-| B | gepa | 3 | 75654 | 83409 | 85965 | 159663 | $0.57 |
-| B | hc | 3 | 124455 | 140800 | 145347 | 269951 | $1.54 |
-| C | gepa | 3 | 6458 | 7489 | 7489 | 0 | n/a |
+| B | ctl-seed | 3 | 111539 | 126395 | 129160 | 0 | n/a |
+| B | gepa | 3 | 74403 | 81898 | 84368 | 167432 | $0.59 |
+| B | hc | 3 | 132939 | 150274 | 154982 | 269951 | $1.54 |
+| C | gepa | 3 | 53644 | 62788 | 62788 | 0 | n/a |
 
 ## Overhead / waste (not in main tables; included in campaign totals)
 
@@ -149,7 +153,7 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | A | ao | all | restart_waste | 636 | 3,811,054 | 3,811,054 | $0.00 |
 | A | hc | all | restart_waste | 615 | 3,410,547 | 3,410,547 | $0.00 |
 | B | hc | all | pilot | 619 | 2,777,762 | 2,641,597 | $0.54 |
-| A | evoskill | all | restart_waste | 802 | 2,573,246 | 2,573,246 | $0.00 |
+| A | evoskill | all | restart_waste | 804 | 2,573,286 | 2,573,286 | $0.00 |
 | B | gepa | all | pilot | 466 | 2,297,765 | 2,241,304 | $0.20 |
 | - | BL-gepa-smoke2 | all | smoke | 147 | 2,176,130 | 2,130,636 | $0.16 |
 | - | BLsmoke-mipro-s0 | all | smoke | 458 | 1,806,342 | 1,734,479 | $0.22 |
@@ -157,6 +161,7 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | BL-wikiskill-smoke | all | smoke | 129 | 1,096,254 | 880,221 | $0.25 |
 | A | ace | all | restart_waste | 137 | 1,014,045 | 902,796 | $0.35 |
 | - | BLsmoke-ace-s0 | all | smoke | 227 | 993,458 | 984,260 | $0.03 |
+| B | hl-trial | all | no_run_dir | 113 | 790,930 | 790,930 | $0.00 |
 | B | smoke | all | smoke | 175 | 762,980 | 757,621 | $0.02 |
 | - | BL-memento-smoke | all | smoke | 47 | 677,221 | 677,221 | $0.00 |
 | - | BL-hl-smoke2 | all | smoke | 82 | 590,486 | 590,486 | $0.00 |
@@ -187,14 +192,13 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | C | E10C-s0-trial | all | smoke | 27 | 96,218 | 96,218 | $0.00 |
 | - | BL-graphskillevo-smoke | all | smoke | 18 | 76,722 | 51,846 | $0.14 |
 | A | E10-evomock | all | smoke | 5 | 63,186 | 0 | $0.18 |
+| A | evoskill-r2 | all | no_run_dir | 36 | 63,013 | 63,013 | $0.00 |
 | - | BL-memento-smokefake | all | smoke | 12 | 62,318 | 0 | $0.34 |
 | - | E00 | all | smoke | 6 | 41,475 | 41,475 | $0.00 |
 | B | sbxtest | all | smoke | 1 | 30,614 | 0 | $0.08 |
 | A | E10-tagprobe-api | all | smoke | 1 | 30,596 | 0 | $0.08 |
 | A | E10-metaharness-smoke | all | smoke | 1 | 26,893 | 0 | $0.07 |
 | A | E10-tagprobe-auth | all | smoke | 1 | 26,880 | 0 | $0.07 |
-| B | hl-trial | all | no_run_dir | 9 | 23,771 | 23,771 | $0.00 |
-| A | evoskill-r2 | all | no_run_dir | 8 | 15,341 | 15,341 | $0.00 |
 | A | E10-mh-negtest | all | smoke | 6 | 7,916 | 0 | $0.03 |
 | - | BL-metrtest | all | smoke | 3 | 4,993 | 4,993 | $0.00 |
 | A | E10-evodiag | all | smoke | 3 | 4,993 | 4,993 | $0.00 |
@@ -215,9 +219,9 @@ Restart cutoffs used (gateway calls before this time with the run's tag are coun
 - A/ace/s1: 2026-10-11T12:59:42Z (derived: birth time of launcher.log)
 - A/ace/s2: 2026-10-11T12:59:42Z (derived: birth time of launcher.log)
 - A/ao/s0: 2026-10-11T14:41:25Z (derived: birth time of manifest/negtest.txt)
-- A/evoskill/s0: 2026-10-11T18:24:01Z (derived: birth time of negtest_before_launch.txt)
-- A/evoskill/s1: 2026-10-11T18:24:01Z (derived: birth time of negtest_before_launch.txt)
-- A/evoskill/s2: 2026-10-11T18:24:01Z (derived: birth time of negtest_before_launch.txt)
+- A/evoskill/s0: 2026-10-11T18:28:13Z (derived: birth time of negtest_before_launch.txt)
+- A/evoskill/s1: 2026-10-11T18:28:13Z (derived: birth time of negtest_before_launch.txt)
+- A/evoskill/s2: 2026-10-11T18:28:13Z (derived: birth time of negtest_before_launch.txt)
 - A/hc/s0: 2026-10-11T14:41:25Z (derived: birth time of manifest/negtest.txt)
 - A/metaharness/s0: 2026-10-11T10:56:11Z (derived: birth time of isolation_negtest.txt)
 - A/metaharness/s1: 2026-10-11T10:56:11Z (derived: birth time of isolation_negtest.txt)
@@ -243,6 +247,6 @@ Restart cutoffs used (gateway calls before this time with the run's tag are coun
 
 ## Data-quality notes
 
-- Runs without a per-rollout record: A/evoskill/s0, A/evoskill/s1, A/evoskill/s2, A/graphskillevo/s0, A/graphskillevo/s1, A/graphskillevo/s2, A/mce/s0, A/mce/s1, A/mce/s2, A/memento/s1, A/memento/s2, A/metaharness/s0, A/metaharness/s1, A/metaharness/s2, C/ao/s0, C/ao/s1, C/ao/s2, C/ctl-oneshot/s0, C/ctl-oneshot/s1, C/ctl-oneshot/s2, C/ctl-seed/s0, C/ctl-seed/s1, C/ctl-seed/s2, C/gepa/s0, C/gepa/s1, C/gepa/s2, C/hc/s0, C/hc/s1, C/hc/s2
+- Runs without a per-rollout record: A/graphskillevo/s0, A/graphskillevo/s1, A/graphskillevo/s2, A/mce/s0, A/mce/s1, A/mce/s2, A/memento/s1, A/memento/s2, A/metaharness/s1, A/metaharness/s2, C/ao/s0, C/ao/s1, C/ao/s2, C/ctl-oneshot/s0, C/ctl-oneshot/s1, C/ctl-oneshot/s2, C/ctl-seed/s0, C/ctl-seed/s1, C/ctl-seed/s2, C/gepa/s0, C/gepa/s1, C/hc/s0, C/hc/s1, C/hc/s2
 - Restart attribution is by time (tag is reused across attempts); cutoffs derived from file birth times are heuristics and are listed above.
 - Gateway cannot attribute Claude Code optimizer calls whose tag was not forwarded; see `untagged` category.
