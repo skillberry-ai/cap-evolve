@@ -73,3 +73,41 @@ Dwork et al. state the problem as a procedure, not a complaint: "in practice, th
 - Do not write adjectives of praise for baselines or for CapEvolve ("powerful", "remarkable", "strong"). Give the number.
 - Do not hide a negative result in an appendix; if the simpler method wins, it is the headline.
 - No slogans or all-caps emphasis (cf. "ANY AI agents").
+
+## 3. The writing guide mapped to what the real papers do
+
+Source: writing-assistant/references/writing-guide.md (the user's guide). One checklist, grouped by level. "Seen" cites the papers read for section 1.
+
+### Story and section
+- What, how, why, then the crux. Seen: GEPA and Meta-Harness state the method in paragraph 3 of the intro and the headline numbers in paragraph 4. Ours: the intro already does this; keep the finding (whichever arm wins) in the abstract and first page.
+- Kill darlings. Seen: GEPA (96 pages) and DGM (72) push everything secondary to appendices and point to it by letter. Ours: if a result does not serve the measurement story, it goes to an appendix or is cut.
+- Give the gist first in each section, and prefer section titles that carry the answer. Seen: Meta-Harness result headings state the result ("Meta-Harness is 10x Faster and Converges to a Better Harness"). Ours: avoid colon-titled headings (brief ban), so write the finding as a short statement.
+- Every claim is cited, explained or shown. Seen: ACE and SkillsBench attach a table, figure or appendix to each limitation. Ours: an uncited comparative claim ("frequently", "tens of points") gets a cite or is cut.
+- Present tense for the paper, past tense for earlier work and finished runs.
+- Related work is not background. The guide puts it near the end, and says to organize works by how each relates to the paper, state concrete differences, and not over-discuss any one work. Seen: Meta-Harness groups work into three labelled threads and ends each with the difference. Ours: one paragraph per idea, each opening with its point; see related.tex. Note for the lead: paper.tex currently places Related Work as Section 2; the guide and several ICLR papers put it late. Moving it to just before the conclusion frees the first pages for the method and result.
+
+### Paragraph
+- Open with the point, so the first sentences of a section read as a summary. Test: read only first sentences and see whether the section makes sense.
+- Link to the previous paragraph once (a repeated object or one connecting word), never two linkers in one sentence.
+- Use one example that returns (the SpreadsheetBench scorer story works: intro, problem, results).
+- Short sentences stand out; vary length. Seen: GEPA and Meta-Harness mix 8-word claims with 30-word protocol sentences.
+
+### Sentence
+- The subject performs the main verb. Weak: "We make a contribution to the improvement of quality". Strong: "We improve quality."
+- Verbs over nominalizations: "scorer compliance explains 14 points" over "the explanation of the gain is in scorer compliance".
+- Familiar before new, and put the stress at the end of the sentence. Weak ending: "...as shown in Table 4". Strong: "As Table 4 shows, rule P rejects most null edits."
+- Parallel claims get parallel form (general sentence, then specific sentence with the same skeleton).
+- Be explicit: name the method instead of "it", "these methods", "such approaches".
+
+### Word
+- Replace helper verbs (use, make, get, do) by the real verb: "we train", not "we use training".
+- No "simply, easily, clearly, trivially"; no stacked intensifiers; no vague "various", "several" unless the count matters.
+- Define abbreviations and jargon on first use, and keep their number low. Assume the reader skimmed.
+- Know your own tic words and delete them.
+
+### Graphics
+- Each figure has one reason, is minimal, and the key mark pops out. Captions say what is plotted and how to read it (matches GEPA, DGM).
+
+### Where the guide and the brief differ
+- The guide allows em dashes for stress. The brief bans them, so use a colon or a short separate sentence for the same effect.
+- The guide allows "furthermore" as a single linker. The brief bans it as a sentence opener; use "Second," or repeat the object instead.
