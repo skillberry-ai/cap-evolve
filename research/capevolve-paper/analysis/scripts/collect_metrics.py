@@ -35,8 +35,8 @@ PRICING = PAPER / "protocol" / "pricing.json"
 OUT = Path(os.environ.get("METRICS_OUT", str(PAPER / "analysis" / "out" / "metrics")))
 HEALTH_URL = os.environ.get("GATEWAY_HEALTH", "http://127.0.0.1:4111/health")
 OPT_CAP = 4_000_000
-SUITE_OF = {"E10": "A", "E10B": "B", "E10C": "C"}
-SUITE_ROOT = {"A": RUNS / "E10", "B": RUNS / "E10B", "C": RUNS / "E10C"}
+SUITE_OF = {"E10": "A", "E10B": "B", "E10C": "C", "E12C": "C-E12"}  # E12C = stock-gate ablation on Suite C (decisions 2026-10-11 21:55)
+SUITE_ROOT = {"A": RUNS / "E10", "B": RUNS / "E10B", "C": RUNS / "E10C", "C-E12": RUNS / "E12C"}
 ARM_ALIAS = {"hill-climb": "hc", "agent-optimize": "ao", "ctlseed": "ctl-seed"}
 OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "optimizer-aux", "debugger"}
 TARGET_ROLES = {"target"}
@@ -256,7 +256,7 @@ def derive_cutoffs(main):
 
 
 # ----------------------------------------------------------------------------------------------- gateway pass
-RUN_RE = re.compile(r"^(E10[BC]?)-(.+)-s(\d+)$")
+RUN_RE = re.compile(r"^(E10[BC]?|E12C)-(.+)-s(\d+)$")
 SMOKE_WORDS = ("smoke", "probe", "negtest", "mock", "test", "wd")
 
 
@@ -269,7 +269,7 @@ def classify_tag(tag):
     role = parts[3] if len(parts) > 3 else (parts[2] if len(parts) > 2 else "")
     m = RUN_RE.match(run_id)
     if not m:
-        if run_id.startswith("E10"):
+        if run_id.startswith(("E10", "E12")):
             exp = run_id.split("-")[0]
             return (SUITE_OF.get(exp), run_id, None, "smoke", role)
         return (None, run_id, None, "pre", role)
