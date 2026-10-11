@@ -592,8 +592,10 @@ def rollout_rows(rd):
 # "zero calls" is only used when the call count is known (n_target_calls, else n_llm_calls); None never counts as zero.
 INFRA_RE = re.compile(
     r"timed? ?out|timeout|connection ?(error|reset|refused|aborted)|connecterror|apiconnection|remoteprotocol|read ?error|broken pipe|"
-    r"infrastructure|user.?simulator|sandbox exec failed|server error|internal ?server|service ?unavailable|bad gateway|gateway time|rate ?limit|"
+    r"infrastructure|sandbox exec failed|server error|internal ?server|service ?unavailable|bad gateway|gateway time|rate ?limit|"
     r"\b(429|500|502|503|504)\b|container (pull|start)|oom|out of memory|ratelimit|upstream", re.I)
+
+USERSIM_RE = re.compile(r"user.?simulator", re.I)
 
 
 def _calls(r):
@@ -610,6 +612,10 @@ def uniform_class(r):
     adapter = r.get("error_kind_adapter")
     has_err = bool(adapter or txt)
     if has_err:
+        if txt and USERSIM_RE.search(txt):
+            # simulated-user malfunction: environment, shared by all arms, but a candidate's messages could provoke it;
+            # own subclass so a sensitivity analysis can flip these to candidate
+            return "infra", "env_user_simulator"
         if txt and INFRA_RE.search(txt):
             return "infra", "error_string"
         # a recorded non-infra string (e.g. "task_template.md broke the placeholder contract") is candidate-induced even with 0 calls;

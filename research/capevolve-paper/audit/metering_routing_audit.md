@@ -183,3 +183,7 @@ Final counts (rollouts with an error; live seeds, search-time rows):
 | CapEvolve hc / ao / ctl-oneshot (A, B, C) | 10 / 7 / 10 | 10 / 7 / 10 | 0 | 0 |
 
 These are search-time rows only; the final evaluation will record a string for every error.
+
+Decision (team lead): the simulated-user malfunction counts as infra because the simulator is part of the environment (a frozen
+gpt-oss shared by all arms). Those rows carry their own subclass, `error_rule_uniform=env_user_simulator` (class stays `infra`), because a
+candidate's messages could in principle provoke it. A sensitivity analysis can flip exactly these rows to candidate by filtering on that rule.

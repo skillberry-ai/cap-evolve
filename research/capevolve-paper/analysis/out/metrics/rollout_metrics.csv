@@ -47,6 +47,7 @@ A,ace,1,main,events.jsonl(ev=rollout),47766,train,,,,2026-10-11T20:51:38Z,,,,,,,
 A,ace,1,main,events.jsonl(ev=rollout),262-17,train,,,,2026-10-11T20:54:00Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,ace,1,main,events.jsonl(ev=rollout),40892,train,,,,2026-10-11T21:06:32Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,ace,1,main,events.jsonl(ev=rollout),192-22,train,,,,2026-10-11T21:13:33Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
+A,ace,1,main,events.jsonl(ev=rollout),43589,train,,,,2026-10-11T21:19:30Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,ace,2,main,events.jsonl(ev=rollout),10452,train,,,,2026-10-11T13:05:03Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,ace,2,main,events.jsonl(ev=rollout),108-24,train,,,,2026-10-11T13:20:23Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,ace,2,main,events.jsonl(ev=rollout),57743,train,,,,2026-10-11T14:42:53Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
@@ -1012,6 +1013,7 @@ A,mipro,0,main,events.jsonl(ev=rollout),47798,,,3d5fee3dfdc1,,2026-10-11T20:50:1
 A,mipro,0,main,events.jsonl(ev=rollout),48527,,,3d5fee3dfdc1,,2026-10-11T20:53:27Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
 A,mipro,0,main,events.jsonl(ev=rollout),48588,,,3d5fee3dfdc1,,2026-10-11T20:55:20Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,0,main,events.jsonl(ev=rollout),395-36,,,3d5fee3dfdc1,,2026-10-11T21:01:07Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
+A,mipro,0,main,events.jsonl(ev=rollout),463-17,,,3d5fee3dfdc1,,2026-10-11T21:19:47Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,1,main,events.jsonl(ev=rollout),56786,,,3d5fee3dfdc1,,2026-10-11T13:07:36Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
 A,mipro,1,main,events.jsonl(ev=rollout),118-50,,,3d5fee3dfdc1,,2026-10-11T14:44:56Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
 A,mipro,1,main,events.jsonl(ev=rollout),194-19,,,3d5fee3dfdc1,,2026-10-11T15:11:48Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
@@ -1090,6 +1092,7 @@ A,mipro,2,main,events.jsonl(ev=rollout),50768,,,3d5fee3dfdc1,,2026-10-11T20:23:3
 A,mipro,2,main,events.jsonl(ev=rollout),48921,,,3d5fee3dfdc1,,2026-10-11T21:02:38Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),53647,,,3d5fee3dfdc1,,2026-10-11T21:15:47Z,,,,,,,0.0,0.0,,,candidate,failure_no_error,,,True,,,,,
 A,mipro,2,main,events.jsonl(ev=rollout),53383,,,3d5fee3dfdc1,,2026-10-11T21:16:38Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
+A,mipro,2,main,events.jsonl(ev=rollout),54144,,,3d5fee3dfdc1,,2026-10-11T21:19:29Z,,,,,,,1.0,1.0,,,,,,,True,,,,,
 A,skillopt,0,main,unified:rollouts_metrics_converted.jsonl,12864,val,0,base,,2026-10-11T10:54:44Z,,3,3,,,4543,1.0,1.0,,,,,,False,True,,,,,
 A,skillopt,0,main,unified:rollouts_metrics_converted.jsonl,142-12,val,0,base,,2026-10-11T10:54:44Z,,3,3,,,5112,1.0,1.0,,,,,,False,True,,,,,
 A,skillopt,0,main,unified:rollouts_metrics_converted.jsonl,227-40,val,0,base,,2026-10-11T10:54:44Z,,8,8,,,20858,1.0,1.0,,,,,,False,True,,,,,
@@ -2217,12 +2220,12 @@ B,ao,0,main,unified:rollouts_metrics.jsonl,82,opt,0,cand_6,2026-10-11T19:25:48Z,
 B,ao,0,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:36:35Z,2026-10-11T13:41:49Z,314.7598490715027,16,11,29802,984,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,2905,555
 B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_5,2026-10-11T17:36:46Z,2026-10-11T17:39:34Z,167.49687695503235,14,9,29033,1056,,0.0,,,,candidate,failure_no_error,,,True,6,3,0,2079,470
 B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_6,2026-10-11T19:59:05Z,2026-10-11T20:15:18Z,972.6848740577698,24,17,64426,3125,,1.0,,,,,,,,True,11,6,0,6906,1596
-B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:41:02Z,2026-10-11T13:47:21Z,378.5080440044403,16,11,29805,989,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,7,4,0,2826,814
+B,ao,0,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:41:02Z,2026-10-11T13:47:21Z,378.5080440044403,16,11,29805,989,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,7,4,0,2826,814
 B,ao,0,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_5,2026-10-11T17:38:22Z,2026-10-11T17:48:30Z,608.7253398895264,28,20,75351,2342,,1.0,,,,,,,,True,13,7,0,7492,1193
 B,ao,0,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_6,2026-10-11T19:26:36Z,2026-10-11T19:35:14Z,518.1831929683685,24,17,64380,2107,,1.0,,,,,,,,True,11,6,0,6149,973
 B,ao,0,main,unified:rollouts_metrics.jsonl,84,opt,0,seed,2026-10-11T13:41:50Z,2026-10-11T13:53:24Z,694.4216570854187,34,25,91072,4058,,1.0,,,,,,,,True,16,9,0,13486,1989
 B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_5,2026-10-11T17:59:14Z,2026-10-11T18:07:20Z,486.392019033432,28,18,71635,2134,,0.0,,,,candidate,failure_no_error,,,True,13,5,0,3593,792
-B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_6,2026-10-11T19:34:39Z,2026-10-11T19:48:08Z,809.7869410514832,24,17,60484,2127,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,11,6,0,5404,1873
+B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_6,2026-10-11T19:34:39Z,2026-10-11T19:48:08Z,809.7869410514832,24,17,60484,2127,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,11,6,0,5404,1873
 B,ao,0,main,unified:rollouts_metrics.jsonl,87,opt,0,seed,2026-10-11T13:42:15Z,2026-10-11T13:55:51Z,815.9617240428925,36,24,95310,3691,,1.0,,,,,,,,True,17,7,0,7706,1595
 B,ao,0,main,unified:rollouts_metrics.jsonl,88,opt,0,cand_5,2026-10-11T17:39:36Z,2026-10-11T17:46:50Z,434.09986209869385,22,15,54266,2129,,1.0,,,,,,,,True,10,5,0,4459,633
 B,ao,0,main,unified:rollouts_metrics.jsonl,88,opt,0,cand_6,2026-10-11T19:52:21Z,2026-10-11T20:04:35Z,734.5315001010895,26,17,69019,1931,,1.0,,,,,,,,True,12,5,0,3834,698
@@ -2546,7 +2549,7 @@ B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,80,opt,0,seed,2026-10-11T13:
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,81,opt,0,cand_0001,2026-10-11T15:55:30Z,2026-10-11T16:05:55Z,625.4513628482819,34,23,106655,2540,,0.0,,,,candidate,failure_no_error,,,True,16,7,0,6550,1012
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,81,opt,0,seed,2026-10-11T13:35:21Z,2026-10-11T13:39:39Z,258.4179539680481,16,11,29665,949,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,2723,451
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,82,opt,0,cand_0001,2026-10-11T15:58:24Z,2026-10-11T16:09:41Z,676.8360369205475,26,19,71715,2259,,0.0,,,,candidate,failure_no_error,,,True,12,7,0,6706,1475
-B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:35:31Z,2026-10-11T13:40:32Z,301.05253505706787,16,11,29624,1109,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,7,4,0,2760,553
+B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:35:31Z,2026-10-11T13:40:32Z,301.05253505706787,16,11,29624,1109,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,7,4,0,2760,553
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_0001,2026-10-11T15:59:09Z,2026-10-11T16:05:48Z,399.3943998813629,18,12,43531,1346,,0.0,,,,candidate,failure_no_error,,,True,8,4,0,2831,553
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:39:40Z,2026-10-11T13:43:54Z,253.79677295684814,16,11,30098,1255,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,3056,587
 B,ctl-oneshot,0,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_0001,2026-10-11T16:04:58Z,2026-10-11T16:15:29Z,630.1929609775543,26,18,71117,2271,,0.0,,,,candidate,failure_no_error,,,True,12,6,0,5272,814
@@ -2575,7 +2578,7 @@ B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,105,sel,0,FINAL,2026-10-11T1
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,105,sel,0,FINAL_seed,2026-10-11T17:18:20Z,2026-10-11T17:29:19Z,658.3319039344788,30,21,82726,4259,,0.0,,,,candidate,failure_no_error,,,True,14,7,1,11350,2009
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,110,sel,0,FINAL,2026-10-11T16:44:55Z,2026-10-11T16:55:51Z,656.4350562095642,34,27,109344,4232,,0.0,,,,candidate,failure_no_error,,,True,16,11,1,18392,2864
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,110,sel,0,FINAL_seed,2026-10-11T17:20:32Z,2026-10-11T17:27:48Z,435.52532505989075,26,17,66023,3474,,0.0,,,,candidate,failure_no_error,,,True,12,5,1,5108,898
-B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,112,sel,0,FINAL,2026-10-11T16:47:13Z,2026-10-11T16:58:13Z,659.95605301857,30,21,87999,5080,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,14,7,0,7973,1676
+B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,112,sel,0,FINAL,2026-10-11T16:47:13Z,2026-10-11T16:58:13Z,659.95605301857,30,21,87999,5080,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,14,7,0,7973,1676
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,112,sel,0,FINAL_seed,2026-10-11T17:20:50Z,2026-10-11T17:35:07Z,857.2704298496246,40,28,115947,4965,,0.0,,,,candidate,failure_no_error,,,True,19,9,0,12736,2253
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,113,sel,0,FINAL,2026-10-11T16:47:43Z,2026-10-11T16:51:18Z,214.94821691513062,18,13,41557,1323,,1.0,,,,,,,,True,8,5,1,3255,472
 B,ctl-oneshot,1,main,unified:rollouts_metrics.jsonl,113,sel,0,FINAL_seed,2026-10-11T17:21:02Z,2026-10-11T17:26:02Z,299.77255606651306,24,15,53400,1394,,1.0,,,,,,,,True,11,4,1,2914,416
@@ -3760,6 +3763,9 @@ B,gepa,2,main,evals.jsonl,106,val,,call23,,,,,,,,,1.0,,,,,,,,True,,,,,
 B,gepa,2,main,evals.jsonl,82,val,,call24,,,,,,,,,0.0,,,,candidate,failure_no_error,,,True,,,,,
 B,gepa,2,main,evals.jsonl,67,val,,call24,,,,,,,,,1.0,,,,,,,,True,,,,,
 B,gepa,2,main,evals.jsonl,75,val,,call24,,,,,,,,,1.0,,,,,,,,True,,,,,
+B,gepa,2,main,evals.jsonl,82,val,,call25,,,,,,,,,0.0,,,,candidate,failure_no_error,,,True,,,,,
+B,gepa,2,main,evals.jsonl,67,val,,call25,,,,,,,,,1.0,,,,,,,,True,,,,,
+B,gepa,2,main,evals.jsonl,75,val,,call25,,,,,,,,,1.0,,,,,,,,True,,,,,
 B,hc,0,main,unified:rollouts_metrics.jsonl,0,opt,0,cand_0001,2026-10-11T14:49:30Z,2026-10-11T14:56:18Z,407.2015438079834,20,14,58810,3122,,1.0,,,,,,,,True,9,5,0,6713,1141
 B,hc,0,main,unified:rollouts_metrics.jsonl,0,opt,0,cand_0002,2026-10-11T16:22:42Z,2026-10-11T16:35:04Z,741.8154318332672,28,19,81824,3456,,1.0,,,,,,,,True,13,6,0,6111,1070
 B,hc,0,main,unified:rollouts_metrics.jsonl,0,opt,0,seed,2026-10-11T12:43:53Z,2026-10-11T12:56:44Z,771.3112289905548,28,20,82441,3592,,0.0,,,,candidate,failure_no_error,,,True,13,7,0,10455,1702
@@ -3905,7 +3911,7 @@ B,hc,0,main,unified:rollouts_metrics.jsonl,98,opt,0,cand_0001,2026-10-11T15:46:2
 B,hc,0,main,unified:rollouts_metrics.jsonl,98,opt,0,cand_0002,2026-10-11T17:22:47Z,2026-10-11T17:35:15Z,747.82377409935,34,21,119248,6814,,0.0,,,,candidate,failure_no_error,,,True,16,5,0,8503,1820
 B,hc,0,main,unified:rollouts_metrics.jsonl,98,opt,0,seed,2026-10-11T13:46:45Z,2026-10-11T13:54:31Z,465.8728129863739,22,13,50864,3585,,0.0,,,,candidate,failure_no_error,,,True,10,3,0,2980,745
 B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,cand_0001,2026-10-11T15:47:37Z,2026-10-11T16:10:26Z,1369.6400158405304,44,30,191177,7787,,1.0,,,,,,,,True,21,9,0,28240,4973
-B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,cand_0002,2026-10-11T17:26:17Z,2026-10-11T17:37:29Z,671.3803029060364,28,18,92078,5829,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,13,5,0,10791,2346
+B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,cand_0002,2026-10-11T17:26:17Z,2026-10-11T17:37:29Z,671.3803029060364,28,18,92078,5829,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,13,5,0,10791,2346
 B,hc,0,main,unified:rollouts_metrics.jsonl,99,opt,0,seed,2026-10-11T13:50:41Z,2026-10-11T14:06:00Z,918.8421819210052,30,19,91014,5310,,1.0,,,,,,,,True,14,5,0,9731,1850
 B,hc,1,main,unified:rollouts_metrics.jsonl,0,opt,0,cand_0001,2026-10-11T14:50:31Z,2026-10-11T15:00:11Z,580.0059869289398,24,17,80056,4518,,1.0,,,,,,,,True,11,6,0,9597,1280
 B,hc,1,main,unified:rollouts_metrics.jsonl,0,opt,0,cand_0002,2026-10-11T16:19:48Z,2026-10-11T16:25:19Z,330.8188419342041,20,14,57198,2689,,1.0,,,,,,,,True,9,5,0,7042,1059
@@ -4008,7 +4014,7 @@ B,hc,1,main,unified:rollouts_metrics.jsonl,54,opt,0,cand_0002,2026-10-11T16:49:2
 B,hc,1,main,unified:rollouts_metrics.jsonl,54,opt,0,cand_0003,2026-10-11T18:08:01Z,2026-10-11T18:11:38Z,216.53945803642273,14,10,24685,570,,0.0,,,,candidate,failure_no_error,,,True,6,4,1,2713,337
 B,hc,1,main,unified:rollouts_metrics.jsonl,54,opt,0,seed,2026-10-11T13:15:27Z,2026-10-11T13:19:49Z,262.1797490119934,12,9,18844,476,,0.0,,,,candidate,failure_no_error,,,True,5,4,1,2681,379
 B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0001,2026-10-11T15:18:22Z,2026-10-11T15:24:54Z,391.572212934494,14,10,31345,1454,,1.0,,,,,,,,True,6,4,0,2811,498
-B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0002,2026-10-11T16:50:05Z,2026-10-11T16:56:12Z,367.02173686027527,26,19,60801,2180,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,12,7,0,6290,1320
+B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0002,2026-10-11T16:50:05Z,2026-10-11T16:56:12Z,367.02173686027527,26,19,60801,2180,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,12,7,0,6290,1320
 B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,cand_0003,2026-10-11T18:08:08Z,2026-10-11T18:12:27Z,259.01530408859253,12,9,21142,883,,1.0,,,,,,,,True,5,4,0,2686,407
 B,hc,1,main,unified:rollouts_metrics.jsonl,57,opt,0,seed,2026-10-11T13:15:36Z,2026-10-11T13:20:04Z,267.78010988235474,14,10,24535,1485,,1.0,,,,,,,,True,6,4,0,2995,541
 B,hc,1,main,unified:rollouts_metrics.jsonl,59,opt,0,cand_0001,2026-10-11T15:21:01Z,2026-10-11T15:28:33Z,451.8784878253937,20,15,52599,2782,,0.0,,,,candidate,failure_no_error,,,True,9,6,1,9019,1562
@@ -4178,7 +4184,7 @@ B,hc,2,main,unified:rollouts_metrics.jsonl,81,opt,0,seed,2026-10-11T13:31:27Z,20
 B,hc,2,main,unified:rollouts_metrics.jsonl,82,opt,0,cand_0001,2026-10-11T15:36:34Z,2026-10-11T15:44:54Z,500.22065114974976,22,17,56124,2245,,1.0,,,,,,,,True,10,7,0,8882,1255
 B,hc,2,main,unified:rollouts_metrics.jsonl,82,opt,0,seed,2026-10-11T13:37:14Z,2026-10-11T13:53:06Z,951.5454368591309,32,24,82601,4202,,0.0,,,,candidate,failure_no_error,,,True,15,9,0,13231,2852
 B,hc,2,main,unified:rollouts_metrics.jsonl,83,opt,0,cand_0001,2026-10-11T15:39:03Z,2026-10-11T15:45:43Z,399.4492521286011,24,18,61953,2107,,0.0,,,,candidate,failure_no_error,,,True,11,7,0,7532,1257
-B,hc,2,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:37:49Z,2026-10-11T13:48:37Z,647.7425220012665,26,20,60583,2061,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,12,8,0,9960,1696
+B,hc,2,main,unified:rollouts_metrics.jsonl,83,opt,0,seed,2026-10-11T13:37:49Z,2026-10-11T13:48:37Z,647.7425220012665,26,20,60583,2061,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,12,8,0,9960,1696
 B,hc,2,main,unified:rollouts_metrics.jsonl,84,opt,0,cand_0001,2026-10-11T15:39:09Z,2026-10-11T15:45:51Z,401.1487078666687,24,16,62618,2203,,1.0,,,,,,,,True,11,5,0,4535,799
 B,hc,2,main,unified:rollouts_metrics.jsonl,84,opt,0,seed,2026-10-11T13:38:59Z,2026-10-11T13:46:32Z,453.6539189815521,18,12,34556,1644,,0.0,,,,candidate,failure_no_error,,,True,8,4,0,3619,917
 B,hc,2,main,unified:rollouts_metrics.jsonl,87,opt,0,cand_0001,2026-10-11T15:39:46Z,2026-10-11T15:47:12Z,445.9627890586853,32,22,88879,2844,,0.0,,,,candidate,failure_no_error,,,True,15,7,0,6577,2202
@@ -4241,46 +4247,66 @@ C,ao,0,main,unified:rollouts_metrics.jsonl,7,opt,0,cand_1,2026-10-11T19:38:59Z,2
 C,ao,0,main,unified:rollouts_metrics.jsonl,7,opt,0,seed,2026-10-11T18:20:46Z,2026-10-11T18:41:23Z,1236.975917816162,30,19,69261,5606,,0.0,,,,candidate,failure_no_error,,,True,14,5,0,4936,796
 C,ao,0,main,unified:rollouts_metrics.jsonl,9,opt,0,cand_1,2026-10-11T20:14:50Z,2026-10-11T20:35:22Z,1232.5938520431519,34,24,105269,7102,,1.0,,,,,,,,True,16,8,0,15376,1664
 C,ao,0,main,unified:rollouts_metrics.jsonl,9,opt,0,seed,2026-10-11T18:20:47Z,2026-10-11T19:07:18Z,2791.8389489650726,46,31,123096,6616,,0.0,,,,candidate,failure_no_error,,,True,22,9,0,18713,2963
-C,ao,1,main,unified:rollouts_metrics.jsonl,12,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T20:06:14Z,994.0417330265045,22,16,52605,3207,,1.0,,,,,,,,True,10,6,0,6396,1245
-C,ao,1,main,unified:rollouts_metrics.jsonl,12,opt,0,seed,2026-10-11T18:20:58Z,2026-10-11T18:27:58Z,419.7410080432892,14,9,24105,2467,,1.0,,,,,,,,True,6,3,0,2510,508
-C,ao,1,main,unified:rollouts_metrics.jsonl,14,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T20:03:04Z,804.0822389125824,20,12,53140,6303,,0.0,,,,candidate,failure_no_error,,,True,9,3,0,3919,1247
-C,ao,1,main,unified:rollouts_metrics.jsonl,14,opt,0,seed,2026-10-11T18:20:58Z,2026-10-11T18:48:09Z,1630.8141520023346,36,23,118883,10471,,0.0,,,,candidate,failure_no_error,,,True,17,6,0,8862,905
-C,ao,1,main,unified:rollouts_metrics.jsonl,15,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T20:04:30Z,890.1846208572388,26,17,90999,5826,,1.0,,,,,,,,True,12,5,0,5858,785
-C,ao,1,main,unified:rollouts_metrics.jsonl,15,opt,0,seed,2026-10-11T18:25:12Z,2026-10-11T18:39:17Z,844.1007289886475,20,13,44018,3034,,1.0,,,,,,,,True,9,4,0,3361,721
-C,ao,1,main,unified:rollouts_metrics.jsonl,17,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T20:11:54Z,1334.3053920269012,32,23,98372,6811,,0.0,,,,candidate,failure_no_error,,,True,15,8,0,10676,1219
-C,ao,1,main,unified:rollouts_metrics.jsonl,17,opt,0,seed,2026-10-11T18:27:59Z,2026-10-11T18:52:03Z,1444.0300798416138,32,23,93150,6828,,0.0,,,,candidate,failure_no_error,,,True,15,8,0,13716,1760
-C,ao,1,main,unified:rollouts_metrics.jsonl,1,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T19:57:06Z,445.88975381851196,16,13,34328,1111,,1.0,,,,,,,,True,7,6,0,4779,908
-C,ao,1,main,unified:rollouts_metrics.jsonl,1,opt,0,seed,2026-10-11T18:20:58Z,2026-10-11T18:46:12Z,1514.1200301647186,30,20,66327,2514,,1.0,,,,,,,,True,14,6,0,4413,943
-C,ao,1,main,unified:rollouts_metrics.jsonl,20,opt,0,cand_1,2026-10-11T19:53:30Z,2026-10-11T20:10:33Z,1022.523166179657,26,18,74850,4321,,1.0,,,,,,,,True,12,6,0,8697,1329
-C,ao,1,main,unified:rollouts_metrics.jsonl,20,opt,0,seed,2026-10-11T18:39:17Z,2026-10-11T18:59:41Z,1223.803797006607,22,15,52685,4438,,1.0,,,,,,,,True,10,5,0,7377,835
-C,ao,1,main,unified:rollouts_metrics.jsonl,21,opt,0,cand_1,2026-10-11T20:12:06Z,2026-10-11T20:24:13Z,727.0501317977905,20,13,61179,4321,,0.0,,,,candidate,failure_no_error,,,True,9,4,0,4744,607
-C,ao,1,main,unified:rollouts_metrics.jsonl,21,opt,0,seed,2026-10-11T18:46:13Z,2026-10-11T19:15:01Z,1728.4023241996765,40,28,113402,7332,,0.0,,,,candidate,failure_no_error,,,True,19,9,0,11778,1056
-C,ao,1,main,unified:rollouts_metrics.jsonl,23,opt,0,cand_1,2026-10-11T19:57:07Z,2026-10-11T20:17:06Z,1198.4128408432007,28,18,78266,6392,,1.0,,,,,,,,True,13,5,0,6541,1660
-C,ao,1,main,unified:rollouts_metrics.jsonl,23,opt,0,seed,2026-10-11T18:47:47Z,2026-10-11T19:10:13Z,1345.4903399944305,30,20,90927,7518,,1.0,,,,,,,,True,14,6,0,11903,2037
-C,ao,1,main,unified:rollouts_metrics.jsonl,27,opt,0,cand_1,2026-10-11T19:57:09Z,2026-10-11T20:00:33Z,204.2539620399475,10,7,16858,1059,,1.0,,,,,,,,True,4,3,0,2048,412
-C,ao,1,main,unified:rollouts_metrics.jsonl,27,opt,0,seed,2026-10-11T18:48:10Z,2026-10-11T18:57:03Z,532.8948860168457,10,7,13336,1031,,1.0,,,,,,,,True,4,3,0,2086,516
-C,ao,1,main,unified:rollouts_metrics.jsonl,33,opt,0,cand_1,2026-10-11T20:00:34Z,2026-10-11T20:27:48Z,1634.4657220840454,32,24,89484,7888,,0.0,,,,candidate,failure_no_error,,,True,15,9,0,16598,2356
-C,ao,1,main,unified:rollouts_metrics.jsonl,33,opt,0,seed,2026-10-11T18:49:57Z,2026-10-11T19:05:15Z,917.8811349868774,20,14,40166,4588,,0.0,,,,candidate,failure_no_error,,,True,9,5,0,7250,1519
-C,ao,1,main,unified:rollouts_metrics.jsonl,34,opt,0,cand_1,2026-10-11T20:03:05Z,2026-10-11T20:12:39Z,573.9926941394806,14,10,28022,2874,,1.0,,,,,,,,True,6,4,0,4136,769
-C,ao,1,main,unified:rollouts_metrics.jsonl,34,opt,0,seed,2026-10-11T18:52:04Z,2026-10-11T19:04:25Z,740.8752059936523,16,11,27626,2735,,1.0,,,,,,,,True,7,4,0,4017,1464
-C,ao,1,main,unified:rollouts_metrics.jsonl,38,opt,0,cand_1,2026-10-11T20:04:32Z,2026-10-11T20:19:45Z,912.6961600780487,20,16,44970,3057,,0.0,,,,candidate,failure_no_error,,,True,9,7,0,8603,1660
-C,ao,1,main,unified:rollouts_metrics.jsonl,38,opt,0,seed,2026-10-11T18:57:04Z,2026-10-11T19:17:19Z,1215.230143070221,32,23,68222,4478,,1.0,,,,,,,,True,15,8,0,10382,1722
-C,ao,1,main,unified:rollouts_metrics.jsonl,39,opt,0,cand_1,2026-10-11T20:06:15Z,2026-10-11T20:16:56Z,640.9881649017334,16,11,41282,2289,,0.0,,,,candidate,failure_no_error,,,True,7,4,0,4174,727
-C,ao,1,main,unified:rollouts_metrics.jsonl,39,opt,0,seed,2026-10-11T18:59:42Z,2026-10-11T19:12:14Z,751.8977339267731,20,13,39006,2404,,0.0,,,,candidate,failure_no_error,,,True,9,4,0,3027,754
-C,ao,1,main,unified:rollouts_metrics.jsonl,3,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T19:53:29Z,229.61040997505188,6,4,8317,363,,1.0,,,,,,,,True,2,2,0,1266,473
-C,ao,1,main,unified:rollouts_metrics.jsonl,3,opt,0,seed,2026-10-11T18:20:58Z,2026-10-11T18:25:12Z,253.5214490890503,8,6,9980,508,,0.0,,,,candidate,failure_no_error,,,True,3,3,0,1903,596
-C,ao,1,main,unified:rollouts_metrics.jsonl,42,opt,0,cand_1,2026-10-11T20:10:35Z,2026-10-11T20:20:55Z,620.2706589698792,18,14,47030,2428,,1.0,,,,,,,,True,8,6,0,7540,1274
-C,ao,1,main,unified:rollouts_metrics.jsonl,42,opt,0,seed,2026-10-11T19:04:26Z,2026-10-11T19:45:11Z,2444.8325929641724,68,42,353605,11914,,0.0,,,,candidate,failure_no_error,,,True,33,9,0,23241,2582
-C,ao,1,main,unified:rollouts_metrics.jsonl,43,opt,0,cand_1,2026-10-11T20:11:55Z,2026-10-11T20:21:09Z,553.4182839393616,12,10,24992,1308,,1.0,,,,,,,,True,5,5,0,4162,924
-C,ao,1,main,unified:rollouts_metrics.jsonl,43,opt,0,seed,2026-10-11T19:05:16Z,2026-10-11T19:27:36Z,1340.4347701072693,38,31,84264,2044,,1.0,,,,,,,,True,18,13,0,12207,2128
-C,ao,1,main,unified:rollouts_metrics.jsonl,46,opt,0,cand_1,2026-10-11T20:12:40Z,2026-10-11T20:15:34Z,173.33063411712646,8,6,12407,650,,1.0,,,,,,,,True,3,3,0,1721,451
-C,ao,1,main,unified:rollouts_metrics.jsonl,46,opt,0,seed,2026-10-11T19:10:14Z,2026-10-11T19:13:35Z,200.77845191955566,8,6,9539,634,,1.0,,,,,,,,True,3,3,0,1601,483
-C,ao,1,main,unified:rollouts_metrics.jsonl,49,opt,0,cand_1,2026-10-11T20:15:34Z,2026-10-11T20:25:08Z,573.715537071228,14,10,27910,1139,,1.0,,,,,,,,True,6,4,0,3151,592
-C,ao,1,main,unified:rollouts_metrics.jsonl,49,opt,0,seed,2026-10-11T19:12:15Z,2026-10-11T19:18:09Z,354.05675315856934,14,10,21479,995,,1.0,,,,,,,,True,6,4,0,2512,584
-C,ao,1,main,unified:rollouts_metrics.jsonl,7,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T19:55:07Z,326.8206629753113,8,6,12420,510,,0.0,,,,candidate,failure_no_error,,,True,3,3,0,1771,481
-C,ao,1,main,unified:rollouts_metrics.jsonl,7,opt,0,seed,2026-10-11T18:20:58Z,2026-10-11T18:47:46Z,1608.2092020511627,34,22,82901,5919,,0.0,,,,candidate,failure_no_error,,,True,16,6,0,5500,1482
-C,ao,1,main,unified:rollouts_metrics.jsonl,9,opt,0,cand_1,2026-10-11T19:49:40Z,2026-10-11T19:57:08Z,447.5635998249054,12,8,23187,1287,,1.0,,,,,,,,True,5,3,0,2089,908
-C,ao,1,main,unified:rollouts_metrics.jsonl,9,opt,0,seed,2026-10-11T18:20:58Z,2026-10-11T18:49:56Z,1737.7136747837067,40,29,103081,4775,,0.0,,,,candidate,failure_no_error,,,True,19,10,0,19988,2031
+C,ao,1,main,capevolve:.capevolve/run_*,1,val,0,seed,,2026-10-11T19:45:12Z,1514.1,15,15,,,74197,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,3,val,0,seed,,2026-10-11T19:45:12Z,253.5,4,4,,,12987,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,7,val,0,seed,,2026-10-11T19:45:12Z,1608.2,17,17,,,95802,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,9,val,0,seed,,2026-10-11T19:45:12Z,1737.7,20,20,,,129875,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,12,val,0,seed,,2026-10-11T19:45:12Z,419.7,7,7,,,29590,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,14,val,0,seed,,2026-10-11T19:45:12Z,1630.8,18,18,,,139121,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,15,val,0,seed,,2026-10-11T19:45:12Z,844.1,10,10,,,51134,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,17,val,0,seed,,2026-10-11T19:45:12Z,1444.0,16,16,,,115454,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,20,val,0,seed,,2026-10-11T19:45:12Z,1223.8,11,11,,,65335,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,21,val,0,seed,,2026-10-11T19:45:12Z,1728.4,20,20,,,133568,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,23,val,0,seed,,2026-10-11T19:45:12Z,1345.5,15,15,,,112385,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,27,val,0,seed,,2026-10-11T19:45:12Z,532.9,5,5,,,16969,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,33,val,0,seed,,2026-10-11T19:45:12Z,917.9,10,10,,,53523,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,34,val,0,seed,,2026-10-11T19:45:12Z,740.9,8,8,,,35842,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,38,val,0,seed,,2026-10-11T19:45:12Z,1215.2,16,16,,,84804,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,39,val,0,seed,,2026-10-11T19:45:12Z,751.9,10,10,,,45191,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,42,val,0,seed,,2026-10-11T19:45:12Z,2444.8,34,34,,,391342,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,43,val,0,seed,,2026-10-11T19:45:12Z,1340.4,19,19,,,100643,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,46,val,0,seed,,2026-10-11T19:45:12Z,200.8,4,4,,,12257,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,49,val,0,seed,,2026-10-11T19:45:12Z,354.1,7,7,,,25570,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,1,val,0,cand_1,,2026-10-11T20:27:49Z,445.9,8,8,,,41126,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,3,val,0,cand_1,,2026-10-11T20:27:49Z,229.6,3,3,,,10419,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,7,val,0,cand_1,,2026-10-11T20:27:49Z,326.8,4,4,,,15182,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,9,val,0,cand_1,,2026-10-11T20:27:49Z,447.6,6,6,,,27471,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,12,val,0,cand_1,,2026-10-11T20:27:49Z,994.0,11,11,,,63453,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,14,val,0,cand_1,,2026-10-11T20:27:49Z,804.1,10,10,,,64609,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,15,val,0,cand_1,,2026-10-11T20:27:49Z,890.2,13,13,,,103468,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,17,val,0,cand_1,,2026-10-11T20:27:49Z,1334.3,16,16,,,117078,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,20,val,0,cand_1,,2026-10-11T20:27:49Z,1022.5,13,13,,,89197,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,21,val,0,cand_1,,2026-10-11T20:27:49Z,727.1,10,10,,,70851,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,23,val,0,cand_1,,2026-10-11T20:27:49Z,1198.4,14,14,,,92859,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,27,val,0,cand_1,,2026-10-11T20:27:49Z,204.3,5,5,,,20377,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,33,val,0,cand_1,,2026-10-11T20:27:49Z,1634.5,16,16,,,116326,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,34,val,0,cand_1,,2026-10-11T20:27:49Z,574.0,7,7,,,35801,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,38,val,0,cand_1,,2026-10-11T20:27:49Z,912.7,10,10,,,58290,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,39,val,0,cand_1,,2026-10-11T20:27:49Z,641.0,8,8,,,48472,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,42,val,0,cand_1,,2026-10-11T20:27:49Z,620.3,9,9,,,58272,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,43,val,0,cand_1,,2026-10-11T20:27:49Z,553.4,6,6,,,31386,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,46,val,0,cand_1,,2026-10-11T20:27:49Z,173.3,4,4,,,15229,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,49,val,0,cand_1,,2026-10-11T20:27:49Z,573.7,7,7,,,32792,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,1,val,0,cand_2,,2026-10-11T21:19:17Z,767.9,8,8,,,41935,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,3,val,0,cand_2,,2026-10-11T21:19:17Z,735.1,5,5,,,21238,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,7,val,0,cand_2,,2026-10-11T21:19:17Z,401.4,4,4,,,15579,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,9,val,0,cand_2,,2026-10-11T21:19:17Z,907.2,11,11,,,69505,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,12,val,0,cand_2,,2026-10-11T21:19:17Z,1187.5,10,10,,,54487,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,14,val,0,cand_2,,2026-10-11T21:19:17Z,1471.2,14,14,,,99120,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,15,val,0,cand_2,,2026-10-11T21:19:17Z,1005.6,11,11,,,72100,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,17,val,0,cand_2,,2026-10-11T21:19:17Z,2175.4,20,20,,,159455,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,20,val,0,cand_2,,2026-10-11T21:19:17Z,1306.5,11,11,,,65326,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,21,val,0,cand_2,,2026-10-11T21:19:17Z,967.8,10,10,,,72051,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,23,val,0,cand_2,,2026-10-11T21:19:17Z,1441.5,14,14,,,103409,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,27,val,0,cand_2,,2026-10-11T21:19:17Z,429.7,6,6,,,32016,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,33,val,0,cand_2,,2026-10-11T21:19:17Z,1239.2,12,12,,,75461,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,34,val,0,cand_2,,2026-10-11T21:19:17Z,694.4,8,8,,,44801,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,38,val,0,cand_2,,2026-10-11T21:19:17Z,921.6,11,11,,,75231,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,39,val,0,cand_2,,2026-10-11T21:19:17Z,957.7,9,9,,,59674,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,42,val,0,cand_2,,2026-10-11T21:19:17Z,847.6,10,10,,,69254,0.0,,,,candidate,failure_no_error,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,43,val,0,cand_2,,2026-10-11T21:19:17Z,468.9,6,6,,,33234,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,46,val,0,cand_2,,2026-10-11T21:19:17Z,235.2,3,3,,,11036,1.0,,,,,,,,True,,,,,
+C,ao,1,main,capevolve:.capevolve/run_*,49,val,0,cand_2,,2026-10-11T21:19:17Z,546.8,7,7,,,31817,1.0,,,,,,,,True,,,,,
 C,ao,2,main,unified:rollouts_metrics.jsonl,12,opt,0,seed,2026-10-11T18:21:11Z,2026-10-11T18:39:47Z,1115.9834859371185,20,15,40547,5079,,0.0,,,,candidate,failure_no_error,,,True,9,6,0,7917,1015
 C,ao,2,main,unified:rollouts_metrics.jsonl,14,opt,0,seed,2026-10-11T18:21:11Z,2026-10-11T18:33:15Z,723.7332389354706,14,8,25341,3083,,0.0,,,,candidate,failure_no_error,,,True,6,2,0,1890,419
 C,ao,2,main,unified:rollouts_metrics.jsonl,15,opt,0,seed,2026-10-11T18:25:14Z,2026-10-11T18:35:34Z,619.691516160965,20,13,47597,3274,,1.0,,,,,,,,True,9,4,0,4037,598
@@ -4374,7 +4400,7 @@ C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,1,opt,0,seed,2026-10-11T18:2
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,20,opt,0,cand_0001,2026-10-11T19:55:38Z,2026-10-11T20:11:27Z,949.4783899784088,16,12,35652,2243,,0.0,,,,candidate,failure_no_error,,,True,7,5,0,5163,980
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,20,opt,0,seed,2026-10-11T18:39:13Z,2026-10-11T19:01:33Z,1339.6905889511108,22,15,42180,3210,,0.0,,,,candidate,failure_no_error,,,True,10,5,0,4800,1065
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,21,opt,0,cand_0001,2026-10-11T19:57:42Z,2026-10-11T20:17:13Z,1171.7492508888245,26,17,81418,6313,,0.0,,,,candidate,failure_no_error,,,True,12,5,0,4579,1167
-C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,21,opt,0,seed,2026-10-11T18:41:54Z,2026-10-11T19:11:28Z,1774.688887834549,40,29,114385,5715,,0.0,,infra,infra,infra,error_string,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,19,10,0,12858,2147
+C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,21,opt,0,seed,2026-10-11T18:41:54Z,2026-10-11T19:11:28Z,1774.688887834549,40,29,114385,5715,,0.0,,infra,infra,infra,env_user_simulator,"tau2 user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAU2_SUMMARY.md row 7) — treated as uncontrollable noise, not an agent policy/tool failure.",,True,19,10,0,12858,2147
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,23,opt,0,cand_0001,2026-10-11T20:01:55Z,2026-10-11T20:21:11Z,1156.1192710399628,28,17,106500,7438,,1.0,,,,,,,,True,13,4,0,6215,1563
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,23,opt,0,seed,2026-10-11T18:42:23Z,2026-10-11T19:00:22Z,1079.0038919448853,32,20,96300,8550,,0.0,,,,candidate,failure_no_error,,,True,15,5,0,7597,1635
 C,ctl-oneshot,2,main,unified:rollouts_metrics.jsonl,27,opt,0,cand_0001,2026-10-11T20:02:33Z,2026-10-11T20:08:46Z,373.3975739479065,12,8,25004,1270,,1.0,,,,,,,,True,5,3,0,1985,432

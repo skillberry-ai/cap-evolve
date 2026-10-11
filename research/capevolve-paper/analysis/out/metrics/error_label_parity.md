@@ -4,7 +4,7 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 
 | suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | uniform unverifiable | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A | ace | 1 | main | 28 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| A | ace | 1 | main | 29 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ace | 2 | main | 24 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 0 | main | 40 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 1 | main | 40 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -22,7 +22,7 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | A | metaharness | 0 | main | 120 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | metaharness | 1 | main | 120 | 15 | 15 | 0 | 15 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | metaharness | 2 | main | 120 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| A | mipro | 0 | main | 45 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| A | mipro | 0 | main | 46 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | mipro | 1 | main | 33 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 0 | main | 200 | 85 | 5 | 80 | 5 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 1 | main | 160 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
