@@ -1,0 +1,7 @@
+Dry run of the final-evaluation machinery, 2026-10-11 21:30-22:20 UTC.  Not results: search-split smoke tasks (A: val ids 7902, 267-18; B/C: sel ids), fake B*=50,
+live partial run directories read-only, tags FE-smoke-<S>-dry-*.  Models were Azure-direct (gateway :4112): A target azoai/gpt-5-mini-2025-08-07 (temperature 1),
+B/C target, user simulator and judge azoai/gpt-4.1-2025-04-14 -- because "smoke" tags starve on the saturated RITS deployments (campaign_gateway.py _LiveSem
+reserve_high), which an earlier attempt on the RITS target showed (infra timeouts after 1806 s, retried by the infra rule).  Everything else (artifact
+reconstruction, order, worker per rollout, adapters, LibreOffice 25.8 scorer, tau2 scorer, classifier, retry/hang rule, aggregation) is the production code.
+hang_rule_rollouts.jsonl: run with --hang-s 6 (two hangs -> missing cell, no row).  pcb_*.json: paired_cluster_bootstrap on results_long.csv (gepa vs seed).
+B/rejudge_trials.csv: rejudge.py --all on the saved simulations; 16/16 rewards reproduce.

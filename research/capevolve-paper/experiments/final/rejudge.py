@@ -35,6 +35,7 @@ def main(argv=None):
     ap.add_argument("--gateway", default="http://127.0.0.1:4112/v1")
     ap.add_argument("--tag-exp", default=None)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--all", action="store_true", help="re-evaluate every trial, not only tasks with NL assertions (mechanics test; rewards must reproduce)")
     ap.add_argument("--mode", default="B", help="B (B* artifacts) or END")
     a = ap.parse_args(argv)
     root = Path(a.root)
@@ -64,7 +65,7 @@ def main(argv=None):
             task = next((t for t in res.tasks if str(t.id) == str(r["task"])), None)
             crit = getattr(task, "evaluation_criteria", None) if task else None
             has_nl = bool(crit and getattr(crit, "nl_assertions", None))
-            if has_nl and res.simulations:
+            if (has_nl or a.all) and res.simulations:
                 nl.DEFAULT_LLM_NL_ASSERTIONS_ARGS = {"api_base": a.gateway, "api_key": "%s-s%d:%s:judge" % ("tag:" + tag_exp + "-" + r["arm"], r["seed"], r["arm"])}
                 sim = res.simulations[0]
                 ri = evaluate_simulation(sim, task, EvaluationType.ALL, False, domain)

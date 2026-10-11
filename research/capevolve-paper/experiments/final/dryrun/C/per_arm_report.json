@@ -1,0 +1,28 @@
+{
+ "B|gepa": {
+  "attempts": 6,
+  "candidate_errors": 0,
+  "done": 6,
+  "empty_output": 0,
+  "hangs": 0,
+  "infra_attempts": 0,
+  "jobs": 6,
+  "missing": 0,
+  "pending": 0,
+  "raw_tool_text_last": 0,
+  "retried_jobs": 0
+ },
+ "B|seed": {
+  "attempts": 4,
+  "candidate_errors": 0,
+  "done": 4,
+  "empty_output": 0,
+  "hangs": 0,
+  "infra_attempts": 0,
+  "jobs": 4,
+  "missing": 0,
+  "pending": 0,
+  "raw_tool_text_last": 0,
+  "retried_jobs": 0
+ }
+}

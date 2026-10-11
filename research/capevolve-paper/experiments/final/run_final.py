@@ -166,6 +166,8 @@ def worker_tau(job, attempt_dir):
                 "TAU_GATEWAY": job.get("gateway") or GATEWAY})
     if job.get("target_model"):
         env["TAU_AGENT_MODEL"] = job["target_model"]
+    if job.get("user_model"):
+        env["TAU_USER_MODEL"] = job["user_model"]
     if job.get("judge_model"):
         env["TAU_JUDGE_MODEL"] = job["judge_model"]
     if job.get("final_split"):
@@ -295,28 +297,64 @@ def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
     ad.mkdir(parents=True, exist_ok=True)
     ts = job["trial_seed"] + 7919 * attempt
     spec = dict(job, attempt=attempt, trial_seed=ts, attempt_dir=str(ad))
-    (ad / "job.json").write_text(json.dumps(spec))
-    t_spawn = time.time()
-    out = open(ad / "worker.log", "ab")
-    proc = subprocess.Popen([str(py), "-I", str(HERE / "run_final.py"), "worker", "--job", str(ad / "job.json")],
-                            stdout=out, stderr=subprocess.STDOUT, start_new_session=True, cwd=str(ad))
-    (ad / "pid").write_text(str(proc.pid))
-    hang = False
-    try:
-        proc.wait(timeout=hang_s)
-    except subprocess.TimeoutExpired:
-        hang = True
-        for sig, grace in ((signal.SIGTERM, 60), (signal.SIGKILL, 10)):
+    pidf, rp0 = ad / "pid", ad / "result.json"
+    resumed = False
+    if rp0.exists() or pidf.exists():
+        # resume: this attempt was spawned by an earlier orchestrator.  Ingest a finished result, or wait for the live worker (bounded by the
+        # hang rule counted from its spawn time); a dead worker without a result is an aborted attempt and is respawned in place.
+        try:
+            wpid = int(pidf.read_text())
+        except Exception:
+            wpid = -1
+        t_spawn = pidf.stat().st_mtime if pidf.exists() else time.time()
+        alive = False
+        try:
+            os.kill(wpid, 0)
+            alive = wpid > 0
+        except Exception:
+            alive = False
+        if rp0.exists() or alive:
+            resumed = True
+            while alive and not rp0.exists() and time.time() - t_spawn < hang_s:
+                time.sleep(5)
+                try:
+                    os.kill(wpid, 0)
+                except Exception:
+                    alive = False
+            proc = None
+            hang = alive and not rp0.exists()
+            if hang:
+                try:
+                    os.killpg(wpid, signal.SIGKILL)
+                except Exception:
+                    pass
+    if not resumed:
+        for stale in ("result.json", "pid"):
             try:
-                os.killpg(proc.pid, sig)
-            except ProcessLookupError:
-                break
-            try:
-                proc.wait(timeout=grace)
-                break
-            except subprocess.TimeoutExpired:
-                continue
-    out.close()
+                (ad / stale).unlink()
+            except FileNotFoundError:
+                pass
+        (ad / "job.json").write_text(json.dumps(spec))
+        t_spawn = time.time()
+        out = open(ad / "worker.log", "ab")
+        proc = subprocess.Popen([str(py), "-I", str(HERE / "run_final.py"), "worker", "--job", str(ad / "job.json")],
+                                stdout=out, stderr=subprocess.STDOUT, start_new_session=True, cwd=str(ad))
+        (ad / "pid").write_text(str(proc.pid))
+        hang = False
+        try:
+            proc.wait(timeout=hang_s)
+        except subprocess.TimeoutExpired:
+            hang = True
+            for sig, grace in ((signal.SIGTERM, 60), (signal.SIGKILL, 10)):
+                try:
+                    os.killpg(proc.pid, sig)
+                except ProcessLookupError:
+                    break
+                try:
+                    proc.wait(timeout=grace)
+                    break
+                except subprocess.TimeoutExpired:
+                    continue
     t_end = time.time()
     rp = ad / "result.json"
     res = C.jload(rp) if (rp.exists() and not hang) else None
@@ -329,7 +367,7 @@ def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
             tail = (ad / "worker.log").read_text(errors="replace")[-1500:]
         except Exception:
             pass
-        res = {"worker_ok": False, "worker_exception": "worker exited %s without result.json: %s" % (proc.returncode, tail), "t_start": t_spawn, "t_end": t_end}
+        res = {"worker_ok": False, "worker_exception": "worker exited %s without result.json: %s" % (proc.returncode if proc else "?", tail), "t_start": t_spawn, "t_end": t_end}
     cls, rule = classify(res, cm)
     rec = {"type": "attempt", "job_id": jid, "attempt": attempt, "suite": job["suite"], "arm": job["arm_label"], "seed": job["seed"], "task": job["task"], "family": job.get("family"),
            "trial": job["trial"], "mode": job["mode"], "trial_seed": ts, "t_spawn": t_spawn, "t_start": res.get("t_start"), "t_end": res.get("t_end"),

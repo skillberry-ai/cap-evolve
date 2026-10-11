@@ -1,0 +1,1704 @@
+{
+ "bstar": 50,
+ "bstar_file": "/tmp/fe_dry/m2/bstar_A.FAKE50.json",
+ "bstar_file_sha256": "61b43e95da294b48cf08f441c90dcd21cd2f7fe43ab9ba8c450fd25bbbd517d6",
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "duplicate_groups": {
+  "B:b7a43a727118": [
+   "mipro/s0",
+   "mipro/s1",
+   "mipro/s2"
+  ],
+  "B:ecb7f9f0d358": [
+   "hc/s0",
+   "hc/s1",
+   "hc/s2",
+   "ao/s0",
+   "ao/s1",
+   "ao/s2",
+   "gepa/s0",
+   "gepa/s1",
+   "gepa/s2",
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2",
+   "metaharness/s0",
+   "metaharness/s1",
+   "metaharness/s2",
+   "evoskill/s0",
+   "evoskill/s1",
+   "wikiskill/s0",
+   "wikiskill/s1",
+   "wikiskill/s2",
+   "trace2skill/s0"
+  ],
+  "END:b7a43a727118": [
+   "mipro/s0",
+   "mipro/s1",
+   "mipro/s2"
+  ],
+  "END:ecb7f9f0d358": [
+   "hc/s0",
+   "hc/s1",
+   "hc/s2",
+   "ao/s0",
+   "ao/s1",
+   "ao/s2",
+   "skillopt/s0",
+   "metaharness/s1",
+   "metaharness/s2",
+   "evoskill/s0",
+   "evoskill/s1",
+   "wikiskill/s0",
+   "wikiskill/s1",
+   "wikiskill/s2",
+   "trace2skill/s0"
+  ]
+ },
+ "entries": [
+  {
+   "arm": "hc",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s0/.capevolve/run_20261011_144127/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "no candidates.jsonl created event: seed taken from /home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s0/.capevolve/run_20261011_144127/candidates/seed"
+   ],
+   "event_sources": [],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/hc/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": null,
+   "logged_sha_matches": null,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no promotion (accepted event) inside the limit: the seed is the method's own deployed artifact at this budget",
+   "rollout_index": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "hc",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s1/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "no candidates.jsonl created event: seed taken from /home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s1/.capevolve/run_20261011_143946/candidates/seed"
+   ],
+   "event_sources": [],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/hc/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": null,
+   "logged_sha_matches": null,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no promotion (accepted event) inside the limit: the seed is the method's own deployed artifact at this budget",
+   "rollout_index": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s1",
+   "seed": 1,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "hc",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s2/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "no candidates.jsonl created event: seed taken from /home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s2/.capevolve/run_20261011_143946/candidates/seed"
+   ],
+   "event_sources": [],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/hc/s2",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": null,
+   "logged_sha_matches": null,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no promotion (accepted event) inside the limit: the seed is the method's own deployed artifact at this budget",
+   "rollout_index": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s2",
+   "seed": 2,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0/.capevolve/run_20261011_144127/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0/.capevolve/run_20261011_144127/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/ao/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "b3a5705e30505eb8480a227b9975022e19117f3422677e3d847b5395a00712be",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 3,
+   "reason": "no promotion (accepted event) inside the limit: the seed is the method's own deployed artifact at this budget",
+   "rollout_index": 92,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s1/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s1/.capevolve/run_20261011_143946/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/ao/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "b3a5705e30505eb8480a227b9975022e19117f3422677e3d847b5395a00712be",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 3,
+   "reason": "no promotion (accepted event) inside the limit: the seed is the method's own deployed artifact at this budget",
+   "rollout_index": 96,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s1",
+   "seed": 1,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s2/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s2/.capevolve/run_20261011_143946/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/ao/s2",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "b3a5705e30505eb8480a227b9975022e19117f3422677e3d847b5395a00712be",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 3,
+   "reason": "no promotion (accepted event) inside the limit: the seed is the method's own deployed artifact at this budget",
+   "rollout_index": 82,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s2",
+   "seed": 2,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0/candidates/c0",
+   "candidate_id": "c0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/gepa/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 1,
+   "n_events": 22,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0",
+   "seed": 0,
+   "selection_value": 0.525,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1/candidates/c0",
+   "candidate_id": "c0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/gepa/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 1,
+   "n_events": 11,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1",
+   "seed": 1,
+   "selection_value": 0.525,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2/candidates/c0",
+   "candidate_id": "c0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/gepa/s2",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 1,
+   "n_events": 26,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2",
+   "seed": 2,
+   "selection_value": 0.425,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "skillopt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s0/candidates/base",
+   "candidate_id": "base",
+   "caveats": [
+    "decisions.md says 'current accepted skill at B*'; the native deployed artifact is best_skill (last accept_new_best) and that is what is used; the two differ when the current skill drifted below the best",
+    "end-of-run final promotion (trainer.py:2194-2240, one extra val rollout) is not replayable at a B* inside the run"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/skillopt/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 10,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s0",
+   "seed": 0,
+   "selection_value": 0.625,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "skillopt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s1/candidates/base",
+   "candidate_id": "base",
+   "caveats": [
+    "decisions.md says 'current accepted skill at B*'; the native deployed artifact is best_skill (last accept_new_best) and that is what is used; the two differ when the current skill drifted below the best",
+    "end-of-run final promotion (trainer.py:2194-2240, one extra val rollout) is not replayable at a B* inside the run"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/skillopt/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 12,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s1",
+   "seed": 1,
+   "selection_value": 0.55,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "skillopt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s2/candidates/base",
+   "candidate_id": "base",
+   "caveats": [
+    "decisions.md says 'current accepted skill at B*'; the native deployed artifact is best_skill (last accept_new_best) and that is what is used; the two differ when the current skill drifted below the best",
+    "end-of-run final promotion (trainer.py:2194-2240, one extra val rollout) is not replayable at a B* inside the run"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/skillopt/s2",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 11,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s2",
+   "seed": 2,
+   "selection_value": 0.525,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "metaharness",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/metaharness/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "29658db1c0e61f5371f3b344627c68da2bec3e2e4eb5df5f573ffa3bc1bc1bfe",
+   "logged_sha_matches": false,
+   "mode": "B",
+   "n_events": 6,
+   "reason": "no completed val evaluation inside the limit",
+   "rollout_index": 120,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0",
+   "seed": 0,
+   "selection_value": 0.6,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "metaharness",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s1/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s1/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/metaharness/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "29658db1c0e61f5371f3b344627c68da2bec3e2e4eb5df5f573ffa3bc1bc1bfe",
+   "logged_sha_matches": false,
+   "mode": "B",
+   "n_events": 5,
+   "reason": "no completed val evaluation inside the limit",
+   "rollout_index": 120,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s1",
+   "seed": 1,
+   "selection_value": 0.625,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "metaharness",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s2/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s2/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/metaharness/s2",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "29658db1c0e61f5371f3b344627c68da2bec3e2e4eb5df5f573ffa3bc1bc1bfe",
+   "logged_sha_matches": false,
+   "mode": "B",
+   "n_events": 5,
+   "reason": "no completed val evaluation inside the limit",
+   "rollout_index": 120,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s2",
+   "seed": 2,
+   "selection_value": 0.6,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "evoskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0/candidates/base",
+   "candidate_id": "base",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/evoskill/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0",
+   "seed": 0,
+   "selection_value": 0.55,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "evoskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1/candidates/base",
+   "candidate_id": "base",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/evoskill/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1",
+   "seed": 1,
+   "selection_value": 0.55,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "evoskill",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2",
+   "seed": 2,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "wikiskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s0/candidates/S0",
+   "candidate_id": "S0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/wikiskill/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s0",
+   "seed": 0,
+   "selection_value": 0.575,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "wikiskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s1/candidates/S0",
+   "candidate_id": "S0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/wikiskill/s1",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s1",
+   "seed": 1,
+   "selection_value": 0.525,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "wikiskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s2/candidates/S0",
+   "candidate_id": "S0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/wikiskill/s2",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s2",
+   "seed": 2,
+   "selection_value": 0.5,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "trace2skill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s0/candidates_frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "selection is a single end-of-run step; completion index derived from rollouts_metrics.jsonl row order (no timestamps)"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s0/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/trace2skill/s0",
+   "identical_to_seed": true,
+   "limit": 50.0,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 1,
+   "reason": "selection_scores.json absent: variant val evaluations not completed -> seed (native end-of-run state at the cutoff as well)",
+   "rollout_index": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "trace2skill",
+   "candidate_id": null,
+   "caveats": [],
+   "event_sources": [],
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no seed candidate in candidates.jsonl",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s1",
+   "seed": 1,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "trace2skill",
+   "candidate_id": null,
+   "caveats": [],
+   "event_sources": [],
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no seed candidate in candidates.jsonl",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s2",
+   "seed": 2,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "ace",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/ace/s0/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s0",
+   "seed": 0,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "ace",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/ace/s1/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s1",
+   "seed": 1,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "ace",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/ace/s2/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "mode": "B",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s2",
+   "seed": 2,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "mipro",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0/candidates/3d5fee3dfdc1",
+   "candidate_id": "3d5fee3dfdc1",
+   "caveats": [
+    "MIPROv2 starts with a full eval of the default program; none finished inside the limit"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "3d5fee3dfdc1ebef8196ce1cdce5fab8d782672283573b3f4df8e7edfb545aed",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/mipro/s0",
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "logged_sha256": "7ff526ed7d73c9733821855014b34c684a14d4455613b46d4a97bb2649c3570a",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 1,
+   "reason": "no full-valset evaluation inside the limit",
+   "rollout_index": 25,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+  },
+  {
+   "arm": "mipro",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1/candidates/3d5fee3dfdc1",
+   "candidate_id": "3d5fee3dfdc1",
+   "caveats": [
+    "MIPROv2 starts with a full eval of the default program; none finished inside the limit"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "3d5fee3dfdc1ebef8196ce1cdce5fab8d782672283573b3f4df8e7edfb545aed",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/mipro/s1",
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "logged_sha256": "7ff526ed7d73c9733821855014b34c684a14d4455613b46d4a97bb2649c3570a",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 1,
+   "reason": "no full-valset evaluation inside the limit",
+   "rollout_index": 21,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1",
+   "seed": 1,
+   "selection_value": null,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+  },
+  {
+   "arm": "mipro",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2/candidates/3d5fee3dfdc1",
+   "candidate_id": "3d5fee3dfdc1",
+   "caveats": [
+    "MIPROv2 starts with a full eval of the default program; none finished inside the limit"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "3d5fee3dfdc1ebef8196ce1cdce5fab8d782672283573b3f4df8e7edfb545aed",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/B/mipro/s2",
+   "identical_to_seed": false,
+   "limit": 50.0,
+   "logged_sha256": "7ff526ed7d73c9733821855014b34c684a14d4455613b46d4a97bb2649c3570a",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 1,
+   "reason": "no full-valset evaluation inside the limit",
+   "rollout_index": 19,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2",
+   "seed": 2,
+   "selection_value": null,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+  },
+  {
+   "arm": "hc",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s0/.capevolve/run_20261011_144127/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id"
+   ],
+   "event_sources": [],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/hc/s0",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": null,
+   "logged_sha_matches": null,
+   "mode": "END",
+   "n_events": 0,
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "hc",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s1/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id"
+   ],
+   "event_sources": [],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/hc/s1",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": null,
+   "logged_sha_matches": null,
+   "mode": "END",
+   "n_events": 0,
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s1",
+   "seed": 1,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "hc",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s2/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id"
+   ],
+   "event_sources": [],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/hc/s2",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": null,
+   "logged_sha_matches": null,
+   "mode": "END",
+   "n_events": 0,
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/hill-climb/s2",
+   "seed": 2,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0/.capevolve/run_20261011_144127/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0/.capevolve/run_20261011_144127/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/ao/s0",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "b3a5705e30505eb8480a227b9975022e19117f3422677e3d847b5395a00712be",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 3,
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s1/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s1/.capevolve/run_20261011_143946/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/ao/s1",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "b3a5705e30505eb8480a227b9975022e19117f3422677e3d847b5395a00712be",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 3,
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s1",
+   "seed": 1,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s2/.capevolve/run_20261011_143946/candidates/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s2/.capevolve/run_20261011_143946/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/ao/s2",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "b3a5705e30505eb8480a227b9975022e19117f3422677e3d847b5395a00712be",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 3,
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s2",
+   "seed": 2,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0/candidates/c2",
+   "candidate_id": "c2",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "570b2021a9e5fe6253b3918074a2ead832ce767ad560d2c36dd38f81764533c7",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/gepa/s0",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "cfae38a9027e1b756e4c028a872c56058d0a4d6207b235eafeafafb84947b7e9",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_candidates_considered": 5,
+   "n_events": 22,
+   "rollout_index": 141,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0",
+   "seed": 0,
+   "selection_value": 0.85,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "c668ea87ebef4bd2da0cc4f54f3460ea9b8a3463fc9224ad7575b109204d60b8"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1/candidates/c1",
+   "candidate_id": "c1",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "c5aee4276e5a70c7892937df631c64f83354cd94a730f09bb66d3eb26af79ea6",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/gepa/s1",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "3d6d7fc78ff87ff9334f6001bf595f2a90958e90e29246fb97d04fee6244a76d",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_candidates_considered": 3,
+   "n_events": 11,
+   "rollout_index": 86,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1",
+   "seed": 1,
+   "selection_value": 0.8,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "41d42cd0a68949aa8e68af5703d670d75a1a13541ec80e59c23ee20d4186229b"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2/candidates/c1",
+   "candidate_id": "c1",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "d957b187d454f15dfa2455adf8764eeb7e73dbc8c9d9817eba6f2de106a69cbe",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/gepa/s2",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "d8d2a48ff14376414c1785977234049e8f04f218336d105acbaaee7ff86010a6",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_candidates_considered": 6,
+   "n_events": 26,
+   "rollout_index": 86,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2",
+   "seed": 2,
+   "selection_value": 0.775,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ec3a9ac22a1c69fbde354b5f0b169109c00fd75b6718e6940971fdf302a92c2a"
+  },
+  {
+   "arm": "skillopt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s0/candidates/base",
+   "candidate_id": "base",
+   "caveats": [
+    "decisions.md says 'current accepted skill at B*'; the native deployed artifact is best_skill (last accept_new_best) and that is what is used; the two differ when the current skill drifted below the best",
+    "end-of-run final promotion (trainer.py:2194-2240, one extra val rollout) is not replayable at a B* inside the run"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/skillopt/s0",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 10,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s0",
+   "seed": 0,
+   "selection_value": 0.625,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "skillopt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s1/candidates/step_0002",
+   "candidate_id": "step_0002",
+   "caveats": [
+    "decisions.md says 'current accepted skill at B*'; the native deployed artifact is best_skill (last accept_new_best) and that is what is used; the two differ when the current skill drifted below the best",
+    "end-of-run final promotion (trainer.py:2194-2240, one extra val rollout) is not replayable at a B* inside the run"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "d6b2db5bdb600c90a9a02215049998b31b07f28583609ba33b2ddf895f89572e",
+    "task_template.md": "8386801b920b3a9260bf054a5b64839ffba26ec47f55af28b70f0f14819907fb"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/skillopt/s1",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "05dfb861d702a4dbf05f980efa694e677b0d80066c0a319f8e79beb4199ad5b6",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 12,
+   "rollout_index": 200,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s1",
+   "seed": 1,
+   "selection_value": 0.8,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "46b5b50c8e01569ffee0caeca8587c702c779ee258363e35db90d74c66112531"
+  },
+  {
+   "arm": "skillopt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s2/candidates/step_0001",
+   "candidate_id": "step_0001",
+   "caveats": [
+    "decisions.md says 'current accepted skill at B*'; the native deployed artifact is best_skill (last accept_new_best) and that is what is used; the two differ when the current skill drifted below the best",
+    "end-of-run final promotion (trainer.py:2194-2240, one extra val rollout) is not replayable at a B* inside the run"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "b803dd4cfeb54c306a8a4e34fb0a2d2c9c8d2501b63560e55b80ee07476e989b",
+    "task_template.md": "63cec53cfafcbe751004de24cb1d8218b8d4290fa1134ec07cfea9d14e70bc51"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/skillopt/s2",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "ae88cc0ed0121b4aff8b4c5d4c9d35ad411eff0cf73893b94b372eebd0da8323",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 11,
+   "rollout_index": 120,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/skillopt/s2",
+   "seed": 2,
+   "selection_value": 0.575,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "fbc86db197d502f71cb8a2f27c63e6684d2d013fbf1d9070568adc58848a7af1"
+  },
+  {
+   "arm": "metaharness",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0/frozen/fence_format_plus_workflow",
+   "candidate_id": "fence_format_plus_workflow",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "756906bd2451ba37452cf12a8b321aa160110b916fa9a74b1ec65bea22dbb0f6",
+    "task_template.md": "512ae8a095603eb0668b51e2901e161b57d9243f3f4e3b4908c86e25fa6e5843"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/metaharness/s0",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "3b47bad339fab959aec577c24f3c5d81be39d652a5834b1fa4f1e045cfa809ea",
+   "logged_sha_matches": false,
+   "mode": "END",
+   "n_events": 6,
+   "rollout_index": 210,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s0",
+   "seed": 0,
+   "selection_value": 0.875,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "bec134e4e652b9f43db60ef35413ad06aaf52845b6edd62a51eada9b4fd5081e"
+  },
+  {
+   "arm": "metaharness",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s1/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/metaharness/s1",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "29658db1c0e61f5371f3b344627c68da2bec3e2e4eb5df5f573ffa3bc1bc1bfe",
+   "logged_sha_matches": false,
+   "mode": "END",
+   "n_events": 5,
+   "rollout_index": 120,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s1",
+   "seed": 1,
+   "selection_value": 0.625,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "metaharness",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s2/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/metaharness/s2",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "29658db1c0e61f5371f3b344627c68da2bec3e2e4eb5df5f573ffa3bc1bc1bfe",
+   "logged_sha_matches": false,
+   "mode": "END",
+   "n_events": 5,
+   "rollout_index": 120,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/metaharness/s2",
+   "seed": 2,
+   "selection_value": 0.6,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "evoskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0/candidates/base",
+   "candidate_id": "base",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/evoskill/s0",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0",
+   "seed": 0,
+   "selection_value": 0.55,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "evoskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1/candidates/base",
+   "candidate_id": "base",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/evoskill/s1",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1",
+   "seed": 1,
+   "selection_value": 0.55,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "evoskill",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": null,
+   "mode": "END",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2",
+   "seed": 2,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "wikiskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s0/candidates/S0",
+   "candidate_id": "S0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/wikiskill/s0",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s0",
+   "seed": 0,
+   "selection_value": 0.575,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "wikiskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s1/candidates/S0",
+   "candidate_id": "S0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/wikiskill/s1",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s1",
+   "seed": 1,
+   "selection_value": 0.525,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "wikiskill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s2/candidates/S0",
+   "candidate_id": "S0",
+   "caveats": [],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/wikiskill/s2",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 4,
+   "rollout_index": 40,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/wikiskill/s2",
+   "seed": 2,
+   "selection_value": 0.5,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "trace2skill",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s0/candidates_frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "selection is a single end-of-run step; completion index derived from rollouts_metrics.jsonl row order (no timestamps)"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s0/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/trace2skill/s0",
+   "identical_to_seed": true,
+   "limit": null,
+   "logged_sha256": "5712a34c21d9cd9045c1a1dcf2f5422716735e4af2aa87ee3da279da212ba97b",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 1,
+   "reason": "selection_scores.json absent: variant val evaluations not completed -> seed (native end-of-run state at the cutoff as well)",
+   "rollout_index": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+  },
+  {
+   "arm": "trace2skill",
+   "candidate_id": null,
+   "caveats": [],
+   "event_sources": [],
+   "identical_to_seed": false,
+   "limit": null,
+   "mode": "END",
+   "n_events": 0,
+   "reason": "no seed candidate in candidates.jsonl",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s1",
+   "seed": 1,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "trace2skill",
+   "candidate_id": null,
+   "caveats": [],
+   "event_sources": [],
+   "identical_to_seed": false,
+   "limit": null,
+   "mode": "END",
+   "n_events": 0,
+   "reason": "no seed candidate in candidates.jsonl",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/trace2skill/s2",
+   "seed": 2,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "ace",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/ace/s0/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": null,
+   "mode": "END",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s0",
+   "seed": 0,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "ace",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/ace/s1/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": null,
+   "mode": "END",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s1",
+   "seed": 1,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "ace",
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/ace/s2/candidates.jsonl"
+   ],
+   "identical_to_seed": false,
+   "limit": null,
+   "mode": "END",
+   "n_events": 0,
+   "reason": "no candidates.jsonl events yet",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s2",
+   "seed": 2,
+   "status": "impossible",
+   "suite": "A"
+  },
+  {
+   "arm": "mipro",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0/candidates/3d5fee3dfdc1",
+   "candidate_id": "3d5fee3dfdc1",
+   "caveats": [
+    "MIPROv2 starts with a full eval of the default program; none finished inside the limit"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "3d5fee3dfdc1ebef8196ce1cdce5fab8d782672283573b3f4df8e7edfb545aed",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/mipro/s0",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "7ff526ed7d73c9733821855014b34c684a14d4455613b46d4a97bb2649c3570a",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 1,
+   "reason": "no full-valset evaluation inside the limit",
+   "rollout_index": 25,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0",
+   "seed": 0,
+   "selection_value": null,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+  },
+  {
+   "arm": "mipro",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1/candidates/3d5fee3dfdc1",
+   "candidate_id": "3d5fee3dfdc1",
+   "caveats": [
+    "MIPROv2 starts with a full eval of the default program; none finished inside the limit"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "3d5fee3dfdc1ebef8196ce1cdce5fab8d782672283573b3f4df8e7edfb545aed",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/mipro/s1",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "7ff526ed7d73c9733821855014b34c684a14d4455613b46d4a97bb2649c3570a",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 1,
+   "reason": "no full-valset evaluation inside the limit",
+   "rollout_index": 21,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1",
+   "seed": 1,
+   "selection_value": null,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+  },
+  {
+   "arm": "mipro",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2/candidates/3d5fee3dfdc1",
+   "candidate_id": "3d5fee3dfdc1",
+   "caveats": [
+    "MIPROv2 starts with a full eval of the default program; none finished inside the limit"
+   ],
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2/candidates.jsonl"
+   ],
+   "fallback_seed": true,
+   "files": {
+    "prompt.md": "3d5fee3dfdc1ebef8196ce1cdce5fab8d782672283573b3f4df8e7edfb545aed",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/END/mipro/s2",
+   "identical_to_seed": false,
+   "limit": null,
+   "logged_sha256": "7ff526ed7d73c9733821855014b34c684a14d4455613b46d4a97bb2649c3570a",
+   "logged_sha_matches": true,
+   "mode": "END",
+   "n_events": 1,
+   "reason": "no full-valset evaluation inside the limit",
+   "rollout_index": 19,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2",
+   "seed": 2,
+   "selection_value": null,
+   "status": "partial",
+   "suite": "A",
+   "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+  }
+ ],
+ "generated_utc": "2026-10-11T22:05:25Z",
+ "reconstruct_py_sha256": "35648ce481bdfa194716da0fe877f6d0fd7e55897473647566d655c9d0e59627",
+ "rules": {
+  "ace": "ACE (dl_new/ace_src/ace/ace.py:781-783): deployed playbook = best_playbook, updated on `acc > best_accuracy` at each val evaluation\n    (strict, earliest wins); wrapper code/ace_run.py:199-205 evaluates val at each epoch end and at final stop and takes\n    max(cands, key=(val, -index)).  Replayed over `evaluated` val events inside the limit.",
+  "ao": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "evoskill": "EvoSkill src/registry/manager.py:325-344,366-376,378-427 + loop/runner.py:353: frontier of size 3 (LoopConfig.frontier_size, evoskill_run.py:167),\n    program admitted if the frontier has room or score > worst; best = frontier[0] after sort(key=(score, index), reverse=True), where index is the\n    position in the (alphabetical) git-tag list.  Replayed over the full-val `evaluated` events inside the limit.",
+  "gepa": "GEPA 0.1.4 result.py:76-78: best_idx = max(range(len(scores)), key=scores[i]) over val_aggregate_scores -> highest mean val,\n    first (earliest discovered) wins ties.  Candidates fully val-evaluated inside the limit only.",
+  "harnesslens": "HarnessLens controller.py:578-603,1050-1066,1079-1088: champion = last version accepted by a confirmed paired review (cumulative chain), else v0;\n    selection signal is the TRAIN split paired rollouts.  Needs the accepted-version chain with counted-rollout totals.",
+  "hc": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "metaharness": "Meta-Harness campaign wrapper sb/mh_sb_run.py:152-166 (refresh_frontier: max over completed candidates by (val_score, -index), ties -> earliest),\n    final pick :281-293.  The official repo's terminal_bench_2 reference (meta_harness.py:373-393, `if avg > current_best_avg`) is a strict-greater\n    running best (also earliest on ties).  Candidates flagged incomplete are excluded.",
+  "mipro": "dspy MIPROv2 teleprompt/mipro_optimizer_v2.py:548-549 (best_score = default program's full-val score), :592-595 and :858-860\n    (`if not minibatch and score > best_score` -> best_program) : running STRICT max over FULL-valset evaluations only; minibatch trial scores never\n    update the best.  Wrapper code/mipro_run.py:132-141 tags each evaluation score.kind = full|minibatch.",
+  "oneshot": "ctl-oneshot control: one optimizer step, no selection.  Artifact = its single revision cand_0001 (collect_cap.py best='cand_0001'),\n    independent of B*; it spends well under B* counted rollouts on search.",
+  "skillopt": "SkillOpt@79124b37 trainer.py:1598-1599,1706-1707: best_skill = last `accept_new_best` of the gate (candidate must strictly beat both the\n    current skill and the best, evaluate_gate gate.py ~176-224); best_skill.md is the deployed file.  The converter (to_candidates.py)\n    emits a `selected` event at every best change; take the last one inside the limit.  slow_update candidates are never eligible.",
+  "trace2skill": "Trace2Skill campaign wrapper trace2skill/t2s_run.py:150-162: seed and every evolved variant (error, combined) are scored ONCE on val; best = seed,\n    then `for v: if s > sel[best]: best = v` (strict, seed wins ties).  Selection happens once, after ALL variant evaluations.  A variant counts only if\n    all val evaluations finished inside the limit (decisions.md: 'its selected variant if completed by B* else seed').  Completion index = position of\n    the last val row in rollouts_metrics.jsonl (file order == counted order).",
+  "wikiskill": "WikiSkill (Stahl-G/wikiskill@da6984c) src/wikiskill/officeqa/loop.py:94-96 eq4_accepted (a candidate is accepted iff it STRICTLY beats the\n    incumbent r_best, tie = reject) and engine.py:64-80/269-272 (state replays the gate events; the last accepted skill is the deployed one).\n    Replayed from the `evaluated` val events in order, S0 = incumbent."
+ },
+ "script_commit": "25a9d76cf1ea5d695c5c3a7cdfa0093b5dc30b20",
+ "seed_artifact": {
+  "distinct_seed_hashes": {
+   "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374": 3,
+   "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de": 18
+  },
+  "files": {
+   "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+   "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+  },
+  "frozen_dir": "/tmp/fe_dry/final_eval2/A/artifacts/seed",
+  "n_runs_with_this_seed": 18,
+  "other_hashes": {
+   "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374": [
+    {
+     "arm": "mipro",
+     "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s0/candidates/3d5fee3dfdc1",
+     "candidate_id": "3d5fee3dfdc1",
+     "seed": 0
+    },
+    {
+     "arm": "mipro",
+     "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s1/candidates/3d5fee3dfdc1",
+     "candidate_id": "3d5fee3dfdc1",
+     "seed": 1
+    },
+    {
+     "arm": "mipro",
+     "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/mipro/s2/candidates/3d5fee3dfdc1",
+     "candidate_id": "3d5fee3dfdc1",
+     "seed": 2
+    }
+   ]
+  },
+  "reason": "seed candidates do not all hash identically; the majority one is frozen, the others are listed",
+  "source": {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/agent-optimize/s0/.capevolve/run_20261011_144127/candidates/seed",
+   "candidate_id": "seed",
+   "seed": 0
+  },
+  "status": "partial",
+  "suite": "A",
+  "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+ },
+ "status_counts": {
+  "B:ace:impossible": 3,
+  "B:ao:ok": 3,
+  "B:evoskill:impossible": 1,
+  "B:evoskill:ok": 2,
+  "B:gepa:ok": 3,
+  "B:hc:ok": 3,
+  "B:metaharness:ok": 3,
+  "B:mipro:partial": 3,
+  "B:skillopt:partial": 3,
+  "B:trace2skill:impossible": 2,
+  "B:trace2skill:ok": 1,
+  "B:wikiskill:ok": 3,
+  "END:ace:impossible": 3,
+  "END:ao:ok": 3,
+  "END:evoskill:impossible": 1,
+  "END:evoskill:ok": 2,
+  "END:gepa:ok": 3,
+  "END:hc:ok": 3,
+  "END:metaharness:ok": 3,
+  "END:mipro:partial": 3,
+  "END:skillopt:ok": 3,
+  "END:trace2skill:impossible": 2,
+  "END:trace2skill:ok": 1,
+  "END:wikiskill:ok": 3
+ },
+ "suite": "A"
+}

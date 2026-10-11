@@ -1,0 +1,3 @@
+{"canary_round": 0, "empty_output_rate": 0.0, "errors": [], "mean_reward": 1.0, "n": 2, "raw_tool_text_any_rate": 0.0, "raw_tool_text_last_rate": 0.0, "t": "2026-10-11T22:06:19Z", "wall_s": 40.4}
+{"canary_round": 0, "empty_output_rate": 0.0, "errors": [], "mean_reward": 1.0, "n": 1, "raw_tool_text_any_rate": 0.0, "raw_tool_text_last_rate": 0.0, "t": "2026-10-11T22:15:47Z", "wall_s": 0.0}
+{"canary_round": 0, "empty_output_rate": 0.0, "errors": [], "mean_reward": 1.0, "n": 1, "raw_tool_text_any_rate": 0.0, "raw_tool_text_last_rate": 0.0, "t": "2026-10-11T22:16:34Z", "wall_s": 0.0}

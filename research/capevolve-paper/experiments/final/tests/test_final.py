@@ -111,6 +111,29 @@ def job(i, arm="hc", seed=0, task="t1", trial=0, mode="B", also_end=False):
             "family": "f" + task, "trial": trial, "mode": mode, "trial_seed": 100 + i, "tag": "tag:x", "also_end": also_end}
 
 
+class TestFinalTaskLoading(unittest.TestCase):
+    def test_final_b_reads_sealed_test_from_splits_file(self):
+        tmp = Path(tempfile.mkdtemp())
+        (tmp / "protocol").mkdir()
+        (tmp / "protocol" / "tau_retail_splits.json").write_text(json.dumps({"opt": ["1"], "sel": ["2"], "sealed_test": ["90", "91", "92"]}))
+        old = O.WT_TAU
+        try:
+            O.WT_TAU = tmp
+            tasks, kind, sha = O.load_tasks("B", "final", 2, O.HashRng(1, "x"))
+        finally:
+            O.WT_TAU = old
+        self.assertEqual((kind, [t["id"] for t in tasks]), ("final", ["90", "91", "92"]))
+
+    def test_final_a_needs_the_draw(self):
+        old = O.FINAL_A_TASKS
+        try:
+            O.FINAL_A_TASKS = Path(tempfile.mkdtemp()) / "missing.json"
+            with self.assertRaises(SystemExit):
+                O.load_tasks("A", "final", 2, O.HashRng(1, "x"))
+        finally:
+            O.FINAL_A_TASKS = old
+
+
 class TestRunner(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()

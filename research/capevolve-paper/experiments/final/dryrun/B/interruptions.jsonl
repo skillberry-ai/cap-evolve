@@ -1,0 +1,6 @@
+{"event": "start", "n_jobs": 20, "n_todo": 8, "order_sha256": "487c36b755351a89efc13d57239fa0f12b95973b13575dbfb3ebf1f694c78121", "run_final_sha256": "9fca467e5dba0452d8b5ad16ce9e502aa353dbc7ce5a3cfdcda1e5eca867eab1", "script_commit": "25a9d76cf1ea5d695c5c3a7cdfa0093b5dc30b20", "t": "2026-10-11T22:05:39Z", "workers": 8}
+{"event": "stop", "rows": {"B": 5, "END": 6}, "t": "2026-10-11T22:06:30Z"}
+{"event": "start", "n_jobs": 20, "n_todo": 12, "order_sha256": "487c36b755351a89efc13d57239fa0f12b95973b13575dbfb3ebf1f694c78121", "run_final_sha256": "9fca467e5dba0452d8b5ad16ce9e502aa353dbc7ce5a3cfdcda1e5eca867eab1", "script_commit": "25a9d76cf1ea5d695c5c3a7cdfa0093b5dc30b20", "t": "2026-10-11T22:06:50Z", "workers": 8}
+{"event": "stop", "rows": {"B": 14, "END": 14}, "t": "2026-10-11T22:08:14Z"}
+{"event": "start", "n_jobs": 20, "n_todo": 0, "order_sha256": "487c36b755351a89efc13d57239fa0f12b95973b13575dbfb3ebf1f694c78121", "run_final_sha256": "eea4676d7b28b3530cbc8f809d278d7607e825872a779c2fab1695ed59208172", "script_commit": "25a9d76cf1ea5d695c5c3a7cdfa0093b5dc30b20", "t": "2026-10-11T22:18:17Z", "workers": 8}
+{"event": "stop", "rows": {"B": 14, "END": 14}, "t": "2026-10-11T22:18:17Z"}

@@ -1,0 +1,32 @@
+{
+  "theta": 0.0,
+  "se": 0.0,
+  "ci": [
+    0.0,
+    0.0
+  ],
+  "p_two_sided": 1.0,
+  "per_seed": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "seed_sd": 0.0,
+  "seed_t_ci": [
+    0.0,
+    0.0
+  ],
+  "cr_se": 0.0,
+  "cr_ci": [
+    0.0,
+    0.0
+  ],
+  "cr_p_two_sided": 0.0,
+  "cluster_sd_of_delta": 0.0,
+  "n_tasks": 2,
+  "n_clusters": 2,
+  "n_seeds": 3,
+  "level": "task+seed",
+  "B": 500,
+  "p_signflip": 1.0
+}

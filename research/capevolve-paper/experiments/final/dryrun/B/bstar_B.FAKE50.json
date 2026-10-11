@@ -1,0 +1,160 @@
+{
+ "FAKE": true,
+ "binding_run": "ao/s2",
+ "bstar": 50,
+ "bstar_computed": 200,
+ "bstar_raw": 74,
+ "cheap_arms": [],
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "floored_to_200": true,
+ "generated_utc": "2026-10-11T22:05:25Z",
+ "incomplete_seeds": [
+  "hc/s0",
+  "hc/s2",
+  "ao/s0",
+  "ao/s1",
+  "ao/s2",
+  "gepa/s0",
+  "gepa/s1",
+  "gepa/s2",
+  "harnesslens/s0",
+  "harnesslens/s1",
+  "harnesslens/s2"
+ ],
+ "main_arms": [
+  "hc",
+  "ao",
+  "gepa",
+  "harnesslens"
+ ],
+ "min_counter_by_arm": {
+  "ao": 74,
+  "gepa": 166,
+  "hc": 98
+ },
+ "min_main_counter": 74,
+ "rule": "floor_50(min counted rollouts over all main-tier seeds), floor 200",
+ "runs": [
+  {
+   "arm": "hc",
+   "counter": 147,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/hc/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "hc",
+   "counter": 245,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/hc/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "hc",
+   "counter": 98,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/hc/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ao",
+   "counter": 173,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ao",
+   "counter": 123,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ao",
+   "counter": 74,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 185,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 166,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 169,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens/s0",
+   "seed": 0,
+   "source": "no_run_dir",
+   "tier": "main"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens/s1",
+   "seed": 1,
+   "source": "no_run_dir",
+   "tier": "main"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens/s2",
+   "seed": 2,
+   "source": "no_run_dir",
+   "tier": "main"
+  },
+  {
+   "arm": "oneshot",
+   "counter": 123,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "control"
+  },
+  {
+   "arm": "oneshot",
+   "counter": 148,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "control"
+  },
+  {
+   "arm": "oneshot",
+   "counter": 123,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "control"
+  }
+ ],
+ "suite": "B"
+}

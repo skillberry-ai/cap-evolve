@@ -1,0 +1,28 @@
+{
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "gateway": "http://127.0.0.1:4111/v1 (extras: 4112)",
+ "hang_retries": 1,
+ "hang_rule_s": 10800,
+ "infra_retries": 3,
+ "judge": {
+  "B": "azure/gpt-5.5 (provider defaults)",
+  "C": "n/a for the primary reward (DB + COMMUNICATE); NL judge azure/gpt-5.5 if the task has NL assertions"
+ },
+ "max_tokens": 8000,
+ "order_seed": 20261013,
+ "reward_A": "LibreOffice 25.8.7.3 recalculated hard score (metric hard_restriction); as-saved hard logged",
+ "spreadsheetbench_exec_timeout_s": 180,
+ "spreadsheetbench_max_turns": 30,
+ "spreadsheetbench_scoring": "hard",
+ "target_models": {
+  "A": "rits/google/gemma-4-31B-it",
+  "B": "rits/openai/gpt-oss-120b-a100",
+  "C": "rits/openai/gpt-oss-120b-a100"
+ },
+ "tau_max_steps": 100,
+ "temperature": 0.0,
+ "user_simulator": {
+  "B": "rits/openai/gpt-oss-120b-a100",
+  "C": "rits/openai/gpt-oss-120b-a100"
+ }
+}

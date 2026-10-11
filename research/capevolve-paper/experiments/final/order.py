@@ -37,6 +37,13 @@ EXTRA = {
                "env": {"TEMPERATURE": "1.0"}},     # gpt-5-mini rejects temperature 0 (probed 2026-10-11); provider default 1
                  "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"},
                  "C": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"}},
+    # dry-run path on Azure-direct only: real adapters / scorer / worker, but no RITS (smoke tags starve on the saturated RITS deployments) and
+    # no impact on the running searches.  Never used for results.
+    "dryazure": {"A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry", "env": {"TEMPERATURE": "1.0"}},
+                 "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
+                       "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry"},
+                 "C": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
+                       "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry"}},
 }
 
 
@@ -140,8 +147,10 @@ def main(argv=None):
     tag_exp = a.tag_exp or (("FE-smoke-%s" % suite) if smoke else ("FINAL-%s" % suite))
     if ex.get("exp_suffix"):
         tag_exp += "-" + ex["exp_suffix"]
-    if smoke and "smoke" not in tag_exp:
-        sys.exit("smoke orders must carry 'smoke' in the tag")
+    if a.extra == "dryazure" and not smoke:
+        sys.exit("dryazure is for smoke orders only")
+    if smoke and "smoke" not in tag_exp and not tag_exp.startswith("FE-dry"):
+        sys.exit("smoke orders must carry 'smoke' in the tag (or the coordinator-approved FE-dry prefix)")
     if not smoke and not tag_exp.startswith("FINAL-%s" % suite):
         sys.exit("final tags must start with FINAL-%s" % suite)
     kind = C.SUITES[suite]["artifact_kind"]
@@ -161,7 +170,7 @@ def main(argv=None):
         if suite == "A":
             j.update(agent_view=agent_view, gold_dir=gold_dir, adapter_path=a.adapter_path)
         j["job_id"] = "%s|%s|s%d|%s|%s|t%d" % (suite, label, seed, task["id"], mode, trial)
-        for k in ("target_model", "gateway", "env"):
+        for k in ("target_model", "gateway", "env", "user_model", "judge_model"):
             if ex.get(k):
                 j[k] = ex[k]
         return j
@@ -187,7 +196,7 @@ def main(argv=None):
             same = b and e and e.get("tree_sha256") == b.get("tree_sha256") and e["status"] != "impossible"
             if b:
                 add_cell(arm, seed, "B", b, n_arm, also_end=bool(same) or arm == "oneshot")
-            if e and not a.no_end and not a.extra and arm != "oneshot":
+            if e and not a.no_end and (not a.extra or a.extra == "dryazure") and arm != "oneshot":
                 if e["status"] == "impossible":
                     skipped.append({"arm": arm, "seed": seed, "mode": "END", "reason": e.get("reason", "")})
                 elif not same:
@@ -198,7 +207,7 @@ def main(argv=None):
     for i, j in enumerate(jobs):
         j["idx"] = i
     canary = []
-    if not a.extra:
+    if not a.extra or a.extra == "dryazure":
         crng = HashRng(C.ORDER_SEED, "%s|canary" % suite)
         for tid in canary_tasks(suite, crng):
             cj = make_job("seed", 0, "B", seed_art, {"id": tid, "family": family_of_sb_id(tid) if suite == "A" else tid}, 0, 1)

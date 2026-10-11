@@ -1,0 +1,11 @@
+arm,seed,task,trial,reward,family,reward_as_saved,t_start,t_end,error_class,error_text,attempts,empty_output,raw_tool_text_last,tag,job_id
+gepa,2,28,0,1.0,28,1.0,2026-10-11T22:05:45Z,2026-10-11T22:06:13Z,,,1,0,0,tag:FE-smoke-C-dry-gepa-s2:gepa,C|gepa|s2|28|B|t0
+seed,0,41,1,0.0,41,0.0,2026-10-11T22:05:45Z,2026-10-11T22:06:11Z,,,1,0,0,tag:FE-smoke-C-dry-seed-s0:seed,C|seed|s0|41|B|t1
+gepa,0,41,0,1.0,41,1.0,2026-10-11T22:05:45Z,2026-10-11T22:06:13Z,,,1,0,0,tag:FE-smoke-C-dry-gepa-s0:gepa,C|gepa|s0|41|B|t0
+seed,0,28,1,1.0,28,1.0,2026-10-11T22:05:45Z,2026-10-11T22:06:10Z,,,1,0,0,tag:FE-smoke-C-dry-seed-s0:seed,C|seed|s0|28|B|t1
+gepa,1,28,0,1.0,28,1.0,2026-10-11T22:05:46Z,2026-10-11T22:06:03Z,,,1,0,0,tag:FE-smoke-C-dry-gepa-s1:gepa,C|gepa|s1|28|B|t0
+gepa,1,41,0,0.0,41,0.0,2026-10-11T22:05:45Z,2026-10-11T22:06:12Z,,,1,0,0,tag:FE-smoke-C-dry-gepa-s1:gepa,C|gepa|s1|41|B|t0
+gepa,2,41,0,0.0,41,0.0,2026-10-11T22:06:56Z,2026-10-11T22:07:27Z,,,1,0,0,tag:FE-smoke-C-dry-gepa-s2:gepa,C|gepa|s2|41|B|t0
+seed,0,28,0,1.0,28,1.0,2026-10-11T22:06:56Z,2026-10-11T22:07:16Z,,,1,0,0,tag:FE-smoke-C-dry-seed-s0:seed,C|seed|s0|28|B|t0
+gepa,0,28,0,1.0,28,1.0,2026-10-11T22:06:56Z,2026-10-11T22:07:18Z,,,1,0,0,tag:FE-smoke-C-dry-gepa-s0:gepa,C|gepa|s0|28|B|t0
+seed,0,41,0,0.0,41,0.0,2026-10-11T22:06:56Z,2026-10-11T22:07:22Z,,,1,0,0,tag:FE-smoke-C-dry-seed-s0:seed,C|seed|s0|41|B|t0

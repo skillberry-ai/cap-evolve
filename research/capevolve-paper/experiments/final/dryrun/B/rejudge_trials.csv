@@ -1,0 +1,17 @@
+arm,seed,task,trial,reward,family,reward_primary,rejudged,nl_changed,judge_model,job_id
+oneshot,1,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|oneshot|s1|50|B|t0
+gepa,1,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|gepa|s1|50|B|t0
+oneshot,0,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|oneshot|s0|50|B|t0
+oneshot,2,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|oneshot|s2|50|B|t0
+gepa,1,6,0,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|gepa|s1|6|B|t0
+gepa,0,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|gepa|s0|50|B|t0
+seed,0,50,1,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|seed|s0|50|B|t1
+seed,0,6,0,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|seed|s0|6|B|t0
+seed,0,6,1,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|seed|s0|6|B|t1
+oneshot,2,6,0,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|oneshot|s2|6|B|t0
+gepa,2,6,0,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|gepa|s2|6|B|t0
+oneshot,0,6,0,0.0,6,0.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|oneshot|s0|6|B|t0
+seed,0,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|seed|s0|50|B|t0
+gepa,2,50,0,1.0,50,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|gepa|s2|50|B|t0
+gepa,0,6,0,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|gepa|s0|6|B|t0
+oneshot,1,6,0,1.0,6,1.0,1,0,openai/azoai/gpt-4.1-2025-04-14,B|oneshot|s1|6|B|t0
