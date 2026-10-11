@@ -45,9 +45,9 @@ Even at 40 tasks the simulated minimum detectable effect of a single comparison 
 
 Figure~\ref{fig:pareto} plots delta against cost and Figure~\ref{fig:anytime} plots score against rollouts, both in Appendix~\ref{app:results}.
 \needs{Say which arms lie on the cost-quality frontier on each suite, and whether the frontier changes between USD and tokens as the cost axis.}
-Across the whole campaign the gateway has metered \realCostCalls{} calls and \realCostLedgerMtok{} million ledger tokens, and \realCostWasteShare{}\% of those tokens went to smoke tests, restarts and superseded runs.
-These count toward campaign cost but toward no arm's cost in the tables.
-The metered optimizer spend at Sonnet list prices is at least \$\realCostUsdLower{}, a lower bound because RITS and GPT-5.5 calls have no price available to us.
+Across the whole campaign the gateway has metered \costCalls{} calls and \costTokensM{} million non-cache tokens, which cost at least \$\costUsdProxy{} at Sonnet list prices.
+This is a lower bound, because RITS and GPT-5.5 calls have no price available to us, and it includes smoke tests, restarts and superseded runs that belong to no arm.
+The optimizer cap counts non-cache-read tokens (uncached input, output and cache writes) per search, and the cost table checks each arm against it.
 Table~\ref{tab:cost_so_far} and Figure~\ref{fig:roles} in Appendix~\ref{app:results} give the per-arm and per-role breakdown.
 
 \subsection{Rule P cuts false promotion and costs power}

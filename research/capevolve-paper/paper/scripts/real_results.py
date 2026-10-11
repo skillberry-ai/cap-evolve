@@ -149,8 +149,10 @@ def cost():
     arm_rows = [r for r in read_csv(OUTM / "metrics_by_arm.csv") if r["category"] == "main"]
     role_rows = [r for r in read_csv(OUTM / "metrics_by_role.csv") if r["category"] == "main"]
     opt = collections.defaultdict(lambda: collections.defaultdict(float))
+    seed_nc = collections.defaultdict(float)  # per (suite, arm, seed): the tokens the optimizer cap counts
     for r in role_rows:
         if r["role"] in OPT_ROLES:
+            seed_nc[(r["suite"], r["arm"], r["seed"])] += f(r["in_uncached"]) + f(r["output"]) + f(r["cache_write_5m"]) + f(r["cache_write_1h"])
             k = (r["suite"], r["arm"])
             for fld in ("in_uncached", "cache_read", "output", "usd_total"):
                 opt[k][fld] += f(r[fld])
@@ -171,9 +173,11 @@ def cost():
             rec[k]["cache_read"] += f(r.get("bypassed_cache_read"))
             rec[k]["cw"] += f(r.get("bypassed_cache_creation"))
             rec[k]["usd_total"] += f(r.get("bypassed_usd"))
+            seed_nc[(k[0], k[1], r["seed"])] += f(r.get("bypassed_input")) + f(r.get("bypassed_output")) + f(r.get("bypassed_cache_creation"))
     for k in list(rec):
         if not any(rec[k][x] for x in ("in_uncached", "output", "cache_read", "cw")):
             del rec[k]  # the audit found nothing outside the gateway for this arm
+    cap = max((f(r["optimizer_cap_tokens"]) for r in arm_rows), default=4e6) or 4e6
     g = collections.defaultdict(lambda: collections.defaultdict(float))
     for r in arm_rows:
         k = (r["suite"], r["arm"])
@@ -190,12 +194,13 @@ def cost():
             "wikiskill": "WikiSkill", "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2"}
     L = [r"\begin{table*}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3.5pt}",
          r"\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still "
-         r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. "
+         r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles over seeds, in millions of tokens. "
+         r"The optimizer cap counts non-cache-read tokens, which are uncached input plus output plus cache writes, and applies to each search separately; the table shows the largest seed against the cap of 4M. Cache reads are listed apart and are not counted by the cap. "
          r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
          r"evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}",
-         r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrr}", r"\toprule",
-         r"Suite & Arm & Seeds & Rollouts & Opt.\ uncached & Opt.\ cache rd & Opt.\ cache wr & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
+         r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrrr}", r"\toprule",
+         r"Suite & Arm & Seeds & Rollouts & Opt.\ non-cache-read & Opt.\ cache read & Opt.\ incl.\ cache read & Cap used (\%) & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\", r"\midrule"]
     first = True
     for su in "ABC":
         if not first:
@@ -213,7 +218,9 @@ def cost():
                 nm, recovered = False, True
             m = lambda x: f"{x / 1e6:.2f}"
             cells = [su, nice[a] + (r"$^{\ddagger}$" if recovered else ""), f"{int(v['n'])}", f"{int(v['roll'])}",
-                     ("0 (no optimizer)" if a == "ctl-seed" else "0 (not started)") if nm else m(o["in_uncached"]), "0" if nm else m(o["cache_read"]), "0" if nm else m(o["cw"]),
+                     ("0 (no optimizer)" if a == "ctl-seed" else "0 (not started)") if nm else m(o["in_uncached"] + o["output"] + o["cw"]),
+                     "0" if nm else m(o["cache_read"]), "0" if nm else m(o["in_uncached"] + o["output"] + o["cw"] + o["cache_read"]),
+                     "0" if nm else f"{100 * max([x for (a1, a2, _), x in seed_nc.items() if (a1, a2) == (su, a)] or [0]) / cap:.0f}",
                      "0" if nm else f"{o['usd_total']:.2f}", m(v["tgt"]), f"{v['wall']:.1f}", f"{int(v['err'])}"]
             L.append(" & ".join(f"\\prov{{{c}}}" if i >= 3 else c for i, c in enumerate(cells)) + r" \\")
     L += [r"\bottomrule", r"\end{tabular}", r"\end{table*}"]
@@ -265,23 +272,16 @@ def fig_roles():
 
 
 def numbers(a):
-    t = json.loads((OUTM / "campaign_totals.json").read_text())
-    o = t["overall"]
-    cat = t["by_suite_category"]
-    waste_tok = sum(v["ledger_tokens"] for k, v in cat.items() if k.split("|")[1] not in ("main", "chaser_eval"))
+    # Campaign totals (calls, tokens, USD) come from paper-core's derive_numbers.py (\\costCalls etc.), one source for the whole paper.
     m = {
-        "realAuditGemmaReported": (f"{a['gemma_rep']:.1f}", False), "realAuditGemmaRecalc": (f"{a['gemma_recalc']:.1f}", False),
-        "realAuditGptReported": (f"{a['gpt_rep']:.1f}", False), "realAuditGptRecalc": (f"{a['gpt_recalc']:.1f}", False),
-        "realAuditClaims": (str(a["n"]), False), "realAuditReproduced": (str(a["verdict"]["yes"]), False),
-        "realAuditContradicted": (str(a["verdict"]["no"]), False), "realAuditNoArtifact": (str(a["verdict"]["unverifiable"]), False),
-        "realCostCalls": (f"{o['calls']:,}".replace(",", r"\,"), True), "realCostErrors": (str(o["errors"]), True),
-        "realCostLedgerMtok": (f"{o['ledger_tokens'] / 1e6:.0f}", True), "realCostUsdLower": (f"{o['usd_priced_proxy']:.0f}", True),
-        "realCostWasteShare": (f"{100 * waste_tok / o['ledger_tokens']:.0f}", True),
-        "realCostRitsShare": (f"{100 * o['rits_ledger_tokens'] / o['ledger_tokens']:.0f}", True),
+        "realAuditGemmaReported": f"{a['gemma_rep']:.1f}", "realAuditGemmaRecalc": f"{a['gemma_recalc']:.1f}",
+        "realAuditGptReported": f"{a['gpt_rep']:.1f}", "realAuditGptRecalc": f"{a['gpt_recalc']:.1f}",
+        "realAuditClaims": str(a["n"]), "realAuditReproduced": str(a["verdict"]["yes"]),
+        "realAuditContradicted": str(a["verdict"]["no"]), "realAuditNoArtifact": str(a["verdict"]["unverifiable"]),
     }
-    L = ["% GENERATED by scripts/real_results.py from repo files. Audit values are final; cost values are in progress (\\prov)."]
-    for k, (v, prov) in m.items():
-        L.append("\\newcommand{\\%s}{%s}" % (k, f"\\prov{{{v}}}" if prov else v))
+    L = ["% GENERATED by scripts/real_results.py from repo files. Audit values are final."]
+    for k, v in m.items():
+        L.append("\\newcommand{\\%s}{%s}" % (k, v))
     (PAPER / "numbers_real_results.tex").write_text("\n".join(L) + "\n")
 
 

@@ -2,34 +2,34 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.5pt}
-\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles in millions of tokens. ``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}
+\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles over seeds, in millions of tokens. The optimizer cap counts non-cache-read tokens, which are uncached input plus output plus cache writes, and applies to each search separately; the table shows the largest seed against the cap of 4M. Cache reads are listed apart and are not counted by the cap. ``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}
 \label{tab:cost_so_far}
-\begin{tabular}{llrrrrrrrrr}
+\begin{tabular}{llrrrrrrrrrr}
 \toprule
-Suite & Arm & Seeds & Rollouts & Opt.\ uncached & Opt.\ cache rd & Opt.\ cache wr & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\
+Suite & Arm & Seeds & Rollouts & Opt.\ non-cache-read & Opt.\ cache read & Opt.\ incl.\ cache read & Cap used (\%) & Opt.\ USD & Target tok. (M) & Wall (h) & Errors \\
 \midrule
-A & CapEvolve HC & 3 & \prov{245} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{14.72} & \prov{6.4} & \prov{0} \\
-A & CapEvolve AO & 3 & \prov{221} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{14.76} & \prov{6.4} & \prov{0} \\
-A & GEPA & 3 & \prov{625} & \prov{0.28} & \prov{0.00} & \prov{0.00} & \prov{1.15} & \prov{18.60} & \prov{12.7} & \prov{14} \\
-A & SkillOpt & 3 & \prov{547} & \prov{2.72} & \prov{0.00} & \prov{0.00} & \prov{6.59} & \prov{25.77} & \prov{12.7} & \prov{25} \\
-A & Meta-Harness & 3 & \prov{582} & \prov{0.00} & \prov{0.55} & \prov{0.12} & \prov{0.59} & \prov{28.74} & \prov{10.2} & \prov{15} \\
-A & EvoSkill & 3 & \prov{117} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{6.47} & \prov{2.6} & \prov{0} \\
-A & WikiSkill & 3 & \prov{298} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{17.42} & \prov{8.0} & \prov{0} \\
-A & Trace2Skill & 3 & \prov{434} & \prov{5.61} & \prov{0.00} & \prov{0.00} & \prov{20.27} & \prov{21.72} & \prov{12.2} & \prov{26} \\
-A & ACE & 3 & \prov{73} & \prov{0.99} & \prov{0.00} & \prov{0.00} & \prov{2.91} & \prov{7.81} & \prov{8.1} & \prov{0} \\
-A & MIPROv2 & 3 & \prov{129} & \prov{0.45} & \prov{0.00} & \prov{0.00} & \prov{1.77} & \prov{5.98} & \prov{8.1} & \prov{1} \\
+A & CapEvolve HC & 3 & \prov{248} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{0} & \prov{14.79} & \prov{6.5} & \prov{0} \\
+A & CapEvolve AO & 3 & \prov{223} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{0} & \prov{14.90} & \prov{6.4} & \prov{0} \\
+A & GEPA & 3 & \prov{629} & \prov{0.34} & \prov{0.00} & \prov{0.34} & \prov{5} & \prov{1.15} & \prov{18.68} & \prov{12.8} & \prov{14} \\
+A & SkillOpt & 3 & \prov{554} & \prov{2.83} & \prov{0.00} & \prov{2.83} & \prov{25} & \prov{6.59} & \prov{25.88} & \prov{12.8} & \prov{25} \\
+A & Meta-Harness & 3 & \prov{589} & \prov{0.14} & \prov{0.55} & \prov{0.69} & \prov{1} & \prov{0.59} & \prov{28.82} & \prov{10.2} & \prov{15} \\
+A & EvoSkill & 3 & \prov{117} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{0} & \prov{6.61} & \prov{2.7} & \prov{0} \\
+A & WikiSkill & 3 & \prov{300} & \prov{0 (not started)} & \prov{0} & \prov{0} & \prov{0} & \prov{0} & \prov{17.62} & \prov{8.1} & \prov{0} \\
+A & Trace2Skill & 3 & \prov{436} & \prov{6.51} & \prov{0.00} & \prov{6.51} & \prov{56} & \prov{20.27} & \prov{21.82} & \prov{12.3} & \prov{26} \\
+A & ACE & 3 & \prov{74} & \prov{1.11} & \prov{0.00} & \prov{1.11} & \prov{12} & \prov{2.98} & \prov{7.90} & \prov{8.1} & \prov{0} \\
+A & MIPROv2 & 3 & \prov{129} & \prov{0.54} & \prov{0.00} & \prov{0.54} & \prov{5} & \prov{1.77} & \prov{6.11} & \prov{8.1} & \prov{1} \\
 \midrule
-B & CapEvolve HC & 3 & \prov{441} & \prov{0.01} & \prov{9.96} & \prov{0.76} & \prov{4.91} & \prov{60.50} & \prov{8.4} & \prov{58} \\
-B & CapEvolve AO & 3 & \prov{369} & \prov{0.02} & \prov{30.97} & \prov{1.87} & \prov{12.95} & \prov{46.63} & \prov{8.4} & \prov{53} \\
-B & GEPA & 3 & \prov{483} & \prov{0.49} & \prov{0.00} & \prov{0.00} & \prov{2.15} & \prov{38.44} & \prov{8.4} & \prov{42} \\
-B & one-shot ctrl & 3 & \prov{394} & \prov{0.01} & \prov{6.90} & \prov{0.43} & \prov{3.15} & \prov{36.02} & \prov{5.1} & \prov{21} \\
-B & seed ctrl & 3 & \prov{294} & \prov{0 (no optimizer)} & \prov{0} & \prov{0} & \prov{0} & \prov{33.13} & \prov{6.8} & \prov{27} \\
+B & CapEvolve HC & 3 & \prov{441} & \prov{0.87} & \prov{9.96} & \prov{10.83} & \prov{11} & \prov{4.91} & \prov{60.75} & \prov{8.5} & \prov{58} \\
+B & CapEvolve AO & 3 & \prov{369} & \prov{2.09} & \prov{30.97} & \prov{33.07} & \prov{19} & \prov{12.95} & \prov{46.78} & \prov{8.5} & \prov{54} \\
+B & GEPA & 3 & \prov{483} & \prov{0.61} & \prov{0.00} & \prov{0.61} & \prov{5} & \prov{2.15} & \prov{38.53} & \prov{8.5} & \prov{42} \\
+B & one-shot ctrl & 3 & \prov{394} & \prov{0.51} & \prov{6.90} & \prov{7.41} & \prov{5} & \prov{3.15} & \prov{36.02} & \prov{5.1} & \prov{21} \\
+B & seed ctrl & 3 & \prov{294} & \prov{0 (no optimizer)} & \prov{0} & \prov{0} & \prov{0} & \prov{0} & \prov{33.13} & \prov{6.8} & \prov{27} \\
 \midrule
-C & CapEvolve HC & 3 & \prov{60} & \prov{0.00} & \prov{3.51} & \prov{0.27} & \prov{1.81} & \prov{10.35} & \prov{2.7} & \prov{19} \\
-C & CapEvolve AO & 3 & \prov{100} & \prov{0.00} & \prov{9.16} & \prov{0.59} & \prov{3.97} & \prov{8.16} & \prov{2.7} & \prov{5} \\
-C & GEPA & 3 & \prov{90} & \prov{0.06} & \prov{0.00} & \prov{0.00} & \prov{0.30} & \prov{5.86} & \prov{2.7} & \prov{2} \\
-C & one-shot ctrl & 3 & \prov{80} & \prov{0.00} & \prov{4.58} & \prov{0.27} & \prov{2.13} & \prov{10.98} & \prov{2.7} & \prov{11} \\
-C & seed ctrl & 3 & \prov{0} & \prov{0 (no optimizer)} & \prov{0} & \prov{0} & \prov{0} & \prov{8.37} & \prov{2.7} & \prov{7} \\
+C & CapEvolve HC & 3 & \prov{60} & \prov{0.32} & \prov{3.51} & \prov{3.83} & \prov{3} & \prov{1.81} & \prov{10.43} & \prov{2.8} & \prov{19} \\
+C & CapEvolve AO & 3 & \prov{100} & \prov{0.66} & \prov{9.16} & \prov{9.82} & \prov{7} & \prov{3.97} & \prov{8.31} & \prov{2.8} & \prov{5} \\
+C & GEPA & 3 & \prov{90} & \prov{0.08} & \prov{0.00} & \prov{0.08} & \prov{1} & \prov{0.30} & \prov{5.96} & \prov{2.8} & \prov{2} \\
+C & one-shot ctrl & 3 & \prov{100} & \prov{0.33} & \prov{4.58} & \prov{4.90} & \prov{3} & \prov{2.13} & \prov{11.07} & \prov{2.8} & \prov{11} \\
+C & seed ctrl & 3 & \prov{0} & \prov{0 (no optimizer)} & \prov{0} & \prov{0} & \prov{0} & \prov{0} & \prov{8.50} & \prov{2.8} & \prov{7} \\
 \bottomrule
 \end{tabular}
 \end{table*}

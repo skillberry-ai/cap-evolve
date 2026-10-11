@@ -89,11 +89,13 @@ def cost_table(data):
             if a == "seed":
                 continue
             v = s["arms"][a]
-            body.append(" & ".join([LABEL[a], w(str(v["rollouts"])), w(f"{v['tok_unc']:.1f}"), w(f"{v['tok_cr']:.1f}"),
-                                    w(f"{v['tok_cw']:.1f}"), w(f"{v['tok_out']:.1f}") if "tok_out" in v else "--", w(f"{v['wall_h']:.1f}")]) + r" \\")
-    head = r"Arm & Rollouts at $B^\ast$ & Uncached & Cache read & Cache write & Output & Wall clock (h) \\"
-    cap = ("Optimizer tokens in millions and wall clock per arm, summed over seeds. Cache reads and writes are listed apart "
-           "because they are priced differently from uncached input.")
+            nc = v["tok_unc"] + v["tok_cw"] + v.get("tok_out", 0.0)
+            body.append(" & ".join([LABEL[a], w(str(v["rollouts"])), w(f"{nc:.1f}"), w(f"{v['tok_cr']:.1f}"), w(f"{nc + v['tok_cr']:.1f}"),
+                                    w(f"{v['cap_used']:.0f}"), w(f"{v['wall_h']:.1f}")]) + r" \\")
+    head = r"Arm & Rollouts at $B^\ast$ & Non-cache-read & Cache read & Incl.\ cache read & Cap used (\%) & Wall clock (h) \\"
+    cap = ("Optimizer tokens in millions and wall clock per arm, summed over seeds. Non-cache-read tokens are uncached input, output and cache writes, "
+           "the quantity the optimizer cap of 4M per search counts. The last token column adds cache reads, which the cap ignores. "
+           "Cap used is the largest seed as a share of the cap.")
     return tabular("lrrrrrr", head, body, cap, "tab:cost_tokens", mock)
 
 

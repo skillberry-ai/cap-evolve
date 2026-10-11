@@ -100,14 +100,14 @@ def build():
                 continue
             r = rows[a]
             agentic = a in ("hc", "ao", "metaharness", "evoskill")
-            unc = rng.uniform(4, 30) * (1.5 if agentic else 1.0)
+            unc = rng.uniform(1.5, 5.0) * (1.3 if agentic else 1.0) * (0.15 if a == "oneshot" else 1.0)  # millions, summed over 3 seeds; cap is 4M per search
             cr = rng.uniform(20, 120) if agentic else rng.uniform(0, 8)
-            cw = rng.uniform(2, 9) if agentic else rng.uniform(0, 1)
+            cw = rng.uniform(0.3, 1.5) if agentic else rng.uniform(0, 0.3)
             outt = unc * rng.uniform(0.08, 0.16)
             usd = unc * PRICE["unc"] + outt * PRICE["out"] + cr * PRICE["cr"] + cw * PRICE["cw"]
             out[a] = dict(score=P["seed_score"] + r["delta"], delta=r["delta"], lo=r["lo"], hi=r["hi"],
                           p_holm=r["p_holm"], rollouts=P["bstar"] - (rng.randint(0, 14) if a != "oneshot" else P["bstar"] - 10),
-                          tok_unc=unc, tok_cr=cr, tok_cw=cw, tok_out=outt, usd=usd,
+                          tok_unc=unc, tok_cr=cr, tok_cw=cw, tok_out=outt, usd=usd, cap_used=100 * (unc + cw + outt) / 3 * 1.2 / 4.0,
                           wall_h=rng.uniform(6, 30) if a != "oneshot" else rng.uniform(0.4, 1.5),
                           missing=rng.randint(0, 9), cells=total_cells,
                           curve=curve(rng, P["seed_score"], r["delta"], P["bstar"]) if a != "oneshot" else None)
