@@ -35,7 +35,7 @@ the block on the branches' own wins.
 A subset screen is treated as a sampling design: its tasks are \emph{affected} (predicted to be reached by the edit),
 \emph{sentinels} (regression checks), and a \emph{random} component of $k$ tasks drawn uniformly without replacement
 from the remaining pool of size $N_r$, giving inclusion probability $1$ to the first two strata and $k/N_r$ to the third.
-The Horvitz--Thompson estimate of the pool-mean delta is
+The Horvitz and Thompson estimate of the pool-mean delta is
 \begin{equation}
   \hat\Delta=\frac1N\Big(\sum_{t\in\text{det}}\Delta_t+\frac{N_r}{k}\sum_{t\in\text{rand}}\Delta_t\Big),
 \end{equation}

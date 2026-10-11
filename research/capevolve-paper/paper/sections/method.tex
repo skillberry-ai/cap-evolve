@@ -35,7 +35,7 @@ compared and promoted, and a final set $\Dfin$ that is scored once per run at th
 % src: core/cap_evolve/splits.py:26-60 (frozen splits.json with train/val/test and a test_used seal)
 The shipped hill-climb and agent-optimize implementations use the validation split for \emph{both} roles: the
 proposer reads validation rollouts and per-task rewards, and the same split gates acceptance, so
-$\Dopt=\Dsel=\mathrm{val}$ and the train split is unused. This adaptive reuse is a property of the implementation that
+$\Dopt=\Dsel=\mathrm{val}$. Stock \capevolve{} evaluates the seed artifact on the 80 train tasks once, charged to the budget, but never shows them to the proposer. This adaptive reuse is a property of the implementation that
 we disclose rather than hide; the competing methods in our comparison use the train split (80 tasks) for feedback and the
 validation split (40 tasks) for selection, so the stock CapEvolve arms differ in data exposure, which we report as such; its consequences are discussed in Section~\ref{sec:method:threat}.
 % src (competitors): research/capevolve-paper/decisions.md (stock CapEvolve uses VAL traces for feedback and VAL for gating; competitors use train-80 feedback + val-40 selection)
@@ -65,7 +65,7 @@ $\Dsel$. Deployment cost per task is reported separately and is not part of $N$.
 \subsection{Two search algorithms in one notation}
 \label{sec:method:algs}
 
-Both algorithms follow the propose--evaluate--promote pattern of reflective prompt and skill optimizers \citep{gepa,skillopt}. They maintain a set of candidate artifacts with parent links and an \emph{incumbent} $\artifact^\star$
+Both algorithms follow the propose, evaluate and promote pattern of reflective prompt and skill optimizers \citep{gepa,skillopt}. They maintain a set of candidate artifacts with parent links and an \emph{incumbent} $\artifact^\star$
 together with the incumbent's measurement $m^\star$ (per-task means on $\Dsel$). They differ in who proposes, what the
 proposer sees, how parents are chosen, and how evaluation effort is allocated; they can share one promotion rule
 (Section~\ref{sec:method:P}). Table~\ref{tab:method:algs} (Appendix~\ref{app:skeleton}) summarizes the differences and
@@ -104,7 +104,7 @@ accept iff $\bar\Delta > k_{\mathrm{se}}\,\SE(\Delta)$.
 % src: core/cap_evolve/gate.py:422-459 (mean_d > k_se*se; SE = sqrt(var/n) across tasks)
 
 \emph{Agent-optimize.}
-A driver agent owns the search; scripts decide and record. After a digest, the driver proposes an edit for a
+A driver agent owns the search; scripts decide and record. After a summary (digest) of the failing trajectories, the driver proposes an edit for a
 failure-cluster hypothesis, creating a node whose parent may be any existing node. Evaluation is lazy: a \emph{probe}
 runs only the (task, trial) cells missing from an evidence ledger keyed by the content hash of the candidate, so
 byte-identical candidates share evidence. Promotion requires full-split ledger coverage and then calls a judge.
@@ -173,8 +173,7 @@ nothing for candidates that do not; these rollouts are charged to the budget $N$
 Screening evaluates each validation task with one trial on the 40 validation tasks. Each search is limited to
 $600$ target rollouts, counting every evaluation including confirmations, and at most $4\mathrm{M}$ non-cache-read
 optimizer tokens. The target is Gemma-4-31B-it with a limit of $30$ turns and temperature $0$. The reward is the
-LibreOffice-25.8 recalculated hard score. agent-optimize runs its current digest-and-act engine with its stock switches (parallel branching, smart merge,
-cost gating, failure clustering, pregate and context digest on), and adds active evaluation and fresh-trial-only confirmation.
+LibreOffice-25.8 recalculated hard score. agent-optimize runs its current engine with its stock switches on and adds active evaluation and fresh-trial-only confirmation (Appendix~\ref{app:config}).
 % src (values): frozen E10 configuration communicated by the campaign lead; research/capevolve-paper/decisions.md
 %   ("Frozen E10 search parameters"); switch defaults: core/cap_evolve/optimizer_config.py DEFAULTS (dag_parallel True, active_eval False,
 %   smart_merge True, cost_gating True, failure_clustering True, pregate True, context_digest True)
@@ -242,5 +241,5 @@ split gives a number that is not selected on, and only to the degree that it has
 The proposer is an LLM agent with shell access to the file system the evaluation uses. The system provides tamper detection around each proposal (when enabled), a gold-free agent sandbox in the SpreadsheetBench adapter, a per-run test seal, and logs of both the gate statistic and its unmasked version. It does not sandbox the proposer (a deployment requirement), stop it from reading test outputs left on disk by earlier runs, detect adapter feedback that leaks gold, or guarantee that a promoted edit transfers beyond the final tasks.
 % src: research/capevolve-paper/audit/gold_access_scan.md; core/cap_evolve/adapter.py:104; research/capevolve-paper/audit/algorithm_audit.md:182
 Finally, the benchmarks we use were partly exposed to earlier development; which final sets are development-exposed is
-tabulated in \texttt{audit/exposure\_ledger.csv} (Section~\ref{sec:problem}) and the headline claims are restricted to sets that were not.
+tabulated in the exposure ledger (Section~\ref{sec:problem}) and the headline claims are restricted to sets that were not.
 % src: research/capevolve-paper/decisions.md (development-exposed sets); research/capevolve-paper/audit/exposure_ledger.csv

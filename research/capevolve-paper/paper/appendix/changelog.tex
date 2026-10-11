@@ -1,0 +1,29 @@
+\section{Dated Changes to Roster and Parameters}
+\label{app:changelog}
+
+All times are UTC on 2026-10-11 unless stated, from the campaign decision log. No final-set score existed at the time of any entry; entries after the searches began (about 14:45) could have seen partial search progress.
+
+\begin{table}[h]
+\caption{Changes to the roster, parameters and protocol, in order.}
+\label{tab:changelog}
+\centering\small
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+Time & Change & Reason \\
+\midrule
+09:00 & Suite A roster split into main arms, cheap arms and one-seed exploratory arms & One Gemma deployment saturates; the full roster needed about 70{,}000 rollouts \\
+09:55 & EvoSkill promoted to a main arm & A core skill competitor; promoted before any result \\
+11:00 & Rule P set to $n_{\mathrm{conf}}=3$, $z_{\mathrm{conf}}=1.282$, $\delta_{\min}=0$ (earlier $10$, $2$, $0.02$) & Earlier values had power 0.15 at a true 8-point gain; chosen by simulation before any main seed \\
+11:15 & Comparison moved to a matched checkpoint with a search cutoff of 2026-10-13 06:00 & Fixed 72-hour envelope; checkpoint computed from rollout counters only \\
+11:35 & Suite A final set drawn from the 912-question residual pool & Prior test split was development-exposed \\
+12:45 & Suite B relaunched with GPT-5.5 judge, rule P and candidate-error tagging & First launch used the wrong judge and a pre-merge worktree \\
+13:20 & Suite B roster fixed: hill-climb, agent-optimize, GEPA, HarnessLens as main arms & Saturated gpt-oss deployment; HarnessLens chosen a priori for its native tau fit \\
+14:45 & Stock-gate agent-optimize pilot stopped; no live stock-gate arm at that time & Capacity; later reversed by the triage decision to run the stock-gate hill-climb on Suites A and C \\
+15:30 & Agent-optimize run on its current engine on both suites & Stock defaults selected an archived legacy loop \\
+17:40 & Suite C (tau2 airline) added & User request \\
+18:55 & EvoSkill restarted from scratch & Gateway priority misconfiguration invalidated rollouts from 13:05 \\
+22:30 & Final sizes pinned: A $70\times 1$, B $40\times 3$, C $20\times 3$ & Capacity and power \\
+23:00 & Matched checkpoint computed over primary-family arms only & Slow secondary arms would otherwise bind it \\
+\bottomrule
+\end{tabularx}
+\end{table}

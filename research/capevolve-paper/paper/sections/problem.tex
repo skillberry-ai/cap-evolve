@@ -1,13 +1,13 @@
 \section{Historical Gains Mix Capability with Measurement Artifacts}
 \label{sec:problem}
 
-Four hazards inflated or obscured the earlier \capevolve{} results: scorer compliance, split reuse, gold visibility and gate strictness. We recomputed every number below from retained run artifacts (20 SpreadsheetBench runs, none expired) with repository scripts; \texttt{audit/historical\_results.md} lists every claim and its status.
+Four hazards inflated or obscured the earlier \capevolve{} results: scorer compliance, split reuse, gold visibility and gate strictness. We recomputed every number below from retained run artifacts (20 SpreadsheetBench runs, none expired) with repository scripts; the audit files list every claim and its status.
 
 
 
 \subsection{The scorer rewards literals over formulas}
 
-The historical SpreadsheetBench scorer loads cell values with \texttt{openpyxl} in cached-value mode and does not recalculate. A formula written through \texttt{openpyxl} has no cached value, so it reads as empty and fails. In the verified-400 gold, \histFormulaGoldTasks{} of 400 tasks (\histFormulaGoldPct{}\%) have formula cells in the answer range. Correct formula outputs without cached values passed 0 of 30 checks under the as-saved scorer and 29 to 30 of 30 under LibreOffice recalculation (Appendix~\ref{app:scorer}).
+The historical SpreadsheetBench scorer loads cached cell values and does not recalculate. A formula written by the agent has no cached value, so it reads as empty and fails. In the verified-400 gold, \histFormulaGoldTasks{} of 400 tasks (\histFormulaGoldPct{}\%) have formula cells in the answer range. Correct formula outputs without cached values passed 0 of 30 checks under the as-saved scorer and 29 to 30 of 30 under LibreOffice recalculation (Appendix~\ref{app:scorer}).
 
 Both metrics were recorded from the same output workbooks, and both gains below are the mean of three paired optimization runs, so only the scorer differs. Gemma-4-31B moved from \histGemmaBaseSaved{} to 76.5 as saved (+\histGemmaDeltaSaved{} points) but from \histGemmaBaseRecalc{} to a recalculated 75.4 to 78.6 (+\histGemmaDeltaRecalc{}). GPT-5.5 gained +\histGptDeltaSaved{} as saved but +\histGptDeltaRecalc{} when its \histGptBaseRecalc{} recalculated baseline is the reference. Formula-to-literal compliance therefore accounts for \histGemmaCompliancePts{} points (\histGemmaComplianceShare{}\%) of the Gemma gain and \histGptCompliancePts{} points (\histGptComplianceShare{}\%) of the GPT-5.5 gain. The recalculating scorer is not free of error either: with LibreOffice 25.8, 19 of 400 official gold files fail as outputs, and 4 tasks are unscorable under any path, so the ceiling on the 280-task test split is 98.6\%.
 
