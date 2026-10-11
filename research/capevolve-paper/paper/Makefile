@@ -1,13 +1,17 @@
 PAPER  := paper
 PYTHON ?= python3
+MODE   ?= mock
 TEX    := pdflatex -interaction=nonstopmode -halt-on-error
 
-.PHONY: all numbers pending paper check clean
+.PHONY: all numbers pending results paper check clean
 
-all: numbers pending paper check
+all: numbers results paper check
 
 numbers:
 	$(PYTHON) -I scripts/derive_numbers.py
+
+results:
+	sh scripts/build_results.sh $(MODE)
 
 pending:
 	$(PYTHON) -I scripts/mock_numbers.py
