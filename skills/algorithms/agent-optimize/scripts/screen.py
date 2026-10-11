@@ -134,6 +134,17 @@ def main(argv=None) -> int:
                         "= the #684 gross-kill rule, regardless of SE")
     p.add_argument("--workers", type=int, default=None,
                    help="concurrent rollouts (adapter must be thread-safe)")
+    p.add_argument("--accounting", action="store_true",
+                   help="screen accounting (spec screen_accounting): the subset is affected + sentinels + "
+                        "a random exploration component with recorded inclusion probabilities; the score is "
+                        "a scheduling signal, never a result (cap_evolve.screen_accounting)")
+    p.add_argument("--affected", default="", help="accounting: comma-separated predicted-affected ids "
+                   "(default: --ids, else the most informative failing/high-variance tasks)")
+    p.add_argument("--sentinels", default="", help="accounting: comma-separated regression sentinels (default: --broken)")
+    p.add_argument("--k-random", type=int, default=None,
+                   help="accounting: size of the random exploration component (default ~25%% of the subset)")
+    p.add_argument("--screen-control", choices=("random_subset",), default=None,
+                   help="accounting ablation: replace the subset by an equal-size uniform random subset of the pool")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -166,7 +177,41 @@ def main(argv=None) -> int:
         return 2
 
     custom_ids = [i.strip() for i in (args.ids or "").split(",") if i.strip()]
-    if custom_ids:
+    csv = lambda x: [i.strip() for i in (x or "").split(",") if i.strip()]  # noqa: E731
+    try:
+        from cap_evolve.specfile import spec_for_run
+        acc_on = args.accounting or bool(spec_for_run(run_dir, Path(args.project)).get("screen_accounting"))
+    except Exception:  # noqa: BLE001 - the spec is optional context, the flag is authoritative
+        acc_on = args.accounting
+    scr = None
+    if acc_on:
+        from cap_evolve import screen_accounting as sacc
+        from cap_evolve.subsample import _valid
+        pool = [str(pt["task_id"]) for pt in parent.per_task if pt.get("task_id") and _valid(pt)]
+        run_seed = int(run_dir.read_splits().seed)
+        seed = args.seed if args.seed is not None else sacc.derive_seed(run_seed, args.tier, tag)
+        ctl_seed = args.seed if args.seed is not None else sacc.derive_seed(run_seed, args.tier, tag, "control")
+        k_total = args.k or max(MIN_K, int(round(TIER_FRAC[args.tier] * len(val_ids))))
+        sentinels = csv(args.sentinels) or csv(args.broken)
+        k_rand = args.k_random if args.k_random is not None else max(1, int(round(0.25 * k_total)))
+        affected = csv(args.affected) or custom_ids
+        if not affected:
+            affected = select_screen_subset(parent.per_task, k=max(1, k_total - len(sentinels) - k_rand),
+                                            seed=seed, holdout_frac=0.0, broken_ids=[])["informative"]
+        scr = sacc.build_screen(pool, affected, sentinels, k_rand, seed)
+        if args.screen_control == "random_subset":
+            scr = sacc.build_control(pool, len(scr["ids"]), ctl_seed)
+        ctl = scr["mode"] == "random_subset"
+        sub = {"ids": scr["ids"], "broken": [] if ctl else sentinels,
+               "holdout": [t for t, c in scr["components"].items() if c == "random"],
+               "informative": [] if ctl else affected, "k": len(scr["ids"]), "requested_k": k_total,
+               "seed": scr["seed"],
+               "holdout_frac": None, "pool_n": len(pool),
+               "rationale": (f"accounted screen: {len(affected)} predicted-affected, {len(sentinels)} sentinel, "
+                             f"{scr['k_random']} random of {scr['n_rest']} remaining (seed {seed})"
+                             if scr["mode"] == "accounted" else
+                             f"CONTROL: {len(scr['ids'])} uniform random of {scr['n_pool']} (seed {seed}), predictions ignored")}
+    elif custom_ids:
         val_id_set = {str(i) for i in val_ids}
         chosen = sorted({i for i in custom_ids if i in val_id_set})
         sub = {"ids": chosen, "broken": [], "holdout": [], "informative": chosen,
@@ -236,6 +281,11 @@ def main(argv=None) -> int:
     savings = screen_savings(fired=fired, val_n=len(val_ids),
                              n_trials=full_trials, decision=decision["decision"])
 
+    accounting = None
+    if scr is not None:
+        accounting = sacc.record(scr, sacc.ht_estimate(dict(zip(pair["ids"], pair["deltas"])), scr),
+                                 n_val=len(val_ids),
+                                 pool_excluded=[str(i) for i in val_ids if str(i) not in set(pool)])
     payload = {
         "tag": tag, "screen_tag": screen_tag, "tier": args.tier,
         "current": cur_tag,
@@ -248,6 +298,7 @@ def main(argv=None) -> int:
         "savings": {**savings, "screen_cost_usd": screen_cost_usd},
         "promote_to": ("full-val evaluate + gate_check.py"
                        if decision["decision"] == "promote" else None),
+        **({"accounting": accounting} if accounting is not None else {}),
         "note": ("A screen is TRIAGE. It may kill; it may never accept. Only "
                  "gate_check.py on FULL val (Δ̄ > k·SE and no regression) accepts."),
     }
@@ -259,7 +310,9 @@ def main(argv=None) -> int:
                       fired=fired, decision=decision["decision"],
                       mean_delta=decision["mean_delta"], se=decision["se"],
                       n=decision["n"], inconclusive=decision["inconclusive"],
-                      net_rollouts=savings["net_rollouts"], rationale=sub["rationale"])
+                      net_rollouts=savings["net_rollouts"], rationale=sub["rationale"],
+                      **({"accounting_role": accounting["role"], "accounting_mode": accounting["mode"]}
+                         if accounting is not None else {}))
     print(json.dumps(payload, indent=2))
     return 0
 
