@@ -63,7 +63,11 @@ from .harness import (
     _resolve_workers,
     _SNAPSHOT_IGNORE,
     evaluate_candidate,
+    gate_statistics,
+    joint_coverage,
     movement,
+    planned_val_ids,
+    pop_paper_switches,
     record_iteration,
     split_result_from_rollouts,
 )
@@ -507,6 +511,11 @@ def gepa_loop(
     highest-val pool member; the test split is never touched.
     """
     gate_kwargs = dict(gate_kwargs or {})
+    if gate_kwargs.get("gate_footprint") is True:
+        # Refuse up front (before any paid minibatch): this gate never masks, so an explicit
+        # "footprint on" would silently measure a different statistic than the spec asked for.
+        raise ValueError("gate_footprint: true is not supported by gepa (its val gate never masks "
+                         "the delta vector); use false/unset, or hill-climb/skillopt")
     ctx = ctx or OptimizerContext()   # the SAME read-context assembly as its siblings
     rejected, history, store = _init_memory_store(run_dir, store)
     cache = EvalCache(run_dir.root / "eval_cache.json")
@@ -766,9 +775,12 @@ def _full_val_gate(
     minibatch stage). So we eval the existing child on full val and apply the
     identical paired/significance gate + optional no-regression dual gate.
     """
-    cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
-                                  n_trials=n_trials, tag=cid)
     gk = dict(gate_kwargs or {})
+    sw = pop_paper_switches(gk)   # gate_footprint=false is a no-op here: this gate never masks
+    planned = planned_val_ids(run_dir)
+    cand_val = evaluate_candidate(adapter, workdir, run_dir=run_dir, split="val",
+                                  n_trials=n_trials, tag=cid,
+                                  errored_policy=sw["errored_trial_policy"])
     paired = _paired_deltas(parent_result, cand_val)
     if "mode" not in gk and paired is not None:
         gk["mode"] = "paired"
@@ -780,7 +792,9 @@ def _full_val_gate(
     decision = gate_mod.decide(
         parent_result.reward, cand_val.reward, split="val",
         candidate_stderr=cand_val.stderr, current_stderr=parent_result.stderr,
-        paired_deltas=paired, coverage=cand_val.coverage, run_dir=run_dir,
+        paired_deltas=paired,
+        coverage=(joint_coverage(parent_result, cand_val, planned) if sw["coverage"] == "joint"
+                  else cand_val.coverage), run_dir=run_dir,
         broke=mv["broke"], fixed=mv["fixed"], **gk,
     )
     accepted = decision.accept
@@ -811,6 +825,8 @@ def _full_val_gate(
     _mv_extra = ({"broke": mv["broke"], "fixed": mv["fixed"],
                   "n_broke": len(mv["broke"]), "n_fixed": len(mv["fixed"])}
                  if mv["n_shared"] else {})
+    # Same statistics hill-climb logs (masked == full here: gepa never masks).
+    _mv_extra.update(gate_statistics(parent_result, cand_val, None, planned=planned))
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
                      reason=decision.reason, val=cand_val.reward,
                      parent_val=parent_result.reward, memory_skill=memory_skill,

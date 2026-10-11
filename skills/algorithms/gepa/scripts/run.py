@@ -66,6 +66,7 @@ def main(argv=None) -> int:
     # The shared optimizer read-context flags — identical set to hill-climb/skillopt, so
     # `cap-evolve run` hands gepa the same context instead of a thinner prompt.
     harness.OptimizerContext.add_arguments(p)
+    harness.add_paper_switch_arguments(p)
     p.add_argument("--protected-paths", default="",
                    help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
                         "tests). 'default' expands to the built-in set. Empty = off. A "
@@ -97,6 +98,7 @@ def main(argv=None) -> int:
                    else {"mode": args.gate_mode, "k_se": args.k_se})
     if args.gate_max_broke is not None:
         gate_kwargs["gate_max_broke"] = int(args.gate_max_broke)
+    gate_kwargs.update(harness.paper_switch_kwargs(args))
 
     result = gepa.gepa_loop(
         adapter, run_dir=run_dir, optimizer=optimizer, seed_val=seed_val,

@@ -1326,7 +1326,10 @@ class Adapter(CapabilityAdapter):
             # burning 30 turns per task on a prompt with no output path in it.
             tmpl_error = _task_template_error(ctx)
             if tmpl_error:
-                return Rollout(task_id=task.id, error=tmpl_error)
+                # The CANDIDATE's own fault (its task_template.md is unusable): a measured
+                # failure under errored_trial_policy=fail, not missing data.
+                return Rollout(task_id=task.id, error=tmpl_error,
+                               metadata={"error_kind": "candidate"})
 
             entry = _entries_by_id().get(task.id)
             if entry is None:
@@ -1372,7 +1375,7 @@ class Adapter(CapabilityAdapter):
             except Exception as e:  # noqa: BLE001
                 return Rollout(
                     task_id=task.id, error=f"sandbox startup failed: {e}",
-                    metadata={"run_tag": run_tag},
+                    metadata={"run_tag": run_tag, "error_kind": "infra"},
                 )
 
             system_prompt = _read_system_prompt(ctx)
@@ -1405,7 +1408,7 @@ class Adapter(CapabilityAdapter):
                 except Exception as e:  # noqa: BLE001
                     return Rollout(
                         task_id=task.id, error=f"LLM call failed: {e}", cost_usd=cost,
-                        tokens=tokens, metadata={"run_tag": run_tag},
+                        tokens=tokens, metadata={"run_tag": run_tag, "error_kind": "infra"},
                     )
 
                 cost += float(getattr(response, "_hidden_params", {}).get("response_cost", 0) or 0)
@@ -1439,7 +1442,7 @@ class Adapter(CapabilityAdapter):
                     # the prompt.
                     return Rollout(
                         task_id=task.id, error=f"sandbox exec failed: {e}", cost_usd=cost,
-                        tokens=tokens, metadata={"run_tag": run_tag},
+                        tokens=tokens, metadata={"run_tag": run_tag, "error_kind": "infra"},
                     )
 
                 exec_results.append(exec_result)
@@ -1486,7 +1489,8 @@ class Adapter(CapabilityAdapter):
                         cost_usd=cost,
                         tokens=tokens,
                         error=why,
-                        metadata={"run_tag": run_tag, "id": sid, "model": model_config.MODEL, "seed": seed},
+                        metadata={"run_tag": run_tag, "id": sid, "model": model_config.MODEL, "seed": seed,
+                                  "error_kind": "infra"},
                     )
             else:
                 # Case 1 solved — replay the SAME code onto whatever OTHER copies this dataset
