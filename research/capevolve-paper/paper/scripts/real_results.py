@@ -236,7 +236,7 @@ def table_zeros():
     L = [r"\begin{table*}[t]", r"\centering\scriptsize", r"\setlength{\tabcolsep}{4pt}",
          r"\caption{Error rows per arm and seed under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). "
          r"The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string. "
-         r"Every other error is a candidate error, except rows an adapter labelled infrastructure that have no string and some or unknown target calls, "
+         r"Every other error is a candidate error, except rows an adapter labelled infrastructure that have no recoverable string and some target calls, "
          r"which stay unverifiable. Changed counts rows whose class differs from the adapter label. "
          r"Search used each method's native handling of these errors, and only the reporting is unified. Live runs only.}",
          r"\label{tab:zeros}", r"\begin{tabular}{@{}llrrrrrrrr@{}}", r"\toprule",
@@ -246,8 +246,8 @@ def table_zeros():
     rows.sort(key=lambda r: (r["suite"], r["arm"], r["seed"]))
     for r in rows:
         g = int
-        unv = g(r["adapter_infra_unverifiable"] or 0)
-        cand = g(r["uniform_candidate_error"] or 0) - unv
+        unv = g(r["uniform_unverifiable"] or 0)
+        cand = g(r["uniform_candidate_error"] or 0)
         ch = g(r["changed_candidate_to_infra"] or 0) + g(r["changed_infra_to_candidate"] or 0) + g(r["changed_unlabelled_to_infra"] or 0)
         if prev and prev != r["suite"]:
             L.append(r"\midrule")

@@ -1,7 +1,7 @@
 \begin{table*}[t]
 \centering\scriptsize
 \setlength{\tabcolsep}{4pt}
-\caption{Error rows per arm and seed under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string. Every other error is a candidate error, except rows an adapter labelled infrastructure that have no string and some or unknown target calls, which stay unverifiable. Changed counts rows whose class differs from the adapter label. Search used each method's native handling of these errors, and only the reporting is unified. Live runs only.}
+\caption{Error rows per arm and seed under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string. Every other error is a candidate error, except rows an adapter labelled infrastructure that have no recoverable string and some target calls, which stay unverifiable. Changed counts rows whose class differs from the adapter label. Search used each method's native handling of these errors, and only the reporting is unified. Live runs only.}
 \label{tab:zeros}
 \begin{tabular}{@{}llrrrrrrrr@{}}
 \toprule
@@ -15,15 +15,15 @@ A & CapEvolve AO & 2 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
 A & EvoSkill & 0 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
 A & EvoSkill & 1 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
 A & EvoSkill & 2 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
-A & GEPA & 0 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
-A & GEPA & 1 & 4 & 4 & 0 & 0 & 0 & 4 & 4 \\
-A & GEPA & 2 & 2 & 2 & 0 & 0 & 0 & 2 & 2 \\
+A & GEPA & 0 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+A & GEPA & 1 & 4 & 4 & 0 & 4 & 0 & 0 & 0 \\
+A & GEPA & 2 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
 A & CapEvolve HC & 0 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
 A & CapEvolve HC & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
 A & CapEvolve HC & 2 & 3 & 3 & 0 & 3 & 0 & 0 & 0 \\
 A & Meta-Harness & 0 & 6 & 6 & 0 & 6 & 0 & 0 & 0 \\
-A & Meta-Harness & 1 & 15 & 15 & 0 & 13 & 0 & 2 & 2 \\
-A & Meta-Harness & 2 & 9 & 9 & 0 & 8 & 0 & 1 & 1 \\
+A & Meta-Harness & 1 & 15 & 15 & 0 & 15 & 0 & 0 & 0 \\
+A & Meta-Harness & 2 & 9 & 9 & 0 & 9 & 0 & 0 & 0 \\
 A & MIPROv2 & 0 & 3 & 3 & 0 & 3 & 0 & 0 & 0 \\
 A & MIPROv2 & 1 & 4 & 4 & 0 & 4 & 0 & 0 & 0 \\
 A & SkillOpt & 0 & 85 & 5 & 80 & 5 & 80 & 0 & 0 \\
@@ -36,15 +36,16 @@ A & WikiSkill & 0 & 3 & 0 & 3 & 3 & 0 & 0 & 3 \\
 A & WikiSkill & 1 & 2 & 0 & 2 & 2 & 0 & 0 & 2 \\
 A & WikiSkill & 2 & 3 & 0 & 3 & 3 & 0 & 0 & 3 \\
 \midrule
-B & CapEvolve AO & 0 & 2 & 2 & 0 & 0 & 0 & 2 & 2 \\
-B & One-shot control & 0 & 7 & 7 & 0 & 6 & 0 & 1 & 1 \\
-B & One-shot control & 1 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
-B & CapEvolve HC & 0 & 2 & 2 & 0 & 1 & 0 & 1 & 1 \\
-B & CapEvolve HC & 1 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
-B & CapEvolve HC & 2 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
+B & CapEvolve AO & 0 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+B & One-shot control & 0 & 7 & 7 & 0 & 7 & 0 & 0 & 0 \\
+B & One-shot control & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+B & CapEvolve HC & 0 & 2 & 2 & 0 & 2 & 0 & 0 & 0 \\
+B & CapEvolve HC & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+B & CapEvolve HC & 2 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
 \midrule
 C & One-shot control & 1 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
-C & One-shot control & 2 & 1 & 1 & 0 & 0 & 0 & 1 & 1 \\
+C & One-shot control & 2 & 1 & 1 & 0 & 1 & 0 & 0 & 0 \\
+C & GEPA & 2 & 1 & 1 & 0 & 0 & 0 & 1 & 0 \\
 \bottomrule
 \end{tabular}
 \end{table*}
