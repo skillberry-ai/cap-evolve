@@ -1,5 +1,5 @@
 {
- "_generated_utc": "2026-10-11T18:11:17Z",
+ "_generated_utc": "2026-10-11T18:25:42Z",
  "_note": "values not found in manifests/specs/deviations/launch scripts are 'not recorded'; nothing is guessed",
  "runs": {
   "A/ace/s0": {
@@ -278,7 +278,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 40
+    "rollout_counter": 47
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -305,10 +305,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 0,
-    "state_metric_calls": 0,
+    "state_metric_calls": 40,
     "state_iterations": 0,
     "state_optimizer_usd": 0.0,
-    "state_runner_tokens": 0,
+    "state_runner_tokens": 2321460,
     "state_best_val": 0.0
    }
   },
@@ -497,7 +497,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 38
+    "rollout_counter": 40
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -545,18 +545,18 @@
     "live_cmdline_args": {
      "out": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0",
      "seed": "0",
-     "tag-prefix": "E10-evoskill-s0",
+     "tag-prefix": "E10-evoskill-r2-s0",
      "max-iterations": "12",
      "max-rollouts": "600",
      "concurrency": "4"
     }
    },
    "launch_scripts": {
-    "restart_note.txt": "restart note: earlier attempts (tier hold; concurrency 12->4; candidates.jsonl logging; hung-rollout rule alignment) were infrastructure restarts, same seed, no proposer sessions/outcomes.\n",
-    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
+    "restart_note.txt": "restart note: infrastructure restart #5 (same seed). Previous process (13:05-18:3x) rollouts are INVALID: gateway stalled every request carrying tag E10-evoskill-s0:evoskill:target (zero gateway calls, litellm.Timeout ~1801s); not searches. New tag prefix E10-evoskill-r2-s0. Earlier restarts: tier hold; conc 12->4; candidates logging; hung rule.\n",
+    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-r2-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
    },
    "live_process_cmdlines_snapshot": [
-    "1094139 Sun Oct 11 13:05:19 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0 --seed 0 --tag-prefix E10-evoskill-s0 --max-iterations 12 --max-rollouts 600 --concurrency 4"
+    "2163740 Sun Oct 11 18:24:00 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0 --seed 0 --tag-prefix E10-evoskill-r2-s0 --max-iterations 12 --max-rollouts 600 --concurrency 4"
    ],
    "models_by_role_observed_in_gateway": {
     "target": [
@@ -566,7 +566,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 40
+    "rollout_counter": 4
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -765,33 +765,20 @@
     }
    ],
    "restart_siblings_and_superseded_dirs": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_INVALID_gateway_tag_stall_since_1305",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_conc12",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_hung_rule",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_no_candidates_log",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_stopped_tier_hold_1009"
    ],
    "restart_cutoff": {
-    "utc": "2026-10-11T13:05:19Z",
+    "utc": "2026-10-11T18:24:01Z",
     "source": "derived: birth time of negtest_before_launch.txt"
    },
    "infra": {
     "infra_retries_in_counter": null,
     "infra_retries_json": null,
-    "llm_failure_counts": {
-     "run": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0",
-     "cutoff": "2026-10-11T13:11:00Z",
-     "gateway_by_period": {
-      "before_calls": 265,
-      "before_client_disconnects": 32,
-      "before_upstream_failed_calls": 5,
-      "after_calls": 1
-     },
-     "exact": {
-      "source": "project/.cache/runs (cached val rollouts only; train-sample rollouts are not cached)",
-      "llm_call_failed_rollouts": 39,
-      "cached_rollouts": 39
-     }
-    }
+    "llm_failure_counts": null
    },
    "capevolve_state": null
   },
@@ -814,18 +801,18 @@
     "live_cmdline_args": {
      "out": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1",
      "seed": "1",
-     "tag-prefix": "E10-evoskill-s1",
+     "tag-prefix": "E10-evoskill-r2-s1",
      "max-iterations": "12",
      "max-rollouts": "600",
      "concurrency": "4"
     }
    },
    "launch_scripts": {
-    "restart_note.txt": "restart note: earlier attempts (tier hold; concurrency 12->4; candidates.jsonl logging; hung-rollout rule alignment) were infrastructure restarts, same seed, no proposer sessions/outcomes.\n",
-    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
+    "restart_note.txt": "restart note: infrastructure restart #5 (same seed). Previous process (13:05-18:3x) rollouts are INVALID: gateway stalled every request carrying tag E10-evoskill-s1:evoskill:target (zero gateway calls, litellm.Timeout ~1801s); not searches. New tag prefix E10-evoskill-r2-s1. Earlier restarts: tier hold; conc 12->4; candidates logging; hung rule.\n",
+    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-r2-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
    },
    "live_process_cmdlines_snapshot": [
-    "1094263 Sun Oct 11 13:05:19 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1 --seed 1 --tag-prefix E10-evoskill-s1 --max-iterations 12 --max-rollouts 600 --concurrency 4"
+    "2163792 Sun Oct 11 18:24:01 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1 --seed 1 --tag-prefix E10-evoskill-r2-s1 --max-iterations 12 --max-rollouts 600 --concurrency 4"
    ],
    "models_by_role_observed_in_gateway": {
     "target": [
@@ -835,7 +822,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 44
+    "rollout_counter": 4
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -1034,32 +1021,20 @@
     }
    ],
    "restart_siblings_and_superseded_dirs": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_INVALID_gateway_tag_stall_since_1305",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_conc12",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_hung_rule",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_infra_restart_no_candidates_log",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1_stopped_tier_hold_1009"
    ],
    "restart_cutoff": {
-    "utc": "2026-10-11T13:05:19Z",
+    "utc": "2026-10-11T18:24:01Z",
     "source": "derived: birth time of negtest_before_launch.txt"
    },
    "infra": {
     "infra_retries_in_counter": null,
     "infra_retries_json": null,
-    "llm_failure_counts": {
-     "run": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s1",
-     "cutoff": "2026-10-11T13:11:00Z",
-     "gateway_by_period": {
-      "before_calls": 258,
-      "before_client_disconnects": 35,
-      "before_upstream_failed_calls": 8
-     },
-     "exact": {
-      "source": "project/.cache/runs (cached val rollouts only; train-sample rollouts are not cached)",
-      "llm_call_failed_rollouts": 40,
-      "cached_rollouts": 40
-     }
-    }
+    "llm_failure_counts": null
    },
    "capevolve_state": null
   },
@@ -1082,18 +1057,18 @@
     "live_cmdline_args": {
      "out": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2",
      "seed": "2",
-     "tag-prefix": "E10-evoskill-s2",
+     "tag-prefix": "E10-evoskill-r2-s2",
      "max-iterations": "12",
      "max-rollouts": "600",
      "concurrency": "4"
     }
    },
    "launch_scripts": {
-    "restart_note.txt": "restart note: earlier attempts (tier hold; concurrency 12->4; candidates.jsonl logging; hung-rollout rule alignment) were infrastructure restarts, same seed, no proposer sessions/outcomes.\n",
-    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
+    "restart_note.txt": "restart note: infrastructure restart #5 (same seed). Previous process (13:05-18:3x) rollouts are INVALID: gateway stalled every request carrying tag E10-evoskill-s2:evoskill:target (zero gateway calls, litellm.Timeout ~1801s); not searches. New tag prefix E10-evoskill-r2-s2. Earlier restarts: tier hold; conc 12->4; candidates logging; hung rule.\n",
+    "baselines/launch_e10_evoskill.sh": "#!/usr/bin/env bash\n# launch_e10_evoskill.sh <seed>\nS=$1; B=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s$S; mkdir -p $O\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction\nexec /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u $B/code/evoskill_run.py --out $O --seed $S \\\n  --tag-prefix E10-evoskill-r2-s$S --max-iterations 12 --max-rollouts 600 --concurrency 4\n"
    },
    "live_process_cmdlines_snapshot": [
-    "1094320 Sun Oct 11 13:05:20 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2 --seed 2 --tag-prefix E10-evoskill-s2 --max-iterations 12 --max-rollouts 600 --concurrency 4"
+    "2163843 Sun Oct 11 18:24:01 2026 /home/dev/projects2/campaign-scratch/bench/venv/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/evoskill_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2 --seed 2 --tag-prefix E10-evoskill-r2-s2 --max-iterations 12 --max-rollouts 600 --concurrency 4"
    ],
    "models_by_role_observed_in_gateway": {
     "target": [
@@ -1103,7 +1078,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 44
+    "rollout_counter": 4
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -1302,33 +1277,20 @@
     }
    ],
    "restart_siblings_and_superseded_dirs": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_INVALID_gateway_tag_stall_since_1305",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_conc12",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_hung_rule",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_infra_restart_no_candidates_log",
     "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2_stopped_tier_hold_1009"
    ],
    "restart_cutoff": {
-    "utc": "2026-10-11T13:05:20Z",
+    "utc": "2026-10-11T18:24:01Z",
     "source": "derived: birth time of negtest_before_launch.txt"
    },
    "infra": {
     "infra_retries_in_counter": null,
     "infra_retries_json": null,
-    "llm_failure_counts": {
-     "run": "/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s2",
-     "cutoff": "2026-10-11T13:11:00Z",
-     "gateway_by_period": {
-      "before_calls": 277,
-      "before_client_disconnects": 35,
-      "before_upstream_failed_calls": 5,
-      "after_calls": 1
-     },
-     "exact": {
-      "source": "project/.cache/runs (cached val rollouts only; train-sample rollouts are not cached)",
-      "llm_call_failed_rollouts": 39,
-      "cached_rollouts": 40
-     }
-    }
+    "llm_failure_counts": null
    },
    "capevolve_state": null
   },
@@ -1382,7 +1344,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 143
+    "rollout_counter": 147
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -1610,7 +1572,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 89
+    "rollout_counter": 100
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -1838,7 +1800,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 193
+    "rollout_counter": 199
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -2895,7 +2857,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 48
+    "rollout_counter": 55
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -3086,7 +3048,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 46
+    "rollout_counter": 52
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -4204,7 +4166,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 115
+    "rollout_counter": 119
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -4388,7 +4350,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 109
+    "rollout_counter": 113
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": {
@@ -4571,7 +4533,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 21
+    "rollout_counter": 22
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -4630,7 +4592,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 14
+    "rollout_counter": 18
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -4689,7 +4651,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 14
+    "rollout_counter": 18
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -4903,7 +4865,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 114
+    "rollout_counter": 121
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5253,7 +5215,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 117
+    "rollout_counter": 120
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5603,7 +5565,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 145
+    "rollout_counter": 148
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5798,7 +5760,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 104
+    "rollout_counter": 111
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5984,7 +5946,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 105
+    "rollout_counter": 109
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6170,7 +6132,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 105
+    "rollout_counter": 111
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6371,7 +6333,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 56
+    "rollout_counter": 58
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6522,7 +6484,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 60
+    "rollout_counter": 69
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -6673,7 +6635,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 56
+    "rollout_counter": 59
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -7723,23 +7685,13 @@
      "max_iterations": 1,
      "stall": 0,
      "max_metric_calls": 200
-    },
-    "live_cmdline_args": {
-     "cap": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/artifact",
-     "out": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/post_sel",
-     "splits": "sel",
-     "trials": "2",
-     "seed": "9002",
-     "tag-prefix": "tag:E10B-chaser-ctl-oneshot-s2:chaser"
     }
    },
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2 && source env.sh\nEXTRA=\"\"; [ \"ctl-oneshot\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off --resume $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10B/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2 ctl-oneshot 2 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10B-ctl-oneshot-s2:ctl-oneshot\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_retail_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=7200 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3927932 Sun Oct 11 17:04:20 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u /home/dev/projects2/campaign-scratch/scripts/E10B/eval_cap.py --cap /home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/artifact --out /home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2/post_sel --splits sel --trials 2 --seed 9002 --tag-prefix tag:E10B-chaser-ctl-oneshot-s2:chaser"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5",
@@ -8106,7 +8058,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 142
+    "rollout_counter": 145
    },
    "concurrency": {
     "manifest.json": 6
@@ -8357,7 +8309,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 123
+    "rollout_counter": 126
    },
    "concurrency": {
     "manifest.json": 6
@@ -9268,6 +9220,2529 @@
     "state_optimizer_usd": 0.7213011,
     "state_runner_tokens": 10693701,
     "state_best_val": 0.5416666666666666
+   }
+  },
+  "C/ao/s0": {
+   "suite": "C",
+   "arm": "ao",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ao/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 300,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "agent-optimize",
+     "orchestration_mode": "agent",
+     "gate_k_se": 1.0,
+     "confirm_fresh_only": true,
+     "promotion_rule": "P",
+     "promotion_k_se": 1.0,
+     "promotion_n_conf": 3,
+     "promotion_z_conf": 1.282,
+     "promotion_dmin": 0.0,
+     "promotion_min_coverage": 0.95,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 550,
+     "max_optimizer_usd": 40.0,
+     "optimizer": {
+      "ablation": {
+       "dag_parallel": true,
+       "active_eval": true
+      }
+     },
+     "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/ao/s0/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/ao/s0 && source env.sh\nEXTRA=\"\"; [ \"ao\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/ao/s0 ao 0 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/ao/s0/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-ao-s0:ao\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s0/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s0\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s0/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2059708 Sun Oct 11 18:20:34 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/ao/s0/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n\ntasks.json inside ao sandbox: 30 tasks; split test list: [] ; sealed official-test ids present: none\n",
+     "data_overlay": "also tasks.json/split_tasks.json filtered to the 30 opt+sel tasks (evaluator runs in-shell): opt/sel gold readable to the agent, disclosed; sealed test absent"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum + agent-side tools.py",
+     "gate": "rule P k_se1 n_conf3 z1.282 dmin0 min_cov0.95; footprint off; joint coverage; errored_trial_policy fail",
+     "ao_engine": "NEW engine: dag_parallel+active_eval on, other switches stock, confirm_fresh_only",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n\ntasks.json inside ao sandbox: 30 tasks; split test list: [] ; sealed official-test ids present: none\n",
+      "data_overlay": "also tasks.json/split_tasks.json filtered to the 30 opt+sel tasks (evaluator runs in-shell): opt/sel gold readable to the agent, disclosed; sealed test absent"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/ao/s1": {
+   "suite": "C",
+   "arm": "ao",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ao/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 300,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "agent-optimize",
+     "orchestration_mode": "agent",
+     "gate_k_se": 1.0,
+     "confirm_fresh_only": true,
+     "promotion_rule": "P",
+     "promotion_k_se": 1.0,
+     "promotion_n_conf": 3,
+     "promotion_z_conf": 1.282,
+     "promotion_dmin": 0.0,
+     "promotion_min_coverage": 0.95,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 550,
+     "max_optimizer_usd": 40.0,
+     "optimizer": {
+      "ablation": {
+       "dag_parallel": true,
+       "active_eval": true
+      }
+     },
+     "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/ao/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/ao/s1 && source env.sh\nEXTRA=\"\"; [ \"ao\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/ao/s1 ao 1 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/ao/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-ao-s1:ao\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s1/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s1\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2065903 Sun Oct 11 18:20:46 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/ao/s1/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n\ntasks.json inside ao sandbox: 30 tasks; split test list: [] ; sealed official-test ids present: none\n",
+     "data_overlay": "also tasks.json/split_tasks.json filtered to the 30 opt+sel tasks (evaluator runs in-shell): opt/sel gold readable to the agent, disclosed; sealed test absent"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum + agent-side tools.py",
+     "gate": "rule P k_se1 n_conf3 z1.282 dmin0 min_cov0.95; footprint off; joint coverage; errored_trial_policy fail",
+     "ao_engine": "NEW engine: dag_parallel+active_eval on, other switches stock, confirm_fresh_only",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n\ntasks.json inside ao sandbox: 30 tasks; split test list: [] ; sealed official-test ids present: none\n",
+      "data_overlay": "also tasks.json/split_tasks.json filtered to the 30 opt+sel tasks (evaluator runs in-shell): opt/sel gold readable to the agent, disclosed; sealed test absent"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/ao/s2": {
+   "suite": "C",
+   "arm": "ao",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ao/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 300,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "agent-optimize",
+     "orchestration_mode": "agent",
+     "gate_k_se": 1.0,
+     "confirm_fresh_only": true,
+     "promotion_rule": "P",
+     "promotion_k_se": 1.0,
+     "promotion_n_conf": 3,
+     "promotion_z_conf": 1.282,
+     "promotion_dmin": 0.0,
+     "promotion_min_coverage": 0.95,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 550,
+     "max_optimizer_usd": 40.0,
+     "optimizer": {
+      "ablation": {
+       "dag_parallel": true,
+       "active_eval": true
+      }
+     },
+     "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/ao/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/ao/s2 && source env.sh\nEXTRA=\"\"; [ \"ao\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/ao/s2 ao 2 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/ao/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-ao-s2:ao\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s2/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s2\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/ao/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2071917 Sun Oct 11 18:20:59 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/ao/s2/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n\ntasks.json inside ao sandbox: 30 tasks; split test list: [] ; sealed official-test ids present: none\n",
+     "data_overlay": "also tasks.json/split_tasks.json filtered to the 30 opt+sel tasks (evaluator runs in-shell): opt/sel gold readable to the agent, disclosed; sealed test absent"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum + agent-side tools.py",
+     "gate": "rule P k_se1 n_conf3 z1.282 dmin0 min_cov0.95; footprint off; joint coverage; errored_trial_policy fail",
+     "ao_engine": "NEW engine: dag_parallel+active_eval on, other switches stock, confirm_fresh_only",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n\ntasks.json inside ao sandbox: 30 tasks; split test list: [] ; sealed official-test ids present: none\n",
+      "data_overlay": "also tasks.json/split_tasks.json filtered to the 30 opt+sel tasks (evaluator runs in-shell): opt/sel gold readable to the agent, disclosed; sealed test absent"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/ctl-oneshot/s0": {
+   "suite": "C",
+   "arm": "ctl-oneshot",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C control (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 80,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "hill-climb",
+     "algorithm_focus": "all",
+     "orchestration_mode": "deterministic",
+     "gate_k_se": 1.0,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 1,
+     "stall": 0,
+     "max_metric_calls": 200
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0 && source env.sh\nEXTRA=\"\"; [ \"ctl-oneshot\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0 ctl-oneshot 0 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-ctl-oneshot-s0:ctl-oneshot\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2062735 Sun Oct 11 18:20:40 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s0/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+     "data_overlay": "db+policy+user_simulator only"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "see arm",
+     "gate": "see arm",
+     "ao_engine": null,
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+      "data_overlay": "db+policy+user_simulator only"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/ctl-oneshot/s1": {
+   "suite": "C",
+   "arm": "ctl-oneshot",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C control (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 80,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "hill-climb",
+     "algorithm_focus": "all",
+     "orchestration_mode": "deterministic",
+     "gate_k_se": 1.0,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 1,
+     "stall": 0,
+     "max_metric_calls": 200
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1 && source env.sh\nEXTRA=\"\"; [ \"ctl-oneshot\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1 ctl-oneshot 1 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-ctl-oneshot-s1:ctl-oneshot\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2069142 Sun Oct 11 18:20:52 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s1/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+     "data_overlay": "db+policy+user_simulator only"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "see arm",
+     "gate": "see arm",
+     "ao_engine": null,
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+      "data_overlay": "db+policy+user_simulator only"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/ctl-oneshot/s2": {
+   "suite": "C",
+   "arm": "ctl-oneshot",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C control (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 80,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "hill-climb",
+     "algorithm_focus": "all",
+     "orchestration_mode": "deterministic",
+     "gate_k_se": 1.0,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 1,
+     "stall": 0,
+     "max_metric_calls": 200
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2 && source env.sh\nEXTRA=\"\"; [ \"ctl-oneshot\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2 ctl-oneshot 2 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-ctl-oneshot-s2:ctl-oneshot\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2075290 Sun Oct 11 18:21:05 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/ctl-oneshot/s2/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+     "data_overlay": "db+policy+user_simulator only"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "see arm",
+     "gate": "see arm",
+     "ao_engine": null,
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+      "data_overlay": "db+policy+user_simulator only"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/ctl-seed/s0": {
+   "suite": "C",
+   "arm": "ctl-seed",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ctl-seed/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C control (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": "not recorded",
+   "launch_scripts": "not recorded",
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": null
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": "not recorded",
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "none (unoptimized seed evaluated on opt+sel, 2 trials)",
+     "gate": "n/a",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "per_rollout_metrics": "rollouts_metrics.jsonl (written natively)"
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "C/ctl-seed/s1": {
+   "suite": "C",
+   "arm": "ctl-seed",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ctl-seed/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C control (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": "not recorded",
+   "launch_scripts": "not recorded",
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": null
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": "not recorded",
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "none (unoptimized seed evaluated on opt+sel, 2 trials)",
+     "gate": "n/a",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "per_rollout_metrics": "rollouts_metrics.jsonl (written natively)"
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "C/ctl-seed/s2": {
+   "suite": "C",
+   "arm": "ctl-seed",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/ctl-seed/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C control (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": "not recorded",
+   "launch_scripts": "not recorded",
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": null
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": "not recorded",
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "none (unoptimized seed evaluated on opt+sel, 2 trials)",
+     "gate": "n/a",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "per_rollout_metrics": "rollouts_metrics.jsonl (written natively)"
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "C/gepa/s0": {
+   "suite": "C",
+   "arm": "gepa",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": {
+     "running": "baselines/gepa_pypi (unpacked PyPI gepa==0.1.4 wheel)",
+     "latest_release": "v0.1.4 (2026-07-15) = commit 8b0ce6cd99a234f6b74daf37558a2ac0ce18f975",
+     "head": "462e437a09be67d2acb59564cc0ea59132f5777c (2026-10-08, 87 commits after v0.1.4)",
+     "check_1": "git blob SHA1 of all 92 files in the running copy == files of src/gepa at tag v0.1.4 (0 differ) => running code is byte-identical to gepa-ai/gepa@v0.1.4",
+     "check_2_head_vs_tag": "25 src/gepa files modified, 20 added. Core search (reflective mutation loop, strict-improvement acceptance, pareto selection, round-robin component selection, merge, budget counting) unchanged in the diffs reviewed. HEAD adds: write_agent_state/run-dir agent files, eval-cache split namespaces (cache off in our runs), resume handling, invoke_batch_evaluate hook, metadata/seedable-reflector plumbing, oa/ (optimize_anything engines) and combee proposer. ONE behavioural change on the default path: reflection outputs known to be truncated (finish_reason=length with no closing fence) are SKIPPED instead of salvaged (strategies/instruction_proposal.py parse_proposal / reflection_lm.py). Reflection max_tokens=16000 in our runs.",
+     "decision": "kept the 3 running GEPA searches; provenance = gepa-ai/gepa@v0.1.4 (8b0ce6c), identical to PyPI 0.1.4. Relaunching from the latest release tag would run the same bytes."
+    },
+    "runbook_pin": "PyPI gepa==0.1.4 unpacked in baselines/gepa_pypi (wheels/gepa-0.1.4-py3-none-any.whl)"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0",
+     "seed": "0",
+     "exp": "E10C",
+     "arm": "gepa",
+     "max-metric-calls": "600"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=6 TAU2_SIM_TIMEOUT=10800\ncd /home/dev/projects2/campaign-scratch/scripts/E10C && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0 --seed 0 --exp E10C --arm gepa --max-metric-calls 600 > /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E10C/cost_summary.py \"E10C-gepa-s0:gepa\" --json /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0/cost_summary.json > /dev/null\n",
+    "baselines/launch_e10.sh": "#!/usr/bin/env bash\n# launch_e10.sh <skillopt|gepa> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = skillopt ]; then\n  $PY -I -u $B/code/skillopt_run.py --out $O --seed $S --tag-prefix E10-skillopt-s$S --arm skillopt \\\n    --epochs 3 --batch 40 --max-rollouts 600\nelse\n  $PY -I -u $B/code/gepa_run.py --out $O --seed $S --tag-prefix E10-gepa-s$S --arm gepa \\\n    --max-metric-calls 555 --hard-cap 600 --minibatch 3\nfi\necho \"exit=$?\" \n$PY -I $B/code/finalize.py $M $O\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2138392 Sun Oct 11 18:23:09 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0/driver.sh",
+    "2138432 Sun Oct 11 18:23:09 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s0 --seed 0 --exp E10C --arm gepa --max-metric-calls 600"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 10
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": "not recorded",
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum only (disclosed asymmetry)",
+     "gate": "GEPA native (pareto, reflection minibatch 3, no merge); trainset opt, valset sel",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "per_rollout_metrics": "rollouts_metrics.jsonl (written natively)"
+    }
+   },
+   "deviations": [
+    {
+     "file": "/home/dev/projects2/campaign-scratch/baselines/deviations_gepa.json",
+     "content": {
+      "method": "GEPA (gepa-ai/gepa), PyPI release gepa==0.1.4 (wheel sha recorded in wheels/), gepa.optimize unmodified",
+      "pin_note": "GitHub main tarball download was throttled and abandoned; PyPI 0.1.4 is the released official code. Re-pin to a commit SHA if the paper needs main.",
+      "adapter": "code/gepa_sb_adapter.py (CapEvolveSBGepaAdapter), runner code/gepa_run.py",
+      "unchanged_from_official": [
+       "engine, reflective mutation proposer, default reflection prompt (InstructionProposalSignature) and its first-to-last-backtick output extractor",
+       "candidate selection = pareto (instance frontier), module_selector = round_robin, reflection_minibatch_size default 3, epoch_shuffled batch sampler",
+       "acceptance: strict minibatch improvement (sum), then full-valset evaluation of every accepted proposal; best = highest val mean",
+       "skip_perfect_score=True, use_merge=False (official default), cache_evaluation=False, perfect_score=1.0"
+      ],
+      "deviations": [
+       {
+        "area": "objective/evaluator",
+        "change": "evaluate() runs ONE CapEvolve SpreadsheetBench target rollout per example (patched adapter, gold-free agent view, 30 turns, podman sandbox) and returns the as-saved hard reward in {0,1}. The recalc (LibreOffice 25.8) metrics are recorded per rollout but are not the score.",
+        "why": "identical evaluator across methods"
+       },
+       {
+        "area": "candidate",
+        "change": "two components {prompt.md, task_template.md} = CapEvolve's editable capability, byte-identical seed. GEPA's round-robin selector updates one component per proposal; the reflection prompt for a component does not show the other component (official behaviour).",
+        "why": "same artifact as CapEvolve"
+       },
+       {
+        "area": "feedback/data exposure",
+        "change": "Feedback in the reflective dataset = CapEvolve scorer's gold-safe feedback string (pass/fail, localized failure classes, no gold cell values) + the full agent transcript (<=20k chars). Official GEPA has no benchmark-specific feedback; this is the richest signal the matched evaluator offers and is also what CapEvolve's optimizer sees.",
+        "why": "evaluator identity; no gold leakage"
+       },
+       {
+        "area": "model plumbing",
+        "change": "target = rits/google/gemma-4-31B-it via gateway (litellm_proxy inside the CapEvolve adapter); reflection LM = gepa.lm.LM('openai/aws/claude-sonnet-5-5', api_base=gateway, max_tokens=16000), temperature unset",
+        "why": "campaign gateway; matched optimizer model"
+       },
+       {
+        "area": "budget accounting",
+        "change": "official max_metric_calls is used unchanged: every example evaluation (minibatch of parent, minibatch of child, full-val of accepted children, and the initial seed evaluation on the valset) counts 1. One metric call == one target rollout. A candidate that fails the placeholder contract is scored 0 WITHOUT a model call (as CapEvolve does) but GEPA still debits its metric calls (conservative). Reflection-LM tokens are NOT part of max_metric_calls; they are metered separately via gateway tags BL-gepa-*:reflection.",
+        "why": "rollout-matched track"
+       },
+       {
+        "area": "stochasticity",
+        "change": "rollout seed fixed to 0 for every evaluate() call (GEPA passes no seed); Gemma at temperature 0 is still non-deterministic across calls (observed: same task passes/fails across calls), so GEPA re-evaluating the parent on the minibatch (official behaviour) measures noisy outcomes",
+        "why": "no seed hook in GEPAAdapter.evaluate"
+       },
+       {
+        "area": "intra-batch parallelism",
+        "change": "evaluate() runs batch examples concurrently (4 threads). Does not change semantics.",
+        "why": "wall time"
+       },
+       {
+        "area": "split",
+        "change": "trainset = the 80 train ids, valset = the 40 val ids of SkillOpt's released 80/40/280 split (== CapEvolve full_verified/split_ids.json). Test ids are never passed to GEPA. Smoke runs use --val-from-train (valset = train subset) so that no val id is touched.",
+        "why": "matched data exposure"
+       },
+       {
+        "area": "unused official features",
+        "change": "no merge (official default off); no objective frontier; no task-LM / default evaluator",
+        "why": "defaults"
+       }
+      ],
+      "practical_track_notes": "native GEPA design differences from the matched track: use_merge=True (paper setting) is available via --use-merge; reflection_minibatch_size=3; valset may be the 40 val ids; budget = max_metric_calls total."
+     }
+    },
+    {
+     "file": "/home/dev/projects2/campaign-scratch/baselines/deviations_gepa.json",
+     "content": {
+      "method": "GEPA (gepa-ai/gepa), PyPI release gepa==0.1.4 (wheel sha recorded in wheels/), gepa.optimize unmodified",
+      "pin_note": "GitHub main tarball download was throttled and abandoned; PyPI 0.1.4 is the released official code. Re-pin to a commit SHA if the paper needs main.",
+      "adapter": "code/gepa_sb_adapter.py (CapEvolveSBGepaAdapter), runner code/gepa_run.py",
+      "unchanged_from_official": [
+       "engine, reflective mutation proposer, default reflection prompt (InstructionProposalSignature) and its first-to-last-backtick output extractor",
+       "candidate selection = pareto (instance frontier), module_selector = round_robin, reflection_minibatch_size default 3, epoch_shuffled batch sampler",
+       "acceptance: strict minibatch improvement (sum), then full-valset evaluation of every accepted proposal; best = highest val mean",
+       "skip_perfect_score=True, use_merge=False (official default), cache_evaluation=False, perfect_score=1.0"
+      ],
+      "deviations": [
+       {
+        "area": "objective/evaluator",
+        "change": "evaluate() runs ONE CapEvolve SpreadsheetBench target rollout per example (patched adapter, gold-free agent view, 30 turns, podman sandbox) and returns the as-saved hard reward in {0,1}. The recalc (LibreOffice 25.8) metrics are recorded per rollout but are not the score.",
+        "why": "identical evaluator across methods"
+       },
+       {
+        "area": "candidate",
+        "change": "two components {prompt.md, task_template.md} = CapEvolve's editable capability, byte-identical seed. GEPA's round-robin selector updates one component per proposal; the reflection prompt for a component does not show the other component (official behaviour).",
+        "why": "same artifact as CapEvolve"
+       },
+       {
+        "area": "feedback/data exposure",
+        "change": "Feedback in the reflective dataset = CapEvolve scorer's gold-safe feedback string (pass/fail, localized failure classes, no gold cell values) + the full agent transcript (<=20k chars). Official GEPA has no benchmark-specific feedback; this is the richest signal the matched evaluator offers and is also what CapEvolve's optimizer sees.",
+        "why": "evaluator identity; no gold leakage"
+       },
+       {
+        "area": "model plumbing",
+        "change": "target = rits/google/gemma-4-31B-it via gateway (litellm_proxy inside the CapEvolve adapter); reflection LM = gepa.lm.LM('openai/aws/claude-sonnet-5-5', api_base=gateway, max_tokens=16000), temperature unset",
+        "why": "campaign gateway; matched optimizer model"
+       },
+       {
+        "area": "budget accounting",
+        "change": "official max_metric_calls is used unchanged: every example evaluation (minibatch of parent, minibatch of child, full-val of accepted children, and the initial seed evaluation on the valset) counts 1. One metric call == one target rollout. A candidate that fails the placeholder contract is scored 0 WITHOUT a model call (as CapEvolve does) but GEPA still debits its metric calls (conservative). Reflection-LM tokens are NOT part of max_metric_calls; they are metered separately via gateway tags BL-gepa-*:reflection.",
+        "why": "rollout-matched track"
+       },
+       {
+        "area": "stochasticity",
+        "change": "rollout seed fixed to 0 for every evaluate() call (GEPA passes no seed); Gemma at temperature 0 is still non-deterministic across calls (observed: same task passes/fails across calls), so GEPA re-evaluating the parent on the minibatch (official behaviour) measures noisy outcomes",
+        "why": "no seed hook in GEPAAdapter.evaluate"
+       },
+       {
+        "area": "intra-batch parallelism",
+        "change": "evaluate() runs batch examples concurrently (4 threads). Does not change semantics.",
+        "why": "wall time"
+       },
+       {
+        "area": "split",
+        "change": "trainset = the 80 train ids, valset = the 40 val ids of SkillOpt's released 80/40/280 split (== CapEvolve full_verified/split_ids.json). Test ids are never passed to GEPA. Smoke runs use --val-from-train (valset = train subset) so that no val id is touched.",
+        "why": "matched data exposure"
+       },
+       {
+        "area": "unused official features",
+        "change": "no merge (official default off); no objective frontier; no task-LM / default evaluator",
+        "why": "defaults"
+       }
+      ],
+      "practical_track_notes": "native GEPA design differences from the matched track: use_merge=True (paper setting) is available via --use-merge; reflection_minibatch_size=3; valset may be the 40 val ids; budget = max_metric_calls total."
+     }
+    },
+    {
+     "file": "/home/dev/projects2/campaign-scratch/runs/E10B/deviations_gepa_tau.json",
+     "content": {
+      "method": "official GEPA gepa==0.1.4 gepa.optimize unmodified; Suite B tau2 retail adapter scripts/E10B/gepa_tau.py",
+      "changes_after_pilot": [
+       {
+        "when": "2026-10-11 ~09:30 UTC (after pilot, before v1 main runs; v1 superseded)",
+        "what": "reflective-dataset 'setting' text",
+        "before": "tau2 retail customer-service agent (gpt-oss-120b) talking to a simulated customer; the text under optimization is ADDITIONAL agent guidance appended after the fixed benchmark policy",
+        "after": "tau2 retail customer-service agent (gpt-oss-120b) talking to a simulated customer; the text under optimization is ADDITIONAL agent guidance, appended after the fixed benchmark policy. Write ONLY new guidance (checklists, pitfalls, formats); do NOT restate, paraphrase or copy the fixed benchmark policy - it is already in the system prompt and cannot be changed",
+        "why": "pilot reflector copied the whole benchmark policy into its addendum; matched by the same sentence in the CapEvolve optimizer instructions (build_cap_project.py)"
+       },
+       {
+        "when": "v2 relaunch",
+        "what": "judge azure/gpt-5.5 (was gpt-oss); candidate-code faults score 0 without retry; candidates.jsonl logging; counted rollouts include retries"
+       }
+      ],
+      "surface": "policy addendum only (text component 'policy.md'); no tools component",
+      "budget": "max_metric_calls=600 (GEPA's count) while my counter also includes infra retries; hard cap = 600+2*minibatch+|sel|",
+      "reflection_lm": "openai/aws/claude-sonnet-5-5 via gateway, max_tokens 16000; prompt has no reasoning field (0 empty/error reflection responses in v1 logs)"
+     }
+    }
+   ],
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "C/gepa/s1": {
+   "suite": "C",
+   "arm": "gepa",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": {
+     "running": "baselines/gepa_pypi (unpacked PyPI gepa==0.1.4 wheel)",
+     "latest_release": "v0.1.4 (2026-07-15) = commit 8b0ce6cd99a234f6b74daf37558a2ac0ce18f975",
+     "head": "462e437a09be67d2acb59564cc0ea59132f5777c (2026-10-08, 87 commits after v0.1.4)",
+     "check_1": "git blob SHA1 of all 92 files in the running copy == files of src/gepa at tag v0.1.4 (0 differ) => running code is byte-identical to gepa-ai/gepa@v0.1.4",
+     "check_2_head_vs_tag": "25 src/gepa files modified, 20 added. Core search (reflective mutation loop, strict-improvement acceptance, pareto selection, round-robin component selection, merge, budget counting) unchanged in the diffs reviewed. HEAD adds: write_agent_state/run-dir agent files, eval-cache split namespaces (cache off in our runs), resume handling, invoke_batch_evaluate hook, metadata/seedable-reflector plumbing, oa/ (optimize_anything engines) and combee proposer. ONE behavioural change on the default path: reflection outputs known to be truncated (finish_reason=length with no closing fence) are SKIPPED instead of salvaged (strategies/instruction_proposal.py parse_proposal / reflection_lm.py). Reflection max_tokens=16000 in our runs.",
+     "decision": "kept the 3 running GEPA searches; provenance = gepa-ai/gepa@v0.1.4 (8b0ce6c), identical to PyPI 0.1.4. Relaunching from the latest release tag would run the same bytes."
+    },
+    "runbook_pin": "PyPI gepa==0.1.4 unpacked in baselines/gepa_pypi (wheels/gepa-0.1.4-py3-none-any.whl)"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1",
+     "seed": "1",
+     "exp": "E10C",
+     "arm": "gepa",
+     "max-metric-calls": "600"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=6 TAU2_SIM_TIMEOUT=10800\ncd /home/dev/projects2/campaign-scratch/scripts/E10C && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1 --seed 1 --exp E10C --arm gepa --max-metric-calls 600 > /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E10C/cost_summary.py \"E10C-gepa-s1:gepa\" --json /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1/cost_summary.json > /dev/null\n",
+    "baselines/launch_e10.sh": "#!/usr/bin/env bash\n# launch_e10.sh <skillopt|gepa> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = skillopt ]; then\n  $PY -I -u $B/code/skillopt_run.py --out $O --seed $S --tag-prefix E10-skillopt-s$S --arm skillopt \\\n    --epochs 3 --batch 40 --max-rollouts 600\nelse\n  $PY -I -u $B/code/gepa_run.py --out $O --seed $S --tag-prefix E10-gepa-s$S --arm gepa \\\n    --max-metric-calls 555 --hard-cap 600 --minibatch 3\nfi\necho \"exit=$?\" \n$PY -I $B/code/finalize.py $M $O\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2138876 Sun Oct 11 18:23:12 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1/driver.sh",
+    "2138879 Sun Oct 11 18:23:12 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s1 --seed 1 --exp E10C --arm gepa --max-metric-calls 600"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 10
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": "not recorded",
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum only (disclosed asymmetry)",
+     "gate": "GEPA native (pareto, reflection minibatch 3, no merge); trainset opt, valset sel",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "per_rollout_metrics": "rollouts_metrics.jsonl (written natively)"
+    }
+   },
+   "deviations": [
+    {
+     "file": "/home/dev/projects2/campaign-scratch/baselines/deviations_gepa.json",
+     "content": {
+      "method": "GEPA (gepa-ai/gepa), PyPI release gepa==0.1.4 (wheel sha recorded in wheels/), gepa.optimize unmodified",
+      "pin_note": "GitHub main tarball download was throttled and abandoned; PyPI 0.1.4 is the released official code. Re-pin to a commit SHA if the paper needs main.",
+      "adapter": "code/gepa_sb_adapter.py (CapEvolveSBGepaAdapter), runner code/gepa_run.py",
+      "unchanged_from_official": [
+       "engine, reflective mutation proposer, default reflection prompt (InstructionProposalSignature) and its first-to-last-backtick output extractor",
+       "candidate selection = pareto (instance frontier), module_selector = round_robin, reflection_minibatch_size default 3, epoch_shuffled batch sampler",
+       "acceptance: strict minibatch improvement (sum), then full-valset evaluation of every accepted proposal; best = highest val mean",
+       "skip_perfect_score=True, use_merge=False (official default), cache_evaluation=False, perfect_score=1.0"
+      ],
+      "deviations": [
+       {
+        "area": "objective/evaluator",
+        "change": "evaluate() runs ONE CapEvolve SpreadsheetBench target rollout per example (patched adapter, gold-free agent view, 30 turns, podman sandbox) and returns the as-saved hard reward in {0,1}. The recalc (LibreOffice 25.8) metrics are recorded per rollout but are not the score.",
+        "why": "identical evaluator across methods"
+       },
+       {
+        "area": "candidate",
+        "change": "two components {prompt.md, task_template.md} = CapEvolve's editable capability, byte-identical seed. GEPA's round-robin selector updates one component per proposal; the reflection prompt for a component does not show the other component (official behaviour).",
+        "why": "same artifact as CapEvolve"
+       },
+       {
+        "area": "feedback/data exposure",
+        "change": "Feedback in the reflective dataset = CapEvolve scorer's gold-safe feedback string (pass/fail, localized failure classes, no gold cell values) + the full agent transcript (<=20k chars). Official GEPA has no benchmark-specific feedback; this is the richest signal the matched evaluator offers and is also what CapEvolve's optimizer sees.",
+        "why": "evaluator identity; no gold leakage"
+       },
+       {
+        "area": "model plumbing",
+        "change": "target = rits/google/gemma-4-31B-it via gateway (litellm_proxy inside the CapEvolve adapter); reflection LM = gepa.lm.LM('openai/aws/claude-sonnet-5-5', api_base=gateway, max_tokens=16000), temperature unset",
+        "why": "campaign gateway; matched optimizer model"
+       },
+       {
+        "area": "budget accounting",
+        "change": "official max_metric_calls is used unchanged: every example evaluation (minibatch of parent, minibatch of child, full-val of accepted children, and the initial seed evaluation on the valset) counts 1. One metric call == one target rollout. A candidate that fails the placeholder contract is scored 0 WITHOUT a model call (as CapEvolve does) but GEPA still debits its metric calls (conservative). Reflection-LM tokens are NOT part of max_metric_calls; they are metered separately via gateway tags BL-gepa-*:reflection.",
+        "why": "rollout-matched track"
+       },
+       {
+        "area": "stochasticity",
+        "change": "rollout seed fixed to 0 for every evaluate() call (GEPA passes no seed); Gemma at temperature 0 is still non-deterministic across calls (observed: same task passes/fails across calls), so GEPA re-evaluating the parent on the minibatch (official behaviour) measures noisy outcomes",
+        "why": "no seed hook in GEPAAdapter.evaluate"
+       },
+       {
+        "area": "intra-batch parallelism",
+        "change": "evaluate() runs batch examples concurrently (4 threads). Does not change semantics.",
+        "why": "wall time"
+       },
+       {
+        "area": "split",
+        "change": "trainset = the 80 train ids, valset = the 40 val ids of SkillOpt's released 80/40/280 split (== CapEvolve full_verified/split_ids.json). Test ids are never passed to GEPA. Smoke runs use --val-from-train (valset = train subset) so that no val id is touched.",
+        "why": "matched data exposure"
+       },
+       {
+        "area": "unused official features",
+        "change": "no merge (official default off); no objective frontier; no task-LM / default evaluator",
+        "why": "defaults"
+       }
+      ],
+      "practical_track_notes": "native GEPA design differences from the matched track: use_merge=True (paper setting) is available via --use-merge; reflection_minibatch_size=3; valset may be the 40 val ids; budget = max_metric_calls total."
+     }
+    },
+    {
+     "file": "/home/dev/projects2/campaign-scratch/baselines/deviations_gepa.json",
+     "content": {
+      "method": "GEPA (gepa-ai/gepa), PyPI release gepa==0.1.4 (wheel sha recorded in wheels/), gepa.optimize unmodified",
+      "pin_note": "GitHub main tarball download was throttled and abandoned; PyPI 0.1.4 is the released official code. Re-pin to a commit SHA if the paper needs main.",
+      "adapter": "code/gepa_sb_adapter.py (CapEvolveSBGepaAdapter), runner code/gepa_run.py",
+      "unchanged_from_official": [
+       "engine, reflective mutation proposer, default reflection prompt (InstructionProposalSignature) and its first-to-last-backtick output extractor",
+       "candidate selection = pareto (instance frontier), module_selector = round_robin, reflection_minibatch_size default 3, epoch_shuffled batch sampler",
+       "acceptance: strict minibatch improvement (sum), then full-valset evaluation of every accepted proposal; best = highest val mean",
+       "skip_perfect_score=True, use_merge=False (official default), cache_evaluation=False, perfect_score=1.0"
+      ],
+      "deviations": [
+       {
+        "area": "objective/evaluator",
+        "change": "evaluate() runs ONE CapEvolve SpreadsheetBench target rollout per example (patched adapter, gold-free agent view, 30 turns, podman sandbox) and returns the as-saved hard reward in {0,1}. The recalc (LibreOffice 25.8) metrics are recorded per rollout but are not the score.",
+        "why": "identical evaluator across methods"
+       },
+       {
+        "area": "candidate",
+        "change": "two components {prompt.md, task_template.md} = CapEvolve's editable capability, byte-identical seed. GEPA's round-robin selector updates one component per proposal; the reflection prompt for a component does not show the other component (official behaviour).",
+        "why": "same artifact as CapEvolve"
+       },
+       {
+        "area": "feedback/data exposure",
+        "change": "Feedback in the reflective dataset = CapEvolve scorer's gold-safe feedback string (pass/fail, localized failure classes, no gold cell values) + the full agent transcript (<=20k chars). Official GEPA has no benchmark-specific feedback; this is the richest signal the matched evaluator offers and is also what CapEvolve's optimizer sees.",
+        "why": "evaluator identity; no gold leakage"
+       },
+       {
+        "area": "model plumbing",
+        "change": "target = rits/google/gemma-4-31B-it via gateway (litellm_proxy inside the CapEvolve adapter); reflection LM = gepa.lm.LM('openai/aws/claude-sonnet-5-5', api_base=gateway, max_tokens=16000), temperature unset",
+        "why": "campaign gateway; matched optimizer model"
+       },
+       {
+        "area": "budget accounting",
+        "change": "official max_metric_calls is used unchanged: every example evaluation (minibatch of parent, minibatch of child, full-val of accepted children, and the initial seed evaluation on the valset) counts 1. One metric call == one target rollout. A candidate that fails the placeholder contract is scored 0 WITHOUT a model call (as CapEvolve does) but GEPA still debits its metric calls (conservative). Reflection-LM tokens are NOT part of max_metric_calls; they are metered separately via gateway tags BL-gepa-*:reflection.",
+        "why": "rollout-matched track"
+       },
+       {
+        "area": "stochasticity",
+        "change": "rollout seed fixed to 0 for every evaluate() call (GEPA passes no seed); Gemma at temperature 0 is still non-deterministic across calls (observed: same task passes/fails across calls), so GEPA re-evaluating the parent on the minibatch (official behaviour) measures noisy outcomes",
+        "why": "no seed hook in GEPAAdapter.evaluate"
+       },
+       {
+        "area": "intra-batch parallelism",
+        "change": "evaluate() runs batch examples concurrently (4 threads). Does not change semantics.",
+        "why": "wall time"
+       },
+       {
+        "area": "split",
+        "change": "trainset = the 80 train ids, valset = the 40 val ids of SkillOpt's released 80/40/280 split (== CapEvolve full_verified/split_ids.json). Test ids are never passed to GEPA. Smoke runs use --val-from-train (valset = train subset) so that no val id is touched.",
+        "why": "matched data exposure"
+       },
+       {
+        "area": "unused official features",
+        "change": "no merge (official default off); no objective frontier; no task-LM / default evaluator",
+        "why": "defaults"
+       }
+      ],
+      "practical_track_notes": "native GEPA design differences from the matched track: use_merge=True (paper setting) is available via --use-merge; reflection_minibatch_size=3; valset may be the 40 val ids; budget = max_metric_calls total."
+     }
+    },
+    {
+     "file": "/home/dev/projects2/campaign-scratch/runs/E10B/deviations_gepa_tau.json",
+     "content": {
+      "method": "official GEPA gepa==0.1.4 gepa.optimize unmodified; Suite B tau2 retail adapter scripts/E10B/gepa_tau.py",
+      "changes_after_pilot": [
+       {
+        "when": "2026-10-11 ~09:30 UTC (after pilot, before v1 main runs; v1 superseded)",
+        "what": "reflective-dataset 'setting' text",
+        "before": "tau2 retail customer-service agent (gpt-oss-120b) talking to a simulated customer; the text under optimization is ADDITIONAL agent guidance appended after the fixed benchmark policy",
+        "after": "tau2 retail customer-service agent (gpt-oss-120b) talking to a simulated customer; the text under optimization is ADDITIONAL agent guidance, appended after the fixed benchmark policy. Write ONLY new guidance (checklists, pitfalls, formats); do NOT restate, paraphrase or copy the fixed benchmark policy - it is already in the system prompt and cannot be changed",
+        "why": "pilot reflector copied the whole benchmark policy into its addendum; matched by the same sentence in the CapEvolve optimizer instructions (build_cap_project.py)"
+       },
+       {
+        "when": "v2 relaunch",
+        "what": "judge azure/gpt-5.5 (was gpt-oss); candidate-code faults score 0 without retry; candidates.jsonl logging; counted rollouts include retries"
+       }
+      ],
+      "surface": "policy addendum only (text component 'policy.md'); no tools component",
+      "budget": "max_metric_calls=600 (GEPA's count) while my counter also includes infra retries; hard cap = 600+2*minibatch+|sel|",
+      "reflection_lm": "openai/aws/claude-sonnet-5-5 via gateway, max_tokens 16000; prompt has no reasoning field (0 empty/error reflection responses in v1 logs)"
+     }
+    }
+   ],
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "C/gepa/s2": {
+   "suite": "C",
+   "arm": "gepa",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": {
+     "running": "baselines/gepa_pypi (unpacked PyPI gepa==0.1.4 wheel)",
+     "latest_release": "v0.1.4 (2026-07-15) = commit 8b0ce6cd99a234f6b74daf37558a2ac0ce18f975",
+     "head": "462e437a09be67d2acb59564cc0ea59132f5777c (2026-10-08, 87 commits after v0.1.4)",
+     "check_1": "git blob SHA1 of all 92 files in the running copy == files of src/gepa at tag v0.1.4 (0 differ) => running code is byte-identical to gepa-ai/gepa@v0.1.4",
+     "check_2_head_vs_tag": "25 src/gepa files modified, 20 added. Core search (reflective mutation loop, strict-improvement acceptance, pareto selection, round-robin component selection, merge, budget counting) unchanged in the diffs reviewed. HEAD adds: write_agent_state/run-dir agent files, eval-cache split namespaces (cache off in our runs), resume handling, invoke_batch_evaluate hook, metadata/seedable-reflector plumbing, oa/ (optimize_anything engines) and combee proposer. ONE behavioural change on the default path: reflection outputs known to be truncated (finish_reason=length with no closing fence) are SKIPPED instead of salvaged (strategies/instruction_proposal.py parse_proposal / reflection_lm.py). Reflection max_tokens=16000 in our runs.",
+     "decision": "kept the 3 running GEPA searches; provenance = gepa-ai/gepa@v0.1.4 (8b0ce6c), identical to PyPI 0.1.4. Relaunching from the latest release tag would run the same bytes."
+    },
+    "runbook_pin": "PyPI gepa==0.1.4 unpacked in baselines/gepa_pypi (wheels/gepa-0.1.4-py3-none-any.whl)"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2",
+     "seed": "2",
+     "exp": "E10C",
+     "arm": "gepa",
+     "max-metric-calls": "600"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=6 TAU2_SIM_TIMEOUT=10800\ncd /home/dev/projects2/campaign-scratch/scripts/E10C && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2 --seed 2 --exp E10C --arm gepa --max-metric-calls 600 > /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E10C/cost_summary.py \"E10C-gepa-s2:gepa\" --json /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2/cost_summary.json > /dev/null\n",
+    "baselines/launch_e10.sh": "#!/usr/bin/env bash\n# launch_e10.sh <skillopt|gepa> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = skillopt ]; then\n  $PY -I -u $B/code/skillopt_run.py --out $O --seed $S --tag-prefix E10-skillopt-s$S --arm skillopt \\\n    --epochs 3 --batch 40 --max-rollouts 600\nelse\n  $PY -I -u $B/code/gepa_run.py --out $O --seed $S --tag-prefix E10-gepa-s$S --arm gepa \\\n    --max-metric-calls 555 --hard-cap 600 --minibatch 3\nfi\necho \"exit=$?\" \n$PY -I $B/code/finalize.py $M $O\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2141431 Sun Oct 11 18:23:15 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2/driver.sh",
+    "2141440 Sun Oct 11 18:23:15 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10C/gepa/s2 --seed 2 --exp E10C --arm gepa --max-metric-calls 600"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 10
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": "not recorded",
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum only (disclosed asymmetry)",
+     "gate": "GEPA native (pareto, reflection minibatch 3, no merge); trainset opt, valset sel",
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "per_rollout_metrics": "rollouts_metrics.jsonl (written natively)"
+    }
+   },
+   "deviations": [
+    {
+     "file": "/home/dev/projects2/campaign-scratch/baselines/deviations_gepa.json",
+     "content": {
+      "method": "GEPA (gepa-ai/gepa), PyPI release gepa==0.1.4 (wheel sha recorded in wheels/), gepa.optimize unmodified",
+      "pin_note": "GitHub main tarball download was throttled and abandoned; PyPI 0.1.4 is the released official code. Re-pin to a commit SHA if the paper needs main.",
+      "adapter": "code/gepa_sb_adapter.py (CapEvolveSBGepaAdapter), runner code/gepa_run.py",
+      "unchanged_from_official": [
+       "engine, reflective mutation proposer, default reflection prompt (InstructionProposalSignature) and its first-to-last-backtick output extractor",
+       "candidate selection = pareto (instance frontier), module_selector = round_robin, reflection_minibatch_size default 3, epoch_shuffled batch sampler",
+       "acceptance: strict minibatch improvement (sum), then full-valset evaluation of every accepted proposal; best = highest val mean",
+       "skip_perfect_score=True, use_merge=False (official default), cache_evaluation=False, perfect_score=1.0"
+      ],
+      "deviations": [
+       {
+        "area": "objective/evaluator",
+        "change": "evaluate() runs ONE CapEvolve SpreadsheetBench target rollout per example (patched adapter, gold-free agent view, 30 turns, podman sandbox) and returns the as-saved hard reward in {0,1}. The recalc (LibreOffice 25.8) metrics are recorded per rollout but are not the score.",
+        "why": "identical evaluator across methods"
+       },
+       {
+        "area": "candidate",
+        "change": "two components {prompt.md, task_template.md} = CapEvolve's editable capability, byte-identical seed. GEPA's round-robin selector updates one component per proposal; the reflection prompt for a component does not show the other component (official behaviour).",
+        "why": "same artifact as CapEvolve"
+       },
+       {
+        "area": "feedback/data exposure",
+        "change": "Feedback in the reflective dataset = CapEvolve scorer's gold-safe feedback string (pass/fail, localized failure classes, no gold cell values) + the full agent transcript (<=20k chars). Official GEPA has no benchmark-specific feedback; this is the richest signal the matched evaluator offers and is also what CapEvolve's optimizer sees.",
+        "why": "evaluator identity; no gold leakage"
+       },
+       {
+        "area": "model plumbing",
+        "change": "target = rits/google/gemma-4-31B-it via gateway (litellm_proxy inside the CapEvolve adapter); reflection LM = gepa.lm.LM('openai/aws/claude-sonnet-5-5', api_base=gateway, max_tokens=16000), temperature unset",
+        "why": "campaign gateway; matched optimizer model"
+       },
+       {
+        "area": "budget accounting",
+        "change": "official max_metric_calls is used unchanged: every example evaluation (minibatch of parent, minibatch of child, full-val of accepted children, and the initial seed evaluation on the valset) counts 1. One metric call == one target rollout. A candidate that fails the placeholder contract is scored 0 WITHOUT a model call (as CapEvolve does) but GEPA still debits its metric calls (conservative). Reflection-LM tokens are NOT part of max_metric_calls; they are metered separately via gateway tags BL-gepa-*:reflection.",
+        "why": "rollout-matched track"
+       },
+       {
+        "area": "stochasticity",
+        "change": "rollout seed fixed to 0 for every evaluate() call (GEPA passes no seed); Gemma at temperature 0 is still non-deterministic across calls (observed: same task passes/fails across calls), so GEPA re-evaluating the parent on the minibatch (official behaviour) measures noisy outcomes",
+        "why": "no seed hook in GEPAAdapter.evaluate"
+       },
+       {
+        "area": "intra-batch parallelism",
+        "change": "evaluate() runs batch examples concurrently (4 threads). Does not change semantics.",
+        "why": "wall time"
+       },
+       {
+        "area": "split",
+        "change": "trainset = the 80 train ids, valset = the 40 val ids of SkillOpt's released 80/40/280 split (== CapEvolve full_verified/split_ids.json). Test ids are never passed to GEPA. Smoke runs use --val-from-train (valset = train subset) so that no val id is touched.",
+        "why": "matched data exposure"
+       },
+       {
+        "area": "unused official features",
+        "change": "no merge (official default off); no objective frontier; no task-LM / default evaluator",
+        "why": "defaults"
+       }
+      ],
+      "practical_track_notes": "native GEPA design differences from the matched track: use_merge=True (paper setting) is available via --use-merge; reflection_minibatch_size=3; valset may be the 40 val ids; budget = max_metric_calls total."
+     }
+    },
+    {
+     "file": "/home/dev/projects2/campaign-scratch/baselines/deviations_gepa.json",
+     "content": {
+      "method": "GEPA (gepa-ai/gepa), PyPI release gepa==0.1.4 (wheel sha recorded in wheels/), gepa.optimize unmodified",
+      "pin_note": "GitHub main tarball download was throttled and abandoned; PyPI 0.1.4 is the released official code. Re-pin to a commit SHA if the paper needs main.",
+      "adapter": "code/gepa_sb_adapter.py (CapEvolveSBGepaAdapter), runner code/gepa_run.py",
+      "unchanged_from_official": [
+       "engine, reflective mutation proposer, default reflection prompt (InstructionProposalSignature) and its first-to-last-backtick output extractor",
+       "candidate selection = pareto (instance frontier), module_selector = round_robin, reflection_minibatch_size default 3, epoch_shuffled batch sampler",
+       "acceptance: strict minibatch improvement (sum), then full-valset evaluation of every accepted proposal; best = highest val mean",
+       "skip_perfect_score=True, use_merge=False (official default), cache_evaluation=False, perfect_score=1.0"
+      ],
+      "deviations": [
+       {
+        "area": "objective/evaluator",
+        "change": "evaluate() runs ONE CapEvolve SpreadsheetBench target rollout per example (patched adapter, gold-free agent view, 30 turns, podman sandbox) and returns the as-saved hard reward in {0,1}. The recalc (LibreOffice 25.8) metrics are recorded per rollout but are not the score.",
+        "why": "identical evaluator across methods"
+       },
+       {
+        "area": "candidate",
+        "change": "two components {prompt.md, task_template.md} = CapEvolve's editable capability, byte-identical seed. GEPA's round-robin selector updates one component per proposal; the reflection prompt for a component does not show the other component (official behaviour).",
+        "why": "same artifact as CapEvolve"
+       },
+       {
+        "area": "feedback/data exposure",
+        "change": "Feedback in the reflective dataset = CapEvolve scorer's gold-safe feedback string (pass/fail, localized failure classes, no gold cell values) + the full agent transcript (<=20k chars). Official GEPA has no benchmark-specific feedback; this is the richest signal the matched evaluator offers and is also what CapEvolve's optimizer sees.",
+        "why": "evaluator identity; no gold leakage"
+       },
+       {
+        "area": "model plumbing",
+        "change": "target = rits/google/gemma-4-31B-it via gateway (litellm_proxy inside the CapEvolve adapter); reflection LM = gepa.lm.LM('openai/aws/claude-sonnet-5-5', api_base=gateway, max_tokens=16000), temperature unset",
+        "why": "campaign gateway; matched optimizer model"
+       },
+       {
+        "area": "budget accounting",
+        "change": "official max_metric_calls is used unchanged: every example evaluation (minibatch of parent, minibatch of child, full-val of accepted children, and the initial seed evaluation on the valset) counts 1. One metric call == one target rollout. A candidate that fails the placeholder contract is scored 0 WITHOUT a model call (as CapEvolve does) but GEPA still debits its metric calls (conservative). Reflection-LM tokens are NOT part of max_metric_calls; they are metered separately via gateway tags BL-gepa-*:reflection.",
+        "why": "rollout-matched track"
+       },
+       {
+        "area": "stochasticity",
+        "change": "rollout seed fixed to 0 for every evaluate() call (GEPA passes no seed); Gemma at temperature 0 is still non-deterministic across calls (observed: same task passes/fails across calls), so GEPA re-evaluating the parent on the minibatch (official behaviour) measures noisy outcomes",
+        "why": "no seed hook in GEPAAdapter.evaluate"
+       },
+       {
+        "area": "intra-batch parallelism",
+        "change": "evaluate() runs batch examples concurrently (4 threads). Does not change semantics.",
+        "why": "wall time"
+       },
+       {
+        "area": "split",
+        "change": "trainset = the 80 train ids, valset = the 40 val ids of SkillOpt's released 80/40/280 split (== CapEvolve full_verified/split_ids.json). Test ids are never passed to GEPA. Smoke runs use --val-from-train (valset = train subset) so that no val id is touched.",
+        "why": "matched data exposure"
+       },
+       {
+        "area": "unused official features",
+        "change": "no merge (official default off); no objective frontier; no task-LM / default evaluator",
+        "why": "defaults"
+       }
+      ],
+      "practical_track_notes": "native GEPA design differences from the matched track: use_merge=True (paper setting) is available via --use-merge; reflection_minibatch_size=3; valset may be the 40 val ids; budget = max_metric_calls total."
+     }
+    },
+    {
+     "file": "/home/dev/projects2/campaign-scratch/runs/E10B/deviations_gepa_tau.json",
+     "content": {
+      "method": "official GEPA gepa==0.1.4 gepa.optimize unmodified; Suite B tau2 retail adapter scripts/E10B/gepa_tau.py",
+      "changes_after_pilot": [
+       {
+        "when": "2026-10-11 ~09:30 UTC (after pilot, before v1 main runs; v1 superseded)",
+        "what": "reflective-dataset 'setting' text",
+        "before": "tau2 retail customer-service agent (gpt-oss-120b) talking to a simulated customer; the text under optimization is ADDITIONAL agent guidance appended after the fixed benchmark policy",
+        "after": "tau2 retail customer-service agent (gpt-oss-120b) talking to a simulated customer; the text under optimization is ADDITIONAL agent guidance, appended after the fixed benchmark policy. Write ONLY new guidance (checklists, pitfalls, formats); do NOT restate, paraphrase or copy the fixed benchmark policy - it is already in the system prompt and cannot be changed",
+        "why": "pilot reflector copied the whole benchmark policy into its addendum; matched by the same sentence in the CapEvolve optimizer instructions (build_cap_project.py)"
+       },
+       {
+        "when": "v2 relaunch",
+        "what": "judge azure/gpt-5.5 (was gpt-oss); candidate-code faults score 0 without retry; candidates.jsonl logging; counted rollouts include retries"
+       }
+      ],
+      "surface": "policy addendum only (text component 'policy.md'); no tools component",
+      "budget": "max_metric_calls=600 (GEPA's count) while my counter also includes infra retries; hard cap = 600+2*minibatch+|sel|",
+      "reflection_lm": "openai/aws/claude-sonnet-5-5 via gateway, max_tokens 16000; prompt has no reasoning field (0 empty/error reflection responses in v1 logs)"
+     }
+    }
+   ],
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "C/hc/s0": {
+   "suite": "C",
+   "arm": "hc",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/hc/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 80,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "hill-climb",
+     "algorithm_focus": "all",
+     "orchestration_mode": "deterministic",
+     "gate_k_se": 1.0,
+     "promotion_rule": "P",
+     "promotion_k_se": 1.0,
+     "promotion_n_conf": 3,
+     "promotion_z_conf": 1.282,
+     "promotion_dmin": 0.0,
+     "promotion_min_coverage": 0.95,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 550
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/hc/s0/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/hc/s0 && source env.sh\nEXTRA=\"\"; [ \"hc\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/hc/s0 hc 0 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/hc/s0/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-hc-s0:hc\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s0\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s0/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2057129 Sun Oct 11 18:20:31 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/hc/s0/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+     "data_overlay": "db+policy+user_simulator only"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum + agent-side tools.py",
+     "gate": "rule P k_se1 n_conf3 z1.282 dmin0 min_cov0.95; footprint off; joint coverage; errored_trial_policy fail",
+     "ao_engine": null,
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+      "data_overlay": "db+policy+user_simulator only"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/hc/s1": {
+   "suite": "C",
+   "arm": "hc",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 80,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "hill-climb",
+     "algorithm_focus": "all",
+     "orchestration_mode": "deterministic",
+     "gate_k_se": 1.0,
+     "promotion_rule": "P",
+     "promotion_k_se": 1.0,
+     "promotion_n_conf": 3,
+     "promotion_z_conf": 1.282,
+     "promotion_dmin": 0.0,
+     "promotion_min_coverage": 0.95,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 550
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1 && source env.sh\nEXTRA=\"\"; [ \"hc\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1 hc 1 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-hc-s1:hc\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2063176 Sun Oct 11 18:20:43 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+     "data_overlay": "db+policy+user_simulator only"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum + agent-side tools.py",
+     "gate": "rule P k_se1 n_conf3 z1.282 dmin0 min_cov0.95; footprint off; joint coverage; errored_trial_policy fail",
+     "ao_engine": null,
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+      "data_overlay": "db+policy+user_simulator only"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
+   }
+  },
+  "C/hc/s2": {
+   "suite": "C",
+   "arm": "hc",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10C/hc/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": {
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29"
+    },
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 80,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "rits/openai/gpt-oss-120b-a100",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "hill-climb",
+     "algorithm_focus": "all",
+     "orchestration_mode": "deterministic",
+     "gate_k_se": 1.0,
+     "promotion_rule": "P",
+     "promotion_k_se": 1.0,
+     "promotion_n_conf": 3,
+     "promotion_z_conf": 1.282,
+     "promotion_dmin": 0.0,
+     "promotion_min_coverage": 0.95,
+     "gate_footprint": false,
+     "gate_coverage": "joint",
+     "gate_min_coverage": 0.95,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 550
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/hc/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/hc/s2 && source env.sh\nEXTRA=\"\"; [ \"hc\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/hc/s2 hc 2 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/hc/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-hc-s2:hc\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s2\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "2069442 Sun Oct 11 18:20:56 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/hc/s2/driver.sh"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "target": [
+     "rits/openai/gpt-oss-120b-a100"
+    ],
+    "user": [
+     "rits/openai/gpt-oss-120b-a100"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 0
+   },
+   "concurrency": {
+    "manifest.json": 6
+   },
+   "isolation": {
+    "manifest.optimizer_isolation": {
+     "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+     "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+     "data_overlay": "db+policy+user_simulator only"
+    }
+   },
+   "manifests": {
+    "manifest.json": {
+     "suite": "C tau2 airline",
+     "tau2_pin": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29",
+     "worktree_sha": "6317d6f499e7b18f2c1a34a1d09eac7e5a2f9c60",
+     "EXPOSURE_LABEL": "airline official TEST is DEVELOPMENT-EXPOSED from earlier CapEvolve work (audit/exposure_ledger.csv); run as ordered by the user",
+     "splits": {
+      "file": "protocol/tau_airline_splits.json",
+      "official_counts": {
+       "train": 30,
+       "test": 20,
+       "base": 50
+      },
+      "official_id_list_sha256": {
+       "train": "275f840aca450011e2675ccacdd0215379c4ec41b7a013dfe6ea0626bb7eb068",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff",
+       "base": "a190ad149c6c8699871c616447160e6e98709062b694f9bb2a281c43590bc8cf"
+      },
+      "split_sha256": {
+       "opt": "aa59b73bae36b77350022e608868cdfb44e0f1b90f92a81b6ae56f483fa39699",
+       "sel": "086e75b582ec7ce2b585e8ea74675d123899bc6a8cddc8504deb17e73e6cc9cc",
+       "test": "4a17b83510362e2c9381a0c2b90f1aac2d3d89c4160e7ec8b1d5dc321856b7ff"
+      },
+      "n": {
+       "opt": 20,
+       "sel": 10,
+       "test": 20
+      }
+     },
+     "grading": "DB + COMMUNICATE; no NL judge (azure/gpt-5.5 would be the judge if any task had NL_ASSERTION basis: none do)",
+     "target_and_user_sim": "rits/openai/gpt-oss-120b-a100",
+     "optimizer": "aws/claude-sonnet-5-5",
+     "editable_surface": "policy addendum + agent-side tools.py",
+     "gate": "rule P k_se1 n_conf3 z1.282 dmin0 min_cov0.95; footprint off; joint coverage; errored_trial_policy fail",
+     "ao_engine": null,
+     "evaluator": "pristine tau2 airline constructor for DB/replay; candidate tools affect only the agent env",
+     "error_tagging": "candidate tools fault -> error_kind=candidate; provider/sim -> infra",
+     "infra_retry_policy": "hc/ao zero harness retries (tau2 internal run_with_retry 3x + litellm 3x); GEPA/controls retry once at my layer, watchdog 10800 s",
+     "budget": "600 counted target rollouts per search incl finalize; chaser sel scoring is evaluation not search; sel is the SELECTION set, never a result",
+     "checkpoint": "candidates.jsonl per CHECKPOINT_PROTOCOL.txt, cutoff 2026-10-13 06:00 UTC, B* per suite",
+     "concurrency_per_search": 6,
+     "optimizer_isolation": {
+      "shim": "runs/E10B/_sbx_bin/claude mount-ns sandbox; seed_capability read-only; allowlisted env; tag in ANTHROPIC_API_KEY",
+      "negtest_output": "denied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/tasks.json\ndenied /home/dev/projects2/campaign-scratch/bench/src/tau2-8ebb749/data/tau2/domains/airline/split_tasks.json\ndenied /home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\ndenied /home/dev/.claude/settings.json\ndenied /home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl\nls /home/dev: .local projects2 \ntau2 import+db ok 300\n",
+      "data_overlay": "db+policy+user_simulator only"
+     }
+    }
+   },
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 0,
+    "state_metric_calls": 0,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.0,
+    "state_runner_tokens": 0,
+    "state_best_val": 0.0
    }
   }
  }

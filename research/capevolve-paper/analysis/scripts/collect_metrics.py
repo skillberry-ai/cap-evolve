@@ -42,6 +42,9 @@ OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "opt
 TARGET_ROLES = {"target"}
 USER_ROLES = {"user", "usersim"}
 JUDGE_ROLES = {"judge"}
+CAPS = SCRATCH / "logs" / "caps.json"
+LOWPRI_FIX_T = epoch_const = None  # set below (needs epoch())
+LOWPRI_EXTRA_BEFORE_FIX = ["E10-evoskill", "E10-harnesslens", "probe"]  # decisions.md 2026-10-11 18:40: were still listed until the fix
 NON_OPT_ROLES = TARGET_ROLES | USER_ROLES | JUDGE_ROLES | {"probe", ""}
 MAIN_CATS = ("main", "chaser_eval")
 # Restart cutoffs that cannot be derived from file birth times (source: run-dir notes).
@@ -137,6 +140,22 @@ def load_pricing():
 
 
 PRICES, UNPRICED_LIST = load_pricing()
+LOWPRI_FIX_T = epoch("2026-10-11T18:40:00Z")
+LOWPRI_NOW = (jload(CAPS, {}) or {}).get("low_priority_tags", [])
+
+
+LOWPRI_START = epoch("2026-10-11T13:11:00Z")  # priority feature live with the gateway swap (decisions.md 13:11)
+LOWPRI_COMMON = ["smoke", "Smoke", "E10-memento", "E10-ahe", "E10-mce", "E10-rho", "E10-verse", "E10-graphskillevo", "E10-coevo"]
+LOWPRI_BEFORE_FIX = LOWPRI_COMMON + ["probe", "E10-evoskill", "E10-harnesslens"]  # 13:11-18:40 (team-lead, exact)
+
+
+def low_priority(tag, t):
+    """Tag matched the gateway low_priority_tags list in effect: none before 13:11 UTC, the list incl. probe/E10-evoskill/
+    E10-harnesslens from 13:11 to 18:40, the common list after 18:40 (2026-10-11)."""
+    if t < LOWPRI_START:
+        return False
+    tags = LOWPRI_BEFORE_FIX if t < LOWPRI_FIX_T else LOWPRI_COMMON
+    return any(x in (tag or "") for x in tags)
 
 
 def price_row(model, tok):
@@ -338,7 +357,8 @@ def read_gateway(main):
         else:
             cat = {"pilot": "pilot", "smoke": "smoke", "pre": "smoke", "untagged": "untagged"}[kind]
         model = d.get("model") or ""
-        a = acc[(suite or "-", arm, seed if seed is not None else -1, cat, role, model, d.get("api"))]
+        lp = low_priority(d.get("tag"), t)
+        a = acc[(suite or "-", arm, seed if seed is not None else -1, cat, role, model, d.get("api"), lp)]
         n = norm_usage(d)
         a.calls += 1
         a.status[d.get("status")] += 1
@@ -379,6 +399,9 @@ def _tok_from_approx(r):
     return int(m.group(1)) if m else None
 
 
+EXTRA_COLS = ["n_target_calls", "n_usersim_calls", "n_judge_calls", "usersim_prompt_tokens", "usersim_completion_tokens"]
+
+
 def adapter_unified(rd):
     files = sorted(list(rd.glob("rollouts_metrics*.jsonl")) + list(rd.glob(".capevolve/run_*/rollouts_metrics*.jsonl")),
                    key=lambda p: ("converted" in p.name, p.name))
@@ -400,7 +423,8 @@ def adapter_unified(rd):
                      "wall_s": r.get("wall_s"), "turns": r.get("turns"), "n_llm_calls": r.get("n_llm_calls"),
                      "target_prompt_tokens": r.get("target_prompt_tokens"), "target_completion_tokens": r.get("target_completion_tokens"),
                      "target_total_tokens": tt, "reward": r.get("reward"), "reward_as_saved": r.get("reward_as_saved"),
-                     "error_kind": r.get("error_kind"), "retried": r.get("retried"), "counted": True})
+                     "error_kind": r.get("error_kind"), "retried": r.get("retried"), "counted": True,
+                     **{k: r.get(k) for k in EXTRA_COLS}})
     return "unified:" + files[0].name, rows
 
 
@@ -526,15 +550,19 @@ def adapter_gepa_evals(rd):
 
 
 def adapter_eval_opt(rd):
-    d = jload(rd / "eval_opt.json")
-    if not d or "rows" not in d:
+    rows = []
+    for fn, sp in (("eval_opt.json", "opt"), ("eval_sel.json", "sel")):
+        d = jload(rd / fn)
+        if d and "rows" in d:
+            rows += [dict(r, _split=sp) for r in d["rows"]]
+    if not rows:
         return None
-    rows = [{"task_id": r.get("id"), "split": "opt", "trial_seed": r.get("trial"), "candidate_id": "seed", "t_start": None,
+    rows = [{"task_id": r.get("id"), "split": r["_split"], "trial_seed": r.get("trial"), "candidate_id": "seed", "t_start": None,
              "t_end": None, "wall_s": None, "turns": None, "n_llm_calls": None, "target_prompt_tokens": None,
              "target_completion_tokens": None, "target_total_tokens": r.get("tokens"), "reward": r.get("reward"),
              "reward_as_saved": None, "error_kind": "infra" if r.get("error") else None,
-             "retried": (r.get("attempts") or 1) > 1, "counted": True} for r in d["rows"]]
-    return "eval_opt.json", rows
+             "retried": (r.get("attempts") or 1) > 1, "counted": r["_split"] == "opt"} for r in rows]
+    return "eval_opt.json+eval_sel.json", rows
 
 
 ADAPTERS = [adapter_unified, adapter_capevolve, adapter_events, adapter_memento, adapter_gepa_evals, adapter_eval_opt]
@@ -779,14 +807,14 @@ def main():
 
     # ---- by role / model
     role_rows = []
-    for (suite, arm, seed, cat, role, model, api), a in sorted(acc.items(), key=lambda kv: tuple(str(x) for x in kv[0])):
+    for (suite, arm, seed, cat, role, model, api, lp), a in sorted(acc.items(), key=lambda kv: tuple(str(x) for x in kv[0])):
         tok = {k: a.tok[k] for k in ("in_unc", "cache_read", "cw5", "cw1", "out", "reas")}
         usd = price_row(model, tok)
         lat, que = sorted(a.lat), sorted(a.que)
         errs = {str(k): v for k, v in a.status.items() if k != 200}
         role_rows.append({
             "suite": suite, "arm": arm, "seed": seed if seed >= 0 else "", "category": cat, "role": role, "model": model, "api": api,
-            "rits": model.startswith("rits/"), "calls": a.calls, "ok_200": a.status.get(200, 0), "errors": sum(errs.values()),
+            "rits": model.startswith("rits/"), "low_priority": lp, "calls": a.calls, "ok_200": a.status.get(200, 0), "errors": sum(errs.values()),
             "errors_by_status": json.dumps(errs, sort_keys=True), "retried_calls": a.retried, "extra_attempts": a.extra,
             "calls_without_usage": a.nousage, "in_uncached": tok["in_unc"], "cache_read": tok["cache_read"],
             "cache_write_5m": tok["cw5"], "cache_write_1h": tok["cw1"], "output": tok["out"], "reasoning": tok["reas"],
@@ -819,7 +847,7 @@ def main():
     write_csv(OUT / "rollout_metrics.csv", rollout_out, cols=[
         "suite", "arm", "seed", "category", "source_adapter", "task_id", "split", "trial_seed", "candidate_id", "t_start", "t_end", "wall_s",
         "turns", "n_llm_calls", "target_prompt_tokens", "target_completion_tokens", "target_total_tokens", "reward", "reward_as_saved",
-        "error_kind", "retried", "counted"])
+        "error_kind", "retried", "counted"] + EXTRA_COLS)
     try:
         json.dump(_RCACHE, open(_RCACHE_PATH, "w"))
     except Exception:
@@ -833,6 +861,7 @@ def main():
     for (suite, arm, seed, cat), rs in sorted(groups.items(), key=lambda kv: tuple(str(x) for x in kv[0])):
         row = {"suite": suite, "arm": arm, "seed": seed, "category": cat, "tier_track": TIERS_A.get(arm, "") if suite == "A" else ""}
         row["calls"] = sum(r["calls"] for r in rs)
+        row["low_priority_calls"] = sum(r["calls"] for r in rs if r["low_priority"])
         row["errors"] = sum(r["errors"] for r in rs)
         eb = Counter()
         for r in rs:
