@@ -1113,6 +1113,17 @@ def pop_paper_switches(gate_kwargs: dict) -> dict:
             "errored_trial_policy": pol}
 
 
+#: Spec keys for the shared promotion rule P (``cap_evolve.promotion``); popped from ``gate_kwargs``.
+PROMOTION_KEYS = ("promotion_rule", "promotion_k_se", "promotion_n_conf", "promotion_dmin", "promotion_z_conf")
+
+
+def pop_promotion(gate_kwargs: dict):
+    """Remove the promotion keys from ``gate_kwargs`` (in place); ``PromotionParams`` or None (= off)."""
+    from . import promotion as promotion_mod
+    raw = {k: gate_kwargs.pop(k) for k in PROMOTION_KEYS if k in gate_kwargs}
+    return promotion_mod.PromotionParams.from_spec(raw)
+
+
 def add_paper_switch_arguments(p) -> None:
     """The measurement-switch flags every gate-using algorithm ``run.py`` shares."""
     p.add_argument("--gate-footprint", choices=("on", "off"), default=None,
@@ -1126,6 +1137,13 @@ def add_paper_switch_arguments(p) -> None:
     p.add_argument("--errored-trial-policy", choices=ERRORED_POLICIES, default=None,
                    help="drop (default): errored trials are missing data; fail: errors the adapter "
                         "attributes to the candidate (Rollout.metadata.error_kind=candidate) score 0.0")
+    p.add_argument("--promotion-rule", choices=("P",), default=None,
+                   help="shared promotion rule P (cap_evolve.promotion): unmasked paired screen, then "
+                        "fresh-trial confirmation. Unset = the algorithm's own gate.")
+    p.add_argument("--promotion-k-se", type=float, default=None)
+    p.add_argument("--promotion-n-conf", type=int, default=None)
+    p.add_argument("--promotion-dmin", type=float, default=None)
+    p.add_argument("--promotion-z-conf", type=float, default=None)
 
 
 def paper_switch_kwargs(args) -> dict:
@@ -1143,6 +1161,9 @@ def paper_switch_kwargs(args) -> dict:
     if getattr(args, "errored_trial_policy", None) is not None:
         out["errored_trial_policy"] = args.errored_trial_policy
         os.environ[ERRORED_POLICY_ENV] = args.errored_trial_policy
+    for k in PROMOTION_KEYS:
+        if getattr(args, k, None) is not None:
+            out[k] = getattr(args, k)
     return out
 
 
@@ -3021,6 +3042,11 @@ def run_step(
     sw = pop_paper_switches(gate_kwargs)
     if sw["footprint"] is not None:
         footprint_gate = sw["footprint"]
+    promo = pop_promotion(gate_kwargs)
+    if promo is not None:
+        # Rule P screens on the full UNMASKED vector with the paired k_se gate and nothing else.
+        footprint_gate = False
+        gate_kwargs.update(mode="paired", k_se=promo.k_se)
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
     # Lineage edge for the dashboard/report: the parent is the candidate this step
     # was forked from (the current best by default in a global hill-climb). Captured
@@ -3220,6 +3246,40 @@ def run_step(
         if regressions:
             accepted = False
             decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
+    promo_rec, baseline_val, promo_extra_cost = None, None, (0.0, 0)
+    if promo is not None:
+        import dataclasses
+        from . import promotion as promotion_mod
+        held: dict = {}
+        fresh_from = 1000 + run_dir.spent.iterations * promo.n_conf
+
+        def _fresh_deltas():
+            # New seeds on both sides (explicit trial_offset: independent of the eval ledger), under
+            # fresh tags so the selection-era rollouts are never pooled into the confirmation.
+            kw = dict(run_dir=run_dir, split="val", n_trials=promo.n_conf, trial_offset=fresh_from,
+                      errored_policy=sw["errored_trial_policy"])
+            held["cand"] = evaluate_candidate(adapter, workdir, tag=f"{cid}__conf", **kw)
+            held["par"] = evaluate_candidate(adapter, parent_dir, tag=f"{cid}__confbase", **kw)
+            return _paired_deltas(held["par"], held["cand"], footprint=None) or []
+
+        if accepted:
+            pres = promotion_mod.decide(paired_deltas or [], _fresh_deltas, promo)
+        else:
+            sc = promotion_mod.screen(paired_deltas or [], promo.k_se)
+            pres = promotion_mod.PromotionResult(
+                False, "gate_veto" if sc["pass"] else "screen_reject", sc, None,
+                "P: " + decision.reason, dataclasses.asdict(promo))
+        promo_rec = pres.to_dict()
+        if "cand" in held:
+            promo_rec["fresh_from_trial"] = fresh_from
+            promo_extra_cost = (sum(float(h.cost_usd or 0.0) for h in held.values()),
+                                sum(int(h.tokens or 0) for h in held.values()))
+        if accepted and not pres.promote:
+            accepted = False
+            decision.reason += "; REJECTED by promotion rule P: " + pres.reason
+        elif pres.promote:
+            baseline_val = held["cand"]
+        run_dir.log_event("promotion", candidate=cid, **{k: v for k, v in promo_rec.items() if k != "rule"})
     # Snapshot EVERY candidate (accepted and rejected) so the dashboard can diff any
     # iteration's output against its parent. Exclude the optimizer's injected scratch
     # (trajectories/, guidance/, INSTRUCTIONS/MEMORY/STATE) so the stored candidate is
@@ -3251,6 +3311,8 @@ def run_step(
     _step_extra.update(gate_statistics(current_val, cand_val, fp,
                                        se_floor=gate_kwargs.get("paired_se_floor", 0.0),
                                        planned=planned))
+    if promo_rec is not None:
+        _step_extra["promotion"] = promo_rec
     if mv["n_shared"]:
         _step_extra.update(broke=mv["broke"], fixed=mv["fixed"],
                            n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]))
@@ -3262,7 +3324,8 @@ def run_step(
                      memory_skill=ctx.memory_skill,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      runner_seconds=round(cand_val.seconds, 2),
-                     cost_usd=cand_val.cost_usd, tokens=cand_val.tokens,
+                     cost_usd=(cand_val.cost_usd or 0.0) + promo_extra_cost[0] if promo_rec else cand_val.cost_usd,
+                     tokens=(cand_val.tokens or 0) + promo_extra_cost[1] if promo_rec else cand_val.tokens,
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens,
                      **_step_extra)
     run_dir.record_spend_warnings()
@@ -3302,6 +3365,9 @@ def run_step(
         "accepted": accepted,
         "decision": decision.to_dict(),
         "candidate_val": cand_val.to_dict(),
+        **({"promotion": promo_rec,
+            "baseline_val": baseline_val.to_dict() if baseline_val is not None else None}
+           if promo_rec is not None else {}),
         "parent_val": current_val.to_dict(),
         "regressions": regressions,
         # The composition of the change, always — distinct from ``regressions``, which is
@@ -4528,7 +4594,8 @@ def hill_climb_loop(
         )
         steps.append(step)
         if step["accepted"]:
-            current_val = SplitResult.from_dict(step["candidate_val"])
+            # Under rule P the next baseline is the incumbent's FRESH confirmation measurement.
+            current_val = SplitResult.from_dict(step.get("baseline_val") or step["candidate_val"])
 
     _, why = run_dir.budget_exhausted()
     return {

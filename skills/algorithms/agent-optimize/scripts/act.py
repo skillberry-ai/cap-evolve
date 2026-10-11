@@ -412,6 +412,73 @@ def judge(ctx, tag, ref, cand_min_trial: int = 0) -> dict:
             "gate": {"d_mean": round(v["d_mean"], 4), "canary_tasks": v["canary_tasks"]}}
 
 
+def promotion_params(ctx):
+    """Rule P parameters from the spec (``promotion_rule: P``), or None = the default judge."""
+    from cap_evolve import promotion
+    return promotion.PromotionParams.from_spec(ctx.spec)
+
+
+def _p_state_path(ctx) -> Path:
+    return ctx.root / "promotion_p.json"
+
+
+def _p_state(ctx) -> dict:
+    try:
+        return json.loads(_p_state_path(ctx).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _next_trial(ctx, tag) -> int:
+    return 1 + max((int(f.stem.rsplit("__t", 1)[1]) for f in (ctx.run_dir.rollouts / "val").glob(f"*__{tag}__t*.json")),
+                   default=-1)
+
+
+def judge_p(ctx, a, tag, ref, params) -> dict:
+    """Rule P (cap_evolve.promotion), the same function hill-climb calls. SCREEN on the unmasked paired
+    vector (the reference side restricted to its own confirmation trials once it was promoted under P),
+    then CONFIRM: top up ``tag`` and ``ref`` with ``n_conf`` fresh trials each and compare ONLY those.
+    A promoted tag's first fresh trial index is recorded so the next screen uses its confirmation
+    measurement as the baseline. No reward_gated bar, no NOISE_FLOOR: one rule for both algorithms."""
+    from cap_evolve import promotion
+    run_dir, ids = ctx.run_dir, ctx.val_ids()
+    state = _p_state(ctx)
+    cur = harness.split_result_from_rollouts(run_dir, ref, "val", min_trial=int(state.get(ref, 0)))
+    cand = harness.split_result_from_rollouts(run_dir, tag, "val")
+    fresh = {}
+
+    def confirm_fn():
+        ctx.check_budget(a)
+        for t in (tag, ref):
+            fresh[t] = _next_trial(ctx, t)
+            have = eval_index.counts(run_dir, eval_index.cap_hash(digest.cand_dir(run_dir, t)), "val")
+            want = max((n for _, n in have.values()), default=0) + params.n_conf
+            rc, so, se = sh(topup_cmd(ctx, t, want, ids))
+            if rc != 0:
+                raise Refused(f"rule P confirmation evaluation failed for {t} rc={rc}", stderr=(se or so)[-500:])
+        c = harness.split_result_from_rollouts(run_dir, tag, "val", min_trial=fresh[tag])
+        r = harness.split_result_from_rollouts(run_dir, ref, "val", min_trial=fresh[ref])
+        return harness._paired_deltas(r, c) or []
+
+    res = promotion.decide(harness._paired_deltas(cur, cand) or [], confirm_fn, params)
+    out = res.to_dict()
+    if res.promote:
+        st = _p_state(ctx)
+        st[tag] = fresh[tag]
+        _p_state_path(ctx).write_text(json.dumps(st, indent=1), encoding="utf-8")
+        verdict = "accept"
+    elif res.stage == "screen_reject" and res.screen["mean"] > 0:
+        verdict = "indecisive"
+    else:
+        verdict = "reject"
+    gate = {"accept": res.promote, "indecisive": verdict == "indecisive", "reason": res.reason,
+            "delta": (res.confirm or res.screen)["mean"], "se": (res.confirm or res.screen)["se"],
+            "z": (res.confirm or res.screen)["z"]}
+    reward = harness.split_result_from_rollouts(run_dir, tag, "val").reward
+    return {"p_beat": 1.0 if res.promote else 0.0, "verdict": verdict, "gate_mode": "promotion_P",
+            "reward": reward, "gate": gate, "full_gate": out}
+
+
 def commit(ctx, tag, decision, note, extra: list[str]) -> tuple[int, dict]:
     rc, so, se = sh([PY, HERE / "commit.py", "--run-dir", ctx.root, "--candidate-id", tag,
                      "--from-dir", ctx.work(tag), "--decision", decision, "--note", note, *extra])
@@ -428,7 +495,8 @@ def promote(a, ctx):
     if miss:
         raise Refused(f"{tag} lacks full-val ledger coverage ({len(miss)} tasks unmeasured)",
                       next=f"act.py probe {tag} --tasks {','.join(list(miss)[:10])} --n 1")
-    j = judge(ctx, tag, champ)
+    params = promotion_params(ctx)
+    j = judge_p(ctx, a, tag, champ, params) if params else judge(ctx, tag, champ)
     out = {"champion": champ, "verdict": j["verdict"], "p_beat_champion": j["p_beat"],
            "gate_mode": j["gate_mode"], "gate": j["gate"]}
     if a.verbose:
@@ -523,7 +591,12 @@ def finalize(a, ctx):
     champ = ctx.champion()
     d = digest.cand_dir(run_dir, champ)   # the committed snapshot: the bytes the finalize phase seals
     out = {"champion": champ}
-    if a.n_confirm > 0 and champ != "seed":
+    if a.n_confirm > 0 and champ != "seed" and promotion_params(ctx):
+        # rule P already confirmed the champion on fresh trials at promotion; a second confirmation
+        # on a different (reward_gated) bar would reintroduce the gate-strictness confound.
+        out["confirm"] = {"rule": "P", "note": "confirmed on fresh trials at promotion (promotion_p.json)",
+                          "fresh_from_trial": _p_state(ctx).get(champ)}
+    elif a.n_confirm > 0 and champ != "seed":
         if (a.confirm_fresh_only or ctx.spec.get("confirm_fresh_only")) and not ctx.cfg["cost_gating"]:
             # Refuse BEFORE the paid top-up: the posterior judge pools the ledger by capability
             # hash and cannot isolate fresh trials, so the confirmation could not honour the flag.
