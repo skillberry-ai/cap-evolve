@@ -179,3 +179,16 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
 - Secondary arms (Trace2Skill, ACE, MIPROv2) and exploratory arms (E12A, E12C) are compared at min(B*, own count at the cutoff), with the count reported per seed and disclosed. They never lower B*.
 - Seeds of primary arms that do not reach the floor are reported as incomplete (R21), not dropped.
 - Rationale: the original wording ("every Tier 1 arm") predates the primary/secondary split. With it, the slowest secondary seed would set the comparison budget for all arms.
+- 2026-10-11 (bl-context) — ACE on Suite A switches from the official sequential batch-1 loop to ACE's OWN official batch class (`ace/ace_batch.py` flow, K=4, default augmented-shuffling factor 2, ComBEE curator groups = floor(sqrt(K)) + reducer, Phase-3 post-curate pass included and counted). Reason: batch-1 ACE runs exactly one rollout in flight; at the measured 386-513 s/rollout (reflect+curate only ~13 s) it cannot reach the matched rollout budget in the wall clock (s0 would end <100 rollouts). Expected effect: each curator step merges deltas from 4 samples (playbook updates are coarser/fewer; bullet tags applied once per batch; extra post-curate rollouts consume ~1/3 of the budget). Restart from scratch with the same seeds (infrastructure restart); the sequential runs are kept as runs/E10/ace/s*_superseded_sequential and their cost counted as waste. Competitor-deviation table row: "ACE - official batch variant, K=4". ACE stays a secondary-family arm (min(B*, own count)). Content-filter phrase rename retained.
+- 2026-10-11 21:31 — CORRECTION to timestamps (coordinator error). Six entries above carry wall-clock labels written ahead of real time. The actual times, from their git commit times, are:
+  - "22:00" baseline dispersion = 21:15
+  - "22:20" uniform classifier = 21:19
+  - "22:30" final-set sizes = 21:21
+  - "22:40" rule P inertness / E12A = 21:24
+  - "22:55" amendment 3 adopted = 21:26
+  - "23:00" B* primary-only = 21:26
+  All of these are before the cutoff, and no decision content changes. From now on, entries use `date -u`.
+- 2026-10-11 21:31 — Fact check of gate splits on Suites B and C (tau-runner, from code and logs):
+  - CapEvolve: screen and rule-P confirmation on opt (49/20); sel (25/10) is touched only at finalize.
+  - GEPA: learns on opt and selects best-on-sel, so its sel score is selection-biased.
+  - Consequences: the B/C rule-P operating characteristics in the paper are the opt-count simulations (sim_budget_B.md, sim_budget_C.md), which are correct as used. Search-time sel scores are not comparable across methods. Only the final sets support comparisons.
