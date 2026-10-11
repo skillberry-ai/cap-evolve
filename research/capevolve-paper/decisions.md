@@ -246,3 +246,16 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - Suite B/C optimizer shim (uid dev in a user namespace) had open internet. Closed with a network namespace plus the gateway bridge for new invocations. The 6 long-lived AO sessions were resume-restarted onto it.
   - 49 B/C/E12C transcripts scanned: 0 web access.
 - From now on, every search runs with egress limited to the gateway in proposers, sandboxes and the gateway's own tool stripping.
+- 2026-10-11 23:10 UTC — AO infra restart onto the fixed shim (masked /tmp, no egress; lead GO). Six runs stopped and resumed with --resume, same seeds. Counters before (metric_calls / eval rows) -> after restart (state kept, only in-flight evals lost): E10B ao s0 173/146 -> 173, s1 123/98 -> 123, s2 74/49 -> 74 (in-flight candidate screens lost: B s0 cand_5/cand_6 evals, s1 cand_a, s2 cand_x); E10C ao s0 60/60 -> 60, s1 60/60 -> 60, s2 20/20 -> 20 (in-flight: s0 cand_1, s1 cand_1/cand_2, s2 cand_1). New PIDs: E10B ao 2986477/2990113/2990912; E10C ao relaunched 3203545/3206767/3207061 after a first E10C attempt failed harmlessly at the baseline mkdir (driver.sh lacked --resume; run state intact; false summary/post_sel discarded to discarded_false_exit/). Verified from inside a live AO session namespace (nsenter): github.com and huggingface.co unresolvable, 127.0.0.1:4111/health 200, /tmp holds only home; each claude is in its own net/mnt namespace. HarnessLens: relaunched 22:39-22:40 UTC on the fixed launcher as an infra restart. — tau-runner
+- 2026-10-11 22:50 UTC — CORRECTION of my (tau-runner) entry timestamps above, which were estimates, not clock readings; real times from process starts / file mtimes: E12C hcstock launch 21:02 UTC (not 21:10); /tmp-mask shim fix 22:05 (entry written ~22:20, not 23:15); network-namespace (no-egress) shim fix 22:38 (entry ~22:40, not 23:50); AO infra restart onto the fixed shim: E10B ao drivers started 22:40:10-22:40:16 UTC, E10C ao (after one failed --resume-less attempt) 22:45:58-22:46:04 UTC (not 23:10); HarnessLens relaunch 22:39-22:40 UTC; best-of-k decision entry written ~22:00-22:10. Counters/PIDs in those entries are unaffected. — tau-runner
+- 2026-10-11T23:46 — Suite B final capacity with real HarnessLens durations (about 1000 s mean, about 2000 s planning p90; 480 HL rollouts): fits only if HL cells run at 16-24 concurrent. Decision:
+  - n=3 is kept for all B arms (no asymmetric n).
+  - One interleaved stream per suite (drift control), with per-arm-class concurrency: HL cells ≤24, tau-agent cells ≤12.
+  - A separate HL order file is a fallback flag only.
+  - Estimate: B+C about 9 h, call-limited on gpt-oss. A (11-18 h) stays the critical path. To be re-estimated when the 8-task HL validation finishes.
+- 2026-10-11T23:46 — HarnessLens final error rule:
+  - Wrapper failure (no result row): infra.
+  - Error with target_calls=0 or a truncated stream: infra.
+  - Error after target calls: candidate fault, scored 0.
+  - empty_completion is flagged and reported descriptively.
+  - The hl-v0 worker path was validated end to end (task 50: 1.0, 1983 s).
