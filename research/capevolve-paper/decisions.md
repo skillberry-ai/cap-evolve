@@ -98,3 +98,8 @@ Format: date (UTC) — decision — rationale — reversible?
   - A hang of 3 h or more follows HUNG_ROLLOUT_RULE.
   - Every occurrence is logged to worker_errors.jsonl and reported per arm.
   - This is a necessary deviation from upstream behaviour (an abort would forfeit the arm) and is disclosed as an adapter change.
+- 2026-10-11 20:00 — Cause of the HarnessLens trial-e2e9 opencode_exit_1:
+  - A streamed gpt-oss response returned HTTP 200 and then ended with only reasoning_content (no content, no finish_reason, no usage). That is a truncated SSE stream.
+  - Gateway log since 13:11: streamed RITS target calls come only from HarnessLens (OpenCode), 1 of 98 without usage. Every other arm calls the target unstreamed, so no other arm is exposed.
+  - The gateway cannot retry a stream once it has started sending bytes to the client, so mitigation is the trial-level retry-once policy (above).
+  - Known gateway limitation: a truncated stream is logged as status 200 with usage=null rather than flagged as an error. The metrics script should count those cases as stream_truncated.
