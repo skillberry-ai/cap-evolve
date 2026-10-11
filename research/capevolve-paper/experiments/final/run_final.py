@@ -258,7 +258,7 @@ def worker_hl(job, attempt_dir):
     trunc = bool(row.get("truncated_stream"))
     exit_like = bool(re.search(r"exit[_ ]?(code[_ ]?)?\d|worker exit", str(err or ""), re.I))
     if tc is not None:         # real rule: exit with 0 target calls, or a truncated stream, is infra; exit after target calls is a candidate fault
-        force, frule = bool(err and (trunc or (exit_like and int(tc) == 0))), "hl_exit_zero_target_calls_or_truncated_stream"
+        force, frule = bool(err and (trunc or int(tc) == 0)), "hl_exit_zero_target_calls_or_truncated_stream"
     else:                      # fe_results rows without target_calls: assume an exit made no target calls
         force, frule = bool(err and exit_like), "hl_worker_exit_no_target_calls_assumed"
     flags = {}
