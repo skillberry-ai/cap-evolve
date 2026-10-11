@@ -1,4 +1,4 @@
-# TGFL / SkillMorph (slug: tgfl)
+# SkillMorph (arXiv title: Trajectory-Guided Fault Localization for Agent Skill Evolution; file slug tgfl is a label, not a name used in the paper)
 - Title: Trajectory-Guided Fault Localization for Agent Skill Evolution (method named SkillMorph); authors Yu Ge, Linna Xie, Zhong Li, Yu Pei, Tian Zhang (5; Nanjing U., PolyU); arXiv 2610.11858v1; first 2026-10-08; preprint (arXiv comment: 20 pages, 3 figures; no venue).
 - Code URL: none stated (the only github URL in the paper is the reference to cap-evolve) -> unverified.
 - Surface: multi-skill sets / skill packages (SKILL.md, files, scripts); edit-sites span line ranges across several skills/artifacts (p9).

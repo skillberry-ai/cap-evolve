@@ -19,7 +19,7 @@ Cards: `cards/new/<slug>.md` (FULL = full template, SHORT = 8-12 line triage). P
 | RLMOpt (2608.10471), Coding Agents are Strong Prompt Optimizers (2609.26261), OEO (2608.09629), ReASearch (2608.06714) | (f) | agent/coding-agent as search controller beats GEPA/SkillOpt; controller novelty unsafe |
 | Vestrum (2609.33822), PluginRSI (2609.32423), SkillSpec (2610.00704), SkillVine (2609.32731), COBRA-Skills (2609.11682), DIVE (2608.12486), HarnessCompass (2608.01918) | (b)(c)(a) | joint-surface bundles under one gate, strict-improvement verification of recomposed candidates, bandit/UCB allocation, merges |
 | Rethinking the Evaluation of Harness Evolution (2607.12227) | (d) | harness evolution does not beat matched-budget test-time scaling on a disjoint test split: needs a matched-budget best-of-K baseline |
-| SkillMorph/TGFL (2610.11858) | provenance | cites CAP-Evolve (github.com/skillberry-ai/cap-evolve) as a baseline and reports it second-best in Table 1 (p.11); the only paper found that mentions CapEvolve |
+| SkillMorph (2610.11858; arXiv title: Trajectory-Guided Fault Localization for Agent Skill Evolution) | provenance | cites CAP-Evolve (github.com/skillberry-ai/cap-evolve) as a baseline and reports it second-best in Table 1 (p.11); the only paper found that mentions CapEvolve |
 
 
 ## Budgeting, gating and evaluation allocation

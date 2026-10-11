@@ -8,11 +8,12 @@ budget:   # fallback envelope from the mandate; no repository/user campaign cap 
   max_wall_hours: 72
   preflight_usd_cap: 50
   total_metered_usd_cap: 1000          # includes preflight; unpriced endpoints are counted as "unknown", never 0
-  max_target_rollouts: 10000
-  max_total_tokens: 100000000           # all roles: proposer, target, simulator, judge, diagnostics
+  max_target_rollouts: null             # USER 2026-10-11: RITS-served runs uncapped (metered)
+  max_nonrits_tokens: 100000000         # uncached input + output + cache-write; cache reads reported separately
+  rits_tokens: uncapped_metered
   final_eval_reserve_fraction: 0.25     # reserved for confirmation, final evaluation and analysis
 concurrency:   # initial conservative caps; tune on 429/timeout/p95 evidence only
-  rits: 4
+  rits_per_deployment: 12   # raised after probe, see decisions.md
   litellm_gateway: 8
   azure_direct: 8
   container_slots: 8

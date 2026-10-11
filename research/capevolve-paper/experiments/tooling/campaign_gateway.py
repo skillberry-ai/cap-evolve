@@ -45,13 +45,31 @@ CFG = load_all()
 _lock = threading.Lock()
 _sems = {}
 _limits = dict(DEFAULT_LIMITS)
-_ledger = {"total_tokens": 0, "calls": 0, "blocked": False, "reason": ""}
+_ledger = {"total_tokens": 0, "capped_tokens": 0, "rits_tokens": 0, "calls": 0, "blocked": False, "reason": ""}
+
+
+class _LiveSem:
+    """Counting semaphore whose limit is re-read from _limits on every acquire (caps.json is live)."""
+
+    def __init__(self, key):
+        self.key, self.n, self.cv = key, 0, threading.Condition()
+
+    def acquire(self):
+        with self.cv:
+            while self.n >= int(_limits.get(self.key, _limits["litellm"])):
+                self.cv.wait(timeout=5)
+            self.n += 1
+
+    def release(self):
+        with self.cv:
+            self.n -= 1
+            self.cv.notify_all()
 
 
 def _sem(key):
     with _lock:
         if key not in _sems:
-            _sems[key] = threading.BoundedSemaphore(_limits.get(key, _limits["litellm"]))
+            _sems[key] = _LiveSem(key)
         return _sems[key]
 
 
@@ -79,8 +97,8 @@ def _caps_watch():
             lim = caps.get("concurrency")
             if lim:
                 _limits.update(lim)
-            cap = caps.get("max_total_tokens_ex_cache_read")
-            if cap and _ledger["total_tokens"] >= cap:
+            cap = caps.get("max_nonrits_tokens_ex_cache_read")
+            if cap and _ledger["capped_tokens"] >= cap:
                 _ledger["blocked"], _ledger["reason"] = True, f"token cap {cap} reached"
         except FileNotFoundError:
             pass
@@ -207,6 +225,8 @@ class H(BaseHTTPRequestHandler):
             tok = _usage_tokens(usage)
             with _lock:
                 _ledger["total_tokens"] += tok
+                # user decision 2026-10-11: RITS-served tokens are uncapped (still metered); the cap covers the rest
+                _ledger["rits_tokens" if key.startswith("rits:") else "capped_tokens"] += tok
                 _ledger["calls"] += 1
             _log({"t": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "tag": tag, "model": model,
                   "upstream": key, "api": "anthropic" if is_anthropic else "openai", "stream": stream,
@@ -235,7 +255,23 @@ def _parse_stream_usage(buf):
     return usage or None
 
 
+def _replay_ledger():
+    """Rebuild the ledger from the call log so a gateway restart never resets the budget."""
+    if not os.path.exists(LOG):
+        return
+    for line in open(LOG):
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        tok = _usage_tokens(r.get("usage"))
+        _ledger["total_tokens"] += tok
+        _ledger["rits_tokens" if str(r.get("upstream", "")).startswith("rits:") else "capped_tokens"] += tok
+        _ledger["calls"] += 1
+
+
 if __name__ == "__main__":
+    _replay_ledger()
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=4111)
     a = ap.parse_args()

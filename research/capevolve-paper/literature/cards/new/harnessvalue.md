@@ -1,4 +1,4 @@
-# harnessvalue (FULL)
+# harnessvalue (file slug only; paper title: Where Does Harness-Optimization Value Live? Localized Gains and the Budget-Splitting Trap in Self-Evolving LLM Agents; the paper names no system "HarnessValue") (FULL)
 Exact title: Where Does Harness-Optimization Value Live? Localized Gains and the Budget-Splitting Trap in Self-Evolving LLM Agents
 Authors: Michael Nguyen, Wei Chen Tan, Nurul Aisyah Hassan, Arvind Raman, Li Hua Lim, Ahmad Faiz Razak (affiliations printed: Monash Univ. Malaysia, Universiti Malaya, USM, UPM; a seventh name "Jia Hui Wong" appears in the PDF header but not in the arXiv API author list -- minor discrepancy)
 arXiv id + version read: 2609.02889 v1 (only version)

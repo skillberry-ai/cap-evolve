@@ -997,5 +997,135 @@
    "is_pdf": true
   }
  ],
- "failed_downloads": []
+ "failed_downloads": [],
+ "title_check_downloads": [
+  {
+   "pdf_file": "chen2026from_2606.06324.pdf",
+   "sha256_recomputed": "22e024954f854474819800533ba8a0371eed4688c7b7b554f97d3cd9311f3866",
+   "bytes": 1191467,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "hao2026recreate_2601.11100.pdf",
+   "sha256_recomputed": "2d0c2ee0af8693d3a060d4f82019e7d966b66c98f58f0ce996af0d15e9b7ccf3",
+   "bytes": 2153636,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "jin2026toward_2606.11926.pdf",
+   "sha256_recomputed": "c80931a404f5f0e0adc90d689fbedcc947fa986e4cfe9fa869238c85a7deb276",
+   "bytes": 12838970,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "li2025agentswift_2506.06017.pdf",
+   "sha256_recomputed": "4b47a70e925262a1b7441fb22318047725976d3f5adceb4265805d1fb884293a",
+   "bytes": 1026510,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "lin2025sleeptime_2504.13171.pdf",
+   "sha256_recomputed": "050133427aa9cd015a6715d30f9e3cb5f316bfe70929815ad5cb63ec08cf14cc",
+   "bytes": 3108767,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "lin2026position_2602.00359.pdf",
+   "sha256_recomputed": "c074f749e1c3af7651eaca9a1853621a21e1f52a8244d03c7030e8fa9501e1fe",
+   "bytes": 12961161,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "lin2026workflowlocalized_2607.20999.pdf",
+   "sha256_recomputed": "39625c4071bcd9caa16eae33b8cc157e545dcf2d3d183349dee9bd593ae7fa94",
+   "bytes": 510458,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "liu2026harnessing_2605.17734.pdf",
+   "sha256_recomputed": "dd579ec6683b1ef3c62a90ee92da82fcae54097928cd52442726876e40f1ac1f",
+   "bytes": 3567257,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "luo2026harnessbank_2607.13683.pdf",
+   "sha256_recomputed": "360efedc16753f6bfe062cd58b1e2f7e9984bbdd36a8cc79ed363af686aeaeb2",
+   "bytes": 2126637,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "mialon2023gaia_2311.12983.pdf",
+   "sha256_recomputed": "5bf6f968d4f5cd20acdfca6e81e3c9f5277bb66061fad7a02e35442dff812ba0",
+   "bytes": 4254059,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "ouyang2025reasoningbank_2509.25140.pdf",
+   "sha256_recomputed": "d9e08c61ab714304a6a88e014f552597d9ac654c4cb23dc63a5d53248715da13",
+   "bytes": 5545249,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "shang2024agentsquare_2410.06153.pdf",
+   "sha256_recomputed": "5d83a6ba6a64a1b79364200a98a733fbaa32e9dad826ffe7b8433a9e9d0aa57a",
+   "bytes": 2084840,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "suzgun2025dynamic_2504.07952.pdf",
+   "sha256_recomputed": "660680ecc5cdb8f4d921e1284bf95df2dfa9020c5923330e406fff9b93bcfd00",
+   "bytes": 3794457,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "trivedi2024appworld_2407.18901.pdf",
+   "sha256_recomputed": "2ca1feab1559d678c28706acca11caab54a8a76c64dcf9e14d46f7bd33f21487",
+   "bytes": 4802218,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "zhao2025aflow_2511.20693.pdf",
+   "sha256_recomputed": "57dd3d938c69f60ff006f61fc5e78ace6fb72ee0a5ccad191fcd5263a75931ca",
+   "bytes": 1345246,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  },
+  {
+   "pdf_file": "zhong2026skilllearnbench_2604.20087.pdf",
+   "sha256_recomputed": "bd8f4e62a721d6bc1e1c58e47a26f2593d1b1181ce65455e7688d69d778c5deb",
+   "bytes": 2028189,
+   "is_pdf": true,
+   "purpose": "old-draft reference title verification (downloaded 2026-10-11, latest arXiv version)",
+   "complete_eof": true
+  }
+ ]
 }
