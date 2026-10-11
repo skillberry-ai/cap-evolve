@@ -105,7 +105,7 @@ def main(argv=None) -> int:
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
     if args.resume and run_dir.best_id:
-        current_val = harness.split_result_from_rollouts(run_dir, run_dir.best_id, "val")
+        current_val = harness.resume_val(run_dir, run_dir.best_id, bool(getattr(args, "promotion_rule", None)))
     else:
         current_val = SplitResult.from_dict(
             json.loads((run_dir.root / "baseline.json").read_text())["val"])
