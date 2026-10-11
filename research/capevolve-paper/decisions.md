@@ -213,3 +213,12 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - New worktrees must re-apply the chmod.
   - Pending scans: Trace2Skill's bash tool (uid dev, so it could read the repo); EvoSkill; Meta-Harness.
   - Open question: the network egress of agentic proposers. The pool ids are in the git history, and SpreadsheetBench gold is public, so an optimizer with web access could look either up. That is checked per arm below.
+- 2026-10-11T22:20 — Final-evaluation machinery (experiments/final/, e113e8b1e): built, 16 tests, dry run end to end on Azure-direct with FE-smoke tags on search splits only. Rulings:
+  - SkillOpt N* artifact = native best_skill (last accept_new_best). This corrects the earlier wording "current accepted skill".
+  - results_long.csv has one row per cell; trial-level rows go in results_trials.csv.
+  - tau family = task id.
+  - Infra errors get up to 3 retries; a hang gets 1 retry, then a missing cell.
+  - Ordering: the primary N* window runs first on every suite; then the END secondary (5D); then hl-v0 and the Azure extras.
+  - A's END is dropped, with disclosure, if it would pass 2026-10-14 05:00 UTC.
+  - Capacity estimate: A about 11-18 h is the critical path; B+C about 9 h on gpt-oss at the pinned n=3.
+- 2026-10-11T22:20 — Trace2Skill scan (bl-skills): the LLM-only analysts were used, and the bash-tool ReAct analyst was never run. No file access outside the workspace and no access to final_set, test, gold or credentials. This corrects the metering audit's assumption of a bash-tool exposure for Trace2Skill. Its env still inherited the credential, but no tool existed to read it.
