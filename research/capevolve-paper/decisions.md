@@ -110,3 +110,13 @@ Format: date (UTC) — decision — rationale — reversible?
   - Style: no em dashes, AI-slop word list banned. Brief: campaign-scratch/baselines/PAPER_BRIEF.txt.
   - User's writing-skills zip is not readable from uid dev (permission denied); requested from the user.
 - 2026-10-11 20:30 — Azure OpenAI direct endpoint checked: 17 common deployment names (gpt-5.5/5.4/5.x, gpt-4.1, gpt-4o, o3, o4-mini, gpt-oss, gemini-*) return DeploymentNotFound. The listing is not exposed. Deployment names have been requested from the user. Until then GPT-5.5 and Gemini go through the LiteLLM gateway (azure/gpt-5.5, gcp/gemini-*). Gemini is not an Azure OpenAI model.
+- 2026-10-11 21:10 — Azure OpenAI direct is available (user supplied deployment names; user says to use it as much as needed).
+  - Listing endpoints return 404 (proxy). Working deployments were found by probing, with each miss costing 0 tokens.
+  - Chat completions: gpt-5.2-2025-12-11, gpt-5.2-chat-2025-12-11, gpt-5.1-2025-11-13, gpt-5.1-chat-2025-11-13, gpt-5-2025-08-07, gpt-5-mini-2025-08-07, gpt-5-nano-2025-08-07, gpt-5-chat-2025-08-07, gpt-4.1-2025-04-14, gpt-4.1-mini-2025-04-14, gpt-4.1-nano-2025-04-14, gpt-4o-2024-05-13, gpt-4o-2024-08-06, gpt-4o-2024-11-20, gpt-4o-mini-2024-07-18, o3-2025-04-16, o4-mini-2025-04-16, o3-mini-2025-01-31, o1-2024-12-17, o1-mini-2024-09-12.
+  - Responses-API only (chat returns 400 "unsupported"): gpt-5-pro-2025-10-06, gpt-5.1-codex-2025-11-13, o3-pro-2025-06-10.
+  - Not on Azure: undated aliases, gpt-5.4/5.5/6, Claude, Gemini. LiteLLM gateway (19 models): aws/claude-{opus-4-5,opus-4-8,opus-5,opus-5-5,sonnet-4-6,sonnet-5,sonnet-5-5}; azure/{gpt-5.3-codex,gpt-5.5,gpt-5.6-luna,gpt-5.6-sol,gpt-5.6-terra,gpt-6-astra}; gcp/gemini-3.1-pro-preview; rits/{DeepSeek-V3.2,glm-5-1,Kimi-K2.5}.
+  - Gateway: model prefix azoai/<deployment> goes to Azure direct. It is metered in the same call log and counted in a separate uncapped azure_tokens bucket.
+  - Served by a second gateway process on 127.0.0.1:4112 (same code and log). 4111 was not restarted, so running searches are undisturbed; 4111 picks up the code at its next restart.
+  - Planned uses, at final evaluation and not during search:
+    - (a) Suite B and C judge sensitivity: re-judge with gpt-4.1-2025-04-14, which is tau2's default judge and so removes the judge-substitution deviation from the sensitivity analysis. GPT-5.5 stays primary, as frozen.
+    - (b) Transfer table: evaluate each arm's B* artifact with a second target (Azure gpt-4.1 or gpt-5-mini on B/C; gpt-5-mini on A). These are exploratory and outside the Holm family.

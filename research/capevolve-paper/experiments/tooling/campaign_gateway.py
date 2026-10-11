@@ -47,7 +47,13 @@ _sems = {}
 _limits = dict(DEFAULT_LIMITS)
 _reserve = {}
 _low_tags = []
-_ledger = {"total_tokens": 0, "capped_tokens": 0, "rits_tokens": 0, "calls": 0, "blocked": False, "reason": ""}
+_ledger = {"total_tokens": 0, "capped_tokens": 0, "rits_tokens": 0, "azure_tokens": 0, "calls": 0, "blocked": False, "reason": ""}
+
+
+def _bucket(upstream):
+    """Ledger bucket: RITS and Azure-direct are uncapped (user decisions 2026-10-11); everything else is capped."""
+    u = str(upstream)
+    return "rits_tokens" if u.startswith("rits:") else ("azure_tokens" if u.startswith("azoai:") else "capped_tokens")
 
 
 class _LiveSem:
@@ -138,7 +144,7 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.rstrip("/").endswith("/models"):
-            ids = [f"rits/{k}" for k in RITS_ROUTES] + ["<any litellm gateway id>"]
+            ids = [f"rits/{k}" for k in RITS_ROUTES] + ["azoai/<dated Azure deployment>", "<any litellm gateway id>"]
             return self._send(200, {"object": "list", "data": [{"id": i, "object": "model"} for i in ids]})
         if self.path.startswith("/health"):
             return self._send(200, {"ok": True, **_ledger})
@@ -157,7 +163,18 @@ class H(BaseHTTPRequestHandler):
         model = body.get("model", "")
         path = self.path
         is_anthropic = path.startswith("/v1/messages")
-        if model.startswith("rits/"):
+        if model.startswith("azoai/"):
+            # Azure OpenAI direct (user decision 2026-10-11 21:05): deployment = dated name, e.g. azoai/gpt-4.1-2025-04-14.
+            # Metered like everything else; tokens are counted in their own uncapped bucket (azure_tokens).
+            dep = model[len("azoai/"):]
+            c = CFG["azure"]
+            url = f"{c['base'].rstrip('/')}/openai/deployments/{dep}/chat/completions?api-version={c['version']}"
+            hdr = {"api-key": c["key"], "Content-Type": "application/json"}
+            body.pop("model", None)
+            if "max_tokens" in body and "max_completion_tokens" not in body:
+                body["max_completion_tokens"] = body.pop("max_tokens")
+            key = f"azoai:{dep}"
+        elif model.startswith("rits/"):
             served = model[len("rits/"):]
             route = RITS_ROUTES.get(served)
             if not route:
@@ -258,7 +275,7 @@ class H(BaseHTTPRequestHandler):
             with _lock:
                 _ledger["total_tokens"] += tok
                 # user decision 2026-10-11: RITS-served tokens are uncapped (still metered); the cap covers the rest
-                _ledger["rits_tokens" if key.startswith("rits:") else "capped_tokens"] += tok
+                _ledger[_bucket(key)] += tok
                 _ledger["calls"] += 1
             _log({"t": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "tag": tag, "model": model,
                   "upstream": key, "api": "anthropic" if is_anthropic else "openai", "stream": stream,
@@ -298,7 +315,7 @@ def _replay_ledger():
             continue
         tok = _usage_tokens(r.get("usage"))
         _ledger["total_tokens"] += tok
-        _ledger["rits_tokens" if str(r.get("upstream", "")).startswith("rits:") else "capped_tokens"] += tok
+        _ledger[_bucket(r.get("upstream", ""))] += tok
         _ledger["calls"] += 1
 
 
