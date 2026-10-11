@@ -1,0 +1,287 @@
+{
+ "experiment": "E05_injected_faults",
+ "date": "2026-10-11",
+ "llm_calls": 0,
+ "repo_commit_under_test": "92302726c75f72e1aa381b85e0c3ef279e7d3e45",
+ "legend": {
+  "PASS": "detected or neutralised as intended",
+  "PARTIAL": "detected only in part/post hoc, or only under a non-default setting",
+  "GAP": "not detected: the fault passes silently",
+  "INFO": "context row",
+  "FAIL": "test expectation violated"
+ },
+ "counts": {
+  "PASS": 15,
+  "PARTIAL": 7,
+  "GAP": 6,
+  "INFO": 1
+ },
+ "environment": {
+  "libreoffice": "7.1.8.1 (host) for SB rows; no real model",
+  "tau2": "8ebb7499622fc2be9b9d510d6f7a7653461f4f29, litellm 1.82.6"
+ },
+ "reproduce": "see research/capevolve-paper/experiments/tooling/e05/README.md",
+ "results": [
+  {
+   "id": "SB-1.zero_byte_file",
+   "area": "scorer",
+   "fault": "malformed agent output: zero_byte_file",
+   "expected": "reward 0.0, scored as a candidate failure (not infra, no exception)",
+   "observed": "reward=0.0, raw.errored=False, feedback='0/1 test cases passed (Cell-Level Manipulation, checked range: A1). Te'",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-1.text_with_xlsx_name",
+   "area": "scorer",
+   "fault": "malformed agent output: text_with_xlsx_name",
+   "expected": "reward 0.0, scored as a candidate failure (not infra, no exception)",
+   "observed": "reward=0.0, raw.errored=False, feedback='0/1 test cases passed (Cell-Level Manipulation, checked range: A1). Te'",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-1.truncated_zip",
+   "area": "scorer",
+   "fault": "malformed agent output: truncated_zip",
+   "expected": "reward 0.0, scored as a candidate failure (not infra, no exception)",
+   "observed": "reward=0.0, raw.errored=False, feedback='0/1 test cases passed (Cell-Level Manipulation, checked range: A1). Te'",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-1.missing_output_file",
+   "area": "scorer",
+   "fault": "malformed agent output: missing_output_file",
+   "expected": "reward 0.0, scored as a candidate failure (not infra, no exception)",
+   "observed": "reward=0.0, raw.errored=False, feedback='0/1 test cases passed (Cell-Level Manipulation, checked range: A1). Te'",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-2.exit_nonzero.default_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: exit_nonzero; REWARD_RECALC=0",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=False, failure_flag_in_raw=False",
+   "status": "PARTIAL",
+   "evidence": "reward is the as-saved value, so unaffected; but the hard_restriction metric is silently the un-recalculated value and nothing marks it"
+  },
+  {
+   "id": "SB-2.exit_nonzero.recalc_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: exit_nonzero; REWARD_RECALC=1",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=True, failure_flag_in_raw=False",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-2.hang_until_timeout.default_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: hang_until_timeout; REWARD_RECALC=0",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=False, failure_flag_in_raw=False",
+   "status": "PARTIAL",
+   "evidence": "reward is the as-saved value, so unaffected; but the hard_restriction metric is silently the un-recalculated value and nothing marks it"
+  },
+  {
+   "id": "SB-2.hang_until_timeout.recalc_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: hang_until_timeout; REWARD_RECALC=1",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=True, failure_flag_in_raw=False",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-2.exit0_but_no_file.default_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: exit0_but_no_file; REWARD_RECALC=0",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=False, failure_flag_in_raw=False",
+   "status": "PARTIAL",
+   "evidence": "reward is the as-saved value, so unaffected; but the hard_restriction metric is silently the un-recalculated value and nothing marks it"
+  },
+  {
+   "id": "SB-2.exit0_but_no_file.recalc_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: exit0_but_no_file; REWARD_RECALC=1",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=True, failure_flag_in_raw=False",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-2.exit0_garbage_file.default_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: exit0_garbage_file; REWARD_RECALC=0",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=False, failure_flag_in_raw=False",
+   "status": "PARTIAL",
+   "evidence": "reward is the as-saved value, so unaffected; but the hard_restriction metric is silently the un-recalculated value and nothing marks it"
+  },
+  {
+   "id": "SB-2.exit0_garbage_file.recalc_reward",
+   "area": "scorer",
+   "fault": "LibreOffice recalculation fails: exit0_garbage_file; REWARD_RECALC=1",
+   "expected": "failure is surfaced (metric flag or feedback) and the score is not silently presented as a recalculated one",
+   "observed": "reward=0.0, hard_restriction=0.0, hard_no_recalc=0.0, failure_in_feedback=False, failure_flag_in_raw=False",
+   "status": "GAP",
+   "evidence": "recalculation is the reward and its failure is not surfaced"
+  },
+  {
+   "id": "SB-3.shared_mount_without_allow",
+   "area": "isolation",
+   "fault": "historical shared mount (gold beside inputs) without explicit allow",
+   "expected": "refused at startup",
+   "observed": "RuntimeError: SPREADSHEETBENCH_AGENT_VIEW=0 would mount the gold answers into the agent sandbox (#782). ",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-3.gold_file_in_prebuilt_view_at_startup",
+   "area": "isolation",
+   "fault": "gold-named file present in the view when the run starts",
+   "expected": "refused at startup",
+   "observed": "RuntimeError",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-3.gold_file_appears_after_startup",
+   "area": "isolation",
+   "fault": "gold-named file appears in the view AFTER the startup check (mid-run)",
+   "expected": "detected before the next evaluation",
+   "observed": "no error (check is cached per mount for the process lifetime)",
+   "status": "GAP",
+   "evidence": "startup-only assertion; a mid-run write into the mounted dir by agent code is not re-scanned (agent code can write inside /mnt/data)"
+  },
+  {
+   "id": "SB-3.unrecognised_filename_in_view",
+   "area": "isolation",
+   "fault": "file with a non-input, non-gold name (e.g. renamed gold) in the view",
+   "expected": "refused (allowlist)",
+   "observed": "RuntimeError",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-4.mutated_scorer_effect",
+   "area": "integrity",
+   "fault": "scorer evaluation.py mutated to always return True",
+   "expected": "(shows the attack matters) malformed output scores 1.0 under the mutated scorer",
+   "observed": "reward=1.0",
+   "status": "INFO",
+   "evidence": ""
+  },
+  {
+   "id": "SB-4.mutation_recorded_in_score",
+   "area": "integrity",
+   "fault": "same mutation",
+   "expected": "evaluation.py sha256 in score.raw['scorer'] differs from the pinned hash, so the run is attributable after the fact",
+   "observed": "recorded=2dbd321e6789 pinned=4ae77cee8df0 differs=True",
+   "status": "PARTIAL",
+   "evidence": "detection is post hoc: the adapter records the hash but nothing compares it to a pinned value or refuses to run"
+  },
+  {
+   "id": "SB-4.manifest_verify_catches_mutation",
+   "area": "integrity",
+   "fault": "mutated evaluation.py in a manifest-protected tree",
+   "expected": "verification fails before evaluation",
+   "observed": "exit=1:   CHANGED evaluation/evaluation.py",
+   "status": "PASS",
+   "evidence": "mechanism is the prototype in campaign-scratch/bench/isolation (manifest.py + verify_then_run.sh); it is NOT yet wired into run_suite.sh / cap-evolve run"
+  },
+  {
+   "id": "SB-5.broken_task_template",
+   "area": "error_tagging",
+   "fault": "candidate edits task_template.md and drops required placeholders",
+   "expected": "trial errors immediately (no LLM call) and is tagged error_kind=candidate",
+   "observed": "error='task_template.md broke the placeholder contract \u2014 missing re', error_kind=candidate",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-5.infra_error_scoring",
+   "area": "error_tagging",
+   "fault": "gateway connection error",
+   "expected": "reward 0.0 with infra wording in feedback; harness drops it as missing data",
+   "observed": "reward=0.0, feedback='Rollout failed: LLM call failed: Connection error. Infrastru'",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "SB-5.harness_errored_policy",
+   "area": "error_tagging",
+   "fault": "candidate crashes on 6/30 tasks (candidate-tagged), gateway errors on 2/30 (infra)",
+   "expected": "policy=fail counts the 6 candidate-tagged crashes as 0.0 and still drops the 2 infra errors; policy=drop removes all 8",
+   "observed": "{\"drop\": {\"mean_reward\": 1.0, \"n_tasks\": 30, \"errored_tasks\": 8}, \"fail\": {\"mean_reward\": 0.7857, \"n_tasks\": 30, \"errored_tasks\": 2}}",
+   "status": "PARTIAL",
+   "evidence": "default is `drop`: a candidate that crashes on hard tasks looks BETTER under drop; paper mode must set errored_trial_policy: fail"
+  },
+  {
+   "id": "T2-1.import_raises",
+   "area": "tau2 candidate tools.py",
+   "fault": "candidate tools.py raises at import",
+   "expected": "refused before evaluation, or its trials tagged candidate",
+   "observed": "default pregate ok (warning only: pregate check 'tool_smoke' errored: RuntimeError: candidate import fau); strict pregate REFUSED: [tool_smoke] infra error (strict: failing): RuntimeError: candidate im; at run time the exception escapes Adapter.run_batch (RuntimeError: candidate import fault) and run_trials_pool turns it into an untagged error rollout",
+   "status": "PARTIAL",
+   "evidence": "default pregate only warns; the error rollout carries no error_kind=candidate, so with the default errored policy `drop` it is missing data, not a failure"
+  },
+  {
+   "id": "T2-2.syntax_error",
+   "area": "tau2 candidate tools.py",
+   "fault": "candidate tools.py has a syntax error",
+   "expected": "refused before evaluation",
+   "observed": "default pregate REFUSED: [static] tools/tools.py: SyntaxError: invalid syntax (tools.py, line 1; strict pregate REFUSED: [static] tools/tools.py: SyntaxError: invalid syntax (tools.py, line 1",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "T2-3.no_AirlineTools_class",
+   "area": "tau2 candidate tools.py",
+   "fault": "candidate tools.py defines no AirlineTools class",
+   "expected": "refused, or edits visibly ignored",
+   "observed": "default pregate ok; strict pregate ok; adapter silently falls back to pristine tau2 tools (`cand_cls or _PristineAirlineTools`)",
+   "status": "GAP",
+   "evidence": "the candidate is scored as if it were the seed tools: its tool edits (none usable) are silently discarded"
+  },
+  {
+   "id": "T2-4.get_tools_raises",
+   "area": "tau2 candidate tools.py",
+   "fault": "candidate AirlineTools.get_tools raises",
+   "expected": "refused, or trials tagged candidate",
+   "observed": "default pregate ok; strict pregate ok; run-time rollout error_kind=None (reads as infrastructure error)",
+   "status": "GAP",
+   "evidence": "with a dead gateway the healthy control and this candidate produce the identical INFRASTRUCTURE_ERROR rollout, so the adapter cannot tell them apart; the candidate fault is untagged"
+  },
+  {
+   "id": "T2-5.remove_all_tools",
+   "area": "tau2 candidate tools.py",
+   "fault": "candidate REMOVE_TOOLS removes every agent tool",
+   "expected": "flagged before spending rollouts",
+   "observed": "default pregate ok; strict pregate ok",
+   "status": "GAP",
+   "evidence": "tool_smoke calls tools by attribute and never inspects the exposed tool map; the effect on reward needs LLM calls to measure and was not run"
+  },
+  {
+   "id": "T2-6.tool_body_raises_when_called",
+   "area": "tau2 candidate tools.py",
+   "fault": "a candidate tool body raises when the agent calls it",
+   "expected": "returned to the agent as a tool error, not a crash or an infra error",
+   "observed": "env returned error message: True (Error: candidate tool body fault)",
+   "status": "PASS",
+   "evidence": ""
+  },
+  {
+   "id": "T2-7.gold_env_built_from_candidate",
+   "area": "tau2 evaluator integrity",
+   "fault": "candidate no-ops cancel_reservation",
+   "expected": "the DB check's gold environment is built from pristine tau2 tools",
+   "observed": "tau2's evaluator builds the predicted and gold environments with registry.get_env_constructor(domain), which Adapter.apply() replaced; the constructed env uses the candidate class (module capevolve_candidate_tools_*) and its cancel_reservation is the no-op",
+   "status": "GAP",
+   "evidence": "gold actions are replayed through the candidate's tools; a state-weakening candidate shifts both sides of the DB comparison. Needs a code change (evaluate with the pristine constructor)."
+  }
+ ]
+}
