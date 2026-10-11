@@ -521,6 +521,12 @@ def promote(a, ctx):
             raise Refused(f"{tag} is a merge and merge_verify is on: it needs a passing verification "
                           f"(have: {(v or {}).get('verdict', 'none')})",
                           next=f"act.py verify-merge {tag} --parents <A> <B>")
+        stale = sorted(t for t, h in (v.get("hashes") or {}).items()
+                       if eval_index.cap_hash(digest.cand_dir(run_dir, t)) != h)
+        if stale or not v.get("hashes"):
+            raise Refused(f"the verification of {tag} no longer matches the bytes on disk "
+                          f"(changed: {stale or 'no hashes recorded'}): re-run verify-merge",
+                          next=f"act.py verify-merge {tag} --parents <A> <B>")
     d = digest.cand_dir(run_dir, tag)
     miss = eval_index.missing(run_dir, eval_index.cap_hash(d), ctx.val_ids(), 1)
     if miss:
@@ -619,31 +625,38 @@ def _read_json(path):
         return None
 
 
-def _next_trial(ctx, tag) -> int:
-    """First trial index not yet written for ``tag`` (1 + max existing ``__t<k>`` rollout file)."""
-    return 1 + max((int(f.stem.rsplit("__t", 1)[1]) for f in (ctx.run_dir.rollouts / "val").glob(f"*__{tag}__t*.json")),
-                   default=-1)
-
-
 # ---- verify-merge ----------------------------------------------------------------------------
 
 def _measure(ctx, tag, ids, offset, n) -> dict:
-    """Run ``tag`` on ``ids`` at trial indices [offset, offset+n) and return {(task, k): reward}."""
+    """Run ``tag`` on ``ids`` at trial indices [offset, offset+n) with fixed seeds and return
+    {(task, k): reward}. Asserts the ledger recorded those cells at trial_idx == k (seed_base == offset)."""
     from cap_evolve import objectives
-    cmd = eval_index.eval_cmd(ctx.root, ctx.need_project(), tag, "val", n, ids=ids, trial_offset=offset,
-                              skills_dir=SKILLS)
-    cmd[cmd.index("--candidate") + 1] = str(digest.cand_dir(ctx.run_dir, tag))
-    rc, so, se = sh(cmd)
-    if rc != 0:
-        raise Refused(f"verify-merge evaluation of {tag} failed rc={rc}", stderr=(se or so)[-500:])
+    _eval_fresh(ctx, tag, ids, offset, n)
     want = set(map(str, ids))
-    return {(r.task, r.k): r.reward for r in objectives.load_trials(ctx.run_dir, tag)
-            if r.task in want and offset <= r.k < offset + n}
+    cells = {(r.task, r.k): r.reward for r in objectives.load_trials(ctx.run_dir, tag)
+             if r.task in want and offset <= r.k < offset + n}
+    if eval_index.enabled() and cells:
+        h = eval_index.cap_hash(digest.cand_dir(ctx.run_dir, tag))
+        seen = {(r["task"], r["trial_idx"]) for r in eval_index.rows(ctx.run_dir)
+                if r["cap_hash"] == h and r["split"] == "val"}
+        bad = sorted(c for c in cells if c not in seen)
+        if bad:
+            raise Refused(f"seed alignment broken for {tag}: ledger has no trial_idx == k row for {bad[:3]} "
+                          f"(expected seed_base == offset == {offset}); arms would not be paired")
+    return cells
 
 
-def _first_free_trial(ctx, tag) -> int:
-    h = eval_index.cap_hash(digest.cand_dir(ctx.run_dir, tag))
-    return max(_next_trial(ctx, tag), eval_index.next_trial_idx(ctx.run_dir, h))
+def _purge_scratch(ctx, merge_tag, tags) -> None:
+    """Delta-debugging probes are not candidates: remove their work dirs and ledger rows and park their
+    rollouts under merge_verify/<M>/scratch so no later digest/probe/judge pools them."""
+    import shutil
+    dest = ctx.root / "merge_verify" / merge_tag / "scratch"
+    dest.mkdir(parents=True, exist_ok=True)
+    for t in tags:
+        for f in (ctx.run_dir.rollouts / "val").glob(f"*__{t}__t*.json"):
+            shutil.move(str(f), str(dest / f.name))
+        shutil.rmtree(ctx.work(t), ignore_errors=True)
+    eval_index.forget_tags(ctx.run_dir, tags)
 
 
 def verify_path(ctx, tag) -> Path:
@@ -680,12 +693,17 @@ def verify_merge(a, ctx):
     wl = {t: mvf.wins_losses(rew[t], rew[P]) for t in (A, B)}
     block = mvf.select_block({t: wl[t][0] for t in wl}, {t: wl[t][1] for t in wl}, ids_all,
                              p.n_sentinels, p.seed)
-    k0 = max(_first_free_trial(ctx, t) for t in (P, A, B, M))
-    ctx.check_budget(a)
     tags = {"P": P, "A": A, "B": B, "M": M}
-    res = mvf.run_verification(lambda arm, ids, off, n: _measure(ctx, tags[arm], ids, off, n),
-                               block["ids"], k0, p)
-    out = {"merge": M, "parents": [A, B], "base": P, "block": block, "params": vars(p),
+    k0 = _first_free_trial(ctx, P, A, B, M)
+    hashes = {t: eval_index.cap_hash(digest.cand_dir(run_dir, t)) for t in (P, A, B, M)}
+
+    def measure(arm, ids, off, n):
+        ctx.check_budget(a)                      # before EVERY paid arm evaluation (rounds included)
+        return _measure(ctx, tags[arm], ids, off, n)
+    res = mvf.run_verification(measure, block["ids"], k0, p)
+    out = {"merge": M, "parents": [A, B], "base": P, "hashes": hashes, "block": block, "params": vars(p),
+           "block_note": "the block is win-enriched: gain/interaction describe the block, not the population; "
+                         "population-level confirmation is the full-val promote that follows",
            **{k: res[k] for k in ("verdict", "reason", "rounds", "k0", "n", "stats", "rollouts")},
            "retained": [A, B]}
     if res["verdict"] == "loses" and a.dd_budget:
@@ -698,15 +716,20 @@ def verify_merge(a, ctx):
         base_d, mer_d = digest.cand_dir(run_dir, P), digest.cand_dir(run_dir, M)
         units = [h["id"] for h in mvf.hunks(base_d, mer_d)]
         off = k0 + res["rounds"] * res["n"]
-        count = [0]
+        count, scratch = [0], []
 
         def is_bad(subset):
+            ctx.check_budget(a)                  # before EVERY ddmin evaluation
             count[0] += 1
             tag = f"{M}__dd{count[0]}"
+            scratch.append(tag)
             mvf.materialize(base_d, mer_d, set(subset), ctx.work(tag))
             c = _measure(ctx, tag, tasks, off, res["n"])
             return bool(c) and sum(c.values()) / len(c) <= cut
-        dd = mvf.ddmin(units, is_bad, a.dd_budget)
+        try:
+            dd = mvf.ddmin(units, is_bad, a.dd_budget)
+        finally:
+            _purge_scratch(ctx, M, scratch)
         out["delta_debug"] = {"hunks": units, "minimal": dd["minimal"], "tests": dd["tests"],
                               "exhausted": dd["exhausted"], "reproducible": dd["reproducible"],
                               "interference_tasks": tasks, "bad_if_mean_le": round(cut, 4)}

@@ -127,6 +127,20 @@ def record(run_dir, candidate_dir, split: str, tag: str, task_ids, ks, *, seed_b
         return len(new)
 
 
+def forget_tags(run_dir, tags) -> int:
+    """Drop the ledger rows of scratch ``tags`` (e.g. delta-debugging probes that are not candidates)."""
+    path = Path(run_dir.root) / LEDGER
+    gone = set(tags)
+    with _file_lock(path.with_suffix(".lock")):
+        have = rows(run_dir)
+        keep = [r for r in have if r["tag"] not in gone]
+        if len(keep) != len(have):
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text("".join(json.dumps(r) + "\n" for r in keep), encoding="utf-8")
+            os.replace(tmp, path)
+        return len(have) - len(keep)
+
+
 def backfill(run_dir) -> int:
     """Rebuild the ledger from the rollouts on disk (train/val; never test)."""
     n = 0

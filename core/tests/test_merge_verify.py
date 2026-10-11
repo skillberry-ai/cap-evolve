@@ -258,7 +258,7 @@ def _act(monkeypatch, tmp_path, interfere, spec=None):
         tr = _truth(tools, interfere)
         return SimpleNamespace(per_task=[{"task_id": t, "reward": tr[t]} for t in VTASKS], reward=0.0)
     monkeypatch.setattr(act, "_measure", measure)
-    monkeypatch.setattr(act, "_first_free_trial", lambda c, t: 3)
+    monkeypatch.setattr(act, "_first_free_trial", lambda c, *t: 3)
     monkeypatch.setattr(act.digest, "cand_dir", cand_dir)
     monkeypatch.setattr(act.harness, "split_result_from_rollouts", split)
     monkeypatch.setattr(act.lineage if hasattr(act, "lineage") else __import__("cap_evolve.lineage", fromlist=["x"]),
@@ -316,15 +316,205 @@ def test_promote_of_an_unverified_merge_is_refused_only_when_the_switch_is_on(mo
     ctx.champion = lambda: "P"
     monkeypatch.setattr(act.graph, "latest_node", lambda rd, tag: {"edit_kind": "merge"})
     monkeypatch.setattr(act.eval_index, "missing", lambda *a, **k: {"t00": 1})
-    monkeypatch.setattr(act.eval_index, "cap_hash", lambda d: "h")
     a = SimpleNamespace(tag="M", verbose=False, commit_extra=None, note=None, over_budget=None)
     with pytest.raises(act.Refused, match="needs a passing verification"):
         act.promote(a, ctx)
     (ctx.root / "merge_verify").mkdir()
     (ctx.root / "merge_verify" / "M.json").write_text(json.dumps({"verdict": "pass"}))
+    with pytest.raises(act.Refused, match="no hashes recorded"):                  # a pass without hashes is not binding
+        act.promote(a, ctx)
+    hashes = {t: act.eval_index.cap_hash(act.digest.cand_dir(None, t)) for t in "PABM"}
+    (ctx.root / "merge_verify" / "M.json").write_text(json.dumps({"verdict": "pass", "hashes": hashes}))
     with pytest.raises(act.Refused, match="lacks full-val ledger"):               # got past the merge check
         act.promote(a, ctx)
     ctx.spec = {}                                                                 # switch off: legacy path
     (ctx.root / "merge_verify" / "M.json").unlink()
     with pytest.raises(act.Refused, match="lacks full-val ledger"):
         act.promote(a, ctx)
+
+
+# ---- review round: unit guards -----------------------------------------------------------------------
+
+def test_small_block_cannot_pass_on_an_infinite_z():
+    ts = ["a", "b", "c"]
+    P = {t: 0.0 for t in ts}
+    st = mv.analyse({"P": P, "A": {t: 0.5 for t in ts}, "B": {t: 0.5 for t in ts}, "M": {t: 1.0 for t in ts}})
+    assert st["gain"]["z"] == float("inf")
+    v, why = mv.verdict(st, mv.MergeVerifyParams())
+    assert v == "inconclusive" and "min_block" in why
+
+
+def test_duplicate_python_def_text_coarsens_to_the_file_and_revert_refuses():
+    base = "def a(x):\n    return x\n\ndef b(x):\n    return x\n"
+    merged = "def a(x):\n    return x + 1\n\ndef b(x):\n    return x\n"
+    assert mv._py_units(base, merged) == {"a": ("def a(x):\n    return x\n", "def a(x):\n    return x + 1\n")}
+    twice = merged + "\ndef a(x):\n    return x + 1\n"          # the same changed def text twice
+    assert mv._py_units(base, twice) is None                          # coarsened to the whole file
+    with pytest.raises(ValueError, match="not unique"):
+        mv._revert_py(base, merged, {"zzz"})
+
+
+def test_next_trial_matches_the_exact_tag_only(tmp_path):
+    scripts = str(REPO / "skills" / "algorithms" / "agent-optimize" / "scripts")
+    sys.path.insert(0, scripts)
+    import act
+    val = tmp_path / "val"
+    val.mkdir()
+    for name in ("t1__M__t2.json", "t1__M__dd1__t9.json", "t1__xM__t7.json", "t1__B__M__t5.json"):
+        (val / name).write_text("{}")
+    from types import SimpleNamespace
+    ctx = SimpleNamespace(run_dir=SimpleNamespace(rollouts=tmp_path))
+    # exact: "t1__M__t2" (k=2) and "t1__B__M__t5" (task "t1__B"? head ends with __M: counts) ; dd1 and xM do not
+    assert act._next_trial(ctx, "M") == 6
+    assert act._next_trial(ctx, "M__dd1") == 10
+    assert act._next_trial(ctx, "xM") == 8
+
+
+def test_stale_pass_is_refused_after_the_merge_is_rebuilt(monkeypatch, tmp_path):
+    act, ctx, _ = _act(monkeypatch, tmp_path, False)
+    ctx.champion = lambda: "P"
+    monkeypatch.setattr(act.graph, "latest_node", lambda rd, tag: {"edit_kind": "merge"})
+    monkeypatch.setattr(act.eval_index, "missing", lambda *a, **k: {"t00": 1})
+    act.verify_merge(_args(), ctx)
+    a = SimpleNamespace(tag="M", verbose=False, commit_extra=None, note=None, over_budget=None)
+    with pytest.raises(act.Refused, match="lacks full-val ledger"):               # bound hashes match: gate passes
+        act.promote(a, ctx)
+    (tmp_path / "cands" / "M" / "tools.py").write_text(AB_TOOLS + "\n# rebuilt\n")
+    with pytest.raises(act.Refused, match=r"no longer matches.*\['M'\]"):
+        act.promote(a, ctx)
+
+
+def test_budget_is_checked_before_every_arm_and_every_ddmin_test(monkeypatch, tmp_path):
+    act, ctx, calls = _act(monkeypatch, tmp_path, interfere=True)
+    seen = []
+    ctx.check_budget = lambda a: seen.append(1)
+    act.verify_merge(_args(), ctx)
+    assert len(seen) >= len(calls)                      # one check per _measure (arm or ddmin test) at least
+    act2, ctx2, calls2 = _act(monkeypatch, tmp_path / "second", interfere=True)
+
+    def stop_after_two(a, n=[0]):
+        n[0] += 1
+        if n[0] > 2:
+            raise act2.Refused("budget exhausted: test")
+    ctx2.check_budget = stop_after_two
+    with pytest.raises(act2.Refused, match="budget exhausted"):
+        act2.verify_merge(_args(), ctx2)
+    assert len(calls2) == 2 and not (ctx2.root / "merge_verify" / "M.json").exists()
+
+
+def test_ddmin_scratch_dirs_rollouts_and_ledger_rows_are_purged(monkeypatch, tmp_path):
+    act, ctx, _ = _act(monkeypatch, tmp_path, interfere=True)
+    forgotten = []
+    monkeypatch.setattr(act.eval_index, "forget_tags", lambda rd, tags: forgotten.append(list(tags)))
+    (ctx.run_dir.rollouts / "val").mkdir(parents=True, exist_ok=True)
+    orig = act._measure
+
+    def measure_and_write(c, tag, ids, offset, n):
+        out = orig(c, tag, ids, offset, n)
+        (c.run_dir.rollouts / "val" / f"t00__{tag}__t{offset}.json").write_text("{}")
+        return out
+    monkeypatch.setattr(act, "_measure", measure_and_write)
+    rc, out = act.verify_merge(_args(), ctx)
+    assert out["delta_debug"]["tests"] >= 2 and forgotten and forgotten[0][0].startswith("M__dd")
+    assert not list((ctx.root / "work").glob("M__dd*"))
+    assert not list((ctx.run_dir.rollouts / "val").glob("*M__dd*"))
+    assert list((ctx.root / "merge_verify" / "M" / "scratch").glob("*.json"))
+
+
+# ---- end to end: real fake adapter, real evaluate subprocess, real ledger ------------------------------
+
+E2E_ADAPTER = '''
+from pathlib import Path
+from cap_evolve.adapter import CapabilityAdapter
+from cap_evolve.trials import run_trials_pool
+from cap_evolve.types import Task, Rollout, Score
+
+NEEDS = {f"t{i}": "MARK_A" for i in range(0, 4)}
+NEEDS.update({f"t{i}": "MARK_B" for i in range(4, 8)})
+
+class Adapter(CapabilityAdapter):
+    def tasks(self, split):
+        return [Task(id=f"t{i}") for i in range(12)]
+    def run_target(self, task, ctx, *, seed=0):
+        return Rollout(task_id=task.id, output=(Path(ctx) / "tools.py").read_text(), metadata={"seed": seed})
+    def run_trials(self, tasks, ctx, *, n_trials, base_seed):
+        return run_trials_pool(lambda t, s: self.run_target(t, ctx, seed=s), tasks, n_trials=n_trials, base_seed=base_seed)
+    def score(self, task, rollout):
+        ok = NEEDS.get(task.id, "") in (rollout.output or "")
+        return Score(task_id=task.id, reward=1.0 if ok else 0.0, feedback="", trial_rewards=[1.0 if ok else 0.0])
+'''
+
+
+def _e2e(tmp_path, monkeypatch):
+    import importlib.util
+    from cap_evolve import Budget, RunDir, harness
+    scripts = str(REPO / "skills" / "algorithms" / "agent-optimize" / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import act
+    monkeypatch.setenv("CAPEVOLVE_CORE", str(REPO / "core"))
+    monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(REPO / "skills"))
+    project = tmp_path / "project"
+    (project / "adapters").mkdir(parents=True)
+    (project / "adapters" / "adapter.py").write_text(E2E_ADAPTER)
+    sp = importlib.util.spec_from_file_location("e2e_adapter", project / "adapters" / "adapter.py")
+    mod = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(mod)
+    adapter = mod.Adapter()
+    run_dir = RunDir.create(tmp_path / ".capevolve", ts="mv", budget=Budget(max_iterations=10))
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    (seed / "tools.py").write_text("base\n")
+    harness.ensure_splits(adapter, run_dir, seed=0, split_ids={"val": [f"t{i}" for i in range(12)], "train": [], "test": []})
+    harness.baseline(adapter, seed, run_dir=run_dir)
+    for tag, text in (("A", "base MARK_A\n"), ("B", "base MARK_B\n"), ("M", "base MARK_A MARK_B\n")):
+        d = run_dir.root / "work" / tag
+        d.mkdir(parents=True)
+        (d / "tools.py").write_text(text)
+    for tag in ("A", "B"):
+        harness.evaluate_candidate(adapter, run_dir.root / "work" / tag, run_dir=run_dir, split="val", n_trials=1, tag=tag)
+    ctx = act.Ctx(SimpleNamespace(run_dir=str(run_dir.root), project=str(project), strict=False))
+    ctx.spec = {"merge_verify": True}
+    return act, ctx, run_dir
+
+
+def test_e2e_four_arms_share_seeds_hashes_bind_and_budget_binds(tmp_path, monkeypatch):
+    act, ctx, run_dir = _e2e(tmp_path, monkeypatch)
+    args = _args(parents=["A", "B"], base="seed", n=2, max_rounds=1, dd_budget=0)
+    rc, out = act.verify_merge(args, ctx)
+    assert rc == 0 and out["verdict"] == "pass", out["reason"]
+    k0 = out["k0"]
+    assert k0 == 1                                              # A, B, seed, M have only t0 so far
+    val = run_dir.rollouts / "val"
+    seeds = {}
+    for arm, tag in (("P", "seed"), ("A", "A"), ("B", "B"), ("M", "M")):
+        seeds[arm] = {}
+        for f in val.glob(f"*__{tag}__t*.json"):
+            k = int(f.stem.rsplit("__t", 1)[1])
+            if k >= k0:
+                d = json.loads(f.read_text())
+                seeds[arm][(d["score"]["task_id"], k)] = d["rollout"]["metadata"]["seed"]
+    common = set.intersection(*(set(v) for v in seeds.values()))
+    assert common and all(len({seeds[a][c] for a in seeds}) == 1 for c in common)     # identical seeds per cell
+    # ledger rows carry trial_idx == k
+    from cap_evolve import eval_index
+    h = eval_index.cap_hash(act.digest.cand_dir(run_dir, "M"))
+    assert {r["trial_idx"] for r in eval_index.rows(run_dir) if r["cap_hash"] == h and r["trial_idx"] >= k0} == {1, 2}
+    # hashes bind: rebuilding M invalidates the pass
+    monkeypatch.setattr(act.graph, "latest_node", lambda rd, tag: {"edit_kind": "merge"})
+    monkeypatch.setattr(act.eval_index, "missing", lambda *a, **k: {"t00": 1})
+    a = SimpleNamespace(tag="M", verbose=False, commit_extra=None, note=None, over_budget=None)
+    with pytest.raises(act.Refused, match="lacks full-val ledger"):
+        act.promote(a, ctx)
+    (run_dir.root / "work" / "M" / "tools.py").write_text("base MARK_A MARK_B rebuilt\n")
+    with pytest.raises(act.Refused, match="no longer matches"):
+        act.promote(a, ctx)
+
+
+def test_e2e_budget_stops_verification_midway(tmp_path, monkeypatch):
+    act, ctx, run_dir = _e2e(tmp_path, monkeypatch)
+    run_dir.update_budget(max_metric_calls=run_dir.spent.metric_calls + 1)
+    with pytest.raises(act.Refused, match="budget exhausted"):
+        act.verify_merge(_args(parents=["A", "B"], base="seed", n=2, max_rounds=3, dd_budget=0), ctx)
+    spent_after_first_arm = run_dir.spent.metric_calls
+    assert spent_after_first_arm > 0 and not (ctx.root / "merge_verify" / "M.json").exists()

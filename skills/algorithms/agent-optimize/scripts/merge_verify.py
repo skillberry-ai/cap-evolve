@@ -40,7 +40,8 @@ class MergeVerifyParams:
     max_rounds: int = 3
     n_sentinels: int = 3
     dmin: float = 0.02          # min gain of M over the better parent on the block
-    z_pass: float = 1.0
+    z_pass: float = 1.645
+    min_block: int = 5          # fewer paired tasks than this is never enough (SE=0 would pass on infinity)
     z_lose: float = 1.0
     z_int: float = 1.645
     dd_budget: int = 12
@@ -139,8 +140,8 @@ def analyse(means: dict[str, dict[str, float]]) -> dict:
 
 def verdict(stats: dict, p: MergeVerifyParams) -> tuple[str, str]:
     g, i = stats["gain"], stats["interaction"]
-    if g["n"] < 2:
-        return "inconclusive", f"only {g['n']} paired task(s): no SE"
+    if g["n"] < p.min_block:
+        return "inconclusive", f"only {g['n']} paired task(s) (< min_block {p.min_block}): too few to judge"
     neg_int = i["z"] <= -p.z_int and i["mean"] <= -p.dmin   # significant AND at least dmin large
     if g["mean"] >= p.dmin and g["z"] >= p.z_pass and not neg_int:
         return "pass", f"merge beats {stats['best_parent']} by {g['mean']:+.4f} (z {g['z']:.2f}); interaction {i['mean']:+.4f} (z {i['z']:.2f})"
@@ -236,7 +237,10 @@ def _py_units(base_txt: str, merged_txt: str):
         return None
     if bp != mp or any(n not in mb for n in bb):
         return None                       # preamble edited or a function deleted: whole file
-    return {n: (bb.get(n), mb[n]) for n in mb if bb.get(n) != mb[n]}
+    changed = {n: (bb.get(n), mb[n]) for n in mb if bb.get(n) != mb[n]}
+    if any(merged_txt.count(m) != 1 for _, m in changed.values()):
+        return None                       # a changed def whose text is not unique cannot be reverted in place
+    return changed
 
 
 def hunks(base_dir: Path, merged_dir: Path) -> list[dict]:
@@ -287,8 +291,9 @@ def _revert_py(base_txt: str, merged_txt: str, revert: set[str]) -> str:
     _, mb = funcmerge.blocks(merged_txt)
     text = merged_txt
     for n in sorted(revert):
-        if n in mb and text.count(mb[n]) == 1:
-            text = text.replace(mb[n], bb.get(n, ""), 1)
+        if n not in mb or text.count(mb[n]) != 1:
+            raise ValueError(f"cannot revert python hunk {n!r}: its merged text is not unique in the file")
+        text = text.replace(mb[n], bb.get(n, ""), 1)
     return text
 
 
