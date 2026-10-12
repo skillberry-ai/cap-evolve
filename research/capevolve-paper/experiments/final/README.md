@@ -43,6 +43,16 @@ gpt-oss: HL at W=24 issues about 24 x 25 / 2145 s = 17 calls/min of the 127/min 
 24 in-flight slots shared with the tau-agent cells: if a call holds a slot ~40 s (assumed, to be measured), HL at W=24 occupies ~11 slots and 12 tau-agent workers ~10, i.e. ~21 of 24;
 W=32 would push demand above 24 and only queue, so the decision (coordinator, 2026-10-12, superseding an earlier hl=32) is hl=24,default=12; watch_queue.py reports the median gpt-oss queue_s and, above 60 s, the class caps are rebalanced using the measured slot hold time.  END fallbacks unchanged (drop HL END first, disclosed).
 
+## Suite D (tau2 retail, Azure target gpt-4.1-mini; added 2026-10-12)
+
+`--suite D`: artifacts from `runs/E20/<cell>/s<k>` (cell dirs E20-PT, E21-ruleP, E20-P, E20-T, E20-CTL, E21-1S, E20-GEPA | Tier 2: E20-TD, E23-nohist, E23-nodigest, E21-ruleP-2x; with or without the E2x- prefix),
+final state compared (no B*: `bstar.py` lists counters only; `reconstruct.py` files the last promoted candidate, else the seed, under mode B).  Models are fixed in `order.py` D_MODELS
+(target `azoai/gpt-4.1-mini-2025-04-14`, user simulator and NL judge `azoai/gpt-4.1-2025-04-14`, gateway :4112, tags `FINAL-D-*`), tasks = sealed test-40, family = task id,
+trials: Tier 1 champions 5, Tier 2 champions 3, seed 10, all in one stream.  `run_final.py run --suite D --workers 128` (Azure only; 429-aware backoff before infra retries).
+E25: `decompose.py --suite D --manifest manifests/artifacts_D.json --arms pt,rulep,1s,ctl` writes P-only / T-only sub-artifacts of each champion that differs from the seed on BOTH surfaces
+(frozen read-only, hashed; a sub-artifact equal to the seed or the champion is skipped), then `order.py --suite D --extra decomp --decomp-manifest manifests/decomp_D.json` (n=3; B/C: `--suite B|C --arms oneshot`, n=1,
+run last, dropped first) and `run_final.py run --extra decomp`.  Dry run: FE_D_RUNROOT points D at a fake E20 root of links to E10B runs.
+
 ## Files
 
 | file | role |

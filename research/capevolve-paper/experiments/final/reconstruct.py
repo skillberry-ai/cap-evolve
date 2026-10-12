@@ -440,9 +440,11 @@ RULES = {
     "gepa": rule_gepa, "skillopt": rule_skillopt, "evoskill": rule_evoskill, "metaharness": rule_metaharness,
     "wikiskill": rule_wikiskill, "mipro": rule_mipro, "ace": rule_ace, "trace2skill": rule_trace2skill,
     "harnesslens": rule_harnesslens, "hc": rule_capevolve, "ao": rule_capevolve, "oneshot": rule_oneshot, "hcstock": rule_capevolve,
+    "pt": rule_capevolve, "rulep": rule_capevolve, "p": rule_capevolve, "t": rule_capevolve, "1s": rule_capevolve, "nohist": rule_capevolve, "td": rule_capevolve,
+    "nodigest": rule_capevolve, "rulep2x": rule_capevolve, "ctl": rule_oneshot,
 }
 
-FULL_N = {"A": 40, "B": 25, "C": 10}      # val / selection set size per suite (full-evaluation marker for GEPA)
+FULL_N = {"A": 40, "B": 25, "C": 10, "D": 25}      # val / selection set size per suite (full-evaluation marker for GEPA)
 
 
 # ----------------------------------------------------------------------------------------------------------- artifacts
@@ -596,6 +598,10 @@ def main(argv=None):
     global _BSTAR_RUNS
     _BSTAR_RUNS = (bj or {}).get("runs") or []
     modes = [m for m in a.mode.split(",") if m]
+    final_state = bool(C.SUITES[suite].get("final_state"))
+    if final_state:                 # Suite D: no B*; the artifact is the final state (last promoted, else seed) filed under mode B
+        modes = ["B"]
+        bstar = "final-state"
     if "B" in modes and not bstar:
         sys.exit("B* needed for mode B")
     kind = C.SUITES[suite]["artifact_kind"]
@@ -606,7 +612,7 @@ def main(argv=None):
            "rules": {k: (v.__doc__ or "").strip() for k, v in RULES.items()}, "entries": []}
     man["seed_artifact"] = seed_artifact(suite, out_root, not a.no_copy)
     for mode in modes:
-        limit = float(bstar) if mode == "B" else INF
+        limit = INF if final_state else (float(bstar) if mode == "B" else INF)
         for arm in arms:
             for seed in C.SEEDS:
                 man["entries"].append(build_entry(suite, arm, seed, mode, limit, out_root, not a.no_copy, kind))

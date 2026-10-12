@@ -42,8 +42,9 @@ MAX_HANG_RETRIES = 1           # HUNG_ROLLOUT_RULE.txt: one retry, a second time
 BENCH = C.SCRATCH / "bench"
 BASELINES = C.SCRATCH / "baselines"
 WT_TAU = Path(os.environ.get("TAU_WT", "/home/dev/projects2/wt-tau"))
-PY = {"A": BENCH / "venv" / "bin" / "python", "B": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "C": BENCH / "venv-tau2-8ebb749" / "bin" / "python"}
+PY = {"D": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "A": BENCH / "venv" / "bin" / "python", "B": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "C": BENCH / "venv-tau2-8ebb749" / "bin" / "python"}
 TAU = {"B": dict(domain="retail", example="tau2_retail", splits="tau_retail_splits.json", jmodel_default="openai/azure/gpt-5.5"),
+       "D": dict(domain="retail", example="tau2_retail", splits="tau_retail_splits.json", jmodel_default="openai/azoai/gpt-4.1-2025-04-14"),
        "C": dict(domain="airline", example="tau2_airline_c", splits="tau_airline_splits.json", jmodel_default="openai/azure/gpt-5.5")}
 GATEWAY = "http://127.0.0.1:4111/v1"
 RAW_TOOL_TEXT = "<|tool_call>"
@@ -494,6 +495,8 @@ def execute_job(job, store, cm, py, hang_s=HANG_S, log=print):
         cls = rec["error_class"]
         if cls == "infra":
             infra_n += 1
+            if not rec["hang"]:       # 429-aware backoff before the retry (Azure-direct suites); depends on the error class only
+                time.sleep(min(60, 10 * infra_n) if re.search(r"\b429\b|rate ?limit", rec.get("error_text") or "", re.I) else 0)
             hang_n += 1 if rec["hang"] else 0
             exhausted = (rec["hang"] and hang_n > MAX_HANG_RETRIES) or infra_n > MAX_INFRA_RETRIES
             rec["terminal"] = bool(exhausted)

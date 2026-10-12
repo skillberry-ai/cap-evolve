@@ -84,6 +84,11 @@ def main(argv=None):
     ap.add_argument("--out", default=str(C.MANIFESTS))
     a = ap.parse_args(argv)
     res = compute(a.suite)
+    if C.SUITES[a.suite].get("final_state"):
+        res.update(bstar=None, note="Suite D: searches are rollout-capped, the final state is compared; counters listed for disclosure only")
+        C.write_json_atomic(Path(a.out) / ("bstar_%s.json" % a.suite), res)
+        print("suite %s: no B* (final-state suite); %d runs listed" % (a.suite, len(res["runs"])))
+        return 0
     if a.fake is not None:
         res["bstar_computed"] = res.get("bstar")
         res["bstar"] = a.fake

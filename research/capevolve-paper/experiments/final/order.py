@@ -30,15 +30,19 @@ import fe_common as C  # noqa: E402
 WT_TAU = Path("/home/dev/projects2/wt-tau")
 SPLIT_FILE_A = C.REPO / "ci/benchmarks/spreadsheetbench/full_verified/split_ids.json"
 FINAL_A_TASKS = C.PAPER / "protocol/final_set/suiteA_final_tasks.json"
-DEFAULT_TRIALS = {"A": (1, 2), "B": (3, 3), "C": (3, 3)}   # pinned in decisions.md 22:30          # (trials per task for a method artifact, for the seed artifact)
-TAU_SPLITS = {"B": "tau_retail_splits.json", "C": "tau_airline_splits.json"}
+DEFAULT_TRIALS = {"A": (1, 2), "B": (3, 3), "C": (3, 3), "D": (5, 10)}   # pinned in decisions.md 22:30          # (trials per task for a method artifact, for the seed artifact)
+TAU_SPLITS = {"B": "tau_retail_splits.json", "C": "tau_airline_splits.json", "D": "tau_retail_splits.json"}
+D_TIER2_TRIALS = 3        # Suite D: Tier 1 champions 5 trials, Tier 2 champions 3, the seed 10 (experiment-designer, EXPERIMENTS.md section 6)
+D_MODELS = {"target_model": "openai/azoai/gpt-4.1-mini-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
+            "gateway": "http://127.0.0.1:4112/v1"}
 EXTRA = {
-    "transfer": {"A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer",
+    "transfer": {"D": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "exp_suffix": "xfer"}, "A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer",
                "env": {"TEMPERATURE": "1.0"}},     # gpt-5-mini rejects temperature 0 (probed 2026-10-11); provider default 1
                  "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"},
                  "C": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"}},
     # dry-run path on Azure-direct only: real adapters / scorer / worker, but no RITS (smoke tags starve on the saturated RITS deployments) and
     # no impact on the running searches.  Never used for results.
+    "decomp": {"A": {}, "B": {}, "C": {}, "D": {"exp_suffix": "decomp"}},
     "dryazure": {"A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry", "env": {"TEMPERATURE": "1.0"}},
                  "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
                        "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry"},
@@ -127,6 +131,7 @@ def main(argv=None):
     ap.add_argument("--extra", choices=sorted(EXTRA), default=None)
     ap.add_argument("--end-only", action="store_true", help="write only the distinct END (5D) jobs: run after the primary window (decisions 22:50)")
     ap.add_argument("--hl-v0", action="store_true", help="Suite B: add arm hl-v0 (HarnessLens's unmodified OpenCode harness, run_test_baseline path)")
+    ap.add_argument("--decomp-manifest", default=None, help="with --extra decomp: manifest written by decompose.py")
     ap.add_argument("--no-end", action="store_true", help="skip the native end-of-run (5D) artifacts")
     ap.add_argument("--arms", default=None, help="restrict to these arms (dry runs)")
     ap.add_argument("--tag-exp", default=None)
@@ -145,7 +150,8 @@ def main(argv=None):
     rng = HashRng(C.ORDER_SEED, "%s|tasks" % suite)
     tasks, split_kind, tasks_sha = load_tasks(suite, a.tasks, a.k, rng)
     smoke = split_kind == "smoke"
-    ex = EXTRA[a.extra][suite] if a.extra else {}
+    ex = dict(D_MODELS) if suite == "D" else {}
+    ex.update(EXTRA[a.extra][suite] if a.extra else {})
     tag_exp = a.tag_exp or (("FE-smoke-%s" % suite) if smoke else ("FINAL-%s" % suite))
     if ex.get("exp_suffix"):
         tag_exp += "-" + ex["exp_suffix"]
@@ -185,37 +191,49 @@ def main(argv=None):
             for k in range(n_trials):
                 jobs.append(make_job(arm, seed, mode, art, t, k, n_trials, also_end))
 
-    seed_art = man["seed_artifact"]
-    if seed_art.get("status") not in ("ok", "partial"):
-        sys.exit("no usable seed artifact in manifest")
-    if not a.end_only:
-        add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
-    if a.hl_v0 and suite == "B" and not a.end_only:
-        add_cell("hl-v0", 0, "B", {"frozen_dir": str(C.final_dir("B") / "artifacts/hl-v0"), "tree_sha256": "hl-v0-unmodified", "candidate_id": "v0"}, n_seed, also_end=True)
-    entries = {(e["mode"], e["arm"], e["seed"]): e for e in man["entries"]}
-    arms = a.arms.split(",") if a.arms else C.suite_arms(suite)
-    for arm in arms:
-        for seed in C.SEEDS:
-            b = entries.get(("B", arm, seed))
-            e = entries.get(("END", arm, seed))
-            if not b or b["status"] == "impossible":
-                skipped.append({"arm": arm, "seed": seed, "mode": "B", "reason": (b or {}).get("reason", "no entry")})
-                b = None
-            same = b and e and e.get("tree_sha256") == b.get("tree_sha256") and e["status"] != "impossible"
-            if b and not a.end_only:
-                add_cell(arm, seed, "B", b, n_arm, also_end=bool(same) or arm == "oneshot")
-            if e and not a.no_end and (not a.extra or a.extra == "dryazure") and arm != "oneshot":
-                if e["status"] == "impossible":
-                    skipped.append({"arm": arm, "seed": seed, "mode": "END", "reason": e.get("reason", "")})
-                elif not same and a.end_only:
-                    add_cell(arm, seed, "END", e, n_arm)
+    seed_art = None
+    if a.extra == "decomp":                           # E25: P-only / T-only sub-artifacts written by decompose.py; no seed, no arms loop
+        dm = C.jload(a.decomp_manifest)
+        if not dm:
+            sys.exit("--extra decomp needs --decomp-manifest")
+        nd = a.trials_arm or (3 if suite == "D" else 1)
+        for e in dm["entries"]:
+            add_cell(e["arm_label"], e["seed"], "B", e, nd)
+            for j in jobs[-len(tasks) * nd:]:
+                j["arm"] = e["arm_label"]
+    else:
+        seed_art = man["seed_artifact"]
+        if seed_art.get("status") not in ("ok", "partial"):
+            sys.exit("no usable seed artifact in manifest")
+        if not a.end_only:
+            add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
+        if a.hl_v0 and suite == "B" and not a.end_only:
+            add_cell("hl-v0", 0, "B", {"frozen_dir": str(C.final_dir("B") / "artifacts/hl-v0"), "tree_sha256": "hl-v0-unmodified", "candidate_id": "v0"}, n_seed, also_end=True)
+        entries = {(e["mode"], e["arm"], e["seed"]): e for e in man["entries"]}
+        arms = a.arms.split(",") if a.arms else C.suite_arms(suite)
+        for arm in arms:
+            n_a = D_TIER2_TRIALS if (suite == "D" and arm in C.SUITES["D"]["cheap"] and not a.trials_arm) else n_arm
+            for seed in C.SEEDS:
+                b = entries.get(("B", arm, seed))
+                e = entries.get(("END", arm, seed))
+                if not b or b["status"] == "impossible":
+                    skipped.append({"arm": arm, "seed": seed, "mode": "B", "reason": (b or {}).get("reason", "no entry")})
+                    b = None
+                same = b and e and e.get("tree_sha256") == b.get("tree_sha256") and e["status"] != "impossible"
+                if b and not a.end_only:
+                    add_cell(arm, seed, "B", b, n_a, also_end=bool(same) or arm == "oneshot")
+                if e and not a.no_end and (not a.extra or a.extra == "dryazure") and arm != "oneshot":
+                    if e["status"] == "impossible":
+                        skipped.append({"arm": arm, "seed": seed, "mode": "END", "reason": e.get("reason", "")})
+                    elif not same and a.end_only:
+                        add_cell(arm, seed, "END", e, n_a)
     # one permutation of everything (sorted first so the input order is canonical)
     jobs.sort(key=lambda j: (j["arm_label"], j["seed"], str(j["task"]), j["trial"], j["mode"]))
     HashRng(C.ORDER_SEED, "%s|order|%s" % (suite, a.extra or "primary")).shuffle(jobs)
     for i, j in enumerate(jobs):
         j["idx"] = i
     canary = []
-    if (not a.extra or a.extra == "dryazure") and not a.end_only:
+    if (not a.extra or a.extra == "dryazure") and not a.end_only and seed_art:
         crng = HashRng(C.ORDER_SEED, "%s|canary" % suite)
         for tid in canary_tasks(suite, crng):
             cj = make_job("seed", 0, "B", seed_art, {"id": tid, "family": family_of_sb_id(tid) if suite == "A" else tid}, 0, 1)
@@ -229,7 +247,7 @@ def main(argv=None):
             canary.append(cj)
     meta = {"type": "meta", "suite": suite, "order_seed": C.ORDER_SEED, "split_kind": split_kind, "tasks": [t["id"] for t in tasks], "tasks_sha256": tasks_sha,
             "n_jobs": len(jobs), "trials_arm": n_arm, "trials_seed": n_seed, "tag_exp": tag_exp, "extra": a.extra, "manifest": str(a.manifest),
-            "manifest_sha256": C.file_sha(a.manifest), "bstar": man.get("bstar"), "skipped": skipped, "canary_jobs": canary, "script_commit": C.git_head(),
+            "manifest_sha256": C.file_sha(a.manifest), "bstar": man.get("bstar"), "decomp_manifest": a.decomp_manifest, "skipped": skipped, "canary_jobs": canary, "script_commit": C.git_head(),
             "order_py_sha256": C.file_sha(__file__), "cutoff_utc": C.CUTOFF_UTC,
             "counts_by_arm": {}}
     for j in jobs:
