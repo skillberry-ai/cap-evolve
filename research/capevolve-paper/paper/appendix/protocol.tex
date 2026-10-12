@@ -24,6 +24,8 @@ The primary contrast family pairs hill-climb and agent-optimize with the followi
 
 The exploratory stock-gate arms (hill-climb with one-standard-error gate, footprint masking on, candidate-side coverage 0.6, no rule P; three search seeds, Suites A and C) are compared at the smaller of $N^\star$ and their own rollout count, with rule-P hill-climb taken at the same count. Contrasts are artifact-level mean differences with 95\% intervals and per-seed values, with no Holm correction and no $p$-values in the abstract; a count below $N^\star$ is stated beside the numbers.
 
+For each arm and suite we report the cells touched by each rule: first-attempt infrastructure errors, cells recovered at retry one, two or three, cells scored 0 after three retries, and hangs retried or missing. Per artifact we also give the infrastructure-error rate (first attempt and after retries, Wilson 95\% interval) next to the seed artifact's rate in the same window, descriptively and without a test, and flag clearly higher rates. A Meta-Harness candidate's verification step failed with a sandbox error on 17\% of rollouts against 5\% for other candidates, so infrastructure-labelled errors can be caused by the artifact.
+
 \section{Scorer Audit}
 \label{app:scorer}
 
