@@ -1,6 +1,6 @@
 # Results index
 
-Every real result that exists now, with a link and a one-line description. Updated 2026-10-12 13:30 UTC.
+Every real result that exists now, with a link and a one-line description. Updated 2026-10-12 16:00 UTC (search-time files as of 15:51 UTC).
 
 **Read this first.**
 - No held-out (final-set) score exists for any suite. The final evaluation starts after the search cutoff, 2026-10-13 06:00 UTC. Nothing below is a held-out result.
@@ -9,7 +9,7 @@ Every real result that exists now, with a link and a one-line description. Updat
 
 ## 1. Search-time results (real, search-time)
 
-Snapshot of per-run state is from `analysis/out/searchtime/summary.md` (gateway log up to 2026-10-12 09:42 UTC); rerun `analysis/scripts/searchtime_results.py` for newer numbers.
+Snapshot of per-run state is from `analysis/out/searchtime/summary.md` (regenerated in 0bde54c74 after a metrics-converter fix; gateway log up to 2026-10-12 15:51 UTC); rerun `analysis/scripts/searchtime_results.py` for newer numbers.
 
 | File | What it holds |
 |---|---|
@@ -21,9 +21,9 @@ Snapshot of per-run state is from `analysis/out/searchtime/summary.md` (gateway 
 | [`analysis/out/attrib/summary.md`](analysis/out/attrib/summary.md) | Attribution analyses (search-time, selection split): promotions per search, inert searches, fixed/broke counts per promoted and rejected candidate, edit surface by failure type, shrinkage, cost per point. CSVs in [`analysis/out/attrib/`](analysis/out/attrib/) |
 
 What the search-time files show so far (searches still running, so counts will change):
-- CapEvolve with rule P (hill-climb and agent-optimize) has promoted almost nothing. On Suites B and C every one of the 12 hill-climb and agent-optimize searches returned the seed artifact; on Suite A 5 of 6 did (one hill-climb seed promoted one candidate). Source: [`attrib/summary.md`](analysis/out/attrib/summary.md), section "Promotions per search and inert searches".
-- CapEvolve hill-climb with the stock gate (E12A on Suite A, E12C on Suite C) does promote candidates and shows selection-split gains of 0.2 to 0.35 on most seeds. These are selection-split numbers on the split the gate reads and are optimistic. Whether they survive on held-out data is the question the final evaluation answers.
-- Competitor gains on their own selection splits (for example GEPA on Suite A, 0.33 to 0.38) are not comparable with CapEvolve's, because each method selects on a different split.
+- CapEvolve with rule P has promoted little. Counts as of 15:51 UTC, search-time: Suite A hill-climb 2 promotions in 15 candidates (1 of 3 searches still returns the seed); Suite B hill-climb 0 of 14 (3 of 3 return the seed); Suite C hill-climb 2 of 16 (1 of 3 returns the seed). Agent-optimize on Suites A, B and C promoted nothing in any seed (Suite A: two native early stops and one token-guard stop). Source: [`attrib/summary.md`](analysis/out/attrib/summary.md), section "Promotions per search and inert searches".
+- CapEvolve hill-climb with the stock gate promotes: Suite A (E12A) finished all 3 seeds at 600 rollouts with 7 promotions in 36 candidates and selection-split gains of 0.29 to 0.35; Suite C (E12C) has 3 promotions in 29 candidates so far, with gains of 0.24, 0.00 and 0.32 across seeds. These are selection-split numbers on the split the gate reads and are optimistic. Whether they survive on held-out data is what the final evaluation answers.
+- Competitor gains on their own selection splits (for example GEPA on Suite A, 0.33 to 0.38, all three seeds at 600 rollouts) are not comparable with CapEvolve's, because each method selects on a different split.
 - HarnessLens on Suite B has no scored candidate yet in the snapshot. Its earlier runs failed on a missing host dependency and are recorded as "not evaluated, environment defect".
 
 Figures (search-time, real):
