@@ -35,16 +35,15 @@ PRICING = PAPER / "protocol" / "pricing.json"
 OUT = Path(os.environ.get("METRICS_OUT", str(PAPER / "analysis" / "out" / "metrics")))
 HEALTH_URL = os.environ.get("GATEWAY_HEALTH", "http://127.0.0.1:4111/health")
 OPT_CAP = 4_000_000
-SUITE_OF = {"E10": "A", "E10B": "B", "E10C": "C", "E12C": "C-E12", "E12A": "A-E12", "E20": "D", "E21": "D-E21", "E22": "D-null"}  # E12C = stock-gate ablation on Suite C (decisions 2026-10-11 21:55)
-SUITE_ROOT = {"A": RUNS / "E10", "B": RUNS / "E10B", "C": RUNS / "E10C", "C-E12": RUNS / "E12C", "A-E12": RUNS / "E12A", "D": RUNS / "E20", "D-E21": RUNS / "E21", "D-null": RUNS / "E22"}
-# Later experiments (tag head EXP-<cell>-s<k>, run dir runs/<EXP>/<CELL>/s<k>); same shapes as experiments/final/tokens_at_bstar.py.
-EXTRA_CELLS = {("E12A", "hcstock"): ("A", "hcstock"), ("E12B", "hcstock"): ("B", "hcstock"), ("E12C", "hcstock"): ("C", "hcstock"),
-               ("E10E", "harnesslens"): ("E", "harnesslens"), ("E32", "hl"): ("E", "harnesslens"), ("E32", "harnesslens"): ("E", "harnesslens")}
-for _e, _s, _cells in (("E20", "D", ["pt", "p", "t", "ctl", "gepa"]), ("E21", "D", ["rulep", "1s", "onestage"]), ("E26", "D", ["nohist"]),
-                       ("E30", "E", ["pt", "p", "t", "ctl", "gepa"]), ("E31", "E", ["rulep", "1s", "onestage"]), ("E36", "E", ["nohist"]),
-                       ("E32", "E", ["ace", "mipro", "gepafull", "ao"])):
+SUITE_OF = {"E10": "A", "E10B": "B", "E10C": "C", "E12C": "C-E12", "E12A": "A-E12", "E12B": "B-E12", "E20": "D", "E21": "D-E21", "E22": "D-null"}  # E12C = stock-gate ablation on Suite C (decisions 2026-10-11 21:55)
+SUITE_ROOT = {"A": RUNS / "E10", "B": RUNS / "E10B", "C": RUNS / "E10C", "C-E12": RUNS / "E12C", "A-E12": RUNS / "E12A", "B-E12": RUNS / "E12B", "D": RUNS / "E20", "D-E21": RUNS / "E21", "D-null": RUNS / "E22"}
+# Later experiments with tag head EXP-<cell>-s<k> and run dir runs/<EXP>/<CELL>/s<k> (shapes as in experiments/final/tokens_at_bstar.py).
+# E12A/C, E20, E21, E22 are handled through SUITE_OF/SUITE_ROOT above (their own suite labels).
+EXTRA_CELLS = {("E10E", "harnesslens"): ("E", "harnesslens"), ("E32", "hl"): ("E", "harnesslens"), ("E26", "nohist"): ("D", "NOHIST")}
+for _e, _s, _cells in (("E30", "E", ["PT", "P", "T", "CTL", "GEPA"]), ("E31", "E", ["ruleP", "1S"]), ("E36", "E", ["NOHIST"]),
+                       ("E32", "E", ["ace", "mipro", "gepafull", "ao", "harnesslens"])):
     for _c in _cells:
-        EXTRA_CELLS[(_e, _c)] = (_s, "1s" if _c == "onestage" else _c)
+        EXTRA_CELLS[(_e, _c.lower())] = (_s, _c)
 ARM_ALIAS = {"hill-climb": "hc", "agent-optimize": "ao", "ctlseed": "ctl-seed"}
 OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "optimizer-aux", "debugger"}
 TARGET_ROLES = {"target"}
@@ -286,7 +285,7 @@ def derive_cutoffs(main):
 
 
 # ----------------------------------------------------------------------------------------------- gateway pass
-RUN_RE = re.compile(r"^(E10[BC]?|E12[AC]|E2[012])-(.+)-s(\d+)$")
+RUN_RE = re.compile(r"^(E\d+[A-Z]?)-(.+)-s(\d+)$")
 SMOKE_WORDS = ("smoke", "probe", "negtest", "mock", "test", "wd")
 
 
@@ -299,7 +298,7 @@ def classify_tag(tag):
     role = parts[3] if len(parts) > 3 else (parts[2] if len(parts) > 2 else "")
     m = RUN_RE.match(run_id)
     if not m:
-        if run_id.startswith(("E10", "E12", "E2")):
+        if re.match(r"E\d", run_id):
             exp = run_id.split("-")[0]
             return (SUITE_OF.get(exp), run_id, None, "smoke", role)
         return (None, run_id, None, "pre", role)
