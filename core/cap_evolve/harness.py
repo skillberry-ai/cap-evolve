@@ -2247,8 +2247,9 @@ def history_enabled() -> bool:
     cross-iteration HISTORY from what the proposer sees (LEDGER, JOURNAL, RUNMAP, prior_iterations,
     the insights accumulators and the currently-passing block). PROCESS.md and the current-best
     trajectories stay. The gate, evaluator and scoring never read it."""
-    from .optimizer_config import enabled
-    return enabled("history", None)
+    from .optimizer_config import _env
+    v = _env("history")
+    return True if v is None else v
 
 
 def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
@@ -4226,10 +4227,11 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "FIRST read ./guidance/<cap>/SKILL.md for EVERY capability and "
         "./guidance/optimizer/<name>.md (your subagent/parallelism features) IN FULL "
         "before diagnosing. Then read ./trajectories/ (full traces), ./guidance/sources/ "
-        "(data models/types — read before writing tool code), ./LEDGER.md (facts), the "
-        "whole ./JOURNAL.md (handover) and ./RUNMAP.md + ./prior_iterations/; fill "
-        "./PROCESS.md and APPEND your entry to ./JOURNAL.md. "
-        "The prompt and the tools are equally fair game.",
+        "(data models/types — read before writing tool code)"
+        + (", ./LEDGER.md (facts), the whole ./JOURNAL.md (handover) and ./RUNMAP.md + "
+           "./prior_iterations/; fill ./PROCESS.md and APPEND your entry to ./JOURNAL.md. "
+           if history_enabled() else "; fill ./PROCESS.md. ")
+        + "The prompt and the tools are equally fair game.",
         bench, "", failures, passing, cap, "", algo, "",
         "Address EVERY failure cluster you found, not just the biggest. The DEFAULT fix "
         "for a violated rule/precondition/formula is to move it INTO THE CODE BODY of the "

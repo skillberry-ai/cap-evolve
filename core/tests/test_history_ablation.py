@@ -70,3 +70,44 @@ def test_spec_key_sets_the_env_bridge_value():
     from cap_evolve import optimizer_config as oc
     assert oc.enabled("history", {"optimizer": {"ablation": {"history": False}}}) is False
     assert oc.DEFAULTS["history"] is True
+
+
+def _val():
+    from cap_evolve.loop import SplitResult
+    return SplitResult.from_dict({
+        "split": "val", "reward": 0.5, "stderr": 0.0,
+        "per_task": [{"task_id": "v1", "reward": 0.0, "feedback": "boom"},
+                     {"task_id": "v2", "reward": 1.0, "feedback": ""}]})
+
+
+def test_rendered_prompt_has_no_history_pointer_or_passing_block_when_off(monkeypatch, tmp_path):
+    """The rendered prompt: with a project template free of history text (the E26 derived one) nothing
+    in the render names a history file and the {{PASSING}} block is empty; with the switch on, the
+    passing block is present. The template itself is project-owned (see scripts/E26/nohist_instructions.py)."""
+    from cap_evolve import harness
+    tmpl = tmp_path / "INSTRUCTIONS.md"
+    tmpl.write_text("# t\n{{FOCUS_SUMMARY}}\n{{FAILURES}}\n{{PASSING}}\n", encoding="utf-8")
+    monkeypatch.setenv("CAPEVOLVE_HISTORY", "0")
+    off = harness._focus_instructions(_val(), None, "val", instructions_file=str(tmpl))
+    assert "Currently PASSING" not in off
+    monkeypatch.delenv("CAPEVOLVE_HISTORY")
+    on = harness._focus_instructions(_val(), None, "val", instructions_file=str(tmpl))
+    assert "Currently PASSING" in on
+
+
+def test_fallback_prompt_names_no_history_file_when_off(monkeypatch, tmp_path):
+    from cap_evolve import harness
+    monkeypatch.setenv("CAPEVOLVE_HISTORY", "0")
+    off = harness._focus_instructions(_val(), None, "val", instructions_file=str(tmp_path / "missing.md"))
+    for name in ("LEDGER", "JOURNAL", "RUNMAP", "prior_iterations"):
+        assert name not in off, name
+    monkeypatch.delenv("CAPEVOLVE_HISTORY")
+    on = harness._focus_instructions(_val(), None, "val", instructions_file=str(tmp_path / "missing.md"))
+    assert "LEDGER" in on
+
+
+def test_bad_unrelated_switch_does_not_break_history_enabled(monkeypatch):
+    from cap_evolve import harness
+    monkeypatch.setenv("CAPEVOLVE_ACTIVE_EVAL", "maybe")
+    monkeypatch.delenv("CAPEVOLVE_HISTORY", raising=False)
+    assert harness.history_enabled() is True
