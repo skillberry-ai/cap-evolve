@@ -49,7 +49,7 @@ GATEWAY = "http://127.0.0.1:4111/v1"
 RAW_TOOL_TEXT = "<|tool_call>"
 SB_TARGET = "rits/google/gemma-4-31B-it"
 SB_API_PY = C.REPO / "third_party/spreadsheetbench/code_exec_docker/api.py"
-SB_API_SHA = "4ef019a02437b7ca00c085becaf6b745c3b14c5000a5efdff6b5cd41b82a3263"     # idle-kernel timeout 10800 s (campaign decision 2026-10-12)
+SB_API_SHA = (HERE / "manifests/expected_api_sha256.txt").read_text().split()[0]     # patched api.py: idle-kernel timeout 10800 s + exec500 logging (2026-10-12)
 SB_LO_BIN = str(BENCH / "lo258/root/opt/libreoffice25.8/program/soffice")
 
 
@@ -136,6 +136,10 @@ def worker_A(job, attempt_dir):
     env["SPREADSHEETBENCH_KEEP_OUTPUTS"] = "0"
     env["SPREADSHEETBENCH_LIBREOFFICE_BIN"] = SB_LO_BIN
     env["KERNEL_TIMEOUT_S"] = "10800"
+    import tempfile                                   # the sandbox server's runtime dir (server.log, exec500.jsonl) lands inside the attempt dir for the diagnostics
+    (Path(attempt_dir) / "tmp").mkdir(parents=True, exist_ok=True)
+    env["TMPDIR"] = str(Path(attempt_dir) / "tmp")
+    tempfile.tempdir = env["TMPDIR"]
     env.setdefault("TEMPERATURE", "0.0")
     env.setdefault("MAX_TOKENS", "8000")
     env.update(job.get("env", {}))
@@ -360,6 +364,32 @@ def classify(res, cm):
     return cls, rule
 
 
+def sandbox_diag(ad):
+    """Suite A sandbox-server diagnostics of one attempt (baseline-eng 2026-10-12): execs, HTTP 500s (exec500.jsonl: conversation, kernel id, idle seconds since the last exec),
+    idle-cleanup closures and silent kernel re-creations (a conversation whose kernel was created more than once)."""
+    d = {"sandbox_execs": 0, "sandbox_500": 0, "kernel_recreations": 0, "idle_closures": 0}
+    created = {}
+    for sl in Path(ad).glob("tmp/capevolve_sb_sandbox_*/server.log"):
+        try:
+            for line in sl.read_text(errors="replace").splitlines():
+                m = re.search(r"Kernel created for conversation (\S+)", line)
+                if m:
+                    created[m.group(1)] = created.get(m.group(1), 0) + 1
+                if "Kernel closed for conversation" in line:
+                    d["idle_closures"] += 1
+                if "POST /execute" in line:
+                    d["sandbox_execs"] += 1
+        except Exception:
+            pass
+    d["kernel_recreations"] = sum(max(0, n - 1) for n in created.values())
+    e5 = []
+    for f in Path(ad).glob("tmp/capevolve_sb_sandbox_*/exec500.jsonl"):
+        e5 += C.jsonl(f)
+    d["sandbox_500"] = len(e5)
+    d["exec500"] = e5[:5]
+    return d
+
+
 def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
     jid = job["job_id"]
     h = hashlib.sha256(jid.encode()).hexdigest()[:16]
@@ -439,7 +469,8 @@ def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
             pass
         res = {"worker_ok": False, "worker_exception": "worker exited %s without result.json: %s" % (proc.returncode if proc else "?", tail), "t_start": t_spawn, "t_end": t_end}
     cls, rule = classify(res, cm)
-    rec = {"type": "attempt", "job_id": jid, "attempt": attempt, "suite": job["suite"], "arm": job["arm_label"], "seed": job["seed"], "task": job["task"], "family": job.get("family"),
+    diag = sandbox_diag(ad) if job["suite"] == "A" else {}
+    rec = {"type": "attempt", **{k: v for k, v in diag.items() if k != "exec500"}, "job_id": jid, "attempt": attempt, "suite": job["suite"], "arm": job["arm_label"], "seed": job["seed"], "task": job["task"], "family": job.get("family"),
            "trial": job["trial"], "mode": job["mode"], "trial_seed": ts, "t_spawn": t_spawn, "t_start": res.get("t_start"), "t_end": res.get("t_end"),
            "reward": res.get("reward"), "reward_as_saved": res.get("reward_as_saved"), "error_class": cls, "error_rule": rule,
            "error_text": (res.get("error") or res.get("worker_exception") or ""), "hang": hang, "worker_ok": res.get("worker_ok"),
@@ -557,6 +588,8 @@ def aggregate(suite, root, meta, jobs):
         art["jobs"] += 1
         r["attempts"] += len(allr)
         art["attempts"] += len(allr)
+        for k in ("sandbox_execs", "sandbox_500", "kernel_recreations", "idle_closures"):
+            art[k] = art.get(k, 0) + sum(int(x.get(k) or 0) for x in allr)
         n_inf = sum(1 for x in allr if x["error_class"] == "infra")
         r["retried_jobs"] += 1 if len(allr) > 1 else 0
         r["infra_attempts"] += n_inf
@@ -609,6 +642,9 @@ def aggregate(suite, root, meta, jobs):
     rep = {"%s|%s" % k: v for k, v in sorted(attempts_by_arm.items())}
     C.write_json_atomic(root / "per_arm_report.json", rep)
     for v in by_art.values():
+        if v.get("sandbox_execs"):
+            v["sandbox_500_rate"] = round(v["sandbox_500"] / v["sandbox_execs"], 5)
+            v["kernel_recreations_per_job"] = round(v["kernel_recreations"] / max(1, v["jobs"]), 4)
         v["infra_attempt_rate"] = round(v["infra_attempts"] / v["attempts"], 4) if v["attempts"] else None
         v["infra_final_rate"] = round(v["infra_final"] / v["jobs"], 4) if v["jobs"] else None
     C.write_json_atomic(root / "per_artifact_infra_rates.json", by_art)
