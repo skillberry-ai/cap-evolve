@@ -172,10 +172,21 @@ def tree_hash(root, kind):
 
 
 def tree_hash_normalized(root, kind):
-    """like tree_hash but each file's content is right-stripped of whitespace first (a trailing newline must not make an otherwise identical artifact 'different'); diagnostic only"""
+    """Identity of the RENDERED target-facing content.  tau suites (kind tau_cap): the adapters do `policy.md` .strip() and treat '' and '(none)' as 'no addendum'
+    (wt-tau examples/tau2_retail/adapters/adapter.py:210-221, wt-airE tau2_airline_c adapter.py:210-221), so the policy file is hashed after strip with '(none)' == ''; other files
+    (tools code) are right-stripped.  SpreadsheetBench (kind sb_files): prompt.md and task_template.md are used byte-for-byte (bench/patches/new/adapter.py:981-984,
+    :921), so the strict tree hash applies."""
+    if kind == "sb_files":
+        return tree_hash(root, kind)[0]
     h = hashlib.sha256()
     for f in sorted(tree_files(root, kind)):
-        h.update(("%s\0%s\n" % (f, sha256_bytes((Path(root) / f).read_bytes().rstrip()))).encode())
+        raw = (Path(root) / f).read_bytes()
+        if f == "policy/policy.md":
+            t = raw.decode("utf-8", "replace").strip()
+            raw = b"" if t in ("", "(none)") else t.encode()
+        else:
+            raw = raw.rstrip()
+        h.update(("%s\0%s\n" % (f, sha256_bytes(raw))).encode())
     return h.hexdigest()
 
 

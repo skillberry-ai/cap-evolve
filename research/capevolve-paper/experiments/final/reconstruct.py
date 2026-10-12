@@ -712,7 +712,7 @@ def main(argv=None):
         e["identical_to_seed_normalized"] = bool(sn and e.get("normalized_tree_sha256") == sn)       # descriptive: equal up to trailing whitespace
     inert = {}
     for e in man["entries"]:
-        e["inert"] = bool(e.get("identical_to_seed"))
+        e["inert"] = bool(e.get("identical_to_seed_normalized"))      # inert = identical RENDERED target-facing content (coordinator 2026-10-12; strict hash kept as identical_to_seed)
         inert.setdefault((e["mode"], e["arm"]), []).append(e["inert"])
     man["inert_fraction_by_arm"] = {"%s|%s" % k: {"inert": sum(v), "seeds": len(v), "fraction": round(sum(v) / len(v), 3),
                                                    "label": ("both returned the seed" if all(v) else ("not testable (inert in >=2 of 3 seeds)" if sum(v) >= 2 else ""))}

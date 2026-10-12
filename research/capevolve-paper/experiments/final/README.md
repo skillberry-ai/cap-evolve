@@ -33,6 +33,12 @@ Trace2Skill/ACE/MIPROv2 `rollout_counter.json` (search budget counters), Harness
 Only the tau CapEvolve runs (hc, ao, hcstock on B/C) had a counter (`state.json spent.metric_calls`) that includes the host-side finalize (champion and seed on sel): there the count is the number of logged
 rollouts outside the sel/test/FINAL splits (ao s0 198 -> 148, s1 197 -> 147, s2 172 -> 147; C ao 110 -> 100; the sel-25 rows are finalize rollouts or, for ao s2, the seed's pre-repair sel measurement; ao s2's search is still running). Cross-check: the count equals the number of files under `.capevolve/run_main/rollouts/val`.  Both raw and search counters are written to bstar_<S>.json.
 
+## Inert = identical rendered target-facing content
+
+The tau adapters strip `policy/policy.md` and treat '' and '(none)' as no addendum (wt-tau examples/tau2_retail/adapters/adapter.py:210-221; wt-airE examples/tau2_airline_c/adapters/adapter.py:210-221), so '(none)' and '(none)\n' render identically;
+tools code is compared right-stripped.  The SpreadsheetBench adapter uses prompt.md and task_template.md byte-for-byte (bench/patches/new/adapter.py:981-984, :921), so Suite A stays strict.
+`inert` (and `inert_fraction_by_arm`) uses this rendered identity (`identical_to_seed_normalized`); the strict byte hash stays as `identical_to_seed`.
+
 ## Phase ordering (decisions 22:50)
 
 The primary B* window runs first on every suite (`order_<S>.jsonl`: B* artifacts, seed, one-shot; END artifacts identical to B* ride along).
