@@ -156,27 +156,6 @@ def ablate():
     C.save(fig, "fig_ablate", MOCK)
 
 
-def nullpool():
-    """E22 null pool, mock: false-accept rate per ten-candidate search for each gate, with the simulated value."""
-    npool = data["null_pool"]
-    fig, ax = plt.subplots(figsize=(C.COL_W, 1.9))
-    ks = [("rulep", "Rule P"), ("onestage", "One-stage gate"), ("stock", "Stock gate")]
-    for i, (k, lab) in enumerate(ks):
-        y = len(ks) - 1 - i
-        v = npool[k]
-        ax.barh(y, v["rate"] * 100, color={"rulep": CELL_COL["rulep"], "onestage": CELL_COL["onestage"], "stock": CELL_COL["pt"]}[k], height=0.55)
-        ax.plot([v["lo"] * 100, v["hi"] * 100], [y, y], color="k", lw=0.9)
-        ax.plot(v["sim"] * 100, y, marker="|", color="#cc0000", ms=11, mew=1.8)
-    ax.set_yticks(range(len(ks))); ax.set_yticklabels([l for _, l in reversed(ks)])
-    ax.set_xlim(0, 100)
-    ax.set_xlabel("Null searches with a false promotion (%)")
-    ax.plot([], [], marker="|", color="#cc0000", ms=9, mew=1.6, ls="", label="Simulation")
-    ax.legend(frameon=False, loc="upper right", fontsize=7)
-    ax.grid(axis="y", alpha=0)
-    fig.tight_layout()
-    C.save(fig, "fig_nullpool", MOCK)
-
-
 def pareto():
     fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 2.5))
     for ax, su in zip(axes, SUITES):
