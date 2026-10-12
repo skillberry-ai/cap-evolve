@@ -87,7 +87,7 @@ svg .m{fill:var(--muted)}
 </nav>
 
 <h2 id="summary">Summary</h2>
-<div class="note good"><b>Update 09:30 UTC (coordinator decisions):</b> hill-climb only (E24-AO dropped); stock gate in every cell; reference cell = E20-PT; contrasts pre-registered vs E20-PT with Holm inside Suite D; TOST margin 0.10. Waves: 0 E22; 1 PT, rule P, P, T, CTL (all x3); 2 no-history, one-stage, GEPA, descriptions-only (x2 to 3); 3 skill cell only if a tau skill loader exists (the tau adapter has none today). Capped tokens about 11 M (hc measured 0.2 to 0.7 M per search), within the 20 M headroom. Full table in EXPERIMENTS.md section 0a.</div>
+<div class="note good"><b>Approved scope (coordinator): Tier 1 only.</b> E22 null pool; PT (reference), rule P on PT, P-only, T-only, one-shot, one-stage gate, GEPA prompt-only (3 seeds each); E25 decomposition at final. <b>Not run (not approved):</b> no-history, descriptions-only emulation, PT+skills, rule P 2x, AO, airline. Hill-climb only, stock gate default, registered as amendment 7. Tables below that list the other cells are proposals only.</div>
 <div class="note bad"><b>Why the running campaign cannot answer the ablation questions.</b> Every CapEvolve arm on B and C edits prompt and tools under rule P, and rule P is inert at 550 rollouts: 0 promotions in all hill-climb and agent-optimize searches so far (attrib summary 08:47). A surface grid under rule P would return the seed in almost every cell. The new family (Suite D) uses the <b>stock gate</b> as reference and makes rule P one of its cells.</div>
 <div class="cards">
   <div class="card"><div class="n">gpt-4.1-mini</div><div class="l">Azure target for Suite D: seed 0.612 on retail opt-49 (gpt-oss 0.56 to 0.65), null paired SD 0.57 (gpt-oss 0.55)</div></div>

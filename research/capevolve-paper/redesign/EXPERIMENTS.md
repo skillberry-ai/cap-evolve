@@ -6,28 +6,11 @@ Inputs read: `decisions.md` (to 08:29 UTC today), `protocol/analysis_plan.md` (a
 
 ---
 
-## 0a. Coordinator update (2026-10-12 09:30 UTC): FROZEN LAUNCH LIST FOR SUITE D
+## 0a. APPROVED SCOPE (coordinator, 2026-10-12): TIER 1 ONLY
 
-Decisions applied: hill-climb only (E24-AO dropped), Sonnet 5.5 optimizer, stock gate default in every cell, reference cell = E20-PT (prompt+tools, stock gate, full history). Measured hc optimizer tokens (gateway log, tags E10B-hc, E10C-hc, E12C-hcstock, E12A-hcstock): 0.20 to 0.73 M non-cache-read per search, mean 0.4 M (not 2.5 to 4 M). Grid sized to about 20 M headroom.
+Approved and registered (amendment 7): E22 null pool; E20-PT (reference), E21-ruleP, E20-P, E20-T, E20-CTL (3 seeds each); E21-1S (3 seeds); E20-GEPA (3 seeds); E25 decomposition at final evaluation. Hill-climb only, Sonnet 5.5, stock gate default, target `azoai/gpt-4.1-mini-2025-04-14`, user simulator and judge `azoai/gpt-4.1-2025-04-14`. Measured hc optimizer tokens: 0.20 to 0.73 M per search (mean 0.4 M); Tier 1 about 8 M capped (limit now 170 M). Azure is uncapped (user).
 
-| wave | cell | seeds | rollouts | capped tokens |
-|---|---|---|---|---|
-| 0 (now, no code) | E22 null pool | - | 1,960 | 0 |
-| 1 | E20-PT (reference) | 3 | 1,650 | 1.2 M |
-| 1 | E21-ruleP (rule P on the reference) | 3 | 1,650 | 1.2 M |
-| 1 | E20-P | 3 | 1,650 | 1.2 M |
-| 1 | E20-T | 3 | 1,650 | 1.2 M |
-| 1 | E20-CTL (one-shot) | 3 | 600 | 0.7 M |
-| 2 | E23-nohist (new switch) | 2 | 1,100 | 0.9 M |
-| 2 | E21-1S (one-stage unmasked) | 3 | 1,650 | 1.2 M |
-| 2 | E20-GEPA (P1, cheap) | 2 | 1,100 | 0.8 M |
-| 2 | E20-TD (descriptions-only, emulation) | 2 | 1,100 | 0.8 M |
-| 3 conditional | E20-PTS (needs tau skill loader; the tau adapter has NO skill-package support today, only policy and tools) | 2 | 1,100 | 1.0 M |
-| analysis/final | E26 gate ROC, E25 decomposition, held-out scoring | - | about 16k | 0 |
-
-Capped tokens about 11 M for waves 1 and 2, about 12 M with PTS; fits the 20 M headroom (125 M stop rule applies to the rest). Azure about 15.5k search rollouts plus about 16k held-out, roughly $1.5k at list price.
-
-Pre-registered contrasts (Holm within Suite D, all paired by task, artifact-level CR1 plus pipeline-level t(S-1)): each of {P, T, ruleP, 1S, nohist, TD, PTS, CTL, GEPA} versus E20-PT; plus interaction PT - P - T + seed; plus each of P, T, PT versus seed. TOST margin 0.10 (a margin of 0.05 is below the MDE of about 0.10 at 65 tasks, so it could never pass; report as inconclusive instead). Logged for every cell: promotions per search and the selection-split score per promotion, for selection-to-final shrinkage. Registry entry to be written with stats-reviewer before the first D rollout.
+NOT RUN (not approved): E23 no-history, E20-TD (descriptions-only emulation), E20-PTS (skill package), E21-ruleP-2x, E24-AO, E27 airline, E26 beyond the descriptive scoring in amendment 7G. The text of sections 4 to 10 below describes them as proposals only. No-history feasibility is analysed in the coordinator thread (a one-flag proposer-context switch, about 25 lines, 3 seeds about 1.2 M capped tokens), pending a decision.
 
 ## 0. One-screen summary
 
