@@ -234,7 +234,8 @@ def worker_tau(job, attempt_dir):
            "error_kind_adapter": meta.get("error_kind") if ro.error else None, "termination": meta.get("termination_reason"),
            "n_llm_calls": fl["n_assistant_turns"], "empty_output": False, **fl,
            "empty_completion": _empty_completion(ro.trace, meta.get("termination_reason")),
-           "judge_model": (meta.get("judge") or {}).get("model"), "feedback": (sc.feedback or "")[:1000]}
+           "judge_model": (meta.get("judge") or {}).get("model"), "feedback": (sc.feedback or "")[:1000],
+           "infra_detail": meta.get("infra_detail")}      # wt-tau 740754fe0: exception type/message/traceback functions and the last tool call of an INFRASTRUCTURE_ERROR sim
     ri = meta.get("tau2_reward_info") or {}
     res["tau2_reward_breakdown"] = ri.get("reward_breakdown")
     try:
@@ -479,7 +480,7 @@ def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
            "error_text": (res.get("error") or res.get("worker_exception") or ""), "hang": hang, "worker_ok": res.get("worker_ok"),
            "tokens": res.get("tokens"), "raw_tool_text_last": res.get("raw_tool_text_last"), "raw_tool_text_any": res.get("raw_tool_text_any"),
            "empty_output": res.get("empty_output"), "empty_completion": res.get("empty_completion"), "n_llm_calls": res.get("n_llm_calls"), "termination": res.get("termination"),
-           "tag": job["tag"], "attempt_dir": str(ad), "extra_set": job.get("extra_set")}
+           "tag": job["tag"], "attempt_dir": str(ad), "extra_set": job.get("extra_set"), "infra_detail": res.get("infra_detail")}
     return rec
 
 
@@ -594,7 +595,9 @@ def aggregate(suite, root, meta, jobs):
         for x in allr:
             jlog.append(dict(arm=j.get("arm"), arm_label=j["arm_label"], seed=j["seed"], task=j["task"], trial=j["trial"], attempt=x["attempt"], error_class=x["error_class"],
                              error_rule=x.get("error_rule"), hang=int(bool(x.get("hang"))), final_status=fs, t_start=_iso(x["t_start"]), t_end=_iso(x["t_end"]),
-                             error_text=(x["error_text"] or "").replace("\n", " ")[:500], job_id=j["job_id"], mode=j["mode"]))
+                             error_text=(x["error_text"] or "").replace("\n", " ")[:500], job_id=j["job_id"], mode=j["mode"],
+                             infra_error_type=(x.get("infra_detail") or {}).get("error_type"), infra_traceback_functions="|".join((x.get("infra_detail") or {}).get("traceback_functions") or []),
+                             infra_last_tool=((x.get("infra_detail") or {}).get("last_tool_call") or {}).get("name"), infra_failed_after_attempts=(x.get("infra_detail") or {}).get("failed_after_attempts")))
         jstat.append((j["mode"], j["arm_label"], j["seed"], fs, first_infra, bool(t)))
         arm = j["arm_label"]
         rep = attempts_by_arm.setdefault((j["mode"], arm), {"jobs": 0, "attempts": 0, "retried_jobs": 0, "done": 0, "missing_hang": 0, "infra_final": 0, "pending": 0,
@@ -667,7 +670,7 @@ def aggregate(suite, root, meta, jobs):
         v["infra_attempt_rate"] = round(v["infra_attempts"] / v["attempts"], 4) if v["attempts"] else None
         v["infra_final_rate"] = round(v["infra_final"] / v["jobs"], 4) if v["jobs"] else None
     C.write_json_atomic(root / "per_artifact_infra_rates.json", by_art)
-    _write_csv(root / "rollout_log.csv", jlog, ["mode", "arm", "arm_label", "seed", "task", "trial", "attempt", "error_class", "error_rule", "hang", "final_status", "t_start", "t_end", "error_text", "job_id"])
+    _write_csv(root / "rollout_log.csv", jlog, ["mode", "arm", "arm_label", "seed", "task", "trial", "attempt", "error_class", "error_rule", "hang", "final_status", "t_start", "t_end", "error_text", "job_id", "infra_error_type", "infra_traceback_functions", "infra_last_tool", "infra_failed_after_attempts"])
     C.write_json_atomic(root / "infra_diagnostic.json", infra_diagnostic(jstat))
     return out, rep
 
