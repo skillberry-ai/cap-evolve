@@ -102,6 +102,8 @@ def main(argv=None):
     wanted = {(suite, arm, seed) for arm in arms for seed in C.SEEDS}
     wanted_cm = {(suite if suite in "ABC" else suite, cm.canon_arm(arm) if hasattr(cm, "canon_arm") else arm, seed) for (suite, arm, seed) in wanted}
     led = load_ledger(cm, wanted_cm)
+    main_runs, _others = cm.discover_runs()
+    cm.derive_cutoffs(main_runs)        # per run: time before which gateway calls belong to an attempt superseded by an infrastructure restart (the uniform refund)
     rows = []
     for arm in arms:
         for seed in C.SEEDS:
@@ -114,9 +116,12 @@ def main(argv=None):
             ctx = {"full_n": R.FULL_N[suite], "limit_is_finite": limit != R.INF, "suite": suite}
             fn = R.RULES.get(arm)
             sel = fn(rd, events, limit, ctx) if (fn and (events or arm in ("hc", "ao", "hcstock", "trace2skill"))) else None
-            calls = led.get((suite, cm.canon_arm(arm), seed), [])
+            gross_calls = led.get((suite, cm.canon_arm(arm), seed), [])
+            cutoff = (main_runs.get((suite, cm.canon_arm(arm), seed)) or {}).get("cutoff")
+            calls = [(t, n) for t, n in gross_calls if not cutoff or t >= cutoff]        # CURRENT-ATTEMPT basis (the 4M check); gross is reported as cost
+            gross = sum(n for _, n in gross_calls)
             total = sum(n for _, n in calls)
-            row = {"suite": suite, "arm": arm, "seed": seed, "tokens_end_of_run": total, "n_optimizer_calls": len(calls), "artifact_candidate": (sel or {}).get("candidate_id"),
+            row = {"suite": suite, "arm": arm, "seed": seed, "tokens_end_of_run": total, "tokens_end_of_run_gross": gross, "restart_cutoff_epoch": cutoff, "n_optimizer_calls": len(calls), "artifact_candidate": (sel or {}).get("candidate_id"),
                    "artifact_rollout_index": (sel or {}).get("rollout_index"), "status": (sel or {}).get("status")}
             ridx = row["artifact_rollout_index"]
             starts = [r["t"] for r in C.jsonl(Path(rd) / "logs" / "rollout_starts.jsonl") if isinstance(r.get("t"), (int, float))]
@@ -166,9 +171,9 @@ def main(argv=None):
             rows.append(row)
     out = Path(a.out) if a.out else C.MANIFESTS / ("optimizer_tokens_%s.json" % suite)
     C.write_json_atomic(out, {"suite": suite, "cap": a.cap, "limit": None if limit == R.INF else limit, "generated_utc": C.now_utc(), "rows": rows})
-    print("%-12s %s %-10s %-12s %-12s %s" % ("arm", "seed", "up_to_art", "end_of_run", "after_cap", "sensitivity"))
+    print("%-12s %s %-10s %-12s %-12s %-12s %s" % ("arm", "seed", "up_to_art", "end(current)", "end(gross)", "after_cap", "sensitivity"))
     for r in rows:
-        print("%-12s s%d %-10s %-12s %-12s %s" % (r["arm"], r["seed"], r["tokens_up_to_artifact"], r["tokens_end_of_run"], r["artifact_after_cap"] or ("OVER-AT-END" if r["end_of_run_over_cap"] else ""),
+        print("%-12s s%d %-10s %-12s %-12s %-12s %s" % (r["arm"], r["seed"], r["tokens_up_to_artifact"], r["tokens_end_of_run"], r["tokens_end_of_run_gross"], r["artifact_after_cap"] or ("OVER-AT-END" if r["end_of_run_over_cap"] else ""),
                                                (r.get("sensitivity_at_cap") or {}).get("candidate_id", "")))
     return 0
 
