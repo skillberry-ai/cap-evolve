@@ -82,7 +82,7 @@ The rule changes the class of Trace2Skill and WikiSkill rows, which their adapte
 Of the \errTraceTotal{} Trace2Skill errors, \errTraceInfra{} are infrastructure and \errTraceCand{} keep the candidate class.
 The adapter kept the error text for all of them, in the \texttt{error} field of its pool and validation records.
 The infrastructure rows are sandbox execution failures (HTTP 500) and client timeouts.
-The \errTraceCand{} candidate rows are placeholder-contract rejections caused by the shared-evaluator race and were retried, so they are not candidate faults either.
+Of the \errTraceCand{} rows that carry a candidate-style message, the audit confirmed that they are placeholder-contract rejections caused by the shared-evaluator race, and they were retried as infrastructure errors.
 These rollouts were scored zero without retry, because the runs predate the infrastructure-retry code.
 Trace2Skill's analyst received the pool-phase infrastructure zeros as ordinary failed logs, because the run came before the retry rule, and validation zeros lower its validation scores. Its selected artifact does not change when they are retried.
 All \errWikiTotal{} WikiSkill errors are infrastructure.
