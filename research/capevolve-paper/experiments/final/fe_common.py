@@ -10,6 +10,7 @@ import datetime as dt
 import fcntl
 import hashlib
 import json
+import re
 import os
 import random
 import shutil
@@ -227,6 +228,19 @@ def native_status(rd):
             + list(rd.glob(".capevolve/run_*/optimizer_tokens.json.soft")):
         if f.exists():
             return "guard_stop", "token guard marker %s (%s)" % (f.name, "hard SIGTERM at 3.9M" if f.name.endswith("killed") else "soft stop at 3.5M")
+    # Suite B/C (tau-runner): scripts/E10{B,C}/cost_summary.py --guard writes `GUARD: <tag> optimizer non-cache-read N > LIMIT; killing process group of P` to guard.log,
+    # SIGTERMs the driver (no `exit N` line in run.log) and a watcher / the guard itself writes logs/token_guard_stop.json.  A crash leaves neither.
+    tg = rd / "logs" / "token_guard_stop.json"
+    if tg.exists():
+        d = jload(tg) or {}
+        return "guard_stop", "logs/token_guard_stop.json (%s, %s > %s)" % (d.get("kind"), d.get("optimizer_noncache_read_tokens"), d.get("limit"))
+    gl = rd / "guard.log"
+    if gl.exists():
+        try:
+            if re.search(r"GUARD: (\S+) optimizer non-cache-read (\d+) > (\d+); killing process group of (\d+)", gl.read_text(errors="replace")):
+                return "guard_stop", "guard.log GUARD line"
+        except Exception:
+            pass
     for ev in list(rd.glob(".capevolve/run_*/events.jsonl")) + [rd / "events.jsonl"]:
         if ev.exists():
             try:
