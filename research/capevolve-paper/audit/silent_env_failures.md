@@ -73,3 +73,23 @@ and user-simulator `###STOP###` artifacts (E20 P 9, T 4, PT 2, CTL 2, E21 1S 5, 
 `INDECISIVE: only N% of val tasks produced a valid score`. Optimizer tool errors: `No module named 'pydantic'` (CTL, T, E26, one each) and a
 missing `bench/src/tau2-.../.venv/bin/python` (PT, T, one each), each a single non-repeating probe by the optimizer, same class as the
 intentional tau2/patch/rg gaps. No repeated identical host-level error, no cell with unevaluated proposals. **SUSPECT rows: none.**
+
+## Suite D: tau2 INFRASTRUCTURE_ERROR terminations are candidate-correlated (read-only, 2026-10-12)
+
+Source: `native_sims/<cand>/<split>/*.json` of every Suite D cell (E20, E21, E26): 3,493 non-seed and 1,272 seed simulations.
+- **Seed: 0 of 1,272 infra terminations. Non-seed: 45 of 3,493 (1.3 percent).** Same-window gateway check: all D cells see Azure 429s (23 to 46 per
+  cell in the 10:40 to 12:05 window), yet only the cells below show the spike, and E20-PT-s1 had no non-200 target call at all in its window.
+- **Every one of the 45 ends immediately after a write-tool call** (`exchange_delivered_order_items`, `modify_pending_order_items`,
+  `cancel_pending_order`, `return_delivered_order_items`, `modify_pending_order_address`): empty message list, duration 0, the sim `info.error`
+  holds the last tool call and its result. None ends on a read tool or on an LLM call.
+- Outliers (infra / rollouts, last tool): E20-T s0 cand_0002 12/49 = 24 percent (modify 7, exchange 5) and cand_0003 6/46 = 13 percent
+  (modify 5, exchange 1); E20-PT s1 cand_0003 9/49 = 18 percent (cancel 7, modify 1, address 1); E21-1S s2 cand_0002 4/49 = 8 percent (cancel 4);
+  E20-CTL cand_0001 4/197 over three seeds (exchange 3, modify 1). The same tasks under the seed and under sibling candidates are 0 of 12 (T s0)
+  and 0 of 9 (PT s1); the infra tasks use the edited write tool far more often (T s0: modify on 8/12 infra tasks vs 4/37; PT s1: cancel on 8/9 vs 4/40).
+- What the edits have in common: they change a write tool's return value or error behaviour (T s0 cand_0002 returns a dict with a `note` field from
+  exchange/modify; PT s1 cand_0003 raises "NOT CANCELLED YET" on the first cancel of a multi-item order). A direct check shows the cancel logic itself runs
+  (first call raises ValueError, second succeeds), so the exact exception that the harness converts to INFRASTRUCTURE_ERROR is not yet identified.
+- **Verdict: SUSPECT mislabel.** These terminations are very likely candidate-induced and should not be excluded as infra. Under the uniform classifier
+  they are currently `infra` (string "tau2 terminated for infrastructure reason") and would be dropped or retried rather than scored as candidate failures.
+  Recommended: classify a tau2 INFRASTRUCTURE_ERROR whose last event is a write-tool result as `candidate`, or at least as `unverifiable`, and have the
+  adapter owner capture the exception text (the sim JSON has none) before the final evaluation.
