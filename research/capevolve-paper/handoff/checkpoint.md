@@ -67,6 +67,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
   - ~/.config/containers/containers.conf (default_network=sb_internal) and the sb_internal podman network;
   - the gw_bridge process (baselines/gwbridge), which Meta-Harness, HarnessLens and the B/C shims depend on. Check it in periodic checks while the campaign runs.
   - system package bubblewrap-0.6.3-1.el9 (installed 2026-10-12 for HarnessLens' isolated Harness Editor calls): remove with `sudo dnf remove -y bubblewrap`.
+  - second gw_bridge process for the Azure gateway (baselines/gwbridge/gw4112.sock, forwards to 127.0.0.1:4112), used by the Suite E HarnessLens sandbox: stop it after the campaign.
 
 ## Update 00:50 UTC 10-12 (periodic check)
 - WikiSkill crashed on all 3 seeds at about 22:42 (session.jsonl missing); bl-wikiskill is fixing it.
@@ -90,3 +91,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Amendment 8 + E26 no-history cell approved (experiment-designer registers; patch reviewed before merge).
 - Review round 3 on draft4 (35b73dd7e) done; triage3 running. Resume: read draft4/TRIAGE.md, dispatch fixes.
 - Silent environment-failure audit of all arms requested of metering-auditor (audit/silent_env_failures.md).
+
+## Update 12:50 UTC 10-12 (periodic check)
+- Capped 95.4M/200M (cap raised by the user); ladder 170/178/182M; 18M final reserve; capped watcher at 160M (background task in this session).
+- Suite E admission loop (tau-runner) and E12B relaunch watcher armed. E26-nohist running with shim v2.
+- Azure mini quota is the bottleneck; caps.json azoai:gpt-4.1-mini=15. Undo after campaign: remove bubblewrap, gw4112 bridge, plus earlier items.
+- Resume: watch D searches ending (about 19:30-20:00), Suite E waves, the 06:00 cutoff (cron b76737e4) for A/B/C.
