@@ -70,6 +70,33 @@ def sval(e):
     return None
 
 
+def exclusions(suite, arm, seed):
+    """protocol/infra_exclusions.json: candidate evaluations lost to infrastructure are MISSING (not rejections): events of that candidate before before_utc are dropped"""
+    d = C.jload(C.PAPER / "protocol/infra_exclusions.json") or {}
+    out = {}
+    for x in d.get("entries", []):
+        if x.get("suite") == suite and x.get("arm") == arm and str(x.get("seed")) == str(seed):
+            out[x["candidate"]] = x.get("before_utc") or "9999-01-01T00:00:00Z"
+    return out
+
+
+def apply_exclusions(events, excl):
+    if not excl:
+        return events, 0
+    import datetime as _dt
+    keep, n = [], 0
+    for e in events:
+        b = excl.get(e.get("candidate_id"))
+        if b:
+            t = event_time(e)
+            lim = _dt.datetime.fromisoformat(b.replace("Z", "+00:00"))
+            if t is None or t < lim:
+                n += 1
+                continue
+        keep.append(e)
+    return keep, n
+
+
 def load_events(run_dir, extra_paths=()):
     """candidates.jsonl events of a run, file order.  CapEvolve runs keep it under .capevolve/run_*/ (last run dir wins)."""
     rd = Path(run_dir)
@@ -439,7 +466,7 @@ def rule_oneshot(rd, events, limit, ctx):
 RULES = {
     "gepa": rule_gepa, "skillopt": rule_skillopt, "evoskill": rule_evoskill, "metaharness": rule_metaharness,
     "wikiskill": rule_wikiskill, "mipro": rule_mipro, "ace": rule_ace, "trace2skill": rule_trace2skill,
-    "harnesslens": rule_harnesslens, "hc": rule_capevolve, "ao": rule_capevolve, "oneshot": rule_oneshot, "hcstock": rule_capevolve,
+    "harnesslens": rule_harnesslens, "hc": rule_capevolve, "ao": rule_capevolve, "oneshot": rule_oneshot, "hcstock": rule_capevolve, "hlext": rule_harnesslens,
     "pt": rule_capevolve, "rulep": rule_capevolve, "p": rule_capevolve, "t": rule_capevolve, "1s": rule_capevolve, "nohist": rule_capevolve, "td": rule_capevolve,
     "nodigest": rule_capevolve, "rulep2x": rule_capevolve, "ctl": rule_oneshot,
 }
@@ -504,6 +531,8 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
         entry.update(status="impossible", reason="run directory missing")
         return entry
     events, sources = load_events(rd)
+    events, n_excl = apply_exclusions(events, exclusions(suite, arm, seed))
+    entry["infra_excluded_events"] = n_excl
     entry["event_sources"] = sources
     entry["n_events"] = len(events)
     fn = RULES[arm]
@@ -528,6 +557,14 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
             hh.update(("%s\0%s\n" % (f, files[f])).encode())
         h = hh.hexdigest()
     sr = seed_selection_score(rd, events)
+    inlim = [e for e in events if in_limit(e, limit)]
+    cands_seen = {e["candidate_id"] for e in inlim if e["event"] in ("evaluated", "accepted", "rejected")}
+    sv = C.jload(Path(rd) / "surface_violations.json")
+    entry["n_promotions"] = len({e["candidate_id"] for e in inlim if e["event"] == "accepted"} - {seed_candidate(events)})
+    entry["n_screened"] = len(cands_seen)
+    if sv is not None:
+        entry["surface_violations"] = sv
+    entry["dagger"] = (suite, arm) in C.DAGGER
     own = (_BSTAR_RUNS or [])
     own_n = next((r.get("counter") for r in own if r["arm"] == arm and r["seed"] == seed), None)
     entry["selection"] = {"split": entry.get("selection_split"), "n_tasks": entry.get("selection_n_tasks"),
@@ -625,6 +662,13 @@ def main(argv=None):
     seed_h = man["seed_artifact"].get("tree_sha256")
     for e in man["entries"]:
         e["identical_to_seed"] = bool(seed_h and e.get("tree_sha256") == seed_h)
+    inert = {}
+    for e in man["entries"]:
+        e["inert"] = bool(e.get("identical_to_seed"))
+        inert.setdefault((e["mode"], e["arm"]), []).append(e["inert"])
+    man["inert_fraction_by_arm"] = {"%s|%s" % k: {"inert": sum(v), "seeds": len(v), "fraction": round(sum(v) / len(v), 3),
+                                                   "label": ("both returned the seed" if all(v) else ("not testable (inert in >=2 of 3 seeds)" if sum(v) >= 2 else ""))}
+                                    for k, v in sorted(inert.items())}
     by_hash = {}
     for e in man["entries"]:
         if e.get("tree_sha256"):
@@ -639,11 +683,13 @@ def main(argv=None):
     selp.parent.mkdir(parents=True, exist_ok=True)
     with open(selp, "w", newline="") as f:
         w = _csv.writer(f)
-        w.writerow(["mode", "arm", "seed", "status", "candidate_id", "split", "n_tasks", "champion_score", "seed_score", "seed_split", "comparison_count", "own_count", "seed_source"])
+        w.writerow(["mode", "arm", "seed", "status", "candidate_id", "split", "n_tasks", "champion_score", "seed_score", "seed_split", "comparison_count", "own_count", "seed_source",
+                    "inert", "dagger", "n_promotions", "n_screened"])
         for e in man["entries"]:
             sx = e.get("selection") or {}
             w.writerow([e["mode"], e["arm"], e["seed"], e["status"], e.get("candidate_id"), sx.get("split"), sx.get("n_tasks"), sx.get("champion_score"), sx.get("seed_score"),
-                        sx.get("seed_split"), sx.get("comparison_count"), sx.get("own_count"), sx.get("seed_source")])
+                        sx.get("seed_split"), sx.get("comparison_count"), sx.get("own_count"), sx.get("seed_source"),
+                        int(bool(e.get("inert"))), int(bool(e.get("dagger"))), e.get("n_promotions"), e.get("n_screened")])
     path = Path(a.manifest) if a.manifest else C.MANIFESTS / ("artifacts_%s.json" % suite)
     C.write_json_atomic(path, man)
     for mode in modes:

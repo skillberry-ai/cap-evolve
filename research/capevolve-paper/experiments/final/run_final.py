@@ -617,15 +617,15 @@ def aggregate(suite, root, meta, jobs):
             r["empty_completion"] += 1 if t.get("empty_completion") else 0
             r["raw_tool_text_last"] += 1 if t.get("raw_tool_text_last") else 0
         for _m in (["B", "END"] if j.get("also_end") else [j["mode"]]):
-            trial_rows[_m].append(dict(arm=j.get("arm"), seed=j["seed"], task=j["task"], trial=j["trial"], reward=(0.0 if infra_final else t["reward"]), family=j.get("family"),
+            trial_rows[_m].append(dict(arm=j.get("arm"), seed=j["seed"], task=j["task"], trial=j["trial"], reward=(0.0 if infra_final else t["reward"]), family=j.get("family"), split=j.get("split") or "",
                                        reward_as_saved=(0.0 if infra_final else t["reward_as_saved"]), t_start=_iso(t["t_start"]), t_end=_iso(t["t_end"]), error_class=t["error_class"],
                                        error_text=(t["error_text"] or "").replace("\n", " ")[:500], attempts=len(allr), empty_output=int(bool(t.get("empty_output"))),
                                        empty_completion=int(bool(t.get("empty_completion"))), raw_tool_text_last=int(bool(t.get("raw_tool_text_last"))),
                                        infra_final=int(infra_final), tag=t["tag"], job_id=j["job_id"]))
     out = {}
-    tcols = ["arm", "seed", "task", "trial", "reward", "family", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output",
+    tcols = ["arm", "seed", "task", "trial", "reward", "family", "split", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output",
              "empty_completion", "raw_tool_text_last", "infra_final", "tag", "job_id"]
-    lcols = ["arm", "seed", "task", "reward", "family", "n_trials", "n_infra_final", "reward_as_saved", "t_start", "t_end", "error_class", "error_text"]
+    lcols = ["arm", "seed", "task", "reward", "family", "split", "n_trials", "n_infra_final", "reward_as_saved", "t_start", "t_end", "error_class", "error_text"]
     for mode, suffix in (("B", ""), ("END", "_end")):
         rows = trial_rows[mode]
         _write_csv(root / ("results_trials%s.csv" % suffix), rows, tcols)
@@ -635,7 +635,7 @@ def aggregate(suite, root, meta, jobs):
                 agg.setdefault((x["arm"], x["seed"], x["task"]), []).append(x)
             long_rows = []
             for (arm, seed, task), xs in sorted(agg.items(), key=lambda kv: (kv[0][0], kv[0][1], str(kv[0][2]))):
-                long_rows.append(dict(arm=arm, seed=seed, task=task, reward=round(sum(x["reward"] for x in xs) / len(xs), 10), family=xs[0]["family"],
+                long_rows.append(dict(arm=arm, seed=seed, task=task, reward=round(sum(x["reward"] for x in xs) / len(xs), 10), family=xs[0]["family"], split=xs[0].get("split", ""),
                                       n_trials=len(xs), n_infra_final=sum(x["infra_final"] for x in xs), reward_as_saved=round(sum(x["reward_as_saved"] for x in xs) / len(xs), 10),
                                       t_start=min(x["t_start"] for x in xs), t_end=max(x["t_end"] for x in xs),
                                       error_class="|".join(sorted({x["error_class"] for x in xs if x["error_class"]})),
@@ -730,7 +730,7 @@ def tag_guard(suite, jobs):
                 prob.append("final-set job without FINAL-%s tag: %s" % (suite, j["job_id"]))
                 break
         else:
-            if tag.startswith("FINAL-"):
+            if tag.startswith("FINAL-") and not (suite == "D" and j.get("split") == "sel"):     # Suite D scores sel-25 inside the final window (H65)
                 prob.append("search-split job carries a FINAL tag: %s" % j["job_id"])
                 break
             if str(j["task"]) in sealed:

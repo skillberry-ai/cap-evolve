@@ -100,7 +100,12 @@ def load_tasks(suite, which, k, rng):
             return [{"id": str(t["id"]), "family": str(t.get("family") or family_of_sb_id(t["id"]))} for t in d["tasks"]], "final", C.file_sha(FINAL_A_TASKS)
         sp = C.jload(WT_TAU / "protocol" / TAU_SPLITS[suite])
         ids = [str(x) for x in sp["sealed_test"]]
-        return [{"id": i, "family": i} for i in ids], "final", hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest()
+        tasks = [{"id": i, "family": i, "split": "test"} for i in ids]
+        if suite == "D":      # H65 = sel-25 + test-40 (amendment 7); both sets are built so that either primary choice works (split column)
+            sel = [str(x) for x in sp["sel"]]
+            tasks = [{"id": i, "family": i, "split": "sel"} for i in sel] + tasks
+            ids = sel + ids
+        return tasks, "final", hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest()
     # smoke: search-split tasks only
     if suite == "A":
         d = C.jload(SPLIT_FILE_A)
@@ -109,7 +114,7 @@ def load_tasks(suite, which, k, rng):
         sp = C.jload(WT_TAU / "protocol" / TAU_SPLITS[suite])
         pool = sorted(str(x) for x in sp["sel"])
     pick = sorted(rng.sample(pool, k))
-    return [{"id": i, "family": family_of_sb_id(i) if suite == "A" else i} for i in pick], "smoke", hashlib.sha256("\n".join(pick).encode()).hexdigest()
+    return [{"id": i, "family": family_of_sb_id(i) if suite == "A" else i, "split": "sel" if suite != "A" else "val"} for i in pick], "smoke", hashlib.sha256("\n".join(pick).encode()).hexdigest()
 
 
 def canary_tasks(suite, rng, n=5):
@@ -171,16 +176,16 @@ def main(argv=None):
         label = arm if mode != "END" else arm + "-end"
         if arm == "seed":
             label = "seed"
-        j = {"type": "job", "suite": suite, "arm": arm, "arm_label": label, "seed": seed, "mode": mode, "task": task["id"], "family": task["family"],
+        j = {"type": "job", "suite": suite, "arm": arm, "arm_label": label, "seed": seed, "mode": mode, "task": task["id"], "family": task["family"], "split": task.get("split"),
              "trial": trial, "trial_seed": trial_seed(suite, task["id"], trial, a.extra or ""), "artifact_dir": art["frozen_dir"],
              "artifact_tree_sha256": art["tree_sha256"], "artifact_kind": kind, "tag": "tag:%s-%s-s%d:%s" % (tag_exp, label, seed, label),
-             "also_end": also_end, "extra_set": a.extra, "final_split": not smoke}
+             "also_end": also_end, "extra_set": a.extra, "final_split": (not smoke) and task.get("split") != "sel"}
         if suite == "A":
             j.update(agent_view=agent_view, gold_dir=gold_dir, adapter_path=a.adapter_path)
         j["job_id"] = "%s|%s|s%d|%s|%s|t%d" % (suite, label, seed, task["id"], mode, trial)
-        if arm in ("harnesslens", "hl-v0"):
+        if arm in ("harnesslens", "hl-v0", "hlext"):
             j["hl"] = {"version": art.get("candidate_id") if arm == "harnesslens" else "v0",
-                       "src_run_dir": (None if arm == "hl-v0" else str(Path(art.get("run_dir", "")) / ("hl_s%d" % seed) / "runs/train" / ("e10b-hl-s%d" % seed)))}
+                       "src_run_dir": (None if (arm == "hl-v0" or art.get("candidate_id") == "v0") else str(Path(art.get("run_dir", "")) / ("hl_s%d" % seed) / "runs/train" / ("e10b-hl-s%d" % seed)))}
         for k in ("target_model", "gateway", "env", "user_model", "judge_model"):
             if ex.get(k):
                 j[k] = ex[k]
@@ -188,6 +193,8 @@ def main(argv=None):
 
     def add_cell(arm, seed, mode, art, n_trials, also_end=False):
         for t in tasks:
+            if suite == "D" and not smoke and arm in ("gepa",) and t.get("split") == "sel":
+                continue          # GEPA selects on sel-25: its cells are test-40 only
             for k in range(n_trials):
                 jobs.append(make_job(arm, seed, mode, art, t, k, n_trials, also_end))
 
@@ -207,6 +214,8 @@ def main(argv=None):
             sys.exit("no usable seed artifact in manifest")
         if not a.end_only:
             add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
+            if not a.extra:       # amendment 9A: ONE extra labelled seed-check cell (the seed artifact again, the arms' n); feeds no test
+                add_cell("seed-check", 0, "B", seed_art, n_arm, also_end=True)
         if a.hl_v0 and suite == "B" and not a.end_only:
             add_cell("hl-v0", 0, "B", {"frozen_dir": str(C.final_dir("B") / "artifacts/hl-v0"), "tree_sha256": "hl-v0-unmodified", "candidate_id": "v0"}, n_seed, also_end=True)
         entries = {(e["mode"], e["arm"], e["seed"]): e for e in man["entries"]}

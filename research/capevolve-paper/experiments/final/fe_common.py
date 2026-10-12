@@ -68,9 +68,11 @@ SUITES["D"] = {
                 "td": "E20-TD", "nohist": "E23-nohist", "nodigest": "E23-nodigest", "rulep2x": "E21-ruleP-2x"},
     "artifact_kind": "tau_cap", "final_state": True,               # no B*: D searches are rollout-capped, the final state is compared
 }
-for _s, _ex in (("B", []), ("C", ["hcstock"])):
+for _s, _ex in (("B", ["hcstock", "hlext"]), ("C", ["hcstock"])):   # B: E12B stock-gate hill climb, HL-extended (exploratory)
     SUITES[_s]["exploratory"] = _ex                  # C: E12C stock-gate hill climb
-RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock"): RUNS / "E12C" / "hcstock"}
+RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock"): RUNS / "E12C" / "hcstock", ("B", "hcstock"): RUNS / "E12B" / "hcstock",
+                     ("B", "hlext"): RUNS / "E10B" / "harnesslens_ext"}
+DAGGER = {("B", "ao"), ("C", "ao")}      # amendment 9G: agent-optimize on B/C had access to its own opt/sel gold actions; flagged, second family computed without them
 SEEDS = [0, 1, 2]
 FAMILY_FILES = {"sb_files": ["prompt.md", "task_template.md"], "tau_cap": None}   # None = policy/** tools/**
 
