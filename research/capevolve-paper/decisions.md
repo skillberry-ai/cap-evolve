@@ -360,3 +360,8 @@ Two-stage: soft at 3.5M freezes the run budget (max_metric_calls := rollouts spe
   - (4) Paper title: "CapEvolve: Optimizing Any Editable Surface of a Frozen Agent Under Code-Owned Evaluation".
   - Registry entries for Suite D are written before its first rollout.
 - 2026-10-12T09:17 — Gateway :4112 runs with GATEWAY_AZURE_ONLY=1: non-azoai models are refused (400), so capped calls cannot bypass the :4111 budget guard. Verified (non-Azure 400; Azure OK). All optimizer and judge calls on LiteLLM go through :4111.
+- 2026-10-12T09:22 — HarnessLens on Suite B under the frozen 4M optimizer-token guard:
+  - s0 and s2 stopped on the guard (4.04M / 4.09M non-cache-read; about 3.7M of each was cache writes from re-sent contexts) before proposing any candidate. Their artifact is v0 (the unmodified harness), and they are budget terminations that do not bind N*.
+  - s1 crashed at the end of its baseline (IncompleteRolloutTraceError) and is to be resumed under the same 4M guard.
+  - Exploratory arm hlext: s0's state continued with a 16M guard, labelled separately, outside every Holm family, scored as an exploratory final cell.
+  - Rationale: the matched comparison keeps the frozen budget for every arm, and the exploratory arm shows what HarnessLens does once its fixed pipeline cost has been paid.
