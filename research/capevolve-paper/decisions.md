@@ -297,3 +297,11 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - New HL timeouts validated (FE_dry_hl3 task 10: 974 s, 9 calls, no truncation, reward 1.0). The single truncated-stream trial ran on the old 60 s chunk timeout, which supports the chunk-timeout explanation.
 - 2026-10-12 — Suite B class caps (final-eval-eng): run_final.py --class-caps hl=32,default=12 (HarnessLens/hl-v0 cells 32 concurrent, tau-agent cells 12), single interleaved stream, n=3. Watch gpt-oss gateway queue (experiments/final/watch_queue.py); median queue_s > 60 s -> restart with hl=24 (finished jobs kept). END fallback: drop HL END cells first, disclosed. — capacity: HL primary 9.9 h at 32 (12.9 h at 24), measured HL wall median 2277 s / p90 3336 s. — yes.
 - 2026-10-12T01:41 — Correction to the previous entry: HL class cap = 24, not 32. The gateway's 24 in-flight gpt-oss slots are shared with the tau workers, so 32 would only queue (final-eval-eng, README fda1a7a34). Slot hold time is measured in the first hour of the final window, and class caps are rebalanced then.
+- 2026-10-12T02:16 — Resume-restarts onto the fixed sb_eval_lib (race fix plus uniform infra retry), from restart_log.json:
+  - GEPA s0 01:28:09 (counter 340), s1 02:04:16 (245), s2 01:16:25 (413).
+  - EvoSkill s0 01:46:39 (184), s1 01:13:17 (132), s2 01:06:17 (92).
+  - Each lost at most the next iteration's first 4 rollouts.
+  - SkillOpt is waiting for its epoch boundary.
+- 2026-10-12T02:16 — Network switch cleared: a paired test of sb_internal against the bridge (10+10 containers, 25 execs each) showed no difference in start time, exec latency or failures. CapEvolve's sandbox-500 rate per hour fell after 22:32.
+- 2026-10-12T02:16 — Probable source of sandbox 500s: the exec server deletes kernels idle for more than 10 min (KERNEL_TIMEOUT), so rollouts waiting on slow LLM calls lose their kernel. Being confirmed. If confirmed, KERNEL_TIMEOUT is raised to 3 h uniformly for new sandboxes and for the final evaluation.
+- 2026-10-12T02:16 — Trace2Skill errors relabelled from the regenerated metrics: 49 of 51 infra (sandbox 500, litellm timeout); the 2 placeholder rows are known race rejections.
