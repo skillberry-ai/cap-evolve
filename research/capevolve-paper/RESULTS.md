@@ -1,6 +1,6 @@
 # Results index
 
-Every real result that exists now, with a link and a one-line description. Updated 2026-10-12 16:00 UTC (search-time files as of 15:51 UTC).
+Every real result that exists now, with a link and a one-line description. Updated 2026-10-12 16:05 UTC (search-time files as of 15:51 UTC, metering as of 15:55 UTC; each row carries its own date).
 
 **Read this first.**
 - No held-out (final-set) score exists for any suite. The final evaluation starts after the search cutoff, 2026-10-13 06:00 UTC. Nothing below is a held-out result.
@@ -64,17 +64,17 @@ Not tested: the footprint-masked stock gate, false rejects of real improvements 
 
 ## 3. Metering and cost totals (real)
 
-[`analysis/out/metrics/campaign_totals.json`](analysis/out/metrics/campaign_totals.json), built from the gateway call log by [`analysis/scripts/collect_metrics.py`](analysis/scripts/collect_metrics.py). Report: [`analysis/out/metrics/metrics_report.md`](analysis/out/metrics/metrics_report.md) (generated 2026-10-12 13:15 UTC).
+[`analysis/out/metrics/campaign_totals.json`](analysis/out/metrics/campaign_totals.json), built from the gateway call log by [`analysis/scripts/collect_metrics.py`](analysis/scripts/collect_metrics.py). Report: [`analysis/out/metrics/metrics_report.md`](analysis/out/metrics/metrics_report.md) (generated 2026-10-12 15:55 UTC, commit 56f58199c; refreshed at most hourly).
 
-| Quantity | Value |
-|---|---|
-| Model calls logged / errors | 454,715 / 3,505 |
-| Tokens, all models (ledger basis, cache reads excluded for Anthropic) | 2.50 billion |
-| RITS-served tokens (target models, uncapped by user decision) | 1.70 billion |
-| Azure OpenAI direct tokens (uncapped by user decision) | 0.70 billion (167,435 calls) |
-| Capped (non-RITS, non-Azure) tokens | 97.2M in this log snapshot; the gateway counter is the authority for the 200M cap (95.4M at 12:50 UTC per [`STATUS.md`](STATUS.md)) |
-| Proxy USD, capped bucket (Anthropic list prices) | about $300 |
-| Azure list-price USD (not billed) | about $251 |
+| Quantity (gateway log to 2026-10-12 15:55 UTC) | Value | As of |
+|---|---|---|
+| Model calls logged / errors | 573,697 / 3,791 | 15:55Z |
+| Tokens, all models (ledger basis, cache reads excluded for Anthropic) | 3.13 billion | 15:55Z |
+| RITS-served tokens (target models, uncapped by user decision) | 1.88 billion | 15:55Z |
+| Azure OpenAI direct tokens (uncapped by user decision) | 1.14 billion (261,845 calls) | 15:55Z |
+| Capped (non-RITS, non-Azure) tokens, log basis | 113.3M; the gateway counter is the authority for the 200M cap | 15:55Z |
+| Proxy USD, capped bucket (Anthropic list prices) | about $347 | 15:55Z |
+| Azure list-price USD (not billed) | about $401 | 15:55Z |
 
 USD is a proxy from list prices; IBM gateway billing is not visible, and RITS models are unpriced (tokens only), so USD is a lower bound. The log and the gateway `/health` counter differ by a stated reconciliation gap (see the "Reconciliation" section of the report).
 
