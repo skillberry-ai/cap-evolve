@@ -43,3 +43,40 @@ Scanned every file under `study/**/input/` of s0 (453 files), s1 (343) and s2 (3
 - The probes exercise proposer-mode `read_file` and the `bash` tool on a proposer role (refused because the tool is not offered). The role with a shell is `spreadsheet` mode (the target agent), which is not probed here; in this campaign target rollouts go through `sb_eval_lib` with the gold-free agent view, which I verified above, so that is the control that matters.
 - The test shows no gold or split leakage into the staged files; it cannot show absence of gold-derived facts distilled into text, which is the issue seen in the Opus-optimizer runs.
 - Only s0 is attested by the committed result; s1 and s2 pass my independent scan but have no committed negative-test record.
+
+---
+
+# Addendum: review of the v3 whitelist (commit 3ee2ddd7f)
+
+## Verdict
+The v3 test is sound. Every whitelist reason is narrow enough that it cannot hide a gold file name, gold tree or sealed artefact, and each of the 2274 + 1241 + 1378 recorded matches (s0, s1, s2) is correctly whitelisted on re-inspection. W4 is legitimate. Recommended hardening items are small and listed at the end.
+
+## What I checked
+- Re-read `negative_test_v3_whitelist.py` and all three result files (every occurrence is logged, with offset and context). All 5 pass, 0 unwhitelisted, 0 val or test ids, 8/8 probes refused.
+- All nine markers I asked for are present and **matched zero times** in s0, s1 and s2 (only `gold` and `_output.xlsx` ever match). So no `golden`, `_answer.xlsx`, `answer.xlsx`, tree names, cache path or sealed-artefact string occurs in any staged input.
+
+## Reason by reason
+| reason | scope in code | count s0/s1/s2 | verdict |
+|---|---|---|---|
+| W0 `gold-free` / `gold_free` label | 10-char window around the match | 352/264/264 (one per trace, always `scorer_feedback_gold_free`) | narrow in practice. The check is not tied to a marker, but the only marker that can occur inside that label is `gold`; golden and answer names cannot. |
+| W1 agent's own `/mnt/data/outputs/<task>_<n>_<hash>/1_<task>_output.xlsx` | only marker `_output.xlsx`, full path regex, first occurrence after the path | 1908/944/1103 | safe: `_output.xlsx` is not a gold name in any tier, and the gold markers can never be whitelisted by W1. |
+| W2 `1_<task>_output.xlsx` variants and the `<id>` placeholder | only marker `_output.xlsx`, filename must end at the match | 1/14/5 | safe for the same reason. I read all 20 contexts: truncated paths, `os.path.join` forms, and the skill text "e.g. `/mnt/data/outputs/<task>/1_<id>_output.xlsx`". |
+| W3 task 40892 colour cell "Gold" | marker `gold` only, file name `40892.md`, pattern in a 160-char window | 12/19/5 | correct on all 36 contexts (`['Red','Gold',...]`, `B3: Gold`, `Jumper Gold`). Residual looseness: it is window-based, so a real `gold` word within 100 chars of a colour cell in that one file would be masked. The `golden` marker is not covered by W3 and still fires independently. Low risk; tighten by requiring a capital `Gold` as a whole word inside quotes or after `: `. |
+| W4 wiki prose "described the gold" | marker `gold` only, exact file name and exact 18-char phrase at that offset | 0/0/1 | legitimate, see below. |
+| W5 tail after the 15000-char truncation marker | only marker `_output.xlsx`, within 12 chars of the marker | 1/0/0 | safe (filename tail only). |
+
+Because W1, W2 and W5 apply only to `_output.xlsx`, and W3 and W4 only to `gold` in named files, no whitelist can suppress `golden`, `answer.xlsx`, `_answer.xlsx`, `answer_key`, `ground_truth`, `reference_path`, `SPREADSHEETBENCH_GOLD`, `all_data_912`, `sample_data_200`, `spreadsheetbench-data`, `capevolve-ci`, `reused_seed_run`, `rollouts/test`, `test_per_task` or `spreadsheetbench_verified_400`. Those markers are all unconditional.
+
+## W4 in detail
+The sentence is in `wiki/patterns/ambiguous-blank-spec-na-vs-empty-string.md` (s2, iteration 003 proposer input): "the explicit note about the empty string described the gold". I read the whole note. It cites task 58949 (a train id; val and test do not contain it), and its numbers ("12 of 32 cells", "20 cells hold a value where the expected output has none") are verbatim from the trace's `scorer_feedback_gold_free`: "COVERAGE: ... the expected output has a value in 12. MISMATCH: 20 of 32 cell(s) ... hold a value where the expected output has none". The note contains no cell value, path or file name from the gold. "The gold" there is the maintainer's inference that blanks are the expected missing marker, derived from the "expected has none" class.
+
+## Is that feedback the campaign's registered gold-safe channel, and does it leak values?
+- Yes. It is `score.feedback` produced by the spreadsheetbench adapter's `_localize_failure` and `_mismatch_classes` (`templates/adapters/spreadsheetbench/adapter.py`), recorded as the protocol channel in `protocol/scorer_audit.md` ("per-range counts/types of mismatches (not values) to the optimizer"). The docstring states the gold-safety contract: three signals open the gold, each is a count, a type or a category, and "No cell VALUE is ever emitted". The contract is asserted by `core/tests/test_spreadsheetbench_failure_localization.py::test_no_gold_value_leaks_through_the_mismatch_note`, which I ran: passes. The only literal that can appear (`#N/A`) is the agent's own text.
+- It does disclose categorical facts about the gold, by design and identically for every arm: the expected fill count per range, whether expected cells are empty, numeric direction (lower or higher), text-vs-number type, prefix or extension relation, whether the expected value is the cell's own original input, and whether an expected value is an Excel error marker. Papers should list these explicitly as the optimizer-visible gold signal; they are what the wiki note used.
+- Caveat for the scope of this test: it scans staged files for names and paths. A value leak would not show up as a marker, so the unit test above and the "no values" property of the adapter are what carry that claim. I found no literal gold value in the staged files I read (W4 note, the contexts above).
+
+## Hardening suggestions (none blocking)
+1. Tie W0 to marker `gold` explicitly.
+2. Tighten W3 to whole-word capital `Gold` inside quotes or after `: ` in `40892.md`, and fail if a lowercase `gold` appears in that file.
+3. For W4, also require that the file lies under `wiki/` and bind the phrase to a hash of the sentence, so a later wiki rewrite re-triggers review.
+4. s1 and s2 were still running at scan time; re-run the v3 script after they finish and re-check that no new unwhitelisted reason appears (the whitelist was extended after seeing hits, W2/W4/W5, so a late new context should be reviewed rather than auto-extended).
