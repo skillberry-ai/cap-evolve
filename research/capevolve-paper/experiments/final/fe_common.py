@@ -294,6 +294,16 @@ def native_status(rd):
                         # host-side finalize; decisions.md 02:50 UTC): a native termination, not a crash
                         return "native_finish", "%s: exit %d from the finalize step, final.json present (search ended on its own)" % (name, rc)
                     return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
+    for run in sorted((rd / ".capevolve").glob("run_*")):      # Suite A CapEvolve: the post-agent seal step (eval_start on split=test) means the agent's search has ENDED
+        evf2 = run / "events.jsonl"
+        if evf2.exists() and (rd / "logs" / "host.out").exists():
+            try:
+                with open(evf2, errors="replace") as fh:
+                    for line in fh:
+                        if '"eval_start"' in line and '"split": "test"' in line:
+                            return "native_finish", "events.jsonl: post-agent seal step started (eval_start split=test); the agent's search has ended"
+            except Exception:
+                pass
     ho = rd / "logs" / "host.out"      # Suite A agent-optimize: the host appends `host-exited` on every exit; it counts as the agent's OWN end only if the agent produced its final report first
     if ho.exists() and not _live(rd):
         try:
