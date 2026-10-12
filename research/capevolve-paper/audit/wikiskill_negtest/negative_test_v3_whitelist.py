@@ -12,7 +12,9 @@ run = Path(sys.argv[1]); sp = L.load_split()
 GOLD_MARKERS = ["spreadsheetbench_verified_400", "/data/extracted", "golden", "gold", "answer_key", "ground_truth", "reference_path",
                 "SPREADSHEETBENCH_GOLD", "_output.xlsx", "_answer.xlsx", "answer.xlsx", "all_data_912", "sample_data_200",
                 "spreadsheetbench-data", "capevolve-ci", "reused_seed_run", "rollouts/test", "test_per_task"]
-import re
+import re, hashlib
+SENT = "The checker treats blanks as the expected missing marker; the 'N/A' in the question described the user's wish, while the explicit note about the empty string described the gold."
+SENT_SHA = "9a061ff0c2ad13499120533504269e469a9ae98290e4a1878c9d7a93755c66ef"
 # Whitelist of benign contexts (v3). Anything not whitelisted is a REAL hit. Every occurrence is logged.
 OUT_PATH = re.compile(r"/mnt/data/outputs/[\w\-]+_\d+_[0-9a-f]+/\d+_[\w\-]+_output\.xlsx")   # the agent's own output_path
 def whitelisted(marker, text, i, f):
@@ -25,8 +27,15 @@ def whitelisted(marker, text, i, f):
         if text[max(0, i - 8):i] == "limit.]\n" or text[max(0, i - 9):i] == "limit.]\\n" or "character limit.]" in text[max(0, i - 12):i]: return "W5 tail fragment of the agent's output filename after the 15000-char trace-truncation marker"
         return None
     if ml == "gold":
-        if f.name == "40892.md" and re.search(r"Jumper Gold|Col B: Gold|'Gold'|: Gold|Gold  ", text[max(0, i - 100):i + 60]): return "W3 task 40892 workbook cell value 'Gold' (colour column)"
-        if f.name == "ambiguous-blank-spec-na-vs-empty-string.md" and text[max(0, i - 14):i + 4] == "described the gold": return "W4 maintainer wiki prose: 'described the gold' = the checker's expectation inferred from the campaign's gold-safe scorer feedback (counts of expected cells), no gold values/paths"
+        if f.name == "40892.md":   # W3: whole-word capital "Gold" only (a lowercase 'gold' here is never whitelisted)
+            if text[i:i + 4] != "Gold" or re.match(r"[A-Za-z]", text[i + 4:i + 5] or " ") or re.match(r"[A-Za-z]", text[i - 1:i] or " "): return None
+            line = text[text.rfind("\n", 0, i) + 1:(text.find("\n", i) if text.find("\n", i) >= 0 else len(text))]
+            if text[i - 1:i] in ("'", '"') or text[i - 2:i] == ": " or "Jumper Gold" in line:
+                return "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
+            return None
+        if "/input/wiki/" in "/" + str(f).replace("\\", "/") and SENT in text and text.find(SENT) <= i < text.find(SENT) + len(SENT) \
+                and hashlib.sha256(SENT.encode()).hexdigest() == SENT_SHA:
+            return "W4 wiki prose (files under input/wiki/, bound to the sha256 of the exact sentence)"
     return None
 res = {"markers": GOLD_MARKERS, "staged_files_scanned": 0, "matches": [], "marker_hits": [], "val_or_test_id_in_payload": [], "probes": []}
 for inp in run.glob("study/iterations/*/*/input"):
@@ -38,8 +47,8 @@ for inp in run.glob("study/iterations/*/*/input"):
                     i = mo.start()
                     if m == "gold" and tl[max(0, i - 11):i + 4] == "scorer_feedback_gold_free"[:0]: pass
                     ctx_ = t[max(0, i - 70):i + 50].replace("\n", "\\n")
-                    if "gold-free" in t[max(0, i - 1):i + 9] or "gold_free" in t[max(0, i - 1):i + 9]:
-                        wl = "W0 our own label"      # our own label 'gold-free' / 'scorer_feedback_gold_free' (a negation, not data)
+                    if m == "gold" and (t[i:i + 9] in ("gold-free", "gold_free")):
+                        wl = "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
                     else:
                         wl = whitelisted(m, t, i, f)
                     rec = {"file": str(f.relative_to(run)), "marker": m, "offset": i, "context": ctx_, "whitelisted": bool(wl), "whitelist_reason": wl or None}

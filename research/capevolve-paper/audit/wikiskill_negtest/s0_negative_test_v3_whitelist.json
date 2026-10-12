@@ -27,7 +27,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/32337.md",
@@ -59,7 +59,7 @@
    "offset": 12531,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/22-47.md",
@@ -91,7 +91,7 @@
    "offset": 15045,
    "context": "1_45372_output.xlsx')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/45372.md",
@@ -163,7 +163,7 @@
    "offset": 3211,
    "context": "\\n\\nwb.close()\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/58109.md",
@@ -171,7 +171,7 @@
    "offset": 3520,
    "context": " the value in I6 is 5383.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/58109.md",
@@ -195,7 +195,7 @@
    "offset": 5130,
    "context": ";PRD6 -> Group 1, Group 2\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/48745.md",
@@ -219,7 +219,7 @@
    "offset": 7096,
    "context": "ow_idx}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/49333.md",
@@ -259,7 +259,7 @@
    "offset": 5476,
    "context": "A13 and A14 as requested.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/maintainer/input/traces/58499.md",
@@ -299,7 +299,7 @@
    "offset": 4632,
    "context": "er_position range A1:D22.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/108-24.md",
@@ -323,7 +323,7 @@
    "offset": 3380,
    "context": "aced in the range E4:E12.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/10452.md",
@@ -347,7 +347,7 @@
    "offset": 9810,
    "context": "16/1_105-24_output.xlsx`.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/105-24.md",
@@ -411,7 +411,7 @@
    "offset": 7729,
    "context": "al_k6}\")\\n```\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/10747.md",
@@ -467,7 +467,7 @@
    "offset": 6744,
    "context": "ement Recon Items' sheet.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/141-20.md",
@@ -507,7 +507,7 @@
    "offset": 3498,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/170-13.md",
@@ -531,7 +531,7 @@
    "offset": 4125,
    "context": "62e4a/1_1818_output.xlsx.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/1818.md",
@@ -571,7 +571,7 @@
    "offset": 15045,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/11842.md",
@@ -635,7 +635,7 @@
    "offset": 3950,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/165-23.md",
@@ -667,7 +667,7 @@
    "offset": 9021,
    "context": "F='{col_f.iloc[i]}'\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/192-22.md",
@@ -731,7 +731,7 @@
    "offset": 12531,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/22-47.md",
@@ -763,7 +763,7 @@
    "offset": 15045,
    "context": "n the sample spreadsheet.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/250-20.md",
@@ -795,7 +795,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/118-50.md",
@@ -843,7 +843,7 @@
    "offset": 3141,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/262-17.md",
@@ -867,7 +867,7 @@
    "offset": 15045,
    "context": "Sheet2', index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/194-19.md",
@@ -923,7 +923,7 @@
    "offset": 6998,
    "context": "} (Should be blank)\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/30930.md",
@@ -971,7 +971,7 @@
    "offset": 15045,
    "context": "Lookup', index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/247-24.md",
@@ -1027,7 +1027,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/254-34.md",
@@ -1099,7 +1099,7 @@
    "offset": 2813,
    "context": "erial number in column C.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/31915.md",
@@ -1123,7 +1123,7 @@
    "offset": 10044,
    "context": "False)\\n<|\"|>}<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/32023.md",
@@ -1147,7 +1147,7 @@
    "offset": 3211,
    "context": "\\n\\nwb.close()\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/32337.md",
@@ -1155,7 +1155,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/32337.md",
@@ -1187,7 +1187,7 @@
    "offset": 4476,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/32438.md",
@@ -1227,7 +1227,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/263-1.md",
@@ -1331,7 +1331,7 @@
    "offset": 13233,
    "context": "t(df_output.head(10))\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/325-44.md",
@@ -1395,7 +1395,7 @@
    "offset": 8979,
    "context": "put file are correct.\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/32902.md",
@@ -1443,7 +1443,7 @@
    "offset": 7711,
    "context": "ath.\")\\n<|\"|>}<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/3413.md",
@@ -1491,7 +1491,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/31011.md",
@@ -1563,7 +1563,7 @@
    "offset": 6554,
    "context": "utput.xlsx')\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/36097.md",
@@ -1595,7 +1595,7 @@
    "offset": 9519,
    "context": "w, column=1).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/370-43.md",
@@ -1659,7 +1659,7 @@
    "offset": 9993,
    "context": "es and background colors.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/379-36.md",
@@ -1707,7 +1707,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/32612.md",
@@ -1803,7 +1803,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/398-14.md",
@@ -1851,7 +1851,7 @@
    "offset": 7556,
    "context": " set to Courier New, 9pt.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/39903.md",
@@ -1899,7 +1899,7 @@
    "offset": 9957,
    "context": "4, column=2).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/408-39.md",
@@ -1963,7 +1963,7 @@
    "offset": 15045,
    "context": "=False, header=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/35742.md",
@@ -2051,7 +2051,7 @@
    "offset": 2311,
    "context": "th the \"Invoice No.\" row.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/414-20.md",
@@ -2075,7 +2075,7 @@
    "offset": 5163,
    "context": "_verify.iloc[0:7, 3])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/42354.md",
@@ -2139,7 +2139,7 @@
    "offset": 2492,
    "context": " 15.\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, na",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/40892.md",
@@ -2147,7 +2147,7 @@
    "offset": 4246,
    "context": " 15.\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, na",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/40892.md",
@@ -2155,7 +2155,7 @@
    "offset": 6240,
    "context": " 15.\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, na",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/40892.md",
@@ -2163,7 +2163,7 @@
    "offset": 6770,
    "context": "oc[0:16, 1].tolist())\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/40892.md",
@@ -2227,7 +2227,7 @@
    "offset": 15045,
    "context": "1_34033_output.xlsx')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/34033.md",
@@ -2283,7 +2283,7 @@
    "offset": 1736,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/43589.md",
@@ -2307,7 +2307,7 @@
    "offset": 15045,
    "context": "(row=2, column=col).value\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/46121.md",
@@ -2427,7 +2427,7 @@
    "offset": 15045,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/433-47.md",
@@ -2507,7 +2507,7 @@
    "offset": 3699,
    "context": "row}\")\\n<|\"|>}<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/472-15.md",
@@ -2515,7 +2515,7 @@
    "offset": 4486,
    "context": "2021/22:21:06' and B2: 6.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/472-15.md",
@@ -2555,7 +2555,7 @@
    "offset": 3095,
    "context": "l file.\\n<|\"|><tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/48365.md",
@@ -2563,7 +2563,7 @@
    "offset": 3980,
    "context": "_data)\\n<|\"|>}<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/39931.md",
@@ -2571,7 +2571,7 @@
    "offset": 15045,
    "context": "=False, header=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/39931.md",
@@ -2651,7 +2651,7 @@
    "offset": 5130,
    "context": ";PRD6 -> Group 1, Group 2\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/48745.md",
@@ -2675,7 +2675,7 @@
    "offset": 9087,
    "context": "Row {r}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/48983.md",
@@ -2723,7 +2723,7 @@
    "offset": 15045,
    "context": "then written to cell K40.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/47766.md",
@@ -2787,7 +2787,7 @@
    "offset": 7096,
    "context": "ow_idx}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/49333.md",
@@ -2827,7 +2827,7 @@
    "offset": 9295,
    "context": "_vals}\")\\n```\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/50916.md",
@@ -2883,7 +2883,7 @@
    "offset": 8255,
    "context": "tofilters were preserved.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/493-18.md",
@@ -2931,7 +2931,7 @@
    "offset": 7665,
    "context": ".\\nwb.close()\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/51249.md",
@@ -2939,7 +2939,7 @@
    "offset": 6607,
    "context": "t_path)\\n<|\"|><tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/51249.md",
@@ -2971,7 +2971,7 @@
    "offset": 2150,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/54085.md",
@@ -2995,7 +2995,7 @@
    "offset": 12623,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/54638.md",
@@ -3035,7 +3035,7 @@
    "offset": 15045,
    "context": "1_45372_output.xlsx')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/45372.md",
@@ -3107,7 +3107,7 @@
    "offset": 7326,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/55421.md",
@@ -3155,7 +3155,7 @@
    "offset": 3364,
    "context": ")\\nwb.close()\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/55060.md",
@@ -3163,7 +3163,7 @@
    "offset": 3805,
    "context": "nt with the requirements.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/55060.md",
@@ -3195,7 +3195,7 @@
    "offset": 5788,
    "context": "\"C3:\", df.iloc[1, 2])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/57113.md",
@@ -3259,7 +3259,7 @@
    "offset": 4645,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/57445.md",
@@ -3299,7 +3299,7 @@
    "offset": 15045,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/56427.md",
@@ -3379,7 +3379,7 @@
    "offset": 15045,
    "context": "et_name, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/55427.md",
@@ -3467,7 +3467,7 @@
    "offset": 4727,
    "context": "The solution is complete.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/577-40.md",
@@ -3507,7 +3507,7 @@
    "offset": 3520,
    "context": " the value in I6 is 5383.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/58109.md",
@@ -3531,7 +3531,7 @@
    "offset": 15045,
    "context": "='DATI', index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/55965.md",
@@ -3595,7 +3595,7 @@
    "offset": 6807,
    "context": "result.iloc[0:18, 1])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/57743.md",
@@ -3659,7 +3659,7 @@
    "offset": 2444,
    "context": "operation was successful.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/585-41.md",
@@ -3683,7 +3683,7 @@
    "offset": 6260,
    "context": "alue}')\\n<|\"|><tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/58484.md",
@@ -3715,7 +3715,7 @@
    "offset": 5476,
    "context": "A13 and A14 as requested.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/58499.md",
@@ -3755,7 +3755,7 @@
    "offset": 4091,
    "context": "mn Z in the target sheet.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/66-24.md",
@@ -3779,7 +3779,7 @@
    "offset": 15045,
    "context": "et_name, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/57558.md",
@@ -3867,7 +3867,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/6239.md",
@@ -3931,7 +3931,7 @@
    "offset": 15045,
    "context": "Result', index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/58949.md",
@@ -4011,7 +4011,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/82-30.md",
@@ -4091,7 +4091,7 @@
    "offset": 12030,
    "context": "=False, header=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/56786.md",
@@ -4139,7 +4139,7 @@
    "offset": 15045,
    "context": "saved to the output path.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/001/proposer/input/traces/51090.md",
@@ -4187,7 +4187,7 @@
    "offset": 15045,
    "context": "'Rank'].isna().sum())\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/194-19.md",
@@ -4259,7 +4259,7 @@
    "offset": 15045,
    "context": "int(df_main.head(15))\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/247-24.md",
@@ -4307,7 +4307,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/493-18.md",
@@ -4395,7 +4395,7 @@
    "offset": 6125,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/3413.md",
@@ -4419,7 +4419,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/47766.md",
@@ -4451,7 +4451,7 @@
    "offset": 12224,
    "context": "t(df_verify.head(10))\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/325-44.md",
@@ -4515,7 +4515,7 @@
    "offset": 6734,
    "context": "result.iloc[0:18, 1])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/57743.md",
@@ -4579,7 +4579,7 @@
    "offset": 2400,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/maintainer/input/traces/31915.md",
@@ -4603,7 +4603,7 @@
    "offset": 3974,
    "context": "pulated the target range.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/10452.md",
@@ -4627,7 +4627,7 @@
    "offset": 5037,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/105-24.md",
@@ -4659,7 +4659,7 @@
    "offset": 6841,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/108-24.md",
@@ -4707,7 +4707,7 @@
    "offset": 3604,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/141-20.md",
@@ -4731,7 +4731,7 @@
    "offset": 3240,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/165-23.md",
@@ -4755,7 +4755,7 @@
    "offset": 12962,
    "context": "he specified output path.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/10747.md",
@@ -4803,7 +4803,7 @@
    "offset": 4557,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/170-13.md",
@@ -4827,7 +4827,7 @@
    "offset": 3884,
    "context": "0010a/1_1818_output.xlsx.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/1818.md",
@@ -4867,7 +4867,7 @@
    "offset": 15045,
    "context": "'Rank'].isna().sum())\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/194-19.md",
@@ -4939,7 +4939,7 @@
    "offset": 12202,
    "context": "output_path)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/22-47.md",
@@ -4971,7 +4971,7 @@
    "offset": 15045,
    "context": "int(df_main.head(15))\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/247-24.md",
@@ -5019,7 +5019,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/118-50.md",
@@ -5091,7 +5091,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/192-22.md",
@@ -5195,7 +5195,7 @@
    "offset": 3153,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/262-17.md",
@@ -5219,7 +5219,7 @@
    "offset": 15045,
    "context": "1_11842_output.xlsx')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/11842.md",
@@ -5275,7 +5275,7 @@
    "offset": 6389,
    "context": "728c/1_263-1_output.xlsx.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/263-1.md",
@@ -5315,7 +5315,7 @@
    "offset": 8842,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/254-34.md",
@@ -5363,7 +5363,7 @@
    "offset": 5470,
    "context": "eader=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/30930.md",
@@ -5395,7 +5395,7 @@
    "offset": 2400,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/31915.md",
@@ -5419,7 +5419,7 @@
    "offset": 4591,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/32255.md",
@@ -5451,7 +5451,7 @@
    "offset": 6302,
    "context": "{sheet['R6'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/31011.md",
@@ -5507,7 +5507,7 @@
    "offset": 15045,
    "context": "he specified output path.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/250-20.md",
@@ -5571,7 +5571,7 @@
    "offset": 2244,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/32438.md",
@@ -5595,7 +5595,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/32023.md",
@@ -5619,7 +5619,7 @@
    "offset": 12224,
    "context": "t(df_verify.head(10))\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/325-44.md",
@@ -5683,7 +5683,7 @@
    "offset": 3920,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/32902.md",
@@ -5707,7 +5707,7 @@
    "offset": 6125,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/3413.md",
@@ -5731,7 +5731,7 @@
    "offset": 9375,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/34033.md",
@@ -5755,7 +5755,7 @@
    "offset": 7710,
    "context": "utput.xlsx')\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/36097.md",
@@ -5787,7 +5787,7 @@
    "offset": 15045,
    "context": "e workbook was preserved.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/379-36.md",
@@ -5795,7 +5795,7 @@
    "offset": 10159,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/379-36.md",
@@ -5843,7 +5843,7 @@
    "offset": 8519,
    "context": "w, column=1).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/370-43.md",
@@ -5907,7 +5907,7 @@
    "offset": 2924,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/39903.md",
@@ -5931,7 +5931,7 @@
    "offset": 15045,
    "context": "verify.iloc[3:7, 14])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/35742.md",
@@ -6027,7 +6027,7 @@
    "offset": 9625,
    "context": "B=85.75, C=54.02, D=56.81\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/39931.md",
@@ -6083,7 +6083,7 @@
    "offset": 10657,
    "context": "4, column=2).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/408-39.md",
@@ -6147,7 +6147,7 @@
    "offset": 2305,
    "context": "th the \"Invoice No.\" row.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/414-20.md",
@@ -6171,7 +6171,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/32612.md",
@@ -6259,7 +6259,7 @@
    "offset": 2244,
    "context": "B17)\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, na",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/40892.md",
@@ -6267,7 +6267,7 @@
    "offset": 4105,
    "context": "B17)\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, na",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/40892.md",
@@ -6275,7 +6275,7 @@
    "offset": 6207,
    "context": "B17)\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, na",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/40892.md",
@@ -6283,7 +6283,7 @@
    "offset": 6659,
    "context": "oc[0:16, 1].tolist())\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/40892.md",
@@ -6347,7 +6347,7 @@
    "offset": 5574,
    "context": "_verify.iloc[0:7, 3])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/42354.md",
@@ -6411,7 +6411,7 @@
    "offset": 15045,
    "context": "{cell_b2.font.bold}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/398-14.md",
@@ -6467,7 +6467,7 @@
    "offset": 1736,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/43589.md",
@@ -6491,7 +6491,7 @@
    "offset": 3352,
    "context": "_2022)\\n<|\"|>}<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/433-47.md",
@@ -6499,7 +6499,7 @@
    "offset": 15045,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/433-47.md",
@@ -6587,7 +6587,7 @@
    "offset": 10062,
    "context": "s[f'E{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/45372.md",
@@ -6651,7 +6651,7 @@
    "offset": 4240,
    "context": "now contains the value 6.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/472-15.md",
@@ -6691,7 +6691,7 @@
    "offset": 3336,
    "context": "idx1}\")\\n<|\"|><tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/46646.md",
@@ -6699,7 +6699,7 @@
    "offset": 15045,
    "context": "output_path)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/46646.md",
@@ -6723,7 +6723,7 @@
    "offset": 4139,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/48745.md",
@@ -6747,7 +6747,7 @@
    "offset": 15045,
    "context": "ht\\n<channel|><|tool_call>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/47766.md",
@@ -6755,7 +6755,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/47766.md",
@@ -6787,7 +6787,7 @@
    "offset": 13857,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/48983.md",
@@ -6859,7 +6859,7 @@
    "offset": 4947,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/49333.md",
@@ -6883,7 +6883,7 @@
    "offset": 6877,
    "context": "_path)\\n<|\"|>}<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/51249.md",
@@ -6915,7 +6915,7 @@
    "offset": 15045,
    "context": "acb/1_50916_output.xlsx`.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/50916.md",
@@ -7051,7 +7051,7 @@
    "offset": 15045,
    "context": "{i+1}: Out of range\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/51090.md",
@@ -7091,7 +7091,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/493-18.md",
@@ -7179,7 +7179,7 @@
    "offset": 3479,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/55060.md",
@@ -7211,7 +7211,7 @@
    "offset": 6467,
    "context": "\\n\\nwb.close()\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/55421.md",
@@ -7219,7 +7219,7 @@
    "offset": 9965,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/55421.md",
@@ -7251,7 +7251,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/54085.md",
@@ -7371,7 +7371,7 @@
    "offset": 3665,
    "context": "alue}\")\\n<|\"|><tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/55965.md",
@@ -7379,7 +7379,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/55965.md",
@@ -7443,7 +7443,7 @@
    "offset": 15045,
    "context": "et_name, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/55427.md",
@@ -7523,7 +7523,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/54638.md",
@@ -7579,7 +7579,7 @@
    "offset": 4525,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/57445.md",
@@ -7619,7 +7619,7 @@
    "offset": 6000,
    "context": "\"C3:\", df.iloc[1, 2])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/57113.md",
@@ -7683,7 +7683,7 @@
    "offset": 3931,
    "context": "main in the final output.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/577-40.md",
@@ -7707,7 +7707,7 @@
    "offset": 10203,
    "context": "index=False)\\n<tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/57558.md",
@@ -7731,7 +7731,7 @@
    "offset": 6734,
    "context": "result.iloc[0:18, 1])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/57743.md",
@@ -7795,7 +7795,7 @@
    "offset": 6569,
    "context": "6: {ws['I6'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/58109.md",
@@ -7859,7 +7859,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/56427.md",
@@ -7891,7 +7891,7 @@
    "offset": 1931,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/585-41.md",
@@ -7915,7 +7915,7 @@
    "offset": 7448,
    "context": "t_path)\\n<|\"|><tool_call|>\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/58484.md",
@@ -7947,7 +7947,7 @@
    "offset": 9726,
    "context": "ed A13: BR2 and A14: BR4.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/58499.md",
@@ -8003,7 +8003,7 @@
    "offset": 8828,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/58949.md",
@@ -8035,7 +8035,7 @@
    "offset": 15045,
    "context": "1_56786_output.xlsx')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/56786.md",
@@ -8083,7 +8083,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/66-24.md",
@@ -8163,7 +8163,7 @@
    "offset": 15045,
    "context": "=False, header=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/82-30.md",
@@ -8251,7 +8251,7 @@
    "offset": 15045,
    "context": "ut_path, index=False)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/002/proposer/input/traces/6239.md",
@@ -8299,7 +8299,7 @@
    "offset": 15045,
    "context": "ignment.horizontal}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/398-14.md",
@@ -8363,7 +8363,7 @@
    "offset": 7720,
    "context": "nate}: {cell.value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/54085.md",
@@ -8427,7 +8427,7 @@
    "offset": 15045,
    "context": "[f'{col}16'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/52216.md",
@@ -8483,7 +8483,7 @@
    "offset": 15045,
    "context": "={g_val}, H={h_val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/22-47.md",
@@ -8539,7 +8539,7 @@
    "offset": 15045,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/46121.md",
@@ -8579,7 +8579,7 @@
    "offset": 12633,
    "context": "ignment.horizontal}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/49333.md",
@@ -8651,7 +8651,7 @@
    "offset": 1954,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/414-20.md",
@@ -8675,7 +8675,7 @@
    "offset": 1879,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/maintainer/input/traces/55060.md",
@@ -8699,7 +8699,7 @@
    "offset": 2961,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/10452.md",
@@ -8723,7 +8723,7 @@
    "offset": 6931,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/108-24.md",
@@ -8771,7 +8771,7 @@
    "offset": 6805,
    "context": "  print(row[0].value)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/105-24.md",
@@ -8819,7 +8819,7 @@
    "offset": 6349,
    "context": "{sheet['K6'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/10747.md",
@@ -8883,7 +8883,7 @@
    "offset": 3962,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/165-23.md",
@@ -8915,7 +8915,7 @@
    "offset": 15045,
    "context": "ts found in C2:D100\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/118-50.md",
@@ -8963,7 +8963,7 @@
    "offset": 5885,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/141-20.md",
@@ -9011,7 +9011,7 @@
    "offset": 7166,
    "context": ".\")\\n            break\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/1818.md",
@@ -9059,7 +9059,7 @@
    "offset": 7355,
    "context": "(f\"Row {row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/192-22.md",
@@ -9107,7 +9107,7 @@
    "offset": 13556,
    "context": "w, column=1).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/170-13.md",
@@ -9179,7 +9179,7 @@
    "offset": 15045,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/247-24.md",
@@ -9219,7 +9219,7 @@
    "offset": 15045,
    "context": "={g_val}, H={h_val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/22-47.md",
@@ -9275,7 +9275,7 @@
    "offset": 15045,
    "context": "| {val_h} | {val_i}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/194-19.md",
@@ -9315,7 +9315,7 @@
    "offset": 14823,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/250-20.md",
@@ -9387,7 +9387,7 @@
    "offset": 7670,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/262-17.md",
@@ -9435,7 +9435,7 @@
    "offset": 9612,
    "context": "{highlighted_count}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/254-34.md",
@@ -9499,7 +9499,7 @@
    "offset": 6719,
    "context": "s[f'H{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/263-1.md",
@@ -9563,7 +9563,7 @@
    "offset": 1968,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/31011.md",
@@ -9587,7 +9587,7 @@
    "offset": 4425,
    "context": "w, column=3).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/31915.md",
@@ -9635,7 +9635,7 @@
    "offset": 8671,
    "context": "} (Should be blank)\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/30930.md",
@@ -9699,7 +9699,7 @@
    "offset": 12149,
    "context": "s[f\"B{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/32023.md",
@@ -9771,7 +9771,7 @@
    "offset": 8176,
    "context": "s[f'D{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/32255.md",
@@ -9835,7 +9835,7 @@
    "offset": 5632,
    "context": "cell.number_format}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/32438.md",
@@ -9899,7 +9899,7 @@
    "offset": 6365,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/325-44.md",
@@ -9955,7 +9955,7 @@
    "offset": 8614,
    "context": "w, column=5).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/32612.md",
@@ -10011,7 +10011,7 @@
    "offset": 15045,
    "context": "P3'].number_format}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/32337.md",
@@ -10067,7 +10067,7 @@
    "offset": 2826,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/3413.md",
@@ -10091,7 +10091,7 @@
    "offset": 7724,
    "context": "{row}: {row_values}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/32902.md",
@@ -10155,7 +10155,7 @@
    "offset": 8587,
    "context": "s[f\"K{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/34033.md",
@@ -10227,7 +10227,7 @@
    "offset": 2562,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/36097.md",
@@ -10251,7 +10251,7 @@
    "offset": 15045,
    "context": "Row {r}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/11842.md",
@@ -10299,7 +10299,7 @@
    "offset": 8885,
    "context": "w, column=1).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/370-43.md",
@@ -10363,7 +10363,7 @@
    "offset": 10098,
    "context": ", column=15).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/35742.md",
@@ -10443,7 +10443,7 @@
    "offset": 8596,
    "context": "l_h.fill.fill_type}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/379-36.md",
@@ -10499,7 +10499,7 @@
    "offset": 4505,
    "context": "{row}: {cell_value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/39903.md",
@@ -10547,7 +10547,7 @@
    "offset": 2073,
    "context": "w}: {ws.cell(row=row, column=2).value}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: N",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/40892.md",
@@ -10555,7 +10555,7 @@
    "offset": 4485,
    "context": "w}: {ws.cell(row=row, column=2).value}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: N",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/40892.md",
@@ -10563,7 +10563,7 @@
    "offset": 6317,
    "context": "n=2).value\\n    print(f\\\"B{row}: {val}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: N",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/40892.md",
@@ -10571,7 +10571,7 @@
    "offset": 6871,
    "context": "int(f\"B{row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/40892.md",
@@ -10635,7 +10635,7 @@
    "offset": 15045,
    "context": "ignment.horizontal}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/398-14.md",
@@ -10699,7 +10699,7 @@
    "offset": 1954,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/414-20.md",
@@ -10723,7 +10723,7 @@
    "offset": 8977,
    "context": "Row {r}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/39931.md",
@@ -10795,7 +10795,7 @@
    "offset": 1885,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/43589.md",
@@ -10819,7 +10819,7 @@
    "offset": 5723,
    "context": "s[f\"D{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/42354.md",
@@ -10883,7 +10883,7 @@
    "offset": 15045,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/46121.md",
@@ -10923,7 +10923,7 @@
    "offset": 8212,
    "context": ".start_color.index}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/45372.md",
@@ -10987,7 +10987,7 @@
    "offset": 11180,
    "context": " B11:M11: {results}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/46646.md",
@@ -11051,7 +11051,7 @@
    "offset": 15045,
    "context": ", column=11).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/47766.md",
@@ -11123,7 +11123,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/408-39.md",
@@ -11211,7 +11211,7 @@
    "offset": 6774,
    "context": "i, column=3).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/48080.md",
@@ -11267,7 +11267,7 @@
    "offset": 4060,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/48745.md",
@@ -11291,7 +11291,7 @@
    "offset": 8852,
    "context": "s_dash['C4'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/48365.md",
@@ -11363,7 +11363,7 @@
    "offset": 10348,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/48983.md",
@@ -11419,7 +11419,7 @@
    "offset": 8240,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/493-18.md",
@@ -11483,7 +11483,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/472-15.md",
@@ -11603,7 +11603,7 @@
    "offset": 12633,
    "context": "ignment.horizontal}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/49333.md",
@@ -11675,7 +11675,7 @@
    "offset": 14655,
    "context": "{col}{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/50916.md",
@@ -11739,7 +11739,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/433-47.md",
@@ -11795,7 +11795,7 @@
    "offset": 7781,
    "context": "ws[cell_ref].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/51249.md",
@@ -11867,7 +11867,7 @@
    "offset": 7720,
    "context": "nate}: {cell.value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/54085.md",
@@ -11931,7 +11931,7 @@
    "offset": 15045,
    "context": "[f'{col}16'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/52216.md",
@@ -11987,7 +11987,7 @@
    "offset": 1879,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/55060.md",
@@ -12011,7 +12011,7 @@
    "offset": 6754,
    "context": "w, column=2).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/55427.md",
@@ -12067,7 +12067,7 @@
    "offset": 15045,
    "context": "s[f'F{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/55421.md",
@@ -12107,7 +12107,7 @@
    "offset": 9280,
    "context": "w, column=7).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/55965.md",
@@ -12179,7 +12179,7 @@
    "offset": 6178,
    "context": ": {ws['D12'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/56274.md",
@@ -12243,7 +12243,7 @@
    "offset": 5123,
    "context": " {ws['C200'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/56786.md",
@@ -12283,7 +12283,7 @@
    "offset": 4578,
    "context": "={val_b}, C={val_c}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/57113.md",
@@ -12347,7 +12347,7 @@
    "offset": 8237,
    "context": "s[f'E{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/57445.md",
@@ -12411,7 +12411,7 @@
    "offset": 8601,
    "context": "3: {ws['A3'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/57558.md",
@@ -12483,7 +12483,7 @@
    "offset": 6850,
    "context": "={val_j}, K={val_k}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/577-40.md",
@@ -12531,7 +12531,7 @@
    "offset": 15045,
    "context": ", column=17).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/51090.md",
@@ -12619,7 +12619,7 @@
    "offset": 3617,
    "context": "further output)\"\\n\\nFINAL\\n\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/57743.md",
@@ -12643,7 +12643,7 @@
    "offset": 6651,
    "context": "a: {ws['I6'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/58109.md",
@@ -12707,7 +12707,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/54638.md",
@@ -12771,7 +12771,7 @@
    "offset": 13898,
    "context": "s[f'H{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/58484.md",
@@ -12835,7 +12835,7 @@
    "offset": 2061,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/585-41.md",
@@ -12859,7 +12859,7 @@
    "offset": 8109,
    "context": "nt(f\"A14: {val_a14}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/58499.md",
@@ -12931,7 +12931,7 @@
    "offset": 9146,
    "context": "{row}: {row_values}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/58949.md",
@@ -12995,7 +12995,7 @@
    "offset": 5666,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/66-24.md",
@@ -13043,7 +13043,7 @@
    "offset": 9759,
    "context": "s[f\"G{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/6239.md",
@@ -13107,7 +13107,7 @@
    "offset": 7581,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/82-30.md",
@@ -13171,7 +13171,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/003/proposer/input/traces/56427.md",
@@ -13227,7 +13227,7 @@
    "offset": 12449,
    "context": "s[f\"K{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/34033.md",
@@ -13307,7 +13307,7 @@
    "offset": 7461,
    "context": "w, column=2).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/408-39.md",
@@ -13371,7 +13371,7 @@
    "offset": 13428,
    "context": "={h_val}, I={i_val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/194-19.md",
@@ -13443,7 +13443,7 @@
    "offset": 15045,
    "context": "int(f\"C{row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/56786.md",
@@ -13491,7 +13491,7 @@
    "offset": 10750,
    "context": ".start_color.index}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/45372.md",
@@ -13563,7 +13563,7 @@
    "offset": 1886,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/43589.md",
@@ -13587,7 +13587,7 @@
    "offset": 10595,
    "context": "{highlighted_count}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/254-34.md",
@@ -13651,7 +13651,7 @@
    "offset": 3537,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/maintainer/input/traces/165-23.md",
@@ -13683,7 +13683,7 @@
    "offset": 7205,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/108-24.md",
@@ -13731,7 +13731,7 @@
    "offset": 2792,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/10452.md",
@@ -13755,7 +13755,7 @@
    "offset": 8615,
    "context": "  print(row[0].value)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/105-24.md",
@@ -13811,7 +13811,7 @@
    "offset": 6308,
    "context": "{sheet['K6'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/10747.md",
@@ -13875,7 +13875,7 @@
    "offset": 3537,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/165-23.md",
@@ -13907,7 +13907,7 @@
    "offset": 5909,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/141-20.md",
@@ -13955,7 +13955,7 @@
    "offset": 12102,
    "context": "{row}: {row_values}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/11842.md",
@@ -14019,7 +14019,7 @@
    "offset": 15045,
    "context": "s populated sequentially.\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/1818.md",
@@ -14043,7 +14043,7 @@
    "offset": 15045,
    "context": "={val_c}, D={val_d}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/118-50.md",
@@ -14107,7 +14107,7 @@
    "offset": 15045,
    "context": "(f\"Row {row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/170-13.md",
@@ -14163,7 +14163,7 @@
    "offset": 7355,
    "context": "(f\"Row {row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/192-22.md",
@@ -14211,7 +14211,7 @@
    "offset": 13428,
    "context": "={h_val}, I={i_val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/194-19.md",
@@ -14283,7 +14283,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/22-47.md",
@@ -14331,7 +14331,7 @@
    "offset": 15045,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/247-24.md",
@@ -14371,7 +14371,7 @@
    "offset": 14780,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/250-20.md",
@@ -14443,7 +14443,7 @@
    "offset": 7711,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/262-17.md",
@@ -14491,7 +14491,7 @@
    "offset": 10595,
    "context": "{highlighted_count}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/254-34.md",
@@ -14555,7 +14555,7 @@
    "offset": 2014,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/31011.md",
@@ -14579,7 +14579,7 @@
    "offset": 7055,
    "context": "w, column=8).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/263-1.md",
@@ -14643,7 +14643,7 @@
    "offset": 10365,
    "context": "w, column=3).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/30930.md",
@@ -14707,7 +14707,7 @@
    "offset": 4425,
    "context": "w, column=3).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/31915.md",
@@ -14755,7 +14755,7 @@
    "offset": 2551,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/32438.md",
@@ -14779,7 +14779,7 @@
    "offset": 9699,
    "context": "s[f'D{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/32255.md",
@@ -14843,7 +14843,7 @@
    "offset": 6355,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/325-44.md",
@@ -14899,7 +14899,7 @@
    "offset": 8733,
    "context": "w, column=5).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/32612.md",
@@ -14955,7 +14955,7 @@
    "offset": 14604,
    "context": "s[f\"B{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/32023.md",
@@ -15051,7 +15051,7 @@
    "offset": 6395,
    "context": "s[f\"G{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/3413.md",
@@ -15115,7 +15115,7 @@
    "offset": 12449,
    "context": "s[f\"K{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/34033.md",
@@ -15195,7 +15195,7 @@
    "offset": 6817,
    "context": "s[f'E{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/32902.md",
@@ -15259,7 +15259,7 @@
    "offset": 5629,
    "context": "s[f\"H{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/36097.md",
@@ -15323,7 +15323,7 @@
    "offset": 9305,
    "context": "w, column=1).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/370-43.md",
@@ -15387,7 +15387,7 @@
    "offset": 9892,
    "context": "s[f'O{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/35742.md",
@@ -15467,7 +15467,7 @@
    "offset": 4449,
    "context": "int(f\"C{row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/39903.md",
@@ -15515,7 +15515,7 @@
    "offset": 8012,
    "context": "w, column=8).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/379-36.md",
@@ -15571,7 +15571,7 @@
    "offset": 14713,
    "context": ".color else 'None'}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/398-14.md",
@@ -15635,7 +15635,7 @@
    "offset": 7373,
    "context": "Row {r}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/39931.md",
@@ -15683,7 +15683,7 @@
    "offset": 7461,
    "context": "w, column=2).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/408-39.md",
@@ -15747,7 +15747,7 @@
    "offset": 1954,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/414-20.md",
@@ -15771,7 +15771,7 @@
    "offset": 2073,
    "context": "w}: {ws.cell(row=row, column=2).value}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: N",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/40892.md",
@@ -15779,7 +15779,7 @@
    "offset": 4830,
    "context": "w}: {ws.cell(row=row, column=2).value}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: N",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/40892.md",
@@ -15787,7 +15787,7 @@
    "offset": 6671,
    "context": "e\\n    print(f\\\"B{row}: {repr(val)}\\\")\\n```\"}\\nRESULT \"B2: 'Red'\\nB3: 'Gold'\\nB4: 'Red'\\nB5: 'Blue'\\nB6: 'Black'\\nB7: 'Re",
    "whitelisted": true,
-   "whitelist_reason": "W3 task 40892 workbook cell value 'Gold' (colour column)"
+   "whitelist_reason": "W3 task 40892 workbook cell value, whole-word capital 'Gold' (quoted, after ': ', or in the row containing 'Jumper Gold')"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/40892.md",
@@ -15795,7 +15795,7 @@
    "offset": 7248,
    "context": "B{row}: {repr(val)}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/40892.md",
@@ -15859,7 +15859,7 @@
    "offset": 5441,
    "context": "s[f\"D{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/42354.md",
@@ -15923,7 +15923,7 @@
    "offset": 1886,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/43589.md",
@@ -15947,7 +15947,7 @@
    "offset": 15045,
    "context": "w {row}: {row_vals}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/46121.md",
@@ -15987,7 +15987,7 @@
    "offset": 15045,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/433-47.md",
@@ -16035,7 +16035,7 @@
    "offset": 10750,
    "context": ".start_color.index}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/45372.md",
@@ -16107,7 +16107,7 @@
    "offset": 2883,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/472-15.md",
@@ -16131,7 +16131,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/32337.md",
@@ -16195,7 +16195,7 @@
    "offset": 6813,
    "context": "w, column=3).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/48080.md",
@@ -16267,7 +16267,7 @@
    "offset": 4007,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/48745.md",
@@ -16291,7 +16291,7 @@
    "offset": 9347,
    "context": "s_dash['C4'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/48365.md",
@@ -16355,7 +16355,7 @@
    "offset": 12998,
    "context": "{row}: {row_values}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/48983.md",
@@ -16435,7 +16435,7 @@
    "offset": 8347,
    "context": "lue for cell in row])\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/493-18.md",
@@ -16499,7 +16499,7 @@
    "offset": 14746,
    "context": "{col}{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/50916.md",
@@ -16563,7 +16563,7 @@
    "offset": 12875,
    "context": "ignment.horizontal}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/49333.md",
@@ -16635,7 +16635,7 @@
    "offset": 3174,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/51249.md",
@@ -16659,7 +16659,7 @@
    "offset": 14130,
    "context": "[cell_coord].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/52216.md",
@@ -16723,7 +16723,7 @@
    "offset": 15045,
    "context": "ave.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/47766.md",
@@ -16771,7 +16771,7 @@
    "offset": 15045,
    "context": "{ws[f\"A{i}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/54638.md",
@@ -16811,7 +16811,7 @@
    "offset": 1874,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/55060.md",
@@ -16835,7 +16835,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/46646.md",
@@ -16891,7 +16891,7 @@
    "offset": 15045,
    "context": "s[f'F{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/55421.md",
@@ -16923,7 +16923,7 @@
    "offset": 8851,
    "context": "t[f'B{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/55427.md",
@@ -16987,7 +16987,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/54085.md",
@@ -17123,7 +17123,7 @@
    "offset": 6318,
    "context": ": {ws['D12'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/56274.md",
@@ -17187,7 +17187,7 @@
    "offset": 9538,
    "context": "w, column=7).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/55965.md",
@@ -17251,7 +17251,7 @@
    "offset": 4691,
    "context": "={val_b}, C={val_c}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/57113.md",
@@ -17315,7 +17315,7 @@
    "offset": 5985,
    "context": "s[f'E{row}'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/57445.md",
@@ -17363,7 +17363,7 @@
    "offset": 15045,
    "context": "int(f\"C{row}: {val}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/56786.md",
@@ -17411,7 +17411,7 @@
    "offset": 8304,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/577-40.md",
@@ -17459,7 +17459,7 @@
    "offset": 8399,
    "context": "3: {ws['A3'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/57558.md",
@@ -17523,7 +17523,7 @@
    "offset": 7986,
    "context": "s[f\"B{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/57743.md",
@@ -17587,7 +17587,7 @@
    "offset": 6587,
    "context": "a: {ws['I6'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/58109.md",
@@ -17651,7 +17651,7 @@
    "offset": 15045,
    "context": "s[f\"H{row}\"].value}')\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/58484.md",
@@ -17723,7 +17723,7 @@
    "offset": 2061,
    "context": " further output)\"\\n\\nFINAL\\n\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/585-41.md",
@@ -17747,7 +17747,7 @@
    "offset": 9320,
    "context": "{row}: {row_values}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/58949.md",
@@ -17811,7 +17811,7 @@
    "offset": 14214,
    "context": "w, column=7).value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/6239.md",
@@ -17899,7 +17899,7 @@
    "offset": 5551,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/66-24.md",
@@ -17955,7 +17955,7 @@
    "offset": 8617,
    "context": "True):\\n    print(row)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Sheet-Level Ma",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/82-30.md",
@@ -18019,7 +18019,7 @@
    "offset": 15045,
    "context": "erify['A14'].value}\")\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/58499.md",
@@ -18123,7 +18123,7 @@
    "offset": 15045,
    "context": "out.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"0/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/51090.md",
@@ -18171,7 +18171,7 @@
    "offset": 15045,
    "context": "\\nwb.save(output_path)\\n```\\nTRAIN evaluator feedback:\\n{\"scorer_feedback_gold_free\": \"1/1 test cases passed (Cell-Level Man",
    "whitelisted": true,
-   "whitelist_reason": "W0 our own label"
+   "whitelist_reason": "W0 our own label 'gold-free' / 'scorer_feedback_gold_free' (marker gold only)"
   },
   {
    "file": "study/iterations/004/proposer/input/traces/56427.md",
@@ -18223,7 +18223,7 @@
    "error": "PermissionError"
   },
   {
-   "path": "/tmp/tmpgz34myl3/outside_secret.txt",
+   "path": "/tmp/tmp2wlbsj7p/outside_secret.txt",
    "refused": true,
    "error": "PermissionError"
   },

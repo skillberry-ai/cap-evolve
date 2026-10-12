@@ -6,3 +6,9 @@ Scope: s0/s1/s2 searches are scanned at 2026-10-12 (s1/s2 still running; the lau
 Whitelist reasons: W0 our own label `gold-free`/`scorer_feedback_gold_free`; W1 agent's own output_path `/mnt/data/outputs/<task>_<n>_<hash>/1_<task>_output.xlsx`; W2 agent's own `1_<task>_output.xlsx` filename variants / `<id>` placeholder in skill text; W3 task-40892 workbook cell value "Gold"; W4 maintainer wiki prose "described the gold" (s2 pattern ambiguous-blank-spec-na-vs-empty-string.md: the checker's expectation inferred from the campaign's gold-safe scorer feedback; no gold values/paths); W5 tail fragment of an output filename after the 15000-char trace-truncation marker.
 Note: the whitelist was extended iteratively after seeing the remaining unwhitelisted contexts (W2, W4, W5, and widening W3), all inspected by hand; the full match lists with context are in the sN json files so the auditor can re-check each.
 Result v3: s0 pass (2274 matches, all whitelisted), s1 pass (1241), s2 pass (1378); no val/test ids in any staged payload; 8/8 RoleTools escape probes + bash tool refused in each.
+
+## v3 hardening (2026-10-12, per provenance-auditor addendum)
+- W0 applies only to the `gold` marker and only to the exact spans `gold-free` / `gold_free`.
+- W3: file 40892.md only; whole-word capital "Gold" only (a lowercase "gold" there is never whitelisted -> fails); accepted when quoted, after ": ", or on the row containing "Jumper Gold" (the pandas/print rows of the colour column; my reading of "cell value" - flag if you want it narrower).
+- W4: only files under input/wiki/, bound to sha256(exact sentence) = 9a061ff0c2ad13499120533504269e469a9ae98290e4a1878c9d7a93755c66ef.
+- Re-run on all three seeds: pass, all matches whitelisted (s0 2274, s1 1241, s2 1378). s1/s2 are re-run again at end of search; any new match without a reason is to be reported for review, not given a reason by me.
