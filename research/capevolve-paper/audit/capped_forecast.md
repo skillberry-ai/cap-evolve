@@ -174,3 +174,33 @@ crossed in any case. With the reserve the total stays under the 200M cap in all 
 1. **hlext**: the gateway ledger shows 13.74M against the 10M cap you set, and 3.6M/h in the last hour. `hl_ext_cap_watch.sh` measures `creation_budget.json` usage (input + output + cache_write of HL jobs), not the gateway ledger, so it has not fired. Stop it now (or move the watch to the ledger) to save 2 to 3.5M.
 2. **ACE s1** is at 4.70M on the ledger, over 4M, with a live process (own-meter guard 3.9M, which understates the ledger); stop it externally. **ACE s2** at 2.30M also needs an external ledger guard at 4M, otherwise it may reach about 5M.
 3. Suite E: watch the 2.4M/h pace; if it is still above 2M/h at 02:00 UTC, trim the lowest-priority Suite E cell family so the high case stays under 170M.
+
+## Guard actions on the current-attempt basis, and the v2 line (2026-10-12 21:30 UTC)
+
+Basis: ledger non-cache-read tokens (input + output + cache_creation) of the CURRENT attempt, excluding attempts superseded by an infrastructure restart (erratum 12). Gross = whole tag history. No process was stopped by this audit, because no search is at 4M or 10M on this basis.
+
+| item | gross (gateway, all attempts) | current attempt | limit | action |
+|---|---|---|---|---|
+| hlext s0 | 13.74M | **8.72M** (`creation_budget.json` jobs, 140 sessions, after the clean cut; 4.51M at 15:22) | 10M own cut | **not at 10M: no stop.** `hl_ext_cap_watch.sh` (pid 1270864) already measures exactly this ledger (input + output + cache_write of jobs), so no repointing is needed; it fires at 10M, about 1.3M away |
+| ACE s0 | 4.43M | 3.90M (since 00:59:27) | 4M | native stop, under the cap |
+| ACE s1 | 4.79M | **3.15M** | 4M | not at 4M: keep running. `ace_token_guard.py 1 <pid> --limit 4000000 --since 2026-10-12T00:59:27Z` is already running (pid 1469390) on this basis and will SIGTERM at 4M; the ACE owner then takes the last epoch checkpoint at or under 4M and runs validation |
+| ACE s2 | 2.34M | **1.70M** | 4M | guard already running (pid 1469391), same definition; nothing to add |
+
+So all three of the requested actions are already satisfied or not yet triggered: the gross figures I quoted at 21:11 (hlext 13.74M, ACE s1 4.70M) overstated the over-cap position, because they include superseded or refunded attempts.
+
+### v2 line: HC-2 and AO-2 reruns after 06:00
+
+Assumptions: HC-2 and AO-2, 3 suites x 3 seeds each = 9 + 9 searches, Sonnet 5.5 optimizer, 4M per-search cap. Per-search optimizer cost from v1: HC 0.1 to 0.7M (central 0.4M), AO with bounded jobs 0.3 to 1.5M (central 0.9M).
+Suite B also bills its LLM judge to the capped total (about 0.9M per HC search and 0.45M per AO search in v1): +2.7M (HC-2, 3 seeds) and +1.4M (AO-2).
+
+| | low | central | high |
+|---|---|---|---|
+| HC-2 (9 searches) | 0.9 | 3.6 | 6.3 |
+| AO-2 (9 searches) | 2.7 | 8.1 | 13.5 |
+| Suite B judge on v2 | 2.5 | 4.1 | 5.0 |
+| **v2 total** | **6.1** | **15.8** | **24.8** |
+
+Headroom under the all-searches stop (200M cap minus 18M reserve = 182M) after the v1 searches, using the 21:11 projection (154 / 160 / 171M): **28M / 22M / 11M**.
+What fits: v2 central (15.8M) fits with v1 low or central (leaving 6 to 12M); v2 high (24.8M) fits only with v1 low; with v1 high (171M) only about 11M is available, enough for HC-2 plus a part of AO-2.
+Recommendation: run HC-2 first (3.6M central, 6.3M high, 3 suites), enforce a 1.5M per-search soft cap on AO-2, and start AO-2 only when the v1 actual at 06:00 leaves at least 16M under 182M. If the v1 actual is 171M, run AO-2 on one suite (about 2.7M central) or defer.
+The 170M exploratory and 178M secondary rungs apply to v2 as well, so treat v2 as secondary: stop it first at 178M.
