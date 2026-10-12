@@ -234,6 +234,13 @@ def native_status(rd):
     if tg.exists():
         d = jload(tg) or {}
         return "guard_stop", "logs/token_guard_stop.json (%s, %s > %s)" % (d.get("kind"), d.get("optimizer_noncache_read_tokens"), d.get("limit"))
+    bs = rd / "logs" / "budget_stop.json"      # HarnessLens (bl-harness, derived from its ledger + final.json by hl_stop_marker.py)
+    if bs.exists():
+        d = jload(bs) or {}
+        if d.get("status") == "finished":
+            return ("guard_stop" if d.get("stop_reason") == "token_guard" else "native_finish"), "logs/budget_stop.json finished (%s)" % d.get("stop_reason")
+        if d.get("status") == "crashed":
+            return "crashed", "logs/budget_stop.json crashed (%s)" % str(d.get("last_error"))[:80]
     gl = rd / "guard.log"
     if gl.exists():
         try:
