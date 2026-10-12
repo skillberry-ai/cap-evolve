@@ -14,7 +14,7 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | A | trace2skill | 3 | 6 | 3 | 1.00 | 0 | 0 | 0 |
 | A | ace | 3 | 1 | 0 | 0.00 | 1 | 2 | 0 |
 | A | mipro | 3 | 32 | 0 | 0.00 | 1 | 3 | 0 |
-| A | hc | 3 | 17 | 2 | 0.67 | 1 | 1 | 0 |
+| A | hc | 3 | 18 | 2 | 0.67 | 1 | 1 | 0 |
 | A | ao | 3 | 3 | 0 | 0.00 | 3 | 0 | 0 |
 | A-E12 | hcstock | 3 | 36 | 7 | 2.33 | 0 | 0 | 0 |
 | B | oneshot | 3 | 3 | 1 | 0.33 | 2 | 0 | 0 |
@@ -29,7 +29,7 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | C-E12 | hcstock | 3 | 30 | 3 | 1.00 | 1 | 1 | 0 |
 | C-E12 | bestofk | 3 | 28 | 0 | 0.00 | 0 | 0 | 0 |
 | D | E20-CTL | 3 | 3 | 2 | 0.67 | 1 | 0 | 0 |
-| D | E20-GEPA | 3 | 61 | 29 | 9.67 | 1 | 3 | 0 |
+| D | E20-GEPA | 3 | 62 | 29 | 9.67 | 1 | 3 | 0 |
 | D | E20-P | 3 | 30 | 5 | 1.67 | 0 | 3 | 0 |
 | D | E20-T | 3 | 26 | 1 | 0.33 | 2 | 3 | 0 |
 | D | E20-PT | 3 | 27 | 5 | 1.67 | 0 | 3 | 0 |

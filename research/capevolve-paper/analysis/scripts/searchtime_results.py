@@ -49,12 +49,20 @@ SUITES = {
     "D": (RUNS / "E20", "D", {"CTL": "E20-CTL", "GEPA": "E20-GEPA", "P": "E20-P", "PT": "E20-PT", "T": "E20-T"}),
     "D-E21": (RUNS / "E21", "D", {"1S": "E21-1S", "ruleP": "E21-ruleP"}),
     "D-E26": (RUNS / "E26", "D", {"NOHIST": "E26-NOHIST"}),
+    # Suite E (tau2 airline, Azure target; airline opt-20, GEPA on sel-10): dirs appear when the runs start, discover() skips absent ones
+    "E": (RUNS / "E30", "E", {"CTL": "E30-CTL", "GEPA": "E30-GEPA", "P": "E30-P", "PT": "E30-PT", "T": "E30-T"}),
+    "E-E31": (RUNS / "E31", "E", {"1S": "E31-1S", "ruleP": "E31-ruleP"}),
+    "E-E36": (RUNS / "E36", "E", {"NOHIST": "E36-NOHIST"}),
+    "E-E32": (RUNS / "E32", "E", {"ace": "E32-ace", "mipro": "E32-mipro", "gepafull": "E32-gepafull", "ao": "E32-ao", "hl": "E32-hl"}),
 }
-SUITE_D_CAP = ("E20-CTL", "E20-P", "E20-PT", "E20-T", "E21-1S", "E21-ruleP", "E26-NOHIST")   # CapEvolve cells of Suite D (E20-GEPA is a competitor)
+SUITE_D_CAP = ("E20-CTL", "E20-P", "E20-PT", "E20-T", "E21-1S", "E21-ruleP", "E26-NOHIST",
+               "E30-CTL", "E30-P", "E30-PT", "E30-T", "E31-1S", "E31-ruleP", "E36-NOHIST", "E32-ao")   # CapEvolve cells of Suite D (E20-GEPA is a competitor)
 METRIC_ARM = {"oneshot": "ctl-oneshot", "seed": "ctl-seed", "E20-CTL": "CTL", "E20-GEPA": "GEPA", "E20-P": "P", "E20-PT": "PT",
-              "E20-T": "T", "E21-1S": "1S", "E21-ruleP": "ruleP", "E26-NOHIST": "NOHIST"}  # paper arm key -> arm name in the metrics CSVs
+              "E20-T": "T", "E21-1S": "1S", "E21-ruleP": "ruleP", "E26-NOHIST": "NOHIST",
+              "E30-CTL": "CTL", "E30-GEPA": "GEPA", "E30-P": "P", "E30-PT": "PT", "E30-T": "T", "E31-1S": "1S", "E31-ruleP": "ruleP",
+              "E36-NOHIST": "NOHIST", "E32-ace": "ace", "E32-mipro": "mipro", "E32-gepafull": "gepafull", "E32-ao": "ao", "E32-hl": "hl"}  # paper arm key -> arm name in the metrics CSVs
 SHARE_SURFACES = ["system_prompt", "task_template", "tool_code", "mcp", "skill_files", "other"]  # process_docs/reference excluded from shares
-CAPEVOLVE = ("hc", "ao", "hcstock") + ("E20-CTL", "E20-P", "E20-PT", "E20-T", "E21-1S", "E21-ruleP", "E26-NOHIST")
+CAPEVOLVE = ("hc", "ao", "hcstock") + SUITE_D_CAP
 OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "optimizer-aux", "debugger"}
 CAVEAT = ("search-time, on the search/selection split each method selects on, not held-out; selection-split scores are "
           "optimistic and not comparable across methods (different splits, selection rules and visible feedback)")
@@ -486,7 +494,7 @@ def run_record(r, arm_rows, role):
     if not rec["split"] or rec["split"] in ("val", "opt", "sel"):
         ve = ((state or {}).get("screening_economics") or {}).get("val_n")
         if ve:
-            rec["split"] = "%s-%s" % (rec["split"] or ("opt" if r["base"] in ("B", "C", "D") else "val"), ve)
+            rec["split"] = "%s-%s" % (rec["split"] or ("opt" if r["base"] in ("B", "C", "D", "E") else "val"), ve)
     seed_score = None
     if arm == "seed":
         for nm, key in (("eval_opt.json", "opt"), ("eval_sel.json", "sel")):
@@ -661,9 +669,14 @@ def msr(vals, d=2, pct=False):
 
 
 ARM_ORDER = ["seed", "oneshot", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill", "trace2skill", "ace", "mipro",
-             "harnesslens", "hc", "ao", "hcstock", "bestofk", "E20-CTL", "E20-GEPA", "E20-P", "E20-T", "E20-PT", "E21-1S", "E21-ruleP", "E26-NOHIST"]
+             "harnesslens", "hc", "ao", "hcstock", "bestofk", "E20-CTL", "E20-GEPA", "E20-P", "E20-T", "E20-PT", "E21-1S", "E21-ruleP", "E26-NOHIST",
+             "E30-CTL", "E30-GEPA", "E30-P", "E30-T", "E30-PT", "E31-1S", "E31-ruleP", "E36-NOHIST", "E32-ace", "E32-mipro",
+             "E32-gepafull", "E32-ao", "E32-hl"]
 D_LABELS = {"E20-CTL": "D: control (CTL)", "E20-GEPA": "D: GEPA", "E20-P": "D: CapEvolve P", "E20-T": "D: CapEvolve T", "E20-PT": "D: CapEvolve P+T",
-            "E21-1S": "D: one-stage gate", "E21-ruleP": "D: Rule P", "E26-NOHIST": "D: no history"}
+            "E21-1S": "D: one-stage gate", "E21-ruleP": "D: Rule P", "E26-NOHIST": "D: no history",
+            "E30-CTL": "E: control (CTL)", "E30-GEPA": "E: GEPA", "E30-P": "E: CapEvolve P", "E30-T": "E: CapEvolve T", "E30-PT": "E: CapEvolve P+T",
+            "E31-1S": "E: one-stage gate", "E31-ruleP": "E: Rule P", "E36-NOHIST": "E: no history", "E32-ace": "E: ACE", "E32-mipro": "E: MIPROv2",
+            "E32-gepafull": "E: GEPA (full)", "E32-ao": "E: CapEvolve AO", "E32-hl": "E: HarnessLens"}
 
 
 def arm_label(a):
@@ -676,8 +689,10 @@ def arm_label(a):
 
 def build_summary_tables(recs):
     paths = []
-    for base in ("A", "B", "C", "D"):
+    for base in ("A", "B", "C", "D", "E"):
         rs = [r for r in recs if r["base_suite"] == base and r["arm"] != "seed"]
+        if not rs:   # suite not started yet (Suite E until its runs appear)
+            continue
         arms = sorted({r["arm"] for r in rs}, key=ARM_ORDER.index)
         splits = {}
         for a in arms:
@@ -699,7 +714,7 @@ def build_summary_tables(recs):
                 msr([r["wall_clock_h"] for r in xs], 1),
                 tex(Counter(r["status"] for r in xs).most_common(1)[0][0]) +
                 (" (%d)" % len(set(r["status"] for r in xs)) if len({r["status"] for r in xs}) > 1 else "")))
-        sname = {"A": "Suite A (SpreadsheetBench)", "B": "Suite B ($\\tau^2$ retail)", "C": "Suite C ($\\tau^2$ airline)", "D": "Suite D ($\\tau^2$ retail, Azure target)"}[base]
+        sname = {"A": "Suite A (SpreadsheetBench)", "B": "Suite B ($\\tau^2$ retail)", "C": "Suite C ($\\tau^2$ airline)", "D": "Suite D ($\\tau^2$ retail, Azure target)", "E": "Suite E ($\\tau^2$ airline, Azure target)"}[base]
         body = "\n".join(lines)
         t = r"""\begin{table*}[t]
 \centering
@@ -923,8 +938,8 @@ def main():
                 indecisive_reasons="; ".join("%s x%d" % kv for kv in ge["reasons"].items()),
                 eval_errors=ge["eval_errors"], infra_lost_attempts=rec["infra_lost_attempts"], cap_truncated=rec["cap_truncated"],
                 infra_lost_candidates=rec["infra_lost_candidates"], split=rec["split"], champion_score=rec["champion_score"],
-                seed_score=rec["seed_score"], gate=("stock (paired dbar > 1 SE, single stage)" if rec["arm"] in ("hcstock",) + tuple(a for a in SUITE_D_CAP if a != "E21-ruleP") else
-                                                    "agent-optimize (driver judgement)" if rec["arm"] == "ao" else "Rule P (screen + fresh confirm)")))
+                seed_score=rec["seed_score"], gate=("stock (paired dbar > 1 SE, single stage)" if rec["arm"] in ("hcstock",) + tuple(a for a in SUITE_D_CAP if a not in ("E21-ruleP", "E31-ruleP", "E32-ao")) else
+                                                    "agent-optimize (driver judgement)" if rec["arm"] in ("ao", "E32-ao") else "Rule P (screen + fresh confirm)")))
     recs = [m[0] for m in meta]
     wcsv(OUT / "runs.csv", recs)
     wcsv(OUT / "anytime.csv", any_rows)
