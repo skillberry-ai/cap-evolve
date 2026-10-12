@@ -284,8 +284,11 @@ def native_status(rd):
     bs = rd / "logs" / "budget_stop.json"      # HarnessLens (bl-harness, derived from its ledger + final.json by hl_stop_marker.py)
     if bs.exists():
         d = jload(bs) or {}
+        if d.get("stop_reason") == "token_guard" and d.get("status") in ("finished", "crashed", "crashed_at_guard"):
+            # whatever the exit status: the controller can error on its next session reservation ('creation budget exhausted') instead of finalizing; that is the guard stop
+            return "guard_stop", "logs/budget_stop.json stop_reason=token_guard (status %s)" % d.get("status")
         if d.get("status") == "finished":
-            return ("guard_stop" if d.get("stop_reason") == "token_guard" else "native_finish"), "logs/budget_stop.json finished (%s)" % d.get("stop_reason")
+            return "native_finish", "logs/budget_stop.json finished (%s)" % d.get("stop_reason")
         if d.get("status") == "crashed":
             return "crashed", "logs/budget_stop.json crashed (%s)" % str(d.get("last_error"))[:80]
     gl = rd / "guard.log"

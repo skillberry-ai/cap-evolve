@@ -530,6 +530,15 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
     if not rd.exists():
         entry.update(status="impossible", reason="run directory missing")
         return entry
+    if arm == "harnesslens" and not (rd / "candidates.jsonl").exists():
+        bs = C.jload(rd / "logs" / "budget_stop.json") or {}
+        if bs and not bs.get("accepted_versions") and str(bs.get("selected_version", "")).startswith("v0"):
+            # no version was ever accepted: HarnessLens's own selection is v0 = the unmodified OpenCode harness (the hl-v0 reference); nothing to freeze, evaluated through hl_final_eval.py --version v0
+            entry.update(status="ok", candidate_id="v0", fallback_seed=True, reason="no accepted version (budget_stop.json): HarnessLens returns v0, the unmodified OpenCode harness",
+                         artifact_dir=str(C.final_dir(suite) / "artifacts/hl-v0"), frozen_dir=str(C.final_dir(suite) / "artifacts/hl-v0"), tree_sha256="hl-v0-unmodified", files={},
+                         identical_to_hlv0=True, identical_to_seed=False, caveats=["artifact is HarnessLens v0 (== the hl-v0 reference arm), not the CapEvolve tau seed; stop %s, %s target rollouts" % (bs.get("stop_reason"), bs.get("target_rollouts"))],
+                         selection={"split": "train (HL internal)", "n_tasks": None, "champion_score": None, "seed_score": None})
+            return entry
     events, sources = load_events(rd)
     events, n_excl = apply_exclusions(events, exclusions(suite, arm, seed))
     entry["infra_excluded_events"] = n_excl
