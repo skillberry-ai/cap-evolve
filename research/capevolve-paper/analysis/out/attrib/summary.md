@@ -10,51 +10,59 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | A | skillopt | 3 | 23 | 13 | 4.33 | 0 | 0 | 0 |
 | A | metaharness | 3 | 24 | 11 | 3.67 | 0 | 0 | 0 |
 | A | evoskill | 3 | 24 | 18 | 6.00 | 0 | 0 | 0 |
-| A | wikiskill | 3 | 10 | 5 | 1.67 | 0 | 2 | 0 |
+| A | wikiskill | 3 | 11 | 6 | 2.00 | 0 | 2 | 0 |
 | A | trace2skill | 3 | 6 | 3 | 1.00 | 0 | 0 | 0 |
-| A | ace | 3 | 1 | 0 | 0.00 | 1 | 2 | 0 |
-| A | mipro | 3 | 32 | 0 | 0.00 | 1 | 3 | 0 |
-| A | hc | 3 | 18 | 2 | 0.67 | 1 | 1 | 0 |
+| A | ace | 3 | 1 | 0 | 0.00 | 2 | 2 | 0 |
+| A | mipro | 3 | 39 | 0 | 0.00 | 0 | 3 | 0 |
+| A | hc | 3 | 20 | 2 | 0.67 | 1 | 0 | 0 |
 | A | ao | 3 | 3 | 0 | 0.00 | 3 | 0 | 0 |
 | A-E12 | hcstock | 3 | 36 | 7 | 2.33 | 0 | 0 | 0 |
 | B | oneshot | 3 | 3 | 1 | 0.33 | 2 | 0 | 0 |
-| B | gepa | 3 | 67 | 21 | 7.00 | 0 | 3 | 0 |
-| B | harnesslens | 3 | 0 | 0 | 0.00 | 0 | 2 | 0 |
-| B | hc | 3 | 14 | 0 | 0.00 | 3 | 2 | 0 |
+| B | gepa | 3 | 76 | 24 | 8.00 | 0 | 3 | 0 |
+| B | harnesslens | 3 | 0 | 0 | 0.00 | 0 | 0 | 0 |
+| B | hc | 3 | 16 | 0 | 0.00 | 3 | 0 | 0 |
 | B | ao | 3 | 3 | 0 | 0.00 | 3 | 1 | 0 |
 | C | oneshot | 3 | 3 | 1 | 0.33 | 2 | 0 | 0 |
-| C | gepa | 3 | 54 | 20 | 6.67 | 0 | 3 | 0 |
-| C | hc | 3 | 18 | 2 | 0.67 | 1 | 3 | 0 |
+| C | gepa | 3 | 63 | 23 | 7.67 | 0 | 3 | 0 |
+| C | hc | 3 | 24 | 2 | 0.67 | 1 | 2 | 0 |
 | C | ao | 3 | 1 | 0 | 0.00 | 3 | 0 | 0 |
-| C-E12 | hcstock | 3 | 30 | 3 | 1.00 | 1 | 1 | 0 |
+| C-E12 | hcstock | 3 | 30 | 3 | 1.00 | 1 | 0 | 0 |
 | C-E12 | bestofk | 3 | 28 | 0 | 0.00 | 0 | 0 | 0 |
 | D | E20-CTL | 3 | 3 | 2 | 0.67 | 1 | 0 | 0 |
-| D | E20-GEPA | 3 | 62 | 29 | 9.67 | 1 | 3 | 0 |
-| D | E20-P | 3 | 30 | 5 | 1.67 | 0 | 1 | 0 |
-| D | E20-T | 3 | 26 | 1 | 0.33 | 2 | 2 | 0 |
-| D | E20-PT | 3 | 27 | 5 | 1.67 | 0 | 2 | 0 |
-| D-E21 | E21-1S | 3 | 25 | 5 | 1.67 | 0 | 3 | 0 |
-| D-E21 | E21-ruleP | 3 | 8 | 2 | 0.67 | 1 | 3 | 0 |
-| D-E26 | E26-NOHIST | 3 | 28 | 5 | 1.67 | 0 | 2 | 0 |
+| D | E20-GEPA | 3 | 87 | 40 | 13.33 | 0 | 0 | 0 |
+| D | E20-P | 3 | 30 | 5 | 1.67 | 0 | 0 | 0 |
+| D | E20-T | 3 | 30 | 2 | 0.67 | 1 | 0 | 0 |
+| D | E20-PT | 3 | 30 | 5 | 1.67 | 0 | 0 | 0 |
+| D-E21 | E21-1S | 3 | 30 | 6 | 2.00 | 0 | 0 | 0 |
+| D-E21 | E21-ruleP | 3 | 10 | 4 | 1.33 | 0 | 0 | 0 |
+| D-E26 | E26-NOHIST | 3 | 30 | 5 | 1.67 | 0 | 0 | 0 |
+| E | E30-P | 3 | 10 | 3 | 1.00 | 1 | 3 | 0 |
+| E | E30-T | 3 | 4 | 3 | 1.00 | 0 | 3 | 0 |
+| E | E30-PT | 3 | 5 | 2 | 0.67 | 1 | 3 | 0 |
+| E-E31 | E31-ruleP | 3 | 3 | 0 | 0.00 | 3 | 3 | 0 |
 
 ## Regressions (CapEvolve arms)
 
 | suite | arm | cands | promoted | fixed/prom | broke/prom | net/prom | broke/rejected | protect viol/prom | fresh confirm delta/prom |
 |---|---|---|---|---|---|---|---|---|---|
-| A | hc | 14 | 2 | 8.0 | 3.0 | 5.0 | 1.0 | 3.0 | 0.125 |
+| A | hc | 15 | 2 | 8.0 | 3.0 | 5.0 | 1.0 | 3.0 | 0.125 |
 | A | hcstock | 36 | 7 | 7.7 | 2.3 | 5.4 | 3.1 | 1.9 | -- |
-| B | hc | 16 | 0 | -- | -- | -- | 7.1 | -- | -- |
+| B | hc | 14 | 0 | -- | -- | -- | 7.1 | -- | -- |
 | B | oneshot | 3 | 1 | 11.0 | 4.0 | 7.0 | 8.0 | 4.0 | -- |
-| C | hc | 18 | 2 | 3.0 | 0.5 | 2.5 | 2.1 | 0.5 | 0.121 |
+| C | hc | 24 | 2 | 3.0 | 0.5 | 2.5 | 2.0 | 0.5 | 0.121 |
 | C | hcstock | 30 | 3 | 4.7 | 1.3 | 3.3 | 3.4 | 1.0 | -- |
 | C | oneshot | 3 | 1 | 5.0 | 1.0 | 4.0 | 2.5 | 1.0 | -- |
 | D | E20-CTL | 3 | 2 | 9.5 | 4.5 | 5.0 | 8.0 | 4.5 | -- |
 | D | E20-P | 30 | 5 | 9.0 | 3.8 | 5.2 | 9.2 | 4.2 | -- |
-| D | E20-PT | 28 | 5 | 10.2 | 3.8 | 6.4 | 6.3 | 3.0 | -- |
-| D | E20-T | 26 | 1 | 12.0 | 6.0 | 6.0 | 7.6 | 6.0 | -- |
-| D | E21-1S | 25 | 5 | 9.0 | 3.0 | 6.0 | 6.3 | 2.2 | -- |
-| D | E21-ruleP | 10 | 2 | 13.0 | 5.5 | 7.5 | 6.7 | 5.5 | 0.100 |
-| D | E26-NOHIST | 28 | 5 | 10.4 | 5.0 | 5.4 | 8.1 | 4.8 | -- |
+| D | E20-PT | 30 | 5 | 10.2 | 3.8 | 6.4 | 6.3 | 3.0 | -- |
+| D | E20-T | 30 | 2 | 10.5 | 4.0 | 6.5 | 7.5 | 4.0 | -- |
+| D | E21-1S | 30 | 6 | 9.3 | 3.2 | 6.2 | 6.3 | 2.0 | -- |
+| D | E21-ruleP | 10 | 4 | 11.8 | 5.5 | 6.2 | 6.7 | 4.5 | 0.099 |
+| D | E26-NOHIST | 30 | 5 | 10.4 | 5.0 | 5.4 | 8.0 | 4.8 | -- |
+| E | E30-P | 10 | 3 | 4.0 | 0.7 | 3.3 | 3.1 | 1.0 | -- |
+| E | E30-PT | 5 | 2 | 4.5 | 0.0 | 4.5 | 1.3 | 0.0 | -- |
+| E | E30-T | 4 | 3 | 4.7 | 1.0 | 3.7 | 2.0 | 1.0 | -- |
+| E | E31-ruleP | 3 | 0 | -- | -- | -- | 0.3 | -- | -- |
 
 ## Seed failure types (groups)
 
@@ -145,21 +153,41 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | D | E26-NOHIST | other | 7 |
 | D | E26-NOHIST | state_side_effect | 2 |
 | D | E26-NOHIST | wrong_argument | 25 |
+| E | E30-P | communication | 3 |
+| E | E30-P | missing_action | 7 |
+| E | E30-P | other | 4 |
+| E | E30-P | state_side_effect | 12 |
+| E | E30-P | wrong_argument | 11 |
+| E | E30-PT | communication | 4 |
+| E | E30-PT | missing_action | 8 |
+| E | E30-PT | other | 1 |
+| E | E30-PT | state_side_effect | 12 |
+| E | E30-PT | wrong_argument | 10 |
+| E | E30-T | communication | 2 |
+| E | E30-T | missing_action | 6 |
+| E | E30-T | other | 3 |
+| E | E30-T | state_side_effect | 16 |
+| E | E30-T | wrong_argument | 14 |
+| E | E31-ruleP | communication | 3 |
+| E | E31-ruleP | missing_action | 9 |
+| E | E31-ruleP | other | 2 |
+| E | E31-ruleP | state_side_effect | 17 |
+| E | E31-ruleP | wrong_argument | 12 |
 
 ## Attribution by surface
 
 | suite | arm | surface | touching/total | promoted | mean delta | fixed | broke | rho | note |
 |---|---|---|---|---|---|---|---|---|---|
-| A | hc | system_prompt | 14/14 | 2 | 0.215 | 9.3 | 1.3 | 0.49 | surface touched by every candidate: no contrast available |
-| A | hc | task_template | 14/14 | 2 | 0.215 | 9.3 | 1.3 | -0.38 | surface touched by every candidate: no contrast available |
+| A | hc | system_prompt | 15/15 | 2 | 0.215 | 9.3 | 1.3 | 0.48 | surface touched by every candidate: no contrast available |
+| A | hc | task_template | 15/15 | 2 | 0.215 | 9.3 | 1.3 | -0.38 | surface touched by every candidate: no contrast available |
 | A | hcstock | system_prompt | 36/36 | 7 | 0.017 | 3.6 | 2.9 | -0.53 | surface touched by every candidate: no contrast available |
 | A | hcstock | task_template | 36/36 | 7 | 0.017 | 3.6 | 2.9 | -0.25 | surface touched by every candidate: no contrast available |
-| B | hc | system_prompt | 9/16 | 0 | 0.010 | 7.3 | 6.9 | 0.22 |  |
-| B | hc | tool_code | 14/16 | 0 | -0.007 | 6.8 | 7.1 | -0.16 |  |
+| B | hc | system_prompt | 9/14 | 0 | 0.010 | 7.3 | 6.9 | 0.59 |  |
+| B | hc | tool_code | 14/14 | 0 | -0.007 | 6.8 | 7.1 | 0.25 | surface touched by every candidate: no contrast available |
 | B | oneshot | system_prompt | 3/3 | 1 | 0.017 | 7.7 | 6.7 | -- | surface touched by every candidate: no contrast available |
 | B | oneshot | tool_code | 3/3 | 1 | 0.017 | 7.7 | 6.7 | -- | surface touched by every candidate: no contrast available |
-| C | hc | system_prompt | 18/18 | 2 | 0.053 | 2.9 | 1.9 | 0.38 | surface touched by every candidate: no contrast available |
-| C | hc | tool_code | 18/18 | 2 | 0.053 | 2.9 | 1.9 | 0.45 | surface touched by every candidate: no contrast available |
+| C | hc | system_prompt | 24/24 | 2 | 0.058 | 3.0 | 1.9 | 0.33 | surface touched by every candidate: no contrast available |
+| C | hc | tool_code | 24/24 | 2 | 0.058 | 3.0 | 1.9 | 0.37 | surface touched by every candidate: no contrast available |
 | C | hcstock | system_prompt | 29/30 | 3 | -0.059 | 2.0 | 3.1 | -0.26 |  |
 | C | hcstock | tool_code | 30/30 | 3 | -0.062 | 2.0 | 3.2 | -0.29 | surface touched by every candidate: no contrast available |
 | C | oneshot | system_prompt | 3/3 | 1 | 0.088 | 3.7 | 2.0 | -- | surface touched by every candidate: no contrast available |
@@ -167,15 +195,21 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | D | E20-CTL | system_prompt | 3/3 | 2 | 0.069 | 9.0 | 5.7 | -- | surface touched by every candidate: no contrast available |
 | D | E20-CTL | tool_code | 3/3 | 2 | 0.069 | 9.0 | 5.7 | -- | surface touched by every candidate: no contrast available |
 | D | E20-P | system_prompt | 30/30 | 5 | -0.054 | 5.7 | 8.3 | -0.21 | surface touched by every candidate: no contrast available |
-| D | E20-PT | system_prompt | 27/28 | 5 | 0.006 | 6.3 | 5.9 | -0.20 |  |
-| D | E20-PT | tool_code | 27/28 | 5 | 0.006 | 6.3 | 5.9 | -0.24 |  |
-| D | E20-T | tool_code | 25/26 | 1 | -0.024 | 6.3 | 7.4 | 0.21 |  |
-| D | E21-1S | system_prompt | 25/25 | 5 | 0.021 | 6.7 | 5.7 | -0.49 | surface touched by every candidate: no contrast available |
-| D | E21-1S | tool_code | 25/25 | 5 | 0.021 | 6.7 | 5.7 | -0.42 | surface touched by every candidate: no contrast available |
-| D | E21-ruleP | system_prompt | 8/10 | 2 | 0.069 | 9.8 | 6.4 | -0.15 |  |
-| D | E21-ruleP | tool_code | 8/10 | 2 | 0.069 | 9.8 | 6.4 | -0.30 |  |
-| D | E26-NOHIST | system_prompt | 28/28 | 5 | 0.002 | 7.7 | 7.5 | -0.28 | surface touched by every candidate: no contrast available |
-| D | E26-NOHIST | tool_code | 28/28 | 5 | 0.002 | 7.7 | 7.5 | -0.30 | surface touched by every candidate: no contrast available |
+| D | E20-PT | system_prompt | 30/30 | 5 | 0.002 | 6.1 | 5.9 | -0.17 | surface touched by every candidate: no contrast available |
+| D | E20-PT | tool_code | 30/30 | 5 | 0.002 | 6.1 | 5.9 | -0.24 | surface touched by every candidate: no contrast available |
+| D | E20-T | tool_code | 29/30 | 2 | -0.016 | 6.4 | 7.2 | 0.13 |  |
+| D | E21-1S | system_prompt | 30/30 | 6 | 0.018 | 6.5 | 5.7 | -0.50 | surface touched by every candidate: no contrast available |
+| D | E21-1S | tool_code | 30/30 | 6 | 0.018 | 6.5 | 5.7 | -0.37 | surface touched by every candidate: no contrast available |
+| D | E21-ruleP | system_prompt | 10/10 | 4 | 0.076 | 9.9 | 6.2 | 0.56 | surface touched by every candidate: no contrast available |
+| D | E21-ruleP | tool_code | 10/10 | 4 | 0.076 | 9.9 | 6.2 | 0.40 | surface touched by every candidate: no contrast available |
+| D | E26-NOHIST | system_prompt | 30/30 | 5 | -0.003 | 7.5 | 7.5 | -0.34 | surface touched by every candidate: no contrast available |
+| D | E26-NOHIST | tool_code | 30/30 | 5 | -0.003 | 7.5 | 7.5 | -0.35 | surface touched by every candidate: no contrast available |
+| E | E30-P | system_prompt | 10/10 | 3 | 0.055 | 3.5 | 2.4 | -0.40 | surface touched by every candidate: no contrast available |
+| E | E30-PT | system_prompt | 5/5 | 2 | 0.096 | 2.6 | 0.8 | -0.46 | surface touched by every candidate: no contrast available |
+| E | E30-PT | tool_code | 5/5 | 2 | 0.096 | 2.6 | 0.8 | -0.70 | surface touched by every candidate: no contrast available |
+| E | E30-T | tool_code | 4/4 | 3 | 0.207 | 4.5 | 1.2 | 0.63 | surface touched by every candidate: no contrast available |
+| E | E31-ruleP | system_prompt | 3/3 | 0 | 0.365 | 6.7 | 0.3 | -- | surface touched by every candidate: no contrast available |
+| E | E31-ruleP | tool_code | 3/3 | 0 | 0.365 | 6.7 | 0.3 | -- | surface touched by every candidate: no contrast available |
 
 ## Shrinkage and cost per point
 

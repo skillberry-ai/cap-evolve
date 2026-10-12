@@ -90,3 +90,23 @@ D,E26-NOHIST,missing_action,forgotten rule or step,,20
 D,E26-NOHIST,other,other,,7
 D,E26-NOHIST,state_side_effect,unexpected side effect,,2
 D,E26-NOHIST,wrong_argument,tool misuse,,25
+E,E30-P,communication,output / contract,,3
+E,E30-P,missing_action,forgotten rule or step,,7
+E,E30-P,other,other,,4
+E,E30-P,state_side_effect,unexpected side effect,,12
+E,E30-P,wrong_argument,tool misuse,,11
+E,E30-PT,communication,output / contract,,4
+E,E30-PT,missing_action,forgotten rule or step,,8
+E,E30-PT,other,other,,1
+E,E30-PT,state_side_effect,unexpected side effect,,12
+E,E30-PT,wrong_argument,tool misuse,,10
+E,E30-T,communication,output / contract,,2
+E,E30-T,missing_action,forgotten rule or step,,6
+E,E30-T,other,other,,3
+E,E30-T,state_side_effect,unexpected side effect,,16
+E,E30-T,wrong_argument,tool misuse,,14
+E,E31-ruleP,communication,output / contract,,3
+E,E31-ruleP,missing_action,forgotten rule or step,,9
+E,E31-ruleP,other,other,,2
+E,E31-ruleP,state_side_effect,unexpected side effect,,17
+E,E31-ruleP,wrong_argument,tool misuse,,12

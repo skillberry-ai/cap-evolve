@@ -1,19 +1,19 @@
 suite,arm,seed,candidates,screens,confirms,promoted,screen_reject,confirm_reject,rejected_other,gate_veto,indecisive,indecisive_events,indecisive_reasons,eval_errors,infra_lost_attempts,cap_truncated,infra_lost_candidates,split,champion_score,seed_score,gate
 A,hc,0,4,3,2,1,0,1,0,1,1,1,coverage<0.95 (90%) x1,0,1,0,1,val-40,0.75,0.5789473684210527,Rule P (screen + fresh confirm)
 A,hc,1,2,1,1,1,0,0,0,0,0,0,,0,0,1,0,val-40,0.6923076923076923,0.5897435897435898,Rule P (screen + fresh confirm)
-A,hc,2,12,10,0,0,0,0,0,10,10,10,coverage<0.95 (92%) x10,0,3,0,2,val-40,0.5675675675675675,0.5675675675675675,Rule P (screen + fresh confirm)
+A,hc,2,14,12,0,0,1,0,0,11,12,12,coverage<0.95 (92%) x11; coverage<0.95 (0%) x1,0,3,0,2,val-40,0.5675675675675675,0.5675675675675675,Rule P (screen + fresh confirm)
 A,ao,0,1,0,0,0,0,0,0,0,0,0,,0,0,0,0,val-20,0.46153846153846156,0.46153846153846156,agent-optimize (driver judgement)
 A,ao,1,1,0,0,0,0,0,0,0,0,0,,0,0,0,0,val-40,0.4473684210526316,0.4473684210526316,agent-optimize (driver judgement)
 A,ao,2,1,0,0,0,0,0,0,0,0,0,,0,0,0,0,val-20,0.6842105263157895,0.6842105263157895,agent-optimize (driver judgement)
-B,hc,0,2,2,1,0,1,1,0,0,0,0,,0,0,0,0,opt-49,0.5306122448979592,0.5306122448979592,Rule P (screen + fresh confirm)
+B,hc,0,3,2,1,0,1,1,0,0,0,0,,0,0,1,0,opt-49,0.5306122448979592,0.5306122448979592,Rule P (screen + fresh confirm)
 B,hc,1,10,10,0,0,10,0,0,0,0,0,,0,0,0,0,opt-49,0.6530612244897959,0.6530612244897959,Rule P (screen + fresh confirm)
-B,hc,2,2,2,1,0,1,1,0,0,0,0,,0,0,0,0,opt-49,0.5416666666666666,0.5416666666666666,Rule P (screen + fresh confirm)
+B,hc,2,3,2,1,0,1,1,0,0,0,0,,0,0,1,0,opt-49,0.5416666666666666,0.5416666666666666,Rule P (screen + fresh confirm)
 B,ao,0,2,0,0,0,0,0,2,0,0,0,,0,0,0,0,opt-49,0.6041666666666666,0.6041666666666666,agent-optimize (driver judgement)
 B,ao,1,1,0,0,0,0,0,1,0,0,0,,0,0,0,0,opt-49,0.6122448979591837,0.6122448979591837,agent-optimize (driver judgement)
 B,ao,2,0,0,0,0,0,0,0,0,0,0,,0,0,0,0,opt-49,0.6122448979591837,0.6122448979591837,agent-optimize (driver judgement)
-C,hc,0,4,4,2,1,2,1,0,0,0,0,,0,0,0,0,opt-20,0.6,0.45,Rule P (screen + fresh confirm)
-C,hc,1,5,5,1,0,3,1,0,1,2,2,coverage<0.95 (90%) x2,0,0,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm)
-C,hc,2,9,9,1,1,8,0,0,0,0,0,,0,0,0,0,opt-20,0.6842105263157895,0.55,Rule P (screen + fresh confirm)
+C,hc,0,7,7,2,1,5,1,0,0,0,0,,0,0,0,0,opt-20,0.6,0.45,Rule P (screen + fresh confirm)
+C,hc,1,7,7,1,0,3,1,0,3,4,4,coverage<0.95 (90%) x4,0,0,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm)
+C,hc,2,10,10,1,1,9,0,0,0,0,0,,0,0,0,0,opt-20,0.6842105263157895,0.55,Rule P (screen + fresh confirm)
 C,ao,0,0,0,0,0,0,0,0,0,0,0,,0,0,0,0,opt-20,0.55,0.55,agent-optimize (driver judgement)
 C,ao,1,0,0,0,0,0,0,0,0,0,0,,0,0,0,0,opt-20,0.55,0.55,agent-optimize (driver judgement)
 C,ao,2,1,0,0,0,0,0,1,0,0,0,,0,0,0,0,opt-20,0.45,0.45,agent-optimize (driver judgement)
@@ -30,17 +30,29 @@ D,E20-P,0,10,10,0,3,0,0,7,0,0,0,,0,0,0,0,opt-49,0.8333333333333334,0.53061224489
 D,E20-P,1,10,10,0,1,0,0,9,0,0,0,,0,0,0,0,opt-49,0.6875,0.5625,"stock (paired dbar > 1 SE, single stage)"
 D,E20-P,2,10,10,0,1,0,0,9,0,0,0,,0,0,0,0,opt-49,0.7551020408163265,0.625,"stock (paired dbar > 1 SE, single stage)"
 D,E20-PT,0,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.75,0.5306122448979592,"stock (paired dbar > 1 SE, single stage)"
-D,E20-PT,1,8,8,0,1,0,0,7,0,0,0,,0,0,0,0,opt-49,0.7916666666666666,0.5714285714285714,"stock (paired dbar > 1 SE, single stage)"
-D,E20-PT,2,9,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.7142857142857143,0.5102040816326531,"stock (paired dbar > 1 SE, single stage)"
-D,E20-T,0,7,7,0,0,0,0,7,0,0,0,,0,0,0,0,opt-49,0.5510204081632653,0.5510204081632653,"stock (paired dbar > 1 SE, single stage)"
-D,E20-T,1,9,9,0,1,0,0,8,0,0,0,,0,0,0,0,opt-49,0.6875,0.5714285714285714,"stock (paired dbar > 1 SE, single stage)"
+D,E20-PT,1,10,10,0,1,0,0,9,0,0,0,,0,0,0,0,opt-49,0.7916666666666666,0.5714285714285714,"stock (paired dbar > 1 SE, single stage)"
+D,E20-PT,2,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.7142857142857143,0.5102040816326531,"stock (paired dbar > 1 SE, single stage)"
+D,E20-T,0,10,10,0,1,0,0,9,0,0,0,,0,0,0,0,opt-49,0.7380952380952381,0.5510204081632653,"stock (paired dbar > 1 SE, single stage)"
+D,E20-T,1,10,10,0,1,0,0,9,0,0,0,,0,0,0,0,opt-49,0.6875,0.5714285714285714,"stock (paired dbar > 1 SE, single stage)"
 D,E20-T,2,10,10,0,0,0,0,10,0,0,0,,0,0,0,0,opt-49,0.6122448979591837,0.6122448979591837,"stock (paired dbar > 1 SE, single stage)"
-D-E21,E21-1S,0,9,9,0,2,0,0,7,0,0,0,,0,0,0,0,opt-49,0.7872340425531915,0.5208333333333334,"stock (paired dbar > 1 SE, single stage)"
-D-E21,E21-1S,1,9,9,0,2,0,0,7,0,0,0,,0,0,0,0,opt-49,0.8163265306122449,0.6326530612244898,"stock (paired dbar > 1 SE, single stage)"
-D-E21,E21-1S,2,7,7,0,1,0,0,6,0,6,6,coverage<0.95 (88%) x3; coverage<0.95 (90%) x1; coverage<0.95 (86%) x2,0,0,0,0,opt-49,0.6938775510204082,0.5,"stock (paired dbar > 1 SE, single stage)"
+D-E21,E21-1S,0,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.7872340425531915,0.5208333333333334,"stock (paired dbar > 1 SE, single stage)"
+D-E21,E21-1S,1,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.8163265306122449,0.6326530612244898,"stock (paired dbar > 1 SE, single stage)"
+D-E21,E21-1S,2,10,10,0,2,0,0,8,0,7,7,coverage<0.95 (88%) x3; coverage<0.95 (90%) x1; coverage<0.95 (86%) x2; coverage<0.95 (94%) x1,0,0,0,0,opt-49,0.851063829787234,0.5,"stock (paired dbar > 1 SE, single stage)"
 D-E21,E21-ruleP,0,6,6,1,1,5,0,0,0,0,0,,0,0,0,0,opt-49,0.7142857142857143,0.6122448979591837,Rule P (screen + fresh confirm)
-D-E21,E21-ruleP,1,1,1,1,0,0,1,0,0,0,0,,0,0,0,0,opt-49,0.5510204081632653,0.5510204081632653,Rule P (screen + fresh confirm)
-D-E21,E21-ruleP,2,1,1,1,1,0,0,0,0,0,0,,0,0,0,0,opt-49,0.673469387755102,0.4791666666666667,Rule P (screen + fresh confirm)
+D-E21,E21-ruleP,1,2,2,2,1,0,1,0,0,0,0,,0,0,0,0,opt-49,0.6875,0.5510204081632653,Rule P (screen + fresh confirm)
+D-E21,E21-ruleP,2,2,2,2,2,0,0,0,0,0,0,,0,0,0,0,opt-49,0.7346938775510204,0.4791666666666667,Rule P (screen + fresh confirm)
 D-E26,E26-NOHIST,0,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.7959183673469388,0.5918367346938775,"stock (paired dbar > 1 SE, single stage)"
 D-E26,E26-NOHIST,1,10,10,0,1,0,0,9,0,0,0,,0,0,0,0,opt-49,0.7708333333333334,0.6326530612244898,"stock (paired dbar > 1 SE, single stage)"
-D-E26,E26-NOHIST,2,8,8,0,2,0,0,6,0,0,0,,0,0,0,0,opt-49,0.7608695652173914,0.5306122448979592,"stock (paired dbar > 1 SE, single stage)"
+D-E26,E26-NOHIST,2,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-49,0.7608695652173914,0.5306122448979592,"stock (paired dbar > 1 SE, single stage)"
+E,E30-P,0,3,3,0,0,0,0,3,0,0,0,,0,0,0,0,opt-20,0.4,0.4,"stock (paired dbar > 1 SE, single stage)"
+E,E30-P,1,4,4,0,2,0,0,2,0,0,0,,0,0,0,0,opt-20,0.6,0.3,"stock (paired dbar > 1 SE, single stage)"
+E,E30-P,2,3,3,0,1,0,0,2,0,0,0,,0,0,0,0,opt-20,0.65,0.45,"stock (paired dbar > 1 SE, single stage)"
+E,E30-PT,0,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.5789473684210527,0.4,"stock (paired dbar > 1 SE, single stage)"
+E,E30-PT,1,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.6666666666666666,0.3,"stock (paired dbar > 1 SE, single stage)"
+E,E30-PT,2,1,1,0,0,0,0,1,0,0,0,,0,0,0,0,opt-20,0.55,0.55,"stock (paired dbar > 1 SE, single stage)"
+E,E30-T,0,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.5714285714285714,0.3,"stock (paired dbar > 1 SE, single stage)"
+E,E30-T,1,1,1,0,1,0,0,0,0,0,0,,0,0,0,0,opt-20,0.5882352941176471,0.25,"stock (paired dbar > 1 SE, single stage)"
+E,E30-T,2,1,1,0,1,0,0,0,0,0,0,,0,0,0,0,opt-20,0.7333333333333333,0.4,"stock (paired dbar > 1 SE, single stage)"
+E-E31,E31-ruleP,0,1,1,0,0,0,0,0,1,1,1,coverage<0.95 (85%) x1,0,0,0,0,opt-20,0.25,0.25,Rule P (screen + fresh confirm)
+E-E31,E31-ruleP,1,1,1,0,0,0,0,0,1,1,1,coverage<0.95 (85%) x1,0,0,0,0,opt-20,0.25,0.25,Rule P (screen + fresh confirm)
+E-E31,E31-ruleP,2,1,1,0,0,0,0,0,1,1,1,coverage<0.95 (90%) x1,0,0,0,0,opt-20,0.35,0.35,Rule P (screen + fresh confirm)

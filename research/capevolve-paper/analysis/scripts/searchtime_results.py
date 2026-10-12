@@ -422,6 +422,8 @@ def status_of(r, mrow, cap, info):
     pi = paused_info(r)
     if pi:
         return "paused (truncated at k=%d, %d rollouts)" % (pi["proposals_completed"], pi["counted_incl_baseline"])
+    if (sd / "budget_stop.json").exists():   # recorded native budget stop (hard cap reached); may precede the last gateway call
+        return "native finish (budget_cap)"
     if mrow and mrow.get("active") == "True":
         return "running"
     if not mrow:
@@ -435,6 +437,14 @@ def status_of(r, mrow, cap, info):
     stop_ = str(rs_.get("stop") or "")
     if re.match(r"(rollout budget|evolution_complete|early_stop)", stop_):   # method's own stop rule: native finish (wikiskill, others)
         return "native finish (%s)" % stop_.split(":")[0].split("<")[0].strip()[:30]
+    # a run that reached its budget finished natively, even if an old .err file holds an earlier (resumed-from) crash
+    if cap and js(cap / "state.json"):
+        st = js(cap / "state.json")
+        b, sp = st.get("budget", {}), st.get("spent", {})
+        if b.get("max_metric_calls") and sp.get("metric_calls", 0) >= b["max_metric_calls"]:
+            return "native finish (budget)"
+        if b.get("max_iterations") and sp.get("iterations", 0) >= b["max_iterations"]:
+            return "native finish (iterations)"
     if list(sd.glob("run_summary.crash*")) and not rs_:
         return "crash"
     for lg in list(sd.glob("logs/*.err")) + [sd / "hc.err"]:
@@ -448,13 +458,6 @@ def status_of(r, mrow, cap, info):
             tail = "".join(lg.read_text(errors="replace").splitlines(True)[-60:])
             if re.search(r"Traceback|FATAL|CRASH", tail):
                 return "crash"
-    if cap and js(cap / "state.json"):
-        st = js(cap / "state.json")
-        b, sp = st.get("budget", {}), st.get("spent", {})
-        if b.get("max_metric_calls") and sp.get("metric_calls", 0) >= b["max_metric_calls"]:
-            return "native finish (budget)"
-        if b.get("max_iterations") and sp.get("iterations", 0) >= b["max_iterations"]:
-            return "native finish (iterations)"
     if r["arm"] in ("oneshot", "seed"):
         return "native finish"
     if cap and any(e.get("kind") == "finalize" for e in jl(cap / "events.jsonl")):
@@ -554,7 +557,8 @@ def run_record(r, arm_rows, role):
     rec["final_dir_present"] = (sd / "final").is_dir() and any((sd / "final").iterdir()) if (sd / "final").is_dir() else False
     gen = [c for c in info["created"] if c != sid]
     scr = {e[1] for e in evs if e[1] != sid}
-    rec["candidates_generated"] = max(len(gen), len(prop_dirs(sd))) if arm == "bestofk" else len(gen)
+    # candidates lost or truncated before a verdict may never reach candidates.jsonl "created": count them as generated
+    rec["candidates_generated"] = max(len(gen), len(prop_dirs(sd))) if arm == "bestofk" else len(set(gen) | (set(excl) - {sid}))
     rec["candidates_screened"] = len(scr)
     if arm in CAPEVOLVE or arm == "oneshot":
         ge = gate_events(cap, excl)
