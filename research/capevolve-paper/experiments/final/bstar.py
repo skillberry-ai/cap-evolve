@@ -28,6 +28,24 @@ import fe_common as C  # noqa: E402
 NONBINDING = ("native_finish", "guard_stop")     # N* rule + token-guard addendum: neither binds; count disclosed
 
 
+FINALIZE_SPLITS = ("sel", "test", "FINAL")
+
+
+def search_counter(suite, arm, rd, n, src):
+    """ONE counted-rollout definition for N*: rollouts consumed under the method's own SEARCH budget (baseline/seed evaluation, screens, confirmations, native selection
+    evaluations such as GEPA's valset or SkillOpt's selection evals, HarnessLens's baseline trials and retries), EXCLUDING post-search finalize / sel re-scoring
+    (decisions.md 2026-10-11 'all evaluations count' for the 600 / 550 search budget; the tau runs state '550 + finalize').  Only the tau CapEvolve runs (hc, ao, hcstock) keep a
+    counter (state.json spent.metric_calls) that also includes the host-side finalize (champion and seed on sel-25): for them the search count is the number of logged rollouts outside
+    the finalize splits.  Every other arm's counter file is the search-budget counter and is used unchanged."""
+    if n is None or suite not in ("B", "C") or arm not in ("hc", "ao", "hcstock"):
+        return n, src, 0
+    rows = C.jsonl(rd / "rollouts_metrics.jsonl")
+    if not any(r.get("split") in FINALIZE_SPLITS or r.get("candidate_id") == "FINAL" for r in rows):
+        return n, src, 0
+    search = sum(1 for r in rows if r.get("split") not in FINALIZE_SPLITS and r.get("candidate_id") != "FINAL")
+    return search, "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter %s includes finalize)" % n, n - search
+
+
 def floor_step(n, step=C.BSTAR_STEP, floor=C.BSTAR_FLOOR):
     return max(floor, (int(n) // step) * step)
 
@@ -43,9 +61,10 @@ def compute(suite):
                 if not rd.exists():
                     rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": None, "source": "no_run_dir"})
                     continue
-                n, src = cm.counted_rollouts(rd)
+                n_raw, src_raw = cm.counted_rollouts(rd)
+                n, src, fin_ex = search_counter(suite, arm, rd, n_raw, src_raw)
                 st, ev = C.native_status(rd)
-                rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": n, "source": src, "native_status": st, "native_evidence": ev})
+                rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": n, "source": src, "counter_raw": n_raw, "finalize_excluded": fin_ex, "native_status": st, "native_evidence": ev})
     main = [r for r in rows if r["tier"] == "main"]
     known_all = [r for r in main if r["counter"] is not None]
     # N* rule: a primary seed that terminated NATIVELY before the cutoff does not bind; crashes and infra stops do

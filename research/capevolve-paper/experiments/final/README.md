@@ -23,6 +23,16 @@ for S in A B C; do python3 -u -I run_final.py run --suite $S --order manifests/o
 
 `FINAL_EVAL_ROOT` defaults to `campaign-scratch/final_eval`; results land in `{A,B,C}/results_long.csv`.
 
+## Counted-rollout definition for N* (one quantity for every arm)
+
+Counted = rollouts consumed under the method's own SEARCH budget: baseline/seed evaluations, screens and confirmations, native selection evaluations (GEPA valset, SkillOpt selection evals),
+HarnessLens baseline trials and retries; EXCLUDED: post-search finalize and sel re-scoring (champion and seed on sel-25 after the search), chaser/post_sel scoring, final-eval rollouts.
+Source texts: decisions.md 2026-10-11 ('600 target rollouts per search, all evaluations count'; the tau runs are '550 + finalize'), CHECKPOINT_PROTOCOL.txt 2-3 (counter totals, evaluation straddling B*).
+Audit of counter sources (bstar.py `search_counter`): Suite A hc/ao daemon `logs/rollout_counter.json` (starts, incl. baseline, probes, confirms; no finalize on A), GEPA/SkillOpt/EvoSkill/Meta-Harness/WikiSkill/
+Trace2Skill/ACE/MIPROv2 `rollout_counter.json` (search budget counters), HarnessLens `rollout_counter.json` (baseline_used + rollout jobs + retries): all search-only, unchanged.
+Only the tau CapEvolve runs (hc, ao, hcstock on B/C) had a counter (`state.json spent.metric_calls`) that includes the host-side finalize (champion and seed on sel): there the count is the number of logged
+rollouts outside the sel/test/FINAL splits (ao s0 198 -> 148, s1 197 -> 147, s2 172 -> 147; C ao 110 -> 100).  Both raw and search counters are written to bstar_<S>.json.
+
 ## Phase ordering (decisions 22:50)
 
 The primary B* window runs first on every suite (`order_<S>.jsonl`: B* artifacts, seed, one-shot; END artifacts identical to B* ride along).

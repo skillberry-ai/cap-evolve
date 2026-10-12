@@ -289,6 +289,10 @@ def native_status(rd):
                 m = _re.match(pat, line.strip())
                 if m:
                     rc = int(m.group(1))
+                    if rc != 0 and any(rd.glob(".capevolve/run_*/final.json")):
+                        # CapEvolve AO: the search ended on its own and the exit status comes from the finalize step failing on the test seal (superseded by the approved
+                        # host-side finalize; decisions.md 02:50 UTC): a native termination, not a crash
+                        return "native_finish", "%s: exit %d from the finalize step, final.json present (search ended on its own)" % (name, rc)
                     return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
     evf = rd / "events.jsonl"      # EvoSkill: the loop writes {"event": "loop_done"} when its own stop rule ends it; must be newer than the last restart
     if evf.exists():
