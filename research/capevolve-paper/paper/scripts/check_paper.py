@@ -86,6 +86,16 @@ def main() -> int:
             body_src = f.read_text()
             for n in names:
                 n_pend_uses += len(re.findall(r"\\" + n + r"(?![A-Za-z])", body_src))
+    if draft_on:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("check_mock_leaks", ROOT / "scripts" / "check_mock_leaks.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        leaks = mod.leaks()
+        for f, i, tok in leaks[:10]:
+            print(f"warn  possible typed mock value {tok!r} at {f}:{i}")
+        if leaks:
+            print(f"warn  {len(leaks)} possible typed mock value(s) in the prose (scripts/check_mock_leaks.py)")
     print(f"info  draft mode {'ON' if draft_on else 'off'}: {n_needs} \\needs, "
           f"{n_pend} inline \\pend, {n_pend_uses} uses of pending macros, {n_prov} \\prov")
     if not draft_on and (n_needs or n_pend or n_pend_uses):
