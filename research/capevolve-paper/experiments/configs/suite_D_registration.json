@@ -1,0 +1,119 @@
+{
+ "registration": "Suite D pre-registration (analysis_plan.md 5-AMENDMENT 7)",
+ "written_utc": "2026-10-12 09:20 UTC",
+ "status": "FROZEN before the first Suite D rollout; no Suite D rollout, held-out score or final-set outcome seen",
+ "disclosure": "Designed after seeing search-time results of Suites A-C and the E00-azprobe seed-baseline probes (search-split ids only).",
+ "environment": {
+  "benchmark": "tau2 retail @8ebb7499, E10B builder and splits (opt-49, sel-25, sealed test-40)",
+  "target": "azoai/gpt-4.1-mini-2025-04-14",
+  "user_simulator": "azoai/gpt-4.1-2025-04-14",
+  "judge": "azoai/gpt-4.1-2025-04-14",
+  "temperature": 0,
+  "max_tokens": 8000,
+  "optimizer": "aws/claude-sonnet-5-5 (hill-climb, claude-code shim)",
+  "search_split": "opt-49 (train = val)",
+  "budget": "550 counted rollouts, max 10 iterations, 4M non-cache optimizer-token guard",
+  "seeds_per_cell": 3,
+  "reference_gate": "stock (gate_mode paired, gate_k_se 1.0, footprint masking on, candidate-side coverage 0.6, errored_trial_policy fail)"
+ },
+ "tier1_cells": {
+  "E20-P": {
+   "surface": "policy",
+   "TAU_SURFACES": "policy",
+   "gate": "stock"
+  },
+  "E20-T": {
+   "surface": "tools",
+   "TAU_SURFACES": "tools",
+   "gate": "stock"
+  },
+  "E20-PT": {
+   "surface": "policy,tools",
+   "TAU_SURFACES": "policy,tools",
+   "gate": "stock",
+   "role": "reference"
+  },
+  "E20-CTL": {
+   "surface": "policy,tools",
+   "one_shot": "1 iteration, 200 rollouts, no selection"
+  },
+  "E21-ruleP": {
+   "surface": "policy,tools",
+   "gate": "rule P k_se 1, n_conf 3, z_conf 1.282, dmin 0, min_cov 0.95, footprint off, coverage joint"
+  },
+  "E21-1S": {
+   "surface": "policy,tools",
+   "gate": "one-stage unmasked: gate_footprint false, gate_coverage joint, gate_min_coverage 0.95, no promotion_*"
+  },
+  "E20-GEPA": {
+   "surface": "policy (prompt only)",
+   "method": "GEPA 0.1.4, 550 counted rollouts, reflection Sonnet 5.5, selects on sel-25"
+  }
+ },
+ "exploratory_cells": [
+  "E20-TD",
+  "E23-nohist",
+  "E23-nodigest",
+  "E21-ruleP-2x",
+  "E20-PTS",
+  "E24-AO",
+  "E27-airline"
+ ],
+ "null_pool": {
+  "id": "E22",
+  "evaluations": 40,
+  "split": "opt-49",
+  "trials_per_evaluation": 1,
+  "tag": "E22-nullpool"
+ },
+ "final_set": {
+  "H65": "sel-25 + test-40, every CapEvolve cell champion rescored in the single interleaved final window",
+  "n_trials_tier1_champions": 5,
+  "n_trials_seed": 10,
+  "gepa_contrasts_use": "test-40 only (T=40) on both sides because GEPA selects on sel-25",
+  "decomposition_E25": "P-only and T-only sub-artifacts of each PT/ruleP/1S/CTL champion that differs from the seed on both surfaces"
+ },
+ "holm_primary_m10": [
+  "E20-P vs E20-PT",
+  "E20-T vs E20-PT",
+  "E20-P vs E20-T",
+  "E21-ruleP vs E20-PT",
+  "E21-1S vs E20-PT",
+  "E20-PT vs E20-CTL",
+  "E20-P vs E20-GEPA (test-40)",
+  "E20-P vs seed",
+  "E20-T vs seed",
+  "E20-PT vs seed"
+ ],
+ "holm_secondary": [
+  "E20-GEPA vs seed (test-40)",
+  "E21-ruleP vs seed",
+  "E21-1S vs seed",
+  "E20-CTL vs seed"
+ ],
+ "descriptive_only": [
+  "interaction PT - P - T + seed",
+  "E25 decomposition",
+  "E26 gate ROC",
+  "selection-to-final shrinkage per cell",
+  "promotions per search",
+  "E22 false-accept rates"
+ ],
+ "equivalence": {
+  "test": "TOST alpha .05 on the artifact-level contrast",
+  "margin": 0.1,
+  "applies_to": "primary and secondary rows whose superiority test is not significant"
+ },
+ "intervals": "artifact-level CR1 (task = cluster, t with T-1 df) and pipeline-level t(S-1) with SE^2 = SE_task^2 + s_seed^2/S; both shown",
+ "planning_mde_conditional_tau0.15": {
+  "vs_seed_T65_n5_seed10": 0.072,
+  "vs_seed_holm10": 0.096,
+  "cell_vs_cell_T65_n5": 0.08,
+  "cell_vs_cell_holm10": 0.105,
+  "test40_vs_seed": 0.093,
+  "test40_cell_vs_cell": 0.102,
+  "within_var_assumed": 0.162,
+  "note": "within var from the probe null SD 0.57; re-estimated from E22 and the update changes no rule or margin"
+ },
+ "no_decisions_on_held_out": "No run, launch or design decision (including Tier 2/3 launches) may use any sel-25 or test-40 score of a Suite D cell."
+}
