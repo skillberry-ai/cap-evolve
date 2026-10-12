@@ -1,6 +1,6 @@
 {
  "cap": 4000000,
- "generated_utc": "2026-10-12T15:17:43Z",
+ "generated_utc": "2026-10-12T15:19:03Z",
  "limit": 300.0,
  "rows": [
   {
@@ -40,7 +40,7 @@
    "artifact_after_cap": false,
    "artifact_candidate": "seed",
    "artifact_epoch": null,
-   "artifact_rollout_index": 471,
+   "artifact_rollout_index": 472,
    "artifact_time_source": null,
    "cap_crossed_at_epoch": null,
    "end_of_run_over_cap": false,
@@ -492,12 +492,12 @@
    "artifact_time_source": "rollout_starts.jsonl",
    "cap_crossed_at_epoch": null,
    "end_of_run_over_cap": false,
-   "n_optimizer_calls": 0,
+   "n_optimizer_calls": 70,
    "seed": 0,
    "status": "ok",
    "suite": "A",
-   "tokens_end_of_run": 0,
-   "tokens_up_to_artifact": 0
+   "tokens_end_of_run": 496280,
+   "tokens_up_to_artifact": 55796
   },
   {
    "arm": "hcstock",
@@ -508,12 +508,12 @@
    "artifact_time_source": "rollout_starts.jsonl",
    "cap_crossed_at_epoch": null,
    "end_of_run_over_cap": false,
-   "n_optimizer_calls": 0,
+   "n_optimizer_calls": 85,
    "seed": 1,
    "status": "ok",
    "suite": "A",
-   "tokens_end_of_run": 0,
-   "tokens_up_to_artifact": 0
+   "tokens_end_of_run": 533805,
+   "tokens_up_to_artifact": 91695
   },
   {
    "arm": "hcstock",
@@ -524,12 +524,12 @@
    "artifact_time_source": "rollout_starts.jsonl",
    "cap_crossed_at_epoch": null,
    "end_of_run_over_cap": false,
-   "n_optimizer_calls": 0,
+   "n_optimizer_calls": 71,
    "seed": 2,
    "status": "ok",
    "suite": "A",
-   "tokens_end_of_run": 0,
-   "tokens_up_to_artifact": 0
+   "tokens_end_of_run": 520455,
+   "tokens_up_to_artifact": 175901
   }
  ],
  "suite": "A"

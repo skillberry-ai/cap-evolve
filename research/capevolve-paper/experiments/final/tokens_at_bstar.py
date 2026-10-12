@@ -20,9 +20,21 @@ import fe_common as C  # noqa: E402
 import reconstruct as R  # noqa: E402
 
 
+def _extra_tag_map():
+    """tags that collect_metrics' classifier does not know: E12A/E12B/E12C hcstock and the Suite D/E cells (tag:<EXP>-<cell>-s<k>:<arm>:<role>, e.g. E12A-hcstock, E20-PT, E31-ruleP, E36-nohist)"""
+    m = {("E12A", "hcstock"): ("A", "hcstock"), ("E12B", "hcstock"): ("B", "hcstock"), ("E12C", "hcstock"): ("C", "hcstock")}
+    for suite, dirs in (("D", C.D_DIRS), ("E", C.E_DIRS)):
+        for arm, paths in dirs.items():
+            for pth in paths:
+                e, c = pth.split("/", 1)
+                m[(e, c.lower())] = (suite, arm)
+    return m
+
+
 def load_ledger(cm, wanted):
     """{(suite, arm, seed): [(t, noncache), ...]} for optimizer-role calls of main-run tags (any restart: the 4M guards meter by tag)"""
     out = {}
+    _extra = _extra_tag_map()
     path = cm.GATEWAY_LOG
     with open(path, "rb") as f:
         for line in f:
@@ -33,6 +45,18 @@ def load_ledger(cm, wanted):
             except Exception:
                 continue
             suite, arm, seed, kind, role = cm.classify_tag(d.get("tag"))
+            if kind != "run" or suite is None or (suite, arm, seed) not in wanted:
+                try:           # fall back to the E12x / Suite D / Suite E tag shapes
+                    parts = str(d.get("tag")).split(":")
+                    head, role = parts[1], parts[-1]
+                    import re as _re
+                    mm = _re.match(r"^(E\d+[A-Z]?)-(.+)-s(\d+)$", head)
+                    key = _extra.get((mm.group(1), mm.group(2).lower())) if mm else None
+                    if not key:
+                        continue
+                    suite, arm, seed, kind = key[0], key[1], int(mm.group(3)), "run"
+                except Exception:
+                    continue
             if kind != "run" or role not in cm.OPT_ROLES or (suite, arm, seed) not in wanted:
                 continue
             t = cm.epoch(d.get("t")) or 0
