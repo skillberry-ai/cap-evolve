@@ -1,0 +1,51 @@
+# JOURNAL — optimizer handover (append-only, whole run)
+
+YOU (the optimizer) own this file. It is the running, accumulating handover across ALL iterations — accepted AND rejected — and it is NEVER reset. Each iteration you APPEND one new entry at the bottom (under the marker line); you do NOT edit or delete earlier entries. Read the whole journal before proposing, so you build on EVERY prior attempt (not just the last accepted one) and never re-test a refuted idea.
+
+You CANNOT know your own gate result while you write — the harness scores you AFTER you stop and stamps a **RESULT** line (outcome + Δ + the tasks you measurably broke/fixed, plus the ones whose move was too small to resolve) right below your entry. So do NOT write 'what worked' as a guess. To learn what actually worked, READ the framework RESULT lines of prior entries (and LEDGER.md): an entry whose RESULT says `rejected` with `broke={...}` tells you which specific edits to drop or redesign — its diff.patch is in ./prior_iterations/<id>/.
+
+Append your entry for THIS iteration below the marker, using this shape (INTENT only — the framework appends the RESULT):
+
+    ## Iteration <your candidate id> — <one-line headline of what you tried>
+    - Changes I made (1 line per edit; name the file/tool + cluster it targets):
+    - Per change, the EXPECTED effect + why it's safe (which failing task it should fix;
+      why no passing task changes behavior):
+    - Building on prior RESULTS: which prior entries' broke/fixed I used, and what I
+      did NOT re-try because a prior RESULT showed it regressed (cite ids):
+    - Refuted hypotheses (a prior RESULT proved this is NOT the fix — never re-test):
+    - High-value clusters still NOT cracked (and the guard/tool designs already tried):
+    - Plateau signal (are the last few RESULTs flat/negative? if so, which LEVER to switch
+      to — e.g. a NEW composite tool instead of another guard, or prompt instead of code):
+    - Cost-reduction opportunity (if `cost`/`latency`/`num_messages` is a declared objective,
+      run `detect_loop_patterns.py --run-dir $R --tag $BEST --split val` — free, no extra
+      eval — and check its `by_tool` map for a same-tool-called-N-times-in-a-row pattern. A
+      hit names the exact tool + repeat count: propose a composite/bulk tool (capability
+      `tools`), a bundled script entrypoint (`skills-package`), or upfront-batched
+      instructions (`prompt`/`system-prompt`) that replace the N calls with one. No hit
+      (or cost/latency not a declared objective): say so plainly, do not leave this blank):
+    - Focus next iteration:
+
+<!-- cap-evolve:journal-append-below — add your Iteration entry under this line; do not edit anything above it -->
+
+## Iteration cand_0001 — deterministic enforcement of the three defect classes the 019 review passed on
+- Changes I made (1 line per edit; name the file/tool + cluster it targets):
+  - NEW `epic-decompose/scripts/check_decomposition.py` (584 lines, --self-check passes): mechanical checks for docs-priority derivation, gating-AC gap, spec/content boundary overlap, structural breaches — targets all three 019 sub-clusters (A/B/C).
+  - `prompts/decompose-agent.md` Step 5: new "Spec-vs-content boundary" axis rule + worked example (cluster A).
+  - `prompts/decompose-agent.md` Step 7: gating-coverage AC rule (cluster C).
+  - `prompts/decompose-agent.md` Step 8c: must run the check to exit 0 before `decompose_complete=true` (clusters A-D).
+  - `prompts/review-agent.md` new Step 2.0: reviewer runs the same script first, folds findings into the issues list with class→criterion/severity mapping (clusters A-D).
+  - `prompts/review-agent.md` Criterion 3 + Criterion 6: named spec-vs-content overlap and gating-coverage patterns (clusters A, C).
+  - `prompts/revise-agent.md` Step 2: enumerated must-fix classes for `minor` issues (overlap / gating-AC / docs-priority / structural), observation-minors keep judgment latitude (clusters A-D).
+  - `prompts/revise-agent.md` boundary recipes + Step 4: spec-vs-content correction recipe (never merge — stub or subsume) and post-correction script re-run to exit 0 (clusters A-D).
+- Per change, the EXPECTED effect + why it's safe (which failing task it should fix; why no passing task changes behavior):
+  - Expected: case-019 goes 4/5 → 5/5. The scored deduction is the Epic-Boundaries "one minor overlap" (E001 authoring a reference tutorial that duplicates E003's authoring surface); the same review also flagged the E004 docs-priority derivation (Major→P1, not HLR-4's P2) and the E002 gating-AC gap. The decomposer now has the rules (prose) AND a deterministic check (code) at three enforcement points; even if the decomposer skips, the first review's mechanical pre-check lists the defects and the unconditional first revision must fix them, and the reviser cannot leave a checkable defect for the terminal re-review.
+  - Safety: every edit's firing condition was verified ABSENT from all 7 passing tasks' exact artifacts (programmatic scan; script exits 0 on all of them, flags exactly the 3 target findings on 019). The revise must-fix list is enumerated to the script's defect classes so 015/016's leave-observation behavior and 017's signal-fix latitude are unchanged; review pass/fail thresholds and pipeline cycle-cap semantics untouched.
+- Building on prior RESULTS: none — iteration 1 (seed baseline; RUNMAP/LEDGER empty, no rejected.jsonl).
+- Refuted hypotheses (a prior RESULT proved this is NOT the fix — never re-test): none yet.
+- High-value clusters still NOT cracked (and the guard/tool designs already tried):
+  - gate_failure_impact/gated_by completeness (020's first-review majors): mechanically checkable, deliberately not added this iteration because it fires on a passing task's post-decompose state; needs verification that decompose-time fixing lands identically to revise-time fixing before enabling.
+  - The external scorer's full rationale is truncated at ~1288 chars (framework limit), so the 4/5 attribution rests on the visible "one minor overlap" + the mirrored internal-review minors; if the gate shows 019 still <1.0, the deduction may live in the invisible tail — next lever would be tightening the remaining named dimensions (DAG justification verbosity, summary-section completeness).
+- Plateau signal: none (first iteration; baseline 0.969).
+- Cost-reduction opportunity: cost/latency is not a declared objective for this run. (For completeness: the pipelines run ~23 min/case and ~50 turns; no same-tool repeat-loop pattern was checked since cost is not scored.)
+- Focus next iteration: re-score of 019 is the signal. If 5/5 → consider the gate-metadata check (with the 020 pre-revision verification) and watch for new minors the script doesn't cover. If still 4/5 → the scorer's invisible rationale tail; attack AC specificity/summary completeness instead. Keep the three enforcement legs (decompose 8c / review 2.0 / revise 4) in sync in any future edit.
+

@@ -1,0 +1,401 @@
+{
+  "val": {
+    "split": "val",
+    "reward": 0.96875,
+    "stderr": 0.03125,
+    "pass_k": {
+      "1": 0.875
+    },
+    "pass_at_k": {
+      "1": 0.875
+    },
+    "per_task": [
+      {
+        "task_id": "case-013-human-process-gates",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\n**1. HLR coverage \u2014 solid.** All four HLRs are mapped with no orphans: HLR-1 \u2192 E001/E002/E003; HLR-2 \u2192 E001 (inventory)/E005 (assembly)/E006 (submission); HLR-3 \u2192 E004; HLR-4 \u2192 E007. Priority inheritance is correct: E001 is P0 because it transitively blocks all P0 work; E004 is correctly P1 (it enables only the P1 HLR-3, and its only other dependent is the docs epic, whose edges don't trigger inheritance); E007's P0 via the docs-authoring exception (strategy priority Critical) is explicitly documented and flagged in Health Warnings rather than silently applied. No priority collapse \u2014 the P1 CI work and P2 docs work are separated into independently plannable epics.\n\n**2. Epic boundaries \u2014 solid.** E002/E003 split by component and team (KServe/RHOAI Serving vs Platform Operator/RHOAI Operator). E001/E002/E004/E005/E006 share a team tuple but are genuinely distinct work products (inventory, remediation, CI enforcement, evidence consolidation, external submission management). E005 consolidates artifacts rather than re-creating them; E007 is a clean docs-authoring epic. No duplication of data structures or surfaces; no monoliths (E002's breadth is bounded by th | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 3.496164999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-014-tech-preview-foundation",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale**\n\nThis decomposition cleanly passes the architecture-context maturity probe that the annotation warns about, and all five grading dimensions are solid.\n\n**1. HLR coverage \u2014 solid.** All six HLRs map to epics (HLR-1\u2192E001, HLR-2\u2192E002, HLR-3\u2192E003, HLR-4\u2192E004, HLR-5\u2192E005, HLR-6\u2192E006), with a consistent traceability matrix in the summary. All P0 and P1 requirements are covered; even P2 HLR-6 is covered rather than deferred. Priority inheritance holds: the P0 stability epic (E002) is gated by a P0 Investigation (E001); E004 (P1) depending on E003 (P0) is fine. E006's P0 priority is the docs-authoring exception (strategy `priority: Critical`), correctly applied and explicitly flagged in Health Warnings rather than hidden. E002's \"HLR-1 (partially)\" cross-reference is transparent gate-execution traceability, not orphaning or duplication.\n\n**2. Epic boundaries \u2014 solid.** Each epic has exactly one component/team tuple; no epic bundles multiple teams or mixes code with content authoring (E003 is purely the posture deliverable HLR-3 names; E006 is purely docs-authoring). The E003/E006 posture seam (define-vs-publish) is a defensible division connected by an explicit edge | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 3.961764000000001
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-015-redundant-hlrs",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\nThis decomposition is excellent and correctly handles the specific trap this synthetic case probes.\n\n**1. HLR Coverage \u2014 solid.** All four HLRs are mapped: HLR-1 (P0) and HLR-3 (P1) both trace to E001; HLR-2 (P1) traces to E002 (linkage data) and E003 (registry entry point); HLR-4 (P2) traces to E004. Nothing is orphaned, and the traceability matrix in the summary agrees with each epic's HLR Traceability section. Priority inheritance is clean: E001 (P0) blocks only lower-priority work; no P0 epic is blocked by a P1. E004's P1 (vs. HLR-4's P2) is correctly covered by the docs-authoring priority exception, derived from the strategy's `priority: Major`.\n\n**2. Epic Boundaries \u2014 solid, and the probe is passed.** The annotation expects exactly one comparison epic whose traceability lists both HLR-1 and HLR-3, since they describe the same Dashboard surface in overlapping words. E001 does precisely this, and the decomposition explicitly calls out the consolidated-requirements overlap in its health warnings. Critically, E003 contains an anti-duplication AC (\"reuses the Dashboard's run comparison view; no duplicate comparison surface is built\"), so no two epics inde | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 2.4877690000000006
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-016-component-canonicalization",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Dimension 1 \u2014 HLR Coverage: solid.** All four HLRs are mapped and none orphaned: HLR-1 \u2192 E002 (with BRANCH-B-E005 under outcome B), HLR-2 \u2192 E003, HLR-3 \u2192 bundled into E002/E003 with an explicit, defensible justification (P2 polish sharing each report's own UI surface and data), HLR-4 \u2192 E004. The traceability matrix is complete and each epic's HLR Traceability section matches. Priority inheritance is correct: E001 is P1 because it gates the P1 HLR-1 work; E004 is docs-authoring and correctly takes P2 from the strategy's `priority: Normal` under the docs-authoring exemption rather than inheriting P1 from what it documents.\n\n**Dimension 2 \u2014 Epic Boundaries: solid.** Every epic is a single component/team tuple. Critically for this case (a component-canonicalization probe), all frontmatter components use the canonical names \u2014 Dashboard, Notebooks, Data Science Pipelines, Documentation \u2014 never the strategy's informal \"RHOAI web console\" / \"notebook controller\" / \"Kubeflow Pipelines\" verbatim, and the summary includes an explicit canonicalization table mapping each informal name to its canonical component and team. E002 and E003 share a component but build distinct report view | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 2.7961289999999996
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-017-near-threshold-no-triage",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\nThis decomposition correctly navigates the inverse-triage probe \u2014 the exact failure mode the annotation warns against (collapsing into a single below-threshold epic bundling code + docs) did not occur. It delivers the expected shape: 2 epics, no triage, with the docs work split out and sequenced after the code fixes.\n\n**1. HLR coverage \u2014 solid.** All three HLRs are mapped: HLR-1 and HLR-2 (both P1) to E001, HLR-3 (P2) to E002, with a traceability matrix in the summary matching each epic's HLR Traceability section. Priority inheritance is correct: E001 is P1 on its own P1 HLRs; E002 is a docs-authoring epic whose P2 correctly does not propagate upstream (exemption properly applied and explicitly documented). Nothing orphaned.\n\n**2. Epic boundaries \u2014 solid.** Clean component/team split: E001 (Dashboard / RHOAI Dashboard, code remediation) vs. E002 (Documentation / RHOAI Documentation, content authoring). The work-product boundary is respected \u2014 the VPAT/accessibility-statement authoring is a different work product from the UI fixes, exactly as the work-product splitting rule requires. No sibling duplication (different artifacts, different endpoints). E001's  | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 2.6226169999999995
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-018-cross-strategy-dependency",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\n**1. HLR coverage \u2014 solid.** All four HLRs are traceable: HLR-1 (P0) and HLR-2 (P1) \u2192 E002; HLR-3 (P1) \u2192 E001/E003/E005; HLR-4 (P2) \u2192 E004, covered rather than deferred. Priority inheritance is correct: E002 is the sole P0 epic and blocks only P1 work (E005, E004) \u2014 the correct direction; no P1 epic blocks P0 work. E004's P1 is permissible under the docs-authoring exemption. E002's bundling of HLR-1/HLR-2 is defensible, not priority collapse: the CSV export and stable API are the export surface of the same report computation, sharing data structures and endpoints.\n\n**2. Epic boundaries \u2014 solid.** Component/team tuples are clean (E001/E003/E005 \u2192 Dashboard/RHOAI Dashboard; E002 \u2192 Distributed Workloads; E004 \u2192 Documentation). No epic spans teams. The three Dashboard epics split along a real subsystem axis (data access / view / view extension) with each independently schedulable; no two epics build the same surface (E003 renders quota comparison only, E005 adds the GPU-hour column, E001 provides data access). Content authoring is isolated in E004. Nothing approaches a multi-sprint monolith.\n\n**3. DAG quality \u2014 solid.** Frontmatter dependencies (E003:[E001]; E | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 5.444325999999992
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-019-content-vs-code-split",
+        "reward": 0.75,
+        "feedback": "decomposition_quality 4.0/5 \u2014 SCORE: 4\n\n**HLR Coverage \u2014 solid.** All four HLRs map to epics with per-epic traceability sections and a complete matrix: HLR-1\u2192E002, HLR-2\u2192E003, HLR-3\u2192E001, HLR-4\u2192E004; nothing orphaned. Priority inheritance is handled correctly and explicitly justified: E001 (nominally P1 via HLR-3) is raised to P0 because it gates both P0 epics. E004 is docs-authoring and terminal in the DAG, so its P2 (matching HLR-4's own label) is acceptable under the docs-exemption rule. E002/E003 citing HLR-3 as consumer/producer sides is incidental citation, not priority collapse.\n\n**Epic Boundaries \u2014 solid with one minor overlap.** The probed failure mode is fully avoided: the work-product split is exactly what the annotation expects \u2014 product code (E001 format, E002 gallery), content authoring (E003 six tutorials, Notebooks/Workbenches), docs (E004, RHOAI Docs). No epic mixes gallery code with tutorial authoring; no \"build gallery and write tutorials\" monolith. Data Science Pipelines is correctly treated as passive (import via existing interfaces, validated as an AC on E003). One epic per team; six homogeneous tutorials in one content epic is sanctioned by the annotation's \"epic(s)\" and is not disjoint m | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.75
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 4.6412569999999995
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-020-hardware-dependent-investigation",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\n**1. HLR coverage \u2014 solid.** All four HLRs map cleanly: HLR-1 \u2192 E001 (gating prerequisite) + E002 (direct); HLR-2 \u2192 E003 (gating prerequisite) + E004 (direct); HLR-3 \u2192 E005 + E006; HLR-4 \u2192 E007. Nothing orphaned; out-of-scope boundaries (Gaudi, GPU sharing) are respected and even restated in E007. Priority inheritance is correct: E001 blocks all P0 work \u2192 P0; E003 gates the P0 HLR-2 \u2192 P0; E005/E006 carry HLR-3's P1; E007 is docs-authoring and exempt, with its P1 derived from the strategy's `priority: Major` and explicitly documented. All four affected components are addressed, with KServe correctly handled as a passive component (validation ACs inside E004, same owning team, no code change described).\n\n**2. Epic boundaries \u2014 solid.** Every epic is a single (component, team) tuple matching valid components and plausible ownership. E005 (Training Operator job execution) and E006 (Kueue admission/quota) share a test vehicle but validate different components at different layers \u2014 coordination risk, not duplication. No epic mixes code with content authoring; E007 is pure docs. Nothing is an obvious multi-sprint monolith.\n\n**3. DAG quality \u2014 solid.** The 8 Merma | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 6.302232000000001
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 31.75225899999999,
+    "tokens": 0,
+    "seconds": 3894.550008058548,
+    "cost_source": {},
+    "n_tasks": 8,
+    "n_scored": 8
+  },
+  "best_id": "seed",
+  "train": {
+    "split": "train",
+    "reward": 0.8333333333333334,
+    "stderr": 0.08883363181483768,
+    "pass_k": {
+      "1": 0.6666666666666666
+    },
+    "pass_at_k": {
+      "1": 0.6666666666666666
+    },
+    "per_task": [
+      {
+        "task_id": "case-001-simple-two-component",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\n**1. HLR Coverage \u2014 solid.** All five HLRs map to epics with explicit per-epic HLR Traceability sections and a complete matrix in the summary: HLR-1 (P0)\u2192E001, HLR-2 (P0)\u2192E002, HLR-3 (P1)\u2192E001, HLR-4 (P2)\u2192E003, HLR-5 (P2)\u2192E004. Both P0s are traceable, as the annotations require. Priority inheritance holds: E001 (P0) is the prerequisite of E002 (P0) and E003 (P2), so no lower-priority epic blocks higher-priority work. E004's P1 derives from the strategy's `priority: Major` under the docs-authoring exemption. Bundling HLR-3 (P1) into the P0 E001 is defensible rather than priority collapse \u2014 the 30-second refresh shares the same data path and views as HLR-1, and the bundling is explicitly justified in both the epic and the summary, while the genuinely deferrable HLR-4 was correctly split out.\n\n**2. Epic Boundaries \u2014 solid.** E001\u2013E003 are single-component (Dashboard), single-team epics with clean ownership: status field (E001), detail view (E002), list controls (E003), content (E004). No two epics independently build the same surface; E002/E003/E004 each consume rather than rebuild E001's status surface. Code vs. docs-authoring is properly separated. KServe i | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 2.3519099999999997
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-002-complex-genai-eval",
+        "reward": 0.0,
+        "feedback": "[artifact_contract] RHAISTRAT-9002-BRANCH-B-E011.md: body missing 'hlr traceability' section; RHAISTRAT-9002-BRANCH-B-E012.md: body missing 'hlr traceability' section | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 8.488656999999998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-003-triage-below-threshold",
+        "reward": 0.5,
+        "feedback": "decomposition_quality 3.0/5 \u2014 SCORE: 3\n\n**Rationale**\n\nThe decomposition is craftsmanlike in every secondary respect, but it fails on the one axis this case was constructed to test: the below-threshold triage is not defensible against the strategy, and the resulting single-epic collapse mixes code implementation with content/docs work.\n\n**The material gap \u2014 indefensible triage (Dimension 2, boundary quality):**\n\nThe summary declares `triage: below-threshold` and collapses to one epic. Per the grading rule, a declared triage makes a single epic \"correct by design\" only if the `triage_rationale` holds up against the strategy. Here it does not, on two counts the rationale explicitly tries to argue around:\n\n1. **Two components are named.** The strategy's Affected Components section lists both Notebooks and Dashboard. The below-threshold precondition requires a single component AND a single team. The rationale's move \u2014 reclassifying Dashboard as a \"passive surface\" whose validation becomes an AC on the Notebooks epic \u2014 is a rationalization around an explicit rule, not satisfaction of it. The strategy itself asserts the Dashboard administration UI is part of the change's affected surface, and the epic indeed authors  | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.5
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 1.6899389999999996
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-004-triage-docs-only",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\n**Triage correctness (threshold question):** The decomposition summary declares `triage: docs-only` with `epic_count: 1`, matching the dataset's `expected_triage: docs-only`. The triage rationale is directly defensible against the strategy: the problem statement says \"Nothing in this strategy changes product behavior; the capability exists and works. The gap is entirely published guidance,\" Out of Scope excludes all code/operator/config changes, and every HLR is a documentation deliverable. Per the grading instructions, a single epic is correct by design here and missing decomposition depth is not penalized.\n\n**1. HLR coverage \u2014 solid.** All three HLRs (HLR-1 P1, HLR-2 P1, HLR-3 P2) map to RHAISTRAT-9004-E001 in both the epic's HLR Traceability section and the summary's traceability matrix; nothing is orphaned. The P2 HLR-3 bundling is explicitly justified (a section of the same content surface, not independently shippable), and docs-authoring epics are exempt from strict priority inheritance in any case. Epic priority P1 is consistent with the strategy's Major/P1 HLRs.\n\n**2. Epic boundaries \u2014 solid.** One epic, one component (Documentation \u2014 a valid canon | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 1.568481
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-005-ambiguous-investigation",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**HLR coverage (solid):** All five HLRs map to epics with explicit HLR Traceability sections: HLR-1 \u2192 the two conditional branch epics (both bounded outcomes of open question 1 covered, no orphaned outcome), HLR-2 \u2192 E004, HLR-3 \u2192 E005, HLR-4 \u2192 E002+E006, HLR-5 \u2192 E003+E007. Priority inheritance is correct in both directions: E001 (P0) gates the P0 HLR-1 branches; E002 (P1) gates the P1 preemption epic; E003 (P2) gates the P2 placement epic; E004 (P0) \u2192 E005 (P1) is a higher-priority prerequisite, not an inversion. No triage is declared, and full decomposition is appropriate for a Critical strategy with five HLRs.\n\n**Epic boundaries (solid):** Clean component/team tuples \u2014 six epics on Distributed Workloads (three Investigations resolving distinct unknowns, permitted since the one-epic-per-team rule targets Implementations), one on Dashboard/RHOAI Dashboard. Training Operator correctly treated as passive with its validation folded into E004's ACs per the same-team rule. The two branch epics implement the same HLR under mutually exclusive outcomes \u2014 the conditional-branch pattern, not duplication. No code/content/docs mixing; no monoliths.\n\n**DAG quality (solid):** All five  | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 11.312162000000006
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-006-offplatform-onboarding",
+        "reward": 0.75,
+        "feedback": "decomposition_quality 4.0/5 \u2014 SCORE: 4\n\n**Rationale**\n\nThis is a strong, largely correct decomposition with a handful of minor, non-material flaws concentrated in DAG coherence \u2014 which keeps it out of perfect-score territory under the rubric.\n\n**1. HLR coverage \u2014 solid.** All four HLRs are mapped: HLR-1 (P0) \u2192 E001/E002/E003/E004 plus both branch E008/E009 pairs; HLR-2 (P1) \u2192 E003 (license gate) and E005; HLR-3 (P1) \u2192 E001 (gate) and E006; HLR-4 (P2) \u2192 E007. Priority inheritance is correct: onboarding and branch deployment/enablement epics are P0 because they block HLR-1; E005/E006 inherit P1; E007 is a docs-authoring epic (exempt) with priority derived from the strategy's Jira priority and the divergence from HLR-4's P2 documented rather than hidden. Nothing orphaned; the Notebooks component addition for HLR-2 is justified.\n\n**2. Epic boundaries \u2014 solid.** Every epic carries a single component/team tuple. Branch A/B epics are mutually exclusive conditional alternatives, not duplicate builds of the same surface. Code, image work, and docs are properly separated (E007 is pure docs-authoring). No multi-sprint monoliths; the branch E008/E009 splits are logically sized.\n\n**3. DAG quality \u2014 good but not flawless.**  | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.75
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 6.981902
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-007-conditional-branch",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\nThis decomposition handles the strategy's defining difficulty \u2014 a genuinely undecided posture fork (HLR-1) \u2014 exactly as the strategy and annotations demand, and all five grading dimensions are solid.\n\n**1. HLR coverage \u2014 solid.** All five HLRs are mapped in a complete traceability matrix: HLR-1 \u2192 E001 (the Investigation); HLR-2's disjunctive \"either\u2026or\" \u2192 BRANCH-A-E002 / BRANCH-B-E002 (exactly one executes per the E001 outcome, matching the out-of-scope note that both postures don't ship together); HLR-3 \u2192 AE003/BE003; HLR-4 \u2192 AE004/BE002; HLR-5 \u2192 AE005/BE004. Priority inheritance is correct: E001, which blocks all P0 user-visible value, is P0; branch epics inherit P0/P1 from their HLRs; docs epics carry P1 per the docs-authoring exemption (strategy priority: Major). Nothing is orphaned.\n\n**2. Epic boundaries \u2014 solid.** Every epic has a single component and team; all four components (Llama Stack, Dashboard, Platform Operator, Documentation) are valid and used. Branch A correctly splits operator backend from Dashboard UI (different components/teams); Branch B folds registration + connection UI into one Dashboard epic with an explicit same-component/same-tea | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 3.4539049999999993
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-008-underspecified-strategy",
+        "reward": 0.75,
+        "feedback": "decomposition_quality 4.0/5 \u2014 SCORE: 4\n\n**Dimension 1 \u2014 HLR Coverage: solid.** All four HLRs are mapped (HLR-1\u2192E001/E004, HLR-2\u2192E002/E005/E006, HLR-3\u2192E003/E007, HLR-4\u2192E008) with a traceability matrix matching the epic files. HLR-1/2/3 carry no priority in the strategy; the P1 default is documented with its basis (\"leadership wants visible usability progress\") and a confirmation request rather than silently invented. HLR-4's P2 is correctly isolated in the docs-authoring epic via the stated exception. No P0 HLRs exist, so no P0-inheritance issue is possible; no orphaned requirements.\n\n**Dimension 2 \u2014 Epic Boundaries: solid with minor observations.** Component/team tuples are clean (Dashboard/RHOAI Dashboard, Notebooks/Workbenches, Documentation/RHOAI Documentation); no epic bundles two teams' work; E005 (console) and E006 (workbench layer) target distinct code paths with no overlap; doc authoring is held exclusively in E008. Two minor notes, both flagged by the internal review: E007's Dashboard assignment is a documented placeholder pending E003 (reassignment path is captured in E003's ACs and E007's gate_failure_impact), and E007 could exceed a single sprint if multiple integrations are prioritized \u2014 mitigated  | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.75
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 5.106487000000003
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-009-triage-trivial-rename",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Triage correctness (the decisive check for this probe):** The decomposition summary declares `triage: below-threshold` with `epic_count: 1`, exactly matching the expected triage. The triage_rationale is defensible against the strategy: S-sized scope, single component (Dashboard), single team (RHOAI Dashboard), both HLRs P2, \"Open Questions: None,\" product decision already approved, and the HLR-2 docs work is genuinely incidental (caption/reference touch-ups falling out of the string change, no new content authored). Neither escape condition (genuine unknowns, distinct work streams) applies, and the rationale explicitly walks through both. This avoids the over-decomposition failure mode (two epics / null triage) this case was designed to isolate.\n\n**Dimension 1 \u2014 HLR coverage:** Both HLR-1 and HLR-2 appear in E001's HLR Traceability section and in the summary's traceability matrix; nothing is orphaned. No P0/P1 requirements exist (both P2), and priority inheritance is consistent (epic P2, strategy Minor). Full coverage.\n\n**Dimension 2 \u2014 Epic boundaries:** Single epic, single component, single team, trivially under the ~2-week bound; no duplication possible. The docs touc | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 1.2556159999999996
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-010-priority-inheritance",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\n**1. HLR coverage \u2014 solid.** All five HLRs map to epics with a complete traceability matrix: HLR-1/HLR-2 (P0) \u2192 E002, HLR-3 (P1) \u2192 E003, HLR-4 (P2) \u2192 E001, HLR-5 (P2) \u2192 E004; nothing orphaned. Critically, the case's probed trap is handled correctly in both directions: E001 (schema, nominally HLR-4/P2) is promoted to P0 via prerequisite inheritance \u2014 the strategy's own note says HLR-1 cannot ship before the schema is settled \u2014 and E002 (the HLR-1 epic) carries an explicit dependency on E001. This is genuine inheritance, not priority collapse: E001 maps to a single HLR and contains no deferrable lower-priority work. Conversely, E003 correctly stays P1 because its only dependent is the docs-authoring epic E004, which is exempt from pushing priority upstream; E004's P0 is derived from the strategy's `priority: Critical`, not from inverting HLR-5.\n\n**2. Epic boundaries \u2014 solid.** One epic per component/team tuple (KServe/RHOAI Serving \u00d72, Dashboard/RHOAI Dashboard, Documentation/RHOAI Documentation). No duplication of structures or surfaces: E001 produces the schema E002 consumes; E002 defines the config surface E003 consumes. Code vs. docs authoring is cleanly | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 4.174341999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-011-parallel-fanout",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale:**\n\nThis decomposition is exactly what the strategy's structure calls for, and it passes all five dimensions.\n\n**1. HLR coverage \u2014 solid.** All nine HLRs map to epics with a complete traceability matrix: HLR-1\u2192E001, HLR-2\u2192E002, HLR-3\u2192E003+E004 (correctly split), HLR-4..7\u2192E005..E008, HLR-8\u2192E009, HLR-9\u2192E010. Nothing orphaned. Priority inheritance is correct: E001 is P0 and blocks P0 adoptions; the HLR-3 split keeps both halves P0 (no priority collapse); E010 is docs-authoring and exempt, with its P1 correctly derived from the strategy frontmatter (`Major`\u2192P1) and the divergence from HLR-9's P2 label explicitly documented as the exception rule taking precedence.\n\n**2. Epic boundaries \u2014 solid.** One adoption epic per canonical component (Dashboard, KServe, Serving Runtimes, Data Science Pipelines, Model Registry, TrustyAI, Notebooks, Training Operator \u2014 all from the valid component list), no mega-epic bundling. E005 (operator + API server) and E007 (service + operator) bundle sub-systems of a single component/team/logical change, which is correct. Code adoption vs. convention authoring vs. docs authoring are separated into distinct epics. Each epic is a bounded, m | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 4.584169999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "case-012-license-validation",
+        "reward": 1.0,
+        "feedback": "decomposition_quality 5.0/5 \u2014 SCORE: 5\n\n**Rationale**\n\nI independently verified the decomposition against the five rubric dimensions and the case's designed expectations; all five are solid.\n\n**1. HLR coverage \u2014 solid.** All four HLRs trace to epics: HLR-1 (P0) \u2192 E001 (primary, the legal review) plus A/B-E007 as scan evidence; HLR-2 (P0) \u2192 E002 plus both onboarding chains (E006\u2013E009); HLR-3 (P1) \u2192 E003 (pipelines) and E004 (model serving, correctly mapped to canonical Serving Runtimes); HLR-4 (P2) \u2192 E005. Priority inheritance is correct: E001 and E002 are P0, branch epics inherit P0 (they enable HLR-2), E003/E004 are P1 matching HLR-3, and E005's P1 is the documented docs-authoring exception. Nothing orphaned; out-of-scope items (connected-env replacement, migration tooling) are respected and even documented as boundary content in E005.\n\n**2. Epic boundaries \u2014 solid.** Each epic is a single-capability, right-sized unit; no code/docs mixing (E005 is pure docs-authoring). The 8 branch epics share (component, team) with E002 but are split by implementation_type \u2014 the mandated onboarding-chain split \u2014 and the A/B pairs are mutually exclusive conditional alternatives explicitly marked \"not standalone Jira issues,\" s | [informational] internal adversarial review score 14/14",
+        "n": 1,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0
+        ],
+        "raw": {
+          "errored": false,
+          "errored_trials": 0,
+          "valid_trials": 1,
+          "n_trials": 1,
+          "cost_usd": 8.248614000000002
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 59.216184999999996,
+    "tokens": 0,
+    "seconds": 7644.302889108658,
+    "cost_source": {},
+    "n_tasks": 12,
+    "n_scored": 12
+  }
+}

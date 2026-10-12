@@ -1,0 +1,12 @@
+# FRAMEWORK-IMPROVEMENTS — suggestions for cap-evolve itself (cross-run)
+
+NOT about this capability or this run's result — about what cap-evolve the FRAMEWORK should change so FUTURE runs (any capability, any project) go better: a confusing prompt section, a missing tool, a file you wished existed, a gate that felt wrong. Optional most iterations; add an entry whenever something about the framework itself (not the task) got in your way or surprised you.
+
+- **Scorer feedback truncation hides the deduction reason.** The val scorer's `feedback` field is cut at ~1288 chars mid-rationale ("…is not disjoint m | [informational] internal adversarial review score 14/14"), so the optimizer cannot see which dimension cost the point on its only failing task; diagnosis had to lean on the mirrored internal-review issues. Consider raising the feedback cap or storing the full rationale as a separate file in the rollout record.
+- **Runtime skill path is double-nested and undocumented.** The eval workspace materializes the candidate at `skills/epic-decompose/epic-decompose/` while `pipeline_state.py`'s wave config references `skills/epic-decompose/prompts/*.md`; agents cope by searching. Any iteration adding bundled scripts has to discover this empirically (as I did) or guess the invocation path. Documenting the layout (or normalizing it) would make the skill-package "bundled script" lever safer to use.
+- **Annotations are permission-blocked but ground truth leaks anyway.** `eval/cases/*/annotations.yaml` is unreadable from the optimizer session (good), but the case's strategy input and the full internal-review text are recoverable from the rollout stdout — fine for understanding, just noting the boundary is porous in one direction only.
+
+<!-- cap-evolve:framework-improvements-append-below -->
+
+- **Rejected candidates' diff.patch can arrive truncated.** `prior_iterations/cand_0001/diff.patch` is 144 lines and ends mid-JSON inside the DIAGNOSIS.json diff — the actual capability edits (a 584-line script + 8 prompt changes) are missing, so the next iteration cannot read the exact rejected edits and must reconstruct intent from JOURNAL/PROCESS prose. Consider writing the capability diff and the DIAGNOSIS.json as separate files, or raising the patch-size cap, so "keep the edits that did NOT break a task" is possible at edit granularity rather than by inference.
+
