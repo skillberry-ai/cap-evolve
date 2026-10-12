@@ -228,6 +228,37 @@ def _user_model() -> str:
     return USER_SIM_MODEL
 
 
+def _infra_detail(sim, messages) -> dict:
+    """LOGGING ONLY: what tau2 recorded when a simulation ended with an infrastructure/unexpected error. tau2's run_with_retry stores
+    ``sim.info = {error, error_type, error_traceback, failed_after_attempts}`` on its placeholder SimulationRun (messages=[]); for a sim that
+    did produce messages, the last assistant tool call and the tool result that followed it are recorded. Never used for scoring or classification."""
+    import re as _re
+    d = {}
+    info = getattr(sim, "info", None)
+    info = info if isinstance(info, dict) else {}
+    for k in ("error", "error_type", "failed_after_attempts"):
+        if info.get(k) is not None:
+            d[k] = info[k] if k != "error" else str(info[k])[:2000]
+    tb = info.get("error_traceback")
+    if tb:
+        tb = str(tb)
+        d["traceback_tail"] = tb[-3000:]
+        d["traceback_functions"] = sorted(set(_re.findall(r"in ([A-Za-z_][A-Za-z0-9_]*)\n", tb)))[-40:]
+    last_call = None
+    for i, m in enumerate(messages or []):
+        if isinstance(m, dict) and m.get("role") == "assistant" and m.get("tool_calls"):
+            tc = m["tool_calls"][-1]
+            res = None
+            for n in (messages or [])[i + 1:]:
+                if isinstance(n, dict) and n.get("role") == "tool":
+                    res = str(n.get("content"))[:500]; break
+            last_call = {"name": tc.get("name"), "arguments": tc.get("arguments"), "tool_result_head": res}
+    if last_call:
+        d["last_tool_call"] = last_call
+    d["n_messages"] = len(messages or [])
+    return d
+
+
 def _usersim_meta(messages, model) -> dict:
     """User-simulator tokens whose cost the provider did NOT report (None or 0.0), so the
     harness can list-price exactly those and never double-count a provider-priced message."""
@@ -576,6 +607,7 @@ class Adapter(CapabilityAdapter):
                 "tau2_reward": reward,
                 "tau2_reward_info": reward_info_dump,
                 "termination_reason": str(term),
+                **({"infra_detail": _infra_detail(sim, messages)} if term in (TerminationReason.INFRASTRUCTURE_ERROR, TerminationReason.UNEXPECTED_ERROR) else {}),
                 **cost_meta,
             },
         )
