@@ -1,0 +1,71 @@
+{
+ "registration": "Suite E pre-registration (analysis_plan.md 5-AMENDMENT 10)",
+ "written_utc": "2026-10-12 11:16 UTC",
+ "status": "FROZEN before the first Suite E rollout; no Suite D/E held-out score exists",
+ "environment": {
+  "benchmark": "tau2 airline @8ebb7499",
+  "target": "azoai/gpt-4.1-mini-2025-04-14",
+  "user_simulator_and_judge": "azoai/gpt-4.1-2025-04-14",
+  "split_file": "wt-tau/protocol/tau_airline_splits.json",
+  "split_sha256": "371ab03ba85cf25913f31d37b727077a5d6bcccce7f7c7ca983a3fc5d61e6187",
+  "opt": 20,
+  "sel": 10,
+  "test": 20,
+  "worktree_commit": "eb112a08c75e24d60711377c2cfbf3265b86ecd8",
+  "budget": "300 counted rollouts, 10 iterations; CTL 1 iteration 100 rollouts",
+  "seeds_per_cell": 3
+ },
+ "cells": [
+  "E30-PT",
+  "E30-P",
+  "E30-T",
+  "E30-CTL",
+  "E31-ruleP",
+  "E31-1S",
+  "E30-GEPA",
+  "E36-nohist"
+ ],
+ "final_set": {
+  "primary": "test-20 (T=20), n=5 champions, seed n=10, one interleaved window",
+  "secondary": "H30 = sel-10 + test-20, descriptive, own Holm"
+ },
+ "holm_family_E_m11": [
+  "P vs PT",
+  "T vs PT",
+  "P vs T",
+  "ruleP vs PT",
+  "1S vs PT",
+  "PT vs CTL",
+  "P vs GEPA",
+  "P vs seed",
+  "T vs seed",
+  "PT vs seed",
+  "nohist vs PT"
+ ],
+ "holm_secondary_E_sec_m4": [
+  "GEPA vs seed",
+  "ruleP vs seed",
+  "1S vs seed",
+  "CTL vs seed"
+ ],
+ "family_E_comp": "E30-PT vs each competitor that runs; list frozen by a later registry line before the first competitor rollout",
+ "equivalence": "no equivalence claim on Suite E; TOST shown with design power; failing = inconclusive",
+ "claim_rule": "E only corroborates D: replicated iff same sign and artifact-level 95% CI excludes 0; no pooling, no cross-suite p-value",
+ "planning_mde_tau0.15": {
+  "within_var_per_trial": 0.0242,
+  "test20": {
+   "vs_seed": 0.111,
+   "cell_vs_cell": 0.119,
+   "holm11_vs_seed": 0.153,
+   "holm11_cell_vs_cell": 0.164,
+   "pipeline_vs_seed": 0.222
+  },
+  "H30": {
+   "vs_seed": 0.089,
+   "cell_vs_cell": 0.095,
+   "holm11_vs_seed": 0.121,
+   "holm11_cell_vs_cell": 0.129,
+   "pipeline_vs_seed": 0.189
+  }
+ }
+}
