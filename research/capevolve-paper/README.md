@@ -72,7 +72,7 @@ Written designs for extending the study to further benchmarks. These are proposa
 | Design | Status |
 |---|---|
 | [`designs/appworld_experimental_design.md`](designs/appworld_experimental_design.md) (issue text: [`designs/appworld_issue.md`](designs/appworld_issue.md)) | AppWorld, targets DeepSeek-V3.2 and gpt-oss-120b, against ACE, ALTK-Evolve and the campaign competitors. Posted as issue skillberry-ai/cap-evolve#804 |
-| [`designs/swebench_verified_experimental_design.md`](designs/swebench_verified_experimental_design.md) | SWE-bench Verified. In progress |
+| [`designs/swebench_verified_experimental_design.md`](designs/swebench_verified_experimental_design.md) | SWE-bench Verified, GLM 5.3 as agent and optimizer, with a validity section on the reported 482/500 (issues #777, #673). Posted as issue skillberry-ai/cap-evolve#805 |
 
 ## Build the paper
 
