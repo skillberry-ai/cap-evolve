@@ -1,0 +1,53 @@
+base_suite,arm,failure_type,group,category,n
+A,ao,infra,infra (unscorable),,5
+A,ao,no_output_file,output / contract,Cell-Level,23
+A,ao,no_output_file,output / contract,Sheet-Level,3
+A,ao,wrong_result,knowledge or rule gap,Cell-Level,17
+A,ao,wrong_result,knowledge or rule gap,Sheet-Level,11
+A,hc,infra,infra (unscorable),,6
+A,hc,no_output_file,output / contract,Cell-Level,22
+A,hc,no_output_file,output / contract,Sheet-Level,5
+A,hc,wrong_result,knowledge or rule gap,Cell-Level,12
+A,hc,wrong_result,knowledge or rule gap,Sheet-Level,9
+A,hcstock,infra,infra (unscorable),,5
+A,hcstock,no_output_file,output / contract,Cell-Level,23
+A,hcstock,no_output_file,output / contract,Sheet-Level,3
+A,hcstock,wrong_result,knowledge or rule gap,Cell-Level,16
+A,hcstock,wrong_result,knowledge or rule gap,Sheet-Level,10
+B,ao,communication,output / contract,,5
+B,ao,infra,infra (unscorable),,1
+B,ao,missing_action,forgotten rule or step,,18
+B,ao,other,other,,5
+B,ao,state_side_effect,unexpected side effect,,5
+B,ao,wrong_argument,tool misuse,,24
+B,hc,communication,output / contract,,3
+B,hc,infra,infra (unscorable),,1
+B,hc,missing_action,forgotten rule or step,,23
+B,hc,other,other,,7
+B,hc,state_side_effect,unexpected side effect,,4
+B,hc,wrong_argument,tool misuse,,25
+B,oneshot,communication,output / contract,,5
+B,oneshot,infra,infra (unscorable),,1
+B,oneshot,missing_action,forgotten rule or step,,17
+B,oneshot,other,other,,6
+B,oneshot,state_side_effect,unexpected side effect,,4
+B,oneshot,wrong_argument,tool misuse,,27
+C,ao,missing_action,forgotten rule or step,,10
+C,ao,other,other,,3
+C,ao,state_side_effect,unexpected side effect,,5
+C,ao,wrong_argument,tool misuse,,11
+C,hc,communication,output / contract,,2
+C,hc,missing_action,forgotten rule or step,,12
+C,hc,other,other,,3
+C,hc,state_side_effect,unexpected side effect,,1
+C,hc,wrong_argument,tool misuse,,13
+C,hcstock,communication,output / contract,,2
+C,hcstock,infra,infra (unscorable),,1
+C,hcstock,missing_action,forgotten rule or step,,9
+C,hcstock,other,other,,3
+C,hcstock,state_side_effect,unexpected side effect,,1
+C,hcstock,wrong_argument,tool misuse,,12
+C,oneshot,infra,infra (unscorable),,1
+C,oneshot,missing_action,forgotten rule or step,,10
+C,oneshot,other,other,,7
+C,oneshot,wrong_argument,tool misuse,,11

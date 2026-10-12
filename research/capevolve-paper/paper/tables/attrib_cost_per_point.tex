@@ -1,0 +1,34 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Optimizer cost per point of gain. PENDING FINAL: cost per final point is empty until the final evaluation. USD and tokens (non-cache-read, millions) are the cost of the search so far; USD per selection point is search-time, on each method's own selection split, not held-out, and optimistic. Points are percentage points; seeds with no positive gain are left out of the per-point means.}
+\label{tab:attrib-cost}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+Suite & Arm & Opt.\ USD & Opt.\ Mtok & USD/final pt & ktok/final pt & USD/sel. pt \\
+\midrule
+A & GEPA & 1.29 & 0.38 & -- & -- & 0.037 \\
+A & SkillOpt & 8.13 & 3.65 & -- & -- & 0.348 \\
+A & Meta-Harness & 0.79 & 0.18 & -- & -- & 0.029 \\
+A & EvoSkill & 1.56 & 0.51 & -- & -- & 0.053 \\
+A & WikiSkill-comm. & 0.28 & 0.10 & -- & -- & 0.031 \\
+A & Trace2Skill & 6.76 & 2.17 & -- & -- & 0.294 \\
+A & ACE & 2.13 & 0.78 & -- & -- & -- \\
+A & MIPROv2 & 0.59 & 0.18 & -- & -- & -- \\
+A & CapEvolve HC & 0.56 & 0.14 & -- & -- & 0.033 \\
+A & CapEvolve AO & 4.54 & 1.64 & -- & -- & -- \\
+A-E12 & CapEvolve HC, stock gate & 1.17 & 0.29 & -- & -- & 0.040 \\
+B & One-shot control & 1.05 & 0.17 & -- & -- & 0.096 \\
+B & GEPA & 1.29 & 0.37 & -- & -- & 0.087 \\
+B & HarnessLens & 4.75 & 1.39 & -- & -- & -- \\
+B & CapEvolve HC & 2.01 & 0.37 & -- & -- & -- \\
+B & CapEvolve AO & 5.36 & 0.97 & -- & -- & -- \\
+C & One-shot control & 0.71 & 0.11 & -- & -- & 0.025 \\
+C & GEPA & 0.86 & 0.22 & -- & -- & 0.071 \\
+C & CapEvolve HC & 1.75 & 0.33 & -- & -- & -- \\
+C & CapEvolve AO & 2.39 & 0.55 & -- & -- & -- \\
+C-E12 & CapEvolve HC, stock gate & 2.79 & 0.52 & -- & -- & 0.092 \\
+C-E12 & Best-of-$k$ & 6.62 & 1.00 & -- & -- & 0.348 \\
+\bottomrule
+\end{tabular}
+\end{table*}

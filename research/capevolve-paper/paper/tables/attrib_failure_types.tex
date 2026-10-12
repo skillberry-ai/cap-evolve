@@ -1,0 +1,22 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Failure types of the seed artifact's failed tasks, summed over seeds and trials-pooled tasks. Search-time, failed seed tasks on each run's selection split; deterministic labels from scorer feedback, no model judge, not held-out. Forgotten rule or step: a required write was never called ($\tau^2$). Tool misuse: a write with wrong arguments. Output/contract: no output file (Suite A) or unmet communication assertion ($\tau^2$). Knowledge or rule gap: an output file exists and fails the checks (Suite A).}
+\label{tab:attrib-failure-types}
+\begin{tabular}{@{}llrrrrrrrr@{}}
+\toprule
+Suite & Arm & Failed & forgotten rule or step & tool misuse & unexpected side effect & output / contract & knowledge or rule gap & infra (unscorable) & other \\
+\midrule
+A & CapEvolve AO & 59 & 0 & 0 & 0 & 26 & 28 & 5 & 0 \\
+A & CapEvolve HC & 54 & 0 & 0 & 0 & 27 & 21 & 6 & 0 \\
+A & CapEvolve HC, stock gate & 57 & 0 & 0 & 0 & 26 & 26 & 5 & 0 \\
+B & CapEvolve AO & 58 & 18 & 24 & 5 & 5 & 0 & 1 & 5 \\
+B & CapEvolve HC & 63 & 23 & 25 & 4 & 3 & 0 & 1 & 7 \\
+B & One-shot control & 60 & 17 & 27 & 4 & 5 & 0 & 1 & 6 \\
+C & CapEvolve AO & 29 & 10 & 11 & 5 & 0 & 0 & 0 & 3 \\
+C & CapEvolve HC & 31 & 12 & 13 & 1 & 2 & 0 & 0 & 3 \\
+C & CapEvolve HC, stock gate & 28 & 9 & 12 & 1 & 2 & 0 & 1 & 3 \\
+C & One-shot control & 29 & 10 & 11 & 0 & 0 & 0 & 1 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table*}

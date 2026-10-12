@@ -1,0 +1,17 @@
+base_suite,arm,surface,cands_total,cands_touching,promoted_touching,promotion_rate,mean_delta_val,mean_fixed,mean_broke,mean_lines,spearman_lines_vs_delta,note
+A,hc,system_prompt,5,5,1,0.2,0.07950845582424527,7.2,4.2,12.2,-0.35909242322980395,surface touched by every candidate: no contrast available
+A,hc,task_template,5,5,1,0.2,0.07950845582424527,7.2,4.2,2.0,,surface touched by every candidate: no contrast available
+A,hcstock,system_prompt,16,16,6,0.375,0.053156629554655874,5.125,3.0625,22.6875,-0.6504537865717162,surface touched by every candidate: no contrast available
+A,hcstock,task_template,16,16,6,0.375,0.053156629554655874,5.125,3.0625,4.375,-0.3158285828037533,surface touched by every candidate: no contrast available
+B,hc,system_prompt,10,7,0,0.0,-0.005770165208940692,6.714285714285714,7.0,11.714285714285714,0.3446561747421316,
+B,hc,tool_code,10,9,0,0.0,-0.013652683295540405,6.555555555555555,7.222222222222222,52.333333333333336,-0.15055975840196817,
+B,hc,(none: process/other only),10,1,0,0.0,0.08510638297872342,9.0,5.0,,,
+B,oneshot,system_prompt,3,3,1,0.3333333333333333,0.017006802721088492,7.666666666666667,6.666666666666667,17.666666666666668,,surface touched by every candidate: no contrast available
+B,oneshot,tool_code,3,3,1,0.3333333333333333,0.017006802721088492,7.666666666666667,6.666666666666667,72.33333333333333,,surface touched by every candidate: no contrast available
+C,hc,system_prompt,12,9,0,0.0,0.05737491877842756,3.111111111111111,2.0,11.222222222222221,-0.3305422611901982,
+C,hc,tool_code,12,9,0,0.0,0.05737491877842756,3.111111111111111,2.0,105.22222222222223,-0.1431147622449601,
+C,hc,(none: process/other only),12,3,0,0.0,0.15526315789473685,3.3333333333333335,0.3333333333333333,,,
+C,hcstock,system_prompt,16,16,3,0.1875,-0.045017414860681115,2.3125,3.1875,14.9375,-0.2774436090225563,surface touched by every candidate: no contrast available
+C,hcstock,tool_code,16,16,3,0.1875,-0.045017414860681115,2.3125,3.1875,146.1875,-0.271709326925796,surface touched by every candidate: no contrast available
+C,oneshot,system_prompt,3,3,1,0.3333333333333333,0.08771929824561404,3.6666666666666665,2.0,13.333333333333334,,surface touched by every candidate: no contrast available
+C,oneshot,tool_code,3,3,1,0.3333333333333333,0.08771929824561404,3.6666666666666665,2.0,163.0,,surface touched by every candidate: no contrast available

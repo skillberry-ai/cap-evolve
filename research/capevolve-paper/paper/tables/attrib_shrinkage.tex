@@ -1,0 +1,78 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Selection-to-final shrinkage (selection-split gain minus final-set gain), per arm and seed. PENDING FINAL: the final-set column is empty until the final evaluation (cutoff 2026-10-13 06:00 UTC); the selection gain shown is search-time, on each method's own selection split, not held-out. Seeds that return the seed artifact have shrinkage 0 by construction (amendment 6).}
+\label{tab:attrib-shrinkage}
+\begin{tabular}{@{}llrrrrl@{}}
+\toprule
+Suite & Arm & Seed & Sel. gain & Final gain & Shrinkage & Inert \\
+\midrule
+A & CapEvolve HC & 0 & 0.000 & -- & -- & yes \\
+A & CapEvolve HC & 1 & 0.103 & -- & -- & no \\
+A & CapEvolve HC & 2 & 0.000 & -- & -- & yes \\
+A & CapEvolve AO & 0 & 0.000 & -- & -- & yes \\
+A & CapEvolve AO & 1 & 0.000 & -- & -- & yes \\
+A & CapEvolve AO & 2 & 0.000 & -- & -- & yes \\
+A & GEPA & 0 & 0.325 & -- & -- & no \\
+A & GEPA & 1 & 0.350 & -- & -- & no \\
+A & GEPA & 2 & 0.375 & -- & -- & no \\
+A & SkillOpt & 0 & 0.150 & -- & -- & no \\
+A & SkillOpt & 1 & 0.300 & -- & -- & no \\
+A & SkillOpt & 2 & 0.275 & -- & -- & no \\
+A & Meta-Harness & 0 & 0.375 & -- & -- & no \\
+A & Meta-Harness & 1 & 0.250 & -- & -- & no \\
+A & Meta-Harness & 2 & 0.250 & -- & -- & no \\
+A & EvoSkill & 0 & 0.250 & -- & -- & no \\
+A & EvoSkill & 1 & 0.325 & -- & -- & no \\
+A & EvoSkill & 2 & 0.300 & -- & -- & no \\
+A & WikiSkill-comm. & 0 & 0.050 & -- & -- & yes \\
+A & WikiSkill-comm. & 1 & 0.200 & -- & -- & no \\
+A & WikiSkill-comm. & 2 & 0.150 & -- & -- & no \\
+A & Trace2Skill & 0 & 0.200 & -- & -- & no \\
+A & Trace2Skill & 1 & 0.275 & -- & -- & no \\
+A & Trace2Skill & 2 & 0.225 & -- & -- & no \\
+A & ACE & 0 & -- & -- & -- & -- \\
+A & ACE & 1 & -- & -- & -- & -- \\
+A & ACE & 2 & -- & -- & -- & -- \\
+A & MIPROv2 & 0 & 0.000 & -- & -- & yes \\
+A & MIPROv2 & 1 & 0.000 & -- & -- & yes \\
+A & MIPROv2 & 2 & 0.000 & -- & -- & yes \\
+B & CapEvolve HC & 0 & 0.000 & -- & -- & yes \\
+B & CapEvolve HC & 1 & 0.000 & -- & -- & yes \\
+B & CapEvolve HC & 2 & 0.000 & -- & -- & yes \\
+B & CapEvolve AO & 0 & 0.000 & -- & -- & yes \\
+B & CapEvolve AO & 1 & 0.000 & -- & -- & yes \\
+B & CapEvolve AO & 2 & 0.000 & -- & -- & yes \\
+B & GEPA & 0 & 0.120 & -- & -- & no \\
+B & GEPA & 1 & 0.280 & -- & -- & no \\
+B & GEPA & 2 & 0.120 & -- & -- & no \\
+B & HarnessLens & 0 & -- & -- & -- & -- \\
+B & HarnessLens & 1 & -- & -- & -- & -- \\
+B & HarnessLens & 2 & -- & -- & -- & -- \\
+B & One-shot control & 0 & 0.000 & -- & -- & yes \\
+B & One-shot control & 1 & 0.143 & -- & -- & no \\
+B & One-shot control & 2 & 0.000 & -- & -- & yes \\
+C & CapEvolve HC & 0 & 0.000 & -- & -- & yes \\
+C & CapEvolve HC & 1 & 0.000 & -- & -- & yes \\
+C & CapEvolve HC & 2 & 0.000 & -- & -- & yes \\
+C & CapEvolve AO & 0 & 0.000 & -- & -- & yes \\
+C & CapEvolve AO & 1 & 0.000 & -- & -- & yes \\
+C & CapEvolve AO & 2 & 0.000 & -- & -- & yes \\
+C & GEPA & 0 & 0.200 & -- & -- & no \\
+C & GEPA & 1 & 0.100 & -- & -- & no \\
+C & GEPA & 2 & 0.100 & -- & -- & no \\
+C & One-shot control & 0 & 0.237 & -- & -- & no \\
+C & One-shot control & 1 & 0.000 & -- & -- & yes \\
+C & One-shot control & 2 & 0.000 & -- & -- & yes \\
+A-E12 & CapEvolve HC, stock gate & 0 & 0.211 & -- & -- & no \\
+A-E12 & CapEvolve HC, stock gate & 1 & 0.349 & -- & -- & no \\
+A-E12 & CapEvolve HC, stock gate & 2 & 0.322 & -- & -- & no \\
+C-E12 & CapEvolve HC, stock gate & 0 & 0.237 & -- & -- & no \\
+C-E12 & CapEvolve HC, stock gate & 1 & 0.000 & -- & -- & yes \\
+C-E12 & CapEvolve HC, stock gate & 2 & 0.316 & -- & -- & no \\
+C-E12 & Best-of-$k$ & 0 & 0.300 & -- & -- & no \\
+C-E12 & Best-of-$k$ & 1 & 0.100 & -- & -- & no \\
+C-E12 & Best-of-$k$ & 2 & 0.326 & -- & -- & no \\
+\bottomrule
+\end{tabular}
+\end{table*}
