@@ -243,6 +243,22 @@ def native_status(rd):
                 if m:
                     rc = int(m.group(1))
                     return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
+    evf = rd / "events.jsonl"      # EvoSkill: the loop writes {"event": "loop_done"} when its own stop rule ends it; must be newer than the last restart
+    if evf.exists():
+        rl = rd / "restart_log.json"
+        restart_m = rl.stat().st_mtime if rl.exists() else 0
+        try:
+            with open(evf, errors="replace") as fh:
+                for line in fh:
+                    if '"loop_done"' in line:
+                        try:
+                            d = json.loads(line)
+                        except Exception:
+                            continue
+                        if d.get("event") == "loop_done" and float(d.get("t") or 0) > restart_m:
+                            return "native_finish", "events.jsonl loop_done at rollout_index %s (after the last restart)" % d.get("rollout_index")
+        except Exception:
+            pass
     for ev in ("run_summary.json", "final.json", "final"):
         cands = [rd / ev] + list((rd / ".capevolve").glob("run_*/" + ev))
         hit = [c for c in cands if c.exists()]
