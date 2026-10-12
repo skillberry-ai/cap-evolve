@@ -3,6 +3,7 @@
 
 \begin{figure*}[t]
 \centering
+\resizebox{0.97\textwidth}{!}{%
 \begin{tikzpicture}[
     font=\scriptsize,
     box/.style={draw,rounded corners=1.5pt,minimum height=7mm,align=center,inner sep=2.5pt,fill=black!4},
@@ -28,7 +29,7 @@
   \draw[ar] (g.south) |- ([yshift=-6mm]h.east |- h.south) -| (h.south);
   \draw[teal!55!black,dashed] ([xshift=-2mm,yshift=-12mm]s.south west) rectangle ([xshift=2mm,yshift=5mm]z.north east);
   \node[font=\tiny,teal!40!black,anchor=north east] at ([xshift=2mm,yshift=5mm]z.north east) {};
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{CapEvolve. The editable surface is a parameter of one loop. Orange parts belong to the optimizer; teal parts are core code the optimizer cannot edit. Accepted and rejected candidates feed a causal history of which tasks each edit fixed and broke.}
 \label{fig:v2:loop}
 \end{figure*}
