@@ -309,3 +309,8 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - Ruled out: the network switch (A/B test), kernel-killing code, missing soffice, podman OOM.
   - The recalc_verify excess (10/60 against 9/200 for other s2 candidates, Fisher p=0.0035) is real but unexplained; the candidates ran in sequence, so time and server state are confounded with it.
   - Actions: no diagnostic rerun (capacity). The final-eval exec server logs 500 bodies, kernel ids and idle time. KERNEL_TIMEOUT is raised to 3 h uniformly for new sandboxes and the final evaluation. Amendment 5O covers persistent errors.
+- 2026-10-12T02:30 — Sandbox exec-server idle-kernel cleanup (vendored code_exec_docker/api.py, KERNEL_TIMEOUT).
+  - Logs across 218 servers: 356/40,864 execs (0.87%) returned 500. 284 conversations had their kernel idle-deleted at 10 min, and 140 then silently got a fresh kernel, losing Python state mid-rollout. Idle closures correlate with 500 rate (r=0.56).
+  - Change: api.py reads KERNEL_TIMEOUT_S (default 10800), edited at about 02:28Z.
+  - Parity rule: all searches run at 600 s, the original value. Every running search predates the edit, and any search restarted from now on (including SkillOpt's epoch-boundary restart) sets KERNEL_TIMEOUT_S=600.
+  - The final evaluation uses 10800 s (hashed in freeze.py), with 500 logging of the kernel id and idle seconds, plus per-artifact kernel re-creation counts.
