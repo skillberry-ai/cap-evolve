@@ -76,14 +76,15 @@ Adapters label these errors differently, so we classify every error row with one
 The classification is reporting-only: each arm's search used its own native handling of these errors, and no search decision depends on the uniform label.
 In the analysis, a cell that is still an infrastructure error after three retries with new trial seeds counts as a failure in the primary analysis and as missing in the sensitivity analysis (amendment 5O).
 A hang past three hours gets one retry and is then missing in both.
-ACE, MIPROv2 and Meta-Harness ran with handling from before this rule, so their search-time zeros stay in their histories.
+MIPROv2 and Meta-Harness ran with handling from before this rule, as did the GEPA, EvoSkill and SkillOpt seeds until their boundary restarts, so their search-time zeros stay in their histories.
+ACE was relaunched at 00:59 UTC on 12 October on the fixed library and is not affected.
 The rule changes the class of Trace2Skill and WikiSkill rows, which their adapters label as candidate faults.
-It moves the 26 Trace2Skill errors that carry a timeout or sandbox string, and all WikiSkill errors, to infrastructure.
-The Trace2Skill rows without a string keep the candidate class.
-Every Meta-Harness error is infrastructure, and the per-seed counts are 11, 29 and 25 (sandbox 500 errors or timeouts).
-MIPROv2 has 4, 6 and 2.
-SkillOpt has 46 infrastructure errors and 120 candidate errors.
-An audit of the 120 found 119 genuine template breaks, where an edit appended literal Python braces such as \texttt{\{c.coordinate\}} to the template and broke the placeholder contract, and one row caused by a race in the shared evaluator.
+Of the \errTraceTotal{} Trace2Skill errors, \errTraceInfra{} carry a timeout or sandbox string and move to infrastructure, and \errTraceCand{} keep the candidate class because no string was stored.
+All \errWikiTotal{} WikiSkill errors are infrastructure.
+Every Meta-Harness error is infrastructure, \errMetaTotal{} in all, with per-seed counts of \errMetaSeedZero{}, \errMetaSeedOne{} and \errMetaSeedTwo{} (sandbox 500 errors or timeouts).
+MIPROv2 has \errMiproTotal{} in all, with \errMiproSeedZero{}, \errMiproSeedOne{} and \errMiproSeedTwo{} per seed.
+SkillOpt has \errSkillInfra{} infrastructure errors and \errSkillCand{} candidate errors.
+An audit of the candidate rows found all but one to be genuine template breaks, where an edit appended literal Python braces such as \texttt{\{c.coordinate\}} to the template and broke the placeholder contract, and one row caused by a race in the shared evaluator.
 The race was fixed at about 00:55 UTC on 12 October, and no search decision was affected.
 One row remains unverifiable: GEPA on Suite C, seed 2, whose run stores no string although the rollout made 20 target calls.
 It counts as a failure in the primary analysis and as missing in the sensitivity analysis, like any cell whose class we cannot establish.
