@@ -200,7 +200,7 @@ def _live(rd):
     for d in os.listdir("/proc"):
         if d.isdigit() and d != me:
             try:
-                cl = open("/proc/%s/cmdline" % d, "rb").read()
+                cl = open("/proc/%s/cmdline" % d, "rb").read().replace(b"\0", b" ")
                 # post-run scoring (chaser / post_sel) and shell wrappers are not the search
                 if key in cl and not any(x in cl for x in (b"eval_cap.py", b"post_score", b"post_sel", b"/bin/bash -c", b"grep", b"check_sandbox")):
                     return True
