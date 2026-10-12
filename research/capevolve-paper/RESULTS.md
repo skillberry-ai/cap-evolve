@@ -24,6 +24,7 @@ What the search-time files show so far (searches still running, so counts will c
 - CapEvolve with rule P has promoted little. Counts as of 15:51 UTC, search-time: Suite A hill-climb 2 promotions in 15 candidates (1 of 3 searches still returns the seed); Suite B hill-climb 0 of 14 (3 of 3 return the seed); Suite C hill-climb 2 of 16 (1 of 3 returns the seed). Agent-optimize on Suites A, B and C promoted nothing in any seed (Suite A: two native early stops and one token-guard stop). Source: [`attrib/summary.md`](analysis/out/attrib/summary.md), section "Promotions per search and inert searches".
 - CapEvolve hill-climb with the stock gate promotes: Suite A (E12A) finished all 3 seeds at 600 rollouts with 7 promotions in 36 candidates and selection-split gains of 0.29 to 0.35; Suite C (E12C) has 3 promotions in 29 candidates so far, with gains of 0.24, 0.00 and 0.32 across seeds. These are selection-split numbers on the split the gate reads and are optimistic. Whether they survive on held-out data is what the final evaluation answers.
 - Competitor gains on their own selection splits (for example GEPA on Suite A, 0.33 to 0.38, all three seeds at 600 rollouts) are not comparable with CapEvolve's, because each method selects on a different split.
+- ACE on Suite A (search-time): seed 0 finished its final validation rerun; ACE's own rule picks epoch1_end (0.80 against 0.725 on validation).
 - HarnessLens on Suite B (search-time, 16:21 UTC): matched s1 and s2 both ended at their 4M optimizer-token guard with no accepted version, so their artifact is v0. Matched s0 rejected its iteration-1 candidate in fresh-seed confirmation (0.417 against 0.5 for v0; the screen gain did not replicate) and is in iteration 2 at 3.03M of 4M tokens. HL-extended is at 5.19M of its 10M cut. No HarnessLens candidate has been accepted in any matched seed so far. Earlier runs failed on a missing host dependency (bubblewrap) and are recorded as "not evaluated, environment defect", not as a method result.
 
 Figures (search-time, real):
@@ -44,6 +45,10 @@ Figures (search-time, real):
 *Tasks fixed against tasks broken per candidate (circles promoted, crosses rejected). Search-time, own selection split, real.* PDF: [`paper/figures/attrib_regression.pdf`](paper/figures/attrib_regression.pdf)
 
 LaTeX versions of the tables: [`paper/tables/searchtime_summary_A.tex`](paper/tables/searchtime_summary_A.tex), `_B`, `_C`, [`searchtime_gate.tex`](paper/tables/searchtime_gate.tex), [`searchtime_edits.tex`](paper/tables/searchtime_edits.tex), [`searchtime_infra.tex`](paper/tables/searchtime_infra.tex), and the `attrib_*.tex` files in the same directory.
+
+## 1b. E26 no-history arm, manipulation check (real, search-time, Suite D)
+
+[`analysis/out/e26_manipulation_check.json`](analysis/out/e26_manipulation_check.json). All 3 seeds finished. Through iteration 10 the proposer had no reachable history files; there was 1 guessed hidden-path attempt per seed, with nothing returned, and designed reads of the reject record numbered 14, 12 and 13. Search-time gains on opt-49 were +0.20, +0.14 and +0.23 (the search split the gate reads; not held-out, and not yet compared with the reference cell on held-out data).
 
 ## 2. E22 null-pool result (real, search-time, Suite D setting)
 

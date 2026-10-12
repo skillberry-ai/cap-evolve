@@ -13,6 +13,9 @@ Plain-language status is in [`STATUS.md`](STATUS.md); real results are indexed i
 
 ## 2026-10-12
 
+- 18:50 Suite E wave 1 (9 searches: prompt+tools, prompt only, tools only, 3 seeds each) launched between 18:46 and 18:50.
+- Suite D no-history arm (E26) finished all 3 seeds. Manipulation check through iteration 10 ([`analysis/out/e26_manipulation_check.json`](analysis/out/e26_manipulation_check.json)): no history files reachable, 1 guessed hidden-path attempt per seed with nothing returned, designed reads of the reject record 14, 12 and 13. Search-time gains on opt-49: +0.20, +0.14, +0.23 (not held-out).
+- ACE Suite A s0: final validation rerun done; ACE's own rule picks epoch1_end (0.80 against 0.725 on validation, search-time).
 - 16:21 HarnessLens Suite B (search-time): matched s1 and s2 ended at the 4M token guard with no accepted version (artifact v0). Matched s0 rejected its iteration-1 candidate in fresh-seed confirmation (0.417 against 0.5 for v0) and is in iteration 2 at 3.03M of 4M tokens. HL-extended at 5.19M of 10M. No matched seed has accepted a candidate.
 - 15:51 Search-time results regenerated (0bde54c74, after a metrics-converter fix; selection split, not held-out). Suite A rule-P hill-climb: 2 promotions in 15 candidates, 1 of 3 searches still returns the seed. Suite A stock gate: all 3 seeds finished at 600 rollouts, 7 promotions. Suite B rule P: 0 of 14. Suite C rule P: 2 of 16, 1 of 3 inert. Suite A agent-optimize: no promotion in any seed (two native early stops, one token-guard stop). Suite A N* is currently 350 (live, moves until the cutoff).
 - 14:10 Design: SWE-bench Verified experimental design (proposed Suite G, GLM 5.3 as agent and optimizer, with a validity section on the colleagues' reported 482/500, citing #777 and #673) posted as issue skillberry-ai/cap-evolve#805; full text in [`designs/swebench_verified_experimental_design.md`](designs/swebench_verified_experimental_design.md). Design only: no run exists.
