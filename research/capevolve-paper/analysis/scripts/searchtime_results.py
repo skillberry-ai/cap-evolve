@@ -706,7 +706,7 @@ def build_gate_table(gate_rows):
 \scriptsize
 \caption{Gate behaviour per CapEvolve search (search-time, on each run's own search split, not held-out). Rule P: screens and confirmations run, promotions, rejections (screen, confirm, or rejected outright by the driver), vetoes (indecisive at the gate), and indecisive events (valid-score coverage below 0.95). Lost cands: candidates with no valid evaluation because infrastructure failed them (protocol/infra\_exclusions.json), not counted as rejections. Lost attempts: evaluation attempts lost to infrastructure; a candidate that failed once and was retried successfully counts one lost attempt and zero lost candidates, so attempts can exceed candidates screened. Rows for the stock-gate ablation (E12, paired with Rule P on Suites A and C) have a single-stage accept/reject, so confirmations are 0.}
 \label{tab:searchtime-gate}
-\resizebox{\textwidth}{!}{%
+\resizebox{\textwidth}{!}{%%
 \begin{tabular}{@{}llrrrrrrrrrr@{}}
 \toprule
 Suite & Arm & Seed & Cands & Screens & Confirms & Promoted & Rejected & Vetoed & Indecisive & Lost cands & Lost attempts \\
