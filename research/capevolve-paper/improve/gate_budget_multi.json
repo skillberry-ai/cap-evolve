@@ -1,0 +1,122 @@
+{
+ "stock x8 (k=1)": {
+  "params": {},
+  "null": {
+   "p_champion": 0.49975,
+   "p_good": 0.0,
+   "p_bad": 0.49975,
+   "gain": 0.0,
+   "inflation": 0.12900668021085382,
+   "rollouts": 392.0,
+   "stages": 1.0,
+   "rollouts_per_good": Infinity
+  },
+  "mixed": {
+   "p_champion": 0.7545833333333334,
+   "p_good": 0.6407083333333333,
+   "p_bad": 0.113875,
+   "gain": 0.06570615756810419,
+   "inflation": 0.07670647483058121,
+   "rollouts": 392.0,
+   "stages": 1.0,
+   "rollouts_per_good": 611.8228523118944
+  }
+ },
+ "rule P as run x8": {
+  "params": {},
+  "null": {
+   "p_champion": 0.11333333333333333,
+   "p_good": 0.0,
+   "p_bad": 0.11333333333333333,
+   "gain": 0.0,
+   "inflation": 0.07833133253301322,
+   "rollouts": 753.75475,
+   "stages": 2.0,
+   "rollouts_per_good": Infinity
+  },
+  "mixed": {
+   "p_champion": 0.6256666666666667,
+   "p_good": 0.6034583333333333,
+   "p_bad": 0.022208333333333333,
+   "gain": 0.0647947116999943,
+   "inflation": 0.027215078121849208,
+   "rollouts": 989.54275,
+   "stages": 2.0,
+   "rollouts_per_good": 1639.786370227163
+  }
+ },
+ "group-sequential x8": {
+  "params": {},
+  "null": {
+   "p_champion": 0.10779166666666666,
+   "p_good": 0.0,
+   "p_bad": 0.10779166666666666,
+   "gain": 0.0,
+   "inflation": 0.11101055710262461,
+   "rollouts": 424.75891666666666,
+   "stages": 4.449708333333334,
+   "rollouts_per_good": Infinity
+  },
+  "mixed": {
+   "p_champion": 0.6869166666666666,
+   "p_good": 0.6669583333333333,
+   "p_bad": 0.019958333333333335,
+   "gain": 0.07171468436640639,
+   "inflation": 0.04600316401437223,
+   "rollouts": 498.59904166666666,
+   "stages": 4.761333333333333,
+   "rollouts_per_good": 747.5714999687636
+  }
+ },
+ "successive halving 8>4>2 + fresh confirm": {
+  "params": {
+   "zc": 1.50628662109375
+  },
+  "null": {
+   "p_champion": 0.09829166666666667,
+   "p_good": 0.0,
+   "p_bad": 0.09829166666666667,
+   "gain": 0.0,
+   "inflation": 0.09487114048671609,
+   "rollouts": 334.59816666666666,
+   "stages": 3.9167083333333332,
+   "rollouts_per_good": Infinity
+  },
+  "mixed": {
+   "p_champion": 0.6139583333333334,
+   "p_good": 0.5915833333333333,
+   "p_bad": 0.022375,
+   "gain": 0.0634250150618598,
+   "inflation": 0.029207401906127816,
+   "rollouts": 358.2780833333333,
+   "stages": 3.9690416666666666,
+   "rollouts_per_good": 605.6257219326666
+  }
+ },
+ "Thompson allocation + fresh confirm": {
+  "params": {
+   "zc": 1.18328857421875
+  },
+  "null": {
+   "p_champion": 0.11975,
+   "p_good": 0.0,
+   "p_bad": 0.11975,
+   "gain": 0.0,
+   "inflation": 0.07776262905997475,
+   "rollouts": 362.7658333333333,
+   "stages": 9.762916666666667,
+   "rollouts_per_good": Infinity
+  },
+  "mixed": {
+   "p_champion": 0.6487916666666667,
+   "p_good": 0.6260416666666667,
+   "p_bad": 0.02275,
+   "gain": 0.06701399981063248,
+   "inflation": 0.016981510923231406,
+   "rollouts": 379.84641666666664,
+   "stages": 9.937208333333333,
+   "rollouts_per_good": 606.7430282861897
+  }
+ },
+ "_fwer_target": 0.11333333333333333
+}
