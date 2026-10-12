@@ -199,10 +199,15 @@ def build_decomposition(rng):
     return rows
 
 
+def stream(name):
+    """One seeded stream per mock block, so adding a block never shifts the values of another."""
+    return random.Random(f"{SEED}:{name}")
+
+
 def build():
-    rng = random.Random(SEED)
     data = dict(source="mock", seed=SEED, suites={})
     for suite, arms in SUITE_ARMS.items():
+        rng = stream(f"suite{suite}")
         P = SUITE_PARAM[suite]
         rows, ps = {}, []
         for a in arms:
@@ -336,9 +341,9 @@ def build():
                     fams[fname]["arms"][a] = dict(delta=d, lo=d - h, hi=d + h)
             s["families"] = fams
         data["suites"][suite] = s
-    data["suites"]["D"] = build_suite_d(rng)
-    data["suites"]["E"] = build_suite_e(rng, data["suites"]["D"])
-    data["decomposition"] = build_decomposition(rng)
+    data["suites"]["D"] = build_suite_d(stream("suiteD"))
+    data["suites"]["E"] = build_suite_e(stream("suiteE"), data["suites"]["D"])
+    data["decomposition"] = build_decomposition(stream("decomposition"))
     return data
 
 
