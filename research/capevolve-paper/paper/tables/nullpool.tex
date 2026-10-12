@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{False accepts of unmodified-seed (null) candidates on the empirical null pool: 40 evaluations of the seed on 49 retail tasks, one trial per task. Intervals are bootstrap 95\% intervals over evaluations, except the last row, which gives a Wilson interval and is optimistic because draws share a finite pool. The per-ten figure assumes independent candidates. Per-candidate points come from 20,000 draws and intervals from a bootstrap with fewer draws, so a point can lie near the edge of its interval. Unmasked rules only: the footprint-masked stock gate is not tested, because a null edit has an empty footprint.}
+\label{tab:nullpool}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Gate & Per candidate & 95\% interval & Per ten candidates & 95\% interval & Simulated per ten \\
+\midrule
+One-stage gate & 0.184 & [0.113, 0.248] & 0.87 & [0.70, 0.94] & 0.52 \\
+Screen at 2 standard errors & 0.049 & [0.015, 0.089] & 0.39 & [0.14, 0.61] & -- \\
+Rule P as run & 0.028 & [0.006, 0.045] & 0.25 & [0.06, 0.37] & 0.04 \\
+Rule P frozen & 0.008 & [0.001, 0.021] & 0.07 & [0.01, 0.19] & 0.01 \\
+Rule P, 10 confirmations & 0.016 & [0.014, 0.018] & 0.15 & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
