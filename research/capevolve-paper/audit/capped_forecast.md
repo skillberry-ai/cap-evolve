@@ -147,3 +147,30 @@ the same tag. To enforce the 4M rule on the ledger for s1 and s2, stop them from
 **Re-forecast with ACE and hlext capped (ledger-definition 4M for ACE s1 and s2, hlext 10M):** ACE remaining drops from +14M to +2.9M (s0 0, s1 +0.9, s2 +2.0) and hlext from
 +10.6M to +4.5M. Running total +28.4M (was +45.6M), searches 138.2M at 06:00, plus Suite E 17M = **155M**, below the 170M rung; with the 18M reserve 173M, under the 200M cap. High case about
 165M. If ACE s1 and s2 are left on their own meter, add about 6M (161M central, no rung crossed). Next pass 21:11 UTC.
+
+## Re-forecast 2026-10-12 21:11 UTC (Suite E admitted; ladder 170M / 178M / 182M, 18M reserve, cap 200M)
+
+Capped now **141.81M** (15:09: 109.8M; +32M in 6 h, 5.3M/h average). Last hour 7.69M, of which hlext 3.58M; last 3 h 19.1M. Suite E started about 18:50 and has used **7.24M** so far
+(E30-PT 2.04, E30-P 1.64, E31-ruleP 1.52, E30-T 1.41, E36-nohist 0.63; E32 AO and the E30 GEPA/CTL cells have not started), 2.4M/h.
+
+Suite E remaining: Suite D's final cost is a good analogue (E20 7.41M, E21 2.45M, E26 2.98M, together 12.84M for the same cell types; E30 7.4 + E31 about 2.0 + E36 about 3.0 + E32 AO about 5 = about 17.4M, matching the 16 to 18M plan), so about 10M more
+(8 to 12M). At its current pace (2.4M/h x 8.8 h) the cells would reach 21M if none finished early, which is the high case.
+
+| item | now | remaining to 06:00 | low | central | high |
+|---|---|---|---|---|---|
+| **hlext** | 13.74M ledger, **3.58M in the last hour**, process alive | its own 16M guard (about 2.3M) or the 10M watch | 0.5 | 2.0 | 3.5 |
+| **ACE** | s0 4.43 (stopped), **s1 4.70M, still running**, s2 2.30M, running | s1 near its own-meter guard; s2 to 4M on the ledger if stopped externally | 1.7 | 2.5 | 4.5 |
+| Suite E (E30, E31, E36, E32 AO, GEPA, CTL) | 7.24M | 16 to 18M plan; pace-based high 21M | 8 | 10 | 16 |
+| E12B hcstock | optimizer 0.77M, judge 1.0M | like E10B hc | 0.8 | 1.2 | 2.5 |
+| other baselines, B/C GEPA, final evals | | WikiSkill 484 to 523 of 600, EvoSkill, GEPA, hc/ao finals | 1.2 | 2.1 | 3 |
+| **total remaining** | | | **12.2** | **17.8** | **29.5** |
+| **searches at 06:00** | 141.8 | | **154.0** | **159.6** | **171.3** |
+| + 18M reserve | | | 172.0 | 177.6 | 189.3 |
+
+**Verdict:** the 170M exploratory rung is not crossed in the low or central case (154M, 160M) and is crossed only marginally in the high case (171M), around 05:00 to 06:00 UTC, if Suite E runs at its current pace to 21M. 178M and 182M are not
+crossed in any case. With the reserve the total stays under the 200M cap in all three cases (172M, 178M, 189M). The earlier central forecast (155M) was close; the miss was hlext and ACE running past their caps.
+
+**Arms to stop or check:**
+1. **hlext**: the gateway ledger shows 13.74M against the 10M cap you set, and 3.6M/h in the last hour. `hl_ext_cap_watch.sh` measures `creation_budget.json` usage (input + output + cache_write of HL jobs), not the gateway ledger, so it has not fired. Stop it now (or move the watch to the ledger) to save 2 to 3.5M.
+2. **ACE s1** is at 4.70M on the ledger, over 4M, with a live process (own-meter guard 3.9M, which understates the ledger); stop it externally. **ACE s2** at 2.30M also needs an external ledger guard at 4M, otherwise it may reach about 5M.
+3. Suite E: watch the 2.4M/h pace; if it is still above 2M/h at 02:00 UTC, trim the lowest-priority Suite E cell family so the high case stays under 170M.
