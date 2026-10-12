@@ -63,3 +63,13 @@ Counts are per seed s0/s1/s2 unless stated.
 
 No other arm shows a repeated identical host-level error (missing binary, import error, sandbox permission denial) that stopped
 candidates from materializing or running. Baselines that crashed and resumed did so on sandbox HTTP 500s (infra), not on missing dependencies.
+
+## Suite D pass 1 (2026-10-12, requested early; GEPA counted ready once a reflected candidate had been evaluated)
+
+24 cells (E20 CTL, P, PT, T, GEPA; E21 ruleP, 1S; E26 NOHIST), read-only. Every cell has proposed and evaluated candidates:
+CTL 1/1 per seed, P 4/4, PT 4/3/3, T 2/3/4, GEPA 5/6/6 reflected candidates all evaluated (139 to 155 counted rollouts), E21 1S 2/2, E21 ruleP 4/4,
+E26 NOHIST 1/1. Error strings: tau2 `INFRASTRUCTURE_ERROR` terminations (E20 T 17, PT 9, CTL 4, E21 1S 4, ruleP 1; about 1 to 2 percent of rollouts)
+and user-simulator `###STOP###` artifacts (E20 P 9, T 4, PT 2, CTL 2, E21 1S 5, ruleP 3, E26 1), both already classed infra; one E21 1S s2
+`INDECISIVE: only N% of val tasks produced a valid score`. Optimizer tool errors: `No module named 'pydantic'` (CTL, T, E26, one each) and a
+missing `bench/src/tau2-.../.venv/bin/python` (PT, T, one each), each a single non-repeating probe by the optimizer, same class as the
+intentional tau2/patch/rg gaps. No repeated identical host-level error, no cell with unevaluated proposals. **SUSPECT rows: none.**
