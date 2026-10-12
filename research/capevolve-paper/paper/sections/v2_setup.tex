@@ -35,7 +35,8 @@ Table~\ref{tab:v2:arms} lists the arms. We compare \capevolve{} in three configu
 \toprule
 Arm & Edits and notes & Suites \\
 \midrule
-\capevolve{} hill-climb & P (A), P+T (B, C, D); stock gate or rule P; stock gate added post-search-time on A, B, C & A B C D \\
+\capevolve{} hill-climb, rule P & P (A), P+T (B, C, D) & A B C D \\
+\capevolve{} hill-climb, stock gate & same surfaces; post-search-time & A B C D \\ \\
 \capevolve{} agent-optimize & P (A), P+T (B, C); rule P & A B C \\
 GEPA \citep{gepa} & P; Pareto reflective search & A B C D \\
 SkillOpt \citep{skillopt} & train feedback, validation selection & A \\
@@ -46,7 +47,8 @@ Trace2Skill \citep{trace2skill} & cheap, about 200 rollouts & A \\
 ACE \citep{ace} & cheap, one output field renamed & A \\
 MIPROv2 \citep{miprov2-dspy} & cheap & A \\
 HarnessLens \citep{xu2026harnesslens} & native $\tau^2$ fit & B \\
-Seed; one-shot repair & shared seed measurement; one unconditional step & A B C D \\
+Seed; one-shot repair & shared seed measurement; one proposal, then the arm's gate or none & A B C D \\
+Best-of-$k$ one-shot & exploratory, paused, truncated at 140 to 160 rollouts & C \\
 \bottomrule
 \end{tabularx}
 \end{table}
