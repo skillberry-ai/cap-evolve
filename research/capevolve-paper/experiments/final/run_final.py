@@ -136,6 +136,7 @@ def worker_A(job, attempt_dir):
     env["SPREADSHEETBENCH_KEEP_OUTPUTS"] = "0"
     env["SPREADSHEETBENCH_LIBREOFFICE_BIN"] = SB_LO_BIN
     env["KERNEL_TIMEOUT_S"] = "10800"
+    env["SB_DRAIN_ERROR"] = "1"                       # fixed jupyter.py: keep reading the websocket after an error message (final evaluation only)
     import tempfile                                   # the sandbox server's runtime dir (server.log, exec500.jsonl) lands inside the attempt dir for the diagnostics
     (Path(attempt_dir) / "tmp").mkdir(parents=True, exist_ok=True)
     env["TMPDIR"] = str(Path(attempt_dir) / "tmp")
@@ -778,6 +779,13 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
             prob.append("egress check failed: %r" % exc)
         if not SB_API_PY.exists() or C.sha256_file(SB_API_PY) != SB_API_SHA:
             prob.append("sandbox api.py sha256 %s != expected %s (idle-kernel timeout 10800 s patch)" % (C.file_sha(SB_API_PY), SB_API_SHA))
+        jx = HERE / "manifests/expected_jupyter_sha256.txt"
+        jp = C.REPO / "third_party/spreadsheetbench/code_exec_docker/jupyter.py"
+        if jx.exists():
+            if C.file_sha(jp) != jx.read_text().split()[0]:
+                prob.append("sandbox jupyter.py sha256 %s != expected %s (SB_DRAIN_ERROR fix)" % (C.file_sha(jp), jx.read_text().split()[0]))
+        else:
+            print("NOTE: manifests/expected_jupyter_sha256.txt not recorded yet (waiting for baseline-eng's committed sha)")
         for p in (SB_LO_BIN,):
             if not Path(p).exists():
                 prob.append("LibreOffice missing: %s" % p)
@@ -794,6 +802,11 @@ def cmd_prepare(a):
         print(r.stdout.strip()[-300:])
         if r.returncode != 0:
             prob.append("idle-kernel check failed: %s" % (r.stdout + r.stderr)[-300:].replace("\n", " "))
+    if getattr(a, "check_error_drain", False) and a.suite == "A":      # opt-in regression: error exec, 95 s idle, next exec must succeed
+        r = subprocess.run(["bash", "-c", "source %s/local/env_local.sh; SB_DRAIN_ERROR=1 %s -I %s --mode error-drain" % (BENCH, PY["A"], HERE / "check_kernel_idle.py")], capture_output=True, text=True)
+        print(r.stdout.strip()[-300:])
+        if r.returncode != 0:
+            prob.append("error-drain regression failed: %s" % (r.stdout + r.stderr)[-300:].replace("\n", " "))
     print(json.dumps({"order_sha256": sha, "n_jobs": len(jobs), "problems": prob}, indent=1))
     return 1 if prob else 0
 
@@ -909,6 +922,7 @@ def main(argv=None):
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)
         p.add_argument("--force", action="store_true")
+        p.add_argument("--check-error-drain", action="store_true", help="prepare, Suite A: error exec, 95 s idle, next exec must succeed (needs the SB_DRAIN_ERROR jupyter.py)")
         p.add_argument("--check-kernel-idle", action="store_true", help="prepare, Suite A: also run the ~12 min idle-kernel behavioural check")
     w = sp.add_parser("worker")
     w.add_argument("--job", required=True)
