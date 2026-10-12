@@ -107,31 +107,32 @@ CELL_MK = {"ctl": "p", "p": "s", "t": "^", "pt": "H", "rulep": "o", "onestage": 
 
 
 def ablate():
-    """Fig. 5: ablation small multiples. Panels share one layout: reference against variants, paired delta to the seed in points with 95% intervals."""
+    """Fig. 3: ablation small multiples. Every panel shows the difference to the seed in points with 95% intervals."""
     D = data["suites"]["D"]
     cells = D["cells"]
-    fig, axes = plt.subplots(2, 3, figsize=(C.FULL_W, 4.4), constrained_layout=True)
-    fig.get_layout_engine().set(w_pad=0.1, h_pad=0.1, wspace=0.08)
+    fig = plt.figure(figsize=(C.FULL_W, 4.4), constrained_layout=True)
+    gs = fig.add_gridspec(2, 3)
+    axes = {"a": fig.add_subplot(gs[0, 0]), "b": fig.add_subplot(gs[0, 1]), "c": fig.add_subplot(gs[0, 2]),
+            "d": fig.add_subplot(gs[1, 0:2]), "e": fig.add_subplot(gs[1, 2])}
 
-    def rows(ax, keys, title, xlabel="Difference to seed (points)", src=cells, names=None):
+    def rows(ax, keys, title, names):
         for i, k in enumerate(keys):
-            c = src[k]
+            c = cells[k]
             y = len(keys) - 1 - i
             col, mk = CELL_COL.get(k, "#555555"), CELL_MK.get(k, "o")
             ax.plot([c["lo"] * 100, c["hi"] * 100], [y, y], color=col, lw=2.0 if k == "pt" else 1.3)
             ax.plot(c["delta"] * 100, y, marker=mk, color=col, ms=6 if k == "pt" else 5)
         ax.axvline(0, color="k", lw=0.7)
         ax.set_yticks(range(len(keys)))
-        ax.set_yticklabels([(names or {}).get(k, cells[k]["label"] if k in cells else k) for k in reversed(keys)])
+        ax.set_yticklabels([names[k] for k in reversed(keys)])
         ax.set_title(title, loc="left")
-        ax.set_xlabel(xlabel)
+        ax.set_xlabel("Difference to seed (points)")
         ax.grid(axis="y", alpha=0)
 
-    short = {"ctl": "One-shot control", "p": "Prompt only", "t": "Tools only", "pt": "Prompt and tools", "td": "Descriptions only",
-             "pts": "Plus skill package", "rulep": "Rule P", "onestage": "One-stage gate", "nohist": "No causal history", "gepa": "GEPA, prompt only"}
-    rows(axes[0, 0], ["ctl", "p", "t", "pt"], "(a) Surface width", names=short)
-    # (b) HC vs AO on the three E10 suites
-    ax = axes[0, 1]
+    names = {"ctl": "One-shot control", "p": "Prompt only", "t": "Tools only", "pt": "Prompt and tools", "rulep": "Rule P",
+             "onestage": "One-stage gate", "nohist": "Without fixed/broke history", "gepa": "GEPA, prompt only"}
+    rows(axes["a"], ["ctl", "p", "t", "pt"], "(a) Surface width", names)
+    ax = axes["b"]
     ys, labs = [], []
     for i, su in enumerate("ABC"):
         for j, a in enumerate(("hc", "ao")):
@@ -143,35 +144,37 @@ def ablate():
     ax.axvline(0, color="k", lw=0.7)
     ax.set_yticks(ys); ax.set_yticklabels(labs)
     ax.set_title("(b) Orchestration", loc="left"); ax.set_xlabel("Difference to seed (points)"); ax.grid(axis="y", alpha=0)
-    gate_names = {k: f"{short[k]}\n{sum(cells[k]['promotions']) / len(cells[k]['promotions']):.1f} promoted per search" for k in ("pt", "rulep", "onestage")}
-    gate_names["pt"] = "Stock gate\n" + gate_names["pt"].split("\n")[1]
-    rows(axes[0, 2], ["pt", "rulep", "onestage"], "(c) Acceptance gate", names=gate_names)
-    rows(axes[1, 0], ["p", "gepa"], "(d) Loop quality, same surface", names={"p": "CapEvolve, prompt only", "gepa": "GEPA, prompt only"})
-    # (e) null pool
-    ax = axes[1, 1]
-    npool = data["null_pool"]
-    ks = [("rulep", "Rule P"), ("onestage", "One-stage gate"), ("stock", "Stock gate")]
-    for i, (k, lab) in enumerate(ks):
-        y = len(ks) - 1 - i
-        v = npool[k]
-        ax.barh(y, v["rate"] * 100, color=CELL_COL.get(k, "#0072B2") if k != "stock" else CELL_COL["pt"], height=0.55)
-        ax.plot([v["lo"] * 100, v["hi"] * 100], [y, y], color="k", lw=0.9)
-        ax.plot(v["sim"] * 100, y, marker="|", color="#cc0000", ms=11, mew=1.8)
-    ax.set_yticks(range(len(ks))); ax.set_yticklabels([l for _, l in reversed(ks)])
-    ax.set_xlim(0, 100)
-    ax.set_title("(e) Null pool", loc="left"); ax.set_xlabel("Searches with a false promotion (%)")
-    ax.plot([], [], marker="|", color="#cc0000", ms=9, mew=1.6, ls="", label="Simulation")
-    ax.legend(frameon=False, loc="upper right", fontsize=7)
-    ax.grid(axis="y", alpha=0)
-    # (f) interaction of the two surfaces
-    ax = axes[1, 2]
+    rows(axes["c"], ["pt", "rulep", "onestage"], "(c) Acceptance gate", dict(names, pt="Stock gate"))
+    rows(axes["d"], ["pt", "nohist", "p", "gepa"], "(d) Context and loop, same target", dict(names, p="CapEvolve, prompt only"))
+    ax = axes["e"]
     it = D["interaction"]
     ax.plot([it["lo"] * 100, it["hi"] * 100], [0, 0], color=CELL_COL["pt"], lw=2.0)
     ax.plot(it["delta"] * 100, 0, marker="H", color=CELL_COL["pt"], ms=6)
     ax.axvline(0, color="k", lw=0.7)
-    ax.set_yticks([0]); ax.set_yticklabels(["PT minus P minus T"])
-    ax.set_title("(f) Interaction", loc="left"); ax.set_xlabel("Difference (points)"); ax.grid(axis="y", alpha=0)
+    ax.set_yticks([0]); ax.set_yticklabels(["Prompt and tools minus each alone"])
+    ax.set_title("(e) Interaction", loc="left"); ax.set_xlabel("Difference (points)"); ax.grid(axis="y", alpha=0)
     C.save(fig, "fig_ablate", MOCK)
+
+
+def nullpool():
+    """E22 null pool, mock: false-accept rate per ten-candidate search for each gate, with the simulated value."""
+    npool = data["null_pool"]
+    fig, ax = plt.subplots(figsize=(C.COL_W, 1.9))
+    ks = [("rulep", "Rule P"), ("onestage", "One-stage gate"), ("stock", "Stock gate")]
+    for i, (k, lab) in enumerate(ks):
+        y = len(ks) - 1 - i
+        v = npool[k]
+        ax.barh(y, v["rate"] * 100, color={"rulep": CELL_COL["rulep"], "onestage": CELL_COL["onestage"], "stock": CELL_COL["pt"]}[k], height=0.55)
+        ax.plot([v["lo"] * 100, v["hi"] * 100], [y, y], color="k", lw=0.9)
+        ax.plot(v["sim"] * 100, y, marker="|", color="#cc0000", ms=11, mew=1.8)
+    ax.set_yticks(range(len(ks))); ax.set_yticklabels([l for _, l in reversed(ks)])
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("Null searches with a false promotion (%)")
+    ax.plot([], [], marker="|", color="#cc0000", ms=9, mew=1.6, ls="", label="Simulation")
+    ax.legend(frameon=False, loc="upper right", fontsize=7)
+    ax.grid(axis="y", alpha=0)
+    fig.tight_layout()
+    C.save(fig, "fig_nullpool", MOCK)
 
 
 def pareto():
@@ -236,5 +239,5 @@ def families():
 
 
 if __name__ == "__main__":
-    anytime(); forest(); contrast(); ablate(); pareto(); families()
+    anytime(); forest(); contrast(); ablate(); nullpool(); pareto(); families()
     print("mock plots written" if MOCK else "real plots written")

@@ -15,7 +15,7 @@ LABEL = {"hc": "CapEvolve HC, rule P", "ao": "CapEvolve AO, rule P", "gepa": "GE
          "evoskill": "EvoSkill", "wikiskill": "WikiSkill (community)", "trace2skill": "Trace2Skill", "ace": "ACE",
          "mipro": "MIPROv2", "harnesslens": "HarnessLens", "oneshot": "One-shot control", "seed": "Seed (no search)",
          "hcstock": r"CapEvolve as shipped, stock gate$^{\S}$", "bestofk": r"One-shot best of $k$"}
-SUITE_TITLE = {"A": "Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)",
+SUITE_TITLE = {"A": "Suite A, SpreadsheetBench, 70-task final set from the 912 residual pool (Gemma-4-31B-it)",
                "B": r"Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)",
                "C": r"Suite C, $\tau^2$ airline, official test-20 (development-exposed)"}
 
@@ -199,18 +199,18 @@ def ablation_table(data):
     body = []
     for k, c in D["cells"].items():
         v = D["vs_pt"].get(k)
-        cond = r" (conditional)" if c["conditional"] else ""
         vs_pt = "ref." if k == "pt" else w(ci(v))
         p = "--" if k == "pt" else w(pf(v["p_holm"]))
-        body.append(" & ".join([c["label"] + cond, str(c["seeds"]), w(ci(c)), vs_pt, p,
+        ps = w(pf(c["p_holm_seed"])) if "p_holm_seed" in c else "--"
+        body.append(" & ".join([c["label"], str(c["seeds"]), w(ci(c)), ps, vs_pt, p,
                                 w(f"{sum(c['promotions']) / len(c['promotions']):.1f}"), w(f"{c['returned_seed']} of {len(c['promotions'])}")]) + r" \\")
     it = D["interaction"]
     body.append(r"\midrule")
-    body.append(rf"\multicolumn{{7}}{{l}}{{Interaction PT $-$ P $-$ T: {w(ci(it))}}} \\")
-    head = r"Cell & Seeds & $\Delta$ vs seed [CI] & $\Delta$ vs PT [CI] & $p_{\mathrm{Holm}}$ in D & Promoted per search & Returned = seed \\"
-    cap = ("Suite D ablation cells, all hill-climb with the stock gate except where the gate is the factor. Each cell changes one factor against the PT reference. "
-           "Differences below the pre-registered equivalence margin of 10 points are written inconclusive, not equal. Cells with two seeds are exploratory.")
-    return tabular("lccccrr", head, body, cap, "tab:ablation", mock, star=True)
+    body.append(rf"\multicolumn{{8}}{{l}}{{Interaction PT $-$ P $-$ T (descriptive): {w(ci(it))}. P versus T: {w(sd(D['p_vs_t']['delta']))} points, $p_{{\mathrm{{Holm}}}}$ {w(pf(D['p_vs_t']['p_holm']))}.}} \\")
+    head = r"Cell & Seeds & $\Delta$ vs seed [CI] & $p_{\mathrm{Holm}}$ vs seed & $\Delta$ vs PT [CI] & $p_{\mathrm{Holm}}$ vs PT & Promoted per search & Returned = seed \\"
+    cap = ("Suite D ablation cells on the 40 test tasks scored five times each; the 65 held-out tasks (selection and test) are descriptive. All cells are hill-climb with the stock gate except where the gate or the history is the factor. "
+           f"Each cell changes one factor against the PT reference. The Holm family has {D['p_vs_t']['m']} contrasts. Differences below the pre-registered equivalence margin of 10 points are written inconclusive, not equal.")
+    return tabular("lcccccrr", head, body, cap, "tab:ablation", mock, star=True)
 
 
 def decomposition_table(data):
@@ -239,10 +239,10 @@ def rq4_table(data):
                 continue
             v = s["arms"][a]
             r_, sh = v["regress"], v["shrink"]
-            body.append(" & ".join([LABEL[a], w(f"{v['usd_per_point']:.1f}"), w(f"{r_['pass_to_fail']:.1f}"), w(f"{r_['protect_viol']:.1f}"),
+            body.append(" & ".join([LABEL[a], (w(f"{v['usd_per_point']['est']:.1f} [{v['usd_per_point']['lo']:.1f}, " + (f"{v['usd_per_point']['hi']:.1f}" if v['usd_per_point']['hi'] else "$\\infty$") + "]") if v['usd_per_point'] else "--"), w(f"{r_['pass_to_fail']:.1f}"), w(f"{r_['protect_viol']:.1f}"),
                                     w(sd(sh["sel_gain"])), w(sd(sh["final_gain"])), w(sd(sh["shrinkage"]))]) + r" \\")
-    head = r"Arm & USD per point & Pass to fail & Protect-set violations & Selection gain & Final gain & Shrinkage \\"
-    cap = ("Cost, regressions and selection-to-final shrinkage per arm. USD per point is optimizer cost per seed divided by the final-set gain in points. "
+    head = r"Arm & USD per point [interval] & Pass to fail & Protect-set violations & Selection gain & Final gain & Shrinkage \\"
+    cap = ("Cost, regressions and selection-to-final shrinkage per arm. USD per point is the total optimizer cost over all seeds divided by the total final-set gain in points, with a bootstrap interval over seeds, and is undefined when the total gain is not positive. "
            "Pass to fail counts tasks the seed solved and the champion fails, per seed. Shrinkage is selection gain minus final gain, in points, and is zero for a seed that returned the seed artifact.")
     return tabular("lrrrrrr", head, body, cap, "tab:rq4", mock)
 

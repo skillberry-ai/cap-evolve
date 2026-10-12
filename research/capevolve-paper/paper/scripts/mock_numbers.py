@@ -33,7 +33,7 @@ SUITE_PARAM = {  # seed score, SE of a paired delta, tasks, trials per task, see
     "C": dict(seed_score=0.40, se=0.060, tasks=20, trials=3, seed_trials=3, seeds=3, bstar=250, clusters=20),
 }
 PRICE = dict(unc=2.0, out=10.0, cr=0.2, cw=2.5)  # USD per Mtok, Sonnet 5.5 list-price proxy
-FAMILIES = [("F1", 31), ("F2", 24), ("F3", 21), ("F4", 17), ("F5", 15), ("F6", 12)]
+FAMILIES = [("F1", 20), ("F2", 16), ("F3", 13), ("F4", 10), ("F5", 7), ("F6", 4)]  # sums to the 70-task Suite A final set
 LABEL = {"hc": "CapEvolve HC", "ao": "CapEvolve AO", "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness",
          "evoskill": "EvoSkill", "wikiskill": "WikiSkill", "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2",
          "harnesslens": "HarnessLens", "oneshot": "the one-shot control", "seed": "the seed", "hcstock": "CapEvolve HC with the stock gate", "bestofk": "the best-of-k control"}
@@ -76,6 +76,7 @@ D_CELLS = [  # key, label, seeds, conditional. Approved Suite D Tier 1 only (no 
     ("ctl", "One-shot control", 3, False), ("p", "Prompt only (P)", 3, False), ("t", "Tools only (T)", 3, False),
     ("pt", "Prompt and tools (PT), reference", 3, False), ("rulep", "PT with rule P", 3, False),
     ("onestage", "PT with one-stage gate", 3, False), ("gepa", "GEPA, prompt only", 3, False),
+    ("nohist", "PT without fixed/broke history", 3, False),
 ]
 
 
@@ -96,26 +97,36 @@ def build_suite_d(rng):
                           promotions=pr, candidates=cands, seed_deltas=sd_, returned_seed=sum(1 for p in pr if p == 0),
                           regress=dict(pass_to_fail=max(0.0, rng.gauss(3.0, 1.0) * (0.3 if sum(pr) == 0 else 1.0))),
                           rollouts=550 if key != "ctl" else 200)
-    ps = [(k, norm_p(c["delta"] / c["se"])) for k, c in cells.items() if k in ("p", "t", "pt")]
-    # pre-registered contrasts vs PT, Holm within Suite D
+    for c in cells.values():  # print values: 0.1 point
+        h = (c["hi"] - c["lo"]) / 2
+        c["delta"] = round(c["delta"], 3)
+        c["lo"], c["hi"] = round(c["delta"] - h, 3), round(c["delta"] + h, 3)
     ref = cells["pt"]
     cons = {}
     for k, c in cells.items():
         if k == "pt":
             continue
-        dd = c["delta"] - ref["delta"]
-        se_c = P["se"] * 1.3
-        cons[k] = dict(delta=dd, lo=dd - 2.4 * se_c, hi=dd + 2.4 * se_c, p=norm_p(dd / se_c))
-    adj = holm([v["p"] for v in cons.values()])
-    for (k, v), q in zip(cons.items(), adj):
-        v["p_holm"] = q
-    inter = ref["delta"] - cells["p"]["delta"] - cells["t"]["delta"]
-    se_i = P["se"] * 2.0
-    interaction = dict(delta=inter, lo=inter - 2.4 * se_i, hi=inter + 2.4 * se_i)
-    adj_seed = holm([norm_p(cells[k]["delta"] / cells[k]["se"]) for k in cells])
-    for (k, c), q in zip(cells.items(), adj_seed):
-        c["p_holm_seed"] = q
-    return dict(params=P, cells=cells, vs_pt=cons, interaction=interaction)
+        dd = round(c["delta"] - ref["delta"], 3)
+        se_c = P["se"] * 1.3 * 2.4
+        cons[k] = dict(delta=dd, lo=round(dd - se_c, 3), hi=round(dd + se_c, 3), p=norm_p(dd / (se_c / 2.4)))
+    # primary family D, m = 11: seven contrasts against PT, P versus T, and P, T and PT against the seed
+    pvt = round(cells["p"]["delta"] - cells["t"]["delta"], 3)
+    fam = [("vs_pt", k, v["p"]) for k, v in cons.items()]
+    fam.append(("p_vs_t", "p", norm_p(pvt / (P["se"] * 1.3))))
+    fam += [("vs_seed", k, norm_p(cells[k]["delta"] / cells[k]["se"])) for k in ("p", "t", "pt")]
+    adj = holm([x[2] for x in fam])
+    out_p = {}
+    for (kind, k, _), q in zip(fam, adj):
+        out_p[(kind, k)] = q
+    for k, v in cons.items():
+        v["p_holm"] = out_p[("vs_pt", k)]
+    for k in ("p", "t", "pt"):
+        cells[k]["p_holm_seed"] = out_p[("vs_seed", k)]
+    inter = round(ref["delta"] - cells["p"]["delta"] - cells["t"]["delta"], 3)
+    se_i = P["se"] * 2.0 * 2.4
+    interaction = dict(delta=inter, lo=round(inter - se_i, 3), hi=round(inter + se_i, 3))
+    p_vs_t = dict(delta=pvt, p_holm=out_p[("p_vs_t", "p")], m=len(fam))
+    return dict(params=P, cells=cells, vs_pt=cons, interaction=interaction, p_vs_t=p_vs_t)
 
 
 def build_null_pool(rng):
@@ -192,10 +203,6 @@ def build():
         for a, v in out.items():
             if a == "seed":
                 continue
-            if a != "oneshot" and os_ is not None:
-                se_c = rows[a]["se"] * 1.1
-                dd = v["delta"] - os_["delta"]
-                v["vs_oneshot"] = dict(delta=dd, lo=dd - 2.05 * se_c, hi=dd + 2.05 * se_c)
             v["seed_deltas"] = [v["delta"] + rng.gauss(0, 0.015) for _ in range(P["seeds"])]
             if v.get("promotions"):
                 # a seed that promoted nothing returns the seed artifact, so its paired delta is exactly zero
@@ -208,14 +215,31 @@ def build():
             frac = v["missing"] / v["cells"]
             v["bound_pess"] = v["delta"] - frac
             v["bound_opt"] = v["delta"] + frac
+        # round every delta to 0.1 point so score columns, delta columns and contrasts agree on the printed values
+        for a, v in out.items():
+            if a == "seed":
+                continue
+            half = (v["hi"] - v["lo"]) / 2
+            v["delta"] = round(v["delta"], 3)
+            v["lo"], v["hi"] = round(v["delta"] - half, 3), round(v["delta"] + half, 3)
+            v["score"] = round(P["seed_score"] + v["delta"], 3)
+            v["bound_pess"] = round(v["delta"] - v["missing"] / v["cells"], 3)
+            v["bound_opt"] = round(v["delta"] + v["missing"] / v["cells"], 3)
+        if os_ is not None:
+            for a, v in out.items():
+                if a in ("seed", "oneshot"):
+                    continue
+                se_c = rows[a]["se"] * 1.1 * 2.05
+                dd = round(v["delta"] - os_["delta"], 3)
+                v["vs_oneshot"] = dict(delta=dd, lo=round(dd - se_c, 3), hi=round(dd + se_c, 3))
         contrasts = {}
         for cap in ("hc", "ao"):
             for a in arms:
                 if a in ("hc", "ao", "seed", "hcstock", "bestofk"):
                     continue
                 se_c = P["se"] * 1.25
-                dd = out[cap]["delta"] - out[a]["delta"]
-                contrasts[f"{cap}-{a}"] = dict(delta=dd, lo=dd - 2.05 * se_c, hi=dd + 2.05 * se_c)
+                dd = round(out[cap]["delta"] - out[a]["delta"], 3)
+                contrasts[f"{cap}-{a}"] = dict(delta=dd, lo=round(dd - 2.05 * se_c, 3), hi=round(dd + 2.05 * se_c, 3))
         # S-stock secondary family (analysis plan 5P-1): hcstock vs seed and vs named competitors, own Holm
         s_stock = []
         if "hcstock" in out:
@@ -224,10 +248,12 @@ def build():
             pv = [norm_p(d / se) for _, d, se in fam]
             adjf = holm(pv)
             for (a, d, se), q in zip(fam, adjf):
-                s_stock.append(dict(vs=a, delta=d, lo=d - 2.05 * se, hi=d + 2.05 * se, p_holm=q))
+                d = round(d, 3)
+                s_stock.append(dict(vs=a, delta=d, lo=round(d - 2.05 * se, 3), hi=round(d + 2.05 * se, 3), p_holm=q))
+            s_stock[0].update(delta=out["hcstock"]["delta"], lo=out["hcstock"]["lo"], hi=out["hcstock"]["hi"])  # one interval per contrast
             out["hcstock"]["p_holm"] = adjf[0]
             for a in comps:
-                contrasts[f"hcstock-{a}"] = dict(delta=out["hcstock"]["delta"] - out[a]["delta"],
+                contrasts[f"hcstock-{a}"] = dict(delta=round(out["hcstock"]["delta"] - out[a]["delta"], 3),
                                                  lo=s_stock[1 + comps.index(a)]["lo"], hi=s_stock[1 + comps.index(a)]["hi"])
         # final-dependent extras: regressions vs seed, shrinkage, cost per point (mock)
         for a, v in out.items():
@@ -241,7 +267,17 @@ def build():
                                 protect_viol=max(0.0, rng.gauss(2.0, 0.8) * (0.3 if nprom == 0 else 1.0)))
             sel = v["delta"] + abs(rng.gauss(0.05, 0.03)) if nprom else 0.0
             v["shrink"] = dict(sel_gain=sel, final_gain=v["delta"], shrinkage=sel - v["delta"] if nprom else 0.0)
-            v["usd_per_point"] = v["usd"] / 3 / max(100 * v["delta"], 0.5)
+            gains = [100 * x for x in v.get("seed_deltas", [100 * v["delta"]])]
+            total_gain = sum(gains)
+            if total_gain > 0:
+                boots = []
+                for _ in range(400):
+                    gg = sum(rng.choice(gains) for _ in gains)
+                    boots.append(v["usd"] / gg if gg > 0 else float("inf"))
+                boots.sort()
+                v["usd_per_point"] = dict(est=v["usd"] / total_gain, lo=boots[10], hi=boots[389] if boots[389] != float("inf") else None)
+            else:
+                v["usd_per_point"] = None
         s = dict(params=P, arms=out, contrasts=contrasts, s_stock=s_stock)
         if suite == "A":
             fams = {}

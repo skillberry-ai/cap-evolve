@@ -2,40 +2,40 @@
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3.5pt}
-\caption{Cost, regressions and selection-to-final shrinkage per arm. USD per point is optimizer cost per seed divided by the final-set gain in points. Pass to fail counts tasks the seed solved and the champion fails, per seed. Shrinkage is selection gain minus final gain, in points, and is zero for a seed that returned the seed artifact. (placeholder)}
+\caption{Cost, regressions and selection-to-final shrinkage per arm. USD per point is the total optimizer cost over all seeds divided by the total final-set gain in points, with a bootstrap interval over seeds, and is undefined when the total gain is not positive. Pass to fail counts tasks the seed solved and the champion fails, per seed. Shrinkage is selection gain minus final gain, in points, and is zero for a seed that returned the seed artifact. (placeholder)}
 \label{tab:rq4}
 \begin{tabular}{lrrrrrr}
 \toprule
-Arm & USD per point & Pass to fail & Protect-set violations & Selection gain & Final gain & Shrinkage \\
+Arm & USD per point [interval] & Pass to fail & Protect-set violations & Selection gain & Final gain & Shrinkage \\
 \midrule
-\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\multicolumn{7}{l}{\textit{Suite A, SpreadsheetBench, 70-task final set from the 912 residual pool (Gemma-4-31B-it)}} \\
 \midrule
-Meta-Harness & \pend{18.7} & \pend{3.1} & \pend{2.5} & \pend{+5.7} & \pend{$-$1.1} & \pend{+6.8} \\
-GEPA & \pend{0.8} & \pend{1.4} & \pend{1.6} & \pend{+12.3} & \pend{+3.2} & \pend{+9.1} \\
-EvoSkill & \pend{1.5} & \pend{2.7} & \pend{1.7} & \pend{+11.2} & \pend{+3.6} & \pend{+7.6} \\
-WikiSkill (community) & \pend{0.4} & \pend{2.4} & \pend{3.2} & \pend{+13.7} & \pend{+5.3} & \pend{+8.4} \\
-MIPROv2 & \pend{0.7} & \pend{0.0} & \pend{2.2} & \pend{+15.1} & \pend{+5.3} & \pend{+9.8} \\
-Trace2Skill & \pend{1.1} & \pend{3.0} & \pend{1.4} & \pend{+8.8} & \pend{+5.5} & \pend{+3.3} \\
-ACE & \pend{1.0} & \pend{4.6} & \pend{1.1} & \pend{+10.2} & \pend{+5.6} & \pend{+4.6} \\
-SkillOpt & \pend{0.6} & \pend{0.0} & \pend{2.2} & \pend{+11.3} & \pend{+6.0} & \pend{+5.4} \\
-CapEvolve as shipped, stock gate$^{\S}$ & \pend{2.8} & \pend{1.6} & \pend{1.9} & \pend{+6.3} & \pend{+4.4} & \pend{+1.9} \\
-CapEvolve HC, rule P & \pend{2.9} & \pend{4.6} & \pend{1.5} & \pend{+7.7} & \pend{+3.2} & \pend{+4.5} \\
-CapEvolve AO, rule P & \pend{2.9} & \pend{3.4} & \pend{2.4} & \pend{+5.6} & \pend{+4.1} & \pend{+1.5} \\
+Meta-Harness & -- & \pend{2.5} & \pend{1.2} & \pend{+5.1} & \pend{$-$1.1} & \pend{+6.2} \\
+GEPA & \pend{0.8 [0.6, 1.2]} & \pend{2.2} & \pend{2.0} & \pend{+12.2} & \pend{+3.2} & \pend{+9.0} \\
+EvoSkill & \pend{1.5 [0.9, $\infty$]} & \pend{0.9} & \pend{3.2} & \pend{+6.1} & \pend{+3.6} & \pend{+2.5} \\
+WikiSkill (community) & \pend{0.4 [0.4, 0.4]} & \pend{3.8} & \pend{3.0} & \pend{+6.8} & \pend{+5.3} & \pend{+1.5} \\
+MIPROv2 & \pend{0.7 [0.6, 0.8]} & \pend{3.3} & \pend{1.4} & \pend{+9.1} & \pend{+5.3} & \pend{+3.8} \\
+Trace2Skill & \pend{1.1 [0.9, 1.4]} & \pend{1.0} & \pend{0.7} & \pend{+13.3} & \pend{+5.5} & \pend{+7.8} \\
+ACE & \pend{1.0 [0.8, 1.1]} & \pend{3.5} & \pend{3.5} & \pend{+11.8} & \pend{+5.6} & \pend{+6.2} \\
+SkillOpt & \pend{0.6 [0.5, 0.8]} & \pend{2.4} & \pend{1.1} & \pend{+11.4} & \pend{+6.0} & \pend{+5.4} \\
+CapEvolve as shipped, stock gate$^{\S}$ & \pend{2.8 [2.2, 5.1]} & \pend{4.0} & \pend{2.6} & \pend{+11.6} & \pend{+4.4} & \pend{+7.2} \\
+CapEvolve HC, rule P & \pend{2.9 [1.6, 6.0]} & \pend{4.6} & \pend{1.5} & \pend{+7.7} & \pend{+3.2} & \pend{+4.5} \\
+CapEvolve AO, rule P & \pend{2.9 [2.8, 3.1]} & \pend{3.4} & \pend{2.6} & \pend{+7.7} & \pend{+4.1} & \pend{+3.6} \\
 \midrule
 \multicolumn{7}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
 \midrule
-HarnessLens & \pend{9.6} & \pend{3.8} & \pend{1.1} & \pend{+2.2} & \pend{$-$1.9} & \pend{+4.1} \\
-GEPA & \pend{3.9} & \pend{0.1} & \pend{2.3} & \pend{+7.7} & \pend{+1.3} & \pend{+6.5} \\
-CapEvolve HC, rule P & \pend{1.9} & \pend{3.9} & \pend{1.3} & \pend{+8.8} & \pend{+5.7} & \pend{+3.1} \\
-CapEvolve AO, rule P & \pend{4.2} & \pend{1.6} & \pend{2.4} & \pend{+10.1} & \pend{+3.5} & \pend{+6.6} \\
+GEPA & \pend{2.0 [1.3, 3.2]} & \pend{4.1} & \pend{2.1} & \pend{+8.7} & \pend{+2.7} & \pend{+6.0} \\
+HarnessLens & \pend{0.9 [0.8, 0.9]} & \pend{4.2} & \pend{3.3} & \pend{+11.0} & \pend{+6.5} & \pend{+4.5} \\
+CapEvolve HC, rule P & \pend{3.3 [2.2, $\infty$]} & \pend{3.6} & \pend{2.3} & \pend{+8.2} & \pend{+2.7} & \pend{+5.5} \\
+CapEvolve AO, rule P & \pend{1.7 [1.0, $\infty$]} & \pend{4.1} & \pend{2.4} & \pend{+12.6} & \pend{+6.3} & \pend{+6.3} \\
 \midrule
 \multicolumn{7}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
 \midrule
-GEPA & \pend{1.3} & \pend{2.1} & \pend{1.4} & \pend{+7.6} & \pend{+3.7} & \pend{+3.9} \\
-HarnessLens & \pend{0.7} & \pend{3.8} & \pend{2.0} & \pend{+6.8} & \pend{+6.0} & \pend{+0.8} \\
-CapEvolve as shipped, stock gate$^{\S}$ & \pend{0.7} & \pend{3.1} & \pend{2.2} & \pend{+7.4} & \pend{+7.4} & \pend{+0.0} \\
-CapEvolve HC, rule P & \pend{4.8} & \pend{4.4} & \pend{1.3} & \pend{+7.2} & \pend{+2.6} & \pend{+4.5} \\
-CapEvolve AO, rule P & \pend{5.4} & \pend{2.5} & \pend{1.5} & \pend{+5.8} & \pend{+1.6} & \pend{+4.1} \\
+GEPA & \pend{4.9 [2.4, 23.0]} & \pend{2.2} & \pend{2.5} & \pend{+3.1} & \pend{+0.9} & \pend{+2.2} \\
+HarnessLens & \pend{1.0 [0.8, 1.7]} & \pend{2.3} & \pend{2.9} & \pend{+8.7} & \pend{+3.6} & \pend{+5.1} \\
+CapEvolve as shipped, stock gate$^{\S}$ & \pend{1.8 [1.4, 2.2]} & \pend{0.9} & \pend{0.6} & \pend{+8.4} & \pend{+6.8} & \pend{+1.6} \\
+CapEvolve HC, rule P & \pend{1.3 [0.9, 1.7]} & \pend{2.7} & \pend{1.8} & \pend{+5.1} & \pend{+4.4} & \pend{+0.7} \\
+CapEvolve AO, rule P & \pend{2.2 [1.7, 2.9]} & \pend{1.9} & \pend{1.0} & \pend{+6.4} & \pend{+6.0} & \pend{+0.4} \\
 \bottomrule
 \end{tabular}
 \end{table*}

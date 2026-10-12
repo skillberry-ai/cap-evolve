@@ -8,28 +8,28 @@
 \toprule
 Arm & Score (\%) & $\Delta$ vs seed [CI] & $p_{\mathrm{Holm}}$ in family & USD & Missing \\
 \midrule
-\multicolumn{6}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\multicolumn{6}{l}{\textit{Suite A, SpreadsheetBench, 70-task final set from the 912 residual pool (Gemma-4-31B-it)}} \\
 \midrule
 \multicolumn{6}{l}{\textit{Reference arms}} \\
 Seed (no search) & \pend{50.0} & ref. & -- & -- & \pend{0/140} \\
 \multicolumn{6}{l}{\textit{Competitors, secondary family}} \\
-Meta-Harness & \pend{48.9} & \pend{$-$1.1 [$-$8.1, +5.8]} & \pend{1.000} & \pend{28} & \pend{0/210} \\
-GEPA & \pend{53.2} & \pend{+3.2 [$-$2.8, +9.3]} & \pend{1.000} & \pend{7} & \pend{5/210} \\
-EvoSkill & \pend{53.6} & \pend{+3.6 [$-$3.3, +10.4]} & \pend{1.000} & \pend{17} & \pend{4/210} \\
+Meta-Harness & \pend{48.9} & \pend{$-$1.1 [$-$8.0, +5.8]} & \pend{1.000} & \pend{28} & \pend{0/210} \\
+GEPA & \pend{53.2} & \pend{+3.2 [$-$2.9, +9.3]} & \pend{1.000} & \pend{7} & \pend{5/210} \\
+EvoSkill & \pend{53.6} & \pend{+3.6 [$-$3.2, +10.4]} & \pend{1.000} & \pend{17} & \pend{4/210} \\
 WikiSkill (community) & \pend{55.3} & \pend{+5.3 [$-$1.3, +11.9]} & \pend{0.496} & \pend{6} & \pend{1/210} \\
 MIPROv2 & \pend{55.3} & \pend{+5.3 [$-$0.8, +11.4]} & \pend{0.496} & \pend{11} & \pend{1/210} \\
 Trace2Skill & \pend{55.5} & \pend{+5.5 [$-$1.3, +12.3]} & \pend{0.687} & \pend{18} & \pend{0/210} \\
 ACE & \pend{55.6} & \pend{+5.6 [+0.1, +11.1]} & \pend{0.290} & \pend{16} & \pend{5/210} \\
-SkillOpt & \pend{56.0} & \pend{+6.0 [$-$0.5, +12.4]} & \pend{0.290} & \pend{10} & \pend{1/210} \\
+SkillOpt & \pend{56.0} & \pend{+6.0 [$-$0.4, +12.4]} & \pend{0.290} & \pend{10} & \pend{1/210} \\
 \multicolumn{6}{l}{\textit{CapEvolve (primary family; the stock-gate row is post-search-time)}} \\
-CapEvolve as shipped, stock gate$^{\S}$ & \pend{54.4} & \pend{+4.4 [$-$2.1, +10.9]} & \pend{0.831} & \pend{37} & \pend{8/210} \\
+CapEvolve as shipped, stock gate$^{\S}$ & \pend{54.4} & \pend{+4.4 [$-$2.1, +10.9]} & \pend{0.855} & \pend{37} & \pend{8/210} \\
 CapEvolve HC, rule P & \pend{53.2} & \pend{+3.2 [$-$3.7, +10.1]} & \pend{1.000} & \pend{27} & \pend{5/210} \\
-CapEvolve AO, rule P & \pend{54.1} & \pend{+4.1 [$-$2.9, +11.0]} & \pend{1.000} & \pend{36} & \pend{9/210} \\
+CapEvolve AO, rule P & \pend{54.1} & \pend{+4.1 [$-$2.9, +11.1]} & \pend{1.000} & \pend{36} & \pend{9/210} \\
 \multicolumn{6}{l}{\textit{Secondary family S-stock, post-search-time: as shipped minus}} \\
-the seed &  & \pend{+4.4 [$-$1.7, +10.6]} & \pend{0.831} &  &  \\
+the seed &  & \pend{+4.4 [$-$2.1, +10.9]} & \pend{0.855} &  &  \\
 GEPA &  & \pend{+1.2 [$-$6.5, +8.9]} & \pend{1.000} &  &  \\
-SkillOpt &  & \pend{$-$1.6 [$-$9.2, +6.1]} & \pend{1.000} &  &  \\
-Meta-Harness &  & \pend{+5.6 [$-$2.1, +13.2]} & \pend{0.831} &  &  \\
+SkillOpt &  & \pend{$-$1.6 [$-$9.3, +6.1]} & \pend{1.000} &  &  \\
+Meta-Harness &  & \pend{+5.5 [$-$2.2, +13.2]} & \pend{0.855} &  &  \\
 WikiSkill (community) &  & \pend{$-$0.9 [$-$8.6, +6.8]} & \pend{1.000} &  &  \\
 EvoSkill &  & \pend{+0.8 [$-$6.9, +8.5]} & \pend{1.000} &  &  \\
 \bottomrule

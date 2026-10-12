@@ -116,31 +116,34 @@ def table_audit(a):
 
 # ---------------------------------------------------------------- rule P
 def fig_rulep():
-    d = json.loads((REPO / "analysis" / "out" / "sim_budget.json").read_text())
-    opts = {"c: P n_conf=3 z=1.282 dmin=0": ("Rule P, campaign setting (z = 1.28)", "#0072B2", "o"),
-            "a: P n_conf=3 z=2.0 dmin=.02": ("Rule P, z = 2.0 and minimum gain 2 points", "#009E73", "s"),
-            "b: P n_conf=3 z=1.645 dmin=0": ("Rule P, z = 1.645", "#E69F00", "^"),
-            "g: one-stage k=1.645": ("One-stage gate, k = 1.645", "#CC79A7", "v"),
-            "f: one-stage k=1": ("One-stage gate, k = 1", "#D55E00", "D")}
-    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.4))
-    names, fp = [], []
-    for k, (lab, col, mk) in opts.items():
-        keys = sorted(d[k]["power"], key=float)
-        eff = [float(e) for e in keys]
-        pw = [100 * d[k]["power"][e] for e in keys]
-        bx.plot([e * 100 for e in eff], pw, color=col, marker=mk, ms=3.5, label=lab)
-        fp.append((lab, 100 * d[k]["N=6"]["p_any_false_null_search"], col))
-    ax.barh([x[0] for x in fp][::-1], [x[1] for x in fp][::-1], color=[x[2] for x in fp][::-1])
-    for i, x in enumerate(fp[::-1]):
-        ax.text(x[1] + 1, i, f"{x[1]:.1f}%", va="center", fontsize=7.5)
-    ax.set_xlabel("Searches with a false promotion (%)")
-    ax.set_xlim(0, 55)
-    ax.grid(axis="y", alpha=0)
-    bx.set_xlabel("True effect of the candidate (points)")
+    """Rule P against the one-stage gate, per suite, from the budget-exact simulations (10 candidates per search, real task counts)."""
+    sims = {su: json.loads((REPO / "analysis" / "out" / f"sim_budget_{su}.json").read_text()) for su in "ABC"}
+    RP, ONE = "c: P n_conf=3 z=1.282 dmin=0", "f: one-stage k=1"
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.4), constrained_layout=True)
+    w = 0.36
+    for i, su in enumerate("ABC"):
+        for j, (key, col) in enumerate(((RP, "#0072B2"), (ONE, "#D55E00"))):
+            v = 100 * sims[su][key]["N=10"]["p_any_false_null_search"]
+            ax.bar(i + (j - 0.5) * w, v, w, color=col, label=("Rule P" if key == RP else "One-stage gate") if i == 0 else None)
+            ax.text(i + (j - 0.5) * w, v + 1, f"{v:.0f}", ha="center", fontsize=7.5)
+    ax.set_xticks(range(3)); ax.set_xticklabels([f"Suite {su}" for su in "ABC"])
+    ax.set_ylabel("False promotions (% of null searches)")
+    ax.set_ylim(0, 85)
+    ax.legend(frameon=False, loc="upper right", ncol=2)
+    ax.grid(axis="x", alpha=0)
+    styles = {"A": ("-", "o"), "B": ("--", "s"), "C": (":", "^")}
+    for su in "ABC":
+        for key, col in ((RP, "#0072B2"), (ONE, "#D55E00")):
+            pw = sims[su][key]["power"]
+            ks = sorted(pw, key=float)
+            ls, mk = styles[su]
+            bx.plot([float(k) * 100 for k in ks], [100 * pw[k] for k in ks], color=col, ls=ls, marker=mk, ms=3.5, lw=1.1)
+    for su in "ABC":
+        bx.plot([], [], color="#555555", ls=styles[su][0], marker=styles[su][1], ms=3.5, label=f"Suite {su}")
+    bx.set_xlabel("True gain of the candidate (points)")
     bx.set_ylabel("Candidates promoted (%)")
-    bx.set_ylim(0, 80)
-    bx.legend(frameon=False, loc="upper left", fontsize=7)
-    fig.tight_layout()
+    bx.set_ylim(0, 85)
+    bx.legend(frameon=False, loc="upper left", fontsize=7, ncol=3)
     C.save(fig, "fig_rulep", False)
 
 
@@ -193,10 +196,10 @@ def cost():
             "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness", "evoskill": "EvoSkill",
             "wikiskill": "WikiSkill", "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2"}
     L = [r"\begin{table*}[t]", r"\centering", r"\scriptsize", r"\setlength{\tabcolsep}{3pt}",
-         r"\caption{Campaign cost so far, from the gateway ledger (\texttt{analysis/out/metrics}). In progress: searches are still "
+         r"\caption{Campaign cost so far, from the gateway ledger. In progress: searches are still "
          r"running, so every number is \prov{provisional}. Optimizer columns sum the optimizer, proposer, reflector and curator roles over seeds, in millions of tokens. "
          r"The optimizer cap counts non-cache-read tokens, which are uncached input plus output plus cache writes, and applies to each search separately; the table shows the largest seed against the cap of 4M. Cache reads are listed apart and are not counted by the cap. "
-         r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit (\texttt{bypassed\_usage.csv}) found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. "
+         r"``0 (not started)'' means the arm is still in its baseline phase and has made no optimizer call yet; the optimizer is metered at the gateway once it runs, and the metering audit found no optimizer usage outside the gateway. A double dagger would mark usage recovered from CLI transcripts. "
          r"USD is a Sonnet list-price proxy for metered optimizer calls only and is a lower bound. Target tokens are uncached plus output tokens of the "
          r"evaluated model. Wall is hours since launch for the longest seed. Errors count gateway calls that returned an error status, retries included. Rows count seeds that exist in the ledger.}",
          r"\label{tab:cost_so_far}", r"\begin{tabular}{llrrrrrrrrrr}", r"\toprule",
@@ -234,7 +237,7 @@ def table_zeros():
             "skillopt": "SkillOpt", "metaharness": "Meta-Harness", "evoskill": "EvoSkill", "wikiskill": "WikiSkill",
             "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2", "harnesslens": "HarnessLens"}
     L = [r"\begin{table*}[t]", r"\centering\scriptsize", r"\setlength{\tabcolsep}{4pt}",
-         r"\caption{Error rows per arm and seed under each adapter's own label and under one uniform rule (\texttt{error\_label\_parity.csv}). "
+         r"\caption{Error rows per arm and seed under each adapter's own label and under one uniform rule. "
          r"The rule calls an error infrastructure if it has a transport, timeout or sandbox-HTTP string, or made no target call and kept no string. "
          r"Every other error is a candidate error, except rows an adapter labelled infrastructure that have no recoverable string and some target calls, "
          r"which stay unverifiable. Changed counts rows whose class differs from the adapter label. "

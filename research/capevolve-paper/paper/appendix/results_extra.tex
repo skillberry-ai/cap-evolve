@@ -2,22 +2,13 @@
 \label{app:results}
 
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figures/fig_contrast.pdf}
-\caption{CapEvolve against each baseline, as the difference in paired delta in points with 95\% intervals. Filled markers have intervals that exclude zero. These contrasts are the primary family (placeholder).}
-\label{fig:contrast}
-\end{figure*}
 
 \input{tables/cost_tokens}
-\input{tables/ablation}
-\input{tables/decomp}
-\input{tables/rq4}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_audit.pdf}
-\caption{Recalculation removes most of the historical gain. Left: reported and recalculated gains of the two SpreadsheetBench headline runs. Right: outcome of recomputing every historical claim from archived artifacts (\texttt{audit/recomputed\_numbers.csv}).}
+\caption{Recalculation removes most of the historical gain. Left: reported and recalculated gains of the two SpreadsheetBench headline runs. Right: outcome of recomputing every historical claim from archived artifacts.}
 \label{fig:audit}
 \end{figure*}
 
@@ -48,7 +39,7 @@
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/fig_rulep.pdf}
-\caption{Rule P promotes false candidates rarely and real ones less often than the one-stage gate. Left: share of all-null searches of six candidates with at least one false promotion. Right: share of single candidates promoted, against their true effect. The letter z is the confirmation threshold of rule P and k the threshold of the one-stage gate, both in standard errors. Source: \texttt{analysis/out/sim\_budget.md}.}
+\caption{Rule P promotes a null candidate 5 to 13 times less often than the one-stage gate, and it promotes a real gain less often too. Simulated searches of ten candidates at the real task counts: share of all-null searches with a false promotion (left) and share of single candidates promoted against their true gain (right). Rule P screens 7 to 9 candidates per search because its confirmations are charged to the budget.}
 \label{fig:rulep}
 \end{figure*}
 

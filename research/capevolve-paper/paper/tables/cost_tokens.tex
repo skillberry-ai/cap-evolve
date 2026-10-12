@@ -8,7 +8,7 @@
 \toprule
 Arm & Rollouts at \ckpt{} & Uncached input & Output & Cache write & Non-cache-read & Cache read & Cap used (\%) & Wall clock (h) \\
 \midrule
-\multicolumn{9}{l}{\textit{Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)}} \\
+\multicolumn{9}{l}{\textit{Suite A, SpreadsheetBench, 70-task final set from the 912 residual pool (Gemma-4-31B-it)}} \\
 \midrule
 Meta-Harness & \pend{395} & \pend{4.1} & \pend{0.6} & \pend{0.4} & \pend{5.1} & \pend{63.9} & \pend{51} & \pend{31.7} \\
 GEPA & \pend{397} & \pend{1.7} & \pend{0.2} & \pend{0.3} & \pend{2.2} & \pend{4.1} & \pend{22} & \pend{12.6} \\
@@ -24,21 +24,21 @@ CapEvolve AO, rule P & \pend{386} & \pend{5.4} & \pend{0.8} & \pend{1.0} & \pend
 \midrule
 \multicolumn{9}{l}{\textit{Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)}} \\
 \midrule
-One-shot control & \pend{10} & \pend{0.5} & \pend{0.1} & \pend{0.1} & \pend{0.7} & \pend{3.1} & \pend{7} & \pend{0.5} \\
-HarnessLens & \pend{341} & \pend{4.2} & \pend{0.6} & \pend{0.1} & \pend{4.8} & \pend{0.6} & \pend{48} & \pend{11.6} \\
-GEPA & \pend{348} & \pend{3.8} & \pend{0.5} & \pend{0.3} & \pend{4.6} & \pend{4.9} & \pend{46} & \pend{19.2} \\
-CapEvolve HC, rule P & \pend{347} & \pend{2.4} & \pend{0.4} & \pend{1.1} & \pend{3.9} & \pend{106.4} & \pend{39} & \pend{26.8} \\
-CapEvolve AO, rule P & \pend{348} & \pend{6.1} & \pend{0.6} & \pend{1.3} & \pend{8.0} & \pend{112.4} & \pend{80} & \pend{29.5} \\
+One-shot control & \pend{10} & \pend{0.4} & \pend{0.0} & \pend{0.2} & \pend{0.6} & \pend{5.7} & \pend{6} & \pend{2.4} \\
+GEPA & \pend{343} & \pend{4.7} & \pend{0.6} & \pend{0.0} & \pend{5.3} & \pend{3.7} & \pend{53} & \pend{10.4} \\
+HarnessLens & \pend{349} & \pend{4.9} & \pend{0.5} & \pend{0.1} & \pend{5.5} & \pend{7.6} & \pend{55} & \pend{23.8} \\
+CapEvolve HC, rule P & \pend{342} & \pend{3.0} & \pend{0.3} & \pend{0.8} & \pend{4.2} & \pend{76.2} & \pend{42} & \pend{28.1} \\
+CapEvolve AO, rule P & \pend{350} & \pend{2.5} & \pend{0.3} & \pend{1.3} & \pend{4.1} & \pend{104.8} & \pend{41} & \pend{27.6} \\
 \midrule
 \multicolumn{9}{l}{\textit{Suite C, $\tau^2$ airline, official test-20 (development-exposed)}} \\
 \midrule
-One-shot control & \pend{10} & \pend{0.5} & \pend{0.1} & \pend{0.1} & \pend{0.7} & \pend{6.3} & \pend{7} & \pend{2.0} \\
-GEPA & \pend{241} & \pend{3.7} & \pend{0.5} & \pend{0.3} & \pend{4.6} & \pend{4.7} & \pend{46} & \pend{11.1} \\
-HarnessLens & \pend{250} & \pend{3.6} & \pend{0.5} & \pend{0.1} & \pend{4.2} & \pend{0.8} & \pend{42} & \pend{6.9} \\
-CapEvolve as shipped, stock gate$^{\S}$ & \pend{243} & \pend{2.7} & \pend{0.3} & \pend{0.9} & \pend{3.9} & \pend{26.9} & \pend{39} & \pend{21.9} \\
-CapEvolve HC, rule P & \pend{241} & \pend{6.1} & \pend{0.5} & \pend{0.4} & \pend{6.9} & \pend{96.5} & \pend{69} & \pend{19.4} \\
-CapEvolve AO, rule P & \pend{239} & \pend{3.7} & \pend{0.6} & \pend{1.0} & \pend{5.3} & \pend{53.3} & \pend{53} & \pend{20.0} \\
-One-shot best of $k$ & \pend{550} & \pend{4.8} & \pend{0.7} & \pend{0.8} & \pend{6.3} & \pend{114.6} & \pend{63} & \pend{2.2} \\
+One-shot control & \pend{10} & \pend{0.6} & \pend{0.1} & \pend{0.2} & \pend{0.9} & \pend{1.8} & \pend{9} & \pend{0.7} \\
+GEPA & \pend{249} & \pend{3.6} & \pend{0.4} & \pend{0.2} & \pend{4.3} & \pend{3.5} & \pend{43} & \pend{8.5} \\
+HarnessLens & \pend{249} & \pend{3.2} & \pend{0.3} & \pend{0.1} & \pend{3.6} & \pend{4.5} & \pend{36} & \pend{8.1} \\
+CapEvolve as shipped, stock gate$^{\S}$ & \pend{245} & \pend{4.2} & \pend{0.6} & \pend{0.8} & \pend{5.6} & \pend{105.6} & \pend{56} & \pend{18.8} \\
+CapEvolve HC, rule P & \pend{242} & \pend{2.7} & \pend{0.3} & \pend{0.7} & \pend{3.7} & \pend{35.3} & \pend{37} & \pend{19.6} \\
+CapEvolve AO, rule P & \pend{240} & \pend{6.3} & \pend{0.9} & \pend{0.3} & \pend{7.5} & \pend{81.3} & \pend{75} & \pend{19.7} \\
+One-shot best of $k$ & \pend{550} & \pend{2.2} & \pend{0.2} & \pend{0.3} & \pend{2.7} & \pend{41.0} & \pend{27} & \pend{0.9} \\
 \bottomrule
 \end{tabular}
 \end{table*}
