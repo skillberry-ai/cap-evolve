@@ -117,3 +117,33 @@ s2 7.93M in the ledger; the 4M guard is on HL's own meter, so refunds let the le
 - 182M all searches: not crossed centrally; crossed in the high case. The 200M cap holds in the low and central cases (173.8M and 190.4M with the reserve), not in the high case (208M).
 
 **Arms to stop first if the 170M rung is hit:** (1) hlext (exploratory, 10.6M still to go, stop or cap at about 10M total and save about 6M); (2) ACE s1 and s2, the new largest grower and the biggest correction to the last forecast: cap each seed near 5M (s0 is already 4.4M) and save about 8M of the 14M; (3) E26 at its planned 2M (saves 0 to 2M). Decide on ACE and hlext now rather than at the rung, because their burn is front-loaded.
+
+## Guard audit and post-ACE-stop re-forecast (2026-10-12 15:20 UTC)
+
+Shared definition: optimizer-role tokens on the gateway ledger = `usage.total_tokens` if present, else input + output + cache_creation (cache reads excluded),
+roles other than target/user/judge/probe/usersim, capped upstream. Totals per exp-arm-seed at 15:11:44.
+
+**Over 4M on the ledger:** HarnessLens s0 5.47M, s1 6.14M, s2 7.93M; hlext 5.42M (cap now 10M); **SkillOpt s1 4.78M, s2 5.10M** (s0 3.57M); **ACE s0 4.43M**.
+Near the limit: E10 agent-optimize s0 3.96M (its watchdog fired: `optimizer_tokens.json.killed`).
+
+| arm | guard in the launcher | limit and meter | status |
+|---|---|---|---|
+| E10 hill-climb, agent-optimize, E12A hcstock | `token_watchdog.py` on tag `$E10_TAG:optimizer`, kills the process group | 3.9M non-cache (soft 3.5M); ledger definition | uniform enough; AO s0 killed at 3.96M |
+| E10B, E10C, E12B, E12C CapEvolve and GEPA | `cost_summary.py --guard` | **3.9M**, max over roles optimizer or reflection (not their sum), polled every 60 s, strict `>` | ledger definition, 3.9M not 4.0M |
+| E20, E21, E26, E30/E32 (Suite D and E) | `cost_summary.py --guard` | **4.0M**, same role rule | ledger definition |
+| ACE | in-process `--max-opt-tokens` (`ace_run.py`, `ace_batch_run.py`) | 3.9M of its own meter = in + out only | **present but a different meter**: s0 own meter 3.9025M = ledger 4.43M (13 percent higher); s1 own 1.43M vs ledger 3.09M, s2 own 1.31M vs ledger 1.98M because the ledger also holds the restarted attempts. The guard fired late in ledger terms and will fire at about 5.9M (s1) and 5.0M (s2) on the ledger if left alone |
+| HarnessLens | `HL_MAX_OPT_TOKENS` 4M on HL's own meter (refunds failed iterations) | not the ledger | ledger 5.5 to 7.9M; refunds explain the overshoot |
+| hlext | `hl_ext_cap_watch.sh` TOKCAP 10M | ledger | 5.42M used |
+| WikiSkill | in-process `--opt-token-cap` 4M | non-cache | 0.8M used |
+| Meta-Harness | `--proposer-token-cap` 4M | in + out + cache_creation | 0.2M used |
+| **SkillOpt** | **none** (only a rollout cap) | | **s1 and s2 over 4M** |
+| **GEPA (Suite A), MIPROv2, EvoSkill, Trace2Skill** | **none** found in the launchers | | 0.2 to 2.2M used, all under 4M; Trace2Skill finished |
+
+Findings: (1) SkillOpt has no optimizer-token guard and is over 4M on two seeds, but it is at 600 and 566 of 600 rollouts, so almost no further spend.
+(2) ACE did have a guard, but on its own in+out meter, which understates the ledger by 13 percent on the current attempt and by up to 2x where restarts spent tokens under
+the same tag. To enforce the 4M rule on the ledger for s1 and s2, stop them from outside (e.g. a `cost_summary.py --guard` on `E10-ace-s1:` and `s2`) instead of relying on the 3.9M own-meter guard.
+(3) Limits differ (3.9M vs 4.0M) and are checked per role, not summed; minor. (4) GEPA A, MIPRO and EvoSkill have no guard but are far from 4M.
+
+**Re-forecast with ACE and hlext capped (ledger-definition 4M for ACE s1 and s2, hlext 10M):** ACE remaining drops from +14M to +2.9M (s0 0, s1 +0.9, s2 +2.0) and hlext from
++10.6M to +4.5M. Running total +28.4M (was +45.6M), searches 138.2M at 06:00, plus Suite E 17M = **155M**, below the 170M rung; with the 18M reserve 173M, under the 200M cap. High case about
+165M. If ACE s1 and s2 are left on their own meter, add about 6M (161M central, no rung crossed). Next pass 21:11 UTC.
