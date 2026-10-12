@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fe_common as C  # noqa: E402
 
 
-NONBINDING = ("native_finish", "guard_stop")     # N* rule + token-guard addendum: neither binds; count disclosed
+NONBINDING = ("native_finish", "guard_stop", "budget_cap")     # N* rule + token-guard addendum: neither binds; count disclosed
 
 
 FINALIZE_SPLITS = ("sel", "test", "FINAL")

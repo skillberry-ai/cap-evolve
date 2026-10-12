@@ -301,7 +301,7 @@ def native_status(rd):
                     rc = int(m.group(1))
                     if rc != 0 and name == "launcher.log" and re.search(r"RolloutCap|hard cap of \d+ target rollouts", "\n".join(tail)):
                         # baseline-eng: exit 1 = sb_eval_lib.RolloutCap, the search used its whole hard cap (600 counted rollouts): a budget termination, not a crash
-                        return "native_finish", "launcher.log: exit %d from RolloutCap (search budget fully used)" % rc
+                        return "budget_cap", "launcher.log: exit %d from RolloutCap (search budget fully used)" % rc
                     if rc != 0 and any(rd.glob(".capevolve/run_*/final.json")):
                         # CapEvolve AO: the search ended on its own and the exit status comes from the finalize step failing on the test seal (superseded by the approved
                         # host-side finalize; decisions.md 02:50 UTC): a native termination, not a crash
