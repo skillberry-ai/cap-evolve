@@ -24,7 +24,7 @@ What the search-time files show so far (searches still running, so counts will c
 - CapEvolve with rule P has promoted little. Counts as of 15:51 UTC, search-time: Suite A hill-climb 2 promotions in 15 candidates (1 of 3 searches still returns the seed); Suite B hill-climb 0 of 14 (3 of 3 return the seed); Suite C hill-climb 2 of 16 (1 of 3 returns the seed). Agent-optimize on Suites A, B and C promoted nothing in any seed (Suite A: two native early stops and one token-guard stop). Source: [`attrib/summary.md`](analysis/out/attrib/summary.md), section "Promotions per search and inert searches".
 - CapEvolve hill-climb with the stock gate promotes: Suite A (E12A) finished all 3 seeds at 600 rollouts with 7 promotions in 36 candidates and selection-split gains of 0.29 to 0.35; Suite C (E12C) has 3 promotions in 29 candidates so far, with gains of 0.24, 0.00 and 0.32 across seeds. These are selection-split numbers on the split the gate reads and are optimistic. Whether they survive on held-out data is what the final evaluation answers.
 - Competitor gains on their own selection splits (for example GEPA on Suite A, 0.33 to 0.38, all three seeds at 600 rollouts) are not comparable with CapEvolve's, because each method selects on a different split.
-- HarnessLens on Suite B has no scored candidate yet in the snapshot. Its earlier runs failed on a missing host dependency and are recorded as "not evaluated, environment defect".
+- HarnessLens on Suite B (search-time): matched seed 1 ended at its 4M optimizer-token guard with no accepted version, so its returned artifact is v0. Earlier runs failed on a missing host dependency (bubblewrap) and are recorded as "not evaluated, environment defect", not as a method result.
 
 Figures (search-time, real):
 
