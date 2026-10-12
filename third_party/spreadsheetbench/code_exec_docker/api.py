@@ -28,7 +28,8 @@ JupyterKernelType = namedtuple("JupyterKernelType", [
 
 def cleanup_kernels(app, force=False):
     """Cleanup kernels and gateway dockers that have timed out."""
-    KERNEL_TIMEOUT = 10 * 60  # 10 minutes
+    # PATCHED 2026-10-12 (campaign decision): idle-kernel cleanup raised from 10 min to 3 h (env KERNEL_TIMEOUT_S), aligned with the uniform hung-rollout rule. Upstream: 10 * 60.
+    KERNEL_TIMEOUT = int(os.environ.get("KERNEL_TIMEOUT_S", 10800))
     current_time = time.time()
     to_delete = []
     conv_id_to_kernel = app.conv_id_to_kernel
@@ -81,6 +82,7 @@ class ExecuteHandler(tornado.web.RequestHandler):
             logging.info(f"Kernel created for conversation {convid}")
 
         # Update last access time
+        prev_access = conv_id_to_kernel[convid].last_access_time   # PATCHED: for 500 diagnostics
         kernel_access_time = time.time()
         conv_id_to_kernel[convid] = conv_id_to_kernel[convid]._replace(
             last_access_time=kernel_access_time
@@ -88,7 +90,25 @@ class ExecuteHandler(tornado.web.RequestHandler):
 
         # Execute the code
         kernel: JupyterKernel = conv_id_to_kernel[convid].kernel
-        result = await kernel.execute(code)
+        try:
+            result = await kernel.execute(code)
+        except Exception as e:   # PATCHED 2026-10-12: log every 500 (conv id, kernel id, idle seconds since the previous exec, exception) to exec500.jsonl and the server log
+            try:
+                rec = {"t": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "convid": convid, "kernel_id": getattr(kernel, "kernel_id", None),
+                       "idle_s_since_last_exec": (round(kernel_access_time - prev_access, 1) if prev_access else None), "new_kernel_created_this_request": new_kernel,
+                       "ws_present": getattr(kernel, "ws", None) is not None, "exc": type(e).__name__, "msg": str(e)[:300],
+                       "response_body": "Tornado default HTML: <title>500: Internal Server Error</title> (exception text above)",
+                       "n_live_kernels": len(conv_id_to_kernel)}
+                try:   # is the sandbox container still there? (remove=True containers vanish when their main process exits, e.g. OOM kill)
+                    _c = conv_id_to_kernel[convid].kernel_wrapper.container; _c.reload(); rec["container_state"] = _c.status
+                except Exception as _ce:
+                    rec["container_state"] = "GONE_or_unreachable: " + type(_ce).__name__
+                with open("exec500.jsonl", "a") as _f:
+                    _f.write(json.dumps(rec) + "\n")
+                logging.error("EXEC500 " + json.dumps(rec))
+            except Exception:
+                pass
+            raise
 
         self.write(json.dumps({
             "result": result,
