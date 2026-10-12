@@ -926,7 +926,8 @@ def main():
         errs = {str(k): v for k, v in a.status.items() if k != 200}
         role_rows.append({
             "suite": suite, "arm": arm, "seed": seed if seed >= 0 else "", "category": cat, "role": role, "model": model, "api": api,
-            "rits": model.startswith("rits/"), "low_priority": lp, "calls": a.calls, "ok_200": a.status.get(200, 0), "errors": sum(errs.values()),
+            "rits": model.startswith("rits/"), "azure": model.startswith("azoai/"),
+            "bucket": "azure" if model.startswith("azoai/") else ("rits" if model.startswith("rits/") else "capped"), "low_priority": lp, "calls": a.calls, "ok_200": a.status.get(200, 0), "errors": sum(errs.values()),
             "errors_by_status": json.dumps(errs, sort_keys=True), "retried_calls": a.retried, "extra_attempts": a.extra,
             "calls_without_usage": a.nousage, "in_uncached": tok["in_unc"], "cache_read": tok["cache_read"],
             "cache_write_5m": tok["cw5"], "cache_write_1h": tok["cw1"], "output": tok["out"], "reasoning": tok["reas"],
@@ -991,7 +992,11 @@ def main():
         for k in ("in_uncached", "cache_read", "cache_write_5m", "cache_write_1h", "output", "reasoning", "ledger_tokens", "noncache_tokens"):
             row[k] = sum(r[k] for r in rs)
         row["rits_ledger_tokens"] = sum(r["ledger_tokens"] for r in rs if r["rits"])
-        row["nonrits_ledger_tokens"] = row["ledger_tokens"] - row["rits_ledger_tokens"]
+        row["azure_ledger_tokens"] = sum(r["ledger_tokens"] for r in rs if r["azure"])
+        row["azure_calls"] = sum(r["calls"] for r in rs if r["azure"])
+        az = [r["usd_total"] for r in rs if r["azure"] and r["usd_total"] is not None]
+        row["azure_usd_list"] = sum(az) if az else None   # LIST price, not billed; own bucket, uncapped
+        row["nonrits_ledger_tokens"] = row["ledger_tokens"] - row["rits_ledger_tokens"] - row["azure_ledger_tokens"]  # capped bucket only
         for cls, roles in (("target", TARGET_ROLES), ("user", USER_ROLES), ("judge", JUDGE_ROLES), ("optimizer", OPT_ROLES)):
             sel = [r for r in rs if (r["role"] in roles if cls != "optimizer" else r["role"] not in NON_OPT_ROLES)]
             row[cls + "_calls"] = sum(r["calls"] for r in sel)
@@ -1135,7 +1140,8 @@ def build_totals(role_rows, lines, h1, h2):
     def blank():
         return {"calls": 0, "errors": 0, "ledger_tokens": 0, "rits_ledger_tokens": 0, "nonrits_ledger_tokens": 0,
                 "component_noncache_tokens": 0, "in_uncached": 0, "cache_read": 0, "cache_write": 0, "output": 0, "reasoning": 0,
-                "usd_priced_proxy": 0.0, "usd_priced_calls_models": [], "unpriced_noncache_tokens": 0, "usd_lower_bound": False}
+                "usd_priced_proxy": 0.0, "azure_calls": 0, "azure_ledger_tokens": 0, "azure_usd_list": 0.0, "azure_unpriced_noncache_tokens": 0,
+                "usd_priced_proxy_excl_azure": 0.0, "usd_priced_calls_models": [], "unpriced_noncache_tokens": 0, "usd_lower_bound": False}
     T = {"by_suite_category": {}, "by_suite": {}, "overall": blank()}
     models_priced = defaultdict(set)
     for r in role_rows:
@@ -1147,8 +1153,11 @@ def build_totals(role_rows, lines, h1, h2):
             tgt["ledger_tokens"] += r["ledger_tokens"]
             if r["rits"]:
                 tgt["rits_ledger_tokens"] += r["ledger_tokens"]
+            elif r["azure"]:
+                tgt["azure_calls"] += r["calls"]
+                tgt["azure_ledger_tokens"] += r["ledger_tokens"]
             else:
-                tgt["nonrits_ledger_tokens"] += r["ledger_tokens"]
+                tgt["nonrits_ledger_tokens"] += r["ledger_tokens"]   # capped bucket only
             tgt["component_noncache_tokens"] += r["noncache_tokens"]
             tgt["in_uncached"] += r["in_uncached"]
             tgt["cache_read"] += r["cache_read"]
@@ -1157,8 +1166,14 @@ def build_totals(role_rows, lines, h1, h2):
             tgt["reasoning"] += r["reasoning"]
             if r["usd_total"] is not None:
                 tgt["usd_priced_proxy"] += r["usd_total"]
+                if r["azure"]:
+                    tgt["azure_usd_list"] += r["usd_total"]
+                else:
+                    tgt["usd_priced_proxy_excl_azure"] += r["usd_total"]
             else:
                 tgt["unpriced_noncache_tokens"] += r["noncache_tokens"]
+                if r["azure"]:
+                    tgt["azure_unpriced_noncache_tokens"] += r["noncache_tokens"]
                 tgt["usd_lower_bound"] = True
     for grp in ("by_suite_category", "by_suite"):
         for v in T[grp].values():
@@ -1184,16 +1199,27 @@ def build_totals(role_rows, lines, h1, h2):
         rec["prefix_calls_compared"] = n
         rec["log_ledger_total"] = led
         rec["log_ledger_rits"] = rits
-        rec["log_ledger_nonrits_capped"] = led - rits
+        azl = sum(norm_usage(d)["ledger"] for d in sub if (d.get("model") or "").startswith("azoai/"))
+        rec["log_ledger_azure"] = azl
+        rec["log_ledger_nonrits_capped"] = led - rits - azl
         rec["health_total_minus_log"] = h1.get("total_tokens", 0) - led
         rec["health_rits_minus_log"] = h1.get("rits_tokens", 0) - rits
-        rec["health_capped_minus_log"] = h1.get("capped_tokens", 0) - (led - rits)
+        rec["health_capped_minus_log"] = h1.get("capped_tokens", 0) - (led - rits - azl)
         rec["ledger_formula"] = "usage.total_tokens if truthy else (prompt+completion | input+output+cache_creation); rits = model startswith rits/"
         rec["naive_sum_in_out_cachewrite_minus_ledger_by_model_api_stream"] = {str(k): v for k, v in diff_calls.items()}
         rec["note"] = ("Gateway ledger counts usage.total_tokens when the upstream supplies it; for non-streamed Anthropic calls total_tokens = input+output "
                        "and omits cache_creation tokens, so those cache writes are in the usage fields but not in the ledger (see naive_sum_... for the size).")
+    ov = T["overall"]
+    T["buckets"] = {
+        "capped": {"ledger_tokens": ov["nonrits_ledger_tokens"], "usd_proxy_anthropic_list": ov["usd_priced_proxy_excl_azure"],
+                   "definition": "neither rits/ nor azoai/ (counted against the campaign cap)"},
+        "rits": {"ledger_tokens": ov["rits_ledger_tokens"], "usd": None, "definition": "model startswith rits/ (no budget)"},
+        "azure": {"calls": ov["azure_calls"], "ledger_tokens": ov["azure_ledger_tokens"], "usd_list_not_billed": ov["azure_usd_list"],
+                  "unpriced_noncache_tokens": ov["azure_unpriced_noncache_tokens"],
+                  "definition": "model startswith azoai/ (Azure OpenAI direct); UNCAPPED by user decision; USD = Azure LIST price from pricing.json, not billed"}}
     T["reconciliation"] = rec
-    T["notes"] = ["USD is a PROXY (Anthropic list prices); IBM LiteLLM billing is not visible. Non-Claude models are unpriced: tokens only, USD null.",
+    T["notes"] = ["USD is a PROXY (Anthropic list prices); IBM LiteLLM billing is not visible. RITS and other non-Claude, non-Azure models are unpriced: tokens only, USD null.",
+                  "Buckets: capped (counts against the cap), rits (no budget), azure (azoai/*, uncapped by user decision, USD = Azure LIST price not billed). See `buckets`; usd_priced_proxy mixes capped and azure, use usd_priced_proxy_excl_azure and azure_usd_list.",
                   "ledger_tokens = gateway /health basis (cache reads excluded for Anthropic; OpenAI prompt tokens incl. cached counted in full).",
                   "Categories other than main/chaser_eval are overhead/waste but still count toward campaign cost."]
     return T

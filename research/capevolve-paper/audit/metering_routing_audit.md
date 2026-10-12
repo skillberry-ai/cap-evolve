@@ -187,3 +187,19 @@ These are search-time rows only; the final evaluation will record a string for e
 Decision (team lead): the simulated-user malfunction counts as infra because the simulator is part of the environment (a frozen
 gpt-oss shared by all arms). Those rows carry their own subclass, `error_rule_uniform=env_user_simulator` (class stays `infra`), because a
 candidate's messages could in principle provoke it. A sensitivity analysis can flip exactly these rows to candidate by filtering on that rule.
+
+## 7. Azure-direct (azoai/*) pricing and buckets
+
+`protocol/pricing.json` now lists Azure LIST prices (USD per Mtok; list, not billed; retrieved 2026-10-12 from third-party trackers that
+mirror the Azure OpenAI pricing page, which is not machine-readable): gpt-4.1-2025-04-14 and gpt-4.1: $2.00 in / $0.50 cached / $8.00 out;
+gpt-4.1-mini-2025-04-14: $0.40 / $0.10 / $1.60; gpt-5-mini-2025-08-07 and gpt-5-mini: $0.25 / $0.025 / $2.00; gpt-4o-mini-2024-07-18
+(also seen in the ledger): $0.15 / $0.075 / $0.60. Input and output rates are consistent across the trackers; the cached-input rates
+could not be re-checked against the Azure page. No cache-write surcharge exists (cache_write_5m = input). Reasoning tokens are inside
+completion tokens.
+
+`collect_metrics.py` now has three buckets (`campaign_totals.json: buckets`, role rows `bucket`, arm rows `azure_*`): **capped** (neither
+rits/ nor azoai/; `nonrits_ledger_tokens` is now this bucket only), **rits** (no budget), **azure** (azoai/*, uncapped by user decision, USD =
+list price). At 2026-10-12 09:25 UTC: capped 70.4M ledger tokens, $215.83 Anthropic proxy list; azure 14,189 calls, 55.9M ledger tokens, $26.56
+list; rits 1.42B tokens, unpriced. `usd_priced_proxy` still mixes capped and azure; use `usd_priced_proxy_excl_azure` and `azure_usd_list`.
+Open: the gateway /health `capped_tokens` (70.39M) does not match the log's capped bucket (64.24M excluding azure, 86.94M including it) at the
+same prefix, so the gateway's treatment of azoai in its own cap counter is unconfirmed; the reconciliation block in campaign_totals.json shows both.
