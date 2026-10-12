@@ -151,5 +151,19 @@
   "holm_m11_vs_seed_approx": 0.127,
   "holm_m11_cell_approx": 0.139,
   "pipeline_vs_seed": 0.197
+ },
+ "planning_mde_test40_exact_m11": {
+  "vs_seed": 0.1253,
+  "cell_vs_cell": 0.1377,
+  "uncorrected": {
+   "vs_seed": 0.0932,
+   "cell_vs_cell": 0.1024
+  },
+  "floor_tau0_m11": {
+   "vs_seed": 0.0855,
+   "cell_vs_cell": 0.1028
+  },
+  "pipeline_vs_seed": 0.1972,
+  "erratum_utc": "2026-10-12 09:49 UTC"
  }
 }
