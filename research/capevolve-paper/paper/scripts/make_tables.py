@@ -438,14 +438,14 @@ def suite_e_table(data):
     mock = data["source"] == "mock"
     w = wrap(mock)
     E = data["suites"]["E"]
-    body = [r"\multicolumn{6}{l}{\textit{Family E, Holm m = 11: contrasts mirrored from Suite D}} \\", r"\midrule"]
+    body = [r"\multicolumn{5}{l}{\textit{Family E, Holm m = 11: contrasts mirrored from Suite D}} \\", r"\midrule"]
     for c in E["family"]:
         rep = "replicated" if c["replicated"] else "not replicated"
         body.append(" & ".join([c["name"], w(ci(c)), w(pf(c["p_holm"])), w(sd(c["d_delta"])), w(rep)]) + r" \\")
-    body += [r"\midrule", r"\multicolumn{6}{l}{\textit{Secondary family E-sec, Holm m = 4}} \\"]
+    body += [r"\midrule", r"\multicolumn{5}{l}{\textit{Secondary family E-sec, Holm m = 4}} \\"]
     for c in E["secondary"]:
         body.append(" & ".join([c["name"], w(ci(c)), w(pf(c["p_holm"])), "--", "--"]) + r" \\")
-    body += [r"\midrule", r"\multicolumn{6}{l}{\textit{Competitor family E-comp: PT minus competitor (replication domain, exploratory for generality)}} \\"]
+    body += [r"\midrule", r"\multicolumn{5}{l}{\textit{Competitor family E-comp: PT minus competitor (replication domain, exploratory for generality)}} \\"]
     for c in E["competitors"]:
         if c["key"] == "hl":
             body.append(" & ".join([c["label"] + r" (exploratory, one seed, descriptive)", w(ci(c)), "--", "--", "--"]) + r" \\")
@@ -454,7 +454,7 @@ def suite_e_table(data):
             body.append(" & ".join([nm, w(ci(c)), w(pf(c["p_holm"])), "--", "--"]) + r" \\")
     ao = next(c for c in E["competitors"] if c["key"] == "ao")
     others = [c for c in E["competitors"] if c["key"] not in ("ao", "hl")]
-    body.append(r"\multicolumn{6}{l}{\textit{Sensitivity excluding agent-optimize$^{\dagger}$: " + ", ".join(f"{c['label']} {w(pf(c['p_holm_sens']))}" for c in others) + r"}} \\")
+    body.append(r"\multicolumn{5}{l}{\textit{Sensitivity excluding agent-optimize$^{\dagger}$: " + ", ".join(f"{c['label']} {w(pf(c['p_holm_sens']))}" for c in others) + r"}} \\")
     head = r"Contrast & $\Delta$ [CI] & $p_{\mathrm{Holm}}$ & Suite D $\Delta$ & Replication \\"
     cap = ("Suite E, the airline replication of Suite D, on the 20 official test tasks scored five times each (the seed ten times); 3 seeds per cell. "
            "A Suite D contrast is replicated when the Suite E contrast has the same sign and a 95\\% interval that excludes zero, and is not replicated otherwise, which includes inconclusive. "
