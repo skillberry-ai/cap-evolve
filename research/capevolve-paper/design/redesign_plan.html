@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CapEvolve Ablation Plan</title>
+<style>
+:root{
+  --bg:#fbfaf7; --surface:#ffffff; --surface2:#f3f1ec; --text:#1d1c1a; --muted:#6a665e; --line:#ddd9cf;
+  --accent:#1f5fae; --good:#1c7a4a; --warn:#a56a00; --bad:#a8342b; --run:#6b4bb0;
+  --c1:#1f5fae; --c2:#c46a1a; --c3:#1c7a4a; --c4:#8a3f8f; --c5:#a8342b; --c6:#2a8a8a;
+  --tint-good:#e3f2e9; --tint-warn:#f8efd9; --tint-bad:#f6e1de; --tint-run:#ebe5f5; --tint-acc:#e2ecf8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614; --surface:#1f1f1c; --surface2:#262622; --text:#ebe8e0; --muted:#9a968b; --line:#3a3933;
+    --accent:#6ea3e8; --good:#5fc08a; --warn:#e0a948; --bad:#e8786d; --run:#a58be0;
+    --c1:#6ea3e8; --c2:#e89a55; --c3:#5fc08a; --c4:#c58ac9; --c5:#e8786d; --c6:#58bcbc;
+    --tint-good:#1d2e25; --tint-warn:#33290f; --tint-bad:#3a1f1c; --tint-run:#2a2340; --tint-acc:#1c2a3d;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614; --surface:#1f1f1c; --surface2:#262622; --text:#ebe8e0; --muted:#9a968b; --line:#3a3933;
+  --accent:#6ea3e8; --good:#5fc08a; --warn:#e0a948; --bad:#e8786d; --run:#a58be0;
+  --c1:#6ea3e8; --c2:#e89a55; --c3:#5fc08a; --c4:#c58ac9; --c5:#e8786d; --c6:#58bcbc;
+  --tint-good:#1d2e25; --tint-warn:#33290f; --tint-bad:#3a1f1c; --tint-run:#2a2340; --tint-acc:#1c2a3d;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1120px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:19px;margin:38px 0 10px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 6px}
+p{margin:6px 0}
+.sub{color:var(--muted);margin:0 0 16px}
+nav{position:sticky;top:0;background:var(--bg);padding:8px 0;border-bottom:1px solid var(--line);z-index:5;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px}
+nav a{color:var(--accent);text-decoration:none}
+nav a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.card .n{font-size:24px;font-weight:650;line-height:1.1}
+.card .l{color:var(--muted);font-size:12.5px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:600;font-size:12.5px;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.tw{overflow-x:auto;border-radius:6px}
+.tag{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.t-done{background:var(--tint-good);color:var(--good)}
+.t-run{background:var(--tint-run);color:var(--run)}
+.t-new{background:var(--tint-acc);color:var(--accent)}
+.t-cond{background:var(--tint-warn);color:var(--warn)}
+.t-cut{background:var(--tint-bad);color:var(--bad)}
+code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface2);padding:1px 4px;border-radius:3px}
+pre{background:var(--surface2);padding:10px 12px;border-radius:6px;overflow-x:auto;font:12.5px/1.5 ui-monospace,Menlo,monospace;border:1px solid var(--line)}
+.note{border-left:3px solid var(--warn);background:var(--tint-warn);padding:8px 12px;border-radius:0 6px 6px 0;margin:10px 0}
+.note.bad{border-color:var(--bad);background:var(--tint-bad)}
+.note.good{border-color:var(--good);background:var(--tint-good)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:800px){.grid2{grid-template-columns:1fr}}
+.cfg{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cfg h3{margin-top:2px}
+.cfg dl{display:grid;grid-template-columns:130px 1fr;gap:3px 10px;margin:6px 0 0;font-size:13.5px}
+.cfg dt{color:var(--muted)}
+.cfg dd{margin:0}
+details{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;margin:8px 0}
+summary{cursor:pointer;font-weight:600}
+svg text{fill:var(--text);font:11.5px system-ui,sans-serif}
+svg .m{fill:var(--muted)}
+.rq td.c{text-align:center;font-weight:700}
+.rq .y{background:var(--tint-acc);color:var(--accent)}
+.rq .r{background:var(--tint-run);color:var(--run)}
+.rq .a{background:var(--tint-good);color:var(--good)}
+.rq .x{background:var(--tint-bad);color:var(--bad)}
+.leg span{margin-right:12px;font-size:12.5px}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>CapEvolve ablation and analysis plan</h1>
+<p class="sub">experiment-designer, 2026-10-12 09:05 UTC. Proposal for coordinator approval; nothing launched except three tiny probes (tag <code>E00-azprobe</code>, search-split ids). Full text: <code>redesign/EXPERIMENTS.md</code>. Search cutoff 2026-10-13 06:00 UTC; final window to 2026-10-14 05:00.</p>
+<nav>
+  <a href="#summary">Summary</a><a href="#status">Ran / running</a><a href="#capacity">Measured capacity</a><a href="#suiteD">Suite D config</a>
+  <a href="#launch">What to launch</a><a href="#configs">Full configs</a><a href="#final">Final-eval cells</a><a href="#sched">Schedule</a><a href="#rq">RQ map</a><a href="#asks">Decisions needed</a>
+</nav>
+
+<h2 id="summary">Summary</h2>
+<div class="note bad"><b>Why the running campaign cannot answer the ablation questions.</b> Every CapEvolve arm on B and C edits prompt and tools under rule P, and rule P is inert at 550 rollouts: 0 promotions in all hill-climb and agent-optimize searches so far (attrib summary 08:47). A surface grid under rule P would return the seed in almost every cell. The new family (Suite D) uses the <b>stock gate</b> as reference and makes rule P one of its cells.</div>
+<div class="cards">
+  <div class="card"><div class="n">gpt-4.1-mini</div><div class="l">Azure target for Suite D: seed 0.612 on retail opt-49 (gpt-oss 0.56 to 0.65), null paired SD 0.57 (gpt-oss 0.55)</div></div>
+  <div class="card"><div class="n">12.5k + 7k</div><div class="l">Tier 1 Azure rollouts, search + held-out; about $1.0k at list price; done about 16:00 UTC</div></div>
+  <div class="card"><div class="n">about 8 M</div><div class="l">Tier 1 capped optimizer tokens (HC about 0.4 M per search). Needs funding, see Decisions</div></div>
+  <div class="card"><div class="n">0.08 / 0.10</div><div class="l">planning MDE vs seed / between cells (T=65, n=5, S=3). Small surface effects will read inconclusive</div></div>
+</div>
+<p><b>Recommended launch (Tier 1):</b> E22 empirical null pool, E20 surface grid {P, T, PT} x 3 seeds, E20 one-shot control, E21 gate cells {rule P, one-stage} x 3, E20 GEPA prompt-only, then E25 decomposition at final evaluation. <b>Tier 2</b> (after two small code items): gate ROC, descriptions-only (MCP-style) cell, history-off and digest-off, rule P at 2x budget. <b>Tier 3</b> (conditional): skill-package cell, AO on D, airline replication.</p>
+
+<h2 id="status">What has run and what is running (08:30 UTC)</h2>
+<div class="tw"><table>
+<tr><th>Family</th><th>State</th><th>What it gives the ablations</th></tr>
+<tr><td>E10 Suite A (Gemma, prompt only), 9 arms x 3 seeds</td><td><span class="tag t-run">running</span> hc 282/409/200, ao 216/372/333 of 600</td><td>HC vs AO and gate behaviour on A. One editable file, so no width ablation is possible there.</td></tr>
+<tr><td>E10B retail, E10C airline (gpt-oss, prompt + tools)</td><td><span class="tag t-run">running</span></td><td>Rule P inert (0 promotions). One-shot controls promote 1 of 3. AO stopped itself at 198, 172 (B) and 110 (C).</td></tr>
+<tr><td>E12A (A) and E12C (C): stock gate, E12C best-of-k</td><td><span class="tag t-run">running</span></td><td>Stock gate promotes 2.0 (A) and 1.0 (C) per search. Changes three things at once (confirmation, footprint masking, coverage).</td></tr>
+<tr><td>E05 injected faults, gate replay (#791), gate and MDE simulations</td><td><span class="tag t-done">done</span></td><td>Analytic support for C2. E05: 15 pass, 7 partial, 6 gap, 1 info.</td></tr>
+<tr><td>Probes E00-azprobe (this work)</td><td><span class="tag t-done">done</span></td><td>Azure throughput, noise and cost per rollout per candidate target (next section).</td></tr>
+<tr><td>Anything varying surface, causal history or optimizer context</td><td><span class="tag t-cut">none</span></td><td>C1, C4 and the replicated part of C2 need new runs.</td></tr>
+</table></div>
+
+<h2 id="capacity">Measured capacity (Azure-direct, tau2 retail opt-49, 2 trials, c=32)</h2>
+<p>Seed capability (policy + tools), user simulator and judge gpt-4.1, gateway :4112. 7,800 gateway calls, 5 HTTP 500, no 429 at 64 rollouts in flight.</p>
+<div class="grid2">
+<div>
+<svg viewBox="0 0 520 210" width="100%" role="img" aria-label="Seed accuracy and null noise by target">
+  <text x="4" y="14" font-weight="600">Seed reward on opt-49 (bar) and trial noise (null paired SD per task)</text>
+  <g font-size="11">
+  <text x="4" y="48">gpt-oss-120b (E10B)</text><rect x="130" y="36" width="168" height="16" fill="var(--c6)" opacity=".8"/><text x="304" y="48" class="m">0.56 to 0.65 / SD 0.55</text>
+  <text x="4" y="80">gpt-4.1</text><rect x="130" y="68" width="217" height="16" fill="var(--c1)" opacity=".8"/><text x="353" y="80" class="m">0.724 / SD 0.43</text>
+  <text x="4" y="112" font-weight="700">gpt-4.1-mini (chosen)</text><rect x="130" y="100" width="184" height="16" fill="var(--c3)"/><text x="320" y="112" class="m">0.612 / SD 0.57</text>
+  <text x="4" y="144">gpt-5-mini</text><rect x="130" y="132" width="208" height="16" fill="var(--c4)" opacity=".8"/><text x="344" y="144" class="m">0.694 / SD 0.67, half speed</text>
+  <text x="4" y="176">gpt-4o-mini</text><rect x="130" y="164" width="110" height="16" fill="var(--c2)" opacity=".8"/><text x="246" y="176" class="m">0.367 / SD 0.53, weak</text>
+  </g>
+  <line x1="130" y1="30" x2="130" y2="190" stroke="var(--line)"/>
+  <text x="130" y="204" class="m">0</text><text x="425" y="204" class="m">1.0 (bar scale 300 px)</text>
+</svg>
+</div>
+<div class="tw"><table>
+<tr><th>target</th><th>always 0 / 1 / mixed</th><th>rollouts/min at c=32</th><th>tokens/rollout</th><th>USD/rollout</th></tr>
+<tr><td>gpt-4.1</td><td>9 / 31 / 9</td><td>13.5</td><td>64 k</td><td>0.15</td></tr>
+<tr><td><b>gpt-4.1-mini</b></td><td>11 / 22 / 16</td><td>12.9</td><td>78 k</td><td>0.05</td></tr>
+<tr><td>gpt-5-mini</td><td>4 / 23 / 22</td><td>6.7</td><td>76 k</td><td>0.05</td></tr>
+<tr><td>gpt-4o-mini</td><td>24 / 11 / 14</td><td>14.5</td><td>69 k</td><td>0.02</td></tr>
+</table>
+<p class="sub" style="margin-top:8px">Stress: 19 k-token prompts, 64 concurrent requests on gpt-4.1-mini, about 7.4 M tokens/min offered, gave 25% failures (429, resets). Plan for at most about 128 tau rollouts in flight (about 4 M tokens/min) over the whole family, with a staged ramp.</p>
+</div>
+</div>
+<div class="note"><b>Optimizer tokens measured (non-cache-read, gateway ledger):</b> hill-climb 0.20 to 0.73 M per search (use 0.4 M), one-shot 0.09 to 0.31 M, agent-optimize 0.5 to 1.2 M, GEPA reflection about 0.4 M. Capped accounting: :4111 shows 60.5 M, :4112 shows 29.3 M with separate counters; metering-auditor to confirm which one enforces the 150 M cap.</div>
+
+<h2 id="suiteD">Suite D: shared configuration of the new ablation family</h2>
+<div class="tw"><table>
+<tr><th>item</th><th>value</th></tr>
+<tr><td>benchmark</td><td>tau2 retail @8ebb7499; E10B builder and adapter (<code>scripts/E10B/build_cap_project.py</code>, parametrised)</td></tr>
+<tr><td>target / user / judge</td><td><code>azoai/gpt-4.1-mini-2025-04-14</code> / <code>azoai/gpt-4.1-2025-04-14</code> / <code>azoai/gpt-4.1-2025-04-14</code> (judge deviation of B removed); gateway :4112</td></tr>
+<tr><td>optimizer</td><td><code>aws/claude-sonnet-5-5</code>, claude-code shim (no egress, masked /tmp), through :4111; hill-climb</td></tr>
+<tr><td>splits</td><td>train = val = opt-49; finalize test = sel-25; sealed test-40 never in a search</td></tr>
+<tr><td>budget and guard</td><td>550 counted rollouts, 10 iterations, 4 M optimizer-token guard (soft 3.5 M); concurrency 10 to 12 per search</td></tr>
+<tr><td>reference gate</td><td><b>stock</b>: <code>gate_mode paired, gate_k_se 1.0</code>, footprint masking on, candidate-side coverage 0.6, <code>errored_trial_policy fail</code> (= E12C spec)</td></tr>
+<tr><td>seeds</td><td>3 per cell for Tier 1 and 2; 2 for Tier 3</td></tr>
+<tr><td>held-out</td><td>H65 = sel-25 (before the cutoff) + test-40 (final window, through the final machinery). n=5 for Tier 1 champions, 3 for others; seed re-scored in the same window with n=10. GEPA contrasts use test-40 only (GEPA selects on sel).</td></tr>
+<tr><td>statistics</td><td>paired by task; artifact-level CR1 and pipeline-level t(S-1); two Holm families (D-1 surface, 6 contrasts; D-2 loop and gate, 4 contrasts); TOST margin 0.10; all else exploratory</td></tr>
+<tr><td>new code</td><td>surface lock <code>TAU_SURFACES</code> (candidate files of locked surfaces read from the seed, violations counted); parametrised builder; history switch (Tier 2)</td></tr>
+</table></div>
+
+<h2 id="launch">Experiments ranked by value per cost</h2>
+<p class="leg"><span><i class="sw" style="background:var(--tint-acc)"></i>new</span><span><i class="sw" style="background:var(--tint-warn)"></i>conditional on code</span><span><i class="sw" style="background:var(--tint-bad)"></i>not recommended</span>
+R = counted rollouts (Azure), C = capped optimizer tokens, $ at list price. All "fits" assume launch by 11:30 UTC.</p>
+<div class="tw"><table>
+<tr><th>#</th><th>ID</th><th>Question</th><th>Cells and seeds</th><th>R</th><th>C</th><th>Wall</th><th>Fits</th><th>Owner</th><th>Statistics</th><th>Tier</th></tr>
+<tr><td>1</td><td>E22</td><td>False-accept of rule P, one-stage, stock under real noise</td><td>40 seed evaluations on opt-49, offline replay of the real gate code on sampled pairs</td><td>2.0k</td><td>0</td><td>1.5 h</td><td>yes</td><td>tau-runner, metrics-eng</td><td>Wilson CI vs simulation 0.04 / 0.57</td><td><span class="tag t-new">1</span></td></tr>
+<tr><td>2</td><td>E20 P,T,PT</td><td>Surface width and capability type; interaction</td><td>[prompt], [tools], [prompt+tools] x 3 seeds, stock gate</td><td>5.0k</td><td>3.6 M</td><td>3 h</td><td>yes</td><td>tau-runner</td><td>D-1: 6 contrasts</td><td><span class="tag t-new">1</span></td></tr>
+<tr><td>3</td><td>E20-CTL</td><td>Search vs a single proposal</td><td>PT, 1 iteration, 200 rollouts x 3</td><td>0.6k</td><td>0.7 M</td><td>1 h</td><td>yes</td><td>tau-runner</td><td>D-2: PT vs CTL</td><td><span class="tag t-new">1</span></td></tr>
+<tr><td>4</td><td>E21</td><td>Confirmation stage vs stock vs one-stage</td><td>PT: rule P, one-stage unmasked x 3</td><td>3.3k</td><td>2.4 M</td><td>2.5 h</td><td>yes</td><td>tau-runner</td><td>D-2; promotions, shrinkage, regressions</td><td><span class="tag t-new">1</span></td></tr>
+<tr><td>5</td><td>E20-GEPA</td><td>Loop quality at an identical surface</td><td>GEPA, prompt only x 3, 550 rollouts</td><td>1.7k</td><td>1.2 M</td><td>2 h</td><td>yes</td><td>tau-runner</td><td>D-2: P vs GEPA (test-40)</td><td><span class="tag t-new">1</span></td></tr>
+<tr><td>6</td><td>E25</td><td>Which surface carries a champion's gain; additivity</td><td>P-only and T-only sub-artifacts of every two-surface champion on D (at most 24)</td><td>2.9k + 1.8k</td><td>0</td><td>1.5 h</td><td>yes (final)</td><td>final-eval-eng</td><td>descriptive deltas, additivity CI</td><td><span class="tag t-new">1 final</span></td></tr>
+<tr><td>7</td><td>E26</td><td>Gate false accept / false reject on real candidates</td><td>all ~80 candidates of E20-PT, E21 on sel-25, n=2</td><td>4.3k</td><td>0</td><td>1.5 h</td><td>yes</td><td>tau-runner, metrics-eng</td><td>sensitivity / specificity, Wilson</td><td><span class="tag t-new">2</span></td></tr>
+<tr><td>8</td><td>E20-TD</td><td>MCP-style surface (descriptions only), labelled emulation</td><td>[mcp-tool] guidance, AST lock x 3</td><td>1.7k</td><td>1.2 M</td><td>2.5 h</td><td>yes, 1.5 h dev</td><td>tau-runner</td><td>exploratory vs T and PT</td><td><span class="tag t-new">2</span></td></tr>
+<tr><td>9</td><td>E23</td><td>Causal history on/off; digest on/off</td><td>PT: history off, digest off x 2 seeds</td><td>2.2k</td><td>1.8 M</td><td>2.5 h</td><td>yes, 2 h dev</td><td>algo-eng, repo-auditor</td><td>exploratory, regressions, C per accept</td><td><span class="tag t-new">2</span></td></tr>
+<tr><td>10</td><td>E21-2x</td><td>Is rule P inert or under-budgeted</td><td>rule P, 1,100 rollouts x 3</td><td>3.3k</td><td>1.2 M</td><td>4 h</td><td>yes</td><td>tau-runner</td><td>promotions, exploratory</td><td><span class="tag t-new">2</span></td></tr>
+<tr><td>11</td><td>E20-PTS</td><td>Skill package as a fourth surface</td><td>PT + skills x 2</td><td>1.1k</td><td>1.5 M</td><td>3 h</td><td>only if loader ready by 14:00</td><td>tau-runner, repo-auditor</td><td>exploratory</td><td><span class="tag t-cond">3</span></td></tr>
+<tr><td>12</td><td>E24-AO</td><td>HC vs AO where promotions occur</td><td>agent-optimize on D x 2</td><td>0.8k</td><td>2.4 M</td><td>3 h</td><td>yes</td><td>tau-runner</td><td>TOST 0.10</td><td><span class="tag t-cond">3</span></td></tr>
+<tr><td>13</td><td>E27</td><td>Second domain</td><td>airline P,T,PT x 2</td><td>3.3k</td><td>2.4 M</td><td>2 h</td><td>yes</td><td>tau-runner</td><td>30 held-out tasks, MDE 0.12</td><td><span class="tag t-cond">3</span></td></tr>
+<tr><td>14</td><td>E25 on gpt-oss</td><td>Decomposition on B/C</td><td>one-shot and stock-gate champions, n=1</td><td>0.7k gpt-oss</td><td>0</td><td>2.5 h</td><td>tight</td><td>final-eval-eng</td><td>descriptive</td><td><span class="tag t-cond">3, drop first</span></td></tr>
+<tr><td>x</td><td>Suite A skills vs prompt</td><td colspan="9">Not recommended: needs evaluator-daemon and sandbox changes, competes with Gemma (final-eval critical path); SkillOpt, EvoSkill and WikiSkill edit prompt text, so the contrast would mostly measure packaging.</td><td><span class="tag t-cut">cut</span></td></tr>
+<tr><td>x</td><td>E17, E13, E14</td><td colspan="9">Not recommended: optimizer-mechanics 2x2 needs a Gemma optimizer and 7,200 rollouts; DAG and merge are agent-optimize features on gpt-oss.</td><td><span class="tag t-cut">cut</span></td></tr>
+</table></div>
+
+<h3>Totals</h3>
+<div class="tw"><table>
+<tr><th>Set</th><th>Azure rollouts</th><th>Capped tokens</th><th>USD (list)</th><th>Done by</th></tr>
+<tr><td>Tier 1</td><td>12.5k search + 7k held-out</td><td>about 8 M</td><td>about $1.0k</td><td>about 16:00 UTC</td></tr>
+<tr><td>+ Tier 2</td><td>+ 8k search + 2k held-out + 4.3k gate ROC</td><td>+ about 4.2 M</td><td>+ about $0.75k</td><td>about 21:00 UTC</td></tr>
+<tr><td>+ Tier 3</td><td>+ about 5k search</td><td>+ about 6.3 M</td><td>+ about $0.3k</td><td>about 24:00 UTC</td></tr>
+</table></div>
+
+<h2 id="configs">Full configurations</h2>
+<details open><summary>E20 surface cells (hill-climb, stock gate)</summary>
+<div class="tw"><table>
+<tr><th>cell</th><th><code>capabilities</code></th><th><code>TAU_SURFACES</code></th><th>seeds</th><th>iterations / rollouts</th><th>other</th></tr>
+<tr><td>E20-P</td><td>[system-prompt]</td><td>policy</td><td>0,1,2</td><td>10 / 550</td><td>stock gate</td></tr>
+<tr><td>E20-T</td><td>[tools]</td><td>tools</td><td>0,1,2</td><td>10 / 550</td><td>stock gate</td></tr>
+<tr><td><b>E20-PT</b> (reference)</td><td>[system-prompt, tools]</td><td>policy,tools</td><td>0,1,2</td><td>10 / 550</td><td>stock gate</td></tr>
+<tr><td>E20-CTL</td><td>[system-prompt, tools]</td><td>policy,tools</td><td>0,1,2</td><td>1 / 200</td><td>no selection, as E10B ctl-oneshot</td></tr>
+<tr><td>E20-TD</td><td>[mcp-tool]</td><td>tools, docstring-only AST lock</td><td>0,1,2</td><td>10 / 550</td><td>emulation of the MCP client surface</td></tr>
+<tr><td>E20-PTS</td><td>[system-prompt, tools, skill-package]</td><td>policy,tools,skills</td><td>0,1</td><td>10 / 550</td><td>needs tau skill loader</td></tr>
+</table></div>
+<pre>capabilities: [system-prompt, tools]      # per cell
+capability_path: seed_capability
+optimizer_skill: claude-code
+optimizer_model: aws/claude-sonnet-5-5
+optimizer_max_turns: 80
+target_model: azoai/gpt-4.1-mini-2025-04-14
+split_ids_file: split_ids.json            # train = val = opt-49, test = sel-25
+num_trials: 1
+gate_mode: paired
+gate_k_se: 1.0                            # stock gate: no promotion_*, footprint masking default on
+errored_trial_policy: fail
+algorithm_skill: hill-climb
+max_iterations: 10
+max_metric_calls: 550
+pregate: {toolkit: adapters/adapter.py:pregate_toolkit}
+# env: TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14  TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14
+#      TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14       TAU_GATEWAY=http://127.0.0.1:4112/v1
+#      TAU_TAG_PREFIX=tag:E20-&lt;cell&gt;-s&lt;k&gt;:hc          TAU_SURFACES=policy,tools
+#      ANTHROPIC_BASE_URL=http://127.0.0.1:4111  (optimizer path, as E10B)</pre>
+</details>
+<details open><summary>E21 gate cells (PT surface; deltas against the block above)</summary>
+<div class="grid2">
+<pre># E21-ruleP  (the E10B block)
+promotion_rule: P
+promotion_k_se: 1.0
+promotion_n_conf: 3
+promotion_z_conf: 1.282
+promotion_dmin: 0.0
+promotion_min_coverage: 0.95
+gate_footprint: false
+gate_coverage: joint
+gate_min_coverage: 0.95
+# E21-ruleP-2x: same, max_metric_calls: 1100</pre>
+<pre># E21-1S  (one-stage unmasked: confirmation removed only)
+gate_footprint: false
+gate_coverage: joint
+gate_min_coverage: 0.95
+# no promotion_* keys
+
+# E12A / E12C change three things at once
+# (confirmation, footprint masking, coverage);
+# E21-1S isolates the confirmation stage.</pre>
+</div></details>
+<details><summary>E22 empirical null pool, E26 gate ROC, E23 history, E20-GEPA</summary>
+<pre># E22: no optimizer. 40 independent evaluations of the seed on opt-49, 1 trial per task, c=64.
+single.py --tasks &lt;opt-49&gt; --trials 40     # tag E22-nullpool; replay gate.decide / promotion.* on sampled pairs offline
+
+# E26: score every candidate artifact (candidates.jsonl artifact_dir) of E20-PT, E21-ruleP, E21-1S
+#      on sel-25, n=2 per task; seed on sel-25 n=10. Labels: CI&gt;0 / CI&lt;0 / indistinguishable.
+
+# E23-nohist:  optimizer.ablation.history: false   (NEW switch; default on)
+#   skips write_ledger, RUNMAP.md, prior_iterations/, JOURNAL seeding, protect-set text
+# E23-nodigest: optimizer.ablation.context_digest: false   (existing)
+# 2 seeds each, PT surface, stock gate, seeds 0,1 (reference: E20-PT)
+
+# E20-GEPA: scripts/E10B/gepa_tau.py --exp E20 --arm gepa --max-metric-calls 550 --seed k
+#   same Azure env, prompt-only component, reflection aws/claude-sonnet-5-5</pre>
+</details>
+
+<h2 id="final">Final-evaluation cells added (all Azure-direct)</h2>
+<p>Order file <code>order_D.jsonl</code> through <code>run_final.py --suite D</code> (needs a D entry in <code>fe_common.py</code>, about 2 h). One interleaved stream; the seed is re-scored inside the same window (rule 5H). Existing A, B and C cells are unchanged.</p>
+<div class="tw"><table>
+<tr><th>Block</th><th>Artifacts</th><th>Tasks x n</th><th>Rollouts</th><th>Azure time (about 50/min)</th></tr>
+<tr><td>seed</td><td>1</td><td>40 x 10</td><td>400</td><td>8 min</td></tr>
+<tr><td>Tier 1 champions (E20 P, T, PT, CTL; E21 rule P, 1S; E20-GEPA)</td><td>21</td><td>40 x 5</td><td>4,200</td><td>1.4 h</td></tr>
+<tr><td>Tier 2 champions (TD, nohist, nodigest, rule P 2x)</td><td>up to 12</td><td>40 x 3</td><td>1,440</td><td>0.5 h</td></tr>
+<tr><td>E25 decomposition (P-only, T-only sub-artifacts; skip those equal to seed or champion)</td><td>up to 24</td><td>40 x 3</td><td>2,880</td><td>1.0 h</td></tr>
+<tr><td>optional transfer of D champions to gpt-4.1</td><td>21</td><td>40 x 1</td><td>840</td><td>0.3 h</td></tr>
+<tr><td><b>Total</b></td><td></td><td></td><td><b>about 9,800</b></td><td><b>about 3.3 h</b></td></tr>
+</table></div>
+<p class="sub">Pre-cutoff, search split only: sel-25 scoring of champions (about 3.5k), E26 (4.3k), E22 (2.0k). On gpt-oss the only optional extra is E25 at n=1 (about 700 rollouts), scheduled last; the full n=3 decomposition on B and C (about 2,500 rollouts, about 8 h) does not fit next to HarnessLens.</p>
+
+<h2 id="sched">Schedule (UTC)</h2>
+<svg viewBox="0 0 1060 300" width="100%" role="img" aria-label="Schedule">
+  <!-- axis: 10-12 09:00 .. 10-14 05:00 = 44 h ; x = 150 + h*(880/44)=20 px/h -->
+  <g class="m" font-size="11">
+    <text x="150" y="14">10-12 09:00</text><text x="390" y="14">21:00</text><text x="630" y="14">10-13 09:00</text><text x="870" y="14">21:00</text><text x="990" y="14">10-14 03:00</text>
+  </g>
+  <line x1="150" y1="20" x2="1030" y2="20" stroke="var(--line)"/>
+  <!-- cutoff at 10-13 06:00 = 21 h -> 150+420=570 ; final end 10-14 05:00 = 44 h -> 1030 -->
+  <line x1="570" y1="20" x2="570" y2="290" stroke="var(--bad)" stroke-dasharray="4 3"/><text x="574" y="32" fill="var(--bad)" style="fill:var(--bad)">search cutoff 06:00</text>
+  <rect x="570" y="40" width="460" height="250" fill="var(--tint-run)" opacity=".35"/><text x="780" y="286" class="m">final window to 10-14 05:00</text>
+  <g font-size="11.5">
+  <text x="4" y="52">approval, E22 launch</text><rect x="150" y="42" width="30" height="14" fill="var(--c2)"/><rect x="200" y="42" width="30" height="14" fill="var(--c2)" opacity=".5"/>
+  <text x="4" y="76">dev: builder, lock, registry</text><rect x="170" y="66" width="40" height="14" fill="var(--c4)"/>
+  <text x="4" y="100">wave 1: E20 P,T,PT, CTL, GEPA</text><rect x="210" y="90" width="80" height="14" fill="var(--c1)"/>
+  <text x="4" y="124">dev: history switch, TD lock</text><rect x="210" y="114" width="80" height="14" fill="var(--c4)" opacity=".7"/>
+  <text x="4" y="148">wave 2: E21, TD, 2x</text><rect x="290" y="138" width="80" height="14" fill="var(--c3)"/>
+  <text x="4" y="172">E26 gate ROC (rolling)</text><rect x="260" y="162" width="190" height="14" fill="var(--c6)" opacity=".8"/>
+  <text x="4" y="196">wave 3: E23, PTS, AO</text><rect x="370" y="186" width="80" height="14" fill="var(--c5)" opacity=".85"/>
+  <text x="4" y="220">infra-rerun margin</text><rect x="450" y="210" width="120" height="14" fill="var(--line)"/>
+  <text x="4" y="244">final: D test-40 + E25</text><rect x="590" y="234" width="70" height="14" fill="var(--c3)"/>
+  <text x="4" y="268">A / B / C final windows</text><rect x="590" y="258" width="360" height="14" fill="var(--c1)" opacity=".35"/>
+  </g>
+</svg>
+<p class="sub">Primary arms are not touched: D uses neither RITS deployment. It shares only the 16-slot <code>litellm</code> semaphore on :4111 with the Sonnet optimizers (Tier 1 adds about 12 sessions that call it about once a minute); check against the running AO sessions. Hold new launches if the azoai 429 rate exceeds 2% or median <code>queue_s</code> exceeds 30 s.</p>
+
+<h2 id="rq">Research question to experiment map</h2>
+<p class="leg"><span><i class="sw" style="background:var(--tint-acc)"></i>new run</span><span><i class="sw" style="background:var(--tint-run)"></i>running</span><span><i class="sw" style="background:var(--tint-good)"></i>analysis only</span><span><i class="sw" style="background:var(--tint-bad)"></i>cut</span></p>
+<div class="tw"><table class="rq">
+<tr><th>RQ</th><th>E10/B/C</th><th>E12A/C</th><th>E20 grid</th><th>E20-CTL</th><th>E20-GEPA</th><th>E21</th><th>E22</th><th>E23</th><th>E25</th><th>E26</th><th>attrib / analysis</th></tr>
+<tr><td>1 matched comparison</td><td class="c r">R</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c a">A</td></tr>
+<tr><td>1b loop quality, equal surface</td><td></td><td></td><td class="c y">N</td><td></td><td class="c y">N</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>2a surface width / capability type</td><td></td><td></td><td class="c y">N</td><td class="c y">N</td><td></td><td></td><td></td><td></td><td class="c y">N</td><td></td><td class="c a">A</td></tr>
+<tr><td>2b orchestration HC vs AO</td><td class="c r">R</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c a">A (+E24 opt.)</td></tr>
+<tr><td>2c gate design</td><td class="c r">R</td><td class="c r">R</td><td></td><td></td><td></td><td class="c y">N</td><td class="c y">N</td><td></td><td></td><td class="c y">N</td><td class="c a">A</td></tr>
+<tr><td>2d causal history, context</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c y">N</td><td></td><td></td><td class="c a">A</td></tr>
+<tr><td>2e intake / adapter gate</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c a">A (E05)</td></tr>
+<tr><td>2f DAG, merge</td><td colspan="11" class="c x">cut (E13, E14)</td></tr>
+<tr><td>3a marginal value of a surface</td><td></td><td></td><td class="c y">N</td><td></td><td></td><td></td><td></td><td></td><td class="c y">N</td><td></td><td class="c a">A</td></tr>
+<tr><td>3b edit attribution</td><td class="c r">R</td><td class="c r">R</td><td class="c y">N</td><td></td><td></td><td></td><td></td><td></td><td class="c y">N</td><td></td><td class="c a">A</td></tr>
+<tr><td>3c failure-type map</td><td class="c r">R</td><td></td><td class="c y">N</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c a">A + labelling</td></tr>
+<tr><td>3d interaction</td><td></td><td></td><td class="c y">N</td><td></td><td></td><td></td><td></td><td></td><td class="c y">N</td><td></td><td></td></tr>
+<tr><td>3e MCP surface</td><td></td><td></td><td class="c y">N (TD, emulation)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>4 cost and efficiency</td><td class="c r">R</td><td class="c r">R</td><td class="c y">N</td><td class="c y">N</td><td class="c y">N</td><td class="c y">N</td><td></td><td></td><td></td><td></td><td class="c a">A</td></tr>
+<tr><td>5a regressions, protect set</td><td class="c r">R</td><td class="c r">R</td><td class="c y">N</td><td></td><td></td><td class="c y">N</td><td></td><td class="c y">N</td><td></td><td></td><td class="c a">A</td></tr>
+<tr><td>5b shrinkage (winner's curse)</td><td class="c r">R</td><td class="c r">R</td><td class="c y">N</td><td></td><td></td><td class="c y">N</td><td></td><td></td><td></td><td></td><td class="c a">A + final</td></tr>
+<tr><td>5c when the gate says no</td><td class="c r">R</td><td class="c r">R</td><td></td><td></td><td></td><td class="c y">N</td><td class="c y">N</td><td></td><td></td><td class="c y">N</td><td class="c a">A</td></tr>
+<tr><td>5d transfer, 5e seeds, 5f judge</td><td class="c r">R</td><td></td><td class="c y">N (gpt-4.1 transfer)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c a">final extras</td></tr>
+</table></div>
+
+<h2 id="asks">Decisions needed from the coordinator</h2>
+<ol>
+<li><b>Capped tokens.</b> 60.5 M at 08:30, projection about 139 M at the cutoff before this plan, cap 150 M, final-eval reserve 15 M. Tier 1 needs about 8 M, Tier 1 + 2 about 12 M. Preferred: stop E12C best-of-k now (guard up to 8 M per seed, exploratory, does not bind B*); alternative: a 15 M cap raise for the ablation family; minimum: Tier 1 only.</li>
+<li><b>Azure spend.</b> About $1.0k (Tier 1) to $2k (everything) at list price. Uncapped by the user's earlier decision, but large enough to state.</li>
+<li><b>Gate reference.</b> The D family uses the stock gate as its reference, so its rows are never mixed with the rule-P rows of E10. Needs a note in the registry and the paper.</li>
+<li><b>Small code items.</b> Surface lock and builder (tau-runner, 2 h), history switch (algo-eng, 2 h, reviewed), suite D entry in the final machinery (final-eval-eng, 2 h). The skill loader (4 to 6 h) only if you want the fourth surface; the descriptions-only cell is the cheaper substitute and is labelled an emulation.</li>
+<li><b>Registry.</b> Config hashes, seeds, contrasts and margins written to <code>experiments/registry.jsonl</code> before the first D rollout.</li>
+</ol>
+<div class="note good"><b>Honest limits to carry into the paper.</b> One domain, one target, S=3: surface differences below about 0.10 will read inconclusive. The MCP surface is evaluated as an emulation or not at all. Suite A cannot host a skill-versus-prompt ablation in this window. Optimizer mechanics (E17) are dropped. Rule P results (E10) and D rows use different gates by design.</div>
+</main>
+</body>
+</html>
