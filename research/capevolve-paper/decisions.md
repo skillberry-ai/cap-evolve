@@ -331,3 +331,4 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - Regression sweep at 90/110/130 s idle: 500 with the switch off, ok with it on.
   - Parity: searches unpatched (off). The final evaluation uses SB_DRAIN_ERROR=1, KERNEL_TIMEOUT_S=10800 and api.py sha 50b1ba48...291, hashed in freeze.py.
   - Estimated share of search-time 500s explained by the bug: about 1/3 (0.32% of execs against 0.87% observed). This is an estimate, not a log count. The rest is unexplained and disclosed.
+- 2026-10-12T08:22 — USER DECISION: the non-RITS token cap is raised from 100M to 150M (caps.json max_nonrits_tokens_ex_cache_read, live within 30 s). Reason: the projection was about 110M at the cutoff plus 10-15M for the final evaluation. The 65M stop order is withdrawn. The final-eval reserve is now about 15M within 150M; a revised stop order applies only if the projection exceeds 135M at the search cutoff. USD stays well under $1000 (proxy $117 now).
