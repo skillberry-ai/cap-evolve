@@ -245,6 +245,12 @@ def native_status(rd):
                     return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
     for ev in ("run_summary.json", "final.json", "final"):
         cands = [rd / ev] + list((rd / ".capevolve").glob("run_*/" + ev))
-        if any(c.exists() for c in cands):
-            return "native_finish", "%s present (no exit line)" % ev
+        hit = [c for c in cands if c.exists()]
+        if hit:
+            # a summary left over from before a resume-restart is stale: it must be newer than the latest restart record
+            rl = rd / "restart_log.json"
+            restart_m = rl.stat().st_mtime if rl.exists() else 0
+            if max(c.stat().st_mtime for c in hit) <= restart_m:
+                continue
+            return "native_finish", "%s present, newer than the last restart (no exit line)" % ev
     return "running_or_unknown", "no exit evidence"
