@@ -165,5 +165,12 @@
   },
   "pipeline_vs_seed": 0.1972,
   "erratum_utc": "2026-10-12 09:49 UTC"
- }
+ },
+ "surface_lock_violation_rule": "9H: violating seed stays in its cell (intention to treat), dagger, sensitivity row without violating seeds for every contrast involving the cell, E25 decomposes by surfaces actually edited",
+ "holm_secondary_m4": [
+  "E20-GEPA vs seed (test-40)",
+  "E21-ruleP vs seed",
+  "E21-1S vs seed",
+  "E20-CTL vs seed"
+ ]
 }
