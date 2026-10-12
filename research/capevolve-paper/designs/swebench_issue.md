@@ -3,7 +3,7 @@ Proposed labels: `paper-experiment`, `honesty`. Related: #777, #774, #513, #306;
 
 ## Summary
 
-The colleagues report that after CapEvolve optimization with GLM 5.3 as agent and optimizer, a Harbor run over all 500 SWE-bench Verified instances solved 482 (96.4%). This issue (1) lists what must be established before that number can be claimed, and (2) specifies a self-contained design that any agent can run to get a clean number. Full design, split files and hashes: [`research/capevolve-paper/designs/swebench_verified_experimental_design.md`](https://github.com/skillberry-ai/cap-evolve/blob/research/capevolve-paper-20261011/research/capevolve-paper/designs/swebench_verified_experimental_design.md) and `designs/swebench_assets/` on branch `research/capevolve-paper-20261011`.
+The colleagues report that after CapEvolve optimization with GLM 5.3 as agent and optimizer, a Harbor run over all 500 SWE-bench Verified instances solved 482 (96.4%). We treat this as the colleagues' reported internal result, not yet a leaderboard result: section 1 states what must be established before it can be claimed as one. This issue (1) lists what must be established before that number can be claimed, and (2) specifies a self-contained design that any agent can run to get a clean number. Full design, split files and hashes: [`research/capevolve-paper/designs/swebench_verified_experimental_design.md`](https://github.com/skillberry-ai/cap-evolve/blob/research/capevolve-paper-20261011/research/capevolve-paper/designs/swebench_verified_experimental_design.md) and `designs/swebench_assets/` on branch `research/capevolve-paper-20261011`.
 
 ## 1. Validity: what the repository records already show (PR #673, issue #777)
 
