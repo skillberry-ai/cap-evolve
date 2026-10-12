@@ -1,10 +1,38 @@
 \section{Related Work}
 \label{sec:related}
 
-We measure optimizers of three kinds. Prompt and pipeline optimizers edit one string or a few module prompts: OPRO conditions a model on past (solution, score) pairs \citep{opro}, ProTeGi turns minibatch errors into textual gradients \citep{protegi}, MIPROv2 tunes instructions and demonstrations \citep{miprov2-dspy}, and GEPA reflects on traces, keeps a per-task Pareto set and merges candidates \citep{gepa}. Skill and context methods store procedure in text that the frozen agent reads: ACE grows a playbook by deltas \citep{ace}, EvoSkill keeps a frontier of skill-augmented programs \citep{evoskill}, SkillOpt accepts an edit only if it strictly improves a held-out selection score \citep{skillopt}, Trace2Skill consolidates trajectories into one skill directory \citep{trace2skill}, and WikiSkill adds a persistent wiki \citep{wikiskill}. Harness search edits agent code: ADAS and AFlow search over agents and workflows \citep{adas,aflow}, Meta-Harness shows its proposer every earlier candidate through a filesystem \citep{meta-harness}, and HarnessLens verifies a candidate only on tasks relevant to its change \citep{xu2026harnesslens}. CapEvolve's candidate DAG, merge verification and agent-driven controller resemble DarwinX and the Darwin G\"odel Machine \citep{darwinx,dgm}; we do not claim these ideas as new. We run MIPROv2, GEPA, ACE, EvoSkill, SkillOpt, Trace2Skill, Meta-Harness and HarnessLens from official code, and WikiSkill from a community port because no official code exists.
+Prior optimizers differ first in what they may edit and second in how they decide to keep an edit (Table~\ref{tab:surfaces}).
 
-Acceptance rules decide which edit survives, and several carry guarantees that our rule P lacks. CAPO races candidates \citep{capo}, BudgetAPO sizes evaluation slices from measured noise \citep{liu2026budgetapo}, SAGE runs a one-sided paired test on shared items \citep{wang2026sage}, and PACE controls false commits under repeated testing with an anytime-valid e-process \citep{shawn2026pace}. Rule P (Section~\ref{sec:v2:evaluation}) is simpler: a paired screen, then confirmation on fresh trials, tuned by simulation. These papers argue for stricter gates; we measure what a stricter gate costs and buys in final-set score.
+\begin{table*}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\caption{Editable surface and acceptance rule of related optimizers, from the cited papers. P: prompt or context text. T: tool code. M: tool descriptions exposed through an MCP server. S: skill document or package. H: harness or agent code. Y: edited in the paper; p: partial or framework-dependent; blank: not edited in the paper. CapEvolve implements P, T, M and S; our experiments edit P and T.}
+\label{tab:surfaces}
+\begin{tabular}{@{}lcccccl@{}}
+\toprule
+Method & P & T & M & S & H & Acceptance rule \\
+\midrule
+MIPROv2 \citep{miprov2-dspy} & Y & & & & & surrogate search over scored configurations \\
+GEPA \citep{gepa} & Y & & & & & minibatch check, then full-set score; Pareto set \\
+ACE \citep{ace} & Y & & & & & none; delta bullets merged \\
+SkillOpt \citep{skillopt} & & & & Y & & strict gain on a held-out selection split \\
+EvoSkill \citep{evoskill} & Y & & & Y & & validation score; frontier of $k$ programs \\
+Trace2Skill \citep{trace2skill} & & & & Y & & none by default; patches merged \\
+WikiSkill \citep{wikiskill} & & & & Y & & validation gate with rollback \\
+Meta-Harness \citep{meta-harness} & & & & & Y & none; Pareto frontier of evaluated harnesses \\
+HarnessLens \citep{xu2026harnesslens} & Y & p & p & Y & p & evidence gate on selected tasks \\
+ADAS \citep{adas} & Y & p & & & Y & none; archive of evaluated agents \\
+AFlow \citep{aflow} & Y & & & & Y & tree search on validation score \\
+DGM \citep{dgm} & Y & Y & & & Y & staged evaluation on 10, 60, then 200 tasks \\
+DarwinX \citep{darwinx} & Y & Y & & Y & Y & must extend solved set without regressions \\
+\midrule
+CapEvolve & Y & Y & Y & Y & & paired screen, fresh-trial confirmation (Section~\ref{sec:v2:evaluation}) \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
-Earlier measurements of such optimizers each vary one factor. Reusing a holdout set adaptively turns it into a training set \citep{adaptive-data-analysis-holdout-reuse}. Harness evolution on Terminal-Bench 2.1 does not beat simple test-time scaling under matched feedback and inference budgets, and earlier work searched on the tasks it reported \citep{rethinkharness}. Five self-evolving skill methods and a one-shot skill, run with one model, one agent and one split on six benchmarks including SpreadsheetBench, keep all of their training gain on test tasks in 5 of 21 improving cases \citep{piao2026skillsgeneralize}. On three Kotlin repositories, the GEPA gain is not separable from run-to-run variance \citep{kozyrev2026skillissue}, and no continual skill-learning method leads across all tasks and models \citep{zhong2026skilllearnbench}. HarnessOpt-Bench scores LLMs as harness optimizers on a held-out partition kept inaccessible during search \citep{harnessoptbench}. Single-lineage prompt optimization is reported to match or beat GEPA with fewer rollouts \citep{naiveprompt}, one analysis pass of a coding agent to beat SkillOpt on four benchmarks \citep{codingagentsopt}, and removing held-out selection from a self-evolving agent to turn a perfect in-sample score into a 33-point drop on test \citep{nguyen2026rsea}. These reports motivate our seed and one-shot controls.
+Prompt and context optimizers edit text. MIPROv2 tunes instructions and demonstrations \citep{miprov2-dspy}, GEPA reflects on traces and keeps a Pareto set \citep{gepa}, and ACE grows a playbook by deltas \citep{ace}. Skill methods edit procedure that the frozen agent reads: SkillOpt edits one document \citep{skillopt}, EvoSkill and Trace2Skill write skill folders \citep{evoskill,trace2skill}, and WikiSkill adds a persistent wiki \citep{wikiskill}. Harness methods edit agent code, from workflows \citep{adas,aflow} to a coding agent's own tools \citep{dgm,meta-harness}. In the papers we read, none reports editing the descriptions an MCP server exposes. CapEvolve differs in treating the surface as a parameter of one loop, with an edit policy for each of prompts, tool code, tool descriptions and skills. DarwinX and the Darwin G\"odel Machine use search structures similar to CapEvolve's candidate DAG, which we do not claim as new.
 
-Our study differs in what it audits and what it holds fixed. It re-measures the history of one deployed optimizer, finding scorer compliance, a reused test split and gold files read by optimizer sessions. It runs official implementations under one optimizer model, a matched rollout checkpoint, one error classifier and gold isolation. It compares the acceptance gate on the same suites. Meta-Harness states that it searches and scores on the same 89 TerminalBench-2 tasks \citep{meta-harness}; we report each suite's exposure in the same way (Section~\ref{sec:v2:setup}).
+Acceptance rules range from none to a statistical test. CAPO races candidates \citep{capo}, BudgetAPO sizes evaluation slices from measured noise \citep{liu2026budgetapo}, SAGE runs a one-sided paired test on shared items \citep{wang2026sage}, and PACE controls false commits under repeated testing with an anytime-valid e-process \citep{shawn2026pace}. These papers contribute the statistics. Our contribution is where the rule runs: in core code that the optimizer cannot edit, next to a sealed final set and gold isolation, so that the proposer cannot influence what it is scored on. Rule P is simpler than PACE or SAGE and carries no formal guarantee.
+
+Concurrent work measures optimizers without proposing one. Piao et al.\ run five skill optimizers and a one-shot skill with one model, agent and split on six benchmarks, and find that only 5 of 21 improving skills keep all of their training gain on test tasks \citep{piao2026skillsgeneralize}. Another study reports that harness evolution on Terminal-Bench 2.1 does not beat simple test-time scaling under matched budgets \citep{rethinkharness}. Single-lineage prompt optimization and one analysis pass of a coding agent are reported to rival GEPA and SkillOpt \citep{naiveprompt,codingagentsopt}. We therefore include seed and one-shot controls and compare against official code under a matched rollout checkpoint (Section~\ref{sec:v2:setup}).
