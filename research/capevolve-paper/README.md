@@ -53,7 +53,8 @@ Suites A to C use a matched checkpoint N*. Suites D and E use fixed budgets. Sui
 | `audit/` | Repository and algorithm audit, historical-result audit, gold-access scan, metering and silent-failure audits, capped-token forecast |
 | `experiments/` | Configs, run manifests, `registry.jsonl` (every experiment script and hash), `run_queue.jsonl`, final-evaluation tooling |
 | `redesign/` | Story (`STORY.md`), outline, and the experiment plan (`EXPERIMENTS.md`) |
-| `design/` | Experimental design pages |
+| `design/` | Experimental design pages for the five suites |
+| `designs/` | Proposed designs for other benchmarks (AppWorld, SWE-bench Verified) |
 | `reviews/` | Independent review reports, triage and responses per paper draft |
 | `literature/` | Paper cards, evidence table, novelty matrix, bibliography (PDF hashes only) |
 | `handoff/` | `checkpoint.md`, the resumable campaign state |
@@ -63,6 +64,15 @@ Suites A to C use a matched checkpoint N*. Suites D and E use fixed budgets. Sui
 | `STATUS.md` | Plain-language status, updated at periodic checks |
 
 Raw run directories, gateway logs and credentials are not in this repository.
+
+## Designs for other benchmarks
+
+Written designs for extending the study to further benchmarks. These are proposals only: nothing in them has run, and none is part of Suites A to E or of the paper's registered protocol.
+
+| Design | Status |
+|---|---|
+| [`designs/appworld_experimental_design.md`](designs/appworld_experimental_design.md) (issue text: [`designs/appworld_issue.md`](designs/appworld_issue.md)) | AppWorld, targets DeepSeek-V3.2 and gpt-oss-120b, against ACE, ALTK-Evolve and the campaign competitors. Posted as issue skillberry-ai/cap-evolve#804 |
+| [`designs/swebench_verified_experimental_design.md`](designs/swebench_verified_experimental_design.md) | SWE-bench Verified. In progress |
 
 ## Build the paper
 

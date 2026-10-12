@@ -13,6 +13,7 @@ Plain-language status is in [`STATUS.md`](STATUS.md); real results are indexed i
 
 ## 2026-10-12
 
+- 13:55 Design: AppWorld experimental design (proposed Suite F, for colleagues: DeepSeek-V3.2 and gpt-oss-120b, compared with ACE, ALTK-Evolve and the campaign competitors) posted as issue skillberry-ai/cap-evolve#804; full text in [`designs/appworld_experimental_design.md`](designs/appworld_experimental_design.md). A SWE-bench Verified design is in progress ([`designs/swebench_verified_experimental_design.md`](designs/swebench_verified_experimental_design.md)). Design only: no AppWorld run exists and it is outside the registered Suites A to E.
 - 13:14 Amendment 9 erratum 8: descriptive column `identical_to_own_seed` next to the shared-seed inert flag. No rule change.
 - 13:03 Amendment 10 erratum 1: tau2 adapters log `infra_detail` (exception type, tool call) per failed attempt. Logging only, before any Suite E rollout.
 - 12:59 Amendment 9 erratum 7: "no retry credit" sensitivity analysis added; the primary rule 5O-1 is unchanged.

@@ -1,0 +1,30 @@
+{
+ "dev": {
+  "hf_repo": "princeton-nlp/SWE-bench",
+  "n": 225,
+  "parquet_sha256": "d758d54540aa4140d0274ed0cc93b8288aa6f323c3c603e2557e7666a47fc41b",
+  "revision": "e48e2bd1e9fecd5bbd641e9414ac59da9f2e69f6",
+  "sha256_sorted_ids": "6524b8e78c347c257640857b17fa742c95aec2f41a2cb8dd2ce8fb7aae0c11f4"
+ },
+ "swegym": {
+  "hf_repo": "SWE-Gym/SWE-Gym",
+  "n": 2438,
+  "parquet_sha256": "60569cea74bb281f7a5579467436a2bc1932c6e0c5f2f7fa0d084392abd9ad97",
+  "revision": "bb94ed9e39bbeb96a7fcbfb533b80f25a7fd59cb",
+  "sha256_sorted_ids": "1b7c178da5d88b9bf484254a782948209fa4d5d8e8bae8e26c0241031c1ece56"
+ },
+ "train": {
+  "hf_repo": "princeton-nlp/SWE-bench",
+  "n": 19008,
+  "parquet_sha256": "0ba403a7060af657e1f0476937a703726c07da15b759836694b16e553705a10f",
+  "revision": "e48e2bd1e9fecd5bbd641e9414ac59da9f2e69f6",
+  "sha256_sorted_ids": "240ec200ae4f55151c26478d29ec7d6ddbfa619de7066f7ee20fa392fe150e13"
+ },
+ "verified": {
+  "hf_repo": "princeton-nlp/SWE-bench_Verified",
+  "n": 500,
+  "parquet_sha256": "a45b1fe4e2f0c8390b2b2938ac83e92ed5979000856808f3679c07812e9e6dcd",
+  "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+  "sha256_sorted_ids": "fad0fdea4fc2315e9b78cdf80882a32e32393297052e502e0e63c79ad648fb85"
+ }
+}
