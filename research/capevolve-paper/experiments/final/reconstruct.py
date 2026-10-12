@@ -335,7 +335,7 @@ def rule_ace(rd, events, limit, ctx):
     """ACE (dl_new/ace_src/ace/ace.py:781-783): deployed playbook = best_playbook, updated on `acc > best_accuracy` at each val evaluation
     (strict, earliest wins); wrapper code/ace_run.py:199-205 evaluates val at each epoch end and at final stop and takes
     max(cands, key=(val, -index)).  Replayed over `evaluated` val events inside the limit."""
-    best, used = argmax_eval(events, limit, {"val"}, kinds={"full"})
+    best, used = argmax_eval(events, limit, {"val", "sel"}, kinds={"full"})
     if best is None:
         d = sel("impossible", None, None)
         d["reason"] = ("no val-evaluated playbook inside the limit: ACE's native fallback (empty playbook, ace_run.py 'no_eval') would apply, but a run "
