@@ -6,14 +6,14 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm) |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm), [`ui/heatmap_v5_t1_e1.html`](../ui/heatmap_v5_t1_e1.html) (v5 T1 baseline arm) |
 | **3** | **why a task moved, and what it teaches** | **`reports/<exp>/<task>.md`** |
 
 ## Naming
 
-Three experiments each get their own subfolder — `v1/`, `v2/`, `v4/` — mirroring
-`artifacts/<exp>/`, so the two task-id namespaces never collide or imply kinship. v4, with two
-arms, splits one level further:
+Four experiments each get their own subfolder — `v1/`, `v2/`, `v4/`, `v5/` — mirroring
+`artifacts/<exp>/`, so the task-id namespaces never collide or imply kinship. v4, with two
+arms, splits one level further; v5 (so far one arm) does the same for consistency:
 
 | experiment | pattern | count |
 |---|---|--:|
@@ -21,6 +21,7 @@ arms, splits one level further:
 | v2 (hand-authored) | `v2/<task>.md` | 10 |
 | v4 T arm (task-by-task) | `v4/v4_t_e1/<task>.md` | 34 |
 | v4 G arm (global, shared bundle) | `v4/v4_g_e1/<task>.md` | 34 |
+| v5 T1 arm (zero-shot baseline, isolated 68-task set) | `v5/v5_t1_e1/<task>.md` | 68 |
 
 `v4/h4/` is the exception to "one file per task": it holds the **h4 held-out
 suite** — 30 new scenarios (`bench-v4-035` … `-064`) authored after the
@@ -66,7 +67,13 @@ python3 scripts/build_task_reports.py --stats     # coverage: how many written, 
 **Do not hand-edit inside the auto block** — edits there are overwritten on the next run.
 Numbers stay derived; narrative stays human.
 
-## The diff block (v4 only)
+## The diff block (v4 only — v5_t1_e1 gets none)
+
+v5_t1_e1 is a zero-shot baseline with no `best/` directory anywhere (nothing was optimized), so
+`build_v5_t1_task_reports.py` calls the same `scripts/v4_report_common.py::build_diff_block()`
+every v4 report generator uses, and it returns `None` for all 68 tasks by the same
+`best_dir.is_dir()` check that already skips the diff block for v4's not-optimized tasks — no
+special-casing needed.
 
 Both v4 arms get a second generated section, `<!-- BEGIN:diff -->` / `<!-- END:diff -->`,
 appended after the hand-written narrative (or, for the G arm, after the not-yet-written-narrative

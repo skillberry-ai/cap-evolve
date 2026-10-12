@@ -37,14 +37,15 @@ bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; s
 
 | directory | what's in it |
 |---|---|
-| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape) |
+| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape); `v5/` holds a from-scratch, physically isolated rebuild of the task set (68 tasks, no shared content with v4/h4) — one arm so far, `v5_t1_e1/` |
 | [`recipes/`](recipes/) | the cap-evolve configs a rerun needs, copied verbatim — and, critically, where each recipe disagrees with what its run actually did |
 | [`artifacts/`](artifacts/) | the skill packages themselves: seed, champion, rejected, and (for v2) discarded candidates |
 | [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it |
-| [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), and their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms — everything numeric in this branch is derived by one of these, never hand-typed twice |
+| [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms, and `build_v5_t1_*` for v5's baseline arm — everything numeric in this branch is derived by one of these, never hand-typed twice |
 | [`docs/`](docs/) | the design record — specs and implementation plans for parsec v4, plus its intake handoff; describes decisions, not code, so it lives here rather than on `parsec-intake_v4` |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
 | [`ui/heatmap_v4_t.html`](ui/heatmap_v4_t.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
+| [`ui/heatmap_v5_t1_e1.html`](ui/heatmap_v5_t1_e1.html) | the same, for v5's baseline arm — matches `results/v5/`'s per-arm ledger |
 | [`presentations/management_review_presentation/`](presentations/management_review_presentation/) | hand-authored, not generated: the general cap-evolve pitch/roadmap deck (Reveal.js, vendored) — Parsec is one roadmap thread in it, not its subject |
 | [`presentations/parsec_optimization_presentation/`](presentations/parsec_optimization_presentation/) | hand-authored, not generated: the Parsec v1+v2 PoC deck (Reveal.js, vendored) for an IBM/Red Hat audience |
 | [`presentations/presentation_v4/`](presentations/presentation_v4/) | fork of the Parsec deck above, being extended with v4 — cover slide updated so far, rest of the deck still v1/v2 only |
