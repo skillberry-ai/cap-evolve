@@ -17,6 +17,12 @@ ITEMS = [
 ]
 
 
+SCRATCH = Path("/home/dev/projects2/campaign-scratch/scripts/E20")
+WT_TAU = Path("/home/dev/projects2/wt-tau")
+EXTRA_FILES = ["build_d.py", "launch_d.sh", "launch_gepa_d.sh", "gepa_tau.py", "eval_cap.py", "collect_cap.py", "guard_marker.py",
+               "cand_logger.py", "make_sbx_data.py"]
+
+
 def sha(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
@@ -26,12 +32,18 @@ def main():
     have = {(json.loads(l).get("item"), json.loads(l).get("sha256")) for l in lines}
     head = subprocess.check_output(["git", "-C", str(PAPER), "rev-parse", "HEAD"], text=True).strip()
     added = 0
-    for item, path, note in ITEMS:
-        h = sha(path)
+    items = [(i, p, n, None) for i, p, n in ITEMS]
+    wt = subprocess.check_output(["git", "-C", str(WT_TAU), "rev-parse", "HEAD"], text=True).strip()
+    items.append(("suite_D_wt_tau_commit", None, "tau worktree commit the Suite D runs are built from: " + wt, hashlib.sha256(wt.encode()).hexdigest()))
+    for f in EXTRA_FILES:
+        if (SCRATCH / f).exists():
+            items.append(("suite_D_script_" + f, SCRATCH / f, "Suite D launch/eval script (campaign-scratch/scripts/E20)", None))
+    for item, path, note, h0 in items:
+        h = h0 or sha(path)
         if (item, h) in have:
             continue
         prev = hashlib.sha256(lines[-1].encode()).hexdigest() if lines else None
-        d = {"item": item, "sha256": h, "path": str(path.relative_to(PAPER)), "t_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        d = {"item": item, "sha256": h, "path": (str(path.relative_to(PAPER)) if path and PAPER in Path(path).parents else (str(path) if path else None)), "t_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
              "script_commit": head, "prev_line_sha256": prev, "note": note}
         lines.append(json.dumps(d, sort_keys=True)); have.add((item, h)); added += 1
     REG.write_text("\n".join(lines) + "\n")
