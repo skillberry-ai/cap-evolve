@@ -3,6 +3,7 @@
 \scriptsize
 \caption{Regressions per promotion and net gain for CapEvolve searches. Search-time, own selection split of each run, not held-out. Fixed and broke: tasks moving across the pass line (reward 0.5) relative to the parent. Protect viol.: seed-solid tasks that score below 1 at the candidate. Fresh $\Delta$: promoted candidate minus its baseline on fresh confirmation trials (Rule P only), the least biased within-search gain. Rejected: mean tasks broken by rejected candidates (candidates still pending are excluded).}
 \label{tab:attrib-regression}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llrrrrrrrr@{}}
 \toprule
 Suite & Arm & Cands & Promoted & Fixed/prom. & Broke/prom. & Net/prom. & Broke/rej. & Protect viol./prom. & Fresh $\Delta$/prom. \\
@@ -16,4 +17,5 @@ C & CapEvolve, stock gate & 19 & 3 & 4.7 & 1.3 & 3.3 & 3.6 & 1.0 & -- \\
 C & One-shot control & 3 & 1 & 5.0 & 1.0 & 4.0 & 2.5 & 1.0 & -- \\
 \bottomrule
 \end{tabular}
+}
 \end{table*}

@@ -3,6 +3,7 @@
 \scriptsize
 \caption{Edit attribution by capability surface for CapEvolve candidates. Search-time, own selection split of each run (A: val-40, B: opt-49, C: opt-20), not held-out. Touching/total candidates, promoted among those touching, mean selection-split change vs parent, mean tasks fixed and broken (pass = reward $\ge$ 0.5), and Spearman correlation between lines changed on the surface and the change. n/a: surface touched by all or none, so no contrast. Selection-split changes are optimistic and noisy.}
 \label{tab:attrib-surface}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llllrrrrr@{}}
 \toprule
 Suite & Arm & Surface & Touch & Promoted & $\Delta$ sel. & Fixed & Broke & $\rho$ \\
@@ -23,4 +24,5 @@ C & One-shot control & system\_prompt & 3/3 & 1 & 0.088 & 3.7 & 2.0 & n/a \\
 C & One-shot control & tool\_code & 3/3 & 1 & 0.088 & 3.7 & 2.0 & n/a \\
 \bottomrule
 \end{tabular}
+}
 \end{table*}

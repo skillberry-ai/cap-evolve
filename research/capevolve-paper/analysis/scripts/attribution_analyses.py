@@ -90,6 +90,11 @@ def label_failure(base, feedback, error, term):
     return "other", flags
 
 
+TYPE_WORDS = {"missing_action": "Missing action", "wrong_argument": "Wrong arg.", "state_side_effect": "Side effect",
+              "communication": "Comm.", "no_output_file": "No output", "wrong_result": "Wrong result",
+              "partial_result": "Partial", "infra": "Infra", "other": "Other", "was_passing_or_unlabelled": "Unlabelled"}
+
+
 def spreadsheet_category(fb):
     m = re.search(r"\((Cell-Level|Sheet-Level)", fb or "")
     return m.group(1) if m else ""
@@ -421,8 +426,9 @@ def cap(stage, split_note):
 def tex_table(name, caption, label, header, rows, spec, wide=True):
     env = "table*" if wide else "table"
     body = "\n".join(rows)
-    s = ("\\begin{%s}[t]\n\\centering\n\\scriptsize\n\\caption{%s}\n\\label{%s}\n\\begin{tabular}{%s}\n\\toprule\n%s \\\\\n\\midrule\n%s\n"
-         "\\bottomrule\n\\end{tabular}\n\\end{%s}\n") % (env, caption, label, spec, header, body, env)
+    pre, post = ("\\resizebox{\\textwidth}{!}{%\n", "}\n") if header.count("&") >= 8 else ("", "")
+    s = ("\\begin{%s}[t]\n\\centering\n\\scriptsize\n\\caption{%s}\n\\label{%s}\n%s\\begin{tabular}{%s}\n\\toprule\n%s \\\\\n\\midrule\n%s\n"
+         "\\bottomrule\n\\end{tabular}\n%s\\end{%s}\n") % (env, caption, label, pre, spec, header, body, post, env)
     p = TABLES / name
     p.write_text(s)
     return p
@@ -488,7 +494,7 @@ def make_tables(attr, regr, prom, fails, cands, shr, cost):
     out.append(tex_table("attrib_surface_failure.tex",
         "Surface by failure type: seed-failed tasks fixed by CapEvolve candidates, grouped by the candidate's dominant edited surface (most changed lines). " + cap("search", "fixes counted on each run's selection split over all candidates, promoted ones in parentheses") +
         " A task counts as fixed when it fails at the parent and passes at the candidate; the count includes noise flips and is not a measure of cause. Types not listed were not fixed.",
-        "tab:attrib-surface-failure", "Suite & Dominant surface & " + " & ".join(T(t) for t in types), rows, "@{}ll" + "r" * len(types) + "@{}"))
+        "tab:attrib-surface-failure", "Suite & Dominant surface & " + " & ".join(TYPE_WORDS.get(t, t.replace("_", " ").capitalize()) for t in types), rows, "@{}ll" + "r" * len(types) + "@{}"))
     # shrinkage and cost
     rows = []
     for r in shr:
