@@ -335,6 +335,15 @@ def native_status(rd):
                         # host-side finalize; decisions.md 02:50 UTC): a native termination, not a crash
                         return "native_finish", "%s: exit %d from the finalize step, final.json present (search ended on its own)" % (name, rc)
                     return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
+    hco = rd / "logs" / "hc.out"       # Suite A hill-climb (and hcstock): the daemon counter is authoritative; hc ends itself when the budget is exhausted
+    if hco.exists() and not _live(rd):
+        try:
+            full = hco.read_text(errors="replace")
+            tail = full[-300:]
+        except Exception:
+            full, tail = "", ""
+        if tail.rstrip().endswith("hc-exited") and ("max_metric_calls reached" in full or "budget_exhausted" in full):
+            return "budget_cap", "logs/hc.out: budget exhausted (max_metric_calls reached) followed by hc-exited, no live process"
     ho = rd / "logs" / "host.out"      # Suite A agent-optimize: the host appends `host-exited` on every exit; it counts as the agent's OWN end only if the agent produced its final report first
     if ho.exists() and not _live(rd):
         try:
