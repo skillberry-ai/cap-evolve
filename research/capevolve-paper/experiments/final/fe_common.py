@@ -68,7 +68,7 @@ SUITES["D"] = {
 }
 # candidate run directories (relative to RUNS) per Suite D arm; first existing one is used.  Real names: runs/E20/{PT,P,T,CTL}, runs/E21/ruleP (tau-runner)
 D_DIRS = {"pt": ["E20/PT"], "p": ["E20/P"], "t": ["E20/T"], "ctl": ["E20/CTL"], "gepa": ["E20/GEPA"], "rulep": ["E21/ruleP"], "1s": ["E21/1S", "E21/OneStage", "E21/1s"],
-          "nohist": ["E26/nohist", "E26/NOHIST", "E26/nohist-PT", "E26/PT"]}
+          "nohist": ["E26/NOHIST", "E26/nohist"]}
 for _s, _ex in (("B", ["hcstock", "hlext"]), ("C", ["hcstock"])):   # B: E12B stock-gate hill climb, HL-extended (exploratory)
     SUITES[_s]["exploratory"] = _ex                  # C: E12C stock-gate hill climb
 RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock"): RUNS / "E12C" / "hcstock", ("B", "hcstock"): RUNS / "E12B" / "hcstock",

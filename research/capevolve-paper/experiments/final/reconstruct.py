@@ -564,7 +564,9 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
     entry["n_screened"] = len(cands_seen)
     if sv is not None:
         entry["surface_violations"] = sv
-    def _viol(v):      # surface_violations.json: any nonzero count / non-empty list = the champion's search edited outside its cell's lock
+    def _viol(v):
+        if isinstance(v, dict) and "n_violating_candidates" in v:      # tau-runner format: {"violating_candidates": {...}, "n_violating_candidates": n}; absent file = 0
+            return int(v.get("n_violating_candidates") or 0) > 0      # surface_violations.json: any nonzero count / non-empty list = the champion's search edited outside its cell's lock
         if isinstance(v, dict):
             return any(_viol(x) for x in v.values())
         if isinstance(v, (list, tuple, set)):
