@@ -338,3 +338,4 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
     - at 130M, stop the secondary arms (ACE, MIPROv2);
     - primary arms are never stopped for tokens.
   - The coordinator checks this every 3 h.
+- 2026-10-12T08:28 — N* rule addendum (pre-cutoff): a seed stopped by its frozen per-search optimizer-token guard (≤4M non-cache-read) is a BUDGET termination under the frozen configuration. It is treated like a native termination: its artifact is the method's own selection at the stop, its count is disclosed, and it does not bind N*. The AO guard is not raised (the same budget rule applies to every arm).
