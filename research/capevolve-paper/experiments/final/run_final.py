@@ -476,6 +476,55 @@ def execute_job(job, store, cm, py, hang_s=HANG_S, log=print):
         attempt += 1
 
 
+def job_final_state(t, allr):
+    """per-cell final status (amendment 5O): ok / retry_k_ok / infra_final / hang_retried / hang_missing / artifact_fail / pending"""
+    if not t:
+        return "pending"
+    if t["final_status"] == "missing":
+        return "hang_missing" if t.get("missing_kind") == "hang" else "infra_final"
+    if t["error_class"] in ("candidate", "unverifiable"):
+        return "artifact_fail"
+    prior = allr[:-1]
+    if not prior:
+        return "ok"
+    if any(x.get("hang") for x in prior):
+        return "hang_retried"
+    return "retry_%d_ok" % len(prior)
+
+
+def wilson(k, n, z=1.96):
+    if n == 0:
+        return [None, None]
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return [round(c - h, 4), round(c + h, 4)]
+
+
+def infra_diagnostic(jstat):
+    """per (mode, arm, seed) and per arm: counts of cells by final status, first-attempt infra rate, infra_final rate (Wilson 95% CI), next to the seed artifact's
+    rates in the same window (amendment 5O descriptive diagnostic)."""
+    def summarize(rows):
+        done = [r for r in rows if r[5]]
+        n = len(done)
+        st = {}
+        for r in done:
+            st[r[3]] = st.get(r[3], 0) + 1
+        fi = sum(1 for r in done if r[4])
+        ff = st.get("infra_final", 0)
+        return {"cells": n, "status_counts": st, "first_attempt_infra": fi, "first_attempt_infra_rate": round(fi / n, 4) if n else None,
+                "first_attempt_infra_ci95": wilson(fi, n), "infra_final": ff, "infra_final_rate": round(ff / n, 4) if n else None, "infra_final_ci95": wilson(ff, n)}
+    out = {"per_artifact": {}, "per_arm": {}, "seed_artifact": summarize([r for r in jstat if r[1] == "seed"])}
+    groups = {}
+    for r in jstat:
+        groups.setdefault(("%s|%s|s%d" % (r[0], r[1], r[2])), []).append(r)
+        groups.setdefault(("arm|%s|%s" % (r[0], r[1])), []).append(r)
+    for k, rows in sorted(groups.items()):
+        out["per_arm" if k.startswith("arm|") else "per_artifact"][k] = summarize(rows)
+    return out
+
+
 def aggregate(suite, root, meta, jobs):
     """results_long.csv (contract; infra_final cells enter as reward 0 with a flag, amendment 5O) + results_long_infra_missing.csv (infra_final cells absent)
     + results_trials.csv + END variants + per-arm and per-artifact infra-rate reports, from raw/rollouts.jsonl"""
@@ -484,9 +533,18 @@ def aggregate(suite, root, meta, jobs):
     trial_rows = {"B": [], "END": []}
     attempts_by_arm = {}
     by_art = {}
+    jlog = []
+    jstat = []
     for j in jobs:
         t = store.terminal(j["job_id"])
         allr = store.records(j["job_id"])
+        fs = job_final_state(t, allr)
+        first_infra = bool(allr) and allr[0]["error_class"] == "infra"
+        for x in allr:
+            jlog.append(dict(arm=j.get("arm"), arm_label=j["arm_label"], seed=j["seed"], task=j["task"], trial=j["trial"], attempt=x["attempt"], error_class=x["error_class"],
+                             error_rule=x.get("error_rule"), hang=int(bool(x.get("hang"))), final_status=fs, t_start=_iso(x["t_start"]), t_end=_iso(x["t_end"]),
+                             error_text=(x["error_text"] or "").replace("\n", " ")[:500], job_id=j["job_id"], mode=j["mode"]))
+        jstat.append((j["mode"], j["arm_label"], j["seed"], fs, first_infra, bool(t)))
         arm = j["arm_label"]
         rep = attempts_by_arm.setdefault((j["mode"], arm), {"jobs": 0, "attempts": 0, "retried_jobs": 0, "done": 0, "missing_hang": 0, "infra_final": 0, "pending": 0,
                                                             "infra_attempts": 0, "hangs": 0, "candidate_errors": 0, "empty_output": 0, "empty_completion": 0, "raw_tool_text_last": 0})
@@ -551,6 +609,8 @@ def aggregate(suite, root, meta, jobs):
         v["infra_attempt_rate"] = round(v["infra_attempts"] / v["attempts"], 4) if v["attempts"] else None
         v["infra_final_rate"] = round(v["infra_final"] / v["jobs"], 4) if v["jobs"] else None
     C.write_json_atomic(root / "per_artifact_infra_rates.json", by_art)
+    _write_csv(root / "rollout_log.csv", jlog, ["mode", "arm", "arm_label", "seed", "task", "trial", "attempt", "error_class", "error_rule", "hang", "final_status", "t_start", "t_end", "error_text", "job_id"])
+    C.write_json_atomic(root / "infra_diagnostic.json", infra_diagnostic(jstat))
     return out, rep
 
 

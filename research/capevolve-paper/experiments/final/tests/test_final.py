@@ -182,6 +182,11 @@ class TestRunner(unittest.TestCase):
             self.assertIn("t1", sens)
             rates = json.load(open(Path(self.tmp) / "per_artifact_infra_rates.json"))
             self.assertEqual(rates["B|hc|s0"]["infra_final"], 1)
+            dg = json.load(open(Path(self.tmp) / "infra_diagnostic.json"))
+            sc = dg["per_artifact"]["B|hc|s0"]["status_counts"]
+            self.assertEqual((sc.get("infra_final"), sc.get("retry_2_ok"), sc.get("hang_missing")), (1, 1, 1))
+            self.assertEqual(dg["per_artifact"]["B|hc|s0"]["first_attempt_infra"], 3)
+            self.assertTrue((Path(self.tmp) / "rollout_log.csv").exists())
             cand = {"worker_ok": True, "error": "task_template.md broke the placeholder contract", "error_kind_adapter": "infra", "reward": 0.0}
             RF.run_attempt = self.fake_attempts([cand])
             RF.execute_job(job(3, task="t4"), st, self.cm, "py", log=lambda s: None)
