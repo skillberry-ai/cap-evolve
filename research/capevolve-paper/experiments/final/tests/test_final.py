@@ -134,6 +134,41 @@ class TestFinalTaskLoading(unittest.TestCase):
             O.FINAL_A_TASKS = old
 
 
+class TestInfraDetail(unittest.TestCase):
+    def _run(self, tmp, res, jid_task):
+        j = job(0, task=jid_task)
+        h = __import__("hashlib").sha256(j["job_id"].encode()).hexdigest()[:16]
+        ad = Path(tmp) / "raw" / "attempts" / h / "a0"
+        ad.mkdir(parents=True)
+        (ad / "result.json").write_text(json.dumps(res))
+        (ad / "pid").write_text("999999999")             # dead pid + existing result.json = ingest path of run_attempt (no process is spawned)
+        rec = RF.run_attempt(j, 0, tmp, C.collect_metrics(), "py", 5)
+        return j, rec
+
+    def test_infra_detail_lands_in_record_and_rollout_log(self):
+        tmp = tempfile.mkdtemp()
+        det = {"error": "boom", "error_type": "ValueError", "failed_after_attempts": 4, "traceback_functions": ["cancel_order", "_exec"],
+               "last_tool_call": {"name": "cancel_pending_order", "arguments": {}, "tool_result_head": "x"}}
+        res_bad = {"worker_ok": True, "error": "tau2 terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR", "error_kind_adapter": "infra", "reward": 0.0,
+                   "reward_as_saved": 0.0, "t_start": 1.0, "t_end": 2.0, "infra_detail": det}
+        res_ok = {"worker_ok": True, "error": None, "reward": 1.0, "reward_as_saved": 1.0, "t_start": 1.0, "t_end": 2.0}
+        j1, r1 = self._run(tmp, res_bad, "t1")
+        j2, r2 = self._run(tmp, res_ok, "t2")
+        self.assertEqual(r1["infra_detail"]["error_type"], "ValueError")
+        self.assertEqual(r1["error_class"], "infra")
+        self.assertIsNone(r2["infra_detail"])
+        r1.update(terminal=True, final_status="done"); r2.update(terminal=True, final_status="done")
+        st = RF.Store(tmp)
+        st.add(r1); st.add(r2)
+        RF.aggregate("A", tmp, {}, [j1, j2])
+        raw = [json.loads(l) for l in open(Path(tmp) / "raw" / "rollouts.jsonl")]
+        self.assertEqual(raw[0]["infra_detail"]["failed_after_attempts"], 4)
+        rows = {r["task"]: r for r in csv.DictReader(open(Path(tmp) / "rollout_log.csv"))}
+        self.assertEqual((rows["t1"]["infra_error_type"], rows["t1"]["infra_traceback_functions"], rows["t1"]["infra_last_tool"], rows["t1"]["infra_failed_after_attempts"]),
+                         ("ValueError", "cancel_order|_exec", "cancel_pending_order", "4"))
+        self.assertEqual((rows["t2"]["infra_error_type"], rows["t2"]["infra_traceback_functions"], rows["t2"]["infra_last_tool"], rows["t2"]["infra_failed_after_attempts"]), ("", "", "", ""))
+
+
 class TestInfraFlag(unittest.TestCase):
     def test_flags_artifact_above_seed(self):
         js = [("B", "seed", 0, "ok", False, True)] * 200 + [("B", "hc", 0, "ok", False, True)] * 70 + [("B", "hc", 0, "retry_1_ok", True, True)] * 30 + [("B", "gepa", 0, "ok", False, True)] * 100
