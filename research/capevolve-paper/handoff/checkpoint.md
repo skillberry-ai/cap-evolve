@@ -97,3 +97,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Suite E admission loop (tau-runner) and E12B relaunch watcher armed. E26-nohist running with shim v2.
 - Azure mini quota is the bottleneck; caps.json azoai:gpt-4.1-mini=15. Undo after campaign: remove bubblewrap, gw4112 bridge, plus earlier items.
 - Resume: watch D searches ending (about 19:30-20:00), Suite E waves, the 06:00 cutoff (cron b76737e4) for A/B/C.
+
+## Paper repo mirror (13:31 UTC 10-12)
+- github bcarmeli/mlsys2027-cap-evolve-paper (private, main) mirrors research/capevolve-paper/ commit by commit, plus the built PDF and an Overleaf zip. The writer is the repo-sync loop, PID in campaign-scratch/logs/paper_repo_sync.pid (every 600 s). Stop with kill $(cat .../paper_repo_sync.pid). Restart with nohup python3.12 -I campaign-scratch/scripts/paper_repo_sync.py --loop 600.
+- After the campaign, decide with the user whether to keep the loop running. It is a host process to stop.
