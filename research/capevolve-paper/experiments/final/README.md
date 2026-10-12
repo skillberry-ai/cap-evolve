@@ -31,7 +31,7 @@ Source texts: decisions.md 2026-10-11 ('600 target rollouts per search, all eval
 Audit of counter sources (bstar.py `search_counter`): Suite A hc/ao daemon `logs/rollout_counter.json` (starts, incl. baseline, probes, confirms; no finalize on A), GEPA/SkillOpt/EvoSkill/Meta-Harness/WikiSkill/
 Trace2Skill/ACE/MIPROv2 `rollout_counter.json` (search budget counters), HarnessLens `rollout_counter.json` (baseline_used + rollout jobs + retries): all search-only, unchanged.
 Only the tau CapEvolve runs (hc, ao, hcstock on B/C) had a counter (`state.json spent.metric_calls`) that includes the host-side finalize (champion and seed on sel): there the count is the number of logged
-rollouts outside the sel/test/FINAL splits (ao s0 198 -> 148, s1 197 -> 147, s2 172 -> 147; C ao 110 -> 100).  Both raw and search counters are written to bstar_<S>.json.
+rollouts outside the sel/test/FINAL splits (ao s0 198 -> 148, s1 197 -> 147, s2 172 -> 147; C ao 110 -> 100; the sel-25 rows are finalize rollouts or, for ao s2, the seed's pre-repair sel measurement; ao s2's search is still running). Cross-check: the count equals the number of files under `.capevolve/run_main/rollouts/val`.  Both raw and search counters are written to bstar_<S>.json.
 
 ## Phase ordering (decisions 22:50)
 
