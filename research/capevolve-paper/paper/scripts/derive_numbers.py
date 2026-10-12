@@ -84,33 +84,6 @@ tab += ["\\bottomrule", "\\end{tabular}"]
 (ROOT / "paper" / "appendix" / "sim_table.tex").write_text("\n".join(tab) + "\n")
 
 
-# ---- empirical null pool (E22) ----
-npm = (ROOT / "analysis/out/null_pool_replay.md").read_text()
-
-
-def _row(label_re, text):
-    m = re.search(label_re + r".*", text)
-    assert m, label_re
-    return m.group(0)
-
-
-r1 = _row(r"\| one-stage / stock-unmasked \(screen k_se=1\)", npm)
-r2 = _row(r"\| rule P as E10B \(k1, n_conf3, z1\.282, dmin0\)", npm)
-p1 = float(r1.strip("|").split("|")[-1])
-p2 = float(r2.strip("|").split("|")[-1])
-b1 = _row(r"\| one-stage / stock-unmasked \| 0\.", npm)
-b2 = _row(r"\| rule P as E10B \(k1,n3,z1\.282,dmin0\)", npm)
-iv1 = re.findall(r"\[([\d.]+), ([\d.]+)\]", b1)[-1]
-iv2 = re.findall(r"\[([\d.]+), ([\d.]+)\]", b2)[-1]
-put("nullKone", f(p1, 2))
-put("nullKoneLo", f(float(iv1[0]), 2))
-put("nullKoneHi", f(float(iv1[1]), 2))
-put("nullP", f(p2, 2))
-put("nullPLo", f(float(iv2[0]), 2))
-put("nullPHi", f(float(iv2[1]), 2))
-put("nullRatio", f(p1 / p2, 1))
-put("nullPSimRatio", f(p2 / sims["B"][KP]["N=10"]["p_any_false_null_search"], 0))
-
 # ---- minimum detectable effect from observed seed-artifact variance ----
 mo = json.load(open(ROOT / "analysis/out/mde_observed.json"))["mde"]
 
