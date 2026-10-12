@@ -128,12 +128,13 @@ def _bestofk_pause():
     import json as _j
     f = pathlib_path("/home/dev/projects2/campaign-scratch/runs/E12C/bestofk/PAUSED.json")
     try:
-        d = _j.loads(f.read_text())["seeds"]
+        rec = _j.loads(f.read_text())
+        d = rec["final"]  # the final block supersedes the snapshot taken at the first pause
         ks = [str(d[s]["proposals_completed"]) for s in ("s0", "s1", "s2")]
-        rs = [str(d[s]["counted_rollouts_incl_baseline"]) for s in ("s0", "s1", "s2")]
+        rs = [str(d[s]["counted_incl_baseline"]) for s in ("s0", "s1", "s2")]
         return "/".join(ks), "/".join(rs)
     except Exception:
-        return "6/6/7", "140/140/160"
+        return "6/6/8", "140/140/180"
 
 
 def e12_table(data):
