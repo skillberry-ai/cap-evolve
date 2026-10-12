@@ -665,6 +665,15 @@ def main(argv=None):
     nf = (bj or {}).get("natively_finished") or {}
     for e in man["entries"]:
         k = "%s/s%d" % (e["arm"], e["seed"])
+        if k in nf and nf[k].get("stop_kind") == "budget_cap":
+            # per-seed note printed beside the numbers: the campaign's hard cap (RolloutCap at 600 counted rollouts, which also counts infra retries and restart waste) ended the search
+            note = {"stop_kind": "budget_cap", "campaign_hard_cap": 600, "campaign_count_at_stop": nf[k]["count"], "evidence": nf[k]["evidence"]}
+            sel = C.jload(Path(C.run_dir(suite, e["arm"], e["seed"])) / "final" / "SELECTION.json") or {}
+            if sel.get("gepa_total_num_evals") is not None:
+                note.update(own_budget_metric_calls=sel["gepa_total_num_evals"], own_budget=555, own_budget_shortfall=555 - sel["gepa_total_num_evals"])
+            note["reason"] = "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted" + (" (GEPA's own metric calls %s of 555)" % sel["gepa_total_num_evals"] if sel.get("gepa_total_num_evals") is not None else "")
+            e["budget_note"] = note
+            e.setdefault("caveats", []).append(note["reason"])
         if k in nf:
             e["native_finish"] = nf[k]
             e.setdefault("caveats", []).append("natively finished before the cutoff (%s); contributes its final returned artifact, count %s disclosed" % (nf[k]["evidence"], nf[k]["count"]))
