@@ -1,0 +1,136 @@
+{
+ "arms": [
+  "pt",
+  "gepa",
+  "ctl"
+ ],
+ "decompose_py_sha256": "e5bce190fe79fd632eeacb6315951d7a19aa429256469d5a2b36275bad651a61",
+ "entries": [
+  {
+   "arm": "ctl",
+   "arm_label": "ctl-Ponly",
+   "candidate_id": "cand_0001",
+   "files": {
+    "policy/policy.md": "85be1b758d907ae4c2d4a8b5af11bd70001f1bbc2c82a98048b8462a0de99e4e",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval_d/D/artifacts/decomp/ctl/P-s0",
+   "parent_tree_sha256": "7cbcac0fa6d603502e3b44fad11549c1ab6a50edd69329c1b9c5ea1969984ff1",
+   "part": "P",
+   "seed": 0,
+   "seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "tree_sha256": "c5d5d9f1e61cae93e81a09d2fa2b15497c3d882968104a726ef53639e6e66362"
+  },
+  {
+   "arm": "ctl",
+   "arm_label": "ctl-Tonly",
+   "candidate_id": "cand_0001",
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "56e2563e7a67514453ab3ed77489176f274158e8efb6c0163bb726344af0400c"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval_d/D/artifacts/decomp/ctl/T-s0",
+   "parent_tree_sha256": "7cbcac0fa6d603502e3b44fad11549c1ab6a50edd69329c1b9c5ea1969984ff1",
+   "part": "T",
+   "seed": 0,
+   "seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "tree_sha256": "22dbf57a7f8c8f92f5ec4695bd893a5ff9ea3d2fba72dbfd901727c562a7addb"
+  },
+  {
+   "arm": "ctl",
+   "arm_label": "ctl-Ponly",
+   "candidate_id": "cand_0001",
+   "files": {
+    "policy/policy.md": "5089ecd9fc91ac5a9bf5b1ad58ff8c960ffdb97e68d1bef1148fe526309ed7c1",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval_d/D/artifacts/decomp/ctl/P-s1",
+   "parent_tree_sha256": "a1c147534f05f78c10ca2fff725c9a4cb144cefc49f6fc8a8c6d166b36344e9d",
+   "part": "P",
+   "seed": 1,
+   "seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "tree_sha256": "5bf106d52dcbd5b9522632a7cd8ee205f63f40876a1697415cb7fd06eb6ec51b"
+  },
+  {
+   "arm": "ctl",
+   "arm_label": "ctl-Tonly",
+   "candidate_id": "cand_0001",
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "652ece97eb949b59f21fd4693c3f4e36eb91b178fd0aaed4f7a5f80fc1a3d74f"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval_d/D/artifacts/decomp/ctl/T-s1",
+   "parent_tree_sha256": "a1c147534f05f78c10ca2fff725c9a4cb144cefc49f6fc8a8c6d166b36344e9d",
+   "part": "T",
+   "seed": 1,
+   "seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "tree_sha256": "1321139e5b772812e45c8c73fad5bdd4b8e97a9fc07d2d4225b7c3fda45f5c65"
+  },
+  {
+   "arm": "ctl",
+   "arm_label": "ctl-Ponly",
+   "candidate_id": "cand_0001",
+   "files": {
+    "policy/policy.md": "bb4c363321981bf0c8b71951f063c36e10671f786b511a0320ecea1f4febd858",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval_d/D/artifacts/decomp/ctl/P-s2",
+   "parent_tree_sha256": "a9a59b6d77c7814cb5200b106d79961171063d834cd51f2a13289f9389d6204f",
+   "part": "P",
+   "seed": 2,
+   "seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "tree_sha256": "0e243a3fa7b1f012115b4e478528bd6ad5e52d4220c04847a49ac2c85143acff"
+  },
+  {
+   "arm": "ctl",
+   "arm_label": "ctl-Tonly",
+   "candidate_id": "cand_0001",
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "3badeef0c1253d42c26fb438c0119a5d61b55cfc62b16557d3f59f7b17e8de5d"
+   },
+   "frozen_dir": "/tmp/fe_dry/final_eval_d/D/artifacts/decomp/ctl/T-s2",
+   "parent_tree_sha256": "a9a59b6d77c7814cb5200b106d79961171063d834cd51f2a13289f9389d6204f",
+   "part": "T",
+   "seed": 2,
+   "seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "tree_sha256": "547d99a9a6e3b769fe06736a3e37f70317e88c792936f7c4b7bdeae54a66b7ed"
+  }
+ ],
+ "generated_utc": "2026-10-12T09:21:39Z",
+ "skipped": [
+  {
+   "arm": "pt",
+   "reason": "champion differs from the seed on no surface only",
+   "seed": 0
+  },
+  {
+   "arm": "pt",
+   "reason": "champion differs from the seed on no surface only",
+   "seed": 1
+  },
+  {
+   "arm": "pt",
+   "reason": "champion differs from the seed on no surface only",
+   "seed": 2
+  },
+  {
+   "arm": "gepa",
+   "reason": "champion differs from the seed on policy only",
+   "seed": 0
+  },
+  {
+   "arm": "gepa",
+   "reason": "champion differs from the seed on policy only",
+   "seed": 1
+  },
+  {
+   "arm": "gepa",
+   "reason": "champion differs from the seed on policy only",
+   "seed": 2
+  }
+ ],
+ "source_manifest": "/tmp/fe_dry/md/artifacts_D.json",
+ "source_manifest_sha256": "0646e640bd114ffeb263160c3217737d175e1b9ddbae6c11ba9a9f5833914bcc",
+ "suite": "D"
+}

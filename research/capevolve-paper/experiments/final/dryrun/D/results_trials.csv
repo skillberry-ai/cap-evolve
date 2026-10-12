@@ -1,0 +1,7 @@
+arm,seed,task,trial,reward,family,reward_as_saved,t_start,t_end,error_class,error_text,attempts,empty_output,empty_completion,raw_tool_text_last,infra_final,tag,job_id
+ctl,0,4,0,0.0,4,0.0,2026-10-12T09:40:36Z,2026-10-12T09:50:04Z,,,3,0,0,0,0,tag:FE-smoke-D-ctl-s0:ctl,D|ctl|s0|4|B|t0
+ctl,2,4,0,0.0,4,0.0,2026-10-12T09:21:54Z,2026-10-12T09:25:20Z,,,1,0,0,0,0,tag:FE-smoke-D-ctl-s2:ctl,D|ctl|s2|4|B|t0
+ctl,0,6,0,0.0,6,0.0,2026-10-12T09:21:54Z,2026-10-12T09:23:38Z,,,1,0,0,0,0,tag:FE-smoke-D-ctl-s0:ctl,D|ctl|s0|6|B|t0
+pt,1,4,0,0.0,4,0.0,2026-10-12T09:21:54Z,2026-10-12T09:24:16Z,,,1,0,0,0,0,tag:FE-smoke-D-pt-s1:pt,D|pt|s1|4|B|t0
+ctl,1,4,0,0.0,4,0.0,2026-10-12T09:21:54Z,2026-10-12T09:24:15Z,,,1,0,0,0,0,tag:FE-smoke-D-ctl-s1:ctl,D|ctl|s1|4|B|t0
+pt,0,6,0,0.0,6,0.0,2026-10-12T09:21:54Z,2026-10-12T09:25:50Z,,,1,0,0,0,0,tag:FE-smoke-D-pt-s0:pt,D|pt|s0|6|B|t0

@@ -819,7 +819,7 @@ def cmd_run(a):
     meta, jobs = load_order(a.order)
     root = Path(a.root) if a.root else C.final_dir(suite)
     if a.extra:
-        root = root / "extra_%s" % a.extra
+        root = root / ("extra_%s" % a.extra)
     root.mkdir(parents=True, exist_ok=True)
     sha, prob = preflight(suite, a.order, meta, jobs, a.order_sha)
     if prob and not a.force:
@@ -902,7 +902,7 @@ def cmd_aggregate(a):
     meta, jobs = load_order(a.order)
     root = Path(a.root) if a.root else C.final_dir(a.suite)
     if a.extra:
-        root = root / "extra_%s" % a.extra
+        root = root / ("extra_%s" % a.extra)
     out, rep = aggregate(a.suite, root, meta, jobs)
     print(json.dumps({"rows": out, "arms": len(rep)}))
     return 0
