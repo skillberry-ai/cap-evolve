@@ -35,7 +35,13 @@ HarnessLens/hl-v0 evaluation and the Azure transfer extras run after B and C pri
 One interleaved stream per suite (drift control across arms), n=3 kept.  `run_final.py run --suite B ... --class-caps hl=24,default=12` gives HarnessLens/hl-v0
 cells (33 min per rollout) their own pool of up to 24 workers next to 12 for the tau-agent cells; jobs are still dispatched in order within each class.  The shared
 gpt-oss cap is the gateway's 24 in flight.  Fallback only: a separate HL order file (`order.py --arms harnesslens,hl-v0`) if the single stream measurably cannot absorb it.
-Estimate to redo when FE_dry_hl10 lands (HL timing is from 4 rollouts).  bl-harness to confirm 24 concurrent HL sandboxes (memory, PIDs).
+
+Capacity (2026-10-12, bl-harness FE_dry_hl10: 8 v0 trials under search load, old timeouts): wall_s mean 2145, median 2277, p90 3336, max 3723; target_calls median 15.5,
+p90 25 (about 25 gpt-oss calls per rollout with the user simulator).  HL primary = 480 rollouts = 286 worker-hours: W=16 18.9 h, W=24 12.9 h, W=32 9.9 h (each +~1 h tail).
+Window 06:30 -> 2026-10-14 05:00 = 22.5 h, so B finishes with HL at W=24 (slack ~5 h); distinct HL END cells (~180 rollouts, +4.5 h) fit after the primary window; W=16 does not.
+gpt-oss: HL at W=24 issues about 24 x 25 / 2145 s = 17 calls/min of the 127/min budget (total B+C call load ~9.3 h), so calls are not the limit.  The limit is the gateway's
+24 in-flight slots shared with the tau-agent cells: if a call holds a slot ~40 s (assumed, to be measured), HL at W=24 occupies ~11 slots and 12 tau-agent workers ~10, i.e. ~21 of 24;
+W=32 would push demand above 24 and only queue, so use hl=24,default=12.  Host side (bl-harness): 0.6-0.8 GB and 10-15 processes per HL worker, no collisions.
 
 ## Files
 
