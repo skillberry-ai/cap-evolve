@@ -66,6 +66,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Also undo after the campaign:
   - ~/.config/containers/containers.conf (default_network=sb_internal) and the sb_internal podman network;
   - the gw_bridge process (baselines/gwbridge), which Meta-Harness, HarnessLens and the B/C shims depend on. Check it in periodic checks while the campaign runs.
+  - system package bubblewrap-0.6.3-1.el9 (installed 2026-10-12 for HarnessLens' isolated Harness Editor calls): remove with `sudo dnf remove -y bubblewrap`.
 
 ## Update 00:50 UTC 10-12 (periodic check)
 - WikiSkill crashed on all 3 seeds at about 22:42 (session.jsonl missing); bl-wikiskill is fixing it.
@@ -82,3 +83,10 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Stalls being checked: E10 hc s2 (counter at 200 for 5.3 h), E10B HarnessLens s1 (98 for 5.6 h).
 - Meta-Harness s0 and s1 finished at 600 (val 0.975 / 0.875; val is optimistic because the proposer saw val aggregates).
 - Token cap 150M; projection about 139M; stop rule at 125M/130M (decisions.md).
+
+## Update 09:50 UTC 10-12 (periodic check)
+- Capped 75.2M/170M (13M last hour, HarnessLens restarts). Stop rule 145M exploratory, 155M secondary.
+- HarnessLens: no-bubblewrap environment defect found; bubblewrap 0.6.3 installed (undo: sudo dnf remove -y bubblewrap); s0/s2/hlext clean-cut restarts; s1 live refund.
+- Amendment 8 + E26 no-history cell approved (experiment-designer registers; patch reviewed before merge).
+- Review round 3 on draft4 (35b73dd7e) done; triage3 running. Resume: read draft4/TRIAGE.md, dispatch fixes.
+- Silent environment-failure audit of all arms requested of metering-auditor (audit/silent_env_failures.md).
