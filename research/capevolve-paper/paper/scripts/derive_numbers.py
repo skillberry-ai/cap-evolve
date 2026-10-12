@@ -149,6 +149,11 @@ put("mdeDCell", f(100 * m40["uncorrected"]["cell_vs_cell"], 0))
 put("mdeDSeedHolm", f(100 * m40["vs_seed"], 0))
 put("mdeDCellHolm", f(100 * m40["cell_vs_cell"], 0))
 put("mdeDPipe", f(100 * m40["pipeline_vs_seed"], 0))
+rege = json.load(open(ROOT / "experiments/configs/suite_E_registration.json"))["planning_mde_tau0.15"]["test20"]
+put("mdeESeed", f(100 * rege["vs_seed"], 0))
+put("mdeESeedHolm", f(100 * rege["holm11_vs_seed"], 0))
+put("mdeECellHolm", f(100 * rege["holm11_cell_vs_cell"], 0))
+put("mdeEPipe", f(100 * rege["pipeline_vs_seed"], 0))
 
 # ---- gold-access scan -------------------------------------------------------
 put("goldRolloutsScanned", "2{,}049")

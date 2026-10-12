@@ -129,6 +129,64 @@ def build_suite_d(rng):
     return dict(params=P, cells=cells, vs_pt=cons, interaction=interaction, p_vs_t=p_vs_t)
 
 
+E_PARAM = dict(seed_score=0.30, se=0.055, tasks=20, trials=5, seed_trials=10, seeds=3)
+E_CELLS = [("ctl", 3), ("p", 3), ("t", 3), ("pt", 3), ("rulep", 3), ("onestage", 3), ("gepa", 3), ("nohist", 3)]
+E_COMP = [("ace", "ACE"), ("mipro", "MIPROv2"), ("gepafull", "GEPA, full surface"), ("ao", "CapEvolve agent-optimize"), ("hl", "HarnessLens")]
+
+
+def build_suite_e(rng, D):
+    """Suite E, airline replication of Suite D (amendment 10), mock. Contrasts are oriented first-minus-second, as in the label."""
+    P = E_PARAM
+    cells = {}
+    for key, nseed in E_CELLS:
+        mu = 0.015 if key == "ctl" else 0.05
+        d = round(rng.gauss(mu, 0.03), 3)
+        se = P["se"] * rng.uniform(0.9, 1.1)
+        cells[key] = dict(delta=d, se=se, lo=round(d - 2.1 * se, 3), hi=round(d + 2.1 * se, 3),
+                          promotions=[rng.randint(0, 2) if key == "rulep" else rng.randint(1, 5) for _ in range(nseed)])
+
+    def contrast(name, a, b):
+        da = cells[a]["delta"] if a != "seed" else 0.0
+        db = cells[b]["delta"] if b != "seed" else 0.0
+        dd = round(da - db, 3)
+        se_c = P["se"] * 1.3
+        return dict(name=name, delta=dd, lo=round(dd - 2.1 * se_c, 3), hi=round(dd + 2.1 * se_c, 3), p=norm_p(dd / se_c))
+
+    spec = [("P vs PT", "p", "pt"), ("T vs PT", "t", "pt"), ("P vs T", "p", "t"), ("Rule P vs PT", "rulep", "pt"), ("One-stage vs PT", "onestage", "pt"),
+            ("PT vs one-shot control", "pt", "ctl"), ("P vs GEPA, prompt only", "p", "gepa"), ("P vs seed", "p", "seed"), ("T vs seed", "t", "seed"),
+            ("PT vs seed", "pt", "seed"), ("No history vs PT", "nohist", "pt")]
+    # matching Suite D contrasts (first minus second)
+    dv, dc = D["vs_pt"], D["cells"]
+    dmatch = {"P vs PT": dv["p"]["delta"], "T vs PT": dv["t"]["delta"], "P vs T": D["p_vs_t"]["delta"], "Rule P vs PT": dv["rulep"]["delta"],
+              "One-stage vs PT": dv["onestage"]["delta"], "PT vs one-shot control": -dv["ctl"]["delta"],
+              "P vs GEPA, prompt only": round(dc["p"]["delta"] - dc["gepa"]["delta"], 3), "P vs seed": dc["p"]["delta"], "T vs seed": dc["t"]["delta"],
+              "PT vs seed": dc["pt"]["delta"], "No history vs PT": dv["nohist"]["delta"]}
+    fam = [contrast(*x) for x in spec]
+    adj = holm([c["p"] for c in fam])
+    for c, q in zip(fam, adj):
+        c["p_holm"] = q
+        c["d_delta"] = dmatch[c["name"]]
+        same = (c["d_delta"] > 0) == (c["delta"] > 0)
+        c["replicated"] = bool(same and (c["lo"] > 0 or c["hi"] < 0))
+    sec = [contrast(f"{lab} vs seed", k, "seed") for k, lab in (("gepa", "GEPA, prompt only"), ("rulep", "Rule P"), ("onestage", "One-stage"), ("ctl", "One-shot control"))]
+    for c, q in zip(sec, holm([c["p"] for c in sec])):
+        c["p_holm"] = q
+    comps = []
+    for key, lab in E_COMP:
+        d = round(rng.gauss(0.04, 0.03), 3)
+        dd = round(cells["pt"]["delta"] - d, 3)
+        se_c = P["se"] * 1.3
+        comps.append(dict(key=key, label=lab, delta_vs_seed=d, delta=dd, lo=round(dd - 2.1 * se_c, 3), hi=round(dd + 2.1 * se_c, 3), p=norm_p(dd / se_c)))
+    fam_c = [c for c in comps if c["key"] != "hl"]
+    for c, q in zip(fam_c, holm([c["p"] for c in fam_c])):
+        c["p_holm"] = q
+    sens = [c for c in fam_c if c["key"] != "ao"]
+    sens_p = dict(zip([c["key"] for c in sens], holm([c["p"] for c in sens])))
+    for c in comps:
+        c["p_holm_sens"] = sens_p.get(c["key"])
+    return dict(params=P, cells=cells, family=fam, secondary=sec, competitors=comps)
+
+
 def build_decomposition(rng):
     """E25, mock: whole-artifact gain against the prompt-only and tool-only parts of the same champion."""
     rows = []
@@ -279,6 +337,7 @@ def build():
             s["families"] = fams
         data["suites"][suite] = s
     data["suites"]["D"] = build_suite_d(rng)
+    data["suites"]["E"] = build_suite_e(rng, data["suites"]["D"])
     data["decomposition"] = build_decomposition(rng)
     return data
 
@@ -299,7 +358,7 @@ def macros(data):
     m = {}
     for suite, s in data["suites"].items():
         P = s["params"]
-        if suite == "D":
+        if suite in ("D", "E"):
             continue
         m[f"mockT{suite}"] = str(P["tasks"])
         m[f"mockTrials{suite}"] = str(P["trials"])
