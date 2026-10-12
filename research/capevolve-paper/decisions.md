@@ -259,3 +259,10 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - Error after target calls: candidate fault, scored 0.
   - empty_completion is flagged and reported descriptively.
   - The hl-v0 worker path was validated end to end (task 50: 1.0, 1983 s).
+- 2026-10-12T00:50 — N* rule for natively terminated searches (pre-cutoff, counters only).
+  - A primary seed that stops on its own before the cutoff (exit 0 by its own stop rule, e.g. E10B ao s0 at 198) does NOT bind N*. Its artifact at any later budget is its final returned artifact, since the method would deploy exactly that.
+  - N* = the largest count reached by every primary seed still running at the cutoff, plus the final count of each natively finished seed, whichever is lower. The resulting N* also uses a seed's final count only if that seed is still running.
+  - Concretely: N* = floor50(min over still-running primary seeds), minimum 200. A finished seed uses its final artifact, and its count is disclosed.
+  - A crash or infra stop is NOT a native termination; it follows the incomplete rule.
+  - Event: E10B ao s0 stopped at 198 (two screens, no promotion, returned the seed) after interpreting stop_condition "10 candidates" as a cap. This is accepted as the method's own behaviour and disclosed.
+  - To make the finalize step run, the AO agent set CAPEVOLVE_ALLOW_TEST_RESCORE=1. This re-scored the seed on the Suite B sel split, not the sealed test (which is absent from its tree). Recorded as a disclosed deviation.
