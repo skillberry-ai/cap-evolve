@@ -252,6 +252,7 @@ def worker_hl(job, attempt_dir):
     trial = int(job["trial"]) + 10 * int(job.get("attempt", 0))
     cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_final_eval.py"), "--out", str(out), "--tag-prefix", job["tag"].split(":")[1],
            "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1"]
+    cmd += ["--judge-model", job.get("judge_model") or "openai/azure/gpt-5.5"]     # every Suite B cell is judged by azure/gpt-5.5 (shared evaluator); only the OpenCode target harness is HarnessLens's
     if hl.get("src_run_dir"):
         cmd += ["--src-run-dir", hl["src_run_dir"]]
     t0 = time.time()
