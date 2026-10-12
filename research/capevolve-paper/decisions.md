@@ -305,3 +305,7 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
 - 2026-10-12T02:16 — Network switch cleared: a paired test of sb_internal against the bridge (10+10 containers, 25 execs each) showed no difference in start time, exec latency or failures. CapEvolve's sandbox-500 rate per hour fell after 22:32.
 - 2026-10-12T02:16 — Probable source of sandbox 500s: the exec server deletes kernels idle for more than 10 min (KERNEL_TIMEOUT), so rollouts waiting on slow LLM calls lose their kernel. Being confirmed. If confirmed, KERNEL_TIMEOUT is raised to 3 h uniformly for new sandboxes and for the final evaluation.
 - 2026-10-12T02:16 — Trace2Skill errors relabelled from the regenerated metrics: 49 of 51 infra (sandbox 500, litellm timeout); the 2 placeholder rows are known race rejections.
+- 2026-10-12T02:28 — Meta-Harness sandbox 500s: kernel-websocket closures on existing kernels (20/2043 executes in s2's server, about 1%).
+  - Ruled out: the network switch (A/B test), kernel-killing code, missing soffice, podman OOM.
+  - The recalc_verify excess (10/60 against 9/200 for other s2 candidates, Fisher p=0.0035) is real but unexplained; the candidates ran in sequence, so time and server state are confounded with it.
+  - Actions: no diagnostic rerun (capacity). The final-eval exec server logs 500 bodies, kernel ids and idle time. KERNEL_TIMEOUT is raised to 3 h uniformly for new sandboxes and the final evaluation. Amendment 5O covers persistent errors.
