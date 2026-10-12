@@ -1,17 +1,17 @@
 \begin{table*}[t]
 \centering
 \scriptsize
-\caption{Suite B ($\tau^2$ retail): latest run state. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds). Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
+\caption{Suite B ($\tau^2$ retail): latest run state. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds); candidates lost to infrastructure (protocol/infra\_exclusions.json) count as generated only. Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
 \label{tab:searchtime-summary-b}
 \begin{tabular}{@{}llrrrrrrrrrl@{}}
 \toprule
 Arm & Split & Seeds & Rollouts & Seed & Champion & Gen/scr/prom & Seed-eq. & Opt.\ tok. & USD & Wall h & Status \\
 \midrule
 One-shot control & opt-49 & 3 & 131 {\tiny[123,148]} & 0.60 {\tiny[0.56,0.65]} & 0.64 {\tiny[0.56,0.71]} & 3/3/1 & 2/3 & 0.17 {\tiny[0.14,0.20]} & 1.05 {\tiny[0.77,1.37]} & 4.8 {\tiny[4.4,5.1]} & native finish (iterations) \\
-GEPA & sel-25 & 3 & 268 {\tiny[256,277]} & 0.53 {\tiny[0.40,0.60]} & 0.71 {\tiny[0.68,0.72]} & 43/16/16 & 0/3 & 0.37 {\tiny[0.32,0.42]} & 1.29 {\tiny[1.15,1.44]} & 20.1 {\tiny[20.1,20.1]} & running \\
-HarnessLens & -- & 3 & 104 {\tiny[98,108]} & -- & -- & 0/0/0 & 0/0 & 1.39 & 4.75 & 9.2 {\tiny[7.8,10.4]} & stopped (unclassified) (2) \\
-CapEvolve HC & opt-49 & 3 & 359 {\tiny[294,392]} & 0.58 {\tiny[0.53,0.65]} & 0.58 {\tiny[0.53,0.65]} & 9/9/0 & 3/3 & 0.37 {\tiny[0.21,0.62]} & 2.01 {\tiny[1.20,3.18]} & 20.1 {\tiny[20.1,20.1]} & running \\
-CapEvolve AO & opt-49 & 3 & 181 {\tiny[172,198]} & 0.61 {\tiny[0.60,0.61]} & 0.61 {\tiny[0.60,0.61]} & 3/0/0 & 3/3 & 0.97 {\tiny[0.84,1.04]} & 5.36 {\tiny[4.70,6.46]} & 16.4 {\tiny[11.6,20.1]} & native finish (2) \\
+GEPA & sel-25 & 3 & 281 {\tiny[262,296]} & 0.53 {\tiny[0.40,0.60]} & 0.71 {\tiny[0.68,0.72]} & 47/16/16 & 0/3 & 0.39 {\tiny[0.35,0.42]} & 1.37 {\tiny[1.26,1.44]} & 21.1 {\tiny[21.1,21.1]} & running \\
+HarnessLens & -- & 3 & 106 {\tiny[105,108]} & -- & -- & 0/0/0 & 0/0 & 3.52 {\tiny[2.44,4.09]} & 9.44 {\tiny[7.00,10.69]} & 11.0 {\tiny[10.8,11.4]} & stopped (unclassified) (2) \\
+CapEvolve HC, rule P & opt-49 & 3 & 359 {\tiny[294,392]} & 0.58 {\tiny[0.53,0.65]} & 0.58 {\tiny[0.53,0.65]} & 11/11/0 & 3/3 & 0.37 {\tiny[0.21,0.62]} & 2.01 {\tiny[1.20,3.18]} & 21.1 {\tiny[21.1,21.1]} & running \\
+CapEvolve AO, rule P & opt-49 & 3 & 189 {\tiny[172,198]} & 0.61 {\tiny[0.60,0.61]} & 0.61 {\tiny[0.60,0.61]} & 3/0/0 & 3/3 & 0.97 {\tiny[0.84,1.04]} & 5.36 {\tiny[4.70,6.46]} & 16.7 {\tiny[11.6,20.9]} & native finish (2) \\
 \bottomrule
 \end{tabular}
 \end{table*}

@@ -13,7 +13,7 @@ A,A,skillopt,1,val-40,0.29999999999999993,,,,False,running,pending final (select
 A,A,skillopt,2,val-40,0.275,,,,False,running,pending final (selection gain is search-time)
 A,A,metaharness,0,val-40,0.375,,,,False,native finish,pending final (selection gain is search-time)
 A,A,metaharness,1,val-40,0.25,,,,False,native finish,pending final (selection gain is search-time)
-A,A,metaharness,2,val-40,0.25,,,,False,running,pending final (selection gain is search-time)
+A,A,metaharness,2,val-40,0.30000000000000004,,,,False,running,pending final (selection gain is search-time)
 A,A,evoskill,0,val-40,0.25,,,,False,native finish,pending final (selection gain is search-time)
 A,A,evoskill,1,val-40,0.32499999999999996,,,,False,running,pending final (selection gain is search-time)
 A,A,evoskill,2,val-40,0.29999999999999993,,,,False,running,pending final (selection gain is search-time)

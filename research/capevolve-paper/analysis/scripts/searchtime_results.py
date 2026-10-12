@@ -52,6 +52,7 @@ CAPEVOLVE = ("hc", "ao", "hcstock")
 OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "optimizer-aux", "debugger"}
 CAVEAT = ("search-time, on the search/selection split each method selects on, not held-out; selection-split scores are "
           "optimistic and not comparable across methods (different splits, selection rules and visible feedback)")
+EXCL_FILE = PAPER / "protocol" / "infra_exclusions.json"
 FORBIDDEN = re.compile(r"(final_eval|/test|test_|eval_test)")
 
 
@@ -102,6 +103,34 @@ def read_csv(p):
         return []
 
 
+# ----------------------------------------------------------------------------- recorded infrastructure exclusions
+def _epoch(iso):
+    import datetime as dt
+    s = str(iso).replace("Z", "+00:00")
+    try:
+        d = dt.datetime.fromisoformat(s)
+    except ValueError:
+        return None
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=dt.timezone.utc)
+    return d.timestamp()
+
+
+def exclusions(suite, arm, seed):
+    """{candidate: before_epoch}: that candidate's evaluation records earlier than before_epoch are infrastructure-missing."""
+    j = js(EXCL_FILE) or {}
+    return {e["candidate"]: _epoch(e["before_utc"]) for e in j.get("entries", [])
+            if e["suite"] == suite and e["arm"] == arm and str(e["seed"]) == str(seed)}
+
+
+def is_excluded(excl, cid, t):
+    """t: epoch seconds, ISO string or None; a record with unknown time is excluded when the candidate is listed."""
+    if not excl or cid not in excl:
+        return False
+    te = t if isinstance(t, (int, float)) else (_epoch(t) if t else None)
+    return te is None or te < excl[cid]
+
+
 # ----------------------------------------------------------------------------- run discovery
 def capevolve_dir(sd):
     """Latest .capevolve/run_* under a seed dir that has a candidates.jsonl or state.json."""
@@ -147,16 +176,19 @@ def sel_score(ev):
     return v, re.sub(r"\(.*\)", "", split), n, s.get("stage")
 
 
-def analyse_candidates(rows):
+def analyse_candidates(rows, excl=None):
     """Created/evaluated bookkeeping shared by every method's candidates.jsonl."""
     created, parent, sha, adir = {}, {}, {}, {}
     evals = []   # (rollout_index, id, score, split, n, stage)
-    accepted, selected, rejected = [], [], set()
+    accepted, selected, rejected, missing = [], [], set(), set()
     for r in rows:
         cid = r.get("candidate_id")
         if cid is None:
             continue
         ev = r.get("event")
+        if ev != "created" and is_excluded(excl, cid, r.get("t")):
+            missing.add(cid)
+            continue
         if ev == "created":
             if cid not in created:
                 created[cid] = r.get("rollout_index") or 0
@@ -176,7 +208,7 @@ def analyse_candidates(rows):
         elif ev == "rejected":
             rejected.add(cid)
     return dict(created=created, parent=parent, sha=sha, adir=adir, evals=sorted(evals, key=lambda e: e[0]),
-                accepted=accepted, selected=selected, rejected=rejected)
+                accepted=accepted, selected=selected, rejected=rejected, infra_missing=missing)
 
 
 def seed_id(info):
@@ -268,15 +300,19 @@ def diff_surfaces(seed_dir, cand_dir):
 
 
 # ----------------------------------------------------------------------------- events (CapEvolve gate behaviour)
-def gate_events(cap):
+def gate_events(cap, excl=None):
     out = dict(proposed=set(), screens=0, confirms=0, promoted=0, screen_reject=0, confirm_reject=0, gate_veto=0,
                indecisive_events=0, indecisive_cands=set(), steps=0, accepted=0, rejected=0, eval_errors=0,
-               reasons=Counter(), by_cand={})
+               reasons=Counter(), by_cand={}, infra_missing=set())
     if not cap:
         return out
     last_step, last_prom = {}, {}
     for e in jl(cap / "events.jsonl"):
         k = e.get("kind")
+        c_ = e.get("candidate") or e.get("tag") or e.get("id")
+        if k in ("step", "promotion", "step_indecisive", "evaluate_error", "evaluate", "eval_start") and is_excluded(excl, c_, e.get("t")):
+            out["infra_missing"].add(c_)
+            continue
         if k == "step":
             last_step[e.get("candidate")] = e
         elif k == "promotion":
@@ -395,7 +431,8 @@ def run_record(r, arm_rows, role):
     crows = jl((cap or sd) / "candidates.jsonl") if arm != "seed" else []
     if arm == "bestofk":
         crows = jl(sd / "candidates.jsonl")
-    info = analyse_candidates(crows)
+    excl = exclusions(suite, arm, s)
+    info = analyse_candidates(crows, excl)
     sid = seed_id(info)
     state = js(cap / "state.json") if cap else None
     rec["counted_rollouts"] = int(float(mrow["counted_rollouts"])) if mrow and mrow.get("counted_rollouts") else None
@@ -473,7 +510,8 @@ def run_record(r, arm_rows, role):
     rec["candidates_generated"] = len(gen) if gen else (len(prop_dirs(sd)) if arm == "bestofk" else 0)
     rec["candidates_screened"] = len(scr)
     if arm in CAPEVOLVE or arm == "oneshot":
-        ge = gate_events(cap)
+        ge = gate_events(cap, excl)
+        info["infra_missing"] |= ge["infra_missing"]
         rec["candidates_promoted"] = ge["promoted"] if (ge["promoted"] or ge["screens"] and ge["by_cand"] and
                                                          any(v == "promoted" for v in ge["by_cand"].values())) else ge["accepted"]
         if arm in ("ao", "oneshot"):
@@ -481,6 +519,9 @@ def run_record(r, arm_rows, role):
     else:
         acc = {c for _, c, _ in info["accepted"] if c != sid}
         rec["candidates_promoted"] = len(acc or {c for _, c, _ in info["selected"] if c != sid})
+    rec["candidates_infra_missing"] = len(info["infra_missing"])
+    rec["infra_missing_ids"] = ",".join(sorted(info["infra_missing"]))
+    info["infra_full"] = {c for c, t in excl.items() if t and t > 4e9}   # candidates with no valid record at all
     rec["optimizer_noncache_tokens"] = role[mkey]["noncache"] if mkey in role else None
     rec["optimizer_cache_read_tokens"] = role[mkey]["cache_read"] if mkey in role else None
     rec["optimizer_cache_write_tokens"] = role[mkey]["cache_write"] if mkey in role else None
@@ -509,7 +550,7 @@ def edits(runs_meta):
             continue
         seed_dir = info["adir"].get(sid)
         for c in info["created"]:
-            if c == sid:
+            if c == sid or c in info.get("infra_full", ()):
                 continue
             cd = info["adir"].get(c)
             if not cd or not seed_dir:
@@ -607,7 +648,7 @@ def build_summary_tables(recs):
         t = r"""\begin{table*}[t]
 \centering
 \scriptsize
-\caption{%s: latest %s. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds). Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
+\caption{%s: latest %s. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds); candidates lost to infrastructure (protocol/infra\_exclusions.json) count as generated only. Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
 \label{tab:searchtime-summary-%s}
 \begin{tabular}{@{}llrrrrrrrrrl@{}}
 \toprule
@@ -656,17 +697,17 @@ Suite & Arm & Cands & Sys.\ prompt & Task tmpl. & Tool code & MCP & Skills & Pro
 def build_gate_table(gate_rows):
     rows = []
     for g in gate_rows:
-        rows.append("%s & %s & %s & %d & %d & %d & %d & %d & %d & %d \\\\" % (
+        rows.append("%s & %s & %s & %d & %d & %d & %d & %d & %d & %d & %d \\\\" % (
             tex(g["suite"]), arm_label(g["arm"]), g["seed"], g["candidates"], g["screens"], g["confirms"], g["promoted"],
-            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"]))
+            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["infra_missing"]))
     t = r"""\begin{table*}[t]
 \centering
 \scriptsize
-\caption{Gate behaviour per CapEvolve search (search-time, on each run's own search split, not held-out). Rule P: screens and confirmations run, promotions, rejections (screen, confirm, or rejected outright by the driver), vetoes (indecisive at the gate), and indecisive events (valid-score coverage below 0.95). Rows for the stock-gate ablation (E12, paired with Rule P on Suites A and C) have a single-stage accept/reject, so confirmations are 0.}
+\caption{Gate behaviour per CapEvolve search (search-time, on each run's own search split, not held-out). Rule P: screens and confirmations run, promotions, rejections (screen, confirm, or rejected outright by the driver), vetoes (indecisive at the gate), and indecisive events (valid-score coverage below 0.95). Infra-missing: candidates whose evaluation was lost to infrastructure (protocol/infra\_exclusions.json), not counted as rejections. Rows for the stock-gate ablation (E12, paired with Rule P on Suites A and C) have a single-stage accept/reject, so confirmations are 0.}
 \label{tab:searchtime-gate}
-\begin{tabular}{@{}llrrrrrrrr@{}}
+\begin{tabular}{@{}llrrrrrrrrr@{}}
 \toprule
-Suite & Arm & Seed & Cands & Screens & Confirms & Promoted & Rejected & Vetoed & Indecisive \\
+Suite & Arm & Seed & Cands & Screens & Confirms & Promoted & Rejected & Vetoed & Indecisive & Infra-missing \\
 \midrule
 %s
 \bottomrule
@@ -793,6 +834,10 @@ def figures(any_rows, arm_agg, gate_rows):
 
 
 # ----------------------------------------------------------------------------- main
+def st_excl(rec):
+    return exclusions(rec["suite"], rec["arm"], rec["seed"])
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     arm_rows, role = load_metrics()
@@ -809,7 +854,7 @@ def main():
                                      rollout_index=ri, candidate=cid, score=v, best_seen=best, champion=champ,
                                      seed_score=rec["seed_score"], split=rec["split"]))
         if r["arm"] in ("hc", "hcstock", "ao"):
-            ge = gate_events(cap)
+            ge = gate_events(cap, st_excl(rec))
             bc = ge["by_cand"]
             gate_rows.append(dict(
                 suite=rec["suite"], arm=rec["arm"], seed=rec["seed"], candidates=rec["candidates_generated"],
@@ -819,7 +864,7 @@ def main():
                 rejected_other=sum(1 for v in bc.values() if v == "rejected"), gate_veto=ge["gate_veto"],
                 indecisive=len(ge["indecisive_cands"]), indecisive_events=ge["indecisive_events"],
                 indecisive_reasons="; ".join("%s x%d" % kv for kv in ge["reasons"].items()),
-                eval_errors=ge["eval_errors"], split=rec["split"], champion_score=rec["champion_score"],
+                eval_errors=ge["eval_errors"], infra_missing=len(set(ge["infra_missing"]) | set(filter(None, rec["infra_missing_ids"].split(",")))), split=rec["split"], champion_score=rec["champion_score"],
                 seed_score=rec["seed_score"], gate=("stock (paired dbar > 1 SE, single stage)" if rec["arm"] == "hcstock" else
                                                     "agent-optimize (driver judgement)" if rec["arm"] == "ao" else "Rule P (screen + fresh confirm)")))
     recs = [m[0] for m in meta]
@@ -893,11 +938,11 @@ def write_md(recs, gate_rows, agg_rows, infra, compare, newest):
     L += ["", "Notes: champion = what the method itself would return (CapEvolve: state best_id/best_val; GEPA, MIPRO, others: last selected "
           "or argmax of full selection-split evaluations). ACE and HarnessLens have no candidate/selection step yet. "
           "Optimizer USD covers priced (Claude) calls only; unpriced tokens are in runs.csv.", "", "## Gate behaviour (CapEvolve)", "",
-          "| suite | arm | seed | cands | screens | confirms | promoted | rejected | vetoed | indecisive (reasons) |", "|---|---|---|---|---|---|---|---|---|---|"]
+          "| suite | arm | seed | cands | screens | confirms | promoted | rejected | vetoed | indecisive (reasons) | infra-missing |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for g in gate_rows:
-        L.append("| %s | %s | %s | %d | %d | %d | %d | %d | %d | %d %s |" % (
+        L.append("| %s | %s | %s | %d | %d | %d | %d | %d | %d | %d %s | %d |" % (
             g["suite"], g["arm"], g["seed"], g["candidates"], g["screens"], g["confirms"], g["promoted"],
-            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["indecisive_reasons"]))
+            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["indecisive_reasons"], g["infra_missing"]))
     L += ["", "## Edits by capability surface (candidates touching surface / changed lines)", "",
           "| suite | arm | cands | " + " | ".join(SURFACES) + " |", "|---|---|---|" + "---|" * len(SURFACES)]
     for a in agg_rows:

@@ -1,12 +1,12 @@
 base_suite,arm,seed,candidate,promoted,dominant_surface,surfaces_touched,failure_type,group,n_fixed
 A,hc,0,cand_0001,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,4
 A,hc,0,cand_0001,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,5
-A,hc,0,cand_0002,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,2
-A,hc,0,cand_0002,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,2
 A,hc,0,cand_0003,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,4
 A,hc,0,cand_0003,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,5
 A,hc,1,cand_0001,1,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,3
 A,hc,1,cand_0001,1,system_prompt,system_prompt+task_template,no_output_file,output / contract,4
+A,hc,1,cand_0002,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,9
+A,hc,1,cand_0002,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,3
 A,hc,2,cand_0001,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,2
 A,hc,2,cand_0001,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,5
 B,hc,0,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,4
@@ -35,9 +35,15 @@ B,hc,1,cand_0006,0,tool_code,tool_code,missing_action,forgotten rule or step,1
 B,hc,1,cand_0006,0,tool_code,tool_code,wrong_argument,tool misuse,3
 B,hc,1,cand_0007,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,2
 B,hc,1,cand_0007,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,2
+B,hc,1,cand_0008,0,tool_code,tool_code,wrong_argument,tool misuse,4
+B,hc,1,cand_0008,0,tool_code,tool_code,missing_action,forgotten rule or step,1
+B,hc,1,cand_0008,0,tool_code,tool_code,other,other,1
 B,hc,2,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,4
 B,hc,2,cand_0001,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,4
 B,hc,2,cand_0001,0,tool_code,system_prompt+tool_code,communication,output / contract,1
+B,hc,2,cand_0002,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,5
+B,hc,2,cand_0002,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,4
+B,hc,2,cand_0002,0,tool_code,system_prompt+tool_code,communication,output / contract,1
 B,oneshot,0,cand_0001,0,tool_code,system_prompt+tool_code,state_side_effect,unexpected side effect,2
 B,oneshot,0,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,2
 B,oneshot,0,cand_0001,0,tool_code,system_prompt+tool_code,communication,output / contract,1
@@ -89,6 +95,9 @@ A,hcstock,0,cand_0002,0,system_prompt,system_prompt+task_template,no_output_file
 A,hcstock,0,cand_0003,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,3
 A,hcstock,0,cand_0004,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,3
 A,hcstock,0,cand_0004,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,1
+A,hcstock,0,cand_0005,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,3
+A,hcstock,0,cand_0005,0,system_prompt,system_prompt+task_template,was_passing_or_unlabelled,was_passing_or_unlabelled,1
+A,hcstock,0,cand_0005,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,1
 A,hcstock,1,cand_0001,1,system_prompt,system_prompt+task_template,no_output_file,output / contract,7
 A,hcstock,1,cand_0001,1,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,5
 A,hcstock,1,cand_0002,1,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,4
@@ -102,6 +111,7 @@ A,hcstock,1,cand_0005,0,system_prompt,system_prompt+task_template,no_output_file
 A,hcstock,1,cand_0005,0,system_prompt,system_prompt+task_template,was_passing_or_unlabelled,was_passing_or_unlabelled,2
 A,hcstock,1,cand_0006,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,1
 A,hcstock,1,cand_0006,0,system_prompt,system_prompt+task_template,was_passing_or_unlabelled,was_passing_or_unlabelled,2
+A,hcstock,1,cand_0007,0,system_prompt,system_prompt+task_template,was_passing_or_unlabelled,was_passing_or_unlabelled,2
 A,hcstock,2,cand_0001,1,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,5
 A,hcstock,2,cand_0001,1,system_prompt,system_prompt+task_template,no_output_file,output / contract,4
 A,hcstock,2,cand_0002,1,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,2
@@ -118,6 +128,8 @@ A,hcstock,2,cand_0005,0,system_prompt,system_prompt+task_template,wrong_result,k
 A,hcstock,2,cand_0005,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,1
 A,hcstock,2,cand_0006,0,system_prompt,system_prompt+task_template,was_passing_or_unlabelled,was_passing_or_unlabelled,1
 A,hcstock,2,cand_0006,0,system_prompt,system_prompt+task_template,no_output_file,output / contract,1
+A,hcstock,2,cand_0007,0,system_prompt,system_prompt+task_template,was_passing_or_unlabelled,was_passing_or_unlabelled,1
+A,hcstock,2,cand_0007,0,system_prompt,system_prompt+task_template,wrong_result,knowledge or rule gap,1
 C,hcstock,0,cand_0001,1,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,3
 C,hcstock,0,cand_0001,1,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,2
 C,hcstock,0,cand_0002,0,tool_code,system_prompt+tool_code,was_passing_or_unlabelled,was_passing_or_unlabelled,1
@@ -127,6 +139,8 @@ C,hcstock,0,cand_0003,0,tool_code,system_prompt+tool_code,was_passing_or_unlabel
 C,hcstock,0,cand_0003,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
 C,hcstock,0,cand_0004,0,tool_code,system_prompt+tool_code,was_passing_or_unlabelled,was_passing_or_unlabelled,1
 C,hcstock,0,cand_0004,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
+C,hcstock,0,cand_0005,0,tool_code,system_prompt+tool_code,was_passing_or_unlabelled,was_passing_or_unlabelled,1
+C,hcstock,0,cand_0005,0,tool_code,system_prompt+tool_code,communication,output / contract,1
 C,hcstock,1,cand_0001,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,1
 C,hcstock,1,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
 C,hcstock,1,cand_0001,0,tool_code,system_prompt+tool_code,other,other,1
@@ -138,6 +152,8 @@ C,hcstock,1,cand_0005,0,tool_code,system_prompt+tool_code,missing_action,forgott
 C,hcstock,1,cand_0005,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
 C,hcstock,1,cand_0006,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,1
 C,hcstock,1,cand_0006,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
+C,hcstock,1,cand_0007,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,1
+C,hcstock,1,cand_0007,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,2
 C,hcstock,2,cand_0001,1,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,3
 C,hcstock,2,cand_0001,1,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
 C,hcstock,2,cand_0001,1,tool_code,system_prompt+tool_code,other,other,1
@@ -148,3 +164,4 @@ C,hcstock,2,cand_0004,0,tool_code,system_prompt+tool_code,state_side_effect,unex
 C,hcstock,2,cand_0004,0,tool_code,system_prompt+tool_code,other,other,1
 C,hcstock,2,cand_0005,0,tool_code,system_prompt+tool_code,state_side_effect,unexpected side effect,1
 C,hcstock,2,cand_0006,0,tool_code,system_prompt+tool_code,state_side_effect,unexpected side effect,1
+C,hcstock,2,cand_0007,0,tool_code,system_prompt+tool_code,other,other,1

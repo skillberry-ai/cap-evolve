@@ -123,11 +123,13 @@ def seed_failures(cap, base, suite, arm, seed):
 
 
 # ----------------------------------------------------------------------------- per-task rewards, ledger
-def task_rewards(cap):
+def task_rewards(cap, excl=None):
     """{tag: {task: mean reward}} on the selection split, main tags only plus conf tags, non-subset rows."""
     acc = defaultdict(lambda: defaultdict(list))
     for r in st.jl(cap / "eval_index.jsonl"):
         if r.get("split") != "val" or r.get("subset") or r.get("reward") is None:
+            continue
+        if st.is_excluded(excl, r["tag"], r.get("ts")):
             continue
         acc[r["tag"]][str(r["task"])].append(r["reward"])
     return {t: {k: sum(v) / len(v) for k, v in d.items()} for t, d in acc.items()}
@@ -206,7 +208,8 @@ def build():
         if r["arm"] not in EDIT_ARMS or not cap:
             continue
         suite, base, arm, seed = r["suite"], r["base"], r["arm"], r["seed"]
-        tr = task_rewards(cap)
+        excl = st.exclusions(suite, arm, seed)
+        tr = task_rewards(cap, excl)
         seedr = tr.get("seed", {})
         if not seedr:
             continue
@@ -216,7 +219,7 @@ def build():
         led = ledger(cap)
         par = parents(cap)
         gstat = {g["id"]: g.get("status") for g in st.jl(cap / "graph.jsonl")}
-        ge = st.gate_events(cap)
+        ge = st.gate_events(cap, excl)
         statuses = ge["by_cand"]
         solid = {t for t, v in seedr.items() if v >= 0.999}
         for tag, rw in tr.items():
