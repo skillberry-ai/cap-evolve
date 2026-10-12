@@ -154,6 +154,7 @@ def main(argv=None):
                     ("scorer_A_agent_view_builder", C.SCRATCH / "bench/local/make_agent_view.py"),
                     ("scorer_B_adapter", WT_TAU / "examples/tau2_retail/adapters/adapter.py"),
                     ("scorer_C_adapter", WT_TAU / "examples/tau2_airline_c/adapters/adapter.py"),
+                    ("scorer_E_adapter_wt_airE", Path("/home/dev/projects2/wt-airE") / "examples/tau2_airline_c/adapters/adapter.py"),
                     ("scorer_libreoffice_25_8_binary", C.SCRATCH / "bench/lo258/root/opt/libreoffice25.8/program/soffice.bin"),
                     ("runner_run_final", C.HERE / "run_final.py"), ("runner_order", C.HERE / "order.py"), ("runner_reconstruct", C.HERE / "reconstruct.py"),
                     ("runner_bstar", C.HERE / "bstar.py"), ("runner_common", C.HERE / "fe_common.py"), ("runner_draw", C.HERE / "draw_final_a.py"),
