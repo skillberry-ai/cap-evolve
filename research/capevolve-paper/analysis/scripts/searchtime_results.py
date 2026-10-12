@@ -123,6 +123,13 @@ def exclusions(suite, arm, seed):
             if e["suite"] == suite and e["arm"] == arm and str(e["seed"]) == str(seed)}
 
 
+def exclusion_kinds(suite, arm, seed):
+    """{candidate: kind} with kind infra or cap_truncated (default infra)."""
+    j = js(EXCL_FILE) or {}
+    return {e["candidate"]: e.get("kind", "infra") for e in j.get("entries", [])
+            if e["suite"] == suite and e["arm"] == arm and str(e["seed"]) == str(seed)}
+
+
 def is_excluded(excl, cid, t):
     """t: epoch seconds, ISO string or None; a record with unknown time is excluded when the candidate is listed."""
     if not excl or cid not in excl:
@@ -186,6 +193,10 @@ def analyse_candidates(rows, excl=None):
         if cid is None:
             continue
         ev = r.get("event")
+        if "__conf" in cid:   # fresh-trial confirmation records of Rule P: not separate candidates, not selection-split screens
+            if is_excluded(excl, cid.split("__conf")[0], r.get("t")):
+                missing.add(cid.split("__conf")[0])
+            continue
         if ev != "created" and is_excluded(excl, cid, r.get("t")):
             missing.add(cid)
             continue
@@ -519,10 +530,15 @@ def run_record(r, arm_rows, role):
     else:
         acc = {c for _, c, _ in info["accepted"] if c != sid}
         rec["candidates_promoted"] = len(acc or {c for _, c, _ in info["selected"] if c != sid})
-    rec["infra_lost_attempts"] = len(info["infra_missing"])   # attempts lost to infrastructure (a retried candidate counts once here)
+    kinds = exclusion_kinds(suite, arm, s)
+    lost = {c for c in info["infra_missing"] if kinds.get(c, "infra") == "infra"}
+    capt = {c for c in info["infra_missing"] if kinds.get(c) == "cap_truncated"}
+    rec["infra_lost_attempts"] = len(lost)   # attempts lost to infrastructure (a retried candidate counts once here)
+    rec["cap_truncated"] = len(capt)
+    rec["cap_truncated_ids"] = ",".join(sorted(capt))
     rec["infra_missing_ids"] = ",".join(sorted(info["infra_missing"]))
     info["infra_full"] = {c for c, t in excl.items() if t and t > 4e9}   # candidates with no valid record at all
-    rec["infra_lost_candidates"] = len(info["infra_full"])
+    rec["infra_lost_candidates"] = len({c for c in info["infra_full"] if kinds.get(c, "infra") == "infra"})
     rec["optimizer_noncache_tokens"] = role[mkey]["noncache"] if mkey in role else None
     rec["optimizer_cache_read_tokens"] = role[mkey]["cache_read"] if mkey in role else None
     rec["optimizer_cache_write_tokens"] = role[mkey]["cache_write"] if mkey in role else None
@@ -698,18 +714,18 @@ Suite & Arm & Cands & Sys.\ prompt & Task tmpl. & Tool code & MCP & Skills & Pro
 def build_gate_table(gate_rows):
     rows = []
     for g in gate_rows:
-        rows.append("%s & %s & %s & %d & %d & %d & %d & %d & %d & %d & %d & %d \\\\" % (
+        rows.append("%s & %s & %s & %d & %d & %d & %d & %d & %d & %d & %d & %d & %d \\\\" % (
             tex(g["suite"]), arm_label(g["arm"]), g["seed"], g["candidates"], g["screens"], g["confirms"], g["promoted"],
-            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["infra_lost_candidates"], g["infra_lost_attempts"]))
+            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["infra_lost_candidates"], g["infra_lost_attempts"], g["cap_truncated"]))
     t = r"""\begin{table*}[t]
 \centering
 \scriptsize
-\caption{Gate behaviour per CapEvolve search (search-time, on each run's own search split, not held-out). Rule P: screens and confirmations run, promotions, rejections (screen, confirm, or rejected outright by the driver), vetoes (indecisive at the gate), and indecisive events (valid-score coverage below 0.95). Lost cands: candidates with no valid evaluation because infrastructure failed them (protocol/infra\_exclusions.json), not counted as rejections. Lost attempts: evaluation attempts lost to infrastructure; a candidate that failed once and was retried successfully counts one lost attempt and zero lost candidates, so attempts can exceed candidates screened. Rows for the stock-gate ablation (E12, paired with Rule P on Suites A and C) have a single-stage accept/reject, so confirmations are 0.}
+\caption{Gate behaviour per CapEvolve search (search-time, on each run's own search split, not held-out). Rule P: screens and confirmations run, promotions, rejections (screen, confirm, or rejected outright by the driver), vetoes (indecisive at the gate), and indecisive events (valid-score coverage below 0.95). Lost cands: candidates with no valid evaluation because infrastructure failed them (protocol/infra\_exclusions.json), not counted as rejections. Lost attempts: evaluation attempts lost to infrastructure; a candidate that failed once and was retried successfully counts one lost attempt and zero lost candidates, so attempts can exceed candidates screened. Cap-trunc.: candidates whose evaluation straddled the 600-rollout cap and was truncated rather than measured; they are excluded from screen and rejection counts and are not infrastructure losses. Rows for the stock-gate ablation (E12, paired with Rule P on Suites A and C) have a single-stage accept/reject, so confirmations are 0.}
 \label{tab:searchtime-gate}
 \resizebox{\textwidth}{!}{%%
-\begin{tabular}{@{}llrrrrrrrrrr@{}}
+\begin{tabular}{@{}llrrrrrrrrrrr@{}}
 \toprule
-Suite & Arm & Seed & Cands & Screens & Confirms & Promoted & Rejected & Vetoed & Indecisive & Lost cands & Lost attempts \\
+Suite & Arm & Seed & Cands & Screens & Confirms & Promoted & Rejected & Vetoed & Indecisive & Lost cands & Lost attempts & Cap-trunc. \\
 \midrule
 %s
 \bottomrule
@@ -866,7 +882,7 @@ def main():
                 rejected_other=sum(1 for v in bc.values() if v == "rejected"), gate_veto=ge["gate_veto"],
                 indecisive=len(ge["indecisive_cands"]), indecisive_events=ge["indecisive_events"],
                 indecisive_reasons="; ".join("%s x%d" % kv for kv in ge["reasons"].items()),
-                eval_errors=ge["eval_errors"], infra_lost_attempts=len(set(ge["infra_missing"]) | set(filter(None, rec["infra_missing_ids"].split(",")))),
+                eval_errors=ge["eval_errors"], infra_lost_attempts=rec["infra_lost_attempts"], cap_truncated=rec["cap_truncated"],
                 infra_lost_candidates=rec["infra_lost_candidates"], split=rec["split"], champion_score=rec["champion_score"],
                 seed_score=rec["seed_score"], gate=("stock (paired dbar > 1 SE, single stage)" if rec["arm"] == "hcstock" else
                                                     "agent-optimize (driver judgement)" if rec["arm"] == "ao" else "Rule P (screen + fresh confirm)")))
@@ -941,11 +957,11 @@ def write_md(recs, gate_rows, agg_rows, infra, compare, newest):
     L += ["", "Notes: champion = what the method itself would return (CapEvolve: state best_id/best_val; GEPA, MIPRO, others: last selected "
           "or argmax of full selection-split evaluations). ACE and HarnessLens have no candidate/selection step yet. "
           "Optimizer USD covers priced (Claude) calls only; unpriced tokens are in runs.csv.", "", "## Gate behaviour (CapEvolve)", "",
-          "| suite | arm | seed | cands | screens | confirms | promoted | rejected | vetoed | indecisive (reasons) | lost cands | lost attempts |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| suite | arm | seed | cands | screens | confirms | promoted | rejected | vetoed | indecisive (reasons) | lost cands | lost attempts | cap-truncated |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for g in gate_rows:
-        L.append("| %s | %s | %s | %d | %d | %d | %d | %d | %d | %d %s | %d | %d |" % (
+        L.append("| %s | %s | %s | %d | %d | %d | %d | %d | %d | %d %s | %d | %d | %d |" % (
             g["suite"], g["arm"], g["seed"], g["candidates"], g["screens"], g["confirms"], g["promoted"],
-            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["indecisive_reasons"], g["infra_lost_candidates"], g["infra_lost_attempts"]))
+            g["screen_reject"] + g["confirm_reject"] + g["rejected_other"], g["gate_veto"], g["indecisive"], g["indecisive_reasons"], g["infra_lost_candidates"], g["infra_lost_attempts"], g["cap_truncated"]))
     L += ["", "## Edits by capability surface (candidates touching surface / changed lines)", "",
           "| suite | arm | cands | " + " | ".join(SURFACES) + " |", "|---|---|---|" + "---|" * len(SURFACES)]
     for a in agg_rows:

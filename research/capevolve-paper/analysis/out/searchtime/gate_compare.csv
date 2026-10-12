@@ -1,13 +1,13 @@
-suite,arm,seed,candidates,screens,confirms,promoted,screen_reject,confirm_reject,rejected_other,gate_veto,indecisive,indecisive_events,indecisive_reasons,eval_errors,infra_lost_attempts,infra_lost_candidates,split,champion_score,seed_score,gate,base_suite,gain_vs_seed
-A,hc,0,4,2,1,1,0,0,0,1,1,1,coverage<0.95 (90%) x1,0,1,1,val-40,0.75,0.5789473684210527,Rule P (screen + fresh confirm),A,0.17105263157894735
-A,hc,1,2,1,1,1,0,0,0,0,0,0,,0,1,1,val-40,0.6923076923076923,0.5897435897435898,Rule P (screen + fresh confirm),A,0.10256410256410253
-A,hc,2,9,7,0,0,0,0,0,7,7,7,coverage<0.95 (92%) x7,0,3,2,val-40,0.5675675675675675,0.5675675675675675,Rule P (screen + fresh confirm),A,0.0
-A-E12,hcstock,0,12,12,0,2,0,0,10,0,0,0,,0,0,0,val-40,0.85,0.5641025641025641,"stock (paired dbar > 1 SE, single stage)",A,0.2858974358974359
-A-E12,hcstock,1,12,12,0,2,0,0,10,0,0,0,,0,0,0,val-40,0.875,0.5263157894736842,"stock (paired dbar > 1 SE, single stage)",A,0.3486842105263158
-A-E12,hcstock,2,12,12,0,3,0,0,9,0,0,0,,0,0,0,val-40,0.875,0.5526315789473685,"stock (paired dbar > 1 SE, single stage)",A,0.3223684210526315
-C,hc,0,3,3,2,1,1,1,0,0,0,0,,0,0,0,opt-20,0.6,0.45,Rule P (screen + fresh confirm),C,0.14999999999999997
-C,hc,1,5,5,1,0,3,1,0,1,2,2,coverage<0.95 (90%) x2,0,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm),C,0.0
-C,hc,2,8,8,1,1,7,0,0,0,0,0,,0,0,0,opt-20,0.6842105263157895,0.55,Rule P (screen + fresh confirm),C,0.13421052631578945
-C-E12,hcstock,0,9,9,0,1,0,0,8,0,0,0,,0,0,0,opt-20,0.7368421052631579,0.5,"stock (paired dbar > 1 SE, single stage)",C,0.23684210526315785
-C-E12,hcstock,1,10,10,0,0,0,0,10,0,0,0,,0,0,0,opt-20,0.65,0.65,"stock (paired dbar > 1 SE, single stage)",C,0.0
-C-E12,hcstock,2,10,10,0,2,0,0,8,0,0,0,,0,0,0,opt-20,0.7894736842105263,0.47368421052631576,"stock (paired dbar > 1 SE, single stage)",C,0.31578947368421056
+suite,arm,seed,candidates,screens,confirms,promoted,screen_reject,confirm_reject,rejected_other,gate_veto,indecisive,indecisive_events,indecisive_reasons,eval_errors,infra_lost_attempts,cap_truncated,infra_lost_candidates,split,champion_score,seed_score,gate,base_suite,gain_vs_seed
+A,hc,0,4,2,1,1,0,0,0,1,1,1,coverage<0.95 (90%) x1,0,1,0,1,val-40,0.75,0.5789473684210527,Rule P (screen + fresh confirm),A,0.17105263157894735
+A,hc,1,2,1,1,1,0,0,0,0,0,0,,0,0,1,0,val-40,0.6923076923076923,0.5897435897435898,Rule P (screen + fresh confirm),A,0.10256410256410253
+A,hc,2,9,7,0,0,0,0,0,7,7,7,coverage<0.95 (92%) x7,0,3,0,2,val-40,0.5675675675675675,0.5675675675675675,Rule P (screen + fresh confirm),A,0.0
+A-E12,hcstock,0,12,12,0,2,0,0,10,0,0,0,,0,0,0,0,val-40,0.85,0.5641025641025641,"stock (paired dbar > 1 SE, single stage)",A,0.2858974358974359
+A-E12,hcstock,1,12,12,0,2,0,0,10,0,0,0,,0,0,0,0,val-40,0.875,0.5263157894736842,"stock (paired dbar > 1 SE, single stage)",A,0.3486842105263158
+A-E12,hcstock,2,12,12,0,3,0,0,9,0,0,0,,0,0,0,0,val-40,0.875,0.5526315789473685,"stock (paired dbar > 1 SE, single stage)",A,0.3223684210526315
+C,hc,0,3,3,2,1,1,1,0,0,0,0,,0,0,0,0,opt-20,0.6,0.45,Rule P (screen + fresh confirm),C,0.14999999999999997
+C,hc,1,5,5,1,0,3,1,0,1,2,2,coverage<0.95 (90%) x2,0,0,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm),C,0.0
+C,hc,2,8,8,1,1,7,0,0,0,0,0,,0,0,0,0,opt-20,0.6842105263157895,0.55,Rule P (screen + fresh confirm),C,0.13421052631578945
+C-E12,hcstock,0,9,9,0,1,0,0,8,0,0,0,,0,0,0,0,opt-20,0.7368421052631579,0.5,"stock (paired dbar > 1 SE, single stage)",C,0.23684210526315785
+C-E12,hcstock,1,10,10,0,0,0,0,10,0,0,0,,0,0,0,0,opt-20,0.65,0.65,"stock (paired dbar > 1 SE, single stage)",C,0.0
+C-E12,hcstock,2,10,10,0,2,0,0,8,0,0,0,,0,0,0,0,opt-20,0.7894736842105263,0.47368421052631576,"stock (paired dbar > 1 SE, single stage)",C,0.31578947368421056

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "purpose": "Single recorded list of candidate evaluations lost to infrastructure. They are MISSING, not rejected: excluded from screened/promoted/rejected counts, anytime curves, edit attribution and regression statistics. Read by analysis/scripts/searchtime_results.py and analysis/scripts/attribution_analyses.py (and any final-eval tool that wants one source). Add entries here, never edit outputs by hand.",
+  "purpose": "Single recorded list of candidate evaluations lost to infrastructure. They are MISSING, not rejected: excluded from screened/promoted/rejected counts, anytime curves, edit attribution and regression statistics. Read by analysis/scripts/searchtime_results.py and analysis/scripts/attribution_analyses.py (and any final-eval tool that wants one source). Add entries here, never edit outputs by hand. Field kind: infra (lost to infrastructure) or cap_truncated (evaluation straddled the rollout cap and was truncated, not measured); both are excluded from rejection/screen counts and reported in separate columns.",
   "entries": [
     {
       "suite": "A",
@@ -9,7 +9,8 @@
       "candidate": "cand_0002",
       "before_utc": "9999-01-01T00:00:00Z",
       "reason": "agent-view dir collision after the 2026-10-12T03:04Z daemon hot-swap; val screen INVALID (NO output file, val 0.342 vs ~0.79); step was INDECISIVE anyway",
-      "source": "campaign-scratch/runs/E10/hill-climb/s0/manifest/tainted.json"
+      "source": "campaign-scratch/runs/E10/hill-climb/s0/manifest/tainted.json",
+      "kind": "infra"
     },
     {
       "suite": "A",
@@ -18,7 +19,8 @@
       "candidate": "cand_0002",
       "before_utc": "9999-01-01T00:00:00Z",
       "reason": "RuntimeError agent view dir not empty (03:25Z, after the 03:02Z hot-swap); graph labelled it rejected, evaluation never ran",
-      "source": "audit/silent_env_failures.md finding 2"
+      "source": "audit/silent_env_failures.md finding 2",
+      "kind": "infra"
     },
     {
       "suite": "A",
@@ -27,7 +29,8 @@
       "candidate": "cand_0003",
       "before_utc": "9999-01-01T00:00:00Z",
       "reason": "same agent-view dir collision (03:25Z); evaluation never ran",
-      "source": "audit/silent_env_failures.md finding 2"
+      "source": "audit/silent_env_failures.md finding 2",
+      "kind": "infra"
     },
     {
       "suite": "A",
@@ -36,7 +39,8 @@
       "candidate": "cand_0004",
       "before_utc": "2026-10-12T08:00:00Z",
       "reason": "FIRST attempt only (03:26Z) hit the same collision; the retry started 08:26Z is a valid evaluation and is kept",
-      "source": "audit/silent_env_failures.md finding 2"
+      "source": "audit/silent_env_failures.md finding 2",
+      "kind": "infra"
     },
     {
       "suite": "A",
@@ -45,7 +49,8 @@
       "candidate": "cand_0002",
       "before_utc": "9999-01-01T00:00:00Z",
       "reason": "straddled the 600-rollout hard cap (evaluation ended at rollout 600, rejected for coverage by the cap truncation): a cap truncation, not a measured rejection; excluded under the straddler rule",
-      "source": "capevolve-runner via team-lead 2026-10-12; runs/E10/hill-climb/s1/.capevolve/run_*/candidates.jsonl"
+      "source": "capevolve-runner via team-lead 2026-10-12; runs/E10/hill-climb/s1/.capevolve/run_*/candidates.jsonl",
+      "kind": "cap_truncated"
     }
   ]
 }
