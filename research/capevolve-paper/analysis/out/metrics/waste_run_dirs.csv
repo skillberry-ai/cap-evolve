@@ -69,3 +69,9 @@ B,hc,,superseded,superseded_v1,/home/dev/projects2/campaign-scratch/runs/E10B/su
 B,ao,,superseded,superseded_v1,/home/dev/projects2/campaign-scratch/runs/E10B/superseded_v1/pilot_ao/s0,67,run_pilot/state.json:spent.metric_calls
 B,gepa,,superseded,superseded_v1,/home/dev/projects2/campaign-scratch/runs/E10B/superseded_v1/pilot_gepa/s0,27,rollout_counter.json:rollouts
 B,hc,,superseded,superseded_v1,/home/dev/projects2/campaign-scratch/runs/E10B/superseded_v1/pilot_hc/s0,35,run_main/state.json:spent.metric_calls
+B-E12,hcstock,0,restart,paused_1141,/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0_paused_1141,0,run_main/state.json:spent.metric_calls
+B-E12,hcstock,0,restart,superseded_timeout,/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0_superseded_timeout,0,run_main/state.json:spent.metric_calls
+B-E12,hcstock,1,restart,paused_1141,/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1_paused_1141,0,run_main/state.json:spent.metric_calls
+B-E12,hcstock,1,restart,superseded_timeout,/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1_superseded_timeout,0,run_main/state.json:spent.metric_calls
+B-E12,hcstock,2,restart,paused_1141,/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2_paused_1141,0,run_main/state.json:spent.metric_calls
+B-E12,hcstock,2,restart,superseded_timeout,/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2_superseded_timeout,0,run_main/state.json:spent.metric_calls
