@@ -111,3 +111,19 @@ def test_bad_unrelated_switch_does_not_break_history_enabled(monkeypatch):
     monkeypatch.setenv("CAPEVOLVE_ACTIVE_EVAL", "maybe")
     monkeypatch.delenv("CAPEVOLVE_HISTORY", raising=False)
     assert harness.history_enabled() is True
+
+
+def test_process_seed_and_diagnose_guidance_are_history_free_when_off(monkeypatch, tmp_path):
+    from cap_evolve import harness
+    monkeypatch.setenv("CAPEVOLVE_HISTORY", "0")
+    assert "prior_iterations" not in harness._process_seed() and "RUNMAP" not in harness._process_seed()
+    d = tmp_path / "diag"; d.mkdir()
+    src = (REPO / "skills" / "phases" / "diagnose" / "SKILL.md").read_text(encoding="utf-8")
+    (d / "SKILL.md").write_text(src, encoding="utf-8")
+    harness._scrub_history_guidance(d)
+    assert "LEDGER" not in (d / "SKILL.md").read_text(encoding="utf-8")
+    monkeypatch.delenv("CAPEVOLVE_HISTORY")
+    assert "prior_iterations" in harness._process_seed()
+    (d / "SKILL.md").write_text(src, encoding="utf-8")
+    harness._scrub_history_guidance(d)
+    assert (d / "SKILL.md").read_text(encoding="utf-8") == src   # default: untouched
