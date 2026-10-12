@@ -28,6 +28,8 @@ Selection-to-final shrinkage is reported for every arm. Per search seed it is th
 
 For each arm and suite we report the cells touched by each rule: first-attempt infrastructure errors, cells recovered at retry one, two or three, cells scored 0 after three retries, and hangs retried or missing. Per artifact we also give the infrastructure-error rate (first attempt and after retries, Wilson 95\% interval) next to the seed artifact's rate in the same window, descriptively and without a test, and flag clearly higher rates. A Meta-Harness candidate's verification step failed with a sandbox error on 17\% of rollouts against 5\% for other candidates, so infrastructure-labelled errors can be caused by the artifact.
 
+The Suite D primary family has ten contrasts (prompt only, tools only and prompt+tools each against the seed; prompt+tools against each single surface; rule P and the one-stage gate each against the stock gate; prompt+tools against the one-shot repair; prompt-only against GEPA on the sealed test only). Its secondary family has four contrasts: GEPA, rule P, the one-stage gate and the one-shot repair, each against the seed. The interaction PT - P - T + seed is descriptive, reported with an interval and no $p$-value. Holm correction applies within each family.
+
 \section{Infrastructure Incidents}
 \label{app:incidents}
 
