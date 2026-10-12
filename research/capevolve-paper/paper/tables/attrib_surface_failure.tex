@@ -3,6 +3,7 @@
 \scriptsize
 \caption{Surface by failure type: seed-failed tasks fixed by CapEvolve candidates, grouped by the candidate's dominant edited surface (most changed lines). Search-time, fixes counted on each run's selection split over all candidates, promoted ones in parentheses, not held-out. A task counts as fixed when it fails at the parent and passes at the candidate; the count includes noise flips and is not a measure of cause. Types not listed were not fixed.}
 \label{tab:attrib-surface-failure}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llrrrrrrrrr@{}}
 \toprule
 Suite & Dominant surface & communication & infra & missing\_action & no\_output\_file & other & state\_side\_effect & was\_passing\_or\_unlabelled & wrong\_argument & wrong\_result \\
@@ -13,5 +14,5 @@ B & unavailable & 0 (0) & 0 (0) & 4 (0) & 0 (0) & 2 (0) & 0 (0) & 0 (0) & 3 (0) 
 C & tool\_code & 4 (0) & 0 (0) & 31 (8) & 0 (0) & 7 (1) & 5 (0) & 5 (2) & 24 (8) & 0 (0) \\
 C & unavailable & 2 (0) & 0 (0) & 4 (0) & 0 (0) & 0 (0) & 1 (0) & 0 (0) & 3 (0) & 0 (0) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}
