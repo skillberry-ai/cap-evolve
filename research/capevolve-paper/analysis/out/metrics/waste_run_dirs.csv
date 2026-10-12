@@ -1,10 +1,16 @@
 suite,arm,seed,kind,via,dir,counted_rollouts_in_dir,counter_source
+A,ace,0,restart,infra_restart_sblib_fix,/home/dev/projects2/campaign-scratch/runs/E10/ace/s0_infra_restart_sblib_fix,9,rollout_counter.json:total
 A,ace,0,restart,infra_restart_watchdog,/home/dev/projects2/campaign-scratch/runs/E10/ace/s0_infra_restart_watchdog,5,rollout_counter.json:total
 A,ace,0,restart,infra_restart_watchdog40min,/home/dev/projects2/campaign-scratch/runs/E10/ace/s0_infra_restart_watchdog40min,1,rollout_counter.json:total
+A,ace,0,restart,superseded_sequential,/home/dev/projects2/campaign-scratch/runs/E10/ace/s0_superseded_sequential,29,rollout_counter.json:total
+A,ace,1,restart,infra_restart_sblib_fix,/home/dev/projects2/campaign-scratch/runs/E10/ace/s1_infra_restart_sblib_fix,4,rollout_counter.json:total
 A,ace,1,restart,infra_restart_watchdog,/home/dev/projects2/campaign-scratch/runs/E10/ace/s1_infra_restart_watchdog,3,rollout_counter.json:total
 A,ace,1,restart,infra_restart_watchdog40min,/home/dev/projects2/campaign-scratch/runs/E10/ace/s1_infra_restart_watchdog40min,1,rollout_counter.json:total
+A,ace,1,restart,superseded_sequential,/home/dev/projects2/campaign-scratch/runs/E10/ace/s1_superseded_sequential,64,rollout_counter.json:total
+A,ace,2,restart,infra_restart_sblib_fix,/home/dev/projects2/campaign-scratch/runs/E10/ace/s2_infra_restart_sblib_fix,8,rollout_counter.json:total
 A,ace,2,restart,infra_restart_watchdog,/home/dev/projects2/campaign-scratch/runs/E10/ace/s2_infra_restart_watchdog,6,rollout_counter.json:total
 A,ace,2,restart,infra_restart_watchdog40min,/home/dev/projects2/campaign-scratch/runs/E10/ace/s2_infra_restart_watchdog40min,1,rollout_counter.json:total
+A,ace,2,restart,superseded_sequential,/home/dev/projects2/campaign-scratch/runs/E10/ace/s2_superseded_sequential,33,rollout_counter.json:total
 A,evoskill,0,restart,INVALID_gateway_tag_stall_since_1305,/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_INVALID_gateway_tag_stall_since_1305,44,rollout_counter.json:total
 A,evoskill,0,restart,infra_restart_conc12,/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_conc12,12,rollout_counter.json:total
 A,evoskill,0,restart,infra_restart_hung_rule,/home/dev/projects2/campaign-scratch/runs/E10/evoskill/s0_infra_restart_hung_rule,24,rollout_counter.json:total

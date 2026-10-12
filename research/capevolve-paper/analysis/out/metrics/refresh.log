@@ -13,3 +13,93 @@ wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/
 2026-10-11T19:38:32Z collect start
 wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 107225 newest: 2026-10-11T19:38:32Z
 2026-10-11T19:38:37Z collect ok
+2026-10-11T20:08:37Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 113059 newest: 2026-10-11T20:08:38Z
+2026-10-11T20:08:43Z collect ok
+2026-10-11T20:38:43Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 118556 newest: 2026-10-11T20:38:44Z
+2026-10-11T20:38:49Z collect ok
+2026-10-11T21:08:49Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 122560 newest: 2026-10-11T21:08:51Z
+2026-10-11T21:09:00Z collect ok
+2026-10-11T21:13:20Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 123187 newest: 2026-10-11T21:13:21Z
+2026-10-11T21:13:27Z collect ok
+2026-10-11T21:13:55Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 123280 newest: 2026-10-11T21:13:57Z
+2026-10-11T21:14:02Z collect ok
+2026-10-11T21:14:18Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 123348 newest: 2026-10-11T21:14:20Z
+2026-10-11T21:14:26Z collect ok
+2026-10-11T21:17:19Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 123808 newest: 2026-10-11T21:17:19Z
+2026-10-11T21:17:25Z collect ok
+2026-10-11T21:18:02Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 123924 newest: 2026-10-11T21:18:03Z
+2026-10-11T21:18:08Z collect ok
+2026-10-11T21:20:00Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 124228 newest: 2026-10-11T21:20:01Z
+2026-10-11T21:20:07Z collect ok
+2026-10-11T21:39:00Z collect start
+Traceback (most recent call last):
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 1310, in <module>
+    main()
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 956, in main
+    r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
+KeyError: 'error_text'
+2026-10-11T21:39:06Z collect FAILED
+2026-10-11T22:09:06Z collect start
+Traceback (most recent call last):
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 1310, in <module>
+    main()
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 956, in main
+    r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
+KeyError: 'error_text'
+2026-10-11T22:09:12Z collect FAILED
+2026-10-11T22:39:12Z collect start
+Traceback (most recent call last):
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 1310, in <module>
+    main()
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 956, in main
+    r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
+KeyError: 'error_text'
+2026-10-11T22:39:18Z collect FAILED
+2026-10-11T23:09:18Z collect start
+Traceback (most recent call last):
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 1310, in <module>
+    main()
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 956, in main
+    r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
+KeyError: 'error_text'
+2026-10-11T23:09:24Z collect FAILED
+2026-10-11T23:39:24Z collect start
+Traceback (most recent call last):
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 1310, in <module>
+    main()
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 956, in main
+    r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
+KeyError: 'error_text'
+2026-10-11T23:39:30Z collect FAILED
+2026-10-12T00:09:30Z collect start
+Traceback (most recent call last):
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 1310, in <module>
+    main()
+  File "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/scripts/collect_metrics.py", line 956, in main
+    r2["error_kind"] = r2["error_class_uniform"] if r2["error_kind_adapter"] or r2["error_text"] else r2["error_kind_adapter"]
+KeyError: 'error_text'
+2026-10-12T00:09:36Z collect FAILED
+2026-10-12T00:39:36Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 159723 newest: 2026-10-12T00:39:37Z
+2026-10-12T00:39:44Z collect ok
+2026-10-12T01:09:44Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 165562 newest: 2026-10-12T01:09:46Z
+2026-10-12T01:09:53Z collect ok
+2026-10-12T01:39:53Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 170623 newest: 2026-10-12T01:39:55Z
+2026-10-12T01:40:02Z collect ok
+2026-10-12T02:10:02Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 175689 newest: 2026-10-12T02:10:04Z
+2026-10-12T02:10:11Z collect ok
+2026-10-12T02:15:32Z collect start
+wrote /home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/analysis/out/metrics gateway lines: 176636 newest: 2026-10-12T02:15:33Z
+2026-10-12T02:15:40Z collect ok
