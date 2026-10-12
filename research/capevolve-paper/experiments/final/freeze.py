@@ -35,7 +35,7 @@ FROZEN_SETTINGS = {
     "temperature": 0.0, "max_tokens": 8000, "tau_max_steps": 100, "spreadsheetbench_max_turns": 30, "spreadsheetbench_exec_timeout_s": 180,
     "spreadsheetbench_scoring": "hard", "reward_A": "LibreOffice 25.8.7.3 recalculated hard score (metric hard_restriction); as-saved hard logged",
     "gateway": "http://127.0.0.1:4111/v1 (extras: 4112)", "hang_rule_s": 10800, "infra_retries": 3, "hang_retries": 1,
-    "sandbox_KERNEL_TIMEOUT_S": 10800, "sandbox_SB_DRAIN_ERROR": 1, "order_seed": C.ORDER_SEED, "cutoff_utc": C.CUTOFF_UTC,
+    "e25_placement": {"D": "merged into the main window (--merge-decomp)", "E": "separate extra order after the main window", "B/C": "separate extra order, n=1, run last"}, "sandbox_KERNEL_TIMEOUT_S": 10800, "sandbox_SB_DRAIN_ERROR": 1, "order_seed": C.ORDER_SEED, "cutoff_utc": C.CUTOFF_UTC,
 }
 
 

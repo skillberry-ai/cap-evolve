@@ -67,7 +67,7 @@ Capped-token guard: `run_final.py` polls the gateway and stops dispatching with 
 competitors E32/{ace,mipro,gepafull,ao} (own Holm; ao daggered; GEPA-full selects on sel-10, so test-20 only) and E10E/harnesslens (1 exploratory seed).  No B*/N*: each cell's final state.  Cell order if time is short:
 E30-PT, P, T, seed, then E31-ruleP, E36, E30-CTL, E31-1S, E30-GEPA, then competitors, then E25 (`decompose.py --suite E`, n=3 on H30).  E searches may end after the A/B/C cutoff: E scoring starts when they end.
 Suite E has its own order file and its own single interleaved window (never pooled with D); the seed artifact (n=10) and all cells are in one seeded random order, hashed before the first rollout.
-`order.py --merge-decomp manifests/decomp_E.json` puts the E25 cells into that same order (Suites D and E); without it E25 is a separate extra order.  Cut order if time is short:
+E25 placement (coordinator decision 2026-10-12): Suite D MERGES the decomposition into its window (`order.py --suite D ... --merge-decomp manifests/decomp_D.json`) so the P-only/T-only cells are interleaved with their champions and the seed; Suite E keeps E25 as a SEPARATE extra order run after E's main window (`order.py --suite E --extra decomp --decomp-manifest manifests/decomp_E.json`, then `run_final.py run --extra decomp`), so it can be cut first.  Cut order if time is short:
 E25 first, then competitors, GEPA, 1S, CTL, nohist, ruleP; never PT, P, T or the seed (use `order.py --arms ...` to rebuild the order without the cut arms BEFORE the window starts; a started window is not reshuffled).
 Dry run: dryrun/E (fake E30 root of links to E10C runs, Azure).
 
