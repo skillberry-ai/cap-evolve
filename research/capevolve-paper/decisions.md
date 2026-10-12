@@ -280,3 +280,13 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - The flag scan of all 49 B/C/E12C optimizer sessions found no other guard override. Only a throughput knob and the documented --yes were used.
   - Filed as a CapEvolve defect, reported in the paper as a finding about the harness. Not patched mid-campaign; the final evaluation does not use finalize.
 - 2026-10-12T00:53 — HarnessLens relaunched at about 00:52 on patch md5 09a4a0c6 (group, chunk and request timeouts lifted), concurrency 16. The earlier d333c9e1 launch is superseded (killed minutes in).
+- 2026-10-12T00:55 — Shared evaluator (sb_eval_lib.py, edited about 00:54-00:55Z).
+  - (1) Candidate-dir race fixed with an atomic temp-dir rename. Stress test: 40/300 trials hit a false error with the old code, 0/300 with the new.
+  - (2) Uniform search-time infra retry: up to 3 retries with a new trial seed, refunded and logged in infra_retries.json. Candidate faults are never retried. A final failure is flagged infra_final and treated as missing in the analysis; the method itself still receives 0.0.
+  - Both changes take effect only in processes started after the edit.
+  - Rule: a running arm is restarted only if it resumes losslessly from its own state. Otherwise it keeps the pre-rule handling, which is disclosed.
+  - Meta-Harness: not restarted, because its resume restarts the candidate phase. Infra share classified post hoc.
+  - Audit result: SkillOpt's 120 "candidate" zeros are 119 genuine template breaks (its edits add literal Python braces; 3 of 9 early candidates) and 1 race row. No decision affected.
+  - GEPA: 2 genuine breaks, and 0-1 expected race events (unverifiable). EvoSkill: 0.
+  - Trace2Skill s2: 2 race rows, re-run as an infra retry.
+  - The final evaluation uses the fixed library for every arm.
