@@ -45,10 +45,11 @@ W=32 would push demand above 24 and only queue, so the decision (coordinator, 20
 
 ## Suite D (tau2 retail, Azure target gpt-4.1-mini; added 2026-10-12)
 
-`--suite D`: artifacts from `runs/E20/<cell>/s<k>` (cell dirs E20-PT, E21-ruleP, E20-P, E20-T, E20-CTL, E21-1S, E20-GEPA | Tier 2: E20-TD, E23-nohist, E23-nodigest, E21-ruleP-2x; with or without the E2x- prefix),
-final state compared (no B*: `bstar.py` lists counters only; `reconstruct.py` files the last promoted candidate, else the seed, under mode B).  Models are fixed in `order.py` D_MODELS
-(target `azoai/gpt-4.1-mini-2025-04-14`, user simulator and NL judge `azoai/gpt-4.1-2025-04-14`, gateway :4112, tags `FINAL-D-*`), tasks = sealed test-40, family = task id,
-trials: Tier 1 champions 5, Tier 2 champions 3, seed 10, all in one stream.  `run_final.py run --suite D --workers 128` (Azure only; 429-aware backoff before infra retries).
+`--suite D`: approved set only (Tier 1 + E26-nohist): runs/E20/{PT,P,T,CTL,GEPA}, runs/E21/{ruleP,1S}, runs/E26/nohist (names after tau-runner; `fe_common.D_DIRS`), arm keys pt p t ctl gepa rulep 1s nohist.
+Final state compared (no B*): last promoted candidate, else the seed, filed under mode B.  Models fixed in `order.py` D_MODELS (target `azoai/gpt-4.1-mini-2025-04-14`, user simulator and NL judge `azoai/gpt-4.1-2025-04-14`,
+gateway :4112, tags `FINAL-D-*`).  Tasks = H65 (sel-25 + sealed test-40) with a `split` column everywhere (primary = test-40, H65 descriptive); GEPA cells are test-40 only; trials: champions 5, seed 10 (+ one seed-check cell), all in one stream.
+`run_final.py run --suite D --workers 128` (Azure only; 429-aware sleep before infra retries).  A champion whose `surface_violations.json` is non-empty keeps its cell (ITT) and gets the dagger flag (second computation without it).
+Capped-token guard: `run_final.py` polls the gateway and stops dispatching with a PAGE_CAPPED_TOKENS file if the capped counter passes `--capped-stop` (default 168M).  Comparison family rows (D m=11, D-sec m=4) are in freeze.py.
 E25: `decompose.py --suite D --manifest manifests/artifacts_D.json --arms pt,rulep,1s,ctl` writes P-only / T-only sub-artifacts of each champion that differs from the seed on BOTH surfaces
 (frozen read-only, hashed; a sub-artifact equal to the seed or the champion is skipped), then `order.py --suite D --extra decomp --decomp-manifest manifests/decomp_D.json` (n=3; B/C: `--suite B|C --arms oneshot`, n=1,
 run last, dropped first) and `run_final.py run --extra decomp`.  Dry run: FE_D_RUNROOT points D at a fake E20 root of links to E10B runs.

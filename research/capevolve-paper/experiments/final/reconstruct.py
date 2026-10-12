@@ -564,7 +564,14 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
     entry["n_screened"] = len(cands_seen)
     if sv is not None:
         entry["surface_violations"] = sv
-    entry["dagger"] = (suite, arm) in C.DAGGER
+    def _viol(v):      # surface_violations.json: any nonzero count / non-empty list = the champion's search edited outside its cell's lock
+        if isinstance(v, dict):
+            return any(_viol(x) for x in v.values())
+        if isinstance(v, (list, tuple, set)):
+            return len(v) > 0
+        return bool(v) and v not in (0, "0")
+    entry["surface_violation"] = bool(sv is not None and _viol(sv))
+    entry["dagger"] = ((suite, arm) in C.DAGGER) or entry["surface_violation"]      # amendment 9H: stays in its cell (ITT), dagger + sensitivity row without it
     own = (_BSTAR_RUNS or [])
     own_n = next((r.get("counter") for r in own if r["arm"] == arm and r["seed"] == seed), None)
     entry["selection"] = {"split": entry.get("selection_split"), "n_tasks": entry.get("selection_n_tasks"),

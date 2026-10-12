@@ -43,11 +43,22 @@ def git(*args, cwd=C.REPO):
     return subprocess.check_output(["git", "-C", str(cwd)] + list(args), text=True).strip()
 
 
+SUITE_D_FAMILY = {   # registered by stats-reviewer (suite_D_registration.json, amendment 8A/9H): sealed test-40 on both sides; H65 is a descriptive recomputation with its own Holm
+    "primary_D_holm_m11": [("p", "pt"), ("t", "pt"), ("p", "t"), ("rulep", "pt"), ("1s", "pt"), ("pt", "ctl"), ("p", "gepa"), ("p", "seed"), ("t", "seed"), ("pt", "seed"), ("nohist", "pt")],
+    "secondary_D_sec_holm_m4": [("gepa", "seed"), ("rulep", "seed"), ("1s", "seed"), ("ctl", "seed")],
+    "descriptive_only": ["interaction pt - p - t + seed", "E25 decomposition", "selection-to-final shrinkage (non-inert seeds)", "promotions per search", "E26 gate ROC", "exploratory cells"],
+    "surface_lock_rule_9H": "a seed whose champion edits outside its cell's lock stays in its cell (ITT), gets a dagger, and every row involving that cell is recomputed excluding violating seeds (Holm denominator unchanged)",
+}
+
+
 def comparison_family(suites):
     """analysis_plan 5A/5B, per suite.  Arms with an incomplete seed under the B* rule are removed by the caller from the manifests, and the
     family here is generated only from arms that have a usable B* artifact for all seeds."""
     fam = {}
     for s in suites:
+        if s == "D":
+            fam[s] = SUITE_D_FAMILY
+            continue
         man = C.jload(C.MANIFESTS / ("artifacts_%s.json" % s)) or {}
         ok = {}
         for e in man.get("entries", []):

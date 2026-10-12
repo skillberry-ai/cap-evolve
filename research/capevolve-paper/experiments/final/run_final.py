@@ -842,6 +842,22 @@ def cmd_run(a):
                                                     "run_final_sha256": C.file_sha(__file__), "workers": a.workers})
     print("order sha256 %s; %d jobs, %d to run, %d workers" % (sha, len(jobs), len(todo), a.workers))
     stop = threading.Event()
+
+    def caps_watch():          # capped-token guard (coordinator): stop dispatching and page if the gateway's capped counter passes the limit
+        import urllib.request
+        while not stop.wait(60):
+            try:
+                capped = int(json.loads(urllib.request.urlopen("http://127.0.0.1:4111/health", timeout=10).read()).get("capped_tokens") or 0)
+            except Exception:
+                continue
+            if capped > a.capped_stop:
+                msg = "PAGE: capped tokens %d > %d: run_final stops dispatching" % (capped, a.capped_stop)
+                print(msg, flush=True)
+                (root / "PAGE_CAPPED_TOKENS").write_text(msg + "\n")
+                C.append_jsonl(root / "interruptions.jsonl", {"event": "capped_token_stop", "t": C.now_utc(), "capped": capped})
+                stop.set()
+                return
+    threading.Thread(target=caps_watch, daemon=True).start()
     cl = None
     if a.canary_n:
         meta["canary_jobs"] = meta["canary_jobs"][:a.canary_n]
@@ -925,6 +941,7 @@ def main(argv=None):
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)
         p.add_argument("--force", action="store_true")
+        p.add_argument("--capped-stop", type=int, default=168_000_000, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this")
         p.add_argument("--check-error-drain", action="store_true", help="prepare, Suite A: error exec, 95 s idle, next exec must succeed (needs the SB_DRAIN_ERROR jupyter.py)")
         p.add_argument("--check-kernel-idle", action="store_true", help="prepare, Suite A: also run the ~12 min idle-kernel behavioural check")
     w = sp.add_parser("worker")

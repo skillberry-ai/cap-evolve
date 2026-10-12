@@ -11,6 +11,8 @@
  "max_tokens": 8000,
  "order_seed": 20261013,
  "reward_A": "LibreOffice 25.8.7.3 recalculated hard score (metric hard_restriction); as-saved hard logged",
+ "sandbox_KERNEL_TIMEOUT_S": 10800,
+ "sandbox_SB_DRAIN_ERROR": 1,
  "spreadsheetbench_exec_timeout_s": 180,
  "spreadsheetbench_max_turns": 30,
  "spreadsheetbench_scoring": "hard",

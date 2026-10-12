@@ -61,13 +61,14 @@ SUITES = {
 }
 SUITES["D"] = {
     "exp": "E20", "label": "tau2 retail, Azure target gpt-4.1-mini (Suite D ablation family)",
-    "main": ["pt", "rulep", "p", "t", "ctl", "1s", "gepa"],      # Tier 1 champions (40 tasks x n=5)
-    "cheap": ["td", "nohist", "nodigest", "rulep2x"],             # Tier 2 champions (40 tasks x n=3)
-    "controls": [], "exploratory": [],
-    "dirname": {"pt": "E20-PT", "rulep": "E21-ruleP", "p": "E20-P", "t": "E20-T", "ctl": "E20-CTL", "1s": "E21-1S", "gepa": "E20-GEPA",
-                "td": "E20-TD", "nohist": "E23-nohist", "nodigest": "E23-nodigest", "rulep2x": "E21-ruleP-2x"},
-    "artifact_kind": "tau_cap", "final_state": True,               # no B*: D searches are rollout-capped, the final state is compared
+    "main": ["pt", "rulep", "p", "t", "ctl", "1s", "gepa", "nohist"],   # Tier 1 + E26-nohist (approved set; amendment 8F, m = 11)
+    "cheap": [], "controls": [], "exploratory": [],                       # Tier 2 / exploratory cells are NOT approved for the final window
+    "dirname": {},
+    "artifact_kind": "tau_cap", "final_state": True,                      # no B*: D searches are rollout-capped, the final state is compared
 }
+# candidate run directories (relative to RUNS) per Suite D arm; first existing one is used.  Real names: runs/E20/{PT,P,T,CTL}, runs/E21/ruleP (tau-runner)
+D_DIRS = {"pt": ["E20/PT"], "p": ["E20/P"], "t": ["E20/T"], "ctl": ["E20/CTL"], "gepa": ["E20/GEPA"], "rulep": ["E21/ruleP"], "1s": ["E21/1S", "E21/OneStage", "E21/1s"],
+          "nohist": ["E26/nohist", "E26/NOHIST", "E26/nohist-PT", "E26/PT"]}
 for _s, _ex in (("B", ["hcstock", "hlext"]), ("C", ["hcstock"])):   # B: E12B stock-gate hill climb, HL-extended (exploratory)
     SUITES[_s]["exploratory"] = _ex                  # C: E12C stock-gate hill climb
 RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock"): RUNS / "E12C" / "hcstock", ("B", "hcstock"): RUNS / "E12B" / "hcstock",
@@ -87,13 +88,13 @@ def run_dir(suite, arm, seed):
     s = SUITES[suite]
     if (suite, arm) in RUN_ROOT_OVERRIDE:
         return RUN_ROOT_OVERRIDE[(suite, arm)] / ("s%d" % seed)
-    if suite == "D":      # runs/E20/<cell>/s<k>; the cell directory may or may not carry the E2x- prefix
-        root = Path(os.environ.get("FE_D_RUNROOT", str(RUNS / "E20")))
-        name = s["dirname"].get(arm, arm)
-        for cand in (name, name.split("-", 1)[-1], name.lower()):
+    if suite == "D":
+        root = Path(os.environ["FE_D_RUNROOT"]) if os.environ.get("FE_D_RUNROOT") else RUNS
+        cands = D_DIRS.get(arm, [])
+        for cand in cands:
             if (root / cand).is_dir():
                 return root / cand / ("s%d" % seed)
-        return root / name / ("s%d" % seed)
+        return root / (cands[0] if cands else "E20/%s" % arm) / ("s%d" % seed)
     return RUNS / s["exp"] / s["dirname"].get(arm, arm) / ("s%d" % seed)
 
 
