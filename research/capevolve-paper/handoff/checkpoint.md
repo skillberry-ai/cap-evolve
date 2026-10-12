@@ -101,3 +101,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Paper repo mirror (13:31 UTC 10-12)
 - github bcarmeli/mlsys2027-cap-evolve-paper (private, main) mirrors research/capevolve-paper/ commit by commit, plus the built PDF and an Overleaf zip. The writer is the repo-sync loop, PID in campaign-scratch/logs/paper_repo_sync.pid (every 600 s). Stop with kill $(cat .../paper_repo_sync.pid). Restart with nohup python3.12 -I campaign-scratch/scripts/paper_repo_sync.py --loop 600.
 - After the campaign, decide with the user whether to keep the loop running. It is a host process to stop.
+
+## Update 15:50 UTC 10-12 (periodic check)
+- Capped 111.8M/200M. ACE ledger guards (s1/s2) and HL-extended 10M watcher running; HL 3.5 h cumulative per-trial cap watcher running.
+- Pending: ACE s0 final validation rerun, then reconstruct; E12B relaunch when B hill-climb ends; Suite E waves; 21:11 forecast; cutoff 06:00 (cron b76737e4).
