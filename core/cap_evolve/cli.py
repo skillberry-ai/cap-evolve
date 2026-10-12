@@ -759,6 +759,10 @@ def _cmd_run(argv):
         # finalize bookends): the phase scripts read it from the environment they inherit.
         from .harness import ERRORED_POLICY_ENV, resolve_errored_policy
         os.environ[ERRORED_POLICY_ENV] = resolve_errored_policy(str(spec["errored_trial_policy"]))
+    from .optimizer_config import enabled as _ablation_enabled
+    if not _ablation_enabled("history", spec):
+        # the harness (a subprocess) reads the switch from the environment it inherits
+        os.environ["CAPEVOLVE_HISTORY"] = "0"
 
     def run(cmd):
         proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(workdir))

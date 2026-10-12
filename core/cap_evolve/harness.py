@@ -2242,6 +2242,15 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
 
 
+def history_enabled() -> bool:
+    """``optimizer.ablation.history`` / env ``CAPEVOLVE_HISTORY`` (default on). Off removes the
+    cross-iteration HISTORY from what the proposer sees (LEDGER, JOURNAL, RUNMAP, prior_iterations,
+    the insights accumulators and the currently-passing block). PROCESS.md and the current-best
+    trajectories stay. The gate, evaluator and scoring never read it."""
+    from .optimizer_config import enabled
+    return enabled("history", None)
+
+
 def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
     """Create every cross-iteration memory file the optimizer is TOLD to read, in ``target``.
 
@@ -2266,6 +2275,14 @@ def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
     """
     target = Path(target)
     written: list[str] = []
+    if not history_enabled():
+        try:
+            if not (target / "PROCESS.md").exists():
+                (target / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
+            written.append("PROCESS.md")
+        except OSError as e:
+            run_dir.log_event("optimizer_context_warning", what="PROCESS.md", error=str(e)[:300])
+        return written
     for name, fn in (("LEDGER.md", _build_ledger), ("JOURNAL.md", _seed_journal),
                      ("RUNMAP.md", _build_runmap)):
         try:
@@ -2378,6 +2395,16 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
         append-only summary layer above JOURNAL.md (see the comment near ``_INSIGHTS_MARK``).
     """
     seed_framework_memory(workdir, run_dir)
+
+    if not history_enabled():
+        return (f"{instructions}\n\n{_run_ending_signal(run_dir)}"
+                "## Cross-iteration files in THIS working dir\n"
+                "- `PROCESS.md` — EXPLAINABILITY (yours, REQUIRED this iteration): fill it in as you "
+                "work (ranked issues, every edit + class, verify-the-fix, subagents/features used, "
+                "what to preserve, what you skipped). It is snapshotted with your candidate.\n"
+                f"- `{run_dir.rejected_path}` — ALREADY-REFUTED approaches (framework, read-only; JSON "
+                "lines, one per rejected candidate with the gate's reason). Read it and make each "
+                "proposal STRUCTURALLY different from what is in it.\n\n")
 
     pointer = (
         _run_ending_signal(run_dir)
@@ -4144,7 +4171,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} {scope}."
     )
     failures = _failures_block(always_fail, flaky, errored)
-    passing = _passing_block(protect)
+    passing = _passing_block(protect) if history_enabled() else ""
     cap = _capability_brief(capabilities)
     algo = _algorithm_brief(current_val, algorithm)
     bench = (f"- The benchmark / runner source is at `{bench_repo}` — read-only context "

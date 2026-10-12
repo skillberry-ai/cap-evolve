@@ -1,4 +1,4 @@
-"""Optimizer ablation switches: ONE resolver for all seven, one documented precedence (#712).
+"""Optimizer ablation switches: ONE resolver for all eight, one documented precedence (#712).
 
 The switches (what each turns off is the *legacy* behaviour it falls back to):
 
@@ -12,6 +12,9 @@ cost_gating         on       legacy gate mode instead of ``reward_gated``
 failure_clustering  on       per-task listing, no multi-task hypothesis rule
 pregate             on       skip the deterministic candidate checks
 context_digest      on       agent gets the raw tables, no digest
+history             on       proposer gets no LEDGER / JOURNAL / RUNMAP / prior_iterations /
+                             insights files and no currently-passing (protect) block; changes ONLY
+                             what the proposer sees (gate, evaluator and scoring are untouched)
 ==================  =======  ==========================================================
 
 Precedence, highest first (the first one that is set wins; the rest are not consulted):
@@ -34,7 +37,8 @@ import os
 
 #: key -> default
 DEFAULTS = {"dag_parallel": True, "active_eval": False, "smart_merge": True, "cost_gating": True,
-            "failure_clustering": True, "pregate": True, "context_digest": True}
+            "failure_clustering": True, "pregate": True, "context_digest": True,
+            "history": True}
 _TRUE, _FALSE = {"1", "true", "yes", "on"}, {"0", "false", "no", "off"}
 
 
