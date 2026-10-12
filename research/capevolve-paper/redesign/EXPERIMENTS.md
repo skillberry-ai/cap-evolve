@@ -6,6 +6,29 @@ Inputs read: `decisions.md` (to 08:29 UTC today), `protocol/analysis_plan.md` (a
 
 ---
 
+## 0a. Coordinator update (2026-10-12 09:30 UTC): FROZEN LAUNCH LIST FOR SUITE D
+
+Decisions applied: hill-climb only (E24-AO dropped), Sonnet 5.5 optimizer, stock gate default in every cell, reference cell = E20-PT (prompt+tools, stock gate, full history). Measured hc optimizer tokens (gateway log, tags E10B-hc, E10C-hc, E12C-hcstock, E12A-hcstock): 0.20 to 0.73 M non-cache-read per search, mean 0.4 M (not 2.5 to 4 M). Grid sized to about 20 M headroom.
+
+| wave | cell | seeds | rollouts | capped tokens |
+|---|---|---|---|---|
+| 0 (now, no code) | E22 null pool | - | 1,960 | 0 |
+| 1 | E20-PT (reference) | 3 | 1,650 | 1.2 M |
+| 1 | E21-ruleP (rule P on the reference) | 3 | 1,650 | 1.2 M |
+| 1 | E20-P | 3 | 1,650 | 1.2 M |
+| 1 | E20-T | 3 | 1,650 | 1.2 M |
+| 1 | E20-CTL (one-shot) | 3 | 600 | 0.7 M |
+| 2 | E23-nohist (new switch) | 2 | 1,100 | 0.9 M |
+| 2 | E21-1S (one-stage unmasked) | 3 | 1,650 | 1.2 M |
+| 2 | E20-GEPA (P1, cheap) | 2 | 1,100 | 0.8 M |
+| 2 | E20-TD (descriptions-only, emulation) | 2 | 1,100 | 0.8 M |
+| 3 conditional | E20-PTS (needs tau skill loader; the tau adapter has NO skill-package support today, only policy and tools) | 2 | 1,100 | 1.0 M |
+| analysis/final | E26 gate ROC, E25 decomposition, held-out scoring | - | about 16k | 0 |
+
+Capped tokens about 11 M for waves 1 and 2, about 12 M with PTS; fits the 20 M headroom (125 M stop rule applies to the rest). Azure about 15.5k search rollouts plus about 16k held-out, roughly $1.5k at list price.
+
+Pre-registered contrasts (Holm within Suite D, all paired by task, artifact-level CR1 plus pipeline-level t(S-1)): each of {P, T, ruleP, 1S, nohist, TD, PTS, CTL, GEPA} versus E20-PT; plus interaction PT - P - T + seed; plus each of P, T, PT versus seed. TOST margin 0.10 (a margin of 0.05 is below the MDE of about 0.10 at 65 tasks, so it could never pass; report as inconclusive instead). Logged for every cell: promotions per search and the selection-split score per promotion, for selection-to-final shrinkage. Registry entry to be written with stats-reviewer before the first D rollout.
+
 ## 0. One-screen summary
 
 1. **The surface ablation cannot be read off the running campaign.** On B and C the CapEvolve arms run `capabilities: [system-prompt, tools]` under rule P, and rule P is inert at this budget: 0 promotions in all hc and ao searches so far (attrib summary, 08:47: B hc 0/9 candidates, C hc 0/12, ao 0/3 and 0/1; stock gate on C promotes 1.0 per search). A surface grid under rule P would return the seed in nearly every cell and show nothing. The new ablation family therefore has to use the **stock gate** as its reference configuration and treat rule P as one of the cells.
