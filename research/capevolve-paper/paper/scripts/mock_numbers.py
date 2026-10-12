@@ -129,17 +129,6 @@ def build_suite_d(rng):
     return dict(params=P, cells=cells, vs_pt=cons, interaction=interaction, p_vs_t=p_vs_t)
 
 
-def build_null_pool(rng):
-    """E22 empirical null pool, mock: false-accept rate per 10-candidate search for each gate (reference: simulation)."""
-    out = {}
-    n = 2000
-    for key, sim in (("rulep", 0.07), ("onestage", 0.55), ("stock", 0.50)):
-        p = min(max(sim * rng.uniform(0.7, 1.3), 0.005), 0.95)
-        w = 1.96 * math.sqrt(p * (1 - p) / n)
-        out[key] = dict(rate=p, lo=max(p - w, 0), hi=min(p + w, 1), sim=sim, n=n)
-    return out
-
-
 def build_decomposition(rng):
     """E25, mock: whole-artifact gain against the prompt-only and tool-only parts of the same champion."""
     rows = []
@@ -290,7 +279,6 @@ def build():
             s["families"] = fams
         data["suites"][suite] = s
     data["suites"]["D"] = build_suite_d(rng)
-    data["null_pool"] = build_null_pool(rng)
     data["decomposition"] = build_decomposition(rng)
     return data
 
@@ -353,8 +341,6 @@ def macros(data):
         m[f"mockD{k}VsPtHi"] = fmt_d(v["hi"])
     it = D["interaction"]
     m["mockDInter"], m["mockDInterLo"], m["mockDInterHi"] = fmt_d(it["delta"]), fmt_d(it["lo"]), fmt_d(it["hi"])
-    for k, v in data["null_pool"].items():
-        m[f"mockNull{k}"] = f"{100 * v['rate']:.1f}"
     return m
 
 
