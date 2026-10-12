@@ -581,6 +581,17 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
                           "comparison_count": (min(limit, own_n) if (own_n is not None and limit != INF) else own_n), "own_count": own_n, **sr}
     entry["tree_sha256"] = h
     entry["files"] = files
+    # the arm's OWN first candidate (e.g. MIPROv2's default instruction, ACE's empty playbook): returning it is "inert" for the method even though its hash differs from the shared seed's
+    try:
+        oc = seed_candidate(events)
+        oe = last_artifact_event(events, oc) if oc else None
+        if oe and Path(oe["artifact_dir"]).is_dir() and k != "all":
+            oh, _ = C.tree_hash(oe["artifact_dir"], kind)
+            entry["own_seed_candidate"] = oc
+            entry["own_seed_tree_sha256"] = oh
+            entry["identical_to_own_seed"] = (oh == h)
+    except Exception:
+        pass
     entry["logged_sha_matches"] = logged_sha_check(src, entry.get("logged_sha256"), kind if k != "all" else "tau_cap")
     if copy:
         dst = out_root / "artifacts" / mode / arm / ("s%d" % seed)
@@ -706,12 +717,12 @@ def main(argv=None):
     with open(selp, "w", newline="") as f:
         w = _csv.writer(f)
         w.writerow(["mode", "arm", "seed", "status", "candidate_id", "split", "n_tasks", "champion_score", "seed_score", "seed_split", "comparison_count", "own_count", "seed_source",
-                    "inert", "dagger", "n_promotions", "n_screened"])
+                    "inert", "dagger", "n_promotions", "n_screened", "identical_to_own_seed"])
         for e in man["entries"]:
             sx = e.get("selection") or {}
             w.writerow([e["mode"], e["arm"], e["seed"], e["status"], e.get("candidate_id"), sx.get("split"), sx.get("n_tasks"), sx.get("champion_score"), sx.get("seed_score"),
                         sx.get("seed_split"), sx.get("comparison_count"), sx.get("own_count"), sx.get("seed_source"),
-                        int(bool(e.get("inert"))), int(bool(e.get("dagger"))), e.get("n_promotions"), e.get("n_screened")])
+                        int(bool(e.get("inert"))), int(bool(e.get("dagger"))), e.get("n_promotions"), e.get("n_screened"), int(bool(e.get("identical_to_own_seed")))])
     path = Path(a.manifest) if a.manifest else C.MANIFESTS / ("artifacts_%s.json" % suite)
     C.write_json_atomic(path, man)
     for mode in modes:
