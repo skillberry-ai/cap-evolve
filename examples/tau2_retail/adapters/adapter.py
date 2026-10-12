@@ -60,6 +60,9 @@ def _kwargs(role: str) -> dict:
     prefix = os.environ.get("TAU_TAG_PREFIX", "tag:E10B-adhoc-s0:adhoc")
     kw = {"api_base": GATEWAY, "api_key": f"{prefix}:{role}"}
     if role == "judge":
+        jt = os.environ.get("TAU_JUDGE_TEMPERATURE", "").strip()
+        if jt:   # Suite D: tau2-default judge (gpt-4.1) at temperature 0
+            kw["temperature"] = float(jt)
         return kw   # gpt-5.x pins temperature; judge runs with provider-default settings (recorded as such)
     kw.update(temperature=0.0, max_tokens=int(os.environ.get("MAX_TOKENS", "8000")))
     eff = os.environ.get("TAU_REASONING_EFFORT", "").strip()
@@ -1140,7 +1143,7 @@ class Adapter(CapabilityAdapter):
         if edits:
             self.materialize(candidate_dir, edits)
 
-        candidate_dir = Path(candidate_dir)
+        candidate_dir = _surface_lock(Path(candidate_dir))
 
         from tau2.environment.environment import Environment
         from tau2.registry import registry
@@ -1194,5 +1197,39 @@ class Adapter(CapabilityAdapter):
 
         registry._domains[DOMAIN] = candidate_get_environment
 
+
+
+def _surface_lock(candidate_dir: Path) -> Path:
+    """Suite D surface lock. TAU_SURFACES = policy | tools | policy,tools (default: no lock). Files of a LOCKED surface are read
+    from the pristine seed (TAU_SEED_DIR), never from the candidate; every distinct candidate that differs from the seed on a locked
+    surface is recorded in TAU_VIOLATION_FILE (surface_violations.json). Returns the directory the agent environment is built from."""
+    import hashlib, json as _j, shutil, tempfile
+    spec = {x.strip() for x in os.environ.get("TAU_SURFACES", "policy,tools").split(",") if x.strip()}
+    if spec >= {"policy", "tools"}:
+        return candidate_dir
+    seed = Path(os.environ["TAU_SEED_DIR"])
+    files = {"policy": "policy/policy.md", "tools": "tools/tools.py"}
+    locked = [k for k in files if k not in spec]
+    viol = [k for k in locked if (candidate_dir / files[k]).exists() and (candidate_dir / files[k]).read_bytes() != (seed / files[k]).read_bytes()]
+    h = hashlib.sha256()
+    for k in files:
+        p = candidate_dir / files[k]
+        h.update(p.read_bytes() if p.exists() else b"")
+    key = h.hexdigest()[:16]
+    vf = os.environ.get("TAU_VIOLATION_FILE")
+    if vf and viol:
+        p = Path(vf)
+        try:
+            d = _j.loads(p.read_text()) if p.exists() else {"violating_candidates": {}, "n_violating_candidates": 0}
+            d["violating_candidates"][key] = {"surfaces": viol, "candidate_dir": str(candidate_dir)}
+            d["n_violating_candidates"] = len(d["violating_candidates"])
+            p.write_text(_j.dumps(d, indent=1))
+        except Exception:  # noqa: BLE001
+            pass
+    eff = Path(tempfile.mkdtemp(prefix="surflock_")) / "cand"
+    shutil.copytree(candidate_dir, eff)
+    for k in locked:
+        dst = eff / files[k]; dst.parent.mkdir(parents=True, exist_ok=True); shutil.copy(seed / files[k], dst)
+    return eff
 
 _PRISTINE = _threading.local()
