@@ -3,15 +3,16 @@
 \scriptsize
 \caption{Suite B ($\tau^2$ retail): latest run state. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds); candidates lost to infrastructure (protocol/infra\_exclusions.json) count as generated only. Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
 \label{tab:searchtime-summary-b}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llrrrrrrrrrl@{}}
 \toprule
 Arm & Split & Seeds & Rollouts & Seed & Champion & Gen/scr/prom & Seed-eq. & Opt.\ tok. & USD & Wall h & Status \\
 \midrule
 One-shot control & opt-49 & 3 & 131 {\tiny[123,148]} & 0.60 {\tiny[0.56,0.65]} & 0.64 {\tiny[0.56,0.71]} & 3/3/1 & 2/3 & 0.17 {\tiny[0.14,0.20]} & 1.05 {\tiny[0.77,1.37]} & 4.8 {\tiny[4.4,5.1]} & native finish (iterations) \\
-GEPA & sel-25 & 3 & 357 {\tiny[338,389]} & 0.53 {\tiny[0.40,0.60]} & 0.73 {\tiny[0.72,0.76]} & 67/21/21 & 0/3 & 0.56 {\tiny[0.53,0.57]} & 1.97 {\tiny[1.92,2.07]} & 28.2 {\tiny[28.1,28.2]} & running \\
-HarnessLens & -- & 3 & 153 {\tiny[123,173]} & -- & -- & 0/0/0 & 0/0 & 5.79 {\tiny[4.88,6.80]} & 16.24 {\tiny[14.64,18.40]} & 18.2 {\tiny[17.5,18.5]} & running (2) \\
-CapEvolve HC, rule P & opt-49 & 3 & 515 {\tiny[490,564]} & 0.58 {\tiny[0.53,0.65]} & 0.58 {\tiny[0.53,0.65]} & 14/14/0 & 3/3 & 0.43 {\tiny[0.25,0.71]} & 2.33 {\tiny[1.46,3.53]} & 27.9 {\tiny[27.3,28.2]} & running (2) \\
-CapEvolve AO, rule P & opt-49 & 3 & 189 {\tiny[172,198]} & 0.61 {\tiny[0.60,0.61]} & 0.61 {\tiny[0.60,0.61]} & 3/0/0 & 3/3 & 1.12 {\tiny[0.84,1.50]} & 5.79 {\tiny[4.70,7.74]} & 20.2 {\tiny[11.6,28.2]} & native finish (2) \\
+GEPA & sel-25 & 3 & 370 {\tiny[350,392]} & 0.53 {\tiny[0.40,0.60]} & 0.73 {\tiny[0.72,0.76]} & 67/21/21 & 0/3 & 0.57 {\tiny[0.53,0.60]} & 2.04 {\tiny[1.92,2.16]} & 28.6 {\tiny[28.6,28.6]} & running \\
+HarnessLens & -- & 3 & 153 {\tiny[123,173]} & -- & -- & 0/0/0 & 0/0 & 6.04 {\tiny[4.88,6.80]} & 16.97 {\tiny[14.64,18.40]} & 18.3 {\tiny[17.5,19.0]} & running (2) \\
+CapEvolve HC, rule P & opt-49 & 3 & 515 {\tiny[490,564]} & 0.58 {\tiny[0.53,0.65]} & 0.58 {\tiny[0.53,0.65]} & 14/14/0 & 3/3 & 0.43 {\tiny[0.25,0.71]} & 2.33 {\tiny[1.46,3.53]} & 28.2 {\tiny[27.3,28.6]} & running (2) \\
+CapEvolve AO, rule P & opt-49 & 3 & 189 {\tiny[172,198]} & 0.61 {\tiny[0.60,0.61]} & 0.61 {\tiny[0.60,0.61]} & 3/0/0 & 3/3 & 1.12 {\tiny[0.84,1.50]} & 5.79 {\tiny[4.70,7.74]} & 20.4 {\tiny[11.6,28.6]} & native finish (2) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}

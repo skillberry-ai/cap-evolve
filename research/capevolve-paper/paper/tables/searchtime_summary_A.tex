@@ -3,6 +3,7 @@
 \scriptsize
 \caption{Suite A (SpreadsheetBench): latest run state. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds); candidates lost to infrastructure (protocol/infra\_exclusions.json) count as generated only. Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
 \label{tab:searchtime-summary-a}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llrrrrrrrrrl@{}}
 \toprule
 Arm & Split & Seeds & Rollouts & Seed & Champion & Gen/scr/prom & Seed-eq. & Opt.\ tok. & USD & Wall h & Status \\
@@ -11,13 +12,13 @@ GEPA & val-40 & 3 & 600 {\tiny[600,600]} & 0.49 {\tiny[0.42,0.53]} & 0.84 {\tiny
 SkillOpt & val-40 & 3 & 564 {\tiny[526,600]} & 0.57 {\tiny[0.53,0.62]} & 0.81 {\tiny[0.78,0.85]} & 23/15/13 & 0/3 & 4.48 {\tiny[3.57,5.10]} & 9.91 {\tiny[8.13,11.18]} & 27.3 {\tiny[26.7,28.3]} & native finish (2) \\
 Meta-Harness & val-40 & 3 & 600 {\tiny[600,600]} & 0.61 {\tiny[0.60,0.62]} & 0.92 {\tiny[0.88,0.97]} & 24/24/11 & 0/3 & 0.18 {\tiny[0.16,0.21]} & 0.79 {\tiny[0.67,0.94]} & 20.7 {\tiny[19.6,22.4]} & native finish \\
 EvoSkill & val-40 & 3 & 412 {\tiny[332,452]} & 0.55 {\tiny[0.55,0.55]} & 0.84 {\tiny[0.80,0.88]} & 24/24/18 & 0/3 & 0.64 {\tiny[0.39,0.79]} & 1.94 {\tiny[1.26,2.33]} & 15.9 {\tiny[12.3,18.4]} & native finish \\
-WikiSkill-comm. & val-40 & 3 & 437 {\tiny[364,521]} & 0.53 {\tiny[0.50,0.57]} & 0.76 {\tiny[0.65,0.82]} & 10/9/5 & 0/3 & 0.31 {\tiny[0.20,0.43]} & 0.92 {\tiny[0.60,1.21]} & 27.3 {\tiny[26.5,27.8]} & running (2) \\
+WikiSkill-comm. & val-40 & 3 & 445 {\tiny[373,521]} & 0.53 {\tiny[0.50,0.57]} & 0.76 {\tiny[0.65,0.82]} & 10/9/5 & 0/3 & 0.36 {\tiny[0.31,0.43]} & 1.07 {\tiny[0.96,1.21]} & 27.6 {\tiny[26.5,28.2]} & running (2) \\
 Trace2Skill & val-40 & 3 & 200 {\tiny[200,200]} & 0.52 {\tiny[0.50,0.53]} & 0.75 {\tiny[0.70,0.80]} & 6/6/3 & 0/3 & 2.17 {\tiny[2.09,2.23]} & 6.76 {\tiny[6.49,6.96]} & 15.3 {\tiny[14.2,16.1]} & native finish \\
-ACE & val-40 & 3 & 240 {\tiny[149,390]} & 0.80 & 0.80 & 1/1/0 & 1/1 & 2.34 {\tiny[1.35,3.90]} & 5.91 {\tiny[3.58,9.56]} & 15.5 {\tiny[15.1,15.8]} & running (2) \\
-MIPROv2 & val-40 & 3 & 238 {\tiny[221,273]} & 0.57 {\tiny[0.55,0.60]} & 0.69 {\tiny[0.57,0.85]} & 32/2/0 & 1/3 & 0.18 {\tiny[0.18,0.18]} & 0.59 {\tiny[0.58,0.60]} & 27.8 {\tiny[27.8,27.8]} & running \\
-CapEvolve HC, rule P & val-40 & 3 & 578 {\tiny[534,600]} & 0.58 {\tiny[0.57,0.59]} & 0.67 {\tiny[0.57,0.75]} & 18/14/2 & 1/3 & 0.28 {\tiny[0.09,0.54]} & 1.08 {\tiny[0.34,2.10]} & 24.3 {\tiny[21.2,26.1]} & native finish (budget) (2) \\
+ACE & val-40 & 3 & 245 {\tiny[149,390]} & 0.80 & 0.80 & 1/1/0 & 1/1 & 2.34 {\tiny[1.35,3.90]} & 5.91 {\tiny[3.58,9.56]} & 15.8 {\tiny[15.1,16.2]} & running (2) \\
+MIPROv2 & val-40 & 3 & 243 {\tiny[225,277]} & 0.57 {\tiny[0.55,0.60]} & 0.69 {\tiny[0.57,0.85]} & 32/2/0 & 1/3 & 0.18 {\tiny[0.18,0.18]} & 0.59 {\tiny[0.58,0.60]} & 28.2 {\tiny[28.2,28.2]} & running \\
+CapEvolve HC, rule P & val-40 & 3 & 588 {\tiny[564,600]} & 0.58 {\tiny[0.57,0.59]} & 0.67 {\tiny[0.57,0.75]} & 18/14/2 & 1/3 & 0.30 {\tiny[0.09,0.59]} & 1.14 {\tiny[0.34,2.28]} & 24.4 {\tiny[21.2,26.6]} & native finish (budget) (2) \\
 CapEvolve AO, rule P & val-20 & 3 & 349 {\tiny[262,404]} & 0.53 {\tiny[0.45,0.68]} & 0.53 {\tiny[0.45,0.68]} & 3/3/0 & 3/3 & 2.18 {\tiny[0.99,3.96]} & 5.92 {\tiny[2.92,10.38]} & 20.7 {\tiny[20.0,21.4]} & stopped (unclassified) (2) \\
 CapEvolve, stock gate & val-40 & 3 & 600 {\tiny[600,600]} & 0.55 {\tiny[0.53,0.56]} & 0.87 {\tiny[0.85,0.88]} & 36/36/7 & 0/3 & 0.52 {\tiny[0.50,0.53]} & 2.00 {\tiny[1.87,2.16]} & 15.9 {\tiny[15.3,17.0]} & native finish (budget) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}

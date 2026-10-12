@@ -431,7 +431,11 @@ def status_of(r, mrow, cap, info):
     for lg in (sd / "launcher.log", sd / "run.log"):   # hard-cap stop (RolloutCap at 600) is a native budget stop, as in bstar.py
         if lg.exists() and "RolloutCap" in "".join(lg.read_text(errors="replace").splitlines(True)[-400:]):
             return "native finish (budget_cap)"
-    if list(sd.glob("run_summary.crash*")):
+    rs_ = js(sd / "run_summary.json") or {}
+    stop_ = str(rs_.get("stop") or "")
+    if re.match(r"(rollout budget|evolution_complete|early_stop)", stop_):   # method's own stop rule: native finish (wikiskill, others)
+        return "native finish (%s)" % stop_.split(":")[0].split("<")[0].strip()[:30]
+    if list(sd.glob("run_summary.crash*")) and not rs_:
         return "crash"
     for lg in list(sd.glob("logs/*.err")) + [sd / "hc.err"]:
         if lg.exists() and re.search(r"Traceback|RuntimeError", "".join(lg.read_text(errors="replace").splitlines(True)[-40:])):
@@ -721,13 +725,14 @@ def build_summary_tables(recs):
 \scriptsize
 \caption{%s: latest %s. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds); candidates lost to infrastructure (protocol/infra\_exclusions.json) count as generated only. Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
 \label{tab:searchtime-summary-%s}
+\resizebox{\textwidth}{!}{%%
 \begin{tabular}{@{}llrrrrrrrrrl@{}}
 \toprule
 Arm & Split & Seeds & Rollouts & Seed & Champion & Gen/scr/prom & Seed-eq. & Opt.\ tok. & USD & Wall h & Status \\
 \midrule
 %s
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}
 """ % (sname, "run state", base.lower(), body)
         p = TABLES / ("searchtime_summary_%s.tex" % base)

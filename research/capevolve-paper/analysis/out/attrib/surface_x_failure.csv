@@ -444,6 +444,9 @@ D,E20-PT,2,cand_0008,0,tool_code,system_prompt+tool_code,communication,output / 
 D,E20-PT,2,cand_0009,0,tool_code,system_prompt+tool_code,was_passing_or_unlabelled,was_passing_or_unlabelled,1
 D,E20-PT,2,cand_0009,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
 D,E20-PT,2,cand_0009,0,tool_code,system_prompt+tool_code,communication,output / contract,1
+D,E20-PT,2,cand_0010,0,unavailable,unavailable,wrong_argument,tool misuse,3
+D,E20-PT,2,cand_0010,0,unavailable,unavailable,missing_action,forgotten rule or step,1
+D,E20-PT,2,cand_0010,0,unavailable,unavailable,communication,output / contract,1
 D,E20-T,0,cand_0001,0,tool_code,tool_code,missing_action,forgotten rule or step,6
 D,E20-T,0,cand_0001,0,tool_code,tool_code,state_side_effect,unexpected side effect,2
 D,E20-T,0,cand_0001,0,tool_code,tool_code,wrong_argument,tool misuse,2

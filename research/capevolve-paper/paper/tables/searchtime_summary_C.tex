@@ -3,16 +3,17 @@
 \scriptsize
 \caption{Suite C ($\tau^2$ airline): latest run state. Search-time, on each method's own selection split (column Split), not held-out. Cells are the mean over seeds with [min,max]. Champion is the artifact the method itself would return, scored on its own selection split; seed is the seed artifact on the same split. Gen/scr/prom: candidates generated, scored on the selection split, promoted (summed over seeds); candidates lost to infrastructure (protocol/infra\_exclusions.json) count as generated only. Seed-eq.: returned artifact equals the seed. Opt.\ tok.: optimizer non-cache-read tokens (M). Selection-split scores are optimistic and not comparable across methods.}
 \label{tab:searchtime-summary-c}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}llrrrrrrrrrl@{}}
 \toprule
 Arm & Split & Seeds & Rollouts & Seed & Champion & Gen/scr/prom & Seed-eq. & Opt.\ tok. & USD & Wall h & Status \\
 \midrule
 One-shot control & opt-20 & 3 & 53 {\tiny[50,60]} & 0.53 {\tiny[0.50,0.55]} & 0.60 {\tiny[0.53,0.74]} & 3/3/1 & 2/3 & 0.11 {\tiny[0.09,0.13]} & 0.71 {\tiny[0.60,0.81]} & 4.0 {\tiny[3.0,5.7]} & native finish (iterations) \\
-GEPA & sel-10 & 3 & 192 {\tiny[166,207]} & 0.83 {\tiny[0.80,0.90]} & 1.00 {\tiny[1.00,1.00]} & 54/20/20 & 0/3 & 0.45 {\tiny[0.40,0.51]} & 1.73 {\tiny[1.58,1.85]} & 22.5 {\tiny[22.4,22.5]} & running \\
-CapEvolve HC, rule P & opt-20 & 3 & 293 {\tiny[240,320]} & 0.48 {\tiny[0.45,0.55]} & 0.58 {\tiny[0.45,0.68]} & 18/18/2 & 1/3 & 0.50 {\tiny[0.39,0.66]} & 2.48 {\tiny[1.91,3.13]} & 22.5 {\tiny[22.4,22.5]} & running \\
+GEPA & sel-10 & 3 & 198 {\tiny[172,213]} & 0.83 {\tiny[0.80,0.90]} & 1.00 {\tiny[1.00,1.00]} & 54/20/20 & 0/3 & 0.46 {\tiny[0.40,0.54]} & 1.80 {\tiny[1.58,1.96]} & 22.9 {\tiny[22.9,22.9]} & running \\
+CapEvolve HC, rule P & opt-20 & 3 & 300 {\tiny[240,340]} & 0.48 {\tiny[0.45,0.55]} & 0.58 {\tiny[0.45,0.68]} & 18/18/2 & 1/3 & 0.53 {\tiny[0.39,0.66]} & 2.59 {\tiny[1.91,3.13]} & 22.9 {\tiny[22.9,22.9]} & running \\
 CapEvolve AO, rule P & opt-20 & 3 & 97 {\tiny[71,110]} & 0.52 {\tiny[0.45,0.55]} & 0.52 {\tiny[0.45,0.55]} & 1/0/0 & 3/3 & 0.55 {\tiny[0.52,0.56]} & 2.39 {\tiny[1.98,2.75]} & 9.6 {\tiny[7.7,11.3]} & native finish \\
-CapEvolve, stock gate & opt-20 & 3 & 230 {\tiny[220,240]} & 0.54 {\tiny[0.47,0.65]} & 0.73 {\tiny[0.65,0.79]} & 30/30/3 & 1/3 & 0.72 {\tiny[0.66,0.75]} & 3.54 {\tiny[3.14,3.92]} & 18.2 {\tiny[16.8,19.8]} & native finish (iterations) (2) \\
+CapEvolve, stock gate & opt-20 & 3 & 233 {\tiny[230,240]} & 0.54 {\tiny[0.47,0.65]} & 0.73 {\tiny[0.65,0.79]} & 30/30/3 & 1/3 & 0.72 {\tiny[0.66,0.75]} & 3.54 {\tiny[3.14,3.92]} & 18.3 {\tiny[16.8,20.2]} & native finish (iterations) (2) \\
 Best-of-$k$ & opt-20 & 3 & 153 {\tiny[140,180]} & 0.54 {\tiny[0.47,0.65]} & 0.78 {\tiny[0.75,0.80]} & 28/20/0 & 0/3 & 1.22 {\tiny[1.15,1.33]} & 8.03 {\tiny[7.53,8.78]} & 11.4 {\tiny[10.3,13.6]} & paused (truncated at k=6, 140 rollouts) (2) \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}
