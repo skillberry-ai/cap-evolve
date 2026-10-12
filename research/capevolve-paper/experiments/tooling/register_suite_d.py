@@ -54,6 +54,10 @@ def main():
     for it, fp, note in E32_AO:
         if fp.exists():
             items.append((it, fp, note, None))
+    TAU_AIRE = Path("/home/dev/projects2/campaign-scratch/baselines/tau_airE")
+    for f in ("launch_airE.sh", "ace_tau_air.py", "mipro_tau_air.py"):
+        if (TAU_AIRE / f).exists():
+            items.append(("suite_E32_" + f, TAU_AIRE / f, "Suite E competitor launch/script (W4), registered before launch", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
