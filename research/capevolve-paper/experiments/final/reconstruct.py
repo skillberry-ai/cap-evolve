@@ -129,7 +129,7 @@ def sel(status, cid=None, ev=None, **kw):
         d["logged_sha256"] = ev.get("sha256")
         d["rollout_index"] = ev.get("rollout_index")
         d["selection_value"] = sval(ev)
-        d["selection_split"] = (ev.get("score") or {}).get("split") if isinstance(ev.get("score"), dict) else None
+        d["selection_split"] = ((ev.get("score") or {}).get("split") if isinstance(ev.get("score"), dict) else None) or ev.get("split")
         d["selection_n_tasks"] = ev.get("n_tasks")
     return d
 
@@ -416,6 +416,8 @@ def rule_capevolve(rd, events, limit, ctx):
                 cav.append("no candidates.jsonl created event: seed taken from %s" % cand)
                 break
     acc = [e for e in evs if e["event"] == "accepted" and in_limit(e, limit)]
+    if acc and any("state.json best_id changed" in str(e.get("reason", "")) for e in acc):
+        cav.append("AO promotion detected from a state.json best_id change: its rollout_index is an upper bound (<= 2 min late); a promotion just under N* may be excluded")
     if acc:
         status = "partial" if any(e.get("exact") is False for e in acc) or cav else "ok"
         return sel(status, acc[-1]["candidate_id"], acc[-1], caveats=cav + _exact_caveat(acc))
@@ -483,8 +485,8 @@ def seed_selection_score(rd, events):
     cid = seed_candidate(events)
     for e in events:
         if e["event"] == "evaluated" and e.get("candidate_id") == cid and sval(e) is not None and not (e.get("score") or {}).get("kind") == "minibatch" \
-                and (e.get("score") or {}).get("split") in (None, "val", "sel", "opt(val)"):
-            return {"seed_score": sval(e), "seed_split": (e.get("score") or {}).get("split"), "seed_n_tasks": e.get("n_tasks"), "seed_source": "candidates.jsonl evaluated"}
+                and ((e.get("score") or {}).get("split") or e.get("split")) in (None, "val", "sel", "opt(val)"):
+            return {"seed_score": sval(e), "seed_split": (e.get("score") or {}).get("split") or e.get("split"), "seed_n_tasks": e.get("n_tasks"), "seed_source": "candidates.jsonl evaluated"}
     for run in sorted((Path(rd) / ".capevolve").glob("run_*"), reverse=True):
         b = C.jload(run / "baseline.json") or {}
         v = (b.get("val") or {}).get("reward")
