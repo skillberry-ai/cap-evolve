@@ -48,6 +48,13 @@
   "E20-GEPA": {
    "surface": "policy (prompt only)",
    "method": "GEPA 0.1.4, 550 counted rollouts, reflection Sonnet 5.5, selects on sel-25"
+  },
+  "E26-nohist": {
+   "surface": "policy,tools",
+   "gate": "stock",
+   "change": "proposer receives no history (flag optimizer.ablation.history false / CAPEVOLVE_HISTORY=0)",
+   "seeds": 3,
+   "role": "registered before first rollout; code commit in registry item suite_D_nohist_commit"
   }
  },
  "exploratory_cells": [
@@ -67,10 +74,10 @@
   "tag": "E22-nullpool"
  },
  "final_set": {
-  "H65": "sel-25 + test-40, every CapEvolve cell champion rescored in the single interleaved final window",
+  "primary": "test-40 only (T=40) for every contrast of holm_primary and holm_secondary",
+  "secondary_descriptive": "H65 = sel-25 + test-40, own Holm, labelled as including selection tasks",
   "n_trials_tier1_champions": 5,
   "n_trials_seed": 10,
-  "gepa_contrasts_use": "test-40 only (T=40) on both sides because GEPA selects on sel-25",
   "decomposition_E25": "P-only and T-only sub-artifacts of each PT/ruleP/1S/CTL champion that differs from the seed on both surfaces"
  },
  "holm_primary_m10": [
@@ -115,5 +122,34 @@
   "within_var_assumed": 0.162,
   "note": "within var from the probe null SD 0.57; re-estimated from E22 and the update changes no rule or margin"
  },
- "no_decisions_on_held_out": "No run, launch or design decision (including Tier 2/3 launches) may use any sel-25 or test-40 score of a Suite D cell."
+ "no_decisions_on_held_out": "No run, launch or design decision (including Tier 2/3 launches) may use any sel-25 or test-40 score of a Suite D cell.",
+ "version": 2,
+ "amendment8_utc": "2026-10-12 09:42 UTC",
+ "final_set_v1_superseded_by_amendment8": {
+  "H65": "sel-25 + test-40, every CapEvolve cell champion rescored in the single interleaved final window",
+  "n_trials_tier1_champions": 5,
+  "n_trials_seed": 10,
+  "gepa_contrasts_use": "test-40 only (T=40) on both sides because GEPA selects on sel-25",
+  "decomposition_E25": "P-only and T-only sub-artifacts of each PT/ruleP/1S/CTL champion that differs from the seed on both surfaces"
+ },
+ "holm_primary_m11": [
+  "E20-P vs E20-PT",
+  "E20-T vs E20-PT",
+  "E20-P vs E20-T",
+  "E21-ruleP vs E20-PT",
+  "E21-1S vs E20-PT",
+  "E20-PT vs E20-CTL",
+  "E20-P vs E20-GEPA (test-40)",
+  "E20-P vs seed",
+  "E20-T vs seed",
+  "E20-PT vs seed",
+  "E26-nohist vs E20-PT"
+ ],
+ "planning_mde_test40": {
+  "vs_seed": 0.093,
+  "cell_vs_cell": 0.102,
+  "holm_m11_vs_seed_approx": 0.127,
+  "holm_m11_cell_approx": 0.139,
+  "pipeline_vs_seed": 0.197
+ }
 }
