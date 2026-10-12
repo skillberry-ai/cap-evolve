@@ -1,0 +1,19 @@
+\section{Introduction}
+\label{sec:v2:intro}
+
+Agents run on frozen models, and their behavior is set by the files around the model: the system prompt, tool code, the tool list exposed over MCP, and skill packages \citep{agent_skills_docs}. Optimizers edit these files and report large gains \citep{skillopt,meta-harness}. Published methods span prompt and pipeline optimization \citep{dspy,miprov2-dspy,gepa}, skills \citep{skillopt,evoskill,trace2skill,wikiskill}, context playbooks \citep{ace} and harness search \citep{meta-harness,xu2026harnesslens}. Section~\ref{sec:v2:related} places them by the surface each edits.
+
+Two gaps limit these methods. First, each fixes the object it edits, usually the prompt, so a failure that lives elsewhere is out of reach: a rule the model knows but ignores needs tool code the model cannot skip, and a skipped routine needs a bundled script. Second, acceptance is self-scored. Under trial noise a one-standard-error gate promotes a no-op candidate in \simKoneFalseB{} to \simKoneFalseA{} of ten-candidate searches (Appendix~\ref{app:sim}), and an optimizer that can read gold or the scorer can look better than it is. Our own history shows the cost. An earlier \capevolve{} draft reported a Gemma-4-31B gain of \histGemmaDeltaSaved{} points on SpreadsheetBench; recomputed, scorer compliance explains \histGemmaComplianceShare{}\% of it, and GPT-5.5 shows \histGptComplianceShare{}\% (Appendix~\ref{app:hist}).
+
+\capevolve{} addresses both gaps (Figure~\ref{fig:v2:loop}). The editable surface is a parameter of one loop over four capability types (Section~\ref{sec:v2:surface}). Every decision an optimizer could game moves into core code it cannot edit (Section~\ref{sec:v2:evaluation}). The optimizer receives a causal record of which tasks each earlier edit fixed and broke (Section~\ref{sec:v2:context}), and the loop runs as a deterministic hill-climb or as a coding agent that drives the same gate (Section~\ref{sec:v2:modes}).
+
+We evaluate on SpreadsheetBench (Suite A) and $\tau^2$-bench retail (B) and airline (C), plus a retail ablation family (D), with Claude Sonnet 5.5 as the optimizer for every matched arm. Section~\ref{sec:v2:setup} gives the protocol: a matched rollout checkpoint, official code for eight of nine competitors, and paired, family-clustered statistics with an equivalence rule. \pend{[RESULT: headline gain with interval; standing against nine competitors; one-sentence ablation findings.]}
+
+Our contributions are:
+\begin{enumerate}[leftmargin=*,nosep]
+\item The editable surface as a parameter, with per-surface edit policies (Section~\ref{sec:v2:surface}).
+\item Code-owned evaluation: gold isolation, a two-stage promotion rule with measured operating characteristics, and a final-set seal (Section~\ref{sec:v2:evaluation}).
+\item Two orchestration modes over one gate, and a causal optimizer context (Sections~\ref{sec:v2:modes} and~\ref{sec:v2:context}).
+\item An agentic intake with a hard adapter gate (Section~\ref{sec:v2:intake}).
+\item A matched, audited comparison with nine competitors and ablations of the surface, gate, mode and history (Section~\ref{sec:v2:results}). \pend{[RESULT: one line per ablation.]}
+\end{enumerate}

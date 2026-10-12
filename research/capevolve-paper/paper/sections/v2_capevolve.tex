@@ -1,0 +1,40 @@
+\section{CapEvolve Treats the Editable Surface as a Parameter}
+\label{sec:v2:capevolve}
+
+\subsection{One loop, four surfaces}
+\label{sec:v2:surface}
+
+A frozen model runs inside an agent assembled from files: a system prompt, the code and descriptions of its tools, the tool list it receives from an MCP server, and skill packages. We call the set of files under optimization the \emph{capability}. \capevolve{} takes the capability type as a parameter of one loop (Table~\ref{tab:v2:surfaces}). The loop is the same for every type: an optimizer edits a copy of the current best capability, the target agent runs on tasks with the candidate live, a scorer returns a reward in $[0,1]$ plus text feedback, and core code accepts or rejects the candidate. What changes with the type is the menu of edits the optimizer is told it may make and the checks that refuse an invalid candidate. Each type ships as a skill with a ``what you can change here'' menu and explicit edit boundaries, and the optimizer prompt is scoped to the selected capability, so an optimizer editing a prompt does not receive tool-editing advice.
+
+The design bet is that failures live on different surfaces. A rule the model knows but does not follow belongs in tool code the model cannot skip. A knowledge gap belongs in the prompt. A skipped multi-step routine belongs in a bundled script. Fixing one surface only forces prose to compensate for errors that belong in code. Section~\ref{sec:v2:results} tests the bet: it evaluates the prompt on every suite and tool code on the $\tau^2$ suites. \needs{Skill-package contrast, only if the Suite D skill cell or the Suite A skill cell runs.} The MCP tool surface is implemented and unit-tested but not evaluated here.
+
+\begin{table}[t]
+\caption{The four editable surfaces and their edit policies, as shipped in the capability skills. A candidate that violates a policy is refused or fails validation before any rollout is paid for.}
+\label{tab:v2:surfaces}
+\centering\small
+\begin{tabularx}{\columnwidth}{@{}p{0.14\columnwidth}XX@{}}
+\toprule
+Surface & Files edited & Edit policy \\
+\midrule
+System prompt & Prompt and policy text & Rewrite for clarity, add reasons, consolidate, add rules traceable to the task source, add examples. Never drop a needed rule or broaden a permission. \\
+Tools & Tool code, docs and return values & Add guards to existing tool bodies, enrich errors, add composite or loop tools, swap through a wrapper. Never bare-remove a primitive. \\
+MCP tool & Client-side descriptions and which tools are shown & Descriptions and exposure only. Schema, handler and new-tool edits are refused. \\
+Skill package & \texttt{SKILL.md}, references, scripts & Trigger description, bundled scripts for skipped steps, body, references; the result must stay a valid skill. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Agentic intake and a hard adapter gate}
+\label{sec:v2:intake}
+
+Spend begins only after an adapter exists and is checked. Intake reads a brief or interviews the user, installs the benchmark, and writes the adapter: how to list tasks per split, how to run the target with a candidate live, how to score a rollout, and where the runner leaves its native traces. It also writes a capability-scoped optimizer prompt that holds benchmark facts only. The check command then refuses to proceed until every required adapter method is real and scoring is deterministic on a fixed rollout, so no budget is spent against a stub. The adapter contract forbids gold in score feedback, but the library does not enforce that (Section~\ref{sec:v2:limits}). Fault injection tests the check (Section~\ref{sec:v2:results}). \needs{Intake cost and time per onboarded benchmark, from run records.}
+
+\subsection{Two orchestration modes over the same gate}
+\label{sec:v2:modes}
+
+Hill-climb is deterministic. Each iteration copies the current best candidate, builds a prompt from its per-task rewards (failing, flaky, errored and solid tasks, with the passing tasks listed for protection), lets the optimizer edit the copy, evaluates it on the selection split with $n$ trials per task, applies the gate, and snapshots the candidate whether or not it was accepted (Algorithm~\ref{alg:skeleton} in Appendix~\ref{app:skeleton}). Only an accepted candidate becomes the next parent. Agent-optimize hands the same phases to a coding agent. The agent reads a digest of the budget, noise, failure clusters and branch tips, writes a hypothesis, makes one coherent multi-part edit, and calls a small set of verbs: propose, probe, promote, prune and merge. Candidates form a tree in which any node can be a parent, a probe evaluates only the task and trial cells that a content-addressed ledger lacks, and promotion requires full-split coverage before a judge decides. The two modes differ in who chooses the next experiment and when to stop. They share the splits, the budget counters, the gate and the seal, which core code and plugin hooks enforce.
+
+\subsection{What the optimizer receives}
+\label{sec:v2:context}
+
+The optimizer works in a directory that the framework assembles each iteration. It holds the selected capability skill, the diagnosis method, the full trajectories of the current best candidate only (not the seed and every rejected attempt), the supporting source files that new tool code must import, and a causal record of prior work: for each earlier candidate, the task ids it broke and fixed, and the set of currently passing tasks to protect. Four cross-iteration files keep ownership clean. The framework writes a ledger of facts (outcomes and the exact tasks broken and fixed) and a map to prior iterations with their diffs. The optimizer writes a journal of what it tried, what worked and what regressed, and a process note per candidate. Section~\ref{sec:v2:results} tests whether this history matters by removing it. \needs{History-off switch and Suite D result.}
