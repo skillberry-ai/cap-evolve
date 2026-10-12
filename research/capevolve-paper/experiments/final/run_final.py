@@ -257,9 +257,17 @@ def worker_hl(job, attempt_dir):
     hl = job["hl"]
     out = Path(attempt_dir) / "hl_out"
     trial = int(job["trial"]) + 10 * int(job.get("attempt", 0))
-    cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_final_eval.py"), "--out", str(out), "--tag-prefix", job["tag"].split(":")[1],
-           "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1"]
-    cmd += ["--judge-model", job.get("judge_model") or "openai/azure/gpt-5.5"]     # every Suite B cell is judged by azure/gpt-5.5 (shared evaluator); only the OpenCode target harness is HarnessLens's
+    if job["suite"] == "E":       # airline tree (tau_air): Azure gpt-4.1-mini target, gpt-4.1 judge/simulator through :4112 (coordinator: not gpt-5.5)
+        parts = job["tag"].split(":")
+        cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau_air/hl_final_eval_air.py"), "--out", str(out), "--tag-prefix", parts[1], "--arm", parts[2],
+               "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1",
+               "--target-model", (job.get("target_model") or "openai/azoai/gpt-4.1-mini-2025-04-14").replace("openai/", "", 1),
+               "--judge-model", job.get("judge_model") or "openai/azoai/gpt-4.1-2025-04-14",
+               "--split-file", str(wt_of("E") / "protocol" / "tau_airline_splits.json")]
+    else:
+        cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_final_eval.py"), "--out", str(out), "--tag-prefix", job["tag"].split(":")[1],
+               "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1"]
+        cmd += ["--judge-model", job.get("judge_model") or "openai/azure/gpt-5.5"]     # every Suite B cell is judged by azure/gpt-5.5 (shared evaluator); only the OpenCode target harness is HarnessLens's
     if hl.get("src_run_dir"):
         cmd += ["--src-run-dir", hl["src_run_dir"]]
     t0 = time.time()
@@ -892,6 +900,8 @@ def cmd_run(a):
     done_n = [0]
     # one interleaved stream per suite; worker pools per arm class (e.g. hl=24,default=12) so slow HarnessLens cells do not starve the tau-agent cells
     caps = {"default": a.workers}
+    if not a.class_caps and suite == "E":
+        a.class_caps = "hl=4,default=%d" % a.workers        # HarnessLens airline: at most 4 workers (the gpt-4.1-mini quota is saturated)
     if not a.class_caps and suite == "B":
         a.class_caps = "hl=24,default=12"          # decision 2026-10-12 (hl=32 withdrawn: gateway gpt-oss in-flight cap is 24)
     if a.class_caps:

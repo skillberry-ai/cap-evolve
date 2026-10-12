@@ -187,7 +187,7 @@ def main(argv=None):
         j["job_id"] = "%s|%s|s%d|%s|%s|t%d" % (suite, label, seed, task["id"], mode, trial)
         if arm in ("harnesslens", "hl-v0", "hlext"):
             j["hl"] = {"version": art.get("candidate_id") if arm == "harnesslens" else "v0",
-                       "src_run_dir": (None if (arm == "hl-v0" or art.get("candidate_id") == "v0") else str(Path(art.get("run_dir", "")) / ("hl_s%d" % seed) / "runs/train" / ("e10b-hl-s%d" % seed)))}
+                       "src_run_dir": (None if (arm == "hl-v0" or art.get("candidate_id") == "v0") else str(Path(art.get("run_dir", "")) / ("hl_s%d" % seed) / "runs/train" / ("%s-hl-s%d" % ("e10e" if suite == "E" else "e10b", seed))))}
         for k in ("target_model", "gateway", "env", "user_model", "judge_model"):
             if ex.get(k):
                 j[k] = ex[k]
@@ -218,8 +218,8 @@ def main(argv=None):
             add_cell("seed", 0, "B", seed_art, n_seed, also_end=True)
             if not a.extra:       # amendment 9A: ONE extra labelled seed-check cell (the seed artifact again, the arms' n); feeds no test
                 add_cell("seed-check", 0, "B", seed_art, n_arm, also_end=True)
-        if a.hl_v0 and suite == "B" and not a.end_only:
-            add_cell("hl-v0", 0, "B", {"frozen_dir": str(C.final_dir("B") / "artifacts/hl-v0"), "tree_sha256": "hl-v0-unmodified", "candidate_id": "v0"}, n_seed, also_end=True)
+        if a.hl_v0 and suite in ("B", "E") and not a.end_only:
+            add_cell("hl-v0", 0, "B", {"frozen_dir": str(C.final_dir(suite) / "artifacts/hl-v0"), "tree_sha256": "hl-v0-unmodified", "candidate_id": "v0"}, n_seed, also_end=True)
         entries = {(e["mode"], e["arm"], e["seed"]): e for e in man["entries"]}
         arms = a.arms.split(",") if a.arms else C.suite_arms(suite)
         for arm in arms:
