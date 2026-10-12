@@ -123,6 +123,18 @@ Any sentence that generalizes beyond the three artifacts (about the method, the 
 
 **5N. B* is computed over primary-family arms only** (decisions.md, 23:00 UTC entry): the matched checkpoint B* of each suite is the largest rollout count reached by every seed of every arm that appears in the primary family 5A. Secondary and exploratory arms (cheap arms, E12A/E12C, Tier 2) are compared at min(B*, their own counted rollouts at the cutoff); where that is below B*, the shorter count is disclosed per seed beside every number. The B* rule of decisions.md (rounded down to a multiple of 50, floor 200) is otherwise unchanged.
 
+### 5-AMENDMENT 5 (2026-10-12 02:11 UTC; before the search cutoff; no final-set data seen)
+
+Amends items 2, 4 and 5 of section 6 for the final evaluation. Evidence: a Meta-Harness candidate (recalc_verify) produced "sandbox exec failed: 500" on 17% of its rollouts against 5% for other candidates, so an error the uniform classifier labels infrastructure can be induced by the artifact, and treating it as missing would favour artifacts that break the sandbox.
+
+**5O-1.** Every infrastructure-classified error is retried up to 3 times with new trial seeds (unchanged). A cell that is still an infrastructure error after the third retry (`infra_final`) counts as a FAILURE (reward 0) in the PRIMARY analysis, because persistence across fresh seeds implicates the artifact (or a task the artifact cannot run), and the same rule applies to every arm and to the seed artifact. In the sensitivity analysis `infra_final` cells are treated as missing and handled as in section 6 items 4 and 5 (complete case plus pessimistic/optimistic bounds). If the primary and sensitivity conclusions differ for a 5A row, both are reported and the primary stands.
+
+**5O-2.** Hangs past 3 h keep the existing rule: one retry, then missing (also in the primary analysis). Neither rule changes the classification of artifact-induced failures (section 6 item 3, scored 0).
+
+**5O-3. Reporting.** Per arm and per suite: the number of cells touched by each rule (infra error at first attempt, recovered by retry 1/2/3, `infra_final` scored 0, hang retried, hang missing), with the total cells.
+
+**5O-4. Diagnostic (descriptive, no test).** For every scored artifact, the infrastructure-error rate (first-attempt rate and `infra_final` rate, with Wilson 95% intervals) next to the rate of the seed artifact scored in the same window (amendment 2, 5H). An artifact whose rate clearly exceeds the seed's is flagged in the appendix with the dominant error text; the flag changes no estimate and no test.
+
 ## 6. Missingness and invalid rollouts
 The harness averages only valid trials (harness.py:587-601), drops a task from a paired vector when either side has zero valid trials (harness.py:1060-1065), and the coverage guard (harness.py:3022, gate.py:397) looks only at the candidate side and whole tasks. Simulation (sim_footprint.md d): dropped candidate-induced errors turn a null edit into 52-89% acceptance while coverage stays >=0.96.
 1. Classification by a frozen deterministic classifier (error class, exit code, exception-type allowlist), applied blind to arm and reward, published with the code. Anything unclassified counts as a failure.
