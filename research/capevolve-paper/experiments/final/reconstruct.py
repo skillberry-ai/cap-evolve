@@ -690,8 +690,13 @@ def main(argv=None):
     for e in man["entries"]:
         k = "%s/s%d" % (e["arm"], e["seed"])
         if k in nf and e["arm"] == "ace" and nf[k].get("stop_kind") == "guard_stop":
-            e.setdefault("caveats", []).append("ACE stopped by the token guard before its final_stop validation: the artifact is the best val-evaluated epoch-end playbook before the stop (ACE's native rule "
-                                               "max(val_recalc_mean, -index)); had final_stop finished it could have been chosen (bl-context)")
+            tg = Path(C.run_dir(suite, "ace", e["seed"])) / "logs" / "token_guard_stop.json"
+            if (suite, e["seed"]) == ("A", 0):
+                e.setdefault("caveats", []).append("ACE s0: final_stop's playbook includes curator updates made after the 4.0M optimizer-token crossing (14:36:39Z, per the ledger timeline; %s), so it is over budget "
+                                                   "and ineligible under the campaign rule whether or not its validation had finished; epoch1_end (produced at 2.38M) is the correct guard-stop artifact (bl-context)" % tg)
+            else:
+                e.setdefault("caveats", []).append("ACE stopped by the token guard before its final_stop validation: the artifact is the best val-evaluated epoch-end playbook before the stop (ACE's native rule "
+                                                   "max(val_recalc_mean, -index)); a final_stop playbook built after the crossing would be over budget and is not eligible (guard marker %s)" % tg)
         if k in nf and nf[k].get("stop_kind") == "budget_cap":
             # per-seed note printed beside the numbers: the campaign's hard cap (RolloutCap at 600 counted rollouts, which also counts infra retries and restart waste) ended the search
             note = {"stop_kind": "budget_cap", "campaign_hard_cap": 600, "campaign_count_at_stop": nf[k]["count"], "evidence": nf[k]["evidence"]}
