@@ -37,6 +37,18 @@ def search_counter(suite, arm, rd, n, src):
     (decisions.md 2026-10-11 'all evaluations count' for the 600 / 550 search budget; the tau runs state '550 + finalize').  Only the tau CapEvolve runs (hc, ao, hcstock) keep a
     counter (state.json spent.metric_calls) that also includes the host-side finalize (champion and seed on sel-25): for them the search count is the number of logged rollouts outside
     the finalize splits.  Every other arm's counter file is the search-budget counter and is used unchanged."""
+    if n is not None and suite == "A" and arm in ("hc", "ao", "hcstock"):
+        # Suite A CapEvolve: the host's post-agent seal / finalize step starts with an `eval_start` on split `test` (tag FINAL); every rollout started from then on
+        # (measure.py re-evaluating the seed on train after the search ended) is not search (amendment 9 erratum 4)
+        evs = []
+        for run in sorted((rd / ".capevolve").glob("run_*")):
+            evs = C.jsonl(run / "events.jsonl") or evs
+        tf = [e["t"] for e in evs if e.get("kind") == "eval_start" and e.get("split") == "test" and isinstance(e.get("t"), (int, float))]
+        if tf:
+            starts = C.jsonl(rd / "logs" / "rollout_starts.jsonl")
+            post = sum(1 for r in starts if isinstance(r.get("t"), (int, float)) and r["t"] >= min(tf) - 1)
+            return n - post, "logs/rollout_counter.json total minus %d rollouts started after the post-agent seal step began (eval_start split=test)" % post, post
+        return n, src, 0
     if n is None or suite not in ("B", "C") or arm not in ("hc", "ao", "hcstock"):
         return n, src, 0
     rows = C.jsonl(rd / "rollouts_metrics.jsonl")

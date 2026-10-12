@@ -294,6 +294,14 @@ def native_status(rd):
                         # host-side finalize; decisions.md 02:50 UTC): a native termination, not a crash
                         return "native_finish", "%s: exit %d from the finalize step, final.json present (search ended on its own)" % (name, rc)
                     return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
+    ho = rd / "logs" / "host.out"      # Suite A agent-optimize: the host appends `host-exited` on every exit; it counts as the agent's OWN end only if the agent produced its final report first
+    if ho.exists() and not _live(rd):
+        try:
+            tail = ho.read_text(errors="replace")[-6000:]
+        except Exception:
+            tail = ""
+        if tail.rstrip().endswith("host-exited") and '"best_id"' in tail:
+            return "native_finish", "logs/host.out: agent's final report (best_id) followed by host-exited, no live process (exit code not logged)"
     evf = rd / "events.jsonl"      # EvoSkill: the loop writes {"event": "loop_done"} when its own stop rule ends it; must be newer than the last restart
     if evf.exists():
         rl = rd / "restart_log.json"
