@@ -290,3 +290,8 @@ Runs runs/E12A/hcstock/s{0,1,2}, tags tag:E12A-hcstock-s{k}:hcstock:{target,opti
   - GEPA: 2 genuine breaks, and 0-1 expected race events (unverifiable). EvoSkill: 0.
   - Trace2Skill s2: 2 race rows, re-run as an infra retry.
   - The final evaluation uses the fixed library for every arm.
+- 2026-10-12 (bl-context) — ACE (batch K=4) relaunched at 00:59Z from scratch, same seeds, on the fixed sb_eval_lib (atomic candidate dirs + uniform infra-retry rule); the 00:48Z attempt (runs/E10/ace/s*_infra_restart_sblib_fix, ~1 h, few rollouts) is waste. MIPROv2 (started 2026-10-11 12:59Z) is NOT restarted: it has no resume (in-memory optuna study; ~75 rollouts/seed + ~12 h of bootstrap/proposal would be lost) and keeps the PRE-FIX handling: sandbox-500 / LLM-call failures were scored reward 0 and counted, not retried (s0 4, s1 5, s2 2 of ~75 rollouts at the time of the check); 3 h watchdog retry still applies to timeouts. Disclosed as a downward bias on MIPROv2.
+- 2026-10-12T01:40 — HarnessLens final-eval path validated (FE_dry_hl10): 3/8 against 13/29 for the search v0 on the same tasks; no path bug.
+  - Timings under load: median 2277 s, p90 3336 s. B capacity re-estimated: 480 HL rollouts at 32 workers is about 9.9 h primary (24 workers about 12.9 h).
+  - Decision: class caps hl=32 and default=12, stepping HL down to 24 if the gpt-oss median queue exceeds 60 s. Fallback order: drop HL END cells (disclosed), then n=2 for HL END only.
+  - New HL timeouts validated (FE_dry_hl3 task 10: 974 s, 9 calls, no truncation, reward 1.0). The single truncated-stream trial ran on the old 60 s chunk timeout, which supports the chunk-timeout explanation.
