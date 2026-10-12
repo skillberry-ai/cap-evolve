@@ -32,6 +32,12 @@ Amendment 6 (stats-reviewer, protocol/analysis_plan.md, 33ff358b0) fixes how the
 - Both were added after seeing search-time selection-split results, so every table, caption and sentence that uses them carries the label "post-search-time".
 - Allowed claim: stock-gate CapEvolve gains survive only if the final-set artifact-level interval excludes 0. Generalizing sentences need the pipeline-level interval (5M-2); equivalence wording only via TOST (5M-1).
 
+Suite D frozen cell list (experiment-designer, EXPERIMENTS.md section 0a, bc80398b5; supersedes the cell lists and the 0.05 margin below):
+- Target azoai/gpt-4.1-mini (seed 0.612 on opt-49), simulator and judge gpt-4.1, hill-climb, Sonnet 5.5, stock gate, reference cell E20-PT (prompt+tools).
+- Cells: PT (3 seeds), rule P on PT (3), P-only (3), T-only (3), one-shot control (3), one-stage gate (3), no-history (2), GEPA prompt-only on the same target (2), descriptions-only as an MCP-style emulation (2), PT+skills (2, only if a tau skill loader is built; the tau adapter has none today). Plus E22 empirical null pool, E25 decomposition, E26 gate ROC (analysis).
+- Contrasts (Holm within Suite D, paired by task): each cell vs PT, interaction PT - P - T + seed, P/T/PT vs seed. **TOST margin 0.10** (MDE about 0.10 at 65 held-out tasks; 0.05 could never pass). Small differences read "inconclusive"; all ablation claims use that wording.
+- Consequences: mcp-tool is evaluated only as a descriptions-only emulation and must be named that way; the skill-package surface is evaluated only if PTS runs, otherwise it is a stated limitation; the digest-off and 2x-budget rule P cells are Tier 2 and not committed.
+
 ## (b) Crux (one paragraph)
 
 Agent optimizers rewrite the files around a frozen model, but each published method fixes what it may edit (usually the prompt, sometimes a skill file or harness code) and trusts its own scores to decide what to keep. Both choices are weak. A fixed surface cannot repair a failure that lives elsewhere (a rule the model forgets belongs in tool code the model cannot skip; a knowledge gap belongs in the prompt), and a self-scored accept rule promotes noise: under trial noise a one-standard-error gate promotes a null candidate in a large share of ten-candidate searches, and an optimizer that can read gold or the scorer can look better than it is. CapEvolve makes the editable surface a parameter of one loop (prompt, tool code, MCP tool surface, skill package, each with its own edit policy), moves every decision the optimizer could game into core code the optimizer cannot edit (gold isolation, a two-stage promotion rule P, footprint and coverage checks, a seal on the final set, concurrent null controls), and feeds the optimizer a causal history of what each earlier edit fixed and broke. We show, at a matched rollout budget against ten published optimizers, which of these design choices carry the gain, what each capability type is worth, and when the gate correctly says no.
@@ -109,7 +115,7 @@ Capacity notes for the designer. The binding limits are gateway throughput on gp
 3. Ask the user for a cap raise for ablations only.
 Timing: Suite D cells are rollout-capped, not B*-bound, so they can finish after 2026-10-13 06:00 as a separate pre-registered ablation family if the coordinator agrees; they must be registered (config, seeds, contrasts, margins) in experiments/registry.jsonl before launch, and judged on sealed test-40 only through experiments/final.
 
-Statistics for the ablation family: paired by task, family-cluster CR1, own Holm, TOST margin pre-set (suggest 0.05 absolute reward for retail), S=2 or 3 means artifact-level claims with t(S-1) caveats; effect sizes with CIs, "inconclusive" otherwise. All ablation results are labelled exploratory-confirmatory (pre-specified, outside the E10 Holm families).
+Statistics for the ablation family: paired by task, family-cluster CR1, own Holm, TOST margin pre-set (frozen at 0.10, see update above), S=2 or 3 means artifact-level claims with t(S-1) caveats; effect sizes with CIs, "inconclusive" otherwise. All ablation results are labelled exploratory-confirmatory (pre-specified, outside the E10 Holm families).
 
 ## (f) Section outline and page budget (MLSys, 10 pages body, references and appendix extra)
 
