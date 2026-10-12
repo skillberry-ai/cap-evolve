@@ -93,3 +93,12 @@ Source: `native_sims/<cand>/<split>/*.json` of every Suite D cell (E20, E21, E26
   they are currently `infra` (string "tau2 terminated for infrastructure reason") and would be dropped or retried rather than scored as candidate failures.
   Recommended: classify a tau2 INFRASTRUCTURE_ERROR whose last event is a write-tool result as `candidate`, or at least as `unverifiable`, and have the
   adapter owner capture the exception text (the sim JSON has none) before the final evaluation.
+
+## Suite D pass 2 (2026-10-12 15:30 UTC)
+
+All Suite D cells: every proposed candidate has been evaluated (CTL 3, P 26, PT 20, T 19, E21 1S 17, ruleP 7, E26 NOHIST 19; E20 GEPA keeps no graph).
+No new host-level error: the only optimizer tool errors are single non-repeating probes (`No module named 'pydantic'`, missing `bench/.../.venv/bin/python`, one ugrep warning).
+**SUSPECT (update of the infra-mislabel finding):** tau2 INFRASTRUCTURE_ERROR terminations remain candidate-correlated and have grown with the lineages:
+non-seed 107 of 6,323 (1.7 percent) versus seed 0 of 1,406. Per candidate (infra / rollouts): E20-T s0 cand_0002 12/49, cand_0003 7/49, cand_0004 7/49, cand_0006 4/35;
+E20-PT s1 cand_0003 9/49, cand_0004 8/49; E21-1S s2 cand_0002 4/49, cand_0003 4/49, cand_0004 6/49, cand_0005 7/49 (rising along the lineage);
+E20-T s1 cand_0001 3/49; E26-NOHIST s2 cand_0005 3/49. Children inherit the parent's write-tool edit and the rate persists or rises, which fits an edit-induced cause.
