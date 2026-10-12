@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """watch_queue.py: median gateway queue_s of gpt-oss calls over the last N minutes (tags FINAL-B/C only).  Rule (coordinator 2026-10-12): if the median
-exceeds 60 s during the B window, step HarnessLens down from hl=32 to hl=24 (restart run_final.py with --class-caps hl=24,default=12; finished jobs are kept)."""
+exceeds 60 s during the B window, rebalance --class-caps using the measured slot hold time (restart run_final.py; finished jobs are kept).  Default is hl=24,default=12."""
 import argparse, datetime as dt, json, statistics as st, sys
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 import fe_common as C
@@ -21,4 +21,4 @@ with open(C.SCRATCH / "logs" / "gateway_calls.jsonl", "rb") as f:
 if not q:
     print("no matching calls"); sys.exit(0)
 med = st.median(q)
-print("calls %d  median queue_s %.1f  p90 %.1f  -> %s" % (len(q), med, sorted(q)[int(.9 * len(q)) - 1], "STEP HL DOWN to hl=24" if med > 60 else "ok (keep hl=32)"))
+print("calls %d  median queue_s %.1f  p90 %.1f  -> %s" % (len(q), med, sorted(q)[int(.9 * len(q)) - 1], "REBALANCE class caps (median queue > 60 s)" if med > 60 else "ok (keep hl=24,default=12)"))

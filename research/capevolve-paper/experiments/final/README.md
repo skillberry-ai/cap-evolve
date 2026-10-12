@@ -41,7 +41,7 @@ p90 25 (about 25 gpt-oss calls per rollout with the user simulator).  HL primary
 Window 06:30 -> 2026-10-14 05:00 = 22.5 h, so B finishes with HL at W=24 (slack ~5 h); distinct HL END cells (~180 rollouts, +4.5 h) fit after the primary window; W=16 does not.
 gpt-oss: HL at W=24 issues about 24 x 25 / 2145 s = 17 calls/min of the 127/min budget (total B+C call load ~9.3 h), so calls are not the limit.  The limit is the gateway's
 24 in-flight slots shared with the tau-agent cells: if a call holds a slot ~40 s (assumed, to be measured), HL at W=24 occupies ~11 slots and 12 tau-agent workers ~10, i.e. ~21 of 24;
-W=32 would push demand above 24 and only queue, so hl=24,default=12 was my first choice.  DECISION (coordinator 2026-10-12): use hl=32,default=12 for margin (9.9 h primary); watch the gpt-oss queue with `watch_queue.py` and step HL down to 24 if the median queue_s exceeds 60 s; END fallbacks unchanged (drop HL END first, disclosed).  Host side (bl-harness): 0.6-0.8 GB and 10-15 processes per HL worker, no collisions.
+W=32 would push demand above 24 and only queue, so the decision (coordinator, 2026-10-12, superseding an earlier hl=32) is hl=24,default=12; watch_queue.py reports the median gpt-oss queue_s and, above 60 s, the class caps are rebalanced using the measured slot hold time.  END fallbacks unchanged (drop HL END first, disclosed).
 
 ## Files
 

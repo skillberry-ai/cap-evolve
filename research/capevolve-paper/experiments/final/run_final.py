@@ -708,6 +708,8 @@ def cmd_run(a):
     done_n = [0]
     # one interleaved stream per suite; worker pools per arm class (e.g. hl=24,default=12) so slow HarnessLens cells do not starve the tau-agent cells
     caps = {"default": a.workers}
+    if not a.class_caps and suite == "B":
+        a.class_caps = "hl=24,default=12"          # decision 2026-10-12 (hl=32 withdrawn: gateway gpt-oss in-flight cap is 24)
     if a.class_caps:
         caps = {k: int(v) for k, v in (x.split("=") for x in a.class_caps.split(","))}
         caps.setdefault("default", a.workers)
