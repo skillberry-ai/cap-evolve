@@ -107,7 +107,7 @@ def scan_run(root: Path):
 
 def roots():
     out = []
-    for suite in ("E10", "E10B", "E10C", "E12A", "E12C", "E20", "E21"):
+    for suite in ("E10", "E10B", "E10C", "E12A", "E12C", "E20", "E21", "E26"):
         base = RUNS / suite
         if not base.is_dir():
             continue
