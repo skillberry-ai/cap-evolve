@@ -30,19 +30,19 @@ import fe_common as C  # noqa: E402
 WT_TAU = Path("/home/dev/projects2/wt-tau")
 SPLIT_FILE_A = C.REPO / "ci/benchmarks/spreadsheetbench/full_verified/split_ids.json"
 FINAL_A_TASKS = C.PAPER / "protocol/final_set/suiteA_final_tasks.json"
-DEFAULT_TRIALS = {"A": (1, 2), "B": (3, 3), "C": (3, 3), "D": (5, 10)}   # pinned in decisions.md 22:30          # (trials per task for a method artifact, for the seed artifact)
-TAU_SPLITS = {"B": "tau_retail_splits.json", "C": "tau_airline_splits.json", "D": "tau_retail_splits.json"}
+DEFAULT_TRIALS = {"A": (1, 2), "B": (3, 3), "C": (3, 3), "D": (5, 10), "E": (5, 10)}   # pinned in decisions.md 22:30          # (trials per task for a method artifact, for the seed artifact)
+TAU_SPLITS = {"B": "tau_retail_splits.json", "C": "tau_airline_splits.json", "D": "tau_retail_splits.json", "E": "tau_airline_splits.json"}
 D_TIER2_TRIALS = 3        # Suite D: Tier 1 champions 5 trials, Tier 2 champions 3, the seed 10 (experiment-designer, EXPERIMENTS.md section 6)
 D_MODELS = {"target_model": "openai/azoai/gpt-4.1-mini-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
             "gateway": "http://127.0.0.1:4112/v1"}
 EXTRA = {
-    "transfer": {"D": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "exp_suffix": "xfer"}, "A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer",
+    "transfer": {"E": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "exp_suffix": "xfer"}, "D": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "exp_suffix": "xfer"}, "A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer",
                "env": {"TEMPERATURE": "1.0"}},     # gpt-5-mini rejects temperature 0 (probed 2026-10-11); provider default 1
                  "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"},
                  "C": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"}},
     # dry-run path on Azure-direct only: real adapters / scorer / worker, but no RITS (smoke tags starve on the saturated RITS deployments) and
     # no impact on the running searches.  Never used for results.
-    "decomp": {"A": {}, "B": {}, "C": {}, "D": {"exp_suffix": "decomp"}},
+    "decomp": {"A": {}, "B": {}, "C": {}, "D": {"exp_suffix": "decomp"}, "E": {"exp_suffix": "decomp"}},
     "dryazure": {"A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry", "env": {"TEMPERATURE": "1.0"}},
                  "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
                        "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "dry"},
@@ -101,7 +101,7 @@ def load_tasks(suite, which, k, rng):
         sp = C.jload(WT_TAU / "protocol" / TAU_SPLITS[suite])
         ids = [str(x) for x in sp["sealed_test"]]
         tasks = [{"id": i, "family": i, "split": "test"} for i in ids]
-        if suite == "D":      # H65 = sel-25 + test-40 (amendment 7); both sets are built so that either primary choice works (split column)
+        if suite in ("D", "E"):      # D: H65 (sel-25 + test-40); E: H30 (sel-10 + test-20) = sel-25 + test-40 (amendment 7); both sets are built so that either primary choice works (split column)
             sel = [str(x) for x in sp["sel"]]
             tasks = [{"id": i, "family": i, "split": "sel"} for i in sel] + tasks
             ids = sel + ids
@@ -155,7 +155,7 @@ def main(argv=None):
     rng = HashRng(C.ORDER_SEED, "%s|tasks" % suite)
     tasks, split_kind, tasks_sha = load_tasks(suite, a.tasks, a.k, rng)
     smoke = split_kind == "smoke"
-    ex = dict(D_MODELS) if suite == "D" else {}
+    ex = dict(D_MODELS) if suite in ("D", "E") else {}
     ex.update(EXTRA[a.extra][suite] if a.extra else {})
     tag_exp = a.tag_exp or (("FE-smoke-%s" % suite) if smoke else ("FINAL-%s" % suite))
     if ex.get("exp_suffix"):
@@ -193,7 +193,7 @@ def main(argv=None):
 
     def add_cell(arm, seed, mode, art, n_trials, also_end=False):
         for t in tasks:
-            if suite == "D" and not smoke and arm in ("gepa",) and t.get("split") == "sel":
+            if suite in ("D", "E") and not smoke and arm in ("gepa", "gepafull") and t.get("split") == "sel":
                 continue          # GEPA selects on sel-25: its cells are test-40 only
             for k in range(n_trials):
                 jobs.append(make_job(arm, seed, mode, art, t, k, n_trials, also_end))
@@ -203,7 +203,7 @@ def main(argv=None):
         dm = C.jload(a.decomp_manifest)
         if not dm:
             sys.exit("--extra decomp needs --decomp-manifest")
-        nd = a.trials_arm or (3 if suite == "D" else 1)
+        nd = a.trials_arm or (3 if suite in ("D", "E") else 1)
         for e in dm["entries"]:
             add_cell(e["arm_label"], e["seed"], "B", e, nd)
             for j in jobs[-len(tasks) * nd:]:

@@ -67,8 +67,17 @@ SUITES["D"] = {
     "artifact_kind": "tau_cap", "final_state": True,                      # no B*: D searches are rollout-capped, the final state is compared
 }
 # candidate run directories (relative to RUNS) per Suite D arm; first existing one is used.  Real names: runs/E20/{PT,P,T,CTL}, runs/E21/ruleP (tau-runner)
+E_DIRS = {"pt": ["E30/PT"], "p": ["E30/P"], "t": ["E30/T"], "ctl": ["E30/CTL"], "gepa": ["E30/GEPA"], "rulep": ["E31/ruleP"], "1s": ["E31/1S"], "nohist": ["E36/NOHIST"],
+          "ace": ["E32/ace"], "mipro": ["E32/mipro"], "gepafull": ["E32/gepafull"], "ao": ["E32/ao"], "harnesslens": ["E10E/harnesslens"]}
 D_DIRS = {"pt": ["E20/PT"], "p": ["E20/P"], "t": ["E20/T"], "ctl": ["E20/CTL"], "gepa": ["E20/GEPA"], "rulep": ["E21/ruleP"], "1s": ["E21/1S", "E21/OneStage", "E21/1s"],
           "nohist": ["E26/NOHIST", "E26/nohist"]}
+SUITES["E"] = {
+    "exp": "E30", "label": "tau2 airline, Azure target gpt-4.1-mini (Suite E replication of D; development-exposed official test-20)",
+    "main": ["pt", "rulep", "p", "t", "ctl", "1s", "gepa", "nohist"],      # the 8 ablation cells (family E, m = 11)
+    "cheap": ["ace", "mipro", "gepafull", "ao"],                            # E-comp (own Holm; AO daggered); each exists only if its search finishes
+    "controls": [], "exploratory": ["harnesslens"],                        # HarnessLens: 1 exploratory seed, outside Holm
+    "dirname": {}, "artifact_kind": "tau_cap", "final_state": True,
+}
 for _s, _ex in (("B", ["hcstock", "hlext"]), ("C", ["hcstock"])):   # B: E12B stock-gate hill climb, HL-extended (exploratory)
     SUITES[_s]["exploratory"] = _ex                  # C: E12C stock-gate hill climb
 RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock"): RUNS / "E12C" / "hcstock", ("B", "hcstock"): RUNS / "E12B" / "hcstock",
@@ -88,9 +97,9 @@ def run_dir(suite, arm, seed):
     s = SUITES[suite]
     if (suite, arm) in RUN_ROOT_OVERRIDE:
         return RUN_ROOT_OVERRIDE[(suite, arm)] / ("s%d" % seed)
-    if suite == "D":
+    if suite in ("D", "E"):
         root = Path(os.environ["FE_D_RUNROOT"]) if os.environ.get("FE_D_RUNROOT") else RUNS
-        cands = D_DIRS.get(arm, [])
+        cands = (D_DIRS if suite == "D" else E_DIRS).get(arm, [])
         for cand in cands:
             if (root / cand).is_dir():
                 return root / cand / ("s%d" % seed)

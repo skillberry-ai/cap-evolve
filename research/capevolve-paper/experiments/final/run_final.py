@@ -42,9 +42,15 @@ MAX_HANG_RETRIES = 1           # HUNG_ROLLOUT_RULE.txt: one retry, a second time
 BENCH = C.SCRATCH / "bench"
 BASELINES = C.SCRATCH / "baselines"
 WT_TAU = Path(os.environ.get("TAU_WT", "/home/dev/projects2/wt-tau"))
-PY = {"D": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "A": BENCH / "venv" / "bin" / "python", "B": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "C": BENCH / "venv-tau2-8ebb749" / "bin" / "python"}
+WT_AIRE = Path(os.environ.get("TAU_WT_E", "/home/dev/projects2/wt-airE"))          # Suite E adapter worktree (airline_c with the Suite D surface lock + judge temperature, eb112a08 + logging b797886c8)
+
+
+def wt_of(suite):
+    return WT_AIRE if suite == "E" else WT_TAU
+PY = {"E": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "D": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "A": BENCH / "venv" / "bin" / "python", "B": BENCH / "venv-tau2-8ebb749" / "bin" / "python", "C": BENCH / "venv-tau2-8ebb749" / "bin" / "python"}
 TAU = {"B": dict(domain="retail", example="tau2_retail", splits="tau_retail_splits.json", jmodel_default="openai/azure/gpt-5.5"),
        "D": dict(domain="retail", example="tau2_retail", splits="tau_retail_splits.json", jmodel_default="openai/azoai/gpt-4.1-2025-04-14"),
+       "E": dict(domain="airline", example="tau2_airline_c", splits="tau_airline_splits.json", jmodel_default="openai/azoai/gpt-4.1-2025-04-14"),
        "C": dict(domain="airline", example="tau2_airline_c", splits="tau_airline_splits.json", jmodel_default="openai/azure/gpt-5.5")}
 GATEWAY = "http://127.0.0.1:4111/v1"
 RAW_TOOL_TEXT = "<|tool_call>"
@@ -98,7 +104,7 @@ def _stage_candidate(job, dest):
         for f in C.FAMILY_FILES["sb_files"]:
             shutil.copy2(art / f, dest / f)
     else:
-        seed_cap = WT_TAU / "examples" / TAU[job["suite"]]["example"] / "seed_capability"
+        seed_cap = wt_of(job["suite"]) / "examples" / TAU[job["suite"]]["example"] / "seed_capability"
         shutil.copytree(seed_cap, dest)
         for sub in ("policy", "tools"):
             if (art / sub).is_dir():
@@ -188,7 +194,7 @@ def worker_tau(job, attempt_dir):
     cfg = TAU[job["suite"]]
     env.update({"TAU_TAG_PREFIX": job["tag"], "TAU2_MAX_CONCURRENCY": "1", "TAU2_SIM_TIMEOUT": str(HANG_S),
                 "CAPEVOLVE_NATIVE_SIMS": "1" if job.get("save_sims", True) else "0",
-                "TAU_SPLITS_JSON": str(WT_TAU / "protocol" / cfg["splits"]), "MAX_TOKENS": "8000", "PYTHONDONTWRITEBYTECODE": "1",
+                "TAU_SPLITS_JSON": str(wt_of(job["suite"]) / "protocol" / cfg["splits"]), "MAX_TOKENS": "8000", "PYTHONDONTWRITEBYTECODE": "1",
                 "TAU_GATEWAY": job.get("gateway") or GATEWAY})
     if job.get("target_model"):
         env["TAU_AGENT_MODEL"] = job["target_model"]
@@ -199,10 +205,10 @@ def worker_tau(job, attempt_dir):
     if job.get("final_split"):
         env["TAU_ALLOW_SEALED_TEST"] = "final-eval-only"
     env.update(job.get("env", {}))
-    sys.path.insert(0, str(WT_TAU / "core"))
-    sys.path.insert(0, str(WT_TAU / "examples" / cfg["example"] / "adapters"))
+    sys.path.insert(0, str(wt_of(job["suite"]) / "core"))
+    sys.path.insert(0, str(wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters"))
     import importlib.util
-    spec = importlib.util.spec_from_file_location("tau_adapter_final", WT_TAU / "examples" / cfg["example"] / "adapters" / "adapter.py")
+    spec = importlib.util.spec_from_file_location("tau_adapter_final", wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters" / "adapter.py")
     ad = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ad)
     tid = str(job["task"])
@@ -734,7 +740,7 @@ def sealed_ids(suite):
         d = C.jload(C.PAPER / "protocol/final_set/suiteA_final_tasks.json") or {}
         return {str(t["id"]) for t in d.get("tasks", [])}
     cfg = TAU[suite]
-    return {str(x) for x in (C.jload(WT_TAU / "protocol" / cfg["splits"]) or {}).get("sealed_test", [])}
+    return {str(x) for x in (C.jload(wt_of(suite) / "protocol" / cfg["splits"]) or {}).get("sealed_test", [])}
 
 
 def tag_guard(suite, jobs):
@@ -748,7 +754,7 @@ def tag_guard(suite, jobs):
                 prob.append("final-set job without FINAL-%s tag: %s" % (suite, j["job_id"]))
                 break
         else:
-            if tag.startswith("FINAL-") and not (suite == "D" and j.get("split") == "sel"):     # Suite D scores sel-25 inside the final window (H65)
+            if tag.startswith("FINAL-") and not (suite in ("D", "E") and j.get("split") == "sel"):     # Suite D scores sel-25 inside the final window (H65)
                 prob.append("search-split job carries a FINAL tag: %s" % j["job_id"])
                 break
             if str(j["task"]) in sealed:

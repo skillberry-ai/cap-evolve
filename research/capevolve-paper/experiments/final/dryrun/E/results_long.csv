@@ -1,0 +1,5 @@
+arm,seed,task,reward,family,split,n_trials,n_infra_final,reward_as_saved,t_start,t_end,error_class,error_text
+gepa,1,4,1.0,4,sel,1,0,1.0,2026-10-12T13:05:58Z,2026-10-12T13:09:01Z,,
+gepa,1,47,1.0,47,sel,1,0,1.0,2026-10-12T13:05:58Z,2026-10-12T13:07:33Z,,
+gepa,2,47,1.0,47,sel,1,0,1.0,2026-10-12T13:05:58Z,2026-10-12T13:08:56Z,,
+seed,0,4,1.0,4,sel,1,0,1.0,2026-10-12T13:05:58Z,2026-10-12T13:08:10Z,,

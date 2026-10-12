@@ -51,6 +51,15 @@ SUITE_D_FAMILY = {   # registered by stats-reviewer (suite_D_registration.json, 
 }
 
 
+SUITE_E_FAMILY = {   # amendment 10D/10L: primary = official test-20 on both sides; H30 = sel-10 + test-20 descriptive recomputation with its own Holm
+    "primary_E_holm_m11": SUITE_D_FAMILY["primary_D_holm_m11"],
+    "secondary_E_sec_holm_m4": SUITE_D_FAMILY["secondary_D_sec_holm_m4"],
+    "E_comp_own_holm": [("pt", "ace"), ("pt", "mipro"), ("pt", "gepafull"), ("pt", "ao")], "ao_dagger_9F": True,
+    "harnesslens": "1 exploratory seed, outside Holm", "no_equivalence_claim": True,
+    "descriptive_only": SUITE_D_FAMILY["descriptive_only"],
+}
+
+
 def comparison_family(suites):
     """analysis_plan 5A/5B, per suite.  Arms with an incomplete seed under the B* rule are removed by the caller from the manifests, and the
     family here is generated only from arms that have a usable B* artifact for all seeds."""
@@ -58,6 +67,9 @@ def comparison_family(suites):
     for s in suites:
         if s == "D":
             fam[s] = SUITE_D_FAMILY
+            continue
+        if s == "E":
+            fam[s] = SUITE_E_FAMILY
             continue
         man = C.jload(C.MANIFESTS / ("artifacts_%s.json" % s)) or {}
         ok = {}
@@ -154,7 +166,7 @@ def main(argv=None):
                     ("scorer_A_agent_view_builder", C.SCRATCH / "bench/local/make_agent_view.py"),
                     ("scorer_B_adapter", WT_TAU / "examples/tau2_retail/adapters/adapter.py"),
                     ("scorer_C_adapter", WT_TAU / "examples/tau2_airline_c/adapters/adapter.py"),
-                    ("scorer_E_adapter_wt_airE", Path("/home/dev/projects2/wt-airE") / "examples/tau2_airline_c/adapters/adapter.py"),
+                    ("scorer_E_adapter_wt_airE_b797886c8_on_eb112a08", Path("/home/dev/projects2/wt-airE") / "examples/tau2_airline_c/adapters/adapter.py"),
                     ("scorer_libreoffice_25_8_binary", C.SCRATCH / "bench/lo258/root/opt/libreoffice25.8/program/soffice.bin"),
                     ("runner_run_final", C.HERE / "run_final.py"), ("runner_order", C.HERE / "order.py"), ("runner_reconstruct", C.HERE / "reconstruct.py"),
                     ("runner_bstar", C.HERE / "bstar.py"), ("runner_common", C.HERE / "fe_common.py"), ("runner_draw", C.HERE / "draw_final_a.py"),

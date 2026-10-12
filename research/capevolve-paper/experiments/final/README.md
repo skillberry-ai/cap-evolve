@@ -60,6 +60,14 @@ Final state compared (no B*): last promoted candidate, else the seed, filed unde
 gateway :4112, tags `FINAL-D-*`).  Tasks = H65 (sel-25 + sealed test-40) with a `split` column everywhere (primary = test-40, H65 descriptive); GEPA cells are test-40 only; trials: champions 5, seed 10 (+ one seed-check cell), all in one stream.
 `run_final.py run --suite D --workers 128` (Azure only; 429-aware sleep before infra retries).  A champion whose `surface_violations.json` is non-empty keeps its cell (ITT) and gets the dagger flag (second computation without it).
 Capped-token guard: `run_final.py` polls the gateway and stops dispatching with a PAGE_CAPPED_TOKENS file if the capped counter passes `--capped-stop` (default 198M, cap 200M).  Comparison family rows (D m=11, D-sec m=4) are in freeze.py.
+## Suite E (tau2 airline replication of D; added 2026-10-12)
+
+`--suite E`: same shape as D on the airline split (official test-20 primary, H30 = sel-10 + test-20 descriptive, trials 5 per champion/competitor, seed 10, tags `FINAL-E-*`, gateway :4112, adapter worktree
+`wt-airE` = eb112a08 + logging b797886c8, pinned and hashed in freeze.py).  Run roots (fe_common.E_DIRS): E30/{PT,P,T,CTL,GEPA}, E31/{ruleP,1S}, E36/NOHIST (the 8 ablation cells; GEPA cells test-20 only);
+competitors E32/{ace,mipro,gepafull,ao} (own Holm; ao daggered; GEPA-full selects on sel-10, so test-20 only) and E10E/harnesslens (1 exploratory seed).  No B*/N*: each cell's final state.  Cell order if time is short:
+E30-PT, P, T, seed, then E31-ruleP, E36, E30-CTL, E31-1S, E30-GEPA, then competitors, then E25 (`decompose.py --suite E`, n=3 on H30).  E searches may end after the A/B/C cutoff: E scoring starts when they end.
+Dry run: dryrun/E (fake E30 root of links to E10C runs, Azure).
+
 E25: `decompose.py --suite D --manifest manifests/artifacts_D.json --arms pt,rulep,1s,ctl` writes P-only / T-only sub-artifacts of each champion that differs from the seed on BOTH surfaces
 (frozen read-only, hashed; a sub-artifact equal to the seed or the champion is skipped), then `order.py --suite D --extra decomp --decomp-manifest manifests/decomp_D.json` (n=3; B/C: `--suite B|C --arms oneshot`, n=1,
 run last, dropped first) and `run_final.py run --extra decomp`.  Dry run: FE_D_RUNROOT points D at a fake E20 root of links to E10B runs.

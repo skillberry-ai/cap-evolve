@@ -467,11 +467,11 @@ RULES = {
     "gepa": rule_gepa, "skillopt": rule_skillopt, "evoskill": rule_evoskill, "metaharness": rule_metaharness,
     "wikiskill": rule_wikiskill, "mipro": rule_mipro, "ace": rule_ace, "trace2skill": rule_trace2skill,
     "harnesslens": rule_harnesslens, "hc": rule_capevolve, "ao": rule_capevolve, "oneshot": rule_oneshot, "hcstock": rule_capevolve, "hlext": rule_harnesslens,
-    "pt": rule_capevolve, "rulep": rule_capevolve, "p": rule_capevolve, "t": rule_capevolve, "1s": rule_capevolve, "nohist": rule_capevolve, "td": rule_capevolve,
+    "pt": rule_capevolve, "rulep": rule_capevolve, "p": rule_capevolve, "t": rule_capevolve, "1s": rule_capevolve, "nohist": rule_capevolve, "td": rule_capevolve, "gepafull": rule_gepa,
     "nodigest": rule_capevolve, "rulep2x": rule_capevolve, "ctl": rule_oneshot,
 }
 
-FULL_N = {"A": 40, "B": 25, "C": 10, "D": 25}      # val / selection set size per suite (full-evaluation marker for GEPA)
+FULL_N = {"A": 40, "B": 25, "C": 10, "D": 25, "E": 10}      # val / selection set size per suite (full-evaluation marker for GEPA)
 
 
 # ----------------------------------------------------------------------------------------------------------- artifacts

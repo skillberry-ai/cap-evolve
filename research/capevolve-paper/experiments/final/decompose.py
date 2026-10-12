@@ -39,7 +39,7 @@ def surface_hashes(root):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--suite", required=True, choices=["B", "C", "D"])
+    ap.add_argument("--suite", required=True, choices=["B", "C", "D", "E"])
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--arms", default=None)
     ap.add_argument("--out-root", default=None)
@@ -52,7 +52,7 @@ def main(argv=None):
     seed = man["seed_artifact"]
     seed_dir = Path(seed["frozen_dir"])
     seed_h = surface_hashes(seed_dir)
-    want = a.arms.split(",") if a.arms else (C.SUITES[suite]["main"] if suite == "D" else ["oneshot"])
+    want = a.arms.split(",") if a.arms else (C.SUITES[suite]["main"] if suite in ("D", "E") else ["oneshot"])
     entries, skipped = [], []
     for e in man["entries"]:
         if e["mode"] != a.mode or e["arm"] not in want or e["status"] == "impossible" or not e.get("frozen_dir"):

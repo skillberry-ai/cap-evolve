@@ -1,0 +1,5 @@
+arm,seed,task,trial,reward,family,split,reward_as_saved,t_start,t_end,error_class,error_text,attempts,empty_output,empty_completion,raw_tool_text_last,infra_final,first_attempt_infra,tag,job_id
+seed,0,4,0,1.0,4,sel,1.0,2026-10-12T13:05:58Z,2026-10-12T13:08:10Z,,,1,0,0,0,0,0,tag:FE-smoke-E-seed-s0:seed,E|seed|s0|4|B|t0
+gepa,1,47,0,1.0,47,sel,1.0,2026-10-12T13:05:58Z,2026-10-12T13:07:33Z,,,1,0,0,0,0,0,tag:FE-smoke-E-gepa-s1:gepa,E|gepa|s1|47|B|t0
+gepa,2,47,0,1.0,47,sel,1.0,2026-10-12T13:05:58Z,2026-10-12T13:08:56Z,,,1,0,0,0,0,0,tag:FE-smoke-E-gepa-s2:gepa,E|gepa|s2|47|B|t0
+gepa,1,4,0,1.0,4,sel,1.0,2026-10-12T13:05:58Z,2026-10-12T13:09:01Z,,,1,0,0,0,0,0,tag:FE-smoke-E-gepa-s1:gepa,E|gepa|s1|4|B|t0

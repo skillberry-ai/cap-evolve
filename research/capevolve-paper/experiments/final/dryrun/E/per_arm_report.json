@@ -1,0 +1,62 @@
+{
+ "B|gepa": {
+  "attempts": 3,
+  "candidate_errors": 0,
+  "done": 3,
+  "empty_completion": 0,
+  "empty_output": 0,
+  "hangs": 0,
+  "infra_attempts": 0,
+  "infra_final": 0,
+  "jobs": 6,
+  "missing_hang": 0,
+  "pending": 3,
+  "raw_tool_text_last": 0,
+  "retried_jobs": 0
+ },
+ "B|pt": {
+  "attempts": 0,
+  "candidate_errors": 0,
+  "done": 0,
+  "empty_completion": 0,
+  "empty_output": 0,
+  "hangs": 0,
+  "infra_attempts": 0,
+  "infra_final": 0,
+  "jobs": 6,
+  "missing_hang": 0,
+  "pending": 6,
+  "raw_tool_text_last": 0,
+  "retried_jobs": 0
+ },
+ "B|seed": {
+  "attempts": 1,
+  "candidate_errors": 0,
+  "done": 1,
+  "empty_completion": 0,
+  "empty_output": 0,
+  "hangs": 0,
+  "infra_attempts": 0,
+  "infra_final": 0,
+  "jobs": 4,
+  "missing_hang": 0,
+  "pending": 3,
+  "raw_tool_text_last": 0,
+  "retried_jobs": 0
+ },
+ "B|seed-check": {
+  "attempts": 0,
+  "candidate_errors": 0,
+  "done": 0,
+  "empty_completion": 0,
+  "empty_output": 0,
+  "hangs": 0,
+  "infra_attempts": 0,
+  "infra_final": 0,
+  "jobs": 2,
+  "missing_hang": 0,
+  "pending": 2,
+  "raw_tool_text_last": 0,
+  "retried_jobs": 0
+ }
+}
