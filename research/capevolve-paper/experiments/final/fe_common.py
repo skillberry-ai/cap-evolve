@@ -300,7 +300,7 @@ def native_status(rd):
             tail = ho.read_text(errors="replace")[-6000:]
         except Exception:
             tail = ""
-        if tail.rstrip().endswith("host-exited") and '"best_id"' in tail:
+        if tail.rstrip().endswith("host-exited") and "best_id" in tail:
             return "native_finish", "logs/host.out: agent's final report (best_id) followed by host-exited, no live process (exit code not logged)"
     evf = rd / "events.jsonl"      # EvoSkill: the loop writes {"event": "loop_done"} when its own stop rule ends it; must be newer than the last restart
     if evf.exists():
