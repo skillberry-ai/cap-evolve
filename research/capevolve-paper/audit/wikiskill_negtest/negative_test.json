@@ -1,0 +1,48 @@
+{
+ "staged_files_scanned": 453,
+ "marker_hits": [],
+ "val_or_test_id_in_payload": [],
+ "probes": [
+  {
+   "path": "../outside_secret.txt",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "/tmp/tmp3xj6ekz3/outside_secret.txt",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "../../../../etc/passwd",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "/etc/passwd",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "/home/dev/projects2/campaign-scratch/baselines/work/agent_view_verified400/dataset.json",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "/home/dev/projects2/campaign-scratch/bench/data/extracted",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "traces/../../outside_secret.txt",
+   "refused": true,
+   "error": "PermissionError"
+  },
+  {
+   "path": "bash tool",
+   "refused": true,
+   "error": "PermissionError"
+  }
+ ],
+ "pass": true
+}

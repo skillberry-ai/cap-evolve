@@ -1,0 +1,2408 @@
+{
+ "source": "negative_test.FIRST_RUN_raw.json (first, unnarrowed run)",
+ "n_hits": 343,
+ "n_unclassified_or_real": 0,
+ "items": [
+  {
+   "file": "study/iterations/001/maintainer/input/traces/32337.md",
+   "matched": "_output.xlsx",
+   "context": "l_color_o3\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32337_0_320a9374/1_32337_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/maintainer/input/traces/22-47.md",
+   "matched": "_output.xlsx",
+   "context": "= None\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/22-47_0_f1f355b4/1_22-47_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/maintainer/input/traces/45372.md",
+   "matched": "_output.xlsx",
+   "context": "l.value = val\\n    cell.fill = fill\\n\\nwb.save('/mnt/data/outputs/45372_0_25793c3a/1_45372_output.xlsx')\\n```\"}\\nRESULT \"ValueError                              ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/maintainer/input/traces/58109.md",
+   "matched": "_output.xlsx",
+   "context": "# Save the modified spreadsheet\\noutput_path = '/mnt/data/outputs/58109_0_7475b8a3/1_58109_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"Date in I4: 2021-01",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/maintainer/input/traces/48745.md",
+   "matched": "_output.xlsx",
+   "context": "] = result\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/48745_0_b99679cc/1_48745_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False)\\n``",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/maintainer/input/traces/49333.md",
+   "matched": "_output.xlsx",
+   "context": "al='left')\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/49333_0_2509e644/1_49333_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/maintainer/input/traces/58499.md",
+   "matched": "_output.xlsx",
+   "context": " >= 2:\\n    ws['A14'] = unticked[1]\\n\\nwb.save('/mnt/data/outputs/58499_0_25282bfc/1_58499_output.xlsx')\\n```\\n\\n```python\\nimport openpyxl\\n\\nwb = openpyxl.loa",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/108-24.md",
+   "matched": "_output.xlsx",
+   "context": "rite to the output file\\nwith pd.ExcelWriter('/mnt/data/outputs/108-24_0_30e1b9f5/1_108-24_output.xlsx', engine='openpyxl') as writer:\\n    # Copy other sheets ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/10452.md",
+   "matched": "_output.xlsx",
+   "context": "_values[i]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/10452_0_10ee168e/1_10452_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False)\\n``",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/105-24.md",
+   "matched": "_output.xlsx",
+   "context": "k]\\n\\n# Save the result\\nwith pd.ExcelWriter('/mnt/data/outputs/105-24_0_da063f16/1_105-24_output.xlsx', engine='openpyxl') as writer:\\n    # We need to preserv",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/10747.md",
+   "matched": "_output.xlsx",
+   "context": "it_sum\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/10747_0_5cbdc2bb/1_10747_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False, she",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/141-20.md",
+   "matched": "_output.xlsx",
+   "context": "tmt)\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/141-20_0_e9b81861/1_141-20_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/170-13.md",
+   "matched": "_output.xlsx",
+   "context": "the result to the output path\\noutput_path = '/mnt/data/outputs/170-13_0_49da961a/1_170-13_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/1818.md",
+   "matched": "_output.xlsx",
+   "context": "] # Column C\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/1818_0_a3362e4a/1_1818_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/11842.md",
+   "matched": "_output.xlsx",
+   "context": "rget_col}{target_row}'] = total_val\\n\\nwb.save('/mnt/data/outputs/11842_0_b6140fd1/1_11842_output.xlsx')\\n```\\n\\n```python\\nimport openpyxl\\nwb = openpyxl.load_",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/165-23.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/165-23_0_decbc339/1_165-23_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/192-22.md",
+   "matched": "_output.xlsx",
+   "context": "\\n\\n# Save to the output path\\noutput_path = '/mnt/data/outputs/192-22_0_d43ea10b/1_192-22_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/22-47.md",
+   "matched": "_output.xlsx",
+   "context": "= None\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/22-47_0_f1f355b4/1_22-47_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/250-20.md",
+   "matched": "_output.xlsx",
+   "context": "t in the output file.\\n\\nwith pd.ExcelWriter('/mnt/data/outputs/250-20_0_97684b9d/1_250-20_output.xlsx', engine='openpyxl') as writer:\\n    # We need to keep ot",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/118-50.md",
+   "matched": "_output.xlsx",
+   "context": "inal\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/118-50_0_d787ebd9/1_118-50_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/262-17.md",
+   "matched": "_output.xlsx",
+   "context": "n to the correct range.\\nwith pd.ExcelWriter('/mnt/data/outputs/262-17_0_2c8c7fb1/1_262-17_output.xlsx', engine='openpyxl') as writer:\\n    df_sorted.to_excel(w",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/194-19.md",
+   "matched": "_output.xlsx",
+   "context": " = pd.NA\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/194-19_0_3648f693/1_194-19_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/30930.md",
+   "matched": "_output.xlsx",
+   "context": " = count\\n\\n# Save to output path\\ndf.to_excel('/mnt/data/outputs/30930_0_ccbbc528/1_30930_output.xlsx', index=False, header=False)\\n# Wait, the original file m",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/247-24.md",
+   "matched": "_output.xlsx",
+   "context": " Weeks']\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/247-24_0_4808b17a/1_247-24_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/254-34.md",
+   "matched": "_output.xlsx",
+   "context": "inal_sum\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/254-34_0_10ec5792/1_254-34_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/31915.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/31915_0_f186e655/1_31915_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/32023.md",
+   "matched": "_output.xlsx",
+   "context": "rrent_dept\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32023_0_23ee83c6/1_32023_output.xlsx'\\ndf_raw.to_excel(output_path, index=False, header=False)",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/32337.md",
+   "matched": "_output.xlsx",
+   "context": "l_color_o3\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32337_0_320a9374/1_32337_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/32438.md",
+   "matched": "_output.xlsx",
+   "context": "_j.number_format = 'hh:mm:ss AM/PM'\\n\\nwb.save('/mnt/data/outputs/32438_0_83ea7935/1_32438_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/263-1.md",
+   "matched": "_output.xlsx",
+   "context": "al_pvc\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/263-1_0_09c05490/1_263-1_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\\n\\n```python",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/325-44.md",
+   "matched": "_output.xlsx",
+   "context": "ite to the Output sheet\\nwith pd.ExcelWriter('/mnt/data/outputs/325-44_0_58497c00/1_325-44_output.xlsx', engine='openpyxl') as writer:\\n    df_input.to_excel(wr",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/32902.md",
+   "matched": "_output.xlsx",
+   "context": "income, 3)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32902_0_91182a7b/1_32902_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/3413.md",
+   "matched": "_output.xlsx",
+   "context": "cell(row=3+idx, column=7).value = val\\n\\nwb.save('/mnt/data/outputs/3413_0_acbf4368/1_3413_output.xlsx')\\nprint(\\\"Saved to output path.\\\")\\n<|\\\"|>}<tool_call|>\"",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/31011.md",
+   "matched": "_output.xlsx",
+   "context": "# Save the modified spreadsheet\\noutput_path = '/mnt/data/outputs/31011_0_9a90fb98/1_31011_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"AttributeError     ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/36097.md",
+   "matched": "_output.xlsx",
+   "context": "l(row=row, column=8).value = recoup\\n\\nwb.save('/mnt/data/outputs/36097_0_4b99d0e0/1_36097_output.xlsx')\\n<tool_call|>\"}\\nRESULT \"No python code block was found ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/370-43.md",
+   "matched": "_output.xlsx",
+   "context": "n# Save the modified workbook\\noutput_path = '/mnt/data/outputs/370-43_0_88919885/1_370-43_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/379-36.md",
+   "matched": "_output.xlsx",
+   "context": "pe=None)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/379-36_0_6e12878c/1_379-36_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"Columns: ['account'",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/32612.md",
+   "matched": "_output.xlsx",
+   "context": "values\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/32612_0_8ce58581/1_32612_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/398-14.md",
+   "matched": "_output.xlsx",
+   "context": "='left')\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/398-14_0_a4a204e6/1_398-14_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/39903.md",
+   "matched": "_output.xlsx",
+   "context": "_bins)\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/39903_0_854b8a09/1_39903_output.xlsx'\\ndf['# of Bins'] = counts\\ndf.to_excel(output_path, inde",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/408-39.md",
+   "matched": "_output.xlsx",
+   "context": "_15_idx)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/408-39_0_161b38cd/1_408-39_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/35742.md",
+   "matched": "_output.xlsx",
+   "context": "4] = total\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/35742_0_0f78d729/1_35742_output.xlsx'\\ndf_raw.to_excel(output_path, index=False, header=False)",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/414-20.md",
+   "matched": "_output.xlsx",
+   "context": "row - 1)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/414-20_0_567d417a/1_414-20_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/42354.md",
+   "matched": "_output.xlsx",
+   "context": "esults\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/42354_0_58ccca6c/1_42354_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/40892.md",
+   "matched": "gold",
+   "context": "sponds to index 0 to 15.\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, nan, 'Red', 'Black', n",
+   "false_positive": true,
+   "why": "'Gold' is a cell value of the task workbook printed by the agent (e.g. colour list), not a gold path/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/40892.md",
+   "matched": "_output.xlsx",
+   "context": "esults\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/40892_0_4c5a9acb/1_40892_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/34033.md",
+   "matched": "_output.xlsx",
+   "context": "ell(row=6+i, column=11).value = val\\n\\nwb.save('/mnt/data/outputs/34033_0_95440fcb/1_34033_output.xlsx')\\n```\"}\\nRESULT \"ValueError                              ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/43589.md",
+   "matched": "_output.xlsx",
+   "context": "ys\\n\\n# Save to the output path\\noutput_path = '/mnt/data/outputs/43589_0_297d529e/1_43589_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/46121.md",
+   "matched": "_output.xlsx",
+   "context": "\"#,##0.00'\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/46121_0_98fbf865/1_46121_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/433-47.md",
+   "matched": "_output.xlsx",
+   "context": "uals']\\n\\n# Save to output path\\ndf.to_excel('/mnt/data/outputs/433-47_0_46b132a6/1_433-47_output.xlsx', index=False)\\n```\\n\\n<|channel>thought\\n<channel|><|too",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/472-15.md",
+   "matched": "_output.xlsx",
+   "context": "result_value\\n\\n# Save the workbook\\nwb.save('/mnt/data/outputs/472-15_0_444a1d1b/1_472-15_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/39931.md",
+   "matched": "_output.xlsx",
+   "context": "))\\n        df.iloc[r, c] = val\\n\\ndf.to_excel('/mnt/data/outputs/39931_0_14f1d499/1_39931_output.xlsx', index=False, header=False)\\n```\\n\\n```python\\nimport pa",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/48745.md",
+   "matched": "_output.xlsx",
+   "context": "] = result\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/48745_0_b99679cc/1_48745_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False)\\n``",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/48983.md",
+   "matched": "_output.xlsx",
+   "context": "lue = source_data_map[(brand, cat)]\\n\\nwb.save('/mnt/data/outputs/48983_0_1dffbf43/1_48983_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/47766.md",
+   "matched": "_output.xlsx",
+   "context": "= wb['Total (2)']\\nws['K40'] = result\\nwb.save('/mnt/data/outputs/47766_0_0d802349/1_47766_output.xlsx')\\n```\\n\\n```python\\nimport pandas as pd\\nfrom openpyxl i",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/49333.md",
+   "matched": "_output.xlsx",
+   "context": "al='left')\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/49333_0_2509e644/1_49333_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/50916.md",
+   "matched": "_output.xlsx",
+   "context": " day number is typed.\\n        pass\\n\\nwb.save('/mnt/data/outputs/50916_0_a5a7eb52/1_50916_output.xlsx')\\n```\\n<tool_call|>\"}\\nRESULT \"[Code executed successfull",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/493-18.md",
+   "matched": "_output.xlsx",
+   "context": "our_col]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/493-18_0_236bb2b5/1_493-18_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/51249.md",
+   "matched": "_output.xlsx",
+   "context": "# Save the modified spreadsheet\\noutput_path = '/mnt/data/outputs/51249_0_529ae8e4/1_51249_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/54085.md",
+   "matched": "_output.xlsx",
+   "context": "= item\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/54085_0_49bcbc49/1_54085_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/54638.md",
+   "matched": "_output.xlsx",
+   "context": "es = False\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/54638_0_0958c434/1_54638_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/45372.md",
+   "matched": "_output.xlsx",
+   "context": "l.value = val\\n    cell.fill = fill\\n\\nwb.save('/mnt/data/outputs/45372_0_25793c3a/1_45372_output.xlsx')\\n```\"}\\nRESULT \"ValueError                              ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/55421.md",
+   "matched": "_output.xlsx",
+   "context": "results)\\n\\n# Save to output path\\ndf.to_excel('/mnt/data/outputs/55421_0_d474e3cc/1_55421_output.xlsx', index=False)\\n<tool_call|>\"}\\nRESULT \"No python code blo",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/55060.md",
+   "matched": "_output.xlsx",
+   "context": "lt_j23\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/55060_0_04fd3b8c/1_55060_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/57113.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57113_0_f16f5d62/1_57113_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/57445.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57445_0_cdd69041/1_57445_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/56427.md",
+   "matched": "_output.xlsx",
+   "context": "nt = Alignment(horizontal='center')\\n\\nwb.save('/mnt/data/outputs/56427_0_25796684/1_56427_output.xlsx')\\n```\\n\\n<|channel>thought\\n<channel|><|tool_call>call:p",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/55427.md",
+   "matched": "_output.xlsx",
+   "context": "okup_dfes)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/55427_0_cace5734/1_55427_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/577-40.md",
+   "matched": "_output.xlsx",
+   "context": "ask]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/577-40_0_12a8b265/1_577-40_output.xlsx'\\ndf_filtered.to_excel(output_path, index=False, sheet_na",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/58109.md",
+   "matched": "_output.xlsx",
+   "context": "# Save the modified spreadsheet\\noutput_path = '/mnt/data/outputs/58109_0_7475b8a3/1_58109_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"Date in I4: 2021-01",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/55965.md",
+   "matched": "_output.xlsx",
+   "context": "\\n\\n# Save to output path\\nwith pd.ExcelWriter('/mnt/data/outputs/55965_0_6620a59e/1_55965_output.xlsx', engine='openpyxl') as writer:\\n    df_output.to_excel(w",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/57743.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57743_0_77d48be1/1_57743_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/585-41.md",
+   "matched": "_output.xlsx",
+   "context": "ue(cell.value)\\n\\n# Save the result\\nwb.save('/mnt/data/outputs/585-41_0_0b22730a/1_585-41_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/58484.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/58484_0_2dd5e909/1_58484_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/58499.md",
+   "matched": "_output.xlsx",
+   "context": " >= 2:\\n    ws['A14'] = unticked[1]\\n\\nwb.save('/mnt/data/outputs/58499_0_25282bfc/1_58499_output.xlsx')\\n```\\n\\n```python\\nimport openpyxl\\n\\nwb = openpyxl.loa",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/66-24.md",
+   "matched": "_output.xlsx",
+   "context": "e_cols(26)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/66-24_0_020a45fe/1_66-24_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/57558.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57558_0_53b67de5/1_57558_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/6239.md",
+   "matched": "_output.xlsx",
+   "context": "centives\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/6239_0_bd49e986/1_6239_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/58949.md",
+   "matched": "_output.xlsx",
+   "context": "[i][j]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/58949_0_b04b622b/1_58949_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/82-30.md",
+   "matched": "_output.xlsx",
+   "context": ")\\n\\n# Write to the output file\\noutput_path = '/mnt/data/outputs/82-30_0_3bc0a269/1_82-30_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/56786.md",
+   "matched": "_output.xlsx",
+   "context": "ges[i]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/56786_0_fb0100c8/1_56786_output.xlsx'\\noriginal_df.to_excel(output_path, index=False, header=F",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/001/proposer/input/traces/51090.md",
+   "matched": "_output.xlsx",
+   "context": "l(row=row_idx, column=17).value = 0\\n\\nwb.save('/mnt/data/outputs/51090_3_bbaa300a/1_51090_output.xlsx')\\n```\"}\\nRESULT \"ValueError                              ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/194-19.md",
+   "matched": "_output.xlsx",
+   "context": "et2)\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/194-19_0_9cbfd9c2/1_194-19_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/247-24.md",
+   "matched": "_output.xlsx",
+   "context": "ols]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/247-24_0_3239117f/1_247-24_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/493-18.md",
+   "matched": "_output.xlsx",
+   "context": "col]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/493-18_0_623e7aa5/1_493-18_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n\\n# To retain au",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/3413.md",
+   "matched": "_output.xlsx",
+   "context": ", 2].sum()\\n\\n# Save to output path\\ndf.to_excel('/mnt/data/outputs/3413_0_a2600eeb/1_3413_output.xlsx', index=False)\\n<tool_call|>\"}\\nRESULT \"(no further output",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/47766.md",
+   "matched": "_output.xlsx",
+   "context": " Ensure output directory exists\\noutput_path = '/mnt/data/outputs/47766_0_844285ae/1_47766_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/325-44.md",
+   "matched": "_output.xlsx",
+   "context": "keeping the Input sheet\\nwith pd.ExcelWriter('/mnt/data/outputs/325-44_0_f51dac09/1_325-44_output.xlsx', engine='openpyxl') as writer:\\n    df_input.to_excel(wr",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/57743.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57743_0_f8153968/1_57743_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/maintainer/input/traces/31915.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/31915_0_3e9b7008/1_31915_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/10452.md",
+   "matched": "_output.xlsx",
+   "context": "     break\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/10452_0_54fff4ed/1_10452_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False)\\n``",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/105-24.md",
+   "matched": "_output.xlsx",
+   "context": "g[val_k]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/105-24_0_1c6575d5/1_105-24_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/108-24.md",
+   "matched": "_output.xlsx",
+   "context": "the 'Tema UV COS' sheet\\nwith pd.ExcelWriter('/mnt/data/outputs/108-24_0_021ca4f1/1_108-24_output.xlsx', engine='openpyxl') as writer:\\n    # We need to preserv",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/141-20.md",
+   "matched": "_output.xlsx",
+   "context": "ask]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/141-20_0_f2db5cd9/1_141-20_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/165-23.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/165-23_0_dc6ece62/1_165-23_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/10747.md",
+   "matched": "_output.xlsx",
+   "context": "net_profit\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/10747_1_eb8ce774/1_10747_output.xlsx'\\nwb.save(output_path)\\n```\\n<tool_call|>\"}\\nRESULT \"TypeE",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/170-13.md",
+   "matched": "_output.xlsx",
+   "context": "rite to the output path\\nwith pd.ExcelWriter('/mnt/data/outputs/170-13_0_32456db1/1_170-13_output.xlsx', engine='openpyxl') as writer:\\n    df1.to_excel(writer,",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/1818.md",
+   "matched": "_output.xlsx",
+   "context": "] # Column C\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/1818_0_14f0010a/1_1818_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/194-19.md",
+   "matched": "_output.xlsx",
+   "context": "et2)\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/194-19_0_9cbfd9c2/1_194-19_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/22-47.md",
+   "matched": "_output.xlsx",
+   "context": ", column=8).value = row['REF']  # H\\n\\nwb.save('/mnt/data/outputs/22-47_0_18202b63/1_22-47_output.xlsx')\\n<tool_call|>\"}\\nRESULT \"No python code block was found ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/247-24.md",
+   "matched": "_output.xlsx",
+   "context": "ols]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/247-24_0_3239117f/1_247-24_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/118-50.md",
+   "matched": "_output.xlsx",
+   "context": "umns\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/118-50_0_24b5fcaa/1_118-50_output.xlsx'\\nfinal_df.to_excel(output_path, index=False)\\n```\"}\\nRESU",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/192-22.md",
+   "matched": "_output.xlsx",
+   "context": "the result to the output path\\noutput_path = '/mnt/data/outputs/192-22_0_be7e4872/1_192-22_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/262-17.md",
+   "matched": "_output.xlsx",
+   "context": "ame back to the excel file.\\n\\noutput_path = '/mnt/data/outputs/262-17_0_b1abd3a9/1_262-17_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/11842.md",
+   "matched": "_output.xlsx",
+   "context": "int(val) if not pd.isna(val) else 0\\n\\nwb.save('/mnt/data/outputs/11842_0_c0dd4219/1_11842_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/263-1.md",
+   "matched": "_output.xlsx",
+   "context": "s['H3'] = val_h3\\nws['H4'] = val_h4\\n\\nwb.save('/mnt/data/outputs/263-1_0_6c67728c/1_263-1_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/254-34.md",
+   "matched": "_output.xlsx",
+   "context": "\\n    ws_before['C2'] = total_sum\\n\\nwb.save('/mnt/data/outputs/254-34_0_eee35b94/1_254-34_output.xlsx')\\nprint(\\\"Saved to output path.\\\")\\n<tool_call|>\"}\\nRESUL",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/30930.md",
+   "matched": "_output.xlsx",
+   "context": "esults\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/30930_0_22409480/1_30930_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False)\\n# ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/31915.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/31915_0_3e9b7008/1_31915_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/32255.md",
+   "matched": "_output.xlsx",
+   "context": "ell(row=row, column=4).value = None\\n\\nwb.save('/mnt/data/outputs/32255_0_53da8d06/1_32255_output.xlsx')\\n```\"}\\nRESULT \"Row 1: A=Profit, D=None\\nRow 2: A=-1, D=",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/31011.md",
+   "matched": "_output.xlsx",
+   "context": "otal_sum\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/31011_0_8f450ae1/1_31011_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/250-20.md",
+   "matched": "_output.xlsx",
+   "context": "ight have fewer rows.\\n\\nwith pd.ExcelWriter('/mnt/data/outputs/250-20_0_ae83f7a4/1_250-20_output.xlsx', engine='openpyxl') as writer:\\n    # We need to keep ot",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/32438.md",
+   "matched": "_output.xlsx",
+   "context": "_time)\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/32438_0_e1e2e573/1_32438_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/32023.md",
+   "matched": "_output.xlsx",
+   "context": "rrent_dept\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32023_0_b858ec30/1_32023_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/325-44.md",
+   "matched": "_output.xlsx",
+   "context": "keeping the Input sheet\\nwith pd.ExcelWriter('/mnt/data/outputs/325-44_0_f51dac09/1_325-44_output.xlsx', engine='openpyxl') as writer:\\n    df_input.to_excel(wr",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/32902.md",
+   "matched": "_output.xlsx",
+   "context": "l(row=row_idx, column=5).value = t3\\n\\nwb.save('/mnt/data/outputs/32902_0_8c154892/1_32902_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/3413.md",
+   "matched": "_output.xlsx",
+   "context": ", 2].sum()\\n\\n# Save to output path\\ndf.to_excel('/mnt/data/outputs/3413_0_a2600eeb/1_3413_output.xlsx', index=False)\\n<tool_call|>\"}\\nRESULT \"(no further output",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/34033.md",
+   "matched": "_output.xlsx",
+   "context": " 301\\nws['K9'] = 95\\nws['K10'] = None\\nwb.save('/mnt/data/outputs/34033_0_df2eb86f/1_34033_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/36097.md",
+   "matched": "_output.xlsx",
+   "context": "l(row=row, column=8).value = recoup\\n\\nwb.save('/mnt/data/outputs/36097_0_aa42ad7f/1_36097_output.xlsx')\\n<tool_call|>\"}\\nRESULT \"No python code block was found ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/379-36.md",
+   "matched": "_output.xlsx",
+   "context": "pe=None)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/379-36_0_cb510e40/1_379-36_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/370-43.md",
+   "matched": "_output.xlsx",
+   "context": "n# Save the modified workbook\\noutput_path = '/mnt/data/outputs/370-43_0_0be89540/1_370-43_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/39903.md",
+   "matched": "_output.xlsx",
+   "context": "urier_font\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/39903_0_100e6e72/1_39903_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/35742.md",
+   "matched": "_output.xlsx",
+   "context": " df_raw.iloc[r, 14] = row_sum\\n\\noutput_path = '/mnt/data/outputs/35742_1_4ae22e0a/1_35742_output.xlsx'\\ndf_raw.to_excel(output_path, index=False, header=False)",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/39931.md",
+   "matched": "_output.xlsx",
+   "context": "    df.iloc[r_idx, c_idx] = val\\n\\ndf.to_excel('/mnt/data/outputs/39931_0_add58e95/1_39931_output.xlsx', index=False, header=False)\\n```\\n\\n```python\\nimport pa",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/408-39.md",
+   "matched": "_output.xlsx",
+   "context": "col_idx)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/408-39_0_75850d21/1_408-39_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/414-20.md",
+   "matched": "_output.xlsx",
+   "context": "the result to the output path\\noutput_path = '/mnt/data/outputs/414-20_0_e6608bb0/1_414-20_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/32612.md",
+   "matched": "_output.xlsx",
+   "context": "values\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/32612_0_5b7e82df/1_32612_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/40892.md",
+   "matched": "gold",
+   "context": "or rows 0 to 15 (B2:B17)\\nprint(df_verify.iloc[0:16, 1].tolist())\\n```\"}\\nRESULT \"['Red', 'Gold', 'Red', 'Blue', 'Black', 'Red', nan, nan, nan, 'Red', 'Black', n",
+   "false_positive": true,
+   "why": "'Gold' is a cell value of the task workbook printed by the agent (e.g. colour list), not a gold path/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/40892.md",
+   "matched": "_output.xlsx",
+   "context": "[0:16]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/40892_0_135c8220/1_40892_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/42354.md",
+   "matched": "_output.xlsx",
+   "context": "ts\\n\\n# Save to the output path\\noutput_path = '/mnt/data/outputs/42354_0_be448c8a/1_42354_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/398-14.md",
+   "matched": "_output.xlsx",
+   "context": "et/398-14/1_398-14_init.xlsx'\\noutput_path = '/mnt/data/outputs/398-14_2_3c05ac5f/1_398-14_output.xlsx'\\n\\n# Load all sheets\\nxl = pd.ExcelFile(file_path)\\nshee",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/43589.md",
+   "matched": "_output.xlsx",
+   "context": "ys\\n\\n# Save to the output path\\noutput_path = '/mnt/data/outputs/43589_0_70a2b9fd/1_43589_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/433-47.md",
+   "matched": "_output.xlsx",
+   "context": "amed: 7', 'residuals']\\ndf_balanced.to_excel('/mnt/data/outputs/433-47_0_a20d5c66/1_433-47_output.xlsx', index=False)\\n```\u5b8c\u6210<|channel>thought\\n<channel|><|tool_",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/45372.md",
+   "matched": "_output.xlsx",
+   "context": "ellow_fill\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/45372_0_655bcda3/1_45372_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/472-15.md",
+   "matched": "_output.xlsx",
+   "context": "result_value\\n\\n# Save the workbook\\nwb.save('/mnt/data/outputs/472-15_0_c49c2a33/1_472-15_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/46646.md",
+   "matched": "_output.xlsx",
+   "context": "atted_perc\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/46646_0_0cfb02c7/1_46646_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/48745.md",
+   "matched": "_output.xlsx",
+   "context": "] = result\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/48745_0_4c47fa92/1_48745_output.xlsx'\\ndf.to_excel(output_path, index=False, header=False)\\n``",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/47766.md",
+   "matched": "_output.xlsx",
+   "context": " Ensure output directory exists\\noutput_path = '/mnt/data/outputs/47766_0_844285ae/1_47766_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/48983.md",
+   "matched": "_output.xlsx",
+   "context": "alue = val\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/48983_0_55f34885/1_48983_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/49333.md",
+   "matched": "_output.xlsx",
+   "context": "al='left')\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/49333_0_654806d1/1_49333_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/51249.md",
+   "matched": "_output.xlsx",
+   "context": "# Save the modified spreadsheet\\noutput_path = '/mnt/data/outputs/51249_0_f8f783f5/1_51249_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/50916.md",
+   "matched": "_output.xlsx",
+   "context": "t openpyxl\\n\\n# Verification code\\nfile_path = '/mnt/data/outputs/50916_0_ebee0acb/1_50916_output.xlsx'\\nwb = openpyxl.load_workbook(file_path)\\nsheet = wb['21-",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/51090.md",
+   "matched": "_output.xlsx",
+   "context": "ell(row=i+2, column=17).value = val\\n\\nwb.save('/mnt/data/outputs/51090_1_b2f04ba2/1_51090_output.xlsx')\\n```\\n\\n```python\\nimport pandas as pd\\nfrom openpyxl i",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/493-18.md",
+   "matched": "_output.xlsx",
+   "context": "col]\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/493-18_0_623e7aa5/1_493-18_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n\\n# To retain au",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/55060.md",
+   "matched": "_output.xlsx",
+   "context": "_value\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/55060_0_f6694813/1_55060_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/55421.md",
+   "matched": "_output.xlsx",
+   "context": " axis=1)\\n\\n# Save to output path\\ndf.to_excel('/mnt/data/outputs/55421_0_d5f900aa/1_55421_output.xlsx', index=False)\\n<tool_call|>\"}\\nRESULT \"No python code blo",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/54085.md",
+   "matched": "_output.xlsx",
+   "context": "= item\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/54085_0_b68a340e/1_54085_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/55965.md",
+   "matched": "_output.xlsx",
+   "context": "lumn=7).value = val # Column G is 7\\n\\nwb.save('/mnt/data/outputs/55965_0_0b80f269/1_55965_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/55427.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/55427_0_001e5c85/1_55427_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/54638.md",
+   "matched": "_output.xlsx",
+   "context": "es = False\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/54638_0_48c5b2b4/1_54638_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/57445.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57445_0_c4298cab/1_57445_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/57113.md",
+   "matched": "_output.xlsx",
+   "context": "e \\\"\\\"\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/57113_0_0afc8908/1_57113_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/577-40.md",
+   "matched": "_output.xlsx",
+   "context": "the result to the output path\\noutput_path = '/mnt/data/outputs/577-40_0_5ff9ec0f/1_577-40_output.xlsx'\\ndf_filtered.to_excel(output_path, index=False, sheet_na",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/57558.md",
+   "matched": "_output.xlsx",
+   "context": "xis=1)\\n\\n# Save to output path\\noutput_path = '/mnt/data/outputs/57558_0_b6de085b/1_57558_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/57743.md",
+   "matched": "_output.xlsx",
+   "context": "e the result to the output path\\noutput_path = '/mnt/data/outputs/57743_0_f8153968/1_57743_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/58109.md",
+   "matched": "_output.xlsx",
+   "context": "# Save the modified spreadsheet\\noutput_path = '/mnt/data/outputs/58109_0_63e81d05/1_58109_output.xlsx'\\nwb.save(output_path)\\n```\"}\\nRESULT \"[Code executed succ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/56427.md",
+   "matched": "_output.xlsx",
+   "context": "='center'.\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/56427_0_600005c5/1_56427_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/585-41.md",
+   "matched": "_output.xlsx",
+   "context": "ue(cell.value)\\n\\n# Save the result\\nwb.save('/mnt/data/outputs/585-41_0_00fe7d72/1_585-41_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/58484.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/58484_0_5de27869/1_58484_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/58499.md",
+   "matched": "_output.xlsx",
+   "context": "w=14, column=1).value = unticked[1]\\n\\nwb.save('/mnt/data/outputs/58499_0_bae21130/1_58499_output.xlsx')\\n```\\n\\n```python\\nimport pandas as pd\\n\\n# Verify the ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/58949.md",
+   "matched": "_output.xlsx",
+   "context": "x, column=c_idx, value=value)\\n\\noutput_path = '/mnt/data/outputs/58949_0_a4179007/1_58949_output.xlsx'\\nwb.save(output_path)\\n```\\n<tool_call|>\"}\\nRESULT \"[Code",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/56786.md",
+   "matched": "_output.xlsx",
+   "context": "(row=row_idx, column=3).value = avg\\n\\nwb.save('/mnt/data/outputs/56786_2_ff5a02bf/1_56786_output.xlsx')\\n```\"}\\nRESULT \"[Code executed successfully with no outp",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/66-24.md",
+   "matched": "_output.xlsx",
+   "context": "e_cols(26)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/66-24_0_06065e35/1_66-24_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/82-30.md",
+   "matched": "_output.xlsx",
+   "context": "t and range, we use ExcelWriter\\noutput_path = '/mnt/data/outputs/82-30_0_4dd07e82/1_82-30_output.xlsx'\\nwith pd.ExcelWriter(output_path, engine='openpyxl') as ",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/002/proposer/input/traces/6239.md",
+   "matched": "_output.xlsx",
+   "context": "G is index 6\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/6239_0_077d3e7f/1_6239_output.xlsx'\\ndf.to_excel(output_path, index=False)\\n```\"}\\nRESULT \"[C",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/398-14.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/398-14_0_87f25cfc/1_398-14_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/398-14_0_87",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/54085.md",
+   "matched": "_output.xlsx",
+   "context": "B5<>A2)'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/54085_0_f68a144c/1_54085_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/52216.md",
+   "matched": "_output.xlsx",
+   "context": "_inputs[f'{col}16'] = formula\\n\\noutput_path = '/mnt/data/outputs/52216_0_2b606f42/1_52216_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/22-47.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/22-47_0_dd7591d8/1_22-47_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/22-47_0_dd7",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/46121.md",
+   "matched": "_output.xlsx",
+   "context": "ncy_format\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/46121_0_37cb9c47/1_46121_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/49333.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/49333_0_19719081/1_49333_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/49333_0_197",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/414-20.md",
+   "matched": "_output.xlsx",
+   "context": "row - 1)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/414-20_0_c126bc51/1_414-20_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/maintainer/input/traces/55060.md",
+   "matched": "_output.xlsx",
+   "context": "the workbook to the output path\\noutput_path = '/mnt/data/outputs/55060_0_23d7a4cd/1_55060_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/10452.md",
+   "matched": "_output.xlsx",
+   "context": "alue = val\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/10452_0_6591ad1b/1_10452_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/108-24.md",
+   "matched": "_output.xlsx",
+   "context": "e=value)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/108-24_0_c880fea8/1_108-24_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/105-24.md",
+   "matched": "_output.xlsx",
+   "context": "n# Save the modified workbook\\noutput_path = '/mnt/data/outputs/105-24_0_ca6254eb/1_105-24_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/10747.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/10747_0_a1ff7a79/1_10747_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/165-23.md",
+   "matched": "_output.xlsx",
+   "context": "row_idx)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/165-23_0_eadffc53/1_165-23_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/118-50.md",
+   "matched": "_output.xlsx",
+   "context": "e = orig\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/118-50_0_fe2953fc/1_118-50_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/141-20.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/141-20_0_01e4e2c8/1_141-20_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/1818.md",
+   "matched": "_output.xlsx",
+   "context": " = formula_c\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/1818_0_12b46641/1_1818_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/192-22.md",
+   "matched": "_output.xlsx",
+   "context": "e = None\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/192-22_0_a76a731b/1_192-22_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/170-13.md",
+   "matched": "_output.xlsx",
+   "context": "book\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/170-13_0_498a888e/1_170-13_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/170-13_0_49",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/247-24.md",
+   "matched": "_output.xlsx",
+   "context": "book\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/247-24_0_cb576976/1_247-24_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/247-24_0_cb",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/22-47.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/22-47_0_dd7591d8/1_22-47_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/22-47_0_dd7",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/194-19.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/194-19_0_2d8424e6/1_194-19_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/194-19_0_2d",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/250-20.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/250-20_0_af3c29fc/1_250-20_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/250-20_0_af",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/262-17.md",
+   "matched": "_output.xlsx",
+   "context": " = value\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/262-17_0_8e227ec9/1_262-17_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/254-34.md",
+   "matched": "_output.xlsx",
+   "context": "ound_sum\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/254-34_0_0810adfc/1_254-34_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/263-1.md",
+   "matched": "_output.xlsx",
+   "context": "ls[mtrl]\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/263-1_0_5beaf097/1_263-1_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/31011.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/31011_0_a8f9aee0/1_31011_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/31915.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/31915_0_60260b4a/1_31915_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/30930.md",
+   "matched": "_output.xlsx",
+   "context": "alues[i]\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/30930_0_d4ef6417/1_30930_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/32023.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/32023_0_b411a1df/1_32023_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/32023_0_b41",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/32255.md",
+   "matched": "_output.xlsx",
+   "context": "al_formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32255_0_110e0623/1_32255_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/32438.md",
+   "matched": "_output.xlsx",
+   "context": "s AM/PM'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/32438_0_a330b9f7/1_32438_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/325-44.md",
+   "matched": "_output.xlsx",
+   "context": "book\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/325-44_0_6e6d9717/1_325-44_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/325-44_0_6e",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/32612.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/32612_0_04260daa/1_32612_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/32612_0_042",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/32337.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/32337_1_c6600d83/1_32337_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/32337_1_c66",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/3413.md",
+   "matched": "_output.xlsx",
+   "context": "ue = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/3413_0_b39c777c/1_3413_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/32902.md",
+   "matched": "_output.xlsx",
+   "context": "value = t3\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32902_0_d183fe7b/1_32902_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/34033.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/34033_0_db1896d2/1_34033_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/34033_0_db1",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/36097.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/36097_0_80b474aa/1_36097_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/11842.md",
+   "matched": "_output.xlsx",
+   "context": "otal_count\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/11842_0_cce6d8ce/1_11842_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/370-43.md",
+   "matched": "_output.xlsx",
+   "context": "row_idx)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/370-43_0_dfd94b9e/1_370-43_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/35742.md",
+   "matched": "_output.xlsx",
+   "context": "ue = total\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/35742_0_1f0326a9/1_35742_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/379-36.md",
+   "matched": "_output.xlsx",
+   "context": "pe=None)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/379-36_0_52ffc545/1_379-36_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/39903.md",
+   "matched": "_output.xlsx",
+   "context": "ont = font\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/39903_0_895e8228/1_39903_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/40892.md",
+   "matched": "gold",
+   "context": ":\\n    print(f\\\"B{row}: {ws.cell(row=row, column=2).value}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: None\\nB9: None\\nB10: ",
+   "false_positive": true,
+   "why": "'Gold' is a cell value of the task workbook printed by the agent (e.g. colour list), not a gold path/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/40892.md",
+   "matched": "_output.xlsx",
+   "context": "lue = \\\"\\\"\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/40892_0_d4e6f501/1_40892_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/398-14.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/398-14_0_87f25cfc/1_398-14_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/398-14_0_87",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/414-20.md",
+   "matched": "_output.xlsx",
+   "context": "row - 1)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/414-20_0_c126bc51/1_414-20_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/39931.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/39931_1_231f7025/1_39931_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/39931_1_231",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/43589.md",
+   "matched": "_output.xlsx",
+   "context": "B2'] = 4\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/43589_0_ebc679ac/1_43589_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/42354.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/42354_0_acf9e219/1_42354_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/46121.md",
+   "matched": "_output.xlsx",
+   "context": "ncy_format\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/46121_0_37cb9c47/1_46121_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/45372.md",
+   "matched": "_output.xlsx",
+   "context": "ll_color\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/45372_0_0448f777/1_45372_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/46646.md",
+   "matched": "_output.xlsx",
+   "context": "percentage\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/46646_0_0a1c970e/1_46646_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/47766.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/47766_0_36f84254/1_47766_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/47766_0_36f",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/408-39.md",
+   "matched": "_output.xlsx",
+   "context": "s[row-1]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/408-39_0_b06ee231/1_408-39_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/48080.md",
+   "matched": "_output.xlsx",
+   "context": "n\\n# Save the result\\nimport os\\noutput_path = '/mnt/data/outputs/48080_0_b2d654bc/1_48080_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/48745.md",
+   "matched": "_output.xlsx",
+   "context": "e = result\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/48745_0_f6e5e860/1_48745_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/48365.md",
+   "matched": "_output.xlsx",
+   "context": ")))'\\n\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/48365_0_abbff586/1_48365_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/48365_0_abb",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/48983.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/48983_0_15282e4e/1_48983_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/48983_0_152",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/493-18.md",
+   "matched": "_output.xlsx",
+   "context": "a_row[2]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/493-18_0_17d137d1/1_493-18_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/472-15.md",
+   "matched": "_output.xlsx",
+   "context": "  pass\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/472-15_0_781af411/1_472-15_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/49333.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/49333_0_19719081/1_49333_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/49333_0_197",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/50916.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/50916_0_57149d1b/1_50916_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/433-47.md",
+   "matched": "_output.xlsx",
+   "context": "n# Save the result\\nimport os\\noutput_path = '/mnt/data/outputs/433-47_0_6801f889/1_433-47_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/51249.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/51249_0_a06823a2/1_51249_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/51249_0_a06",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/54085.md",
+   "matched": "_output.xlsx",
+   "context": "B5<>A2)'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/54085_0_f68a144c/1_54085_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/52216.md",
+   "matched": "_output.xlsx",
+   "context": "_inputs[f'{col}16'] = formula\\n\\noutput_path = '/mnt/data/outputs/52216_0_2b606f42/1_52216_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/55060.md",
+   "matched": "_output.xlsx",
+   "context": "the workbook to the output path\\noutput_path = '/mnt/data/outputs/55060_0_23d7a4cd/1_55060_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/55427.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/55427_0_9bc76748/1_55427_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/55427_0_9bc",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/55421.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/55421_0_998d00aa/1_55421_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/55421_0_998",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/55965.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/55965_0_6b103c49/1_55965_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/55965_0_6b1",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/56274.md",
+   "matched": "_output.xlsx",
+   "context": "D10-D11'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/56274_0_8c197ecd/1_56274_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/56786.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/56786_0_f2cd9dcc/1_56786_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/57113.md",
+   "matched": "_output.xlsx",
+   "context": "alue = tag\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/57113_0_3f4a80d7/1_57113_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/57445.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/57445_0_ce844762/1_57445_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/57558.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/57558_0_ead4c280/1_57558_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/57558_0_ead",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/577-40.md",
+   "matched": "_output.xlsx",
+   "context": "row_idx)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/577-40_0_32dee298/1_577-40_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/51090.md",
+   "matched": "_output.xlsx",
+   "context": "17).value = val\\n\\nos.makedirs(os.path.dirname('/mnt/data/outputs/51090_1_79f280f5/1_51090_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/51090_1_79f",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/57743.md",
+   "matched": "_output.xlsx",
+   "context": ")), \\\"\\\")'\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/57743_0_191e5534/1_57743_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/58109.md",
+   "matched": "_output.xlsx",
+   "context": "_formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/58109_0_0e7a105c/1_58109_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/54638.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/54638_0_30ee60b3/1_54638_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/54638_0_30e",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/58484.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/58484_0_7fa53e8a/1_58484_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/585-41.md",
+   "matched": "_output.xlsx",
+   "context": "aned_val\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/585-41_0_f12c3ee9/1_585-41_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/58499.md",
+   "matched": "_output.xlsx",
+   "context": "d[1]\\n\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/58499_0_f416c311/1_58499_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/58499_0_f41",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/58949.md",
+   "matched": "_output.xlsx",
+   "context": "lse \\\"\\\"\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/58949_0_8d858d29/1_58949_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/66-24.md",
+   "matched": "_output.xlsx",
+   "context": "e_cols(26)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/66-24_0_43fa4215/1_66-24_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/6239.md",
+   "matched": "_output.xlsx",
+   "context": "e result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/6239_0_6f69f1d6/1_6239_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/6239_0_6f69",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/82-30.md",
+   "matched": "_output.xlsx",
+   "context": "w_idx += 1\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/82-30_0_ba390bbb/1_82-30_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/003/proposer/input/traces/56427.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/56427_0_b80fab57/1_56427_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/56427_0_b80",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/34033.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/34033_0_4232fdd1/1_34033_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/408-39.md",
+   "matched": "_output.xlsx",
+   "context": "idx + 1)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/408-39_0_3fe0bc18/1_408-39_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/194-19.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/194-19_0_ff9de5dd/1_194-19_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/194-19_0_ff",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/56786.md",
+   "matched": "_output.xlsx",
+   "context": "lue = None\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/56786_0_5607198a/1_56786_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/45372.md",
+   "matched": "_output.xlsx",
+   "context": "fill_color\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/45372_0_7be4d6f0/1_45372_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/43589.md",
+   "matched": "_output.xlsx",
+   "context": "B2'] = 4\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/43589_0_524f6f25/1_43589_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/254-34.md",
+   "matched": "_output.xlsx",
+   "context": "ound_sum\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/254-34_0_7d3059fd/1_254-34_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/maintainer/input/traces/165-23.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/165-23_0_fb91832e/1_165-23_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/108-24.md",
+   "matched": "_output.xlsx",
+   "context": "e=value)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/108-24_0_41e3bf14/1_108-24_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/10452.md",
+   "matched": "_output.xlsx",
+   "context": "ue = val\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/10452_0_bb8c045d/1_10452_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/105-24.md",
+   "matched": "_output.xlsx",
+   "context": "n# Save the modified workbook\\noutput_path = '/mnt/data/outputs/105-24_0_949fde7b/1_105-24_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/10747.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/10747_0_beb014ae/1_10747_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/165-23.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/165-23_0_fb91832e/1_165-23_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/141-20.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/141-20_0_b5d8c378/1_141-20_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/11842.md",
+   "matched": "_output.xlsx",
+   "context": "ue = count\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/11842_0_b2731903/1_11842_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/1818.md",
+   "matched": "_output.xlsx",
+   "context": " formula_c\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/1818_0_7ed1dae7/1_1818_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/118-50.md",
+   "matched": "_output.xlsx",
+   "context": "= orig\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/118-50_0_795cd3e9/1_118-50_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/170-13.md",
+   "matched": "_output.xlsx",
+   "context": "book\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/170-13_0_ab8732f5/1_170-13_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/170-13_0_ab",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/192-22.md",
+   "matched": "_output.xlsx",
+   "context": "e = None\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/192-22_0_570a4722/1_192-22_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/194-19.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/194-19_0_ff9de5dd/1_194-19_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/194-19_0_ff",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/22-47.md",
+   "matched": "_output.xlsx",
+   "context": "l\\n# Verification\\nwb = openpyxl.load_workbook('/mnt/data/outputs/22-47_0_42ca883c/1_22-47_output.xlsx')\\nws = wb['sheet1']\\nfor row in range(2, 11):\\n    print",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/247-24.md",
+   "matched": "_output.xlsx",
+   "context": "book\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/247-24_0_85920b2c/1_247-24_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/247-24_0_85",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/250-20.md",
+   "matched": "_output.xlsx",
+   "context": "sult\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/250-20_0_2cec9285/1_250-20_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/250-20_0_2c",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/262-17.md",
+   "matched": "_output.xlsx",
+   "context": "e=value)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/262-17_0_f90f7819/1_262-17_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/254-34.md",
+   "matched": "_output.xlsx",
+   "context": "ound_sum\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/254-34_0_7d3059fd/1_254-34_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/31011.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/31011_0_eaa4a30a/1_31011_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/263-1.md",
+   "matched": "_output.xlsx",
+   "context": "ue = val\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/263-1_0_e180c738/1_263-1_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/30930.md",
+   "matched": "_output.xlsx",
+   "context": "sults[i]\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/30930_0_3119d863/1_30930_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/31915.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/31915_0_9622ea02/1_31915_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/32438.md",
+   "matched": "_output.xlsx",
+   "context": "s AM/PM'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/32438_0_f9415e68/1_32438_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/32255.md",
+   "matched": "_output.xlsx",
+   "context": "w_inner})'\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32255_0_3d991d0e/1_32255_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/325-44.md",
+   "matched": "_output.xlsx",
+   "context": "book\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/325-44_0_f1d3aa85/1_325-44_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/325-44_0_f1",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/32612.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/32612_0_bfaca4cc/1_32612_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/32612_0_bfa",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/32023.md",
+   "matched": "_output.xlsx",
+   "context": "rkbook\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/32023_0_ac3e0087/1_32023_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/32023_0_ac3",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/3413.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/3413_0_6a1b61d3/1_3413_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/34033.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/34033_0_4232fdd1/1_34033_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/32902.md",
+   "matched": "_output.xlsx",
+   "context": "}'] = t3\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/32902_0_97cbeca3/1_32902_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/36097.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/36097_0_0d2e4424/1_36097_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/370-43.md",
+   "matched": "_output.xlsx",
+   "context": "ows(row)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/370-43_0_e8a38f94/1_370-43_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/35742.md",
+   "matched": "_output.xlsx",
+   "context": "'] = total\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/35742_0_f702df05/1_35742_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/39903.md",
+   "matched": "_output.xlsx",
+   "context": "ont = font\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/39903_0_61fb8b3a/1_39903_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/379-36.md",
+   "matched": "_output.xlsx",
+   "context": "pe=None)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/379-36_0_b1dd8a9c/1_379-36_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/398-14.md",
+   "matched": "_output.xlsx",
+   "context": "Save\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/398-14_0_0196b408/1_398-14_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/398-14_0_01",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/39931.md",
+   "matched": "_output.xlsx",
+   "context": "dsheet/39931/1_39931_init.xlsx'\\noutput_path = '/mnt/data/outputs/39931_0_5db0eb5c/1_39931_output.xlsx'\\nwb = openpyxl.load_workbook(file_path)\\nws = wb.active\\",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/408-39.md",
+   "matched": "_output.xlsx",
+   "context": "idx + 1)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/408-39_0_3fe0bc18/1_408-39_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/414-20.md",
+   "matched": "_output.xlsx",
+   "context": "row - 1)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/414-20_0_4e978f9e/1_414-20_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/40892.md",
+   "matched": "gold",
+   "context": ":\\n    print(f\\\"B{row}: {ws.cell(row=row, column=2).value}\\\")\\n```\"}\\nRESULT \"B2: Red\\nB3: Gold\\nB4: Red\\nB5: Blue\\nB6: Black\\nB7: Red\\nB8: None\\nB9: None\\nB10: ",
+   "false_positive": true,
+   "why": "'Gold' is a cell value of the task workbook printed by the agent (e.g. colour list), not a gold path/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/40892.md",
+   "matched": "_output.xlsx",
+   "context": "lue = \\\"\\\"\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/40892_0_314b3554/1_40892_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/42354.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/42354_0_e8f6e558/1_42354_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/43589.md",
+   "matched": "_output.xlsx",
+   "context": "B2'] = 4\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/43589_0_524f6f25/1_43589_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/46121.md",
+   "matched": "_output.xlsx",
+   "context": "y_format\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/46121_0_cd71b449/1_46121_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/433-47.md",
+   "matched": "_output.xlsx",
+   "context": "alue = 0\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/433-47_0_52f120bc/1_433-47_output.xlsx'\\nos.makedirs(os.path.dirname(output_path), exist_ok=True",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/45372.md",
+   "matched": "_output.xlsx",
+   "context": "fill_color\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/45372_0_7be4d6f0/1_45372_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/472-15.md",
+   "matched": "_output.xlsx",
+   "context": "ult_b2\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/472-15_0_9c39f21a/1_472-15_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/32337.md",
+   "matched": "_output.xlsx",
+   "context": "rmat = '0'\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/32337_0_975dfb8f/1_32337_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/48080.md",
+   "matched": "_output.xlsx",
+   "context": " val\\n\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/48080_0_bb5de7fc/1_48080_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/48080_0_bb5",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/48745.md",
+   "matched": "_output.xlsx",
+   "context": "e = result\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/48745_0_68426960/1_48745_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/48365.md",
+   "matched": "_output.xlsx",
+   "context": "$E11)))'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/48365_0_dda5c723/1_48365_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/48983.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/48983_0_b0a4fef2/1_48983_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/48983_0_b0a",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/493-18.md",
+   "matched": "_output.xlsx",
+   "context": "a_row[2]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/493-18_0_83def6b5/1_493-18_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/50916.md",
+   "matched": "_output.xlsx",
+   "context": " formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/50916_0_1b55ece7/1_50916_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/49333.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/49333_0_55921a6c/1_49333_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/49333_0_559",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/51249.md",
+   "matched": "_output.xlsx",
+   "context": "ll_color\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/51249_0_f2b2143c/1_51249_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/52216.md",
+   "matched": "_output.xlsx",
+   "context": "20, $A16)'\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/52216_0_d8be3fbd/1_52216_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/47766.md",
+   "matched": "_output.xlsx",
+   "context": "save['K40'] = rentals_2021_pe\\n\\noutput_path = '/mnt/data/outputs/47766_0_90c1bb3f/1_47766_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/54638.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/54638_0_adc29753/1_54638_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/54638_0_adc",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/55060.md",
+   "matched": "_output.xlsx",
+   "context": "the workbook to the output path\\noutput_path = '/mnt/data/outputs/55060_0_f8eef78a/1_55060_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/46646.md",
+   "matched": "_output.xlsx",
+   "context": "rmat_value(val)\\n\\nos.makedirs(os.path.dirname('/mnt/data/outputs/46646_0_79234f71/1_46646_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/46646_0_792",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/55421.md",
+   "matched": "_output.xlsx",
+   "context": "nt_formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/55421_0_6e383ae0/1_55421_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/55427.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/55427_0_f673d882/1_55427_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/54085.md",
+   "matched": "_output.xlsx",
+   "context": "B5<>A2)'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/54085_0_87b53c86/1_54085_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/56274.md",
+   "matched": "_output.xlsx",
+   "context": "D10-D11'\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/56274_0_4892f7fd/1_56274_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/55965.md",
+   "matched": "_output.xlsx",
+   "context": "ol_offset]\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/55965_0_df0dc8fe/1_55965_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/57113.md",
+   "matched": "_output.xlsx",
+   "context": "alue = tag\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/57113_0_308a5e33/1_57113_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/57445.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/57445_0_9a30016c/1_57445_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/56786.md",
+   "matched": "_output.xlsx",
+   "context": "lue = None\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/56786_0_5607198a/1_56786_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/577-40.md",
+   "matched": "_output.xlsx",
+   "context": "row_idx)\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/577-40_0_fd2eae02/1_577-40_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/57558.md",
+   "matched": "_output.xlsx",
+   "context": "rmula_a3\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/57558_0_6ca8d81f/1_57558_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/57743.md",
+   "matched": "_output.xlsx",
+   "context": " = formula\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/57743_0_48a69a6e/1_57743_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/58109.md",
+   "matched": "_output.xlsx",
+   "context": "_formula\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/58109_0_15419609/1_58109_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/58484.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/58484_0_8fc909f2/1_58484_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/58484_0_8fc",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/585-41.md",
+   "matched": "_output.xlsx",
+   "context": "aned_val\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/585-41_0_9502cf7e/1_585-41_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/58949.md",
+   "matched": "_output.xlsx",
+   "context": "lse \\\"\\\"\\n\\n# Save the workbook\\noutput_path = '/mnt/data/outputs/58949_0_e6c0267f/1_58949_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/6239.md",
+   "matched": "_output.xlsx",
+   "context": "payout\\n\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/6239_0_e6465fd9/1_6239_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/6239_0_e646",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/66-24.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/66-24_0_e420318b/1_66-24_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/66-24_0_e42",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/82-30.md",
+   "matched": "_output.xlsx",
+   "context": "w_idx += 1\\n\\n# Save the result\\noutput_path = '/mnt/data/outputs/82-30_0_a6cb43fd/1_82-30_output.xlsx'\\nimport os\\nos.makedirs(os.path.dirname(output_path), ex",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/58499.md",
+   "matched": "_output.xlsx",
+   "context": "dsheet/58499/1_58499_init.xlsx'\\noutput_path = '/mnt/data/outputs/58499_0_6f35bba8/1_58499_output.xlsx'\\n\\nwb = openpyxl.load_workbook(file_path)\\nsheet = wb.ac",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/51090.md",
+   "matched": "_output.xlsx",
+   "context": "_sum\\n\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/51090_0_f0140109/1_51090_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/51090_0_f01",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  },
+  {
+   "file": "study/iterations/004/proposer/input/traces/56427.md",
+   "matched": "_output.xlsx",
+   "context": "result\\nimport os\\nos.makedirs(os.path.dirname('/mnt/data/outputs/56427_1_fe16a95a/1_56427_output.xlsx'), exist_ok=True)\\nwb.save('/mnt/data/outputs/56427_1_fe1",
+   "false_positive": true,
+   "why": "the agent's own output_path filename (\u2026/outputs/<task>_output.xlsx) inside its transcript code; not a gold/answer file"
+  }
+ ]
+}
