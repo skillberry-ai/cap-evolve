@@ -75,7 +75,7 @@
   \node[core,right=5mm of g] (z) {final set\\{\tiny sealed, scored once}};
   \draw[ar] (surf) -- (o);
   \draw[ar] (o) -- (a); \draw[ar] (a) -- (s); \draw[ar] (s) -- (g); \draw[ar] (g) -- (z);
-  \node[opt,below=7mm of a,xshift=-4mm] (h) {fix-and-break history\\{\tiny fixed and broke, protect set}};
+  \node[opt,below=7mm of a,xshift=-4mm] (h) {fixed/broke history\\{\tiny fixed and broke, protect set}};
   \draw[ar] (h) -| (o);
   \draw[ar] (g.south) |- ([yshift=-6mm]h.east |- h.south) -| (h.south);
   \draw[teal!55!black,dashed] ([xshift=-2mm,yshift=-12mm]s.south west) rectangle ([xshift=2mm,yshift=5mm]z.north east);
@@ -106,7 +106,7 @@
 \centering
 \loopfigure
 \refstepcounter{figure}\label{fig:v2:loop}
-\par\vspace{2pt}\begin{small}\emph{Figure \thefigure.} CapEvolve. The editable surface is a parameter of one loop. Orange parts belong to the optimizer; teal parts are core code the optimizer cannot edit. Accepted and rejected candidates feed a fix-and-break history of which tasks each edit fixed and broke. The prompt and tool surfaces are evaluated; the MCP and skill surfaces are implemented, not evaluated.\end{small}
+\par\vspace{2pt}\begin{small}\emph{Figure \thefigure.} CapEvolve. The editable surface is a parameter of one loop. Orange parts belong to the optimizer; teal parts are core code the optimizer cannot edit. Accepted and rejected candidates feed a fixed/broke history of which tasks each edit fixed and broke. The prompt and tool surfaces are evaluated; the MCP and skill surfaces are implemented, not evaluated.\end{small}
 \end{minipage}
 \vspace{0.08in}
 ]
