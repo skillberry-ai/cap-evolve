@@ -671,7 +671,11 @@ def main(argv=None):
             sel = C.jload(Path(C.run_dir(suite, e["arm"], e["seed"])) / "final" / "SELECTION.json") or {}
             if sel.get("gepa_total_num_evals") is not None:
                 note.update(own_budget_metric_calls=sel["gepa_total_num_evals"], own_budget=555, own_budget_shortfall=555 - sel["gepa_total_num_evals"])
-            if (suite, e["arm"], e["seed"]) == ("A", "skillopt", 1):    # baseline-eng, rollout_counter.json 'by' counts (606 started - 6 refunded infra retries = 600)
+            ob = C.jload(Path(C.run_dir(suite, e["arm"], e["seed"])) / "own_budget.json")      # written by the arm owner next to the run (baseline-eng)
+            if ob:
+                note.update(ob)
+                note["own_budget_source_file"] = "own_budget.json"
+            elif (suite, e["arm"], e["seed"]) == ("A", "skillopt", 1):      # fallback until the file exists    # baseline-eng, rollout_counter.json 'by' counts (606 started - 6 refunded infra retries = 600)
                 note.update(own_budget_steps_completed=6, own_budget_steps_planned=6,
                             cut_by_cap="epoch-3 slow-update rollout_curr (17 of 20 rollouts) and the epoch-3 meta-skill step; neither is scored or eligible for best_skill.md",
                             infra_retries_refunded=6, source="baseline-eng message 2026-10-12 (rollout_counter.json by-phase counts)")
