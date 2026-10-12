@@ -698,7 +698,7 @@ def main(argv=None):
     nf = (bj or {}).get("natively_finished") or {}
     for e in man["entries"]:
         k = "%s/s%d" % (e["arm"], e["seed"])
-        if k in nf and e["arm"] == "ace" and nf[k].get("stop_kind") == "guard_stop":
+        if k in nf and e["arm"] == "ace" and nf[k].get("stop_kind") in ("guard_stop", "native_finish") and (suite, e["seed"]) in (("A", 0), ("A", 1), ("A", 2)):
             tg = Path(C.run_dir(suite, "ace", e["seed"])) / "logs" / "token_guard_stop.json"
             if (suite, e["seed"]) == ("A", 0):
                 e.setdefault("caveats", []).append("ACE s0: native stop at 3.90M current-attempt optimizer tokens (525,189 tokens of superseded attempts refunded, bl-context; %s); its final_stop validation was killed "

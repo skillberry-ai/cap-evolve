@@ -286,6 +286,9 @@ def native_status(rd):
     tg = rd / "logs" / "token_guard_stop.json"
     if tg.exists():
         d = jload(tg) or {}
+        # classify by the marker's CONTENT, not its file name: the ACE s0 marker was rewritten to say the stop was NATIVE (runner's own meter under the cap, current-attempt basis)
+        if str(d.get("kind", "")).lower().startswith("native") or d.get("native_stop"):
+            return "native_finish", "logs/token_guard_stop.json: %s" % str(d.get("kind"))[:100]
         return "guard_stop", "logs/token_guard_stop.json (%s, %s > %s)" % (d.get("kind"), d.get("optimizer_noncache_read_tokens"), d.get("limit"))
     for f in (rd / "budget_stop.json",):          # tau CapEvolve runs (tau-runner): lead-decided native budget stop, champion = state.json best_id
         d0 = jload(f) if f.exists() else None
