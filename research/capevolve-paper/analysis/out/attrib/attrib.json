@@ -441,37 +441,37 @@
    "base_suite": "E",
    "arm": "E30-PT",
    "surface": "system_prompt",
-   "cands_total": 5,
-   "cands_touching": 5,
+   "cands_total": 6,
+   "cands_touching": 6,
    "promoted_touching": 2,
-   "promotion_rate": 0.4,
-   "mean_delta_val": 0.0962719298245614,
-   "mean_fixed": 2.6,
-   "mean_broke": 0.8,
-   "mean_lines": 35.8,
-   "spearman_lines_vs_delta": -0.4616902584383194,
+   "promotion_rate": 0.3333333333333333,
+   "mean_delta_val": 0.07145467836257309,
+   "mean_fixed": 2.3333333333333335,
+   "mean_broke": 1.0,
+   "mean_lines": 34.0,
+   "spearman_lines_vs_delta": -0.1765469659009499,
    "note": "surface touched by every candidate: no contrast available"
   },
   {
    "base_suite": "E",
    "arm": "E30-PT",
    "surface": "tool_code",
-   "cands_total": 5,
-   "cands_touching": 5,
+   "cands_total": 6,
+   "cands_touching": 6,
    "promoted_touching": 2,
-   "promotion_rate": 0.4,
-   "mean_delta_val": 0.0962719298245614,
-   "mean_fixed": 2.6,
-   "mean_broke": 0.8,
-   "mean_lines": 240.2,
-   "spearman_lines_vs_delta": -0.6999999999999998,
+   "promotion_rate": 0.3333333333333333,
+   "mean_delta_val": 0.07145467836257309,
+   "mean_fixed": 2.3333333333333335,
+   "mean_broke": 1.0,
+   "mean_lines": 236.5,
+   "spearman_lines_vs_delta": -0.42857142857142855,
    "note": "surface touched by every candidate: no contrast available"
   },
   {
    "base_suite": "E",
    "arm": "E30-T",
    "surface": "system_prompt",
-   "cands_total": 4,
+   "cands_total": 5,
    "cands_touching": 0,
    "promoted_touching": 0,
    "promotion_rate": null,
@@ -486,15 +486,15 @@
    "base_suite": "E",
    "arm": "E30-T",
    "surface": "tool_code",
-   "cands_total": 4,
-   "cands_touching": 4,
+   "cands_total": 5,
+   "cands_touching": 5,
    "promoted_touching": 3,
-   "promotion_rate": 0.75,
-   "mean_delta_val": 0.2065126050420168,
-   "mean_fixed": 4.5,
-   "mean_broke": 1.25,
-   "mean_lines": 164.5,
-   "spearman_lines_vs_delta": 0.6324555320336759,
+   "promotion_rate": 0.6,
+   "mean_delta_val": 0.14168067226890754,
+   "mean_fixed": 3.6,
+   "mean_broke": 1.4,
+   "mean_lines": 211.0,
+   "spearman_lines_vs_delta": -0.20519567041703082,
    "note": "surface touched by every candidate: no contrast available"
   },
   {
@@ -832,42 +832,42 @@
   {
    "base_suite": "E",
    "arm": "E30-PT",
-   "candidates": 5,
+   "candidates": 6,
    "promoted": 2,
-   "broke_per_candidate": 0.8,
-   "fixed_per_candidate": 2.6,
+   "broke_per_candidate": 1.0,
+   "fixed_per_candidate": 2.3333333333333335,
    "broke_per_promotion": 0.0,
    "fixed_per_promotion": 4.5,
    "net_per_promotion": 4.5,
    "delta_val_per_promotion": 0.2456140350877193,
    "fresh_confirm_delta_per_promotion": null,
-   "broke_per_rejected": 1.3333333333333333,
-   "fixed_per_rejected": 1.3333333333333333,
-   "ledger_broke_per_candidate": 0.8,
-   "ledger_fixed_per_candidate": 3.0,
-   "protect_violations_per_candidate": 0.4,
+   "broke_per_rejected": 1.5,
+   "fixed_per_rejected": 1.25,
+   "ledger_broke_per_candidate": 1.0,
+   "ledger_fixed_per_candidate": 2.6666666666666665,
+   "protect_violations_per_candidate": 0.6666666666666666,
    "protect_violations_per_promotion": 0.0,
-   "protect_size_mean": 7.8
+   "protect_size_mean": 8.333333333333334
   },
   {
    "base_suite": "E",
    "arm": "E30-T",
-   "candidates": 4,
+   "candidates": 5,
    "promoted": 3,
-   "broke_per_candidate": 1.25,
-   "fixed_per_candidate": 4.5,
+   "broke_per_candidate": 1.4,
+   "fixed_per_candidate": 3.6,
    "broke_per_promotion": 1.0,
    "fixed_per_promotion": 4.666666666666667,
    "net_per_promotion": 3.6666666666666665,
    "delta_val_per_promotion": 0.23613445378151257,
    "fresh_confirm_delta_per_promotion": null,
    "broke_per_rejected": 2.0,
-   "fixed_per_rejected": 4.0,
-   "ledger_broke_per_candidate": 1.5,
-   "ledger_fixed_per_candidate": 4.5,
-   "protect_violations_per_candidate": 1.25,
+   "fixed_per_rejected": 2.0,
+   "ledger_broke_per_candidate": 1.6,
+   "ledger_fixed_per_candidate": 4.0,
+   "protect_violations_per_candidate": 1.0,
    "protect_violations_per_promotion": 1.0,
-   "protect_size_mean": 6.25
+   "protect_size_mean": 6.0
   },
   {
    "base_suite": "E",
@@ -1330,7 +1330,7 @@
    "suite": "E",
    "arm": "E30-T",
    "searches": 3,
-   "candidates_generated": 4,
+   "candidates_generated": 5,
    "promotions": 3,
    "promotions_per_search": 1.0,
    "searches_with_promotion": 3,
@@ -1344,7 +1344,7 @@
    "suite": "E",
    "arm": "E30-PT",
    "searches": 3,
-   "candidates_generated": 5,
+   "candidates_generated": 6,
    "promotions": 2,
    "promotions_per_search": 0.6666666666666666,
    "searches_with_promotion": 2,
@@ -1394,7 +1394,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1422,7 +1422,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (budget)",
+   "status": "guard stop (token guard)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1436,7 +1436,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "stopped (unclassified)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1450,7 +1450,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "stopped (unclassified)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1632,7 +1632,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (rollout budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1716,7 +1716,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish",
+   "status": "guard stop (token guard)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1814,7 +1814,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1926,7 +1926,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": null,
-   "status": "stopped (unclassified)",
+   "status": "guard stop (token guard)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1940,7 +1940,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": null,
-   "status": "stopped (unclassified)",
+   "status": "guard stop (token guard)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1954,7 +1954,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": null,
-   "status": "stopped (unclassified)",
+   "status": "guard stop (token guard)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1968,7 +1968,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1982,7 +1982,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1996,7 +1996,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2038,7 +2038,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2136,7 +2136,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2150,7 +2150,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2164,7 +2164,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2178,7 +2178,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2192,7 +2192,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2206,7 +2206,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2220,7 +2220,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2234,7 +2234,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2248,7 +2248,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2304,7 +2304,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2318,7 +2318,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2332,7 +2332,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2388,7 +2388,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2402,7 +2402,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2416,7 +2416,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2430,7 +2430,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2444,7 +2444,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2458,7 +2458,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2472,7 +2472,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2486,7 +2486,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -2500,7 +2500,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {

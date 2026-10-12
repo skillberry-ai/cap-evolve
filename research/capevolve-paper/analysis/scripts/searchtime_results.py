@@ -408,6 +408,19 @@ def pid_alive(p):
         return False
 
 
+FE_LABEL = {"native_finish": "native finish", "guard_stop": "guard stop (token guard)", "budget_cap": "native finish (budget_cap)", "crashed": "crash"}
+
+
+def fe_native_status(sd):
+    """(status, evidence) from experiments/final/fe_common.native_status, the classifier behind bstar_<S>.json; None if unavailable."""
+    try:
+        sys.path.insert(0, str(PAPER / "experiments" / "final"))
+        import fe_common
+        return fe_common.native_status(sd)
+    except Exception:
+        return None
+
+
 def paused_info(r):
     """E12C best-of-k is paused/truncated by a lead decision: runs/E12C/bestofk/PAUSED.json."""
     if r["arm"] != "bestofk":
@@ -422,6 +435,9 @@ def status_of(r, mrow, cap, info):
     pi = paused_info(r)
     if pi:
         return "paused (truncated at k=%d, %d rollouts)" % (pi["proposals_completed"], pi["counted_incl_baseline"])
+    nat = fe_native_status(sd)   # single source of truth: experiments/final/fe_common.native_status (what bstar.py uses)
+    if nat and nat[0] in FE_LABEL:
+        return FE_LABEL[nat[0]]
     if (sd / "budget_stop.json").exists():   # recorded native budget stop (hard cap reached); may precede the last gateway call
         return "native finish (budget_cap)"
     if mrow and mrow.get("active") == "True":

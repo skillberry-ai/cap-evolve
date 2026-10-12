@@ -37,8 +37,8 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | D-E21 | E21-ruleP | 3 | 10 | 4 | 1.33 | 0 | 0 | 0 |
 | D-E26 | E26-NOHIST | 3 | 30 | 5 | 1.67 | 0 | 0 | 0 |
 | E | E30-P | 3 | 10 | 3 | 1.00 | 1 | 3 | 0 |
-| E | E30-T | 3 | 4 | 3 | 1.00 | 0 | 3 | 0 |
-| E | E30-PT | 3 | 5 | 2 | 0.67 | 1 | 3 | 0 |
+| E | E30-T | 3 | 5 | 3 | 1.00 | 0 | 3 | 0 |
+| E | E30-PT | 3 | 6 | 2 | 0.67 | 1 | 3 | 0 |
 | E-E31 | E31-ruleP | 3 | 3 | 0 | 0.00 | 3 | 3 | 0 |
 
 ## Regressions (CapEvolve arms)
@@ -60,8 +60,8 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | D | E21-ruleP | 10 | 4 | 11.8 | 5.5 | 6.2 | 6.7 | 4.5 | 0.099 |
 | D | E26-NOHIST | 30 | 5 | 10.4 | 5.0 | 5.4 | 8.0 | 4.8 | -- |
 | E | E30-P | 10 | 3 | 4.0 | 0.7 | 3.3 | 3.1 | 1.0 | -- |
-| E | E30-PT | 5 | 2 | 4.5 | 0.0 | 4.5 | 1.3 | 0.0 | -- |
-| E | E30-T | 4 | 3 | 4.7 | 1.0 | 3.7 | 2.0 | 1.0 | -- |
+| E | E30-PT | 6 | 2 | 4.5 | 0.0 | 4.5 | 1.5 | 0.0 | -- |
+| E | E30-T | 5 | 3 | 4.7 | 1.0 | 3.7 | 2.0 | 1.0 | -- |
 | E | E31-ruleP | 3 | 0 | -- | -- | -- | 0.3 | -- | -- |
 
 ## Seed failure types (groups)
@@ -205,9 +205,9 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | D | E26-NOHIST | system_prompt | 30/30 | 5 | -0.003 | 7.5 | 7.5 | -0.34 | surface touched by every candidate: no contrast available |
 | D | E26-NOHIST | tool_code | 30/30 | 5 | -0.003 | 7.5 | 7.5 | -0.35 | surface touched by every candidate: no contrast available |
 | E | E30-P | system_prompt | 10/10 | 3 | 0.055 | 3.5 | 2.4 | -0.40 | surface touched by every candidate: no contrast available |
-| E | E30-PT | system_prompt | 5/5 | 2 | 0.096 | 2.6 | 0.8 | -0.46 | surface touched by every candidate: no contrast available |
-| E | E30-PT | tool_code | 5/5 | 2 | 0.096 | 2.6 | 0.8 | -0.70 | surface touched by every candidate: no contrast available |
-| E | E30-T | tool_code | 4/4 | 3 | 0.207 | 4.5 | 1.2 | 0.63 | surface touched by every candidate: no contrast available |
+| E | E30-PT | system_prompt | 6/6 | 2 | 0.071 | 2.3 | 1.0 | -0.18 | surface touched by every candidate: no contrast available |
+| E | E30-PT | tool_code | 6/6 | 2 | 0.071 | 2.3 | 1.0 | -0.43 | surface touched by every candidate: no contrast available |
+| E | E30-T | tool_code | 5/5 | 3 | 0.142 | 3.6 | 1.4 | -0.21 | surface touched by every candidate: no contrast available |
 | E | E31-ruleP | system_prompt | 3/3 | 0 | 0.365 | 6.7 | 0.3 | -- | surface touched by every candidate: no contrast available |
 | E | E31-ruleP | tool_code | 3/3 | 0 | 0.365 | 6.7 | 0.3 | -- | surface touched by every candidate: no contrast available |
 

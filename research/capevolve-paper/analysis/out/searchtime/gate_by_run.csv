@@ -49,9 +49,9 @@ E,E30-P,1,4,4,0,2,0,0,2,0,0,0,,0,0,0,0,opt-20,0.6,0.3,"stock (paired dbar > 1 SE
 E,E30-P,2,3,3,0,1,0,0,2,0,0,0,,0,0,0,0,opt-20,0.65,0.45,"stock (paired dbar > 1 SE, single stage)"
 E,E30-PT,0,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.5789473684210527,0.4,"stock (paired dbar > 1 SE, single stage)"
 E,E30-PT,1,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.6666666666666666,0.3,"stock (paired dbar > 1 SE, single stage)"
-E,E30-PT,2,1,1,0,0,0,0,1,0,0,0,,0,0,0,0,opt-20,0.55,0.55,"stock (paired dbar > 1 SE, single stage)"
+E,E30-PT,2,2,2,0,0,0,0,2,0,0,0,,0,0,0,0,opt-20,0.55,0.55,"stock (paired dbar > 1 SE, single stage)"
 E,E30-T,0,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.5714285714285714,0.3,"stock (paired dbar > 1 SE, single stage)"
-E,E30-T,1,1,1,0,1,0,0,0,0,0,0,,0,0,0,0,opt-20,0.5882352941176471,0.25,"stock (paired dbar > 1 SE, single stage)"
+E,E30-T,1,2,2,0,1,0,0,1,0,0,0,,0,0,0,0,opt-20,0.5882352941176471,0.25,"stock (paired dbar > 1 SE, single stage)"
 E,E30-T,2,1,1,0,1,0,0,0,0,0,0,,0,0,0,0,opt-20,0.7333333333333333,0.4,"stock (paired dbar > 1 SE, single stage)"
 E-E31,E31-ruleP,0,1,1,0,0,0,0,0,1,1,1,coverage<0.95 (85%) x1,0,0,0,0,opt-20,0.25,0.25,Rule P (screen + fresh confirm)
 E-E31,E31-ruleP,1,1,1,0,0,0,0,0,1,1,1,coverage<0.95 (85%) x1,0,0,0,0,opt-20,0.25,0.25,Rule P (screen + fresh confirm)

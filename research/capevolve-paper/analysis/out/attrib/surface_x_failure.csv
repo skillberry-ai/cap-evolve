@@ -816,6 +816,7 @@ E,E30-PT,1,cand_0001,1,tool_code,system_prompt+tool_code,state_side_effect,unexp
 E,E30-PT,1,cand_0001,1,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,3
 E,E30-PT,2,cand_0001,0,tool_code,system_prompt+tool_code,communication,output / contract,1
 E,E30-PT,2,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
+E,E30-PT,2,cand_0002,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,1
 E,E30-T,0,cand_0001,0,tool_code,tool_code,missing_action,forgotten rule or step,1
 E,E30-T,0,cand_0001,0,tool_code,tool_code,wrong_argument,tool misuse,1
 E,E30-T,0,cand_0001,0,tool_code,tool_code,state_side_effect,unexpected side effect,2

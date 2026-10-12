@@ -64,7 +64,7 @@
    "optimizer_usd": 0.3373,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 21.2,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "last_gateway_call": "2026-10-12T11:52:35Z"
   },
   {
@@ -128,7 +128,7 @@
    "optimizer_usd": 10.3835,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 21.45,
-   "status": "native finish (budget)",
+   "status": "guard stop (token guard)",
    "last_gateway_call": "2026-10-12T12:08:39Z"
   },
   {
@@ -160,7 +160,7 @@
    "optimizer_usd": 2.9188,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 20.0,
-   "status": "stopped (unclassified)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T10:43:10Z"
   },
   {
@@ -192,7 +192,7 @@
    "optimizer_usd": 4.4682,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 20.58,
-   "status": "stopped (unclassified)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T11:17:17Z"
   },
   {
@@ -608,7 +608,7 @@
    "optimizer_usd": 1.212,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 26.5,
-   "status": "native finish (rollout budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T15:33:44Z"
   },
   {
@@ -800,7 +800,7 @@
    "optimizer_usd": 9.5622,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 15.06,
-   "status": "native finish",
+   "status": "guard stop (token guard)",
    "last_gateway_call": "2026-10-12T16:03:16Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
@@ -1027,7 +1027,7 @@
    "optimizer_usd": 3.5336,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 27.27,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T15:55:06Z"
   },
   {
@@ -1283,7 +1283,7 @@
    "optimizer_usd": 19.2633,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 20.21,
-   "status": "stopped (unclassified)",
+   "status": "guard stop (token guard)",
    "last_gateway_call": "2026-10-12T18:28:57Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
@@ -1316,7 +1316,7 @@
    "optimizer_usd": 14.643,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 17.53,
-   "status": "stopped (unclassified)",
+   "status": "guard stop (token guard)",
    "last_gateway_call": "2026-10-12T15:47:45Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
@@ -1349,7 +1349,7 @@
    "optimizer_usd": 18.4037,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 18.5,
-   "status": "stopped (unclassified)",
+   "status": "guard stop (token guard)",
    "last_gateway_call": "2026-10-12T16:46:00Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
@@ -1382,7 +1382,7 @@
    "optimizer_usd": 0.9993,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 5.12,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-11T17:45:47Z"
   },
   {
@@ -1414,7 +1414,7 @@
    "optimizer_usd": 1.3734,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 4.94,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-11T17:35:07Z"
   },
   {
@@ -1446,7 +1446,7 @@
    "optimizer_usd": 0.7744,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 4.41,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-11T17:03:01Z"
   },
   {
@@ -1653,7 +1653,7 @@
    "optimizer_usd": 3.1332,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 23.56,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:55:00Z"
   },
   {
@@ -1877,7 +1877,7 @@
    "optimizer_usd": 0.5998,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 5.67,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T00:01:12Z"
   },
   {
@@ -1909,7 +1909,7 @@
    "optimizer_usd": 0.7143,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 3.25,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-11T21:36:12Z"
   },
   {
@@ -1941,7 +1941,7 @@
    "optimizer_usd": 0.8116,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 3.05,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-11T21:24:23Z"
   },
   {
@@ -2084,7 +2084,7 @@
    "optimizer_usd": 1.8706,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 16.97,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "last_gateway_call": "2026-10-12T14:22:20Z"
   },
   {
@@ -2116,7 +2116,7 @@
    "optimizer_usd": 2.1633,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 15.3,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "last_gateway_call": "2026-10-12T12:42:13Z"
   },
   {
@@ -2148,7 +2148,7 @@
    "optimizer_usd": 1.9638,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 15.39,
-   "status": "native finish (budget)",
+   "status": "native finish (budget_cap)",
    "last_gateway_call": "2026-10-12T12:48:10Z"
   },
   {
@@ -2180,7 +2180,7 @@
    "optimizer_usd": 3.1357,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 20.5,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:33:11Z"
   },
   {
@@ -2212,7 +2212,7 @@
    "optimizer_usd": 3.9176,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 16.81,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T13:51:39Z"
   },
   {
@@ -2244,7 +2244,7 @@
    "optimizer_usd": 3.58,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 17.99,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T15:02:20Z"
   },
   {
@@ -2375,7 +2375,7 @@
    "optimizer_usd": 0.6797,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 2.25,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T11:37:44Z"
   },
   {
@@ -2407,7 +2407,7 @@
    "optimizer_usd": 0.6451,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 2.69,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T12:04:10Z"
   },
   {
@@ -2439,7 +2439,7 @@
    "optimizer_usd": 0.694,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 1.96,
-   "status": "native finish (iterations)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T11:20:29Z"
   },
   {
@@ -2567,7 +2567,7 @@
    "optimizer_usd": 2.5194,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 6.99,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T16:21:41Z"
   },
   {
@@ -2599,7 +2599,7 @@
    "optimizer_usd": 2.1783,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.44,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T16:48:48Z"
   },
   {
@@ -2631,7 +2631,7 @@
    "optimizer_usd": 2.271,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.01,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T16:22:56Z"
   },
   {
@@ -2663,7 +2663,7 @@
    "optimizer_usd": 3.6884,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.37,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T16:44:00Z"
   },
   {
@@ -2695,7 +2695,7 @@
    "optimizer_usd": 3.2652,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 8.93,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T18:17:55Z"
   },
   {
@@ -2727,7 +2727,7 @@
    "optimizer_usd": 3.2565,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 8.42,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:47:34Z"
   },
   {
@@ -2759,7 +2759,7 @@
    "optimizer_usd": 3.7596,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 9.41,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T18:47:00Z"
   },
   {
@@ -2791,7 +2791,7 @@
    "optimizer_usd": 2.8121,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 8.55,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:55:28Z"
   },
   {
@@ -2823,7 +2823,7 @@
    "optimizer_usd": 2.5453,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.31,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T16:40:55Z"
   },
   {
@@ -2855,7 +2855,7 @@
    "optimizer_usd": 2.6373,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.44,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:49:35Z"
   },
   {
@@ -2887,7 +2887,7 @@
    "optimizer_usd": 3.8061,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.56,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:56:45Z"
   },
   {
@@ -2919,7 +2919,7 @@
    "optimizer_usd": 3.2473,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 8.15,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T18:32:32Z"
   },
   {
@@ -2951,7 +2951,7 @@
    "optimizer_usd": 2.0723,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 7.83,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T17:11:49Z"
   },
   {
@@ -2983,7 +2983,7 @@
    "optimizer_usd": 1.3397,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 9.16,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T18:31:58Z"
   },
   {
@@ -3015,7 +3015,7 @@
    "optimizer_usd": 1.0133,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 9.49,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": "2026-10-12T18:51:27Z"
   },
   {
@@ -3049,7 +3049,7 @@
    "optimizer_tokens_state_total": 14484898,
    "optimizer_tokens_source": "state.json spent.optimizer_tokens kept as optimizer_tokens_state_total (includes cache reads; non-cache split not yet in the gateway metrics for E26); USD from state.json",
    "wall_clock_h": 4.6,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": null
   },
   {
@@ -3083,7 +3083,7 @@
    "optimizer_tokens_state_total": 13201528,
    "optimizer_tokens_source": "state.json spent.optimizer_tokens kept as optimizer_tokens_state_total (includes cache reads; non-cache split not yet in the gateway metrics for E26); USD from state.json",
    "wall_clock_h": 5.4,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": null
   },
   {
@@ -3117,7 +3117,7 @@
    "optimizer_tokens_state_total": 14446574,
    "optimizer_tokens_source": "state.json spent.optimizer_tokens kept as optimizer_tokens_state_total (includes cache reads; non-cache split not yet in the gateway metrics for E26); USD from state.json",
    "wall_clock_h": 5.7,
-   "status": "native finish (budget)",
+   "status": "native finish",
    "last_gateway_call": null
   },
   {
@@ -3295,8 +3295,8 @@
    "champion_gain_vs_seed": 0.0,
    "returned_equals_seed": true,
    "final_dir_present": false,
-   "candidates_generated": 1,
-   "candidates_screened": 1,
+   "candidates_generated": 2,
+   "candidates_screened": 2,
    "candidates_promoted": 0,
    "infra_lost_attempts": 0,
    "cap_truncated": 0,
@@ -3359,8 +3359,8 @@
    "champion_gain_vs_seed": 0.3382352941176471,
    "returned_equals_seed": false,
    "final_dir_present": false,
-   "candidates_generated": 1,
-   "candidates_screened": 1,
+   "candidates_generated": 2,
+   "candidates_screened": 2,
    "candidates_promoted": 1,
    "infra_lost_attempts": 0,
    "cap_truncated": 0,
@@ -4716,13 +4716,13 @@
    "suite": "E",
    "arm": "E30-PT",
    "seed": "2",
-   "candidates": 1,
-   "screens": 1,
+   "candidates": 2,
+   "screens": 2,
    "confirms": 0,
    "promoted": 0,
    "screen_reject": 0,
    "confirm_reject": 0,
-   "rejected_other": 1,
+   "rejected_other": 2,
    "gate_veto": 0,
    "indecisive": 0,
    "indecisive_events": 0,
@@ -4764,13 +4764,13 @@
    "suite": "E",
    "arm": "E30-T",
    "seed": "1",
-   "candidates": 1,
-   "screens": 1,
+   "candidates": 2,
+   "screens": 2,
    "confirms": 0,
    "promoted": 1,
    "screen_reject": 0,
    "confirm_reject": 0,
-   "rejected_other": 0,
+   "rejected_other": 1,
    "gate_veto": 0,
    "indecisive": 0,
    "indecisive_events": 0,
@@ -5726,16 +5726,16 @@
   {
    "suite": "E",
    "arm": "E30-PT",
-   "candidates": 5,
-   "cands_touching_system_prompt": 5,
-   "files_system_prompt": 5,
-   "lines_system_prompt": 179,
+   "candidates": 6,
+   "cands_touching_system_prompt": 6,
+   "files_system_prompt": 6,
+   "lines_system_prompt": 204,
    "cands_touching_task_template": 0,
    "files_task_template": 0,
    "lines_task_template": 0,
-   "cands_touching_tool_code": 5,
-   "files_tool_code": 5,
-   "lines_tool_code": 1201,
+   "cands_touching_tool_code": 6,
+   "files_tool_code": 6,
+   "lines_tool_code": 1419,
    "cands_touching_mcp": 0,
    "files_mcp": 0,
    "lines_mcp": 0,
@@ -5755,16 +5755,16 @@
   {
    "suite": "E",
    "arm": "E30-T",
-   "candidates": 4,
+   "candidates": 5,
    "cands_touching_system_prompt": 0,
    "files_system_prompt": 0,
    "lines_system_prompt": 0,
    "cands_touching_task_template": 0,
    "files_task_template": 0,
    "lines_task_template": 0,
-   "cands_touching_tool_code": 4,
-   "files_tool_code": 4,
-   "lines_tool_code": 658,
+   "cands_touching_tool_code": 5,
+   "files_tool_code": 5,
+   "lines_tool_code": 1055,
    "cands_touching_mcp": 0,
    "files_mcp": 0,
    "lines_mcp": 0,
