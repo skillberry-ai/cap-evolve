@@ -796,6 +796,8 @@ E,E30-P,0,cand_0002,0,system_prompt,system_prompt,state_side_effect,unexpected s
 E,E30-P,0,cand_0002,0,system_prompt,system_prompt,wrong_argument,tool misuse,2
 E,E30-P,0,cand_0003,0,system_prompt,system_prompt,wrong_argument,tool misuse,2
 E,E30-P,0,cand_0003,0,system_prompt,system_prompt,state_side_effect,unexpected side effect,3
+E,E30-P,0,cand_0004,0,system_prompt,system_prompt,wrong_argument,tool misuse,1
+E,E30-P,0,cand_0004,0,system_prompt,system_prompt,state_side_effect,unexpected side effect,2
 E,E30-P,1,cand_0001,1,system_prompt,system_prompt,state_side_effect,unexpected side effect,2
 E,E30-P,1,cand_0001,1,system_prompt,system_prompt,wrong_argument,tool misuse,3
 E,E30-P,1,cand_0001,1,system_prompt,system_prompt,missing_action,forgotten rule or step,1
@@ -830,6 +832,9 @@ E,E30-T,2,cand_0001,1,tool_code,tool_code,wrong_argument,tool misuse,1
 E,E31-ruleP,0,cand_0001,0,tool_code,system_prompt+tool_code,state_side_effect,unexpected side effect,3
 E,E31-ruleP,0,cand_0001,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,1
 E,E31-ruleP,0,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,2
+E,E31-ruleP,0,cand_0002,0,unavailable,unavailable,state_side_effect,unexpected side effect,4
+E,E31-ruleP,0,cand_0002,0,unavailable,unavailable,missing_action,forgotten rule or step,1
+E,E31-ruleP,0,cand_0002,0,unavailable,unavailable,wrong_argument,tool misuse,2
 E,E31-ruleP,1,cand_0001,0,tool_code,system_prompt+tool_code,state_side_effect,unexpected side effect,3
 E,E31-ruleP,1,cand_0001,0,tool_code,system_prompt+tool_code,wrong_argument,tool misuse,2
 E,E31-ruleP,1,cand_0001,0,tool_code,system_prompt+tool_code,missing_action,forgotten rule or step,1

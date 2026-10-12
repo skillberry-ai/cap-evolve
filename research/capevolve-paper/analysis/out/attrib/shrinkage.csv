@@ -23,7 +23,7 @@ A,A,wikiskill,2,val-40,0.19999999999999996,,,,False,running,pending final (selec
 A,A,trace2skill,0,val-40,0.19999999999999996,,,,False,native finish,pending final (selection gain is search-time)
 A,A,trace2skill,1,val-40,0.275,,,,False,native finish,pending final (selection gain is search-time)
 A,A,trace2skill,2,val-40,0.22499999999999998,,,,False,native finish,pending final (selection gain is search-time)
-A,A,ace,0,val-40,0.0,,,,True,guard stop (token guard),pending final (selection gain is search-time)
+A,A,ace,0,val-40,0.0,,,,True,native finish,pending final (selection gain is search-time)
 A,A,ace,1,val-40,0.0,,,,True,running,pending final (selection gain is search-time)
 A,A,ace,2,,,,,,,running,pending final (selection gain is search-time)
 A,A,mipro,0,val-40,0.20000000000000007,,,,False,running,pending final (selection gain is search-time)

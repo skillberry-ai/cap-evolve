@@ -426,15 +426,15 @@
    "base_suite": "E",
    "arm": "E30-P",
    "surface": "system_prompt",
-   "cands_total": 10,
-   "cands_touching": 10,
+   "cands_total": 11,
+   "cands_touching": 11,
    "promoted_touching": 3,
-   "promotion_rate": 0.3,
-   "mean_delta_val": 0.05499999999999999,
-   "mean_fixed": 3.5,
-   "mean_broke": 2.4,
-   "mean_lines": 40.5,
-   "spearman_lines_vs_delta": -0.39634883165741774,
+   "promotion_rate": 0.2727272727272727,
+   "mean_delta_val": 0.05454545454545454,
+   "mean_fixed": 3.4545454545454546,
+   "mean_broke": 2.3636363636363638,
+   "mean_lines": 40.27272727272727,
+   "spearman_lines_vs_delta": -0.40554717899261883,
    "note": "surface touched by every candidate: no contrast available"
   },
   {
@@ -501,7 +501,7 @@
    "base_suite": "E",
    "arm": "E31-ruleP",
    "surface": "system_prompt",
-   "cands_total": 3,
+   "cands_total": 4,
    "cands_touching": 3,
    "promoted_touching": 0,
    "promotion_rate": 0.0,
@@ -509,14 +509,14 @@
    "mean_fixed": 6.666666666666667,
    "mean_broke": 0.3333333333333333,
    "mean_lines": 29.666666666666668,
-   "spearman_lines_vs_delta": null,
-   "note": "surface touched by every candidate: no contrast available"
+   "spearman_lines_vs_delta": 0.6324555320336759,
+   "note": ""
   },
   {
    "base_suite": "E",
    "arm": "E31-ruleP",
    "surface": "tool_code",
-   "cands_total": 3,
+   "cands_total": 4,
    "cands_touching": 3,
    "promoted_touching": 0,
    "promotion_rate": 0.0,
@@ -524,8 +524,23 @@
    "mean_fixed": 6.666666666666667,
    "mean_broke": 0.3333333333333333,
    "mean_lines": 202.33333333333334,
+   "spearman_lines_vs_delta": 0.9486832980505138,
+   "note": ""
+  },
+  {
+   "base_suite": "E",
+   "arm": "E31-ruleP",
+   "surface": "(none: process/other only)",
+   "cands_total": 4,
+   "cands_touching": 1,
+   "promoted_touching": 0,
+   "promotion_rate": 0.0,
+   "mean_delta_val": 0.35,
+   "mean_fixed": 7.0,
+   "mean_broke": 0.0,
+   "mean_lines": null,
    "spearman_lines_vs_delta": null,
-   "note": "surface touched by every candidate: no contrast available"
+   "note": ""
   }
  ],
  "regression": [
@@ -812,22 +827,22 @@
   {
    "base_suite": "E",
    "arm": "E30-P",
-   "candidates": 10,
+   "candidates": 11,
    "promoted": 3,
-   "broke_per_candidate": 2.4,
-   "fixed_per_candidate": 3.5,
+   "broke_per_candidate": 2.3636363636363638,
+   "fixed_per_candidate": 3.4545454545454546,
    "broke_per_promotion": 0.6666666666666666,
    "fixed_per_promotion": 4.0,
    "net_per_promotion": 3.3333333333333335,
    "delta_val_per_promotion": 0.16666666666666666,
    "fresh_confirm_delta_per_promotion": null,
-   "broke_per_rejected": 3.142857142857143,
-   "fixed_per_rejected": 3.2857142857142856,
-   "ledger_broke_per_candidate": 2.4,
-   "ledger_fixed_per_candidate": 3.5,
+   "broke_per_rejected": 3.0,
+   "fixed_per_rejected": 3.25,
+   "ledger_broke_per_candidate": 2.3636363636363638,
+   "ledger_fixed_per_candidate": 3.4545454545454546,
    "protect_violations_per_candidate": 2.0,
    "protect_violations_per_promotion": 1.0,
-   "protect_size_mean": 7.5
+   "protect_size_mean": 7.545454545454546
   },
   {
    "base_suite": "E",
@@ -872,10 +887,10 @@
   {
    "base_suite": "E",
    "arm": "E31-ruleP",
-   "candidates": 3,
+   "candidates": 4,
    "promoted": 0,
-   "broke_per_candidate": 0.3333333333333333,
-   "fixed_per_candidate": 6.666666666666667,
+   "broke_per_candidate": 0.25,
+   "fixed_per_candidate": 6.75,
    "broke_per_promotion": null,
    "fixed_per_promotion": null,
    "net_per_promotion": null,
@@ -885,9 +900,9 @@
    "fixed_per_rejected": 6.666666666666667,
    "ledger_broke_per_candidate": 0.6666666666666666,
    "ledger_fixed_per_candidate": 6.666666666666667,
-   "protect_violations_per_candidate": 0.3333333333333333,
+   "protect_violations_per_candidate": 0.25,
    "protect_violations_per_promotion": null,
-   "protect_size_mean": 5.666666666666667
+   "protect_size_mean": 5.5
   }
  ],
  "promotions": [
@@ -1134,7 +1149,7 @@
    "suite": "C",
    "arm": "gepa",
    "searches": 3,
-   "candidates_generated": 63,
+   "candidates_generated": 64,
    "promotions": 23,
    "promotions_per_search": 7.666666666666667,
    "searches_with_promotion": 3,
@@ -1316,7 +1331,7 @@
    "suite": "E",
    "arm": "E30-P",
    "searches": 3,
-   "candidates_generated": 10,
+   "candidates_generated": 11,
    "promotions": 3,
    "promotions_per_search": 1.0,
    "searches_with_promotion": 2,
@@ -1716,7 +1731,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": true,
-   "status": "guard stop (token guard)",
+   "status": "native finish",
    "stage": "pending final (selection gain is search-time)"
   },
   {

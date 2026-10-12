@@ -32,7 +32,7 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | A | trace2skill | 0 | val-40 | 200 | 0.500 | 0.700 (error) | 0.200 | 2/2/1 | False | 2202310 | 0 | 6.8207 | 15.6 | native finish |
 | A | trace2skill | 1 | val-40 | 200 | 0.525 | 0.800 (combined) | 0.275 | 2/2/1 | False | 2225291 | 0 | 6.958 | 14.2 | native finish |
 | A | trace2skill | 2 | val-40 | 200 | 0.525 | 0.750 (combined) | 0.225 | 2/2/1 | False | 2085988 | 0 | 6.4927 | 16.1 | native finish |
-| A | ace | 0 | val-40 | 390 | 0.800 | 0.800 (epoch1_end) | 0.000 | 1/1/0 | True | 3902518 | 0 | 9.5622 | 15.1 | guard stop (token guard) |
+| A | ace | 0 | val-40 | 390 | 0.800 | 0.800 (epoch1_end) | 0.000 | 1/1/0 | True | 3902518 | 0 | 9.5622 | 15.1 | native finish |
 | A | ace | 1 | val-40 | 261 | 0.875 | 0.875 (epoch1_end) | 0.000 | 0/0/0 | True | 2268702 | 0 | 5.7565 | 18.4 | running |
 | A | ace | 2 | -- | 158 | -- | -- (--) | -- | 0/0/0 | None | 1459386 | 0 | 3.8583 | 18.4 | running |
 | A | mipro | 0 | val-40 | 247 | 0.575 | 0.775 (33aeb0cca75d) | 0.200 | 11/1/0 | False | 178651 | 0 | 0.5792 | 30.3 | running |
@@ -62,7 +62,7 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | C | ao | 0 | opt-20 | 110 | 0.550 | 0.550 (seed) | 0.000 | 0/0/0 | True | 554012 | 5514194 | 2.7512 | 11.3 | native finish |
 | C | ao | 1 | opt-20 | 110 | 0.550 | 0.550 (seed) | 0.000 | 0/0/0 | True | 564650 | 4051700 | 2.4403 | 7.7 | native finish |
 | C | ao | 2 | opt-20 | 71 | 0.450 | 0.450 (seed) | 0.000 | 1/0/0 | True | 523420 | 2466110 | 1.975 | 9.8 | native finish |
-| C | gepa | 0 | sel-10 | 254 | 0.800 | 1.000 (cand_0005) | 0.200 | 21/10/10 | False | 543724 | 0 | 2.257 | 25.0 | running |
+| C | gepa | 0 | sel-10 | 254 | 0.800 | 1.000 (cand_0005) | 0.200 | 22/10/10 | False | 543724 | 0 | 2.257 | 25.0 | running |
 | C | gepa | 1 | sel-10 | 194 | 0.800 | 1.000 (cand_0013) | 0.200 | 18/7/7 | False | 474739 | 0 | 1.8759 | 25.0 | running |
 | C | gepa | 2 | sel-10 | 239 | 0.900 | 1.000 (cand_0001) | 0.100 | 24/6/6 | False | 622107 | 0 | 2.278 | 25.0 | running |
 | C | oneshot | 0 | opt-20 | 60 | 0.500 | 0.737 (cand_0001) | 0.237 | 1/1/1 | False | 93027 | 1279390 | 0.5998 | 5.7 | native finish |
@@ -104,7 +104,7 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | D-E26 | E26-NOHIST | 0 | opt-49 | 589 | 0.592 | 0.796 (cand_0009) | 0.204 | 10/10/2 | False | None | None | 4.912208399999999 | 4.6 | native finish |
 | D-E26 | E26-NOHIST | 1 | opt-49 | 589 | 0.633 | 0.771 (cand_0006) | 0.138 | 10/10/1 | False | None | None | 4.5320538 | 5.4 | native finish |
 | D-E26 | E26-NOHIST | 2 | opt-49 | 589 | 0.531 | 0.761 (cand_0007) | 0.230 | 10/10/2 | False | None | None | 4.6286165 | 5.7 | native finish |
-| E | E30-P | 0 | opt-20 | 80 | 0.400 | 0.400 (seed) | 0.000 | 3/3/0 | True | 269102 | 2275602 | 1.3348 | 0.6 | running |
+| E | E30-P | 0 | opt-20 | 80 | 0.400 | 0.400 (seed) | 0.000 | 4/4/0 | True | 269102 | 2275602 | 1.3348 | 0.6 | running |
 | E | E30-P | 1 | opt-20 | 80 | 0.300 | 0.600 (cand_0004) | 0.300 | 4/4/2 | False | 243084 | 2170027 | 1.2339 | 0.6 | running |
 | E | E30-P | 2 | opt-20 | 60 | 0.450 | 0.650 (cand_0002) | 0.200 | 3/3/1 | False | 264460 | 2364171 | 1.3571 | 0.6 | running |
 | E | E30-PT | 0 | opt-20 | 60 | 0.400 | 0.579 (cand_0001) | 0.179 | 2/2/1 | False | 277372 | 4141612 | 1.8134 | 0.6 | running |
@@ -113,7 +113,7 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | E | E30-T | 0 | opt-20 | 40 | 0.300 | 0.571 (cand_0002) | 0.271 | 2/2/1 | False | 145087 | 2002215 | 0.9225 | 0.6 | running |
 | E | E30-T | 1 | opt-20 | 40 | 0.250 | 0.588 (cand_0001) | 0.338 | 2/2/1 | False | 209979 | 3302815 | 1.4483 | 0.5 | running |
 | E | E30-T | 2 | opt-20 | 40 | 0.400 | 0.733 (cand_0001) | 0.333 | 1/1/1 | False | 194727 | 3026100 | 1.3198 | 0.5 | running |
-| E-E31 | E31-ruleP | 0 | opt-20 | 40 | 0.250 | 0.250 (seed) | 0.000 | 1/1/0 | True | None | None | 0.7952703999999999 | 0.4 | running |
+| E-E31 | E31-ruleP | 0 | opt-20 | 60 | 0.250 | 0.250 (seed) | 0.000 | 1/1/0 | True | None | None | 0.7952703999999999 | 0.5 | running |
 | E-E31 | E31-ruleP | 1 | opt-20 | 40 | 0.250 | 0.250 (seed) | 0.000 | 1/1/0 | True | None | None | 0.9282890000000001 | 0.3 | running |
 | E-E31 | E31-ruleP | 2 | opt-20 | 40 | 0.350 | 0.350 (seed) | 0.000 | 1/1/0 | True | None | None | 0.9935958000000003 | 0.3 | running |
 
@@ -168,7 +168,7 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | D-E26 | E26-NOHIST | 0 | 10 | 10 | 0 | 2 | 8 | 0 | 0  | 0 | 0 | 0 |
 | D-E26 | E26-NOHIST | 1 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
 | D-E26 | E26-NOHIST | 2 | 10 | 10 | 0 | 2 | 8 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-P | 0 | 3 | 3 | 0 | 0 | 3 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-P | 0 | 4 | 4 | 0 | 0 | 4 | 0 | 0  | 0 | 0 | 0 |
 | E | E30-P | 1 | 4 | 4 | 0 | 2 | 2 | 0 | 0  | 0 | 0 | 0 |
 | E | E30-P | 2 | 3 | 3 | 0 | 1 | 2 | 0 | 0  | 0 | 0 | 0 |
 | E | E30-PT | 0 | 2 | 2 | 0 | 1 | 1 | 0 | 0  | 0 | 0 | 0 |
@@ -200,7 +200,7 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | B | hc | 14 | 9 / 110 | 0 / 0 | 14 / 607 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | B | oneshot | 3 | 3 / 53 | 0 / 0 | 3 / 217 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C | ao | 1 | 1 / 13 | 0 / 0 | 1 / 151 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| C | gepa | 63 | 63 / 5968 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| C | gepa | 64 | 64 / 6121 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C | hc | 24 | 24 / 286 | 0 / 0 | 24 / 2842 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C | oneshot | 3 | 3 / 40 | 0 / 0 | 3 / 489 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C-E12 | bestofk | 19 | 19 / 540 | 0 / 0 | 19 / 4687 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
@@ -213,7 +213,7 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | D-E21 | E21-1S | 30 | 30 / 1163 | 0 / 0 | 30 / 2992 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | D-E21 | E21-ruleP | 10 | 10 / 286 | 0 / 0 | 10 / 866 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | D-E26 | E26-NOHIST | 30 | 30 / 1096 | 0 / 0 | 30 / 2450 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| E | E30-P | 10 | 10 / 405 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E | E30-P | 11 | 11 / 443 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | E | E30-PT | 6 | 6 / 204 | 0 / 0 | 6 / 1419 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | E | E30-T | 5 | 0 / 0 | 0 / 0 | 5 / 1055 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | E-E31 | E31-ruleP | 3 | 3 / 89 | 0 / 0 | 3 / 607 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
