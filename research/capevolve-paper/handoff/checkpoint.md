@@ -66,3 +66,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Also undo after the campaign:
   - ~/.config/containers/containers.conf (default_network=sb_internal) and the sb_internal podman network;
   - the gw_bridge process (baselines/gwbridge), which Meta-Harness, HarnessLens and the B/C shims depend on. Check it in periodic checks while the campaign runs.
+
+## Update 00:50 UTC 10-12 (periodic check)
+- WikiSkill crashed on all 3 seeds at about 22:42 (session.jsonl missing); bl-wikiskill is fixing it.
+- Trace2Skill is paused at about 200 (bl-skills checking). ACE batch restart: status asked of bl-context.
+- Final-eval machinery: dry runs OK on RITS and Azure; the HarnessLens worker is validated with v0; the HL 8-task validation run is in progress.
+- Token pace about 2.2M/h, projecting to about 98M at the cutoff. Apply the 65M stop order when reached, or ask the user to raise the cap.
