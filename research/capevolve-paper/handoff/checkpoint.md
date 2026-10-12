@@ -77,3 +77,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - No stalls. Infra retry hot-swapped into the CapEvolve daemons (03:02); GEPA and EvoSkill resume-restarted; ACE relaunched. MIPROv2 and MH stay on pre-rule handling.
 - Root cause of most sandbox 500s: the jupyter.py drain bug. Fix behind SB_DRAIN_ERROR, final evaluation only. KERNEL_TIMEOUT_S: search 600, final 10800.
 - Token budget: projection about 110M, over the cap. Asked the user whether to raise the cap or apply the stop order at 65M.
+
+## Update 08:25 UTC 10-12 (periodic check)
+- Stalls being checked: E10 hc s2 (counter at 200 for 5.3 h), E10B HarnessLens s1 (98 for 5.6 h).
+- Meta-Harness s0 and s1 finished at 600 (val 0.975 / 0.875; val is optimistic because the proposer saw val aggregates).
+- Token cap 150M; projection about 139M; stop rule at 125M/130M (decisions.md).
