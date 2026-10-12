@@ -5,17 +5,17 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | uniform unverifiable | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | A | ace | 0 | main | 163 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 | 0 | 16 | 0 |
-| A | ace | 1 | main | 79 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| A | ace | 1 | main | 80 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
 | A | ace | 2 | main | 80 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 6 | 0 |
 | A | ao | 0 | main | 160 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 1 | main | 160 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 2 | main | 160 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | evoskill | 0 | main | 336 | 14 | 14 | 0 | 14 | 0 | 0 | 0 | 0 | 0 | 14 | 0 |
-| A | evoskill | 1 | main | 354 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 9 | 0 |
-| A | evoskill | 2 | main | 357 | 17 | 17 | 0 | 17 | 0 | 0 | 0 | 0 | 0 | 17 | 0 |
+| A | evoskill | 1 | main | 356 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 9 | 0 |
+| A | evoskill | 2 | main | 360 | 17 | 17 | 0 | 17 | 0 | 0 | 0 | 0 | 0 | 17 | 0 |
 | A | gepa | 0 | main | 243 | 8 | 8 | 0 | 8 | 0 | 0 | 0 | 0 | 0 | 8 | 0 |
 | A | gepa | 1 | main | 191 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 7 | 0 |
-| A | gepa | 2 | main | 174 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 3 | 0 |
+| A | gepa | 2 | main | 175 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 3 | 0 |
 | A | hc | 0 | main | 240 | 12 | 12 | 0 | 12 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | hc | 1 | main | 160 | 10 | 10 | 0 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | hc | 2 | main | 160 | 8 | 8 | 0 | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -34,7 +34,7 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | A | trace2skill | 2 | main | 202 | 21 | 21 | 0 | 19 | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
 | A | wikiskill | 0 | main | 196 | 26 | 23 | 3 | 26 | 0 | 0 | 3 | 0 | 0 | 26 | 0 |
 | A | wikiskill | 1 | main | 194 | 20 | 18 | 2 | 20 | 0 | 0 | 2 | 0 | 0 | 20 | 0 |
-| A | wikiskill | 2 | main | 156 | 5 | 2 | 3 | 5 | 0 | 0 | 3 | 0 | 0 | 5 | 0 |
+| A | wikiskill | 2 | main | 157 | 5 | 2 | 3 | 5 | 0 | 0 | 3 | 0 | 0 | 5 | 0 |
 | A-E12 | hcstock | 0 | main | 320 | 5 | 5 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A-E12 | hcstock | 1 | main | 440 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A-E12 | hcstock | 2 | main | 360 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |

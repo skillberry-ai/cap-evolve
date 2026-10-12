@@ -201,5 +201,11 @@ completion tokens.
 rits/ nor azoai/; `nonrits_ledger_tokens` is now this bucket only), **rits** (no budget), **azure** (azoai/*, uncapped by user decision, USD =
 list price). At 2026-10-12 09:25 UTC: capped 70.4M ledger tokens, $215.83 Anthropic proxy list; azure 14,189 calls, 55.9M ledger tokens, $26.56
 list; rits 1.42B tokens, unpriced. `usd_priced_proxy` still mixes capped and azure; use `usd_priced_proxy_excl_azure` and `azure_usd_list`.
-Open: the gateway /health `capped_tokens` (70.39M) does not match the log's capped bucket (64.24M excluding azure, 86.94M including it) at the
-same prefix, so the gateway's treatment of azoai in its own cap counter is unconfirmed; the reconciliation block in campaign_totals.json shows both.
+Reconciliation with the gateway's exact formula (`campaign_gateway.py` `_usage_tokens`: `usage.total_tokens` if the key is present, else
+input+output+cache_creation; `_bucket` by `upstream` prefix `rits:` / `azoai:` / else capped), computed over the FULL log
+(`campaign_totals.json: reconciliation.gateway_formula_full_log`, `health_minus_gateway_formula_full_log`), 2026-10-12 09:27 UTC:
+:4111 `capped_tokens` 70,441,219 vs formula 70,447,082 (difference -5,863, in-flight calls); `rits_tokens` 1,424,706,177 vs 1,425,601,353
+(-895,176); the :4111 `azure_tokens` counter (2.09M) is far below the log's azoai total (59.6M) because Azure traffic is served by :4112, whose
+counter is separate. **The capped bucket matches the gateway to within in-flight calls.** My earlier 64.24M "capped" figure was not a different token
+definition: it summed the first `health.calls` lines (a prefix of the log), which cannot match a counter that excludes the :4112 Azure lines
+and keeps counting while the log is read. The prefix comparison is kept in the file for history; the full-log comparison is the valid one.

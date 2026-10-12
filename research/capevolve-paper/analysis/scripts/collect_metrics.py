@@ -1205,6 +1205,29 @@ def build_totals(role_rows, lines, h1, h2):
         rec["health_total_minus_log"] = h1.get("total_tokens", 0) - led
         rec["health_rits_minus_log"] = h1.get("rits_tokens", 0) - rits
         rec["health_capped_minus_log"] = h1.get("capped_tokens", 0) - (led - rits - azl)
+        # exact gateway formula (experiments/tooling/campaign_gateway.py _usage_tokens/_bucket): total_tokens if the key is present, else
+        # input+output+cache_creation; bucket by the `upstream` prefix (rits: / azoai: / else capped)
+        def _gw_tok(d):
+            u = d.get("usage")
+            if not u:
+                return 0
+            if "total_tokens" in u:
+                return int(u.get("total_tokens") or 0)
+            return int(u.get("input_tokens", 0) or 0) + int(u.get("output_tokens", 0) or 0) + int(u.get("cache_creation_input_tokens", 0) or 0)
+
+        def _gw_bucket(d):
+            up = str(d.get("upstream", ""))
+            return "rits_tokens" if up.startswith("rits:") else ("azure_tokens" if up.startswith("azoai:") else "capped_tokens")
+        gw = Counter()
+        for d in sub:
+            gw[_gw_bucket(d)] += _gw_tok(d)
+        gwall = Counter()
+        for d in lines:
+            gwall[_gw_bucket(d)] += _gw_tok(d)
+        rec["gateway_formula_prefix"] = dict(gw)
+        rec["gateway_formula_full_log"] = dict(gwall)
+        rec["health_minus_gateway_formula_prefix"] = {b: h1.get(b, 0) - gw[b] for b in ("capped_tokens", "rits_tokens", "azure_tokens")}
+        rec["health_minus_gateway_formula_full_log"] = {b: h1.get(b, 0) - gwall[b] for b in ("capped_tokens", "rits_tokens", "azure_tokens")}
         rec["ledger_formula"] = "usage.total_tokens if truthy else (prompt+completion | input+output+cache_creation); rits = model startswith rits/"
         rec["naive_sum_in_out_cachewrite_minus_ledger_by_model_api_stream"] = {str(k): v for k, v in diff_calls.items()}
         rec["note"] = ("Gateway ledger counts usage.total_tokens when the upstream supplies it; for non-streamed Anthropic calls total_tokens = input+output "
