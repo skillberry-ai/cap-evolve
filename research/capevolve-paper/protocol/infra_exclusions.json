@@ -51,6 +51,26 @@
       "reason": "straddled the 600-rollout hard cap (evaluation ended at rollout 600, rejected for coverage by the cap truncation): a cap truncation, not a measured rejection; excluded under the straddler rule",
       "source": "capevolve-runner via team-lead 2026-10-12; runs/E10/hill-climb/s1/.capevolve/run_*/candidates.jsonl",
       "kind": "cap_truncated"
+    },
+    {
+      "suite": "B",
+      "arm": "hc",
+      "seed": "0",
+      "candidate": "cand_0003",
+      "before_utc": "9999-01-01T00:00:00Z",
+      "kind": "cap_truncated",
+      "reason": "confirmation straddled the 550-rollout cap (crossing at rollout 550 inside cand_0003__conf; cand_0003__confbase not run); no verdict; native budget stop",
+      "source": "campaign-scratch/runs/E10B/hc/s0/budget_stop.json; decisions.md (lead decision via tau-runner)"
+    },
+    {
+      "suite": "B",
+      "arm": "hc",
+      "seed": "2",
+      "candidate": "cand_0003",
+      "before_utc": "9999-01-01T00:00:00Z",
+      "kind": "cap_truncated",
+      "reason": "confirmation straddled the 550-rollout cap (crossing at rollout 550 inside cand_0003__conf; cand_0003__confbase not run); no verdict; native budget stop",
+      "source": "campaign-scratch/runs/E10B/hc/s2/budget_stop.json; decisions.md (lead decision via tau-runner)"
     }
   ]
 }

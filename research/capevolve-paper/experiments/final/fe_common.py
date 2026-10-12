@@ -287,6 +287,10 @@ def native_status(rd):
     if tg.exists():
         d = jload(tg) or {}
         return "guard_stop", "logs/token_guard_stop.json (%s, %s > %s)" % (d.get("kind"), d.get("optimizer_noncache_read_tokens"), d.get("limit"))
+    for f in (rd / "budget_stop.json",):          # tau CapEvolve runs (tau-runner): lead-decided native budget stop, champion = state.json best_id
+        d0 = jload(f) if f.exists() else None
+        if d0 and d0.get("kind") == "budget_stop" and d0.get("native"):
+            return "budget_cap", "budget_stop.json (native budget stop, %s counted of max %s)" % (d0.get("counted_rollouts"), d0.get("max_metric_calls"))
     bs = rd / "logs" / "budget_stop.json"      # HarnessLens (bl-harness, derived from its ledger + final.json by hl_stop_marker.py)
     if bs.exists():
         d = jload(bs) or {}
