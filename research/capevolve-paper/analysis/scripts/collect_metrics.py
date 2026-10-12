@@ -37,6 +37,14 @@ HEALTH_URL = os.environ.get("GATEWAY_HEALTH", "http://127.0.0.1:4111/health")
 OPT_CAP = 4_000_000
 SUITE_OF = {"E10": "A", "E10B": "B", "E10C": "C", "E12C": "C-E12", "E12A": "A-E12", "E20": "D", "E21": "D-E21", "E22": "D-null"}  # E12C = stock-gate ablation on Suite C (decisions 2026-10-11 21:55)
 SUITE_ROOT = {"A": RUNS / "E10", "B": RUNS / "E10B", "C": RUNS / "E10C", "C-E12": RUNS / "E12C", "A-E12": RUNS / "E12A", "D": RUNS / "E20", "D-E21": RUNS / "E21", "D-null": RUNS / "E22"}
+# Later experiments (tag head EXP-<cell>-s<k>, run dir runs/<EXP>/<CELL>/s<k>); same shapes as experiments/final/tokens_at_bstar.py.
+EXTRA_CELLS = {("E12A", "hcstock"): ("A", "hcstock"), ("E12B", "hcstock"): ("B", "hcstock"), ("E12C", "hcstock"): ("C", "hcstock"),
+               ("E10E", "harnesslens"): ("E", "harnesslens"), ("E32", "hl"): ("E", "harnesslens"), ("E32", "harnesslens"): ("E", "harnesslens")}
+for _e, _s, _cells in (("E20", "D", ["pt", "p", "t", "ctl", "gepa"]), ("E21", "D", ["rulep", "1s", "onestage"]), ("E26", "D", ["nohist"]),
+                       ("E30", "E", ["pt", "p", "t", "ctl", "gepa"]), ("E31", "E", ["rulep", "1s", "onestage"]), ("E36", "E", ["nohist"]),
+                       ("E32", "E", ["ace", "mipro", "gepafull", "ao"])):
+    for _c in _cells:
+        EXTRA_CELLS[(_e, _c)] = (_s, "1s" if _c == "onestage" else _c)
 ARM_ALIAS = {"hill-climb": "hc", "agent-optimize": "ao", "ctlseed": "ctl-seed"}
 OPT_ROLES = {"optimizer", "reflection", "proposer", "reflector", "curator", "optimizer-aux", "debugger"}
 TARGET_ROLES = {"target"}
@@ -213,6 +221,28 @@ def discover_runs():
                 if m:
                     others.append({"suite": suite, "arm": canon_arm(n), "seed": int(m.group(1)), "dir": str(sd),
                                    "kind": "stopped" if "stopped" in m.group(2) else "restart", "via": m.group(2)})
+    for (exp, cell), (suite, arm) in sorted(EXTRA_CELLS.items()):
+        eroot = RUNS / exp
+        if not eroot.is_dir():
+            continue
+        for cd in sorted(eroot.iterdir()):
+            if not (cd.is_dir() and cd.name.lower() == cell):
+                continue
+            for sd in sorted(cd.iterdir()):
+                if not sd.is_dir():
+                    continue
+                m = re.fullmatch(r"s(\d+)", sd.name)
+                if m and (suite, arm, int(m.group(1))) not in main:
+                    main[(suite, arm, int(m.group(1)))] = {
+                        "suite": suite, "arm": arm, "arm_dir": "%s/%s" % (exp, cd.name), "seed": int(m.group(1)), "dir": str(sd),
+                        "stopped": jload(sd / "STOPPED.json") or jload(sd / "PAUSED.json"),
+                        "superseded_note": (sd / "SUPERSEDED.txt").read_text()[:400] if (sd / "SUPERSEDED.txt").exists() else None,
+                        "restart_dirs": []}
+                    continue
+                m = re.fullmatch(r"s(\d+)_(.+)", sd.name)
+                if m:
+                    others.append({"suite": suite, "arm": arm, "seed": int(m.group(1)), "dir": str(sd),
+                                   "kind": "stopped" if re.search("stopped|paused", m.group(2)) else "restart", "via": m.group(2)})
     arms_by_suite = defaultdict(set)
     for k in main:
         arms_by_suite[k[0]].add(k[1])
@@ -274,7 +304,13 @@ def classify_tag(tag):
             return (SUITE_OF.get(exp), run_id, None, "smoke", role)
         return (None, run_id, None, "pre", role)
     exp, arm, seed = m.group(1), m.group(2), int(m.group(3))
-    suite = SUITE_OF[exp]
+    if exp in SUITE_OF:
+        suite = SUITE_OF[exp]
+    elif (exp, arm.lower()) in EXTRA_CELLS:
+        suite, arm = EXTRA_CELLS[(exp, arm.lower())]
+        return (suite, arm, seed, "smoke" if seed >= 90 else "run", role)
+    else:
+        return (None, run_id, None, "smoke", role)
     if seed >= 90 or any(w in arm for w in SMOKE_WORDS):
         return (suite, canon_arm(arm), seed, "smoke", role)
     if arm.startswith("pilot-"):
