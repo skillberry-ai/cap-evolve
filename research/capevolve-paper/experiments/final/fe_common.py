@@ -261,6 +261,12 @@ def _live(rd):
                     return True
             except Exception:
                 pass
+            try:       # controllers that carry no run dir on their command line (HarnessLens): the process cwd must lie UNDER this run dir (not just share a run id with another arm)
+                cwd = os.readlink("/proc/%s/cwd" % d)
+                if cwd == str(rd) or cwd.startswith(str(rd) + "/"):
+                    return True
+            except Exception:
+                pass
     return False
 
 
