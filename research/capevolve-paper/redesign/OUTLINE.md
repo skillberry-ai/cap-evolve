@@ -1,6 +1,6 @@
 # Method-paper outline and section skeletons (story-architect, 2026-10-12)
 
-For paper-core. Structure only: no outcome claims. Every result sentence below is a slot written as `[RESULT: ...]` and is filled only from the final evaluation. Follows STORY.md (claims C1 to C6, RQ1 to RQ5). Lead decisions applied: Suite D is a separate pre-registered ablation family (Sonnet 5.5 optimizer, hill-climb only, no AO cell, may finish after the search cutoff); no new Suite A arms.
+For paper-core. Structure only: no outcome claims. Every result sentence below is a slot written as `[RESULT: ...]` and is filled only from the final evaluation. Follows STORY.md (claims C1 to C6, RQ1 to RQ5). Update 2026-10-12: hcstock (CapEvolve as shipped) is a headline arm; the gate trade-off is a central ablation (RQ-G); Suite D defaults to the stock gate. Lead decisions applied: Suite D is a separate pre-registered ablation family (Sonnet 5.5 optimizer, hill-climb only, no AO cell, may finish after the search cutoff); no new Suite A arms.
 
 Writing rules (PAPER_BRIEF + writing guide): no em or en dashes as punctuation, none of the banned words, every claim carries a number/citation/pointer, each paragraph opens with its point, one "In this paper, we" at most, no colon-titled headings, no bold lead-ins inside paragraphs, no rhetorical questions. Numbers via macros only; unfilled slots use `\pend`. Evidence statuses via `\prov`/`\needs` as in paper.tex.
 
@@ -31,7 +31,7 @@ Figure 2: system diagram (phases, artifacts, who owns which file). Draw once; ca
 ## 3 Code-owned evaluation (1.0 page)
 Opening point: every decision an optimizer could game is made in core code it cannot edit. Subsections as short paragraphs:
 - Isolation: gold and scorer unreadable from the proposer sandbox, negative tests per arm, egress closed, split files unreadable; scans reported as scans with coverage.
-- Rule P: unmasked screen at k_se 1, then fresh-trial confirmation (n_conf, z, dmin, coverage; frozen values). Algorithm box or equation. Figure 3: false-promotion vs power simulation (fig_rulep).
+- Rule P (the conservative configuration; the stock gate is the shipped default and is described alongside it, with the trade-off tested in 5.2c): unmasked screen at k_se 1, then fresh-trial confirmation (n_conf, z, dmin, coverage; frozen values). Algorithm box or equation. Figure 3: false-promotion vs power simulation (fig_rulep).
 - Footprint and coverage checks; seal on the final set; errored-trial policy.
 - Concurrent null controls and injected faults (E04, E05: 15 pass, 7 partial, 6 gap, 1 info; gaps stated).
 - One paragraph: the audit that motivated this (scorer compliance decomposition, gold reads), details in the appendix.
@@ -41,14 +41,14 @@ Opening point: every decision an optimizer could game is made in core code it ca
 - Optimizer for all matched arms: Claude Sonnet 5.5; budget 600 rollouts nominal, matched checkpoint N* from rollout counters, 4M optimizer-token guard.
 - Competitors (Table 3): ten methods, the surface each edits (P/T/M/S/H), official code or reimplementation, which suites. State the surface asymmetry here, not only in limitations.
 - Statistics: paired, family-cluster CR1, Holm per suite, TOST margin, artifact-level claims, S=3 raw values shown. Ablation family: own Holm, pre-registered in experiments/registry.jsonl, margins listed.
-- Ablation protocol: one factor changed against the reference cell P+T hill-climb rule P full history; reference counted once.
+- Ablation protocol: one factor changed against the reference cell P+T hill-climb, stock gate, full history; reference counted once. Rule P is itself an ablation cell.
 
 ## 5 Results (3.0 pages)
-5.1 RQ1 Comparison at a matched budget (1.0). Table 4: per suite, seed vs each arm, paired delta with CI and Holm p, N* and count per arm. Figure 4: forest plot (fig_forest). Text slots: `[RESULT: CapEvolve vs seed]`, `[RESULT: rank vs competitors, equivalence statements]`. **Required caveat sentence directly under the table, not in limitations:** on Suites B and C the CapEvolve hill-climb arm edits prompt and tools while GEPA, MIPROv2 and ACE edit the prompt only, so the gap mixes loop quality and surface width; Suite A (prompt only for all) and the prompt-only cell of Suite D (5.2a) separate the two. 
+5.1 RQ1 Comparison at a matched budget (1.0). Table 4: per suite, seed vs each arm (CapEvolve rows: hcstock, HC rule P, AO rule P; hcstock is the shipped configuration and the headline; Suite B lacks an hcstock row, say so), paired delta with CI and Holm p, N* and count per arm. Figure 4: forest plot (fig_forest). Text slots: `[RESULT: CapEvolve vs seed]`, `[RESULT: rank vs competitors, equivalence statements]`. **Required caveat sentence directly under the table, not in limitations:** on Suites B and C the CapEvolve hill-climb arm edits prompt and tools while GEPA, MIPROv2 and ACE edit the prompt only, so the gap mixes loop quality and surface width; Suite A (prompt only for all) and the prompt-only cell of Suite D (5.2a) separate the two. 
 5.2 RQ2 Ablations (1.0). One compact panel per ablation, shared layout (reference vs variant, paired delta, CI, n), Figure 5 as a small-multiples forest:
  a. surface width (Suite D: P, T, P+T, `[P+T+S if run]`);
  b. orchestration, HC vs AO (Suites A, B, C from E10 arms; promotions per search and stop reasons);
- c. gate: rule P vs stock gate (E12A, E12C) vs one-stage (Suite D); report final-set gain, promotions, shrinkage;
+ c. gate (central, give it the most space, about 0.35 page): rule P vs stock gate (E12A, E12C) vs one-stage (Suite D). Report promotions per search, inert searches, final-set gain, selection-to-final shrinkage and regressions, so the reader sees whether strictness buys held-out reliability or only inertia. Neutral wording until results exist; do not describe rule P as an improvement;
  d. causal history on/off (Suite D): final gain, regressed tasks, accepted-candidate count;
  e. intake/adapter gate: fault-injection table (appendix) plus a sentence.
  Each paragraph: claim tested (from STORY.md), result slot, verdict in the pre-specified vocabulary (supported, equivalent, inconclusive, contradicted).
