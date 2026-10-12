@@ -27,3 +27,23 @@ Time & Change & Reason \\
 \bottomrule
 \end{tabularx}
 \end{table}
+
+\begin{table}[h]
+\caption{Analysis-plan amendments. Times are UTC. Each was written before any final-set score existed. The last column says whether search-time results had been seen.}
+\label{tab:amendments}
+\centering\small
+\begin{tabularx}{\textwidth}{@{}l l X l@{}}
+\toprule
+No. & Time & Change & Search-time results seen \\
+\midrule
+1 & 11 Oct 21:15 & Observed-variance MDE, contrast families and equivalence margin & before the search cutoff \\
+2 & 11 Oct 21:15 & Interleaved final window and drift check & before the search cutoff \\
+3 & 11 Oct 22:45 & Equivalence rule, two intervals, stock-gate arms, promotion counts & before the search cutoff \\
+4 & 11 Oct 23:05 & Matched checkpoint over primary-family arms only & before the search cutoff \\
+5 & 12 Oct 02:11 & Infrastructure errors that persist after retries score 0 in the primary analysis & before the search cutoff \\
+6 & 12 Oct 08:40 & Stock-gate secondary family and selection-to-final shrinkage & yes, selection-split results \\
+7 & 12 Oct 09:20 & Suite D ablation family and its contrasts & yes, results of Suites A to C and baseline probes \\
+8 & 12 Oct & Suite D primary set moved to the test tasks, eleven-contrast family with no-history cell & yes, same as 7 \\
+\bottomrule
+\end{tabularx}
+\end{table}

@@ -3,9 +3,11 @@
 
 Tables labelled search-time use each method's own selection split during the search; they are not held-out and are not comparable across methods. Tables without final-set columns are marked pending.
 
+\input{tables/e12}
 \input{tables/ablation}
 \input{tables/decomp}
 \input{tables/rq4}
+\input{tables/attrib_failure_types}
 \input{tables/attrib_promotions}
 \input{tables/attrib_regression}
 \input{tables/attrib_surface}
@@ -13,3 +15,10 @@ Tables labelled search-time use each method's own selection split during the sea
 \input{tables/attrib_shrinkage}
 \input{tables/attrib_cost_per_point}
 \input{tables/searchtime_gate}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_contrast.pdf}
+\caption{Each \capevolve{} configuration against each competitor, as the difference in paired delta in points with 95\% intervals. Filled markers have intervals that exclude zero. These contrasts are the primary family (placeholder).}
+\label{fig:contrast}
+\end{figure*}

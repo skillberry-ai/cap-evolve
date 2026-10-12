@@ -28,7 +28,7 @@ ORDER = ["hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill",
 
 def esc(s):
     s = str(s)
-    for a, b in (("\\", "/"), ("&", "\\&"), ("%", "\\%"), ("_", "\\_"), ("#", "\\#"), ("$", "\\$"),
+    for a, b in (("\\", "/"), ("&", "\\&"), ("%", "\\%"), ("_", "\\_\\allowbreak{}"), ("#", "\\#"), ("$", "\\$"),
                  ("{", "\\{"), ("}", "\\}"), ("~", "\\~{}"), ("^", "\\^{}")):
         s = s.replace(a, b)
     return s
@@ -46,7 +46,7 @@ def flat(hp):
                 continue
             if isinstance(v, list):
                 v = ",".join(map(str, v))
-            v = str(v)
+            v = str(v).replace('rits/', '').replace('ibm-ete-int/', '').replace('ibm-ete/', '').replace('ibm-rits/', '')
             if v.startswith("/") or len(v) > 60 or v in ("true`", "|"):
                 continue
             out[k] = v
