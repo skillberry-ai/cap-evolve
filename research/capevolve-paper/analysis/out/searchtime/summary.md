@@ -85,32 +85,32 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 
 ## Gate behaviour (CapEvolve)
 
-| suite | arm | seed | cands | screens | confirms | promoted | rejected | vetoed | indecisive (reasons) | infra-missing |
-|---|---|---|---|---|---|---|---|---|---|---|
-| A | hc | 0 | 3 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (90%) x1 | 1 |
-| A | hc | 1 | 2 | 1 | 1 | 1 | 0 | 0 | 0  | 0 |
-| A | hc | 2 | 3 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (92%) x1 | 3 |
-| A | ao | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0  | 0 |
-| A | ao | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0  | 0 |
-| A | ao | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0  | 0 |
-| B | hc | 0 | 1 | 1 | 0 | 0 | 1 | 0 | 0  | 0 |
-| B | hc | 1 | 8 | 8 | 0 | 0 | 8 | 0 | 0  | 0 |
-| B | hc | 2 | 2 | 2 | 1 | 0 | 2 | 0 | 0  | 0 |
-| B | ao | 0 | 2 | 0 | 0 | 0 | 2 | 0 | 0  | 0 |
-| B | ao | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0  | 0 |
-| B | ao | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 |
-| C | hc | 0 | 2 | 2 | 1 | 0 | 2 | 0 | 0  | 0 |
-| C | hc | 1 | 3 | 3 | 0 | 0 | 3 | 0 | 1 coverage<0.95 (90%) x1 | 0 |
-| C | hc | 2 | 4 | 4 | 0 | 0 | 4 | 0 | 0  | 0 |
-| C | ao | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 |
-| C | ao | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 |
-| C | ao | 2 | 1 | 0 | 0 | 0 | 1 | 0 | 0  | 0 |
-| A-E12 | hcstock | 0 | 6 | 5 | 0 | 1 | 4 | 0 | 0  | 0 |
-| A-E12 | hcstock | 1 | 8 | 7 | 0 | 2 | 5 | 0 | 0  | 0 |
-| A-E12 | hcstock | 2 | 8 | 7 | 0 | 3 | 4 | 0 | 0  | 0 |
-| C-E12 | hcstock | 0 | 5 | 5 | 0 | 1 | 4 | 0 | 0  | 0 |
-| C-E12 | hcstock | 1 | 7 | 7 | 0 | 0 | 7 | 0 | 0  | 0 |
-| C-E12 | hcstock | 2 | 7 | 7 | 0 | 2 | 5 | 0 | 0  | 0 |
+| suite | arm | seed | cands | screens | confirms | promoted | rejected | vetoed | indecisive (reasons) | lost cands | lost attempts |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| A | hc | 0 | 3 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (90%) x1 | 1 | 1 |
+| A | hc | 1 | 2 | 1 | 1 | 1 | 0 | 0 | 0  | 0 | 0 |
+| A | hc | 2 | 3 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (92%) x1 | 2 | 3 |
+| A | ao | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 |
+| A | ao | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 |
+| A | ao | 2 | 1 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 |
+| B | hc | 0 | 1 | 1 | 0 | 0 | 1 | 0 | 0  | 0 | 0 |
+| B | hc | 1 | 8 | 8 | 0 | 0 | 8 | 0 | 0  | 0 | 0 |
+| B | hc | 2 | 2 | 2 | 1 | 0 | 2 | 0 | 0  | 0 | 0 |
+| B | ao | 0 | 2 | 0 | 0 | 0 | 2 | 0 | 0  | 0 | 0 |
+| B | ao | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0  | 0 | 0 |
+| B | ao | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 |
+| C | hc | 0 | 2 | 2 | 1 | 0 | 2 | 0 | 0  | 0 | 0 |
+| C | hc | 1 | 3 | 3 | 0 | 0 | 3 | 0 | 1 coverage<0.95 (90%) x1 | 0 | 0 |
+| C | hc | 2 | 4 | 4 | 0 | 0 | 4 | 0 | 0  | 0 | 0 |
+| C | ao | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 |
+| C | ao | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 |
+| C | ao | 2 | 1 | 0 | 0 | 0 | 1 | 0 | 0  | 0 | 0 |
+| A-E12 | hcstock | 0 | 6 | 5 | 0 | 1 | 4 | 0 | 0  | 0 | 0 |
+| A-E12 | hcstock | 1 | 8 | 7 | 0 | 2 | 5 | 0 | 0  | 0 | 0 |
+| A-E12 | hcstock | 2 | 8 | 7 | 0 | 3 | 4 | 0 | 0  | 0 | 0 |
+| C-E12 | hcstock | 0 | 5 | 5 | 0 | 1 | 4 | 0 | 0  | 0 | 0 |
+| C-E12 | hcstock | 1 | 7 | 7 | 0 | 0 | 7 | 0 | 0  | 0 | 0 |
+| C-E12 | hcstock | 2 | 7 | 7 | 0 | 2 | 5 | 0 | 0  | 0 | 0 |
 
 ## Edits by capability surface (candidates touching surface / changed lines)
 

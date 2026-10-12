@@ -1,25 +1,25 @@
-suite,arm,seed,candidates,screens,confirms,promoted,screen_reject,confirm_reject,rejected_other,gate_veto,indecisive,indecisive_events,indecisive_reasons,eval_errors,infra_missing,split,champion_score,seed_score,gate
-A,hc,0,3,1,0,0,0,0,0,1,1,1,coverage<0.95 (90%) x1,0,1,val-40,0.5789473684210527,0.5789473684210527,Rule P (screen + fresh confirm)
-A,hc,1,2,1,1,1,0,0,0,0,0,0,,0,0,val-40,0.6923076923076923,0.5897435897435898,Rule P (screen + fresh confirm)
-A,hc,2,3,1,0,0,0,0,0,1,1,1,coverage<0.95 (92%) x1,0,3,val-40,0.5675675675675675,0.5675675675675675,Rule P (screen + fresh confirm)
-A,ao,0,1,0,0,0,0,0,0,0,0,0,,0,0,val-20,0.46153846153846156,0.46153846153846156,agent-optimize (driver judgement)
-A,ao,1,1,0,0,0,0,0,0,0,0,0,,0,0,val-40,0.4473684210526316,0.4473684210526316,agent-optimize (driver judgement)
-A,ao,2,1,0,0,0,0,0,0,0,0,0,,0,0,val-20,0.6842105263157895,0.6842105263157895,agent-optimize (driver judgement)
-B,hc,0,1,1,0,0,1,0,0,0,0,0,,0,0,opt-49,0.5306122448979592,0.5306122448979592,Rule P (screen + fresh confirm)
-B,hc,1,8,8,0,0,8,0,0,0,0,0,,0,0,opt-49,0.6530612244897959,0.6530612244897959,Rule P (screen + fresh confirm)
-B,hc,2,2,2,1,0,1,1,0,0,0,0,,0,0,opt-49,0.5416666666666666,0.5416666666666666,Rule P (screen + fresh confirm)
-B,ao,0,2,0,0,0,0,0,2,0,0,0,,0,0,opt-49,0.6041666666666666,0.6041666666666666,agent-optimize (driver judgement)
-B,ao,1,1,0,0,0,0,0,1,0,0,0,,0,0,opt-49,0.6122448979591837,0.6122448979591837,agent-optimize (driver judgement)
-B,ao,2,0,0,0,0,0,0,0,0,0,0,,0,0,opt-49,0.6122448979591837,0.6122448979591837,agent-optimize (driver judgement)
-C,hc,0,2,2,1,0,1,1,0,0,0,0,,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm)
-C,hc,1,3,3,0,0,3,0,0,0,1,1,coverage<0.95 (90%) x1,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm)
-C,hc,2,4,4,0,0,4,0,0,0,0,0,,0,0,opt-20,0.55,0.55,Rule P (screen + fresh confirm)
-C,ao,0,0,0,0,0,0,0,0,0,0,0,,0,0,opt-20,0.55,0.55,agent-optimize (driver judgement)
-C,ao,1,0,0,0,0,0,0,0,0,0,0,,0,0,opt-20,0.55,0.55,agent-optimize (driver judgement)
-C,ao,2,1,0,0,0,0,0,1,0,0,0,,0,0,opt-20,0.45,0.45,agent-optimize (driver judgement)
-A-E12,hcstock,0,6,5,0,1,0,0,4,0,0,0,,0,0,val-40,0.775,0.5641025641025641,"stock (paired dbar > 1 SE, single stage)"
-A-E12,hcstock,1,8,7,0,2,0,0,5,0,0,0,,0,0,val-40,0.875,0.5263157894736842,"stock (paired dbar > 1 SE, single stage)"
-A-E12,hcstock,2,8,7,0,3,0,0,4,0,0,0,,0,0,val-40,0.875,0.5526315789473685,"stock (paired dbar > 1 SE, single stage)"
-C-E12,hcstock,0,5,5,0,1,0,0,4,0,0,0,,0,0,opt-20,0.7368421052631579,0.5,"stock (paired dbar > 1 SE, single stage)"
-C-E12,hcstock,1,7,7,0,0,0,0,7,0,0,0,,0,0,opt-20,0.65,0.65,"stock (paired dbar > 1 SE, single stage)"
-C-E12,hcstock,2,7,7,0,2,0,0,5,0,0,0,,0,0,opt-20,0.7894736842105263,0.47368421052631576,"stock (paired dbar > 1 SE, single stage)"
+suite,arm,seed,candidates,screens,confirms,promoted,screen_reject,confirm_reject,rejected_other,gate_veto,indecisive,indecisive_events,indecisive_reasons,eval_errors,infra_lost_attempts,infra_lost_candidates,split,champion_score,seed_score,gate
+A,hc,0,3,1,0,0,0,0,0,1,1,1,coverage<0.95 (90%) x1,0,1,1,val-40,0.5789473684210527,0.5789473684210527,Rule P (screen + fresh confirm)
+A,hc,1,2,1,1,1,0,0,0,0,0,0,,0,0,0,val-40,0.6923076923076923,0.5897435897435898,Rule P (screen + fresh confirm)
+A,hc,2,3,1,0,0,0,0,0,1,1,1,coverage<0.95 (92%) x1,0,3,2,val-40,0.5675675675675675,0.5675675675675675,Rule P (screen + fresh confirm)
+A,ao,0,1,0,0,0,0,0,0,0,0,0,,0,0,0,val-20,0.46153846153846156,0.46153846153846156,agent-optimize (driver judgement)
+A,ao,1,1,0,0,0,0,0,0,0,0,0,,0,0,0,val-40,0.4473684210526316,0.4473684210526316,agent-optimize (driver judgement)
+A,ao,2,1,0,0,0,0,0,0,0,0,0,,0,0,0,val-20,0.6842105263157895,0.6842105263157895,agent-optimize (driver judgement)
+B,hc,0,1,1,0,0,1,0,0,0,0,0,,0,0,0,opt-49,0.5306122448979592,0.5306122448979592,Rule P (screen + fresh confirm)
+B,hc,1,8,8,0,0,8,0,0,0,0,0,,0,0,0,opt-49,0.6530612244897959,0.6530612244897959,Rule P (screen + fresh confirm)
+B,hc,2,2,2,1,0,1,1,0,0,0,0,,0,0,0,opt-49,0.5416666666666666,0.5416666666666666,Rule P (screen + fresh confirm)
+B,ao,0,2,0,0,0,0,0,2,0,0,0,,0,0,0,opt-49,0.6041666666666666,0.6041666666666666,agent-optimize (driver judgement)
+B,ao,1,1,0,0,0,0,0,1,0,0,0,,0,0,0,opt-49,0.6122448979591837,0.6122448979591837,agent-optimize (driver judgement)
+B,ao,2,0,0,0,0,0,0,0,0,0,0,,0,0,0,opt-49,0.6122448979591837,0.6122448979591837,agent-optimize (driver judgement)
+C,hc,0,2,2,1,0,1,1,0,0,0,0,,0,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm)
+C,hc,1,3,3,0,0,3,0,0,0,1,1,coverage<0.95 (90%) x1,0,0,0,opt-20,0.45,0.45,Rule P (screen + fresh confirm)
+C,hc,2,4,4,0,0,4,0,0,0,0,0,,0,0,0,opt-20,0.55,0.55,Rule P (screen + fresh confirm)
+C,ao,0,0,0,0,0,0,0,0,0,0,0,,0,0,0,opt-20,0.55,0.55,agent-optimize (driver judgement)
+C,ao,1,0,0,0,0,0,0,0,0,0,0,,0,0,0,opt-20,0.55,0.55,agent-optimize (driver judgement)
+C,ao,2,1,0,0,0,0,0,1,0,0,0,,0,0,0,opt-20,0.45,0.45,agent-optimize (driver judgement)
+A-E12,hcstock,0,6,5,0,1,0,0,4,0,0,0,,0,0,0,val-40,0.775,0.5641025641025641,"stock (paired dbar > 1 SE, single stage)"
+A-E12,hcstock,1,8,7,0,2,0,0,5,0,0,0,,0,0,0,val-40,0.875,0.5263157894736842,"stock (paired dbar > 1 SE, single stage)"
+A-E12,hcstock,2,8,7,0,3,0,0,4,0,0,0,,0,0,0,val-40,0.875,0.5526315789473685,"stock (paired dbar > 1 SE, single stage)"
+C-E12,hcstock,0,5,5,0,1,0,0,4,0,0,0,,0,0,0,opt-20,0.7368421052631579,0.5,"stock (paired dbar > 1 SE, single stage)"
+C-E12,hcstock,1,7,7,0,0,0,0,7,0,0,0,,0,0,0,opt-20,0.65,0.65,"stock (paired dbar > 1 SE, single stage)"
+C-E12,hcstock,2,7,7,0,2,0,0,5,0,0,0,,0,0,0,opt-20,0.7894736842105263,0.47368421052631576,"stock (paired dbar > 1 SE, single stage)"
