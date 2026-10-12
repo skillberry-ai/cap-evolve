@@ -186,7 +186,11 @@ class JupyterKernel:
                 if msg_type == 'error':
                     traceback = "\n\n\n\n".join(msg["content"]["traceback"])
                     outputs.append(traceback)
-                    execution_done = True
+                    # PATCHED 2026-10-12 (campaign decision, final evaluation only): upstream stops reading at the first `error` message and leaves execute_reply/status
+                    # unread; if the next exec arrives ~85-135 s later the kernel websocket is dead and /execute returns 500. SB_DRAIN_ERROR=1 keeps reading until
+                    # execute_reply. Default OFF = upstream behaviour (search-phase parity).
+                    if os.environ.get("SB_DRAIN_ERROR", "0") != "1":
+                        execution_done = True
                 elif msg_type == 'stream':
                     outputs.append(msg['content']['text'])
                 elif msg_type in ['execute_result', 'display_data']:
