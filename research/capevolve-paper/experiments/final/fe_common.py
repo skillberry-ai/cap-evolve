@@ -216,9 +216,10 @@ def native_status(rd):
     import re as _re
     rd = Path(rd)
     # frozen optimizer-token guard (CapEvolve): soft stop at 3.5M (budget frozen := spent) / hard SIGTERM at 3.9M; counts like a native termination (N* addendum)
-    for f in [rd / "optimizer_tokens.json.soft", rd / "logs" / "optimizer_tokens.json.soft"] + list(rd.glob(".capevolve/run_*/optimizer_tokens.json.soft")):
+    for f in [rd / "logs" / "optimizer_tokens.json.soft", rd / "logs" / "optimizer_tokens.json.killed", rd / "optimizer_tokens.json.soft", rd / "optimizer_tokens.json.killed"] \
+            + list(rd.glob(".capevolve/run_*/optimizer_tokens.json.soft")):
         if f.exists():
-            return "guard_stop", "token guard soft stop marker %s" % f.name
+            return "guard_stop", "token guard marker %s (%s)" % (f.name, "hard SIGTERM at 3.9M" if f.name.endswith("killed") else "soft stop at 3.5M")
     for ev in list(rd.glob(".capevolve/run_*/events.jsonl")) + [rd / "events.jsonl"]:
         if ev.exists():
             try:
