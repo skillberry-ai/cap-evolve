@@ -41,9 +41,12 @@ def compute(suite):
                     rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": None, "source": "no_run_dir"})
                     continue
                 n, src = cm.counted_rollouts(rd)
-                rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": n, "source": src})
+                st, ev = C.native_status(rd)
+                rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": n, "source": src, "native_status": st, "native_evidence": ev})
     main = [r for r in rows if r["tier"] == "main"]
-    known = [r for r in main if r["counter"] is not None]
+    known_all = [r for r in main if r["counter"] is not None]
+    # N* rule: a primary seed that terminated NATIVELY before the cutoff does not bind; crashes and infra stops do
+    known = [r for r in known_all if r.get("native_status") != "native_finish"] or known_all
     unknown = [r for r in main if r["counter"] is None]
     out = {"suite": suite, "generated_utc": C.now_utc(), "rule": "floor_50(min counted rollouts over all main-tier seeds), floor 200",
            "cutoff_utc": C.CUTOFF_UTC, "runs": rows, "main_arms": spec["main"], "cheap_arms": spec["cheap"]}
@@ -51,12 +54,14 @@ def compute(suite):
         out.update(bstar=None, error="no counters")
         return out
     lo = min(known, key=lambda r: (r["counter"], r["arm"], r["seed"]))
+    out["natively_finished"] = {"%s/s%d" % (r["arm"], r["seed"]): {"count": r["counter"], "evidence": r["native_evidence"]} for r in known_all if r.get("native_status") == "native_finish"}
+    out["crashed"] = ["%s/s%d" % (r["arm"], r["seed"]) for r in known_all if r.get("native_status") == "crashed"]
     out["min_main_counter"] = lo["counter"]
     out["binding_run"] = "%s/s%d" % (lo["arm"], lo["seed"])
     out["bstar_raw"] = lo["counter"]
     out["bstar"] = floor_step(lo["counter"])
     out["floored_to_200"] = lo["counter"] < C.BSTAR_FLOOR
-    out["incomplete_seeds"] = ["%s/s%d" % (r["arm"], r["seed"]) for r in known if r["counter"] < C.BSTAR_FLOOR] + \
+    out["incomplete_seeds"] = ["%s/s%d" % (r["arm"], r["seed"]) for r in known_all if r["counter"] < C.BSTAR_FLOOR and r.get("native_status") != "native_finish"] + \
                               ["%s/s%d" % (r["arm"], r["seed"]) for r in unknown]
     cheap = [r for r in rows if r["tier"] == "cheap" and r["counter"] is not None]
     if cheap:

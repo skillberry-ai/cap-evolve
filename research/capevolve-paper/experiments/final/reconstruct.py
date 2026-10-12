@@ -582,6 +582,12 @@ def main(argv=None):
         for arm in arms:
             for seed in C.SEEDS:
                 man["entries"].append(build_entry(suite, arm, seed, mode, limit, out_root, not a.no_copy, kind))
+    nf = (bj or {}).get("natively_finished") or {}
+    for e in man["entries"]:
+        k = "%s/s%d" % (e["arm"], e["seed"])
+        if k in nf:
+            e["native_finish"] = nf[k]
+            e.setdefault("caveats", []).append("natively finished before the cutoff (%s); contributes its final returned artifact, count %s disclosed" % (nf[k]["evidence"], nf[k]["count"]))
     seed_h = man["seed_artifact"].get("tree_sha256")
     for e in man["entries"]:
         e["identical_to_seed"] = bool(seed_h and e.get("tree_sha256") == seed_h)

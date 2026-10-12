@@ -191,3 +191,28 @@ def final_dir(suite):
 
 def cell_key(arm, seed):
     return "%s/s%d" % (arm, seed)
+
+
+def native_status(rd):
+    """('native_finish'|'crashed'|'running_or_unknown', evidence).  Native = the run's own stop rule ended it with exit status 0 (decisions.md N* rule);
+    crashes / infra stops are not native.  Evidence, strongest first: a driver `run.log` whose last line is `exit <rc>`; a `launcher.log` line `exit=<rc>`;
+    `run_summary.json` / `final.json` / `final/` written by the method itself.  Anything else counts as still running (binds N*, conservative)."""
+    import re as _re
+    rd = Path(rd)
+    for name, pat in (("run.log", r"^exit (\d+)\s*$"), ("launcher.log", r"^exit=(\d+)\s*$")):
+        p = rd / name
+        if p.exists():
+            try:
+                tail = p.read_text(errors="replace").splitlines()[-40:]
+            except Exception:
+                tail = []
+            for line in reversed(tail):
+                m = _re.match(pat, line.strip())
+                if m:
+                    rc = int(m.group(1))
+                    return ("native_finish" if rc == 0 else "crashed"), "%s: exit %d" % (name, rc)
+    for ev in ("run_summary.json", "final.json", "final"):
+        cands = [rd / ev] + list((rd / ".capevolve").glob("run_*/" + ev))
+        if any(c.exists() for c in cands):
+            return "native_finish", "%s present (no exit line)" % ev
+    return "running_or_unknown", "no exit evidence"
