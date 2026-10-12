@@ -323,3 +323,58 @@ Stop rules: if the 429 rate exceeds 2% or the median `queue_s` for azoai exceeds
 - **Azure rate limits.** Observed 429s at about 7 M tokens/min. Staged ramp, and a second target deployment as fallback.
 - **Self-similarity of the simulator.** gpt-4.1 serves as user and judge for a gpt-4.1-mini agent; the same family may favour the agent. Constant across cells, so contrasts are unaffected; absolute levels are not comparable with B.
 - **Search-time exposure.** D searches use the same opt-49 as E10B; optimizers run in the same no-egress sandbox; the adapter refuses test ids. The seal on test-40 is unchanged.
+
+---
+
+## 12. Suite E: replication of Suite D (and E26) on tau2 airline, plus competitors (design, 2026-10-12 11:20 UTC)
+
+Status: DESIGN for the four-essentials check by the coordinator. Registered as amendment 10 before the first rollout (draft below). User authorised launch once the design is ready.
+
+### 12.1 Fixed facts
+- **Split file (unchanged, every cell and competitor):** `wt-tau/protocol/tau_airline_splits.json`, sha256 `371ab03ba85cf25913f31d37b727077a5d6bcccce7f7c7ca983a3fc5d61e6187` (identical copy in `wt-airE`). opt-20 + sel-10 = the official train-30, test-20 = the official test. tau2 airline has exactly 50 tasks (`tasks.json`, 50), so **no other airline pool exists**; the official test-20 is development-exposed (audit/exposure_ledger.csv) and Suite E is labelled replication, never sealed. Every optimizer, selection and early-stopping step may touch only train-30 (opt-20 for the screen and gate, sel-10 only at `finalize` as in Suite C). A competitor needing its own validation split carves it from train-30 only.
+- **Models:** target `azoai/gpt-4.1-mini-2025-04-14`; user simulator and NL judge `azoai/gpt-4.1-2025-04-14`; temperature 0, max tokens 8000; Azure on :4112, the Claude optimizer on :4111 (the same shim, `runs/E10B/_sbx_bin`, except E36 which uses `runs/E26/_sbx_bin`).
+- **Code:** worktree `wt-airE` (branch research/suite-e, commit `eb112a08c75e24d60711377c2cfbf3265b86ecd8`) = wt-nohist core (wt-tau 738a7b3ea plus the history flag, default on) plus the Suite D surface lock and judge temperature ported to `examples/tau2_airline_c` (3 unit tests pass). All E cells run on this one code base; E36 differs from E30-PT by the flag and sandbox only.
+- **Probe (E00-azprobe-air, seed on opt-20, 3 trials, c=16, under heavy load):** reward 0.233; 14 of 20 tasks always 0, 4 always 1, 2 mixed; null paired SD per task 0.22 (retail 0.57); 65 k tokens per rollout; 0 errors. So airline has large headroom (0.77) and low trial noise: gates see a cleaner signal than on retail, rule P is less inert in expectation, and the MDE is dominated by task heterogeneity and T=20.
+
+### 12.2 Cells (3 seeds each, hill-climb, Sonnet 5.5, run ids mirror D)
+| id | = D cell | spec delta | budget |
+|---|---|---|---|
+| E30-PT (reference) | E20-PT | [system-prompt, tools], stock gate | 300 counted rollouts, 10 iterations |
+| E30-P | E20-P | [system-prompt], `TAU_SURFACES=policy` | same |
+| E30-T | E20-T | [tools], `TAU_SURFACES=tools` | same |
+| E30-CTL | E20-CTL | 1 iteration, no selection | 100 rollouts |
+| E31-ruleP | E21-ruleP | rule P (k 1, n_conf 3, z 1.282, dmin 0, cov 0.95), footprint off, coverage joint | same 300 (one confirmation costs 20 x 3 x 2 = 120) |
+| E31-1S | E21-1S | one-stage unmasked | same |
+| E30-GEPA | E20-GEPA | official GEPA 0.1.4, prompt only, selects on sel-10 | 300 |
+| E36-nohist | E26-nohist | history flag off, E26 shim, derived instructions | same as PT |
+Budget rationale: opt-20 makes a screen cost 20 rollouts, so 10 iterations cost about 220 plus finalize; 550 (D) would never be used. 300 is matched within E for all cells.
+
+### 12.3 Competitors (owners asked 10:50; answers pending, later wave if late)
+Same models, split, 300-rollout budget, 3 seeds; each leaves the family if it cannot finish by 06:00, with the reason recorded. Candidates: GEPA full surface (prompt + tools, only if its adapter allows; otherwise prompt-only is the E30-GEPA cell), HarnessLens (bl-harness), ACE and MIPROv2 (bl-context / baseline-eng), AHE, CapEvolve agent-optimize (my estimate from E10C: 0.5 M capped per search), one-shot control (= E30-CTL). Own Holm family E-comp: E30-PT vs each competitor on test-20.
+
+### 12.4 Held-out scoring
+Primary: official test-20, n = 5 trials per champion, seed artifact n = 10 in the same interleaved window. Secondary (descriptive, labelled as including selection tasks of GEPA): H30 = sel-10 + test-20. E25-style decomposition of two-surface champions: optional, n = 3.
+
+### 12.5 Amendment 10 (draft for stats-reviewer; register before the first E rollout)
+- 10A Setting and split as above, with the split-file sha256 and the train-only rule.
+- 10B Cells and budgets as 12.2; competitor family as 12.3.
+- 10C Primary set test-20 only; n = 5 / seed n = 10; H30 secondary.
+- 10D Family E: m = 11 mirroring D (P vs PT, T vs PT, P vs T, ruleP vs PT, 1S vs PT, PT vs CTL, P vs GEPA, P vs seed, T vs seed, PT vs seed, nohist vs PT), Holm within E; family E-comp (own Holm); TOST margin 0.10.
+- 10E Claim rule: Suite E only corroborates D. A Suite D contrast is 'replicated' if the matching E contrast has the same sign and its artifact-level 95% CI excludes 0; otherwise 'not replicated' (including inconclusive). No pooling of D and E, no cross-suite p-value or headline, and E-only contrasts without a D counterpart (competitors) are labelled replication-domain, exploratory for generality.
+- 10F Planning MDE on test-20 (stats-reviewer to compute, tau 0.15, within variance from the probe 0.0475 (null SD 0.22) rather than 0.162): my approximation 0.10 vs seed and 0.11 cell vs cell uncorrected, about 0.14 / 0.15 at m = 11. Rule: failing TOST is 'inconclusive'.
+- 10G Exposure: airline test-20 development-exposed (not sealed); no cleaner pool exists.
+
+### 12.6 Cost
+| item | Azure rollouts (mini) | capped tokens | USD at list |
+|---|---|---|---|
+| search, 18 hc searches (6 cells x 3), about 230 each | 4.1 k | 18 x 0.35 = 6.3 M | 0.20 |
+| CTL 3 x 100, GEPA 3 x 300 | 1.2 k | 0.3 + 1.2 M | 0.06 |
+| final: 24 champions x 20 x 5 + seed 200 + sel-10 n=5 (1.2 k) | 3.8 k | 0 | 0.19 |
+| E36 included above | | | |
+| **E replication total** | **about 9.1 k** | **about 7.8 M** | **about 0.5 k** |
+| competitors (AO 3 x 1.0 M, others to be confirmed) | about 3 k | 3 to 12 M | about 0.2 k |
+Capped allowance: replication 8 M (under the 12 M cap), E in total at most 20 M.
+
+### 12.7 Azure capacity (the binding constraint)
+Measured at 11:10 UTC from the gateway log (calls with deployment azoai/gpt-4.1-mini): about 480 calls a minute, 8.4% HTTP 429 since 10:20 (0% on gpt-4.1); causes are E22 (4 chunks, 64 in flight), the D wave 1 searches (21 searches) and my probes. D searches are running at about 65 rollouts an hour each, not the 250 planned. The gpt-4.1-mini deployment sustains roughly 25 rollouts a minute (about 1.5 k an hour) in total. Budget until 06:00 (about 18 h): about 28 k rollouts; D needs about 13.5 k more search rollouts and E needs about 5.3 k before 06:00, which fits only at near-full utilisation; D plus E final scoring (about 17 k rollouts) runs in the final window and takes about 11 h at this rate.
+Rule: E may start only when (a) E22 has finished and (b) the 15-minute azoai-mini 429 rate is under 2%; waves are admitted by that rule, at most 4 concurrent rollouts per E search and at most 48 in flight for E. Options if the rule is never met: (i) sequence E after D wave 1 (about 14:00 to 15:00 at the current rate); (ii) run E on `azoai/gpt-4.1-2025-04-14` as target (separate quota, 0% 429), which is NOT an exact replication; (iii) ask the user for more quota on the mini deployment.
