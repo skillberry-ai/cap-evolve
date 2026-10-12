@@ -394,8 +394,19 @@ def pid_alive(p):
         return False
 
 
+def paused_info(r):
+    """E12C best-of-k is paused/truncated by a lead decision: runs/E12C/bestofk/PAUSED.json."""
+    if r["arm"] != "bestofk":
+        return None
+    j = js(r["sd"].parent / "PAUSED.json")
+    return (j or {}).get("seeds", {}).get("s" + str(r["seed"])) if j else None
+
+
 def status_of(r, mrow, cap, info):
     sd = r["sd"]
+    pi = paused_info(r)
+    if pi:
+        return "paused (truncated at k=%d, %d rollouts)" % (pi["proposals_completed"], pi["counted_rollouts_incl_baseline"])
     if mrow and mrow.get("active") == "True":
         return "running"
     if not mrow:
@@ -448,6 +459,10 @@ def run_record(r, arm_rows, role):
     state = js(cap / "state.json") if cap else None
     rec["counted_rollouts"] = int(float(mrow["counted_rollouts"])) if mrow and mrow.get("counted_rollouts") else None
     rec["counted_source"] = mrow.get("counted_source") if mrow else None
+    pi_ = paused_info(r)
+    if pi_:
+        rec["counted_rollouts"] = pi_["counted_rollouts_incl_baseline"]
+        rec["counted_source"] = "PAUSED.json:counted_rollouts_incl_baseline"
     if rec["counted_rollouts"] is None and arm == "bestofk":
         pr = js(sd / "progress.json")
         rec["counted_rollouts"] = pr.get("counted") if pr else None

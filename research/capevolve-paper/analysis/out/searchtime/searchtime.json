@@ -2254,7 +2254,7 @@
    "seed": "0",
    "run_dir": "runs/E12C/bestofk/s0",
    "counted_rollouts": 140,
-   "counted_source": "progress.json:counted",
+   "counted_source": "PAUSED.json:counted_rollouts_incl_baseline",
    "split": "opt-20",
    "seed_note": "seed split score taken from the paired hcstock run (same opt split)",
    "seed_score": 0.5,
@@ -2277,7 +2277,7 @@
    "optimizer_usd": 8.7779,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 13.58,
-   "status": "unknown",
+   "status": "paused (truncated at k=6, 140 rollouts)",
    "last_gateway_call": "2026-10-12T11:07:37Z"
   },
   {
@@ -2287,7 +2287,7 @@
    "seed": "1",
    "run_dir": "runs/E12C/bestofk/s1",
    "counted_rollouts": 140,
-   "counted_source": "progress.json:counted",
+   "counted_source": "PAUSED.json:counted_rollouts_incl_baseline",
    "split": "opt-20",
    "seed_note": "seed split score taken from the paired hcstock run (same opt split)",
    "seed_score": 0.65,
@@ -2310,7 +2310,7 @@
    "optimizer_usd": 7.532,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 10.32,
-   "status": "unknown",
+   "status": "paused (truncated at k=6, 140 rollouts)",
    "last_gateway_call": "2026-10-12T11:08:03Z"
   },
   {
@@ -2320,7 +2320,7 @@
    "seed": "2",
    "run_dir": "runs/E12C/bestofk/s2",
    "counted_rollouts": 160,
-   "counted_source": "progress.json:counted",
+   "counted_source": "PAUSED.json:counted_rollouts_incl_baseline",
    "split": "opt-20",
    "seed_note": "seed split score taken from the paired hcstock run (same opt split)",
    "seed_score": 0.47368421052631576,
@@ -2343,7 +2343,7 @@
    "optimizer_usd": 7.7866,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 10.31,
-   "status": "unknown",
+   "status": "paused (truncated at k=7, 160 rollouts)",
    "last_gateway_call": "2026-10-12T11:07:26Z"
   }
  ],

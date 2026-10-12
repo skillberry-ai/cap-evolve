@@ -77,9 +77,9 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | C-E12 | hcstock | 0 | opt-20 | 200 | 0.500 | 0.737 (cand_0001) | 0.237 | 9/9/1 | False | 663977 | 5433411 | 3.1357 | 18.8 | running |
 | C-E12 | hcstock | 1 | opt-20 | 230 | 0.650 | 0.650 (seed) | 0.000 | 10/10/0 | True | 734093 | 7538800 | 3.9176 | 16.8 | native finish (iterations) |
 | C-E12 | hcstock | 2 | opt-20 | 240 | 0.474 | 0.789 (cand_0002) | 0.316 | 10/10/2 | False | 749017 | 6133673 | 3.58 | 18.0 | native finish (iterations) |
-| C-E12 | bestofk | 0 | opt-20 | 140 | 0.500 | 0.800 (prop_02) | 0.300 | 6/6/0 | False | 1327579 | 18298241 | 8.7779 | 13.6 | unknown |
-| C-E12 | bestofk | 1 | opt-20 | 140 | 0.650 | 0.750 (prop_03) | 0.100 | 6/6/0 | False | 1150457 | 15406071 | 7.532 | 10.3 | unknown |
-| C-E12 | bestofk | 2 | opt-20 | 160 | 0.474 | 0.800 (prop_01) | 0.326 | 7/7/0 | False | 1172177 | 16774685 | 7.7866 | 10.3 | unknown |
+| C-E12 | bestofk | 0 | opt-20 | 140 | 0.500 | 0.800 (prop_02) | 0.300 | 6/6/0 | False | 1327579 | 18298241 | 8.7779 | 13.6 | paused (truncated at k=6, 140 rollouts) |
+| C-E12 | bestofk | 1 | opt-20 | 140 | 0.650 | 0.750 (prop_03) | 0.100 | 6/6/0 | False | 1150457 | 15406071 | 7.532 | 10.3 | paused (truncated at k=6, 140 rollouts) |
+| C-E12 | bestofk | 2 | opt-20 | 160 | 0.474 | 0.800 (prop_01) | 0.326 | 7/7/0 | False | 1172177 | 16774685 | 7.7866 | 10.3 | paused (truncated at k=7, 160 rollouts) |
 
 Notes: champion = what the method itself would return (CapEvolve: state best_id/best_val; GEPA, MIPRO, others: last selected or argmax of full selection-split evaluations). ACE and HarnessLens have no candidate/selection step yet. Optimizer USD covers priced (Claude) calls only; unpriced tokens are in runs.csv.
 

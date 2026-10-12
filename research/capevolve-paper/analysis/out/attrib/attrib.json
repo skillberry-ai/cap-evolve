@@ -1574,7 +1574,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "unknown",
+   "status": "paused (truncated at k=6, 140 rollouts)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1588,7 +1588,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "unknown",
+   "status": "paused (truncated at k=6, 140 rollouts)",
    "stage": "pending final (selection gain is search-time)"
   },
   {
@@ -1602,7 +1602,7 @@
    "final_gain_se_task": null,
    "shrinkage": null,
    "returned_equals_seed": false,
-   "status": "unknown",
+   "status": "paused (truncated at k=7, 160 rollouts)",
    "stage": "pending final (selection gain is search-time)"
   }
  ],
