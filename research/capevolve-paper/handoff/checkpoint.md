@@ -105,3 +105,6 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Update 15:50 UTC 10-12 (periodic check)
 - Capped 111.8M/200M. ACE ledger guards (s1/s2) and HL-extended 10M watcher running; HL 3.5 h cumulative per-trial cap watcher running.
 - Pending: ACE s0 final validation rerun, then reconstruct; E12B relaunch when B hill-climb ends; Suite E waves; 21:11 forecast; cutoff 06:00 (cron b76737e4).
+
+## Update 18:50 UTC 10-12 (periodic check)
+- Capped 125.6M/200M. Suite E wave 1 started. GEPA A s1 budget_cap (finalize from state pending, baseline-eng). Host loops: paper_repo_sync, metrics_commit_loop (pid file in campaign-scratch/logs), HL watchers, ACE ledger guards.

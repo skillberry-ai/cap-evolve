@@ -1,5 +1,15 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-12 18:50 UTC (coordinator periodic check)_
+
+## Update 18:50 UTC
+- **Spend**: capped 125.6M of 200M; proxy USD $337. Ladder 170/178/182M with 18M final reserve; next forecast 21:11.
+- **Suite A**: N* about 350 (live, bound by WikiSkill s2). GEPA s0/s1/s2 all budget_cap at 600 (s1 final/ being rebuilt from state). WikiSkill s0 native finish (521). Gold-isolation negative tests for WikiSkill pass (v3, reviewed by provenance-auditor).
+- **Suite B**: HarnessLens s1 and s2 guard-stopped with no accepted version (artifact v0); s0 in iteration 3, near its guard. E12B relaunched 16:01. Hill-climb s1 finished.
+- **Suite D**: several cells finished (PT s0, P s0/s2, T s2, CTL); no-history arm running clean.
+- **Suite E**: wave 1 directories have appeared (E30 PT s0-s2, P s0), launched by the admission loop; launch report requested.
+- **Repo mirror**: bcarmeli/mlsys2027-cap-evolve-paper up to date; hourly metrics commits running.
+
 _Last updated: 2026-10-12 15:50 UTC (coordinator periodic check)_
 
 ## Update 15:50 UTC
