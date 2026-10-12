@@ -1,5 +1,19 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-12 21:50 UTC (coordinator periodic check)_
+
+## Update 21:50 UTC
+- **Spend**: capped 144.7M of 200M; proxy USD $367. 21:11 forecast at 06:00: 154/160/171M (low/central/high) before the 18M reserve; no rung crossed centrally. On the current-attempt basis, nothing is over its per-search cap (hlext 8.72M of 10M; ACE s1 3.15M, s2 1.70M of 4M; ledger guards are armed).
+- **Stall check**: one run is live but stale, the extended HarnessLens run (counter idle 12 h, tokens flat since 20:51); its owner has been asked to confirm. Every other stale counter belongs to a finished run.
+- **Suite B**: hill-climb s0 and s2 (budget-stopped) are being finalized host-side, with champion = seed and sel only. ao s2 and HarnessLens s0-s2 are still running.
+- **Suite E**: the zero-D admission clause fired at 20:40 and launched the no-history wave; waves W3 and W4 are queued.
+- **CapEvolve v2** (user request): four diagnoses are in improve/ and V2_PLAN.md. Epic #808, sub-issues #809-#813.
+  - PR-0 #814 (port of the campaign core) is merged to main with green CI (user-approved admin merge).
+  - PR-1 gate/P2 is coded on v2/gate, with tests and a PR next.
+  - PR-4 HC-2 #815 is open but waits for PR-1.
+  - PR-2 AO-2 and PR-3 helpers are being built.
+  - v2 reruns come after 06:00, on A, D and E (with no capped judge), HC-2 first.
+
 _Last updated: 2026-10-12 18:50 UTC (coordinator periodic check)_
 
 ## Update 18:50 UTC

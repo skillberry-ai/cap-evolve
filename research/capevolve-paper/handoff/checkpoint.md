@@ -108,3 +108,13 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 
 ## Update 18:50 UTC 10-12 (periodic check)
 - Capped 125.6M/200M. Suite E wave 1 started. GEPA A s1 budget_cap (finalize from state pending, baseline-eng). Host loops: paper_repo_sync, metrics_commit_loop (pid file in campaign-scratch/logs), HL watchers, ACE ledger guards.
+
+## Update 21:50 UTC 10-12 (periodic check)
+- Capped tokens are 144.7M. Resume points are unchanged: the cutoff is 06:00 (cron b76737e4), with N*, reconstruct, freeze and final evals after it.
+- v2 build: read research/capevolve-paper/improve/V2_PLAN.md. PRs target main.
+  - PR-0 #814 is merged.
+  - v2/gate is coded (PR-1).
+  - #815 is HC-2.
+  - Agents v2-gate, v2-ao2, v2-helpers and v2-hc2 are live.
+  - Each PR gets a review agent, then fixes, then an admin merge.
+  - Register amendment 11 (v2 runs on pooled F/C) before any rerun.
