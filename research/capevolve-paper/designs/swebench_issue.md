@@ -1,4 +1,4 @@
-DRAFT, not posted. Proposed title: `[experiment] SWE-bench Verified with GLM 5.3 as agent and optimizer: clean design (Suite F) and what the 482/500 claim needs`
+DRAFT, not posted. Proposed title: `[experiment] SWE-bench Verified with GLM 5.3 as agent and optimizer: clean design (Suite G) and what the 482/500 claim needs`
 Proposed labels: `paper-experiment`, `honesty`. Related: #777, #774, #513, #306; PRs #673, #699.
 
 ## Summary
@@ -27,7 +27,7 @@ The colleagues report that after CapEvolve optimization with GLM 5.3 as agent an
 
 Fresh optimization on non-Verified executable data only (below), network blocked, gold unreachable, 3 search seeds, champions fixed from the selection set before any Verified number is read, one scored pass over Verified for all arms together in one interleaved window.
 
-## 2. Design (Suite F)
+## 2. Design (Suite G)
 
 **Data.** Verified (500 instances, 12 repos) is scored once. Official splits, counted from the pinned parquet files: SWE-bench `train` 19,008 instances / 35 repos and `dev` 225 / 6 repos are both repo-disjoint and instance-disjoint from Verified; but `train` has empty `FAIL_TO_PASS`, `PASS_TO_PASS`, `test_patch` and `version` in all rows, so it gives no executable reward and is used for decontamination statistics only. Search and selection therefore use SWE-Gym (2,438 instances, 11 repos, none shared with Verified, pre-built images, Harbor adapter): OPT-100 (gate), SEL-60 (champion selection), REH-100 (rehearsal), PIL-40 (pilot). SWE-bench `dev` (225) is a transfer set (DEV-225; DEV-PIL-60 for the pilot). Decontamination: instance, repo and time-window checks plus a gold-patch hash check inside the evaluator; the pretraining contamination of GLM 5.3 cannot be removed, so claims are paired differences between artifacts. Split files and hashes (sha256): `gym_splits.json` `e4615cb6ea6940e265280dbacd27ec8a86fd6b6d312faa3a1e99a9e569312b7b`, `dev_splits.json` `ed9704c566aee64de7b2e39b3d5a7ee513ee2cd5c38d605f6299f3bb85c29a0a`, `id_hashes.json` `ce156f7824d89614de5e3f0e2d1b713ad310e9012b0707d8d05265031b03d29d`, `decontam_report.json` `fd611588fb563a5ef68366245bb5546175374095758277fbbae8c51547aa8ab9`. Verified id-list hash `fad0fdea4fc2315e9b78cdf80882a32e32393297052e502e0e63c79ad648fb85`.
 
@@ -41,7 +41,7 @@ Fresh optimization on non-Verified executable data only (below), network blocked
 
 **Budget.** Unit: about 10 min per rollout (8.4 and 11.4 min measured in PR #673). Tier 1: 41,025 rollouts (18,600 search, 17,000 Verified, 3,825 dev, 1,600 rehearsal) = 142 h at 48 containers, about $41k at an assumed $1 per rollout (token price UNVERIFIED). Tier 2: 30,000 rollouts (104 h). Tier 3: 36,000 rollouts (125 h). Pilot: about 1,000 rollouts, no Verified contact (about 3.5 h). Reduced replication: 8,800 rollouts (31 h), three arms.
 
-**Build checklist (acceptance tests in the design, section 12).** Split loader and Verified-id guard; Harbor SWE-Gym and dev task generation with oracle check; candidate injection and surface lock; network allowlist probe; future-commit probe on all images; phase-separation probe; optimizer sandbox with canary file; patch-hash decontamination; empirical null pool for the gates; cap-evolve Harbor adapter with infrastructure classification and retries; patch extraction and official re-grade; Suite F final-evaluation entry; competitor adapters; candidate static scan; cost ledger; analysis-script simulation.
+**Build checklist (acceptance tests in the design, section 12).** Split loader and Verified-id guard; Harbor SWE-Gym and dev task generation with oracle check; candidate injection and surface lock; network allowlist probe; future-commit probe on all images; phase-separation probe; optimizer sandbox with canary file; patch-hash decontamination; empirical null pool for the gates; cap-evolve Harbor adapter with infrastructure classification and retries; patch extraction and official re-grade; Suite G final-evaluation entry; competitor adapters; candidate static scan; cost ledger; analysis-script simulation.
 
 **Deliverables and claims.** Validity report; frozen package with chained registry lines; pilot report; clean score table (artifact-level claim: "this artifact scores X on Verified, cross-repo, network blocked, D above baseline"); six-row contrast table; optimizer-strength decomposition; ablations; competitor comparison; dev and rehearsal replications; cost table; leaderboard readiness note. Not supported: an uncontaminated absolute score, "top across all leaderboards", other models or scaffolds beyond the reduced Track M check, or a method-level claim under about 10 points at 3 seeds.
 

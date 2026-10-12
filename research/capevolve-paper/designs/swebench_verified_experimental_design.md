@@ -1,10 +1,10 @@
-# CapEvolve on SWE-bench Verified with GLM 5.3 as agent and optimizer: experimental design (Suite F)
+# CapEvolve on SWE-bench Verified with GLM 5.3 as agent and optimizer: experimental design (Suite G)
 
 Status: DRAFT for team-lead review, written 2026-10-12. Nothing in this document has been posted to GitHub. The repository is public, so this text contains no endpoints, keys or internal host names. It becomes binding only when its SHA-256 and the hashes of the split files are written to `experiments/registry.jsonl` (section 10) before any search rollout starts.
 
 Audience: a colleague's coding agent that must run every experiment from this document alone. Each section says what to do, what number to record, what passes and what stops the run. Where something does not exist yet, section 12 gives a build checklist with acceptance tests. Items marked **UNVERIFIED** could not be checked from here; they are collected in section 15 and each carries the test that settles it.
 
-Method sources reused: `protocol/analysis_plan.md` (amendments 1 to 10: paired, task-clustered estimators, Holm families, TOST equivalence, inert-artifact rule 9D, infrastructure rule 5O, interleaved final window 5H, matched checkpoint N*), `redesign/EXPERIMENTS.md` (Suites D and E), `experiments/registry.jsonl` (hash chain). Suite names A to E are taken; this design is Suite F.
+Method sources reused: `protocol/analysis_plan.md` (amendments 1 to 10: paired, task-clustered estimators, Holm families, TOST equivalence, inert-artifact rule 9D, infrastructure rule 5O, interleaved final window 5H, matched checkpoint N*), `redesign/EXPERIMENTS.md` (Suites D and E), `experiments/registry.jsonl` (hash chain). Suite names A to F are taken (F is AppWorld, issue #804); this design is Suite G.
 
 ---
 
@@ -208,7 +208,7 @@ All probes run in the pilot and again on a random 10% of containers during the m
 
 ### 6.6 Optional extension X1 (in-repo pool)
 
-If the cross-repo design shows no transfer, X1 asks whether in-repo data helps: build OPT and SEL from SWE-rebench instances in Verified's 12 repos with `created_at` later than 2023-09-06, drop any instance whose normalized gold patch matches a Verified patch, and rerun the Tier 1 headline arm with S=3. Requires SWE-rebench environments (availability UNVERIFIED). Its results are labelled in-repo and never pooled with Suite F.
+If the cross-repo design shows no transfer, X1 asks whether in-repo data helps: build OPT and SEL from SWE-rebench instances in Verified's 12 repos with `created_at` later than 2023-09-06, drop any instance whose normalized gold patch matches a Verified patch, and rerun the Tier 1 headline arm with S=3. Requires SWE-rebench environments (availability UNVERIFIED). Its results are labelled in-repo and never pooled with Suite G.
 
 ---
 
@@ -222,28 +222,28 @@ If the cross-repo design shows no transfer, X1 asks whether in-repo data helps: 
 
 ### 7.2 Arms
 
-Cell ids use prefix F. Optimizer is GLM 5.3 unless stated. Surface "PST" means prompt, skills and tools all editable.
+Cell ids use prefix G. Optimizer is GLM 5.3 unless stated. Surface "PST" means prompt, skills and tools all editable.
 
 | Cell | Algorithm and gate | Surface | Seeds | Tier |
 |---|---|---|---|---|
-| F00-seed | no search; S0 | none | n/a | 1 |
-| F10-hc | hill-climb, stock gate (paired, k_se 1.0, footprint masking on, candidate-side coverage 0.6, errored trial policy fail) | PST | 3 | 1, reference |
-| F11-hcP | hill-climb, rule P (k_se 1, n_conf 3, z_conf 1.282, dmin 0) | PST | 3 | 1 |
-| F12-ao | agent-optimize, rule P | PST | 3 | 1 (gold-isolation flag, section 6, item 5, applies) |
-| F13-ctl | one-shot control: baseline evaluation on OPT-100, one proposal, one evaluation, no selection (200 rollouts) | PST | 3 | 1 |
-| F14-mo | hill-climb stock gate, **optimizer Claude Sonnet 5.5**, target GLM 5.3 | PST | 3 | 1, matched-optimizer control |
-| F20-P, F20-S, F20-T | F10-hc with `SURFACES` locked to prompt, skills, or tools | P, S, T | 3 each | 2 |
-| F21-1S | one-stage gate (footprint masking off, joint coverage, no confirmation) | PST | 3 | 2 |
-| F22-nohist | F10-hc with `CAPEVOLVE_HISTORY=0` and the hidden-history sandbox of amendment 8H (no LEDGER, JOURNAL, RUNMAP, prior iterations; per-invocation config; PROCESS.md reset) | PST | 3 | 2 |
-| F30 to F37 | competitors (section 7.5) | see table | 3 each, HarnessLens 1 | 3 |
+| G00-seed | no search; S0 | none | n/a | 1 |
+| G10-hc | hill-climb, stock gate (paired, k_se 1.0, footprint masking on, candidate-side coverage 0.6, errored trial policy fail) | PST | 3 | 1, reference |
+| G11-hcP | hill-climb, rule P (k_se 1, n_conf 3, z_conf 1.282, dmin 0) | PST | 3 | 1 |
+| G12-ao | agent-optimize, rule P | PST | 3 | 1 (gold-isolation flag, section 6, item 5, applies) |
+| G13-ctl | one-shot control: baseline evaluation on OPT-100, one proposal, one evaluation, no selection (200 rollouts) | PST | 3 | 1 |
+| G14-mo | hill-climb stock gate, **optimizer Claude Sonnet 5.5**, target GLM 5.3 | PST | 3 | 1, matched-optimizer control |
+| G20-P, G20-S, G20-T | G10-hc with `SURFACES` locked to prompt, skills, or tools | P, S, T | 3 each | 2 |
+| G21-1S | one-stage gate (footprint masking off, joint coverage, no confirmation) | PST | 3 | 2 |
+| G22-nohist | G10-hc with `CAPEVOLVE_HISTORY=0` and the hidden-history sandbox of amendment 8H (no LEDGER, JOURNAL, RUNMAP, prior iterations; per-invocation config; PROCESS.md reset) | PST | 3 | 2 |
+| G30 to G37 | competitors (section 7.5) | see table | 3 each, HarnessLens 1 | 3 |
 
-Why these: F10 versus F11 is the gate question (stock gate shipped, rule P nearly inert in Suites A to C). F10 versus F13 asks whether search beats a single proposal. F10 versus F14 separates optimizer strength from target strength: if Sonnet-optimized and GLM-optimized artifacts differ, the "self-optimizer" gain depends on the optimizer; if they match, it does not. F20 versus F10 shows which surface carries the effect (analysis follows Suite D 7D). F22 versus F10 tests the value of the causal history.
+Why these: G10 versus G11 is the gate question (stock gate shipped, rule P nearly inert in Suites A to C). G10 versus G13 asks whether search beats a single proposal. G10 versus G14 separates optimizer strength from target strength: if Sonnet-optimized and GLM-optimized artifacts differ, the "self-optimizer" gain depends on the optimizer; if they match, it does not. G20 versus G10 shows which surface carries the effect (analysis follows Suite D 7D). G22 versus G10 tests the value of the causal history.
 
 ### 7.3 Budget rule and matched checkpoint
 
 - Search budget per cell: at most 1,500 counted rollouts and 10 iterations, optimizer-token guard 4M non-cache-read (soft 3.5M). Counted rollouts are those of amendment 9 erratum 4: baseline evaluations, screens, confirmations and native selection evaluations; finalize and SEL-60 rescoring are excluded.
 - OPT-100 at n = 1 per task: a screen costs 100 rollouts, a rule-P confirmation 2 x 100 x 3 = 600. A stock-gate search reaches about 14 screens; a rule-P search about 8 screens plus 1 to 2 confirmations.
-- **N\*:** the largest counted-rollout count reached by every seed of every primary-family arm (F10, F11, F12, F14), rounded down to a multiple of 50, floor 600. Every primary comparison uses each arm's artifact at min(N\*, its own count at the end), with the count disclosed per seed (analysis plan 5N).
+- **N\*:** the largest counted-rollout count reached by every seed of every primary-family arm (G10, G11, G12, G14), rounded down to a multiple of 50, floor 600. Every primary comparison uses each arm's artifact at min(N\*, its own count at the end), with the count disclosed per seed (analysis plan 5N).
 - Native end-of-run artifacts (unmatched budget) are a secondary analysis (5D).
 - A search that crashes stays in the denominator; its champion is the seed unless a candidate was already accepted.
 
@@ -266,14 +266,14 @@ All competitors get the same target (GLM 5.3), the same OPT-100 / SEL-60 split a
 
 | Method (arXiv) | What it edits | Feasible here? | What it needs | Plan |
 |---|---|---|---|---|
-| GEPA (2507.19457) | prompt text | Yes | official `gepa` package, a `GEPAAdapter` whose evaluate call runs a Harbor batch on a minibatch and returns reward and trajectory text; reflection model GLM 5.3; selection on SEL-60 | F30, 3 seeds, prompt only. Suite E used GEPA 0.1.4. |
-| MIPROv2 (2406.11695) | instructions and few-shot demos | Partly | a DSPy program wrapper around one agent call. Few-shot demos would be full agent trajectories of tens of thousands of tokens, so only the instruction (a policy addendum) is optimized, as in Suite E | F31 optional, descriptive only |
-| ACE (2510.04618) | evolving playbook | Yes | generator = the agent, reflector and curator = GLM 5.3, playbook appended to the prompt; offline mode on OPT-100 | F32, 3 seeds |
-| SkillOpt (2605.23904) | skill text | Yes | official code adapted to Claude Code skill blocks and Harbor batches; selection split SEL-60 | F33, 3 seeds |
-| Meta-Harness (2603.28052) | harness code with a filesystem of all prior candidates | Yes, heavy | proposer agent with read access to prior candidates, code edits in `tools/`; the same hidden-gold rules | F34, 3 seeds |
-| EvoSkill (2603.02766) | skill folders, Pareto frontier | Yes, adapter needed | designed for small QA validation sets; frontier of k = 3 programs as git branches; use the actual code | F35, 3 seeds |
-| Trace2Skill (2603.25158) | skills distilled from trajectories | Yes, cheap | trajectory collection counted in the budget (reuse baseline OPT-100 trajectories; count them once); hierarchical merge of patches | F36, 3 seeds |
-| HarnessLens (2608.27311) | harness, behavior-aware task subset per candidate | Yes | MIT code; the Suite B and E adapter with the sandbox fix | F37, 1 seed, exploratory |
+| GEPA (2507.19457) | prompt text | Yes | official `gepa` package, a `GEPAAdapter` whose evaluate call runs a Harbor batch on a minibatch and returns reward and trajectory text; reflection model GLM 5.3; selection on SEL-60 | G30, 3 seeds, prompt only. Suite E used GEPA 0.1.4. |
+| MIPROv2 (2406.11695) | instructions and few-shot demos | Partly | a DSPy program wrapper around one agent call. Few-shot demos would be full agent trajectories of tens of thousands of tokens, so only the instruction (a policy addendum) is optimized, as in Suite E | G31 optional, descriptive only |
+| ACE (2510.04618) | evolving playbook | Yes | generator = the agent, reflector and curator = GLM 5.3, playbook appended to the prompt; offline mode on OPT-100 | G32, 3 seeds |
+| SkillOpt (2605.23904) | skill text | Yes | official code adapted to Claude Code skill blocks and Harbor batches; selection split SEL-60 | G33, 3 seeds |
+| Meta-Harness (2603.28052) | harness code with a filesystem of all prior candidates | Yes, heavy | proposer agent with read access to prior candidates, code edits in `tools/`; the same hidden-gold rules | G34, 3 seeds |
+| EvoSkill (2603.02766) | skill folders, Pareto frontier | Yes, adapter needed | designed for small QA validation sets; frontier of k = 3 programs as git branches; use the actual code | G35, 3 seeds |
+| Trace2Skill (2603.25158) | skills distilled from trajectories | Yes, cheap | trajectory collection counted in the budget (reuse baseline OPT-100 trajectories; count them once); hierarchical merge of patches | G36, 3 seeds |
+| HarnessLens (2608.27311) | harness, behavior-aware task subset per candidate | Yes | MIT code; the Suite B and E adapter with the sandbox fix | G37, 1 seed, exploratory |
 | AHE, Agentic Harness Engineering (2604.25850) | prompts, tools, middleware, memory | No in this campaign | NexAU framework and E2B sandboxes; its own SWE-bench Verified numbers are frozen-harness transfer from a Terminal-Bench 2 discovery run (75.6 vs seed 75.2) | cite only |
 | VERSE (2610.02616) | executor harness and optimizer assets | No | evaluated on SWE-rebench with local Qwen models under vLLM; its host optimizers are re-implementations | cite as design reference for time-based splits |
 | DGM, HGM (2505.22954, 2510.21614) | agent source code by self-modification | No | native budgets of about $22k per run exceed the matched budget | cite only |
@@ -297,16 +297,16 @@ Tier 1 (claim-bearing minimum):
 
 | Item | Arithmetic | Rollouts |
 |---|---|---|
-| Searches F10, F11, F12, F14 | 4 cells x 3 seeds x 1,500 | 18,000 |
-| F13 one-shot | 3 seeds x 200 | 600 |
-| Verified, champions | 15 artifacts (F10, F11, F12, F14, F13 x 3 seeds) x 500 x n = 2 | 15,000 |
+| Searches G10, G11, G12, G14 | 4 cells x 3 seeds x 1,500 | 18,000 |
+| G13 one-shot | 3 seeds x 200 | 600 |
+| Verified, champions | 15 artifacts (G10, G11, G12, G14, G13 x 3 seeds) x 500 x n = 2 | 15,000 |
 | Verified, baseline | 500 x n = 4 | 2,000 |
 | DEV-225 | 15 x 225 x 1 + 225 x 2 | 3,825 |
 | REH-100 | 16 artifacts x 100 x 1 | 1,600 |
 | **Tier 1 total** | | **41,025** |
 
 Wall at C = 48: 41,025 x 10 / 48 = 8,547 min = 142 h = 5.9 days. Cost at c = $1: $41k (range $12k to $123k for c = $0.3 to $3).
-Optimizer tokens: 12 GLM searches with a 4M cap = 48M GLM tokens for F10, F11, F12; plus the 3 Sonnet 5.5 searches at a 4M cap = 12M non-cache-read tokens, to be priced from the provider table in `protocol/pricing.json` (the Claude side is in the campaign's budget lines).
+Optimizer tokens: 12 GLM searches with a 4M cap = 48M GLM tokens for G10, G11, G12; plus the 3 Sonnet 5.5 searches at a 4M cap = 12M non-cache-read tokens, to be priced from the provider table in `protocol/pricing.json` (the Claude side is in the campaign's budget lines).
 
 Tier 2 (surface, one-stage and history ablations): 5 cells x 3 seeds x 1,500 = 22,500 search rollouts + 15 artifacts x 500 x 1 = 7,500 final = **30,000** rollouts, 104 h, $30k.
 
@@ -323,7 +323,7 @@ Purpose: measure what the planning inputs assume, and test every probe, before r
 | P0 | Oracle agent on OPT-100, SEL-60, REH-100, PIL-40, DEV-225 (no LLM), plus the Verified oracle sweep for the 493-instance list | no agent rollouts |
 | P1 | Baseline S0 on PIL-40, 3 trials, `reasoning_effort` high and max (the pre-registered choice rule: use high unless max improves the pass rate by more than 5 points) | 240 |
 | P2 | Network probe: S0 and S0-open on DEV-PIL-60, 1 trial each | 120 |
-| P3 | One mini search: F10-hc, seed 0, OPT-40 taken as the first 40 ids of OPT-100 (sorted), 400 counted rollouts, GLM optimizer | 400 |
+| P3 | One mini search: G10-hc, seed 0, OPT-40 taken as the first 40 ids of OPT-100 (sorted), 400 counted rollouts, GLM optimizer | 400 |
 | P4 | Mini final: S0 (n = 2) and the P3 champion (n = 2) on DEV-PIL-60 | 240 |
 | Total | | about 1,000 |
 
@@ -333,12 +333,12 @@ Outputs that feed the freeze: within-task Bernoulli variance s2 (planning 0.05),
 
 ### 8.4 Reduced replication (about 8,800 rollouts)
 
-Arms F00, F10 (GLM optimizer) and F14 (Sonnet optimizer), S = 3, search budget 800 counted rollouts, final on Verified with n = 1 per champion and n = 2 for the baseline, no REH or DEV scoring.
-Search: 2 cells x 3 seeds x 800 = 4,800. Final: 6 artifacts x 500 + 500 x 2 = 4,000. Total 8,800 rollouts; 8,800 x 10 / 48 = 1,833 min = 30.6 h; $8.8k at c = $1. The MDE rises to about 6 to 8 points; the reduced run supports only the F10-versus-seed and F10-versus-F14 contrasts and is labelled reduced.
+Arms G00, G10 (GLM optimizer) and G14 (Sonnet optimizer), S = 3, search budget 800 counted rollouts, final on Verified with n = 1 per champion and n = 2 for the baseline, no REH or DEV scoring.
+Search: 2 cells x 3 seeds x 800 = 4,800. Final: 6 artifacts x 500 + 500 x 2 = 4,000. Total 8,800 rollouts; 8,800 x 10 / 48 = 1,833 min = 30.6 h; $8.8k at c = $1. The MDE rises to about 6 to 8 points; the reduced run supports only the G10-versus-seed and G10-versus-G14 contrasts and is labelled reduced.
 
 ### 8.5 Track M (mini-swe-agent) reduced run
 
-F00-M and F10-M (prompt and scaffold surfaces), S = 3, 800 rollouts per search, final n = 1 on Verified: 2,400 + 4 x 500 = 4,400 rollouts, about 15 h at C = 48.
+G00-M and G10-M (prompt and scaffold surfaces), S = 3, 800 rollouts per search, final n = 1 on Verified: 2,400 + 4 x 500 = 4,400 rollouts, about 15 h at C = 48.
 
 ---
 
@@ -354,10 +354,10 @@ Everything follows `protocol/analysis_plan.md`; this section fixes the SWE-speci
 - Sign-flip randomization p-value as a pre-declared robustness check; if the two disagree both are reported.
 - Inert artifacts (content tree hash equal to S0): per-task delta = 0 by construction and an extra seed-check cell (9D). Own-seed identity column (erratum 8) is descriptive.
 
-### 9.2 Primary family F (Holm m = 6, Verified, matched checkpoint)
+### 9.2 Primary family G (Holm m = 6, Verified, matched checkpoint)
 
-1. F10-hc vs F00-seed. 2. F11-hcP vs F00-seed. 3. F12-ao vs F00-seed. 4. F10-hc vs F13-ctl (search vs one-shot). 5. F10-hc vs F14-mo (optimizer strength; two-sided). 6. F10-hc vs F11-hcP (gate).
-Secondary families, each with its own Holm: S-ab (Tier 2: F20-P, F20-S, F20-T vs F10; F21-1S vs F10; F22-nohist vs F10; each vs seed); S-comp (F10 vs each competitor that finishes); S-dev (the F-family contrasts re-run on DEV-225, a second-repo-family replication, no pooling with Verified); S-reh (REH-100, descriptive). Equivalence (TOST) on non-significant primary rows with margin **0.05** absolute (about the conditional MDE below), design power reported, never at pipeline level; non-passing rows read "inconclusive". Winner's-curse shrinkage per arm (5P-2): SEL-60 gain minus Verified gain, non-inert seeds only.
+1. G10-hc vs G00-seed. 2. G11-hcP vs G00-seed. 3. G12-ao vs G00-seed. 4. G10-hc vs G13-ctl (search vs one-shot). 5. G10-hc vs G14-mo (optimizer strength; two-sided). 6. G10-hc vs G11-hcP (gate).
+Secondary families, each with its own Holm: S-ab (Tier 2: G20-P, G20-S, G20-T vs G10; G21-1S vs G10; G22-nohist vs G10; each vs seed); S-comp (G10 vs each competitor that finishes); S-dev (the G-family contrasts re-run on DEV-225, a second-repo-family replication, no pooling with Verified); S-reh (REH-100, descriptive). Equivalence (TOST) on non-significant primary rows with margin **0.05** absolute (about the conditional MDE below), design power reported, never at pipeline level; non-passing rows read "inconclusive". Winner's-curse shrinkage per arm (5P-2): SEL-60 gain minus Verified gain, non-inert seeds only.
 
 ### 9.3 Minimum detectable effect at T = 500
 
@@ -391,12 +391,12 @@ Time-block adjustment (5I); leave-one-repo-out (drop django, then each other rep
 
 Fields as in the existing file: `item`, `note`, `path`, `prev_line_sha256`, `script_commit`, `sha256`, `t_utc`. Items to write, in order, before the first search rollout:
 
-`suiteF_design` (this file), `suiteF_analysis_plan_amendment` (the amendment 11 text, section 14), `suiteF_registration_json` (cells, contrasts, Holm families, margins), `suiteF_splits_gym`, `suiteF_splits_dev`, `suiteF_id_hashes`, `suiteF_decontam_report`, `suiteF_oracle_exclusions` (oracle result per pool and Verified), `suiteF_model_registry` (provider, id string, listing, sampling), `suiteF_seed_artifact` (tree hash of S0), `suiteF_infra_classifier` (code hash), `suiteF_probe_report` (section 6 results), `suiteF_image_digests`, `suiteF_harbor_swebench_versions`, `suiteF_commit_cap_evolve`, `suiteF_commit_adapter`. Before the Verified window opens: `suiteF_champions` (artifact tree hashes and the selection rule output on SEL-60), `suiteF_final_order` (hash of the randomized order file), `suiteF_nstar`. Deviations go to `decisions.md` with the reason; affected analyses become exploratory.
+`suiteG_design` (this file), `suiteG_analysis_plan_amendment` (the amendment 11 text, section 14), `suiteG_registration_json` (cells, contrasts, Holm families, margins), `suiteG_splits_gym`, `suiteG_splits_dev`, `suiteG_id_hashes`, `suiteG_decontam_report`, `suiteG_oracle_exclusions` (oracle result per pool and Verified), `suiteG_model_registry` (provider, id string, listing, sampling), `suiteG_seed_artifact` (tree hash of S0), `suiteG_infra_classifier` (code hash), `suiteG_probe_report` (section 6 results), `suiteG_image_digests`, `suiteG_harbor_swebench_versions`, `suiteG_commit_cap_evolve`, `suiteG_commit_adapter`. Before the Verified window opens: `suiteG_champions` (artifact tree hashes and the selection rule output on SEL-60), `suiteG_final_order` (hash of the randomized order file), `suiteG_nstar`. Deviations go to `decisions.md` with the reason; affected analyses become exploratory.
 
 ### 10.2 Logging
 
-- One record per rollout: `cell`, `seed`, `artifact_tree_sha256`, `pool`, `task_id`, `attempt`, `attempt_seed`, start and end UTC, queue seconds, Harbor job and trial dir, hash of `result.json`, reward, `exception_info`, classifier label, retries and their causes, turn count, wall seconds, tokens by role (gateway ledger with tags `tag:F10-hc-s0:<arm>:{target,optimizer}`), count of denied network connections, `counted` flag (for N\*), path of `model_patch.diff` and its hash.
-- Search level: `events.jsonl`, candidates, rejected, promotions per search (5M-4), optimizer transcripts, history-read scan counts (F22).
+- One record per rollout: `cell`, `seed`, `artifact_tree_sha256`, `pool`, `task_id`, `attempt`, `attempt_seed`, start and end UTC, queue seconds, Harbor job and trial dir, hash of `result.json`, reward, `exception_info`, classifier label, retries and their causes, turn count, wall seconds, tokens by role (gateway ledger with tags `tag:G10-hc-s0:<arm>:{target,optimizer}`), count of denied network connections, `counted` flag (for N\*), path of `model_patch.diff` and its hash.
+- Search level: `events.jsonl`, candidates, rejected, promotions per search (5M-4), optimizer transcripts, history-read scan counts (G22).
 - The final order, window start and end, every interruption (a block boundary), the hourly canary.
 - Artifacts are stored by content hash; the trajectories needed for leaderboard-style reasoning traces are kept with the final rollouts.
 
@@ -420,10 +420,10 @@ harbor run -p $TASKDIR -a claude-code -m "$GLM_ID" -n 48 -o $JOBS \
    --ae ANTHROPIC_BASE_URL="$GATEWAY" --ak max_turns=200 -y        # key and agent-kwarg names UNVERIFIED
 
 # a search (hill-climb, stock gate), from the cap-evolve campaign tooling
-cap-evolve run --spec suiteF/F10-hc.yaml --project $PROJ --run-ts s0 --dashboard off
+cap-evolve run --spec suiteG/G10-hc.yaml --project $PROJ --run-ts s0 --dashboard off
 
 # final window, all arms interleaved
-python3 experiments/final/run_final.py --suite F --order $ORDER_FILE --manifest $MANIFEST
+python3 experiments/final/run_final.py --suite G --order $ORDER_FILE --manifest $MANIFEST
 ```
 
 Environment variables, as in the colleagues' launcher but with the isolation changes: `HARBOR_DATASET` (local path to the generated pool), `HARBOR_AGENT=claude-code`, `HARBOR_MODEL`, `HARBOR_PARALLEL=48`, `HARBOR_TIMEOUT` per batch, `HARBOR_EXTRA_FLAGS` for the environment (docker or openshift). Never write keys into the run directory or the registry.
@@ -451,7 +451,7 @@ For every champion on Verified, extract `model_patch.diff` and run the official 
 
 ## 12. Build checklist and acceptance tests
 
-Existing: `capevolve_harbor` (run, results, tasks), the Harbor adapter template, the swe_bench litellm template (not agentic), the campaign's final-eval machinery (`experiments/final`), gateway tagging, rule P, the stock gate, the hidden-history flag, the Claude shim sandbox. Existing CI tier `ci/benchmarks/swebench/full` is built from Verified itself (250 ids, split 100/50/100) and **must not be used** for optimization in Suite F; add a guard that fails a Suite F spec if any pool id is a Verified id.
+Existing: `capevolve_harbor` (run, results, tasks), the Harbor adapter template, the swe_bench litellm template (not agentic), the campaign's final-eval machinery (`experiments/final`), gateway tagging, rule P, the stock gate, the hidden-history flag, the Claude shim sandbox. Existing CI tier `ci/benchmarks/swebench/full` is built from Verified itself (250 ids, split 100/50/100) and **must not be used** for optimization in Suite G; add a guard that fails a Suite G spec if any pool id is a Verified id.
 
 | Id | Build item | Acceptance test |
 |---|---|---|
@@ -466,8 +466,8 @@ Existing: `capevolve_harbor` (run, results, tasks), the Harbor adapter template,
 | B9 | Empirical null pool: S0 evaluated K = 40 times on OPT-100, replayed through the real stock gate, one-stage gate and rule P (as in 7F of the plan) | false-accept rates per decision and per 10-candidate search with intervals; compared with section 9.3 approximations |
 | B10 | Harbor adapter for cap-evolve: batch evaluation, per-task rewards, trajectories, `exception_info`, infra classification, retries, token ledger tags | on PIL-40, 20 forced infrastructure failures (kill container, block gateway) are retried and labelled; 20 forced agent timeouts are scored 0 |
 | B11 | Patch extraction post-step and official re-grade script | on 50 instances, Harbor verdict equals the official verdict, or each difference is explained |
-| B12 | Scorer adapter and final-eval entry for Suite F (`run_final.py --suite F`), order file, interleaving, block analysis | dry run on REH-100 with S0 and one dummy champion reproduces the paired CR1 numbers of a hand computation |
-| B13 | Competitor adapters F30, F32 to F37 | each runs 3 iterations on OPT-40 within budget accounting, returns an artifact that loads in the scaffold, and its counted rollouts match the harness counter |
+| B12 | Scorer adapter and final-eval entry for Suite G (`run_final.py --suite G`), order file, interleaving, block analysis | dry run on REH-100 with S0 and one dummy champion reproduces the paired CR1 numbers of a hand computation |
+| B13 | Competitor adapters G30, G32 to G37 | each runs 3 iterations on OPT-40 within budget accounting, returns an artifact that loads in the scaffold, and its counted rollouts match the harness counter |
 | B14 | Candidate static scan (section 6, item 4) | 20 planted violations rejected, 20 clean candidates pass |
 | B15 | Cost and token ledger for GLM on the gateway | pilot reports tokens and dollars (or GPU hours) per rollout by role |
 | B16 | Analysis scripts for section 9 on synthetic data | a simulated null reproduces size 0.05 within Monte Carlo error; a planted +0.06 effect is detected with power near 0.8 at the MDE table settings |
@@ -483,9 +483,9 @@ Stop rules: any failure of B4 to B7 blocks all search and final rollouts. B9 and
 | D1 Validity report | section 2.2 items 1 to 12 answered for the colleagues' run, with files | which parts of 482/500 are held out; wording of any public statement |
 | D2 Frozen package | this design, registration JSON, split files, hashes, classifier, probes, image digests, chained registry lines | that the design was fixed before scoring |
 | D3 Pilot report | s2, discordant rate, wall, tokens, infra rate, probe results, baseline pass rates | planning constants; go or stop |
-| D4 Clean score table | P1 and P1-first with intervals for F00, F10, F11, F12, F13, F14 on Verified at N\*; per-seed values; promotions per search; inert fraction | "this artifact, as found in these runs, scores X on SWE-bench Verified (cross-repo, network blocked, held out), D above the baseline" (artifact level) |
+| D4 Clean score table | P1 and P1-first with intervals for G00, G10, G11, G12, G13, G14 on Verified at N\*; per-seed values; promotions per search; inert fraction | "this artifact, as found in these runs, scores X on SWE-bench Verified (cross-repo, network blocked, held out), D above the baseline" (artifact level) |
 | D5 Contrast table | the six primary rows with Holm-adjusted p, artifact-level and pipeline-level intervals, TOST rows | "gate A beats gate B", "search beats one-shot", "optimizer strength matters or does not", at the stated MDE |
-| D6 Optimizer-strength decomposition | F10 vs F14 and both vs F00 | whether GLM 5.3 can optimize itself as well as Claude Sonnet 5.5 can optimize it |
+| D6 Optimizer-strength decomposition | G10 vs G14 and both vs G00 | whether GLM 5.3 can optimize itself as well as Claude Sonnet 5.5 can optimize it |
 | D7 Surface and history ablations (Tier 2) | S-ab family | which surface carries the effect; value of history |
 | D8 Competitor comparison (Tier 3) | S-comp family, native-budget view | relative standing at matched rollouts; no "best optimizer" claim in advance |
 | D9 DEV-225 and REH-100 replication | S-dev, S-reh | transfer to a second repo family and the in-pool number |
@@ -498,7 +498,7 @@ Claims not supported by this design: any statement that the absolute Verified sc
 
 ## 14. Proposed amendment 11 to the analysis plan (text to register)
 
-Amendment 11 (Suite F, SWE-bench Verified): the cells, splits, rules and contrasts of sections 3, 7 and 9 of this document; the primary family F of six rows at Holm m = 6; clusters = repos; TOST margin 0.05; DEV-225 and REH-100 are secondary and descriptive; section 5O applies; 9D (inert), 9H (surface violations) and 5H/5I (window and blocks) apply unchanged. Disclosure to write at registration: which of the campaign's results had been seen (all Suites A to E search-time results; none of Suite F), and that the planning inputs of section 9.3 come from the pilot.
+Amendment 11 (Suite G, SWE-bench Verified): the cells, splits, rules and contrasts of sections 3, 7 and 9 of this document; the primary family G of six rows at Holm m = 6; clusters = repos; TOST margin 0.05; DEV-225 and REH-100 are secondary and descriptive; section 5O applies; 9D (inert), 9H (surface violations) and 5H/5I (window and blocks) apply unchanged. Disclosure to write at registration: which of the campaign's results had been seen (all Suites A to E search-time results; none of Suite G), and that the planning inputs of section 9.3 come from the pilot.
 
 ---
 
