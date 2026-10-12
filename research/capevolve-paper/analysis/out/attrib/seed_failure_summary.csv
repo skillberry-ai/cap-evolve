@@ -51,3 +51,42 @@ C,oneshot,infra,infra (unscorable),,1
 C,oneshot,missing_action,forgotten rule or step,,10
 C,oneshot,other,other,,7
 C,oneshot,wrong_argument,tool misuse,,11
+D,E20-CTL,communication,output / contract,,5
+D,E20-CTL,infra,infra (unscorable),,1
+D,E20-CTL,missing_action,forgotten rule or step,,16
+D,E20-CTL,other,other,,10
+D,E20-CTL,state_side_effect,unexpected side effect,,3
+D,E20-CTL,wrong_argument,tool misuse,,23
+D,E20-P,communication,output / contract,,6
+D,E20-P,infra,infra (unscorable),,2
+D,E20-P,missing_action,forgotten rule or step,,22
+D,E20-P,other,other,,12
+D,E20-P,state_side_effect,unexpected side effect,,3
+D,E20-P,wrong_argument,tool misuse,,19
+D,E20-PT,communication,output / contract,,5
+D,E20-PT,missing_action,forgotten rule or step,,28
+D,E20-PT,other,other,,10
+D,E20-PT,state_side_effect,unexpected side effect,,3
+D,E20-PT,wrong_argument,tool misuse,,22
+D,E20-T,communication,output / contract,,4
+D,E20-T,missing_action,forgotten rule or step,,24
+D,E20-T,other,other,,6
+D,E20-T,state_side_effect,unexpected side effect,,5
+D,E20-T,wrong_argument,tool misuse,,23
+D,E21-1S,communication,output / contract,,10
+D,E21-1S,infra,infra (unscorable),,2
+D,E21-1S,missing_action,forgotten rule or step,,23
+D,E21-1S,other,other,,6
+D,E21-1S,state_side_effect,unexpected side effect,,2
+D,E21-1S,wrong_argument,tool misuse,,24
+D,E21-ruleP,communication,output / contract,,4
+D,E21-ruleP,infra,infra (unscorable),,1
+D,E21-ruleP,missing_action,forgotten rule or step,,22
+D,E21-ruleP,other,other,,11
+D,E21-ruleP,state_side_effect,unexpected side effect,,4
+D,E21-ruleP,wrong_argument,tool misuse,,25
+D,E26-NOHIST,communication,output / contract,,7
+D,E26-NOHIST,missing_action,forgotten rule or step,,20
+D,E26-NOHIST,other,other,,7
+D,E26-NOHIST,state_side_effect,unexpected side effect,,2
+D,E26-NOHIST,wrong_argument,tool misuse,,25

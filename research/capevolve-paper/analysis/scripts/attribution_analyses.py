@@ -41,7 +41,7 @@ OUT = PAPER / "analysis" / "out" / "attrib"
 TABLES, FIGS = st.TABLES, st.FIGS
 FINAL = SCRATCH / "final_eval"
 CAP_SURF = ["system_prompt", "task_template", "tool_code", "mcp", "skill_files"]
-EDIT_ARMS = ("hc", "hcstock", "ao", "oneshot")
+EDIT_ARMS = ("hc", "hcstock", "ao", "oneshot") + st.SUITE_D_CAP
 PASS = 0.5
 
 # ----------------------------------------------------------------------------- failure typing
