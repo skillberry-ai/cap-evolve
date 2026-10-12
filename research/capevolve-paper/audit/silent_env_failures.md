@@ -102,3 +102,34 @@ No new host-level error: the only optimizer tool errors are single non-repeating
 non-seed 107 of 6,323 (1.7 percent) versus seed 0 of 1,406. Per candidate (infra / rollouts): E20-T s0 cand_0002 12/49, cand_0003 7/49, cand_0004 7/49, cand_0006 4/35;
 E20-PT s1 cand_0003 9/49, cand_0004 8/49; E21-1S s2 cand_0002 4/49, cand_0003 4/49, cand_0004 6/49, cand_0005 7/49 (rising along the lineage);
 E20-T s1 cand_0001 3/49; E26-NOHIST s2 cand_0005 3/49. Children inherit the parent's write-tool edit and the rate persists or rises, which fits an edit-induced cause.
+
+## Per-lineage table: infra-labelled terminations by candidate, Suite D (2026-10-12 15:50 UTC)
+
+Search-time classification is unchanged (decision of the team lead): tau2 INFRASTRUCTURE_ERROR trials were treated as missing by the gate. This is a disclosed search-time bias: a
+candidate whose edit provokes such terminations has failing trials dropped, which can help it through the gate, and its children inherit the edit. For the final
+evaluation this is covered by 5O (infra_final scores 0), the registered no-retry-credit sensitivity and the new `infra_detail` logging. Source: `native_sims`
+(simulations with `termination_reason=infrastructure_error`) per candidate, val split; graph status from `graph.jsonl`. Hill-climb lineages are stars rather than chains:
+every candidate's parent is the seed or the current champion.
+
+**Lineages with an elevated rate (6 percent or more and at least 3 terminations):**
+
+| cell, seed | candidate (parent) | infra / rollouts | rate | accepted |
+|---|---|---|---|---|
+| E20-T s0 | cand_0002 (seed) | 12/49 | 24.5% | no (rejected) |
+| E20-T s0 | cand_0003 (seed) | 7/49 | 14.3% | no |
+| E20-T s0 | cand_0004 (seed) | 7/49 | 14.3% | no |
+| E20-T s0 | cand_0006 (running) | 5/37 | 13.5% | not yet decided |
+| E20-T s1 | cand_0001 (seed) | 3/49 | 6.1% | no |
+| E20-PT s1 | cand_0003 (cand_0002) | 9/49 | 18.4% | no |
+| E20-PT s1 | cand_0004 (cand_0002) | 8/49 | 16.3% | no |
+| E21-1S s2 | cand_0002, cand_0003, cand_0004, cand_0005 (all from cand_0001) | 4/49, 4/49, 6/49, 7/49 | 8.2, 8.2, 12.2, 14.3% | no (all rejected) |
+| E26-NOHIST s2 | cand_0005 (cand_0001) | 3/49 | 6.1% | no |
+
+Seed rate in every one of these cells: 0 of 49. The parents of the PT s1, 1S s2 and NOHIST s2 children (cand_0002, cand_0001, cand_0001) are the accepted champions with 0 of 49 each, so the
+elevated rate comes from the child's own edit, not from an inherited one, except possibly in E21-1S s2 where four siblings of one champion share a rising rate.
+
+**Is any accepted champion among them? No.** All accepted candidates, Suite D, with infra / rollouts: CTL s0 cand_0001 2/74, CTL s1 cand_0001 1/74, P s0 cand_0001/0002/0004 0/49 each,
+P s1 cand_0002 0/49, P s2 cand_0005 0/49, PT s0 cand_0001 0/49 and cand_0005 1/49, PT s1 cand_0002 0/49, PT s2 cand_0001 and cand_0003 0/49, T s1 cand_0003 1/49, 1S s0 cand_0002 0/49,
+1S s1 cand_0001 and cand_0005 0/49, 1S s2 cand_0001 0/49, ruleP s2 cand_0001 2/196, NOHIST s0 cand_0004 0/49, NOHIST s1 cand_0006 1/49, NOHIST s2 cand_0001 0/49. The highest
+champion rate is 2.7 percent (CTL s0). Cells with no accepted candidate: E20-T s0 (best = seed; all five rejected candidates have 13 to 25 percent infra terminations), E20-T s2, E20-CTL s2, E21-ruleP s0 and s1.
+Reading: the bias works against these candidates in the sense that they were still rejected after their failing trials were dropped; no champion owes its acceptance to a high drop rate.
