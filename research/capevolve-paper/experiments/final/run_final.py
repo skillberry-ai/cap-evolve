@@ -789,6 +789,11 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
 def cmd_prepare(a):
     meta, jobs = load_order(a.order)
     sha, prob = preflight(a.suite, a.order, meta, jobs, a.order_sha)
+    if getattr(a, "check_kernel_idle", False) and a.suite == "A":      # opt-in, ~12 min: an idle kernel (700 s > the old 600 s timeout) must keep its state
+        r = subprocess.run(["bash", "-c", "source %s/local/env_local.sh; %s -I %s --idle-s 700" % (BENCH, PY["A"], HERE / "check_kernel_idle.py")], capture_output=True, text=True)
+        print(r.stdout.strip()[-300:])
+        if r.returncode != 0:
+            prob.append("idle-kernel check failed: %s" % (r.stdout + r.stderr)[-300:].replace("\n", " "))
     print(json.dumps({"order_sha256": sha, "n_jobs": len(jobs), "problems": prob}, indent=1))
     return 1 if prob else 0
 
@@ -904,6 +909,7 @@ def main(argv=None):
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)
         p.add_argument("--force", action="store_true")
+        p.add_argument("--check-kernel-idle", action="store_true", help="prepare, Suite A: also run the ~12 min idle-kernel behavioural check")
     w = sp.add_parser("worker")
     w.add_argument("--job", required=True)
     a = ap.parse_args(argv)
