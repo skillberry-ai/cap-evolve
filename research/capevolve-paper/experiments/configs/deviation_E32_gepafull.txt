@@ -1,0 +1,10 @@
+E32-gepafull = E30-GEPA with exactly these differences (everything else byte-identical; tau_lib.py, metrics_lib.py, cost_summary.py, guard_marker.py are byte-identical copies of scripts/E30/):
+ 1. COMPONENT LIST: seed_candidate = {"policy.md": "(none)", "tools.py": <pristine airline seed tools.py>} instead of {"policy.md": "(none)"}. GEPA's native round-robin module selector edits one
+    component per proposal; evaluate() builds the capability with make_cap(policy, tools) and the candidate log freezes both files (CandLogTools subclasses L.CandLog; keys on (policy, tools)).
+ 2. TOOLS.PY REFLECTION TEMPLATE: gepa.optimize(reflection_prompt_template={"tools.py": TOOLS_TEMPLATE}) (official parameter). Needed because GEPA's default template asks for "a new instruction for the
+    assistant" and, for a code component, made Claude return a meta-prompt (invalid Python) in smoke. policy.md keeps GEPA's default template and E30's reflective-dataset rows (verbatim, incl. E30's
+    'gpt-oss-120b' wording in the setting string, which is stale for this gpt-4.1-mini target - kept identical for parity).
+ 3. BOOKKEEPING: best/ also writes tools/tools.py; run_summary.json also records tools sha256 and per-candidate tools sha256 (candidates list holds policy.md + tools sha instead of policy text only).
+Launcher: only paths/names (scripts/E32, runs/E32/gepafull/s<seed>, --exp E32 --arm gepafull, cost_summary tags E32-gepafull-s<k>:gepafull); budget 300, guard limit 4,000,000, env exports identical to E30.
+Adapter/env/models/splits: wt-airE eb112a08c, azoai/gpt-4.1-mini target, azoai/gpt-4.1 user+judge on :4112, TAU_JUDGE_TEMPERATURE=0, reflection aws/claude-sonnet-5-5 on :4111, same splits file; no TAU_SURFACES lock (default policy,tools).
+Verification: real smoke earlier (Suite E dev runs): 8 counted rollouts, a valid evaluated 30,416-char tools.py candidate (docstring edits), exit 0; this exact E32 file was checked offline (adapter.evaluate/make_reflective_dataset/CandLog with a stubbed evaluator, no API calls) - no further Azure calls spent (mini quota).
