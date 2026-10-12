@@ -79,7 +79,11 @@ A hang past three hours gets one retry and is then missing in both.
 MIPROv2 and Meta-Harness ran with handling from before this rule, as did the GEPA, EvoSkill and SkillOpt seeds until their boundary restarts, so their search-time zeros stay in their histories.
 ACE was relaunched at 00:59 UTC on 12 October on the fixed library and is not affected.
 The rule changes the class of Trace2Skill and WikiSkill rows, which their adapters label as candidate faults.
-Of the \errTraceTotal{} Trace2Skill errors, \errTraceInfra{} carry a timeout or sandbox string and move to infrastructure, and \errTraceCand{} keep the candidate class because no string was stored.
+Of the \errTraceTotal{} Trace2Skill errors, \errTraceInfra{} are infrastructure and \errTraceCand{} keep the candidate class.
+The adapter kept the error text for all of them, in the \texttt{error} field of its pool and validation records: sandbox execution failures (HTTP 500), client timeouts, and two placeholder-contract rejections from a race that was retried.
+None is a genuine candidate error, so the candidate count should drop to zero once the metrics are rebuilt from those records.
+These rollouts were scored zero without retry, because the runs predate the infrastructure-retry code.
+Trace2Skill's analyst treated the pool-phase infrastructure zeros as failed logs, and validation zeros lower its validation scores, but its selected artifact does not change when they are retried.
 All \errWikiTotal{} WikiSkill errors are infrastructure.
 Every Meta-Harness error is infrastructure, \errMetaTotal{} in all, with per-seed counts of \errMetaSeedZero{}, \errMetaSeedOne{} and \errMetaSeedTwo{} (sandbox 500 errors or timeouts).
 MIPROv2 has \errMiproTotal{} in all, with \errMiproSeedZero{}, \errMiproSeedOne{} and \errMiproSeedTwo{} per seed.
