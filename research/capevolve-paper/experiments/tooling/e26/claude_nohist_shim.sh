@@ -17,13 +17,16 @@ S=/tmp/sbxstage.$$; mkdir -p $S; mount -t tmpfs none $S
 W="$SBX_W"; B='$B'; WT='$WT'
 m() { mkdir -p "$S/$2"; mount --rbind "$1" "$S/$2"; }
 mkdir -p "$W/claude_cfg/projects"; exec 9<"$W/claude_cfg/projects"          # real transcript dir, kept as fd 9 for copy-out
-mkdir -p $S/w_cwd $S/w_proj $S/cfg; mount --rbind "$SBX_PWD" $S/w_cwd; mount --rbind "$W/.capevolve/project" $S/w_proj
+cp /home/dev/projects2/campaign-scratch/runs/E26/PROCESS.seed.md $S/process_seed.md; mkdir -p $S/w_cwd $S/w_proj $S/cfg; mount --rbind "$SBX_PWD" $S/w_cwd; mount --rbind "$W/.capevolve/project" $S/w_proj
 for f in "$W"/claude_cfg/* ; do [ "$(basename "$f")" = projects ] || cp -a "$f" $S/cfg/ ; done
 RJ="$W/.capevolve/run_main/rejected.jsonl"; if [ -f "$RJ" ]; then cp "$RJ" $S/rejected.jsonl; fi
 m /home/dev/.local/share/claude cl; m /home/dev/.local/bin lb; m $B/bench/venv-tau2-8ebb749 venv; m $B/bench/src/tau2-8ebb749/src tsrc
 m $W/sbx_data tdata; m $WT/core wtcore; m $B/baselines/gwbridge gwb; m $WT/skills wtskills; m $WT/docs/archive wtdocs; m $B/bench/local blocal
 mount -t tmpfs none /home/dev
-mkdir -p "$SBX_PWD" "$W/.capevolve/project"; mount --rbind $S/w_cwd "$SBX_PWD"; mount --rbind $S/w_proj "$W/.capevolve/project"
+mkdir -p "$SBX_PWD" "$W/.capevolve/project"; mount --rbind $S/w_cwd "$SBX_PWD"; 
+# carry-over scrub: a child of an ACCEPTED candidate starts from the snapshot of that candidate, which includes its filled PROCESS.md and DIAGNOSIS.json = history. Reset them.
+cp $S/process_seed.md "$SBX_PWD/PROCESS.md"; rm -f "$SBX_PWD/DIAGNOSIS.json"
+mount --rbind $S/w_proj "$W/.capevolve/project"
 mount -o remount,bind,ro "$W/.capevolve/project" 2>/dev/null || true
 mkdir -p /home/dev/.cfg_nohist; mount --rbind $S/cfg /home/dev/.cfg_nohist
 if [ -f $S/rejected.jsonl ]; then mkdir -p "$W/.capevolve/run_main"; cp $S/rejected.jsonl "$W/.capevolve/run_main/rejected.jsonl"; fi
