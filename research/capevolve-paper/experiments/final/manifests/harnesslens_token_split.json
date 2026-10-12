@@ -1,0 +1,77 @@
+{
+ "source": "bl-harness message 2026-10-12 ~15:20 UTC (HarnessLens creation ledger settled usage; non-cache-read = input + output + cache_write)",
+ "cutoff": "bubblewrap fix installed 2026-10-12T09:42:06Z; s0/s2/hlext restarted 09:43:46Z; s1 refund 09:46:54Z; jobs split by reserved_at",
+ "superseded_defect_attempts": {
+  "s0": {
+   "archived_total": 4039960,
+   "refunded_failed_sessions": 2614687,
+   "kept_reused": 1425273
+  },
+  "s2": {
+   "archived_total": 4091565,
+   "refunded_failed_sessions": 2621897,
+   "kept_reused": 1469668
+  },
+  "s1": {
+   "refunded_iterations_1_to_7": 878819,
+   "ledger_jobs": 21
+  },
+  "hlext_s0": {
+   "archived_total": 4570796,
+   "refunded_loop_sessions": 3145523,
+   "note": "includes the 2,614,687 inherited from s0's defect state; do not add to s0's"
+  }
+ },
+ "search_after_fix": {
+  "s0": 699156,
+  "s1": 2052255,
+  "s2": 2423885,
+  "hlext_s0": 3082663
+ },
+ "kept_reused_prefix_baseline_stage": {
+  "s0": 1425273,
+  "s1": 1545250,
+  "s2": 1469668,
+  "hlext_s0": 1425273
+ },
+ "current_ledger_total_counted_by_4M_guard": {
+  "s0": 2124429,
+  "s1": 3597505,
+  "s2": 3893553,
+  "hlext_s0": 4507936
+ },
+ "total_spent_including_defect_attempts": {
+  "s0": 4740000,
+  "s1": 4480000,
+  "s2": 6520000,
+  "hlext_s0": 7650000,
+  "hlext_note": "2.61M of it shared with s0"
+ },
+ "after_fix_by_stage_analyzer_experience_harness_editor_main_agent": {
+  "s0": [
+   158126,
+   369918,
+   17610,
+   153502
+  ],
+  "s1": [
+   374329,
+   1345367,
+   59495,
+   273064
+  ],
+  "s2": [
+   335830,
+   1263360,
+   67301,
+   757394
+  ],
+  "hlext_s0": [
+   573783,
+   1837741,
+   83798,
+   587341
+  ]
+ },
+ "gateway_meter_note": "gateway tag totals (5.47M/6.14M/7.93M/5.42M at ~14:30) count all prompt tokens of the tag incl. cache-read and direct judge calls and are not reproducible from the ledger by a simple sum; use the ledger numbers in the cost table"
+}
