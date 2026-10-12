@@ -134,6 +134,14 @@ class TestFinalTaskLoading(unittest.TestCase):
             O.FINAL_A_TASKS = old
 
 
+class TestInfraFlag(unittest.TestCase):
+    def test_flags_artifact_above_seed(self):
+        js = [("B", "seed", 0, "ok", False, True)] * 200 + [("B", "hc", 0, "ok", False, True)] * 70 + [("B", "hc", 0, "retry_1_ok", True, True)] * 30 + [("B", "gepa", 0, "ok", False, True)] * 100
+        dg = RF.infra_diagnostic(js)
+        self.assertIn("B|hc|s0", dg["flagged_above_seed"])
+        self.assertNotIn("B|gepa|s0", dg["flagged_above_seed"])
+
+
 class TestRunner(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()

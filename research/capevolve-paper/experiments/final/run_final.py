@@ -561,6 +561,18 @@ def infra_diagnostic(jstat):
         groups.setdefault(("arm|%s|%s" % (r[0], r[1])), []).append(r)
     for k, rows in sorted(groups.items()):
         out["per_arm" if k.startswith("arm|") else "per_artifact"][k] = summarize(rows)
+    # flag any artifact / arm whose first-attempt or final infra rate is clearly above the seed artifact's in the same window (Wilson 95% intervals do not overlap, rate >= 5%)
+    sd = out["seed_artifact"]
+    for grp in ("per_artifact", "per_arm"):
+        for k, v in out[grp].items():
+            if "|seed" in k or "|canary" in k:
+                continue
+            fl = []
+            for rate, ci in (("first_attempt_infra_rate", "first_attempt_infra_ci95"), ("infra_final_rate", "infra_final_ci95")):
+                if v[rate] is not None and sd[ci][1] is not None and v[ci][0] is not None and v[rate] >= 0.05 and v[ci][0] > sd[ci][1]:
+                    fl.append(rate)
+            v["above_seed_infra_rate"] = fl
+    out["flagged_above_seed"] = sorted(k for grp in ("per_artifact", "per_arm") for k, v in out[grp].items() if v.get("above_seed_infra_rate"))
     return out
 
 
@@ -622,15 +634,17 @@ def aggregate(suite, root, meta, jobs):
                                        reward_as_saved=(0.0 if infra_final else t["reward_as_saved"]), t_start=_iso(t["t_start"]), t_end=_iso(t["t_end"]), error_class=t["error_class"],
                                        error_text=(t["error_text"] or "").replace("\n", " ")[:500], attempts=len(allr), empty_output=int(bool(t.get("empty_output"))),
                                        empty_completion=int(bool(t.get("empty_completion"))), raw_tool_text_last=int(bool(t.get("raw_tool_text_last"))),
-                                       infra_final=int(infra_final), tag=t["tag"], job_id=j["job_id"]))
+                                       infra_final=int(infra_final), first_attempt_infra=int(bool(allr) and allr[0]["error_class"] == "infra"), tag=t["tag"], job_id=j["job_id"]))
     out = {}
     tcols = ["arm", "seed", "task", "trial", "reward", "family", "split", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output",
-             "empty_completion", "raw_tool_text_last", "infra_final", "tag", "job_id"]
+             "empty_completion", "raw_tool_text_last", "infra_final", "first_attempt_infra", "tag", "job_id"]
     lcols = ["arm", "seed", "task", "reward", "family", "split", "n_trials", "n_infra_final", "reward_as_saved", "t_start", "t_end", "error_class", "error_text"]
     for mode, suffix in (("B", ""), ("END", "_end")):
         rows = trial_rows[mode]
         _write_csv(root / ("results_trials%s.csv" % suffix), rows, tcols)
-        for variant, vsuffix in ((rows, ""), ([x for x in rows if not x["infra_final"]], "_infra_missing")):
+        # sensitivity: no retry credit -- a cell whose FIRST attempt hit an infra error scores 0 (retries cannot hide candidate-induced infra errors)
+        fa0 = [dict(x, reward=(0.0 if x["first_attempt_infra"] else x["reward"]), reward_as_saved=(0.0 if x["first_attempt_infra"] else x["reward_as_saved"])) for x in rows]
+        for variant, vsuffix in ((rows, ""), ([x for x in rows if not x["infra_final"]], "_infra_missing"), (fa0, "_first_attempt_infra_zero")):
             agg = {}
             for x in variant:
                 agg.setdefault((x["arm"], x["seed"], x["task"]), []).append(x)
