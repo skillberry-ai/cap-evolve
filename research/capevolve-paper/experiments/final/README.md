@@ -66,6 +66,9 @@ Capped-token guard: `run_final.py` polls the gateway and stops dispatching with 
 `wt-airE` = eb112a08 + logging b797886c8, pinned and hashed in freeze.py).  Run roots (fe_common.E_DIRS): E30/{PT,P,T,CTL,GEPA}, E31/{ruleP,1S}, E36/NOHIST (the 8 ablation cells; GEPA cells test-20 only);
 competitors E32/{ace,mipro,gepafull,ao} (own Holm; ao daggered; GEPA-full selects on sel-10, so test-20 only) and E10E/harnesslens (1 exploratory seed).  No B*/N*: each cell's final state.  Cell order if time is short:
 E30-PT, P, T, seed, then E31-ruleP, E36, E30-CTL, E31-1S, E30-GEPA, then competitors, then E25 (`decompose.py --suite E`, n=3 on H30).  E searches may end after the A/B/C cutoff: E scoring starts when they end.
+Suite E has its own order file and its own single interleaved window (never pooled with D); the seed artifact (n=10) and all cells are in one seeded random order, hashed before the first rollout.
+`order.py --merge-decomp manifests/decomp_E.json` puts the E25 cells into that same order (Suites D and E); without it E25 is a separate extra order.  Cut order if time is short:
+E25 first, then competitors, GEPA, 1S, CTL, nohist, ruleP; never PT, P, T or the seed (use `order.py --arms ...` to rebuild the order without the cut arms BEFORE the window starts; a started window is not reshuffled).
 Dry run: dryrun/E (fake E30 root of links to E10C runs, Azure).
 
 E25: `decompose.py --suite D --manifest manifests/artifacts_D.json --arms pt,rulep,1s,ctl` writes P-only / T-only sub-artifacts of each champion that differs from the seed on BOTH surfaces

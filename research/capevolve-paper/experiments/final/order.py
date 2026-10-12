@@ -137,6 +137,8 @@ def main(argv=None):
     ap.add_argument("--end-only", action="store_true", help="write only the distinct END (5D) jobs: run after the primary window (decisions 22:50)")
     ap.add_argument("--hl-v0", action="store_true", help="Suite B: add arm hl-v0 (HarnessLens's unmodified OpenCode harness, run_test_baseline path)")
     ap.add_argument("--decomp-manifest", default=None, help="with --extra decomp: manifest written by decompose.py")
+    ap.add_argument("--merge-decomp", default=None, help="Suites D/E: add the E25 decomposition cells (decompose.py manifest, n=3) to the MAIN order, i.e. into the one interleaved window; "
+                    "omit it to run E25 as a separate extra order, or to cut it first")
     ap.add_argument("--no-end", action="store_true", help="skip the native end-of-run (5D) artifacts")
     ap.add_argument("--arms", default=None, help="restrict to these arms (dry runs)")
     ap.add_argument("--tag-exp", default=None)
@@ -236,6 +238,11 @@ def main(argv=None):
                         skipped.append({"arm": arm, "seed": seed, "mode": "END", "reason": e.get("reason", "")})
                     elif not same and a.end_only:
                         add_cell(arm, seed, "END", e, n_a)
+    if a.merge_decomp and a.extra != "decomp":
+        dm2 = C.jload(a.merge_decomp)
+        nd2 = a.trials_arm or 3
+        for e in dm2["entries"]:
+            add_cell(e["arm_label"], e["seed"], "B", e, nd2)
     # one permutation of everything (sorted first so the input order is canonical)
     jobs.sort(key=lambda j: (j["arm_label"], j["seed"], str(j["task"]), j["trial"], j["mode"]))
     HashRng(C.ORDER_SEED, "%s|order|%s" % (suite, a.extra or "primary")).shuffle(jobs)
