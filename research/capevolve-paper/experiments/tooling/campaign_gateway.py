@@ -190,6 +190,9 @@ class H(BaseHTTPRequestHandler):
         path = self.path
         stripped = _strip_web_tools(body)
         is_anthropic = path.startswith("/v1/messages")
+        if os.environ.get("GATEWAY_AZURE_ONLY") == "1" and not model.startswith("azoai/"):
+            # the Azure-direct gateway (:4112) must not carry capped (LiteLLM) calls: the budget guard lives on :4111
+            return self._send(400, {"error": {"message": "this gateway serves azoai/<deployment> models only; use :4111"}})
         if model.startswith("azoai/"):
             # Azure OpenAI direct (user decision 2026-10-11 21:05): deployment = dated name, e.g. azoai/gpt-4.1-2025-04-14.
             # Metered like everything else; tokens are counted in their own uncapped bucket (azure_tokens).

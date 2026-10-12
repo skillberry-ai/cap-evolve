@@ -359,3 +359,4 @@ Two-stage: soft at 3.5M freezes the run budget (max_metric_calls := rollouts spe
   - (3) Non-RITS token cap raised to 170M (caps.json).
   - (4) Paper title: "CapEvolve: Optimizing Any Editable Surface of a Frozen Agent Under Code-Owned Evaluation".
   - Registry entries for Suite D are written before its first rollout.
+- 2026-10-12T09:17 — Gateway :4112 runs with GATEWAY_AZURE_ONLY=1: non-azoai models are refused (400), so capped calls cannot bypass the :4111 budget guard. Verified (non-Azure 400; Azure OK). All optimizer and judge calls on LiteLLM go through :4111.
