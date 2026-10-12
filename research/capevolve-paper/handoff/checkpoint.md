@@ -72,3 +72,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Trace2Skill is paused at about 200 (bl-skills checking). ACE batch restart: status asked of bl-context.
 - Final-eval machinery: dry runs OK on RITS and Azure; the HarnessLens worker is validated with v0; the HL 8-task validation run is in progress.
 - Token pace about 2.2M/h, projecting to about 98M at the cutoff. Apply the 65M stop order when reached, or ask the user to raise the cap.
+
+## Update 03:50 UTC 10-12 (periodic check)
+- No stalls. Infra retry hot-swapped into the CapEvolve daemons (03:02); GEPA and EvoSkill resume-restarted; ACE relaunched. MIPROv2 and MH stay on pre-rule handling.
+- Root cause of most sandbox 500s: the jupyter.py drain bug. Fix behind SB_DRAIN_ERROR, final evaluation only. KERNEL_TIMEOUT_S: search 600, final 10800.
+- Token budget: projection about 110M, over the cap. Asked the user whether to raise the cap or apply the stop order at 65M.
