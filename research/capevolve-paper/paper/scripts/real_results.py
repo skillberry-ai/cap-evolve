@@ -258,6 +258,73 @@ def table_zeros():
     (PAPER / "tables" / "zeros.tex").write_text("\n".join(L) + "\n")
 
 
+ATTR = REPO / "analysis" / "out" / "attrib"
+NICE_ARM = {"ctl-oneshot": "One-shot control", "ctl-seed": "Seed control", "oneshot": "One-shot control", "hc": "CapEvolve HC, rule P", "ao": "CapEvolve AO, rule P",
+            "hcstock": "CapEvolve, stock gate", "bestofk": "One-shot best of $k$", "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness",
+            "evoskill": "EvoSkill", "wikiskill": "WikiSkill", "trace2skill": "Trace2Skill", "ace": "ACE", "mipro": "MIPROv2", "harnesslens": "HarnessLens"}
+
+
+def table_promotions():
+    """Real, search-time: candidates, promotions and inert searches per arm (analysis/out/attrib/promotions_by_arm.csv)."""
+    rows = read_csv(ATTR / "promotions_by_arm.csv")
+    L = [r"\begin{table}[t]", r"\centering\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{Promotions per search at search time, for every arm (in progress). Candidates are those generated, promotions are those the arm's own rule accepted, "
+         r"and a search is inert when it promoted nothing. Counts come from the candidate logs and are not held-out results.}",
+         r"\label{tab:promotions}", r"\begin{tabular}{@{}llrrrrr@{}}", r"\toprule",
+         r"Suite & Arm & Searches & Candidates & Promotions & Per search & Inert \\", r"\midrule"]
+    prev = None
+    for r in rows:
+        su = r["suite"]
+        if prev and su[0] != prev[0]:
+            L.append(r"\midrule")
+        prev = su
+        cells = [su, NICE_ARM.get(r["arm"], r["arm"]), r["searches"], r["candidates_generated"], r["promotions"],
+                 f"{float(r['promotions_per_search']):.1f}", r["inert_searches"]]
+        L.append(" & ".join(f"\\prov{{{c}}}" if i >= 2 else c for i, c in enumerate(cells)) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (PAPER / "tables" / "promotions.tex").write_text("\n".join(L) + "\n")
+
+
+def table_regress():
+    """Real, search-time: tasks fixed and broken per candidate, and protect-set violations (analysis/out/attrib/regression_by_arm.csv)."""
+    rows = read_csv(ATTR / "regression_by_arm.csv")
+    def g(r, k):
+        v = r.get(k, "")
+        return "--" if v in ("", None) else f"{float(v):.1f}"
+    L = [r"\begin{table}[t]", r"\centering\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{Regressions at search time for CapEvolve and the one-shot control (in progress). Fixed and broke are tasks that flip from fail to pass and from pass to fail on the selection split, "
+         r"per candidate. Protect-set violations count tasks passing in the incumbent that a promoted candidate failed. Selection-split counts include noise flips.}",
+         r"\label{tab:regress_search}", r"\begin{tabular}{@{}llrrrrr@{}}", r"\toprule",
+         r"Suite & Arm & Candidates & Promoted & Fixed & Broke & Protect violations per promotion \\", r"\midrule"]
+    for r in rows:
+        cells = [r["base_suite"], NICE_ARM.get(r["arm"], r["arm"]), r["candidates"], r["promoted"], g(r, "fixed_per_candidate"), g(r, "broke_per_candidate"), g(r, "protect_violation")]
+        L.append(" & ".join(f"\\prov{{{c}}}" if i >= 2 else c for i, c in enumerate(cells)) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (PAPER / "tables" / "regress_search.tex").write_text("\n".join(L) + "\n")
+
+
+def table_surface_failure():
+    """Real, search-time: tasks fixed by failure type and the surface a candidate edited most (analysis/out/attrib/surface_x_failure.csv)."""
+    c = collections.defaultdict(int)
+    for r in read_csv(ATTR / "surface_x_failure.csv"):
+        if r["group"] in ("was_passing_or_unlabelled", "infra (unscorable)"):
+            continue
+        c[(r["group"], r["dominant_surface"])] += int(r["n_fixed"] or 0)
+    groups = sorted({g for g, _ in c}, key=lambda g: -sum(v for (gg, _), v in c.items() if gg == g))
+    cols = [("system_prompt", "Prompt"), ("tool_code", "Tool code"), ("unavailable", "Surface unknown")]
+    L = [r"\begin{table}[t]", r"\centering\scriptsize",
+         r"\caption{Tasks fixed by candidates, by failure type of the seed (rows) and by the surface the candidate edited most (columns), at search time on the selection split (in progress). "
+         r"Counts sum over CapEvolve candidates and one-shot proposals on Suites A, B and C. Tasks fixed by noise flips are included, and no held-out claim rests on this table.}",
+         r"\label{tab:surface_failure}", r"\begin{tabular}{@{}lrrrr@{}}", r"\toprule",
+         r"Failure type & " + " & ".join(n for _, n in cols) + r" & Share by tool code \\", r"\midrule"]
+    for g in groups:
+        vals = [c.get((g, k), 0) for k, _ in cols]
+        tot = sum(vals)
+        L.append(" & ".join([g[0].upper() + g[1:]] + [f"\\prov{{{v}}}" for v in vals] + [f"\\prov{{{100 * vals[1] / tot:.0f}\\%}}"]) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (PAPER / "tables" / "surface_failure.tex").write_text("\n".join(L) + "\n")
+
+
 def fig_roles():
     rows = [r for r in read_csv(OUTM / "metrics_by_role.csv") if r["category"] == "main"]
     agg = collections.defaultdict(lambda: collections.defaultdict(float))
@@ -325,9 +392,18 @@ def numbers(a):
     for k, nm in names.items():
         m[f"errMetaSeed{nm}"] = str(seedv("metaharness", str(k)))
         m[f"errMiproSeed{nm}"] = str(seedv("mipro", str(k)))
+    # search-time facts about inert searches (analysis/out/attrib/promotions_by_arm.csv), shown as in-progress values
+    pb = {(r["base_suite"], r["arm"]): r for r in read_csv(ATTR / "promotions_by_arm.csv")}
+    for arm, nm in (("hc", "Hc"), ("ao", "Ao"), ("hcstock", "Stock"), ("gepa", "Gepa")):
+        for su in "ABC":
+            r = pb.get((su, arm))
+            if r:
+                m[f"stInert{nm}{su}"] = r["inert_searches"]
+                m[f"stSearches{nm}{su}"] = r["searches"]
+                m[f"stPromo{nm}{su}"] = f"{float(r['promotions_per_search']):.1f}"
     L = ["% GENERATED by scripts/real_results.py from repo files. Audit values are final."]
     for k, v in m.items():
-        L.append("\\newcommand{\\%s}{%s}" % (k, v))
+        L.append("\\newcommand{\\%s}{%s}" % (k, f"\\prov{{{v}}}" if k.startswith("st") else v))
     (PAPER / "numbers_real_results.tex").write_text("\n".join(L) + "\n")
 
 

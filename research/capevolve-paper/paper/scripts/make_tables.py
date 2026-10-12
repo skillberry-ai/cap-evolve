@@ -11,24 +11,24 @@ import json
 from pathlib import Path
 
 PAPER = Path(__file__).resolve().parents[1]
-LABEL = {"hc": "CapEvolve HC", "ao": "CapEvolve AO", "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness",
+LABEL = {"hc": "CapEvolve HC, rule P", "ao": "CapEvolve AO, rule P", "gepa": "GEPA", "skillopt": "SkillOpt", "metaharness": "Meta-Harness",
          "evoskill": "EvoSkill", "wikiskill": "WikiSkill (community)", "trace2skill": "Trace2Skill", "ace": "ACE",
          "mipro": "MIPROv2", "harnesslens": "HarnessLens", "oneshot": "One-shot control", "seed": "Seed (no search)",
-         "hcstock": r"CapEvolve HC, stock gate", "bestofk": r"One-shot best of $k$"}
+         "hcstock": r"CapEvolve as shipped, stock gate$^{\S}$", "bestofk": r"One-shot best of $k$"}
 SUITE_TITLE = {"A": "Suite A, SpreadsheetBench verified-400 (Gemma-4-31B-it)",
                "B": r"Suite B, $\tau^2$ retail, sealed test-40 (gpt-oss-120b)",
                "C": r"Suite C, $\tau^2$ airline, official test-20 (development-exposed)"}
 
 
-GROUP = {"seed": "ref", "oneshot": "ref", "hc": "primary", "ao": "primary", "hcstock": "explor", "bestofk": "explor"}
-GROUP_TITLE = {"ref": "Reference arms", "secondary": "Competitors, secondary family", "primary": "CapEvolve, primary family",
+GROUP = {"seed": "ref", "oneshot": "ref", "hc": "primary", "ao": "primary", "hcstock": "primary", "bestofk": "explor"}
+GROUP_TITLE = {"ref": "Reference arms", "secondary": "Competitors, secondary family", "primary": "CapEvolve (primary family; the stock-gate row is post-search-time)",
                "explor": "Exploratory, outside the Holm family"}
 
 
 def order(s):
     arms = s["arms"]
     base = sorted((a for a in arms if a not in ("seed", "oneshot", "hc", "ao", "hcstock", "bestofk")), key=lambda a: arms[a]["delta"])
-    return ["seed"] + (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hc", "ao") if a in arms] + [a for a in ("hcstock", "bestofk") if a in arms]
+    return ["seed"] + (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hcstock", "hc", "ao") if a in arms] + [a for a in ("bestofk",) if a in arms]
 
 
 def pct(x):
@@ -87,6 +87,12 @@ def main_table(suites, data, label, cap):
                 p = w(pf(v["p_holm"])) if v["p_holm"] is not None else "--"
                 cells = [w(pct(v["score"])), w(ci(v))] + ([w(ci(v["vs_oneshot"]))] if has_os else []) + [p, w(f"{v['usd']:.0f}"), miss]
             body.append(" & ".join([LABEL[a]] + cells) + r" \\")
+        if s.get("s_stock"):
+            body.append(rf"\multicolumn{{{ncol}}}{{l}}{{\textit{{Secondary family S-stock, post-search-time: as shipped minus}}}} \\")
+            for r_ in s["s_stock"]:
+                nm = "the seed" if r_["vs"] == "seed" else LABEL[r_["vs"]]
+                cells = ["", w(ci(r_))] + ([""] if has_os else []) + [w(pf(r_["p_holm"])), "", ""]
+                body.append(" & ".join([nm] + cells) + r" \\")
     head = (r"Arm & Score (\%) & $\Delta$ vs seed [CI] & " + (r"$\Delta$ vs one-shot [CI] & " if has_os else "") + r"$p_{\mathrm{Holm}}$ in family & USD & Missing \\")
     return tabular("lcc" + ("c" if has_os else "") + "rrr", head, body, cap, label, mock)
 
@@ -186,17 +192,74 @@ def perseed_table(data):
     return tabular("lcccccr", head, body, cap, "tab:perseed", mock)
 
 
+def ablation_table(data):
+    mock = data["source"] == "mock"
+    w = wrap(mock)
+    D = data["suites"]["D"]
+    body = []
+    for k, c in D["cells"].items():
+        v = D["vs_pt"].get(k)
+        cond = r" (conditional)" if c["conditional"] else ""
+        vs_pt = "ref." if k == "pt" else w(ci(v))
+        p = "--" if k == "pt" else w(pf(v["p_holm"]))
+        body.append(" & ".join([c["label"] + cond, str(c["seeds"]), w(ci(c)), vs_pt, p,
+                                w(f"{sum(c['promotions']) / len(c['promotions']):.1f}"), w(f"{c['returned_seed']} of {len(c['promotions'])}")]) + r" \\")
+    it = D["interaction"]
+    body.append(r"\midrule")
+    body.append(rf"\multicolumn{{7}}{{l}}{{Interaction PT $-$ P $-$ T: {w(ci(it))}}} \\")
+    head = r"Cell & Seeds & $\Delta$ vs seed [CI] & $\Delta$ vs PT [CI] & $p_{\mathrm{Holm}}$ in D & Promoted per search & Returned = seed \\"
+    cap = ("Suite D ablation cells, all hill-climb with the stock gate except where the gate is the factor. Each cell changes one factor against the PT reference. "
+           "Differences below the pre-registered equivalence margin of 10 points are written inconclusive, not equal. Cells with two seeds are exploratory.")
+    return tabular("lccccrr", head, body, cap, "tab:ablation", mock, star=True)
+
+
+def decomposition_table(data):
+    mock = data["source"] == "mock"
+    w = wrap(mock)
+    body = []
+    for r in data["decomposition"]:
+        body.append(" & ".join([f"{r['cell']} seed {r['seed']}", w(sd(r["whole"])), w(sd(r["p_part"])), w(sd(r["t_part"])), w(sd(r["gap"]))]) + r" \\")
+    head = r"Champion & Whole artifact & Prompt part & Tool part & Whole minus parts \\"
+    cap = ("Decomposition of Suite D champions that edit both surfaces: paired delta of the whole artifact, of its prompt edits on the seed tools, "
+           "and of its tool edits on the seed prompt, in points. A gap near zero means the parts add up.")
+    return tabular("lrrrr", head, body, cap, "tab:decomp", mock, star=False)
+
+
+def rq4_table(data):
+    mock = data["source"] == "mock"
+    w = wrap(mock)
+    body = []
+    for i, su in enumerate("ABC"):
+        s = data["suites"][su]
+        if i:
+            body.append(r"\midrule")
+        body += [rf"\multicolumn{{7}}{{l}}{{\textit{{{SUITE_TITLE[su]}}}}} \\", r"\midrule"]
+        for a in order(s):
+            if a in ("seed", "oneshot", "bestofk"):
+                continue
+            v = s["arms"][a]
+            r_, sh = v["regress"], v["shrink"]
+            body.append(" & ".join([LABEL[a], w(f"{v['usd_per_point']:.1f}"), w(f"{r_['pass_to_fail']:.1f}"), w(f"{r_['protect_viol']:.1f}"),
+                                    w(sd(sh["sel_gain"])), w(sd(sh["final_gain"])), w(sd(sh["shrinkage"]))]) + r" \\")
+    head = r"Arm & USD per point & Pass to fail & Protect-set violations & Selection gain & Final gain & Shrinkage \\"
+    cap = ("Cost, regressions and selection-to-final shrinkage per arm. USD per point is optimizer cost per seed divided by the final-set gain in points. "
+           "Pass to fail counts tasks the seed solved and the champion fails, per seed. Shrinkage is selection gain minus final gain, in points, and is zero for a seed that returned the seed artifact.")
+    return tabular("lrrrrrr", head, body, cap, "tab:rq4", mock)
+
+
 def main():
     data = json.loads((PAPER / "results_data.json").read_text())
     cap_a = (r"Score is the final-set reward. $\Delta$ is the paired difference in points with a family-cluster-robust 95\% interval, "
              r"$p_{\mathrm{Holm}}$ is Holm-adjusted within the suite, and USD is optimizer cost at Sonnet list prices. "
-             r"Missing is missing over scheduled cells. Tokens and wall clock are in Table~\ref{tab:cost_tokens}, per-seed values in Table~\ref{tab:perseed}, promotions per search in Table~\ref{tab:promotions}. Suite A has no one-shot control. The stock-gate arm (E12A on Suite A, E12C on Suite C) is exploratory and outside the Holm family.")
+             r"Missing is missing over scheduled cells. Tokens and wall clock are in Table~\ref{tab:cost_tokens}, per-seed values in Table~\ref{tab:perseed}. Suite A has no one-shot control. The stock-gate arm (E12A on Suite A, E12C on Suite C) is tested in its own secondary family S-stock, and its difference to rule-P hill-climb is descriptive.")
     T = PAPER / "tables"
-    (T / "main_A.tex").write_text(main_table(["A"], data, "tab:main_a", "Suite A results, baselines by ascending delta and CapEvolve last, with the exploratory stock-gate arm below. " + cap_a))
+    (T / "main_A.tex").write_text(main_table(["A"], data, "tab:main_a", "Suite A results, baselines by ascending delta and the CapEvolve arms last. The row marked $\\S$ is CapEvolve as shipped (stock gate), added after search-time results were seen, so it is post-search-time. " + cap_a))
     (T / "main_BC.tex").write_text(main_table(["B", "C"], data, "tab:main_bc", r"Suites B and C results. Columns as in Table~\ref{tab:main_a}."))
     (T / "cost_tokens.tex").write_text(cost_table(data))
-    (T / "promotions.tex").write_text(promotions_table(data))
     (T / "e12.tex").write_text(e12_table(data))
+    (T / "ablation.tex").write_text(ablation_table(data))
+    (T / "decomp.tex").write_text(decomposition_table(data))
+    (T / "rq4.tex").write_text(rq4_table(data))
     (T / "perseed.tex").write_text(perseed_table(data))
     print("tables written, source =", data["source"])
 

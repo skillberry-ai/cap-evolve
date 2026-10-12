@@ -71,6 +71,76 @@ def curve(rng, seed_score, delta, bstar):
     return dict(rollouts=grid, mean=mean, lo=lo, hi=hi)
 
 
+D_PARAM = dict(seed_score=0.61, se=0.045, tasks=40, trials=5, seeds=3, bstar=550, heldout=65)
+D_CELLS = [  # key, label, seeds, conditional. Approved Suite D Tier 1 only (no history, descriptions-only or skill cells)
+    ("ctl", "One-shot control", 3, False), ("p", "Prompt only (P)", 3, False), ("t", "Tools only (T)", 3, False),
+    ("pt", "Prompt and tools (PT), reference", 3, False), ("rulep", "PT with rule P", 3, False),
+    ("onestage", "PT with one-stage gate", 3, False), ("gepa", "GEPA, prompt only", 3, False),
+]
+
+
+def build_suite_d(rng):
+    P = D_PARAM
+    cells = {}
+    for key, label, nseed, cond in D_CELLS:
+        mu = 0.015 if key == "ctl" else 0.05
+        d = rng.gauss(mu, 0.022)
+        se = P["se"] * rng.uniform(0.9, 1.1) * (1.15 if nseed == 2 else 1.0)
+        tcrit = 4.30 if nseed == 3 else 12.7
+        tcrit = min(tcrit, 2.6)  # artifact-level interval over tasks, not seeds
+        pr = [rng.randint(0, 2) if key == "rulep" else rng.randint(1, 6) for _ in range(nseed)]
+        cands = [rng.randint(6, 12) for _ in range(nseed)]
+        sd_ = [0.0 if p == 0 else d + rng.gauss(0, 0.015) for p in pr]
+        d = sum(sd_) / len(sd_)
+        cells[key] = dict(label=label, seeds=nseed, conditional=cond, delta=d, se=se, lo=d - tcrit * se, hi=d + tcrit * se,
+                          promotions=pr, candidates=cands, seed_deltas=sd_, returned_seed=sum(1 for p in pr if p == 0),
+                          regress=dict(pass_to_fail=max(0.0, rng.gauss(3.0, 1.0) * (0.3 if sum(pr) == 0 else 1.0))),
+                          rollouts=550 if key != "ctl" else 200)
+    ps = [(k, norm_p(c["delta"] / c["se"])) for k, c in cells.items() if k in ("p", "t", "pt")]
+    # pre-registered contrasts vs PT, Holm within Suite D
+    ref = cells["pt"]
+    cons = {}
+    for k, c in cells.items():
+        if k == "pt":
+            continue
+        dd = c["delta"] - ref["delta"]
+        se_c = P["se"] * 1.3
+        cons[k] = dict(delta=dd, lo=dd - 2.4 * se_c, hi=dd + 2.4 * se_c, p=norm_p(dd / se_c))
+    adj = holm([v["p"] for v in cons.values()])
+    for (k, v), q in zip(cons.items(), adj):
+        v["p_holm"] = q
+    inter = ref["delta"] - cells["p"]["delta"] - cells["t"]["delta"]
+    se_i = P["se"] * 2.0
+    interaction = dict(delta=inter, lo=inter - 2.4 * se_i, hi=inter + 2.4 * se_i)
+    adj_seed = holm([norm_p(cells[k]["delta"] / cells[k]["se"]) for k in cells])
+    for (k, c), q in zip(cells.items(), adj_seed):
+        c["p_holm_seed"] = q
+    return dict(params=P, cells=cells, vs_pt=cons, interaction=interaction)
+
+
+def build_null_pool(rng):
+    """E22 empirical null pool, mock: false-accept rate per 10-candidate search for each gate (reference: simulation)."""
+    out = {}
+    n = 2000
+    for key, sim in (("rulep", 0.07), ("onestage", 0.55), ("stock", 0.50)):
+        p = min(max(sim * rng.uniform(0.7, 1.3), 0.005), 0.95)
+        w = 1.96 * math.sqrt(p * (1 - p) / n)
+        out[key] = dict(rate=p, lo=max(p - w, 0), hi=min(p + w, 1), sim=sim, n=n)
+    return out
+
+
+def build_decomposition(rng):
+    """E25, mock: whole-artifact gain against the prompt-only and tool-only parts of the same champion."""
+    rows = []
+    for i, cell in enumerate(["pt", "pt", "pt", "rulep", "onestage", "onestage", "ctl", "pt"]):
+        whole = rng.gauss(0.05, 0.03)
+        fp = rng.uniform(0.2, 0.7)
+        p_part = whole * fp + rng.gauss(0, 0.012)
+        t_part = whole * (1 - fp) + rng.gauss(0, 0.012)
+        rows.append(dict(cell=cell, seed=i % 3, whole=whole, p_part=p_part, t_part=t_part, gap=whole - p_part - t_part))
+    return rows
+
+
 def build():
     rng = random.Random(SEED)
     data = dict(source="mock", seed=SEED, suites={})
@@ -146,7 +216,33 @@ def build():
                 se_c = P["se"] * 1.25
                 dd = out[cap]["delta"] - out[a]["delta"]
                 contrasts[f"{cap}-{a}"] = dict(delta=dd, lo=dd - 2.05 * se_c, hi=dd + 2.05 * se_c)
-        s = dict(params=P, arms=out, contrasts=contrasts)
+        # S-stock secondary family (analysis plan 5P-1): hcstock vs seed and vs named competitors, own Holm
+        s_stock = []
+        if "hcstock" in out:
+            comps = {"A": ["gepa", "skillopt", "metaharness", "wikiskill", "evoskill"], "C": ["gepa"]}.get(suite, [])
+            fam = [("seed", out["hcstock"]["delta"], P["se"] * 1.0)] + [(a, out["hcstock"]["delta"] - out[a]["delta"], P["se"] * 1.25) for a in comps]
+            pv = [norm_p(d / se) for _, d, se in fam]
+            adjf = holm(pv)
+            for (a, d, se), q in zip(fam, adjf):
+                s_stock.append(dict(vs=a, delta=d, lo=d - 2.05 * se, hi=d + 2.05 * se, p_holm=q))
+            out["hcstock"]["p_holm"] = adjf[0]
+            for a in comps:
+                contrasts[f"hcstock-{a}"] = dict(delta=out["hcstock"]["delta"] - out[a]["delta"],
+                                                 lo=s_stock[1 + comps.index(a)]["lo"], hi=s_stock[1 + comps.index(a)]["hi"])
+        # final-dependent extras: regressions vs seed, shrinkage, cost per point (mock)
+        for a, v in out.items():
+            if a == "seed" or a in ("oneshot", "bestofk") and False:
+                continue
+            if a == "seed":
+                continue
+            nprom = sum(v["promotions"]) if v.get("promotions") else 0
+            v["regress"] = dict(pass_to_fail=max(0.0, rng.gauss(3.0, 1.2) * (0.3 if nprom == 0 else 1.0)),
+                                fail_to_pass=max(0.0, rng.gauss(5.0, 1.5) * (0.3 if nprom == 0 else 1.0)),
+                                protect_viol=max(0.0, rng.gauss(2.0, 0.8) * (0.3 if nprom == 0 else 1.0)))
+            sel = v["delta"] + abs(rng.gauss(0.05, 0.03)) if nprom else 0.0
+            v["shrink"] = dict(sel_gain=sel, final_gain=v["delta"], shrinkage=sel - v["delta"] if nprom else 0.0)
+            v["usd_per_point"] = v["usd"] / 3 / max(100 * v["delta"], 0.5)
+        s = dict(params=P, arms=out, contrasts=contrasts, s_stock=s_stock)
         if suite == "A":
             fams = {}
             for fname, n in FAMILIES:
@@ -157,6 +253,9 @@ def build():
                     fams[fname]["arms"][a] = dict(delta=d, lo=d - h, hi=d + h)
             s["families"] = fams
         data["suites"][suite] = s
+    data["suites"]["D"] = build_suite_d(rng)
+    data["null_pool"] = build_null_pool(rng)
+    data["decomposition"] = build_decomposition(rng)
     return data
 
 
@@ -176,6 +275,8 @@ def macros(data):
     m = {}
     for suite, s in data["suites"].items():
         P = s["params"]
+        if suite == "D":
+            continue
         m[f"mockT{suite}"] = str(P["tasks"])
         m[f"mockTrials{suite}"] = str(P["trials"])
         m[f"mockSeeds{suite}"] = str(P["seeds"])
@@ -199,6 +300,25 @@ def macros(data):
             m[k + "Usd"] = f"{v['usd']:.0f}"
             m[k + "Wall"] = f"{v['wall_h']:.1f}"
             m[k + "Miss"] = f"{v['missing']}/{v['cells']}"
+    D = data["suites"]["D"]
+    m["mockDTasks"] = str(D["params"]["tasks"])
+    m["mockDTrials"] = str(D["params"]["trials"])
+    m["mockDHeldout"] = str(D["params"]["heldout"])
+    for k, c in D["cells"].items():
+        key = f"mockD{k}"
+        m[key + "Delta"] = fmt_d(c["delta"])
+        m[key + "Lo"] = fmt_d(c["lo"])
+        m[key + "Hi"] = fmt_d(c["hi"])
+        m[key + "Prom"] = f"{sum(c['promotions']) / len(c['promotions']):.1f}"
+        m[key + "Ret"] = f"{c['returned_seed']} of {len(c['promotions'])}"
+    for k, v in D["vs_pt"].items():
+        m[f"mockD{k}VsPt"] = fmt_d(v["delta"])
+        m[f"mockD{k}VsPtLo"] = fmt_d(v["lo"])
+        m[f"mockD{k}VsPtHi"] = fmt_d(v["hi"])
+    it = D["interaction"]
+    m["mockDInter"], m["mockDInterLo"], m["mockDInterHi"] = fmt_d(it["delta"]), fmt_d(it["lo"]), fmt_d(it["hi"])
+    for k, v in data["null_pool"].items():
+        m[f"mockNull{k}"] = f"{100 * v['rate']:.1f}"
     return m
 
 

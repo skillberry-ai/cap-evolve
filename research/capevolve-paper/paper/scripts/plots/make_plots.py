@@ -101,6 +101,79 @@ def contrast():
     C.save(fig, "fig_contrast", MOCK)
 
 
+CELL_COL = {"ctl": "#999999", "p": "#56B4E9", "t": "#009E73", "pt": "#003F73", "rulep": "#0072B2", "onestage": "#D55E00",
+            "nohist": "#CC79A7", "gepa": "#E69F00", "td": "#8A7B00", "pts": "#882255"}
+CELL_MK = {"ctl": "p", "p": "s", "t": "^", "pt": "H", "rulep": "o", "onestage": "D", "nohist": "P", "gepa": "v", "td": "X", "pts": "*"}
+
+
+def ablate():
+    """Fig. 5: ablation small multiples. Panels share one layout: reference against variants, paired delta to the seed in points with 95% intervals."""
+    D = data["suites"]["D"]
+    cells = D["cells"]
+    fig, axes = plt.subplots(2, 3, figsize=(C.FULL_W, 4.4), constrained_layout=True)
+    fig.get_layout_engine().set(w_pad=0.1, h_pad=0.1, wspace=0.08)
+
+    def rows(ax, keys, title, xlabel="Difference to seed (points)", src=cells, names=None):
+        for i, k in enumerate(keys):
+            c = src[k]
+            y = len(keys) - 1 - i
+            col, mk = CELL_COL.get(k, "#555555"), CELL_MK.get(k, "o")
+            ax.plot([c["lo"] * 100, c["hi"] * 100], [y, y], color=col, lw=2.0 if k == "pt" else 1.3)
+            ax.plot(c["delta"] * 100, y, marker=mk, color=col, ms=6 if k == "pt" else 5)
+        ax.axvline(0, color="k", lw=0.7)
+        ax.set_yticks(range(len(keys)))
+        ax.set_yticklabels([(names or {}).get(k, cells[k]["label"] if k in cells else k) for k in reversed(keys)])
+        ax.set_title(title, loc="left")
+        ax.set_xlabel(xlabel)
+        ax.grid(axis="y", alpha=0)
+
+    short = {"ctl": "One-shot control", "p": "Prompt only", "t": "Tools only", "pt": "Prompt and tools", "td": "Descriptions only",
+             "pts": "Plus skill package", "rulep": "Rule P", "onestage": "One-stage gate", "nohist": "No causal history", "gepa": "GEPA, prompt only"}
+    rows(axes[0, 0], ["ctl", "p", "t", "pt"], "(a) Surface width", names=short)
+    # (b) HC vs AO on the three E10 suites
+    ax = axes[0, 1]
+    ys, labs = [], []
+    for i, su in enumerate("ABC"):
+        for j, a in enumerate(("hc", "ao")):
+            v = data["suites"][su]["arms"][a]
+            y = 5 - (2 * i + j)
+            ax.plot([v["lo"] * 100, v["hi"] * 100], [y, y], color=C.ARMS[a][1], lw=1.6)
+            ax.plot(v["delta"] * 100, y, marker=C.ARMS[a][2], color=C.ARMS[a][1], ms=5)
+            ys.append(y); labs.append(f"{su}, {'hill-climb' if a == 'hc' else 'agent-optimize'}")
+    ax.axvline(0, color="k", lw=0.7)
+    ax.set_yticks(ys); ax.set_yticklabels(labs)
+    ax.set_title("(b) Orchestration", loc="left"); ax.set_xlabel("Difference to seed (points)"); ax.grid(axis="y", alpha=0)
+    gate_names = {k: f"{short[k]}\n{sum(cells[k]['promotions']) / len(cells[k]['promotions']):.1f} promoted per search" for k in ("pt", "rulep", "onestage")}
+    gate_names["pt"] = "Stock gate\n" + gate_names["pt"].split("\n")[1]
+    rows(axes[0, 2], ["pt", "rulep", "onestage"], "(c) Acceptance gate", names=gate_names)
+    rows(axes[1, 0], ["p", "gepa"], "(d) Loop quality, same surface", names={"p": "CapEvolve, prompt only", "gepa": "GEPA, prompt only"})
+    # (e) null pool
+    ax = axes[1, 1]
+    npool = data["null_pool"]
+    ks = [("rulep", "Rule P"), ("onestage", "One-stage gate"), ("stock", "Stock gate")]
+    for i, (k, lab) in enumerate(ks):
+        y = len(ks) - 1 - i
+        v = npool[k]
+        ax.barh(y, v["rate"] * 100, color=CELL_COL.get(k, "#0072B2") if k != "stock" else CELL_COL["pt"], height=0.55)
+        ax.plot([v["lo"] * 100, v["hi"] * 100], [y, y], color="k", lw=0.9)
+        ax.plot(v["sim"] * 100, y, marker="|", color="#cc0000", ms=11, mew=1.8)
+    ax.set_yticks(range(len(ks))); ax.set_yticklabels([l for _, l in reversed(ks)])
+    ax.set_xlim(0, 100)
+    ax.set_title("(e) Null pool", loc="left"); ax.set_xlabel("Searches with a false promotion (%)")
+    ax.plot([], [], marker="|", color="#cc0000", ms=9, mew=1.6, ls="", label="Simulation")
+    ax.legend(frameon=False, loc="upper right", fontsize=7)
+    ax.grid(axis="y", alpha=0)
+    # (f) interaction of the two surfaces
+    ax = axes[1, 2]
+    it = D["interaction"]
+    ax.plot([it["lo"] * 100, it["hi"] * 100], [0, 0], color=CELL_COL["pt"], lw=2.0)
+    ax.plot(it["delta"] * 100, 0, marker="H", color=CELL_COL["pt"], ms=6)
+    ax.axvline(0, color="k", lw=0.7)
+    ax.set_yticks([0]); ax.set_yticklabels(["PT minus P minus T"])
+    ax.set_title("(f) Interaction", loc="left"); ax.set_xlabel("Difference (points)"); ax.grid(axis="y", alpha=0)
+    C.save(fig, "fig_ablate", MOCK)
+
+
 def pareto():
     fig, axes = plt.subplots(1, 3, figsize=(C.FULL_W, 2.5))
     for ax, su in zip(axes, SUITES):
@@ -163,5 +236,5 @@ def families():
 
 
 if __name__ == "__main__":
-    anytime(); forest(); contrast(); pareto(); families()
+    anytime(); forest(); contrast(); ablate(); pareto(); families()
     print("mock plots written" if MOCK else "real plots written")

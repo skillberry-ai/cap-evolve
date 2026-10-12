@@ -16,8 +16,8 @@ COL_W, FULL_W = 3.3, 6.9
 
 # key: (label, colour, marker)
 ARMS = {
-    "hc":          ("CapEvolve HC",   "#0072B2", "o"),
-    "ao":          ("CapEvolve AO",   "#56B4E9", "s"),
+    "hc":          ("CapEvolve HC, rule P",   "#0072B2", "o"),
+    "ao":          ("CapEvolve AO, rule P",   "#56B4E9", "s"),
     "gepa":        ("GEPA",           "#E69F00", "^"),
     "skillopt":    ("SkillOpt",       "#009E73", "v"),
     "metaharness": ("Meta-Harness",   "#D55E00", "D"),
@@ -27,21 +27,21 @@ ARMS = {
     "ace":         ("ACE",            "#882255", "h"),
     "mipro":       ("MIPROv2",        "#44AA99", "<"),
     "harnesslens": ("HarnessLens",    "#332288", ">"),
-    "hcstock":     ("CapEvolve HC, stock gate", "#6C9BC4", "H"),
+    "hcstock":     ("CapEvolve, stock gate", "#003F73", "H"),
     "oneshot":     ("One-shot control",  "#999999", "p"),
     "seed":        ("Seed",           "#555555", "+"),
 }
 SUITE_ARMS = {
-    "A": ["hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill", "trace2skill", "ace", "mipro", "hcstock", "seed"],
+    "A": ["hcstock", "hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill", "trace2skill", "ace", "mipro", "seed"],
     "B": ["hc", "ao", "gepa", "harnesslens", "oneshot", "seed"],
-    "C": ["hc", "ao", "gepa", "harnesslens", "oneshot", "hcstock", "seed"],
+    "C": ["hcstock", "hc", "ao", "gepa", "harnesslens", "oneshot", "seed"],
 }
 SUITE_NAME = {"A": "Suite A (SpreadsheetBench)", "B": "Suite B (\u03c4\u00b2 retail)", "C": "Suite C (\u03c4\u00b2 airline)"}  # plain Unicode: mathtext tau extracts as a wrong glyph from the PDF
 CKPT = "N*"  # label of the matched checkpoint; set to the symbol paper-core adopts
 ROLE_COLOR = {"target": "#0072B2", "user": "#56B4E9", "judge": "#E69F00", "optimizer": "#D55E00", "other": "#999999"}
 
 
-CAP = ("hc", "ao")  # CapEvolve arms are drawn thick and opaque, all others thinner, so the key comparison stands out
+CAP = ("hc", "ao", "hcstock")  # CapEvolve arms are drawn thick and opaque, all others thinner, so the key comparison stands out
 
 
 def lw(a):
@@ -86,4 +86,4 @@ def table_order(suite_data):
     """Row order shared by the tables and the forest plot: one-shot control, baselines by ascending delta, CapEvolve last, exploratory arm after."""
     arms = suite_data["arms"]
     base = sorted((a for a in arms if a not in ("seed", "oneshot", "hc", "ao", "hcstock", "bestofk")), key=lambda a: arms[a]["delta"])
-    return (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hc", "ao") if a in arms] + (["hcstock"] if "hcstock" in arms else [])
+    return (["oneshot"] if "oneshot" in arms else []) + base + [a for a in ("hcstock", "hc", "ao") if a in arms]
