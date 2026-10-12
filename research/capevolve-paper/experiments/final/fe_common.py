@@ -215,6 +215,19 @@ def native_status(rd):
     `run_summary.json` / `final.json` / `final/` written by the method itself.  Anything else counts as still running (binds N*, conservative)."""
     import re as _re
     rd = Path(rd)
+    # frozen optimizer-token guard (CapEvolve): soft stop at 3.5M (budget frozen := spent) / hard SIGTERM at 3.9M; counts like a native termination (N* addendum)
+    for f in [rd / "optimizer_tokens.json.soft", rd / "logs" / "optimizer_tokens.json.soft"] + list(rd.glob(".capevolve/run_*/optimizer_tokens.json.soft")):
+        if f.exists():
+            return "guard_stop", "token guard soft stop marker %s" % f.name
+    for ev in list(rd.glob(".capevolve/run_*/events.jsonl")) + [rd / "events.jsonl"]:
+        if ev.exists():
+            try:
+                with open(ev, errors="replace") as fh:
+                    for line in fh:
+                        if "token_guard_soft" in line or "token_guard_hard" in line:
+                            return "guard_stop", "events.jsonl: " + ("token_guard_hard" if "token_guard_hard" in line else "token_guard_soft")
+            except Exception:
+                pass
     if _live(rd):
         return "running_or_unknown", "a process with this run dir on its command line is alive"
     for name, pat in (("run.log", r"^exit (\d+)\s*$"), ("launcher.log", r"^exit=(\d+)\s*$")):
