@@ -1,0 +1,2170 @@
+[
+ {
+  "root": "E10/ace/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 17,
+  "rollout_rows": 163,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/ace/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 11,
+  "rollout_rows": 87,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/ace/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 10,
+  "rollout_rows": 85,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/agent-optimize/s0",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 160,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log daemon_v2.log: Traceback (most recent call last):",
+    14
+   ],
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    7
+   ],
+   [
+    "log daemon.log: Traceback (most recent call last):",
+    2
+   ]
+  ]
+ },
+ {
+  "root": "E10/agent-optimize/s1",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 160,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log daemon_v2.log: Traceback (most recent call last):",
+    32
+   ],
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    7
+   ]
+  ]
+ },
+ {
+  "root": "E10/agent-optimize/s2",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 160,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log daemon_v2.log: Traceback (most recent call last):",
+    24
+   ],
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    8
+   ],
+   [
+    "rollout: LLM call failed: litellm.Timeout: APITimeoutError - Request timed out. Error_str: Request timed out.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/evoskill/s0",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 0,
+  "rollout_rows": 616,
+  "cand_ids_never_evaluated": [
+   "base",
+   "iter-skill-1",
+   "iter-skill-14",
+   "iter-skill-15",
+   "iter-skill-17",
+   "iter-skill-4",
+   "iter-skill-5"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10/evoskill/s1",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 0,
+  "rollout_rows": 683,
+  "cand_ids_never_evaluated": [
+   "base",
+   "iter-skill-1",
+   "iter-skill-10",
+   "iter-skill-11",
+   "iter-skill-2",
+   "iter-skill-7",
+   "iter-skill-8",
+   "iter-skill-9"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10/evoskill/s2",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 0,
+  "rollout_rows": 692,
+  "cand_ids_never_evaluated": [
+   "base",
+   "iter-skill-10",
+   "iter-skill-11",
+   "iter-skill-2",
+   "iter-skill-6",
+   "iter-skill-7",
+   "iter-skill-8",
+   "iter-skill-9"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10/gepa/s0",
+  "candidates_proposed": 20,
+  "candidates_evaluated": 0,
+  "rollout_rows": 306,
+  "cand_ids_never_evaluated": [
+   "c0",
+   "c1",
+   "c2",
+   "c3",
+   "c4",
+   "c5",
+   "c6",
+   "c7",
+   "c8",
+   "c9",
+   "rej_i15",
+   "rej_i18"
+  ],
+  "top_errors": [
+   [
+    "log launcher.log: If your code raises an error, the traceback is returned; fix it and retry.",
+    2
+   ],
+   [
+    "log to_candidates.log: Traceback (most recent call last):",
+    2
+   ],
+   [
+    "log to_candidates.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/gepa/sN/gepa_run/gepa_state.bin'",
+    2
+   ],
+   [
+    "log launcher.log: N. Round N (verify). Re-open output_path and print the values in answer_position, plus a few neighbouring cells to confirm nothing else changed. Fix and rewrite if anythi",
+    1
+   ],
+   [
+    "log launcher.log: If your code raises an error, the traceback will be returned to you; fix the code and try again.",
+    1
+   ],
+   [
+    "log launcher.log: Traceback (most recent call last):",
+    1
+   ],
+   [
+    "log launcher.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/gepa/sN/best/prompt.md'",
+    1
+   ],
+   [
+    "log launcher.log: If your code raises an error, the traceback is returned. Fix it and try again.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/gepa/s1",
+  "candidates_proposed": 9,
+  "candidates_evaluated": 0,
+  "rollout_rows": 254,
+  "cand_ids_never_evaluated": [
+   "c0",
+   "c1",
+   "c2",
+   "c3",
+   "c4",
+   "c5",
+   "c6",
+   "c7",
+   "rej_i16"
+  ],
+  "top_errors": [
+   [
+    "log launcher.log: If your code raises an error, the traceback will be returned to you; fix the code and try again.",
+    1
+   ],
+   [
+    "log launcher.log: - If code errors, read the traceback and change your approach. Do not resend the same failing code.",
+    1
+   ],
+   [
+    "log launcher.log: Traceback (most recent call last):",
+    1
+   ],
+   [
+    "log launcher.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/gepa/sN/best/prompt.md'",
+    1
+   ],
+   [
+    "log launcher.log: - If the code errors, read the traceback and change the approach rather than resending the same code.",
+    1
+   ],
+   [
+    "log launcher.log: If your code raises an error, read the traceback and change the approach. Do not resend the same failing code.",
+    1
+   ],
+   [
+    "log launcher.log: - spreadsheet_path: the input .xlsx file. It is READ-ONLY. Never call wb.save() on this path, because that raises PermissionError. Only save to output_path.",
+    1
+   ],
+   [
+    "log launcher.log: - If code errors, read the traceback and change the approach. Do not resend the same failing code.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/gepa/s2",
+  "candidates_proposed": 17,
+  "candidates_evaluated": 0,
+  "rollout_rows": 250,
+  "cand_ids_never_evaluated": [
+   "c0",
+   "c1",
+   "c2",
+   "c3",
+   "c4",
+   "c5",
+   "c6",
+   "c7",
+   "c8",
+   "c9",
+   "rej_i10",
+   "rej_i13"
+  ],
+  "top_errors": [
+   [
+    "log to_candidates.log: Traceback (most recent call last):",
+    2
+   ],
+   [
+    "log to_candidates.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/gepa/sN/gepa_run/gepa_state.bin'",
+    2
+   ],
+   [
+    "log launcher.log: Traceback (most recent call last):",
+    1
+   ],
+   [
+    "log launcher.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/gepa/sN/best/prompt.md'",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/graphskillevo/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/graphskillevo/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/graphskillevo/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/hill-climb/s0",
+  "candidates_proposed": 3,
+  "candidates_evaluated": 3,
+  "rollout_rows": 240,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    12
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    3
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    3
+   ],
+   [
+    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
+    2
+   ],
+   [
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    2
+   ]
+  ]
+ },
+ {
+  "root": "E10/hill-climb/s1",
+  "candidates_proposed": 4,
+  "candidates_evaluated": 4,
+  "rollout_rows": 440,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    13
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    4
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/hill-climb/s2",
+  "candidates_proposed": 4,
+  "candidates_evaluated": 1,
+  "rollout_rows": 160,
+  "cand_ids_never_evaluated": [
+   "cand_0002",
+   "cand_0003",
+   "cand_0004"
+  ],
+  "top_errors": [
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    8
+   ],
+   [
+    "event evaluate_error: {\"kind\": \"evaluate_error\", \"candidate\": \"candN\", \"error\": \"RuntimeError: agent view dir /home/dev/projectsN/campaign-scratch/runs/EN/_p",
+    3
+   ],
+   [
+    "graph note: indecisive (evaluation error): candidate evaluation raised: RuntimeError: agent view dir /home/dev/projectsN/campaign-scratch/runs/EN/_priv/hill-climb-sN/view is not emp",
+    2
+   ],
+   [
+    "log hc.err: Traceback (most recent call last):",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    1
+   ],
+   [
+    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
+    1
+   ],
+   [
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/injtest/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/mce/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log run.log: ls bench/data: ls: cannot access '/home/dev/projectsN/campaign-scratch/bench/data': No such file or directory",
+    1
+   ],
+   [
+    "log run.log: ModuleNotFoundError: No module named 'sb_eval_lib'",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/mce/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log run.log: Traceback (most recent call last):",
+    1
+   ],
+   [
+    "log run.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/mce/sN/iter_results.jsonl'",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/mce/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log run.log: Traceback (most recent call last):",
+    1
+   ],
+   [
+    "log run.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/mce/sN/iter_results.jsonl'",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/memento/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/memento/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/memento/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/metaharness/s0",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 8,
+  "rollout_rows": 600,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/metaharness/s1",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 8,
+  "rollout_rows": 600,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/metaharness/s2",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 8,
+  "rollout_rows": 600,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10/mipro/s0",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "101db7a9d33e",
+   "33aeb0cca75d",
+   "3d5fee3dfdc1",
+   "4d121df97c80",
+   "64aa725b61bf",
+   "c241f8e56231",
+   "f9d947266c89"
+  ],
+  "top_errors": [
+   [
+    "log launcher.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    1
+   ],
+   [
+    "log launcher.log: - If the code raises an error or the check fails, read the traceback, diagnose the root cause (wrong sheet, off-by-one row, type mismatch, NaN), and change the approach. ",
+    1
+   ],
+   [
+    "log launcher.log: N. **Handle errors.** If the code fails, read the traceback, inspect the data again, and fix the root cause. Never resubmit the same failing approach.",
+    1
+   ],
+   [
+    "log launcher.log: N. **Save and verify.** Create the output directory if needed (os.makedirs) and save to the exact output path given. Then reload the saved file, print the values in answe",
+    1
+   ],
+   [
+    "log launcher.log: - If the code raises an error or the check looks wrong, read the traceback, diagnose the root cause, and change your approach. Do not rerun the same failing code.",
+    1
+   ],
+   [
+    "log launcher.log: N. Save to the exact output path given, creating parent directories first (`os.makedirs(..., exist_ok=True)`). Then reload the saved file and print the answer_position ce",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/mipro/s1",
+  "candidates_proposed": 10,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "2077bf782302",
+   "210e4cd8791d",
+   "24af25e5b752",
+   "3d5fee3dfdc1",
+   "40ccf4332f30",
+   "41225a3d4182",
+   "59f8f0808863",
+   "a3a355b69466",
+   "cc2319ac81ff",
+   "e82b37c38cc0"
+  ],
+  "top_errors": [
+   [
+    "log launcher.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    1
+   ],
+   [
+    "log launcher.log: N. **Handle errors properly.** If execution fails, read the traceback, work out the root cause, and change your approach. Never resubmit the same failing code. Don't hard",
+    1
+   ],
+   [
+    "log launcher.log: - If code raises an error or the output looks wrong, read the traceback or the discrepancy, diagnose the cause, and change the approach. Never re-run the same failing cod",
+    1
+   ],
+   [
+    "log launcher.log: - If anything looks off, or any step raises an error, read the traceback, diagnose the root cause and change your approach. Never rerun the same failing code unchanged.",
+    1
+   ],
+   [
+    "log launcher.log: - If the code errors or the verification looks wrong, read the traceback or the mismatch, change your approach, and rerun. Do not repeat a failing approach unchanged. Com",
+    1
+   ],
+   [
+    "log launcher.log: - If any step raises an error or the output looks wrong, read the traceback, diagnose the cause (wrong sheet, off-by-one, dtype, merged cells), and fix it. Never rerun th",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/mipro/s2",
+  "candidates_proposed": 9,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "3c01cf212de9",
+   "3d5fee3dfdc1",
+   "5638f07336a4",
+   "71c830d71880",
+   "73b1e560f815",
+   "779ef0083958",
+   "87baac04f74e",
+   "c5110d7488b0",
+   "f9fa744d6275"
+  ],
+  "top_errors": [
+   [
+    "log launcher.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    1
+   ],
+   [
+    "log launcher.log: N. **Handle errors.** If code raises an error, read the traceback, diagnose the cause, and change the approach. Never re-run the same failing code. Avoid slow or fragile ",
+    1
+   ],
+   [
+    "log launcher.log: N. Save the workbook with all sheets to the exact output_path given, and create parent directories first. Re-open the saved file and verify: the answer cells hold the exp",
+    1
+   ],
+   [
+    "log launcher.log: - If execution raises an error, read the traceback, diagnose the cause (wrong sheet name, wrong index base, type mismatch, missing directory), and change your approach. N",
+    1
+   ],
+   [
+    "log launcher.log: - If execution raises an error, read the full traceback, find the root cause (wrong sheet name, wrong header offset, wrong column type, a missing directory), and change t",
+    1
+   ],
+   [
+    "log launcher.log: - If execution raises an error or the check looks wrong, read the traceback, diagnose the cause, and change your approach. Never rerun the same failing code.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/skillopt/s0",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 6,
+  "rollout_rows": 522,
+  "cand_ids_never_evaluated": [
+   "slow_epoch_02"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10/skillopt/s1",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 6,
+  "rollout_rows": 597,
+  "cand_ids_never_evaluated": [
+   "slow_epoch_02"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10/skillopt/s2",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 7,
+  "rollout_rows": 667,
+  "cand_ids_never_evaluated": [
+   "slow_epoch_02"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10/trace2skill/s0",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 200,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log evolve_error.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    2
+   ],
+   [
+    "log evolve_error.log: +N. **Never resubmit identical code or an identical reply after an error.** Each round must inspect new information or change the logic. If the same code has run twice w",
+    2
+   ],
+   [
+    "log evolve_combined.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    2
+   ],
+   [
+    "log evolve_combined.log: +- If a call fails with a transient infrastructure error (HTTP N, sandbox error) rather than a Python traceback, retry the same small step once. Do not rewrite correct ",
+    2
+   ]
+  ]
+ },
+ {
+  "root": "E10/trace2skill/s1",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 200,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log evolve_error.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    2
+   ],
+   [
+    "log evolve_combined.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    2
+   ]
+  ]
+ },
+ {
+  "root": "E10/trace2skill/s2",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 202,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log evolve_error.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    2
+   ],
+   [
+    "log evolve_error.log: +- If a tool call fails with a transient infrastructure error (e.g. HTTP Nxx / sandbox exec failure) rather than a Python traceback, retry the same call once or twice, or",
+    2
+   ],
+   [
+    "log evolve_combined.log: - If code execution returns an error, read the traceback carefully and fix the code \u2014 do not repeat a failing approach unchanged.",
+    2
+   ],
+   [
+    "log evolve_combined.log: +- If a tool call fails with a transient infrastructure error (HTTP Nxx, timeout, sandbox exec failure) rather than a Python traceback, retry the same call once or twice,",
+    2
+   ],
+   [
+    "log evolve_error.log: - insert_after in SKILL.md: - If code execution returns an error, read the traceback car",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/wikiskill/s0",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 1,
+  "rollout_rows": 196,
+  "cand_ids_never_evaluated": [
+   "it001"
+  ],
+  "top_errors": [
+   [
+    "log negative_test.out: \"error\": \"PermissionError\"",
+    8
+   ],
+   [
+    "log launcher.log: N:N:N Traceback (most recent call last):",
+    7
+   ],
+   [
+    "log community_run.log: N:N:N Traceback (most recent call last):",
+    7
+   ],
+   [
+    "log launcher.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/H",
+    6
+   ],
+   [
+    "log launcher.log: N:N:N STOP FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/NbdN",
+    6
+   ],
+   [
+    "log community_run.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/H",
+    6
+   ],
+   [
+    "log community_run.log: N:N:N STOP FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/NbdN",
+    6
+   ],
+   [
+    "log launcher.log: === infra restart (same seed) after FileNotFoundError session.jsonl; adapter patched N-N-NTN:N:NZ",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/wikiskill/s1",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 1,
+  "rollout_rows": 194,
+  "cand_ids_never_evaluated": [
+   "it001"
+  ],
+  "top_errors": [
+   [
+    "log negative_test.out: \"error\": \"PermissionError\"",
+    8
+   ],
+   [
+    "log launcher.log: N:N:N Traceback (most recent call last):",
+    7
+   ],
+   [
+    "log community_run.log: N:N:N Traceback (most recent call last):",
+    7
+   ],
+   [
+    "log launcher.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/H",
+    6
+   ],
+   [
+    "log launcher.log: N:N:N STOP FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/NfNa",
+    6
+   ],
+   [
+    "log community_run.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/H",
+    6
+   ],
+   [
+    "log community_run.log: N:N:N STOP FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/NfNa",
+    6
+   ],
+   [
+    "log launcher.log: === infra restart (same seed) after FileNotFoundError session.jsonl; adapter patched N-N-NTN:N:NZ",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10/wikiskill/s2",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 1,
+  "rollout_rows": 162,
+  "cand_ids_never_evaluated": [
+   "it001"
+  ],
+  "top_errors": [
+   [
+    "log negative_test.out: \"error\": \"PermissionError\"",
+    8
+   ],
+   [
+    "log launcher.log: N:N:N Traceback (most recent call last):",
+    6
+   ],
+   [
+    "log launcher.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/H",
+    6
+   ],
+   [
+    "log launcher.log: N:N:N STOP FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/NeN",
+    6
+   ],
+   [
+    "log community_run.log: N:N:N Traceback (most recent call last):",
+    6
+   ],
+   [
+    "log community_run.log: FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/H",
+    6
+   ],
+   [
+    "log community_run.log: N:N:N STOP FileNotFoundError: [Errno N] No such file or directory: '/home/dev/projectsN/campaign-scratch/runs/EN/wikiskill/sN/study/iterations/N/train/attempts/NeN",
+    6
+   ],
+   [
+    "log launcher.log: === infra restart (same seed) after FileNotFoundError session.jsonl; adapter patched N-N-NTN:N:NZ",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ao/s0",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 2,
+  "rollout_rows": 346,
+  "cand_ids_never_evaluated": [
+   "cand_1",
+   "cand_2",
+   "cand_3",
+   "cand_4"
+  ],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    6
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    3
+   ],
+   [
+    "event agent_optimize_pregate_warning: {\"kind\": \"agent_optimize_pregate_warning\", \"tag\": \"candN\", \"warnings\": [\"policy grew +N% over the parent (cap +N%): every task pays fo",
+    3
+   ],
+   [
+    "event infra_warning: act: no clusters.json: hypothesis size rule NOT checked",
+    3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    3
+   ],
+   [
+    "event infra_warning: no optimizer transcript found: optimizer cost is NOT metered (recorded $N is unknown, not free) and max_optimizer_usd is inert. A subagent optimizer: run `python -m cap_e",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ao/s1",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 2,
+  "rollout_rows": 344,
+  "cand_ids_never_evaluated": [
+   "cand_1",
+   "cand_10",
+   "cand_2",
+   "cand_3"
+  ],
+  "top_errors": [
+   [
+    "event infra_warning: no optimizer transcript found: optimizer cost is NOT metered (recorded $N is unknown, not free) and max_optimizer_usd is inert. A subagent optimizer: run `python -m cap_e",
+    14
+   ],
+   [
+    "event agent_optimize_pregate_warning: {\"kind\": \"agent_optimize_pregate_warning\", \"tag\": \"candN\", \"warnings\": [\"policy grew +N% over the parent (cap +N%): every task pays fo",
+    7
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    5
+   ],
+   [
+    "event agent_optimize_compliance: {\"kind\": \"agent_optimize_compliance\", \"tag\": \"candN\", \"screened_before_fullval\": false, \"auto_screened\": false, \"skip_screen_ladder\": false",
+    3
+   ],
+   [
+    "event infra_warning: act: no clusters.json: hypothesis size rule NOT checked",
+    3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"cand_a\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ao/s2",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 2,
+  "rollout_rows": 344,
+  "cand_ids_never_evaluated": [
+   "cand_2",
+   "cand_3",
+   "cand_a",
+   "cand_x"
+  ],
+  "top_errors": [
+   [
+    "event agent_optimize_pregate_warning: {\"kind\": \"agent_optimize_pregate_warning\", \"tag\": \"candN\", \"warnings\": [\"policy grew +N% over the parent (cap +N%): every task pays fo",
+    6
+   ],
+   [
+    "event infra_warning: no optimizer transcript found: optimizer cost is NOT metered (recorded $N is unknown, not free) and max_optimizer_usd is inert. A subagent optimizer: run `python -m cap_e",
+    6
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    4
+   ],
+   [
+    "event agent_optimize_compliance: {\"kind\": \"agent_optimize_compliance\", \"tag\": \"candN\", \"screened_before_fullval\": false, \"auto_screened\": false, \"skip_screen_ladder\": false",
+    3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ctl-oneshot/s0",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 246,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    6
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    3
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ctl-oneshot/s1",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 296,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    4
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL_seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ctl-oneshot/s2",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 246,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/ctl-seed/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/ctl-seed/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/ctl-seed/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/gepa/s0",
+  "candidates_proposed": 13,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "cand_0000",
+   "cand_0001",
+   "cand_0002",
+   "cand_0003",
+   "cand_0004",
+   "cand_0005",
+   "cand_0006",
+   "cand_0007",
+   "cand_0008",
+   "cand_0009",
+   "cand_0010",
+   "cand_0011"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/gepa/s1",
+  "candidates_proposed": 17,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "cand_0000",
+   "cand_0001",
+   "cand_0002",
+   "cand_0003",
+   "cand_0004",
+   "cand_0005",
+   "cand_0006",
+   "cand_0007",
+   "cand_0008",
+   "cand_0009",
+   "cand_0010",
+   "cand_0011"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/gepa/s2",
+  "candidates_proposed": 19,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "cand_0000",
+   "cand_0001",
+   "cand_0002",
+   "cand_0003",
+   "cand_0004",
+   "cand_0005",
+   "cand_0006",
+   "cand_0007",
+   "cand_0008",
+   "cand_0009",
+   "cand_0010",
+   "cand_0011"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/harnesslens/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log budget_stop.json: \"materialization_failed\": N",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/harnesslens/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10B/harnesslens/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log budget_stop.json: \"materialization_failed\": N",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/harnesslens_ext/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "log budget_stop.json: \"materialization_failed\": N",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/hc/s0",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 588,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    4
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    2
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    1
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/hc/s1",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 7,
+  "rollout_rows": 784,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    8
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    7
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10B/hc/s2",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 784,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    4
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N); REJECTED by promotion rule P: P confirm: fresh mean +N.N, z N.N (need >= N an",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N); REJECTED by promotion rule P: P confirm: fresh mean +N.N, z N.N (need >= N an",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ao/s0",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 220,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event infra_warning: no optimizer transcript found: optimizer cost is NOT metered (recorded $N is unknown, not free) and max_optimizer_usd is inert. A subagent optimizer: run `python -m cap_e",
+    9
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    5
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    3
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "log cand_logger.log: Traceback (most recent call last):",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ao/s1",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 220,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    5
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "log cand_logger.log: Traceback (most recent call last):",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ao/s2",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 142,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    5
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    3
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "rejected: act.py prune: delta +N.N within noise (sd N.N), P(beat parent)=N.N",
+    1
+   ],
+   [
+    "graph note: act.py prune: delta +N.N within noise (sd N.N), P(beat parent)=N.N",
+    1
+   ],
+   [
+    "log cand_logger.log: Traceback (most recent call last):",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ctl-oneshot/s0",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 120,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    4
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL_seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ctl-oneshot/s1",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 100,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    3
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ctl-oneshot/s2",
+  "candidates_proposed": 1,
+  "candidates_evaluated": 1,
+  "rollout_rows": 100,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    3
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/ctl-seed/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 1,
+  "rollout_rows": 60,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10C/ctl-seed/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 1,
+  "rollout_rows": 60,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10C/ctl-seed/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 1,
+  "rollout_rows": 60,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10C/gepa/s0",
+  "candidates_proposed": 11,
+  "candidates_evaluated": 11,
+  "rollout_rows": 136,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10C/gepa/s1",
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 104,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10C/gepa/s2",
+  "candidates_proposed": 12,
+  "candidates_evaluated": 12,
+  "rollout_rows": 126,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E10C/hc/s0",
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 400,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    6
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    3
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N); REJECTED by promotion rule P: P confirm: fresh mean +N.N, z N.N (need >= N an",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/hc/s1",
+  "candidates_proposed": 3,
+  "candidates_evaluated": 3,
+  "rollout_rows": 200,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    5
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    4
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    3
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
+    1
+   ],
+   [
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E10C/hc/s2",
+  "candidates_proposed": 4,
+  "candidates_evaluated": 4,
+  "rollout_rows": 360,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    7
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    5
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    1
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E12A/hcstock/s0",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 5,
+  "rollout_rows": 320,
+  "cand_ids_never_evaluated": [
+   "cand_0006"
+  ],
+  "top_errors": [
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    5
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    5
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    5
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    4
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    4
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E12A/hcstock/s1",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 7,
+  "rollout_rows": 400,
+  "cand_ids_never_evaluated": [
+   "cand_0008"
+  ],
+  "top_errors": [
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    7
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    7
+   ],
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    6
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    3
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    3
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ]
+  ]
+ },
+ {
+  "root": "E12A/hcstock/s2",
+  "candidates_proposed": 8,
+  "candidates_evaluated": 7,
+  "rollout_rows": 400,
+  "cand_ids_never_evaluated": [
+   "cand_0008"
+  ],
+  "top_errors": [
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    7
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    7
+   ],
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    4
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    3
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    3
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    3
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E12C/bestofk/s0",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "prop_01",
+   "prop_02",
+   "prop_03",
+   "prop_04",
+   "prop_05",
+   "prop_06"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E12C/bestofk/s1",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "prop_01",
+   "prop_02",
+   "prop_03",
+   "prop_04",
+   "prop_05",
+   "prop_06"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E12C/bestofk/s2",
+  "candidates_proposed": 6,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [
+   "prop_01",
+   "prop_02",
+   "prop_03",
+   "prop_04",
+   "prop_05",
+   "prop_06"
+  ],
+  "top_errors": []
+ },
+ {
+  "root": "E12C/hcstock/s0",
+  "candidates_proposed": 5,
+  "candidates_evaluated": 5,
+  "rollout_rows": 240,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    6
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    5
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    4
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E12C/hcstock/s1",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 7,
+  "rollout_rows": 320,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    8
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    7
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E12C/hcstock/s2",
+  "candidates_proposed": 7,
+  "candidates_evaluated": 7,
+  "rollout_rows": 300,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    8
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    7
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    4
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    4
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    1
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    1
+   ]
+  ]
+ },
+ {
+  "root": "E20/CTL/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/CTL/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/CTL/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/P/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/P/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/P/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/PT/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/PT/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/PT/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/T/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/T/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E20/T/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E21/ruleP/s0",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E21/ruleP/s1",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ },
+ {
+  "root": "E21/ruleP/s2",
+  "candidates_proposed": 0,
+  "candidates_evaluated": 0,
+  "rollout_rows": 0,
+  "cand_ids_never_evaluated": [],
+  "top_errors": []
+ }
+]
