@@ -1,0 +1,16 @@
+\section{Limitations and Discussion}
+\label{sec:v2:limits}
+
+\begin{itemize}[leftmargin=*,nosep]
+\item \emph{We built the system and ran the baselines.} Tuning effort is asymmetric. Competitors run from official code through adapters, WikiSkill is a community port, and every deviation is listed with its expected direction of bias (Appendix~\ref{app:config}).
+\item \emph{Surface asymmetry.} On Suites B and C the \capevolve{} arms edit prompt and tools and GEPA, MIPROv2 and ACE edit the prompt only. The Suite A and Suite D prompt-only comparisons are the tie-breakers.
+\item \emph{Power.} Three search seeds give two degrees of freedom for statements about the method, and the artifact-level minimum detectable effect is \mdeBCondThree{} points on Suite B and \mdeCCondThree{} on Suite C. We claim at the artifact level and call smaller gaps inconclusive.
+\item \emph{Exposure.} The Suite A final set samples an older release whose ids were scored at most twice before, score only. Suite B's test is sealed against scoring and selection but its task files were visible on the runner filesystem; a scan of 68 optimizer transcripts and the run directories found no access, which is absence of evidence. Suite C's test is development-exposed. Pretraining contamination cannot be checked.
+\item \emph{Gates.} Rule P is conservative and, in the search-time data, promotes almost nothing; the final evaluation decides whether that is reliability or inertia. Stock \capevolve{} selects and gates on one split that also feeds the proposer, so a candidate can overfit it; we report selection-to-final shrinkage. Competitors keep native gates, and Suite B has no stock-gate arm.
+\item \emph{Matched checkpoint.} Capacity bound the search, so $N^\star$ falls below 600 and results say little about larger budgets. We match target rollouts, not optimizer compute. The only compute-matched control is a best-of-$k$ one-shot run on Suite C.
+\item \emph{Ablations.} Suite D uses another target and judge than Suites A to C and establishes mechanism, not rank. The causal-history ablation, a descriptions-only emulation of the MCP surface and the skill-package cell were not run; the MCP tool surface and the skill package are therefore not evaluated, and intake is tested by fault injection, not a user study.
+\item \emph{Scorer, judge and metering.} LibreOffice 25.8 fails 19 of 400 official gold files as outputs. GPT-5.5 judges the $\tau^2$ assertions on Suites B and C. RITS and Azure tokens have no visible price, and the gateway ledger over-counts Suite B by 20 to 60\% against transcripts.
+\item \emph{Concurrent work.} Piao et al.\ \citep{piao2026skillsgeneralize}, Rethinking Harness Evolution \citep{rethinkharness} and PACE \citep{shawn2026pace} overlap with our surface and gate ideas. We claim the combination and the controlled ablations, not any single idea.
+\end{itemize}
+
+\needs{Discussion paragraph on when to use which surface and which orchestration mode, taken only from Sections 5.2 and 5.3 after the final evaluation.}

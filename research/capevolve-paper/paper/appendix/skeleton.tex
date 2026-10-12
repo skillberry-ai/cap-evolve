@@ -42,3 +42,18 @@ Stopping & budget caps, consecutive rejects, optional convergence monitor & budg
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{algorithm}[h]
+\caption{Promotion rule P for candidate $\artifact'$ against incumbent $\artifact^\star$.}
+\label{alg:P}
+\begin{algorithmic}[1]
+\REQUIRE screen measurements $m',m^\star$ on $\Dsel$; $k,\ n_{\mathrm{conf}},\ \delta_{\min},\ z_{\mathrm{conf}},\ \rho$
+\STATE $\Delta_t\gets m'_t-m^\star_t$ for $t$ scored on both sides (\emph{unmasked}: no footprint restriction)
+\IF{$|\Delta|<2$ \textbf{or} $\bar\Delta\le 0$ \textbf{or} $\bar\Delta\le k\,\SE(\Delta)$} \STATE \textbf{return} reject \ENDIF
+\STATE draw one trial offset $o$ (agent-optimize: beyond every trial either artifact has; hill-climb: $o=1000+i\,n_{\mathrm{conf}}$ at iteration $i$); fix seeds as $\mathrm{base}+o+j$
+\STATE $m'_{\mathrm{c}}\gets \mathrm{Eval}(\artifact',\Dsel,n_{\mathrm{conf}};o)$;\quad $m^\star_{\mathrm{c}}\gets \mathrm{Eval}(\artifact^\star,\Dsel,n_{\mathrm{conf}};o)$
+\STATE $\Delta^{c}_t\gets m'_{\mathrm{c},t}-m^\star_{\mathrm{c},t}$;\quad $\mathrm{cov}\gets |\Delta^{c}|/|\Delta|$
+\IF{$\mathrm{cov}<\rho$ \textbf{or} $\bar\Delta^{c}<\delta_{\min}$ \textbf{or} $\bar\Delta^{c}/\SE(\Delta^{c})<z_{\mathrm{conf}}$} \STATE \textbf{return} reject \ENDIF
+\RETURN promote, with new baseline $m^\star\gets m'_{\mathrm{c}}$
+\end{algorithmic}
+\end{algorithm}

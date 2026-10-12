@@ -23,6 +23,12 @@
 % Rollout budget N and matched checkpoint N* (not B, which would clash with Suite B).
 \newcommand{\budget}{\ensuremath{N}}
 \newcommand{\ckpt}{\ensuremath{N^\star}}
+\newcommand{\artifact}{a}
+\newcommand{\Dopt}{\mathcal{D}_{\mathrm{opt}}}
+\newcommand{\Dsel}{\mathcal{D}_{\mathrm{sel}}}
+\newcommand{\Dfin}{\mathcal{D}_{\mathrm{fin}}}
+\newcommand{\rbar}{\bar r}
+\newcommand{\SE}{\mathrm{SE}}
 \newcommand{\tautwo}{$\tau^2$-bench}
 \providecommand{\RETURN}{\STATE \textbf{return} }
 
@@ -46,11 +52,11 @@
 \input{numbers}
 \input{numbers_pending}
 
-\mlsystitlerunning{What Do Agent Optimizers Gain When Measured Carefully?}
+\mlsystitlerunning{CapEvolve: Optimizing Any Editable Surface of a Frozen Agent}
 
 \begin{document}
 \twocolumn[
-\mlsystitle{What Do Agent Optimizers Gain When Measured Carefully?\\An Audit and a Matched Comparison of Ten Optimizers}
+\mlsystitle{\capevolve: Optimizing Any Editable Surface of a Frozen Agent\\Under Code-Owned Evaluation}
 
 \begin{mlsysauthorlist}
 \mlsysauthor{Anonymous Author}{anon}
@@ -62,21 +68,20 @@
 \vskip 0.3in
 
 \begin{abstract}
-\input{sections/abstract}
+\input{sections/v2_abstract}
 \end{abstract}
 ]
 
 \printAffiliationsAndNotice{}
 
-\input{sections/intro}
-\input{sections/problem}
-\input{sections/method}
-\input{sections/setup}
-\input{sections/results}
-\input{sections/discussion}
+\input{sections/v2_intro}
+\input{sections/v2_capevolve}
+\input{sections/v2_evaluation}
+\input{sections/v2_setup}
+\input{sections/v2_results}
 \input{sections/related}
-\input{sections/limitations}
-\input{sections/conclusion}
+\input{sections/v2_limitations}
+\input{sections/v2_conclusion}
 
 % Marks the last body page for scripts/check_paper.py.
 \label{paper:endofbody}
