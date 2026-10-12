@@ -328,6 +328,72 @@ def table_surface_failure():
     (PAPER / "tables" / "surface_failure.tex").write_text("\n".join(L) + "\n")
 
 
+def null_pool():
+    """E22 empirical null pool (analysis/out/null_pool_replay.md): per-candidate and per-ten-candidate false-accept rates with intervals."""
+    import re
+    md = (REPO / "analysis" / "out" / "null_pool_replay.md").read_text()
+    sec1, sec2 = md.split("## Bootstrap over the 40 evaluations")
+    gates = {}
+    for line in sec1.splitlines():
+        m = re.match(r"\| (.+?) \| ([\d.]+) \| ([\d.]+) \| \[([\d.]+), ([\d.]+)\] \| ([\d.]+) \|", line)
+        if m:
+            gates[m.group(1)] = dict(per=float(m.group(3)), w_lo=float(m.group(4)), w_hi=float(m.group(5)), per10=float(m.group(6)))
+    boot = {}
+    for line in sec2.splitlines():
+        m = re.match(r"\| (.+?) \| ([\d.]+) \| \[([\d.]+), ([\d.]+)\] \| ([\d.]+); \[([\d.]+), ([\d.]+)\] \|", line)
+        if m:
+            boot[m.group(1)] = dict(per=float(m.group(2)), lo=float(m.group(3)), hi=float(m.group(4)), per10=float(m.group(5)), lo10=float(m.group(6)), hi10=float(m.group(7)))
+    spec = [("one-stage / stock-unmasked (screen k_se=1)", "one-stage / stock-unmasked", "One-stage gate", "f: one-stage k=1"),
+            ("screen k_se=2", "screen k_se=2", "Screen at 2 standard errors", None),
+            ("rule P as E10B (k1, n_conf3, z1.282, dmin0)", "rule P as E10B (k1,n3,z1.282,dmin0)", "Rule P as run", "c: P n_conf=3 z=1.282 dmin=0"),
+            ("rule P frozen (k1, n_conf3, z2.0, dmin0.02)", "rule P frozen (z2.0,dmin.02)", "Rule P frozen", "a: P n_conf=3 z=2.0 dmin=.02"),
+            ("rule P n_conf10 z1.645 dmin0.02", None, "Rule P, 10 confirmations", None)]
+    sim = json.loads((REPO / "analysis" / "out" / "sim_budget_B.json").read_text())
+    rows = []
+    for g1, g2, label, simkey in spec:
+        d = gates[g1]
+        b = boot.get(g2) if g2 else None
+        rows.append(dict(label=label, per=d["per"], per10=d["per10"],
+                         lo=b["lo"] if b else d["w_lo"], hi=b["hi"] if b else d["w_hi"],
+                         lo10=b["lo10"] if b else None, hi10=b["hi10"] if b else None, boot=bool(b),
+                         sim10=sim[simkey]["N=10"]["p_any_false_null_search"] if simkey else None))
+    fig, (ax, bx) = plt.subplots(1, 2, figsize=(C.FULL_W, 2.5), sharey=True, constrained_layout=True)
+    ys = list(range(len(rows) - 1, -1, -1))
+    for y, r in zip(ys, rows):
+        ax.barh(y, 100 * r["per"], color="#0072B2", height=0.55)
+        ax.plot([100 * r["lo"], 100 * r["hi"]], [y, y], color="k", lw=1.0)
+        bx.barh(y, 100 * r["per10"], color="#0072B2", height=0.55)
+        if r["lo10"] is not None:
+            bx.plot([100 * r["lo10"], 100 * r["hi10"]], [y, y], color="k", lw=1.0)
+        if r["sim10"] is not None:
+            bx.plot(100 * r["sim10"], y, marker="|", color="#cc0000", ms=12, mew=2.0)
+    ax.set_yticks(ys); ax.set_yticklabels([r["label"] for r in rows])
+    ax.set_xlabel("Null candidates accepted (%)")
+    bx.set_xlabel("Ten-candidate searches with a false accept (%)")
+    ax.set_xlim(0, 25); bx.set_xlim(0, 100)
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    fig.legend(handles=[Patch(color="#0072B2", label="Empirical (gpt-4.1-mini, Suite D retail, 40 seed evaluations)"),
+                        Line2D([], [], marker="|", color="#cc0000", ms=10, mew=2.0, ls="", label="Simulated (gpt-oss, Suite B)")],
+               loc="lower center", ncol=2, frameon=False, bbox_to_anchor=(0.5, -0.1), fontsize=7.5)
+    for a_ in (ax, bx):
+        a_.grid(axis="y", alpha=0)
+    C.save(fig, "fig_nullpool", False)
+    L = [r"\begin{table}[t]", r"\centering\scriptsize", r"\setlength{\tabcolsep}{3pt}",
+         r"\caption{False accepts of unmodified-seed (null) candidates on the empirical null pool: 40 evaluations of the seed on 49 retail tasks, one trial per task. "
+         r"Intervals are bootstrap 95\% intervals over evaluations, except the last row, which gives a Wilson interval and is optimistic because draws share a finite pool. "
+         r"The per-ten figure assumes independent candidates. Per-candidate points come from 20,000 draws and intervals from a bootstrap with fewer draws, so a point can lie near the edge of its interval. "
+         r"Unmasked rules only: the footprint-masked stock gate is not tested, because a null edit has an empty footprint.}",
+         r"\label{tab:nullpool}", r"\begin{tabular}{@{}lccccc@{}}", r"\toprule",
+         r"Gate & Per candidate & 95\% interval & Per ten candidates & 95\% interval & Simulated per ten \\", r"\midrule"]
+    for r in rows:
+        i10 = f"[{r['lo10']:.2f}, {r['hi10']:.2f}]" if r["lo10"] is not None else "--"
+        sm = f"{r['sim10']:.2f}" if r["sim10"] is not None else "--"
+        L.append(f"{r['label']} & {r['per']:.3f} & [{r['lo']:.3f}, {r['hi']:.3f}] & {r['per10']:.2f} & {i10} & {sm} \\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    (PAPER / "tables" / "nullpool.tex").write_text("\n".join(L).replace("\\\\\\\\", "\\\\") + "\n")
+
+
 def fig_roles():
     rows = [r for r in read_csv(OUTM / "metrics_by_role.csv") if r["category"] == "main"]
     agg = collections.defaultdict(lambda: collections.defaultdict(float))
@@ -412,5 +478,5 @@ def numbers(a):
 
 if __name__ == "__main__":
     a = audit()
-    table_zeros(); fig_audit(a); table_audit(a); fig_rulep(); cost(); fig_roles(); numbers(a)
+    table_zeros(); null_pool(); fig_audit(a); table_audit(a); fig_rulep(); cost(); fig_roles(); numbers(a)
     print("real results written")

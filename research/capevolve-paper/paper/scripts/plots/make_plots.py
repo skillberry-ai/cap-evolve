@@ -239,5 +239,5 @@ def families():
 
 
 if __name__ == "__main__":
-    anytime(); forest(); contrast(); ablate(); nullpool(); pareto(); families()
+    anytime(); forest(); contrast(); ablate(); pareto(); families()
     print("mock plots written" if MOCK else "real plots written")
