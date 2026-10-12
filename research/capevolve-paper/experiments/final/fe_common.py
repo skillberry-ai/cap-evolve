@@ -171,6 +171,14 @@ def tree_hash(root, kind):
     return h.hexdigest(), files
 
 
+def tree_hash_normalized(root, kind):
+    """like tree_hash but each file's content is right-stripped of whitespace first (a trailing newline must not make an otherwise identical artifact 'different'); diagnostic only"""
+    h = hashlib.sha256()
+    for f in sorted(tree_files(root, kind)):
+        h.update(("%s\0%s\n" % (f, sha256_bytes((Path(root) / f).read_bytes().rstrip()))).encode())
+    return h.hexdigest()
+
+
 def file_sha(path):
     return sha256_file(path) if Path(path).exists() else None
 

@@ -580,6 +580,10 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
                           "champion_score": (sr.get("seed_score") if entry.get("fallback_seed") or entry.get("candidate_id") == seed_candidate(events) else entry.get("selection_value")),
                           "comparison_count": (min(limit, own_n) if (own_n is not None and limit != INF) else own_n), "own_count": own_n, **sr}
     entry["tree_sha256"] = h
+    try:
+        entry["normalized_tree_sha256"] = C.tree_hash_normalized(src, kind) if k != "all" else None
+    except Exception:
+        entry["normalized_tree_sha256"] = None
     entry["files"] = files
     # the arm's OWN first candidate (e.g. MIPROv2's default instruction, ACE's empty playbook): returning it is "inert" for the method even though its hash differs from the shared seed's
     try:
@@ -600,10 +604,26 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
     return entry
 
 
+SEED_DIRS = {   # the seed capability directory each suite's searches were built from (NOT a vote over runs)
+    "A": C.REPO / "templates/adapters/spreadsheetbench/seed_capability",
+    "B": Path("/home/dev/projects2/wt-tau/examples/tau2_retail/seed_capability"),
+    "C": Path("/home/dev/projects2/wt-tau/examples/tau2_airline_c/seed_capability"),
+    "D": Path("/home/dev/projects2/wt-tau/examples/tau2_retail/seed_capability"),
+    "E": Path("/home/dev/projects2/wt-airE/examples/tau2_airline_c/seed_capability"),
+}
+
+
 def seed_artifact(suite, out_root, copy):
-    """The seed artifact: the seed candidate of every search must hash identically; the first one found is frozen."""
+    """The shared seed artifact = the canonical seed capability directory of the suite, hashed exactly like every other artifact (tree_hash over the canonical files).
+    The seed candidate of each run is only CROSS-CHECKED against it (listed as agreeing / deviating), never used to pick the hash."""
     kind = C.SUITES[suite]["artifact_kind"]
-    found = {}
+    src = SEED_DIRS[suite]
+    out = {"suite": suite, "seed_source_dir": str(src)}
+    if not src.is_dir() or not C.tree_files(src, kind):
+        out.update(status="impossible", reason="seed capability directory missing: %s" % src)
+        return out
+    h, files = C.tree_hash(src, kind)
+    agree, deviate = [], []
     for arm in C.suite_arms(suite):
         for seed in C.SEEDS:
             rd = C.run_dir(suite, arm, seed)
@@ -614,22 +634,15 @@ def seed_artifact(suite, out_root, copy):
             e = last_artifact_event(events, cid) if cid else None
             if e and Path(e["artifact_dir"]).is_dir():
                 try:
-                    h, files = C.tree_hash(e["artifact_dir"], kind)
+                    rh, rf = C.tree_hash(e["artifact_dir"], kind)
                 except Exception:
                     continue
-                if files:
-                    found.setdefault(h, []).append({"arm": arm, "seed": seed, "candidate_id": cid, "artifact_dir": e["artifact_dir"]})
-    out = {"suite": suite, "distinct_seed_hashes": {h: len(v) for h, v in found.items()}}
-    if not found:
-        out.update(status="impossible", reason="no seed candidate artifact found")
-        return out
-    major = max(found, key=lambda h: len(found[h]))
-    src = found[major][0]["artifact_dir"]
-    out.update(status="ok" if len(found) == 1 else "partial", tree_sha256=major, source=found[major][0],
-               files=C.tree_hash(src, kind)[1], n_runs_with_this_seed=len(found[major]),
-               other_hashes={h: v for h, v in found.items() if h != major})
-    if len(found) > 1:
-        out["reason"] = "seed candidates do not all hash identically; the majority one is frozen, the others are listed"
+                (agree if rh == h else deviate).append({"arm": arm, "seed": seed, "candidate_id": cid, "tree_sha256": rh})
+    out.update(status="ok", tree_sha256=h, normalized_tree_sha256=C.tree_hash_normalized(src, kind), files=files, n_runs_agreeing=len(agree), runs_deviating=deviate,
+               distinct_seed_hashes={h: len(agree)})
+    if deviate:
+        out["note"] = ("%d run(s) have a first candidate that is not byte-identical to the seed capability (the arm's own starting point, e.g. MIPROv2's default instruction); "
+                       "the shared seed hash is the seed directory's, as registered" % len(deviate))
     if copy:
         dst = out_root / "artifacts" / "seed"
         freeze_copy(src, dst, kind)
@@ -695,6 +708,8 @@ def main(argv=None):
     seed_h = man["seed_artifact"].get("tree_sha256")
     for e in man["entries"]:
         e["identical_to_seed"] = bool(seed_h and e.get("tree_sha256") == seed_h)
+        sn = man["seed_artifact"].get("normalized_tree_sha256")
+        e["identical_to_seed_normalized"] = bool(sn and e.get("normalized_tree_sha256") == sn)       # descriptive: equal up to trailing whitespace
     inert = {}
     for e in man["entries"]:
         e["inert"] = bool(e.get("identical_to_seed"))
@@ -717,12 +732,12 @@ def main(argv=None):
     with open(selp, "w", newline="") as f:
         w = _csv.writer(f)
         w.writerow(["mode", "arm", "seed", "status", "candidate_id", "split", "n_tasks", "champion_score", "seed_score", "seed_split", "comparison_count", "own_count", "seed_source",
-                    "inert", "dagger", "n_promotions", "n_screened", "identical_to_own_seed"])
+                    "inert", "dagger", "n_promotions", "n_screened", "identical_to_own_seed", "identical_to_seed_normalized"])
         for e in man["entries"]:
             sx = e.get("selection") or {}
             w.writerow([e["mode"], e["arm"], e["seed"], e["status"], e.get("candidate_id"), sx.get("split"), sx.get("n_tasks"), sx.get("champion_score"), sx.get("seed_score"),
                         sx.get("seed_split"), sx.get("comparison_count"), sx.get("own_count"), sx.get("seed_source"),
-                        int(bool(e.get("inert"))), int(bool(e.get("dagger"))), e.get("n_promotions"), e.get("n_screened"), int(bool(e.get("identical_to_own_seed")))])
+                        int(bool(e.get("inert"))), int(bool(e.get("dagger"))), e.get("n_promotions"), e.get("n_screened"), int(bool(e.get("identical_to_own_seed"))), int(bool(e.get("identical_to_seed_normalized")))])
     path = Path(a.manifest) if a.manifest else C.MANIFESTS / ("artifacts_%s.json" % suite)
     C.write_json_atomic(path, man)
     for mode in modes:
