@@ -463,6 +463,9 @@ def execute_job(job, store, cm, py, hang_s=HANG_S, log=print):
             exhausted = (rec["hang"] and hang_n > MAX_HANG_RETRIES) or infra_n > MAX_INFRA_RETRIES
             rec["terminal"] = bool(exhausted)
             rec["final_status"] = "missing" if exhausted else None
+            # amendment 5O: an infra error still infra after the retries is `infra_final` (scored 0 in the primary results, missing only in the
+            # sensitivity file); a 3 h hang that exhausted its one retry stays a missing cell in both.
+            rec["missing_kind"] = ("hang" if (rec["hang"] or hang_n > MAX_HANG_RETRIES) else "infra_final") if exhausted else None
         else:
             rec["terminal"] = True
             rec["final_status"] = "done"
@@ -474,61 +477,80 @@ def execute_job(job, store, cm, py, hang_s=HANG_S, log=print):
 
 
 def aggregate(suite, root, meta, jobs):
-    """results_long.csv (contract) + results_trials.csv + END variants + per-arm report, from raw/rollouts.jsonl"""
+    """results_long.csv (contract; infra_final cells enter as reward 0 with a flag, amendment 5O) + results_long_infra_missing.csv (infra_final cells absent)
+    + results_trials.csv + END variants + per-arm and per-artifact infra-rate reports, from raw/rollouts.jsonl"""
     root = Path(root)
     store = Store(root)
-    fam = {}
     trial_rows = {"B": [], "END": []}
     attempts_by_arm = {}
+    by_art = {}
     for j in jobs:
         t = store.terminal(j["job_id"])
         allr = store.records(j["job_id"])
         arm = j["arm_label"]
-        rep = attempts_by_arm.setdefault((j["mode"], arm), {"jobs": 0, "attempts": 0, "retried_jobs": 0, "done": 0, "missing": 0, "pending": 0, "infra_attempts": 0,
-                                                            "hangs": 0, "candidate_errors": 0, "empty_output": 0, "raw_tool_text_last": 0})
+        rep = attempts_by_arm.setdefault((j["mode"], arm), {"jobs": 0, "attempts": 0, "retried_jobs": 0, "done": 0, "missing_hang": 0, "infra_final": 0, "pending": 0,
+                                                            "infra_attempts": 0, "hangs": 0, "candidate_errors": 0, "empty_output": 0, "empty_completion": 0, "raw_tool_text_last": 0})
+        art = by_art.setdefault("%s|%s|s%d" % (j["mode"], arm, j["seed"]), {"jobs": 0, "attempts": 0, "infra_attempts": 0, "infra_final": 0, "hang_missing": 0})
         r = rep
         r["jobs"] += 1
+        art["jobs"] += 1
         r["attempts"] += len(allr)
+        art["attempts"] += len(allr)
+        n_inf = sum(1 for x in allr if x["error_class"] == "infra")
         r["retried_jobs"] += 1 if len(allr) > 1 else 0
-        r["infra_attempts"] += sum(1 for x in allr if x["error_class"] == "infra")
+        r["infra_attempts"] += n_inf
+        art["infra_attempts"] += n_inf
         r["hangs"] += sum(1 for x in allr if x.get("hang"))
         if not t:
             r["pending"] += 1
             continue
-        if t["final_status"] == "missing":
-            r["missing"] += 1
+        infra_final = t["final_status"] == "missing" and t.get("missing_kind") != "hang"
+        if t["final_status"] == "missing" and not infra_final:
+            r["missing_hang"] += 1
+            art["hang_missing"] += 1
             continue
-        r["done"] += 1
-        r["candidate_errors"] += 1 if t["error_class"] in ("candidate", "unverifiable") else 0
-        r["empty_output"] += 1 if t.get("empty_output") else 0
-        r["empty_completion"] = r.get("empty_completion", 0) + (1 if t.get("empty_completion") else 0)
-        r["raw_tool_text_last"] += 1 if t.get("raw_tool_text_last") else 0
+        if infra_final:
+            r["infra_final"] += 1
+            art["infra_final"] += 1
+        else:
+            r["done"] += 1
+            r["candidate_errors"] += 1 if t["error_class"] in ("candidate", "unverifiable") else 0
+            r["empty_output"] += 1 if t.get("empty_output") else 0
+            r["empty_completion"] += 1 if t.get("empty_completion") else 0
+            r["raw_tool_text_last"] += 1 if t.get("raw_tool_text_last") else 0
         for _m in (["B", "END"] if j.get("also_end") else [j["mode"]]):
-          trial_rows[_m].append(dict(arm=j.get("arm"), seed=j["seed"], task=j["task"], trial=j["trial"], reward=t["reward"], family=j.get("family"),
-                                            reward_as_saved=t["reward_as_saved"], t_start=_iso(t["t_start"]), t_end=_iso(t["t_end"]), error_class=t["error_class"],
-                                            error_text=(t["error_text"] or "").replace("\n", " ")[:500], attempts=len(allr), empty_output=int(bool(t.get("empty_output"))), empty_completion=int(bool(t.get("empty_completion"))),
-                                            raw_tool_text_last=int(bool(t.get("raw_tool_text_last"))), tag=t["tag"], job_id=j["job_id"]))
+            trial_rows[_m].append(dict(arm=j.get("arm"), seed=j["seed"], task=j["task"], trial=j["trial"], reward=(0.0 if infra_final else t["reward"]), family=j.get("family"),
+                                       reward_as_saved=(0.0 if infra_final else t["reward_as_saved"]), t_start=_iso(t["t_start"]), t_end=_iso(t["t_end"]), error_class=t["error_class"],
+                                       error_text=(t["error_text"] or "").replace("\n", " ")[:500], attempts=len(allr), empty_output=int(bool(t.get("empty_output"))),
+                                       empty_completion=int(bool(t.get("empty_completion"))), raw_tool_text_last=int(bool(t.get("raw_tool_text_last"))),
+                                       infra_final=int(infra_final), tag=t["tag"], job_id=j["job_id"]))
     out = {}
+    tcols = ["arm", "seed", "task", "trial", "reward", "family", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output",
+             "empty_completion", "raw_tool_text_last", "infra_final", "tag", "job_id"]
+    lcols = ["arm", "seed", "task", "reward", "family", "n_trials", "n_infra_final", "reward_as_saved", "t_start", "t_end", "error_class", "error_text"]
     for mode, suffix in (("B", ""), ("END", "_end")):
         rows = trial_rows[mode]
-        _write_csv(root / ("results_trials%s.csv" % suffix), rows,
-                   ["arm", "seed", "task", "trial", "reward", "family", "reward_as_saved", "t_start", "t_end", "error_class", "error_text", "attempts", "empty_output", "empty_completion",
-                    "raw_tool_text_last", "tag", "job_id"])
-        agg = {}
-        for x in rows:
-            agg.setdefault((x["arm"], x["seed"], x["task"]), []).append(x)
-        long_rows = []
-        for (arm, seed, task), xs in sorted(agg.items(), key=lambda kv: (kv[0][0], kv[0][1], str(kv[0][2]))):
-            long_rows.append(dict(arm=arm, seed=seed, task=task, reward=round(sum(x["reward"] for x in xs) / len(xs), 10), family=xs[0]["family"],
-                                  n_trials=len(xs), reward_as_saved=round(sum(x["reward_as_saved"] for x in xs) / len(xs), 10),
-                                  t_start=min(x["t_start"] for x in xs), t_end=max(x["t_end"] for x in xs),
-                                  error_class="|".join(sorted({x["error_class"] for x in xs if x["error_class"]})),
-                                  error_text=next((x["error_text"] for x in xs if x["error_text"]), "")))
-        _write_csv(root / ("results_long%s.csv" % suffix), long_rows,
-                   ["arm", "seed", "task", "reward", "family", "n_trials", "reward_as_saved", "t_start", "t_end", "error_class", "error_text"])
-        out[mode] = len(long_rows)
+        _write_csv(root / ("results_trials%s.csv" % suffix), rows, tcols)
+        for variant, vsuffix in ((rows, ""), ([x for x in rows if not x["infra_final"]], "_infra_missing")):
+            agg = {}
+            for x in variant:
+                agg.setdefault((x["arm"], x["seed"], x["task"]), []).append(x)
+            long_rows = []
+            for (arm, seed, task), xs in sorted(agg.items(), key=lambda kv: (kv[0][0], kv[0][1], str(kv[0][2]))):
+                long_rows.append(dict(arm=arm, seed=seed, task=task, reward=round(sum(x["reward"] for x in xs) / len(xs), 10), family=xs[0]["family"],
+                                      n_trials=len(xs), n_infra_final=sum(x["infra_final"] for x in xs), reward_as_saved=round(sum(x["reward_as_saved"] for x in xs) / len(xs), 10),
+                                      t_start=min(x["t_start"] for x in xs), t_end=max(x["t_end"] for x in xs),
+                                      error_class="|".join(sorted({x["error_class"] for x in xs if x["error_class"]})),
+                                      error_text=next((x["error_text"] for x in xs if x["error_text"]), "")))
+            _write_csv(root / ("results_long%s%s.csv" % (suffix, vsuffix)), long_rows, lcols)
+            if not vsuffix:
+                out[mode] = len(long_rows)
     rep = {"%s|%s" % k: v for k, v in sorted(attempts_by_arm.items())}
     C.write_json_atomic(root / "per_arm_report.json", rep)
+    for v in by_art.values():
+        v["infra_attempt_rate"] = round(v["infra_attempts"] / v["attempts"], 4) if v["attempts"] else None
+        v["infra_final_rate"] = round(v["infra_final"] / v["jobs"], 4) if v["jobs"] else None
+    C.write_json_atomic(root / "per_artifact_infra_rates.json", by_art)
     return out, rep
 
 

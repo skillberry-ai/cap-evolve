@@ -165,11 +165,23 @@ class TestRunner(unittest.TestCase):
             RF.run_attempt = self.fake_attempts([infra] * 4)
             RF.execute_job(job(1, task="t2"), st, self.cm, "py", log=lambda s: None)
             self.assertEqual(st.terminal("A|hc|s0|t2|B|t0")["final_status"], "missing")
+            self.assertEqual(st.terminal("A|hc|s0|t2|B|t0")["missing_kind"], "infra_final")
             hang = {"worker_ok": True, "error": "watchdog", "error_kind_adapter": "infra", "reward": 0.0, "hang": True}
             RF.run_attempt = self.fake_attempts([hang, hang])
             RF.execute_job(job(2, task="t3"), st, self.cm, "py", log=lambda s: None)
             self.assertEqual(st.terminal("A|hc|s0|t3|B|t0")["final_status"], "missing")
             self.assertEqual(len(st.records("A|hc|s0|t3|B|t0")), 2)
+            self.assertEqual(st.terminal("A|hc|s0|t3|B|t0")["missing_kind"], "hang")
+            out, rep = RF.aggregate("A", self.tmp, {}, [job(0), job(1, task="t2"), job(2, task="t3")])
+            prim = {(r["task"]): r for r in csv.DictReader(open(Path(self.tmp) / "results_long.csv"))}
+            self.assertEqual(prim["t2"]["reward"], "0.0")              # infra_final scores 0 in the primary file
+            self.assertEqual(prim["t2"]["n_infra_final"], "1")
+            self.assertNotIn("t3", prim)                               # hang stays missing
+            sens = {r["task"] for r in csv.DictReader(open(Path(self.tmp) / "results_long_infra_missing.csv"))}
+            self.assertNotIn("t2", sens)
+            self.assertIn("t1", sens)
+            rates = json.load(open(Path(self.tmp) / "per_artifact_infra_rates.json"))
+            self.assertEqual(rates["B|hc|s0"]["infra_final"], 1)
             cand = {"worker_ok": True, "error": "task_template.md broke the placeholder contract", "error_kind_adapter": "infra", "reward": 0.0}
             RF.run_attempt = self.fake_attempts([cand])
             RF.execute_job(job(3, task="t4"), st, self.cm, "py", log=lambda s: None)

@@ -93,7 +93,7 @@ in `duplicate_groups`; they are still evaluated per (arm, seed) cell (independen
   campaign adapters.  Gateway tags `tag:FINAL-<S>-<arm>-s<seed>:<arm>:<role>` (END artifacts use arm label `<arm>-end`; canary `FINAL-<S>-canary-s0`).
 * Hang rule: 3 h per rollout (process group killed after SIGTERM grace) = infra error, one retry with a new trial seed, then a MISSING cell.
   Other `infra` errors (uniform classifier): up to 3 further attempts.  `candidate`/`unverifiable` errors stand with their reward.  A harness
-  failure (worker crash without result) is `infra`, never a 0.  Missing cells have no row.
+  failure (worker crash without result) is `infra`, never a 0.  Missing cells have no row.  Amendment 5O: a cell still infra after 3 retries (`infra_final`) is scored 0 in `results_long.csv` (column `n_infra_final`, trial-level `infra_final`) and absent from `results_long_infra_missing.csv`; a 3 h hang that used its one retry is absent from both.  `per_artifact_infra_rates.json` logs infra attempt and infra_final rates per (mode, arm, seed).
 * Outputs per suite in `FINAL_EVAL_ROOT/<S>/`: `results_long.csv` (contract: arm, seed, task, reward = mean over valid trials, family; extra: n_trials,
   reward_as_saved, t_start (min), t_end (max), error_class, error_text), `results_trials.csv` (one row per trial: trial, t_start, t_end, error_class,
   error_text, attempts, empty_output, raw_tool_text_last, tag), the same two with `_end` for the 5D secondary analysis, `per_arm_report.json`
