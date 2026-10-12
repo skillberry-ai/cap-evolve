@@ -2242,6 +2242,32 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
 
 
+_PROCESS_PRIOR_LINE = "- Prior iterations I read from ./prior_iterations/ + ./RUNMAP.md (which, and what I learned):\n"
+
+
+def _process_seed() -> str:
+    """PROCESS.md template; without the history, the line asking what was read from it is dropped."""
+    if history_enabled():
+        return _PROCESS_SEED
+    return (_PROCESS_SEED.replace(_PROCESS_PRIOR_LINE, "")
+            .replace(", so anyone — and the next iteration via ./prior_iterations/ — can see your reasoning.",
+                     ", so anyone can see your reasoning."))
+
+
+_DIAG_HISTORY_BULLET = re.compile(
+    r"- cross-check the run history \(LEDGER / prior iterations\) and skip any cluster whose\n"
+    r"  fix was already tried and rejected — do not re-diagnose a refuted approach\.\n")
+
+
+def _scrub_history_guidance(dst: Path) -> None:
+    """History off: drop the one line of the staged diagnose skill that points at the run history."""
+    if history_enabled():
+        return
+    f = Path(dst) / "SKILL.md"
+    if f.is_file():
+        f.write_text(_DIAG_HISTORY_BULLET.sub("", f.read_text(encoding="utf-8")), encoding="utf-8")
+
+
 def history_enabled() -> bool:
     """``optimizer.ablation.history`` / env ``CAPEVOLVE_HISTORY`` (default on). Off removes the
     cross-iteration HISTORY from what the proposer sees (LEDGER, JOURNAL, RUNMAP, prior_iterations,
@@ -2279,7 +2305,7 @@ def seed_framework_memory(target: Path, run_dir: RunDir) -> list[str]:
     if not history_enabled():
         try:
             if not (target / "PROCESS.md").exists():
-                (target / "PROCESS.md").write_text(_PROCESS_SEED, encoding="utf-8")
+                (target / "PROCESS.md").write_text(_process_seed(), encoding="utf-8")
             written.append("PROCESS.md")
         except OSError as e:
             run_dir.log_event("optimizer_context_warning", what="PROCESS.md", error=str(e)[:300])
@@ -2377,8 +2403,8 @@ def _run_ending_signal(run_dir: RunDir) -> str:
     if is_last:
         return (
             f"## Run budget — THIS MAY BE YOUR LAST ITERATION ({status})\n"
-            "Update `META_INSIGHTS.md` and `FRAMEWORK_IMPROVEMENTS.md` THIS iteration — "
-            "there may be no next one to do it in.\n\n"
+            + ("Update `META_INSIGHTS.md` and `FRAMEWORK_IMPROVEMENTS.md` THIS iteration — "
+               "there may be no next one to do it in.\n\n" if history_enabled() else "\n")
         )
     return f"## Run budget ({status})\n\n"
 
@@ -2675,6 +2701,7 @@ def stage_capability_guidance(run_dir: RunDir, dest: Path, *, capabilities=None,
                 diag_src, dst,
                 ignore=shutil.ignore_patterns("__pycache__", "scripts", "*.pyc"),
             )
+            _scrub_history_guidance(dst)
         except Exception as e:  # noqa: BLE001
             run_dir.log_event("optimizer_context_warning", what="guidance/diagnose", error=str(e)[:300])
 
@@ -2812,6 +2839,7 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
                     if dst.exists():
                         shutil.rmtree(dst)
                     shutil.copytree(diag_src, dst, ignore=ignore)
+                    _scrub_history_guidance(dst)
                 except Exception as e:  # noqa: BLE001
                     run_dir.log_event("optimizer_context_warning",
                                       what=f"{skills_dir}/diagnose", error=str(e)[:300])
