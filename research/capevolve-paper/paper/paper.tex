@@ -52,6 +52,37 @@
 \input{numbers}
 \input{numbers_pending}
 
+% The loop figure lives in a macro because \twocolumn[...] scans for the first brace-level-0 "]".
+\newcommand{\loopfigure}{%
+\resizebox{0.97\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\scriptsize,
+    box/.style={draw,rounded corners=1.5pt,minimum height=7mm,align=center,inner sep=2.5pt,fill=black!4},
+    opt/.style={box,fill=orange!14,draw=orange!60!black},
+    core/.style={box,fill=teal!14,draw=teal!55!black},
+    ar/.style={-{Stealth[length=4pt]},draw=black!60}
+  ]
+  \node[box,minimum width=24mm] (p) at (0,1.05) {system prompt};
+  \node[box,minimum width=24mm] (t) at (0,0.45) {tool code};
+  \node[box,minimum width=24mm] (m) at (0,-0.15) {MCP tool surface};
+  \node[box,minimum width=24mm] (k) at (0,-0.75) {skill package};
+  \node[draw=black!35,dashed,rounded corners=2pt,fit=(p)(t)(m)(k),inner sep=3pt] (surf) {};
+  \node[anchor=south,font=\scriptsize\bfseries] at (surf.north) {editable surface (a parameter)};
+  \node[opt,right=9mm of surf] (o) {optimizer\\{\tiny edits a copy}};
+  \node[box,right=5mm of o] (a) {target agent\\{\tiny runs tasks}};
+  \node[core,right=5mm of a] (s) {scorer\\{\tiny gold isolated}};
+  \node[core,right=5mm of s] (g) {gate\\{\tiny stock or rule P}};
+  \node[core,right=5mm of g] (z) {final set\\{\tiny sealed, scored once}};
+  \draw[ar] (surf) -- (o);
+  \draw[ar] (o) -- (a); \draw[ar] (a) -- (s); \draw[ar] (s) -- (g); \draw[ar] (g) -- (z);
+  \node[opt,below=7mm of a,xshift=-4mm] (h) {causal history\\{\tiny fixed and broke, protect set}};
+  \draw[ar] (h) -| (o);
+  \draw[ar] (g.south) |- ([yshift=-6mm]h.east |- h.south) -| (h.south);
+  \draw[teal!55!black,dashed] ([xshift=-2mm,yshift=-12mm]s.south west) rectangle ([xshift=2mm,yshift=5mm]z.north east);
+  \node[font=\tiny,teal!40!black,anchor=north east] at ([xshift=2mm,yshift=5mm]z.north east) {};
+\end{tikzpicture}}%
+}
+
 \mlsystitlerunning{CapEvolve: Optimizing Any Editable Surface of a Frozen Agent}
 
 \begin{document}
@@ -70,6 +101,14 @@
 \begin{abstract}
 \input{sections/v2_abstract}
 \end{abstract}
+\vspace{0.08in}
+\begin{minipage}{\textwidth}
+\centering
+\loopfigure
+\refstepcounter{figure}\label{fig:v2:loop}
+\par\vspace{2pt}\begin{small}\emph{Figure \thefigure.} CapEvolve. The editable surface is a parameter of one loop. Orange parts belong to the optimizer; teal parts are core code the optimizer cannot edit. Accepted and rejected candidates feed a causal history of which tasks each edit fixed and broke.\end{small}
+\end{minipage}
+\vspace{0.08in}
 ]
 
 \printAffiliationsAndNotice{}
@@ -97,6 +136,7 @@
 \appendix
 \input{appendix/config}
 \input{appendix/protocol}
+\input{appendix/audit}
 \input{appendix/mechanisms}
 \input{appendix/contract}
 \input{appendix/skeleton}

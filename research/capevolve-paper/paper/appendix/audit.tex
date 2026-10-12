@@ -1,0 +1,46 @@
+\section{Motivating Audit of Historical Results}
+\label{app:hist}
+
+This audit is the reason \capevolve{} makes evaluation code-owned (Section~\ref{sec:v2:evaluation}). It covers an earlier version of our own optimizer. Four hazards inflated or obscured its reported results: scorer compliance, split reuse, gold visibility and gate strictness. We recomputed every number below from retained run artifacts (20 SpreadsheetBench runs, none expired) with repository scripts; the audit files list every claim and its status.
+
+
+
+\subsection*{The scorer rewards literals over formulas}
+
+The historical SpreadsheetBench scorer loads cached cell values and does not recalculate. A formula written by the agent has no cached value, so it reads as empty and fails. In the verified-400 gold, \histFormulaGoldTasks{} of 400 tasks (\histFormulaGoldPct{}\%) have formula cells in the answer range. Correct formula outputs without cached values passed 0 of 30 checks under the as-saved scorer and 29 to 30 of 30 under LibreOffice recalculation (Appendix~\ref{app:scorer}).
+
+Both metrics were recorded from the same output workbooks, and both gains below are the mean of three paired optimization runs, so only the scorer differs. Gemma-4-31B moved from \histGemmaBaseSaved{} to 76.5 as saved (+\histGemmaDeltaSaved{} points) but from \histGemmaBaseRecalc{} to a recalculated 75.4 to 78.6 (+\histGemmaDeltaRecalc{}). GPT-5.5 gained +\histGptDeltaSaved{} as saved but +\histGptDeltaRecalc{} when its \histGptBaseRecalc{} recalculated baseline is the reference. Formula-to-literal compliance therefore accounts for \histGemmaCompliancePts{} points (\histGemmaComplianceShare{}\%) of the Gemma gain and \histGptCompliancePts{} points (\histGptComplianceShare{}\%) of the GPT-5.5 gain. The recalculating scorer is not free of error either: with LibreOffice 25.8, 19 of 400 official gold files fail as outputs, and 4 tasks are unscorable under any path, so the ceiling on the 280-task test split is 98.6\%.
+
+\subsection*{Development reuse and gold access contaminate the splits}
+
+The historical SpreadsheetBench test split of 280 tasks was scored in development runs, and parts of it served for selection. The airline test-20 and all 87 SkillsBench tasks were exposed the same way (exposure ledger, 17 rows). A one-iteration run from an empty seed artifact reached 85.6 on the 280 tasks where an eight-round agent-optimize run reached 76.4, yet the earlier draft listed the first run only as a 62.9 control. Both are single runs and rank nothing.
+
+Gold answers sat in the directory mounted into the agent container. We found no gold read in 2{,}049 retained agent rollouts, which is an absence of evidence: the retained rollouts cover validation tasks only. On the optimizer side, at least \goldOptimizerRuns{} Claude Code sessions quote gold values or formulas in their notes, and distilled rules appear in champion prompts. One GPT-5.5 session read a prior run's sealed-test evaluation (280 per-task results) and clustered failures by 55 test ids; its champion text is byte-identical to the earlier run's first candidate.
+
+\subsection*{Gate strictness changes which edits are accepted}
+
+The hill-climb gate accepts a candidate whose paired mean gain exceeds one standard error, after setting to zero the tasks whose rollouts never touch the edited files (the edit's footprint). We replayed \replayDecisions{} recorded decisions from \replayRuns{} runs. The recorded rule accepted \replayRecorded{}. An unmasked one-standard-error gate would have accepted \replayUnmasked{}, changed \replayFlipsUnmasked{} decisions, and blocked the champion path in \replayBlockedRuns{} of \replayPathRuns{} runs whose champions later gained on the (exposed) test split. Every recorded-versus-unmasked mismatch in hill-climb runs was a dropped task, not footprint masking, so the footprint concern rests on code and simulation. The replay is descriptive; a two-stage rule cannot be replayed because no artifact re-measures a candidate on new trials. The helper that computes standard errors also double-counts within-task noise, overstating new-task variance by 12 to 33\%; we do not report it (Appendix~\ref{app:sim}).
+
+\subsection*{Scorer audit}
+\label{app:scorer}
+
+The default SpreadsheetBench reward is \texttt{hard\_no\_recalc}: cached values as saved. Correct formula outputs without cached values passed 0 of 30 checks under it and 25 of 30 (LibreOffice 7.1.8.1) to 29 or 30 of 30 (LibreOffice 25.8.7.3) under recalculation. The recalculation path recalculates the candidate output only and uses gold as shipped. With LibreOffice 7.1.8.1 the official gold file used as output fails on 32 of 400 verified tasks, and with 25.8.7.3 on 19. Four verified tasks (130-9, 283-32, 45944, 49300) are unscorable on every path because of malformed answer-position strings, all four in the SkillOpt test split. Scoring was deterministic: 333 records were scored twice with fresh profiles and none differed. The gold workbooks sat in the directory bind-mounted read-write into the agent container; the campaign runs agents on a gold-free copy and scores on the pristine tree.
+
+\subsection*{Historical results under both scorers}
+
+\begin{table}[h]
+\caption{Historical SpreadsheetBench runs (SkillOpt split, 280 test tasks, three optimization runs per row, Opus 5 optimizer) recomputed from run artifacts. Test-280 was development-exposed, so these are fit-quality figures, not held-out results. Paired means; the as-saved delta is the anti-conservative pooled-observation figure of the earlier draft.}
+\label{tab:hist}
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Target & Baseline as saved & Gain as saved & Baseline recalc. & Gain recalc. \\
+\midrule
+Gemma-4-31B & \histGemmaBaseSaved{} & +\histGemmaDeltaSaved{} & \histGemmaBaseRecalc{} & +\histGemmaDeltaRecalc{} \\
+GPT-5.5 & \histGptBaseSaved{} & +\histGptDeltaSaved{} & \histGptBaseRecalc{} & +\histGptDeltaRecalc{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Disputed and withdrawn claims: the earlier draft quoted 76.5 for Gemma while a blog post quoted 76.8 for the same data (a denominator definition: the post counts the champion on all champion-scored tasks, including four whose seed rollout failed for infrastructure reasons). A GPT-5.5 run with a champion test score of 89.8 against a baseline of 28.9 is excluded: it is a 225-task subset in which 55 champion rollouts failed on a budget error, and the seed scores 38.6 on all 280. Full lists are in \texttt{audit/recomputed\_numbers.csv}.
+
