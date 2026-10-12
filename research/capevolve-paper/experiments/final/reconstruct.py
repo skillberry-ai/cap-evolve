@@ -692,8 +692,9 @@ def main(argv=None):
         if k in nf and e["arm"] == "ace" and nf[k].get("stop_kind") == "guard_stop":
             tg = Path(C.run_dir(suite, "ace", e["seed"])) / "logs" / "token_guard_stop.json"
             if (suite, e["seed"]) == ("A", 0):
-                e.setdefault("caveats", []).append("ACE s0: final_stop's playbook includes curator updates made after the 4.0M optimizer-token crossing (14:36:39Z, per the ledger timeline; %s), so it is over budget "
-                                                   "and ineligible under the campaign rule whether or not its validation had finished; epoch1_end (produced at 2.38M) is the correct guard-stop artifact (bl-context)" % tg)
+                e.setdefault("caveats", []).append("ACE s0: native stop at 3.90M current-attempt optimizer tokens (525,189 tokens of superseded attempts refunded, bl-context; %s); its final_stop validation was killed "
+                                                   "by a coordinator error and is rerun to completion (val-40, target rollouts only); the artifact is whichever of epoch1_end and final_stop ACE's native rule picks "
+                                                   "(highest val-40 mean, earliest on ties), taken here from candidates.jsonl" % tg)
             else:
                 e.setdefault("caveats", []).append("ACE stopped by the token guard before its final_stop validation: the artifact is the best val-evaluated epoch-end playbook before the stop (ACE's native rule "
                                                    "max(val_recalc_mean, -index)); a final_stop playbook built after the crossing would be over budget and is not eligible (guard marker %s)" % tg)
