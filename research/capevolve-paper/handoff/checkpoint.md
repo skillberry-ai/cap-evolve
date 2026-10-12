@@ -118,3 +118,17 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
   - Agents v2-gate, v2-ao2, v2-helpers and v2-hc2 are live.
   - Each PR gets a review agent, then fixes, then an admin merge.
   - Register amendment 11 (v2 runs on pooled F/C) before any rerun.
+
+## 22:12 UTC 10-12: Claude Code model-access outage
+- From about 22:09 UTC, every subagent fails with the error "403 team not allowed to access model (Azure only)". This is the Claude Code session auth. The campaign gateway (Sonnet 5.5 optimizer) is unaffected, and searches and script loops keep running. The user was notified and must run /login or restore access.
+- State of the v2 PRs when the outage began:
+  - #814 PR-0: merged to main (b764ceb79).
+  - #817 PR-1 gate/P2: open, base retargeted to main, head v2/gate@928c5bfce, 66 new tests, not reviewed. Its report claims 7 core failures that are "pre-existing on port" (merge_* tests). This MUST be verified, because v2-port saw only 1 failure.
+  - #815 PR-4 HC-2: base v2/gate; rerun its tests on real P2 bodies.
+  - #816 PR-3 helpers: base main, kernel-text carrier. Pending: auto helper_fixtures from F, and one real docker check. Review not done (3 reviewer attempts hit the 403).
+  - PR-2 AO-2: nothing pushed (check origin/v2/ao2).
+- After access is restored:
+  1. respawn the reviewers for #817 and #816;
+  2. respawn v2-ao2 from the brief at campaign-scratch/baselines/V2_BUILD_BRIEF.txt;
+  3. respawn the runners (bl-harness, tau-runner and others) only as needed;
+  4. keep the cutoff steps at 06:00.
