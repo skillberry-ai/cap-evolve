@@ -22,6 +22,7 @@ ITEMS = [
 
 SCRATCH = Path("/home/dev/projects2/campaign-scratch/scripts/E20")
 WT_TAU = Path("/home/dev/projects2/wt-tau")
+E30_FILES = ["build_e.py", "launch_e.sh", "launch_gepa_e.sh", "launch_nohist_e.sh", "metrics_loop_e.sh", "guard_marker.py", "cand_logger.py"]
 EXTRA_FILES = ["build_d.py", "launch_d.sh", "launch_gepa_d.sh", "gepa_tau.py", "eval_cap.py", "collect_cap.py", "guard_marker.py",
                "cand_logger.py", "make_sbx_data.py"]
 
@@ -40,6 +41,14 @@ def main():
     items.append(("suite_D_wt_tau_commit", None, "tau worktree commit the Suite D runs are built from: " + wt, hashlib.sha256(wt.encode()).hexdigest()))
     wte = subprocess.check_output(["git", "-C", "/home/dev/projects2/wt-airE", "rev-parse", "HEAD"], text=True).strip()
     items.append(("suite_E_wt_airE_commit", None, "Suite E worktree wt-airE commit: " + wte, hashlib.sha256(wte.encode()).hexdigest()))
+    for f in E30_FILES:
+        fp = SCRATCH.parent / "E30" / f
+        if fp.exists():
+            items.append(("suite_E_script_" + f, fp, "Suite E launch/eval script (campaign-scratch/scripts/E30)", None))
+    for extra, note in ((SCRATCH.parent.parent / "runs" / "E36_INSTRUCTIONS.nohist.md", "E36 no-history instructions"),
+                        (SCRATCH.parent / "E00" / "admission_check.py", "Suite E admission check (every 15 minutes)")):
+        if extra.exists():
+            items.append(("suite_E_" + extra.name, extra, note, None))
     for f in EXTRA_FILES:
         if (SCRATCH / f).exists():
             items.append(("suite_D_script_" + f, SCRATCH / f, "Suite D launch/eval script (campaign-scratch/scripts/E20)", None))

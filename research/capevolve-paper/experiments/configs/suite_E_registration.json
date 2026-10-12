@@ -67,5 +67,71 @@
    "holm11_cell_vs_cell": 0.129,
    "pipeline_vs_seed": 0.189
   }
+ },
+ "addendum": {
+  "written_utc": "2026-10-12 11:52 UTC",
+  "search_end_rule": "own budget 300 rollouts / 10 iterations (CTL 100), champion = last accepted else seed, no N*, final evaluation after E searches end, own interleaved window; no E decision may use any D or E held-out score",
+  "admission": "E22 done AND 15-min azoai-mini 429 < 2% AND 15-min mean mini queue_s < 3 s AND D calls/min per active D search >= 85% of baseline at last wave start; <=4 rollouts/search, <=12 concurrent E searches; scripts/E00/admission_check.py",
+  "waves": {
+   "W1": [
+    "E30-PT",
+    "E30-P",
+    "E30-T"
+   ],
+   "W2": [
+    "E31-ruleP",
+    "E36-nohist"
+   ],
+   "W3": [
+    "E30-CTL",
+    "E31-1S",
+    "E30-GEPA"
+   ],
+   "W4": "competitors"
+  },
+  "cut_order": [
+   "competitors",
+   "E30-GEPA",
+   "E31-1S",
+   "E30-CTL",
+   "seeds 3->2",
+   "E36-nohist",
+   "E31-ruleP"
+  ],
+  "never_cut": [
+   "E30-PT",
+   "E30-P",
+   "E30-T"
+  ],
+  "E_comp": [
+   {
+    "competitor": "ACE",
+    "seeds": 3,
+    "tag": "E32-ace-s<k>:ace"
+   },
+   {
+    "competitor": "MIPROv2",
+    "seeds": 3,
+    "tag": "E32-mipro-s<k>:mipro"
+   },
+   {
+    "competitor": "GEPA full surface",
+    "seeds": 3,
+    "tag": "E32-gepafull-s<k>:gepafull"
+   },
+   {
+    "competitor": "CapEvolve agent-optimize",
+    "seeds": 3,
+    "tag": "E32-ao-s<k>:ao",
+    "dagger": true
+   }
+  ],
+  "exploratory_outside_holm": [
+   {
+    "competitor": "HarnessLens",
+    "seeds": 1,
+    "tag": "E32-hl-s0:hl"
+   }
+  ]
  }
 }
