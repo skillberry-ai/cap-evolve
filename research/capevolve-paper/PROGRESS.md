@@ -13,6 +13,7 @@ Plain-language status is in [`STATUS.md`](STATUS.md); real results are indexed i
 
 ## 2026-10-12
 
+- 19:22 HarnessLens Suite B (search-time): all three matched seeds ended at the 4M token guard with no accepted candidate (artifact v0). s0 rejected candidates 1 (confirmation) and 2 (screen); its iteration-3 review was refused by the guard. HL-extended at 7.32M of 10M, still running.
 - 18:50 Suite E wave 1 (9 searches: prompt+tools, prompt only, tools only, 3 seeds each) launched between 18:46 and 18:50.
 - Suite D no-history arm (E26) finished all 3 seeds. Manipulation check through iteration 10 ([`analysis/out/e26_manipulation_check.json`](analysis/out/e26_manipulation_check.json)): no history files reachable, 1 guessed hidden-path attempt per seed with nothing returned, designed reads of the reject record 14, 12 and 13. Search-time gains on opt-49: +0.20, +0.14, +0.23 (not held-out).
 - ACE Suite A s0: final validation rerun done; ACE's own rule picks epoch1_end (0.80 against 0.725 on validation, search-time).
