@@ -399,14 +399,15 @@ def paused_info(r):
     if r["arm"] != "bestofk":
         return None
     j = js(r["sd"].parent / "PAUSED.json")
-    return (j or {}).get("seeds", {}).get("s" + str(r["seed"])) if j else None
+    # "final" is the state at the final stop (2026-10-12T11:06Z); the old top-level "seeds" snapshot is superseded
+    return (j or {}).get("final", {}).get("s" + str(r["seed"])) if j else None
 
 
 def status_of(r, mrow, cap, info):
     sd = r["sd"]
     pi = paused_info(r)
     if pi:
-        return "paused (truncated at k=%d, %d rollouts)" % (pi["proposals_completed"], pi["counted_rollouts_incl_baseline"])
+        return "paused (truncated at k=%d, %d rollouts)" % (pi["proposals_completed"], pi["counted_incl_baseline"])
     if mrow and mrow.get("active") == "True":
         return "running"
     if not mrow:
@@ -461,8 +462,8 @@ def run_record(r, arm_rows, role):
     rec["counted_source"] = mrow.get("counted_source") if mrow else None
     pi_ = paused_info(r)
     if pi_:
-        rec["counted_rollouts"] = pi_["counted_rollouts_incl_baseline"]
-        rec["counted_source"] = "PAUSED.json:counted_rollouts_incl_baseline"
+        rec["counted_rollouts"] = pi_["counted_incl_baseline"]
+        rec["counted_source"] = "PAUSED.json:final.counted_incl_baseline"
     if rec["counted_rollouts"] is None and arm == "bestofk":
         pr = js(sd / "progress.json")
         rec["counted_rollouts"] = pr.get("counted") if pr else None
@@ -510,13 +511,12 @@ def run_record(r, arm_rows, role):
         if state:
             champ_id, champ_score = state.get("best_id"), state.get("spent", {}).get("best_val")
     elif arm == "bestofk":
-        pr = js(sd / "progress.json") or {}
-        res = pr.get("results", {})
+        res = (paused_info(r) or {}).get("opt_scores", {})   # PAUSED.json "final"; progress.json is stale (orchestrator killed)
         if res:
-            k = max(res, key=lambda x: res[x].get("opt_score", -1))
-            champ_id, champ_score = "prop_%02d" % int(k), res[k]["opt_score"]
+            champ_id = max(res, key=lambda x: res[x])
+            champ_score = res[champ_id]
             for x in res:
-                info["evals"].append((0, "prop_%02d" % int(x), res[x]["opt_score"], "opt", None, None))
+                info["evals"].append((0, x, res[x], "opt", None, None))
             info["evals"].sort(key=lambda e: e[0])
     else:
         sel = [x for x in info["selected"] if x[2]]
@@ -533,7 +533,7 @@ def run_record(r, arm_rows, role):
     rec["final_dir_present"] = (sd / "final").is_dir() and any((sd / "final").iterdir()) if (sd / "final").is_dir() else False
     gen = [c for c in info["created"] if c != sid]
     scr = {e[1] for e in evs if e[1] != sid}
-    rec["candidates_generated"] = len(gen) if gen else (len(prop_dirs(sd)) if arm == "bestofk" else 0)
+    rec["candidates_generated"] = max(len(gen), len(prop_dirs(sd))) if arm == "bestofk" else len(gen)
     rec["candidates_screened"] = len(scr)
     if arm in CAPEVOLVE or arm == "oneshot":
         ge = gate_events(cap, excl)

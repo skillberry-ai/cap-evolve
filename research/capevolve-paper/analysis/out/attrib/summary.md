@@ -27,7 +27,7 @@ Stage: search-time only, final pending. All search-time numbers are on each run'
 | C | hc | 3 | 16 | 2 | 0.67 | 1 | 3 | 0 |
 | C | ao | 3 | 1 | 0 | 0.00 | 3 | 0 | 0 |
 | C-E12 | hcstock | 3 | 29 | 3 | 1.00 | 1 | 1 | 0 |
-| C-E12 | bestofk | 3 | 19 | 0 | 0.00 | 0 | 0 | 0 |
+| C-E12 | bestofk | 3 | 28 | 0 | 0.00 | 0 | 0 | 0 |
 
 ## Regressions (CapEvolve arms)
 

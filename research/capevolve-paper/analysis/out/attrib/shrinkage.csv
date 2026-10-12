@@ -64,4 +64,4 @@ C,C-E12,hcstock,1,opt-20,0.0,,,,True,native finish (iterations),pending final (s
 C,C-E12,hcstock,2,opt-20,0.31578947368421056,,,,False,native finish (iterations),pending final (selection gain is search-time)
 C,C-E12,bestofk,0,opt-20,0.30000000000000004,,,,False,"paused (truncated at k=6, 140 rollouts)",pending final (selection gain is search-time)
 C,C-E12,bestofk,1,opt-20,0.09999999999999998,,,,False,"paused (truncated at k=6, 140 rollouts)",pending final (selection gain is search-time)
-C,C-E12,bestofk,2,opt-20,0.3263157894736843,,,,False,"paused (truncated at k=7, 160 rollouts)",pending final (selection gain is search-time)
+C,C-E12,bestofk,2,opt-20,0.3263157894736843,,,,False,"paused (truncated at k=8, 180 rollouts)",pending final (selection gain is search-time)

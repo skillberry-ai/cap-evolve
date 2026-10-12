@@ -1,6 +1,6 @@
 {
  "caveat": "search-time, on the search/selection split each method selects on, not held-out; selection-split scores are optimistic and not comparable across methods (different splits, selection rules and visible feedback)",
- "newest_gateway_call": "2026-10-12T15:51:17Z",
+ "newest_gateway_call": "2026-10-12T15:55:47Z",
  "metrics_dir": "analysis/out/metrics",
  "runs": [
   {
@@ -9,7 +9,7 @@
    "arm": "hc",
    "seed": "0",
    "run_dir": "runs/E10/hill-climb/s0",
-   "counted_rollouts": 568,
+   "counted_rollouts": 575,
    "counted_source": "logs/rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.5789473684210527,
@@ -31,9 +31,9 @@
    "optimizer_cache_write_tokens": 193125,
    "optimizer_usd": 0.8051,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 25.15,
+   "wall_clock_h": 25.22,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:08Z"
+   "last_gateway_call": "2026-10-12T15:55:36Z"
   },
   {
    "suite": "A",
@@ -95,9 +95,9 @@
    "optimizer_cache_write_tokens": 417091,
    "optimizer_usd": 1.7377,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 25.16,
+   "wall_clock_h": 25.24,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:00Z"
+   "last_gateway_call": "2026-10-12T15:55:28Z"
   },
   {
    "suite": "A",
@@ -617,7 +617,7 @@
    "arm": "wikiskill",
    "seed": "1",
    "run_dir": "runs/E10/wikiskill/s1",
-   "counted_rollouts": 371,
+   "counted_rollouts": 374,
    "counted_source": "rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.525,
@@ -639,9 +639,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 0.9641,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 26.81,
+   "wall_clock_h": 26.88,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:06Z"
+   "last_gateway_call": "2026-10-12T15:55:45Z"
   },
   {
    "suite": "A",
@@ -649,7 +649,7 @@
    "arm": "wikiskill",
    "seed": "2",
    "run_dir": "runs/E10/wikiskill/s2",
-   "counted_rollouts": 350,
+   "counted_rollouts": 352,
    "counted_source": "rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.5,
@@ -671,9 +671,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 0.5978,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 26.81,
+   "wall_clock_h": 26.89,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:59Z"
+   "last_gateway_call": "2026-10-12T15:55:37Z"
   },
   {
    "suite": "A",
@@ -777,7 +777,7 @@
    "arm": "ace",
    "seed": "0",
    "run_dir": "runs/E10/ace/s0",
-   "counted_rollouts": 379,
+   "counted_rollouts": 384,
    "counted_source": "rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.8,
@@ -799,9 +799,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 9.5622,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 14.86,
+   "wall_clock_h": 14.94,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:05Z",
+   "last_gateway_call": "2026-10-12T15:55:31Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
   {
@@ -832,9 +832,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 3.8498,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 14.82,
+   "wall_clock_h": 14.92,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:49:12Z",
+   "last_gateway_call": "2026-10-12T15:55:00Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
   {
@@ -865,9 +865,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 3.5812,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 14.7,
+   "wall_clock_h": 14.87,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:41:49Z",
+   "last_gateway_call": "2026-10-12T15:51:52Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
   {
@@ -876,7 +876,7 @@
    "arm": "mipro",
    "seed": "0",
    "run_dir": "runs/E10/mipro/s0",
-   "counted_rollouts": 212,
+   "counted_rollouts": 213,
    "counted_source": "rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.575,
@@ -898,9 +898,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 0.5792,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 26.83,
+   "wall_clock_h": 26.91,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:02Z"
+   "last_gateway_call": "2026-10-12T15:55:44Z"
   },
   {
    "suite": "A",
@@ -908,7 +908,7 @@
    "arm": "mipro",
    "seed": "1",
    "run_dir": "runs/E10/mipro/s1",
-   "counted_rollouts": 252,
+   "counted_rollouts": 254,
    "counted_source": "rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.55,
@@ -930,9 +930,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 0.6009,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 26.81,
+   "wall_clock_h": 26.89,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:58Z"
+   "last_gateway_call": "2026-10-12T15:55:44Z"
   },
   {
    "suite": "A",
@@ -940,7 +940,7 @@
    "arm": "mipro",
    "seed": "2",
    "run_dir": "runs/E10/mipro/s2",
-   "counted_rollouts": 210,
+   "counted_rollouts": 211,
    "counted_source": "rollout_counter.json:total",
    "split": "val-40",
    "seed_score": 0.6,
@@ -962,9 +962,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 0.5906,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 26.83,
+   "wall_clock_h": 26.9,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:12Z"
+   "last_gateway_call": "2026-10-12T15:55:36Z"
   },
   {
    "suite": "B",
@@ -994,9 +994,9 @@
    "optimizer_cache_write_tokens": 300337,
    "optimizer_usd": 2.0054,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.21,
+   "wall_clock_h": 27.28,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:06Z"
+   "last_gateway_call": "2026-10-12T15:55:40Z"
   },
   {
    "suite": "B",
@@ -1004,7 +1004,7 @@
    "arm": "hc",
    "seed": "1",
    "run_dir": "runs/E10B/hc/s1",
-   "counted_rollouts": 539,
+   "counted_rollouts": 564,
    "counted_source": "run_main/state.json:spent.metric_calls",
    "split": "opt-49",
    "seed_score": 0.6530612244897959,
@@ -1026,9 +1026,9 @@
    "optimizer_cache_write_tokens": 636935,
    "optimizer_usd": 3.5336,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.2,
+   "wall_clock_h": 27.27,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:05Z"
+   "last_gateway_call": "2026-10-12T15:55:06Z"
   },
   {
    "suite": "B",
@@ -1058,9 +1058,9 @@
    "optimizer_cache_write_tokens": 212906,
    "optimizer_usd": 1.4563,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.21,
+   "wall_clock_h": 27.28,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:12Z"
+   "last_gateway_call": "2026-10-12T15:55:47Z"
   },
   {
    "suite": "B",
@@ -1154,9 +1154,9 @@
    "optimizer_cache_write_tokens": 1391574,
    "optimizer_usd": 7.7435,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.21,
+   "wall_clock_h": 27.28,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:11Z"
+   "last_gateway_call": "2026-10-12T15:55:43Z"
   },
   {
    "suite": "B",
@@ -1186,9 +1186,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 1.9925,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.21,
+   "wall_clock_h": 27.28,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:13Z"
+   "last_gateway_call": "2026-10-12T15:55:38Z"
   },
   {
    "suite": "B",
@@ -1218,9 +1218,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 1.829,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.2,
+   "wall_clock_h": 27.28,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:54Z"
+   "last_gateway_call": "2026-10-12T15:55:20Z"
   },
   {
    "suite": "B",
@@ -1250,9 +1250,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 1.8404,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 27.2,
+   "wall_clock_h": 27.28,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:09Z"
+   "last_gateway_call": "2026-10-12T15:55:44Z"
   },
   {
    "suite": "B",
@@ -1282,9 +1282,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 12.8626,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 17.57,
+   "wall_clock_h": 17.65,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:21Z",
+   "last_gateway_call": "2026-10-12T15:55:10Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
   {
@@ -1348,9 +1348,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 17.6206,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 17.54,
+   "wall_clock_h": 17.64,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:48:29Z",
+   "last_gateway_call": "2026-10-12T15:54:16Z",
    "note": "no candidate/selection step recorded (online playbook / pre-search trace phase): no champion score"
   },
   {
@@ -1588,9 +1588,9 @@
    "optimizer_cache_write_tokens": 399037,
    "optimizer_usd": 2.3814,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 21.5,
+   "wall_clock_h": 21.58,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:04Z"
+   "last_gateway_call": "2026-10-12T15:55:43Z"
   },
   {
    "suite": "C",
@@ -1620,9 +1620,9 @@
    "optimizer_cache_write_tokens": 347867,
    "optimizer_usd": 1.9114,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 21.5,
+   "wall_clock_h": 21.58,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:49Z"
+   "last_gateway_call": "2026-10-12T15:55:41Z"
   },
   {
    "suite": "C",
@@ -1652,9 +1652,9 @@
    "optimizer_cache_write_tokens": 552930,
    "optimizer_usd": 2.9597,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 21.5,
+   "wall_clock_h": 21.57,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:17Z"
+   "last_gateway_call": "2026-10-12T15:55:42Z"
   },
   {
    "suite": "C",
@@ -1758,7 +1758,7 @@
    "arm": "gepa",
    "seed": "0",
    "run_dir": "runs/E10C/gepa/s0",
-   "counted_rollouts": 198,
+   "counted_rollouts": 201,
    "counted_source": "rollout_counter.json:rollouts",
    "split": "sel-10",
    "seed_score": 0.8,
@@ -1780,9 +1780,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 1.6686,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 21.5,
+   "wall_clock_h": 21.58,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:38Z"
+   "last_gateway_call": "2026-10-12T15:55:40Z"
   },
   {
    "suite": "C",
@@ -1812,9 +1812,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 1.3661,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 21.5,
+   "wall_clock_h": 21.58,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:51:17Z"
+   "last_gateway_call": "2026-10-12T15:55:45Z"
   },
   {
    "suite": "C",
@@ -1844,9 +1844,9 @@
    "optimizer_cache_write_tokens": 0,
    "optimizer_usd": 1.6393,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 21.49,
+   "wall_clock_h": 21.57,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:43Z"
+   "last_gateway_call": "2026-10-12T15:55:35Z"
   },
   {
    "suite": "C",
@@ -2179,9 +2179,9 @@
    "optimizer_cache_write_tokens": 611908,
    "optimizer_usd": 3.1357,
    "optimizer_unpriced_noncache_tokens": 0,
-   "wall_clock_h": 18.8,
+   "wall_clock_h": 18.87,
    "status": "running",
-   "last_gateway_call": "2026-10-12T15:50:59Z"
+   "last_gateway_call": "2026-10-12T15:55:44Z"
   },
   {
    "suite": "C-E12",
@@ -2254,7 +2254,7 @@
    "seed": "0",
    "run_dir": "runs/E12C/bestofk/s0",
    "counted_rollouts": 140,
-   "counted_source": "PAUSED.json:counted_rollouts_incl_baseline",
+   "counted_source": "PAUSED.json:final.counted_incl_baseline",
    "split": "opt-20",
    "seed_note": "seed split score taken from the paired hcstock run (same opt split)",
    "seed_score": 0.5,
@@ -2263,7 +2263,7 @@
    "champion_gain_vs_seed": 0.30000000000000004,
    "returned_equals_seed": false,
    "final_dir_present": false,
-   "candidates_generated": 6,
+   "candidates_generated": 9,
    "candidates_screened": 6,
    "candidates_promoted": 0,
    "infra_lost_attempts": 0,
@@ -2287,7 +2287,7 @@
    "seed": "1",
    "run_dir": "runs/E12C/bestofk/s1",
    "counted_rollouts": 140,
-   "counted_source": "PAUSED.json:counted_rollouts_incl_baseline",
+   "counted_source": "PAUSED.json:final.counted_incl_baseline",
    "split": "opt-20",
    "seed_note": "seed split score taken from the paired hcstock run (same opt split)",
    "seed_score": 0.65,
@@ -2296,7 +2296,7 @@
    "champion_gain_vs_seed": 0.09999999999999998,
    "returned_equals_seed": false,
    "final_dir_present": false,
-   "candidates_generated": 6,
+   "candidates_generated": 9,
    "candidates_screened": 6,
    "candidates_promoted": 0,
    "infra_lost_attempts": 0,
@@ -2319,8 +2319,8 @@
    "arm": "bestofk",
    "seed": "2",
    "run_dir": "runs/E12C/bestofk/s2",
-   "counted_rollouts": 160,
-   "counted_source": "PAUSED.json:counted_rollouts_incl_baseline",
+   "counted_rollouts": 180,
+   "counted_source": "PAUSED.json:final.counted_incl_baseline",
    "split": "opt-20",
    "seed_note": "seed split score taken from the paired hcstock run (same opt split)",
    "seed_score": 0.47368421052631576,
@@ -2329,8 +2329,8 @@
    "champion_gain_vs_seed": 0.3263157894736843,
    "returned_equals_seed": false,
    "final_dir_present": false,
-   "candidates_generated": 7,
-   "candidates_screened": 7,
+   "candidates_generated": 10,
+   "candidates_screened": 8,
    "candidates_promoted": 0,
    "infra_lost_attempts": 0,
    "cap_truncated": 0,
@@ -2343,7 +2343,7 @@
    "optimizer_usd": 7.7866,
    "optimizer_unpriced_noncache_tokens": 0,
    "wall_clock_h": 10.31,
-   "status": "paused (truncated at k=7, 160 rollouts)",
+   "status": "paused (truncated at k=8, 180 rollouts)",
    "last_gateway_call": "2026-10-12T11:07:26Z"
   }
  ],
@@ -3547,7 +3547,7 @@
   {
    "suite": "A",
    "arm": "wikiskill",
-   "rollouts": 1110,
+   "rollouts": 1115,
    "errors": 80,
    "uniform_infra": 80,
    "uniform_candidate_error": 0,
@@ -3565,7 +3565,7 @@
   {
    "suite": "A",
    "arm": "ace",
-   "rollouts": 709,
+   "rollouts": 714,
    "errors": 33,
    "uniform_infra": 33,
    "uniform_candidate_error": 0,
@@ -3574,9 +3574,9 @@
   {
    "suite": "A",
    "arm": "mipro",
-   "rollouts": 664,
-   "errors": 21,
-   "uniform_infra": 20,
+   "rollouts": 668,
+   "errors": 22,
+   "uniform_infra": 21,
    "uniform_candidate_error": 1,
    "uniform_unverifiable": 0
   },
@@ -3637,7 +3637,7 @@
   {
    "suite": "B",
    "arm": "hc",
-   "rollouts": 1519,
+   "rollouts": 1544,
    "errors": 7,
    "uniform_infra": 7,
    "uniform_candidate_error": 0,
@@ -3673,7 +3673,7 @@
   {
    "suite": "C",
    "arm": "gepa",
-   "rollouts": 537,
+   "rollouts": 540,
    "errors": 1,
    "uniform_infra": 0,
    "uniform_candidate_error": 0,
