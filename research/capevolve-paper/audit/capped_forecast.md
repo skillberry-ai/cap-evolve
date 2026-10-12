@@ -90,3 +90,30 @@ Re-forecast at 15:00 UTC when Suite D cells have finished their first iteration,
 - Suite D cost per cell is extrapolated from E10B hc (0.8M optimizer) and E10C hc (0.3 to 0.4M); azoai judge/target tokens are in the Azure bucket and
   do not count.
 - The ledger and the HarnessLens meter differ (1.1 to 1.4x), so the HL numbers are approximate in both directions.
+
+## Re-forecast 2026-10-12 15:09 UTC (ladder: 170M exploratory, 178M secondary, 182M all searches, 18M reserve, cap 200M)
+
+Capped counted from the log: **109.8M** at 15:09 (11:25: 85.8M), burn **6.96M/h last hour, 6.6M/h over 3 h**. The 11:30 forecast under-predicted: 24M was spent in 3.7 h
+(the central case implied about 10M). Causes: HarnessLens resumed on all three seeds after the bubblewrap fix and the refunded iterations (s0 5.47M, s1 6.14M,
+s2 7.93M in the ledger; the 4M guard is on HL's own meter, so refunds let the ledger run past it), hlext at 5.42M and 1.2M/h, **ACE far above the earlier estimate**
+(s0 4.43M at 350 of 600 rollouts, already past the assumed 4M guard, so no such guard applies; 12.7 to 19.6k tokens per rollout, 1.1M/h), and E26 NOHIST at 1.87M in 3 h.
+
+| family | now | basis to 06:00 (14.85 h) | low | central | high |
+|---|---|---|---|---|---|
+| HarnessLens s0, s1, s2 (all active) | 5.47 / 6.14 / 7.93 | 2.1M/h now, guard on meter with refunds | 2 | 4.5 | 8 |
+| hlext | 5.42 | 1.0 to 1.2M/h to its 16M cap (cap reached about 00:00 to 01:00) | 8 | 10.6 | 10.6 |
+| **ACE (unguarded)** | 4.43 / 3.09 / 1.98; 350 / 158 / 149 of 600 | rollouts left x tokens per rollout = 3.2 / 8.7 / 6.0 = 17.9M; rate 1.1M/h x 14.85 = 16.6M | 9 | **14** | 18 |
+| Suite D (E20 P/PT/T/CTL/GEPA, E21 1S/ruleP) | about 0.2 to 0.6 per cell, 1.3M/h combined | cells finishing at about 1 to 1.5M | 6 | 9 | 14 |
+| E26 NOHIST | 1.87 (plan 1.2 to 2) | 0.55M/h | 1 | 1.5 | 4 |
+| other baselines and B/C/E12 (WikiSkill, SkillOpt, EvoSkill, GEPA, ao, hc) | | mostly near native end | 4 | 6 | 8 |
+| **running total** | 109.8 | | +30 | **+45.6** | +62.6 |
+| Suite E (not yet admitted) | | 16 to 18 | +16 | +17 | +18 |
+| **searches at 06:00** | | | **155.8** | **172.4** | **190.4** |
+| + 18M reserve | | | 173.8 | 190.4 | 208.4 |
+
+**Verdict against the ladder (searches, reserve separate):**
+- 170M exploratory stop: **crossed in the central case** (172.4M), likely between **02:00 and 05:00 UTC** once Suite E is running (the pre-Suite-E burn reaches about 155M at 06:00; Suite E adds about 17M over 9 to 11 h from 19:00 to 21:30). Not crossed in the low case (155.8M).
+- 178M secondary stop: not crossed centrally; crossed in the high case (190M), around 00:00 to 03:00.
+- 182M all searches: not crossed centrally; crossed in the high case. The 200M cap holds in the low and central cases (173.8M and 190.4M with the reserve), not in the high case (208M).
+
+**Arms to stop first if the 170M rung is hit:** (1) hlext (exploratory, 10.6M still to go, stop or cap at about 10M total and save about 6M); (2) ACE s1 and s2, the new largest grower and the biggest correction to the last forecast: cap each seed near 5M (s0 is already 4.4M) and save about 8M of the 14M; (3) E26 at its planned 2M (saves 0 to 2M). Decide on ACE and hlext now rather than at the rung, because their burn is front-loaded.
