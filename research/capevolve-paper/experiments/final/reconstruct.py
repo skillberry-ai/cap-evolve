@@ -695,15 +695,17 @@ def main(argv=None):
         for arm in arms:
             for seed in C.SEEDS:
                 man["entries"].append(build_entry(suite, arm, seed, mode, limit, out_root, not a.no_copy, kind))
-    nf = (bj or {}).get("natively_finished") or {}
+    nf = dict((bj or {}).get("natively_finished") or {})
+    for r in (bj or {}).get("runs") or []:      # secondary / exploratory arms too (the N* file only lists the binding-tier ones)
+        if r.get("native_status") in ("native_finish", "guard_stop", "budget_cap"):
+            nf.setdefault("%s/s%d" % (r["arm"], r["seed"]), {"count": r.get("counter"), "evidence": r.get("native_evidence"), "stop_kind": r["native_status"]})
     for e in man["entries"]:
         k = "%s/s%d" % (e["arm"], e["seed"])
         if k in nf and e["arm"] == "ace" and nf[k].get("stop_kind") in ("guard_stop", "native_finish") and (suite, e["seed"]) in (("A", 0), ("A", 1), ("A", 2)):
             tg = Path(C.run_dir(suite, "ace", e["seed"])) / "logs" / "token_guard_stop.json"
             if (suite, e["seed"]) == ("A", 0):
-                e.setdefault("caveats", []).append("ACE s0: native stop at 3.90M current-attempt optimizer tokens (525,189 tokens of superseded attempts refunded, bl-context; %s); its final_stop validation was killed "
-                                                   "by a coordinator error and is rerun to completion (val-40, target rollouts only); the artifact is whichever of epoch1_end and final_stop ACE's native rule picks "
-                                                   "(highest val-40 mean, earliest on ties), taken here from candidates.jsonl" % tg)
+                e.setdefault("caveats", []).append("native stop at 3.90M current-attempt tokens (525,189 tokens of superseded attempts refunded); final_stop validation interrupted by a coordinator error and rerun; "
+                                                   "ACE's own rule picked epoch1_end (0.80 against 0.725) (bl-context; %s)" % tg)
             else:
                 e.setdefault("caveats", []).append("ACE stopped by the token guard before its final_stop validation: the artifact is the best val-evaluated epoch-end playbook before the stop (ACE's native rule "
                                                    "max(val_recalc_mean, -index)); a final_stop playbook built after the crossing would be over budget and is not eligible (guard marker %s)" % tg)
