@@ -193,12 +193,30 @@ def cell_key(arm, seed):
     return "%s/s%d" % (arm, seed)
 
 
+def _live(rd):
+    """True if any other process has this run dir on its command line (a search still running or restarting)."""
+    key = str(rd).encode()
+    me = str(os.getpid())
+    for d in os.listdir("/proc"):
+        if d.isdigit() and d != me:
+            try:
+                cl = open("/proc/%s/cmdline" % d, "rb").read()
+                # post-run scoring (chaser / post_sel) and shell wrappers are not the search
+                if key in cl and not any(x in cl for x in (b"eval_cap.py", b"post_score", b"post_sel", b"/bin/bash -c", b"grep", b"check_sandbox")):
+                    return True
+            except Exception:
+                pass
+    return False
+
+
 def native_status(rd):
     """('native_finish'|'crashed'|'running_or_unknown', evidence).  Native = the run's own stop rule ended it with exit status 0 (decisions.md N* rule);
     crashes / infra stops are not native.  Evidence, strongest first: a driver `run.log` whose last line is `exit <rc>`; a `launcher.log` line `exit=<rc>`;
     `run_summary.json` / `final.json` / `final/` written by the method itself.  Anything else counts as still running (binds N*, conservative)."""
     import re as _re
     rd = Path(rd)
+    if _live(rd):
+        return "running_or_unknown", "a process with this run dir on its command line is alive"
     for name, pat in (("run.log", r"^exit (\d+)\s*$"), ("launcher.log", r"^exit=(\d+)\s*$")):
         p = rd / name
         if p.exists():
