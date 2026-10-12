@@ -73,20 +73,25 @@ Each such rollout counts against the budget, so the search saw a score and not a
 We did not check whether the ACE reflector or the MIPROv2 bootstrap showed the error text.
 
 Adapters label these errors differently, so we classify every error row with one rule and keep the adapter label beside it (Table~\ref{tab:zeros}).
-Search-time feedback used each method's native handling, and only the reporting is unified.
+The classification is reporting-only: each arm's search used its own native handling of these errors, and no search decision depends on the uniform label.
+In the analysis, a cell that is still an infrastructure error after three retries with new trial seeds counts as a failure in the primary analysis and as missing in the sensitivity analysis (amendment 5O).
+A hang past three hours gets one retry and is then missing in both.
+ACE, MIPROv2 and Meta-Harness ran with handling from before this rule, so their search-time zeros stay in their histories.
 The rule changes the class of Trace2Skill and WikiSkill rows, which their adapters label as candidate faults.
-It moves 26 of 27 Trace2Skill errors and all 8 WikiSkill errors to infrastructure: the stored Trace2Skill strings are 8 client timeouts and 18 sandbox 500 errors, and the WikiSkill errors are seed rows with no target call and no stored string.
-The remaining Trace2Skill row has no string and an unknown call count, so it stays a candidate error.
-All 30 Meta-Harness errors are infrastructure after we recovered the three missing strings, each a sandbox 500.
-SkillOpt has 27 infrastructure errors and 120 candidate errors, and the 120 are rows where the task template broke its placeholder contract before any LLM call.
+It moves the 26 Trace2Skill errors that carry a timeout or sandbox string, and all WikiSkill errors, to infrastructure.
+The Trace2Skill rows without a string keep the candidate class.
+Every Meta-Harness error is infrastructure, and the per-seed counts are 11, 29 and 25 (sandbox 500 errors or timeouts).
+MIPROv2 has 4, 6 and 2.
+SkillOpt has 46 infrastructure errors and 120 candidate errors.
+An audit of the 120 found 119 genuine template breaks, where an edit appended literal Python braces such as \texttt{\{c.coordinate\}} to the template and broke the placeholder contract, and one row caused by a race in the shared evaluator.
+The race was fixed at about 00:55 UTC on 12 October, and no search decision was affected.
 One row remains unverifiable: GEPA on Suite C, seed 2, whose run stores no string although the rollout made 20 target calls.
-The pessimistic missingness bound counts it as a failure and the optimistic bound drops it.
+It counts as a failure in the primary analysis and as missing in the sensitivity analysis, like any cell whose class we cannot establish.
 Eight $\tau^2$ rows are infrastructure only because the user simulator emitted a stop token next to leaked reasoning.
 We count a simulated-user fault as infrastructure, in its own subclass, because the simulator is a frozen environment component shared by all arms.
-A pre-specified sensitivity analysis flips those 8 rows to candidate errors and we report it beside the main result.
+A pre-specified sensitivity analysis flips those 8 rows to candidate errors, and we report it beside the main result.
 GEPA persists outputs only for its best program, so its counts are incomplete.
-The one live timeout zero after the 13:11 gateway fix is MIPROv2 seed 0 at 13:20.
-Every other timeout zero before 13:11 enters the sensitivity analysis that treats such rollouts as missing.
+Gateway retries from 13:11 UTC on 11 October removed most client-side failures, and the uniform search-time infrastructure retry was added from each arm's restart time (decisions.md).
 
 \input{tables/zeros}
 
