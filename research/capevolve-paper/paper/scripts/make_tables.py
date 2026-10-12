@@ -141,7 +141,7 @@ def e12_table(data):
             body.append(r"\midrule")
     head = r"Arm & Seed 0 & Seed 1 & Seed 2 & Screened & Promoted & Returned = seed \\"
     cap = (r"Stock-gate and rule-P hill-climb at the same rollout count, with per-seed paired deltas to the seed in points and promotion counts (means per search). "
-           r"Descriptive and exploratory: no tests. The best-of-$k$ row draws $k$ independent one-shot proposals per seed on Suite C and keeps the best on the optimization set.")
+           r"Descriptive and exploratory: no tests. The best-of-$k$ row draws $k$ independent one-shot proposals per seed on Suite C and keeps the best on the optimization set. It is truncated at $k=6/6/8$ proposals (140/140/180 counted rollouts) for seeds 0/1/2, paused to fund the Suite B stock-gate arm, and is exploratory and descriptive only.")
     return tabular("lcccccc", head, body, cap, "tab:e12", mock, star=False)
 
 
