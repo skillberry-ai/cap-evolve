@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fe_common as C  # noqa: E402
 
 INF = float("inf")
+_BSTAR_RUNS = []          # runs list of the bstar file in use (own counters for the comparison point)
 
 
 # ----------------------------------------------------------------------------------------------------------- events
@@ -128,6 +129,8 @@ def sel(status, cid=None, ev=None, **kw):
         d["logged_sha256"] = ev.get("sha256")
         d["rollout_index"] = ev.get("rollout_index")
         d["selection_value"] = sval(ev)
+        d["selection_split"] = (ev.get("score") or {}).get("split") if isinstance(ev.get("score"), dict) else None
+        d["selection_n_tasks"] = ev.get("n_tasks")
     return d
 
 
@@ -434,7 +437,7 @@ def rule_oneshot(rd, events, limit, ctx):
 RULES = {
     "gepa": rule_gepa, "skillopt": rule_skillopt, "evoskill": rule_evoskill, "metaharness": rule_metaharness,
     "wikiskill": rule_wikiskill, "mipro": rule_mipro, "ace": rule_ace, "trace2skill": rule_trace2skill,
-    "harnesslens": rule_harnesslens, "hc": rule_capevolve, "ao": rule_capevolve, "oneshot": rule_oneshot,
+    "harnesslens": rule_harnesslens, "hc": rule_capevolve, "ao": rule_capevolve, "oneshot": rule_oneshot, "hcstock": rule_capevolve,
 }
 
 FULL_N = {"A": 40, "B": 25, "C": 10}      # val / selection set size per suite (full-evaluation marker for GEPA)
@@ -475,6 +478,21 @@ def freeze_copy(src_dir, dst_dir, kind, extra_files=None):
     return files
 
 
+def seed_selection_score(rd, events):
+    """the seed artifact's score on the arm's own selection split, from the search record (evaluated event of the seed candidate, else CapEvolve baseline.json)"""
+    cid = seed_candidate(events)
+    for e in events:
+        if e["event"] == "evaluated" and e.get("candidate_id") == cid and sval(e) is not None and not (e.get("score") or {}).get("kind") == "minibatch" \
+                and (e.get("score") or {}).get("split") in (None, "val", "sel", "opt(val)"):
+            return {"seed_score": sval(e), "seed_split": (e.get("score") or {}).get("split"), "seed_n_tasks": e.get("n_tasks"), "seed_source": "candidates.jsonl evaluated"}
+    for run in sorted((Path(rd) / ".capevolve").glob("run_*"), reverse=True):
+        b = C.jload(run / "baseline.json") or {}
+        v = (b.get("val") or {}).get("reward")
+        if isinstance(v, (int, float)):
+            return {"seed_score": float(v), "seed_split": "val", "seed_n_tasks": (b.get("val") or {}).get("n_tasks"), "seed_source": "baseline.json"}
+    return {"seed_score": None, "seed_source": "not found"}
+
+
 def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
     rd = C.run_dir(suite, arm, seed)
     entry = {"suite": suite, "arm": arm, "seed": seed, "mode": mode, "limit": None if limit == INF else limit, "run_dir": str(rd)}
@@ -505,6 +523,12 @@ def build_entry(suite, arm, seed, mode, limit, out_root, copy, kind):
         for f in sorted(files):
             hh.update(("%s\0%s\n" % (f, files[f])).encode())
         h = hh.hexdigest()
+    sr = seed_selection_score(rd, events)
+    own = (_BSTAR_RUNS or [])
+    own_n = next((r.get("counter") for r in own if r["arm"] == arm and r["seed"] == seed), None)
+    entry["selection"] = {"split": entry.get("selection_split"), "n_tasks": entry.get("selection_n_tasks"),
+                          "champion_score": (sr.get("seed_score") if entry.get("fallback_seed") or entry.get("candidate_id") == seed_candidate(events) else entry.get("selection_value")),
+                          "comparison_count": (min(limit, own_n) if (own_n is not None and limit != INF) else own_n), "own_count": own_n, **sr}
     entry["tree_sha256"] = h
     entry["files"] = files
     entry["logged_sha_matches"] = logged_sha_check(src, entry.get("logged_sha256"), kind if k != "all" else "tau_cap")
@@ -567,6 +591,8 @@ def main(argv=None):
     out_root = Path(a.out_root) if a.out_root else C.final_dir(suite)
     bj = C.jload(a.bstar_file) if a.bstar_file else None
     bstar = a.bstar if a.bstar is not None else (bj or {}).get("bstar")
+    global _BSTAR_RUNS
+    _BSTAR_RUNS = (bj or {}).get("runs") or []
     modes = [m for m in a.mode.split(",") if m]
     if "B" in modes and not bstar:
         sys.exit("B* needed for mode B")
@@ -600,6 +626,16 @@ def main(argv=None):
     for e in man["entries"]:
         k = "%s:%s:%s" % (e["mode"], e["arm"], e["status"])
         man["status_counts"][k] = man["status_counts"].get(k, 0) + 1
+    import csv as _csv
+    selp = out_root / "selection_scores.csv"
+    selp.parent.mkdir(parents=True, exist_ok=True)
+    with open(selp, "w", newline="") as f:
+        w = _csv.writer(f)
+        w.writerow(["mode", "arm", "seed", "status", "candidate_id", "split", "n_tasks", "champion_score", "seed_score", "seed_split", "comparison_count", "own_count", "seed_source"])
+        for e in man["entries"]:
+            sx = e.get("selection") or {}
+            w.writerow([e["mode"], e["arm"], e["seed"], e["status"], e.get("candidate_id"), sx.get("split"), sx.get("n_tasks"), sx.get("champion_score"), sx.get("seed_score"),
+                        sx.get("seed_split"), sx.get("comparison_count"), sx.get("own_count"), sx.get("seed_source")])
     path = Path(a.manifest) if a.manifest else C.MANIFESTS / ("artifacts_%s.json" % suite)
     C.write_json_atomic(path, man)
     for mode in modes:

@@ -36,7 +36,7 @@ def compute(suite):
     cm = C.collect_metrics()
     spec = C.SUITES[suite]
     rows = []
-    for tier, arms in (("main", spec["main"]), ("cheap", spec["cheap"]), ("control", spec["controls"])):
+    for tier, arms in (("main", spec["main"]), ("cheap", spec["cheap"]), ("control", spec["controls"]), ("exploratory", spec.get("exploratory", []))):
         for arm in arms:
             for seed in C.SEEDS:
                 rd = C.run_dir(suite, arm, seed)

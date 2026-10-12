@@ -37,6 +37,7 @@ SUITES = {
         "main": ["hc", "ao", "gepa", "skillopt", "metaharness", "evoskill", "wikiskill"],
         "cheap": ["trace2skill", "ace", "mipro"],
         "controls": [],
+        "exploratory": ["hcstock"],       # E12A stock-gate hill climb: does not bind N*, compared at min(N*, own count)
         "dirname": {"hc": "hill-climb", "ao": "agent-optimize"},
         "artifact_kind": "sb_files",       # prompt.md + task_template.md
     },
@@ -57,17 +58,23 @@ SUITES = {
         "artifact_kind": "tau_cap",
     },
 }
+for _s, _ex in (("B", []), ("C", ["hcstock"])):
+    SUITES[_s]["exploratory"] = _ex                  # C: E12C stock-gate hill climb
+RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock"): RUNS / "E12C" / "hcstock"}
 SEEDS = [0, 1, 2]
 FAMILY_FILES = {"sb_files": ["prompt.md", "task_template.md"], "tau_cap": None}   # None = policy/** tools/**
 
 
-def suite_arms(suite, include_cheap=True, include_controls=True):
+def suite_arms(suite, include_cheap=True, include_controls=True, include_exploratory=True):
     s = SUITES[suite]
-    return list(s["main"]) + (list(s["cheap"]) if include_cheap else []) + (list(s["controls"]) if include_controls else [])
+    return list(s["main"]) + (list(s["cheap"]) if include_cheap else []) + (list(s["controls"]) if include_controls else []) + \
+        (list(s.get("exploratory", [])) if include_exploratory else [])
 
 
 def run_dir(suite, arm, seed):
     s = SUITES[suite]
+    if (suite, arm) in RUN_ROOT_OVERRIDE:
+        return RUN_ROOT_OVERRIDE[(suite, arm)] / ("s%d" % seed)
     return RUNS / s["exp"] / s["dirname"].get(arm, arm) / ("s%d" % seed)
 
 
