@@ -48,6 +48,8 @@ TAU = {"B": dict(domain="retail", example="tau2_retail", splits="tau_retail_spli
 GATEWAY = "http://127.0.0.1:4111/v1"
 RAW_TOOL_TEXT = "<|tool_call>"
 SB_TARGET = "rits/google/gemma-4-31B-it"
+SB_API_PY = C.REPO / "third_party/spreadsheetbench/code_exec_docker/api.py"
+SB_API_SHA = "4ef019a02437b7ca00c085becaf6b745c3b14c5000a5efdff6b5cd41b82a3263"     # idle-kernel timeout 10800 s (campaign decision 2026-10-12)
 SB_LO_BIN = str(BENCH / "lo258/root/opt/libreoffice25.8/program/soffice")
 
 
@@ -133,6 +135,7 @@ def worker_A(job, attempt_dir):
     env["SPREADSHEETBENCH_REWARD_RECALC"] = "0"
     env["SPREADSHEETBENCH_KEEP_OUTPUTS"] = "0"
     env["SPREADSHEETBENCH_LIBREOFFICE_BIN"] = SB_LO_BIN
+    env["KERNEL_TIMEOUT_S"] = "10800"
     env.setdefault("TEMPERATURE", "0.0")
     env.setdefault("MAX_TOKENS", "8000")
     env.update(job.get("env", {}))
@@ -737,6 +740,8 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
                 prob.append("sandbox egress check failed (exit %d): %s" % (r.returncode, (r.stdout + r.stderr)[-300:].replace("\n", " ")))
         except Exception as exc:
             prob.append("egress check failed: %r" % exc)
+        if not SB_API_PY.exists() or C.sha256_file(SB_API_PY) != SB_API_SHA:
+            prob.append("sandbox api.py sha256 %s != expected %s (idle-kernel timeout 10800 s patch)" % (C.file_sha(SB_API_PY), SB_API_SHA))
         for p in (SB_LO_BIN,):
             if not Path(p).exists():
                 prob.append("LibreOffice missing: %s" % p)
