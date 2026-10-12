@@ -942,7 +942,7 @@ def main(argv=None):
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)
         p.add_argument("--force", action="store_true")
-        p.add_argument("--capped-stop", type=int, default=168_000_000, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this")
+        p.add_argument("--capped-stop", type=int, default=198_000_000, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this")
         p.add_argument("--check-error-drain", action="store_true", help="prepare, Suite A: error exec, 95 s idle, next exec must succeed (needs the SB_DRAIN_ERROR jupyter.py)")
         p.add_argument("--check-kernel-idle", action="store_true", help="prepare, Suite A: also run the ~12 min idle-kernel behavioural check")
     w = sp.add_parser("worker")
