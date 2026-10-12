@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Parsec v5 heatmap — T1 zero-shot baseline (v5_t1_e1)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #6b7280;
+    --border: #d0d7de;
+    --header-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 13px;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 16px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    margin-bottom: 16px; font-size: 12px; color: var(--muted);
+  }
+  .legend .swatch { display: inline-block; width: 34px; height: 12px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+  .note {
+    background: var(--header-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 12px; margin-bottom: 16px; font-size: 12px; color: var(--muted);
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  th {
+    background: var(--header-bg);
+    cursor: pointer;
+    position: sticky;
+    top: 0;
+    user-select: none;
+    font-size: 11px;
+  }
+  th.sorted { background: #eef1f4; }
+  th .arrow { color: var(--muted); font-size: 10px; margin-left: 2px; }
+  td.task-cell { text-align: left; font-family: ui-monospace, monospace; font-size: 12px; }
+  .badge {
+    display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 10px;
+    margin-left: 4px; font-weight: 600; vertical-align: middle;
+  }
+  .badge.v4-34 { background: #dbeafe; color: #1e40af; }
+  .badge.h4-30 { background: #ede9fe; color: #5b21b6; }
+  .badge.new { background: #d1fae5; color: #065f46; }
+  .badge.renamed-content-changed { background: #fee2e2; color: #991b1b; }
+  .cell-n { font-size: 9px; color: rgba(0,0,0,0.55); display: block; }
+  .empty-cell { background: #f3f4f6 !important; color: #9ca3af; }
+  tr.summary-row td, tr.summary-row th {
+    background: #fff7ed; font-weight: 700; border-top: 2px solid #d0d7de;
+  }
+  tr.summary-row td.task-cell { text-align: left; }
+  tr.summary-row-overall td, tr.summary-row-overall th {
+    background: #eef2ff; border-top: 2px solid #6366f1; border-bottom: 2px solid #6366f1;
+  }
+</style>
+</head>
+<body>
+
+<h1>Parsec v5 heatmap — T1 (original skill) zero-shot baseline, v5_t1_e1</h1>
+<div class="subtitle">All 68 v5 Parsec tasks · the original, unmodified PARSEC skill, zero-shot, 5 trials/task, no optimization. 34 tasks share a byte-identical id with v4's original 34-task set (badge <span class="badge v4-34">v4-34</span>); 21 more match an h4 held-out task (<span class="badge h4-30">h4-30</span>); 2 kept a task number but got different content (<span class="badge renamed-content-changed">renamed</span>, excluded from the delta column); 11 are brand new (<span class="badge new">new</span>). See <code>results/v5/v5_t1_e1/summary.md</code> and <code>reports/v5-vs-v4-h4-comparison.md</code> for the full read.</div>
+
+<div class="note">
+  <strong>"prior arm mean" and "Δ vs prior arm" only exist for the 55 matched tasks</strong> (origin v4-34 or h4-30) — null for <span class="badge new">new</span> and <span class="badge renamed-content-changed">renamed</span> tasks, shown as "—" rather than a misleading zero. For v4-34 tasks, the prior arm is the mean of <code>v4_t4_e1</code>/<code>v4_t4_e2</code> (two independent repeats on v4's own 34-task set); for h4-30 tasks it's the mean of <code>h4_t1_e1</code>/<code>h4_t1_e3</code> (two drops of h4's 30-task held-out set). <strong>The seed skill itself is not byte-identical</strong> between v5 and v4/h4 (confirmed diff, see <code>artifacts/v5/seed/</code> vs <code>artifacts/v4/seed/</code>) — a nonzero delta here reflects both the model/gateway and this skill drift, not a controlled A/B.
+</div>
+
+<div class="legend">
+  <span><span class="swatch" style="background:rgb(220,38,38)"></span>0.0</span>
+  <span><span class="swatch" style="background:rgb(254,243,199)"></span>0.5</span>
+  <span><span class="swatch" style="background:rgb(5,150,105)"></span>1.0</span>
+  <span><span class="badge v4-34">v4-34</span> matches a v4 original-set task id</span>
+  <span><span class="badge h4-30">h4-30</span> matches an h4 held-out task id</span>
+  <span><span class="badge renamed-content-changed">renamed</span> same number, different content</span>
+  <span><span class="badge new">new</span> no prior baseline</span>
+  <span>Click a column header to sort.</span>
+</div>
+
+<table id="tbl"></table>
+
+<script>
+const DATA = [
+  {
+    "task": "cloud-024-guid-to-account",
+    "category": "cloud",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.3671,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "cloud-025-gcp-project-status",
+    "category": "cloud",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.9733333999999999,
+    "stderr": 0.026666600000000006,
+    "errored_trials": 0,
+    "cost_usd": 0.4488,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": -0.0267
+  },
+  {
+    "task": "cloud-026-gpu-abuse-triage",
+    "category": "cloud",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.4024,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.795,
+    "delta_vs_prior_arm": 0.205
+  },
+  {
+    "task": "cloud-027-azure-pool-database-trap",
+    "category": "cloud",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.885,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "cloud-055-azure-subscription-not-found",
+    "category": "cloud",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.6672,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.86,
+    "delta_vs_prior_arm": 0.14
+  },
+  {
+    "task": "cloud-057-cloudtrail-select-only-refusal",
+    "category": "cloud",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.44000000000000006,
+    "stderr": 0.039999999999999994,
+    "errored_trials": 0,
+    "cost_usd": 0.23229999999999998,
+    "headroom": "ok",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.4435,
+    "delta_vs_prior_arm": -0.0035
+  },
+  {
+    "task": "cloud-058-malformed-account-id",
+    "category": "cloud",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.6,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.2048,
+    "headroom": "ok",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.7,
+    "delta_vs_prior_arm": -0.1
+  },
+  {
+    "task": "cloud-059-blank-owner-email-fallback",
+    "category": "cloud",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.2501,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.6225,
+    "delta_vs_prior_arm": 0.3775
+  },
+  {
+    "task": "cloud-060-marketplace-cost-not-in-usd",
+    "category": "cloud",
+    "origin": "renamed-content-changed",
+    "status": "ok",
+    "reward": 0.36,
+    "stderr": 0.04,
+    "errored_trials": 0,
+    "cost_usd": 0.6753,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "cloud-074-assigned-account-still-billing",
+    "category": "cloud",
+    "origin": "new",
+    "status": "ok",
+    "reward": 0.666667,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.1403,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "cost-028-highest-spend-provider",
+    "category": "cost",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.48339999999999994,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.7,
+    "delta_vs_prior_arm": 0.3
+  },
+  {
+    "task": "cost-029-no-cost-rows-for-guid",
+    "category": "cost",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.8800000000000001,
+    "stderr": 0.04898979485566355,
+    "errored_trials": 0,
+    "cost_usd": 0.4593,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.8,
+    "delta_vs_prior_arm": 0.08
+  },
+  {
+    "task": "cost-030-threshold-not-an-anomaly",
+    "category": "cost",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.6336999999999999,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.86,
+    "delta_vs_prior_arm": 0.14
+  },
+  {
+    "task": "cost-050-partial-account-coverage",
+    "category": "cost",
+    "origin": "renamed-content-changed",
+    "status": "ok",
+    "reward": 0.86,
+    "stderr": 0.03500000000000001,
+    "errored_trials": 0,
+    "cost_usd": 0.4513,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "cost-051-gcp-net-of-credits",
+    "category": "cost",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.968,
+    "stderr": 0.032,
+    "errored_trials": 0,
+    "cost_usd": 0.45289999999999997,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.79,
+    "delta_vs_prior_arm": 0.178
+  },
+  {
+    "task": "cost-053-capacity-dropped-reservations",
+    "category": "cost",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.9039999999999999,
+    "stderr": 0.03919183588453085,
+    "errored_trials": 0,
+    "cost_usd": 0.9874999999999999,
+    "headroom": "ok",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.79,
+    "delta_vs_prior_arm": 0.114
+  },
+  {
+    "task": "cost-054-monitor-no-dashboard-link",
+    "category": "cost",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.9571428000000001,
+    "stderr": 0.0262445679511018,
+    "errored_trials": 0,
+    "cost_usd": 0.4512,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.5665,
+    "delta_vs_prior_arm": 0.3906
+  },
+  {
+    "task": "cost-064-reservation-release-active-job-check",
+    "category": "cost",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.76,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.8746,
+    "headroom": "ok",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.434,
+    "delta_vs_prior_arm": 0.326
+  },
+  {
+    "task": "cost-073-end-exclusive-alert-day",
+    "category": "cost",
+    "origin": "new",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.47609999999999997,
+    "headroom": "saturated",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "cost-075-vm-count-not-in-billing",
+    "category": "cost",
+    "origin": "new",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5258,
+    "headroom": "saturated",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "icinga-010-stuck-anarchysubjects",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.495,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.7054,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.341,
+    "delta_vs_prior_arm": 0.154
+  },
+  {
+    "task": "icinga-011-aap2-job-status-alert",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5368999999999999,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "icinga-012-nodes-ready-threshold",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.734,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "icinga-013-acknowledged-not-an-issue",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.512,
+    "stderr": 0.032,
+    "errored_trials": 0,
+    "cost_usd": 0.28109999999999996,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.64,
+    "delta_vs_prior_arm": -0.128
+  },
+  {
+    "task": "icinga-014-check-script-path-moved",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.55,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 2.2541,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": -0.45
+  },
+  {
+    "task": "icinga-015-problems-by-severity",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5076999999999999,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "icinga-016-hosts-most-problems",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.4927,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "icinga-017-invented-action-trap",
+    "category": "icinga",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.4701,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.986,
+    "delta_vs_prior_arm": 0.014
+  },
+  {
+    "task": "icinga-045-hosts-search-filter",
+    "category": "icinga",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.96,
+    "stderr": 0.039999999999999994,
+    "errored_trials": 0,
+    "cost_usd": 0.4655,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.7375,
+    "delta_vs_prior_arm": 0.2225
+  },
+  {
+    "task": "icinga-046-services-search-cross-host",
+    "category": "icinga",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.4677,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.6415,
+    "delta_vs_prior_arm": 0.3585
+  },
+  {
+    "task": "icinga-047-downtime-similar-host-names",
+    "category": "icinga",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.4579,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.55,
+    "delta_vs_prior_arm": 0.45
+  },
+  {
+    "task": "icinga-048-comment-service-vs-host-scope",
+    "category": "icinga",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.975,
+    "stderr": 0.024999999999999998,
+    "errored_trials": 0,
+    "cost_usd": 0.462,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.6,
+    "delta_vs_prior_arm": 0.375
+  },
+  {
+    "task": "icinga-072-alert-output-not-decoy-metrics",
+    "category": "icinga",
+    "origin": "new",
+    "status": "ok",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.44299999999999995,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-001-ee-entrypoint-rca",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.884,
+    "stderr": 0.05381449618829484,
+    "errored_trials": 0,
+    "cost_usd": 0.38660000000000005,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.728,
+    "delta_vs_prior_arm": 0.156
+  },
+  {
+    "task": "platform-002-collection-not-found-rca",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.883333,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.381,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.8234,
+    "delta_vs_prior_arm": 0.0599
+  },
+  {
+    "task": "platform-003-tojson-dict-literal-rca",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.9299998,
+    "stderr": 0.0285774619821285,
+    "errored_trials": 0,
+    "cost_usd": 0.3681,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": -0.07
+  },
+  {
+    "task": "platform-004-events-then-config",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.3239,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "platform-005-wrong-owner-trap",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.2412,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.828,
+    "delta_vs_prior_arm": 0.172
+  },
+  {
+    "task": "platform-006-version-tag-not-a-ref",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.3353,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "platform-007-directory-path-fetch",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.2758,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.7975,
+    "delta_vs_prior_arm": 0.2025
+  },
+  {
+    "task": "platform-008-log-does-not-say",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.9199999999999999,
+    "stderr": 0.04898979485566355,
+    "errored_trials": 0,
+    "cost_usd": 0.32630000000000003,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": -0.08
+  },
+  {
+    "task": "platform-009-catalog-item-no-config",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.2927,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.7975,
+    "delta_vs_prior_arm": 0.2025
+  },
+  {
+    "task": "platform-018-find-jobs-window",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.7106999999999999,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.028,
+    "delta_vs_prior_arm": 0.972
+  },
+  {
+    "task": "platform-019-anarchysubject-state",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.8031,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.66,
+    "delta_vs_prior_arm": 0.34
+  },
+  {
+    "task": "platform-020-ocpv-vm-inventory",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.6035,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.2775,
+    "delta_vs_prior_arm": 0.7225
+  },
+  {
+    "task": "platform-021-babylon-missing-cluster-trap",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5192,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "platform-022-job-on-no-controller",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.9650000000000001,
+    "stderr": 0.03500000000000001,
+    "errored_trials": 0,
+    "cost_usd": 0.2756,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": -0.035
+  },
+  {
+    "task": "platform-023-splunk-guid-no-events",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.96,
+    "stderr": 0.039999999999999994,
+    "errored_trials": 0,
+    "cost_usd": 0.30210000000000004,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.98,
+    "delta_vs_prior_arm": -0.02
+  },
+  {
+    "task": "platform-031-helm-url-not-a-timeout",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.8699999999999999,
+    "stderr": 0.03273950213427197,
+    "errored_trials": 0,
+    "cost_usd": 3.6673,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.9153,
+    "delta_vs_prior_arm": -0.0453
+  },
+  {
+    "task": "platform-032-shared-secret-not-a-registry-outage",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.8956000000000002,
+    "headroom": "saturated",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.68,
+    "delta_vs_prior_arm": 0.32
+  },
+  {
+    "task": "platform-033-schema-change-not-the-oom",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.7309522,
+    "stderr": 0.1237523346856131,
+    "errored_trials": 0,
+    "cost_usd": 1.7893999999999999,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": -0.269
+  },
+  {
+    "task": "platform-034-rate-limit-not-an-outage",
+    "category": "platform",
+    "origin": "v4-34",
+    "status": "ok",
+    "reward": 0.7849998,
+    "stderr": 0.03810316016867892,
+    "errored_trials": 0,
+    "cost_usd": 0.7857,
+    "headroom": "ok",
+    "prior_arm": "v4_t4_e1/e2",
+    "prior_arm_mean": 0.9922,
+    "delta_vs_prior_arm": -0.2072
+  },
+  {
+    "task": "platform-036-secret-redacted-not-absent",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.7871,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.235,
+    "delta_vs_prior_arm": 0.765
+  },
+  {
+    "task": "platform-037-ocpv-healthy-vm-degraded-machineset",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.6092,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.8135,
+    "delta_vs_prior_arm": 0.1865
+  },
+  {
+    "task": "platform-038-anarchy-subject-guid-cross-cluster",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.8054,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "platform-040-workshop-cross-cluster-name-search",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.675,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5344,
+    "headroom": "ok",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.9825,
+    "delta_vs_prior_arm": -0.3075
+  },
+  {
+    "task": "platform-041-resource-pool-unfiltered-list",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5284,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "platform-042-deployment-via-resource-claim",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 0.9720000000000001,
+    "stderr": 0.028000000000000004,
+    "errored_trials": 0,
+    "cost_usd": 0.8049999999999999,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.875,
+    "delta_vs_prior_arm": 0.097
+  },
+  {
+    "task": "platform-043-multiworkshop-asset-failure",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.2809,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 1.0,
+    "delta_vs_prior_arm": 0.0
+  },
+  {
+    "task": "platform-044-search-catalog-env-type",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.5157999999999999,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.86,
+    "delta_vs_prior_arm": 0.14
+  },
+  {
+    "task": "platform-062-provisioning-job-trace",
+    "category": "platform",
+    "origin": "h4-30",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.5383999999999998,
+    "headroom": "saturated",
+    "prior_arm": "h4_t1_e1/e3",
+    "prior_arm_mean": 0.6985,
+    "delta_vs_prior_arm": 0.3015
+  },
+  {
+    "task": "platform-065-other-guid-job-not-the-failure",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 0.8039999999999999,
+    "stderr": 0.0342928563989645,
+    "errored_trials": 0,
+    "cost_usd": 1.0581,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-066-per-guid-cluster-and-lifespan",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 0.9650000000000001,
+    "stderr": 0.021433035249352816,
+    "errored_trials": 0,
+    "cost_usd": 0.9186,
+    "headroom": "saturated",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-067-branch-name-not-the-cause",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.8514999999999999,
+    "headroom": "saturated",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-068-deprecation-warning-not-the-fatal",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 0.828,
+    "stderr": 0.05453439281774393,
+    "errored_trials": 0,
+    "cost_usd": 1.7209,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-069-typo-variable-not-located",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 0.9438,
+    "headroom": "saturated",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-070-invented-fix-variables",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.1876,
+    "headroom": "saturated",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  },
+  {
+    "task": "platform-071-unmonitored-proxy-not-esxi-alert",
+    "category": "platform",
+    "origin": "new",
+    "status": "ok",
+    "reward": 0.383333,
+    "stderr": 0.0,
+    "errored_trials": 0,
+    "cost_usd": 1.3843,
+    "headroom": "ok",
+    "prior_arm": null,
+    "prior_arm_mean": null,
+    "delta_vs_prior_arm": null
+  }
+];
+
+const SUMMARIES =
+[
+  {
+    "category": "overall",
+    "n_tasks": 68,
+    "reward_mean": 0.8885,
+    "n_with_prior_arm": 55,
+    "prior_arm_mean_mean": 0.7969,
+    "delta_vs_prior_arm_mean": 0.1222
+  },
+  {
+    "category": "cloud",
+    "n_tasks": 10,
+    "reward_mean": 0.804,
+    "n_with_prior_arm": 8,
+    "prior_arm_mean_mean": 0.8026,
+    "delta_vs_prior_arm_mean": 0.074
+  },
+  {
+    "category": "cost",
+    "n_tasks": 10,
+    "reward_mean": 0.9329,
+    "n_with_prior_arm": 7,
+    "prior_arm_mean_mean": 0.7058,
+    "delta_vs_prior_arm_mean": 0.2184
+  },
+  {
+    "category": "icinga",
+    "n_tasks": 13,
+    "reward_mean": 0.8071,
+    "n_with_prior_arm": 12,
+    "prior_arm_mean_mean": 0.7913,
+    "delta_vs_prior_arm_mean": 0.083
+  },
+  {
+    "category": "platform",
+    "n_tasks": 35,
+    "reward_mean": 0.9302,
+    "n_with_prior_arm": 28,
+    "prior_arm_mean_mean": 0.8204,
+    "delta_vs_prior_arm_mean": 0.1287
+  }
+]
+;
+
+const COLUMNS = [
+  { key: "task", label: "task", tip: "Scenario id. Badge shows origin relative to v4/h4." },
+  { key: "category", label: "cat", tip: "Service area, from the task id prefix (cloud/cost/icinga/platform)." },
+  { key: "reward", label: "v5_t1_e1", tip: "v5_t1_e1 reward, mean of 5 trials." },
+  { key: "stderr", label: "stderr", tip: "Standard error across the 5 trials." },
+  { key: "errored_trials", label: "err", tip: "Number of the 5 trials that errored (infra failure, not a genuine zero)." },
+  { key: "cost_usd", label: "cost($)", tip: "Total cost across the task's 5 trials." },
+  { key: "prior_arm_mean", label: "prior arm", tip: "Mean of the matched prior arm (v4_t4_e1/e2 or h4_t1_e1/e3). Null for new/renamed tasks." },
+  { key: "delta_vs_prior_arm", label: "Δ vs prior", tip: "v5_t1_e1 reward − prior arm mean. Null for new/renamed tasks." },
+];
+
+let sortState = { key: "task", dir: "asc" };
+
+function color(v) {
+  if (v === null || v === undefined) return "#f3f4f6";
+  const t = Math.max(0, Math.min(1, v));
+  const low = [220, 38, 38], mid = [254, 243, 199], high = [5, 150, 105];
+  let r, g, b;
+  if (t < 0.5) {
+    const k = t * 2;
+    r = low[0] + (mid[0] - low[0]) * k;
+    g = low[1] + (mid[1] - low[1]) * k;
+    b = low[2] + (mid[2] - low[2]) * k;
+  } else {
+    const k = (t - 0.5) * 2;
+    r = mid[0] + (high[0] - mid[0]) * k;
+    g = mid[1] + (high[1] - mid[1]) * k;
+    b = mid[2] + (high[2] - mid[2]) * k;
+  }
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+
+function textColorFor(bg) {
+  const m = /rgb\((\d+),(\d+),(\d+)\)/.exec(bg);
+  if (!m) return "#111";
+  const lum = (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) / 255;
+  return lum > 0.6 ? "#111" : "#fff";
+}
+
+function fmt(v) {
+  return v === null || v === undefined ? "—" : v.toFixed(3);
+}
+
+function fmtDelta(v) {
+  if (v === null || v === undefined) return "—";
+  const s = v >= 0 ? "+" : "";
+  return s + v.toFixed(3);
+}
+
+function fmtCost(v) {
+  return v === null || v === undefined ? "—" : "$" + v.toFixed(3);
+}
+
+function rewardCell(v, extraClass, tooltip) {
+  const empty = v === null || v === undefined;
+  const bg = color(v);
+  const style = empty ? "" : `background:${bg};color:${textColorFor(bg)};`;
+  const cls = ["reward-cell", extraClass, empty ? "empty-cell" : ""].filter(Boolean).join(" ");
+  const title = tooltip ? ` title="${tooltip.replace(/"/g, "&quot;")}"` : "";
+  return `<td class="${cls}" style="${style}"${title}>${fmt(v)}</td>`;
+}
+
+function sortRows(rows) {
+  const { key, dir } = sortState;
+  const sign = dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = a[key], vb = b[key];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === "string") return sign * va.localeCompare(vb);
+    return sign * (va - vb);
+  });
+}
+
+function renderHeader() {
+  return (
+    "<tr>" +
+    COLUMNS.map((c) => {
+      const active = sortState.key === c.key;
+      const arrow = active ? (sortState.dir === "asc" ? "▲" : "▼") : "";
+      return `<th class="${active ? "sorted" : ""}" data-key="${c.key}" title="${c.tip.replace(/"/g, "&quot;")}">${c.label}<span class="arrow">${arrow}</span></th>`;
+    }).join("") +
+    "</tr>"
+  );
+}
+
+function renderTaskCell(row) {
+  const oBadge = `<span class="badge ${row.origin}">${row.origin}</span>`;
+  return `<td class="task-cell">${row.task}${oBadge}</td>`;
+}
+
+function renderRow(row) {
+  let html = "<tr>";
+  html += renderTaskCell(row);
+  html += `<td>${row.category}</td>`;
+  html += rewardCell(row.reward, "", `trial errors: ${row.errored_trials}`);
+  html += `<td>${fmt(row.stderr)}</td>`;
+  html += `<td>${row.errored_trials}</td>`;
+  html += `<td>${fmtCost(row.cost_usd)}</td>`;
+  html += rewardCell(row.prior_arm_mean, "", row.prior_arm ? `source: ${row.prior_arm}` : "");
+  html += `<td>${fmtDelta(row.delta_vs_prior_arm)}</td>`;
+  html += "</tr>";
+  return html;
+}
+
+function renderSummaryRow(s) {
+  const label = s.category === "overall" ? `MEAN — all tasks (${s.n_tasks})` : `MEAN — ${s.category} (${s.n_tasks})`;
+  const rowClass = s.category === "overall" ? "summary-row summary-row-overall" : "summary-row";
+  let html = `<tr class="${rowClass}"><td class="task-cell">${label}</td><td></td>`;
+  html += rewardCell(s.reward_mean, "");
+  html += "<td></td><td></td><td></td>";
+  html += rewardCell(s.prior_arm_mean_mean, "", `n=${s.n_with_prior_arm} matched tasks`);
+  html += `<td>${fmtDelta(s.delta_vs_prior_arm_mean)}</td>`;
+  html += "</tr>";
+  return html;
+}
+
+function render() {
+  const tbl = document.getElementById("tbl");
+  const rows = sortRows(DATA);
+  let html = "<thead>" + renderHeader() + "</thead><tbody>";
+  html += SUMMARIES.map(renderSummaryRow).join("");
+  html += rows.map(renderRow).join("");
+  html += "</tbody>";
+  tbl.innerHTML = html;
+
+  tbl.querySelectorAll("th").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortState.key === key) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState = { key, dir: "asc" };
+      }
+      render();
+    });
+  });
+}
+
+render();
+</script>
+</body>
+</html>

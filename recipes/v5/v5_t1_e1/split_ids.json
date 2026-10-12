@@ -1,0 +1,5 @@
+{
+  "train": ["platform-001-ee-entrypoint-rca"],
+  "val":   ["platform-001-ee-entrypoint-rca"],
+  "test":  ["platform-001-ee-entrypoint-rca"]
+}
