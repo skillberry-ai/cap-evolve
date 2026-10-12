@@ -5,8 +5,8 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | uniform unverifiable | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | A | ace | 0 | main | 405 | 22 | 22 | 0 | 22 | 0 | 0 | 0 | 0 | 0 | 22 | 0 |
-| A | ace | 1 | main | 339 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 7 | 0 |
-| A | ace | 2 | main | 248 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 9 | 0 |
+| A | ace | 1 | main | 347 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 7 | 0 |
+| A | ace | 2 | main | 268 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 9 | 0 |
 | A | ao | 0 | main | 160 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 1 | main | 160 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 2 | main | 160 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -23,9 +23,9 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | A | metaharness | 0 | main | 600 | 19 | 19 | 0 | 19 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | metaharness | 1 | main | 600 | 37 | 37 | 0 | 37 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | metaharness | 2 | main | 600 | 34 | 34 | 0 | 34 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| A | mipro | 0 | main | 315 | 11 | 11 | 0 | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| A | mipro | 1 | main | 384 | 12 | 12 | 0 | 9 | 3 | 0 | 0 | 3 | 0 | 0 | 0 |
-| A | mipro | 2 | main | 372 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| A | mipro | 0 | main | 337 | 11 | 11 | 0 | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| A | mipro | 1 | main | 396 | 12 | 12 | 0 | 9 | 3 | 0 | 0 | 3 | 0 | 0 | 0 |
+| A | mipro | 2 | main | 394 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 0 | main | 600 | 98 | 18 | 80 | 18 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 1 | main | 580 | 21 | 20 | 1 | 20 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 2 | main | 600 | 68 | 28 | 40 | 28 | 40 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -34,7 +34,7 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | A | trace2skill | 2 | main | 202 | 21 | 21 | 0 | 19 | 2 | 0 | 0 | 2 | 0 | 0 | 0 |
 | A | wikiskill | 0 | main | 484 | 30 | 27 | 3 | 30 | 0 | 0 | 3 | 0 | 0 | 30 | 0 |
 | A | wikiskill | 1 | main | 496 | 42 | 40 | 2 | 42 | 0 | 0 | 2 | 0 | 0 | 42 | 0 |
-| A | wikiskill | 2 | main | 459 | 14 | 11 | 3 | 14 | 0 | 0 | 3 | 0 | 0 | 14 | 0 |
+| A | wikiskill | 2 | main | 470 | 14 | 11 | 3 | 14 | 0 | 0 | 3 | 0 | 0 | 14 | 0 |
 | A-E12 | hcstock | 0 | main | 800 | 5 | 5 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A-E12 | hcstock | 1 | main | 800 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A-E12 | hcstock | 2 | main | 760 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -45,17 +45,17 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | B | hc | 0 | main | 662 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | hc | 1 | main | 564 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | hc | 2 | main | 662 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| B-E12 | hcstock | 0 | main | 196 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| B-E12 | hcstock | 1 | main | 196 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B-E12 | hcstock | 0 | main | 245 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B-E12 | hcstock | 1 | main | 245 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ao | 0 | main | 110 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ao | 2 | main | 71 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ctl-oneshot | 0 | main | 60 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ctl-oneshot | 1 | main | 50 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ctl-oneshot | 2 | main | 50 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| C | gepa | 1 | main | 226 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
-| C | gepa | 2 | main | 286 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
+| C | gepa | 1 | main | 241 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
+| C | gepa | 2 | main | 301 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
 | C | hc | 0 | main | 480 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| C | hc | 1 | main | 320 | 17 | 17 | 0 | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| C | hc | 1 | main | 380 | 20 | 20 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | hc | 2 | main | 360 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C-E12 | hcstock | 0 | main | 280 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C-E12 | hcstock | 2 | main | 300 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -80,15 +80,15 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | D-E21 | ruleP | 0 | main | 687 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | D-E21 | ruleP | 1 | main | 785 | 17 | 17 | 0 | 17 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | D-E21 | ruleP | 2 | main | 785 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| E | 1S | 0 | main | 80 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| E | 1S | 1 | main | 80 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| E | 1S | 2 | main | 80 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| E | 1S | 0 | main | 200 | 19 | 19 | 0 | 19 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| E | 1S | 1 | main | 180 | 20 | 20 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| E | 1S | 2 | main | 256 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | E | CTL | 0 | main | 50 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | E | CTL | 1 | main | 60 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | E | CTL | 2 | main | 60 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| E | NOHIST | 0 | main | 160 | 21 | 21 | 0 | 21 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| E | NOHIST | 1 | main | 140 | 20 | 20 | 0 | 20 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| E | NOHIST | 2 | main | 160 | 13 | 13 | 0 | 13 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| E | NOHIST | 0 | main | 240 | 29 | 29 | 0 | 29 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| E | NOHIST | 1 | main | 240 | 29 | 29 | 0 | 29 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| E | NOHIST | 2 | main | 240 | 18 | 18 | 0 | 18 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | E | PT | 0 | main | 256 | 27 | 27 | 0 | 27 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | E | PT | 1 | main | 258 | 14 | 14 | 0 | 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | E | PT | 2 | main | 248 | 19 | 19 | 0 | 19 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
