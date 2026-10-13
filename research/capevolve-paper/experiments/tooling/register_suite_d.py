@@ -122,6 +122,12 @@ def main():
     for it, fp, note in V2DE_FILES:
         if fp.exists():
             items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suites D/E): " + note, None))
+    WTAO = Path("/home/dev/projects2/wt-v2run-ao")
+    AO2_CODE = [("conductor.py", "skills/algorithms/agent-optimize/scripts/conductor.py"), ("conductor_backend.py", "skills/algorithms/agent-optimize/scripts/conductor_backend.py"),
+                ("proposer.py", "skills/algorithms/agent-optimize/scripts/proposer.py"), ("optimizer_cost.py", "core/cap_evolve/optimizer_cost.py")]
+    for nm, rel in AO2_CODE:
+        if (WTAO / rel).exists():
+            items.append(("v2_11E_AO2_code_" + nm, WTAO / rel, "AO-2 code file at d68775bbd (changed vs a3f5eeb6d)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
