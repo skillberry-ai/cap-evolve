@@ -5,8 +5,8 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | suite | arm | seed | cat | rollouts | errors | adapter infra | adapter cand. | uniform infra | uniform cand. | uniform unverifiable | cand->infra | infra->cand. | unlabelled->infra | infra by 0 calls, no string | adapter-infra unverifiable |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | A | ace | 0 | main | 405 | 22 | 22 | 0 | 22 | 0 | 0 | 0 | 0 | 0 | 22 | 0 |
-| A | ace | 1 | main | 380 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 | 0 | 16 | 0 |
-| A | ace | 2 | main | 346 | 15 | 15 | 0 | 15 | 0 | 0 | 0 | 0 | 0 | 15 | 0 |
+| A | ace | 1 | main | 386 | 16 | 16 | 0 | 16 | 0 | 0 | 0 | 0 | 0 | 16 | 0 |
+| A | ace | 2 | main | 372 | 15 | 15 | 0 | 15 | 0 | 0 | 0 | 0 | 0 | 15 | 0 |
 | A | ao | 0 | main | 160 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 1 | main | 160 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | ao | 2 | main | 160 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -23,9 +23,9 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | A | metaharness | 0 | main | 600 | 19 | 19 | 0 | 19 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | metaharness | 1 | main | 600 | 37 | 37 | 0 | 37 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | metaharness | 2 | main | 600 | 34 | 34 | 0 | 34 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| A | mipro | 0 | main | 410 | 11 | 11 | 0 | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| A | mipro | 1 | main | 482 | 14 | 14 | 0 | 11 | 3 | 0 | 0 | 3 | 0 | 0 | 0 |
-| A | mipro | 2 | main | 476 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| A | mipro | 0 | main | 428 | 11 | 11 | 0 | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| A | mipro | 1 | main | 496 | 14 | 14 | 0 | 11 | 3 | 0 | 0 | 3 | 0 | 0 | 0 |
+| A | mipro | 2 | main | 494 | 9 | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 0 | main | 600 | 98 | 18 | 80 | 18 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 1 | main | 580 | 21 | 20 | 1 | 20 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A | skillopt | 2 | main | 600 | 68 | 28 | 40 | 28 | 40 | 0 | 0 | 0 | 0 | 0 | 0 |
@@ -39,24 +39,24 @@ Rule (all arms): infra = transport/timeout/sandbox-HTTP error string, or zero ta
 | A-E12 | hcstock | 1 | main | 800 | 6 | 6 | 0 | 6 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | A-E12 | hcstock | 2 | main | 760 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | ao | 0 | main | 173 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| B | ao | 2 | main | 613 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B | ao | 2 | main | 760 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | ctl-oneshot | 0 | main | 123 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | ctl-oneshot | 1 | main | 148 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | hc | 0 | main | 662 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | hc | 1 | main | 564 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B | hc | 2 | main | 662 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| B-E12 | hcstock | 0 | main | 489 | 8 | 8 | 0 | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| B-E12 | hcstock | 1 | main | 636 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| B-E12 | hcstock | 2 | main | 488 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B-E12 | hcstock | 0 | main | 587 | 8 | 8 | 0 | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B-E12 | hcstock | 1 | main | 710 | 5 | 5 | 0 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B-E12 | hcstock | 2 | main | 586 | 7 | 7 | 0 | 7 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ao | 0 | main | 110 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ao | 2 | main | 71 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ctl-oneshot | 0 | main | 60 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ctl-oneshot | 1 | main | 50 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | ctl-oneshot | 2 | main | 50 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| C | gepa | 1 | main | 309 | 3 | 3 | 0 | 2 | 0 | 1 | 0 | 0 | 0 | 2 | 1 |
-| C | gepa | 2 | main | 391 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
+| C | gepa | 1 | main | 325 | 3 | 3 | 0 | 2 | 0 | 1 | 0 | 0 | 0 | 2 | 1 |
+| C | gepa | 2 | main | 428 | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |
 | C | hc | 0 | main | 480 | 3 | 3 | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| C | hc | 1 | main | 520 | 26 | 26 | 0 | 26 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| C | hc | 1 | main | 580 | 27 | 27 | 0 | 27 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C | hc | 2 | main | 360 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C-E12 | hcstock | 0 | main | 280 | 4 | 4 | 0 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | C-E12 | hcstock | 2 | main | 300 | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |

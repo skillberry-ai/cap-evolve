@@ -1,5 +1,5 @@
 {
- "_generated_utc": "2026-10-13T03:34:22Z",
+ "_generated_utc": "2026-10-13T04:36:09Z",
  "_note": "values not found in manifests/specs/deviations/launch scripts are 'not recorded'; nothing is guessed",
  "runs": {
   "A/ace/s0": {
@@ -304,7 +304,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 368
+    "rollout_counter": 375
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -489,22 +489,12 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E10/ace/s2",
-     "seed": "2",
-     "tag-prefix": "E10-ace-s2",
-     "arm": "ace",
-     "max-rollouts": "600"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3612417 Mon Oct 12 00:59:23 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/code/ace_batch_run.py --out /home/dev/projects2/campaign-scratch/runs/E10/ace/s2 --seed 2 --tag-prefix E10-ace-s2 --arm ace --max-rollouts 600"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "curator": [
      "aws/claude-sonnet-5-5"
@@ -519,7 +509,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 332
+    "rollout_counter": 361
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5534,7 +5524,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 413
+    "rollout_counter": 434
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5596,7 +5586,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 482
+    "rollout_counter": 499
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5658,7 +5648,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 482
+    "rollout_counter": 497
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -9535,7 +9525,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 613
+    "rollout_counter": 760
    },
    "concurrency": {
     "manifest.json": 6
@@ -9604,10 +9594,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 16293683,
-    "state_metric_calls": 613,
+    "state_metric_calls": 760,
     "state_iterations": 0,
     "state_optimizer_usd": 11.5331611,
-    "state_runner_tokens": 55901695,
+    "state_runner_tokens": 69478442,
     "state_best_val": 0.6122448979591837,
     "cost_summary_optimizer_noncache": 636710
    }
@@ -12803,9 +12793,7 @@
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10B/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0 hcstock 0 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E12B-hcstock-s0:hcstock\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_retail_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=7200 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "2123156 Mon Oct 12 16:01:19 2026 bash /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5"
@@ -12823,7 +12811,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 392
+    "rollout_counter": 441
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -12854,11 +12842,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 4613471,
-    "state_metric_calls": 392,
-    "state_iterations": 7,
-    "state_optimizer_usd": 1.9525771,
-    "state_runner_tokens": 38176258,
+    "state_optimizer_tokens": 4855922,
+    "state_metric_calls": 441,
+    "state_iterations": 8,
+    "state_optimizer_usd": 2.1235301,
+    "state_runner_tokens": 43036652,
     "state_best_val": 0.6595744680851063
    }
   },
@@ -12922,9 +12910,7 @@
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10B/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1 hcstock 1 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E12B-hcstock-s1:hcstock\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_retail_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=7200 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "2124677 Mon Oct 12 16:01:22 2026 bash /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5"
@@ -12942,7 +12928,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 490
+    "rollout_counter": 564
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -12974,11 +12960,12 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 5694132,
-    "state_metric_calls": 490,
-    "state_iterations": 9,
+    "state_metric_calls": 564,
+    "state_iterations": 10,
     "state_optimizer_usd": 2.3134376,
-    "state_runner_tokens": 44864423,
-    "state_best_val": 0.6666666666666666
+    "state_runner_tokens": 51118622,
+    "state_best_val": 0.6666666666666666,
+    "cost_summary_optimizer_noncache": 549811
    }
   },
   "B-E12/hcstock/s2": {
@@ -13041,9 +13028,7 @@
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10B/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2 hcstock 2 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E12B-hcstock-s2:hcstock\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_retail_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=7200 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "2125008 Mon Oct 12 16:01:25 2026 bash /home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5"
@@ -13061,7 +13046,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 441
+    "rollout_counter": 490
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -13092,11 +13077,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 4991510,
-    "state_metric_calls": 441,
-    "state_iterations": 8,
-    "state_optimizer_usd": 2.836145,
-    "state_runner_tokens": 37641696,
+    "state_optimizer_tokens": 5123443,
+    "state_metric_calls": 490,
+    "state_iterations": 9,
+    "state_optimizer_usd": 2.97451,
+    "state_runner_tokens": 41238352,
     "state_best_val": 0.6530612244897959
    }
   },
@@ -14425,7 +14410,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 410
+    "rollout_counter": 432
    },
    "concurrency": {
     "manifest.json": 6
@@ -14687,7 +14672,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 309
+    "rollout_counter": 328
    },
    "concurrency": {
     "manifest.json": 6
@@ -14949,7 +14934,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 394
+    "rollout_counter": 431
    },
    "concurrency": {
     "manifest.json": 6
@@ -15409,7 +15394,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 520
+    "rollout_counter": 590
    },
    "concurrency": {
     "manifest.json": 6
@@ -15479,11 +15464,11 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 4761727,
-    "state_metric_calls": 520,
-    "state_iterations": 9,
+    "state_metric_calls": 590,
+    "state_iterations": 10,
     "state_optimizer_usd": 2.2270012999999995,
-    "state_runner_tokens": 41843931,
-    "state_best_val": 0.45
+    "state_runner_tokens": 47112219,
+    "state_best_val": 0.6842105263157895
    }
   },
   "C/hc/s2": {
