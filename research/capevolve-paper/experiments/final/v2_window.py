@@ -61,6 +61,7 @@ def build(suite, champions_path, out_root, manifests=None, dry=False):
 
 
 V2_CODE_ROOT = "/home/dev/projects2/wt-v2run"        # main at a3f5eeb6d (amendment 11 erratum 1): adapter, core, helpers carrier, gold isolation, iopub idle-wait fix
+V2_TAU_ADAPTERS = {"D": "/home/dev/projects2/campaign-scratch/scripts/V2/adapters/retail/adapter.py", "E": "/home/dev/projects2/campaign-scratch/scripts/V2/adapters/airline/adapter.py"}
 V2_CODE_SHA = "a3f5eeb6d54d9782c9fb3985ca1d63560f6cc4bb"
 
 
@@ -112,6 +113,12 @@ def make_order(suite, mpath, out=None, tag_exp=None, code_root=None, harness_dir
     meta["inert_mapped_to_seed_check"] = [{"arm": a_, "seed": s_} for a_, s_ in inert]
     if suite == "A":
         apply_a_overrides(jobs + meta.get("canary_jobs", []), meta, code_root, harness_dir)
+    else:       # D / E: the V2 adapter copy (v1 file + read-only reference/ guard) for every cell, anchors included
+        adp = V2_TAU_ADAPTERS[suite]
+        for j in jobs + meta.get("canary_jobs", []):
+            j["adapter_py"] = adp
+        meta["scorer"] = {"window": "v2", "adapter_py": adp, "adapter_sha256": C.file_sha(adp),
+                          "note": "v2 and the in-window anchors share the V2 adapter copy (11F); the v1 window used the frozen v1 adapter (no reference/ guard)"}
     if suite in ("D", "E"):
         jobs = [j for j in jobs if j.get("split") != "sel"]
         meta["tasks"] = [t for t in meta["tasks"] if any(j["task"] == t for j in jobs)]
@@ -158,6 +165,11 @@ def register(suite, manifests=None, registry=None, note=""):
              ("v2window_script_v2_window_py", C.file_sha(__file__), __file__, ""), ("v2window_script_order_py", C.file_sha(C.HERE / "order.py"), C.HERE / "order.py", ""),
              ("v2window_script_run_final_py", C.file_sha(C.HERE / "run_final.py"), C.HERE / "run_final.py", ""), ("v2window_script_fe_common_py", C.file_sha(C.HERE / "fe_common.py"), C.HERE / "fe_common.py", ""),
              ("v2window_script_commit", hashlib.sha256((C.git_head() or "").encode()).hexdigest(), C.REPO, C.git_head())]
+    meta = json.loads(open(manifests / ("order_V2_%s.jsonl" % suite)).readline())
+    sc = meta.get("scorer") or {}
+    if sc:
+        items.append(("v2window_scorer_%s" % suite, hashlib.sha256(json.dumps(sc, sort_keys=True).encode()).hexdigest(), manifests / ("order_V2_%s.jsonl" % suite),
+                      "scorer of the v2 window (v1 window used a different adapter): " + json.dumps(sc, sort_keys=True)[:600]))
     n = sum(1 for name, sha, p, nt in items if reg.add(name, sha, p, ((note + " | ") if note else "") + nt, suites=[suite]))
     reg.write()
     print("registered %d new v2 window items (%d lines)" % (n, len(reg.lines)))

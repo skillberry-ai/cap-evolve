@@ -208,9 +208,11 @@ def worker_tau(job, attempt_dir):
         env["TAU_ALLOW_SEALED_TEST"] = "final-eval-only"
     env.update(job.get("env", {}))
     sys.path.insert(0, str(wt_of(job["suite"]) / "core"))
-    sys.path.insert(0, str(wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters"))
+    ad_py = Path(job["adapter_py"]) if job.get("adapter_py") else wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters" / "adapter.py"      # v2 window: the V2 adapter copy (reference/ guard)
+    sys.path.insert(0, str(wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters"))      # siblings (model_config.py)
+    sys.path.insert(0, str(ad_py.parent))
     import importlib.util
-    spec = importlib.util.spec_from_file_location("tau_adapter_final", wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters" / "adapter.py")
+    spec = importlib.util.spec_from_file_location("tau_adapter_final", ad_py)
     ad = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ad)
     tid = str(job["task"])
