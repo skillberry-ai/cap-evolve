@@ -1,5 +1,35 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 18:50 UTC (coordinator periodic check)_
+
+## Update 18:50 UTC
+- **Spend**: capped spend is 179.5M of 230M; the v1 final window stops itself at 198M.
+- **v1 final**:
+
+  | Suite | State |
+  |---|---|
+  | A | COMPLETE (2520, 0 missing) |
+  | C | COMPLETE (1018/1020; the END-only extra is done) |
+  | D | COMPLETE (13,080 with 66 infra_final) |
+  | B | 2102/2520 at 18:32, ~2.5 h left |
+  | E | launched 18:11 (5,550 jobs, 64 workers), ~00:30 ETA |
+
+  - Azure mini 429s are external peak-load shedding (30-47%): 0 429-attributed infra. Holds were adjusted (decisions.md).
+  - Held-out scores are deliberately NOT computed yet, so v2 launch decisions stay blind (amendment 11D).
+- **v2**: 12 of the 18 registered searches are running, all fully registered.
+
+  | Arm | Suite | Launched |
+  |---|---|---|
+  | HC-2 | A | 16:13 |
+  | AO-2 | A | 18:34 |
+  | HC-2 | E | 17:13 |
+  | HC-2 | D | 18:37 |
+
+  - AO-2 D/E waits on the E re-smoke (started 18:40) and the partition-hash check.
+  - Errata 6-8: D/E use one shared unstratified F/C partition per suite.
+- **Artifacts**: release artifacts-2026-10-13a exists on the paper repo (wave a); verification and manifest are pending from repo-sync.
+- **Stalls**: none.
+
 _Last updated: 2026-10-13 15:50 UTC (coordinator periodic check)_
 
 ## Update 15:50 UTC

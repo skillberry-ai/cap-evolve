@@ -159,3 +159,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - v2 worktrees: wt-v2run (HC-2, a3f5eeb6d, writable, git clean) and wt-v2run-ao (AO-2, d68775bbd). Runners: capevolve-runner (A), tau-runner (D/E). Registry owner: stats-reviewer.
 - The E final window is armed to start on D exit (final-eval-eng). The v2 final window comes after the v2 searches, per amendment 11F.
 - Open user question: a 2x-budget v2 arm (not answered).
+
+## Update 18:50 UTC 10-13 (periodic check)
+- 12 V2 searches are running (see STATUS). AO-2 D/E is pending its smoke.
+- v1 final: A, C and D done; B and E running.
+- Unblinding of held-out scores waits for the user's call, or for the v2 freeze.
