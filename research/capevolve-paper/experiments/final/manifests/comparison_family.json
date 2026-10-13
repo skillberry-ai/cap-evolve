@@ -404,5 +404,100 @@
    ]
   ],
   "surface_lock_rule_9H": "a seed whose champion edits outside its cell's lock stays in its cell (ITT), gets a dagger, and every row involving that cell is recomputed excluding violating seeds (Holm denominator unchanged)"
+ },
+ "E": {
+  "E_comp_own_holm": [
+   [
+    "pt",
+    "ace"
+   ],
+   [
+    "pt",
+    "mipro"
+   ],
+   [
+    "pt",
+    "gepafull"
+   ],
+   [
+    "pt",
+    "ao"
+   ]
+  ],
+  "ao_dagger_9F": true,
+  "descriptive_only": [
+   "interaction pt - p - t + seed",
+   "E25 decomposition",
+   "selection-to-final shrinkage (non-inert seeds)",
+   "promotions per search",
+   "E26 gate ROC",
+   "exploratory cells"
+  ],
+  "harnesslens": "1 exploratory seed, outside Holm",
+  "no_equivalence_claim": true,
+  "primary_E_holm_m11": [
+   [
+    "p",
+    "pt"
+   ],
+   [
+    "t",
+    "pt"
+   ],
+   [
+    "p",
+    "t"
+   ],
+   [
+    "rulep",
+    "pt"
+   ],
+   [
+    "1s",
+    "pt"
+   ],
+   [
+    "pt",
+    "ctl"
+   ],
+   [
+    "p",
+    "gepa"
+   ],
+   [
+    "p",
+    "seed"
+   ],
+   [
+    "t",
+    "seed"
+   ],
+   [
+    "pt",
+    "seed"
+   ],
+   [
+    "nohist",
+    "pt"
+   ]
+  ],
+  "secondary_E_sec_holm_m4": [
+   [
+    "gepa",
+    "seed"
+   ],
+   [
+    "rulep",
+    "seed"
+   ],
+   [
+    "1s",
+    "seed"
+   ],
+   [
+    "ctl",
+    "seed"
+   ]
+  ]
  }
 }
