@@ -192,6 +192,12 @@ def main():
     _h = CS / "runs/V2/_tools/harden_rundirs.sh"
     if _h.exists():
         items.append(("v2_11E_A_harden_rundirs.sh", _h, "Suite A run-dir hardening (removes group/other permissions on .capevolve, logs, manifest, .sealed)", None))
+    for nm, fp in (("hc2", CS / "runs/V2/_sbx_bin/SWAP_TIME_hc2"), ("ao2", CS / "runs/V2/_sbx_bin_ao/SWAP_TIME_ao2")):
+        if fp.exists():
+            items.append(("v2_11E_shim_swap_time_" + nm, fp, "shim swap time (events.jsonl overlay isolation fix)", None))
+    for nm, fp in (("hc2_live", CS / "runs/V2/_sbx_bin/claude"), ("ao2_live", CS / "runs/V2/_sbx_bin_ao/claude")):
+        if fp.exists():
+            items.append(("v2_11E_shim_live_" + nm, fp, "live optimizer shim after the isolation fix", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
