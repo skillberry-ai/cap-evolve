@@ -150,3 +150,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - v1 final window running, owned by final-eval-eng (hourly status_report.py).
 - v2 is blocked on #826 (pooled spec fix). After the merge: pin the SHA, create a fresh worktree wt-v2run2, remove other-read on the ci/benchmarks/spreadsheetbench split files, register 11E with stats-reviewer, then the runners (capevolve-runner A, tau-runner D/E) smoke and launch.
 - The cap is 230M. caps.json has V2- in low_priority_tags and Azure mini reserve 9.
+
+## Update 12:50 UTC 10-13 (periodic check)
+- v2 launch is blocked on the P2 budget-fit rule (imp-gate, improve/p2_budget_fit.md), then an 11E registration. There is an open user question about a 2× budget arm.
+- The runners are holding the real launches. Plumbing smokes are running (capevolve-runner s97, tau-runner E small).

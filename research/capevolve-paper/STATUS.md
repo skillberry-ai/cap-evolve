@@ -1,5 +1,33 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 12:50 UTC (coordinator periodic check)_
+
+## Update 12:50 UTC
+- **Spend**: capped spend is 173.9M of the 230M cap; the v1 final window stops itself at 198M.
+- **v1 final window (12:26)**:
+
+  | Suite | Done | First-attempt infra rate |
+  |---|---|---|
+  | A | 1213 / 2520 | 0.1% |
+  | B | 1120 / 2520 | 2.0% |
+  | C | 450 / 1020 | 0.9% |
+  | D | 7884 / 13080 | 2.3% |
+
+  - No candidate errors.
+  - HarnessLens finished: 480/480 rollouts, 7 trace failures, all retried.
+  - V2 smokes slowed A (255 to 140 jobs/h), so the s98 witness smokes were stopped.
+- **Stalls**: none. Every final-eval output was written within 6 minutes.
+- **v2**:
+  - The code is main at 6131641e6 (v2.0, registered).
+  - Smokes confirmed the pooled split and the hidden C.
+  - The smokes also showed that the default P2 sizes fund ZERO rounds within v1's budgets (the seed baseline is 4×|F|).
+  - imp-gate is calibrating a budget-fit rule:
+    - K 4, smaller rungs, 1 survivor, fewer control and baseline trials, no in-search final estimate;
+    - 2 rounds per search;
+    - per-round power at +0.10 is only 7-22%; power at +0.15/+0.20/+0.25 is pending.
+  - Asked the user whether to add a 2× budget arm (non-matched).
+  - Plumbing smokes (s97 on A; small-knob smokes on E) are running: AO-2 propose works.
+
 _Last updated: 2026-10-13 09:50 UTC (coordinator periodic check)_
 
 ## Update 09:50 UTC
