@@ -104,8 +104,9 @@ loop (reap, promote, merge or rebase, rungs, propose, stop); the LLM only runs b
 (`ao_chunk`, default 20 rollouts) in a shared slot pool, with `promotion_rule: P2` going through the shared
 P2 evaluator. State is `graph.jsonl` plus `conductor.json`; a killed run resumes and `finalize` is
 idempotent. Stopping is structured only (rollouts, tokens, wall `deadline_utc`, `stop_at_reward`, plateau
-with a floor); prose in `stop_condition` is never parsed into a cap. Multi-objective specs are refused
-(exit 2). With K=1, rungs off and merge off it makes the same decisions as hill-climb. When PR-3 helper
+with a floor); prose in `stop_condition` is never parsed into a cap. A `cost` objective (minimize) adds cost per
+success: promote on reward with cost per success at most `eps` (default 0.10) worse, or on cost per
+success at least `eps` lower with reward non-inferior. Any other gating objective is refused (exit 2). With K=1, rungs off and merge off it makes the same decisions as hill-climb. When PR-3 helper
 checks are importable and `helpers.enabled`, each proposal gets `lint_candidate` and `run_smoke` before any
 rollout. Without the flag, nothing here runs and the loop below is unchanged.
 

@@ -106,6 +106,37 @@ def rank_survivors(scored: dict[str, float], slots: int) -> list[str]:
     return [t for t, _ in sorted(scored.items(), key=lambda kv: (-kv[1], kv[0]))[:max(slots, 0)]]
 
 
+# ---- second objective: cost per success (opt-in, a ``cost`` objective in the spec) ------------
+MARGIN = 0.03              # reward non-inferiority margin for a cost-only win
+
+
+def cost_per_success(cand_r, cand_c, ref_r, ref_c) -> dict:
+    """Paired cost per success (sum cost / sum reward, ``objectives.cost_per_success``) of the
+    candidate vs the reference, on the same cells the reward rule reads. ``*_c`` lists are aligned
+    with ``*_r``; a cell without a recorded cost is dropped, never read as free."""
+    from cap_evolve.objectives import TrialRec, cost_per_success as cps
+
+    def arm(r, c):
+        return [TrialRec(t, k, rr, cc) for t in sorted(r) for k, (rr, cc) in enumerate(zip(r[t], c.get(t) or []))
+                if cc is not None]
+    return cps(arm(ref_r, ref_c), arm(cand_r, cand_c))
+
+
+def mo_verdict(reward_pass: bool, r_mean: float, r_se: float, n: int, cps: dict, eps: float, z: float) -> tuple[bool, str]:
+    """Reward and cost per success, reward first. ``reward``: the reward rule passed and cost per
+    success is at most ``eps`` (relative) worse. ``cost``: reward is non-inferior on ``n >= 2`` paired
+    tasks (one-SE lower bound above ``-MARGIN``) and cost per success is at least ``eps`` lower with paired z <= ``-z``.
+    Else ``cost_regression`` (reward passed, cost grew) or ``no_gain``."""
+    rel, cz = float(cps.get("rel") or 0.0), float(cps.get("z") or 0.0)
+    if cps.get("n", 0) == 0:
+        return reward_pass, "reward_no_cost_data" if reward_pass else "no_gain"     # reward alone, flagged
+    if reward_pass:
+        return (True, "reward") if rel <= eps else (False, "cost_regression")
+    if n >= 2 and r_mean - r_se >= -MARGIN and rel <= -eps and cz <= -z:
+        return True, "cost"
+    return False, "no_gain"
+
+
 # ---- parents and merges -----------------------------------------------------------------------
 
 def pick_parent(slot: int, champion: str, tips: dict[str, float], rng: random.Random,

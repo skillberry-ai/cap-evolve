@@ -179,14 +179,15 @@ class RealBackend(P2Port, conductor.Backend):
             self._hash[key] = eval_index.cap_hash(d)
         return self._hash[key]
 
-    def _cells(self, tag, ids, window):
+    def _cells(self, tag, ids, window, field="reward"):
         h, fp, lo, hi = self.cap_hash(tag), eval_index.env_fp(), *window
         want = set(map(str, ids))
         out: dict[str, dict[int, float]] = {}
         for r in self._ledger():
             if (r["cap_hash"] == h and r["split"] == "val" and r["env_fp"] == fp and r["task"] in want
                     and lo <= int(r["trial_idx"]) < hi):
-                out.setdefault(r["task"], {})[int(r["trial_idx"])] = float(r["reward"])
+                v = r[field] if field == "reward" else r.get(field)
+                out.setdefault(r["task"], {})[int(r["trial_idx"])] = None if v is None else float(v)
         return out
 
     def missing(self, tag, ids, window):
@@ -196,6 +197,11 @@ class RealBackend(P2Port, conductor.Backend):
 
     def rewards(self, tag, ids, window):
         cells = self._cells(tag, ids, window if window is not None else (0, 10 ** 12))
+        return {t: [c[k] for k in sorted(c)] for t, c in cells.items()}
+
+    def costs(self, tag, ids, window):
+        """Per-cell agent cost (USD), aligned with ``rewards``; None where the row has none."""
+        cells = self._cells(tag, ids, window if window is not None else (0, 10 ** 12), "cost")
         return {t: [c[k] for k in sorted(c)] for t, c in cells.items()}
 
     def initial_champion(self):
@@ -269,6 +275,9 @@ class RealBackend(P2Port, conductor.Backend):
             dg, text = digest.fit(digest.build(self.run_dir, self.project, self.spec))
         except Exception:  # noqa: BLE001 - a digest failure must not stop a proposal
             dg, text = {}, ""
+        if self.cfg.cost_eps is not None:
+            text = ("Objectives: reward first, then cost per success (agent USD per unit reward); an edit that "
+                    "adds cost per success beyond " f"{self.cfg.cost_eps:.0%} is rejected even when reward rises.\n" + text)
         taken = {j.get("cluster") for j in conductor_jobs(self.root) if j.get("state") in ("queued", "running")}
         cluster = proposer.pick_cluster(dg, int(job.get("slot") or 0), taken)
         job["cluster"] = (cluster or {}).get("id")

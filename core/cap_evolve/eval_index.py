@@ -135,7 +135,7 @@ def record(run_dir, candidate_dir, split: str, tag: str, task_ids, ks, *, seed_b
                     continue
                 new.append({"cap_hash": h, "split": split, "task": tid, "trial_idx": seed_base + j,
                             "tag": tag, "k": k, "env_fp": fp, "window_id": 0, "reward": reward,
-                            "subset": subset, "cost": float(ro.get("cost_usd") or 0.0),
+                            "subset": subset, "cost": None if ro.get("cost_usd") is None else float(ro["cost_usd"]),
                             "tokens": int(ro.get("tokens") or 0), "ts": time.time()})
         if new:
             gone = {(r["tag"], r["split"], r["task"], r["k"]) for r in new}

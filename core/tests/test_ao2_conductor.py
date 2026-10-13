@@ -255,12 +255,13 @@ def test_supervisor_does_not_retry_a_refusal_and_gives_up_eventually():
 
 # multi-objective refusal -----------------------------------------------------------------------
 def test_multi_objective_spec_is_refused():
+    # reward + cost is supported (test_ao2_cost_objective.py); any OTHER gating objective is refused
     multi = {"objectives": [{"name": "reward", "direction": "max", "role": "gate"},
-                            {"name": "cost", "direction": "min", "role": "gate"}]}
+                            {"name": "latency", "direction": "min", "role": "gate"}]}
     with pytest.raises(conductor.Refused, match="single scalar objective"):
         conductor.Cfg.from_spec(multi)
     with pytest.raises(conductor.Refused):
-        conductor.Cfg.from_spec({"objectives": [{"name": "cost", "direction": "min", "role": "pareto"}]})
+        conductor.Cfg.from_spec({"objectives": [{"name": "num_messages", "direction": "min", "role": "pareto"}]})
     with pytest.raises(conductor.Refused):
         conductor.Cfg.from_spec({"pareto": True})
     # cost may be REPORTED: a display-role objective, or none at all, is a single-objective spec
