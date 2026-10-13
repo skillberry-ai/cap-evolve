@@ -189,6 +189,9 @@ def main():
     for nm, rel in (("hc2", "runs/V2/_sbx_bin/claude.new"), ("ao2", "runs/V2/_sbx_bin_ao/claude.new")):
         if (CS / rel).exists():
             items.append(("v2_11E_shim_events_overlay_candidate_" + nm, CS / rel, "optimizer shim candidate: /dev/null bound over run_main/events.jsonl (confirm-chunk events isolation fix)", None))
+    _h = CS / "runs/V2/_tools/harden_rundirs.sh"
+    if _h.exists():
+        items.append(("v2_11E_A_harden_rundirs.sh", _h, "Suite A run-dir hardening (removes group/other permissions on .capevolve, logs, manifest, .sealed)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
