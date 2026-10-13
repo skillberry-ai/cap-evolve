@@ -1,0 +1,621 @@
+{
+ "binding_run": "ctl/s0",
+ "bstar": null,
+ "bstar_if_cheap_bind": 200,
+ "bstar_raw": 50,
+ "cheap_arms": [
+  "ace",
+  "mipro",
+  "gepafull",
+  "ao"
+ ],
+ "crashed": [],
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "floored_to_200": true,
+ "generated_utc": "2026-10-13T15:28:13Z",
+ "incomplete_seeds": [],
+ "main_arms": [
+  "pt",
+  "rulep",
+  "p",
+  "t",
+  "ctl",
+  "1s",
+  "gepa",
+  "nohist"
+ ],
+ "min_counter_by_arm": {
+  "1s": 230,
+  "ctl": 50,
+  "gepa": 302,
+  "nohist": 240,
+  "p": 240,
+  "pt": 230,
+  "rulep": 320,
+  "t": 240
+ },
+ "min_main_counter": 50,
+ "natively_finished": {
+  "1s/s0": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "1s/s1": {
+   "count": 230,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "1s/s2": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "ctl/s0": {
+   "count": 50,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "ctl/s1": {
+   "count": 60,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "ctl/s2": {
+   "count": 60,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "gepa/s0": {
+   "count": 302,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "gepa/s1": {
+   "count": 309,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "gepa/s2": {
+   "count": 310,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "nohist/s0": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "nohist/s1": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "nohist/s2": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "p/s0": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "p/s1": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "p/s2": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "pt/s0": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "pt/s1": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "pt/s2": {
+   "count": 230,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "rulep/s0": {
+   "count": 320,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "rulep/s1": {
+   "count": 320,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "rulep/s2": {
+   "count": 400,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "t/s0": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "t/s1": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "t/s2": {
+   "count": 240,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  }
+ },
+ "note": "Suite D: searches are rollout-capped, the final state is compared; counters listed for disclosure only",
+ "rule": "floor_50(min counted rollouts over all main-tier seeds), floor 200",
+ "runs": [
+  {
+   "arm": "pt",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/PT/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "pt",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/PT/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "pt",
+   "counter": 230,
+   "counter_raw": 230,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/PT/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "rulep",
+   "counter": 320,
+   "counter_raw": 320,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E31/ruleP/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "rulep",
+   "counter": 320,
+   "counter_raw": 320,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E31/ruleP/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "rulep",
+   "counter": 400,
+   "counter_raw": 400,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E31/ruleP/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "p",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/P/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "p",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/P/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "p",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/P/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "t",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/T/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "t",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/T/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "t",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/T/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ctl",
+   "counter": 50,
+   "counter_raw": 50,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/CTL/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ctl",
+   "counter": 60,
+   "counter_raw": 60,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/CTL/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ctl",
+   "counter": 60,
+   "counter_raw": 60,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/CTL/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "1s",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E31/1S/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "1s",
+   "counter": 230,
+   "counter_raw": 230,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E31/1S/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "1s",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E31/1S/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 302,
+   "counter_raw": 302,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 309,
+   "counter_raw": 309,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/GEPA/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 310,
+   "counter_raw": 310,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "nohist",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E36/NOHIST/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "nohist",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E36/NOHIST/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "nohist",
+   "counter": 240,
+   "counter_raw": 240,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E36/NOHIST/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "main"
+  },
+  {
+   "arm": "ace",
+   "counter": 290,
+   "counter_raw": 290,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "ace",
+   "counter": 297,
+   "counter_raw": 297,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "ace",
+   "counter": 300,
+   "counter_raw": 300,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "mipro",
+   "counter": 215,
+   "counter_raw": 215,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "mipro",
+   "counter": 219,
+   "counter_raw": 219,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "mipro",
+   "counter": 213,
+   "counter_raw": 213,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "gepafull",
+   "counter": 304,
+   "counter_raw": 304,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "gepafull",
+   "counter": 303,
+   "counter_raw": 303,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "gepafull",
+   "counter": 309,
+   "counter_raw": 309,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "cheap"
+  },
+  {
+   "arm": "ao",
+   "counter": 30,
+   "counter_raw": 30,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "cheap"
+  },
+  {
+   "arm": "ao",
+   "counter": 300,
+   "counter_raw": 300,
+   "finalize_excluded": 0,
+   "native_evidence": "a process with this run dir on its command line is alive",
+   "native_status": "running_or_unknown",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "cheap"
+  },
+  {
+   "arm": "ao",
+   "counter": 30,
+   "counter_raw": 30,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "cheap"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10E/harnesslens/s0",
+   "seed": 0,
+   "source": "no_run_dir",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10E/harnesslens/s1",
+   "seed": 1,
+   "source": "no_run_dir",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10E/harnesslens/s2",
+   "seed": 2,
+   "source": "no_run_dir",
+   "tier": "exploratory"
+  }
+ ],
+ "suite": "E"
+}

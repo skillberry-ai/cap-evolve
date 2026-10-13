@@ -13,7 +13,7 @@ a = ap.parse_args()
 uid = os.getuid(); env = os.environ
 env.setdefault("XDG_RUNTIME_DIR", "/run/user/%d" % uid); env.setdefault("DOCKER_HOST", "unix://%s/podman/podman.sock" % env["XDG_RUNTIME_DIR"])
 env["SB_DRAIN_ERROR"] = os.environ.get("SB_DRAIN_ERROR", "1"); env["KERNEL_TIMEOUT_S"] = str(a.kernel_timeout_s); env["CLEANUP_TIMEOUT_MS"] = "5000"
-repo = Path(__file__).resolve().parents[4]
+repo = Path(os.environ.get("CHECK_REPO") or Path(__file__).resolve().parents[4])
 env["SPREADSHEETBENCH_HARNESS_DIR"] = a.harness_dir or str(repo / "third_party/spreadsheetbench"); env["SPREADSHEETBENCH_DATA_DIR"] = a.view
 sys.path[:0] = [str(repo / "templates/adapters"), str(repo / "core"), str(Path(a.adapter).parent)]
 spec = importlib.util.spec_from_file_location("sb_idle_check", a.adapter); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
