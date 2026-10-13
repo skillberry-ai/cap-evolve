@@ -1,12 +1,15 @@
 {
  "bstar": "final-state",
  "bstar_file": "manifests/bstar_E.json",
- "bstar_file_sha256": "bf1dd1d1e842b121997d0def29e87444155a85e448cbe3a11e5f1b15f7ac7e4c",
+ "bstar_file_sha256": "634510c7ce4c2f8bbb4c0463011b2daaba5a0a9eeaeeca4a53a51cc3a214a267",
  "cutoff_utc": "2026-10-13T06:00:00Z",
  "duplicate_groups": {
   "B:440bf0aae6d0": [
    "pt/s2",
-   "1s/s1"
+   "1s/s1",
+   "ao/s0",
+   "ao/s1",
+   "ao/s2"
   ]
  },
  "entries": [
@@ -1950,9 +1953,186 @@
    "suite": "E",
    "surface_violation": false,
    "tree_sha256": "9b3caedc110cd48f43d655f80ad299675a0d1de46ca0a212191b626c6e287aa5"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 30 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/E/artifacts/B/ao/s0",
+   "identical_to_own_seed": true,
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "8d97846d52a0bea51642fb253131ac7ec4146ced8a9a5fa0b1e4d6ff9737e2e2",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 2,
+   "n_promotions": 0,
+   "n_screened": 0,
+   "native_finish": {
+    "count": 30,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "faf38337a142fb778e866834e6298e9536d05cd378489ffd860e83268745f30b",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": 0.3,
+    "comparison_count": 30,
+    "n_tasks": null,
+    "own_count": 30,
+    "seed_n_tasks": 20,
+    "seed_score": 0.3,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "E",
+   "surface_violation": false,
+   "tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = state.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 310 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/E/artifacts/B/ao/s1",
+   "identical_to_own_seed": true,
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "8d97846d52a0bea51642fb253131ac7ec4146ced8a9a5fa0b1e4d6ff9737e2e2",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 1,
+   "n_promotions": 0,
+   "n_screened": 0,
+   "native_finish": {
+    "count": 310,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "faf38337a142fb778e866834e6298e9536d05cd378489ffd860e83268745f30b",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": 0.45,
+    "comparison_count": 310,
+    "n_tasks": null,
+    "own_count": 310,
+    "seed_n_tasks": 20,
+    "seed_score": 0.45,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "E",
+   "surface_violation": false,
+   "tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e"
+  },
+  {
+   "arm": "ao",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 30 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/E/artifacts/B/ao/s2",
+   "identical_to_own_seed": true,
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "8d97846d52a0bea51642fb253131ac7ec4146ced8a9a5fa0b1e4d6ff9737e2e2",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 2,
+   "n_promotions": 0,
+   "n_screened": 0,
+   "native_finish": {
+    "count": 30,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "faf38337a142fb778e866834e6298e9536d05cd378489ffd860e83268745f30b",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": 0.3,
+    "comparison_count": 30,
+    "n_tasks": null,
+    "own_count": 30,
+    "seed_n_tasks": 20,
+    "seed_score": 0.3,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "E",
+   "surface_violation": false,
+   "tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e"
   }
  ],
- "generated_utc": "2026-10-13T15:28:36Z",
+ "generated_utc": "2026-10-13T16:17:45Z",
  "inert_fraction_by_arm": {
   "B|1s": {
    "fraction": 0.333,
@@ -1964,6 +2144,12 @@
    "fraction": 0.0,
    "inert": 0,
    "label": "",
+   "seeds": 3
+  },
+  "B|ao": {
+   "fraction": 1.0,
+   "inert": 3,
+   "label": "both returned the seed",
    "seeds": 3
   },
   "B|ctl": {
@@ -2049,7 +2235,7 @@
   "trace2skill": "Trace2Skill campaign wrapper trace2skill/t2s_run.py:150-162: seed and every evolved variant (error, combined) are scored ONCE on val; best = seed,\n    then `for v: if s > sel[best]: best = v` (strict, seed wins ties).  Selection happens once, after ALL variant evaluations.  A variant counts only if\n    all val evaluations finished inside the limit (decisions.md: 'its selected variant if completed by B* else seed').  Completion index = position of\n    the last val row in rollouts_metrics.jsonl (file order == counted order).",
   "wikiskill": "WikiSkill (Stahl-G/wikiskill@da6984c) src/wikiskill/officeqa/loop.py:94-96 eq4_accepted (a candidate is accepted iff it STRICTLY beats the\n    incumbent r_best, tie = reject) and engine.py:64-80/269-272 (state replays the gate events; the last accepted skill is the deployed one).\n    Replayed from the `evaluated` val events in order, S0 = incumbent."
  },
- "script_commit": "71f8e5ad16971d8e55385ff69cb23ad48cba9e73",
+ "script_commit": "362035bc26ae3a4462573c7ed51a9f8e3c710dcf",
  "seed_artifact": {
   "distinct_seed_hashes": {
    "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e": 24
@@ -2144,6 +2330,7 @@
  "status_counts": {
   "B:1s:ok": 3,
   "B:ace:ok": 3,
+  "B:ao:ok": 3,
   "B:ctl:ok": 3,
   "B:gepa:ok": 3,
   "B:gepafull:ok": 3,

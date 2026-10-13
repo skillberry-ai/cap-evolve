@@ -1,6 +1,6 @@
 {
  "cap": 4000000,
- "generated_utc": "2026-10-13T15:29:36Z",
+ "generated_utc": "2026-10-13T16:18:36Z",
  "limit": null,
  "rows": [
   {
@@ -624,13 +624,13 @@
    "artifact_time_source": null,
    "cap_crossed_at_epoch": null,
    "end_of_run_over_cap": false,
-   "n_optimizer_calls": 68,
+   "n_optimizer_calls": 70,
    "restart_cutoff_epoch": null,
    "seed": 1,
    "status": "ok",
    "suite": "E",
-   "tokens_end_of_run": 982994,
-   "tokens_end_of_run_gross": 982994,
+   "tokens_end_of_run": 1137921,
+   "tokens_end_of_run_gross": 1137921,
    "tokens_up_to_artifact": null
   },
   {
