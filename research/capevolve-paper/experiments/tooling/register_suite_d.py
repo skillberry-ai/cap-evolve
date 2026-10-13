@@ -102,7 +102,17 @@ def main():
                              (f"A_ao2_s{k}_instructions", base / "project/optimizer/INSTRUCTIONS.md", f"AO-2 Suite A seed {k} optimizer instructions")]
         for sd in sorted((V2 / f"A/ao2/s{k}.sealed").glob("run_*/splits_full.json")):
             A_ao2_seed_files.append((f"A_ao2_s{k}_splits_full_sealed", sd, f"AO-2 Suite A seed {k} sealed full pool partition F/C (hash only; content not read)"))
-    V2_FILES += A_hc2_seed_files + A_ao2_seed_files
+    E_hc2_seed_files = []
+    for k in (0, 1, 2):
+        base = V2 / f"E/hc2/s{k}"
+        E_hc2_seed_files += [(f"E_hc2_s{k}_build_record", base / "BUILD_RECORD.json", f"HC-2 Suite E seed {k} build record (spec/adapter/shim/splits hashes at launch)"),
+                             (f"E_hc2_s{k}_spec", base / ".capevolve/project/capevolve.yaml", f"HC-2 Suite E seed {k} run spec"),
+                             (f"E_hc2_s{k}_split_ids", base / ".capevolve/project/split_ids.json", f"HC-2 Suite E seed {k} proposer-visible split ids"),
+                             (f"E_hc2_s{k}_driver", base / "driver.sh", f"HC-2 Suite E seed {k} driver"),
+                             (f"E_hc2_s{k}_env", base / "env.sh", f"HC-2 Suite E seed {k} env")]
+        for sd in sorted((V2 / f"E/hc2/s{k}.sealed").glob("run_*/splits_full.json")):
+            E_hc2_seed_files.append((f"E_hc2_s{k}_splits_full_sealed", sd, f"HC-2 Suite E seed {k} sealed full pool partition F/C (hash only; content not read)"))
+    V2_FILES += A_hc2_seed_files + A_ao2_seed_files + E_hc2_seed_files
     _unused_marker = None
     for it, fp, note in V2_FILES:
         if fp.exists():
