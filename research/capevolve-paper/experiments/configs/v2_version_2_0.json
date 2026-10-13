@@ -4,7 +4,7 @@
  "status": "FROZEN before any v2 run (amendment 11E first version line)",
  "code": {
   "repo": "skillberry-ai/cap-evolve main",
-  "commit": "6131641e672e2bb18af7ffa089bd7a709f1f5390",
+  "commit": "a3f5eeb6d54d9782c9fb3985ca1d63560f6cc4bb",
   "includes_prs": [
    814,
    817,
@@ -16,7 +16,10 @@
    825,
    816,
    824,
-   826
+   826,
+   832,
+   833,
+   834
   ],
   "worktree": "/home/dev/projects2/wt-v2run (core/ and skills/ read-only)",
   "superseded_commit": {
@@ -24,7 +27,14 @@
    "reason": "smoke tests found a main bug: the pooled split never triggered because the baseline phase read the spec before run_config was logged; fix #826 merged; no v2 search ran on the superseded commit (smokes only, discarded)",
    "superseded_utc": "2026-10-13 09:53 UTC"
   },
-  "note": "main at 6131641e6 = 6b94ccba0 plus #826; full suite 2753 passed, 1 failure that also fails on main; wt-v2run rebuilt at this SHA, core/ and skills/ read-only, o-r on 5 SpreadsheetBench split_ids/split_source files"
+  "note": "main a3f5eeb6d = 6131641e6 + #832 (hc2_final_estimate_trials, 0 disables), #833 (ao_final_estimate_trials, 0 disables, capped to remaining budget), #834 (spec key finalize:false; helper_surface ignores files byte-identical to the seed). Integration full suite 2773 passed, 1 failure that also fails on main; final run on this SHA in progress.",
+  "superseded_commits": [
+   {
+    "commit": "6131641e672e2bb18af7ffa089bd7a709f1f5390",
+    "reason": "default P2 sizes fund zero rounds within v1's budgets (smokes); budget-fit knobs and PRs #832-#834 added; no v2 search ran, smokes discarded",
+    "superseded_utc": "2026-10-13 13:14 UTC"
+   }
+  ]
  },
  "P2_defaults": {
   "p2_z_conf": 1.7,
@@ -45,5 +55,84 @@
   "ao_max_tokens": 1500000,
   "ao_max_idle_proposals": 6
  },
- "pending_lines": "launcher, shim, adapter, splits and spec hashes from capevolve-runner (A) and tau-runner (D, E) after smoke tests, appended as further 11E lines before each real launch"
+ "pending_lines": "launcher, shim, adapter, splits and spec hashes from capevolve-runner (A) and tau-runner (D, E) after smoke tests, appended as further 11E lines before each real launch",
+ "P2_budget_fit": {
+  "source": "improve/p2_budget_fit.md (imp-gate, null-pool simulator, per-task heterogeneity SD 0, 0.1, 0.2)",
+  "rule": "K 4, 1 survivor, kill-only rungs, in-search final estimate dropped, acceptance = paired confirmation on C at one-sided alpha 0.12 (t_crit about 1.19-1.23) with mean >= 0.02",
+  "per_suite": {
+   "A": {
+    "max_metric_calls": 600,
+    "p2_k": 4,
+    "p2_k_small": 4,
+    "p2_max_survivors": 1,
+    "p2_rung_sizes": [
+     8,
+     24
+    ],
+    "p2_incumbent_trials": 2,
+    "p2_conf_n": "116 (2x58)",
+    "p2_ctrl_m": 1,
+    "p2_z_conf": 1.187,
+    "p2_dmin": 0.02
+   },
+   "D": {
+    "max_metric_calls": 550,
+    "p2_k": 4,
+    "p2_k_small": 4,
+    "p2_max_survivors": 1,
+    "p2_rung_sizes": [
+     8,
+     24
+    ],
+    "p2_incumbent_trials": 3,
+    "p2_conf_n": "72 (2x36)",
+    "p2_ctrl_m": 2,
+    "p2_z_conf": 1.195,
+    "p2_dmin": 0.02
+   },
+   "E": {
+    "max_metric_calls": 300,
+    "p2_k": 4,
+    "p2_k_small": 4,
+    "p2_max_survivors": 1,
+    "p2_rung_sizes": [
+     8,
+     16
+    ],
+    "p2_incumbent_trials": 2,
+    "p2_conf_n": "42 (3x14)",
+    "p2_ctrl_m": 3,
+    "p2_z_conf": 1.231,
+    "p2_dmin": 0.02
+   }
+  },
+  "both_arms_all_suites": {
+   "finalize": false,
+   "hc2_final_estimate_trials": 0,
+   "ao_final_estimate_trials": 0,
+   "ao_k_prop": 4
+  },
+  "approximation_statement": "the code's confirmation statistic uses the heterogeneity-aware SE (max of the model SE and the spread of per-task deltas) and is applied as z >= p2_z_conf; this approximates the simulated cluster-robust t",
+  "supersedes": "P2_defaults (p2_z_conf 1.7, p2_gs_c 1.6) and the Suite E scaling rule (k_small 4, rungs [8,24]) of the earlier v2.0 entry"
+ },
+ "planned_power_two_rounds": {
+  "+0.10": {
+   "A": "0.36-0.50",
+   "D": "0.38-0.54",
+   "E": "0.25-0.38"
+  },
+  "+0.20": {
+   "A": "0.84-0.92",
+   "D": "0.86-0.94",
+   "E": "0.69-0.86"
+  }
+ },
+ "caveats": [
+  "a null result at these budgets is uninformative",
+  "round FWER <= 0.10; per-search FWER is higher across rounds"
+ ],
+ "outside_search_algorithm": [
+  "v2 tau adapters (copied from v1) add a reference/ read-only guard; hashes from tau-runner",
+  "admit_v2 uses a 30 s V2-only queue rule"
+ ]
 }
