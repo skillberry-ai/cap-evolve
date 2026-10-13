@@ -408,6 +408,22 @@ def sandbox_diag(ad):
     return d
 
 
+_HL_SPAWN = {"lock": threading.Lock(), "last": 0.0}
+HL_SPAWN_GAP_S = float(os.environ.get("HL_SPAWN_GAP_S", "6"))
+
+
+def _hl_stagger(job):
+    """HarnessLens trials build a tree, a sandbox and an OpenCode process each; 24 starts in the same second all failed with 'retained rollout has no complete OpenCode trace'
+    (2026-10-13 launch 1, worker-start burst), while 8 staggered/parallel trials were fine.  Spawns of HL workers are spaced by HL_SPAWN_GAP_S seconds."""
+    if not job.get("hl"):
+        return
+    with _HL_SPAWN["lock"]:
+        wait = _HL_SPAWN["last"] + HL_SPAWN_GAP_S - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        _HL_SPAWN["last"] = time.time()
+
+
 def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
     jid = job["job_id"]
     h = hashlib.sha256(jid.encode()).hexdigest()[:16]
@@ -453,6 +469,7 @@ def run_attempt(job, attempt, store_root, cm, py, hang_s=HANG_S):
             except FileNotFoundError:
                 pass
         (ad / "job.json").write_text(json.dumps(spec))
+        _hl_stagger(job)
         t_spawn = time.time()
         out = open(ad / "worker.log", "ab")
         proc = subprocess.Popen([str(py), "-I", str(HERE / "run_final.py"), "worker", "--job", str(ad / "job.json")],
