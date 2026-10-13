@@ -1,5 +1,16 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 06:50 UTC (coordinator periodic check)_
+
+## Update 06:50 UTC (search cutoff in progress)
+- **Cutoff 06:00**: final-eval-eng is leading it.
+  - Stops: B ao s2 (06:00:11), A ace s1 and mipro s0/s1 (06:03:06), and C gepa s0-s2 (06:03:21, about 3 min late; rollouts after 06:00 must be excluded from the counted search).
+  - Counters are snapshotted with sha256 (campaign-scratch/cutoff_20261013/), and the stops are in experiments/final/manifests/cutoff_stops.json.
+  - Next: N* per suite, B* reconstruction, freeze into registry.jsonl, then the final-eval launch.
+- **170M rung**: applied at 04:22 (E12B hcstock s0/s2 stopped, champion cand_0003). Capped spend is 171.1M of 200M; the 18M final reserve remains.
+- **Suite E** continues on its own schedule; hl s0 is held.
+- **v2 PRs**: #817, #815 and #818 are open; #816 is in fix. The user decision on v2 rerun headroom is still open.
+
 _Last updated: 2026-10-13 03:50 UTC (coordinator periodic check)_
 
 ## Update 03:50 UTC

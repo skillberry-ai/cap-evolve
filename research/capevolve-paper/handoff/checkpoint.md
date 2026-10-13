@@ -141,3 +141,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - Capped spend is 169.0M. The 170M rung is armed (tau-runner stops E12B hcstock). Suite E hl s0 is held.
 - v2 PRs: #815, #817 and #818 are open, with #816 being fixed. The user still has to decide the cap for the v2 reruns.
 - 06:00 cutoff steps per cron b76737e4.
+
+## Update 06:50 UTC 10-13 (cutoff in progress)
+- final-eval-eng leads the cutoff: stops are done, and the snapshot is at campaign-scratch/cutoff_20261013. Pending: N*, reconstruct, freeze registry, final launch.
+- C gepa s0-s2 were stopped about 3 min late, so their counted search must use the 06:00 counter.
