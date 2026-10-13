@@ -1,5 +1,5 @@
 {
- "_generated_utc": "2026-10-13T04:36:09Z",
+ "_generated_utc": "2026-10-13T05:37:55Z",
  "_note": "values not found in manifests/specs/deviations/launch scripts are 'not recorded'; nothing is guessed",
  "runs": {
   "A/ace/s0": {
@@ -304,7 +304,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 375
+    "rollout_counter": 402
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5524,7 +5524,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 434
+    "rollout_counter": 458
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5586,7 +5586,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 499
+    "rollout_counter": 514
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5648,7 +5648,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 497
+    "rollout_counter": 520
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -9525,7 +9525,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 760
+    "rollout_counter": 907
    },
    "concurrency": {
     "manifest.json": 6
@@ -9593,11 +9593,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 16293683,
-    "state_metric_calls": 760,
+    "state_optimizer_tokens": 16673358,
+    "state_metric_calls": 907,
     "state_iterations": 0,
-    "state_optimizer_usd": 11.5331611,
-    "state_runner_tokens": 69478442,
+    "state_optimizer_usd": 12.550177099999999,
+    "state_runner_tokens": 81633165,
     "state_best_val": 0.6122448979591837,
     "cost_summary_optimizer_noncache": 636710
    }
@@ -12811,7 +12811,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 441
+    "rollout_counter": 491
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -12843,10 +12843,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 4855922,
-    "state_metric_calls": 441,
+    "state_metric_calls": 491,
     "state_iterations": 8,
     "state_optimizer_usd": 2.1235301,
-    "state_runner_tokens": 43036652,
+    "state_runner_tokens": 46734016,
     "state_best_val": 0.6595744680851063
    }
   },
@@ -13046,7 +13046,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 490
+    "rollout_counter": 540
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -13078,10 +13078,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 5123443,
-    "state_metric_calls": 490,
+    "state_metric_calls": 540,
     "state_iterations": 9,
     "state_optimizer_usd": 2.97451,
-    "state_runner_tokens": 41238352,
+    "state_runner_tokens": 44846146,
     "state_best_val": 0.6530612244897959
    }
   },
@@ -14410,7 +14410,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 432
+    "rollout_counter": 470
    },
    "concurrency": {
     "manifest.json": 6
@@ -14672,7 +14672,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 328
+    "rollout_counter": 372
    },
    "concurrency": {
     "manifest.json": 6
@@ -14934,7 +14934,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 431
+    "rollout_counter": 455
    },
    "concurrency": {
     "manifest.json": 6
@@ -15377,9 +15377,7 @@
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1 && source env.sh\nEXTRA=\"\"; [ \"hc\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10C/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1 hc 1 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10C-hc-s1:hc\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "2063176 Sun Oct 11 18:20:43 2026 bash /home/dev/projects2/campaign-scratch/runs/E10C/hc/s1/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -15394,7 +15392,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 590
+    "rollout_counter": 600
    },
    "concurrency": {
     "manifest.json": 6
@@ -15464,11 +15462,12 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 4761727,
-    "state_metric_calls": 590,
+    "state_metric_calls": 600,
     "state_iterations": 10,
     "state_optimizer_usd": 2.2270012999999995,
-    "state_runner_tokens": 47112219,
-    "state_best_val": 0.6842105263157895
+    "state_runner_tokens": 47630912,
+    "state_best_val": 0.6842105263157895,
+    "cost_summary_optimizer_noncache": 589979
    }
   },
   "C/hc/s2": {
