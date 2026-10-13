@@ -88,6 +88,9 @@ def main():
     for it, fp, note in V2_FILES:
         if fp.exists():
             items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suite A): " + note, None))
+    _ao = json.loads((PAPER / "experiments/configs/v2_version_2_0.json").read_text()).get("per_arm_code_pins", {}).get("AO-2", {}).get("commit")
+    if _ao:
+        items.append(("v2_0_code_commit_AO2", None, "AO-2 arm code pin (a3f5eeb6d + #836 + #835): " + _ao, hashlib.sha256(_ao.encode()).hexdigest()))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():

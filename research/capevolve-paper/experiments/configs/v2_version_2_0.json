@@ -158,5 +158,21 @@
   }
  ],
  "withdrawn_utc": "2026-10-13 13:34 UTC",
- "withdrawn_note": "no run used either file; wt-v2run is owner-writable again at a3f5eeb6d with git status clean; the registry lines stay in the chain as withdrawn"
+ "withdrawn_note": "no run used either file; wt-v2run is owner-writable again at a3f5eeb6d with git status clean; the registry lines stay in the chain as withdrawn",
+ "per_arm_code_pins": {
+  "HC-2": {
+   "commit": "a3f5eeb6d54d9782c9fb3985ca1d63560f6cc4bb",
+   "worktree": "/home/dev/projects2/wt-v2run"
+  },
+  "AO-2": {
+   "commit": "d68775bbde8974a26e25c54245896f1fcfe1ae6e",
+   "worktree": "/home/dev/projects2/wt-v2run-ao",
+   "base": "a3f5eeb6d + #836 (proposer and merge jobs get the parent's traces and guidance) + #835 (token basis non-cache-read, refused proposals log their reason, retries carry it, harvest ignores the operator's own session, proposer context uses the gate's split)",
+   "tests": "merged head full suite 2783 passed, 1 failure that also fails on main",
+   "diff_scope": "a3f5eeb6d..d68775bbd touches only AO-2 conductor, proposer, backend, their tests and core/cap_evolve/optimizer_cost.py (new behaviour applies only to runs with conductor.json); verified from git diff --stat",
+   "reason": "airline smokes: the conductor counted cache-read tokens toward ao_max_tokens (1.5M soft cap allowed about 13 jobs) and dropped refusal reasons; no AO-2 search has run",
+   "registered_utc": "2026-10-13 14:29 UTC",
+   "pending": "AO-2 spec and launcher hashes after the re-smoke"
+  }
+ }
 }
