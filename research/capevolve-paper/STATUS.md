@@ -1,5 +1,32 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 15:50 UTC (coordinator periodic check)_
+
+## Update 15:50 UTC
+- **Spend**: capped spend is 176.3M of 230M; the v1 final window stops itself at 198M.
+- **v1 final window (15:26)**:
+
+  | Suite | Done | ETA |
+  |---|---|---|
+  | A | 2086 / 2520 | ~1.5 h |
+  | B | 1612 / 2520 | ~5.9 h (long pole) |
+  | C | 890 / 1020 | ~1 h |
+  | D | 11262 / 13080 | ~1.7 h |
+
+  - Per-arm infra above 5% on the first attempt: B oneshot (infra_final 5.9%), D t (2.8%) and D ctl (1.1%). Ruled: no rule change; the tools-surface edits plausibly induce them; reported per arm with sensitivities.
+- **Suite E final**: frozen (5a1edeac3), 5,100 jobs. It launches when D ends (~17:00). The ao block is late-registered when E32-ao s1 ends. No HL on E.
+- **Stalls**: none. All final-eval outputs were written within 11 minutes.
+- **v2**: no search launched yet; smokes only.
+  - Smoke-found defects, all fixed and merged:
+    - pooled split (#826);
+    - budget-fit P2 rule (#832-#834);
+    - AO-2 token basis, refusal detail and operator-session billing (#835, after #836);
+    - read-only worktree crash (reverted);
+    - helper_surface config.
+  - Pins: HC-2 a3f5eeb6d, AO-2 d68775bbd (registered 54df3caab).
+  - HC-2 launches after its smokes pass (E first in waves of 3, A next, D after the v1 D window). AO-2 follows its re-smoke.
+- **Artifacts**: repo-sync finished the secret scan; the 12 hard hits are all third-party fixtures or binaries (nothing to rotate). The upload is in progress.
+
 _Last updated: 2026-10-13 12:50 UTC (coordinator periodic check)_
 
 ## Update 12:50 UTC

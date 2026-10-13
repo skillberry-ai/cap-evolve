@@ -154,3 +154,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Update 12:50 UTC 10-13 (periodic check)
 - v2 launch is blocked on the P2 budget-fit rule (imp-gate, improve/p2_budget_fit.md), then an 11E registration. There is an open user question about a 2× budget arm.
 - The runners are holding the real launches. Plumbing smokes are running (capevolve-runner s97, tau-runner E small).
+
+## Update 15:50 UTC 10-13 (periodic check)
+- v2 worktrees: wt-v2run (HC-2, a3f5eeb6d, writable, git clean) and wt-v2run-ao (AO-2, d68775bbd). Runners: capevolve-runner (A), tau-runner (D/E). Registry owner: stats-reviewer.
+- The E final window is armed to start on D exit (final-eval-eng). The v2 final window comes after the v2 searches, per amendment 11F.
+- Open user question: a 2x-budget v2 arm (not answered).
