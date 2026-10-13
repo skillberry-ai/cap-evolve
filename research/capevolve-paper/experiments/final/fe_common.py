@@ -257,13 +257,13 @@ def _live(rd):
             try:
                 cl = open("/proc/%s/cmdline" % d, "rb").read().replace(b"\0", b" ")
                 # post-run scoring (chaser / post_sel) and shell wrappers are not the search
-                if key in cl and not any(x in cl for x in (b"eval_cap.py", b"post_score", b"post_sel", b"/bin/bash -c", b"grep", b"check_sandbox")):
+                if key in cl and not any(x in cl for x in (b"eval_cap.py", b"post_score", b"post_sel", b"/bin/bash -c", b"grep", b"check_sandbox", b"eval_daemon.py", b"make_candidates.py")):
                     return True
             except Exception:
                 pass
             try:       # controllers that carry no run dir on their command line (HarnessLens): the process cwd must lie UNDER this run dir (not just share a run id with another arm)
                 cwd = os.readlink("/proc/%s/cwd" % d)
-                if cwd == str(rd) or cwd.startswith(str(rd) + "/"):
+                if (cwd == str(rd) or cwd.startswith(str(rd) + "/")) and not any(x in cl for x in (b"eval_daemon.py", b"make_candidates.py", b"eval_cap.py", b"post_score", b"post_sel", b"/bin/bash -c", b"grep", b"check_sandbox")):
                     return True
             except Exception:
                 pass
@@ -343,6 +343,8 @@ def native_status(rd):
                 m = _re.match(pat, line.strip())
                 if m:
                     rc = int(m.group(1))
+                    if rc != 0 and name == "run.log" and re.search(r"hard rollout cap \d+ would be exceeded", "\n".join(tail)):
+                        return "budget_cap", "run.log: exit %d from the evaluator's hard rollout cap (tau_lib CountedEvaluator)" % rc
                     if rc != 0 and name == "launcher.log" and re.search(r"RolloutCap|hard cap of \d+ target rollouts", "\n".join(tail)):
                         # baseline-eng: exit 1 = sb_eval_lib.RolloutCap, the search used its whole hard cap (600 counted rollouts): a budget termination, not a crash
                         return "budget_cap", "launcher.log: exit %d from RolloutCap (search budget fully used)" % rc
@@ -358,7 +360,12 @@ def native_status(rd):
             tail = full[-300:]
         except Exception:
             full, tail = "", ""
-        if tail.rstrip().endswith("hc-exited") and ("max_metric_calls reached" in full or "budget_exhausted" in full):
+        pid_alive = False
+        try:
+            pid_alive = any(os.path.exists("/proc/%s" % x) for x in (rd / "logs" / "hc.pid").read_text().split())
+        except Exception:
+            pid_alive = False
+        if (tail.rstrip().endswith("hc-exited") or not pid_alive) and ("max_metric_calls reached" in full or "budget_exhausted" in full) and not pid_alive:
             return "budget_cap", "logs/hc.out: budget exhausted (max_metric_calls reached) followed by hc-exited, no live process"
     ho = rd / "logs" / "host.out"      # Suite A agent-optimize: the host appends `host-exited` on every exit; it counts as the agent's OWN end only if the agent produced its final report first
     if ho.exists() and not _live(rd):
