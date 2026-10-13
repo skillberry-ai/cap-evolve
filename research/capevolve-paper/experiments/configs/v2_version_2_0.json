@@ -1,0 +1,42 @@
+{
+ "version": "v2.0",
+ "written_utc": "2026-10-13 09:24 UTC",
+ "status": "FROZEN before any v2 run (amendment 11E first version line)",
+ "code": {
+  "repo": "skillberry-ai/cap-evolve main",
+  "commit": "6b94ccba05ff7453bcc50f9411cbc2223c794a4d",
+  "includes_prs": [
+   814,
+   817,
+   822,
+   823,
+   815,
+   821,
+   818,
+   825,
+   816,
+   824
+  ],
+  "worktree": "/home/dev/projects2/wt-v2run (core/ and skills/ read-only)"
+ },
+ "P2_defaults": {
+  "p2_z_conf": 1.7,
+  "p2_gs_c": 1.6
+ },
+ "suite_E_scaling_rule": {
+  "use_only_if": "plan_round cannot fund a round at the defaults",
+  "k_small": 4,
+  "rungs": [
+   8,
+   24
+  ],
+  "confirm": "4 x |C| per side"
+ },
+ "AO-2": {
+  "ao_slots": 4,
+  "ao_k_prop": 3,
+  "ao_max_tokens": 1500000,
+  "ao_max_idle_proposals": 6
+ },
+ "pending_lines": "launcher, shim, adapter, splits and spec hashes from capevolve-runner (A) and tau-runner (D, E) after smoke tests, appended as further 11E lines before each real launch"
+}
