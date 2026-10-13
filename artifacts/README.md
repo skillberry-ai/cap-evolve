@@ -17,6 +17,7 @@ one directory per candidate. v4's packages are larger: a shared 8-file multi-age
 | [`v4/seed/`](v4/seed/) | the shared 8-file seed bundle both v4 arms hill-climb from — byte-identical between arms, not duplicated per arm |
 | [`v4/v4_t_e1/`](v4/v4_t_e1/) | the T arm: 21 task-by-task optimizer runs (of 34 tasks total) — `v4/v4_t_e1/<task>/best/` (or `NOTE.md`), `v4/v4_t_e1/<task>/rejected/`, plus `t4-merge/` |
 | [`v4/v4_g_e1/`](v4/v4_g_e1/) | the G arm: one shared-bundle run across all 34 tasks at once — `v4/v4_g_e1/best/` (the accepted candidate) and `v4/v4_g_e1/rejected/cand_*/` |
+| [`v5/seed/`](v5/seed/) | the original parsec skill v5's baseline arm evaluated on all 136 tasks — verified byte-identical to parsec commit `28e2c40` and to `v4/seed/`. No `best/`: nothing in that arm was optimized. See [`v5/README.md`](v5/README.md) for why the byte verification matters. |
 
 `v1/seed/SKILL.md` and `v1/best/SKILL.md` are **byte-identical** (`diff` reports no
 difference). v1's headline run never accepted a candidate — `best_id == "seed"` in
