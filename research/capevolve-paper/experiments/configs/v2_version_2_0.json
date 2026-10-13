@@ -4,7 +4,7 @@
  "status": "FROZEN before any v2 run (amendment 11E first version line)",
  "code": {
   "repo": "skillberry-ai/cap-evolve main",
-  "commit": "6b94ccba05ff7453bcc50f9411cbc2223c794a4d",
+  "commit": "6131641e672e2bb18af7ffa089bd7a709f1f5390",
   "includes_prs": [
    814,
    817,
@@ -15,9 +15,16 @@
    818,
    825,
    816,
-   824
+   824,
+   826
   ],
-  "worktree": "/home/dev/projects2/wt-v2run (core/ and skills/ read-only)"
+  "worktree": "/home/dev/projects2/wt-v2run (core/ and skills/ read-only)",
+  "superseded_commit": {
+   "commit": "6b94ccba05ff7453bcc50f9411cbc2223c794a4d",
+   "reason": "smoke tests found a main bug: the pooled split never triggered because the baseline phase read the spec before run_config was logged; fix #826 merged; no v2 search ran on the superseded commit (smokes only, discarded)",
+   "superseded_utc": "2026-10-13 09:53 UTC"
+  },
+  "note": "main at 6131641e6 = 6b94ccba0 plus #826; full suite 2753 passed, 1 failure that also fails on main; wt-v2run rebuilt at this SHA, core/ and skills/ read-only, o-r on 5 SpreadsheetBench split_ids/split_source files"
  },
  "P2_defaults": {
   "p2_z_conf": 1.7,

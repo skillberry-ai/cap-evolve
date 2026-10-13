@@ -61,7 +61,7 @@ def main():
     for f in ("launch_airE.sh", "ace_tau_air.py", "mipro_tau_air.py"):
         if (TAU_AIRE / f).exists():
             items.append(("suite_E32_" + f, TAU_AIRE / f, "Suite E competitor launch/script (W4), registered before launch", None))
-    _v2 = "6b94ccba05ff7453bcc50f9411cbc2223c794a4d"
+    _v2 = json.loads((PAPER / "experiments/configs/v2_version_2_0.json").read_text())["code"]["commit"]
     items.append(("v2_0_code_commit", None, "skillberry-ai/cap-evolve main commit of CapEvolve v2.0: " + _v2, hashlib.sha256(_v2.encode()).hexdigest()))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
