@@ -44,13 +44,41 @@ for S in a.suites.split(","):
             tot[k] += x
     out[S] = {"totals": dict(tot), "first_attempt_infra_rate": round(tot["first_infra"] / tot["started"], 4) if tot["started"] else None,
               "arms": arms, "canary_last": can}
+def idle_gap_proxy(hours=1.0):
+    """Suite A idle-kernel exposure proxy: the longest non-first-turn Gemma call (queue+latency) of the FINAL-A tags in the last `hours` h; an inter-exec gap is this plus the exec time (<= 180 s).
+    The idle-kernel defect needs a gap near/above ~600 s (check_kernel_idle: 700 s fails), so > 300 s here is an alert."""
+    import time, datetime as dt
+    cut = time.time() - hours * 3600
+    mx, n, over = 0.0, 0, 0
+    path = C.SCRATCH / "logs" / "gateway_calls.jsonl"
+    with open(path, "rb") as f:
+        f.seek(0, 2); size = f.tell(); f.seek(max(0, size - 80_000_000)); f.readline()
+        for line in f:
+            if b'"tag": "tag:FINAL-A' not in line:
+                continue
+            try:
+                d = json.loads(line)
+                t = dt.datetime.strptime(d["t"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc).timestamp()
+            except Exception:
+                continue
+            if t < cut or not d["tag"].endswith(":target") or ((d.get("usage") or {}).get("prompt_tokens") or 0) < 2000:
+                continue
+            du = (d.get("queue_s") or 0) + (d.get("latency_s") or 0)
+            n += 1; mx = max(mx, du); over += du > 300
+    return {"calls": n, "max_call_s": round(mx, 1), "over_300s": over}
+
+
+try:
+    out["suiteA_idle_gap_proxy_last_hour"] = idle_gap_proxy()
+except Exception:
+    out["suiteA_idle_gap_proxy_last_hour"] = None
 try:
     h = json.loads(urllib.request.urlopen("http://127.0.0.1:4111/health", timeout=5).read()); out["capped_tokens"] = h.get("capped_tokens")
 except Exception:
     out["capped_tokens"] = None
 if a.json:
     print(json.dumps(out, indent=1)); sys.exit(0)
-print("capped tokens:", out["capped_tokens"])
+print("capped tokens:", out["capped_tokens"], "| Suite A idle-gap proxy (last hour):", out["suiteA_idle_gap_proxy_last_hour"])
 for S in a.suites.split(","):
     o = out[S]; t = o["totals"]
     print("== Suite %s: done %d / %d jobs, missing %d, started %d, attempts %d, first-attempt infra rate %s (infra attempts %d), HL trace failures %d" %
