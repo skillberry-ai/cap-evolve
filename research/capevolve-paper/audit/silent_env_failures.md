@@ -162,3 +162,15 @@ Overall 601 of 13,324 non-seed rollouts (4.5%) versus 0 of 3,042 seed rollouts. 
 E30-T s0 cand_0002 7/30, E30-T s1 cand_0001 4/30, E30-T s2 cand_0009 6/30 (and cand_0001 5/20), E30-CTL s1 cand_0001 4/30, E31-ruleP s1 cand_0008 10/90, E36-NOHIST s0 cand_0003 4/30 and s1 cand_0002 3/30.
 Consequence for the paper: for tools-surface cells, the gate's treatment of infra-labelled trials as missing can favour a candidate whose tool edit provokes them; 5O (infra_final scores 0) and the no-retry-credit sensitivity are the right check, and a final
 evaluation of these champions should report the infra rate next to the score.
+
+## Mechanism of the tools-surface infra labels, found in the final window (2026-10-13 21:00 UTC, final-eval-eng)
+
+tau2 re-executes the agent's tool calls on a pristine environment and compares each tool result with the live one (`_eval_pristine`); a mismatch ends the simulation as `TerminationReason.INFRASTRUCTURE_ERROR`. `infra_detail` then holds
+"Tool call: ... Returned: <pristine result> ... Expected: <live result>". An artifact that edits a tool's refusal logic, error wording or return text therefore makes live and pristine results differ, and the run is labelled infrastructure error, retried up to
+three times, and scored 0 if every retry hits the same difference (5O infra_final). This is an evaluation property, not network infrastructure, and it penalises tools-surface edits both at search time and in the final window.
+Extraction (`experiments/final/infra_mechanism.py`, final-window rollouts, infra attempts by sub-type of the mismatch): Suite E (airline): 137 mismatches, 125 of them `live_refusal` (the edited tool, for example `_check_cancellable` in E t s0, refuses what the
+pristine tool performs; 22 of 23 infra_final cells have a live guard error in the final attempt; tools: cancel_reservation 100+, update_reservation_flights/baggages, book_reservation). Suite D (retail): 564 mismatches, 461 `reworded_error` (both results are
+errors, the edited tool words them differently) and 102 `content_differs` (both succeed, returned text differs); tools exchange_delivered_order_items, modify_pending_order_items, return_delivered_order_items. Suite B oneshot: 92 `content_differs`, all
+modify_pending_order_items. Suite C oneshot: 11 `reworded_error`, all book_reservation. Rate limits (429 text inside `infra_detail`, not in `error_text`) are a minor, separate cause: D 31 of 646 infra attempts (16 of them in 16:00-18:00 UTC during the Azure
+high-demand episode), E 6 of 151, B 1 of 117. The user-simulator "leaked reasoning" stop is the other minor cause (D 51, B 15, C 6, E 8).
+Consequence for the analysis: report per-artifact infra_final next to each score with both sensitivities (infra_final missing, first-attempt-only) and the sub-type split (this table) as a third descriptive column.
