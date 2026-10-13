@@ -145,3 +145,12 @@ in `duplicate_groups`; they are still evaluated per (arm, seed) cell (independen
 * Task family for tau suites = task id (no family metadata exists), so clusters = tasks.
 * HarnessLens artifact/harness format is pending from bl-harness; its worker is not implemented (tau worker runs the CapEvolve tau agent).
 * Suite A `hc` has no `candidates.jsonl` yet; ACE/MIPROv2/Trace2Skill have few events yet (search is early).
+
+## v2 scoring window (amendment 11F; added 2026-10-13)
+
+`v2_window.py build --suite A|D|E --champions champions_V2_<S>.json` freezes the v2 champions (hc2, ao2: final state of each search, read-only copy + tree hash under `final_eval/V2/<S>/artifacts/B/<arm>/s<k>`),
+writes `manifests/artifacts_V2_<S>.json` (v2 entries + the v1 GEPA champions + the seed artifact, copied from `artifacts_<S>.json`) and `manifests/order_V2_<S>.jsonl(.sha256)` through `order.py`
+(arms hc2, ao2, gepa, + seed and seed-check cells; tags `FINAL-<S>-V2-...`; held-out set only: A T = 70, D test-40, E test-20, the sel cells are dropped; trials as v1: A 1/2, D and E 5/10).
+`v2_window.py register --suite S` appends the hashes (champions file, manifest, tree hashes, order, 11G comparison family, scripts, commit) to the registry; run `git fetch && git merge` first (the registry is shared).
+Run: `run_final.py prepare|run --suite S --order manifests/order_V2_S.jsonl --root <FINAL_EVAL_ROOT>/V2/S --workers N` (same adapters, worker and scorer as the v1 windows).
+Dry test (fake champions from v1 artifacts): order sizes A 840, D 2,400, E 1,200 jobs; `prepare` passes for all three.
