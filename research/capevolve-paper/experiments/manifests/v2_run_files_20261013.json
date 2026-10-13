@@ -1,0 +1,108 @@
+{
+ "written_utc": "2026-10-13T18:40:17Z",
+ "note": "static (non-state) files of each real V2 run, hashed from disk after launch; sealed partition files hashed without reading",
+ "runs": {
+  "A/hc2/s0": {
+   "capevolve.yaml": "ebcd54e66becfedbd875e541f353bfd840e71ca9cb8247052ee9d658d74f0eee",
+   "split_ids.json": "50258bc3a19a36164e2a3f2a4721ef568a94bd7c95f65b4fa820bce42eaebc92",
+   "adapter.py": "2f43e8db3ed4b5cde3f60706b67f48305a7673014a08312e57f5d2d687b5defd",
+   "seed_capability_tree": "e25aa639a89562c230dab14085ea371f9250c395ca2b5add2be7fe96df868cd5",
+   "splits_full_sealed": "51c33dfd0dcdbe9cfb1efe6b2d70a484b06fc50202dd05d1d02ce89397c3c634"
+  },
+  "A/hc2/s1": {
+   "capevolve.yaml": "84ab64dc8fd6c5cce987676c4ea6d72b563dd74d71f2d00d884952d593d1ff89",
+   "split_ids.json": "50258bc3a19a36164e2a3f2a4721ef568a94bd7c95f65b4fa820bce42eaebc92",
+   "adapter.py": "2f43e8db3ed4b5cde3f60706b67f48305a7673014a08312e57f5d2d687b5defd",
+   "seed_capability_tree": "e25aa639a89562c230dab14085ea371f9250c395ca2b5add2be7fe96df868cd5",
+   "splits_full_sealed": "7fd8757ceada7e62875fa9de5d099eb53c058b473da24eb3c21ee7b014d42203"
+  },
+  "A/hc2/s2": {
+   "capevolve.yaml": "be77ab1e6a5702797fe5920539b0d31494357cefafd50e3adfb3bd476723d11d",
+   "split_ids.json": "50258bc3a19a36164e2a3f2a4721ef568a94bd7c95f65b4fa820bce42eaebc92",
+   "adapter.py": "2f43e8db3ed4b5cde3f60706b67f48305a7673014a08312e57f5d2d687b5defd",
+   "seed_capability_tree": "e25aa639a89562c230dab14085ea371f9250c395ca2b5add2be7fe96df868cd5",
+   "splits_full_sealed": "d8553191392f180eac8994a8f8fccddc70e41bc30b6453bfbf2c147f6f1ab28a"
+  },
+  "A/ao2/s0": {
+   "capevolve.yaml": "9764d8da56c95d62fd37195311dbe26fc42b02351a4a75a08235b1da07462379",
+   "split_ids.json": "50258bc3a19a36164e2a3f2a4721ef568a94bd7c95f65b4fa820bce42eaebc92",
+   "adapter.py": "2f43e8db3ed4b5cde3f60706b67f48305a7673014a08312e57f5d2d687b5defd",
+   "seed_capability_tree": "e25aa639a89562c230dab14085ea371f9250c395ca2b5add2be7fe96df868cd5",
+   "splits_full_sealed": "51c33dfd0dcdbe9cfb1efe6b2d70a484b06fc50202dd05d1d02ce89397c3c634"
+  },
+  "A/ao2/s1": {
+   "capevolve.yaml": "54a40757a4e90029f9592b520393f37bb154c6f62402cec0f1cdb16c7dfcc8d5",
+   "split_ids.json": "50258bc3a19a36164e2a3f2a4721ef568a94bd7c95f65b4fa820bce42eaebc92",
+   "adapter.py": "2f43e8db3ed4b5cde3f60706b67f48305a7673014a08312e57f5d2d687b5defd",
+   "seed_capability_tree": "e25aa639a89562c230dab14085ea371f9250c395ca2b5add2be7fe96df868cd5",
+   "splits_full_sealed": "7fd8757ceada7e62875fa9de5d099eb53c058b473da24eb3c21ee7b014d42203"
+  },
+  "A/ao2/s2": {
+   "capevolve.yaml": "59f61db62ded0d84eeefc0f807983ad3ee823d9a784facd5504dfd5bd6650388",
+   "split_ids.json": "50258bc3a19a36164e2a3f2a4721ef568a94bd7c95f65b4fa820bce42eaebc92",
+   "adapter.py": "2f43e8db3ed4b5cde3f60706b67f48305a7673014a08312e57f5d2d687b5defd",
+   "seed_capability_tree": "e25aa639a89562c230dab14085ea371f9250c395ca2b5add2be7fe96df868cd5",
+   "splits_full_sealed": "d8553191392f180eac8994a8f8fccddc70e41bc30b6453bfbf2c147f6f1ab28a"
+  },
+  "D/hc2/s0": {
+   "capevolve.yaml": "cb1fa2790620250ac4e7dd19482cc5c9491340f3c47927ffebbaf8961929d1c2",
+   "split_ids.json": "a0e26710171f424e0adbb3a59adba8f83a8428e344c112ec61fde7bde620bff4",
+   "adapter.py": "eb809461f1cb0ad1b9633891223f94206b77232ae95d29d1760b0032e56ab93f",
+   "driver.sh": "2063ed83cafb58f4d372fdcecf04a459aaf14e54c4b7cbeece9b6100fef10565",
+   "env.sh": "b2209eecf8b20142c01dc49bfd783517c480f6ed419225392998aeeb14310232",
+   "BUILD_RECORD.json": "4c0c0a455d6da9624cb001e82c2ee7aed7be62e48e80f598de1cf96aeadcf813",
+   "seed_capability_tree": "7fc5190809a8dc13088a77fe7641dbf7b89976fb0b6d392070522e72fbbbf500",
+   "splits_full_sealed": "ff73af154b51f4490378f8064eb6be48028c8a716f97e874aee10170a4405e18"
+  },
+  "D/hc2/s1": {
+   "capevolve.yaml": "cb1fa2790620250ac4e7dd19482cc5c9491340f3c47927ffebbaf8961929d1c2",
+   "split_ids.json": "a0e26710171f424e0adbb3a59adba8f83a8428e344c112ec61fde7bde620bff4",
+   "adapter.py": "eb809461f1cb0ad1b9633891223f94206b77232ae95d29d1760b0032e56ab93f",
+   "driver.sh": "56b3a0cad200ba516f337de158a96a207fb1c943ad6d15761526c3f545a203e7",
+   "env.sh": "236c31d3a4eaf3d88d18e448e52c38e5fac80ea8fc3b1ce3731bb05feb6caef1",
+   "BUILD_RECORD.json": "63141c0772fb0b5d9da6440a2a251ff06a57b15a93b070fdbcab31570a550808",
+   "seed_capability_tree": "7fc5190809a8dc13088a77fe7641dbf7b89976fb0b6d392070522e72fbbbf500",
+   "splits_full_sealed": "ff73af154b51f4490378f8064eb6be48028c8a716f97e874aee10170a4405e18"
+  },
+  "D/hc2/s2": {
+   "capevolve.yaml": "cb1fa2790620250ac4e7dd19482cc5c9491340f3c47927ffebbaf8961929d1c2",
+   "split_ids.json": "a0e26710171f424e0adbb3a59adba8f83a8428e344c112ec61fde7bde620bff4",
+   "adapter.py": "eb809461f1cb0ad1b9633891223f94206b77232ae95d29d1760b0032e56ab93f",
+   "driver.sh": "130aaf5a1c3b4e94fdee063aca91ddf0c20340a22bc2d7ee954ce1ba83347f00",
+   "env.sh": "1d576af2a691b1ed4f15a145ba5a65ffa68ae4e734fb01cb1b4f1629136c7071",
+   "BUILD_RECORD.json": "b870bf673877fcb045873fae4a4e99362718c0488425569b0bc93a6bf13a2da2",
+   "seed_capability_tree": "7fc5190809a8dc13088a77fe7641dbf7b89976fb0b6d392070522e72fbbbf500",
+   "splits_full_sealed": "ff73af154b51f4490378f8064eb6be48028c8a716f97e874aee10170a4405e18"
+  },
+  "E/hc2/s0": {
+   "capevolve.yaml": "030cf06cbfa88819cca3c68574a6e2954e683c6ea927a7efbf3e7faa7ac8e84f",
+   "split_ids.json": "d1fc298523320c3959fc339db3d4026cfb1b838c0e6ff126037494cc1b3554cb",
+   "adapter.py": "26773c8826e34ca7d141c91aacb35a0e3acb31a4ff042f0dc4c4dc81a11dff24",
+   "driver.sh": "510e75861b5bbbf1dee818173830b88c4fff644b314a001638d3d6a8f8e43947",
+   "env.sh": "a74ce8cf658d847ca43fc599d68d84eca877af7f3baebb9d1bdaa88ecb011adf",
+   "BUILD_RECORD.json": "73f4efce2f05f9ad9d5d2532558b64918dedd9d7b6c8c91200d66a261fdff7da",
+   "seed_capability_tree": "f7fac4bb67b32c182d45e48a27172fcc1a4812d59aef40b11cf10d9dfd6073ea",
+   "splits_full_sealed": "f6e8691bd9a2246b48cce437d1baa68af2c918519183c73df6fc1fdceaadda5b"
+  },
+  "E/hc2/s1": {
+   "capevolve.yaml": "030cf06cbfa88819cca3c68574a6e2954e683c6ea927a7efbf3e7faa7ac8e84f",
+   "split_ids.json": "d1fc298523320c3959fc339db3d4026cfb1b838c0e6ff126037494cc1b3554cb",
+   "adapter.py": "26773c8826e34ca7d141c91aacb35a0e3acb31a4ff042f0dc4c4dc81a11dff24",
+   "driver.sh": "8f20624bfdbacc798dc6e6eea1952b07941aa98019015dae1fecee5c0be0d0ed",
+   "env.sh": "9693876997f173eca18d858c235eb347e5cc1feb8fd2da3fc1a51ad4f5674ef1",
+   "BUILD_RECORD.json": "5cf2fc204cdfaf4f31c6e3f01fafba452967c6f2db20d6a3e25a61bf3491d010",
+   "seed_capability_tree": "f7fac4bb67b32c182d45e48a27172fcc1a4812d59aef40b11cf10d9dfd6073ea",
+   "splits_full_sealed": "f6e8691bd9a2246b48cce437d1baa68af2c918519183c73df6fc1fdceaadda5b"
+  },
+  "E/hc2/s2": {
+   "capevolve.yaml": "030cf06cbfa88819cca3c68574a6e2954e683c6ea927a7efbf3e7faa7ac8e84f",
+   "split_ids.json": "d1fc298523320c3959fc339db3d4026cfb1b838c0e6ff126037494cc1b3554cb",
+   "adapter.py": "26773c8826e34ca7d141c91aacb35a0e3acb31a4ff042f0dc4c4dc81a11dff24",
+   "driver.sh": "1478a2af54f29d9076d5e572fa4b701b6c8eae749f93205eefc2506b38936e89",
+   "env.sh": "51f4ca2a1dc7bac8755d4d20d4ce4d2499df381aa457a96a9df755af506ac8ad",
+   "BUILD_RECORD.json": "1d01ee274b24b3c409e56fe31ea819a6cd1953fce1a4d704fd84c6e6cc1a2f2a",
+   "seed_capability_tree": "f7fac4bb67b32c182d45e48a27172fcc1a4812d59aef40b11cf10d9dfd6073ea",
+   "splits_full_sealed": "f6e8691bd9a2246b48cce437d1baa68af2c918519183c73df6fc1fdceaadda5b"
+  }
+ }
+}

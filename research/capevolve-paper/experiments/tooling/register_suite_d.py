@@ -112,7 +112,17 @@ def main():
                              (f"E_hc2_s{k}_env", base / "env.sh", f"HC-2 Suite E seed {k} env")]
         for sd in sorted((V2 / f"E/hc2/s{k}.sealed").glob("run_*/splits_full.json")):
             E_hc2_seed_files.append((f"E_hc2_s{k}_splits_full_sealed", sd, f"HC-2 Suite E seed {k} sealed full pool partition F/C (hash only; content not read)"))
-    V2_FILES += A_hc2_seed_files + A_ao2_seed_files + E_hc2_seed_files
+    D_hc2_seed_files = []
+    for k in (0, 1, 2):
+        base = V2 / f"D/hc2/s{k}"
+        D_hc2_seed_files += [(f"D_hc2_s{k}_build_record", base / "BUILD_RECORD.json", f"HC-2 Suite D seed {k} build record"),
+                             (f"D_hc2_s{k}_spec", base / ".capevolve/project/capevolve.yaml", f"HC-2 Suite D seed {k} run spec"),
+                             (f"D_hc2_s{k}_split_ids", base / ".capevolve/project/split_ids.json", f"HC-2 Suite D seed {k} proposer-visible split ids"),
+                             (f"D_hc2_s{k}_driver", base / "driver.sh", f"HC-2 Suite D seed {k} driver"),
+                             (f"D_hc2_s{k}_env", base / "env.sh", f"HC-2 Suite D seed {k} env")]
+        for sd in sorted((V2 / f"D/hc2/s{k}.sealed").glob("run_*/splits_full.json")):
+            D_hc2_seed_files.append((f"D_hc2_s{k}_splits_full_sealed", sd, f"HC-2 Suite D seed {k} sealed full pool partition F/C (hash only; content not read)"))
+    V2_FILES += A_hc2_seed_files + A_ao2_seed_files + E_hc2_seed_files + D_hc2_seed_files
     _unused_marker = None
     for it, fp, note in V2_FILES:
         if fp.exists():
@@ -147,6 +157,8 @@ def main():
     for nm, rel in AO2_CODE:
         if (WTAO / rel).exists():
             items.append(("v2_11E_AO2_code_" + nm, WTAO / rel, "AO-2 code file at d68775bbd (changed vs a3f5eeb6d)", None))
+    for mf in sorted((PAPER / "experiments/manifests").glob("v2_run_files_*.json")):
+        items.append(("v2_11E_run_files_" + mf.stem.split("_")[-1], mf, "static files of each real V2 run, hashed from disk after launch", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
