@@ -62,6 +62,7 @@ def build(suite, champions_path, out_root, manifests=None, dry=False):
 
 V2_CODE_ROOT = "/home/dev/projects2/wt-v2run"        # main at a3f5eeb6d (amendment 11 erratum 1): adapter, core, helpers carrier, gold isolation, iopub idle-wait fix
 V2_TAU_ADAPTERS = {"D": "/home/dev/projects2/campaign-scratch/scripts/V2/adapters/retail/adapter.py", "E": "/home/dev/projects2/campaign-scratch/scripts/V2/adapters/airline/adapter.py"}
+V2_CAPPED_STOP = 228_000_000        # campaign cap 230M minus the same 2M margin as the v1 stop (198M of 200M); the v2 windows use none of the :4111 capped counter
 V2_CODE_SHA = "a3f5eeb6d54d9782c9fb3985ca1d63560f6cc4bb"
 
 
@@ -124,7 +125,7 @@ def make_order(suite, mpath, out=None, tag_exp=None, code_root=None, harness_dir
         meta["tasks"] = [t for t in meta["tasks"] if any(j["task"] == t for j in jobs)]
     for i, j in enumerate(jobs):
         j["idx"] = i
-    meta.update(n_jobs=len(jobs), window="v2", counts_by_arm={})
+    meta.update(n_jobs=len(jobs), window="v2", counts_by_arm={}, capped_stop=V2_CAPPED_STOP)
     for j in jobs:
         k = "%s/s%d" % (j["arm_label"], j["seed"])
         meta["counts_by_arm"][k] = meta["counts_by_arm"].get(k, 0) + 1

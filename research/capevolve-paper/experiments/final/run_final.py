@@ -881,6 +881,7 @@ def cmd_prepare(a):
 def cmd_run(a):
     suite = a.suite
     meta, jobs = load_order(a.order)
+    a.capped_stop = a.capped_stop or int(meta.get("capped_stop") or 198_000_000)      # v2 windows carry 228000000 in the hashed order (cap 230M minus 2M)
     root = Path(a.root) if a.root else C.final_dir(suite)
     if a.extra:
         root = root / ("extra_%s" % a.extra)
@@ -1007,7 +1008,7 @@ def main(argv=None):
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)
         p.add_argument("--force", action="store_true")
-        p.add_argument("--capped-stop", type=int, default=198_000_000, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this")
+        p.add_argument("--capped-stop", type=int, default=None, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this (default: the order's capped_stop, else 198000000)")
         p.add_argument("--check-error-drain", action="store_true", help="prepare, Suite A: error exec, 95 s idle, next exec must succeed (needs the SB_DRAIN_ERROR jupyter.py)")
         p.add_argument("--check-kernel-idle", action="store_true", help="prepare, Suite A: also run the ~12 min idle-kernel behavioural check")
     w = sp.add_parser("worker")
