@@ -204,3 +204,45 @@ def test_the_idle_cap_is_configurable_and_defaults_to_six():
     from conductor import Cfg
     assert Cfg.from_spec({"ao_max_idle_proposals": 0}).caps.max_idle == 6, "0 means unset: the default holds"
     assert Cfg.from_spec({"ao_max_idle_proposals": 9}).caps.max_idle == 9
+
+
+# merge-resolve jobs (seen live on run_20261013_131033) ------------------------------------------
+def test_proposer_metadata_never_makes_two_branches_conflict(tmp_path):
+    import merge
+    dirs = {}
+    for name, hyp in (("base", None), ("a", '{"id": "a"}'), ("b", '{"id": "b"}')):
+        d = dirs[name] = tmp_path / name
+        (d / "policy").mkdir(parents=True)
+        (d / "policy" / "policy.md").write_text("# P\n\nrule\n")
+        if hyp:
+            (d / "hypothesis.json").write_text(hyp)
+    (dirs["b"] / "tools.py").write_text("x = 1\n")
+    r = merge.build_merge_dir(dirs["base"], dirs["a"], dirs["b"], tmp_path / "out")
+    assert r["built"], r
+
+
+def test_a_merge_resolve_job_gets_a_copy_of_the_trunk_and_the_donor_path(tmp_path):
+    import unittest.mock as m
+    work = tmp_path / "work" / "cand_9"
+    calls = []
+
+    def sh(argv):
+        calls.append([str(x) for x in argv])
+        work.mkdir(parents=True)
+        return 0, "", ""
+    fake = SimpleNamespace(
+        ctx=SimpleNamespace(work=lambda t: work), run_dir=tmp_path, root=tmp_path, project=tmp_path, spec={},
+        cfg=SimpleNamespace(cost_eps=None), optimizer="mock",
+        _paths=lambda j: (tmp_path / "j.log", tmp_path / "j.rc", tmp_path / "j.prompt.md"),
+        _spawn=lambda j, cmd, env=None: {"pid": 1}, transcript=lambda j: tmp_path / "t.jsonl", job_usd_cap=lambda: 0)
+    job = {"id": "j1", "kind": "merge", "tag": "cand_9", "parent": "cand_1", "parents": ["cand_1", "cand_2"],
+           "conflicts": [{"where": "policy/policy.md::Rules", "trunk": ["cand_2"], "donor": ["cand_1"]}]}
+    with m.patch.object(conductor_backend.act, "sh", sh), \
+            m.patch.object(conductor_backend, "conductor_jobs", lambda root: []), \
+            m.patch.object(conductor_backend.digest, "build", lambda *a: {}), \
+            m.patch.object(conductor_backend.digest, "fit", lambda d: ({}, "")), \
+            m.patch.object(conductor_backend.digest, "cand_dir", lambda rd, t: tmp_path / "candidates" / t):
+        conductor_backend.RealBackend._start_llm(fake, job)
+    assert calls and calls[0][-1] == "cand_2", "the work dir is a copy of the conflict's trunk"
+    prompt = (tmp_path / "j.prompt.md").read_text()
+    assert "policy/policy.md::Rules" in prompt and str(tmp_path / "candidates" / "cand_1") in prompt

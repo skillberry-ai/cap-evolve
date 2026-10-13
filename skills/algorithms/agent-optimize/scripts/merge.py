@@ -92,8 +92,8 @@ def _changed_files(base_dir: Path, a_dir: Path, b_dir: Path):
 
     # DIAGNOSIS.json is per-candidate optimizer metadata (#611), not capability bytes: each
     # sibling writes its own, so 3-way merging it would collide on EVERY pair. It is combined
-    # from the parents in build_merge_dir instead.
-    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__", "DIAGNOSIS.json"}
+    # from the parents in build_merge_dir instead. hypothesis.json (the AO-2 proposer's claim) likewise.
+    ignore = set(_SNAPSHOT_IGNORE) | {"PROCESS.md", "__pycache__", "DIAGNOSIS.json", "hypothesis.json"}
     base_f, a_f, b_f = (_capability_files(d, ignore) for d in (base_dir, a_dir, b_dir))
     changed_a = {r for r in set(base_f) | set(a_f) if _read(base_f, r) != _read(a_f, r)}
     changed_b = {r for r in set(base_f) | set(b_f) if _read(base_f, r) != _read(b_f, r)}

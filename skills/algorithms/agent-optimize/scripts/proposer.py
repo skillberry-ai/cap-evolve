@@ -34,8 +34,9 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
                  kind: str = "propose", conflicts: list | None = None) -> str:
     head = {
         "propose": f"You are proposing one edit to candidate {parent!r} (already copied into {workdir}).",
-        "merge": (f"{workdir} merges two branches and has conflicts in {', '.join(map(str, conflicts or []))}. "
-                  "Resolve each conflict so BOTH branches' intended changes survive; remove all conflict markers."),
+        "merge": (f"{workdir} is a copy of branch {parent!r}; merging another branch into it conflicts in: "
+                  f"{'; '.join(map(str, conflicts or []))}. Rewrite each conflicting part so BOTH branches' "
+                  "intended changes survive (read the other branch's version where given)."),
     }[kind]
     target = ""
     if cluster:

@@ -265,7 +265,14 @@ class RealBackend(P2Port, conductor.Backend):
     def _start_llm(self, job):
         tag, parent, kind = job["tag"], job["parent"], job["kind"]
         work = self.ctx.work(tag)
-        if kind == "propose":
+        conflicts = job.get("conflicts")
+        if kind == "merge":
+            # merge_n stops on a conflict without writing a merge dir: the job edits a copy of the trunk
+            # and ports the donor's version of each conflicting block, read from the donor's own dir.
+            parent = ((conflicts or [{}])[0].get("trunk") or [parent])[0]
+            conflicts = [f"{c.get('where')} (port the version in {digest.cand_dir(self.run_dir, (c.get('donor') or ['?'])[0])})"
+                         if isinstance(c, dict) else str(c) for c in conflicts or []]
+        if kind == "propose" or (kind == "merge" and not work.exists()):
             if work.exists():
                 shutil.rmtree(work)                 # a retry starts from a clean copy of the parent
             rc, out, err = act.sh([act.PY, HERE / "prepare_candidate.py", "-r", self.root, "-t", tag, "--parent", parent])
@@ -285,7 +292,7 @@ class RealBackend(P2Port, conductor.Backend):
         log, rcf, prompt = self._paths(job)
         prompt.write_text(proposer.build_prompt(workdir=work, parent=parent, cluster=cluster, digest_text=text,
                                                 strict=bool(job.get("strict")), kind=kind,
-                                                conflicts=job.get("conflicts")), encoding="utf-8")
+                                                conflicts=conflicts), encoding="utf-8")
         cmd = [act.PY, RUN_OPTIMIZER, "--name", self.optimizer, "--workdir", work, "--prompt", prompt, "--json",
                "--transcript", str(self.transcript(job))]
         turns = int(self.spec.get("optimizer_max_turns") or 40)
