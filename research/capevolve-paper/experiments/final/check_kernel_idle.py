@@ -6,6 +6,7 @@ import argparse, importlib.util, os, sys, time
 from pathlib import Path
 ap = argparse.ArgumentParser(); ap.add_argument("--idle-s", type=int, default=700); ap.add_argument("--kernel-timeout-s", default="10800")
 ap.add_argument("--mode", choices=["idle", "error-drain"], default="idle", help="error-drain: an erroring exec, a 95 s idle, then an exec that must succeed (SB_DRAIN_ERROR=1)")
+ap.add_argument("--harness-dir", default=None, help="vendored spreadsheetbench dir to use (diagnostics: patched copy with message logging)")
 ap.add_argument("--adapter", default="/home/dev/projects2/campaign-scratch/bench/patches/new/adapter.py")
 ap.add_argument("--view", default="/home/dev/projects2/campaign-scratch/baselines/work/agent_view_verified400")
 a = ap.parse_args()
@@ -13,7 +14,7 @@ uid = os.getuid(); env = os.environ
 env.setdefault("XDG_RUNTIME_DIR", "/run/user/%d" % uid); env.setdefault("DOCKER_HOST", "unix://%s/podman/podman.sock" % env["XDG_RUNTIME_DIR"])
 env["SB_DRAIN_ERROR"] = os.environ.get("SB_DRAIN_ERROR", "1"); env["KERNEL_TIMEOUT_S"] = str(a.kernel_timeout_s); env["CLEANUP_TIMEOUT_MS"] = "5000"
 repo = Path(__file__).resolve().parents[4]
-env["SPREADSHEETBENCH_HARNESS_DIR"] = str(repo / "third_party/spreadsheetbench"); env["SPREADSHEETBENCH_DATA_DIR"] = a.view
+env["SPREADSHEETBENCH_HARNESS_DIR"] = a.harness_dir or str(repo / "third_party/spreadsheetbench"); env["SPREADSHEETBENCH_DATA_DIR"] = a.view
 sys.path[:0] = [str(repo / "templates/adapters"), str(repo / "core"), str(Path(a.adapter).parent)]
 spec = importlib.util.spec_from_file_location("sb_idle_check", a.adapter); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 sb = m._Sandbox(); cid = "idlecheck-%d" % os.getpid()
