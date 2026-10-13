@@ -86,6 +86,15 @@ def main():
                 ("A_capopt_egress.sh", V2 / "_tools/capopt_egress.sh", "egress check"),
                 ("A_negtest_capopt.sh", V2 / "_tools/negtest_capopt.sh", "negative test for the optimizer user"),
                 ("A_pooled_split_file", V2 / "_eval/split_ids.json", "pooled split file (train 80 / val 40 / test [])")]
+    A_hc2_seed_files = []
+    for k in (0, 1, 2):
+        base = V2 / f"A/hc2/s{k}"
+        A_hc2_seed_files += [(f"A_hc2_s{k}_spec", base / "project/capevolve.yaml", f"HC-2 Suite A seed {k} spec (split_seed {k})"),
+                             (f"A_hc2_s{k}_split_ids", base / "project/inputs/split_ids.json", f"HC-2 Suite A seed {k} proposer-visible split ids"),
+                             (f"A_hc2_s{k}_instructions", base / "project/optimizer/INSTRUCTIONS.md", f"HC-2 Suite A seed {k} optimizer instructions")]
+        for sd in sorted((V2 / f"A/hc2/s{k}.sealed").glob("run_*/splits_full.json")):
+            A_hc2_seed_files.append((f"A_hc2_s{k}_splits_full_sealed", sd, f"HC-2 Suite A seed {k} sealed full pool partition F/C (hash only; content not read)"))
+    V2_FILES += A_hc2_seed_files
     for it, fp, note in V2_FILES:
         if fp.exists():
             items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suite A): " + note, None))
