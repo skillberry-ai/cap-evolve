@@ -16,8 +16,9 @@ HYPOTHESIS_FILE = "hypothesis.json"
 
 PROCEDURE = """Procedure (do every step; you may use subagents to read traces in parallel):
 1. Read the failing traces listed above (./trajectories). For each failing task find the turn where the agent goes
-   wrong; tau2_reward_info (action checks, database/env assertions, required communication) is the ground truth.
+   wrong; the trace's reward breakdown (action checks, state assertions, required communication) is the ground truth.
 2. Group the failing tasks by root cause and fix as MANY groups as you can in this ONE edit, your primary tasks first.
+   A small edit is refused: change >= {min_lines} capability lines and predict >= {min_tasks} fixed tasks.
    You are judged on how many of the parent's failing tasks your edit fixes, net of any passing task it breaks.
 3. Prefer code over prose: where the agent computes prices/totals, looks things up or checks eligibility in its head,
    add a deterministic tool (or make an existing tool return the needed fields / validate the call) plus one policy
@@ -61,7 +62,8 @@ def failing_block(rates: dict, traces: dict, primary: list, rejected: list) -> s
 
 
 def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str = "", strict: bool = False,
-                 kind: str = "propose", conflicts: list | None = None, refusal: str = "", failing: str = "") -> str:
+                 kind: str = "propose", conflicts: list | None = None, refusal: str = "", failing: str = "",
+                 min_lines: int = 40, min_tasks: int = 3) -> str:
     head = {
         "propose": f"You are proposing one edit to candidate {parent!r} (already copied into {workdir}).",
         "merge": (f"{workdir} is a copy of branch {parent!r}; merging another branch into it conflicts in: "
@@ -72,7 +74,7 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
     if cluster:
         target = (f"\nTarget cluster {cluster.get('id')}: {cluster.get('label') or ''}; failing tasks "
                   f"{', '.join(map(str, cluster.get('tasks') or []))}; headroom {cluster.get('headroom')}.")
-    proc = PROCEDURE if kind == "propose" else ""
+    proc = PROCEDURE.format(min_lines=min_lines, min_tasks=min_tasks) if kind == "propose" else ""
     body = f"{head}{target}\n{failing}\n\n{digest_text.strip()}\n\n{proc}{RULES.format(workdir=workdir)}"
     if strict:
         body += STRICT
@@ -84,6 +86,29 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
         room = MAX_PROMPT_BYTES - len(body.replace(digest_text, "").encode("utf-8")) - 16
         body = body.replace(digest_text, digest_text.encode("utf-8")[:max(room, 0)].decode("utf-8", "ignore") + "...")
     return body
+
+
+def capability_diff_lines(parent_dir, cand_dir) -> int:
+    """Changed (+/-, non-blank) lines between two capability dirs, counting only files inside sub-dirs
+    (policy/, tools/, ...): root-level memory files and read-only context dirs are not the edit."""
+    import difflib
+    skip = {"trajectories", "guidance", "prior_iterations", "__pycache__", ".claude", ".git"}
+
+    def files(d):
+        d = Path(d)
+        return {str(f.relative_to(d)): f for f in d.rglob("*") if f.is_file() and len(f.relative_to(d).parts) > 1
+                and f.relative_to(d).parts[0] not in skip and not f.relative_to(d).parts[0].startswith(".")}
+    a, b = files(parent_dir), files(cand_dir)
+    n = 0
+    for rel in set(a) | set(b):
+        try:
+            x = a[rel].read_text(encoding="utf-8").splitlines() if rel in a else []
+            y = b[rel].read_text(encoding="utf-8").splitlines() if rel in b else []
+        except (OSError, UnicodeDecodeError):
+            continue
+        n += sum(1 for ln in difflib.unified_diff(x, y, lineterm="", n=0)
+                 if ln[:1] in "+-" and not ln.startswith(("+++", "---")) and ln[1:].strip())
+    return n
 
 
 def read_hypothesis(workdir) -> dict | None:

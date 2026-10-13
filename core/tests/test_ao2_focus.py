@@ -102,3 +102,26 @@ def test_a_champion_that_passes_everything_prunes_candidates_instead_of_parking_
     w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"seed_trials": 3, "reward_fn": lambda cand, task, k: 1.0})
     c = F.run_to_done(w, be, cfg, max_ticks=3000)
     assert all(n.get("why") == "no_focus_targets" for t, n in c.st["nodes"].items() if t != "seed")
+
+
+def test_small_proposals_are_refused_with_a_reason_under_focus(tmp_path):
+    from types import SimpleNamespace
+    import unittest.mock as m
+    import conductor_backend
+    import proposer
+    parent, work = tmp_path / "p", tmp_path / "w"
+    for d in (parent, work):
+        (d / "tools").mkdir(parents=True)
+        (d / "tools" / "tools.py").write_text("x = 1\n")
+    (work / "JOURNAL.md").write_text("\n".join(f"note {i}" for i in range(200)))       # memory, not the edit
+    assert proposer.capability_diff_lines(parent, work) == 0
+    fake = SimpleNamespace(cfg=SimpleNamespace(focus=True), spec={}, run_dir=tmp_path)
+    with m.patch.object(conductor_backend.digest, "cand_dir", lambda rd, t: parent):
+        small = conductor_backend.RealBackend._too_small(fake, {"kind": "propose"}, work, "seed", {"predicted_tasks": ["1"]})
+        assert "too small" in small and "0 changed" in small
+        (work / "tools" / "tools.py").write_text("x = 1\n" + "\n".join(f"def f{i}(): return {i}" for i in range(45)))
+        assert conductor_backend.RealBackend._too_small(fake, {"kind": "propose"}, work, "seed",
+                                                        {"predicted_tasks": ["1", "2", "3"]}) == ""
+        assert conductor_backend.RealBackend._too_small(fake, {"kind": "merge"}, work, "seed", {}) == ""
+        fake.cfg.focus = False
+        assert conductor_backend.RealBackend._too_small(fake, {"kind": "propose"}, parent, "seed", {}) == ""

@@ -296,7 +296,9 @@ class RealBackend(P2Port, conductor.Backend):
         failing = self._failing_block(work, parent, int(job.get("slot") or 0)) if kind == "propose" else ""
         body = proposer.build_prompt(workdir=work, parent=parent, cluster=cluster, digest_text=text,
                                      strict=bool(job.get("strict")), kind=kind, conflicts=conflicts,
-                                     refusal=job.get("refusal") or "", failing=failing)
+                                     refusal=job.get("refusal") or "", failing=failing,
+                                     min_lines=int(self.spec.get("ao_min_edit_lines") or 40),
+                                     min_tasks=int(self.spec.get("ao_min_predicted") or 3))
         prompt.write_text(body, encoding="utf-8")
         with contextlib.suppress(OSError):        # the injected CLAUDE.md says "read ./INSTRUCTIONS.md FIRST"
             (work / "INSTRUCTIONS.md").write_text(body, encoding="utf-8")
@@ -418,6 +420,9 @@ class RealBackend(P2Port, conductor.Backend):
             return {"ok": False, "refused": bad[0], "detail": bad[1]}
         h = proposer.read_hypothesis(work)
         hyp = work / proposer.HYPOTHESIS_FILE
+        small = self._too_small(job, work, parent, h)
+        if small:
+            return {"ok": False, "refused": "too_small", "detail": small}
         a = argparse.Namespace(**vars(self.ns), tag=tag, parent=parent, hypothesis_file=str(hyp) if h else None,
                                small_edit_justification=None, over_budget=None, verb="propose")
         try:
@@ -428,6 +433,19 @@ class RealBackend(P2Port, conductor.Backend):
             return {"ok": False, "refused": why, "detail": msg[:300]}
         parents = [parent] if job["kind"] == "propose" else list(job.get("parents") or [parent])
         return {"ok": True, "hash": self.cap_hash(tag), "parents": parents, "hypothesis_id": out.get("hypothesis_id")}
+
+    def _too_small(self, job, work, parent, h) -> str:
+        """Focus runs want LARGE edits: a proposal must change >= ``ao_min_edit_lines`` capability lines and
+        predict >= ``ao_min_predicted`` fixed tasks, or it is refused and retried with this reason."""
+        if job["kind"] != "propose" or not self.cfg.focus:
+            return ""
+        n = proposer.capability_diff_lines(digest.cand_dir(self.run_dir, parent), work)
+        k = len((h or {}).get("predicted_tasks") or [])
+        lo, kmin = int(self.spec.get("ao_min_edit_lines") or 40), int(self.spec.get("ao_min_predicted") or 3)
+        if n >= lo and k >= kmin:
+            return ""
+        return (f"edit too small: {n} changed capability lines (need >= {lo}) and {k} predicted tasks (need >= {kmin}). "
+                "Fix MORE of the parent's failing tasks in one edit (tools + policy), and list them in predicted_tasks.")
 
     def node_event(self, tag, status, **kw):
         parents = kw.pop("parents", None)

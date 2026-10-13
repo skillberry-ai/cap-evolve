@@ -139,7 +139,7 @@ def mo_verdict(reward_pass: bool, r_mean: float, r_se: float, n: int, cps: dict,
 
 # ---- focus rule (ao_focus) ------------------------------------------------------------------------
 FOCUS_SD_FLOOR = 0.25      # per-task paired-delta sd floor (one or two trials cannot claim certainty)
-FOCUS_Z = 1.8              # one-sided ACCEPT bar (simulated on real tau2 rates: false accept ~5% per null)
+FOCUS_Z = 1.8              # one-sided ACCEPT bar (simulated on real per-task pass rates: false accept ~5% per null)
 FOCUS_Z_KILL = 0.8         # lighter KILL bar: a wrong kill costs one idea, a wrong accept costs the champion
 FOCUS_MIN_GAIN = 0.07      # accept only gains of >= 2 tasks of 30: large, resolvable improvements
 
