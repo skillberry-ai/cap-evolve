@@ -204,3 +204,28 @@ Headroom under the all-searches stop (200M cap minus 18M reserve = 182M) after t
 What fits: v2 central (15.8M) fits with v1 low or central (leaving 6 to 12M); v2 high (24.8M) fits only with v1 low; with v1 high (171M) only about 11M is available, enough for HC-2 plus a part of AO-2.
 Recommendation: run HC-2 first (3.6M central, 6.3M high, 3 suites), enforce a 1.5M per-search soft cap on AO-2, and start AO-2 only when the v1 actual at 06:00 leaves at least 16M under 182M. If the v1 actual is 171M, run AO-2 on one suite (about 2.7M central) or defer.
 The 170M exploratory and 178M secondary rungs apply to v2 as well, so treat v2 as secondary: stop it first at 178M.
+
+## Re-forecast 2026-10-13 00:50 UTC and ladder application
+
+Capped **158.76M** (00:48:51). Pace: 4.11M last hour, 7.18M last 2 h (3.6M/h). 5.2 h to 06:00.
+Active consumers and projection to 06:00 (M tokens): E32-ace (3 seeds, launched 00:06, 1.30M in its first hour, 4M guard per seed not binding before 06:00) +6.8; E32-gepafull +3.3 (0.63M/h);
+E32-ao +2.0 (0.10M so far, idle 35 min, ramping; 1.0M per seed over about 10 h); E30-GEPA +1.5 (2.28M so far, 0.6M/h); E10 ace s1 and s2 +1.5 (guards at 4M current attempt); E12B hcstock +1.5 (3.07M so far);
+B/C GEPA, ao, hc finals +1.0. **Total +17.6M (low 14, high 22): 176.4M at 06:00 (172.8 / 180.8).** hlext is finished (stopped at 22:44 by the 10M cut, 10.05M on its own ledger); E31-1S, E36-nohist, E30-P/PT/T, E31-ruleP are done or idle.
+Registered W4 (competitors) already launched at 00:06: ace/s0-s2, gepafull/s0-s2, ao/s0-s2 (mipro/s0-s2 at 22:17, idle since 23:44); the queue holds only `hl` (seed 0).
+
+Time to rungs at the status quo: **170M at about 03:50 UTC (+-1 h)**, 178M at about 06:30, 182M at about 07:30. Suite E searches may run past 06:00 (10I) with guards of 4M per seed (W4 alone up to 36M), so the ladder, not the guards, is what binds after 06:00.
+
+### Ladder as registered (decisions 2026-10-12 11:29Z; cut order 10K)
+- **170M, exploratory arms, HL-extended first.** (1) hlext: already stopped (nothing to stop). (2) E12B hcstock s0-s2 stock-gate cells: the only exploratory family still running (E12A, E12C ended); note decisions.md calls E12B exploratory (lines 179, 336) and, in the older 10:01Z ladder, secondary; lead to confirm. Remaining E12B spend about 1.5M, so this rung saves little.
+- **178M, secondary arms:** ACE (E10 s1, s2; E32-ace s0-s2), MIPROv2 (E32-mipro, idle), Trace2Skill (finished). By 10K the Suite E "competitors" (W4: ace, mipro, gepafull, ao, hl) are the first Suite E cut; the rest follows the fixed order E30-GEPA, E31-1S, E30-CTL, seeds 3 to 2, E36-nohist, E31-ruleP; E30-P, E30-PT, E30-T are never cut. Cuts are decided by the clock and capacity only, never by a score.
+- **182M, all searches** (budget stop, non-binding for N*). 18M stays reserved for the final evaluation.
+
+### Options for W4 (capped total at 06:00, and headroom under 182M for v2)
+| option | what runs | 06:00 total | headroom to 182M | crosses 170M | v2 (central 15.8M) |
+|---|---|---|---|---|---|
+| A. launch the queued `hl` as well | as now + hl seed 0 (+2.5M, 1.5 to 4) | **178.9M** | 3.1M | about 03:20 | does not fit |
+| status quo (hold `hl`, nothing else changes) | W4 as launched | **176.4M** | 5.6M | about 03:50 | does not fit |
+| C. primary-comparison cells only: keep E32-ao and E32-gepafull, stop E32-ace (-6.8M), hold `hl`; optionally also stop E10 ace s1/s2 (-1.5M) | ao, gepafull, E30-GEPA, E12B | **169.6M** (168.1M with E10 ace) | **12.4M** (13.9M) | about 06:00 (not before) | HC-2 (3.6M) plus part of AO-2, not the full 15.8M |
+| B. hold W4 entirely: stop E32-ace, gepafull, ao now (-12.1M of the remaining spend; 2.0M already sunk), hold `hl` | E30-GEPA, E12B, E10 ace | **164.3M** | **17.7M** | not before 06:00 | fits (15.8M) |
+
+Primary-comparison cells are my assumption (CapEvolve-AO and GEPA appear in every earlier suite; ACE, MIPROv2 and HL are the secondary or competitor arms in the registered order): confirm which W4 families the paper needs before cutting.
