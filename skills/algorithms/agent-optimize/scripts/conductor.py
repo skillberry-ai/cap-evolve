@@ -379,9 +379,25 @@ class Conductor:
         if j["kind"] in ("propose", "merge"):
             self._lost_proposal(j)
 
+    def _missing(self, tag, ids, window) -> dict:
+        """``b.missing`` minus cells dropped after ``eval_retries`` runs that never landed (a rollout that
+        always errors): missing data, which ``paired_deltas`` already drops, never a wait forever."""
+        drop = self.st.get("dropped_cells", {})
+        lo, hi = window_key(window)
+        return {t: k for t, k in self.b.missing(tag, ids, window).items() if f"{tag}|{t}|{lo}|{hi}" not in drop}
+
     def _reaped_eval(self, j, res) -> None:
         if j.get("p2seq") or j.get("p2"):
             return self._p2_reaped(j, res)
+        if res.get("ok", True):
+            lo, hi = window_key(j["window"])
+            tries, drop = self.st.setdefault("cell_tries", {}), self.st.setdefault("dropped_cells", {})
+            for t in self.b.missing(j["tag"], j["ids"], j["window"]):
+                key = f"{j['tag']}|{t}|{lo}|{hi}"
+                tries[key] = tries.get(key, 0) + 1
+                if tries[key] >= self.cfg.eval_retries and key not in drop:
+                    drop[key] = tries[key]
+                    self.b.log("cell_dropped", tag=j["tag"], task=t, window=[lo, hi], tries=tries[key])
         n = self.st["nodes"].get(j.get("owner"))
         if not res.get("ok", True) and n is not None:
             n["eval_failures"] = int(n.get("eval_failures", 0)) + 1
@@ -497,7 +513,7 @@ class Conductor:
         for _ in range(len(self.cfg.rungs) + 2):
             ids = self._stage_ids(n)
             full = ids == self.screen_ids()
-            if self.b.missing(tag, ids, (0, self.cfg.screen_n)) or self.b.missing(self.champion, ids, self.ref_want(self.champion)):
+            if self._missing(tag, ids, (0, self.cfg.screen_n)) or self._missing(self.champion, ids, self.ref_want(self.champion)):
                 n["status"] = "rung" if not full else "full"
                 return
             deltas = policy.paired_deltas(self._cand_rewards(tag, ids), self._ref(), ids)
@@ -549,7 +565,7 @@ class Conductor:
         ids = self.b.confirm_ids()
         w = (n["k0"], n["k0"] + self.cfg.params.n_conf)
         ref = n["ref"]
-        if self.b.missing(tag, ids, w) or self.b.missing(ref, ids, w):
+        if self._missing(tag, ids, w) or self._missing(ref, ids, w):
             return
         deltas = policy.paired_deltas(self.b.rewards(tag, ids, w), self.b.rewards(ref, ids, w), ids)
         p = self.cfg.params
@@ -677,7 +693,7 @@ class Conductor:
         else:
             wants = self._wants()
         for prio, _k, tag, ids, window, owner, purpose in wants:
-            miss = self.b.missing(tag, ids, window)
+            miss = self._missing(tag, ids, window)
             for t in self._inflight(tag, window):
                 miss.pop(t, None)
             for ch in policy.chunks(miss, self.cfg.chunk):
@@ -940,8 +956,8 @@ class Conductor:
         confirming = [t for t, n in self.st["nodes"].items() if n["status"] == "confirming"]
         for t in confirming:
             n = self.node(t)
-            if not cs.live(self.st, "eval") and (self.b.missing(t, self.b.confirm_ids(), (n["k0"], n["k0"] + self.cfg.params.n_conf))
-                                                or self.b.missing(n["ref"], self.b.confirm_ids(), (n["k0"], n["k0"] + self.cfg.params.n_conf))):
+            if not cs.live(self.st, "eval") and (self._missing(t, self.b.confirm_ids(), (n["k0"], n["k0"] + self.cfg.params.n_conf))
+                                                or self._missing(n["ref"], self.b.confirm_ids(), (n["k0"], n["k0"] + self.cfg.params.n_conf))):
                 if not self._confirm_launchable(t, n):
                     n["status"] = "unconfirmed"
                     n["reserved"] = 0

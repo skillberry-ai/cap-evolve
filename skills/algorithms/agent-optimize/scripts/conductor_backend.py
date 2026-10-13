@@ -242,8 +242,9 @@ class RealBackend(P2Port, conductor.Backend):
 
     def eval_cmd(self, job) -> list[str]:
         tag, ids, (lo, hi) = job["tag"], job["ids"], job["window"]
-        if lo == 0:
-            return act.topup_cmd(self.ctx, tag, hi, ids)
+        # ponytail: always the exact trial window, never --topup-to (that numbers refills after the tag's
+        # highest k, so an errored trial 1 came back as trial 2 and the window [0, 2) waited forever).
+        # A partial refill re-runs the cells it already has; dedupe per cell if that waste ever matters.
         cmd = eval_index.eval_cmd(self.root, self.project, tag, "val", hi - lo, ids=ids, trial_offset=lo,
                                   fixed_seeds=True, skills_dir=SKILLS)
         cmd[cmd.index("--candidate") + 1] = str(digest.cand_dir(self.run_dir, tag))

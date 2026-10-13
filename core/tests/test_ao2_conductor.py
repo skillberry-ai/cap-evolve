@@ -345,3 +345,24 @@ def test_state_atomic_and_reservation_arithmetic(tmp_path):
     assert not cs.rollouts_fit(st, committed=100, need=1, cap=200, finalize_reserve=51)
     assert cs.rollouts_fit(st, committed=10 ** 6, need=10 ** 6, cap=None)
     assert not list(tmp_path.glob(".conductor.json.tmp*")), "no torn temp file is left behind"
+
+
+# a cell whose rollout always errors -------------------------------------------------------------
+def test_a_cell_that_never_lands_is_dropped_not_waited_on_forever(tmp_path):
+    """One (candidate, task, trial) cell never reaches the ledger (its rollout always errors). The
+    conductor retries it ``eval_retries`` times, then drops it as missing data and the run finishes;
+    before, the window kept the candidate waiting and relaunched the cell forever."""
+    w, be, cfg = F.make(tmp_path, spec={"max_metric_calls": 1500, "max_candidates": 4, "ao_plateau_n": 99},
+                        world_kw={"salt": 1}, rungs=(8,))
+    real = w._row
+
+    def flaky(tag, task, trial):
+        if tag == "cand_1" and task == "t00" and trial == 0:
+            return                                    # errored rollout: never indexed
+        real(tag, task, trial)
+    w._row = flaky
+    c = F.run_to_done(w, be, cfg, max_ticks=3000)
+    dropped = [k for k in c.st.get("dropped_cells", {}) if k.startswith("cand_1|t00|")]
+    assert dropped, "the cell is dropped after eval_retries tries"
+    assert c.st["cell_tries"][dropped[0]] == cfg.eval_retries
+    assert c.st["nodes"]["cand_1"].get("decided"), "cand_1 is decided instead of waiting forever"
