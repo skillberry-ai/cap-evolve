@@ -81,6 +81,7 @@ def main():
                 ("A_make_candidates.py", V2 / "_tools/make_candidates.py", "candidate extraction"),
                 ("A_make_metrics.py", V2 / "_tools/make_metrics.py", "metrics extraction"),
                 ("A_start_daemon_v2.sh", V2 / "_tools/start_daemon_v2.sh", "evaluator daemon start script"),
+                ("A_post_hc2.sh", V2 / "_tools/post_hc2.sh", "post-step after the hill-climb driver exits: harness.skip_finalize(run_dir) (finalize false), writes champion.json, evaluates nothing"),
                 ("A_token_watchdog.py", V2 / "_tools/token_watchdog.py", "optimizer token guard"),
                 ("A_capopt_egress.sh", V2 / "_tools/capopt_egress.sh", "egress check"),
                 ("A_negtest_capopt.sh", V2 / "_tools/negtest_capopt.sh", "negative test for the optimizer user"),
