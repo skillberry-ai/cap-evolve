@@ -186,6 +186,9 @@ def main():
     for nm, fp in TOKEN_FILES:
         if fp.exists():
             items.append(("tokens_final_" + nm, fp, "final optimizer-token manifest/evidence (amendment 9 erratum 14)", None))
+    for nm, rel in (("hc2", "runs/V2/_sbx_bin/claude.new"), ("ao2", "runs/V2/_sbx_bin_ao/claude.new")):
+        if (CS / rel).exists():
+            items.append(("v2_11E_shim_events_overlay_candidate_" + nm, CS / rel, "optimizer shim candidate: /dev/null bound over run_main/events.jsonl (confirm-chunk events isolation fix)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
