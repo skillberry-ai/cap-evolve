@@ -204,7 +204,7 @@ def main(argv=None):
     for s in suites:
         item("bstar_%s" % s, mdir / ("bstar_%s.json" % s))
         item("artifact_manifest_%s" % s, mdir / ("artifacts_%s.json" % s), "tree hashes of every artifact incl. the seed")
-        for suf in ("", "_transfer", "_rejudge"):
+        for suf in ("", "_end", "_transfer", "_rejudge"):
             p = mdir / ("order_%s%s.jsonl" % (s, suf))
             if p.exists():
                 item("order_%s%s" % (s, suf), p)
