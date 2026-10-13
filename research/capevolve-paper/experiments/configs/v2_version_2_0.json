@@ -134,5 +134,15 @@
  "outside_search_algorithm": [
   "v2 tau adapters (copied from v1) add a reference/ read-only guard; hashes from tau-runner",
   "admit_v2 uses a 30 s V2-only queue rule"
- ]
+ ],
+ "suite_A_seeds": {
+  "split_seed": {
+   "0": 0,
+   "1": 1,
+   "2": 2
+  },
+  "note": "the search seed is the split/pool seed and the base trial seed (capevolve-runner)",
+  "AO-2": "launches held pending a token-basis PR (new SHA, new AO spec/launcher hashes later); HC-2 may go on a3f5eeb6d"
+ },
+ "registry_note": "v2_11E_A_sbx_bin_claude (runs/V2/_sbx_bin/claude) belongs to the tau/airline runner's shim, not to capevolve-runner; its item label is 'A_' by registration location only"
 }
