@@ -127,6 +127,7 @@ def main(argv=None):
     ap.add_argument("--suites", default="A,B,C")
     ap.add_argument("--registry", default=str(REGISTRY))
     ap.add_argument("--allow-dirty", action="store_true")
+    ap.add_argument("--note", default="", help="reason attached to every item that is NEW in this run (e.g. a post-freeze deviation)")
     ap.add_argument("--dry", action="store_true", help="print what would be registered; write nothing")
     ap.add_argument("--manifests", default=str(C.MANIFESTS))
     a = ap.parse_args(argv)
@@ -224,7 +225,7 @@ def main(argv=None):
         if a.dry:
             print("%-40s %s %s" % (name, sha[:16], note))
             continue
-        n_new += 1 if reg.add(name, sha, path, note, suites=suites) else 0
+        n_new += 1 if reg.add(name, sha, path, ((a.note + " | ") if a.note else "") + note, suites=suites) else 0
     if not a.dry:
         reg.write()
     print("registered %d new items (%d total lines) -> %s" % (n_new, len(reg.lines), a.registry))
