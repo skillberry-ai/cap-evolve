@@ -521,7 +521,7 @@ class RealBackend(P2Port, conductor.Backend):
         """``finalize: false``: record the champion; no test FINAL, no bookend, no final estimate."""
         return harness.skip_finalize(self.run_dir, champion=champion, reason="spec")
 
-    def _final_val(self, champion, n: int = 3, k0: int = 5000) -> None:
+    def _final_val(self, champion, n: int = 3, k0: int = 900_000) -> None:      # far above every fill window
         """Focus promotes on failing tasks + canaries only: before test is sealed, ONE fresh full-val
         estimate of the final champion (``n`` trials, fresh seeds), reported next to the seed's pooled draws."""
         cmd = eval_index.eval_cmd(self.root, self.project, champion, "val", n, ids=self.screen_ids(), trial_offset=k0,

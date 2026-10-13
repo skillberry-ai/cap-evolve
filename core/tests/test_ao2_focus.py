@@ -95,3 +95,10 @@ def test_proposer_failing_block_lists_rates_traces_primary_and_rejected():
     assert "PRIMARY tasks (sibling jobs take the others): 7" in txt and "7__seed__t0.json" in txt
     assert "3__seed__t1.json" not in txt, "a slot reads its primary tasks' traces"
     assert "cand_1: transfer rule" in txt
+
+
+def test_a_champion_that_passes_everything_prunes_candidates_instead_of_parking_them(tmp_path):
+    spec = {"max_metric_calls": 3000, "max_candidates": 4, "ao_plateau_n": 99, "ao_focus": True}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"seed_trials": 3, "reward_fn": lambda cand, task, k: 1.0})
+    c = F.run_to_done(w, be, cfg, max_ticks=3000)
+    assert all(n.get("why") == "no_focus_targets" for t, n in c.st["nodes"].items() if t != "seed")

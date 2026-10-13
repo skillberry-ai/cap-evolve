@@ -582,7 +582,10 @@ class Conductor:
             return
         focus, canary = self._focus_ids(n)
         ids = focus + canary
-        if not focus or self._missing(tag, ids, (0, n["trials"])):
+        if not focus:                     # the champion passes every task: nothing left this rule can promote on
+            self._finish_node(tag, "pruned", "no_focus_targets", {"stage": "focus"})
+            return
+        if self._missing(tag, ids, (0, n["trials"])):
             n["status"] = "rung"
             return
         ref = self.b.rewards(self.champion, ids, self.ref_window(self.champion))
