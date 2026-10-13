@@ -1,5 +1,25 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 00:50 UTC (coordinator periodic check)_
+
+## Update 00:50 UTC
+- **Spend**:
+  - Capped spend is 158.6M of 200M; proxy cost is $380.
+  - The pace is 3.65M/h over the last 2 h, mostly Suite E (GEPA, ACE, gepafull, 1S) and ACE s2 on Suite A, which projects about 177M by 06:00. That is above the 21:11 central forecast.
+  - The metering auditor is re-forecasting and applying the registered 170M ladder, including holding Suite E wave W4 if needed.
+- **Stalls**: none. No live run dir has been idle for more than 1 h.
+- **Suite B**:
+  - hc s0/s2 finalized with the seed as champion (sel 0.52 / 0.60); post_sel rescore is running.
+  - HarnessLens: all four arms (matched s0-s2 and the extended run cut at 10M) end at v0 with no accepted candidate.
+- **Suite E**: W1-W3 are running; W4 (13 cells) is queued.
+- **Outage**: Claude Code subagent model access was refused from 22:09 to 22:20 UTC. The user moved teams. The searches were unaffected because they run through the campaign gateway.
+- **CapEvolve v2**:
+  - #814 is merged.
+  - #817 (gate/P2): the full suite passes except the one failure that is already on main; review in progress.
+  - #815 (HC-2): runs on the real P2 evaluator; the final estimate on C is being added.
+  - #816 (helpers): fixing the 2 blockers from review (IPython traceback tagging, lint/smoke bypass).
+  - AO-2: in progress on v2/ao2.
+
 _Last updated: 2026-10-12 21:50 UTC (coordinator periodic check)_
 
 ## Update 21:50 UTC
