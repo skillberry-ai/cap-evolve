@@ -1,5 +1,29 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 09:50 UTC (coordinator periodic check)_
+
+## Update 09:50 UTC
+- **Spend**: capped spend is 172.6M. The cap was raised to 230M (user, 08:15) for the v2 reruns; the v1 final window still stops at 198M.
+- **v1 final window**: running in registered interleaved order since 07:03.
+
+  | Suite | Done | First-attempt infra rate |
+  |---|---|---|
+  | A | 512 / 2520 | 0.2% |
+  | B | 541 / 2520 | 1.3% |
+  | C | 151 / 1020 | 0.7% |
+  | D | 3631 / 13080 | 1.75% |
+
+  - No candidate errors.
+  - B/C rebalanced, net zero: B default 10, C 10, HL 16.
+  - Suite A idle-gap watch: max non-first-turn call 323 s; the pause threshold is 450 s.
+- **Stalls**: none. All live dirs were active within 20 minutes. All v1 searches ended at the cutoff, except E32-ao s1 (running). E32-ao s0/s2 are native early stops.
+- **CapEvolve v2**:
+  - Every v2 PR is merged to main: #814, #817, #822, #823, #815, #821, #818, #825, #816 and #824. 11E v2.0 was registered at 6b94ccba0.
+  - The smoke tests found a main bug: the pooled split never triggered because the spec was read before run_config was logged.
+  - Fix #826 is open, the full suite passes, and it is being merged.
+  - Then a new SHA, a new worktree, re-registration, re-smoke and launch (18 searches: A, D, E × HC-2/AO-2 × 3).
+- **Artifacts**: repo-sync is uploading all run artifacts to the paper repo as release assets, with a secret scan and a manifest.
+
 _Last updated: 2026-10-13 06:50 UTC (coordinator periodic check)_
 
 ## Update 06:50 UTC (search cutoff in progress)

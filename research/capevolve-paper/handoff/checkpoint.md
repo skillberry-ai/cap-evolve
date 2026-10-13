@@ -145,3 +145,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Update 06:50 UTC 10-13 (cutoff in progress)
 - final-eval-eng leads the cutoff: stops are done, and the snapshot is at campaign-scratch/cutoff_20261013. Pending: N*, reconstruct, freeze registry, final launch.
 - C gepa s0-s2 were stopped about 3 min late, so their counted search must use the 06:00 counter.
+
+## Update 09:50 UTC 10-13 (periodic check)
+- v1 final window running, owned by final-eval-eng (hourly status_report.py).
+- v2 is blocked on #826 (pooled spec fix). After the merge: pin the SHA, create a fresh worktree wt-v2run2, remove other-read on the ci/benchmarks/spreadsheetbench split files, register 11E with stats-reviewer, then the runners (capevolve-runner A, tau-runner D/E) smoke and launch.
+- The cap is 230M. caps.json has V2- in low_priority_tags and Azure mini reserve 9.
