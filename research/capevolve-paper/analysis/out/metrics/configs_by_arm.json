@@ -1,5 +1,5 @@
 {
- "_generated_utc": "2026-10-12T23:27:28Z",
+ "_generated_utc": "2026-10-13T00:29:05Z",
  "_note": "values not found in manifests/specs/deviations/launch scripts are 'not recorded'; nothing is guessed",
  "runs": {
   "A/ace/s0": {
@@ -304,7 +304,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 344
+    "rollout_counter": 350
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -321,10 +321,10 @@
     "source": "derived: birth time of launcher.log"
    },
    "infra": {
-    "infra_retries_in_counter": 7,
+    "infra_retries_in_counter": 10,
     "infra_retries_json": {
-     "infra_retries": 7,
-     "final_failures": 0,
+     "infra_retries": 10,
+     "final_failures": 1,
      "events": [
       {
        "t": "2026-10-12T06:06:43Z",
@@ -388,6 +388,41 @@
        "seed": 1,
        "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39537/execute",
        "who": "val"
+      },
+      {
+       "t": "2026-10-13T00:09:02Z",
+       "kind": "retry",
+       "task_id": "51090",
+       "attempt": 0,
+       "seed": 0,
+       "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39537/execute",
+       "who": "train"
+      },
+      {
+       "t": "2026-10-13T00:18:52Z",
+       "kind": "retry",
+       "task_id": "51090",
+       "attempt": 1,
+       "seed": 1,
+       "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39537/execute",
+       "who": "train"
+      },
+      {
+       "t": "2026-10-13T00:21:49Z",
+       "kind": "retry",
+       "task_id": "51090",
+       "attempt": 2,
+       "seed": 2,
+       "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39537/execute",
+       "who": "train"
+      },
+      {
+       "t": "2026-10-13T00:29:09Z",
+       "kind": "final_failure",
+       "task_id": "51090",
+       "attempts": 4,
+       "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:39537/execute",
+       "who": "train"
       }
      ]
     },
@@ -440,7 +475,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 259
+    "rollout_counter": 277
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5402,7 +5437,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 343
+    "rollout_counter": 369
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5464,7 +5499,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 397
+    "rollout_counter": 417
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5526,7 +5561,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 397
+    "rollout_counter": 416
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -9175,23 +9210,13 @@
       }
      },
      "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
-    },
-    "live_cmdline_args": {
-     "cap": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/artifact",
-     "out": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/post_sel",
-     "splits": "sel",
-     "trials": "2",
-     "seed": "9001",
-     "tag-prefix": "tag:E10B-chaser-ao-s1:chaser"
     }
    },
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E10B/ao/s1 && source env.sh\nEXTRA=\"\"; [ \"ao\" = \"ao\" ] && EXTRA=\"--agent-driver claude-code\"\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off --resume $EXTRA > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E10B/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E10B/ao/s1 ao 1 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-tau/core:/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-tau/skills\nexport TAU_TAG_PREFIX=tag:E10B-ao-s1:ao\nexport TAU_JUDGE_MODEL=openai/azure/gpt-5.5\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-6} TAU2_SIM_TIMEOUT=7200 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "54859 Mon Oct 12 22:47:33 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u /home/dev/projects2/campaign-scratch/scripts/E10B/eval_cap.py --cap /home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/artifact --out /home/dev/projects2/campaign-scratch/runs/E10B/ao/s1/post_sel --splits sel --trials 2 --seed 9001 --tag-prefix tag:E10B-chaser-ao-s1:chaser"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5",
@@ -10197,7 +10222,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 505
+    "rollout_counter": 542
    },
    "concurrency": {
     "manifest.json": 6
@@ -10448,7 +10473,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 501
+    "rollout_counter": 538
    },
    "concurrency": {
     "manifest.json": 6
@@ -10698,7 +10723,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 521
+    "rollout_counter": 552
    },
    "concurrency": {
     "manifest.json": 6
@@ -12853,7 +12878,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 245
+    "rollout_counter": 294
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -12884,11 +12909,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 3921617,
-    "state_metric_calls": 245,
-    "state_iterations": 4,
-    "state_optimizer_usd": 1.4477737000000002,
-    "state_runner_tokens": 21750831,
+    "state_optimizer_tokens": 4211645,
+    "state_metric_calls": 294,
+    "state_iterations": 5,
+    "state_optimizer_usd": 1.5801658,
+    "state_runner_tokens": 26145803,
     "state_best_val": 0.6666666666666666
    }
   },
@@ -12972,7 +12997,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 245
+    "rollout_counter": 294
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -13003,11 +13028,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 3406475,
-    "state_metric_calls": 245,
-    "state_iterations": 4,
-    "state_optimizer_usd": 2.0084976,
-    "state_runner_tokens": 20957626,
+    "state_optimizer_tokens": 4168945,
+    "state_metric_calls": 294,
+    "state_iterations": 5,
+    "state_optimizer_usd": 2.2838595,
+    "state_runner_tokens": 25826786,
     "state_best_val": 0.6530612244897959
    }
   },
@@ -14336,7 +14361,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 319
+    "rollout_counter": 341
    },
    "concurrency": {
     "manifest.json": 6
@@ -14598,7 +14623,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 244
+    "rollout_counter": 261
    },
    "concurrency": {
     "manifest.json": 6
@@ -14798,7 +14823,7 @@
    "restart_siblings_and_superseded_dirs": [],
    "restart_cutoff": null,
    "infra": {
-    "infra_retries_in_counter": 1,
+    "infra_retries_in_counter": 2,
     "infra_retries_json": null,
     "llm_failure_counts": null
    },
@@ -14860,7 +14885,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 304
+    "rollout_counter": 332
    },
    "concurrency": {
     "manifest.json": 6
@@ -15320,7 +15345,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 380
+    "rollout_counter": 440
    },
    "concurrency": {
     "manifest.json": 6
@@ -15389,11 +15414,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 4579249,
-    "state_metric_calls": 380,
-    "state_iterations": 8,
-    "state_optimizer_usd": 2.0811776999999996,
-    "state_runner_tokens": 31620863,
+    "state_optimizer_tokens": 4761727,
+    "state_metric_calls": 440,
+    "state_iterations": 9,
+    "state_optimizer_usd": 2.2270012999999995,
+    "state_runner_tokens": 35769365,
     "state_best_val": 0.45
    }
   },
@@ -19025,9 +19050,7 @@
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E31/1S/s0/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E31/1S/s0 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E30/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E31/1S/s0 1S 0 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only. Suite D: target/user/judge via the Azure-only gateway :4112; optimizer via :4111 in the E10B shim.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E31/1S/s0/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills\nexport TAU_TAG_PREFIX=tag:E31-1S-s0:1S\nexport TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\nexport TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s0/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E31/1S/s0/surface_violations.json\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-airE/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E31/1S/s0\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s0/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3075731 Mon Oct 12 21:43:39 2026 bash /home/dev/projects2/campaign-scratch/runs/E31/1S/s0/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -19042,7 +19065,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 200
+    "rollout_counter": 240
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -19057,11 +19080,12 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 8077517,
-    "state_metric_calls": 200,
-    "state_iterations": 9,
+    "state_metric_calls": 240,
+    "state_iterations": 10,
     "state_optimizer_usd": 3.0457625000000004,
-    "state_runner_tokens": 11887478,
-    "state_best_val": 0.6842105263157895
+    "state_runner_tokens": 14110360,
+    "state_best_val": 0.6842105263157895,
+    "cost_summary_optimizer_noncache": 657307
    }
   },
   "E/1S/s1": {
@@ -19121,27 +19145,13 @@
      "max_iterations": 10,
      "stall": 0,
      "max_metric_calls": 300
-    },
-    "live_cmdline_args": {
-     "rbind": "\"$S/$1\"",
-     "bind": "\"$SC\"",
-     "permission-mode": "acceptEdits",
-     "allowedTools": "Bash",
-     "disallowedTools": "Monitor",
-     "model": "aws/claude-sonnet-5-5",
-     "output-format": "json",
-     "max-turns": "80",
-     "max-budget-usd": "8"
     }
    },
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E31/1S/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E31/1S/s1 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E30/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E31/1S/s1 1S 1 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only. Suite D: target/user/judge via the Azure-only gateway :4112; optimizer via :4111 in the E10B shim.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills\nexport TAU_TAG_PREFIX=tag:E31-1S-s1:1S\nexport TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\nexport TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/surface_violations.json\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-airE/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "534519 Mon Oct 12 23:28:08 2026 bash -c  set -e S=/tmp/sbxstage.$$; mkdir -p $S; mount -t tmpfs none $S W=\"$SBX_W\"; B=/home/dev/projects2/campaign-scratch; WT=/home/dev/projects2/wt-tau m() { mkdir -p \"$S/$2\"; mount --rbind \"$1\" \"$S/$2\"; } m \"$W\" w; m /home/dev/.local/share/claude cl; m /home/dev/.local/bin lb; m $B/bench/venv-tau2-8ebb749 venv; m $B/bench/src/tau2-8ebb749/src tsrc m $W/sbx_data tdata; m $WT/core wtcore; m $B/baselines/gwbridge gwb; m $WT/skills wtskills; m $WT/docs/archive wtdocs; m $B/bench/local blocal mount -t tmpfs none /home/dev b() { mkdir -p \"$2\"; mount --rbind \"$S/$1\" \"$2\"; } b w \"$W\"; b cl /home/dev/.local/share/claude; b lb /home/dev/.local/bin; b venv $B/bench/venv-tau2-8ebb749; b tsrc $B/bench/src/tau2-8ebb749/src b tdata $B/bench/src/tau2-8ebb749/data; b wtcore $WT/core; b gwb $B/baselines/gwbridge; b wtskills $WT/skills; b wtdocs $WT/docs/archive; b blocal $B/bench/local for p in /home/dev/.local/share/claude /home/dev/.local/bin $B/bench/venv-tau2-8ebb749 $B/bench/src/tau2-8ebb749/src $B/bench/src/tau2-8ebb749/data $WT/core $WT/skills $WT/docs/archive $B/bench/local; do mount -o remount,bind,ro \"$p\"; done SC=\"$W/.capevolve/project/seed_capability\"; if [ -d \"$SC\" ]; then mount --bind \"$SC\" \"$SC\"; mount -o remount,bind,ro \"$SC\"; fi mount -t tmpfs none /tmp; mount -t tmpfs none /var/tmp; mount -t tmpfs none /dev/shm 2>/dev/null || true umount -l $S 2>/dev/null || true mkdir -p /tmp/home/tmp ip link set lo up 2>/dev/null || /usr/sbin/ip link set lo up /usr/bin/python3 $B/baselines/gwbridge/gw_bridge.py inside $B/baselines/gwbridge/gw.sock 4111 >/dev/null 2>&1 & FW=$! for i in $(seq 1 40); do (echo > /dev/tcp/127.0.0.1/4111) 2>/dev/null && break; sleep 0.25; done cd \"$SBX_PWD\" env -i \"$@\"; rc=$?; kill $FW 2>/dev/null; exit $rc bash ANTHROPIC_API_<redacted> ANTHROPIC_BASE_URL=http://127.0.0.1:4111 CAPEVOLVE_CORE=/home/dev/projects2/wt-airE/core CAPEVOLVE_ERRORED_TRIAL_POLICY=fail CAPEVOLVE_NATIVE_SIMS=1 CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills E10B_W=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1 LANG=C.UTF-8 MAX_<redacted> PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:/usr/local/go/bin:/usr/local/go/bin:/home/dev/.local/bin:/home/dev/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/.capevolve/project/adapters TAU2_MAX_CONCURRENCY=4 TAU2_SIM_TIMEOUT=10800 TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_GATEWAY=http://127.0.0.1:4112/v1 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0 TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/.capevolve/project/seed_capability TAU_SPLITS_JSON=/home/dev/projects2/wt-airE/protocol/tau_airline_splits.json TAU_SURFACES=policy,tools TAU_TAG_PREFIX=tag:E31-1S-s1:1S TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/surface_violations.json TERM=screen HOME=/tmp/home TMPDIR=/tmp/home/tmp CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s1/claude_cfg /home/dev/.local/bin/claude -p # Benchmark facts (tau2 airline, agent gpt-4.1-mini) - The agent under optimization is gpt-4.1-mini acting as a airline customer-service agent; a simulated customer (gpt-4.1) talks to it. Reward = 1.0 iff the final DB state matches the hidden expected state AND the agent communicated the required information to the user; otherwise 0.0 (no LLM judge). - EDITABLE SURFACE: You may edit both `policy/policy.md` and `tools/tools.py`. - `policy/policy.md` is ADDITIONAL agent guidance, appended after the benchmark policy (shown in `reference/benchmark_policy.md`; it is IMMUTABLE and always present). Write ONLY new guidance (checklists, pitfalls, formats); do NOT restate, paraphrase or copy the fixed benchmark policy. Keep it under ~1500 words. - `tools/tools.py` is the agent-side tool wrapper (copy of tau2's airline tools; `REMOVE_TOOLS` hides tools). The evaluator replays the agent's tool calls on the PRISTINE tau2 toolkit, so changing a write tool's semantics cannot move the gold side; docstring/description edits and read-side helpers are safe. Never hide write calls inside a composite tool. - General rules only. Never mention task ids, specific customer names, order ids or product ids.  # Optimize the capability \u2014 ship several REAL, SAFE, VERIFIED fixes this iteration  ## THE READER (who consumes what you edit) At runtime these capabilities are read by `azoai/gpt-4.1-mini-2025-04-14` \u2014 capability tier: **strong**. The reader is a capable general model, but less robust than frontier on long or ambiguous context. Keep instructions clear and reasonably explicit; add a worked example for tricky formats; prefer code enforcement for behavioral rules over trusting inference. Optimize your edits for THIS reader's capability level, not for your own. When the reader is weaker than you, prefer explicit rules, worked examples, and code enforcement over terse prose you would personally infer.   Focus: every failing task on the val split. Current val reward 0.500: 10 solid / 0 flaky / 10 failing of 20 tasks.  ## EMPTY SEED \u2014 create the capability from scratch The capability directory is EMPTY (no pre-existing content). This is the first iteration starting from a blank slate. Your job is to CREATE the initial capability content \u2014 not edit existing files (there are none). Analyze the failing trajectories in `./trajectories/` to understand what the agent needs, then create the capability files from scratch (e.g. SKILL.md, prompt.txt, tools.json, policy.md \u2014 whatever the capability type requires). Read `./guidance/<cap>/SKILL.md` for the expected file format and structure. A good initial capability addresses the most common failure patterns visible in the trajectories.   GOAL: raise the eval score as much as you can THIS iteration, then STOP (the harness re-scores you \u2014 don't run evaluation yourself). The prompt AND the tools are equally fair game.  Make **AS MANY real fixes as you can this iteration \u2014 solve many issues across many trajectories, not just the biggest one.** A timid one- or two-edit iteration is an under-used iteration: diagnose EVERY failure cluster in `./trajectories/` and ship a fix for each one that passes the three tests below. Breadth is the goal \u2014 the more distinct failing clusters you fix in this ONE candidate, the larger the gain.  The ONLY brake on breadth is regression: every edit must pass all three tests, because a single speculative edit that breaks a passing task can sink an iteration of good work (it did in prior runs). So the discipline is \"many fixes, each one real and safe\" \u2014 NOT \"few fixes\". Do not stop at the first cluster; work through them all.  ## EDIT BOTH ARTIFACTS, AND PREFER CODE (this is where prior iterations fell short) A strong iteration changes BOTH the prompt AND the tool CODE \u2014 many edits to each. The recurring failure mode to avoid: an iteration that just adds a few prose rules to the policy and (at most) rewords a docstring, leaving `tools.py` logic untouched. That is an under-used iteration even if it \"covers\" several clusters, because: - **A BEHAVIORAL miss is NOT fixed by a prose rule.** When the agent already \"knows\" the   rule but skips it (doesn't call get_*_details before acting, acts on a guess, re-asks   after consent, miscomputes a total) \u2014 adding ANOTHER prose rule it will skip the same   way does nothing. Enforce it in CODE: an in-body guard / validation / computation in   the EXISTING tool, or a composite tool that performs the whole action. Prose is reserved   for genuine KNOWLEDGE gaps (a fact/format/criterion the agent cannot derive). - **Do NOT defer a capability-gap cluster** (\"would need a compute tool \u2014 next iteration\").   If a cluster needs a compute/validation/composite tool, BUILD it THIS iteration \u2014 that   is the highest-leverage edit available, not something to postpone. So for each cluster, first ask \"can this be enforced in `tools.py` code?\" \u2014 if yes, do that; only fall back to a prompt rule for a true knowledge gap. Expect your `tools.py` diff to contain real CODE (guards, validations, new/changed tool bodies), not only docstring text \u2014 across SEVERAL tools, not one.  ## The THREE TESTS every change must pass (this is the whole game) Before you keep any edit, confirm all three. Drop any edit that fails even one. 1. **REAL** \u2014 it targets a cluster that is FAILING in THIS iteration's `./trajectories/`    (reward 0, partial-credit, or communication/omission). Never edit for a hypothetical    problem, never touch a path only used by already-PASSING tasks. 2. **SAFE (bounded blast radius)** \u2014 the real regression question is *behavioral*:    **would this edit change what the agent DOES on ANY currently-passing task?** Not    \"does a passing task call this tool\" \u2014 \"does the agent now take a different action,    or newly ACT where it correctly REFUSED / escalated\". Two blast-radius classes:    - **BOUNDED** \u2014 an in-body guard/computation that fires ONLY on the exact violating      condition. Only already-failing inputs hit it; passing tasks are untouched by      construction. This is the SAFE default \u2014 prefer it.    - **UNBOUNDED** \u2014 any edit to a GLOBAL decision/permission/refusal rule in the prompt      (loosening \"X may do Y\", broadening who may take an action, relaxing a      refuse-and-escalate rule). It changes behavior across the ENTIRE decision class,      including tasks where the stricter/original behavior was the gold answer. Allowed      ONLY if the new behavior is correct for EVERY task in that class AND you have read      the currently-passing tasks in the class and confirmed none relied on the old      behavior. Otherwise it is a guaranteed regression \u2014 encode the discriminating      CONDITION instead (see the DECISION / PERMISSION lever below).    Name the passing tasks in each edit's blast-radius class and state which class it is.    A regression wastes the whole candidate (the gate rejects a net-zero), not one task. 3. **VERIFIED** \u2014 you have shown it actually fixes its target (see VERIFY-THE-FIX). An    edit you cannot verify is a guess \u2014 drop it.  Quality AND breadth: ship every fix that passes the three tests \u2014 the more clusters you cover safely, the bigger the gain. The only edits to leave out are the speculative ones (an edit that fails a test), not real fixes you ran out of patience for. Don't re-add anything `LEDGER.md` / `JOURNAL.md` show was already tried and rejected.  ## Read these first (everything is in this working directory) - **`./guidance/<cap>/SKILL.md` for EACH selected capability \u2014 READ IT IN FULL before you   edit; it is the MENU of improvement TYPES available to you.** Each capability skill lists   the concrete kinds of change you can make (for a tools capability: in-body validation   guards, normalization, computation, composite/atomic-write tools, loop/workflow tools,   enriched return values + actionable errors, add/remove tools, sharpened descriptions;   for a prompt capability: role/contract, decision-rule narrowing, missing-rule, worked   example, consolidation). Do not invent change types from memory \u2014 take them from the   skill, and deliberately apply MULTIPLE DIFFERENT types this iteration (e.g. several   in-body guards + a compute tool + enriched errors + a couple of prompt rules), matching   each cluster to the strongest type the skill describes for it. (Tool code? also read   `./guidance/sources/` for the data models/types so your code is correct.) - `./guidance/diagnose/SKILL.md` \u2014 the failure-clustering method. Use it. - `./trajectories/` \u2014 the FULL traces of the current best candidate (the step you build   on). The `## (a) 10 ALWAYS-failing task(s) \u2014 fix the shared root cause (full traces in ./trajectories/): - 1 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state, but NO gold action mismatched \u2014 so this is not a wrong argument value. The divergence is an EXTRA or DUPLICATED write, or a write side effect: every successful update appends a charge to `payment_history`, and re-issuing a corrected write does not undo the first one. The 1 write(s) you performed, in order: cancel_reservati - 7 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): cancel_reservation: ag - 12 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): calculate: agent used  - 14 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): cancel_reservation: wa - 17 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): update_reservation_bag - 21 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): update_reservation_fli - 23 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): cancel_reservation: wa - 33 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): search_direct_flight:  - 39 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): get_reservation_detail - 43 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state, but NO gold action mismatched \u2014 so this is not a wrong argument value. The divergence is an EXTRA or DUPLICATED write, or a write side effect: every successful update appends a charge to `payment_history`, and re-issuing a corrected write does not undo the first one. The 1 write(s) you performed, in order: cancel_reservati ` block below summarizes them with argument-level feedback \u2014 read   the actual traces for the clusters you'll fix, don't rely on the summary alone. - `./LEDGER.md` \u2014 FACTS (read-only): every prior iteration's outcome + the exact tasks it   broke/fixed. Your SAFE test starts here \u2014 never re-introduce a change that broke a task. - `./JOURNAL.md` \u2014 the accumulating handover. Each entry is the optimizer's INTENT, and   directly below it the framework stamps a **RESULT** line (objective: ACCEPTED/REJECTED \u00b7   \u0394 \u00b7 the exact tasks fixed/broke). The RESULT lines \u2014 not the intent \u2014 are the truth of   what worked: read them all before proposing. If the most recent RESULT is **REJECTED**,   its batch was reverted; read that entry's `./prior_iterations/<id>/diff.patch`, keep the   edits that did NOT appear in its `broke={...}`, and DROP or REDESIGN the ones that did \u2014   do NOT resubmit the whole rejected batch, and do NOT abandon the cluster. APPEND your new   entry (intent only) below the marker; never edit earlier entries or re-try a refuted idea. - `./RUNMAP.md` + `./prior_iterations/<id>/` \u2014 EVERY prior iteration's (accepted AND   rejected) PROCESS.md + diff.patch. Read the one(s) that touched a cluster you're about to   work on, so you build on what worked and avoid repeating what regressed. - `./PROCESS.md` \u2014 your REQUIRED explainability file for THIS iteration (template inside). - `./guidance/optimizer/<name>.md` \u2014 your agent's subagent/parallelism features (optional).   ## Process (do this, then STOP) **Parallelism:** Your agent supports parallel subagents/worktrees (see ./guidance/optimizer/claude-code.md). FAN OUT to cover MANY clusters at once: one read-only subagent per trajectory-group to diagnose, then one edit-subagent per issue (each in its own worktree), then MERGE every edit into this ONE candidate with no conflicts. This is how a single iteration fixes many issues across many trajectories, not just the biggest one. 1. Read your capability SKILL(s) + the diagnose method + the cross-iteration files    (LEDGER facts, JOURNAL handover, RUNMAP for clusters you'll touch). 2. Diagnose THIS iteration's `./trajectories/` ONLY (not stale signatures). Cluster ALL    failures by shared root cause \u2014 total, partial-credit, AND communication/omission.    RANK clusters by LEVERAGE = (# failing tasks \u00d7 trials \u00d7 score recoverable), biggest    first \u2014 but plan to fix ALL of them this iteration, not only the top few. 3. For EACH cluster, pick the strongest improvement TYPE from the capability SKILL(s)    (cross-check the FAILURE TYPE section next) and draft the edit. Across the iteration    use MULTIPLE different types from the skills, not the same one repeatedly. Run each    edit through the THREE TESTS; keep it only if it passes all three. 4. Ship every passing edit together in this ONE candidate \u2014 cover as many clusters as you    can SAFELY (that is the win), and never include an edit that fails a test. 5. Fill `PROCESS.md` and APPEND your entry to `JOURNAL.md`. STOP.  ## Choose the lever by FAILURE TYPE Pick the strongest lever YOUR capability's edit space offers (see `./guidance/<cap>/`). The levers below are written for a TOOLS capability; for a prompt-only capability (system-prompt / skill-package) use the structural-prose equivalent noted in each.  - **RULE VIOLATION** \u2014 the agent breaks a rule/precondition/formula it could already   follow. **Default strong lever (tools): move the rule INTO THE CODE BODY of the   EXISTING tool that governs it** \u2014 an in-body validation / normalization / computation   that raises an ACTIONABLE error or returns the corrected value, scoped to fire ONLY on   the violating condition. This is the highest-yield, lowest-regression edit and is what   drove the best prior results \u2014 reach for it first. *Example:*   ```   def book(record_id, amount, payment_id):   +   methods = {m[\"id\"] for m in get_record(record_id)[\"payment_methods\"]}   +   if payment_id not in methods:                      # fires only on the violation   +       raise ValueError(f\"payment_id {payment_id!r} not on file; available={sorted(methods)}\")       return _backend.book(record_id, amount, payment_id)   ```   (Prompt capability: make the rule unmissable \u2014 a checklisted step / worked counterexample.) - **CAPABILITY GAP / ACTION STALL** \u2014 the agent has NO reliable way to do the thing (a   hard-ZERO cluster needing a real compute / composite / discriminating-predicate tool),   or it narrates/confirms a multi-step action then never executes it. **Prose does   NOTHING for a hard zero** \u2014 a 0.00 task stays 0.00 after any docstring/prompt reword;   it needs a TOOL the agent will CALL that changes the graded state. (tools) ADD a NEW   code-bearing tool that closes the gap \u2014 a composite atomic-WRITE tool whose body   performs the whole action via the existing primitives (then REMOVE the raw primitives   so it can't be skipped), or a loop/validation tool. Add a new tool ONLY when it closes   a real gap AND the agent will call it AND it changes the graded outcome \u2014 NOT a   read/compute/summary helper that a guard or a prompt line would subsume, and never to   hit a quota. (Prompt capability: an explicit, ordered, unavoidable procedure.) - **KNOWLEDGE GAP** \u2014 a format/criterion/fact the agent genuinely cannot derive \u2192   prose: a precise prompt or docstring rule. Don't restate a rule the agent already has;   that's a rule-violation (use code), not a knowledge gap. - **DECISION / PERMISSION (ACT vs REFUSE)** \u2014 the agent made the wrong call on a   decision the policy governs: it ACTED where it should have refused/escalated, or   refused where it should have acted. **This is the most dangerous cluster to fix   wrong.** NEVER loosen, broaden, or alter a GLOBAL decision/permission/refusal rule in   the prompt to fix it \u2014 a global prose change (e.g. \"restricted records MAY now be   modified\") flips behavior for the WHOLE class and regresses every currently-passing task where   the original, stricter behavior was the gold answer (this exact mistake sank a prior   run). Instead encode the EXACT discriminating CONDITION that separates the qualifying   cases, **ideally in CODE** \u2014 an in-body guard on the tool that owns the action, which   refuses/raises ONLY when the precise policy predicate is/isn't met (bounded blast   radius: only the qualifying cases change). If it truly cannot be code, add an ADDITIVE   prompt rule that NARROWS (states the exact predicate) \u2014 never one that LOOSENS.  Also improve **tool RETURN values / error messages** (actionable: what's wrong + valid options + next step) when a recoverable error stranded the agent \u2014 this is high-leverage and low-risk. Never delete a needed rule; change/consolidate instead.  ## VERIFY-THE-FIX (do this for EACH kept edit \u2014 it satisfies the VERIFIED + SAFE tests) - **In-body guard / computation:** run the tool body on the EXACT args from the failing   trace and confirm it fires / returns the corrected value. THEN run it on the args from   1\u20132 currently-PASSING tasks that use the same tool and confirm it does NOT fire (the   blast-radius / SAFE check). A guard that never fires on the failing task is dead code;   one that fires on a passing task is a regression \u2014 drop or rescope either. - **Decision / permission edit (prompt OR guard):** the SAFE check is BEHAVIORAL, not   argument-level. Enumerate the currently-passing tasks in the SAME decision class (same   permission/refusal rule) and confirm the edit would NOT flip the agent's action on any   of them \u2014 in particular that it does not make the agent newly ACT where a passing   task's gold answer was to refuse/escalate. If you cannot enumerate and check that   class, the edit is UNBOUNDED and unverified \u2014 replace it with a coded   discriminating-condition guard scoped to the violating cases only. - **New tool:** construct the inputs the agent SHOULD have passed (from the trace's   observed state) and run the tool body; confirm it completes the action end-to-end. - **Prompt/docstring:** confirm the missing fact is now stated, general, and unambiguous.  Record one line per edit in PROCESS.md, e.g. `trace <task> arg x=<bad> \u2192 guard raises \"<msg>\"; passing tasks <ids> \u2192 guard does NOT fire`. An edit with no verification line is unverified \u2014 verify it or drop it.  ## NON-OVERFITTING (every edit must GENERALIZE) Every edit encodes a GENERAL rule that holds across the whole class of inputs \u2014 NEVER a literal that special-cases one task (its id, target, name, or expected answer). A guard fires on the general condition (\"the id is not in the user's records\", \"the record is in a state that forbids this action\"), NOT `if record_id == \"<TASK_SPECIFIC_ID>\"`. ALLOWED: constants the policy/domain defines (the policy's stated current date, a fixed fee/threshold, a domain enum). Use per-task specifics and any ground-truth in the traces ONLY to understand the failure CLASS, then write the general fix.  ## Handover (REQUIRED before you STOP) - **PROCESS.md** (this iteration): the ranked cluster list (with leverage + RULE/GAP/   KNOWLEDGE tag), every kept edit + its lever, the VERIFY-THE-FIX + blast-radius line per   edit, what you deliberately skipped and why, and (if you used subagents) that you did. - **DIAGNOSIS.json** (OPTIONAL but recommended): a machine-readable diagnosis file that makes   your diagnosis available to the dashboard. If absent, the dashboard will parse PROCESS.md   tables when present, or show only outcome data. The schema:   ```json   {     \"candidate\": \"cand_NNNN\",     \"headline\": \"Brief summary of this iteration's strategy\",     \"clusters\": [       {\"id\": \"A\", \"name\": \"Short cluster name\",        \"detail\": \"Root cause explanation\", \"tasks\": [\"task-id\", ...],        \"scope\": \"BOUNDED|WIDESPREAD|SYSTEMIC\", \"latent\": false,        \"tag\": \"KNOWLEDGE|BEHAVIORAL|CAPABILITY-GAP\"}     ],     \"edits\": [       {\"id\": \"E1\", \"title\": \"What this edit does\",        \"files\": [\"policy.md\", \"tools.py\"], \"lever\": \"CONTRACT|KNOWLEDGE|BEHAVIORAL|...\",        \"clusters\": [\"A\"], \"blast_radius\": \"BOUNDED|MODERATE|WIDE\",        \"verified\": \"How you tested it\"}     ],     \"skipped\": [{\"title\": \"What was skipped\", \"reason\": \"Why\"}],     \"techniques\": [\"technique 1\", \"technique 2\"]   }   ```   Validation is advisory only and never blocks an iteration. Warnings are recorded when a   task ID is not in the val split, an edit references a missing cluster, or an edit   references a file that does not exist in the candidate. - **JOURNAL.md** (append ONE entry below the marker; never edit earlier entries). Write   INTENT only \u2014 you cannot know your gate result; the framework stamps the RESULT below   your entry: the changes I made (1 line/edit, naming the file/tool + cluster) \u00b7 the   EXPECTED effect + why each is safe \u00b7 which prior RESULTS I built on and which regressing   edits I did NOT re-try (cite ids) \u00b7 refuted hypotheses (a prior RESULT disproved \u2014 never   re-test) \u00b7 high-value clusters not yet cracked + designs already tried \u00b7 plateau signal +   which lever to switch to \u00b7 focus next iteration.  ## (a) 10 ALWAYS-failing task(s) \u2014 fix the shared root cause (full traces in ./trajectories/): - 1 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state, but NO gold action mismatched \u2014 so this is not a wrong argument value. The divergence is an EXTRA or DUPLICATED write, or a write side effect: every successful update appends a charge to `payment_history`, and re-issuing a corrected write does not undo the first one. The 1 write(s) you performed, in order: cancel_reservati - 7 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): cancel_reservation: ag - 12 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): calculate: agent used  - 14 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): cancel_reservation: wa - 17 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): update_reservation_bag - 21 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): update_reservation_fli - 23 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): cancel_reservation: wa - 33 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): search_direct_flight:  - 39 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state \u2014 a required write (book/update/cancel) was missing, wrong, or extra. See the per-action detail below for the specific wrong argument. Action-trace detail (DIAGNOSTIC ONLY - this task is scored on DB/COMMUNICATE, so action checks do NOT affect your reward; use these only as a clue to the wrong write): get_reservation_detail - 43 (reward 0.00): Task reward: 0.000. Database state does NOT match the expected final state, but NO gold action mismatched \u2014 so this is not a wrong argument value. The divergence is an EXTRA or DUPLICATED write, or a write side effect: every successful update appends a charge to `payment_history`, and re-issuing a corrected write does not undo the first one. The 1 write(s) you performed, in order: cancel_reservati  ## Currently PASSING (10 task(s)) \u2014 your edit MUST NOT regress these These tasks already score ~1.0. Preserve their behavior: any edit that changes their trajectory is a regression and will be rejected. Protect: 3, 9, 15, 20, 27, 34, 38, 42, 46, 49  ## What you are editing (the allowed edit space) The capability under optimization is composed of these editable artifact(s). Use the FULL edit space below \u2014 do not limit yourself to trivial wording tweaks. - **system-prompt** \u2014 Optimize an agent's system prompt / policy text (instructions, output contract, decision policy).   - Allowed edits: Edit the prompt/policy text: instructions, decision policy, and the output contract. Prefer sharpening rules the traces show the agent breaking; do not just append more preamble.   - Full guidance (read it): ./guidance/system-prompt/SKILL.md - **tools** \u2014 Optimize an agent's own tool surface \u2014 docs, parameter schema/API, tool code, composing tools that call existing tools, adding/removing tools.   - Allowed edits: Edit tool names/descriptions, per-parameter docs, in-description examples, the JSON schema, and the handler code. HIGHEST-LEVERAGE EDIT: WRITE A NEW CODE-BEARING TOOL (a real body \u2014 loops, validation, calls to existing tools), because a deterministic tool can't be 'forgotten' the way a prompt rule can. Two patterns to prefer: (1) a VALIDATION/RULE-ENFORCEMENT tool that wraps a primitive \u2014 validate/normalize inputs, enforce a GENERAL rule, then delegate to the primitive (e.g. cancel_record_safely(id) checks cancellable then calls cancel_record), and REMOVE the raw primitive so the only path is the safe one; (2) a WORKFLOW/LOOP tool that collapses a recurring multi-step sequence or N repeated calls into ONE call with real loops (e.g. loop get_record over a list of ids). Keep the toolset LEAN \u2014 REPLACE/consolidate, don't accumulate. The body must be real code, never '...' or docstring-only. Selection is driven by the name+description; argument-filling by the parameter schema/enums.   - Full guidance (read it): ./guidance/tools/SKILL.md ## How your edit is judged Algorithm: hill-climb:all. Your edited candidate is re-scored on the SAME held-out val tasks and compared to the current best (val reward 0.500). It is ACCEPTED only if the per-task improvement clears a significance bar (a noise margin), so a tiny or lucky change is rejected. Aim for a real, generalizing gain across a CLASS of failures \u2014 not a one-off patch to a single task (that overfits and gets rejected or hurts the held-out test).  ## Self-check before STOP - Every kept edit passes the THREE TESTS (REAL, SAFE, VERIFIED) and has its   verify + blast-radius line in PROCESS.md. Drop any that doesn't. - You read each selected capability's `./guidance/<cap>/SKILL.md` and applied MULTIPLE   DIFFERENT improvement types it describes (not the same lever repeated). - You addressed EVERY failing cluster you found this iteration (not just the top few),   and did NOT defer a capability-gap cluster to \"next iteration\" \u2014 you built the tool now. - Your `tools.py` diff contains real CODE (in-body guards / validations / new or changed   tool bodies / a composite tool) across SEVERAL tools \u2014 NOT just docstring text. If the   only tools.py change is documentation, you under-used the iteration: convert the   behavioral / rule-violation / capability-gap clusters into code and try again. - Every BEHAVIORAL cluster (agent knows the rule but skips the action) is fixed in CODE,   not by adding another prose rule it will skip the same way. - You shipped many edits across BOTH policy.md AND tools.py \u2014 and you did NOT pad with   speculative/cosmetic edits or re-add anything already rejected (check LEDGER/JOURNAL). - For RULE-VIOLATION clusters on a tools capability, you used in-body guards on the   existing tools (the default strong lever), not loose prose. - For DECISION / PERMISSION clusters you did NOT loosen or alter a global decision/   permission/refusal rule; you encoded the discriminating CONDITION (in code where   possible) and confirmed it does not flip the action on any passing task in the class. - Every prompt edit is ADDITIVE knowledge the agent lacked (a fact/format/narrowing   predicate) \u2014 never a change to a decision the agent currently gets right. - For any hard-ZERO cluster you shipped a real tool the agent will call (prose does   nothing for a zero). - Any new tool closes a real gap, will be called, and changes the graded outcome \u2014 not a   helper a guard subsumes, not quota-filling. - No edit hardcodes a ta<redacted> id/value/date/answer. - PROCESS.md + JOURNAL.md are filled. Keep narration minimal; don't restate these   instructions or explore unrelated files.   ## Run budget (iteration 9/10 (1 after this one); 180/300 rollouts used (60%))  ## Cross-iteration files in THIS working dir (clean ownership \u2014 read all) - `LEDGER.md` \u2014 FACTS (framework, read-only): every iteration's outcome + the tasks it MEASURABLY broke/fixed, plus the ones whose move was under 2\u00b7SE and so resolves nothing. Never re-introduce a change that broke a task; never redesign an edit because a task landed in `unresolved`. - `JOURNAL.md` \u2014 HANDOVER (yours, append-only across the whole run): read the whole thing, then APPEND your entry for this iteration below the marker line. Do NOT edit earlier entries. This is how you avoid repeating refuted ideas and hitting the same plateau. - `PROCESS.md` \u2014 EXPLAINABILITY (yours, REQUIRED this iteration): fill it in as you work (ranked issues, every edit + class, verify-the-fix, subagents/features used, what to preserve, what you skipped). It is snapshotted with your candidate. - `RUNMAP.md` + `./prior_iterations/<id>/` \u2014 every prior iteration's PROCESS.md + capability diff, copied in for you. Read the ones targeting your cluster BEFORE proposing, so you build on prior work instead of repeating it. - `INSIGHTS.md` \u2014 SUMMARIZED, VERIFIED findings (yours, append-only, optional most iterations): a distilled 'what worked / what didn't / what's promising' a future iteration reads INSTEAD of the whole journal. Add an entry whenever you have a new CONFIRMED finding (cite the RESULT that confirmed it). - `META_INSIGHTS.md` \u2014 about the SEARCH PROCESS itself (yours, append-only): which strategies helped or stalled, what to try next. Update AT LEAST once, at the end of the run. - `FRAMEWORK_IMPROVEMENTS.md` \u2014 cross-run suggestions for cap-evolve ITSELF, not this task (yours, append-only, optional): what confused you or was missing about the framework. Update AT LEAST once, at the end of the run. - `.capevolve/run_main/rejected.jsonl` \u2014 ALREADY-REFUTED approaches (framework, read-only; JSON lines, one per rejected candidate with the gate's reason). Read it and make each proposal STRUCTURALLY different from what is in it. Its sibling `history.jsonl` is the same record for accepts.   --permission-mode acceptEdits --allowedTools Bash --disallowedTools Monitor --model aws/claude-sonnet-5-5 --output-format json --max-turns 80 --max-budget-usd 8",
-    "3081701 Mon Oct 12 21:44:02 2026 bash /home/dev/projects2/campaign-scratch/runs/E31/1S/s1/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -19156,7 +19166,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 180
+    "rollout_counter": 230
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -19170,12 +19180,13 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 7234343,
-    "state_metric_calls": 180,
-    "state_iterations": 8,
-    "state_optimizer_usd": 2.5788346,
-    "state_runner_tokens": 11505935,
-    "state_best_val": 0.5
+    "state_optimizer_tokens": 8041474,
+    "state_metric_calls": 230,
+    "state_iterations": 10,
+    "state_optimizer_usd": 2.8912399,
+    "state_runner_tokens": 14061970,
+    "state_best_val": 0.5,
+    "cost_summary_optimizer_noncache": 614040
    }
   },
   "E/1S/s2": {
@@ -19241,9 +19252,7 @@
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E31/1S/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E31/1S/s2 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E30/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E31/1S/s2 1S 2 >> collect.log 2>&1\n",
     "env.sh": "# source me. Non-secret metering tags only. Suite D: target/user/judge via the Azure-only gateway :4112; optimizer via :4111 in the E10B shim.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E31/1S/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills\nexport TAU_TAG_PREFIX=tag:E31-1S-s2:1S\nexport TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\nexport TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s2/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E31/1S/s2/surface_violations.json\nexport TAU_SPLITS_JSON=/home/dev/projects2/wt-airE/protocol/tau_airline_splits.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E10B/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E31/1S/s2\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E31/1S/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3087368 Mon Oct 12 21:44:25 2026 bash /home/dev/projects2/campaign-scratch/runs/E31/1S/s2/driver.sh"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -19258,7 +19267,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 180
+    "rollout_counter": 240
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -19272,12 +19281,13 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 7298465,
-    "state_metric_calls": 180,
-    "state_iterations": 8,
-    "state_optimizer_usd": 2.6113450000000005,
-    "state_runner_tokens": 14502695,
-    "state_best_val": 0.6
+    "state_optimizer_tokens": 7758001,
+    "state_metric_calls": 240,
+    "state_iterations": 10,
+    "state_optimizer_usd": 2.8055577000000005,
+    "state_runner_tokens": 19116131,
+    "state_best_val": 0.6,
+    "cost_summary_optimizer_noncache": 578729
    }
   },
   "E/CTL/s0": {
@@ -19589,22 +19599,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0",
-     "seed": "0",
-     "exp": "E30",
-     "arm": "GEPA",
-     "max-metric-calls": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E30 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0 --seed 0 --exp E30 --arm GEPA --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E30/cost_summary.py \"E30-GEPA-s0:GEPA\" --json /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0/cost_summary.json > /dev/null\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3577981 Mon Oct 12 21:59:54 2026 bash /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0/driver.sh",
-    "3577986 Mon Oct 12 21:59:54 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s0 --seed 0 --exp E30 --arm GEPA --max-metric-calls 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "reflection": [
      "aws/claude-sonnet-5-5"
@@ -19619,7 +19618,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 192
+    "rollout_counter": 302
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -19679,7 +19678,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 185
+    "rollout_counter": 309
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -19709,22 +19708,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2",
-     "seed": "2",
-     "exp": "E30",
-     "arm": "GEPA",
-     "max-metric-calls": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E30 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2 --seed 2 --exp E30 --arm GEPA --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E30/cost_summary.py \"E30-GEPA-s2:GEPA\" --json /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2/cost_summary.json > /dev/null\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3589279 Mon Oct 12 22:00:40 2026 bash /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2/driver.sh",
-    "3589282 Mon Oct 12 22:00:40 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E30/GEPA/s2 --seed 2 --exp E30 --arm GEPA --max-metric-calls 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "reflection": [
      "aws/claude-sonnet-5-5"
@@ -19739,7 +19727,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 191
+    "rollout_counter": 310
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -20924,11 +20912,11 @@
     "cost_summary_optimizer_noncache": 457860
    }
   },
-  "E/mipro/s0": {
+  "E/ace/s0": {
    "suite": "E",
-   "arm": "mipro",
+   "arm": "ace",
    "seed": 0,
-   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s0",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s0",
    "status": "active_or_finished",
    "stopped_record": null,
    "superseded_note": null,
@@ -20941,18 +20929,19 @@
    },
    "hyperparameters_and_specs": {
     "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s0",
+     "out": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s0",
      "seed": "0",
      "exp": "E32",
-     "arm": "mipro",
+     "arm": "ace",
      "max-rollouts": "300"
     }
    },
    "launch_scripts": {
+    "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
    "live_process_cmdlines_snapshot": [
-    "3805748 Mon Oct 12 22:16:09 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/mipro_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/mipro/s0 --seed 0 --exp E32 --arm mipro --max-rollouts 300"
+    "923490 Tue Oct 13 00:02:45 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/ace_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/ace/s0 --seed 0 --exp E32 --arm ace --max-rollouts 300"
    ],
    "models_by_role_observed_in_gateway": {
     "optimizer": [
@@ -20968,7 +20957,671 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 193
+    "rollout_counter": 67
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "E/ace/s1": {
+   "suite": "E",
+   "arm": "ace",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "not recorded",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s1",
+     "seed": "1",
+     "exp": "E32",
+     "arm": "ace",
+     "max-rollouts": "300"
+    }
+   },
+   "launch_scripts": {
+    "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
+    "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "927845 Tue Oct 13 00:03:10 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/ace_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/ace/s1 --seed 1 --exp E32 --arm ace --max-rollouts 300"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "optimizer": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 67
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "E/ace/s2": {
+   "suite": "E",
+   "arm": "ace",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "not recorded",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s2",
+     "seed": "2",
+     "exp": "E32",
+     "arm": "ace",
+     "max-rollouts": "300"
+    }
+   },
+   "launch_scripts": {
+    "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
+    "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "933087 Tue Oct 13 00:03:35 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/ace_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/ace/s2 --seed 2 --exp E32 --arm ace --max-rollouts 300"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "optimizer": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 69
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "E/ao/s0": {
+   "suite": "E",
+   "arm": "ao",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 300,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "azoai/gpt-4.1-mini-2025-04-14",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "agent-optimize",
+     "orchestration_mode": "agent",
+     "gate_k_se": 1.0,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 300,
+     "max_optimizer_usd": 40.0,
+     "optimizer": {
+      "ablation": {
+       "dag_parallel": true,
+       "active_eval": true
+      }
+     },
+     "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/ao/s0/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E32/ao/s0 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off --agent-driver claude-code > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E30/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E32/ao/s0 ao 0 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only. Suite D: target/user/judge via the Azure-only gateway :4112; optimizer via :4111 in the E10B shim.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills\nexport TAU_TAG_PREFIX=tag:E32-ao-s0:ao\nexport TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\nexport TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/surface_violations.json\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E32/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E32/ao/s0\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E32/ao/s0/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "optimizer": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 30
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 307116,
+    "state_metric_calls": 30,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.1725053,
+    "state_runner_tokens": 1798775,
+    "state_best_val": 0.35,
+    "cost_summary_optimizer_noncache": 52218
+   }
+  },
+  "E/ao/s1": {
+   "suite": "E",
+   "arm": "ao",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 300,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "azoai/gpt-4.1-mini-2025-04-14",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "agent-optimize",
+     "orchestration_mode": "agent",
+     "gate_k_se": 1.0,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 300,
+     "max_optimizer_usd": 40.0,
+     "optimizer": {
+      "ablation": {
+       "dag_parallel": true,
+       "active_eval": true
+      }
+     },
+     "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/ao/s1/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E32/ao/s1 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off --agent-driver claude-code > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E30/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E32/ao/s1 ao 1 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only. Suite D: target/user/judge via the Azure-only gateway :4112; optimizer via :4111 in the E10B shim.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills\nexport TAU_TAG_PREFIX=tag:E32-ao-s1:ao\nexport TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\nexport TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/surface_violations.json\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E32/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E32/ao/s1\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E32/ao/s1/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "optimizer": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 30
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 254517,
+    "state_metric_calls": 30,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.09841260000000002,
+    "state_runner_tokens": 1801217,
+    "state_best_val": 0.3,
+    "cost_summary_optimizer_noncache": 25156
+   }
+  },
+  "E/ao/s2": {
+   "suite": "E",
+   "arm": "ao",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/ao/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "Suite B/C search arm (E10B manifest)",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    ".capevolve/project/capevolve.yaml": {
+     "capabilities": [
+      "system-prompt",
+      "tools"
+     ],
+     "capability_path": "seed_capability",
+     "actions": [
+      "edit"
+     ],
+     "capability_sources": [
+      "seed_capability/reference/data_model.py",
+      "seed_capability/reference/benchmark_policy.md"
+     ],
+     "optimizer_skill": "claude-code",
+     "optimizer_model": "aws/claude-sonnet-5-5",
+     "optimizer_max_turns": 300,
+     "optimizer_usd_per_iter": 8.0,
+     "target_model": "azoai/gpt-4.1-mini-2025-04-14",
+     "dataset_source": "adapter",
+     "split_seed": 42,
+     "split_train": 0.5,
+     "split_val": 0.25,
+     "split_test": 0.25,
+     "split_ids_file": "split_ids.json",
+     "num_trials": 1,
+     "gate_mode": "paired",
+     "errored_trial_policy": "fail",
+     "store": "copy",
+     "pregate": {
+      "toolkit": "adapters/adapter.py:pregate_toolkit"
+     },
+     "algorithm_skill": "agent-optimize",
+     "orchestration_mode": "agent",
+     "gate_k_se": 1.0,
+     "max_iterations": 10,
+     "stall": 0,
+     "max_metric_calls": 300,
+     "max_optimizer_usd": 40.0,
+     "optimizer": {
+      "ablation": {
+       "dag_parallel": true,
+       "active_eval": true
+      }
+     },
+     "stop_condition": "stop when the rollout budget (max_metric_calls) is exhausted or after 10 candidates"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/ao/s2/driver.pid\ncd /home/dev/projects2/campaign-scratch/runs/E32/ao/s2 && source env.sh\n$PY -u -c \"import sys; from cap_evolve.cli import main; sys.exit(main(sys.argv[1:]))\" run --spec .capevolve/project/capevolve.yaml --project .capevolve/project --run-ts main --dashboard off --agent-driver claude-code > run.log 2>&1\necho \"exit $?\" >> run.log\n$PY /home/dev/projects2/campaign-scratch/scripts/E30/collect_cap.py /home/dev/projects2/campaign-scratch/runs/E32/ao/s2 ao 2 >> collect.log 2>&1\n",
+    "env.sh": "# source me. Non-secret metering tags only. Suite D: target/user/judge via the Azure-only gateway :4112; optimizer via :4111 in the E10B shim.\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport PYTHONPATH=/home/dev/projects2/wt-airE/core:/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/.capevolve/project/adapters\nexport CAPEVOLVE_SKILLS_DIR=/home/dev/projects2/wt-airE/skills\nexport TAU_TAG_PREFIX=tag:E32-ao-s2:ao\nexport TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\nexport TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/surface_violations.json\nexport TAU_SPLITS_JSON=/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/splits_sbx.json\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 MAX_<redacted>\nexport ANTHROPIC_BASE_URL=http://127.0.0.1:4111 ANTHROPIC_API_<redacted>\nexport PATH=/home/dev/projects2/campaign-scratch/runs/E32/_sbx_bin:$PATH\nexport E10B_W=/home/dev/projects2/campaign-scratch/runs/E32/ao/s2\nexport CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/E32/ao/s2/claude_cfg\nexport CAPEVOLVE_NATIVE_SIMS=1\nPY=/home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python\n"
+   },
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "optimizer": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 30
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": null,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": {
+    "state_optimizer_tokens": 212372,
+    "state_metric_calls": 30,
+    "state_iterations": 0,
+    "state_optimizer_usd": 0.09154200000000001,
+    "state_runner_tokens": 1645569,
+    "state_best_val": 0.4,
+    "cost_summary_optimizer_noncache": 24477
+   }
+  },
+  "E/gepafull/s0": {
+   "suite": "E",
+   "arm": "gepafull",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "not recorded",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0",
+     "seed": "0",
+     "exp": "E32",
+     "arm": "gepafull",
+     "max-metric-calls": "300"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E32 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0 --seed 0 --exp E32 --arm gepafull --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E32/cost_summary.py \"E32-gepafull-s0:gepafull\" --json /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/cost_summary.json > /dev/null\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "937411 Tue Oct 13 00:04:00 2026 bash /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/driver.sh",
+    "937414 Tue Oct 13 00:04:00 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0 --seed 0 --exp E32 --arm gepafull --max-metric-calls 300"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "reflection": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 70
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "E/gepafull/s1": {
+   "suite": "E",
+   "arm": "gepafull",
+   "seed": 1,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "not recorded",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1",
+     "seed": "1",
+     "exp": "E32",
+     "arm": "gepafull",
+     "max-metric-calls": "300"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E32 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1 --seed 1 --exp E32 --arm gepafull --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E32/cost_summary.py \"E32-gepafull-s1:gepafull\" --json /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/cost_summary.json > /dev/null\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "941884 Tue Oct 13 00:04:23 2026 bash /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/driver.sh",
+    "941887 Tue Oct 13 00:04:24 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1 --seed 1 --exp E32 --arm gepafull --max-metric-calls 300"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "reflection": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 67
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "E/gepafull/s2": {
+   "suite": "E",
+   "arm": "gepafull",
+   "seed": 2,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "not recorded",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": {
+    "live_cmdline_args": {
+     "out": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2",
+     "seed": "2",
+     "exp": "E32",
+     "arm": "gepafull",
+     "max-metric-calls": "300"
+    }
+   },
+   "launch_scripts": {
+    "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E32 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2 --seed 2 --exp E32 --arm gepafull --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E32/cost_summary.py \"E32-gepafull-s2:gepafull\" --json /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/cost_summary.json > /dev/null\n"
+   },
+   "live_process_cmdlines_snapshot": [
+    "945502 Tue Oct 13 00:04:47 2026 bash /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/driver.sh",
+    "945505 Tue Oct 13 00:04:47 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2 --seed 2 --exp E32 --arm gepafull --max-metric-calls 300"
+   ],
+   "models_by_role_observed_in_gateway": {
+    "reflection": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 67
+   },
+   "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
+   "isolation": "not recorded",
+   "manifests": "not recorded",
+   "deviations": "not recorded",
+   "restart_siblings_and_superseded_dirs": [],
+   "restart_cutoff": null,
+   "infra": {
+    "infra_retries_in_counter": 0,
+    "infra_retries_json": null,
+    "llm_failure_counts": null
+   },
+   "capevolve_state": null
+  },
+  "E/mipro/s0": {
+   "suite": "E",
+   "arm": "mipro",
+   "seed": 0,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s0",
+   "status": "active_or_finished",
+   "stopped_record": null,
+   "superseded_note": null,
+   "tier_track": "not recorded",
+   "tier_track_source": "run manifest",
+   "method_version_or_sha": {
+    "shas_from_manifests": "not recorded",
+    "provenance_entry": "not recorded",
+    "runbook_pin": "not recorded"
+   },
+   "hyperparameters_and_specs": "not recorded",
+   "launch_scripts": {
+    "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
+   },
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
+   "models_by_role_observed_in_gateway": {
+    "optimizer": [
+     "aws/claude-sonnet-5-5"
+    ],
+    "target": [
+     "azoai/gpt-4.1-mini-2025-04-14"
+    ],
+    "user": [
+     "azoai/gpt-4.1-2025-04-14"
+    ]
+   },
+   "budget": {
+    "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
+    "optimizer_noncache_token_cap": 4000000,
+    "rollout_counter": 215
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -20998,21 +21651,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s1",
-     "seed": "1",
-     "exp": "E32",
-     "arm": "mipro",
-     "max-rollouts": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3812049 Mon Oct 12 22:16:34 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/mipro_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/mipro/s1 --seed 1 --exp E32 --arm mipro --max-rollouts 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -21027,7 +21670,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 173
+    "rollout_counter": 219
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21057,21 +21700,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/mipro/s2",
-     "seed": "2",
-     "exp": "E32",
-     "arm": "mipro",
-     "max-rollouts": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "3818502 Mon Oct 12 22:16:59 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/mipro_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/mipro/s2 --seed 2 --exp E32 --arm mipro --max-rollouts 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -21086,7 +21719,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 188
+    "rollout_counter": 213
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
