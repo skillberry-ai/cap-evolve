@@ -229,3 +229,7 @@ Time to rungs at the status quo: **170M at about 03:50 UTC (+-1 h)**, 178M at ab
 | B. hold W4 entirely: stop E32-ace, gepafull, ao now (-12.1M of the remaining spend; 2.0M already sunk), hold `hl` | E30-GEPA, E12B, E10 ace | **164.3M** | **17.7M** | not before 06:00 | fits (15.8M) |
 
 Primary-comparison cells are my assumption (CapEvolve-AO and GEPA appear in every earlier suite; ACE, MIPROv2 and HL are the secondary or competitor arms in the registered order): confirm which W4 families the paper needs before cutting.
+
+### Update 2026-10-13 01:00 UTC (E32-ace rate from bl-context)
+bl-context confirms ledger guards on E32-ace (`cost_summary.py`, 3.9M, role optimizer, current-attempt basis) and gives the seed rates: about 0.45 to 0.49M used in 50 minutes per seed, 0.5 to 0.55M/h per seed, so 9.5 to 10M for the three seeds by 06:00 if linear (the guard would not fire before 06:00; ACE playbook prompts grow, so the later rate may be higher).
+My E32-ace term (+6.8M) was too low by about 1.5M: corrected +8.3M. Status-quo projection becomes **177.9M** at 06:00 (174.3 to 182.3M), 170M crossed about 03:20 UTC, 178M at about 06:00, 182M at about 07:00; headroom under 182M **4.1M** (option C: 168.1M to 171.1M depending on E10 ace; hold-W4 option B: 164.3M unchanged since the ace term is removed there).
