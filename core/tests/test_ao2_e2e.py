@@ -92,8 +92,9 @@ def test_a_second_invocation_resumes_and_finalize_stays_idempotent(tmp_path):
 
 
 def test_multi_objective_spec_is_refused_by_the_real_entry_point(tmp_path):
+    # reward + cost is supported (test_ao2_cost_objective.py); any other gating objective is refused
     spec = _project(tmp_path, "objectives:\n  - {name: reward, direction: max, role: gate}\n"
-                              "  - {name: cost, direction: min, role: pareto}\n")
+                              "  - {name: latency, direction: min, role: pareto}\n")
     rc, rd = _run(tmp_path, spec, "multi")
     assert rc == 2
     assert not (rd / "final.json").exists()
