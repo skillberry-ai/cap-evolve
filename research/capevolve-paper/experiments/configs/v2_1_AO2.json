@@ -20,7 +20,9 @@
   "E"
  ],
  "launch_rule": "unconditionally on all three suites, each after that suite's v2.0 AO-2 searches have ended, capacity permitting; cuts by clock and capacity only, never by an outcome",
- "decision_basis": "search behaviour only (stop reasons and rollout counts of v2.0 AO-2 searches); no held-out data seen; [internal confirm-split estimates: to be stated by the coordinator]",
+ "decision_basis": "search behaviour only: the AO-2 E s0/s1 stop reason ('plateau ... at 41% of budget'), rollout counts 136 and 164 of 300, and proposal and round counts from tau-runner's 23:10 UTC report; no AO-2 confirm-split, selection or held-out number was looked at",
  "scoring": "scored once in the suite's v2 window as additional rows if finished in time, otherwise in a later window with the same in-window anchors (seed, seed-check, GEPA budget-parity anchor); own Holm over the versions scored; budget is NOT matched to v2.0 or to the other arms (uses more rollouts), reported",
- "pending": "spec file hashes per suite (registered before each launch)"
+ "pending": "spec file hashes per suite (registered before each launch)",
+ "disclosure_other_views": "at about 19:40 UTC 2026-10-13 the coordinator read search-time internal numbers for HC-2 (E and A rung F-stratum means and z from events.jsonl; sealed HC-2 E confirm records: s0 cand_0003 reject +0.095 over 14 C tasks, s2 cand_0001 accept +0.19) for a status report; internal estimates, not held-out, HC-2 only, no part in the v2.1-AO2 decision",
+ "correlation_note": "v2.1-AO2 reruns the same seeds as v2.0 AO-2: rows are correlated and not independent evidence"
 }
