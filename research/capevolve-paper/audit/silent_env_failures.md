@@ -133,3 +133,32 @@ P s1 cand_0002 0/49, P s2 cand_0005 0/49, PT s0 cand_0001 0/49 and cand_0005 1/4
 1S s1 cand_0001 and cand_0005 0/49, 1S s2 cand_0001 0/49, ruleP s2 cand_0001 2/196, NOHIST s0 cand_0004 0/49, NOHIST s1 cand_0006 1/49, NOHIST s2 cand_0001 0/49. The highest
 champion rate is 2.7 percent (CTL s0). Cells with no accepted candidate: E20-T s0 (best = seed; all five rejected candidates have 13 to 25 percent infra terminations), E20-T s2, E20-CTL s2, E21-ruleP s0 and s1.
 Reading: the bias works against these candidates in the sense that they were still rejected after their failing trials were dropped; no champion owes its acceptance to a high drop rate.
+
+## Suite D and E pass 3 (2026-10-13 03:30 UTC) SUSPECT: infra-labelled terminations track the tools surface and now include accepted champions
+
+Scope widened to Suite E (E30, E31, E32, E36) as well as D. Every proposed candidate has been evaluated (E32 ace, gepafull, mipro, ao have no graph yet). Optimizer tool errors are single probes only, plus `pip: command not found` x2 (E36),
+`Claude requested permissions to read ... /tmp/*.txt` and, for E32-ao, `agent-optimize/SKILL.md` unreadable x3 (the known SKILL.md denial).
+
+**Infra-labelled tau2 terminations (INFRASTRUCTURE_ERROR) by cell, non-seed rollouts versus seed (native_sims):**
+
+| cell | non-seed infra / rollouts | rate | seed |
+|---|---|---|---|
+| E20-P (prompt only) | 0 / 1,545 | 0.0% | 0/222 |
+| E30-P (prompt only) | 0 / 630 | 0.0% | 0/90 |
+| E20-PT | 36 / 1,545 | 2.3% | 0/222 |
+| E20-T | 79 / 1,520 | 5.2% | 0/222 |
+| E20-CTL | 4 / 197 | 2.0% | 0/222 |
+| E21-1S / E21-ruleP / E26-NOHIST | 51 / 1,545; 18 / 1,447; 40 / 1,545 | 3.3%; 1.2%; 2.6% | 0 |
+| E30-PT | 58 / 620 | 9.4% | 0/90 |
+| E30-T | **120 / 630** | **19.0%** | 0/90 |
+| E30-CTL | 9 / 80 | 11.2% | 0/90 |
+| E31-1S / E31-ruleP | 56 / 620; 54 / 770 | 9.0%; 7.0% | 0 |
+| E36-NOHIST | 76 / 630 | 12.1% | 0/90 |
+
+Overall 601 of 13,324 non-seed rollouts (4.5%) versus 0 of 3,042 seed rollouts. The two prompt-only cells are exactly zero; every cell whose search may edit tools is not, and the rate grows with the search (Suite E candidates are evaluated on
+20 to 30 rollouts and show 15 to 30 percent per candidate in E30-T). It is not the Azure 429 storm: infra rates stay 1 to 10 percent in the hours with a 0.0 percent mini 429 rate (E20 hours 11, 13 to 15; E30 hours 20 to 21).
+
+**Correction to the earlier lineage table:** I reported (15:50 UTC, 2026-10-12) that no accepted champion had an elevated rate. That no longer holds. Accepted best candidates at 10 percent or more: E20-T s0 cand_0010 13/74 (17.6%),
+E30-T s0 cand_0002 7/30, E30-T s1 cand_0001 4/30, E30-T s2 cand_0009 6/30 (and cand_0001 5/20), E30-CTL s1 cand_0001 4/30, E31-ruleP s1 cand_0008 10/90, E36-NOHIST s0 cand_0003 4/30 and s1 cand_0002 3/30.
+Consequence for the paper: for tools-surface cells, the gate's treatment of infra-labelled trials as missing can favour a candidate whose tool edit provokes them; 5O (infra_final scores 0) and the no-retry-credit sensitivity are the right check, and a final
+evaluation of these champions should report the infra rate next to the score.

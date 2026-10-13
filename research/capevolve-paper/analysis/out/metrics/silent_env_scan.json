@@ -3,7 +3,7 @@
   "root": "E10/ace/s0",
   "candidates_proposed": 2,
   "candidates_evaluated": 0,
-  "rollout_rows": 370,
+  "rollout_rows": 405,
   "cand_ids_never_evaluated": [
    "epoch1_end",
    "final_stop"
@@ -12,18 +12,22 @@
  },
  {
   "root": "E10/ace/s1",
-  "candidates_proposed": 0,
-  "candidates_evaluated": 19,
-  "rollout_rows": 163,
-  "cand_ids_never_evaluated": [],
+  "candidates_proposed": 1,
+  "candidates_evaluated": 0,
+  "rollout_rows": 379,
+  "cand_ids_never_evaluated": [
+   "epoch1_end"
+  ],
   "top_errors": []
  },
  {
   "root": "E10/ace/s2",
-  "candidates_proposed": 0,
-  "candidates_evaluated": 17,
-  "rollout_rows": 153,
-  "cand_ids_never_evaluated": [],
+  "candidates_proposed": 1,
+  "candidates_evaluated": 0,
+  "rollout_rows": 336,
+  "cand_ids_never_evaluated": [
+   "epoch1_end"
+  ],
   "top_errors": []
  },
  {
@@ -307,11 +311,17 @@
  },
  {
   "root": "E10/hill-climb/s0",
-  "candidates_proposed": 6,
-  "candidates_evaluated": 6,
-  "rollout_rows": 520,
-  "cand_ids_never_evaluated": [],
+  "candidates_proposed": 8,
+  "candidates_evaluated": 7,
+  "rollout_rows": 760,
+  "cand_ids_never_evaluated": [
+   "cand_0004__confbase"
+  ],
   "top_errors": [
+   [
+    "rollout: EN_ROLLOUT_BUDGET_EXHAUSTED",
+    160
+   ],
    [
     "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
     12
@@ -329,20 +339,16 @@
     2
    ],
    [
-    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
     2
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
-    1
-   ],
-   [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
-    1
+    2
    ],
    [
-    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    1
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    2
    ]
   ]
  },
@@ -389,34 +395,37 @@
  },
  {
   "root": "E10/hill-climb/s2",
-  "candidates_proposed": 10,
-  "candidates_evaluated": 7,
-  "rollout_rows": 400,
+  "candidates_proposed": 14,
+  "candidates_evaluated": 12,
+  "rollout_rows": 600,
   "cand_ids_never_evaluated": [
    "cand_0002",
-   "cand_0003",
-   "cand_0010"
+   "cand_0003"
   ],
   "top_errors": [
    [
-    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
-    8
+    "rollout: EN_ROLLOUT_BUDGET_EXHAUSTED",
+    40
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    7
-   ],
-   [
-    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    12
    ],
    [
     "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
-    7
+    12
    ],
    [
     "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
-    7
+    12
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    11
+   ],
+   [
+    "rollout: sandbox exec failed: N Server Error: Internal Server Error for url: http://N.N.N.N:N/execute",
+    8
    ],
    [
     "event evaluate_error: {\"kind\": \"evaluate_error\", \"candidate\": \"candN\", \"error\": \"RuntimeError: agent view dir /home/dev/projectsN/campaign-scratch/runs/EN/_p",
@@ -424,10 +433,6 @@
    ],
    [
     "graph note: indecisive (evaluation error): candidate evaluation raised: RuntimeError: agent view dir /home/dev/projectsN/campaign-scratch/runs/EN/_priv/hill-climb-sN/view is not emp",
-    2
-   ],
-   [
-    "log hc.err: Traceback (most recent call last):",
     2
    ]
   ]
@@ -541,20 +546,22 @@
  },
  {
   "root": "E10/mipro/s0",
-  "candidates_proposed": 10,
+  "candidates_proposed": 21,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
+   "053b32a5f5bc",
+   "0956ad410a11",
    "101db7a9d33e",
+   "30d89049b364",
    "33aeb0cca75d",
    "35ab03acf850",
    "3d5fee3dfdc1",
+   "4354eb75c76d",
    "4d121df97c80",
    "64aa725b61bf",
    "7a3b36ed95c9",
-   "c241f8e56231",
-   "ef971ef2d2ae",
-   "f9d947266c89"
+   "95d02845a046"
   ],
   "top_errors": [
    [
@@ -585,22 +592,22 @@
  },
  {
   "root": "E10/mipro/s1",
-  "candidates_proposed": 12,
+  "candidates_proposed": 28,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
+   "04c8b496b9ae",
+   "09b009ccbfc8",
+   "15ed9a462c05",
+   "1fe4207ce21e",
    "2077bf782302",
+   "20e13ec07750",
    "210e4cd8791d",
    "24af25e5b752",
+   "376cdcf4ea3f",
    "39b127a6c10d",
    "3d5fee3dfdc1",
-   "40ccf4332f30",
-   "41225a3d4182",
-   "59f8f0808863",
-   "a3a355b69466",
-   "cc2319ac81ff",
-   "db9ee1db786e",
-   "e82b37c38cc0"
+   "40ccf4332f30"
   ],
   "top_errors": [
    [
@@ -631,19 +638,22 @@
  },
  {
   "root": "E10/mipro/s2",
-  "candidates_proposed": 9,
+  "candidates_proposed": 23,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
+   "1fd3d5044e23",
+   "205b14c32c0c",
    "3c01cf212de9",
    "3d5fee3dfdc1",
    "5638f07336a4",
+   "5e8980d242f8",
+   "622f6a6aa137",
+   "62f6935a27d9",
    "71c830d71880",
    "73b1e560f815",
    "779ef0083958",
-   "87baac04f74e",
-   "c5110d7488b0",
-   "f9fa744d6275"
+   "7b2f016636d8"
   ],
   "top_errors": [
    [
@@ -784,7 +794,7 @@
   "root": "E10/wikiskill/s0",
   "candidates_proposed": 5,
   "candidates_evaluated": 1,
-  "rollout_rows": 468,
+  "rollout_rows": 484,
   "cand_ids_never_evaluated": [
    "it001",
    "it002",
@@ -828,12 +838,14 @@
  },
  {
   "root": "E10/wikiskill/s1",
-  "candidates_proposed": 3,
+  "candidates_proposed": 5,
   "candidates_evaluated": 1,
-  "rollout_rows": 331,
+  "rollout_rows": 496,
   "cand_ids_never_evaluated": [
    "it001",
-   "it002"
+   "it002",
+   "it003",
+   "it004"
   ],
   "top_errors": [
    [
@@ -872,12 +884,14 @@
  },
  {
   "root": "E10/wikiskill/s2",
-  "candidates_proposed": 3,
+  "candidates_proposed": 5,
   "candidates_evaluated": 1,
-  "rollout_rows": 284,
+  "rollout_rows": 470,
   "cand_ids_never_evaluated": [
    "it001",
-   "it002"
+   "it002",
+   "it003",
+   "it004"
   ],
   "top_errors": [
    [
@@ -1010,7 +1024,7 @@
   "root": "E10B/ao/s2",
   "candidates_proposed": 6,
   "candidates_evaluated": 2,
-  "rollout_rows": 344,
+  "rollout_rows": 1226,
   "cand_ids_never_evaluated": [
    "cand_2",
    "cand_3",
@@ -1018,6 +1032,10 @@
    "cand_x"
   ],
   "top_errors": [
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    7
+   ],
    [
     "event agent_optimize_pregate_warning: {\"kind\": \"agent_optimize_pregate_warning\", \"tag\": \"candN\", \"warnings\": [\"policy grew +N% over the parent (cap +N%): every task pays fo",
     6
@@ -1027,20 +1045,20 @@
     6
    ],
    [
-    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     4
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    3
    ],
    [
     "event agent_optimize_compliance: {\"kind\": \"agent_optimize_compliance\", \"tag\": \"candN\", \"screened_before_fullval\": false, \"auto_screened\": false, \"skip_screen_ladder\": false",
     3
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    2
-   ],
-   [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
+    2
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
@@ -1185,7 +1203,7 @@
  },
  {
   "root": "E10B/gepa/s0",
-  "candidates_proposed": 19,
+  "candidates_proposed": 37,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
@@ -1206,7 +1224,7 @@
  },
  {
   "root": "E10B/gepa/s1",
-  "candidates_proposed": 21,
+  "candidates_proposed": 39,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
@@ -1227,7 +1245,7 @@
  },
  {
   "root": "E10B/gepa/s2",
-  "candidates_proposed": 22,
+  "candidates_proposed": 37,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
@@ -1244,7 +1262,12 @@
    "cand_0010",
    "cand_0011"
   ],
-  "top_errors": []
+  "top_errors": [
+   [
+    "log run.log: Traceback (most recent call last):",
+    2
+   ]
+  ]
  },
  {
   "root": "E10B/harnesslens/s0",
@@ -1321,16 +1344,20 @@
   "root": "E10B/hc/s0",
   "candidates_proposed": 2,
   "candidates_evaluated": 2,
-  "rollout_rows": 980,
+  "rollout_rows": 1324,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    6
+    8
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     3
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    2
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
@@ -1345,15 +1372,11 @@
     1
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
-    1
-   ],
-   [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
     1
    ],
    [
-    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ]
   ]
@@ -1362,12 +1385,12 @@
   "root": "E10B/hc/s1",
   "candidates_proposed": 10,
   "candidates_evaluated": 10,
-  "rollout_rows": 1078,
+  "rollout_rows": 1128,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    11
+    12
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
@@ -1403,12 +1426,12 @@
   "root": "E10B/hc/s2",
   "candidates_proposed": 2,
   "candidates_evaluated": 2,
-  "rollout_rows": 980,
+  "rollout_rows": 1324,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    6
+    8
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
@@ -1419,11 +1442,15 @@
     3
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    2
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
     1
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ],
    [
@@ -1431,11 +1458,7 @@
     1
    ],
    [
-    "rejected: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N); REJECTED by promotion rule P: P confirm: fresh mean +N.N, z N.N (need >= N an",
-    1
-   ],
-   [
-    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ]
   ]
@@ -1684,134 +1707,136 @@
  },
  {
   "root": "E10C/gepa/s0",
-  "candidates_proposed": 16,
-  "candidates_evaluated": 16,
-  "rollout_rows": 192,
+  "candidates_proposed": 36,
+  "candidates_evaluated": 36,
+  "rollout_rows": 404,
   "cand_ids_never_evaluated": [],
   "top_errors": []
  },
  {
   "root": "E10C/gepa/s1",
-  "candidates_proposed": 14,
-  "candidates_evaluated": 14,
-  "rollout_rows": 144,
-  "cand_ids_never_evaluated": [],
+  "candidates_proposed": 30,
+  "candidates_evaluated": 29,
+  "rollout_rows": 303,
+  "cand_ids_never_evaluated": [
+   "cand_0029"
+  ],
   "top_errors": []
  },
  {
   "root": "E10C/gepa/s2",
-  "candidates_proposed": 19,
-  "candidates_evaluated": 18,
-  "rollout_rows": 175,
+  "candidates_proposed": 39,
+  "candidates_evaluated": 38,
+  "rollout_rows": 388,
   "cand_ids_never_evaluated": [
-   "cand_0018"
+   "cand_0038"
   ],
   "top_errors": []
  },
  {
   "root": "E10C/hc/s0",
-  "candidates_proposed": 2,
-  "candidates_evaluated": 2,
-  "rollout_rows": 520,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 960,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    17
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    3
+    10
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    2
+    3
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
     2
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ],
-   [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
-    1
+    2
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    1
-   ],
-   [
-    "rejected: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N); REJECTED by promotion rule P: P confirm: fresh mean +N.N, z N.N (need >= N an",
-    1
+    2
    ]
   ]
  },
  {
   "root": "E10C/hc/s1",
-  "candidates_proposed": 4,
-  "candidates_evaluated": 4,
-  "rollout_rows": 440,
+  "candidates_proposed": 9,
+  "candidates_evaluated": 9,
+  "rollout_rows": 920,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    9
+    21
    ],
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    15
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    10
+   ],
+   [
+    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
+    4
+   ],
+   [
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
     4
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
+    3
    ],
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ],
-   [
-    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
-    1
+    3
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
-    1
+    2
    ]
   ]
  },
  {
   "root": "E10C/hc/s2",
-  "candidates_proposed": 8,
-  "candidates_evaluated": 8,
-  "rollout_rows": 600,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 720,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    11
+    15
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    8
+    10
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    6
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    6
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -2002,29 +2027,29 @@
  },
  {
   "root": "E12C/hcstock/s0",
-  "candidates_proposed": 8,
-  "candidates_evaluated": 8,
-  "rollout_rows": 360,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 480,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    9
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    8
-   ],
-   [
-    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    4
+    10
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    6
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
     4
    ],
    [
@@ -2244,7 +2269,7 @@
  },
  {
   "root": "E20/GEPA/s0",
-  "candidates_proposed": 12,
+  "candidates_proposed": 26,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
@@ -2265,7 +2290,7 @@
  },
  {
   "root": "E20/GEPA/s1",
-  "candidates_proposed": 16,
+  "candidates_proposed": 30,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
@@ -2286,7 +2311,7 @@
  },
  {
   "root": "E20/GEPA/s2",
-  "candidates_proposed": 15,
+  "candidates_proposed": 34,
   "candidates_evaluated": 0,
   "rollout_rows": 0,
   "cand_ids_never_evaluated": [
@@ -2307,18 +2332,18 @@
  },
  {
   "root": "E20/P/s0",
-  "candidates_proposed": 9,
-  "candidates_evaluated": 9,
-  "rollout_rows": 931,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    10
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    9
+    10
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
@@ -2326,11 +2351,11 @@
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    5
+    6
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    5
+    6
    ],
    [
     "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -2341,205 +2366,205 @@
     1
    ],
    [
-    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ]
   ]
  },
  {
   "root": "E20/P/s1",
-  "candidates_proposed": 8,
-  "candidates_evaluated": 8,
-  "rollout_rows": 882,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    9
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    8
-   ],
-   [
-    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    6
-   ],
-   [
-    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    6
+    10
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    5
+    7
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    7
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    7
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    1
+    2
    ],
    [
-    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ]
   ]
  },
  {
   "root": "E20/P/s2",
-  "candidates_proposed": 9,
-  "candidates_evaluated": 9,
-  "rollout_rows": 931,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    10
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    9
+    10
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    7
+    8
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    7
+    8
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    3
+    4
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ],
    [
-    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ],
    [
-    "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"test\", \"tag\": \"FINAL_seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N",
     1
    ]
   ]
  },
  {
   "root": "E20/PT/s0",
-  "candidates_proposed": 8,
-  "candidates_evaluated": 8,
-  "rollout_rows": 882,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    9
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    8
+    10
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    5
    ],
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    5
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    2
+    3
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    3
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
-    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
+    3
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
+    3
    ]
   ]
  },
  {
   "root": "E20/PT/s1",
-  "candidates_proposed": 5,
-  "candidates_evaluated": 5,
-  "rollout_rows": 588,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    17
+    26
    ],
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    6
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    10
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     5
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    4
    ],
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    4
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
     2
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ],
-   [
-    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    1
    ]
   ]
  },
  {
   "root": "E20/PT/s2",
-  "candidates_proposed": 7,
-  "candidates_evaluated": 7,
-  "rollout_rows": 735,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    8
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    7
+    10
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    3
+    7
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    6
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    6
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    2
+    3
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -2553,34 +2578,34 @@
  },
  {
   "root": "E20/T/s0",
-  "candidates_proposed": 5,
-  "candidates_evaluated": 5,
-  "rollout_rows": 588,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    26
+    69
    ],
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    5
+    12
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    5
+    10
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    7
    ],
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    7
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    2
+    3
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -2594,21 +2619,29 @@
  },
  {
   "root": "E20/T/s1",
-  "candidates_proposed": 6,
-  "candidates_evaluated": 6,
-  "rollout_rows": 686,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
-    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    7
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    13
    ],
    [
-    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    10
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    10
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     6
    ],
    [
@@ -2620,14 +2653,6 @@
     3
    ],
    [
-    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
-    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
     1
    ]
@@ -2635,26 +2660,26 @@
  },
  {
   "root": "E20/T/s2",
-  "candidates_proposed": 8,
-  "candidates_evaluated": 8,
-  "rollout_rows": 882,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1128,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    9
+    12
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    8
+    10
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    6
+    8
    ],
    [
     "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    6
+    8
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
@@ -2676,59 +2701,71 @@
  },
  {
   "root": "E21/1S/s0",
-  "candidates_proposed": 6,
-  "candidates_evaluated": 6,
-  "rollout_rows": 686,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    6
+    10
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    4
+    9
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    5
    ],
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    4
+    5
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    1
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
+    3
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    1
+    3
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    3
    ]
   ]
  },
  {
   "root": "E21/1S/s1",
-  "candidates_proposed": 6,
-  "candidates_evaluated": 6,
-  "rollout_rows": 686,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    6
+    10
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    3
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -2737,76 +2774,64 @@
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     3
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    2
+   ]
+  ]
+ },
+ {
+  "root": "E21/1S/s2",
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 1178,
+  "cand_ids_never_evaluated": [],
+  "top_errors": [
+   [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    39
+   ],
+   [
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
+    13
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    10
+   ],
+   [
+    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
+    7
+   ],
+   [
+    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
+    7
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    5
    ],
    [
     "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     2
    ],
    [
-    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    1
-   ],
-   [
-    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    1
-   ],
-   [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ]
-  ]
- },
- {
-  "root": "E21/1S/s2",
-  "candidates_proposed": 5,
-  "candidates_evaluated": 5,
-  "rollout_rows": 588,
-  "cand_ids_never_evaluated": [],
-  "top_errors": [
-   [
-    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    21
-   ],
-   [
-    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    6
-   ],
-   [
-    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    5
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    5
-   ],
-   [
-    "event gate_warning: too few val tasks produced a valid score \u2014 the gate is declining to judge this candidate. This is an infrastructure failure (runner/environment), not a bad edit: fix the ",
-    4
-   ],
-   [
-    "graph note: INDECISIVE: only N% of val tasks produced a valid score (< N% required). The evaluation measured the infrastructure, not the edit \u2014 not counted as a rejection.",
-    4
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ],
-   [
-    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     1
    ]
   ]
  },
  {
   "root": "E21/ruleP/s0",
-  "candidates_proposed": 5,
-  "candidates_evaluated": 5,
-  "rollout_rows": 980,
+  "candidates_proposed": 6,
+  "candidates_evaluated": 6,
+  "rollout_rows": 1374,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    8
+    11
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
@@ -2840,107 +2865,111 @@
  },
  {
   "root": "E21/ruleP/s1",
-  "candidates_proposed": 1,
-  "candidates_evaluated": 1,
-  "rollout_rows": 882,
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 1570,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
+    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    12
+   ],
+   [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    5
+    8
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    3
+    5
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     2
    ],
    [
-    "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    1
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
+    2
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ],
    [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
-    1
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
-    1
-   ],
-   [
-    "rejected: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N); REJECTED by promotion rule P: P confirm: fresh mean +N.N, z N.N (need >= N an",
+    "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata",
     1
    ]
   ]
  },
  {
   "root": "E21/ruleP/s2",
-  "candidates_proposed": 1,
-  "candidates_evaluated": 1,
-  "rollout_rows": 784,
+  "candidates_proposed": 2,
+  "candidates_evaluated": 2,
+  "rollout_rows": 1570,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    4
-   ],
-   [
-    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    2
+    9
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
+    5
+   ],
+   [
+    "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
+    4
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
+    2
+   ],
+   [
+    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
+    2
+   ],
+   [
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     2
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    1
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__conf\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials",
-    1
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN__confbase\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_tr",
-    1
-   ],
-   [
-    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     1
    ]
   ]
  },
  {
   "root": "E26/NOHIST/s0",
-  "candidates_proposed": 7,
-  "candidates_evaluated": 7,
-  "rollout_rows": 392,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 589,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    8
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    7
-   ],
-   [
-    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    10
    ],
    [
     "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     3
    ],
    [
@@ -2948,37 +2977,41 @@
     3
    ],
    [
-    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    3
+    "graph note: paired \u0394\u0304=+N.N > N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    2
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    1
-   ],
-   [
-    "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"seed\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
     1
    ]
   ]
  },
  {
   "root": "E26/NOHIST/s1",
-  "candidates_proposed": 6,
-  "candidates_evaluated": 6,
-  "rollout_rows": 343,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 589,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    13
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    6
+    10
    ],
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    3
+    8
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    6
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -2987,14 +3020,6 @@
    [
     "graph note: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
     3
-   ],
-   [
-    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
-    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
    ],
    [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
@@ -3004,22 +3029,30 @@
  },
  {
   "root": "E26/NOHIST/s2",
-  "candidates_proposed": 6,
-  "candidates_evaluated": 6,
-  "rollout_rows": 343,
+  "candidates_proposed": 10,
+  "candidates_evaluated": 10,
+  "rollout_rows": 589,
   "cand_ids_never_evaluated": [],
   "top_errors": [
    [
     "rollout: tauN terminated for infrastructure reason: TerminationReason.INFRASTRUCTURE_ERROR",
-    9
+    31
    ],
    [
     "event gate_warning: errored_trial_policy=fail reclassified N trials as candidate failures (N errored trials stay missing). Either nothing errored, or the adapter never sets Rollout.metadata[",
-    7
+    12
    ],
    [
     "event errored_trial_policy: {\"kind\": \"errored_trial_policy\", \"split\": \"val\", \"tag\": \"candN\", \"policy\": \"fail\", \"reclassified_trials\": N, \"still_missing_trials\": N}",
-    6
+    10
+   ],
+   [
+    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
+   ],
+   [
+    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
+    5
    ],
    [
     "rejected: paired \u0394\u0304=+N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
@@ -3030,16 +3063,8 @@
     3
    ],
    [
-    "rejected: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
-    "graph note: paired \u0394\u0304=-N.N <= N.N\u00b7SE=N.N (SE=N.N, n=N, resolvable effect size N\u00b7SE=N.N)",
-    2
-   ],
-   [
     "rollout: tauN user-simulator emitted ###STOP### alongside leaked reasoning that explicitly planned to continue the conversation (documented artifact, docs/TAUN_SUMMARY.md row N) \u2014",
-    1
+    2
    ]
   ]
  }
