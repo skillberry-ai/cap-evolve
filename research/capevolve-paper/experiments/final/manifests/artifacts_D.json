@@ -1,0 +1,1553 @@
+{
+ "bstar": "final-state",
+ "bstar_file": "manifests/bstar_D.json",
+ "bstar_file_sha256": "5ea2ad2d5e80703536429d71e6b536cdcfa6598cbc3e7bad832f1e7bd4ff49e1",
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "duplicate_groups": {},
+ "entries": [
+  {
+   "arm": "pt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/PT/s0/frozen/cand_0005",
+   "candidate_id": "cand_0005",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/PT/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "0941dab51addca44b693d1755289bd97b433e12f534e3fbb953dab1e37e01f46",
+    "tools/tools.py": "6015be5734235f80407002202d98092e93d449472ca85393cd51b5d076da0874"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/pt/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "9908c92782ef142b67dd5577330b1d6c300cb5c49f863a008397eca1ea5c2a0e",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "3e96218fd01fba6f4cb070a5d86b4c8d315a42f7574b9d1dc9643390389802e8",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/PT/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5306122448979592,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "0c09ec97b00afd8d82ea1322cfee993bdf21217c7a12791d4ceeb135efcf89d1"
+  },
+  {
+   "arm": "pt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/PT/s1/frozen/cand_0002",
+   "candidate_id": "cand_0002",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/PT/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "513380ef7b9bd5cefbdfbaa570fe726eb666d833deec9e8b858c9638f010e759",
+    "tools/tools.py": "6c90c02d6e256a36f702217c23b32586b3d800ee87b0da5485f6c8027921d7d0"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/pt/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "f84e2eefa7bbc2d4412ed633509b61133e78d73d06cf6416897cae6597b37846",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 1,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "654633742a3fde77ac6dd30534153a5052ff0a791aa666151b55275586f2065d",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/PT/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5714285714285714,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "df3568c07ba961c31eae502cd4ad5a019c7147dfadb1b434236d99ace709ad5d"
+  },
+  {
+   "arm": "pt",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/PT/s2/frozen/cand_0003",
+   "candidate_id": "cand_0003",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/PT/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "84faacaa3760825de518a783c5adda580b4cddb5401d67db947d0ee3b7f0cf16",
+    "tools/tools.py": "fffb6d3ea52ddfe876873945a8e09e4c4ff6b8c4f94588f2941cd9c506298bcc"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/pt/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "3ae750dfbaaf2b9c3cba85abdbbb3da72d8250116b0716a0e5ec5d414380cc30",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "1900549f14f9247f63fc7404bdcfc848d1f438ce02c7d061532164997bb4f420",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/PT/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5102040816326531,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "73bf17da4bfb9bb1a72c2e5ab81356ee8829a7ef371449dda30312cd1a0f96b5"
+  },
+  {
+   "arm": "rulep",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s0/frozen/cand_0006",
+   "candidate_id": "cand_0006",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 687 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "933d8dfc20937620338be75b067a1a6d613b76e8a7f08c648b0e8218cfdf73a7",
+    "tools/tools.py": "2dc24de8d7298838078c2c6b0cb0329d1c21ca87159698a58518a44722cd0834"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/rulep/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "990abf8c060713da00ea8f0af5fa1f0252c06c6de3ca5415eea0ba1c3fb75566",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 20,
+   "n_promotions": 1,
+   "n_screened": 6,
+   "native_finish": {
+    "count": 687,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "11ef28846d97e3b862b446ec7b02514118de8a69cb3645868a65ce83fa99ed2c",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 687,
+    "n_tasks": null,
+    "own_count": 687,
+    "seed_n_tasks": 49,
+    "seed_score": 0.6122448979591837,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "abb1bf857cbbef0fb7b32c33c451d1d16e1e4204c42970573f8523510396a864"
+  },
+  {
+   "arm": "rulep",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s1/frozen/cand_0002",
+   "candidate_id": "cand_0002",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 785 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "b4131aef0dd1c46d1b1b6a8dc5be4862f0ceaa4f81e64e71b4cdbefa7b853300",
+    "tools/tools.py": "826784b0d67761b8ec7659e152148a2286d01062a8f1d1a737eda8515c49d8d7"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/rulep/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "e655af9dd1df2864b1649ff40cad3941c8691ce66d7bdf0bdbfd3e6a47005d53",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 8,
+   "n_promotions": 1,
+   "n_screened": 2,
+   "native_finish": {
+    "count": 785,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "756a7802be227e8325936be62e74bd5f2fc87e7c4133fbd65b3d91a568a57da0",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 785,
+    "n_tasks": null,
+    "own_count": 785,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5510204081632653,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "9d05fd1096e8d5cd9662afbfd7467770fa9fdff5b02623eb1414338048139f25"
+  },
+  {
+   "arm": "rulep",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s2/frozen/cand_0002",
+   "candidate_id": "cand_0002",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 785 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "9ab3df9165251a17bcc61b3c6a32f930c649ee93fbcbc208f5a35889ac8275a3",
+    "tools/tools.py": "6896ddb419eced62b3178043b1e69481093cd4b03554ce15f9f7186c96ba50cd"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/rulep/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "6d3f520b4006223f927810a23029a4fea3c22a6a17ef73aa1408ce532c86b476",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 8,
+   "n_promotions": 2,
+   "n_screened": 2,
+   "native_finish": {
+    "count": 785,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "d66c7349e4f4adf45457eb9991af9a5b3a1859236acd83fdd32ae472f3488628",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E21/ruleP/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 785,
+    "n_tasks": null,
+    "own_count": 785,
+    "seed_n_tasks": 49,
+    "seed_score": 0.4791666666666667,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "640eac5a9eae9e87950ea80f5e5f6f856e165136dbd19b45c58fd2ab0f12bd86"
+  },
+  {
+   "arm": "p",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/P/s0/frozen/cand_0004",
+   "candidate_id": "cand_0004",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/P/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "4aab8c5ee2d7a6a8fd711eb177c1d42b83d4b208b6208ddb1e01ea029350c70a",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/p/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "45e228bf099cd555447647c0b00b8f49aece2f8ec3a3d45d642e2a0651225ae6",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 3,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "2aa60228f45b544471882d820dcd5e5c88ae16032d0b8e77414dd750db1c88d8",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/P/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5306122448979592,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "cf3d69aa1133139d2f4cc8e06f8b6322fbc465b01563a6a35176c655f8194c58"
+  },
+  {
+   "arm": "p",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/P/s1/frozen/cand_0002",
+   "candidate_id": "cand_0002",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/P/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "fe8dc2a2d6b0ef16a6590de2f9cf35eba4706488a4972300a4fbb45823b8be8a",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/p/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "ae5bbe71d810439386df2dde1b7d9bfe4e0c64d35f103bc8b63d86b1706e75c8",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 1,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "e4912c6de9c200ba04a15f8e90b5dd9ab8f70fe6498ba4432b07833d5905d000",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/P/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5625,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "01ace3dcaa3f4613eb5fe76a6ac92ee27b1b5d62893e790187ffc219b053b5c9"
+  },
+  {
+   "arm": "p",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/P/s2/frozen/cand_0005",
+   "candidate_id": "cand_0005",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/P/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "fad13ed03ed08ce23a826487a9a6bce131a4d117ece71c666020fb1da47f2b98",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/p/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "dad2d5d07aa3c036130365f34f9f724cc8320e0ed9e49245ff16968d0ebf96a1",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 1,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "9c1b0c1baa633f4b36440c592bd7d4e85a57fec3c403fe4694afc76196d1b6f2",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/P/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.625,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "815307082b8c5aeedcd3663e63ef284692004ce14e4cb3c733f28fbaab3d5693"
+  },
+  {
+   "arm": "t",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/T/s0/frozen/cand_0010",
+   "candidate_id": "cand_0010",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/T/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "03aea1eddd24fb329719d9d020bb68c0d2aa3b007d249b1225e41493f5c91fee"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/t/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "63ba9f2b6e431c09b76e4efeb5d27fbc22aee22bb923961446d5c00f1b7ccb8a",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 1,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "344f9a3f1d11e4d1df06749acd82fd720b1522e97a16dfa025354158db43021c",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/T/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5510204081632653,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "79f30fc5f4f0e3492fc91776717b9251306457fd33169d9e10e5f4fb93609ca6"
+  },
+  {
+   "arm": "t",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/T/s1/frozen/cand_0003",
+   "candidate_id": "cand_0003",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/T/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "c757755a5a35ea21d76195d96ad31a9969efd0a897801242ac9e19f6fecef8ce"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/t/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "8494988b7943f64e791b9a40fd67e396b21d2b01ef0e70dfac2df09deca8317a",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 1,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "b084d48ad5c1f4bdbffbc3243cac7e724e997cd400ac64d9ff662be3b86e69ba",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/T/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5714285714285714,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "619e762ee4028a52e5784522b432806751552653bcaf7f3c15ec27362608adbd"
+  },
+  {
+   "arm": "t",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/T/s2/frozen/seed",
+   "candidate_id": "seed",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 564 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/T/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/t/s2",
+   "identical_to_own_seed": true,
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "a2e749de337f2055b8960a44c1ce55d63faea8642b8c4c8dda7920e8ee0484d6",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 0,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 564,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/T/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": 0.6122448979591837,
+    "comparison_count": 564,
+    "n_tasks": null,
+    "own_count": 564,
+    "seed_n_tasks": 49,
+    "seed_score": 0.6122448979591837,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "ctl",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s0/frozen/cand_0001",
+   "candidate_id": "cand_0001",
+   "caveats": [
+    "no selection rule: the one-shot revision is the artifact; B*-independent",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 148 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "070be4036e2051c0269cbaad3b22a250a66d3ffaf8626f8c548587330e5ec4fd",
+    "tools/tools.py": "17987354cf12fb2e68bbd1dd7b2bfb60d9ef83a41316b09f01f545a3124bac74"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/ctl/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "a1e06a03395cd11706630f4b9ff4084bd125bfa7e5bdea089a31818d23b6da87",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 5,
+   "n_promotions": 1,
+   "n_screened": 1,
+   "native_finish": {
+    "count": 148,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "a14314fd4b36c6734361468a451a76e55294694c495de723de68424785ac34c8",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": 96,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 148,
+    "n_tasks": 0,
+    "own_count": 148,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5918367346938775,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": 0,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "30ed569ebde5c21bd5e3d526ffd177703881b685dab331d7419647cf0e38eb4f"
+  },
+  {
+   "arm": "ctl",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s1/frozen/cand_0001",
+   "candidate_id": "cand_0001",
+   "caveats": [
+    "no selection rule: the one-shot revision is the artifact; B*-independent",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 148 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "cfd4e91ff8c7b8f2f52c71a65c832c92939d1c291580ec38a33ea1c764519bfd",
+    "tools/tools.py": "cc460043ba1d1c16d7f7a1a02dc0a659550ea6cdc241bdbdaa4d1565fb2e267b"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/ctl/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "6bb0672eebbb7223c04be810e870003541bda292641047787fa19fc6c71efcf4",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 5,
+   "n_promotions": 1,
+   "n_screened": 1,
+   "native_finish": {
+    "count": 148,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "bd59423682802aec7b59e51b6896b7454bcd26796cf197a64af0aac0365944a0",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": 98,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 148,
+    "n_tasks": 0,
+    "own_count": 148,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5714285714285714,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": 0,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "ede43ad37ee04f8e8017e6a75ab3706ebbb43339aeef057aa255272c84e9426f"
+  },
+  {
+   "arm": "ctl",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s2/frozen/cand_0001",
+   "candidate_id": "cand_0001",
+   "caveats": [
+    "no selection rule: the one-shot revision is the artifact; B*-independent",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 123 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "d2191b727fe79728dbc020198c79b779023361efd05db67e230fa934c561e907",
+    "tools/tools.py": "f6a18bc3b5fd3d3593bf62675b2bf994faacc5132a4873a9c660ca4f7f67bacf"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/ctl/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "e8846bebe43c22888db41c469951ea0a751712e160dcb8efe4a2abfcdc418126",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 5,
+   "n_promotions": 0,
+   "n_screened": 1,
+   "native_finish": {
+    "count": 123,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "efcffa3a3df42f7c525dd67209139d4c32a7f8b53b6c5e6afa6e8685d52173bf",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": 96,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/CTL/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": 0.6666666666666666,
+    "comparison_count": 123,
+    "n_tasks": 49,
+    "own_count": 123,
+    "seed_n_tasks": 49,
+    "seed_score": 0.6666666666666666,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": "opt(val)"
+   },
+   "selection_n_tasks": 49,
+   "selection_split": "opt(val)",
+   "selection_value": 0.6666666666666666,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "41f2c866a943853158537323c1cefdceb8726ddac2e4a0bb7b96c7df2f64b685"
+  },
+  {
+   "arm": "1s",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E21/1S/s0/frozen/cand_0009",
+   "candidate_id": "cand_0009",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E21/1S/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "90c83185d440d1d4ae1bd6df9a0989144b7ff91441c744184a4c375e8f1797ff",
+    "tools/tools.py": "135680fd0362dbedb8ae32eb886395f0b788d5e365e22882a35750e2a21ab6ee"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/1s/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "3382496da467c2a8310c09425bb890c11a12bdde278942a0881d03c0e8e96811",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "d38bde3d214b09bc555b0a63b5e121b5e7d2fff64e619881479c0da8d200e19e",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E21/1S/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5208333333333334,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "97a5727ebb4c8dcb731052e1be35a1ddb04631db13cef0b5202a3e96da3562a2"
+  },
+  {
+   "arm": "1s",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E21/1S/s1/frozen/cand_0005",
+   "candidate_id": "cand_0005",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E21/1S/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "a3adff05344d5385565d13f3c26995effbf62c287b6d3bd34100b4e81992a965",
+    "tools/tools.py": "7b45aa00dcb7fbd79edf9f6e7d60ccdce90a074e6546c4e11168f11a96a56e91"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/1s/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "8e30d499f1abbb34082494f80f5e7e7f275e4e1fa46682558f0631cdde808338",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "004c1b7f14769bd93c6fe8dffdb787e29262530a9e40b1613cacb338635e36bd",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E21/1S/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.6326530612244898,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "7eaaa81cc75b72e109ca08e9f001dfd517a3f5e96287512b35d7bead082d63b0"
+  },
+  {
+   "arm": "1s",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E21/1S/s2/frozen/cand_0009",
+   "candidate_id": "cand_0009",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E21/1S/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "ef3ad844c61d636b78bf666228ce8d1609af1ec4eb0c8735325126fa51dd5c41",
+    "tools/tools.py": "b3cfa8581a270127ac9fee3d6d90bc23b4dd5649e22f0d3413c6dcc80f6d409a"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/1s/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "3fe5310976eb3477905930af516454728ee54ea2229a8c2f361cdab0964bc822",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "767777dc6e5bd0f02f636fabbaec56e58ba0cdd79090d11889758329d194d4db",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E21/1S/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "03df70ef6b6033e9b2d02350dcda3bee0033bc6d16be4308d683b049ea8697fe"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s0/frozen/cand_0025",
+   "candidate_id": "cand_0025",
+   "caveats": [
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 564 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s0/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "ca989e3c20365dd3f712ae7b5cf7d3589f381ff069e5bf3c50db1a47a860c702",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/gepa/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "85f8d6775e94256df7dad095418689723d1e761991e5e5cb83e9415d3eabfc52",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 15,
+   "n_events": 117,
+   "n_promotions": 14,
+   "n_screened": 26,
+   "native_finish": {
+    "count": 564,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "d954f72b50827847a971d1aa55bfd9d3e5aa9ed4b0d94330c162b2b61066bc42",
+   "own_seed_candidate": "cand_0000",
+   "own_seed_tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366",
+   "rollout_index": 564,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": 0.68,
+    "comparison_count": 564,
+    "n_tasks": 25,
+    "own_count": 564,
+    "seed_n_tasks": 25,
+    "seed_score": 0.64,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "sel",
+    "split": "sel"
+   },
+   "selection_n_tasks": 25,
+   "selection_split": "sel",
+   "selection_value": 0.68,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "1ee3ab331cb643da55ef1ca5f4b198c7c9c6179a21c2739b5733388fbfacac65"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s1/frozen/cand_0019",
+   "candidate_id": "cand_0019",
+   "caveats": [
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 575 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s1/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "8d28215ea82c8b641335ddc0a7b5fdbb67cfbe51fb7e9b8f74dafcd4e2eeed35",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/gepa/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "fef6374c692f37a15fb9aef53331a920abc7c2dab243c359ec42c76ad248ef1e",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 15,
+   "n_events": 125,
+   "n_promotions": 14,
+   "n_screened": 30,
+   "native_finish": {
+    "count": 575,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "f79ad87a3e35456bf905cd16b8696466eadf6f699f820f65b219b71e2738df90",
+   "own_seed_candidate": "cand_0000",
+   "own_seed_tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366",
+   "rollout_index": 382,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": 0.8,
+    "comparison_count": 575,
+    "n_tasks": 25,
+    "own_count": 575,
+    "seed_n_tasks": 25,
+    "seed_score": 0.56,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "sel",
+    "split": "sel"
+   },
+   "selection_n_tasks": 25,
+   "selection_split": "sel",
+   "selection_value": 0.8,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "c882c169ad68cb5e76e65ce03677c61a7e5a55a34d59e69df5862b9250867adc"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s2/frozen/cand_0020",
+   "candidate_id": "cand_0020",
+   "caveats": [
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 556 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s2/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "c10035a31aea76f06a2a669b4b99318ceeaac27f4878a2fa11ebeeeb364a8bc0",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/gepa/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "f6a798e193bf54f952f96e98e6882b552d259ea7b5c56e83abcf092bceaf9eda",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 13,
+   "n_events": 136,
+   "n_promotions": 12,
+   "n_screened": 34,
+   "native_finish": {
+    "count": 556,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "0868e9c0f037d7bf4958ad936513effff8df912871eafa758fb7deb48035df53",
+   "own_seed_candidate": "cand_0000",
+   "own_seed_tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366",
+   "rollout_index": 390,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": 0.68,
+    "comparison_count": 556,
+    "n_tasks": 25,
+    "own_count": 556,
+    "seed_n_tasks": 25,
+    "seed_score": 0.56,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "sel",
+    "split": "sel"
+   },
+   "selection_n_tasks": 25,
+   "selection_split": "sel",
+   "selection_value": 0.68,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "b8a7a498ed2e140ad17e1fdfa44833ccad80326bc1b2486a9c945e6d9c1332d1"
+  },
+  {
+   "arm": "nohist",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s0/frozen/cand_0009",
+   "candidate_id": "cand_0009",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s0/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "353f695f68f4295c6a0020c75ee652f1acd455d70b5d6d02cf5ae2ded51db475",
+    "tools/tools.py": "9dcbf6ba3f14306aacb197216428aed15e17166c5c89232ec11d43b8a39b902a"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/nohist/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "7a66c47713bb38a7ae7a7b1b8ab749f879c1a513900d96926370fa017e4b8b8e",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "fa71ad3442d3d008c69506395cc24ef4b1e4df7485880de81ddc0028279e662f",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5918367346938775,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "d7f9c762203f64b81473b39e26dc10f787c68bc306265e88319d628735b3b1ce"
+  },
+  {
+   "arm": "nohist",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s1/frozen/cand_0006",
+   "candidate_id": "cand_0006",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s1/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "cb57179e41f0dcbe900b7416d544bbff06a05f28f06327dee39a56b953ed913d",
+    "tools/tools.py": "da204dbdc01845105934424549991d867dc8d11ee4cb49d4e85e50ad7e942060"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/nohist/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "1dc40f37d392bc6dbeeea1fab0733f13a92bb30e967ed49696c24a9d685b5672",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 1,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "091f12f2e8d337756de60cfa78b48098dda5f1b1d416fd2f8a65392827068d86",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.6326530612244898,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "8796b3bdac9f6604a83d69060de64b2e4cf134ce5d7e9e854379b3763ab14596"
+  },
+  {
+   "arm": "nohist",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s2/frozen/cand_0007",
+   "candidate_id": "cand_0007",
+   "caveats": [
+    "end-of-run = final.json best_id",
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 589 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s2/.capevolve/run_main/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "ce378802aca44eb8bda001ecb6719db18e8f03d76090d8245d4d35c977a104a2",
+    "tools/tools.py": "a9e4356e5a0c5494b56f5889c41a44b93b6d67bf0d16dd0bb92d71ccc1425aec"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/nohist/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "4243626321435d14aa91d10a74f6a68827856dba336cbf6bdffe318b1e8f89dd",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_events": 32,
+   "n_promotions": 2,
+   "n_screened": 10,
+   "native_finish": {
+    "count": 589,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "459d0457a2758163397ff056b7c8da15510b98d668913f5fb1792d401365e512",
+   "own_seed_candidate": "seed",
+   "own_seed_tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165",
+   "rollout_index": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E26/NOHIST/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": null,
+    "comparison_count": 589,
+    "n_tasks": null,
+    "own_count": 589,
+    "seed_n_tasks": 49,
+    "seed_score": 0.5306122448979592,
+    "seed_source": "baseline.json",
+    "seed_split": "val",
+    "split": null
+   },
+   "selection_n_tasks": null,
+   "selection_split": null,
+   "selection_value": null,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "5f7ce6ae6f57748281b0026d6a88a3ec9acc7ced219ef4c1ffb13ff19b086716"
+  }
+ ],
+ "generated_utc": "2026-10-13T06:58:41Z",
+ "inert_fraction_by_arm": {
+  "B|1s": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|ctl": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|gepa": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|nohist": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|p": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|pt": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|rulep": {
+   "fraction": 0.0,
+   "inert": 0,
+   "label": "",
+   "seeds": 3
+  },
+  "B|t": {
+   "fraction": 0.333,
+   "inert": 1,
+   "label": "",
+   "seeds": 3
+  }
+ },
+ "reconstruct_py_sha256": "6e85c039d2dc2c8cf6da5e858494e6df6a91466343617ea96cb56358f0caeca3",
+ "rules": {
+  "1s": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "ace": "ACE (dl_new/ace_src/ace/ace.py:781-783): deployed playbook = best_playbook, updated on `acc > best_accuracy` at each val evaluation\n    (strict, earliest wins); wrapper code/ace_run.py:199-205 evaluates val at each epoch end and at final stop and takes\n    max(cands, key=(val, -index)).  Replayed over `evaluated` val events inside the limit.",
+  "ao": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "ctl": "ctl-oneshot control: one optimizer step, no selection.  Artifact = its single revision cand_0001 (collect_cap.py best='cand_0001'),\n    independent of B*; it spends well under B* counted rollouts on search.",
+  "evoskill": "EvoSkill src/registry/manager.py:325-344,366-376,378-427 + loop/runner.py:353: frontier of size 3 (LoopConfig.frontier_size, evoskill_run.py:167),\n    program admitted if the frontier has room or score > worst; best = frontier[0] after sort(key=(score, index), reverse=True), where index is the\n    position in the (alphabetical) git-tag list.  Replayed over the full-val `evaluated` events inside the limit.",
+  "gepa": "GEPA 0.1.4 result.py:76-78: best_idx = max(range(len(scores)), key=scores[i]) over val_aggregate_scores -> highest mean val,\n    first (earliest discovered) wins ties.  Candidates fully val-evaluated inside the limit only.",
+  "gepafull": "GEPA 0.1.4 result.py:76-78: best_idx = max(range(len(scores)), key=scores[i]) over val_aggregate_scores -> highest mean val,\n    first (earliest discovered) wins ties.  Candidates fully val-evaluated inside the limit only.",
+  "harnesslens": "HarnessLens controller.py:578-603,1050-1066,1079-1088: champion = last version accepted by a confirmed paired review (cumulative chain), else v0;\n    selection signal is the TRAIN split paired rollouts.  Needs the accepted-version chain with counted-rollout totals.",
+  "hc": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "hcstock": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "hlext": "HarnessLens controller.py:578-603,1050-1066,1079-1088: champion = last version accepted by a confirmed paired review (cumulative chain), else v0;\n    selection signal is the TRAIN split paired rollouts.  Needs the accepted-version chain with counted-rollout totals.",
+  "metaharness": "Meta-Harness campaign wrapper sb/mh_sb_run.py:152-166 (refresh_frontier: max over completed candidates by (val_score, -index), ties -> earliest),\n    final pick :281-293.  The official repo's terminal_bench_2 reference (meta_harness.py:373-393, `if avg > current_best_avg`) is a strict-greater\n    running best (also earliest on ties).  Candidates flagged incomplete are excluded.",
+  "mipro": "dspy MIPROv2 teleprompt/mipro_optimizer_v2.py:548-549 (best_score = default program's full-val score), :592-595 and :858-860\n    (`if not minibatch and score > best_score` -> best_program) : running STRICT max over FULL-valset evaluations only; minibatch trial scores never\n    update the best.  Wrapper code/mipro_run.py:132-141 tags each evaluation score.kind = full|minibatch.",
+  "nodigest": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "nohist": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "oneshot": "ctl-oneshot control: one optimizer step, no selection.  Artifact = its single revision cand_0001 (collect_cap.py best='cand_0001'),\n    independent of B*; it spends well under B* counted rollouts on search.",
+  "p": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "pt": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "rulep": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "rulep2x": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "skillopt": "SkillOpt@79124b37 trainer.py:1598-1599,1706-1707: best_skill = last `accept_new_best` of the gate (candidate must strictly beat both the\n    current skill and the best, evaluate_gate gate.py ~176-224); best_skill.md is the deployed file.  The converter (to_candidates.py)\n    emits a `selected` event at every best change; take the last one inside the limit.  slow_update candidates are never eligible.",
+  "t": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "td": "CapEvolve hill-climb / agent-optimize under rule P (analysis_plan section 8, decisions.md): deployed = LAST PROMOTED candidate\n    (event `accepted` = step accept flag after screen + fresh-trial confirmation) with rollout_index <= limit; else the seed.  A promotion whose\n    confirmation straddles the limit is not yet logged as accepted at that index, hence excluded.  End-of-run: run_main/final.json best_id,\n    else state.json best_id (the champion at the cutoff).",
+  "trace2skill": "Trace2Skill campaign wrapper trace2skill/t2s_run.py:150-162: seed and every evolved variant (error, combined) are scored ONCE on val; best = seed,\n    then `for v: if s > sel[best]: best = v` (strict, seed wins ties).  Selection happens once, after ALL variant evaluations.  A variant counts only if\n    all val evaluations finished inside the limit (decisions.md: 'its selected variant if completed by B* else seed').  Completion index = position of\n    the last val row in rollouts_metrics.jsonl (file order == counted order).",
+  "wikiskill": "WikiSkill (Stahl-G/wikiskill@da6984c) src/wikiskill/officeqa/loop.py:94-96 eq4_accepted (a candidate is accepted iff it STRICTLY beats the\n    incumbent r_best, tie = reject) and engine.py:64-80/269-272 (state replays the gate events; the last accepted skill is the deployed one).\n    Replayed from the `evaluated` val events in order, S0 = incumbent."
+ },
+ "script_commit": "8c288531f5a46a628e371bf107c29acc3b1bbf3f",
+ "seed_artifact": {
+  "distinct_seed_hashes": {
+   "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165": 21
+  },
+  "files": {
+   "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+   "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+  },
+  "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/seed",
+  "n_runs_agreeing": 21,
+  "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+  "note": "3 run(s) have a first candidate that is not byte-identical to the seed capability (the arm's own starting point, e.g. MIPROv2's default instruction); the shared seed hash is the seed directory's, as registered",
+  "runs_deviating": [
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 0,
+    "tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 1,
+    "tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 2,
+    "tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366"
+   }
+  ],
+  "seed_source_dir": "/home/dev/projects2/wt-tau/examples/tau2_retail/seed_capability",
+  "status": "ok",
+  "suite": "D",
+  "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+ },
+ "status_counts": {
+  "B:1s:ok": 3,
+  "B:ctl:ok": 3,
+  "B:gepa:ok": 3,
+  "B:nohist:ok": 3,
+  "B:p:ok": 3,
+  "B:pt:ok": 3,
+  "B:rulep:ok": 3,
+  "B:t:ok": 3
+ },
+ "suite": "D"
+}

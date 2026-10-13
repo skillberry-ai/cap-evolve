@@ -1,0 +1,517 @@
+{
+ "T": 70,
+ "allocation": {
+  "formula|cell": 47,
+  "formula|sheet": 1,
+  "literal|cell": 1,
+  "literal|sheet": 21
+ },
+ "draw_script_sha256": "df8025c8951706126fff10dbf1bf30034a235b8893af49e2e7c643f2a99b342c",
+ "drawn_utc": "2026-10-13T06:59:58Z",
+ "n_after_sibling_exclusion": 239,
+ "n_trials_per_task": 1,
+ "pool_file": "protocol/final_set/sb912_residual_pool.json",
+ "pool_file_sha256": "4a43d812f5ee4a17f9b09c2e8b74f88e667dcb281eddbdd201d02a9bea5fdb39",
+ "pool_sorted_ids_sha256": "2f9163a019cfa40bb1f97f20a73826cdea2a169b11976d68fd9e23bcbc3d2da7",
+ "seed": 20261013,
+ "stratum_sizes": {
+  "formula|cell": 162,
+  "formula|sheet": 2,
+  "literal|cell": 3,
+  "literal|sheet": 72
+ },
+ "suite": "A",
+ "tasks": [
+  {
+   "family": "10493",
+   "gold_has_formula_in_range": true,
+   "id": "10493",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "122",
+   "gold_has_formula_in_range": false,
+   "id": "122-39",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "132",
+   "gold_has_formula_in_range": false,
+   "id": "132-4",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "134",
+   "gold_has_formula_in_range": false,
+   "id": "134-14",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "14625",
+   "gold_has_formula_in_range": true,
+   "id": "14625",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "15827",
+   "gold_has_formula_in_range": true,
+   "id": "15827",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "15829",
+   "gold_has_formula_in_range": true,
+   "id": "15829",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "159",
+   "gold_has_formula_in_range": false,
+   "id": "159-7",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "166",
+   "gold_has_formula_in_range": false,
+   "id": "166-27",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "19032",
+   "gold_has_formula_in_range": true,
+   "id": "19032",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "212",
+   "gold_has_formula_in_range": false,
+   "id": "212-20",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "225",
+   "gold_has_formula_in_range": false,
+   "id": "225-4",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "228",
+   "gold_has_formula_in_range": false,
+   "id": "228-19",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "289",
+   "gold_has_formula_in_range": false,
+   "id": "289-3",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "312",
+   "gold_has_formula_in_range": false,
+   "id": "312-46",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "319",
+   "gold_has_formula_in_range": false,
+   "id": "319-11",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "330",
+   "gold_has_formula_in_range": false,
+   "id": "330-23",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "33094",
+   "gold_has_formula_in_range": true,
+   "id": "33094",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "33935",
+   "gold_has_formula_in_range": true,
+   "id": "33935",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "34365",
+   "gold_has_formula_in_range": true,
+   "id": "34365",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "36170",
+   "gold_has_formula_in_range": true,
+   "id": "36170",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "36745",
+   "gold_has_formula_in_range": true,
+   "id": "36745",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "36842",
+   "gold_has_formula_in_range": true,
+   "id": "36842",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "371",
+   "gold_has_formula_in_range": false,
+   "id": "371-33",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "37615",
+   "gold_has_formula_in_range": true,
+   "id": "37615",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "37764",
+   "gold_has_formula_in_range": true,
+   "id": "37764",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "38655",
+   "gold_has_formula_in_range": true,
+   "id": "38655",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "39490",
+   "gold_has_formula_in_range": true,
+   "id": "39490",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "40758",
+   "gold_has_formula_in_range": true,
+   "id": "40758",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "415",
+   "gold_has_formula_in_range": false,
+   "id": "415-45",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "42378",
+   "gold_has_formula_in_range": true,
+   "id": "42378",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "43939",
+   "gold_has_formula_in_range": true,
+   "id": "43939",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "44278",
+   "gold_has_formula_in_range": true,
+   "id": "44278",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "44287",
+   "gold_has_formula_in_range": true,
+   "id": "44287",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "45025",
+   "gold_has_formula_in_range": true,
+   "id": "45025",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "45181",
+   "gold_has_formula_in_range": false,
+   "id": "45181",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "literal|cell"
+  },
+  {
+   "family": "47353",
+   "gold_has_formula_in_range": true,
+   "id": "47353",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "47360",
+   "gold_has_formula_in_range": true,
+   "id": "47360",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "48950",
+   "gold_has_formula_in_range": true,
+   "id": "48950",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "48968",
+   "gold_has_formula_in_range": true,
+   "id": "48968",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "490",
+   "gold_has_formula_in_range": false,
+   "id": "490-49",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "49118",
+   "gold_has_formula_in_range": true,
+   "id": "49118",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "49278",
+   "gold_has_formula_in_range": true,
+   "id": "49278",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "49467",
+   "gold_has_formula_in_range": true,
+   "id": "49467",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "49665",
+   "gold_has_formula_in_range": true,
+   "id": "49665",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "50232",
+   "gold_has_formula_in_range": true,
+   "id": "50232",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "50442",
+   "gold_has_formula_in_range": true,
+   "id": "50442",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "50577",
+   "gold_has_formula_in_range": true,
+   "id": "50577",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "50681",
+   "gold_has_formula_in_range": true,
+   "id": "50681",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "52888",
+   "gold_has_formula_in_range": true,
+   "id": "52888",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "530",
+   "gold_has_formula_in_range": false,
+   "id": "530-28",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "53965",
+   "gold_has_formula_in_range": true,
+   "id": "53965",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "54490",
+   "gold_has_formula_in_range": true,
+   "id": "54490",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "55126",
+   "gold_has_formula_in_range": true,
+   "id": "55126",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "55515",
+   "gold_has_formula_in_range": true,
+   "id": "55515",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "55572",
+   "gold_has_formula_in_range": true,
+   "id": "55572",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "56",
+   "gold_has_formula_in_range": false,
+   "id": "56-46",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "56451",
+   "gold_has_formula_in_range": true,
+   "id": "56451",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "56576",
+   "gold_has_formula_in_range": true,
+   "id": "56576",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "570",
+   "gold_has_formula_in_range": false,
+   "id": "570-43",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "57225",
+   "gold_has_formula_in_range": true,
+   "id": "57225",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "57427",
+   "gold_has_formula_in_range": true,
+   "id": "57427",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "58667",
+   "gold_has_formula_in_range": true,
+   "id": "58667",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "591",
+   "gold_has_formula_in_range": false,
+   "id": "591-29",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "59626",
+   "gold_has_formula_in_range": true,
+   "id": "59626",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "59791",
+   "gold_has_formula_in_range": true,
+   "id": "59791",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "598",
+   "gold_has_formula_in_range": true,
+   "id": "598-14",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "formula|sheet"
+  },
+  {
+   "family": "59969",
+   "gold_has_formula_in_range": true,
+   "id": "59969",
+   "instruction_type": "Cell-Level Manipulation",
+   "stratum": "formula|cell"
+  },
+  {
+   "family": "62",
+   "gold_has_formula_in_range": false,
+   "id": "62-48",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  },
+  {
+   "family": "85",
+   "gold_has_formula_in_range": false,
+   "id": "85-38",
+   "instruction_type": "Sheet-Level Manipulation",
+   "stratum": "literal|sheet"
+  }
+ ],
+ "tasks_sorted_ids_sha256": "04a7a7407290188c6d53c51cc0b17ee84c3fead47d6f24e16f567e9fad13803d"
+}

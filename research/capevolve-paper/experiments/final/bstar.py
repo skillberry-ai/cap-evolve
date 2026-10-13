@@ -114,6 +114,8 @@ def compute(suite):
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--suite", required=True, choices=sorted(C.SUITES))
+    ap.add_argument("--ruling", type=int, default=None, help="N* set by a coordinator ruling (decisions.md) where the literal rule is undefined (Suite A 2026-10-13: 600)")
+    ap.add_argument("--ruling-ref", default="decisions.md 73edccaf7 'N* rulings at the search cutoff'")
     ap.add_argument("--fake", type=int, default=None, help="dry-run only: override B* (written to a separate FAKE file)")
     ap.add_argument("--out", default=str(C.MANIFESTS))
     a = ap.parse_args(argv)
@@ -123,6 +125,10 @@ def main(argv=None):
         C.write_json_atomic(Path(a.out) / ("bstar_%s.json" % a.suite), res)
         print("suite %s: no B* (final-state suite); %d runs listed" % (a.suite, len(res["runs"])))
         return 0
+    if a.ruling is not None:
+        res["bstar_literal_rule"] = res.get("bstar")
+        res["bstar"] = a.ruling
+        res["ruling"] = a.ruling_ref
     if a.fake is not None:
         res["bstar_computed"] = res.get("bstar")
         res["bstar"] = a.fake

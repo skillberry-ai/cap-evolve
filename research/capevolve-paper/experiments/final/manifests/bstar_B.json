@@ -1,0 +1,329 @@
+{
+ "binding_run": "ao/s2",
+ "bstar": 850,
+ "bstar_raw": 882,
+ "cheap_arms": [],
+ "crashed": [],
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "floored_to_200": false,
+ "generated_utc": "2026-10-13T06:58:29Z",
+ "incomplete_seeds": [],
+ "main_arms": [
+  "hc",
+  "ao",
+  "gepa",
+  "harnesslens"
+ ],
+ "min_counter_by_arm": {
+  "ao": 147,
+  "gepa": 603,
+  "harnesslens": 163,
+  "hc": 539
+ },
+ "min_main_counter": 882,
+ "natively_finished": {
+  "ao/s0": {
+   "count": 148,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "ao/s1": {
+   "count": 147,
+   "evidence": "run.log: exit 1 from the finalize step, final.json present (search ended on its own)",
+   "stop_kind": "native_finish"
+  },
+  "gepa/s0": {
+   "count": 613,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "gepa/s1": {
+   "count": 603,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "gepa/s2": {
+   "count": 607,
+   "evidence": "run.log: exit 1 from the evaluator's hard rollout cap (tau_lib CountedEvaluator)",
+   "stop_kind": "budget_cap"
+  },
+  "harnesslens/s0": {
+   "count": 176,
+   "evidence": "logs/budget_stop.json stop_reason=token_guard (status crashed_at_guard)",
+   "stop_kind": "guard_stop"
+  },
+  "harnesslens/s1": {
+   "count": 173,
+   "evidence": "logs/budget_stop.json stop_reason=token_guard (status crashed_at_guard)",
+   "stop_kind": "guard_stop"
+  },
+  "harnesslens/s2": {
+   "count": 163,
+   "evidence": "logs/budget_stop.json stop_reason=token_guard (status crashed_at_guard)",
+   "stop_kind": "guard_stop"
+  },
+  "hc/s0": {
+   "count": 637,
+   "evidence": "budget_stop.json (native budget stop, 637 counted of max 550)",
+   "stop_kind": "budget_cap"
+  },
+  "hc/s1": {
+   "count": 539,
+   "evidence": "run.log: exit 0",
+   "stop_kind": "native_finish"
+  },
+  "hc/s2": {
+   "count": 637,
+   "evidence": "budget_stop.json (native budget stop, 637 counted of max 550)",
+   "stop_kind": "budget_cap"
+  }
+ },
+ "rule": "floor_50(min counted rollouts over all main-tier seeds), floor 200",
+ "runs": [
+  {
+   "arm": "hc",
+   "counter": 637,
+   "counter_raw": 662,
+   "finalize_excluded": 25,
+   "native_evidence": "budget_stop.json (native budget stop, 637 counted of max 550)",
+   "native_status": "budget_cap",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/hc/s0",
+   "seed": 0,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 662 includes finalize)",
+   "tier": "main"
+  },
+  {
+   "arm": "hc",
+   "counter": 539,
+   "counter_raw": 564,
+   "finalize_excluded": 25,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/hc/s1",
+   "seed": 1,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 564 includes finalize)",
+   "tier": "main"
+  },
+  {
+   "arm": "hc",
+   "counter": 637,
+   "counter_raw": 662,
+   "finalize_excluded": 25,
+   "native_evidence": "budget_stop.json (native budget stop, 637 counted of max 550)",
+   "native_status": "budget_cap",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/hc/s2",
+   "seed": 2,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 662 includes finalize)",
+   "tier": "main"
+  },
+  {
+   "arm": "ao",
+   "counter": 148,
+   "counter_raw": 198,
+   "finalize_excluded": 50,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s0",
+   "seed": 0,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 198 includes finalize)",
+   "tier": "main"
+  },
+  {
+   "arm": "ao",
+   "counter": 147,
+   "counter_raw": 197,
+   "finalize_excluded": 50,
+   "native_evidence": "run.log: exit 1 from the finalize step, final.json present (search ended on its own)",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s1",
+   "seed": 1,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 197 includes finalize)",
+   "tier": "main"
+  },
+  {
+   "arm": "ao",
+   "counter": 882,
+   "counter_raw": 932,
+   "finalize_excluded": 50,
+   "native_evidence": "running at the 2026-10-13 06:00Z cutoff, stopped by tau-runner",
+   "native_status": "cutoff_stop",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ao/s2",
+   "seed": 2,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 932 includes finalize)",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 613,
+   "counter_raw": 613,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 603,
+   "counter_raw": 603,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "gepa",
+   "counter": 607,
+   "counter_raw": 607,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 1 from the evaluator's hard rollout cap (tau_lib CountedEvaluator)",
+   "native_status": "budget_cap",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:rollouts",
+   "tier": "main"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": 176,
+   "counter_raw": 176,
+   "finalize_excluded": 0,
+   "native_evidence": "logs/budget_stop.json stop_reason=token_guard (status crashed_at_guard)",
+   "native_status": "guard_stop",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:total",
+   "tier": "main"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": 173,
+   "counter_raw": 173,
+   "finalize_excluded": 0,
+   "native_evidence": "logs/budget_stop.json stop_reason=token_guard (status crashed_at_guard)",
+   "native_status": "guard_stop",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens/s1",
+   "seed": 1,
+   "source": "rollout_counter.json:total",
+   "tier": "main"
+  },
+  {
+   "arm": "harnesslens",
+   "counter": 163,
+   "counter_raw": 163,
+   "finalize_excluded": 0,
+   "native_evidence": "logs/budget_stop.json stop_reason=token_guard (status crashed_at_guard)",
+   "native_status": "guard_stop",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens/s2",
+   "seed": 2,
+   "source": "rollout_counter.json:total",
+   "tier": "main"
+  },
+  {
+   "arm": "oneshot",
+   "counter": 123,
+   "counter_raw": 123,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s0",
+   "seed": 0,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "control"
+  },
+  {
+   "arm": "oneshot",
+   "counter": 148,
+   "counter_raw": 148,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s1",
+   "seed": 1,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "control"
+  },
+  {
+   "arm": "oneshot",
+   "counter": 123,
+   "counter_raw": 123,
+   "finalize_excluded": 0,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/ctl-oneshot/s2",
+   "seed": 2,
+   "source": "run_main/state.json:spent.metric_calls",
+   "tier": "control"
+  },
+  {
+   "arm": "hcstock",
+   "counter": 441,
+   "counter_raw": 491,
+   "finalize_excluded": 50,
+   "native_evidence": "final.json present, newer than the last restart (no exit line)",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s0",
+   "seed": 0,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 491 includes finalize)",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "hcstock",
+   "counter": 539,
+   "counter_raw": 564,
+   "finalize_excluded": 25,
+   "native_evidence": "run.log: exit 0",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s1",
+   "seed": 1,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 564 includes finalize)",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "hcstock",
+   "counter": 490,
+   "counter_raw": 540,
+   "finalize_excluded": 50,
+   "native_evidence": "final.json present, newer than the last restart (no exit line)",
+   "native_status": "native_finish",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E12B/hcstock/s2",
+   "seed": 2,
+   "source": "rollouts_metrics.jsonl rows outside sel/test/FINAL (state.json counter 540 includes finalize)",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "hlext",
+   "counter": 284,
+   "counter_raw": 284,
+   "finalize_excluded": 0,
+   "native_evidence": "no exit evidence",
+   "native_status": "running_or_unknown",
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens_ext/s0",
+   "seed": 0,
+   "source": "rollout_counter.json:total",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "hlext",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens_ext/s1",
+   "seed": 1,
+   "source": "no_run_dir",
+   "tier": "exploratory"
+  },
+  {
+   "arm": "hlext",
+   "counter": null,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10B/harnesslens_ext/s2",
+   "seed": 2,
+   "source": "no_run_dir",
+   "tier": "exploratory"
+  }
+ ],
+ "suite": "B"
+}
