@@ -1,0 +1,145 @@
+{
+  "candidate": "cand_0003",
+  "headline": "Attack the one real mechanism behind every observed 4/5 — an unresolved defect-class minor in the terminal re-review — with a structural consistency script at the producer and reviser, producer-side rules for the three known AC/boundary defect classes, a narrowing rule that stops the re-review from escalating already-surfaced health warnings, and a reviser must-fix discriminator calibrated against every observed minor.",
+  "clusters": [
+    {
+      "id": "A",
+      "name": "unresolved defect-class minor in terminal re-review -> judge 4/5",
+      "detail": "The external judge (decomposition_quality, rubric: '4 = one minor gap') reads the pipeline's final adversarial review; every observed 4/5 cites a defect-class minor left unresolved in that file, and every observed 5/5 had a clean or observation-only final review. The loop ends at pass:true (minors never fail), so defects the first review misses, the reviser leaves, or the re-review newly finds are never fixed. Sub-classes: A1 mermaid/frontmatter edge mismatch (cand_0002-019 first review; seed-018 post-decompose true positive); A2 parallel-supplier AC-precision gap (cand_0002-019 re-review: stub fixture covers only one launch path); A3 re-review escalating already-surfaced health warnings into Completeness minors (cand_0002-013 regression); A4 spec-vs-content overlap (seed-019); A5 rollout-gate AC gap (seed-019); A6 reviser leaves prescriptive minors unfixed (seed-019: all three stayed).",
+      "tasks": ["case-019-content-vs-code-split"],
+      "scope": "BOUNDED",
+      "latent": false,
+      "tag": "BEHAVIORAL"
+    },
+    {
+      "id": "B",
+      "name": "latent: reviewer pedantry draw on passing tasks (cand_0002's 013 break)",
+      "detail": "cand_0002 broke case-013 (1.0 -> 0.75) via three Completeness minors that appeared only in the re-review, each mirroring a health warning the decomposer had already surfaced ('Flagged in Health Warning #N; Confirm with the strategy author'). The seed-013 run had the same health warnings, a clean review, and 5/5 — the delta is the reviewer/re-review draw, plausibly amplified by cand_0002's reviewer pattern-naming edits. This cluster is the regression mechanism this iteration's reviewer edit (A3 narrowing) is designed to close.",
+      "tasks": ["case-013-human-process-gates"],
+      "scope": "WIDESPREAD",
+      "latent": true,
+      "tag": "BEHAVIORAL"
+    }
+  ],
+  "edits": [
+    {
+      "id": "E1",
+      "title": "New structural consistency script check_decomposition.py (--self-check 9/9)",
+      "files": ["epic-decompose/scripts/check_decomposition.py"],
+      "lever": "BEHAVIORAL",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Self-check 9/9; catches exactly cand_0002-019's first-review defect (missing E001->E005 mermaid arrow) on the reconstructed post-decompose state, fix loop closes to exit 0; CLEAN on all 8 tasks' final artifacts and 7/8 post-decompose states (seed-018: one TRUE finding whose fix converges to the already-5/5 final state); CLEAN on cand_0002-013 (not implicated in that regression); primary/fallback/unavailable invocation branches executed in a replica of the runtime layout."
+    },
+    {
+      "id": "E2",
+      "title": "Decompose Step 8c: fail-open consistency-check invocation (dual-path, fix-once)",
+      "files": ["epic-decompose/prompts/decompose-agent.md"],
+      "lever": "BEHAVIORAL",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Exact snippet smoke-tested in the runtime layout; on passing tasks the only delta is one Bash call printing OK (post-decompose states CLEAN); fires only on real structural inconsistencies."
+    },
+    {
+      "id": "E3",
+      "title": "Decompose Step 5: spec-vs-content boundary rule + different-domain worked example",
+      "files": ["epic-decompose/prompts/decompose-agent.md"],
+      "lever": "KNOWLEDGE",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Trigger (spec epic beside non-docs content epic) absent from all 7 passing tasks; the same rule in cand_0002 verifiably produced a clean external dim-2 on 019."
+    },
+    {
+      "id": "E4",
+      "title": "Decompose Step 7: parallel-supplier AC completeness rule + different-domain example",
+      "files": ["epic-decompose/prompts/decompose-agent.md"],
+      "lever": "KNOWLEDGE",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Trigger (ACs verifying against a parallel epic's supplied artifacts) grepped absent from all passing tasks; targets cand_0002-019's re-review defect (stub fixture vs both launch paths)."
+    },
+    {
+      "id": "E5",
+      "title": "Decompose Step 7: rollout-gate AC coverage rule with exclusions",
+      "files": ["epic-decompose/prompts/decompose-agent.md"],
+      "lever": "KNOWLEDGE",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Feature-flag scope among passing tasks exists only in 014-E005 whose gate ACs already satisfy the rule; 013's CI/approval-gate epics named in the exclusions; targets seed-019's third minor."
+    },
+    {
+      "id": "E6",
+      "title": "Review Criterion 7: already-surfaced strategy ambiguity is not a Completeness issue (narrowing only)",
+      "files": ["epic-decompose/prompts/review-agent.md"],
+      "lever": "KNOWLEDGE",
+      "clusters": ["B"],
+      "blast_radius": "BOUNDED",
+      "verified": "No passing task's final review lists a health-warning mirror (seed-013 clean over the same health warnings cand_0002-013's reviewer escalated); rule only removes listings, adds nothing."
+    },
+    {
+      "id": "E7",
+      "title": "Revise Step 2: defect-vs-observation must-fix discriminator for minors",
+      "files": ["epic-decompose/prompts/revise-agent.md"],
+      "lever": "BEHAVIORAL",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Discriminator checked against all 12 observed minors: seed-019's 3 prescriptive ones -> fixed; all 7 passing-task minors and cand_0002-013's 3 -> classified observation (latitude unchanged, including 016's signal-value comparison, explicitly carved out)."
+    },
+    {
+      "id": "E8",
+      "title": "Revise recipes: spec/content overlap (stub or subsume, never merge, + supplier-AC sweep) and missing rollout-gate AC",
+      "files": ["epic-decompose/prompts/revise-agent.md"],
+      "lever": "KNOWLEDGE",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Recipe signatures absent from all passing tasks' review issue lists."
+    },
+    {
+      "id": "E9",
+      "title": "Revise Step 4: propagation of dep/AC changes + fail-open script run",
+      "files": ["epic-decompose/prompts/revise-agent.md"],
+      "lever": "BEHAVIORAL",
+      "clusters": ["A"],
+      "blast_radius": "BOUNDED",
+      "verified": "Script CLEAN on all 8 final states -> no-op on current trajectories; propagation rules fire only when corrections touched dependencies or producer ACs."
+    },
+    {
+      "id": "E10",
+      "title": "SKILL.md description: add 'Use when' (clears standing validation warning)",
+      "files": ["epic-decompose/SKILL.md"],
+      "lever": "CONTRACT",
+      "clusters": [],
+      "blast_radius": "BOUNDED",
+      "verified": "199 chars < 1024, third person, no XML tags/ALL-CAPS; same triggers."
+    }
+  ],
+  "skipped": [
+    {
+      "title": "docs-priority derivation as a script check",
+      "reason": "External judge visibly accepts either P-label under the docs exemption; shipped as reviser prose keyed to prescriptive minors instead, verified to fire only where the field deviates (all 7 passing tasks' docs epics already follow the derivation)."
+    },
+    {
+      "title": "gate_failure_impact / gated_by completeness check",
+      "reason": "Fires on passing case-020's post-decompose state; decompose-time-vs-revise-time fix-path equivalence not verified; both prior iterations deliberately skipped it too."
+    },
+    {
+      "title": "epic_count / branch-metadata structural checks in the script",
+      "reason": "Ambiguous conventions (016 counts branch files differently); consistent with cand_0001's rejection mechanism; review rubric covers them."
+    },
+    {
+      "title": "Reviewer-side script invocation or pattern-naming additions",
+      "reason": "cand_0001's folding and cand_0002's E5/E6 naming are the plausible drivers of the 013 reviewer-pedantry regression; reviewer edits kept narrowing-only."
+    },
+    {
+      "title": "Pipeline loop-semantics changes (revise again on minors)",
+      "reason": "Outside the candidate edit surface; would churn every task whose final review legitimately lists observation minors (015/016/018/020)."
+    }
+  ],
+  "techniques": [
+    "read the benchmark's actual judge rubric to convert a flaky score into a mechanism",
+    "cross-candidate artifact diffing (seed vs accepted-for-019 vs rejected) to isolate what a 5/5 looks like",
+    "reconstructed intermediate file states (Write + frontmatter.py set replay) to measure guard blast radius",
+    "structural-only code enforcement vs both rejected semantic-script designs",
+    "discriminator calibrated against every observed labeled example"
+  ]
+}

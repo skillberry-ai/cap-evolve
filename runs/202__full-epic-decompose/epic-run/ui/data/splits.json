@@ -1,0 +1,40 @@
+{
+  "train": [
+    "case-001-simple-two-component",
+    "case-002-complex-genai-eval",
+    "case-003-triage-below-threshold",
+    "case-004-triage-docs-only",
+    "case-005-ambiguous-investigation",
+    "case-006-offplatform-onboarding",
+    "case-007-conditional-branch",
+    "case-008-underspecified-strategy",
+    "case-009-triage-trivial-rename",
+    "case-010-priority-inheritance",
+    "case-011-parallel-fanout",
+    "case-012-license-validation"
+  ],
+  "val": [
+    "case-013-human-process-gates",
+    "case-014-tech-preview-foundation",
+    "case-015-redundant-hlrs",
+    "case-016-component-canonicalization",
+    "case-017-near-threshold-no-triage",
+    "case-018-cross-strategy-dependency",
+    "case-019-content-vs-code-split",
+    "case-020-hardware-dependent-investigation"
+  ],
+  "test": [
+    "case-021-real-pqc-base-image-compliance",
+    "case-022-real-kueue-scheduling-visibility-ui",
+    "case-023-real-maas-xks-deployment",
+    "case-024-real-default-vector-store",
+    "case-025-real-eval-job-progress-ui",
+    "case-026-real-agent-operator-productization",
+    "case-027-real-feature-store-admin-ui",
+    "case-028-real-standalone-keda-autoscaling",
+    "case-029-real-mlflow-workspace-artifact-serving",
+    "case-030-real-operator-structured-logging"
+  ],
+  "seed": 0,
+  "test_used": true
+}
