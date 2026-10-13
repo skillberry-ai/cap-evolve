@@ -269,13 +269,15 @@ class RealBackend(P2Port, conductor.Backend):
         if kind == "merge":
             # merge_n stops on a conflict without writing a merge dir: the job edits a copy of the trunk
             # and ports the donor's version of each conflicting block, read from the donor's own dir.
-            parent = ((conflicts or [{}])[0].get("trunk") or [parent])[0]
+            parent = job["parent"] = ((conflicts or [{}])[0].get("trunk") or [parent])[0]   # register() diffs against it
             conflicts = [f"{c.get('where')} (port the version in {digest.cand_dir(self.run_dir, (c.get('donor') or ['?'])[0])})"
                          if isinstance(c, dict) else str(c) for c in conflicts or []]
         if kind == "propose" or (kind == "merge" and not work.exists()):
             if work.exists():
                 shutil.rmtree(work)                 # a retry starts from a clean copy of the parent
-            rc, out, err = act.sh([act.PY, HERE / "prepare_candidate.py", "-r", self.root, "-t", tag, "--parent", parent])
+            rc, out, err = act.sh([act.PY, HERE / "prepare_candidate.py", "-r", self.root, "-t", tag, "--parent", parent,
+                                   "--source", digest.cand_dir(self.run_dir, parent),     # an unpromoted tip lives in work/
+                                   "--allow-uncommitted-source"])
             if rc != 0:
                 raise RuntimeError(f"prepare_candidate failed: {(err or out)[-300:]}")
             (work.parent / f".parent_{tag}").write_text(parent)
@@ -287,7 +289,7 @@ class RealBackend(P2Port, conductor.Backend):
             text = ("Objectives: reward first, then cost per success (agent USD per unit reward); an edit that "
                     "adds cost per success beyond " f"{self.cfg.cost_eps:.0%} is rejected even when reward rises.\n" + text)
         taken = {j.get("cluster") for j in conductor_jobs(self.root) if j.get("state") in ("queued", "running")}
-        cluster = proposer.pick_cluster(dg, int(job.get("slot") or 0), taken)
+        cluster = proposer.pick_cluster(dg, int(job.get("slot") or 0), taken) if kind == "propose" else None
         job["cluster"] = (cluster or {}).get("id")
         log, rcf, prompt = self._paths(job)
         prompt.write_text(proposer.build_prompt(workdir=work, parent=parent, cluster=cluster, digest_text=text,

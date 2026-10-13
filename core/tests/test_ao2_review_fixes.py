@@ -243,6 +243,9 @@ def test_a_merge_resolve_job_gets_a_copy_of_the_trunk_and_the_donor_path(tmp_pat
             m.patch.object(conductor_backend.digest, "fit", lambda d: ({}, "")), \
             m.patch.object(conductor_backend.digest, "cand_dir", lambda rd, t: tmp_path / "candidates" / t):
         conductor_backend.RealBackend._start_llm(fake, job)
-    assert calls and calls[0][-1] == "cand_2", "the work dir is a copy of the conflict's trunk"
+    argv = calls[0]
+    assert argv[argv.index("--parent") + 1] == "cand_2", "the work dir is a copy of the conflict's trunk"
+    assert argv[argv.index("--source") + 1] == str(tmp_path / "candidates" / "cand_2"), "read where the tip lives"
+    assert job["parent"] == "cand_2", "register() diffs the result against the trunk it was built from"
     prompt = (tmp_path / "j.prompt.md").read_text()
     assert "policy/policy.md::Rules" in prompt and str(tmp_path / "candidates" / "cand_1") in prompt
