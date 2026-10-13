@@ -1,0 +1,26 @@
+{
+ "version": "v2.1-AO2",
+ "role": "SECONDARY version of AO-2 (amendment 11D: own Holm over the versions scored); v2.0 AO-2 stays the primary AO-2 version, unchanged",
+ "registered_utc": "2026-10-13 23:12 UTC",
+ "reason": "AO-2 E s0 and s1 ended by the core's default plateau rule ('11 proposals without a champion change at 41% of budget', policy.py:211-215; plateau_n = max(6, 0.4 x projected budget proposals), floor 0.4), leaving about 59% of the rollout budget unused; v2.0 left ao_plateau_* at the defaults",
+ "code": "same as v2.0 AO-2: main d68775bbde8974a26e25c54245896f1fcfe1ae6e (wt-v2run-ao); NO code change",
+ "spec_delta_vs_v2.0_AO2": {
+  "ao_plateau_floor": {
+   "v2.0": 0.4,
+   "v2.1-AO2": 0.8,
+   "meaning": "no plateau stop before 80% of the rollout budget is spent"
+  },
+  "ao_plateau_n": "unchanged (default derivation max(6, 0.4 x projected proposals))",
+  "everything_else": "identical: P2 gate and all knobs, helpers, surface, budgets, shim"
+ },
+ "seeds": "0, 1, 2 per suite; same suite partitions as v2.0 (A per seed, D and E shared)",
+ "suites": [
+  "A",
+  "D",
+  "E"
+ ],
+ "launch_rule": "unconditionally on all three suites, each after that suite's v2.0 AO-2 searches have ended, capacity permitting; cuts by clock and capacity only, never by an outcome",
+ "decision_basis": "search behaviour only (stop reasons and rollout counts of v2.0 AO-2 searches); no held-out data seen; [internal confirm-split estimates: to be stated by the coordinator]",
+ "scoring": "scored once in the suite's v2 window as additional rows if finished in time, otherwise in a later window with the same in-window anchors (seed, seed-check, GEPA budget-parity anchor); own Holm over the versions scored; budget is NOT matched to v2.0 or to the other arms (uses more rollouts), reported",
+ "pending": "spec file hashes per suite (registered before each launch)"
+}

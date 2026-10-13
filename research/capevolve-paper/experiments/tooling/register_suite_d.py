@@ -19,6 +19,7 @@ ITEMS = [
     ("v2_registration", PAPER / "experiments/configs/v2_registration.json", "CapEvolve v2 reruns (amendment 11)"),
     ("v2_plan", PAPER / "improve/V2_PLAN.md", "CapEvolve v2 synthesis and build plan (amendment 11 source)"),
     ("v2_version_2_0", PAPER / "experiments/configs/v2_version_2_0.json", "11E version line v2.0: code SHA, P2 defaults, Suite E scaling rule, AO-2 parameters"),
+    ("v2_1_AO2_version_line", PAPER / "experiments/configs/v2_1_AO2.json", "11E version line v2.1-AO2 (secondary AO-2 version: ao_plateau_floor 0.8)"),
     ("suite_D_experiment_design", PAPER / "redesign/EXPERIMENTS.md", "experiment-designer proposal the registration was written against"),
 ]
 
