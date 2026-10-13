@@ -91,6 +91,17 @@ def main():
     _ao = json.loads((PAPER / "experiments/configs/v2_version_2_0.json").read_text()).get("per_arm_code_pins", {}).get("AO-2", {}).get("commit")
     if _ao:
         items.append(("v2_0_code_commit_AO2", None, "AO-2 arm code pin (a3f5eeb6d + #836 + #835): " + _ao, hashlib.sha256(_ao.encode()).hexdigest()))
+    CS = Path("/home/dev/projects2/campaign-scratch")
+    V2DE_FILES = [("D_E_build_v2.py", CS / "scripts/V2/build_v2.py", "Suite D/E v2 project builder"),
+                  ("D_E_launch_v2.sh", CS / "scripts/V2/launch_v2.sh", "Suite D/E v2 launcher (env scrub, CAPEVOLVE_OPTIMIZER_COST=off)"),
+                  ("D_E_admit_v2.py", CS / "scripts/V2/admit_v2.py", "Suite D/E v2 admission rule (own 429 >= 2% or queue >= 30 s hold; v1 protection; max 6 V2 searches)"),
+                  ("D_E_cost_summary.py", CS / "scripts/E30/cost_summary.py", "cost/guard helper"),
+                  ("D_E_cand_logger.py", CS / "scripts/E30/cand_logger.py", "candidate logger"),
+                  ("D_E_shim_claude_hc2", CS / "runs/V2/_sbx_bin/claude", "HC-2 optimizer shim (binds .capevolve/project, run_main, claude_cfg)"),
+                  ("D_E_shim_claude_ao2", CS / "runs/V2/_sbx_bin_ao/claude", "AO-2 optimizer shim (WT=wt-v2run-ao)")]
+    for it, fp, note in V2DE_FILES:
+        if fp.exists():
+            items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suites D/E): " + note, None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
