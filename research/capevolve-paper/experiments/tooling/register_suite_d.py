@@ -122,7 +122,20 @@ def main():
                              (f"D_hc2_s{k}_env", base / "env.sh", f"HC-2 Suite D seed {k} env")]
         for sd in sorted((V2 / f"D/hc2/s{k}.sealed").glob("run_*/splits_full.json")):
             D_hc2_seed_files.append((f"D_hc2_s{k}_splits_full_sealed", sd, f"HC-2 Suite D seed {k} sealed full pool partition F/C (hash only; content not read)"))
-    V2_FILES += A_hc2_seed_files + A_ao2_seed_files + E_hc2_seed_files + D_hc2_seed_files
+    AO2_DE_seed_files = []
+    for sname in ("D", "E"):
+        for k in (0, 1, 2):
+            base = V2 / f"{sname}/ao2/s{k}"
+            if not base.exists():
+                continue
+            AO2_DE_seed_files += [(f"{sname}_ao2_s{k}_build_record", base / "BUILD_RECORD.json", f"AO-2 Suite {sname} seed {k} build record"),
+                                  (f"{sname}_ao2_s{k}_spec", base / ".capevolve/project/capevolve.yaml", f"AO-2 Suite {sname} seed {k} run spec"),
+                                  (f"{sname}_ao2_s{k}_split_ids", base / ".capevolve/project/split_ids.json", f"AO-2 Suite {sname} seed {k} proposer-visible split ids"),
+                                  (f"{sname}_ao2_s{k}_driver", base / "driver.sh", f"AO-2 Suite {sname} seed {k} driver"),
+                                  (f"{sname}_ao2_s{k}_env", base / "env.sh", f"AO-2 Suite {sname} seed {k} env")]
+            for sd in sorted((V2 / f"{sname}/ao2/s{k}.sealed").glob("run_*/splits_full.json")):
+                AO2_DE_seed_files.append((f"{sname}_ao2_s{k}_splits_full_sealed", sd, f"AO-2 Suite {sname} seed {k} sealed full pool partition F/C (hash only; content not read)"))
+    V2_FILES += A_hc2_seed_files + A_ao2_seed_files + E_hc2_seed_files + D_hc2_seed_files + AO2_DE_seed_files
     _unused_marker = None
     for it, fp, note in V2_FILES:
         if fp.exists():
