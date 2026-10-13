@@ -68,10 +68,34 @@ def idle_gap_proxy(hours=1.0):
     return {"calls": n, "max_call_s": round(mx, 1), "over_300s": over}
 
 
+def print_no_output_rate(hours=1.0):
+    """Suite A direct outcome check for the iopub race: share of code turns containing print( whose tool reply is the bare no-output message, over the attempts last written in the last `hours` h (pre-fix baseline ~1.9-2.2%). Pause A and tell lead above 4% in any hour."""
+    import time
+    cut = time.time() - hours * 3600
+    n = bad = files = 0
+    for p in (C.SCRATCH / "final_eval" / "A" / "raw" / "attempts").glob("*/a*/trace.json"):
+        try:
+            if p.stat().st_mtime < cut:
+                continue
+            msgs = json.loads(p.read_text())
+        except Exception:
+            continue
+        files += 1
+        for i, m in enumerate(msgs[:-1]):
+            if m.get("role") == "assistant" and "print(" in str(m.get("content")) and msgs[i + 1].get("role") == "user":
+                n += 1
+                bad += str(msgs[i + 1].get("content")).strip() == "[Code executed successfully with no output]"
+    return {"attempts": files, "print_turns": n, "no_output": bad, "rate": round(bad / n, 4) if n else None}
+
+
 try:
     out["suiteA_idle_gap_proxy_last_hour"] = idle_gap_proxy()
 except Exception:
     out["suiteA_idle_gap_proxy_last_hour"] = None
+try:
+    out["suiteA_print_no_output_last_hour"] = print_no_output_rate()
+except Exception:
+    out["suiteA_print_no_output_last_hour"] = None
 try:
     h = json.loads(urllib.request.urlopen("http://127.0.0.1:4111/health", timeout=5).read()); out["capped_tokens"] = h.get("capped_tokens")
 except Exception:
@@ -79,6 +103,7 @@ except Exception:
 if a.json:
     print(json.dumps(out, indent=1)); sys.exit(0)
 print("capped tokens:", out["capped_tokens"], "| Suite A idle-gap proxy (last hour):", out["suiteA_idle_gap_proxy_last_hour"])
+print("Suite A print-returned-no-output rate (last hour, alert > 0.04):", out["suiteA_print_no_output_last_hour"])
 for S in a.suites.split(","):
     o = out[S]; t = o["totals"]
     print("== Suite %s: done %d / %d jobs, missing %d, started %d, attempts %d, first-attempt infra rate %s (infra attempts %d), HL trace failures %d" %
