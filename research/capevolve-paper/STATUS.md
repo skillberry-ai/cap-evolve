@@ -1,5 +1,22 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 03:50 UTC (coordinator periodic check)_
+
+## Update 03:50 UTC
+- **Spend**:
+  - Capped spend is 169.0M of 200M; proxy cost is $386. The pace slowed to about 1.8M/h over the last 30 minutes.
+  - The 170M exploratory rung (E12B hcstock s0-s2 stop, finalized on sel only) is armed with tau-runner.
+  - The last W4 cell (Suite E HarnessLens s0) is held.
+  - The 178M rung (ACE, MIPROv2, then the W4 competitors) stays registered.
+- **Stalls**: none; every live run dir has been active within 20 minutes.
+- **v2 PRs**:
+  - #814 merged.
+  - #817 gate/P2: under review.
+  - #815 HC-2 and #818 AO-2: open, stacked on v2/gate.
+  - #816 helpers: fixing two review blockers.
+- **Open user decision**: v2 rerun headroom (about 4M under 182M versus the 6-25M needed). The options are raising the cap, running HC-2 only, or holding the rest of W4.
+- **Cutoff 06:00**: N*, reconstruct, freeze, then final evals.
+
 _Last updated: 2026-10-13 00:50 UTC (coordinator periodic check)_
 
 ## Update 00:50 UTC

@@ -136,3 +136,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Update 00:50 UTC 10-13 (periodic check)
 - Capped spend is 158.6M, with pace at 3.65M/h. The ladder decision is with metering-auditor (W4 hold?). Before v2 reruns, get v2 headroom under 182M from the auditor.
 - v2 agents: fix-pr3 (#816), rev-pr1 (#817), v2-ao2b (AO-2), v2-hc2 (#815). All run on Sonnet; the user asked to stay on sonnet-5-5.
+
+## Update 03:50 UTC 10-13 (periodic check)
+- Capped spend is 169.0M. The 170M rung is armed (tau-runner stops E12B hcstock). Suite E hl s0 is held.
+- v2 PRs: #815, #817 and #818 are open, with #816 being fixed. The user still has to decide the cap for the v2 reruns.
+- 06:00 cutoff steps per cron b76737e4.
