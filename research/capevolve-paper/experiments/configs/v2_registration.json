@@ -1,0 +1,84 @@
+{
+ "registration": "CapEvolve v2 reruns (analysis_plan.md 5-AMENDMENT 11)",
+ "written_utc": "2026-10-13 07:04 UTC",
+ "status": "FROZEN before any v2 run; no v1 final (held-out) score seen when written; main commit SHA registered later as an 11E version line",
+ "arms": {
+  "HC-2": "hc2 true, promotion_rule P2, split_mode pooled, code helpers where the surface allows",
+  "AO-2": "ao_engine conductor, P2, pooled, single objective only, code helpers where the surface allows"
+ },
+ "suites": {
+  "A": {
+   "target": "Gemma-4-31B",
+   "surface": "[system-prompt, skill-package]",
+   "pool": "train-80 U val-40 = 120",
+   "test": "the v1 frozen T=70 draw (second use)",
+   "final_n": {
+    "arm": 1,
+    "seed": 2
+   }
+  },
+  "D": {
+   "target": "azoai/gpt-4.1-mini",
+   "surface": "policy+tools",
+   "pool": "opt-49 U sel-25 = 74",
+   "test": "sealed test-40 (second use)",
+   "final_n": {
+    "arm": 5,
+    "seed": 10
+   }
+  },
+  "E": {
+   "target": "azoai/gpt-4.1-mini",
+   "surface": "policy+tools",
+   "pool": "opt-20 U sel-10 = 30",
+   "test": "official test-20, development-exposed (second use)",
+   "final_n": {
+    "arm": 5,
+    "seed": 10
+   }
+  }
+ },
+ "excluded": {
+  "B": "GPT-5.5 judge capped (capacity reason)"
+ },
+ "seeds": 3,
+ "optimizer": "Sonnet 5.5, 4M per search (AO-2 soft cap 1.5M)",
+ "partition": "pooled F/C about 50/50, seeded, stratified, sealed; proposer sees F only; internal C estimate = diagnostic",
+ "test_rule": "each frozen version scored once; iteration uses internal C estimates only; no design decision uses any held-out score; primary = first frozen version v2.0, later versions secondary with own Holm",
+ "family_V2_m4_per_suite": [
+  "HC-2 vs seed",
+  "AO-2 vs seed",
+  "HC-2 vs v1 GEPA (A E10 gepa, D E20-GEPA, E E30-GEPA)",
+  "AO-2 vs v1 GEPA"
+ ],
+ "descriptive": [
+  "vs best v1 competitor by test mean (data-dependent)",
+  "vs every other v1 competitor",
+  "vs v1 stock-gate and rule-P hill-climb",
+  "HC-2 vs AO-2"
+ ],
+ "window": "one interleaved window per suite; in-window re-scoring of the seed and the v1 GEPA champions; v2 contrasts use only in-window anchors",
+ "planning_mde_tau0.15": {
+  "vs_seed": {
+   "A": 0.106,
+   "D": 0.093,
+   "E": 0.111,
+   "holm4": {
+    "A": 0.128,
+    "D": 0.112,
+    "E": 0.136
+   }
+  },
+  "vs_gepa": {
+   "A": 0.119,
+   "D": 0.102,
+   "E": 0.119,
+   "holm4": {
+    "A": 0.143,
+    "D": 0.124,
+    "E": 0.146
+   }
+  }
+ },
+ "equivalence": "none"
+}
