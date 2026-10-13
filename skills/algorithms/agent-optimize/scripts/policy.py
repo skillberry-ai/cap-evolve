@@ -137,6 +137,36 @@ def mo_verdict(reward_pass: bool, r_mean: float, r_se: float, n: int, cps: dict,
     return False, "no_gain"
 
 
+# ---- focus rule (ao_focus) ------------------------------------------------------------------------
+FOCUS_SD_FLOOR = 0.25      # per-task paired-delta sd floor (one or two trials cannot claim certainty)
+FOCUS_Z = 1.8              # one-sided ACCEPT bar (simulated on real tau2 rates: false accept ~5% per null)
+FOCUS_Z_KILL = 0.8         # lighter KILL bar: a wrong kill costs one idea, a wrong accept costs the champion
+FOCUS_MIN_GAIN = 0.07      # accept only gains of >= 2 tasks of 30: large, resolvable improvements
+
+
+def focus_verdict(focus_d, canary_d, n_all: int, n_pass: int) -> dict:
+    """Stratified estimate of the FULL-set gain from two strata of the champion's tasks: the failing
+    stratum is measured in full (``focus_d``, one paired delta per task), the passing stratum through
+    ``canary_d``, a random sample of it scaled to its ``n_pass`` tasks. Unbiased for the full-set
+    change even though both strata were picked by the champion's own (noisy) results: the regression
+    to the mean that inflates focus deltas is the one that deflates canary deltas.
+    ``accept``: lower bound > 0 and gain >= FOCUS_MIN_GAIN; ``kill``: (lighter) upper bound < FOCUS_MIN_GAIN."""
+    nf, nc, N = len(focus_d), len(canary_d), max(n_all, 1)
+    _, se_f, _ = mean_se(focus_d, FOCUS_SD_FLOOR)                 # se of the focus MEAN
+    mc, se_c, _ = mean_se(canary_d, FOCUS_SD_FLOOR) if nc else (0.0, 0.0, 0)
+    gain = (sum(focus_d) + n_pass * mc) / N
+    se = math.sqrt((nf * se_f) ** 2 + (n_pass * se_c) ** 2) / N
+    out = {"gain": gain, "se": se, "mean": sum(focus_d) / nf if nf else 0.0, "canary": mc, "n": nf,
+           "p_beat": _N.cdf(gain / se) if se > 0 else 0.5}
+    if nf == 0:
+        return {**out, "verdict": "more", "why": "no_data"}
+    if gain - FOCUS_Z * se > 0 and gain >= FOCUS_MIN_GAIN:
+        return {**out, "verdict": "accept", "why": "focus_gain"}
+    if gain + FOCUS_Z_KILL * se < FOCUS_MIN_GAIN:
+        return {**out, "verdict": "kill", "why": "no_gain"}
+    return {**out, "verdict": "more", "why": "undecided"}
+
+
 # ---- parents and merges -----------------------------------------------------------------------
 
 def pick_parent(slot: int, champion: str, tips: dict[str, float], rng: random.Random,

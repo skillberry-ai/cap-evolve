@@ -106,7 +106,10 @@ P2 evaluator. State is `graph.jsonl` plus `conductor.json`; a killed run resumes
 idempotent. Stopping is structured only (rollouts, tokens, wall `deadline_utc`, `stop_at_reward`, plateau
 with a floor); prose in `stop_condition` is never parsed into a cap. A `cost` objective (minimize) adds cost per
 success: promote on reward with cost per success at most `eps` (default 0.10) worse, or on cost per
-success at least `eps` lower with reward non-inferior. Any other gating objective is refused (exit 2). With K=1, rungs off and merge off it makes the same decisions as hill-climb. When PR-3 helper
+success at least `eps` lower with reward non-inferior. Any other gating objective is refused (exit 2). `ao_focus: true` judges a
+candidate only on the champion's failing tasks plus `ao_focus_canary` passing ones (1-3 trials), with a
+stratified full-set gain; it promotes directly (no full-val screen or fresh confirm), gives proposers the
+parent's pass rates and failing traces, merges near misses, and runs one fresh full-val estimate at finalize. With K=1, rungs off and merge off it makes the same decisions as hill-climb. When PR-3 helper
 checks are importable and `helpers.enabled`, each proposal gets `lint_candidate` and `run_smoke` before any
 rollout. Without the flag, nothing here runs and the loop below is unchanged.
 

@@ -11,18 +11,28 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-MAX_PROMPT_BYTES = 4096
+MAX_PROMPT_BYTES = 7168
 HYPOTHESIS_FILE = "hypothesis.json"
 
+PROCEDURE = """Procedure (do every step; you may use subagents to read traces in parallel):
+1. Read the failing traces listed above (./trajectories). For each failing task find the turn where the agent goes
+   wrong; tau2_reward_info (action checks, database/env assertions, required communication) is the ground truth.
+2. Group the failing tasks by root cause and fix as MANY groups as you can in this ONE edit, your primary tasks first.
+   You are judged on how many of the parent's failing tasks your edit fixes, net of any passing task it breaks.
+3. Prefer code over prose: where the agent computes prices/totals, looks things up or checks eligibility in its head,
+   add a deterministic tool (or make an existing tool return the needed fields / validate the call) plus one policy
+   line saying when to use it. Wording-only edits rarely move these tasks.
+4. Keep a change only if it is REAL (a failing trace shows the problem), SAFE (re-read two passing traces: they would
+   still pass) and general (no task id, expected answer or copied value).
+5. Replay each task in predicted_tasks against your edit and name the turn it changes; drop tasks you cannot.
+"""
+
 RULES = """Rules:
-- One coherent edit for ONE hypothesis, big enough to matter: fix the mechanism for EVERY failing task it covers (tools
-  and policy together if needed). An effect below the digest's "min detectable" is rejected as noise; a hypothesis
-  already attempted needs a different mechanism, not new wording. General rules only: never a task id, an expected
-  answer or a copied value.
+- A hypothesis already attempted (see rejected) needs a different mechanism, not new wording.
 - Edit only inside {workdir}. Do NOT run evaluations, sleep, poll or wait: the conductor evaluates your edit.
 - REQUIRED, the candidate is refused without it: finish by writing {workdir}/hypothesis.json (valid JSON, exactly this name, even when no clusters.json exists): {{"id","cluster_ids":[...],"claim","predicted_tasks":[...],"predicted_mechanism","edit_scope"}}, then stop.
-- Read the parent's failing traces under ./trajectories before editing (feedback tasks only; held-out data is not available);
-  ./guidance has the capability guides and data-model sources."""
+- ./trajectories holds the parent's traces (feedback tasks only; held-out data is not available); ./guidance has the
+  capability guides and data-model sources."""
 
 STRICT = "\nYour previous attempt produced no usable candidate. This time the edit MUST change a capability file and hypothesis.json MUST exist."
 
@@ -34,8 +44,24 @@ def pick_cluster(digest_dict: dict, slot: int, taken: set[str]) -> dict | None:
     return rows[slot % len(rows)] if rows else None
 
 
+def failing_block(rates: dict, traces: dict, primary: list, rejected: list) -> str:
+    """The data a proposer needs inline: the parent's pass rate on every task it does not always pass,
+    the failing trace files to read, this slot's primary tasks, and what was already tried."""
+    rows = [f"{t}: {sum(v):g}/{len(v)}" for t, v in sorted(rates.items(), key=lambda kv: (sum(kv[1]) / len(kv[1]), kv[0]))
+            if v and sum(v) < len(v)]
+    out = [f"Parent's failing tasks (passes/trials): {', '.join(rows) or 'none'}."]
+    if primary:
+        out.append(f"Your PRIMARY tasks (sibling jobs take the others): {', '.join(primary)}.")
+    files = [f for t in (primary or sorted(traces)) for f in traces.get(t, [])]
+    if files:
+        out.append("Failing traces to read first: " + ", ".join(files) + ".")
+    if rejected:
+        out.append("Already tried and rejected (measured): " + " | ".join(rejected) + ".")
+    return "\n".join(out)
+
+
 def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str = "", strict: bool = False,
-                 kind: str = "propose", conflicts: list | None = None, refusal: str = "") -> str:
+                 kind: str = "propose", conflicts: list | None = None, refusal: str = "", failing: str = "") -> str:
     head = {
         "propose": f"You are proposing one edit to candidate {parent!r} (already copied into {workdir}).",
         "merge": (f"{workdir} is a copy of branch {parent!r}; merging another branch into it conflicts in: "
@@ -46,7 +72,8 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
     if cluster:
         target = (f"\nTarget cluster {cluster.get('id')}: {cluster.get('label') or ''}; failing tasks "
                   f"{', '.join(map(str, cluster.get('tasks') or []))}; headroom {cluster.get('headroom')}.")
-    body = f"{head}{target}\n\n{digest_text.strip()}\n\n{RULES.format(workdir=workdir)}"
+    proc = PROCEDURE if kind == "propose" else ""
+    body = f"{head}{target}\n{failing}\n\n{digest_text.strip()}\n\n{proc}{RULES.format(workdir=workdir)}"
     if strict:
         body += STRICT
     if refusal:

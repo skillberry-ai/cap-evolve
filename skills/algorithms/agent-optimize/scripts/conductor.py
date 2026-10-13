@@ -48,6 +48,7 @@ from cap_evolve import conductor_state as cs
 from cap_evolve import gatecfg, promotion
 
 FRESH_BASE = 1000          # first fresh-trial index (hill-climb: ``1000 + iterations * n_conf``)
+FILL_BASE, FILL_N = 3000, 2   # focus rule: a new champion's fresh reference fill (trial indices, trials per task)
 TERMINAL = ("champion", "rejected", "pruned", "superseded", "refused")
 PRE_CONFIRM = ("proposed", "rung", "full", "screened", "stale", "racing")
 EXIT_REFUSED = 2
@@ -70,6 +71,10 @@ class Cfg:
     target_alive: int | None = None     # nodes in flight before confirm; default K (K=1 => serial = hill-climb)
     merge: bool = False
     merge_bar: float = policy.COMPLEMENTARY   # complementarity a pair of tips needs to be merged
+    focus: bool = False                 # ao_focus: judge on the champion's failing tasks + canaries, promote directly
+    focus_n: int = 1                    # first look: trials per focus cell
+    focus_max: int = 3                  # last look; undecided after it = pruned (no resolvable gain)
+    focus_canary: int = 6               # sample of the champion's passing tasks (regression stratum)
     job_token_cap: int = 150_000
     chunk_timeout: float = 3 * 3600.0
     eval_retries: int = 3
@@ -128,7 +133,9 @@ class Cfg:
                    job_token_cap=job_cap, chunk_timeout=num("ao_chunk_timeout", cast=float, default=cls.chunk_timeout),
                    seed=num("ao_seed", default=0), tick_s=num("ao_tick_s", cast=float, default=cls.tick_s), ref_pooled=spec.get("split_mode") == "pooled", finalize=gatecfg.finalize_enabled(spec),
                    params=params, caps=caps, p2=p2, pipeline=num("ao_pipeline", default=2 if p2 and k > 1 else 1),
-                   cost_eps=cost_eps, merge_bar=num("ao_merge_bar", cast=float, default=policy.COMPLEMENTARY))
+                   cost_eps=cost_eps, merge_bar=num("ao_merge_bar", cast=float, default=policy.COMPLEMENTARY),
+                   focus=bool(spec.get("ao_focus")), focus_n=num("ao_focus_n", default=1),
+                   focus_max=num("ao_focus_max", default=3), focus_canary=num("ao_focus_canary", default=6))
 
 
 def refuse_multi_objective(spec: dict) -> float | None:
@@ -488,7 +495,7 @@ class Conductor:
         for tag in sorted(self.st["nodes"]):
             n = self.st["nodes"][tag]
             if n["status"] in ("proposed", "rung", "full", "stale") and not self._is_base(tag):
-                self._advance(tag, n)
+                (self._advance_focus if self.cfg.focus else self._advance)(tag, n)
         for tag in sorted(self.st["nodes"]):
             n = self.st["nodes"][tag]
             if n["status"] == "confirming":
@@ -549,6 +556,64 @@ class Conductor:
                 n["status"] = "screened"
                 self.b.node_event(tag, "gated", stage="screened", mean_delta=round(s["mean"], 6), se=round(s["se"], 6))
             return
+
+    # ---- focus rule (ao_focus) -------------------------------------------------------------
+    def _focus_ids(self, n) -> tuple[list[str], list[str]]:
+        """(focus, canaries) against the CURRENT champion, frozen per node per epoch: focus = tasks the
+        champion does not always pass (all its draws), canaries = ``focus_canary`` of its passing tasks."""
+        if n.get("focus_epoch") != self.st["epoch"]:
+            ref = self.b.rewards(self.champion, self.screen_ids(), self.ref_window(self.champion))
+            mean = {t: sum(v) / len(v) for t, v in ref.items() if v}
+            focus = sorted(t for t, m in mean.items() if m < 1.0)
+            passing = sorted(t for t, m in mean.items() if m >= 1.0)
+            canary = sorted(random.Random(f"{self.cfg.seed}:{n.get('tag', '')}:{self.st['epoch']}").sample(
+                passing, min(self.cfg.focus_canary, len(passing))))
+            n.update(focus_ids=focus, canary_ids=canary, focus_epoch=self.st["epoch"], n_pass=len(passing),
+                     trials=self.cfg.focus_n, rung=0)
+        return n["focus_ids"], n["canary_ids"]
+
+    def _advance_focus(self, tag, n) -> None:
+        """Judge ``tag`` on the champion's failing tasks (+ canaries) only, and promote directly: a real
+        fix is a large per-task jump there, invisible in a 30-task mean. Looks at ``focus_n`` ..
+        ``focus_max`` trials per cell; the champion's reference is all of its draws."""
+        n.setdefault("tag", tag)
+        if self._missing(self.champion, self.screen_ids(), self.ref_want(self.champion)):   # a new champion's fresh fill first
+            n["status"] = "rung"
+            return
+        focus, canary = self._focus_ids(n)
+        ids = focus + canary
+        if not focus or self._missing(tag, ids, (0, n["trials"])):
+            n["status"] = "rung"
+            return
+        ref = self.b.rewards(self.champion, ids, self.ref_window(self.champion))
+        cand = self.b.rewards(tag, ids, (0, n["trials"]))
+        v = policy.focus_verdict(policy.paired_deltas(cand, ref, focus), policy.paired_deltas(cand, ref, canary),
+                                 len(self.screen_ids()), n["n_pass"])
+        n["p_beat"], n["focus"] = v["p_beat"], {k: v[k] for k in ("gain", "mean", "se", "canary", "n")}
+        route = "reward"
+        if v["verdict"] == "accept" and self.cfg.cost_eps is not None:
+            cps = self._cps(tag, ids, (0, n["trials"]), self.champion, self.ref_window(self.champion))
+            ok, route = policy.mo_verdict(True, v["mean"], v["se"], v["n"], cps, self.cfg.cost_eps, 1.0)
+            n["focus"]["cost_rel"] = round(cps.get("rel", 0.0), 4)
+            if not ok:
+                v["verdict"] = "kill"
+        ev = {"stage": f"focus@{n['trials']}", "gain": round(v["gain"], 4), "route": route, **n["focus"]}
+        if v["verdict"] == "accept":
+            self.b.commit_accept(tag, ev)
+            old = self.champion
+            self._finish_node(tag, "champion", "promoted", ev)
+            self.node(old)["status"] = "superseded"
+            # its reference is a FRESH unselected fill, never the trials that won it the promotion (those
+            # are selected upward: reusing them inflated the champion by ~0.1 per promotion in simulation)
+            k = FILL_BASE + 10 * (self.st["epoch"] + 1)
+            n["ref_window"] = [k, k + FILL_N]
+            self.st.update(champion=tag, epoch=self.st["epoch"] + 1, proposals_since_improve=0)
+        elif v["verdict"] == "kill" or n["trials"] >= self.cfg.focus_max:
+            self._finish_node(tag, "pruned", "focus_" + (route if route != "reward" else v["why"]), ev)
+        else:
+            n["trials"] += 1
+            n["rung"] += 1
+            n["status"] = "rung"
 
     def _start_confirms(self) -> None:
         busy = [t for t, n in self.st["nodes"].items() if n["status"] == "confirming"]
@@ -638,12 +703,21 @@ class Conductor:
                   for n in self.st["nodes"].values())
         if not policy.merge_allowed(nm, self.st["n_proposals"], won):
             return
-        if self.cfg.p2:       # a P2 node has been through its rungs when it is pending after a round
+        if self.cfg.focus:    # near misses: candidates that fixed failing tasks of THIS champion but not enough alone
+            tips = sorted(t for t, n in self.st["nodes"].items() if not self._is_base(t) and t != self.champion
+                          and n.get("focus_epoch") == self.st["epoch"] and (n.get("focus") or {}).get("gain", 0) > 0
+                          and n["status"] in ("pruned", "rung"))
+            wins = self.b.wins(tips, self.champion)
+            eligible = tips
+        elif self.cfg.p2:     # a P2 node has been through its rungs when it is pending after a round
             eligible = [t for t in tips if self.node(t)["status"] == "unconfirmed" or self.node(t).get("unconfirmed")]
         else:
             eligible = [t for t in tips if self.node(t)["status"] == "screened"
                         or (self.node(t)["status"] in ("full", "rung") and self.node(t).get("rung", 0) >= 1)]
-        pairs = policy.merge_pairs(eligible, wins, self.b.related, merged, bar=self.cfg.merge_bar)
+        pairs = policy.merge_pairs(eligible, wins, self.b.related, merged, bar=self.cfg.merge_bar, limit=10)
+        if self.cfg.focus:    # only a pair whose gains TOGETHER could clear the accept bar is worth an evaluation
+            g = lambda t: (self.node(t).get("focus") or {}).get("gain", 0.0)  # noqa: E731
+            pairs = [p for p in pairs if g(p[0]) + g(p[1]) >= policy.FOCUS_MIN_GAIN]
         if pairs:
             a, b, _ = pairs[0]
             self.st.setdefault("merged_pairs", []).append(sorted((a, b)))
@@ -688,8 +762,15 @@ class Conductor:
                 out.append((1, tag, tag, cids, w, tag, "confirm"))
                 out.append((1, tag, n["ref"], cids, w, tag, "confirm"))
             elif n["status"] in ("proposed", "rung", "full", "stale") and not self._is_base(tag):
-                sids = self._stage_ids(n)
-                out.append((2, f"{-n.get('p_beat', 0.5):+.6f}:{tag}", tag, sids, (0, self.cfg.screen_n), tag, "rung"))
+                if self.cfg.focus:
+                    if self._missing(champ, ids, self.ref_want(champ)):
+                        continue                                  # wait for the champion's fill (priority 0)
+                    n.setdefault("tag", tag)
+                    f, c = self._focus_ids(n)
+                    sids, w = f + c, (0, n["trials"])
+                else:
+                    sids, w = self._stage_ids(n), (0, self.cfg.screen_n)
+                out.append((2, f"{-n.get('p_beat', 0.5):+.6f}:{tag}", tag, sids, w, tag, "rung"))
         return sorted(out, key=lambda w: (w[0], w[1]))
 
     def launch_evals(self) -> None:

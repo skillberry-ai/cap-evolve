@@ -1,0 +1,97 @@
+"""AO-2 conductor, focus rule (``ao_focus``): a candidate is judged only on the champion's failing tasks
+plus a few passing canaries and promoted directly; no full-set screen, no fresh-trial confirmation."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent))
+import ao2_fakes as F  # noqa: E402
+
+import conductor  # noqa: E402
+import policy  # noqa: E402
+
+
+def test_focus_verdict_table():
+    fixed = [1.0, 0.5, 1.0, 0.5, 1.0, 0.5, 1.0, 0.5]                  # 8 failing tasks, large jumps
+    assert policy.focus_verdict(fixed, [0.0] * 6, 30, 16)["verdict"] == "accept"
+    assert policy.focus_verdict([0.0] * 8, [0.0] * 6, 30, 16)["verdict"] == "kill"
+    assert policy.focus_verdict(fixed, [-0.5] * 6, 30, 16)["verdict"] == "kill"      # breaks the passing stratum
+    assert policy.focus_verdict([0.5, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0], [0.0] * 6, 30, 16)["verdict"] == "more"
+    assert policy.focus_verdict([], [], 30, 16)["verdict"] == "more"
+    v = policy.focus_verdict([1.0] * 4, [-1.0, 0.0], 10, 6)                          # gain = (4 - 6*0.5)/10
+    assert v["gain"] == pytest.approx(0.1)
+
+
+def _cells(w, tag):
+    h = w.hash(tag)
+    return {t for (hh, t, k) in w.rows if hh == h}
+
+
+def test_focus_promotes_on_failing_tasks_without_full_evals(tmp_path):
+    spend, champs = {}, {}
+    for focus in (False, True):
+        spec = {"max_metric_calls": 6000, "max_candidates": 12, "ao_plateau_n": 99, "ao_focus": focus}
+        w, be, cfg = F.make(tmp_path / str(focus), spec=spec, world_kw={"salt": 4, "seed_trials": 3, "base": 0.85},
+                            rungs=() if focus else (8, 16), k_prop=2)
+        c = F.run_to_done(w, be, cfg, max_ticks=6000)
+        spend[focus] = len(w.rows) - 3 * len(F.TASKS)
+        champs[focus] = [t for t, n in c.st["nodes"].items() if n.get("why") == "promoted"]
+        if focus:
+            assert champs[True], "a focus run promotes real fixes"
+            full = [t for t in c.st["nodes"] if t != "seed" and t not in champs[True] and _cells(w, t) >= set(F.TASKS)]
+            assert not full, f"non-champion candidates must never be evaluated on every task: {full}"
+            # every promotion really improved the true pass probability of the incumbent
+            def truth(t):
+                return sum(F.p_of(w.cands[t]["genes"], x) for x in F.TASKS) / len(F.TASKS)
+            seq = ["seed"] + champs[True]
+            assert all(truth(b) > truth(a) for a, b in zip(seq, seq[1:])), [round(truth(t), 3) for t in seq]
+    assert spend[True] < spend[False], spend
+
+
+def test_focus_is_opt_in():
+    assert conductor.Cfg.from_spec({}).focus is False
+    c = conductor.Cfg.from_spec({"ao_focus": True, "ao_focus_n": 3, "ao_focus_canary": 2})
+    assert (c.focus, c.focus_n, c.focus_canary) == (True, 3, 2)
+
+
+def test_a_new_champion_is_judged_against_a_fresh_fill_not_its_winning_trials(tmp_path):
+    spec = {"max_metric_calls": 6000, "max_candidates": 12, "ao_plateau_n": 99, "ao_focus": True}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"salt": 4, "seed_trials": 3, "base": 0.85}, k_prop=2)
+    c = F.run_to_done(w, be, cfg, max_ticks=6000)
+    champs = [t for t, n in c.st["nodes"].items() if n.get("why") == "promoted"]
+    assert champs
+    for t in champs:
+        lo, hi = c.st["nodes"][t]["ref_window"]
+        assert lo >= conductor.FILL_BASE and hi - lo == conductor.FILL_N
+        h = w.hash(t)
+        assert all((h, x, k) in w.rows for x in F.TASKS for k in range(lo, hi)), "fresh fill on every task"
+
+
+def test_focus_near_misses_with_disjoint_wins_are_merged(tmp_path):
+    spec = {"max_metric_calls": 9000, "max_candidates": 30, "ao_plateau_n": 99, "ao_focus": True,
+            "ao_merge": True, "ao_merge_bar": 0.3}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"salt": 6, "seed_trials": 3, "base": 0.85, "quality": 0.25},
+                        k_prop=3)
+    be.wins = lambda tags, base: {t: {f"w{t}"} for t in tags}          # every pair fully complementary
+    c = F.run_to_done(w, be, cfg, max_ticks=8000)
+    merges = [t for t, n in c.st["nodes"].items() if n.get("edit_kind") == "merge"]
+    assert merges, "near misses (gain > 0, not accepted) get merged under focus"
+    g = lambda t: (c.st["nodes"][t].get("focus") or {}).get("gain", 0.0)
+    for a, b in c.st.get("merged_pairs", []):
+        if all(c.st["nodes"][x].get("edit_kind") == "edit" for x in (a, b)) and c.st["nodes"][a].get("focus_epoch") is not None:
+            assert g(a) + g(b) >= policy.FOCUS_MIN_GAIN - 1e-9 or c.st["nodes"][a]["status"] == "champion"
+
+
+def test_proposer_failing_block_lists_rates_traces_primary_and_rejected():
+    import proposer
+    txt = proposer.failing_block({"7": [0.0, 0.0, 0.0], "3": [1.0, 0.0], "0": [1.0, 1.0]},
+                                 {"7": ["7__seed__t0.json"], "3": ["3__seed__t1.json"]}, ["7"],
+                                 ["cand_1: transfer rule -> focus_no_gain gain +0.01"])
+    assert "7: 0/3" in txt and "3: 1/2" in txt and "0:" not in txt.split("traces")[0]
+    assert "PRIMARY tasks (sibling jobs take the others): 7" in txt and "7__seed__t0.json" in txt
+    assert "3__seed__t1.json" not in txt, "a slot reads its primary tasks' traces"
+    assert "cand_1: transfer rule" in txt
