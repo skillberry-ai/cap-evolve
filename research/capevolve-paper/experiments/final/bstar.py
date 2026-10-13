@@ -76,6 +76,9 @@ def compute(suite):
                 n_raw, src_raw = cm.counted_rollouts(rd)
                 n, src, fin_ex = search_counter(suite, arm, rd, n_raw, src_raw)
                 st, ev = C.native_status(rd)
+                cs = (C.jload(C.MANIFESTS / "cutoff_stops.json") or {}).get("stops", {}).get("%s/%s/s%d" % (suite, arm, seed))
+                if cs:          # still running at the cutoff and stopped by it: binds N* whatever artifacts appear after the stop (host-side finalize, final.json)
+                    st, ev = "cutoff_stop", "running at the 2026-10-13 06:00Z cutoff, stopped by %s" % cs.get("stopped_by")
                 rows.append({"arm": arm, "seed": seed, "tier": tier, "run_dir": str(rd), "counter": n, "source": src, "counter_raw": n_raw, "finalize_excluded": fin_ex, "native_status": st, "native_evidence": ev})
     main = [r for r in rows if r["tier"] == "main"]
     known_all = [r for r in main if r["counter"] is not None]

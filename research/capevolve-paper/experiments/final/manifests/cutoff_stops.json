@@ -1,0 +1,14 @@
+{
+ "cutoff_utc": "2026-10-13T06:00:00Z",
+ "note": "searches still running at the cutoff and stopped by the cutoff protocol (recorded as `cutoff`; they BIND N*, with their counted search rollouts at the stop). Observed by final-eval-eng at 06:00:02Z-06:00:58Z from /proc (cwd/cmdline). Stop timestamps for tau-runner / bl-harness runs are the owners' (to be filled in).",
+ "stops": {
+  "A/ace/s1": {"stopped_by": "final-eval-eng", "kill_utc": "2026-10-13T06:03:06Z", "tier": "cheap"},
+  "A/mipro/s0": {"stopped_by": "final-eval-eng", "kill_utc": "2026-10-13T06:03:06Z", "tier": "cheap"},
+  "A/mipro/s1": {"stopped_by": "final-eval-eng", "kill_utc": "2026-10-13T06:03:06Z", "tier": "cheap"},
+  "B/ao/s2": {"stopped_by": "tau-runner", "kill_utc": null, "tier": "main", "note": "host-side finalize ran after the stop; final.json is post-stop and must not make it read as a native finish"},
+  "B/hlext/s0": {"stopped_by": "bl-harness", "kill_utc": null, "tier": "exploratory"},
+  "C/gepa/s0": {"stopped_by": "tau-runner", "kill_utc": null, "tier": "main"},
+  "C/gepa/s1": {"stopped_by": "tau-runner", "kill_utc": null, "tier": "main"},
+  "C/gepa/s2": {"stopped_by": "tau-runner", "kill_utc": null, "tier": "main"}
+ }
+}
