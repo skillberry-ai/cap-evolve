@@ -1,5 +1,31 @@
 # Campaign status (plain language)
 
+_Last updated: 2026-10-13 21:50 UTC (coordinator periodic check)_
+
+## Update 21:50 UTC
+- **Spend**: capped spend is 183.3M of 230M; the v1 final window stops itself at 198M.
+- **v1 final**: A, B, C and D COMPLETE. E is at about 2,660/5,550, ETA ~01:45 UTC.
+  - Tools-edit arms carry infra_final through tau2's tool-consistency check (live vs pristine replay); this is registered as an analysis note (34ee6789a).
+  - E t is at 9.6% infra_final; E t s0 is flagged above 15%.
+  - The A/B/C optimizer-token list is final (de6230f07).
+- **v2**: 13 searches running or done, all registered.
+
+  | Arm | Suite | Launched | State |
+  |---|---|---|---|
+  | HC-2 | A | 16:13 | in first-round confirmation |
+  | AO-2 | A | 18:34 | round 1 |
+  | HC-2 | E | 17:13 | s1 and s2 done (budget_unfunded; champions cand_0010 and cand_0001, both P2 confirmation accepts); s0 running |
+  | AO-2 | E | 21:14 | s0 and s1 running; s2 queued |
+  | HC-2 | D | 18:37 | s0-s2 running |
+
+  - AO-2 D is queued until the V2 cap lifts from 6 to 9 when the v1 E final window ends (erratum 10).
+- **v2 final windows**: machinery built (research/fe-v2-window, not merged until E main ends).
+  - A scores every cell with main's adapter a3f5eeb6d plus the campaign api.py (10800 s); errata 12 and 13.
+  - GEPA anchor at budget parity (erratum 11).
+  - Open item: the drain-error fix in the A staged jupyter.
+  - The scorer equivalence check is running.
+- **Stalls**: none.
+
 _Last updated: 2026-10-13 18:50 UTC (coordinator periodic check)_
 
 ## Update 18:50 UTC

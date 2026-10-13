@@ -164,3 +164,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - 12 V2 searches are running (see STATUS). AO-2 D/E is pending its smoke.
 - v1 final: A, C and D done; B and E running.
 - Unblinding of held-out scores waits for the user's call, or for the v2 freeze.
+
+## Update 21:50 UTC 10-13 (periodic check)
+- v1: only E main is running (final-eval-eng). Extras run after E main. The v2 windows take priority over the extras.
+- v2: champions files are written per suite by the runners when all six of that suite's searches end. Each window then launches on the lead's go.
+- Held-out scores stay unopened until the v2 searches freeze (11D).
