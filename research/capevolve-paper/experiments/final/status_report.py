@@ -88,6 +88,31 @@ def print_no_output_rate(hours=1.0):
     return {"attempts": files, "print_turns": n, "no_output": bad, "rate": round(bad / n, 4) if n else None}
 
 
+def infra_429_by_arm(suite, hours=1.0):
+    """429-attributed infra attempts per arm (error text mentions 429 / high demand / rate limit) over the last `hours` h, as a share of that arm's finished attempts (sensitivity input: rollouts to exclude)."""
+    import time, collections
+    cut = time.time() - hours * 3600
+    n = collections.Counter(); k = collections.Counter(); tot = [0, 0]
+    try:
+        f = open(C.SCRATCH / "final_eval" / suite / "raw" / "rollouts.jsonl")
+    except Exception:
+        return {}
+    for l in f:
+        try:
+            d = json.loads(l)
+        except Exception:
+            continue
+        t = d.get("t_end") or 0
+        if not isinstance(t, (int, float)) or t < cut:
+            continue
+        arm = d.get("arm"); n[arm] += 1; tot[0] += 1
+        if "infra" in str(d.get("error_class") or d.get("class")):
+            txt = str(d.get("error_text") or d.get("error"))
+            if "429" in txt or "high demand" in txt or "rate limit" in txt.lower() or "RateLimit" in txt:
+                k[arm] += 1; tot[1] += 1
+    return {"total_finished": tot[0], "total_429_infra": tot[1], "share": round(tot[1] / tot[0], 4) if tot[0] else None, "by_arm": {a: [k[a], n[a]] for a in k}}
+
+
 try:
     out["suiteA_idle_gap_proxy_last_hour"] = idle_gap_proxy()
 except Exception:
@@ -103,6 +128,9 @@ except Exception:
 if a.json:
     print(json.dumps(out, indent=1)); sys.exit(0)
 print("capped tokens:", out["capped_tokens"], "| Suite A idle-gap proxy (last hour):", out["suiteA_idle_gap_proxy_last_hour"])
+for S_ in ("D", "E"):
+    if S_ in a.suites.split(","):
+        print("Suite %s 429-attributed infra attempts (last hour; arm: [429 infra, finished]):" % S_, infra_429_by_arm(S_))
 print("Suite A print-returned-no-output rate (last hour, alert > 0.04):", out["suiteA_print_no_output_last_hour"])
 per_arm = {}
 for S_ in a.suites.split(","):
