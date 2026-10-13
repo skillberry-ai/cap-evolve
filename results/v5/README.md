@@ -6,44 +6,40 @@ v5 is a **from-scratch rebuild** of the parsec benchmark material: new task copi
 content with any v4/h4 tree.
 
 It exists because v4's own 34-task set and h4's 30-task held-out set were both found to have
-drifted from the copies this branch's v4/h4 arms were built against (different `golden.json`,
-seeds, `verify.py`). Rather than reconcile that lineage, v5 starts clean, with logic and
-parameters kept identical to what was proven for v4/h4.
+drifted from the copies this branch's v4/h4 arms were built against. Rather than reconcile that
+lineage, v5 starts clean, with logic and parameters kept identical to what was proven for v4/h4.
 
 ## Shared setup
 
-- **Task set:** all 136 v5 tasks. Per-task drop membership is recorded in each arm's ledger
-  (`task_set`: `10-10` or `10-12`); the two drops are statistically indistinguishable in
-  difficulty (permutation p = 0.62 — see the baseline arm's summary).
+- **Task set:** all 136 v5 tasks. Each arm's ledger records, per task, its `task_set` (`10-10` /
+  `10-12`) and its `origin`: `v4-34` (v4's original tasks, contracts unchanged), `h4-rewritten`
+  (shares an h4 id but was rewritten — h4's numbers do not carry over), `renamed-content-changed`,
+  or new.
 - **Agent model:** `claude-sonnet-4-6`.
 - **Skill under test (baseline):** [`../../artifacts/v5/seed/`](../../artifacts/v5/seed/) —
   verified byte-identical (8/8 prompt files) to parsec commit `28e2c40` and to
-  [`../../artifacts/v4/seed/`](../../artifacts/v4/seed/). **Verify the artifact under test against
-  a known commit before running an arm**; see the baseline summary for the run this rule was
-  learned from.
+  [`../../artifacts/v4/seed/`](../../artifacts/v4/seed/).
+- **Every trial is audited** against its on-disk record before its number is used. cap-evolve counts
+  only the exceptions it catches itself; a harbor timeout reaches the ledger as a clean `0.0`.
 
-## Arms run so far
+## Arms
 
 | arm | scope | result | links |
 |---|---|---|---|
-| **b1** (`v5_b1_e1`) | baseline: original skill, zero-shot, no optimization, all 136 tasks | mean reward **0.7260**, 0 errored trials; 30/136 saturated; **68% of tasks non-deterministic** | [`summary.md`](v5_b1_e1/summary.md) · [`results.json`](v5_b1_e1/results.json) · [`cost_time/`](v5_b1_e1/cost_time/) · [heatmap](../../ui/heatmap_v5_b1_e1.html) · [per-trial](../../ui/trials_v5_b1_e1.html) · [recipe](../../recipes/v5/v5_b1_e1/) · [reports](../../reports/v5/v5_b1_e1/) |
+| **b1** (`v5_b1_e1`) | baseline: original skill, zero-shot, no optimization, all 136 tasks | mean reward **0.8114** from 679 audited trials; reproduces v4's original-skill baseline on the 34 shared tasks to **−0.002**; 56% of tasks vary across trials, min detectable per-task delta ~0.09 | [`summary.md`](v5_b1_e1/summary.md) · [`results.json`](v5_b1_e1/results.json) · [`cost_time/`](v5_b1_e1/cost_time/) · [heatmap](../../ui/heatmap_v5_b1_e1.html) · [per-trial](../../ui/trials_v5_b1_e1.html) · [recipe](../../recipes/v5/v5_b1_e1/) · [reports](../../reports/v5/v5_b1_e1/) |
+| ~~`v5_t1_e1`~~ | **discarded** — 68 tasks run against `v4_g_e1/rejected/cand_0001` (a v4 global-optimizer candidate), not the original skill | not a baseline; recorded separately in PR #801 | — |
 
-Naming: `b` = baseline, `t` = task-by-task optimization, `g` = global (shared-bundle)
-optimization — so `v5_b1_e1` is the first baseline experiment, and the planned optimizer arms are
-`v5_t*_e*` / `v5_g*_e*`.
+Naming: `b` = baseline, `t` = task-by-task optimization, `g` = global (shared-bundle) optimization.
 
-## What hasn't run
+## Before the optimizer arms
 
-No optimizer arm yet. The plan is to split the 136 randomly into a train half (`o5`) and a
-held-out half (`h5`), run the task-by-task and global arms on `o5`, and validate on `h5`. The
-baseline's permutation test is what licenses a random split rather than a drop-based one.
-
-## Open items before the optimizer arms
-
-- **Gating rule.** 68% of tasks are non-deterministic; a per-task delta below ~0.25 is
-  indistinguishable from noise at n=5, while the suite mean resolves to ~0.02. A hill-climb gate
-  accepting on any per-task gain will accept noise. See the baseline summary's noise-floor section.
-- **Trial timeouts are not enforced end-to-end** — two baseline tasks hung ~6.5h below the
-  adapter's 20-minute cap. Worth fixing before arms that run far more trials.
-- **Two deterministic zeros** (`cloud-304-marketplace-active-past-end`,
-  `icinga-072-alert-output-not-decoy-metrics`) — real capability gap or contract defect, unexamined.
+- **Grader defects.** 21 tasks penalise correct answers or demand an unshown vocabulary — see
+  [`../../reports/v5-benchmark-quality-review.md`](../../reports/v5-benchmark-quality-review.md).
+  Patch them, or exclude them from both halves of the split.
+- **Split stratified, not purely random.** 10-10 outscores 10-12 by +0.074 (p = 0.06), about half
+  of it from the 21 `h4-rewritten` tasks the original skill now finds easy. Stratify `o5`/`h5` by
+  task set and category.
+- **Gate with a margin.** A per-task delta below ~0.09 is noise at 5 trials; the suite mean
+  resolves to ~0.02.
+- **Infra:** gateway hangs before the first tool call are the dominant failure; one can leave a
+  simulator call in flight that blocks the next trials' reseeding (`HTTP 409`). Audit every trial.

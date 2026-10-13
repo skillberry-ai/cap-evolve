@@ -33,7 +33,8 @@ reports, if they are ever written, belong beside them as
 
 Cross-cutting analyses that span arms or experiments stay at this directory's
 root with an experiment prefix — `v4-skillset-variant-comparison.md`,
-`v4-t4-merge-decisions.md`, `v4-cap-evolve-question-answers.md` — rather than
+`v4-t4-merge-decisions.md`, `v4-cap-evolve-question-answers.md`,
+`v5-benchmark-quality-review.md` — rather than
 inside an arm folder, since none of them belongs to a single arm.
 
 v1's task ids are all of the form `traces_parsec-aap2-<NNNN>`, so the shared prefix is dropped

@@ -28,9 +28,10 @@ DATA_END_RE = re.compile(r"^\];\n", re.MULTILINE)
 SUMMARY_RE = re.compile(r"(const SUMMARIES =\n)(.*?)(\n;\n)", re.DOTALL)
 
 FIELDS = [
-    "task", "category", "task_set", "reward", "stderr",
-    "trial_rewards", "trial_min", "trial_max", "spread", "sd",
+    "task", "category", "task_set", "origin", "reward", "stderr",
+    "trial_rewards", "n_valid", "trial_min", "trial_max", "spread", "sd",
     "variable", "errored_trials", "cost_usd",
+    "v4_t1_reward", "jb_reward", "delta_vs_v4_t1",
 ]
 
 
@@ -65,6 +66,9 @@ def build_summaries_block(results):
         rows.append(row(f"set {st}", "set", s["by_task_set"][st]))
     for c in ("platform", "icinga", "cloud", "cost"):
         rows.append(row(c, "category", s["by_category"][c]))
+    for o in ("v4-34", "h4-rewritten", "new-10-10", "new-10-12"):
+        if o in s["by_origin"]:
+            rows.append(row(f"origin {o}", "origin", s["by_origin"][o]))
     return rows
 
 

@@ -15,7 +15,10 @@ discarded after its skill proved byte-identical to
 [`../v4/v4_g_e1/rejected/cand_0001`](../v4/v4_g_e1/rejected/cand_0001) — a v4 **global optimizer**
 candidate that had been left installed in the live parsec clone's working tree. parsec's git HEAD
 still read `28e2c40`, so nothing in `git status` would have revealed it; only a byte comparison
-did. It inflated the shared-task mean by +0.151. See
+did. On the 68 tasks the two runs share, it raised the mean by **+0.040** — small on average, but
+concentrated: `cloud-024-guid-to-account` 0.200 → 1.000, `platform-003` +0.49, `platform-001` +0.40.
+(An earlier figure of +0.151 was wrong: it compared against the baseline before its dead trials were
+re-run.) See
 [`../../results/v5/v5_b1_e1/summary.md`](../../results/v5/v5_b1_e1/summary.md).
 
 **Rule this leaves behind:** pin the artifact under test to a known commit and verify it by bytes

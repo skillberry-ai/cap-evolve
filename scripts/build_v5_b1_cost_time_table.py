@@ -39,28 +39,31 @@ def render(results):
     )
     L.append("")
     L.append(
-        f"**{len(ledger)}/{len(ledger)} tasks done, 0 errored trials.** "
+        f"**{len(ledger)}/{len(ledger)} tasks done; {o['n_valid_trials']} valid trials of "
+        f"{5*len(ledger)}, {5*len(ledger)-o['n_valid_trials']} excluded by the per-trial audit "
+        f"(dead trials, see `../summary.md`).** "
         f"Cost: ${o['cost_usd']:,.2f}. Tokens: {o['tokens']:,}. "
         f"Summed task time: {o['seconds']/60:.1f} min ({o['seconds']/3600:.2f} hr) -- "
-        f"summed across tasks; the sweep ran at 10-way concurrency on CCC/LSF, so elapsed "
-        f"wall-clock was far less (see `recipes/v5/v5_b1_e1/README.md`)."
+        f"summed across tasks; the sweep ran at 10- to 15-way concurrency on CCC/LSF, so elapsed "
+        f"wall-clock was far less (see `recipes/v5/v5_b1_e1/README.md`). Costs are those of the run "
+        f"each task's kept trials come from; the cost of discarded runs is not included."
     )
     L.append("")
     L.append(
-        f"`spread` = max - min across the 5 trials, `sd` = population sd. "
+        f"`spread` = max - min across a task's valid trials, `sd` = population sd. "
         f"**{o['n_variable']} of {len(ledger)} tasks ({o['pct_variable']:.1f}%) are "
         f"non-deterministic**; see `../summary.md` for what that bounds."
     )
     L.append("")
     L.append("## Summary table")
     L.append("")
-    L.append("| # | Task | set | Reward(val) | stderr | Trial rewards | spread | sd "
+    L.append("| # | Task | set | origin | Reward(val) | stderr | Trial rewards | spread | sd "
              "| Errored | Headroom | Cost($) | Tokens | Time(s) |")
-    L.append("|---|---|:--|---|---|---|---|---|---|---|---|---|---|")
+    L.append("|---|---|:--|:--|---|---|---|---|---|---|---|---|---|---|")
     for i, r in enumerate(ledger, 1):
         trials = ", ".join(f"{v:.3f}" for v in (r["trial_rewards"] or []))
         L.append(
-            f"| {i} | {r['task']} | {r['task_set']} | {r['reward']:.4f} | {r['stderr']:.4f} "
+            f"| {i} | {r['task']} | {r['task_set']} | {r['origin']} | {r['reward']:.4f} | {r['stderr']:.4f} "
             f"| {trials} | {r['spread']:.3f} | {r['sd']:.3f} | {r['errored_trials']} "
             f"| {r['headroom']} | {r['cost_usd']:.4f} | {r['tokens']:,} | {r['seconds']:.1f} |"
         )

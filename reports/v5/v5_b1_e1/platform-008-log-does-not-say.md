@@ -5,22 +5,25 @@
 **task:** `platform-008-log-does-not-say`  
 **category:** platform  
 **task set:** 10-10  
-**status:** ok  
+**origin:** v4-34  
 **deterministic:** no  
 
 _Read no cell without the `n` and split beside it._
 
 | measurement | split | n | reward |
 |---|---|--:|--:|
-| v5_b1_e1 (original skill, zero-shot) | val | 5 | 0.600 |
+| v5_b1_e1 (original skill, zero-shot) | val | 5 | 0.960 |
+| v4_t1_e1 (v4's original-skill baseline) | test | 3 | 0.933 |
+| JB baseline-v2 (external) | test | 1 | 1.000 |
 
-per-trial rewards: [1.000, 0.000, 0.000, 1.000, 1.000]  
-min 0.000 · max 1.000 · spread 1.000 · sd 0.490 · errored trials 0
+per-trial rewards: [0.800, 1.000, 1.000, 1.000, 1.000]  
+min 0.800 · max 1.000 · spread 0.200 · sd 0.080 · errored trials 0  
+delta vs v4_t1_e1: +0.027  
 
-**cost/time:** $0.1593, 48,746 tokens, 52.2 min -- see [`../../../results/v5/v5_b1_e1/cost_time/`](../../../results/v5/v5_b1_e1/cost_time/)
+**cost/time:** $0.2772, 82,818 tokens, 17.5 min -- see [`../../../results/v5/v5_b1_e1/cost_time/`](../../../results/v5/v5_b1_e1/cost_time/)
 
 <!-- END:auto -->
 
-This task is **non-deterministic**: five identical trials spanned 0.000-1.000 (sd 0.490). With n=5 its mean carries a ~95% CI of roughly +/-0.127, so a later arm's change on this task alone is only meaningful well above that. It is one of 92 of 136 v5 tasks (68%) that vary across repeats.
+This task is **non-deterministic**: 5 identical trials spanned 0.800-1.000 (sd 0.080). With n=5 its mean carries a ~95% CI of roughly +/-0.045, so a later arm's change on this task alone is only meaningful well above that. It is one of 76 of 136 v5 tasks (56%) that vary across repeats.
 
-This task came from the **`v5_2026-10-10`** drop (the first 68). The two drops are statistically indistinguishable in difficulty (permutation p = 0.62) -- see [`../../../results/v5/v5_b1_e1/summary.md`](../../../results/v5/v5_b1_e1/summary.md).
+**Lineage:** one of v4's original 34 tasks, carried into v5 with its contract unchanged. The two v4 rows above are v4's own original-skill baselines on the same task, so the comparison is like-for-like. Across all 34 such tasks v5 reproduces v4 to -0.002 on average (SE 0.018).

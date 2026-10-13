@@ -29,17 +29,24 @@ RESULTS_JSON = ROOT / "results" / "v5" / "v5_b1_e1" / "results.json"
 REPORTS_DIR = ROOT / "reports" / "v5" / "v5_b1_e1"
 ARTIFACTS_DIR = ROOT / "artifacts" / "v5"
 
-SET_NOTE = {
-    "10-10": (
-        "This task came from the **`v5_2026-10-10`** drop (the first 68). The two "
-        "drops are statistically indistinguishable in difficulty (permutation "
-        "p = 0.62) -- see [`../../../results/v5/v5_b1_e1/summary.md`](../../../results/v5/v5_b1_e1/summary.md)."
+ORIGIN_NOTE = {
+    "v4-34": (
+        "**Lineage:** one of v4's original 34 tasks, carried into v5 with its contract "
+        "unchanged. The two v4 rows above are v4's own original-skill baselines on the "
+        "same task, so the comparison is like-for-like. Across all 34 such tasks v5 "
+        "reproduces v4 to {v4_delta:+.3f} on average (SE {v4_se:.3f})."
     ),
-    "10-12": (
-        "This task came from the **`v5_2026-10-12`** drop (the second 68). The two "
-        "drops are statistically indistinguishable in difficulty (permutation "
-        "p = 0.62) -- see [`../../../results/v5/v5_b1_e1/summary.md`](../../../results/v5/v5_b1_e1/summary.md)."
+    "h4-rewritten": (
+        "**Lineage:** shares an id with an h4 held-out task, but its instruction, "
+        "contract, seed data and verifier were all rewritten going into v5. h4's "
+        "numbers for this id describe a different task and are deliberately not shown."
     ),
+    "renamed-content-changed": (
+        "**Lineage:** kept a v4/h4 task number but has different content, so no "
+        "earlier number is comparable."
+    ),
+    "new-10-10": "**Lineage:** new in the `v5_2026-10-10` drop -- no earlier measurement.",
+    "new-10-12": "**Lineage:** new in the `v5_2026-10-12` drop -- no earlier measurement.",
 }
 
 DETERMINISTIC_NOTE = (
@@ -49,7 +56,7 @@ DETERMINISTIC_NOTE = (
 )
 
 VARIABLE_NOTE = (
-    "This task is **non-deterministic**: five identical trials spanned "
+    "This task is **non-deterministic**: {n} identical trials spanned "
     "{lo:.3f}-{hi:.3f} (sd {sd:.3f}). With n=5 its mean carries a ~95% CI of "
     "roughly +/-{ci:.3f}, so a later arm's change on this task alone is only "
     "meaningful well above that. It is one of {n_var} of {n_total} v5 tasks "
@@ -62,21 +69,31 @@ def build_auto_block(row, overall):
     lines.append(f"**task:** `{row['task']}`  ")
     lines.append(f"**category:** {row['category']}  ")
     lines.append(f"**task set:** {row['task_set']}  ")
-    lines.append(f"**status:** {row['status']}  ")
+    lines.append(f"**origin:** {row['origin']}  ")
     lines.append(f"**deterministic:** {'no' if row['variable'] else 'yes'}  ")
     lines.append("")
     lines.append("_Read no cell without the `n` and split beside it._")
     lines.append("")
     lines.append("| measurement | split | n | reward |")
     lines.append("|---|---|--:|--:|")
-    lines.append(f"| v5_b1_e1 (original skill, zero-shot) | val | {fmt(row['n_trials'])} "
+    lines.append(f"| v5_b1_e1 (original skill, zero-shot) | val | {fmt(row['n_valid'])} "
                  f"| {fmt(row['reward'])} |")
+    if row.get("v4_t1_reward") is not None:
+        lines.append(f"| v4_t1_e1 (v4's original-skill baseline) | test | {fmt(row['v4_t1_n'])} "
+                     f"| {fmt(row['v4_t1_reward'])} |")
+        lines.append(f"| JB baseline-v2 (external) | test | {fmt(row['jb_n'])} "
+                     f"| {fmt(row['jb_reward'])} |")
     lines.append("")
     trials = ", ".join(fmt(v) for v in (row.get("trial_rewards") or []))
     lines.append(f"per-trial rewards: [{trials}]  ")
     lines.append(f"min {fmt(row['trial_min'])} · max {fmt(row['trial_max'])} · "
                  f"spread {fmt(row['spread'])} · sd {fmt(row['sd'])} · "
-                 f"errored trials {row['errored_trials']}")
+                 f"errored trials {row['errored_trials']}  ")
+    if row.get("delta_vs_v4_t1") is not None:
+        lines.append(f"delta vs v4_t1_e1: {row['delta_vs_v4_t1']:+.3f}  ")
+    if row.get("audit_note"):
+        lines.append("")
+        lines.append(f"**audit:** {row['errored_trials']} trial(s) excluded -- {row['audit_note']}.")
     lines.append("")
     lines.append(
         f"**cost/time:** ${row['cost_usd']:.4f}, {row['tokens']:,} tokens, "
@@ -88,10 +105,10 @@ def build_auto_block(row, overall):
     return "\n".join(lines)
 
 
-def prefilled_hand(row, overall, noise):
+def prefilled_hand(row, overall, noise, results_sections):
     parts = []
     if row["variable"]:
-        parts.append(VARIABLE_NOTE.format(
+        parts.append(VARIABLE_NOTE.format(n=row["n_valid"],
             lo=row["trial_min"], hi=row["trial_max"], sd=row["sd"],
             ci=noise["ci95_halfwidth_per_task"],
             n_var=overall["n_variable"], n_total=overall["n_tasks"],
@@ -99,7 +116,9 @@ def prefilled_hand(row, overall, noise):
     else:
         parts.append(DETERMINISTIC_NOTE.format(
             n_det=overall["n_deterministic"], n_total=overall["n_tasks"]))
-    parts.append(SET_NOTE[row["task_set"]])
+    cmp4 = results_sections["comparison_v4"]
+    parts.append(ORIGIN_NOTE[row["origin"]].format(v4_delta=cmp4["paired_delta_mean"],
+                                                   v4_se=cmp4["paired_delta_se"]))
     return "\n\n".join(parts)
 
 
@@ -143,7 +162,7 @@ def main():
             build_auto_block(row, overall),
             diff_block_for(row["task"]),
             existing,
-            prefilled_hand=prefilled_hand(row, overall, noise),
+            prefilled_hand=prefilled_hand(row, overall, noise, results["sections"]),
         )
         if new_text == existing:
             continue

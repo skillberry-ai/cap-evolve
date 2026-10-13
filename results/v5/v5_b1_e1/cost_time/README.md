@@ -13,12 +13,13 @@ The dependency runs one way only, so the table cannot drift from the ledger.
 
 ## What's in the `.md`
 
-One row per task: the 5 individual trial rewards, mean and stderr, **`spread`** (max − min) and
+One row per task: its task set and origin, the individual valid trial rewards (5, or 4 for
+`platform-113`), mean and stderr, **`spread`** (max − min) and
 **`sd`**, errored-trial count, a `saturated`/`ok` headroom tag, and that task's total
 cost/tokens/seconds.
 
 `spread` and `sd` are not in v4's equivalent table. They are here because characterising how
-stochastic this benchmark is was part of this arm's job: 92 of 136 tasks return a different reward
+stochastic this benchmark is was part of this arm's job: 76 of 136 tasks return a different reward
 across identical repeated trials, and a table of means alone would hide that.
 
 ## Where the numbers end up
@@ -31,5 +32,6 @@ across identical repeated trials, and a table of means alone would hide that.
 ## Caveat this table carries forward
 
 Each row's cost/tokens/seconds is a **sum across that task's 5 trials**, and the sweep ran at
-10-way concurrency on CCC/LSF. The summed "task time" at the top (48.8h) is therefore a
-cost/budget figure, not a schedule figure — actual elapsed wall-clock was roughly 9h.
+10- to 15-way concurrency on CCC/LSF. The summed "task time" at the top is therefore a
+cost/budget figure, not a schedule figure. Costs are those of the run each task's kept trials
+come from — 44 tasks were re-run after the per-trial audit, and the discarded runs' cost is not included.

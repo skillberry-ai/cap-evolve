@@ -23,13 +23,15 @@ Each task's eval ran as its own `bsub` job on CCC/LSF. `scripts/parsec/v5/run_on
 up the parsec simulator stack (5 containers + the `parsec-live` app) in a dedicated per-job lane,
 then handed off to `scripts/ccc/run_ccc_experiment.sh --max-iterations 0`, which is what actually
 invokes `cap-evolve run`. `scripts/parsec/v5/fan_out.sh` kept 10 jobs in flight across the 136
-tasks, one per compute node (podman's graphroot is per-UID-per-host, so two jobs cannot share a
+tasks (15 for the re-run), one per compute node (podman's graphroot is per-UID-per-host, so two jobs cannot share a
 node without corrupting each other's image store).
 
 - **Models:** agent `claude-sonnet-4-6`; simulator LLM `azure/gpt-5.4`. Gateway per this repo's
   documented provider order.
-- **Trials:** 5 per task, 680 total, 0 errored.
-- **Concurrency:** 10 concurrent jobs; ~9h elapsed for 48.8h of summed task time.
+- **Trials:** 5 per task, 680 total. A per-trial audit found 74 dead (gateway hangs before the
+  first tool call, one port collision, one budget cap) that cap-evolve had scored as 0.0; the 44
+  affected tasks were re-run in full, and 679 valid trials remain.
+- **Concurrency:** 10 concurrent jobs for the first pass, 15 for the re-run.
 - **Task source:** `rhdp-parsec/v5_2026-10-10/bench-v5-harbor-tasks/` after the `v5_2026-10-12`
   drop was merged into it (136 dirs, no id collisions).
 - **Seed installation:** the `v5_2026-10-12` drop's stricter `install_seeds.py`, which additionally

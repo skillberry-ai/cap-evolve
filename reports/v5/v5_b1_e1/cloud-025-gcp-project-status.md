@@ -5,7 +5,7 @@
 **task:** `cloud-025-gcp-project-status`  
 **category:** cloud  
 **task set:** 10-10  
-**status:** ok  
+**origin:** v4-34  
 **deterministic:** yes  
 
 _Read no cell without the `n` and split beside it._
@@ -13,14 +13,17 @@ _Read no cell without the `n` and split beside it._
 | measurement | split | n | reward |
 |---|---|--:|--:|
 | v5_b1_e1 (original skill, zero-shot) | val | 5 | 1.000 |
+| v4_t1_e1 (v4's original-skill baseline) | test | 3 | 1.000 |
+| JB baseline-v2 (external) | test | 1 | 1.000 |
 
 per-trial rewards: [1.000, 1.000, 1.000, 1.000, 1.000]  
-min 1.000 · max 1.000 · spread 0.000 · sd 0.000 · errored trials 0
+min 1.000 · max 1.000 · spread 0.000 · sd 0.000 · errored trials 0  
+delta vs v4_t1_e1: +0.000  
 
 **cost/time:** $0.3564, 110,187 tokens, 15.7 min -- see [`../../../results/v5/v5_b1_e1/cost_time/`](../../../results/v5/v5_b1_e1/cost_time/)
 
 <!-- END:auto -->
 
-All five trials returned the identical reward, so this task's score carries no run-to-run noise -- unusual here: only 44 of 136 v5 tasks are deterministic.
+All five trials returned the identical reward, so this task's score carries no run-to-run noise -- unusual here: only 60 of 136 v5 tasks are deterministic.
 
-This task came from the **`v5_2026-10-10`** drop (the first 68). The two drops are statistically indistinguishable in difficulty (permutation p = 0.62) -- see [`../../../results/v5/v5_b1_e1/summary.md`](../../../results/v5/v5_b1_e1/summary.md).
+**Lineage:** one of v4's original 34 tasks, carried into v5 with its contract unchanged. The two v4 rows above are v4's own original-skill baselines on the same task, so the comparison is like-for-like. Across all 34 such tasks v5 reproduces v4 to -0.002 on average (SE 0.018).
