@@ -144,5 +144,19 @@
   "note": "the search seed is the split/pool seed and the base trial seed (capevolve-runner)",
   "AO-2": "launches held pending a token-basis PR (new SHA, new AO spec/launcher hashes later); HC-2 may go on a3f5eeb6d"
  },
- "registry_note": "v2_11E_A_sbx_bin_claude (runs/V2/_sbx_bin/claude) belongs to the tau/airline runner's shim, not to capevolve-runner; its item label is 'A_' by registration location only"
+ "registry_note": "v2_11E_A_sbx_bin_claude (runs/V2/_sbx_bin/claude) belongs to the tau/airline runner's shim, not to capevolve-runner; its item label is 'A_' by registration location only",
+ "withdrawn": [
+  {
+   "item": "v2_11E_A_pysite_sitecustomize.py",
+   "sha256": "7c85bd6d0aff300151d858f008a50f4a411e40c5ef3aa88094960765c56c2653",
+   "reason": "patches stdlib behaviour (shutil.rmtree permission fallback) outside the registered code path; the real cause was a read-only chmod on wt-v2run, reverted"
+  },
+  {
+   "item": "v2_11E_A_env_v2.sh",
+   "sha256": "df7b0e6ec5b9952f3781521c63f7419c029113b4833f74446ff3609a9c5fb9ac",
+   "reason": "loads the withdrawn pysite first on PYTHONPATH"
+  }
+ ],
+ "withdrawn_utc": "2026-10-13 13:34 UTC",
+ "withdrawn_note": "no run used either file; wt-v2run is owner-writable again at a3f5eeb6d with git status clean; the registry lines stay in the chain as withdrawn"
 }
