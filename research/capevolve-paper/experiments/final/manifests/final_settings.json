@@ -1,5 +1,10 @@
 {
  "cutoff_utc": "2026-10-13T06:00:00Z",
+ "e25_placement": {
+  "B/C": "separate extra order, n=1, run last",
+  "D": "merged into the main window (--merge-decomp)",
+  "E": "separate extra order after the main window"
+ },
  "gateway": "http://127.0.0.1:4111/v1 (extras: 4112)",
  "hang_retries": 1,
  "hang_rule_s": 10800,
