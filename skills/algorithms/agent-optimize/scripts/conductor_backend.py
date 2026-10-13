@@ -146,10 +146,12 @@ class RealBackend(P2Port, conductor.Backend):
         self._lock = threading.Lock()
 
     # ---- process lifetime
+    @contextlib.contextmanager
     def run_lock(self):
-        """One conductor per run dir (flock, released by the OS even on a crash)."""
+        """One conductor per run dir. flock, held for the life of the process and released by the OS even on a
+        crash; a second conductor fails fast with the holder's pid."""
         self.run_dir.run_lock("conductor")
-        return contextlib.nullcontext()
+        yield
 
     # ---- data: the evidence ledger
     def _ledger(self) -> list[dict]:
@@ -274,12 +276,32 @@ class RealBackend(P2Port, conductor.Backend):
         prompt.write_text(proposer.build_prompt(workdir=work, parent=parent, cluster=cluster, digest_text=text,
                                                 strict=bool(job.get("strict")), kind=kind,
                                                 conflicts=job.get("conflicts")), encoding="utf-8")
-        cmd = [act.PY, RUN_OPTIMIZER, "--name", self.optimizer, "--workdir", work, "--prompt", prompt, "--json"]
+        cmd = [act.PY, RUN_OPTIMIZER, "--name", self.optimizer, "--workdir", work, "--prompt", prompt, "--json",
+               "--transcript", str(self.transcript(job))]
         turns = int(self.spec.get("optimizer_max_turns") or 40)
         cmd += ["--budget", str(turns)]
+        usd = self.job_usd_cap()
+        if usd:
+            cmd += ["--usd-budget", f"{usd:g}"]         # the CLI's own hard stop; the conductor's token kill is the backstop
         if self.spec.get("optimizer_model"):
             cmd += ["--model", str(self.spec["optimizer_model"])]
         return self._spawn(job, cmd)
+
+    def transcript(self, job) -> Path:
+        return self.jobs_dir / f"{job['id']}.transcript.jsonl"
+
+    def job_usd_cap(self) -> float:
+        """Hard $ limit for ONE one-shot job: ``ao_job_usd_cap``, else what is left of ``max_optimizer_usd``
+        (never more than the run may still spend). 0 = no dollar cap configured."""
+        cap = float(self.spec.get("ao_job_usd_cap") or 0)
+        total = float(self.spec.get("max_optimizer_usd") or 0)
+        if total:
+            left = max(total - float(RunDir.open(self.root).spent.optimizer_usd), 0.01)
+            cap = min(cap, left) if cap else left
+        return cap
+
+    def running_tokens(self, job):
+        return proposer.transcript_tokens(self.transcript(job))
 
     def alive(self, job):
         if job.get("p2") or job.get("p2seq"):
@@ -304,7 +326,12 @@ class RealBackend(P2Port, conductor.Backend):
         return res
 
     def kill(self, job):
-        self._threads.pop(job["id"], None)
+        if job.get("p2") or job.get("p2seq"):
+            f = self._threads.get(job["id"])
+            if f is not None and not f.done() and not f.cancel():
+                return False             # mid-rollout: a thread cannot be interrupted; keep its slot and reservation
+            self._threads.pop(job["id"], None)
+            return True
         pid = job.get("pid")
         if pid and _pid_alive(pid):
             with contextlib.suppress(ProcessLookupError, PermissionError):
@@ -387,7 +414,10 @@ class RealBackend(P2Port, conductor.Backend):
             est = self.ev.final_estimate(digest.cand_dir(self.run_dir, champion), digest.cand_dir(self.run_dir, "seed"))
             (self.root / "final_estimate.json").write_text(json.dumps(est, indent=1, default=str), encoding="utf-8")
         a = argparse.Namespace(**vars(self.ns), n_confirm=0, n_trials=0, seal_anyway=None, over_budget=None, verb="finalize")
-        rc, out = act.finalize(a, self.ctx)
+        try:
+            rc, out = act.finalize(a, self.ctx)
+        except act.Refused as e:
+            raise conductor.Refused(f"finalize blocked: {e}") from e
         return out
 
     def finalized(self):

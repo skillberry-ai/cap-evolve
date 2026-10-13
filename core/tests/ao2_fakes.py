@@ -139,6 +139,8 @@ class FakeBackend(conductor.Backend):
         self.started.append(dict(job))
         lo, hi = self.w.delay
         self.w.jobs[job["id"]] = {**job, "left": self.w.rng.randint(lo, hi)}
+        if job["kind"] == "propose" and getattr(self.w, "hang_tokens", 0):
+            self.w.jobs[job["id"]]["left"] = 10 ** 9           # a runaway proposer: never finishes, keeps burning
         return {"pid": 1000 + len(self.started)}
 
     def alive(self, job): return job["id"] in self.w.jobs
@@ -177,7 +179,13 @@ class FakeBackend(conductor.Backend):
             return {"ok": True, "tokens": self.w.tokens_per_propose}
         return {"ok": True}
 
-    def kill(self, job): self.w.jobs.pop(job["id"], None)
+    def kill(self, job):
+        if getattr(self.w, "unkillable", False):
+            return False
+        self.w.jobs.pop(job["id"], None)
+
+    def running_tokens(self, job):
+        return int(getattr(self.w, "hang_tokens", 0)) if job["id"] in self.w.jobs else 0
 
     # ---- graph
     def register(self, job, result):
@@ -272,7 +280,7 @@ class P2Backend(conductor_backend.P2Port, conductor.Backend):
         self.ev = evaluator.P2Evaluator(self.adapter, self.run_dir, self.params)
         self.pool = ThreadPoolExecutor(max_workers=workers)
         self.futs: dict = {}
-        self.rounds: dict = {}
+        self._rounds: dict = {}
         self.dirs: dict = {"seed": self.run_dir.candidate_dir("seed")}
         self.decisions: list = []
         self.max_parallel = 0
@@ -287,7 +295,7 @@ class P2Backend(conductor_backend.P2Port, conductor.Backend):
         n = P2Backend.__new__(P2Backend)
         n.__dict__.update(self.__dict__)
         from concurrent.futures import ThreadPoolExecutor
-        n.pool, n.futs, n.rounds = ThreadPoolExecutor(max_workers=4), {}, {}
+        n.pool, n.futs, n._rounds = ThreadPoolExecutor(max_workers=4), {}, {}
         return n
 
     def dir_of(self, tag): return self.dirs[tag]
@@ -304,12 +312,12 @@ class P2Backend(conductor_backend.P2Port, conductor.Backend):
     def remaining_rollouts(self): return self.run_dir.remaining_metric_calls()
 
     def _remember_round(self, rnd):
-        self.rounds[rnd.round_id] = rnd
+        self._rounds[rnd.round_id] = rnd
 
     def _round(self, rid):
-        if rid not in self.rounds:
-            self.rounds[rid] = self.ev.resume_round(rid)
-        return self.rounds[rid]
+        if rid not in self._rounds:
+            self._rounds[rid] = self.ev.resume_round(rid)
+        return self._rounds[rid]
 
     def _job(self, x):
         from cap_evolve.evaluator import Job

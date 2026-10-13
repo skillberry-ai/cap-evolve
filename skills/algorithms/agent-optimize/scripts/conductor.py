@@ -155,7 +155,11 @@ class Backend:
     def start(self, job: dict) -> dict: raise NotImplementedError
     def poll(self, job: dict) -> dict | None: raise NotImplementedError
     def alive(self, job: dict) -> bool: raise NotImplementedError
-    def kill(self, job: dict) -> None: raise NotImplementedError
+    def kill(self, job: dict) -> bool | None:
+        """Stop the job. False = it cannot be stopped yet (a P2 worker thread mid-rollout): the conductor keeps its
+        slot and reservation until ``poll`` reports it finished. None/True = stopped."""
+        raise NotImplementedError
+    def running_tokens(self, job: dict) -> int: return 0        # optimizer tokens a RUNNING one-shot job has used so far
     # graph
     def register(self, job: dict, result: dict) -> dict: raise NotImplementedError
     def node_event(self, tag: str, status: str, **kw) -> None: raise NotImplementedError
@@ -318,13 +322,25 @@ class Conductor:
             if j["state"] != "running":
                 continue
             res = self.b.poll(j)
-            if res is None:
-                if self.clock() - float(j.get("started") or self.clock()) > self.cfg.chunk_timeout:
-                    self.b.kill(j)
-                    j["state"] = "lost"
-                    j["reserved_rollouts"] = j["reserved_tokens"] = 0
-                    self.b.log("job_timeout", job=j["id"], job_kind=j["kind"])
+            if res is not None and j.get("cancelling"):      # a cancelled worker finally ended: now free its slot
+                self._lose(j, "job_cancelled")
                 continue
+            if res is None:
+                if j.get("cancelling"):
+                    continue
+                if not self.b.alive(j):                 # gone without leaving an exit record: free the slot now
+                    self._lose(j, "job_vanished")
+                elif self.clock() - float(j.get("started") or self.clock()) > self.cfg.chunk_timeout:
+                    if self._stop(j):
+                        self._lose(j, "job_timeout")
+                elif j["kind"] in ("propose", "merge", "diagnose") and \
+                        self.b.running_tokens(j) > self.cfg.job_token_cap:
+                    used = int(self.b.running_tokens(j))     # the per-job cap is enforced here, not trusted to the CLI
+                    self.b.kill(j)                           # a proposer is a process: kill() always stops it
+                    self.b.log("job_token_cap", job=j["id"], job_kind=j["kind"], tokens=used, cap=self.cfg.job_token_cap)
+                    res = {"ok": False, "error": "token_cap", "tokens": used}
+                if res is None:
+                    continue
             j["result"] = {k: v for k, v in res.items() if k != "stdout"}
             j["state"] = "done" if res.get("ok", True) else "failed"
             j["reserved_rollouts"] = 0
@@ -333,6 +349,21 @@ class Conductor:
                 self.st["tokens_committed"] = int(self.st.get("tokens_committed", 0)) + tok
                 j["reserved_tokens"] = 0
             getattr(self, f"_reaped_{j['kind']}", lambda *_: None)(j, res)
+
+    def _stop(self, j) -> bool:
+        """Ask the backend to stop ``j``. False (and ``cancelling``) when it cannot stop yet; reap frees it later."""
+        if self.b.kill(j) is False:
+            j["cancelling"] = True
+            return False
+        return True
+
+    def _lose(self, j, why) -> None:
+        """A running job that is gone or hung: refund its reservations; the ledger decides what is missing."""
+        j["state"] = "lost"
+        j["reserved_rollouts"] = j["reserved_tokens"] = 0
+        self.b.log(why, job=j["id"], job_kind=j["kind"], tag=j.get("tag"))
+        if j["kind"] in ("propose", "merge"):
+            self._lost_proposal(j)
 
     def _reaped_eval(self, j, res) -> None:
         if j.get("p2seq") or j.get("p2"):
@@ -641,6 +672,7 @@ class Conductor:
         try:
             j.update(self.b.start(j))
             j["state"] = "running"
+            self.save()              # the pid is on disk before anything else can crash: no double run on resume
         except Exception as e:      # noqa: BLE001 - a job that cannot start is a failed job, not a crash
             j["state"] = "failed"
             j["reserved_rollouts"] = j["reserved_tokens"] = 0
@@ -793,9 +825,9 @@ class Conductor:
 
     def _p2_abandon_round(self, r, why) -> None:
         for j in cs.live(self.st, "eval"):
-            if j.get("round") == r["id"]:
-                self.b.kill(j)
+            if j.get("round") == r["id"] and self._stop(j):
                 j["state"] = "lost"
+                j["reserved_rollouts"] = j["reserved_tokens"] = 0
         for tag in r["tags"]:
             n = self.st["nodes"].get(tag)
             if n and n["status"] == "racing":
@@ -869,8 +901,7 @@ class Conductor:
         confirmation can no longer run is ``unconfirmed``. True when nothing is in flight."""
         for j in cs.live(self.st):
             keep = self._keep_on_drain(j)
-            if not keep:
-                self.b.kill(j)
+            if not keep and not j.get("cancelling") and self._stop(j):
                 j["state"] = "lost"
                 j["reserved_rollouts"] = j["reserved_tokens"] = 0
         confirming = [t for t, n in self.st["nodes"].items() if n["status"] == "confirming"]
@@ -905,7 +936,13 @@ class Conductor:
             if n["status"] in PRE_CONFIRM and not self._is_base(t):
                 self.b.node_event(t, "gated" if n["status"] == "screened" else "proposed", stage="pending_at_stop")
         if not self.b.finalized():
-            self.st["final"] = self.b.finalize(self.champion)
+            try:
+                self.st["final"] = self.b.finalize(self.champion)
+            except Refused as e:                 # retrying cannot help: stop the supervisor instead of looping it
+                self.st["finalize_blocked"] = str(e)[:400]
+                self.b.log("finalize_blocked", reason=self.st["finalize_blocked"])
+                self.save()
+                raise
         self.st["finalized"] = True
         self.b.log("conductor_done", champion=self.champion, reason=self.st.get("stopped"))
 
@@ -954,7 +991,11 @@ def main(argv=None) -> int:
         return EXIT_REFUSED
     with be.run_lock():
         c = Conductor(Path(a.run_dir).resolve(), be, cfg)
-        rc = c.run(a.max_ticks)
+        try:
+            rc = c.run(a.max_ticks)
+        except Refused as e:             # e.g. finalize blocked: a relaunch would hit the same wall
+            print(json.dumps({"ok": False, "refused": str(e)}, indent=2))
+            return EXIT_REFUSED
     print(json.dumps({"ok": rc == 0, "champion": c.champion, "stopped": c.st.get("stopped"),
                       "n_proposals": c.st["n_proposals"]}, indent=2))
     return rc

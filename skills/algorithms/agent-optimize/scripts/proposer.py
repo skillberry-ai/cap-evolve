@@ -70,3 +70,31 @@ def tokens_from_result(stdout: str) -> int:
         if isinstance(rec, dict):
             return int(((rec.get("cost") or {}).get("tokens")) or 0)
     return 0
+
+
+def _billed(usage: dict) -> int:
+    """input + output + cache creation: the quantity the token watchdog counts (cache reads are not billed as new work)."""
+    return sum(int(usage.get(k) or 0) for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens"))
+
+
+def transcript_tokens(path) -> int:
+    """Tokens a still-running job has used so far, from its stream-json transcript (one ``usage`` per
+    assistant message id, the last one seen; the final ``result`` record, when present, is the total)."""
+    per_msg: dict = {}
+    try:
+        lines = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return 0
+    for n, line in enumerate(lines):
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(rec, dict):
+            continue
+        if rec.get("type") == "result" and isinstance(rec.get("usage"), dict):
+            return _billed(rec["usage"])
+        msg = rec.get("message")
+        if isinstance(msg, dict) and isinstance(msg.get("usage"), dict):
+            per_msg[msg.get("id") or f"line{n}"] = _billed(msg["usage"])
+    return sum(per_msg.values())
