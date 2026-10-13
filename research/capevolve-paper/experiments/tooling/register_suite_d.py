@@ -100,6 +100,16 @@ def main():
                   ("D_E_cand_logger.py", CS / "scripts/E30/cand_logger.py", "candidate logger"),
                   ("D_E_shim_claude_hc2", CS / "runs/V2/_sbx_bin/claude", "HC-2 optimizer shim (binds .capevolve/project, run_main, claude_cfg)"),
                   ("D_E_shim_claude_ao2", CS / "runs/V2/_sbx_bin_ao/claude", "AO-2 optimizer shim (WT=wt-v2run-ao)")]
+    S2 = CS / "scripts/V2"
+    V2DE_FILES += [("D_hc2_spec", S2 / "specs/D_hc2.capevolve.yaml", "Suite D HC-2 spec (seed-0 build; seeds do not change the spec)"),
+                   ("D_ao2_spec", S2 / "specs/D_ao2.capevolve.yaml", "Suite D AO-2 spec"),
+                   ("E_hc2_spec", S2 / "specs/E_hc2.capevolve.yaml", "Suite E HC-2 spec"),
+                   ("E_ao2_spec", S2 / "specs/E_ao2.capevolve.yaml", "Suite E AO-2 spec"),
+                   ("retail_adapter", S2 / "adapters/retail/adapter.py", "V2 retail adapter (v1 file + read-only reference/ guard)"),
+                   ("airline_adapter", S2 / "adapters/airline/adapter.py", "V2 airline adapter (v1 file + read-only reference/ guard)"),
+                   ("tau_retail_splits.json", S2 / "data/tau_retail_splits.json", "retail splits data"),
+                   ("tau_airline_splits.json", S2 / "data/tau_airline_splits.json", "airline splits data"),
+                   ("wave_v2.sh", S2 / "wave_v2.sh", "waits for admit_v2 then calls launch_v2.sh; only schedules")]
     for it, fp, note in V2DE_FILES:
         if fp.exists():
             items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suites D/E): " + note, None))
