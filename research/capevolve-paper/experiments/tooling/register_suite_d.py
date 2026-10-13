@@ -159,6 +159,11 @@ def main():
             items.append(("v2_11E_AO2_code_" + nm, WTAO / rel, "AO-2 code file at d68775bbd (changed vs a3f5eeb6d)", None))
     for mf in sorted((PAPER / "experiments/manifests").glob("v2_run_files_*.json")):
         items.append(("v2_11E_run_files_" + mf.stem.split("_")[-1], mf, "static files of each real V2 run, hashed from disk after launch", None))
+    AO2_BUILD = CS / "runs/V2/_build_records_ao2"
+    for sname in ("D", "E"):
+        fp = AO2_BUILD / f"{sname}_ao2_build_record.json"
+        if fp.exists():
+            items.append((f"v2_11E_{sname}_ao2_seed0_build_record_prelaunch", fp, f"AO-2 Suite {sname} seed-0 build record, before launch (code d68775bbd, partition equals HC-2)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
