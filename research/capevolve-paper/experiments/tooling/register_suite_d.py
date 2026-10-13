@@ -180,6 +180,11 @@ def main():
     _new = CS / "scripts/V2/admit_v2.py.new"
     if _new.exists():
         items.append(("v2_11E_D_E_admit_v2_cap9_candidate", _new, "admit_v2.py candidate: V2 concurrency cap 9 after the last v1 Azure-mini user ends (same bytes as admit_v2.py after the swap)", None))
+    TOKEN_FILES = [("optimizer_tokens_" + x, PAPER / f"experiments/final/manifests/optimizer_tokens_{x}.json") for x in "ABCDE"]
+    TOKEN_FILES += [("optimizer_tokens_" + x + "_end_of_window", CS / f"final_eval/token_recheck/optimizer_tokens_{x}_end_of_window.json") for x in "ABC"]
+    for nm, fp in TOKEN_FILES:
+        if fp.exists():
+            items.append(("tokens_final_" + nm, fp, "final optimizer-token manifest/evidence (amendment 9 erratum 14)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
