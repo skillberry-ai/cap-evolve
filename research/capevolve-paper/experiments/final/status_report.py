@@ -107,7 +107,7 @@ def infra_429_by_arm(suite, hours=1.0):
             continue
         arm = d.get("arm"); n[arm] += 1; tot[0] += 1
         if "infra" in str(d.get("error_class") or d.get("class")):
-            txt = str(d.get("error_text") or d.get("error"))
+            txt = str(d.get("error_text") or d.get("error")) + " " + str(d.get("infra_detail"))
             if "429" in txt or "high demand" in txt or "rate limit" in txt.lower() or "RateLimit" in txt:
                 k[arm] += 1; tot[1] += 1
     return {"total_finished": tot[0], "total_429_infra": tot[1], "share": round(tot[1] / tot[0], 4) if tot[0] else None, "by_arm": {a: [k[a], n[a]] for a in k}}
