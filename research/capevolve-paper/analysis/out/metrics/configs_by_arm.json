@@ -1,5 +1,5 @@
 {
- "_generated_utc": "2026-10-13T02:32:38Z",
+ "_generated_utc": "2026-10-13T03:34:22Z",
  "_note": "values not found in manifests/specs/deviations/launch scripts are 'not recorded'; nothing is guessed",
  "runs": {
   "A/ace/s0": {
@@ -304,7 +304,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 363
+    "rollout_counter": 368
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -519,7 +519,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 306
+    "rollout_counter": 332
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -536,9 +536,9 @@
     "source": "derived: birth time of launcher.log"
    },
    "infra": {
-    "infra_retries_in_counter": 13,
+    "infra_retries_in_counter": 14,
     "infra_retries_json": {
-     "infra_retries": 14,
+     "infra_retries": 15,
      "final_failures": 1,
      "events": [
       {
@@ -669,6 +669,15 @@
        "kind": "final_failure",
        "task_id": "51090",
        "attempts": 4,
+       "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:52937/execute",
+       "who": "post_curate"
+      },
+      {
+       "t": "2026-10-13T03:02:25Z",
+       "kind": "retry",
+       "task_id": "32337",
+       "attempt": 0,
+       "seed": 0,
        "error": "sandbox exec failed: 500 Server Error: Internal Server Error for url: http://127.0.0.1:52937/execute",
        "who": "post_curate"
       }
@@ -5525,7 +5534,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 401
+    "rollout_counter": 413
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5587,7 +5596,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 459
+    "rollout_counter": 482
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -5649,7 +5658,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 461
+    "rollout_counter": 482
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -10275,23 +10284,12 @@
     },
     "runbook_pin": "PyPI gepa==0.1.4 unpacked in baselines/gepa_pypi (wheels/gepa-0.1.4-py3-none-any.whl)"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "cap": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/artifact",
-     "out": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/post_sel",
-     "splits": "sel",
-     "trials": "2",
-     "seed": "9000",
-     "tag-prefix": "tag:E10B-chaser-gepa-s0:chaser"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=6 TAU2_SIM_TIMEOUT=7200\ncd /home/dev/projects2/campaign-scratch/scripts/E10B && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0 --seed 0 --exp E10B --arm gepa --max-metric-calls 600 > /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E10B/cost_summary.py \"E10B-gepa-s0:gepa\" --json /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/cost_summary.json > /dev/null\n",
     "baselines/launch_e10.sh": "#!/usr/bin/env bash\n# launch_e10.sh <skillopt|gepa> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600   # search-phase parity: sandbox idle-kernel cleanup stays 600 s for every search (re)start\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = skillopt ]; then\n  $PY -I -u $B/code/skillopt_run.py --out $O --seed $S --tag-prefix E10-skillopt-s$S --arm skillopt \\\n    --epochs 3 --batch 40 --max-rollouts 600\nelse\n  $PY -I -u $B/code/gepa_run.py --out $O --seed $S --tag-prefix E10-gepa-s$S --arm gepa \\\n    --max-metric-calls 555 --hard-cap 600 --minibatch 3\nfi\necho \"exit=$?\" \n$PY -I $B/code/finalize.py $M $O\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "2704110 Tue Oct 13 02:29:43 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u /home/dev/projects2/campaign-scratch/scripts/E10B/eval_cap.py --cap /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/artifact --out /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s0/post_sel --splits sel --trials 2 --seed 9000 --tag-prefix tag:E10B-chaser-gepa-s0:chaser"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5",
@@ -10526,23 +10524,12 @@
     },
     "runbook_pin": "PyPI gepa==0.1.4 unpacked in baselines/gepa_pypi (wheels/gepa-0.1.4-py3-none-any.whl)"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "cap": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/artifact",
-     "out": "/home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/post_sel",
-     "splits": "sel",
-     "trials": "2",
-     "seed": "9001",
-     "tag-prefix": "tag:E10B-chaser-gepa-s1:chaser"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=6 TAU2_SIM_TIMEOUT=7200\ncd /home/dev/projects2/campaign-scratch/scripts/E10B && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1 --seed 1 --exp E10B --arm gepa --max-metric-calls 600 > /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E10B/cost_summary.py \"E10B-gepa-s1:gepa\" --json /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/cost_summary.json > /dev/null\n",
     "baselines/launch_e10.sh": "#!/usr/bin/env bash\n# launch_e10.sh <skillopt|gepa> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600   # search-phase parity: sandbox idle-kernel cleanup stays 600 s for every search (re)start\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = skillopt ]; then\n  $PY -I -u $B/code/skillopt_run.py --out $O --seed $S --tag-prefix E10-skillopt-s$S --arm skillopt \\\n    --epochs 3 --batch 40 --max-rollouts 600\nelse\n  $PY -I -u $B/code/gepa_run.py --out $O --seed $S --tag-prefix E10-gepa-s$S --arm gepa \\\n    --max-metric-calls 555 --hard-cap 600 --minibatch 3\nfi\necho \"exit=$?\" \n$PY -I $B/code/finalize.py $M $O\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "2535748 Tue Oct 13 02:14:43 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u /home/dev/projects2/campaign-scratch/scripts/E10B/eval_cap.py --cap /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/artifact --out /home/dev/projects2/campaign-scratch/runs/E10B/gepa/s1/post_sel --splits sel --trials 2 --seed 9001 --tag-prefix tag:E10B-chaser-gepa-s1:chaser"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "judge": [
      "azure/gpt-5.5",
@@ -12836,7 +12823,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 343
+    "rollout_counter": 392
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -12867,11 +12854,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 4294384,
-    "state_metric_calls": 343,
-    "state_iterations": 6,
-    "state_optimizer_usd": 1.7285709,
-    "state_runner_tokens": 33461160,
+    "state_optimizer_tokens": 4613471,
+    "state_metric_calls": 392,
+    "state_iterations": 7,
+    "state_optimizer_usd": 1.9525771,
+    "state_runner_tokens": 38176258,
     "state_best_val": 0.6595744680851063
    }
   },
@@ -12955,7 +12942,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 441
+    "rollout_counter": 490
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -12986,11 +12973,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 5409573,
-    "state_metric_calls": 441,
-    "state_iterations": 8,
-    "state_optimizer_usd": 2.1370388,
-    "state_runner_tokens": 40798501,
+    "state_optimizer_tokens": 5694132,
+    "state_metric_calls": 490,
+    "state_iterations": 9,
+    "state_optimizer_usd": 2.3134376,
+    "state_runner_tokens": 44864423,
     "state_best_val": 0.6666666666666666
    }
   },
@@ -13074,7 +13061,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 392
+    "rollout_counter": 441
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -13105,11 +13092,11 @@
     "llm_failure_counts": null
    },
    "capevolve_state": {
-    "state_optimizer_tokens": 4802711,
-    "state_metric_calls": 392,
-    "state_iterations": 7,
-    "state_optimizer_usd": 2.6701977,
-    "state_runner_tokens": 33973350,
+    "state_optimizer_tokens": 4991510,
+    "state_metric_calls": 441,
+    "state_iterations": 8,
+    "state_optimizer_usd": 2.836145,
+    "state_runner_tokens": 37641696,
     "state_best_val": 0.6530612244897959
    }
   },
@@ -14438,7 +14425,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 382
+    "rollout_counter": 410
    },
    "concurrency": {
     "manifest.json": 6
@@ -14700,7 +14687,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 297
+    "rollout_counter": 309
    },
    "concurrency": {
     "manifest.json": 6
@@ -14962,7 +14949,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 369
+    "rollout_counter": 394
    },
    "concurrency": {
     "manifest.json": 6
@@ -15422,7 +15409,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 460
+    "rollout_counter": 520
    },
    "concurrency": {
     "manifest.json": 6
@@ -15492,10 +15479,10 @@
    },
    "capevolve_state": {
     "state_optimizer_tokens": 4761727,
-    "state_metric_calls": 460,
+    "state_metric_calls": 520,
     "state_iterations": 9,
     "state_optimizer_usd": 2.2270012999999995,
-    "state_runner_tokens": 37452688,
+    "state_runner_tokens": 41843931,
     "state_best_val": 0.45
    }
   },
@@ -20993,22 +20980,12 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s0",
-     "seed": "0",
-     "exp": "E32",
-     "arm": "ace",
-     "max-rollouts": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "923490 Tue Oct 13 00:02:45 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/ace_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/ace/s0 --seed 0 --exp E32 --arm ace --max-rollouts 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -21023,7 +21000,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 250
+    "rollout_counter": 290
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21032,7 +21009,7 @@
    "restart_siblings_and_superseded_dirs": [],
    "restart_cutoff": null,
    "infra": {
-    "infra_retries_in_counter": 3,
+    "infra_retries_in_counter": 4,
     "infra_retries_json": null,
     "llm_failure_counts": null
    },
@@ -21053,22 +21030,12 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s1",
-     "seed": "1",
-     "exp": "E32",
-     "arm": "ace",
-     "max-rollouts": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "927845 Tue Oct 13 00:03:10 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/ace_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/ace/s1 --seed 1 --exp E32 --arm ace --max-rollouts 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -21083,7 +21050,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 264
+    "rollout_counter": 297
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21113,22 +21080,12 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/ace/s2",
-     "seed": "2",
-     "exp": "E32",
-     "arm": "ace",
-     "max-rollouts": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "baselines/launch_e10_competitors.sh": "#!/usr/bin/env bash\n# launch_e10_competitors.sh <trace2skill|graphskillevo> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport KERNEL_TIMEOUT_S=600\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000\nPY=/home/dev/projects2/campaign-scratch/bench/venv/bin/python\nif [ $M = trace2skill ]; then\n  $PY -u $B/trace2skill/t2s_run.py --out $O --seed $S --tag-prefix E10-trace2skill-s$S --arm trace2skill --max-rollouts 600\nelse\n  $PY -u $B/graphskillevo/graph_run.py --out $O --seed $S --tag-prefix E10-graphskillevo-s$S --arm graphskillevo --population 4 --generations 2 --train-eval-num 15 --max-rollouts 600\nfi\necho \"exit=$?\"\n",
     "baselines/launch_e10_new.sh": "#!/usr/bin/env bash\n# launch_e10_new.sh <ace|mipro> <seed>\nset -u\nM=$1; S=$2\nB=/home/dev/projects2/campaign-scratch/baselines\nO=/home/dev/projects2/campaign-scratch/runs/E10/$M/s$S\nmkdir -p $O; source /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport BL_REWARD_METRIC=hard_restriction BL_GLOBAL_COUNTER=$O/global_counter.json BL_GLOBAL_CAP=100000 KERNEL_TIMEOUT_S=600\nPY=$B/venv_dspy/bin/python\n$PY -I -u $B/code/${M}_run.py --out $O --seed $S --tag-prefix E10-$M-s$S --arm $M --max-rollouts 600\necho \"exit=$?\"\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "933087 Tue Oct 13 00:03:35 2026 /home/dev/projects2/campaign-scratch/baselines/venv_dspy_tau/bin/python -I -u /home/dev/projects2/campaign-scratch/baselines/tau_airE/ace_tau_air.py --out /home/dev/projects2/campaign-scratch/runs/E32/ace/s2 --seed 2 --exp E32 --arm ace --max-rollouts 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "optimizer": [
      "aws/claude-sonnet-5-5"
@@ -21143,7 +21100,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 260
+    "rollout_counter": 300
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21152,7 +21109,7 @@
    "restart_siblings_and_superseded_dirs": [],
    "restart_cutoff": null,
    "infra": {
-    "infra_retries_in_counter": 1,
+    "infra_retries_in_counter": 2,
     "infra_retries_json": null,
     "llm_failure_counts": null
    },
@@ -21488,22 +21445,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0",
-     "seed": "0",
-     "exp": "E32",
-     "arm": "gepafull",
-     "max-metric-calls": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E32 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0 --seed 0 --exp E32 --arm gepafull --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E32/cost_summary.py \"E32-gepafull-s0:gepafull\" --json /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/cost_summary.json > /dev/null\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "937411 Tue Oct 13 00:04:00 2026 bash /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0/driver.sh",
-    "937414 Tue Oct 13 00:04:00 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s0 --seed 0 --exp E32 --arm gepafull --max-metric-calls 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "reflection": [
      "aws/claude-sonnet-5-5"
@@ -21518,7 +21464,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 232
+    "rollout_counter": 304
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21527,7 +21473,7 @@
    "restart_siblings_and_superseded_dirs": [],
    "restart_cutoff": null,
    "infra": {
-    "infra_retries_in_counter": 1,
+    "infra_retries_in_counter": 2,
     "infra_retries_json": null,
     "llm_failure_counts": null
    },
@@ -21548,22 +21494,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1",
-     "seed": "1",
-     "exp": "E32",
-     "arm": "gepafull",
-     "max-metric-calls": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E32 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1 --seed 1 --exp E32 --arm gepafull --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E32/cost_summary.py \"E32-gepafull-s1:gepafull\" --json /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/cost_summary.json > /dev/null\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "941884 Tue Oct 13 00:04:23 2026 bash /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1/driver.sh",
-    "941887 Tue Oct 13 00:04:24 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s1 --seed 1 --exp E32 --arm gepafull --max-metric-calls 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "reflection": [
      "aws/claude-sonnet-5-5"
@@ -21578,7 +21513,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 260
+    "rollout_counter": 303
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21608,22 +21543,11 @@
     "provenance_entry": "not recorded",
     "runbook_pin": "not recorded"
    },
-   "hyperparameters_and_specs": {
-    "live_cmdline_args": {
-     "out": "/home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2",
-     "seed": "2",
-     "exp": "E32",
-     "arm": "gepafull",
-     "max-metric-calls": "300"
-    }
-   },
+   "hyperparameters_and_specs": "not recorded",
    "launch_scripts": {
     "driver.sh": "#!/usr/bin/env bash\necho $$ > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/driver.pid\nsource /home/dev/projects2/campaign-scratch/bench/local/env_local.sh\nexport TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-4} TAU2_SIM_TIMEOUT=10800 TAU_GATEWAY=http://127.0.0.1:4112/v1\nexport TAU_AGENT_MODEL=openai/azoai/gpt-4.1-mini-2025-04-14 TAU_USER_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_MODEL=openai/azoai/gpt-4.1-2025-04-14 TAU_JUDGE_TEMPERATURE=0\ncd /home/dev/projects2/campaign-scratch/scripts/E32 && /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2 --seed 2 --exp E32 --arm gepafull --max-metric-calls 300 > /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/run.log 2>&1\necho \"exit $?\" >> /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/run.log\npython3 /home/dev/projects2/campaign-scratch/scripts/E32/cost_summary.py \"E32-gepafull-s2:gepafull\" --json /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/cost_summary.json > /dev/null\n"
    },
-   "live_process_cmdlines_snapshot": [
-    "945502 Tue Oct 13 00:04:47 2026 bash /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2/driver.sh",
-    "945505 Tue Oct 13 00:04:47 2026 /home/dev/projects2/campaign-scratch/bench/venv-tau2-8ebb749/bin/python -u gepa_tau.py --out /home/dev/projects2/campaign-scratch/runs/E32/gepafull/s2 --seed 2 --exp E32 --arm gepafull --max-metric-calls 300"
-   ],
+   "live_process_cmdlines_snapshot": "not recorded (no live process matched at collection time)",
    "models_by_role_observed_in_gateway": {
     "reflection": [
      "aws/claude-sonnet-5-5"
@@ -21638,7 +21562,7 @@
    "budget": {
     "counted_rollouts_cap_per_search": "600 (decisions.md frozen E10 parameters; manifest/launch may differ per arm)",
     "optimizer_noncache_token_cap": 4000000,
-    "rollout_counter": 238
+    "rollout_counter": 309
    },
    "concurrency": "see launch_scripts/live cmdlines (E10_CONC / TAU2_MAX_CONCURRENCY env) else not recorded",
    "isolation": "not recorded",
@@ -21647,7 +21571,7 @@
    "restart_siblings_and_superseded_dirs": [],
    "restart_cutoff": null,
    "infra": {
-    "infra_retries_in_counter": 5,
+    "infra_retries_in_counter": 6,
     "infra_retries_json": null,
     "llm_failure_counts": null
    },
