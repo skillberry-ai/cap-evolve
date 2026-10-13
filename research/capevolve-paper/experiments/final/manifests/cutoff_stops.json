@@ -5,46 +5,89 @@
   "A/ace/s1": {
    "stopped_by": "final-eval-eng",
    "kill_utc": "2026-10-13T06:03:06Z",
-   "tier": "cheap"
+   "tier": "cheap",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 420,
+    "rows_source": "rollouts_metrics.jsonl",
+    "counter_0600_58_snapshot": 409,
+    "counter_at_stop_or_post_stop_snapshot": 409
+   }
   },
   "A/mipro/s0": {
    "stopped_by": "final-eval-eng",
    "kill_utc": "2026-10-13T06:03:06Z",
-   "tier": "cheap"
+   "tier": "cheap",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 463,
+    "rows_source": "events.jsonl",
+    "counter_0600_58_snapshot": 468,
+    "counter_at_stop_or_post_stop_snapshot": 468
+   }
   },
   "A/mipro/s1": {
    "stopped_by": "final-eval-eng",
    "kill_utc": "2026-10-13T06:03:06Z",
-   "tier": "cheap"
+   "tier": "cheap",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 521,
+    "rows_source": "events.jsonl",
+    "counter_0600_58_snapshot": 521,
+    "counter_at_stop_or_post_stop_snapshot": 523
+   }
   },
   "B/ao/s2": {
    "stopped_by": "tau-runner",
    "kill_utc": "2026-10-13T06:00:11Z",
    "tier": "main",
-   "note": "tau-runner: killed before 06:00; metric_calls 907 at stop (state.json), in-flight cand_4 gate eval (147) cap_truncated; champion = seed; host-side sel-only finalize running afterwards (post-stop rollouts excluded from the search count); one earlier completed FINAL sel eval (0.56, 2026-10-11) also exists"
+   "note": "tau-runner: killed before 06:00; metric_calls 907 at stop (state.json), in-flight cand_4 gate eval (147) cap_truncated; champion = seed; host-side sel-only finalize running afterwards (post-stop rollouts excluded from the search count); one earlier completed FINAL sel eval (0.56, 2026-10-11) also exists",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 882,
+    "rows_source": "rollouts_metrics.jsonl",
+    "counter_0600_58_snapshot": null,
+    "counter_at_stop_or_post_stop_snapshot": null
+   }
   },
   "C/gepa/s0": {
    "stopped_by": "tau-runner",
    "kill_utc": "2026-10-13T06:03:21.200Z",
    "tier": "main",
-   "note": "stopped ~3 minutes after the cutoff (missed in the first sweep); counters 476/388/474 at the stop"
+   "note": "stopped ~3 minutes after the cutoff (missed in the first sweep); counters 476/388/474 at the stop",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 473,
+    "rows_source": "rollouts_metrics.jsonl",
+    "counter_0600_58_snapshot": 476,
+    "counter_at_stop_or_post_stop_snapshot": 476
+   }
   },
   "C/gepa/s1": {
    "stopped_by": "tau-runner",
    "kill_utc": "2026-10-13T06:03:21.338Z",
    "tier": "main",
-   "note": "stopped ~3 minutes after the cutoff (missed in the first sweep); counters 476/388/474 at the stop"
+   "note": "stopped ~3 minutes after the cutoff (missed in the first sweep); counters 476/388/474 at the stop",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 376,
+    "rows_source": "rollouts_metrics.jsonl",
+    "counter_0600_58_snapshot": 388,
+    "counter_at_stop_or_post_stop_snapshot": 388
+   }
   },
   "C/gepa/s2": {
    "stopped_by": "tau-runner",
    "kill_utc": "2026-10-13T06:03:21.469Z",
    "tier": "main",
-   "note": "stopped ~3 minutes after the cutoff (missed in the first sweep); counters 476/388/474 at the stop"
+   "note": "stopped ~3 minutes after the cutoff (missed in the first sweep); counters 476/388/474 at the stop",
+   "count_at_0600": {
+    "rows_logged_by_0600_lower_bound": 469,
+    "rows_source": "rollouts_metrics.jsonl",
+    "counter_0600_58_snapshot": 471,
+    "counter_at_stop_or_post_stop_snapshot": 474
+   }
   }
  },
  "not_running_at_cutoff": {
   "B/hlext/s0": "ended at the coordinator 10M token cut before 06:00 (budget_stop.json refreshed 06:03:59Z: stopped_at_cut, 284 target rollouts, 10.05M tokens); exploratory",
   "B/hcstock/s0, s2": "stopped 04:22:46Z at the 170M rung by tau-runner (champion cand_0003; 441 and 490 counted); s1 native 564",
   "C/E12C/E10C hc": "ended before the cutoff"
- }
+ },
+ "count_at_cutoff_note": "Counted search rollouts as of 06:00:00Z are bracketed by (lower bound) rollouts logged with a timestamp <= 06:00:00Z and (upper bound) the counter in the 06:00:58Z pre-stop snapshot; the counter at the stop is also given. Runs stopped after 06:00 (C gepa 06:03:21Z, A ace s1 and mipro s0/s1 06:03:06Z) use the bracket; N* is the same for every value in the bracket."
 }
