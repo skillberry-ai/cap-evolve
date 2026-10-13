@@ -104,12 +104,23 @@ if a.json:
     print(json.dumps(out, indent=1)); sys.exit(0)
 print("capped tokens:", out["capped_tokens"], "| Suite A idle-gap proxy (last hour):", out["suiteA_idle_gap_proxy_last_hour"])
 print("Suite A print-returned-no-output rate (last hour, alert > 0.04):", out["suiteA_print_no_output_last_hour"])
+per_arm = {}
+for S_ in a.suites.split(","):
+    try:
+        per_arm[S_] = json.load(open(C.SCRATCH / "final_eval" / S_ / "per_arm_report.json"))
+    except Exception:
+        per_arm[S_] = {}
 for S in a.suites.split(","):
     o = out[S]; t = o["totals"]
     print("== Suite %s: done %d / %d jobs, missing %d, started %d, attempts %d, first-attempt infra rate %s (infra attempts %d), HL trace failures %d" %
           (S, t["done"], t["jobs"], t["missing"], t["started"], t["attempts"], o["first_attempt_infra_rate"], t["infra_attempts"], t["hl_trace_fail"]))
     for arm, v in o["arms"].items():
         if v["started"]:
-            print("   %-16s %4d/%-4d first_infra %-3d infra_att %-3d cand_err %-3d empty %-3d rawtool %-3d" % (arm, v["done"], v["jobs"], v["first_infra"], v["infra_attempts"], v["candidate_err"], v["empty_out"], v["raw_tool"]))
+            ifin = sum(r.get("infra_final", 0) for k_, r in per_arm.get(S, {}).items() if k_.split("|", 1)[1] == arm)
+            fr = v["first_infra"] / v["started"] if v["started"] else 0.0
+            fn = ifin / v["done"] if v["done"] else 0.0
+            flag = " **FIRST>5%%**" % () if fr > 0.05 else ""
+            flag += " **INFRA_FINAL>10%%**" % () if fn > 0.10 else ""
+            print("   %-16s %4d/%-4d first_infra %-3d (%4.1f%%) infra_att %-3d infra_final %-3d (%4.1f%%) cand_err %-3d empty %-3d rawtool %-3d%s" % (arm, v["done"], v["jobs"], v["first_infra"], 100 * fr, v["infra_attempts"], ifin, 100 * fn, v["candidate_err"], v["empty_out"], v["raw_tool"], flag))
     for c in o["canary_last"]:
         print("   canary", {k: c.get(k) for k in ("canary_round", "t", "n", "mean_reward", "raw_tool_text_last_rate", "empty_output_rate")})
