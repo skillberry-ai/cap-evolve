@@ -174,5 +174,15 @@
    "registered_utc": "2026-10-13 14:29 UTC",
    "pending": "AO-2 spec and launcher hashes after the re-smoke"
   }
+ },
+ "suite_A_seed_capability": {
+  "runner_tree_hash": "5faa85b3c12ed7ba6f0165e0cb8d8c6300a8af8f0466a76a251a5fc0af4985aa",
+  "stats_reviewer_tree_hash_sorted_path_sha256": "e25aa639a895 (prefix)",
+  "identical_in": "all six runs (HC-2 and AO-2, seeds 0-2)",
+  "hc2_ao2_same_partition": "HC-2 and AO-2 of the same seed have identical sealed partition hashes",
+  "launched_utc": {
+   "HC-2": "2026-10-13 16:13Z",
+   "AO-2": "2026-10-13 18:34Z"
+  }
  }
 }

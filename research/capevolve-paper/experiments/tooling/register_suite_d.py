@@ -94,7 +94,16 @@ def main():
                              (f"A_hc2_s{k}_instructions", base / "project/optimizer/INSTRUCTIONS.md", f"HC-2 Suite A seed {k} optimizer instructions")]
         for sd in sorted((V2 / f"A/hc2/s{k}.sealed").glob("run_*/splits_full.json")):
             A_hc2_seed_files.append((f"A_hc2_s{k}_splits_full_sealed", sd, f"HC-2 Suite A seed {k} sealed full pool partition F/C (hash only; content not read)"))
-    V2_FILES += A_hc2_seed_files
+    A_ao2_seed_files = []
+    for k in (0, 1, 2):
+        base = V2 / f"A/ao2/s{k}"
+        A_ao2_seed_files += [(f"A_ao2_s{k}_spec", base / "project/capevolve.yaml", f"AO-2 Suite A seed {k} spec (split_seed {k})"),
+                             (f"A_ao2_s{k}_split_ids", base / "project/inputs/split_ids.json", f"AO-2 Suite A seed {k} proposer-visible split ids"),
+                             (f"A_ao2_s{k}_instructions", base / "project/optimizer/INSTRUCTIONS.md", f"AO-2 Suite A seed {k} optimizer instructions")]
+        for sd in sorted((V2 / f"A/ao2/s{k}.sealed").glob("run_*/splits_full.json")):
+            A_ao2_seed_files.append((f"A_ao2_s{k}_splits_full_sealed", sd, f"AO-2 Suite A seed {k} sealed full pool partition F/C (hash only; content not read)"))
+    V2_FILES += A_hc2_seed_files + A_ao2_seed_files
+    _unused_marker = None
     for it, fp, note in V2_FILES:
         if fp.exists():
             items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suite A): " + note, None))
