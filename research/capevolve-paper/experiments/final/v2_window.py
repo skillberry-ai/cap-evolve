@@ -141,7 +141,9 @@ def comparison_family_v2(suite):
     """11G: Holm m = 4 within suite, paired, task = cluster: HC-2 vs seed, AO-2 vs seed, HC-2 vs v1 GEPA, AO-2 vs v1 GEPA (all against in-window anchors)."""
     return {"suite": suite, "window": "v2", "holm_denominator_primary": 4,
             "primary_11G": [{"arm": "hc2", "vs": "seed"}, {"arm": "ao2", "vs": "seed"}, {"arm": "hc2", "vs": "gepa"}, {"arm": "ao2", "vs": "gepa"}],
-            "descriptive_only": [{"arm": "hc2", "vs": "ao2"}, {"arm": "hc2|ao2", "vs": "best v1 competitor (data-dependent)"}, {"arm": "hc2|ao2", "vs": "v1 stock-gate hc / rule-P hc"}],
+            "descriptive_only": [{"arm": "hc2", "vs": "ao2"}, {"arm": "hc2|ao2", "vs": "best v1 competitor by test mean (data-dependent)"}, {"arm": "hc2|ao2", "vs": "every other v1 competitor"},
+                                 {"arm": "hc2|ao2", "vs": "v1 stock-gate hc / rule-P hc"}],
+            "descriptive_note": "descriptive rows use v1-window numbers (no in-window anchor) and carry the window-shift note: the seed's in-window v2 mean against its v1-window mean (shown after the v2 results, erratum 11 (5)-(6))",
             "anchors": "seed (A n=2, D/E n=10) and v1 GEPA champions re-scored inside this window; v1-window numbers are shown beside, never pooled (11F)"}
 
 
