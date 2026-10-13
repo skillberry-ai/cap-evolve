@@ -177,6 +177,9 @@ def main():
         fp = AO2_BUILD / f"{sname}_ao2_build_record.json"
         if fp.exists():
             items.append((f"v2_11E_{sname}_ao2_seed0_build_record_prelaunch", fp, f"AO-2 Suite {sname} seed-0 build record, before launch (code d68775bbd, partition equals HC-2)", None))
+    _new = CS / "scripts/V2/admit_v2.py.new"
+    if _new.exists():
+        items.append(("v2_11E_D_E_admit_v2_cap9_candidate", _new, "admit_v2.py candidate: V2 concurrency cap 9 after the last v1 Azure-mini user ends (same bytes as admit_v2.py after the swap)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
