@@ -245,7 +245,8 @@ def test_a_merge_resolve_job_gets_a_copy_of_the_trunk_and_the_donor_path(tmp_pat
         ctx=SimpleNamespace(work=lambda t: work), run_dir=tmp_path, root=tmp_path, project=tmp_path, spec={},
         cfg=SimpleNamespace(cost_eps=None), optimizer="mock",
         _paths=lambda j: (tmp_path / "j.log", tmp_path / "j.rc", tmp_path / "j.prompt.md"),
-        _spawn=lambda j, cmd, env=None: {"pid": 1}, transcript=lambda j: tmp_path / "t.jsonl", job_usd_cap=lambda: 0)
+        _spawn=lambda j, cmd, env=None: {"pid": 1}, transcript=lambda j: tmp_path / "t.jsonl", job_usd_cap=lambda: 0,
+        _inject_context=lambda work, parent: None)
     job = {"id": "j1", "kind": "merge", "tag": "cand_9", "parent": "cand_1", "parents": ["cand_1", "cand_2"],
            "conflicts": [{"where": "policy/policy.md::Rules", "trunk": ["cand_2"], "donor": ["cand_1"]}]}
     with m.patch.object(conductor_backend.act, "sh", sh), \
@@ -260,3 +261,19 @@ def test_a_merge_resolve_job_gets_a_copy_of_the_trunk_and_the_donor_path(tmp_pat
     assert job["parent"] == "cand_2", "register() diffs the result against the trunk it was built from"
     prompt = (tmp_path / "j.prompt.md").read_text()
     assert "policy/policy.md::Rules" in prompt and str(tmp_path / "candidates" / "cand_1") in prompt
+
+
+def test_a_proposer_reads_its_parents_val_traces_and_guidance(tmp_path):
+    """Seen live: conductor proposers had no ./trajectories, so every edit was written blind."""
+    import unittest.mock as m
+    seen = {}
+    fake = SimpleNamespace(project=tmp_path, run_dir=SimpleNamespace(log_event=lambda *a, **k: seen.setdefault("warn", k)),
+                           optimizer="claude-code", spec={"capabilities": ["system-prompt", "tools"],
+                                                          "capability_sources": ["seed/data_model.py"]})
+    with m.patch("cap_evolve.check.load_adapter", lambda p: "ADAPTER"), \
+            m.patch.object(conductor_backend.harness, "_inject_optimizer_context",
+                           lambda adapter, rd, work, **kw: seen.update(adapter=adapter, work=work, **kw)):
+        conductor_backend.RealBackend._inject_context(fake, tmp_path / "work" / "cand_5", "cand_3")
+    assert seen["split"] == "val" and seen["tag"] == "cand_3", "the PARENT's feedback-split traces, never test"
+    assert seen["work"] == tmp_path / "work" / "cand_5" and seen["capabilities"] == ["system-prompt", "tools"]
+    assert "warn" not in seen

@@ -281,6 +281,7 @@ class RealBackend(P2Port, conductor.Backend):
             if rc != 0:
                 raise RuntimeError(f"prepare_candidate failed: {(err or out)[-300:]}")
             (work.parent / f".parent_{tag}").write_text(parent)
+            self._inject_context(work, parent)
         try:
             dg, text = digest.fit(digest.build(self.run_dir, self.project, self.spec))
         except Exception:  # noqa: BLE001 - a digest failure must not stop a proposal
@@ -321,6 +322,20 @@ class RealBackend(P2Port, conductor.Backend):
 
     def running_tokens(self, job):
         return proposer.transcript_tokens(self.transcript(job))
+
+    def _inject_context(self, work, parent) -> None:
+        """What a harness-driven optimizer gets in its work dir: the PARENT's val traces under
+        ./trajectories, capability guidance and data-model sources under ./guidance (none of it is
+        capability: cap_hash ignores both). Without it a proposer edits blind. Never fatal."""
+        try:
+            from cap_evolve.check import load_adapter
+            adapter = getattr(self, "_adapter", None) or load_adapter(self.project)
+            harness._inject_optimizer_context(
+                adapter, self.run_dir, work, split="val", capabilities=list(self.spec.get("capabilities") or []),
+                optimizer_name=self.optimizer, capability_sources=list(self.spec.get("capability_sources") or []),
+                project_dir=self.project, tag=parent)
+        except Exception as e:  # noqa: BLE001
+            self.run_dir.log_event("optimizer_context_warning", what="conductor_inject", error=str(e)[:300])
 
     def alive(self, job):
         if job.get("p2") or job.get("p2seq"):

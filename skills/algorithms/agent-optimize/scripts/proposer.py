@@ -11,14 +11,18 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-MAX_PROMPT_BYTES = 3072
+MAX_PROMPT_BYTES = 4096
 HYPOTHESIS_FILE = "hypothesis.json"
 
 RULES = """Rules:
-- One coherent edit for ONE hypothesis. General rules only: never a task id, an expected answer or a copied value.
+- One coherent edit for ONE hypothesis, big enough to matter: fix the mechanism for EVERY failing task it covers (tools
+  and policy together if needed). An effect below the digest's "min detectable" is rejected as noise; a hypothesis
+  already attempted needs a different mechanism, not new wording. General rules only: never a task id, an expected
+  answer or a copied value.
 - Edit only inside {workdir}. Do NOT run evaluations, sleep, poll or wait: the conductor evaluates your edit.
 - Finish by writing {workdir}/hypothesis.json: {{"id","cluster_ids":[...],"claim","predicted_tasks":[...],"predicted_mechanism","edit_scope"}}, then stop.
-- Reasoning about failures: read traces under ./trajectories if present (feedback tasks only; held-out data is not available)."""
+- Read the parent's failing traces under ./trajectories before editing (feedback tasks only; held-out data is not available);
+  ./guidance has the capability guides and data-model sources."""
 
 STRICT = "\nYour previous attempt produced no usable candidate. This time the edit MUST change a capability file and hypothesis.json MUST exist."
 
