@@ -63,6 +63,27 @@ def main():
             items.append(("suite_E32_" + f, TAU_AIRE / f, "Suite E competitor launch/script (W4), registered before launch", None))
     _v2 = json.loads((PAPER / "experiments/configs/v2_version_2_0.json").read_text())["code"]["commit"]
     items.append(("v2_0_code_commit", None, "skillberry-ai/cap-evolve main commit of CapEvolve v2.0: " + _v2, hashlib.sha256(_v2.encode()).hexdigest()))
+    V2 = Path("/home/dev/projects2/campaign-scratch/runs/V2")
+    V2_FILES = [("A_hc2_s98_spec", V2 / "A/hc2/s98/project/capevolve.yaml", "HC-2 Suite A spec, s98 instance of the real spec (per-seed specs differ only in split_seed)"),
+                ("A_ao2_s98_spec", V2 / "A/ao2/s98/project/capevolve.yaml", "AO-2 Suite A spec, s98 instance of the real spec"),
+                ("A_project_shim_adapter", V2 / "_tools/project_template/adapters/adapter.py", "client-side project shim adapter (forwards run/score to the evaluator daemon)"),
+                ("A_spreadsheetbench_adapter", Path("/home/dev/projects2/wt-v2run/templates/adapters/spreadsheetbench/adapter.py"), "spreadsheetbench adapter at the v2.0 SHA"),
+                ("A_code_exec_api.py", Path("/home/dev/projects2/wt-v2run/third_party/spreadsheetbench/code_exec_docker/api.py"), "code_exec_docker api.py (KERNEL_TIMEOUT 10 min)"),
+                ("A_code_exec_jupyter.py", Path("/home/dev/projects2/wt-v2run/third_party/spreadsheetbench/code_exec_docker/jupyter.py"), "code_exec_docker jupyter.py"),
+                ("A_eval_daemon.py", V2 / "_tools/eval_daemon.py", "evaluator daemon (infra retry, 3 h hang watchdog, hard cap, counters)"),
+                ("A_shim_claude", V2 / "_tools/shim/claude", "optimizer sandbox shim claude"),
+                ("A_shim_inner.sh", V2 / "_tools/shim/inner.sh", "inner.sh (private tmpfs /tmp, run dir + .sealed blanked, project ro)"),
+                ("A_sbx_bin_claude", V2 / "_sbx_bin/claude", "runs/V2/_sbx_bin/claude launcher"),
+                ("A_run_v2.sh", V2 / "_tools/run_v2.sh", "Suite A v2 launcher (may be re-hashed at launch)"),
+                ("A_env_v2.sh", V2 / "_tools/env_v2.sh", "Suite A v2 env"),
+                ("A_scaffold_v2.sh", V2 / "_tools/scaffold_v2.sh", "Suite A v2 scaffold (may be re-hashed at launch)"),
+                ("A_token_watchdog.py", V2 / "_tools/token_watchdog.py", "optimizer token guard"),
+                ("A_capopt_egress.sh", V2 / "_tools/capopt_egress.sh", "egress check"),
+                ("A_negtest_capopt.sh", V2 / "_tools/negtest_capopt.sh", "negative test for the optimizer user"),
+                ("A_pooled_split_file", V2 / "_eval/split_ids.json", "pooled split file (train 80 / val 40 / test [])")]
+    for it, fp, note in V2_FILES:
+        if fp.exists():
+            items.append(("v2_11E_" + it, fp, "11E line (v2.0, Suite A): " + note, None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
