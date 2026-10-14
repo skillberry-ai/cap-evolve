@@ -6,14 +6,14 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm) |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm), [`ui/heatmap_v5_b1_e1.html`](../ui/heatmap_v5_b1_e1.html) + [`ui/trials_v5_b1_e1.html`](../ui/trials_v5_b1_e1.html) (v5 baseline arm) |
 | **3** | **why a task moved, and what it teaches** | **`reports/<exp>/<task>.md`** |
 
 ## Naming
 
-Three experiments each get their own subfolder — `v1/`, `v2/`, `v4/` — mirroring
-`artifacts/<exp>/`, so the two task-id namespaces never collide or imply kinship. v4, with two
-arms, splits one level further:
+Four experiments each get their own subfolder — `v1/`, `v2/`, `v4/`, `v5/` — mirroring
+`artifacts/<exp>/`, so the task-id namespaces never collide or imply kinship. v4, with two
+arms, splits one level further; v5 does the same:
 
 | experiment | pattern | count |
 |---|---|--:|
@@ -21,6 +21,7 @@ arms, splits one level further:
 | v2 (hand-authored) | `v2/<task>.md` | 10 |
 | v4 T arm (task-by-task) | `v4/v4_t_e1/<task>.md` | 34 |
 | v4 G arm (global, shared bundle) | `v4/v4_g_e1/<task>.md` | 34 |
+| v5 baseline arm (original skill, zero-shot) | `v5/v5_b1_e1/<task>.md` | 136 |
 
 `v4/h4/` is the exception to "one file per task": it holds the **h4 held-out
 suite** — 30 new scenarios (`bench-v4-035` … `-064`) authored after the
@@ -32,7 +33,8 @@ reports, if they are ever written, belong beside them as
 
 Cross-cutting analyses that span arms or experiments stay at this directory's
 root with an experiment prefix — `v4-skillset-variant-comparison.md`,
-`v4-t4-merge-decisions.md`, `v4-cap-evolve-question-answers.md` — rather than
+`v4-t4-merge-decisions.md`, `v4-cap-evolve-question-answers.md`,
+`v5-benchmark-quality-review.md` — rather than
 inside an arm folder, since none of them belongs to a single arm.
 
 v1's task ids are all of the form `traces_parsec-aap2-<NNNN>`, so the shared prefix is dropped
@@ -66,7 +68,14 @@ python3 scripts/build_task_reports.py --stats     # coverage: how many written, 
 **Do not hand-edit inside the auto block** — edits there are overwritten on the next run.
 Numbers stay derived; narrative stays human.
 
-## The diff block (v4 only)
+## The diff block (v4 only — v5's baseline arm gets none)
+
+`v5_b1_e1` is a zero-shot baseline with no `best/` directory anywhere, so
+`build_v5_b1_task_reports.py` calls the same `scripts/v4_report_common.py::build_diff_block()`
+every v4 generator uses and it returns `None` for all 136 tasks — the same path v4's
+never-optimized tasks already take. No special-casing.
+
+### The v4 arms' diff block
 
 Both v4 arms get a second generated section, `<!-- BEGIN:diff -->` / `<!-- END:diff -->`,
 appended after the hand-written narrative (or, for the G arm, after the not-yet-written-narrative
