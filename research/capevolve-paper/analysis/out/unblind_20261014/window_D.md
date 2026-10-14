@@ -59,9 +59,9 @@ Inert artifacts re-scored in this window (as measured minus in-window seed; iden
 | 1s vs seed | +0.085 | [0.005, 0.165] | [-0.090, 0.260] | 0.037 | 0.074 | inconclusive | +0.085 (0.072) | a 0/3, b 0/1 | +0.10, +0.07, +0.10 |
 | ctl vs seed | +0.113 | [0.039, 0.187] | [-0.092, 0.319] | 0.004 | 0.011 | superior | +0.116 (0.009) | a 0/3, b 0/1 | +0.16, +0.13, +0.06 |
 
-Infrastructure and missing cells (per_arm_report.json; counts only):
+Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
-| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
+| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
 |---|---|---|---|---|---|---|---|---|---|
 | B|1s | 975 | 968 | 62 | 7 | 0 | 0 | 0 | 0 | 0 |
 | B|1s-Tonly | 585 | 585 | 12 | 0 | 0 | 0 | 0 | 0 | 0 |

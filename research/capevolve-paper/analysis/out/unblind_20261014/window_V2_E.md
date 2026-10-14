@@ -33,9 +33,9 @@ Seed-check minus seed (empirical null of window noise, 9D(ii)): +0.065, 95% CI [
 | ao21 vs seed | arm absent | | | | | not run | | | |
 | ao21 vs gepa | arm absent | | | | | not run | | | |
 
-Infrastructure and missing cells (per_arm_report.json; counts only):
+Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
-| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
+| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
 |---|---|---|---|---|---|---|---|---|---|
 | B|gepa | 300 | 300 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B|hc2 | 200 | 196 | 25 | 4 | 0 | 0 | 0 | 0 | 0 |

@@ -512,7 +512,7 @@ def main():
         # infra
         rep = infra_counts(w)
         tot = defaultdict(int)
-        L += ["Infrastructure and missing cells (per_arm_report.json; counts only):", "", "| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |", "|---|---|---|---|---|---|---|---|---|---|"]
+        L += ["Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):", "", "| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |", "|---|---|---|---|---|---|---|---|---|---|"]
         for k, v in sorted(rep.items()):
             for kk in ("jobs", "done", "infra_attempts", "infra_final", "hangs", "missing_hang", "candidate_errors", "empty_output", "raw_tool_text_last"):
                 tot[kk] += v.get(kk, 0)

@@ -78,9 +78,9 @@ Inert artifacts re-scored in this window (as measured minus in-window seed; iden
 | hcstock vs wikiskill | -0.014 | [-0.072, 0.044] | [-0.180, 0.151] | 0.625 | 1.000 | equivalent within +-0.10 | -0.014 (1.000) | a 0/3, b 0/3 | -0.06, +0.02, -0.00 |
 | hcstock vs evoskill | -0.005 | [-0.046, 0.037] | [-0.146, 0.136] | 0.820 | 1.000 | equivalent within +-0.10 | -0.005 (1.000) | a 0/3, b 0/3 | -0.05, +0.03, +0.00 |
 
-Infrastructure and missing cells (per_arm_report.json; counts only):
+Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
-| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
+| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
 |---|---|---|---|---|---|---|---|---|---|
 | B|seed | 140 | 140 | 1 | 0 | 0 | 0 | 0 | 8 | 21 |
 | TOTAL | 2520 | 2520 | 1 | 0 | 0 | 0 | 0 | 33 | 77 |

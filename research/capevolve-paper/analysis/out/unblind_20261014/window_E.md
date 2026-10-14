@@ -59,9 +59,9 @@ Inert artifacts re-scored in this window (as measured minus in-window seed; iden
 | pt vs gepafull | -0.033 | [-0.134, 0.067] | [-0.399, 0.332] | 0.496 | 0.993 | n.s. | -0.033 (0.993) | a 1/3, b 0/3 | -0.01, +0.08, -0.16 |
 | pt vs ao (dagger) | +0.130 | [0.044, 0.216] | [-0.219, 0.479] | 0.005 | 0.020 | superior | +0.130 (0.020) | a 1/3, b 3/3 | +0.15, +0.24, -0.00 |
 
-Infrastructure and missing cells (per_arm_report.json; counts only):
+Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
-| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
+| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
 |---|---|---|---|---|---|---|---|---|---|
 | B|1s | 450 | 447 | 31 | 3 | 0 | 0 | 0 | 0 | 0 |
 | B|ao | 450 | 450 | 4 | 0 | 0 | 0 | 0 | 0 | 0 |

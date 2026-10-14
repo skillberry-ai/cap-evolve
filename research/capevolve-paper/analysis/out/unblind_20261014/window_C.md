@@ -57,9 +57,9 @@ Inert artifacts re-scored in this window (as measured minus in-window seed; iden
 | hcstock vs seed | +0.100 | [-0.007, 0.207] | [-0.218, 0.418] | 0.064 | 0.129 | n.s. | +0.100 (0.129) | a 1/3, b 0/1 | +0.12, +0.00, +0.18 |
 | hcstock vs gepa | +0.022 | [-0.056, 0.101] | [-0.259, 0.304] | 0.560 | 0.560 | n.s. | +0.022 (0.560) | a 1/3, b 0/3 | +0.04, -0.08, +0.11 |
 
-Infrastructure and missing cells (per_arm_report.json; counts only):
+Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
-| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
+| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
 |---|---|---|---|---|---|---|---|---|---|
 | B|hc | 180 | 180 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B|hcstock | 180 | 180 | 2 | 0 | 0 | 0 | 0 | 0 | 0 |

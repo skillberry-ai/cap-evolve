@@ -63,9 +63,9 @@ Inert artifacts re-scored in this window (as measured minus in-window seed; iden
 | hcstock vs gepa | -0.008 | [-0.067, 0.050] | [-0.144, 0.127] | 0.776 | 1.000 | equivalent within +-0.10 | -0.008 (1.000) | a 1/3, b 0/3 | -0.01, -0.03, +0.01 |
 | hcstock vs harnesslens | +0.222 | [0.143, 0.301] | [0.046, 0.399] | <0.001 | <0.001 | superior | +0.222 (<0.001) | a 1/3, b 0/3 | +0.22, +0.20, +0.24 |
 
-Infrastructure and missing cells (per_arm_report.json; counts only):
+Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
-| key | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
+| mode\|arm (mode B = matched-checkpoint artifacts; it is NOT the suite letter) | jobs | done | infra attempts | infra_final | hangs | missing hang | candidate errors | empty output | raw tool text |
 |---|---|---|---|---|---|---|---|---|---|
 | B|ao | 360 | 360 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | B|harnesslens | 360 | 360 | 7 | 0 | 0 | 0 | 0 | 0 | 0 |

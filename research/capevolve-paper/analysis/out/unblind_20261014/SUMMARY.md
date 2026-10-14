@@ -1,6 +1,6 @@
 # Unblinded results (user-directed early unblinding, analysis_plan erratum 36), 2026-10-14
 
-Files: window_<W>.md (per-window tables: arms, registered families, infra, latency, cost), v1_vs_v2.md, unblind_results.json. Script `analysis/scripts/unblind_analysis.py`. Windows: v1 A-E, v2 E, v2 D (Suite A v2 has no window yet).
+Files: window_<W>.md (per-window tables), v1_vs_v2.md, unblind_results.json. Script `analysis/scripts/unblind_analysis.py`. Suite A v2 has no window yet.
 
 # Window A: per-arm tables (user-directed early unblinding, erratum 36)
 
