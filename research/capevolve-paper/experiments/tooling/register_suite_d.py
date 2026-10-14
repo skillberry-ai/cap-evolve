@@ -4,6 +4,7 @@ experiments/final/freeze.py: every line carries the sha256 of the previous line)
 
     python3 -I register_suite_d.py            # run from anywhere; paths are relative to the paper directory
 """
+import glob
 import hashlib, json, subprocess, sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -262,6 +263,14 @@ def main():
                          ("frozen_V2_A_ao21_s2_prompt.md", CS / "final_eval/frozen_V2_A_ao21/s2/prompt.md", "frozen A v2.1-AO2 champion s2 surface file prompt.md (hash only)"),
                          ("frozen_V2_A_ao21_s2_task_template.md", CS / "final_eval/frozen_V2_A_ao21/s2/task_template.md", "frozen A v2.1-AO2 champion s2 surface file task_template.md (hash only)"),
                          ("frozen_V2_A_ao21_s2_skills_spreadsheet-helpers_SKILL.md", CS / "final_eval/frozen_V2_A_ao21/s2/skills/spreadsheet-helpers/SKILL.md", "frozen A v2.1-AO2 champion s2 surface file skills/spreadsheet-helpers/SKILL.md (hash only)"),
+                         ("champions_V2_D_ao21_erratum43.json", CS / "final_eval/champions_V2_D_ao21_erratum43.json", "Suite D v2.1-AO2 champions after erratum 43: s0 = P2-accepted cand_5, s1/s2 = seed"),
+                         ("D_ao21_s0_cand5_provenance", V2 / "D/ao21/s0" / "CAND5_PROVENANCE.json", "provenance of D ao21 s0 cand_5 (erratum 43)"),
+                         ("D_ao21_s0_events_jsonl_at_ruling", V2 / "D/ao21/s0" / ".capevolve/run_main/events.jsonl", "search-split events of D ao21 s0 (verdict bits; hash only) at the time of erratum 43"),
+                         ("D_ao21_s0_cand5_policy", V2 / "D/ao21/s0" / "frozen_manual/cand_5/policy/policy.md", "D ao21 s0 cand_5 policy.md"),
+                         ("D_ao21_s0_cand5_tools", V2 / "D/ao21/s0" / "frozen_manual/cand_5/tools/tools.py", "D ao21 s0 cand_5 tools.py (equals the seed's)"),
+                         ("A_ao21_s0_events_jsonl_at_ruling", Path(glob.glob(str(V2 / "A/ao21/s0/.capevolve/run_*/events.jsonl"))[0]), "search-split events of A ao21 s0 (verdict bits; hash only) at the time of erratum 43"),
+                         ("A_ao21_s1_events_jsonl_at_ruling", Path(glob.glob(str(V2 / "A/ao21/s1/.capevolve/run_*/events.jsonl"))[0]), "search-split events of A ao21 s1 (verdict bits; hash only) at the time of erratum 43"),
+                         ("A_ao21_s2_events_jsonl_at_ruling", Path(glob.glob(str(V2 / "A/ao21/s2/.capevolve/run_*/events.jsonl"))[0]), "search-split events of A ao21 s2 (verdict bits; hash only) at the time of erratum 43"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
