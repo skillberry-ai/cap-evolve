@@ -1,6 +1,21 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 06:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 09:50 UTC (coordinator periodic check)_
+
+## Update 09:50 UTC 10-14
+- **Spend**: capped spend is 192.5M of 230M (gateway healthy).
+- **Unblinded (user decision, errata 36-37)**: results in analysis/out/unblind_20261014/. Headline: no suite or run where v2 beats a v1 arm that found something.
+  - D: v2 = seed in all 12 searches, vs v1 HC about +0.12.
+  - E: v2 HC-2 +0.100, about v1 pt (+0.130) and below v1 rulep (+0.247).
+  - A: v2 window pending.
+  - Only B HC vs HarnessLens holds at pipeline level.
+- **v2 Suite A**:
+  - HC-2 s2 ended about 09:03Z (finalize_skipped). The champions file is being built, then the A window (standing go, canary >= 0.6).
+  - v2.1-AO2 A s0-s2 are at 267, 247 and 281 of 600 (ETA ~16-19Z).
+- **Pending user decisions**: B/C transfer spend; the Overleaf branch.
+- **Stalls/crashes**: none (ao21 s1's last event was 102 min ago, under the 3h rule).
+
+_Earlier: 2026-10-14 06:50 UTC (coordinator periodic check)_
 
 ## Update 06:50 UTC 10-14
 - **Spend**: capped spend is 192.1M of 230M (gateway healthy). The v2 optimizer cost so far is about $77 priced, across 26 searches.

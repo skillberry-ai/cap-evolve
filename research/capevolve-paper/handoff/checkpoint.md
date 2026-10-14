@@ -187,3 +187,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - The v2 freeze is declared once all of A ends. Then analysis is unblinded (errata 28), unless the user decides earlier.
 - The transfer orders B/C are registered (errata 30) but held for the user's cost go.
 - caps.json: azoai mini concurrency was raised to 30 (backup caps.json.bak_*).
+
+## Update 09:50 UTC 10-14 (periodic check)
+- Held-out scores were unblinded by the user at ~07:00Z (errata 36). Tables are in analysis/out/unblind_20261014/. No held-out numbers go to the runners.
+- A hc2 s2 has ended. capevolve-runner was asked to build champions_V2_A.json (it was missing 44 min after the end). final-eval-eng's watcher then launches the A window.
+- Remaining runs: A ao21 s0-s2 (ETA ~16-19Z). Then the v2.1 A champions, a possible A ao21 window, and the full freeze.
