@@ -1,0 +1,388 @@
+{
+ "bstar": "v2-final-state",
+ "champions_file": "/home/dev/projects2/campaign-scratch/final_eval/champions_V2_A_ao21.json",
+ "champions_file_sha256": "3ed90d211aa00b6cce79fdd17ebb86f2b324f46e9a675cbf3b7fa2e1a40e3053",
+ "entries": [
+  {
+   "arm": "ao21",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "prompt.md": "edc3056b94a04088dbf44e63bdcae75b4f79156679233ec65badb8774ee70fcb",
+    "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+    "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_template.md": "eee68845b9e1939030486e61c88254296fe5186a870e17e50f76586db7d06767"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V21/A/artifacts/B/ao21/s0",
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "88507ac12ad46bb69ba0711b96ce9bfb8d6d5972c266b9b2bf9e476dcc1bd36a",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/final_eval/frozen_V2_A_ao21/s0",
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "88507ac12ad46bb69ba0711b96ce9bfb8d6d5972c266b9b2bf9e476dcc1bd36a"
+  },
+  {
+   "arm": "ao21",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "prompt.md": "3214d8e8e7cb7188f517121140380cdb9af2e254c8627878c452c72d8289262d",
+    "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+    "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V21/A/artifacts/B/ao21/s1",
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "183037c615d4b7de0e5c25474d07a016acf956fd0a0861c800d51a7ad64c9207",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/final_eval/frozen_V2_A_ao21/s1",
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "183037c615d4b7de0e5c25474d07a016acf956fd0a0861c800d51a7ad64c9207"
+  },
+  {
+   "arm": "ao21",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "prompt.md": "12b44632b05386d74ed6bd2dd29d934a1e0ff7d1b36768dd7590d5a2cd3de592",
+    "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+    "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "task_template.md": "350eab2c15d8014808c696f1c09ee34c37077f3564adbc573e0f572cb5c8dbcb"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V21/A/artifacts/B/ao21/s2",
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "8c3503a75334e0baa91faf67e99384b08c1c1bb6ccceefb9e2ad50e1417347ce",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/final_eval/frozen_V2_A_ao21/s2",
+   "status": "ok",
+   "suite": "A",
+   "tree_sha256": "8c3503a75334e0baa91faf67e99384b08c1c1bb6ccceefb9e2ad50e1417347ce"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0/candidates/c2",
+   "budget_note": {
+    "campaign_count_at_stop": 600,
+    "campaign_hard_cap": 600,
+    "classification": "budget_cap",
+    "counter_after_refund": 600,
+    "counter_started": 609,
+    "cut_by_cap": "gepa.optimize raised RolloutCap (campaign hard cap 600) mid-iteration; state saved at the last completed iteration; best/ never written, final/ rebuilt from gepa_state.bin",
+    "evidence": "launcher.log: exit 1 from RolloutCap (search budget fully used)",
+    "infra_retries_refunded": 9,
+    "n_programs": 10,
+    "own_budget": 555,
+    "own_budget_metric_calls": 553,
+    "own_budget_metric_calls_planned": 555,
+    "own_budget_metric_calls_used": 553,
+    "own_budget_short_by": 2,
+    "own_budget_shortfall": 2,
+    "own_budget_source_file": "own_budget.json",
+    "reason": "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted (GEPA's own metric calls 553 of 555)",
+    "selected": "c2 (val 0.85)",
+    "source": "gepa_state.bin total_num_evals; rollout_counter.json",
+    "stop_kind": "budget_cap",
+    "why_counter_ahead_of_gepa": "campaign counter also includes the cut iteration's in-flight rollouts and rollouts wasted at the resume-restart"
+   },
+   "candidate_id": "c2",
+   "caveats": [
+    "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted (GEPA's own metric calls 553 of 555)",
+    "natively finished before the cutoff (launcher.log: exit 1 from RolloutCap (search budget fully used)); contributes its final returned artifact, count 600 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "570b2021a9e5fe6253b3918074a2ead832ce767ad560d2c36dd38f81764533c7",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/A/artifacts/B/gepa/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": 600.0,
+   "logged_sha256": "cfae38a9027e1b756e4c028a872c56058d0a4d6207b235eafeafafb84947b7e9",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 10,
+   "n_events": 53,
+   "n_promotions": 9,
+   "n_screened": 20,
+   "native_finish": {
+    "count": 600,
+    "evidence": "launcher.log: exit 1 from RolloutCap (search budget fully used)",
+    "stop_kind": "budget_cap"
+   },
+   "normalized_tree_sha256": "c668ea87ebef4bd2da0cc4f54f3460ea9b8a3463fc9224ad7575b109204d60b8",
+   "own_seed_candidate": "c0",
+   "own_seed_tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de",
+   "rollout_index": 141,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": 0.85,
+    "comparison_count": 600.0,
+    "n_tasks": 40,
+    "own_count": 600,
+    "seed_n_tasks": 40,
+    "seed_score": 0.525,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "val",
+    "split": "val"
+   },
+   "selection_n_tasks": 40,
+   "selection_split": "val",
+   "selection_value": 0.85,
+   "status": "ok",
+   "suite": "A",
+   "surface_violation": false,
+   "tree_sha256": "c668ea87ebef4bd2da0cc4f54f3460ea9b8a3463fc9224ad7575b109204d60b8"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1/candidates/c5",
+   "budget_note": {
+    "campaign_count_at_stop": 600,
+    "campaign_hard_cap": 600,
+    "classification": "budget_cap",
+    "counter_after_refund": 600,
+    "counter_started": 611,
+    "cut_by_cap": "gepa.optimize raised RolloutCap (campaign hard cap 600) mid-iteration; state saved at the last completed iteration; best/ never written, final/ rebuilt from gepa_state.bin",
+    "evidence": "launcher.log: exit 1 from RolloutCap (search budget fully used)",
+    "infra_retries_refunded": 11,
+    "n_programs": 11,
+    "own_budget": 555,
+    "own_budget_metric_calls": 542,
+    "own_budget_metric_calls_planned": 555,
+    "own_budget_metric_calls_used": 542,
+    "own_budget_short_by": 13,
+    "own_budget_shortfall": 13,
+    "own_budget_source_file": "own_budget.json",
+    "reason": "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted (GEPA's own metric calls 542 of 555)",
+    "selected": "c5 (val 0.875)",
+    "source": "gepa_state.bin total_num_evals; rollout_counter.json",
+    "stop_kind": "budget_cap",
+    "why_counter_ahead_of_gepa": "campaign counter also includes the cut iteration's in-flight rollouts and rollouts wasted at the resume-restart"
+   },
+   "candidate_id": "c5",
+   "caveats": [
+    "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted (GEPA's own metric calls 542 of 555)",
+    "natively finished before the cutoff (launcher.log: exit 1 from RolloutCap (search budget fully used)); contributes its final returned artifact, count 600 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "35ff628a88b68b563996e9153441be91c13e67bbd93a663b8f63d25e9a323db6",
+    "task_template.md": "0bae200480a3a714bb9c4b1a891185acf8121b2de3aafd85ec0fc56bea24e8f7"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/A/artifacts/B/gepa/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": 600.0,
+   "logged_sha256": "62957b89bf95dc716e257fd762c8378ffb31aa60adfbc332bc1f778356bc4635",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 11,
+   "n_events": 43,
+   "n_promotions": 10,
+   "n_screened": 14,
+   "native_finish": {
+    "count": 600,
+    "evidence": "launcher.log: exit 1 from RolloutCap (search budget fully used)",
+    "stop_kind": "budget_cap"
+   },
+   "normalized_tree_sha256": "da09f3d23a592e030c57f7e711ee3c9578c24ea8836db22801e89bd24fd67f9c",
+   "own_seed_candidate": "c0",
+   "own_seed_tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de",
+   "rollout_index": 288,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": 0.875,
+    "comparison_count": 600.0,
+    "n_tasks": 40,
+    "own_count": 600,
+    "seed_n_tasks": 40,
+    "seed_score": 0.525,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "val",
+    "split": "val"
+   },
+   "selection_n_tasks": 40,
+   "selection_split": "val",
+   "selection_value": 0.875,
+   "status": "ok",
+   "suite": "A",
+   "surface_violation": false,
+   "tree_sha256": "da09f3d23a592e030c57f7e711ee3c9578c24ea8836db22801e89bd24fd67f9c"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2/candidates/c8",
+   "budget_note": {
+    "campaign_count_at_stop": 600,
+    "campaign_hard_cap": 600,
+    "classification": "budget_cap",
+    "counter_after_refund": 600,
+    "counter_started": 604,
+    "cut_by_cap": "gepa.optimize raised RolloutCap (campaign hard cap 600) mid-iteration; state saved at the last completed iteration; best/ never written, final/ rebuilt from gepa_state.bin",
+    "evidence": "launcher.log: exit 1 from RolloutCap (search budget fully used)",
+    "infra_retries_refunded": 4,
+    "n_programs": 10,
+    "own_budget": 555,
+    "own_budget_metric_calls": 526,
+    "own_budget_metric_calls_planned": 555,
+    "own_budget_metric_calls_used": 526,
+    "own_budget_short_by": 29,
+    "own_budget_shortfall": 29,
+    "own_budget_source_file": "own_budget.json",
+    "reason": "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted (GEPA's own metric calls 526 of 555)",
+    "selected": "c8 (val 0.8)",
+    "source": "gepa_state.bin total_num_evals; rollout_counter.json",
+    "stop_kind": "budget_cap",
+    "why_counter_ahead_of_gepa": "campaign counter also includes the cut iteration's in-flight rollouts and rollouts wasted at the resume-restart"
+   },
+   "candidate_id": "c8",
+   "caveats": [
+    "the search raised RolloutCap at the campaign's 600 counted-rollout hard cap before its own budget was exhausted (GEPA's own metric calls 526 of 555)",
+    "natively finished before the cutoff (launcher.log: exit 1 from RolloutCap (search budget fully used)); contributes its final returned artifact, count 600 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2/candidates.jsonl"
+   ],
+   "files": {
+    "prompt.md": "de0e3df18c66dd2389ab1e8bde832a85c078c784b52b21482921bc85c9fa1036",
+    "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/A/artifacts/B/gepa/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": 600.0,
+   "logged_sha256": "a4d3fd2cee4ef4d2d7a62e74bfb1c565a98df06ba6bb981decf029b0ebb2456a",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 10,
+   "n_events": 47,
+   "n_promotions": 9,
+   "n_screened": 17,
+   "native_finish": {
+    "count": 600,
+    "evidence": "launcher.log: exit 1 from RolloutCap (search budget fully used)",
+    "stop_kind": "budget_cap"
+   },
+   "normalized_tree_sha256": "2e9eda53d41f594e6691bdbb5126b4660400dd804935e7d3a89a846c5e5c90d8",
+   "own_seed_candidate": "c0",
+   "own_seed_tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de",
+   "rollout_index": 456,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E10/gepa/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": 0.8,
+    "comparison_count": 600.0,
+    "n_tasks": 40,
+    "own_count": 600,
+    "seed_n_tasks": 40,
+    "seed_score": 0.425,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "val",
+    "split": "val"
+   },
+   "selection_n_tasks": 40,
+   "selection_split": "val",
+   "selection_value": 0.8,
+   "status": "ok",
+   "suite": "A",
+   "surface_violation": false,
+   "tree_sha256": "2e9eda53d41f594e6691bdbb5126b4660400dd804935e7d3a89a846c5e5c90d8"
+  }
+ ],
+ "generated_utc": "2026-10-14T21:32:56Z",
+ "seed_artifact": {
+  "distinct_seed_hashes": {
+   "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de": 27
+  },
+  "files": {
+   "prompt.md": "aacc289b4e666017ee2af06bb07a7b2309f4a5d43949852d07fba7246d4b1540",
+   "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+  },
+  "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/A/artifacts/seed",
+  "n_runs_agreeing": 27,
+  "normalized_tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de",
+  "note": "6 run(s) have a first candidate that is not byte-identical to the seed capability (the arm's own starting point, e.g. MIPROv2's default instruction); the shared seed hash is the seed directory's, as registered",
+  "runs_deviating": [
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 0,
+    "tree_sha256": "55b08568dd2149498f479c452d0292e9ab6547d69df9ea8032e4eef175a39b22"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 1,
+    "tree_sha256": "0e2f8639fe5470fa22114e5c35c932dbf5b5de13af337a2438e8d02b163fc684"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 2,
+    "tree_sha256": "d37377e45f8338cd0e9cc86072165d981ec7b948413969b2a3842e0d03e496f7"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "3d5fee3dfdc1",
+    "seed": 0,
+    "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "3d5fee3dfdc1",
+    "seed": 1,
+    "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "3d5fee3dfdc1",
+    "seed": 2,
+    "tree_sha256": "b7a43a727118f378876b0a55a4114e28790be61721e4907df05dd2934e91c374"
+   }
+  ],
+  "seed_source_dir": "/home/dev/projects2/cap-evolve-campaign/templates/adapters/spreadsheetbench/seed_capability",
+  "status": "ok",
+  "suite": "A",
+  "tree_sha256": "ecb7f9f0d358d3f4d39a51dcb199c627d50faaf3f5a1685f32f68f2c7b9582de"
+ },
+ "suite": "A",
+ "v1_manifest": "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/experiments/final/manifests/artifacts_A.json",
+ "v1_manifest_sha256": "1dece339503a95b7f56efd0e1ebec73ae986395770ff2a00b1b7cd40bcc9e00a",
+ "window": "v2"
+}

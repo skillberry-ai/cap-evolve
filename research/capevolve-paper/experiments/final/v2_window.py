@@ -24,6 +24,7 @@ import order as O  # noqa: E402
 import reconstruct as R  # noqa: E402
 
 V2_ARMS = ("hc2", "ao2")
+VER = "V2"               # window version token in file names, roots and tags: V2 (v2.0) or V21 (v2.1-AO2 corrected champions, erratum 43)
 V1_COMPARATOR = "gepa"          # 11G: the one competitor run on every suite (A E10 gepa, D E20-GEPA, E E30-GEPA)
 
 
@@ -54,7 +55,7 @@ def build(suite, champions_path, out_root, manifests=None, dry=False):
     man = {"suite": suite, "window": "v2", "bstar": "v2-final-state", "entries": entries + gep, "seed_artifact": seed_art,
            "v1_manifest": str(manifests / ("artifacts_%s.json" % suite)), "v1_manifest_sha256": C.file_sha(manifests / ("artifacts_%s.json" % suite)),
            "champions_file": str(champions_path), "champions_file_sha256": C.file_sha(champions_path), "generated_utc": C.now_utc()}
-    mpath = manifests / ("artifacts_V2_%s.json" % suite)
+    mpath = manifests / ("artifacts_%s_%s.json" % (VER, suite))
     if not dry:
         C.write_json_atomic(mpath, man)
     return man, mpath
@@ -95,10 +96,10 @@ def apply_a_overrides(jobs, meta, code_root, harness_dir):
 
 
 def make_order(suite, mpath, out=None, tag_exp=None, code_root=None, harness_dir=None):
-    out = Path(out or (Path(mpath).parent / ("order_V2_%s.jsonl" % suite)))
+    out = Path(out or (Path(mpath).parent / ("order_%s_%s.jsonl" % (VER, suite))))
     code_root = code_root or V2_CODE_ROOT
     argv = ["--suite", suite, "--manifest", str(mpath), "--tasks", "final", "--arms", ",".join(V2_ARMS + (V1_COMPARATOR,)), "--no-end",
-            "--tag-exp", tag_exp or ("FINAL-%s-V2" % suite), "--out", str(out)]
+            "--tag-exp", tag_exp or ("FINAL-%s-%s" % (suite, VER)), "--out", str(out)]
     if suite == "A":
         argv += ["--adapter-path", str(Path(code_root) / "templates/adapters/spreadsheetbench/adapter.py")]
     if O.main(argv):
@@ -140,12 +141,13 @@ def make_order(suite, mpath, out=None, tag_exp=None, code_root=None, harness_dir
 
 
 def comparison_family_v2(suite):
-    """11G: Holm m = 4 within suite, paired, task = cluster: HC-2 vs seed, AO-2 vs seed, HC-2 vs v1 GEPA, AO-2 vs v1 GEPA (all against in-window anchors)."""
-    return {"suite": suite, "window": "v2", "holm_denominator_primary": 4,
-            "primary_11G": [{"arm": "hc2", "vs": "seed"}, {"arm": "ao2", "vs": "seed"}, {"arm": "hc2", "vs": "gepa"}, {"arm": "ao2", "vs": "gepa"}],
-            "descriptive_only": [{"arm": "hc2", "vs": "ao2"}, {"arm": "hc2|ao2", "vs": "best v1 competitor by test mean (data-dependent)"}, {"arm": "hc2|ao2", "vs": "every other v1 competitor"},
-                                 {"arm": "hc2|ao2", "vs": "v1 stock-gate hc / rule-P hc"}],
-            "descriptive_note": "descriptive rows use v1-window numbers (no in-window anchor) and carry the window-shift note: the seed's in-window v2 mean against its v1-window mean (shown after the v2 results, erratum 11 (5)-(6))",
+    """11G: Holm m = 2 x (number of v2 arms) within suite, paired, task = cluster: each arm vs seed and vs v1 GEPA (all against in-window anchors).
+    v2.0 (hc2, ao2): m = 4. A single-arm window (v2.1 corrected AO-2 champions, ao21): m = 2, its own family (11D, later versions are secondary)."""
+    prim = [{"arm": a, "vs": "seed"} for a in V2_ARMS] + [{"arm": a, "vs": V1_COMPARATOR} for a in V2_ARMS]
+    return {"suite": suite, "window": VER, "holm_denominator_primary": len(prim), "primary_11G": prim,
+            "descriptive_only": [{"arm": "|".join(V2_ARMS), "vs": "best v1 competitor by test mean (data-dependent)"}, {"arm": "|".join(V2_ARMS), "vs": "every other v1 competitor"},
+                                 {"arm": "|".join(V2_ARMS), "vs": "v1 stock-gate hc / rule-P hc"}] + ([{"arm": "hc2", "vs": "ao2"}] if len(V2_ARMS) > 1 else []),
+            "descriptive_note": "descriptive rows use v1-window numbers (no in-window anchor) and carry the window-shift note: the seed's in-window mean against its v1-window mean (shown after the results, erratum 11 (5)-(6))",
             "anchors": "seed (A n=2, D/E n=10) and v1 GEPA champions re-scored inside this window; v1-window numbers are shown beside, never pooled (11F)"}
 
 
@@ -155,24 +157,25 @@ def register(suite, manifests=None, registry=None, note=""):
     import freeze as F
     manifests = Path(manifests or C.MANIFESTS)
     reg = F.Registry(registry or F.REGISTRY)
-    fam = manifests / ("comparison_family_V2_%s.json" % suite)
+    fam = manifests / ("comparison_family_%s_%s.json" % (VER, suite))
+    fam_m = len(comparison_family_v2(suite)["primary_11G"])
     C.write_json_atomic(fam, comparison_family_v2(suite))
-    man = json.load(open(manifests / ("artifacts_V2_%s.json" % suite)))
+    man = json.load(open(manifests / ("artifacts_%s_%s.json" % (VER, suite))))
     h = hashlib.sha256()
     for e in sorted(man["entries"], key=lambda e: (e["mode"], e["arm"], e["seed"])):
         h.update(("%s|%s|%d|%s\n" % (e["mode"], e["arm"], e["seed"], e.get("tree_sha256"))).encode())
-    items = [("v2window_champions_file_%s" % suite, C.file_sha(man["champions_file"]), man["champions_file"], "v2 champions (final state of the searches)"),
-             ("v2window_artifact_manifest_%s" % suite, C.file_sha(manifests / ("artifacts_V2_%s.json" % suite)), manifests / ("artifacts_V2_%s.json" % suite), "v2 champions + v1 GEPA + seed"),
-             ("v2window_artifact_tree_hashes_%s" % suite, h.hexdigest(), manifests / ("artifacts_V2_%s.json" % suite), "sha over (mode|arm|seed|tree hash); seed %s" % man["seed_artifact"]["tree_sha256"]),
-             ("v2window_order_%s" % suite, C.file_sha(manifests / ("order_V2_%s.jsonl" % suite)), manifests / ("order_V2_%s.jsonl" % suite), "interleaved randomized v2 window, held-out set only"),
-             ("v2window_comparison_family_%s" % suite, C.file_sha(fam), fam, "11G Holm m=4"),
-             ("v2window_script_v2_window_py", C.file_sha(__file__), __file__, ""), ("v2window_script_order_py", C.file_sha(C.HERE / "order.py"), C.HERE / "order.py", ""),
-             ("v2window_script_run_final_py", C.file_sha(C.HERE / "run_final.py"), C.HERE / "run_final.py", ""), ("v2window_script_fe_common_py", C.file_sha(C.HERE / "fe_common.py"), C.HERE / "fe_common.py", ""),
-             ("v2window_script_commit", hashlib.sha256((C.git_head() or "").encode()).hexdigest(), C.REPO, C.git_head())]
-    meta = json.loads(open(manifests / ("order_V2_%s.jsonl" % suite)).readline())
+    items = [("%swindow_champions_file_%s" % (VER.lower(), suite), C.file_sha(man["champions_file"]), man["champions_file"], "v2 champions (final state of the searches)"),
+             ("%swindow_artifact_manifest_%s" % (VER.lower(), suite), C.file_sha(manifests / ("artifacts_%s_%s.json" % (VER, suite))), manifests / ("artifacts_%s_%s.json" % (VER, suite)), "v2 champions + v1 GEPA + seed"),
+             ("%swindow_artifact_tree_hashes_%s" % (VER.lower(), suite), h.hexdigest(), manifests / ("artifacts_%s_%s.json" % (VER, suite)), "sha over (mode|arm|seed|tree hash); seed %s" % man["seed_artifact"]["tree_sha256"]),
+             ("%swindow_order_%s" % (VER.lower(), suite), C.file_sha(manifests / ("order_%s_%s.jsonl" % (VER, suite))), manifests / ("order_%s_%s.jsonl" % (VER, suite)), "interleaved randomized v2 window, held-out set only"),
+             ("%swindow_comparison_family_%s" % (VER.lower(), suite), C.file_sha(fam), fam, "11G Holm m=%d" % fam_m),
+             ("%swindow_script_v2_window_py" % VER.lower(), C.file_sha(__file__), __file__, ""), ("%swindow_script_order_py" % VER.lower(), C.file_sha(C.HERE / "order.py"), C.HERE / "order.py", ""),
+             ("%swindow_script_run_final_py" % VER.lower(), C.file_sha(C.HERE / "run_final.py"), C.HERE / "run_final.py", ""), ("%swindow_script_fe_common_py" % VER.lower(), C.file_sha(C.HERE / "fe_common.py"), C.HERE / "fe_common.py", ""),
+             ("%swindow_script_commit" % VER.lower(), hashlib.sha256((C.git_head() or "").encode()).hexdigest(), C.REPO, C.git_head())]
+    meta = json.loads(open(manifests / ("order_%s_%s.jsonl" % (VER, suite))).readline())
     sc = meta.get("scorer") or {}
     if sc:
-        items.append(("v2window_scorer_%s" % suite, hashlib.sha256(json.dumps(sc, sort_keys=True).encode()).hexdigest(), manifests / ("order_V2_%s.jsonl" % suite),
+        items.append(("%swindow_scorer_%s" % (VER.lower(), suite), hashlib.sha256(json.dumps(sc, sort_keys=True).encode()).hexdigest(), manifests / ("order_%s_%s.jsonl" % (VER, suite)),
                       "scorer of the v2 window (v1 window used a different adapter): " + json.dumps(sc, sort_keys=True)[:600]))
     n = sum(1 for name, sha, p, nt in items if reg.add(name, sha, p, ((note + " | ") if note else "") + nt, suites=[suite]))
     reg.write()
@@ -185,16 +188,21 @@ if __name__ == "__main__":
     ap.add_argument("--suite", required=True, choices=["A", "D", "E"])
     ap.add_argument("--champions", default=None)
     ap.add_argument("--note", default="")
+    ap.add_argument("--version", default="V2", help="window version token: V2 (hc2, ao2) or V21 (corrected v2.1-AO2 champions, arm ao21)")
+    ap.add_argument("--arms", default=None, help="v2 arms of this window (default hc2,ao2)")
     ap.add_argument("--root", default=None, help="default FINAL_EVAL_ROOT/V2/<suite>")
     ap.add_argument("--manifests", default=None)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
+    VER = a.version
+    if a.arms:
+        V2_ARMS = tuple(a.arms.split(","))
     if a.cmd == "register":
         register(a.suite, a.manifests, None, a.note)
         sys.exit(0)
     if not a.champions:
         sys.exit("--champions required for build")
-    root = a.root or str(C.final_dir(a.suite).parent / "V2" / a.suite)
+    root = a.root or str(C.final_dir(a.suite).parent / VER / a.suite)
     man, mpath = build(a.suite, a.champions, root, a.manifests)
     hd = build_harness_dir(V2_CODE_ROOT, Path(root) / "harness") if a.suite == "A" else None
     out, sha, meta = make_order(a.suite, mpath, a.out, harness_dir=hd)
