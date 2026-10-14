@@ -38,8 +38,12 @@ D_MODELS = {"target_model": "openai/azoai/gpt-4.1-mini-2025-04-14", "user_model"
 EXTRA = {
     "transfer": {"E": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "exp_suffix": "xfer"}, "D": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "exp_suffix": "xfer"}, "A": {"target_model": "azoai/gpt-5-mini-2025-08-07", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer",
                "env": {"TEMPERATURE": "1.0"}},     # gpt-5-mini rejects temperature 0 (probed 2026-10-11); provider default 1
-                 "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"},
-                 "C": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"}},
+                 # B/C transfer (team-lead 2026-10-14): target, user simulator and NL judge ALL Azure gpt-4.1 via :4112 (the default gpt-oss user simulator and gpt-5.5 judge do not exist there);
+                 # the user simulator and judge change together with the target (confound, stated in the order meta and in the table); exploratory, outside the Holm family
+                 "B": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
+                       "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"},
+                 "C": {"target_model": "openai/azoai/gpt-4.1-2025-04-14", "user_model": "openai/azoai/gpt-4.1-2025-04-14", "judge_model": "openai/azoai/gpt-4.1-2025-04-14",
+                       "gateway": "http://127.0.0.1:4112/v1", "exp_suffix": "xfer"}},
     # dry-run path on Azure-direct only: real adapters / scorer / worker, but no RITS (smoke tags starve on the saturated RITS deployments) and
     # no impact on the running searches.  Never used for results.
     "decomp": {"A": {}, "B": {}, "C": {}, "D": {"exp_suffix": "decomp"}, "E": {"exp_suffix": "decomp"}},
@@ -265,6 +269,8 @@ def main(argv=None):
             "n_jobs": len(jobs), "trials_arm": n_arm, "trials_seed": n_seed, "tag_exp": tag_exp, "extra": a.extra, "manifest": str(a.manifest),
             "manifest_sha256": C.file_sha(a.manifest), "bstar": man.get("bstar"), "decomp_manifest": a.decomp_manifest, "skipped": skipped, "canary_jobs": canary, "script_commit": C.git_head(),
             "order_py_sha256": C.file_sha(__file__), "cutoff_utc": C.CUTOFF_UTC,
+            "extra_note": ("transfer: target, user simulator and NL judge all Azure gpt-4.1 (:4112); the user simulator and judge change together with the target (confound); exploratory, outside the Holm family; "
+                           "the seed artifact is a cell, so each arm's transfer effect is a within-config contrast against the seed") if a.extra == "transfer" else None,
             "counts_by_arm": {}}
     for j in jobs:
         k = "%s/s%d" % (j["arm_label"], j["seed"])
