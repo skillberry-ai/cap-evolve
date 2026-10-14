@@ -722,14 +722,22 @@ class Conductor:
             key = f"{tip}>{self.champion}"
             if n.get("edit_kind") in ("rebase", "merge") or key in done or n["status"] in ("confirming", "racing"):
                 continue
-            if self._merge_jobs() >= 1:
+            if self._merge_jobs() >= 1 or not self._merge_room():
                 return
             done.append(key)
+            if self.b.related(tip, self.champion):      # the champion is already in its lineage (e.g. a revert)
+                continue
             self._do_merge(tip, self.champion, "rebase")
         self.st["rebased_epoch"] = self.st["epoch"]
 
+    def _merge_room(self) -> bool:
+        """Merges and rebases are candidates too: they count toward ``max_candidates`` and may add at most
+        one node beyond the alive cap (seen live: unbounded near-miss merging queued ~40 nodes)."""
+        cap = self.cfg.caps.max_candidates
+        return not (cap and self.st["n_proposals"] >= cap) and self.in_flight_nodes() < self.cfg.alive_cap + 1
+
     def merge(self) -> None:
-        if not self.cfg.merge or self._merge_jobs() >= 1:
+        if not self.cfg.merge or self._merge_jobs() >= 1 or not self._merge_room():
             return
         tips = self.alive_tips()
         wins = self.b.wins(tips, self.champion)
@@ -742,7 +750,7 @@ class Conductor:
         if self.cfg.focus:    # near misses: candidates that fixed failing tasks of THIS champion but not enough alone
             tips = sorted(t for t, n in self.st["nodes"].items() if not self._is_base(t) and t != self.champion
                           and n.get("focus_epoch") == self.st["epoch"] and (n.get("focus") or {}).get("gain", 0) > 0
-                          and n["status"] in ("pruned", "rung"))
+                          and n["status"] in ("pruned", "rung") and n.get("edit_kind", "edit") == "edit")
             wins = self.b.wins(tips, self.champion)
             eligible = tips
         elif self.cfg.p2:     # a P2 node has been through its rungs when it is pending after a round

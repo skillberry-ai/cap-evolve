@@ -174,3 +174,22 @@ def test_a_revert_restores_the_runs_best_and_an_unfundable_fill_reverts(tmp_path
     c.node("cand_1").update(status="champion", fill_check="seed", ref_window=[9000, 9002])
     c.fits = lambda need: False
     assert c.drain() and c.champion == "seed" and c.node("cand_1")["why"] == "fill_unfunded"
+
+
+def test_merges_count_toward_max_candidates_and_never_flood(tmp_path):
+    spec = {"max_metric_calls": 20000, "max_candidates": 16, "ao_plateau_n": 99, "ao_focus": True,
+            "ao_merge": True, "ao_merge_bar": 0.0}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"salt": 6, "seed_trials": 3, "base": 0.85, "quality": 0.25},
+                        k_prop=3)
+    be.wins = lambda tags, base: {t: {f"w{t}"} for t in tags}
+    c = conductor.Conductor(w.root, be, cfg, sleep=lambda s: None)
+    peak = 0
+    for _ in range(12000):
+        peak = max(peak, c.in_flight_nodes())
+        if c.tick():
+            break
+    assert c.st["n_proposals"] <= 16
+    assert peak <= cfg.alive_cap + 2
+    nodes = c.st["nodes"]
+    assert not any(nodes[x].get("edit_kind") == "merge" for p in c.st.get("merged_pairs", []) for x in p
+                   if nodes.get(x) and x != c.champion), "near-miss merges are between original edits only"
