@@ -247,6 +247,9 @@ def main():
                          ("champions_V2_D.json", CS / "final_eval/champions_V2_D.json", "Suite D v2.0 champions (all six = seed)"),
                          ("champions_V2_E_ao21.json", CS / "final_eval/champions_V2_E_ao21.json", "Suite E v2.1-AO2 champions (all three seeds ended; frozen/seed per run)"),
                          ("champions_V2_D_ao21.json", CS / "final_eval/champions_V2_D_ao21.json", "Suite D v2.1-AO2 champions (all three seeds ended; frozen/seed per run)"),
+                         ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
+                         ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
+                         ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
                          ("v2_1_D_no_order.json", PAPER / "experiments/final/manifests/v2_1_D_no_order.json", "manifest note: no v2.1 D window or order (inert champions)"),
                          ("v2_1_E_no_order.json", PAPER / "experiments/final/manifests/v2_1_E_no_order.json", "manifest note: no v2.1 E window or order (inert champions)")):
         if fp.exists():
