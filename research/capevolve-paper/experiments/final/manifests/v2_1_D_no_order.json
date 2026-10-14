@@ -1,0 +1,9 @@
+{
+ "suite": "D",
+ "version": "v2.1-AO2",
+ "order": null,
+ "reason": "all three v2.1-AO2 D searches ended on the seed artifact (plateau stops at 80-83%, 514-531 of 550 counted rollouts; champions_V2_D_ao21.json: every entry frozen/seed, tree hash 9ed1a9be71d9... = the seed); per amendment 11 erratum 11 (3) and the statistics reviewer's ruling for E v2.1, an inert champion is mapped to the seed-check cell of the existing v2.0 D window (delta 0) and gets no rescoring cell, so no v2.1 D window or order exists",
+ "mapped_to": "v2.0 D window seed-check cell (order_V2_D.jsonl sha256 b0895e08856ab6da0fed749e0d33acf8efcb52291d027c3e563d3b55ac640db3)",
+ "row_text": "all three searches ended on the seed (plateau stop), no candidate was scored; pipeline-level estimate over 3 seeds, own Holm family (11D secondary), in-window anchors of the v2.0 D window with the time-block drift rule",
+ "ruling": "same rule as Suite E v2.1 (statistics reviewer 2026-10-14; team-lead: no order); to be confirmed by the statistics reviewer for D"
+}
