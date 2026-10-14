@@ -245,7 +245,8 @@ def main():
                          ("A_run_v21.sh", V2 / "_tools/run_v21.sh", "Suite A v2.1-AO2 launcher"),
                          ("make_champions_ao21.py", CS / "scripts/V2/make_champions_ao21.py", "champions extraction for the ao21 arm"),
                          ("champions_V2_D.json", CS / "final_eval/champions_V2_D.json", "Suite D v2.0 champions (all six = seed)"),
-                         ("champions_V2_E_ao21.json", CS / "final_eval/champions_V2_E_ao21.json", "Suite E v2.1-AO2 champions (all three seeds ended; frozen/seed per run)")):
+                         ("champions_V2_E_ao21.json", CS / "final_eval/champions_V2_E_ao21.json", "Suite E v2.1-AO2 champions (all three seeds ended; frozen/seed per run)"),
+                         ("champions_V2_D_ao21.json", CS / "final_eval/champions_V2_D_ao21.json", "Suite D v2.1-AO2 champions (all three seeds ended; frozen/seed per run)")):
         if fp.exists():
             items.append(("v2_1_AO2_" + nm, fp, "11E record: " + note, None))
     for nm in ("counts_only.py", "status_report.py"):
