@@ -1,6 +1,19 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 09:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 12:50 UTC (coordinator periodic check)_
+
+## Update 12:50 UTC 10-14
+- **Spend**: capped spend is 192.5M of 230M (gateway healthy).
+- **Running**:
+  - The SpreadsheetBench (A) v2 final window launched 10:00Z: 840 jobs, 475 done at 12:26Z, 0 infra. ETA ~14:15Z.
+  - The A v2.1-AO2 searches s0-s2 are at 362, 307 and 356 of 600. ETA ~16-19Z.
+- **Decisions**:
+  - The user kept the current v2 A runs, which start from the v1 seed plus an empty helper scaffold (errata 40). The scaffold effect is reported separately.
+  - The A window is anchored on the v1 seed (errata 38).
+- **Pending user decisions**: B/C transfer spend; the Overleaf branch.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 09:50 UTC (coordinator periodic check)_
 
 ## Update 09:50 UTC 10-14
 - **Spend**: capped spend is 192.5M of 230M (gateway healthy).
