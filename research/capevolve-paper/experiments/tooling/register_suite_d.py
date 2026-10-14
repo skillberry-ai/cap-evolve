@@ -240,7 +240,8 @@ def main():
     for it, fp, note in AO21_SEED:
         if fp.exists():
             items.append(("v2_1_AO2_" + it, fp, "11E v2.1-AO2 per-seed file: " + note, None))
-    for nm, fp, note in (("A_scaffold_v21.sh", V2 / "_tools/scaffold_v21.sh", "Suite A v2.1-AO2 scaffold (v2.0 scaffold + ao_plateau_floor 0.8)"),
+    for nm, fp, note in (("A_harden_rundirs_ao21.sh", V2 / "_tools/harden_rundirs_ao21.sh", "harden_rundirs.sh with the arm loop changed to ao21 (same chmod sweep; no effect on search)"),
+                         ("A_scaffold_v21.sh", V2 / "_tools/scaffold_v21.sh", "Suite A v2.1-AO2 scaffold (v2.0 scaffold + ao_plateau_floor 0.8)"),
                          ("A_run_v21.sh", V2 / "_tools/run_v21.sh", "Suite A v2.1-AO2 launcher"),
                          ("make_champions_ao21.py", CS / "scripts/V2/make_champions_ao21.py", "champions extraction for the ao21 arm"),
                          ("champions_V2_D.json", CS / "final_eval/champions_V2_D.json", "Suite D v2.0 champions (all six = seed)")):
