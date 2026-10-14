@@ -201,6 +201,9 @@ def main():
     _eq = PAPER / "experiments/final/check_scorer_equivalence_A.py"
     if _eq.exists():
         items.append(("v2_11E_A_check_scorer_equivalence.py", _eq, "Suite A v2-vs-v1 scorer equivalence check script (40 of 40 identical)", None))
+    _er = PAPER / "experiments/final/manifests/scorer_equivalence_A_result.json"
+    if _er.exists():
+        items.append(("v2_11E_A_scorer_equivalence_result", _er, "40-row Suite A v2-vs-v1 scorer equivalence result", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
