@@ -54,7 +54,7 @@ class TestAdapterTaskResolution(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory() as tmp:
             empty = Path(tmp)
-            with patch.object(adapter_mod, "V4N", empty), \
+            with patch.object(adapter_mod, "BENCH_ROOT", empty), \
                  patch.object(adapter_mod, "TASKS_DIR", empty), \
                  patch.dict(os.environ, {"PARSEC_V4N": str(empty)}, clear=True):
                 self.assertEqual(adapter_mod.Adapter().tasks("val"), [])
@@ -892,3 +892,80 @@ class TestAwaitQuiescentSims(unittest.TestCase):
         harbor_ceiling = task_agent_timeout * adapter_mod.AGENT_TIMEOUT_MULTIPLIER
         self.assertGreater(adapter_mod.TRIAL_TIMEOUT_SEC, harbor_ceiling,
                            "the subprocess cap must outlast the agent ceiling")
+
+
+def _write_trial(job_dir: Path, *, final: dict | None, exception_type: str | None = None) -> None:
+    trial = job_dir / "bench-v5-x__abc"
+    (trial / "agent").mkdir(parents=True)
+    lines = [json.dumps({"type": "assistant"})]
+    if final is not None:
+        lines.append(json.dumps({"type": "result", **final}))
+    (trial / "agent" / "agent.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    info = {"exception_type": exception_type, "exception_message": "boom"} if exception_type else None
+    (trial / "result.json").write_text(json.dumps({"exception_info": info}), encoding="utf-8")
+
+
+class TestAgentFailure(unittest.TestCase):
+    """A dead agent must reach the gate as missing data, never as a 0.0 answer."""
+
+    def _check(self, **kw):
+        with tempfile.TemporaryDirectory() as tmp:
+            _write_trial(Path(tmp), **kw)
+            return adapter_mod._agent_failure(Path(tmp))
+
+    def test_successful_final_event_is_clean(self):
+        self.assertIsNone(self._check(final={"subtype": "success", "is_error": False}))
+
+    def test_harbor_timeout_is_dead(self):
+        why = self._check(final={"subtype": "error_during_execution", "is_error": True},
+                          exception_type="AgentTimeoutError")
+        self.assertIn("AgentTimeoutError", why)
+
+    def test_error_final_event_without_exception_is_dead(self):
+        why = self._check(final={"subtype": "error_during_execution", "is_error": True})
+        self.assertIn("error_during_execution", why)
+
+    def test_success_subtype_flagged_is_error_is_dead(self):
+        self.assertIsNotNone(self._check(final={"subtype": "success", "is_error": True}))
+
+    def test_missing_result_event_is_dead(self):
+        self.assertIn("no result event", self._check(final=None))
+
+
+class TestBenchProfile(unittest.TestCase):
+    """PARSEC_BENCH selects the tree; v4 stays the default so existing arms are unchanged."""
+
+    def _constants(self, env: dict) -> dict:
+        code = ("import json, adapter as a; print(json.dumps({'bench': a.BENCH, 'prefix': a.TASK_DIR_PREFIX,"
+                " 'timeout': a.TRIAL_TIMEOUT_SEC, 'mult': a.AGENT_TIMEOUT_MULTIPLIER,"
+                " 'root': str(a.BENCH_ROOT), 'jobs': str(a.JOBS_ROOT)}))")
+        adapters = Path(adapter_mod.__file__).parent
+        core = Path(__file__).resolve().parents[3] / "core"
+        proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=adapters,
+                              env={"PATH": os.environ.get("PATH", ""),
+                                   "PYTHONPATH": f"{adapters}{os.pathsep}{core}", **env})
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads(proc.stdout)
+
+    def test_default_is_v4(self):
+        c = self._constants({"PARSEC_V4N": "/tmp/v4tree"})
+        self.assertEqual((c["bench"], c["prefix"], c["timeout"], c["mult"]), ("v4", "bench-v4-", 2400, 2.5))
+        self.assertEqual(c["jobs"], "/tmp/v4tree/_run/jobs/v4_g2_e1")
+
+    def test_v5_reads_its_own_tree_and_timeouts(self):
+        c = self._constants({"PARSEC_BENCH": "v5", "PARSEC_V5N": "/tmp/v5tree", "PARSEC_V4N": "/tmp/v4tree"})
+        self.assertEqual((c["bench"], c["prefix"], c["timeout"], c["mult"]), ("v5", "bench-v5-", 1200, 1.0))
+        self.assertEqual(c["root"], "/tmp/v5tree")
+
+    def test_jobs_suite_override(self):
+        c = self._constants({"PARSEC_BENCH": "v5", "PARSEC_V5N": "/tmp/v5tree", "PARSEC_JOBS_SUITE": "v6_g2_e1"})
+        self.assertEqual(c["jobs"], "/tmp/v5tree/_run/jobs/v6_g2_e1")
+
+    def test_unknown_bench_refuses_to_import(self):
+        adapters = Path(adapter_mod.__file__).parent
+        core = Path(__file__).resolve().parents[3] / "core"
+        proc = subprocess.run([sys.executable, "-c", "import adapter"], capture_output=True, text=True,
+                              cwd=adapters, env={"PATH": os.environ.get("PATH", ""), "PARSEC_BENCH": "v9",
+                                                 "PYTHONPATH": f"{adapters}{os.pathsep}{core}"})
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("PARSEC_BENCH", proc.stderr)

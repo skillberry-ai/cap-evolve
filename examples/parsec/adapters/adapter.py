@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-"""Harbor adapter for parsec v4, system-prompt-only cap-evolve optimization.
+"""Harbor adapter for parsec (v4 or v5 tree), system-prompt-only cap-evolve optimization.
 
-Multi-task: tasks() enumerates every ``bench-v4-*`` directory under
-``$PARSEC_V4N/_run/tasks/`` and returns one Task per id, regardless of the
+Which tree is selected by ``$PARSEC_BENCH``: ``v4`` (default, so the v4/h4 arms
+are unchanged) reads ``$PARSEC_V4N`` and ``bench-v4-*`` tasks; ``v5`` reads
+``$PARSEC_V5N`` and ``bench-v5-*`` tasks, with the v5 sweeps' own trial
+timeouts so v5/v6 arms stay comparable with ``v5_b1_e1``.
+
+Multi-task: tasks() enumerates every ``bench-<tree>-*`` directory under
+``<tree root>/_run/tasks/`` and returns one Task per id, regardless of the
 ``split`` argument. This matches core/cap_evolve/harness.py's actual
 contract — it only ever calls ``adapter.tasks("all")`` (both in
 ``ensure_splits`` and in ``_tasks_for``), then filters the result down to
@@ -73,7 +78,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 # The example root (this file's parent's parent) holds parsec_paths.py, the
-# single source of truth for PARSEC_V4N/MCP_PORTS — see that module's docstring.
+# single source of truth for PARSEC_V4N/PARSEC_V5N/MCP_PORTS — see that module's docstring.
 _COMMON_DIR = Path(__file__).resolve().parents[1]
 if str(_COMMON_DIR) not in sys.path:
     sys.path.insert(0, str(_COMMON_DIR))
@@ -82,22 +87,38 @@ from capevolve_harbor.results import build_feedback, parse_job_dir  # noqa: E402
 from cap_evolve import CapabilityAdapter, Rollout, Score, Task  # noqa: E402
 import parsec_paths  # noqa: E402
 
-# May be None if $PARSEC_V4N is unset — deliberately not resolved to a
+#: Per-tree settings. v4's timeouts were raised for slower sim calls (revert to
+#: 20*60 / 1.0 once that is understood); v5 keeps the values every v5 sweep ran
+#: with, so a v5/v6 arm is measured under the same budget as v5_b1_e1.
+#: ``jobs`` is the default trial-data namespace under _run/jobs/; v4's is
+#: v4_g2_e1-scoped so stale v4_t2_e1 job dirs can't reach trajectories()'s
+#: "newest" search. ``$PARSEC_JOBS_SUITE`` overrides it, so concurrent arms on
+#: one tree never share a namespace.
+_PROFILES = {
+    "v4": {"resolve": parsec_paths.resolve_v4n_or_none, "required_msg": parsec_paths.V4N_REQUIRED_MSG,
+           "prefix": "bench-v4-", "jobs": "v4_g2_e1", "agent_timeout_multiplier": 2.5,
+           "trial_timeout_sec": 40 * 60},
+    "v5": {"resolve": parsec_paths.resolve_v5n_or_none, "required_msg": parsec_paths.V5N_REQUIRED_MSG,
+           "prefix": "bench-v5-", "jobs": "v5", "agent_timeout_multiplier": 1.0,
+           "trial_timeout_sec": 20 * 60},
+}
+BENCH = os.environ.get("PARSEC_BENCH", "v4").strip() or "v4"
+if BENCH not in _PROFILES:
+    raise RuntimeError(f"PARSEC_BENCH={BENCH!r} is not one of {sorted(_PROFILES)}")
+_PROFILE = _PROFILES[BENCH]
+
+# May be None if the tree's env var is unset — deliberately not resolved to a
 # machine-specific default (see parsec_paths.py's docstring). Adapter()
 # raises a clear RuntimeError at construction time if it is None; nothing
-# below the class definition dereferences V4N directly at import time.
-V4N = parsec_paths.resolve_v4n_or_none()
-TASKS_DIR = V4N / "_run" / "tasks" if V4N else None
-# v4_g2_e1-scoped (not v4_t2_e1): the old per-task projects wrote trial data
-# under .../jobs/v4_t2_e1/<task_id>/..., and this adapter no longer knows
-# about those runs (TASK_ID support removed) — a shared namespace would let
-# stale v4_t2_e1 job dirs be picked up by trajectories()'s "newest" search.
-JOBS_ROOT = V4N / "_run" / "jobs" / "v4_g2_e1" if V4N else None
-# Both raised for slower sim calls; revert to 20*60 / 1.0 once the cause of the
-# increased time is understood.
-AGENT_TIMEOUT_MULTIPLIER = 2.5
-TRIAL_TIMEOUT_SEC = 40 * 60
-TASK_DIR_PREFIX = "bench-v4-"
+# below the class definition dereferences BENCH_ROOT directly at import time.
+BENCH_ROOT = _PROFILE["resolve"]()
+TASKS_DIR = BENCH_ROOT / "_run" / "tasks" if BENCH_ROOT else None
+JOBS_ROOT = (BENCH_ROOT / "_run" / "jobs" / (os.environ.get("PARSEC_JOBS_SUITE", "").strip()
+                                             or _PROFILE["jobs"])
+             if BENCH_ROOT else None)
+AGENT_TIMEOUT_MULTIPLIER = _PROFILE["agent_timeout_multiplier"]
+TRIAL_TIMEOUT_SEC = _PROFILE["trial_timeout_sec"]
+TASK_DIR_PREFIX = _PROFILE["prefix"]
 
 PROMPT_FILES = [
     "orchestrator.md",
@@ -287,17 +308,61 @@ def _read_parsec_usage_cost(
     return total_cost, total_tokens
 
 
+def _agent_final_event(job_dir: Path) -> dict | None:
+    """The agent's last ``result`` event in this job's transcript, or None if it never wrote one."""
+    out = None
+    for pat in ("*/agent/*.jsonl", "*/agent.jsonl", "*/*/agent*.jsonl"):
+        for p in sorted(job_dir.glob(pat)):
+            for line in p.read_text(encoding="utf-8", errors="replace").splitlines():
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(ev, dict) and ev.get("type") == "result":
+                    out = ev
+    return out
+
+
+def _agent_failure(job_dir: Path) -> str | None:
+    """Why the agent did not finish this trial, or None when it did.
+
+    ``parse_job_dir`` treats a reward file as proof the trial was measured, even
+    beside a Harbor exception — right for a crash in teardown. Parsec's verifier
+    always writes one, and its completion gate turns an agent that never finished
+    into a reward of 0.0, so a gateway hang before the first tool call reached the
+    gate as a genuine wrong answer (189 such trials across the v5 sweeps).
+
+    The authority is the agent's own final event, read the way the task verifier
+    reads it (``subtype == "success" and not is_error``). Across all 2,389 v5 trials
+    every non-success final event coincided with completion 0, and no success
+    event did, so this drops dead trials and never a genuine wrong answer.
+    """
+    for p in sorted(job_dir.glob("*/result.json")):
+        try:
+            info = json.loads(p.read_text(encoding="utf-8")).get("exception_info") or {}
+        except (OSError, ValueError):
+            continue
+        if isinstance(info, dict) and info.get("exception_type"):
+            return f"agent did not finish: {info['exception_type']}"
+    ev = _agent_final_event(job_dir)
+    if ev is None:
+        return "agent did not finish: no result event in its transcript"
+    if ev.get("subtype") != "success" or ev.get("is_error"):
+        return f"agent did not finish: final event {ev.get('subtype')}"
+    return None
+
+
 class Adapter(CapabilityAdapter):
     def __init__(self) -> None:
-        if V4N is None:
+        if BENCH_ROOT is None:
             # Message text from parsec_paths, so there is one wording to keep
-            # right. The *condition* deliberately stays on the module-level V4N
+            # right. The *condition* deliberately stays on the module-level BENCH_ROOT
             # constant rather than calling resolve_v4n(): the rest of this class
-            # dereferences V4N/TASKS_DIR/JOBS_ROOT, all captured at import, so a
+            # dereferences BENCH_ROOT/TASKS_DIR/JOBS_ROOT, all captured at import, so a
             # fresh env read that succeeded here would only defer the failure to
             # an AttributeError on None further down.
             raise RuntimeError(
-                f"{parsec_paths.V4N_REQUIRED_MSG} Set it before invoking "
+                f"{_PROFILE['required_msg']} Set it before invoking "
                 "`cap-evolve run`."
             )
         # Read fresh on every construction (see module docstring) so a caller —
@@ -306,7 +371,7 @@ class Adapter(CapabilityAdapter):
         self.live_prompts_dir = Path(
             os.environ.get(
                 "PARSEC_LIVE_PROMPTS_DIR",
-                str(V4N / "_run" / "parsec-live" / "config" / "prompts"),
+                str(BENCH_ROOT / "_run" / "parsec-live" / "config" / "prompts"),
             )
         )
         # Same per-instance, env-overridable pattern as live_prompts_dir above,
@@ -314,7 +379,7 @@ class Adapter(CapabilityAdapter):
         # every construction so a test (or caller) that sets it before
         # constructing an Adapter always gets it.
         #
-        # Default matches parsec_stack.sh's own LOG_DIR ("$PARSEC_V4N/_run/logs/sims"),
+        # Default matches parsec_stack.sh's own LOG_DIR ("<tree root>/_run/logs/sims"),
         # where it actually starts parsec-live. The old default one level up
         # (_run/logs/parsec-live.log) is a stale file nothing writes to anymore —
         # every usage-window lookup against it silently returned (0.0, 0), which is
@@ -322,7 +387,7 @@ class Adapter(CapabilityAdapter):
         # themselves costing real money.
         self.live_log_path = Path(
             os.environ.get(
-                "PARSEC_LIVE_LOG", str(V4N / "_run" / "logs" / "sims" / "parsec-live.log")
+                "PARSEC_LIVE_LOG", str(BENCH_ROOT / "_run" / "logs" / "sims" / "parsec-live.log")
             )
         )
 
@@ -331,9 +396,9 @@ class Adapter(CapabilityAdapter):
     # calls it with split="all" (both in ensure_splits and in _tasks_for),
     # then filters the result itself down to whichever train/val/test ids
     # are frozen in the project's split_ids.json. So this enumerates every
-    # task the adapter knows about — every bench-v4-<id> directory under
-    # $PARSEC_V4N/_run/tasks/ — and the project decides, via split_ids.json,
-    # which subset (up to all 34) actually gets optimized/evaluated.
+    # task the adapter knows about — every <prefix><id> directory under
+    # <tree root>/_run/tasks/ — and the project decides, via split_ids.json,
+    # which subset actually gets optimized/evaluated.
     # ------------------------------------------------------------------
     def tasks(self, split: str) -> list[Task]:
         task_dirs = sorted(TASKS_DIR.glob(f"{TASK_DIR_PREFIX}*"))
@@ -430,10 +495,10 @@ class Adapter(CapabilityAdapter):
         try:
             seed_proc = subprocess.run(
                 [sys.executable, "install_seeds.py", str(task_dir)],
-                cwd=str(V4N), capture_output=True, text=True, timeout=120,
+                cwd=str(BENCH_ROOT), capture_output=True, text=True, timeout=120,
             )
         except (subprocess.SubprocessError, OSError) as exc:
-            # A hang past the timeout, or install_seeds.py/V4N not being there at
+            # A hang past the timeout, or install_seeds.py/BENCH_ROOT not being there at
             # all, is the same class of event as a non-zero exit: infra, not
             # capability. Reported the same way rather than escaping as an
             # exception the caller would have to interpret.
@@ -463,7 +528,7 @@ class Adapter(CapabilityAdapter):
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
 
         env = dict(os.environ)
-        # `harbor run` (cwd=V4N) needs "." to import parsec_harbor_agent — but
+        # `harbor run` (cwd=BENCH_ROOT) needs "." to import parsec_harbor_agent — but
         # PREPEND it, don't clobber: assigning outright discards whatever the
         # caller's environment, or the parent `cap-evolve run` process, already
         # put on PYTHONPATH.
@@ -478,7 +543,7 @@ class Adapter(CapabilityAdapter):
         env.setdefault("PARSEC_URL", "http://127.0.0.1:8000")
         env.setdefault(
             "PARSEC_SIM_TRACE",
-            str(V4N / "_run" / "logs" / "parsec-trace" / "trace.jsonl"),
+            str(BENCH_ROOT / "_run" / "logs" / "parsec-trace" / "trace.jsonl"),
         )
         env["DOCKER_HOST"] = docker_host
         for var, port in MCP_PORTS.items():
@@ -496,7 +561,7 @@ class Adapter(CapabilityAdapter):
                 proc = subprocess.run(
                     ["harbor", "run", "--config", str(cfg_path), "--n-concurrent", "1",
                      "--agent-timeout-multiplier", str(AGENT_TIMEOUT_MULTIPLIER)],
-                    cwd=str(V4N), env=env, stdout=logf, stderr=subprocess.STDOUT,
+                    cwd=str(BENCH_ROOT), env=env, stdout=logf, stderr=subprocess.STDOUT,
                     timeout=TRIAL_TIMEOUT_SEC,
                 )
         except subprocess.TimeoutExpired:
@@ -542,14 +607,16 @@ class Adapter(CapabilityAdapter):
         )
 
         # trial_result.error is set only when the trial produced NO score at all
-        # (image build failure, agent-setup timeout, agent timeout). That is
-        # missing data, not a reward of 0.0 — propagating it is what lets the
-        # harness exclude the trial from the mean instead of handing the
-        # optimizer a phantom capability regression to "fix".
+        # (image build failure, agent-setup timeout). That is missing data, not a
+        # reward of 0.0 — propagating it is what lets the harness exclude the
+        # trial from the mean instead of handing the optimizer a phantom
+        # capability regression to "fix". A dead AGENT is the case the parser
+        # misses: see _agent_failure.
+        error = trial_result.error or _agent_failure(job_dir)
         return Rollout(
             task_id=task.id,
             output=feedback,
-            error=trial_result.error,
+            error=error,
             cost_usd=real_cost_usd,
             tokens=real_tokens,
             metadata={

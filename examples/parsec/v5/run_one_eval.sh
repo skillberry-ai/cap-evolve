@@ -123,6 +123,10 @@ bash "$V5_DIR/make_lane.sh" "$LANE" || exit 3
 # and to the Harbor container (which reads the trajectory back out of it), and
 # PARSEC_LIVE_LOG must name the file parsec_stack.sh actually writes or the
 # cost-attribution window silently sums zero.
+# The shared adapter serves v4 by default; select the v5 tree, and give each
+# suite its own trial-data namespace so concurrent arms never share one.
+export PARSEC_BENCH=v5
+export PARSEC_JOBS_SUITE="${PARSEC_JOBS_SUITE:-v5_$SUITE_ID}"
 export PARSEC_LIVE_ROOT="$LANE_DIR"
 export PARSEC_LIVE_PROMPTS_DIR="$LANE_DIR/config/prompts"
 export PARSEC_SKILLS_DIR="$LANE_DIR/_v5/skills"
