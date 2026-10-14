@@ -198,6 +198,9 @@ def main():
     for nm, fp in (("hc2_live", CS / "runs/V2/_sbx_bin/claude"), ("ao2_live", CS / "runs/V2/_sbx_bin_ao/claude")):
         if fp.exists():
             items.append(("v2_11E_shim_live_" + nm, fp, "live optimizer shim after the isolation fix", None))
+    _eq = PAPER / "experiments/final/check_scorer_equivalence_A.py"
+    if _eq.exists():
+        items.append(("v2_11E_A_check_scorer_equivalence.py", _eq, "Suite A v2-vs-v1 scorer equivalence check script (40 of 40 identical)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
