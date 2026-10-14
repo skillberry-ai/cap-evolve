@@ -1,0 +1,3882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parsec v5 G2-arm — per-trial view (v5_g2_e1)</title>
+<style>
+  :root {
+    --bg:#fbfaf8; --fg:#1c1a17; --muted:#6e685d; --border:#e5e0d8;
+    --head:#f1eee8; --rowalt:#f6f4f0;
+    --dot:#5b8cc4; --dotline:#aac3de; --mean:#1f4e79; --grid:#e9e4db;
+    --chip:#eef2f7; --chipfg:#2f5d8a; --chip2:#f3ebe3; --chip2fg:#8a5a3b;
+    --accent:#2f5d8a; --warn:#9a6b1f;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg:#191714; --fg:#ece7df; --muted:#a39a8c; --border:#36312a;
+    --head:#2a2621; --rowalt:#221f1b;
+    --dot:#7ba7d6; --dotline:#3d5570; --mean:#bcd8f2; --grid:#312c25;
+    --chip:#24303c; --chipfg:#9cc3e6; --chip2:#312720; --chip2fg:#d9a97f;
+    --accent:#8fb8de; --warn:#d9a95f;
+    color-scheme: dark;
+  }}
+  :root[data-theme="dark"] {
+    --bg:#191714; --fg:#ece7df; --muted:#a39a8c; --border:#36312a;
+    --head:#2a2621; --rowalt:#221f1b;
+    --dot:#7ba7d6; --dotline:#3d5570; --mean:#bcd8f2; --grid:#312c25;
+    --chip:#24303c; --chipfg:#9cc3e6; --chip2:#312720; --chip2fg:#d9a97f;
+    --accent:#8fb8de; --warn:#d9a95f;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-size:13px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1200px; margin:0 auto; padding-block:24px; padding-left:16px; padding-right:16px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .subtitle { color:var(--muted); margin-bottom:14px; max-width:80ch; }
+  .note { background:var(--head); border:1px solid var(--border); border-left:3px solid var(--accent);
+    border-radius:6px; padding:9px 13px; margin-bottom:14px; font-size:12px; color:var(--muted); }
+  .note strong { color:var(--fg); }
+  .kpis { display:flex; flex-wrap:wrap; gap:9px; margin-bottom:14px; }
+  .kpi { background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 13px; min-width:118px; }
+  .kpi .v { font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .kpi .l { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .legend { display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:14px;
+    font-size:11px; color:var(--muted); }
+  table { border-collapse:collapse; width:100%; }
+  th, td { border-bottom:1px solid var(--border); padding:3px 8px; text-align:right; white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { background:var(--head); color:var(--muted); font-size:10px; text-transform:uppercase;
+    letter-spacing:.04em; cursor:pointer; user-select:none; position:sticky; top:0; }
+  th.sorted { color:var(--fg); }
+  th .arrow { font-size:9px; margin-left:2px; }
+  td.task-cell { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:11px; }
+  td.num, th.num { font-variant-numeric:tabular-nums; }
+  tbody tr:nth-child(even) { background:var(--rowalt); }
+  .chip { display:inline-block; font-size:9px; padding:1px 5px; border-radius:9px; margin-left:5px;
+    font-weight:600; background:var(--chip); color:var(--chipfg); vertical-align:middle; }
+  .chip.s1012 { background:var(--chip2); color:var(--chip2fg); }
+  .det { color:var(--muted); }
+  svg.dp { display:block; }
+  .dp .grid { stroke:var(--grid); stroke-width:1; }
+  .dp .rng { stroke:var(--dotline); stroke-width:2.5; stroke-linecap:round; }
+  .dp .trial { fill:var(--bg); stroke:var(--dot); stroke-width:1.6; }
+  .dp .mean { fill:var(--mean); stroke:var(--bg); stroke-width:1.2; }
+  tr.summary-row td { background:var(--head); font-weight:700; border-top:2px solid var(--border); }
+  tr.summary-row.overall td { background:var(--chip); }
+  .axis-head { display:flex; justify-content:space-between; width:300px; font-size:9px;
+    color:var(--muted); font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Parsec v5 G2-arm — per-trial view (<code>v5_g2_e1</code>)</h1>
+<div class="subtitle"><strong>cand_0004</strong>, v4's accepted G2-arm champion, reused as-is zero-shot, 5 trials per task, no further optimization, across all 136 v5 tasks. Every individual trial is drawn, so run-to-run stochasticity is visible rather than averaged away. Companion to <a href="heatmap_v5_g2_e1.html">heatmap_v5_g2_e1.html</a>; narrative in <code>results/v5/v5_g2_e1/summary.md</code>.</div>
+
+<div class="note">
+  <strong>Why this page exists.</strong> 56% of these tasks return a different reward across identical repeated trials (mean trial sd 0.051). A <strong>single task's</strong> before/after difference below roughly <strong>0.09</strong> is indistinguishable from noise at 5 trials, while the <em>suite</em> mean is resolved to ~0.02. A page showing only means would hide this. Every trial drawn here passed a per-trial audit of its on-disk record: 74 dead trials that cap-evolve had silently scored 0.0 were re-run, and the one remaining is excluded (<code>platform-113</code>, n=4).
+</div>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="legend">
+  <span>
+    <svg class="dp" width="58" height="16" viewBox="0 0 58 16">
+      <line x1="7" y1="8" x2="51" y2="8" class="rng"/>
+      <circle cx="7" cy="8" r="3.2" class="trial"/>
+      <circle cx="51" cy="8" r="3.2" class="trial"/>
+      <circle cx="31" cy="8" r="4.2" class="mean"/>
+    </svg>
+  </span>
+  <span>open circle = one trial value (bigger = that value repeated) · filled = mean · line = min–max</span>
+  <span><span class="chip">10-10</span><span class="chip s1012">10-12</span> which 68-task drop</span>
+  <span>click a column header to sort</span>
+</div>
+
+<table id="tbl"></table>
+
+<script>
+const DATA = [
+  {
+    "task": "cloud-024-guid-to-account",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.36779999999999996,
+    "v5_b1_reward": 0.2,
+    "delta_vs_v5_b1": 0.8,
+    "move": "up"
+  },
+  {
+    "task": "cloud-025-gcp-project-status",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.4927,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-026-gpu-abuse-triage",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.9766666,
+    "stderr": 0.023333399999999994,
+    "trial_rewards": [
+      1.0,
+      0.883333,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.883333,
+    "trial_max": 1.0,
+    "spread": 0.116667,
+    "sd": 0.046667,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.37979999999999997,
+    "v5_b1_reward": 0.9400000000000001,
+    "delta_vs_v5_b1": 0.036667,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-027-azure-pool-database-trap",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.9400000000000001,
+    "stderr": 0.03674234614174768,
+    "trial_rewards": [
+      0.85,
+      1.0,
+      1.0,
+      1.0,
+      0.85
+    ],
+    "n_valid": 5,
+    "trial_min": 0.85,
+    "trial_max": 1.0,
+    "spread": 0.15,
+    "sd": 0.073485,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.8773000000000002,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.06,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-055-azure-subscription-not-found",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5007,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-057-cloudtrail-select-only-refusal",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 0.64,
+    "stderr": 0.14696938456699069,
+    "trial_rewards": [
+      0.4,
+      0.4,
+      0.4,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.4,
+    "trial_max": 1.0,
+    "spread": 0.6,
+    "sd": 0.293939,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.35150000000000003,
+    "v5_b1_reward": 0.5599999999999999,
+    "delta_vs_v5_b1": 0.08,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-058-malformed-account-id",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 0.6,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.6,
+      0.6,
+      0.6,
+      0.6,
+      0.6
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6,
+    "trial_max": 0.6,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.22849999999999998,
+    "v5_b1_reward": 0.6,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-059-blank-owner-email-fallback",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.25139999999999996,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-060-marketplace-cost-not-in-usd",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "renamed-content-changed",
+    "reward": 0.24000000000000005,
+    "stderr": 0.04,
+    "trial_rewards": [
+      0.2,
+      0.4,
+      0.2,
+      0.2,
+      0.2
+    ],
+    "n_valid": 5,
+    "trial_min": 0.2,
+    "trial_max": 0.4,
+    "spread": 0.2,
+    "sd": 0.08,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.6937,
+    "v5_b1_reward": 0.28,
+    "delta_vs_v5_b1": -0.04,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-074-assigned-account-still-billing",
+    "category": "cloud",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 0.666667,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.666667,
+      0.666667,
+      0.666667,
+      0.666667,
+      0.666667
+    ],
+    "n_valid": 5,
+    "trial_min": 0.666667,
+    "trial_max": 0.666667,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.4275,
+    "v5_b1_reward": 0.666667,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-301-gcp-delete-counter-not-a-state",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5225,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-302-cloudtrail-local-time-window",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.2258,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-303-lookup-events-resource-names-instance",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8400000000000001,
+    "stderr": 0.116619037896906,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.8,
+      0.4,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.4,
+    "trial_max": 1.0,
+    "spread": 0.6,
+    "sd": 0.233238,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.40149999999999997,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.16,
+    "move": "down"
+  },
+  {
+    "task": "cloud-304-marketplace-active-past-end",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.114286,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.114286,
+      0.114286,
+      0.114286,
+      0.114286,
+      0.114286
+    ],
+    "n_valid": 5,
+    "trial_min": 0.114286,
+    "trial_max": 0.114286,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.261,
+    "v5_b1_reward": 0.182857,
+    "delta_vs_v5_b1": -0.068571,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-305-marketplace-vendor-org-wide",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.0228572,
+    "stderr": 0.0228572,
+    "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.114286
+    ],
+    "n_valid": 5,
+    "trial_min": 0.0,
+    "trial_max": 0.114286,
+    "spread": 0.114286,
+    "sd": 0.045714,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5675,
+    "v5_b1_reward": 0.0457144,
+    "delta_vs_v5_b1": -0.022857,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-306-account-db-reservation-none-free",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.866667,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.866667,
+      0.866667,
+      0.866667,
+      0.866667,
+      0.866667
+    ],
+    "n_valid": 5,
+    "trial_min": 0.866667,
+    "trial_max": 0.866667,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5805,
+    "v5_b1_reward": 0.866667,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-307-azure-two-project-tags",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.291,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-308-azure-leftover-tag-on-free-sub",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.116667,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.116667,
+      0.116667,
+      0.116667,
+      0.116667,
+      0.116667
+    ],
+    "n_valid": 5,
+    "trial_min": 0.116667,
+    "trial_max": 0.116667,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.7151,
+    "v5_b1_reward": 0.20999980000000001,
+    "delta_vs_v5_b1": -0.093333,
+    "move": "down"
+  },
+  {
+    "task": "cloud-309-deleted-iam-user-trail-remains",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.7355558,
+    "stderr": 0.019051641321419007,
+    "trial_rewards": [
+      0.688889,
+      0.766667,
+      0.766667,
+      0.766667,
+      0.688889
+    ],
+    "n_valid": 5,
+    "trial_min": 0.688889,
+    "trial_max": 0.766667,
+    "spread": 0.077778,
+    "sd": 0.038103,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.2374999999999998,
+    "v5_b1_reward": 0.7822222,
+    "delta_vs_v5_b1": -0.046666,
+    "move": "flat"
+  },
+  {
+    "task": "cloud-310-stopped-lab-restarted-billing",
+    "category": "cloud",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.783333,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.783333,
+      0.783333,
+      0.783333,
+      0.783333,
+      0.783333
+    ],
+    "n_valid": 5,
+    "trial_min": 0.783333,
+    "trial_max": 0.783333,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.5281,
+    "v5_b1_reward": 0.6666664,
+    "delta_vs_v5_b1": 0.116667,
+    "move": "up"
+  },
+  {
+    "task": "cost-028-highest-spend-provider",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5251,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-029-no-cost-rows-for-guid",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.9199999999999999,
+    "stderr": 0.04898979485566355,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.8,
+      0.8,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.8,
+    "trial_max": 1.0,
+    "spread": 0.2,
+    "sd": 0.09798,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5038,
+    "v5_b1_reward": 0.8400000000000001,
+    "delta_vs_v5_b1": 0.08,
+    "move": "flat"
+  },
+  {
+    "task": "cost-030-threshold-not-an-anomaly",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.8026,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-050-partial-account-coverage",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "renamed-content-changed",
+    "reward": 0.9650000000000001,
+    "stderr": 0.03500000000000001,
+    "trial_rewards": [
+      1.0,
+      0.825,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.825,
+    "trial_max": 1.0,
+    "spread": 0.175,
+    "sd": 0.07,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.49539999999999995,
+    "v5_b1_reward": 0.7899999999999999,
+    "delta_vs_v5_b1": 0.175,
+    "move": "up"
+  },
+  {
+    "task": "cost-051-gcp-net-of-credits",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.49539999999999995,
+    "v5_b1_reward": 0.8400000000000001,
+    "delta_vs_v5_b1": 0.16,
+    "move": "up"
+  },
+  {
+    "task": "cost-053-capacity-dropped-reservations",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 0.8720000000000001,
+    "stderr": 0.05986651818838305,
+    "trial_rewards": [
+      1.0,
+      0.84,
+      0.68,
+      1.0,
+      0.84
+    ],
+    "n_valid": 5,
+    "trial_min": 0.68,
+    "trial_max": 1.0,
+    "spread": 0.32,
+    "sd": 0.119733,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.8213,
+    "v5_b1_reward": 0.9359999999999999,
+    "delta_vs_v5_b1": -0.064,
+    "move": "flat"
+  },
+  {
+    "task": "cost-054-monitor-no-dashboard-link",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 0.9785714000000001,
+    "stderr": 0.0214286,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.892857,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.892857,
+    "trial_max": 1.0,
+    "spread": 0.107143,
+    "sd": 0.042857,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.4959,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.021429,
+    "move": "flat"
+  },
+  {
+    "task": "cost-064-reservation-release-active-job-check",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 0.732,
+    "stderr": 0.028000000000000004,
+    "trial_rewards": [
+      0.62,
+      0.76,
+      0.76,
+      0.76,
+      0.76
+    ],
+    "n_valid": 5,
+    "trial_min": 0.62,
+    "trial_max": 0.76,
+    "spread": 0.14,
+    "sd": 0.056,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.073,
+    "v5_b1_reward": 0.76,
+    "delta_vs_v5_b1": -0.028,
+    "move": "flat"
+  },
+  {
+    "task": "cost-073-end-exclusive-alert-day",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5702,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-075-vm-count-not-in-billing",
+    "category": "cost",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5706,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-401-monitor-drilldown-wrong-month",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.51,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-402-unused-cost-preset-has-no-utilisation",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8400000000000001,
+    "stderr": 5.551115123125783e-17,
+    "trial_rewards": [
+      0.84,
+      0.84,
+      0.84,
+      0.84,
+      0.84
+    ],
+    "n_valid": 5,
+    "trial_min": 0.84,
+    "trial_max": 0.84,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.9304,
+    "v5_b1_reward": 0.8400000000000001,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-403-capacity-results-truncated-at-50",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9039999999999999,
+    "stderr": 0.03919183588453085,
+    "trial_rewards": [
+      0.84,
+      1.0,
+      0.84,
+      0.84,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.84,
+    "trial_max": 1.0,
+    "spread": 0.16,
+    "sd": 0.078384,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5808,
+    "v5_b1_reward": 0.8400000000000001,
+    "delta_vs_v5_b1": 0.064,
+    "move": "flat"
+  },
+  {
+    "task": "cost-404-azure-gpu-cost-counts-standard-disks",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5113,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-405-azure-cache-stale-for-month-close",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5069,
+    "v5_b1_reward": 0.93,
+    "delta_vs_v5_b1": 0.07,
+    "move": "flat"
+  },
+  {
+    "task": "cost-406-gcp-daily-rows-is-not-day-coverage",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6639999999999999,
+    "stderr": 0.0342928563989645,
+    "trial_rewards": [
+      0.72,
+      0.72,
+      0.72,
+      0.58,
+      0.58
+    ],
+    "n_valid": 5,
+    "trial_min": 0.58,
+    "trial_max": 0.72,
+    "spread": 0.14,
+    "sd": 0.068586,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.0061,
+    "v5_b1_reward": 0.86,
+    "delta_vs_v5_b1": -0.196,
+    "move": "down"
+  },
+  {
+    "task": "cost-407-aws-historical-query-came-back-org-wide",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.6,
+      0.6,
+      0.6,
+      0.6,
+      0.6
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6,
+    "trial_max": 0.6,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.49549999999999994,
+    "v5_b1_reward": 0.6,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-408-three-cloud-total-gcp-query-failed",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.608,
+    "stderr": 0.028000000000000004,
+    "trial_rewards": [
+      0.72,
+      0.58,
+      0.58,
+      0.58,
+      0.58
+    ],
+    "n_valid": 5,
+    "trial_min": 0.58,
+    "trial_max": 0.72,
+    "spread": 0.14,
+    "sd": 0.056,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.7428000000000001,
+    "v5_b1_reward": 0.6639999999999999,
+    "delta_vs_v5_b1": -0.056,
+    "move": "flat"
+  },
+  {
+    "task": "cost-409-top-spender-chain-to-instance-type",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.3246,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "cost-410-released-sandbox-still-spending",
+    "category": "cost",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.45199999999999996,
+    "stderr": 0.05238320341483517,
+    "trial_rewards": [
+      0.34,
+      0.48,
+      0.48,
+      0.62,
+      0.34
+    ],
+    "n_valid": 5,
+    "trial_min": 0.34,
+    "trial_max": 0.62,
+    "spread": 0.28,
+    "sd": 0.104766,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.1602,
+    "v5_b1_reward": 0.544,
+    "delta_vs_v5_b1": -0.092,
+    "move": "down"
+  },
+  {
+    "task": "icinga-010-stuck-anarchysubjects",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.523,
+    "stderr": 0.028000000000000004,
+    "trial_rewards": [
+      0.495,
+      0.495,
+      0.495,
+      0.635,
+      0.495
+    ],
+    "n_valid": 5,
+    "trial_min": 0.495,
+    "trial_max": 0.635,
+    "spread": 0.14,
+    "sd": 0.056,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.7441,
+    "v5_b1_reward": 0.495,
+    "delta_vs_v5_b1": 0.028,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-011-aap2-job-status-alert",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5939000000000001,
+    "v5_b1_reward": 0.916,
+    "delta_vs_v5_b1": 0.084,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-012-nodes-ready-threshold",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5622,
+    "v5_b1_reward": 0.9720000000000001,
+    "delta_vs_v5_b1": 0.028,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-013-acknowledged-not-an-issue",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.576,
+    "stderr": 0.03919183588453085,
+    "trial_rewards": [
+      0.64,
+      0.64,
+      0.48,
+      0.64,
+      0.48
+    ],
+    "n_valid": 5,
+    "trial_min": 0.48,
+    "trial_max": 0.64,
+    "spread": 0.16,
+    "sd": 0.078384,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.41879999999999995,
+    "v5_b1_reward": 0.48,
+    "delta_vs_v5_b1": 0.096,
+    "move": "up"
+  },
+  {
+    "task": "icinga-014-check-script-path-moved",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.515,
+    "stderr": 0.03500000000000001,
+    "trial_rewards": [
+      0.55,
+      0.55,
+      0.55,
+      0.375,
+      0.55
+    ],
+    "n_valid": 5,
+    "trial_min": 0.375,
+    "trial_max": 0.55,
+    "spread": 0.175,
+    "sd": 0.07,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.4289,
+    "v5_b1_reward": 0.515,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-015-problems-by-severity",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.9597,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-016-hosts-most-problems",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5527,
+    "v5_b1_reward": 0.9359999999999999,
+    "delta_vs_v5_b1": 0.064,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-017-invented-action-trap",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5327,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-045-hosts-search-filter",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5275000000000001,
+    "v5_b1_reward": 0.96,
+    "delta_vs_v5_b1": 0.04,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-046-services-search-cross-host",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5246999999999999,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-047-downtime-similar-host-names",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.518,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-048-comment-service-vs-host-scope",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5245,
+    "v5_b1_reward": 0.975,
+    "delta_vs_v5_b1": 0.025,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-072-alert-output-not-decoy-metrics",
+    "category": "icinga",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 0.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.0,
+    "trial_max": 0.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.2658,
+    "v5_b1_reward": 0.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-201-soft-critical-not-yet-hard",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.6711,
+    "v5_b1_reward": 0.9066666,
+    "delta_vs_v5_b1": 0.093333,
+    "move": "up"
+  },
+  {
+    "task": "icinga-202-flapping-recovery-is-not-resolution",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8933334,
+    "stderr": 0.04988880079196131,
+    "trial_rewards": [
+      1.0,
+      0.866667,
+      0.866667,
+      0.733333,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.733333,
+    "trial_max": 1.0,
+    "spread": 0.266667,
+    "sd": 0.099778,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5732999999999999,
+    "v5_b1_reward": 0.8666668,
+    "delta_vs_v5_b1": 0.026667,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-203-perfdata-headroom-to-critical",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.64,
+    "stderr": 0.05059644256269408,
+    "trial_rewards": [
+      0.64,
+      0.8,
+      0.48,
+      0.64,
+      0.64
+    ],
+    "n_valid": 5,
+    "trial_min": 0.48,
+    "trial_max": 0.8,
+    "spread": 0.32,
+    "sd": 0.101193,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.3571,
+    "v5_b1_reward": 0.672,
+    "delta_vs_v5_b1": -0.032,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-204-downtime-window-expired",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6799999999999999,
+    "stderr": 0.019999999999999997,
+    "trial_rewards": [
+      0.6,
+      0.7,
+      0.7,
+      0.7,
+      0.7
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6,
+    "trial_max": 0.7,
+    "spread": 0.1,
+    "sd": 0.04,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5464,
+    "v5_b1_reward": 0.7,
+    "delta_vs_v5_b1": -0.02,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-205-notifications-disabled-nobody-paged",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.7866666,
+    "stderr": 0.03266002653642521,
+    "trial_rewards": [
+      0.866667,
+      0.866667,
+      0.733333,
+      0.733333,
+      0.733333
+    ],
+    "n_valid": 5,
+    "trial_min": 0.733333,
+    "trial_max": 0.866667,
+    "spread": 0.133334,
+    "sd": 0.06532,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.8671,
+    "v5_b1_reward": 0.6266666,
+    "delta_vs_v5_b1": 0.16,
+    "move": "up"
+  },
+  {
+    "task": "icinga-206-stale-ok-check",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6799998,
+    "stderr": 0.032659781587450955,
+    "trial_rewards": [
+      0.733333,
+      0.6,
+      0.6,
+      0.733333,
+      0.733333
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6,
+    "trial_max": 0.733333,
+    "spread": 0.133333,
+    "sd": 0.06532,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5516,
+    "v5_b1_reward": 0.6533332,
+    "delta_vs_v5_b1": 0.026667,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-207-host-down-masks-service-alerts",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8333332,
+    "stderr": 0.02635236653964877,
+    "trial_rewards": [
+      0.833333,
+      0.75,
+      0.916667,
+      0.833333,
+      0.833333
+    ],
+    "n_valid": 5,
+    "trial_min": 0.75,
+    "trial_max": 0.916667,
+    "spread": 0.166667,
+    "sd": 0.052705,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5538,
+    "v5_b1_reward": 0.8666666,
+    "delta_vs_v5_b1": -0.033333,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-208-service-not-monitored",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6799999999999999,
+    "stderr": 0.04898979485566358,
+    "trial_rewards": [
+      0.8,
+      0.6,
+      0.6,
+      0.6,
+      0.8
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6,
+    "trial_max": 0.8,
+    "spread": 0.2,
+    "sd": 0.09798,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.7045,
+    "v5_b1_reward": 0.8,
+    "delta_vs_v5_b1": -0.12,
+    "move": "down"
+  },
+  {
+    "task": "icinga-209-backup-freshness-upstream-service",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.45,
+    "stderr": 0.03689334477788644,
+    "trial_rewards": [
+      0.45,
+      0.333333,
+      0.566667,
+      0.45,
+      0.45
+    ],
+    "n_valid": 5,
+    "trial_min": 0.333333,
+    "trial_max": 0.566667,
+    "spread": 0.233334,
+    "sd": 0.073787,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 2.6758999999999995,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.55,
+    "move": "down"
+  },
+  {
+    "task": "icinga-210-command-vars-override-script-default",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9566665999999999,
+    "stderr": 0.026666712500043935,
+    "trial_rewards": [
+      0.883333,
+      0.9,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.883333,
+    "trial_max": 1.0,
+    "spread": 0.116667,
+    "sd": 0.053333,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.0087,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.043333,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-211-thresholds-file-never-deployed",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.2,
+    "stderr": 0.03162277660168379,
+    "trial_rewards": [
+      0.1,
+      0.3,
+      0.2,
+      0.2,
+      0.2
+    ],
+    "n_valid": 5,
+    "trial_min": 0.1,
+    "trial_max": 0.3,
+    "spread": 0.2,
+    "sd": 0.063246,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.4143,
+    "v5_b1_reward": 0.18,
+    "delta_vs_v5_b1": 0.02,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-212-fix-on-main-not-on-pinned-ref",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8200000000000001,
+    "stderr": 0.019999999999999997,
+    "trial_rewards": [
+      0.8,
+      0.9,
+      0.8,
+      0.8,
+      0.8
+    ],
+    "n_valid": 5,
+    "trial_min": 0.8,
+    "trial_max": 0.9,
+    "spread": 0.1,
+    "sd": 0.04,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 2.599,
+    "v5_b1_reward": 0.78,
+    "delta_vs_v5_b1": 0.04,
+    "move": "flat"
+  },
+  {
+    "task": "icinga-213-host-down-is-paused-vm",
+    "category": "icinga",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.45,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.45,
+      0.45,
+      0.45,
+      0.45,
+      0.45
+    ],
+    "n_valid": 5,
+    "trial_min": 0.45,
+    "trial_max": 0.45,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 3.6083,
+    "v5_b1_reward": 0.45,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-001-ee-entrypoint-rca",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.748,
+    "stderr": 0.06590902821313632,
+    "trial_rewards": [
+      0.66,
+      0.76,
+      1.0,
+      0.66,
+      0.66
+    ],
+    "n_valid": 5,
+    "trial_min": 0.66,
+    "trial_max": 1.0,
+    "spread": 0.34,
+    "sd": 0.131818,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.3815,
+    "v5_b1_reward": 0.48,
+    "delta_vs_v5_b1": 0.268,
+    "move": "up"
+  },
+  {
+    "task": "platform-002-collection-not-found-rca",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.7466666,
+    "stderr": 0.10984825594136668,
+    "trial_rewards": [
+      0.883333,
+      0.883333,
+      0.316667,
+      0.766667,
+      0.883333
+    ],
+    "n_valid": 5,
+    "trial_min": 0.316667,
+    "trial_max": 0.883333,
+    "spread": 0.566666,
+    "sd": 0.219697,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.36369999999999997,
+    "v5_b1_reward": 0.8366666,
+    "delta_vs_v5_b1": -0.09,
+    "move": "down"
+  },
+  {
+    "task": "platform-003-tojson-dict-literal-rca",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.8933334,
+    "stderr": 0.1066666,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      0.466667,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.466667,
+    "trial_max": 1.0,
+    "spread": 0.533333,
+    "sd": 0.213333,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5701,
+    "v5_b1_reward": 0.44333340000000004,
+    "delta_vs_v5_b1": 0.45,
+    "move": "up"
+  },
+  {
+    "task": "platform-004-events-then-config",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.3891,
+    "v5_b1_reward": 0.7866664,
+    "delta_vs_v5_b1": 0.213334,
+    "move": "up"
+  },
+  {
+    "task": "platform-005-wrong-owner-trap",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.9985,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-006-version-tag-not-a-ref",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.3391,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-007-directory-path-fetch",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.2793,
+    "v5_b1_reward": 0.82,
+    "delta_vs_v5_b1": 0.18,
+    "move": "up"
+  },
+  {
+    "task": "platform-008-log-does-not-say",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.9199999999999999,
+    "stderr": 0.08,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.6,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6,
+    "trial_max": 1.0,
+    "spread": 0.4,
+    "sd": 0.16,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.337,
+    "v5_b1_reward": 0.96,
+    "delta_vs_v5_b1": -0.04,
+    "move": "flat"
+  },
+  {
+    "task": "platform-009-catalog-item-no-config",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.3005,
+    "v5_b1_reward": 0.9650000000000001,
+    "delta_vs_v5_b1": 0.035,
+    "move": "flat"
+  },
+  {
+    "task": "platform-018-find-jobs-window",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.83,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-019-anarchysubject-state",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.8723000000000001,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-020-ocpv-vm-inventory",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.6787000000000001,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-021-babylon-missing-cluster-trap",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5640000000000001,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-022-job-on-no-controller",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.93,
+    "stderr": 0.04286607049870563,
+    "trial_rewards": [
+      0.825,
+      0.825,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.825,
+    "trial_max": 1.0,
+    "spread": 0.175,
+    "sd": 0.085732,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.2734,
+    "v5_b1_reward": 0.7,
+    "delta_vs_v5_b1": 0.23,
+    "move": "up"
+  },
+  {
+    "task": "platform-023-splunk-guid-no-events",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.96,
+    "stderr": 0.039999999999999994,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.8,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.8,
+    "trial_max": 1.0,
+    "spread": 0.2,
+    "sd": 0.08,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.2998,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.04,
+    "move": "flat"
+  },
+  {
+    "task": "platform-031-helm-url-not-a-timeout",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.9235,
+    "stderr": 0.02388252499213598,
+    "trial_rewards": [
+      1.0,
+      0.9125,
+      0.8525,
+      0.94,
+      0.9125
+    ],
+    "n_valid": 5,
+    "trial_min": 0.8525,
+    "trial_max": 1.0,
+    "spread": 0.1475,
+    "sd": 0.047765,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 2.4142,
+    "v5_b1_reward": 0.6599999999999999,
+    "delta_vs_v5_b1": 0.2635,
+    "move": "up"
+  },
+  {
+    "task": "platform-032-shared-secret-not-a-registry-outage",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 2.4039,
+    "v5_b1_reward": 0.8800000000000001,
+    "delta_vs_v5_b1": 0.12,
+    "move": "up"
+  },
+  {
+    "task": "platform-033-schema-change-not-the-oom",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.7523808,
+    "stderr": 0.13231977114830573,
+    "trial_rewards": [
+      0.488095,
+      0.380952,
+      1.0,
+      0.892857,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.380952,
+    "trial_max": 1.0,
+    "spread": 0.619048,
+    "sd": 0.26464,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.9986,
+    "v5_b1_reward": 0.8285714000000001,
+    "delta_vs_v5_b1": -0.076191,
+    "move": "flat"
+  },
+  {
+    "task": "platform-034-rate-limit-not-an-outage",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "v4-34",
+    "reward": 0.7849996,
+    "stderr": 0.015555600000000003,
+    "trial_rewards": [
+      0.769444,
+      0.769444,
+      0.769444,
+      0.847222,
+      0.769444
+    ],
+    "n_valid": 5,
+    "trial_min": 0.769444,
+    "trial_max": 0.847222,
+    "spread": 0.077778,
+    "sd": 0.031111,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5212,
+    "v5_b1_reward": 0.7855554,
+    "delta_vs_v5_b1": -0.000556,
+    "move": "flat"
+  },
+  {
+    "task": "platform-036-secret-redacted-not-absent",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.853,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-037-ocpv-healthy-vm-degraded-machineset",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.8152,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-038-anarchy-subject-guid-cross-cluster",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.878,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-040-workshop-cross-cluster-name-search",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 0.675,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.675,
+      0.675,
+      0.675,
+      0.675,
+      0.675
+    ],
+    "n_valid": 5,
+    "trial_min": 0.675,
+    "trial_max": 0.675,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.6389,
+    "v5_b1_reward": 0.74,
+    "delta_vs_v5_b1": -0.065,
+    "move": "flat"
+  },
+  {
+    "task": "platform-041-resource-pool-unfiltered-list",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5721,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-042-deployment-via-resource-claim",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.876,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-043-multiworkshop-asset-failure",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.2885,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-044-search-catalog-env-type",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5607,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-062-provisioning-job-trace",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "h4-rewritten",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 2.1206,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-065-other-guid-job-not-the-failure",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 0.916,
+    "stderr": 0.0342928563989645,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.86,
+      0.86,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.86,
+    "trial_max": 1.0,
+    "spread": 0.14,
+    "sd": 0.068586,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.5626000000000002,
+    "v5_b1_reward": 0.8039999999999999,
+    "delta_vs_v5_b1": 0.112,
+    "move": "up"
+  },
+  {
+    "task": "platform-066-per-guid-cluster-and-lifespan",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 0.9650000000000001,
+    "stderr": 0.021433035249352816,
+    "trial_rewards": [
+      0.9125,
+      1.0,
+      1.0,
+      1.0,
+      0.9125
+    ],
+    "n_valid": 5,
+    "trial_min": 0.9125,
+    "trial_max": 1.0,
+    "spread": 0.0875,
+    "sd": 0.042866,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.9791,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": -0.035,
+    "move": "flat"
+  },
+  {
+    "task": "platform-067-branch-name-not-the-cause",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.1022,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-068-deprecation-warning-not-the-fatal",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 0.86,
+    "stderr": 0.10844353369380767,
+    "trial_rewards": [
+      0.86,
+      1.0,
+      1.0,
+      1.0,
+      0.44
+    ],
+    "n_valid": 5,
+    "trial_min": 0.44,
+    "trial_max": 1.0,
+    "spread": 0.56,
+    "sd": 0.216887,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.7892,
+    "v5_b1_reward": 0.944,
+    "delta_vs_v5_b1": -0.084,
+    "move": "flat"
+  },
+  {
+    "task": "platform-069-typo-variable-not-located",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.1353,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-070-invented-fix-variables",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.1605,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-071-unmonitored-proxy-not-esxi-alert",
+    "category": "platform",
+    "task_set": "10-10",
+    "origin": "new-10-10",
+    "reward": 0.383333,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.383333,
+      0.383333,
+      0.383333,
+      0.383333,
+      0.383333
+    ],
+    "n_valid": 5,
+    "trial_min": 0.383333,
+    "trial_max": 0.383333,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 1.3593,
+    "v5_b1_reward": 0.383333,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-101-vcpu-quota-from-catalog-sizing",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.79,
+    "stderr": 0.021433035249352785,
+    "trial_rewards": [
+      0.825,
+      0.7375,
+      0.825,
+      0.7375,
+      0.825
+    ],
+    "n_valid": 5,
+    "trial_min": 0.7375,
+    "trial_max": 0.825,
+    "spread": 0.0875,
+    "sd": 0.042866,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.2353,
+    "v5_b1_reward": 0.5925,
+    "delta_vs_v5_b1": 0.1975,
+    "move": "up"
+  },
+  {
+    "task": "platform-102-no-proxy-misses-api-domain",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6666666,
+    "stderr": 0.08299936412081722,
+    "trial_rewards": [
+      0.383333,
+      0.65,
+      0.65,
+      0.883333,
+      0.766667
+    ],
+    "n_valid": 5,
+    "trial_min": 0.383333,
+    "trial_max": 0.883333,
+    "spread": 0.5,
+    "sd": 0.165999,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.42140000000000005,
+    "v5_b1_reward": 0.5366666,
+    "delta_vs_v5_b1": 0.13,
+    "move": "up"
+  },
+  {
+    "task": "platform-103-olm-channel-not-in-catalog",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.86,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.86,
+      0.86,
+      0.86,
+      0.86,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.86,
+    "trial_max": 0.86,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 4.942399999999999,
+    "v5_b1_reward": 0.772,
+    "delta_vs_v5_b1": 0.088,
+    "move": "flat"
+  },
+  {
+    "task": "platform-104-cfn-dependency-and-what-changed",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8400000000000001,
+    "stderr": 0.04000000000000001,
+    "trial_rewards": [
+      0.7,
+      0.9,
+      0.9,
+      0.9,
+      0.8
+    ],
+    "n_valid": 5,
+    "trial_min": 0.7,
+    "trial_max": 0.9,
+    "spread": 0.2,
+    "sd": 0.08,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.4707,
+    "v5_b1_reward": 0.76,
+    "delta_vs_v5_b1": 0.08,
+    "move": "flat"
+  },
+  {
+    "task": "platform-105-failed-revision-not-main",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.6539999999999999,
+    "stderr": 0.05600000000000001,
+    "trial_rewards": [
+      0.57,
+      0.57,
+      0.57,
+      0.71,
+      0.85
+    ],
+    "n_valid": 5,
+    "trial_min": 0.57,
+    "trial_max": 0.85,
+    "spread": 0.28,
+    "sd": 0.112,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.42610000000000003,
+    "v5_b1_reward": 0.598,
+    "delta_vs_v5_b1": 0.056,
+    "move": "flat"
+  },
+  {
+    "task": "platform-106-yaml-float-version",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.86,
+    "stderr": 0.04427188724235732,
+    "trial_rewards": [
+      0.86,
+      0.86,
+      0.72,
+      1.0,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.72,
+    "trial_max": 1.0,
+    "spread": 0.28,
+    "sd": 0.088544,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.3576,
+    "v5_b1_reward": 0.8039999999999999,
+    "delta_vs_v5_b1": 0.056,
+    "move": "flat"
+  },
+  {
+    "task": "platform-107-host-pattern-skipped-play",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8879999999999999,
+    "stderr": 0.028000000000000004,
+    "trial_rewards": [
+      0.86,
+      0.86,
+      0.86,
+      0.86,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.86,
+    "trial_max": 1.0,
+    "spread": 0.14,
+    "sd": 0.056,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 2.7327999999999997,
+    "v5_b1_reward": 0.858,
+    "delta_vs_v5_b1": 0.03,
+    "move": "flat"
+  },
+  {
+    "task": "platform-108-duplicate-guid-concurrent-run",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8066666,
+    "stderr": 0.043652633877694025,
+    "trial_rewards": [
+      0.783333,
+      0.783333,
+      0.9,
+      0.666667,
+      0.9
+    ],
+    "n_valid": 5,
+    "trial_min": 0.666667,
+    "trial_max": 0.9,
+    "spread": 0.233333,
+    "sd": 0.087305,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5835,
+    "v5_b1_reward": 0.7833332,
+    "delta_vs_v5_b1": 0.023333,
+    "move": "flat"
+  },
+  {
+    "task": "platform-109-quoted-false-is-truthy",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.5900000000000001,
+    "stderr": 0.042278836313219416,
+    "trial_rewards": [
+      0.65,
+      0.675,
+      0.475,
+      0.65,
+      0.5
+    ],
+    "n_valid": 5,
+    "trial_min": 0.475,
+    "trial_max": 0.675,
+    "spread": 0.2,
+    "sd": 0.084558,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 6.9778,
+    "v5_b1_reward": 0.5599999999999999,
+    "delta_vs_v5_b1": 0.03,
+    "move": "flat"
+  },
+  {
+    "task": "platform-110-renamed-catalog-item",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9299998,
+    "stderr": 0.0285774619821285,
+    "trial_rewards": [
+      0.883333,
+      0.883333,
+      1.0,
+      0.883333,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.883333,
+    "trial_max": 1.0,
+    "spread": 0.116667,
+    "sd": 0.057155,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.379,
+    "v5_b1_reward": 0.9299998,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-111-recycled-sandbox-swallowed-teardown",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.835,
+    "stderr": 0.0175,
+    "trial_rewards": [
+      0.765,
+      0.8525,
+      0.8525,
+      0.8525,
+      0.8525
+    ],
+    "n_valid": 5,
+    "trial_min": 0.765,
+    "trial_max": 0.8525,
+    "spread": 0.0875,
+    "sd": 0.035,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.6508,
+    "v5_b1_reward": 0.8109999999999999,
+    "delta_vs_v5_b1": 0.024,
+    "move": "flat"
+  },
+  {
+    "task": "platform-112-exec-pool-disk-not-the-bastion",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.7150000000000001,
+    "stderr": 0.07108533604056466,
+    "trial_rewards": [
+      0.925,
+      0.575,
+      0.575,
+      0.8375,
+      0.6625
+    ],
+    "n_valid": 5,
+    "trial_min": 0.575,
+    "trial_max": 0.925,
+    "spread": 0.35,
+    "sd": 0.142171,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.4714,
+    "v5_b1_reward": 0.8724999999999999,
+    "delta_vs_v5_b1": -0.1575,
+    "move": "down"
+  },
+  {
+    "task": "platform-113-account-region-override-not-capacity",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.795,
+    "stderr": 0.04322904116447645,
+    "trial_rewards": [
+      0.825,
+      0.6625,
+      0.8375,
+      0.9125,
+      0.7375
+    ],
+    "n_valid": 5,
+    "trial_min": 0.6625,
+    "trial_max": 0.9125,
+    "spread": 0.25,
+    "sd": 0.086458,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5922,
+    "v5_b1_reward": 0.74375,
+    "delta_vs_v5_b1": 0.05125,
+    "move": "flat"
+  },
+  {
+    "task": "platform-114-ee-nightly-float-not-a-commit",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9285716,
+    "stderr": 0.03511395927633339,
+    "trial_rewards": [
+      1.0,
+      0.916667,
+      0.916667,
+      0.809524,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.809524,
+    "trial_max": 1.0,
+    "spread": 0.190476,
+    "sd": 0.070228,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.4735,
+    "v5_b1_reward": 0.9619047999999999,
+    "delta_vs_v5_b1": -0.033333,
+    "move": "flat"
+  },
+  {
+    "task": "platform-115-find-jobs-default-page-not-the-total",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.748,
+    "stderr": 0.028000000000000004,
+    "trial_rewards": [
+      0.72,
+      0.72,
+      0.72,
+      0.72,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.72,
+    "trial_max": 0.86,
+    "spread": 0.14,
+    "sd": 0.056,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.2986999999999997,
+    "v5_b1_reward": 0.748,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-116-timeout-headroom-from-history",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.7275,
+    "stderr": 0.021433035249352785,
+    "trial_rewards": [
+      0.7625,
+      0.7625,
+      0.7625,
+      0.675,
+      0.675
+    ],
+    "n_valid": 5,
+    "trial_min": 0.675,
+    "trial_max": 0.7625,
+    "spread": 0.0875,
+    "sd": 0.042866,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5808,
+    "v5_b1_reward": 0.6925,
+    "delta_vs_v5_b1": 0.035,
+    "move": "flat"
+  },
+  {
+    "task": "platform-117-dependency-project-sync-failed",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8800000000000001,
+    "stderr": 0.04898979485566355,
+    "trial_rewards": [
+      0.8,
+      1.0,
+      0.8,
+      1.0,
+      0.8
+    ],
+    "n_valid": 5,
+    "trial_min": 0.8,
+    "trial_max": 1.0,
+    "spread": 0.2,
+    "sd": 0.09798,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.34800000000000003,
+    "v5_b1_reward": 0.96,
+    "delta_vs_v5_b1": -0.08,
+    "move": "flat"
+  },
+  {
+    "task": "platform-118-pending-pvcs-wait-for-first-consumer",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.916,
+    "stderr": 0.0342928563989645,
+    "trial_rewards": [
+      0.86,
+      0.86,
+      1.0,
+      1.0,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.86,
+    "trial_max": 1.0,
+    "spread": 0.14,
+    "sd": 0.068586,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.3529,
+    "v5_b1_reward": 0.916,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-119-pvc-storage-class-not-on-cluster",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9720000000000001,
+    "stderr": 0.028000000000000004,
+    "trial_rewards": [
+      1.0,
+      0.86,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.86,
+    "trial_max": 1.0,
+    "spread": 0.14,
+    "sd": 0.056,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5284000000000001,
+    "v5_b1_reward": 0.944,
+    "delta_vs_v5_b1": 0.028,
+    "move": "flat"
+  },
+  {
+    "task": "platform-120-errors-only-matches-are-not-errors",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.808,
+    "stderr": 0.0932952303175248,
+    "trial_rewards": [
+      1.0,
+      0.52,
+      1.0,
+      0.84,
+      0.68
+    ],
+    "n_valid": 5,
+    "trial_min": 0.52,
+    "trial_max": 1.0,
+    "spread": 0.48,
+    "sd": 0.18659,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.3024,
+    "v5_b1_reward": 0.712,
+    "delta_vs_v5_b1": 0.096,
+    "move": "up"
+  },
+  {
+    "task": "platform-121-near-miss-pick-partner-repo",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.7,
+    "stderr": 0.1224744871391589,
+    "trial_rewards": [
+      1.0,
+      0.5,
+      0.5,
+      1.0,
+      0.5
+    ],
+    "n_valid": 5,
+    "trial_min": 0.5,
+    "trial_max": 1.0,
+    "spread": 0.5,
+    "sd": 0.244949,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.7921999999999998,
+    "v5_b1_reward": 0.5,
+    "delta_vs_v5_b1": 0.2,
+    "move": "up"
+  },
+  {
+    "task": "platform-122-search-total-not-page",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.776,
+    "stderr": 0.0342928563989645,
+    "trial_rewards": [
+      0.72,
+      0.86,
+      0.72,
+      0.72,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.72,
+    "trial_max": 0.86,
+    "spread": 0.14,
+    "sd": 0.068586,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.3852,
+    "v5_b1_reward": 0.8039999999999999,
+    "delta_vs_v5_b1": -0.028,
+    "move": "flat"
+  },
+  {
+    "task": "platform-123-prod-stage-overrides-common",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9125,
+    "stderr": 0.0,
+    "trial_rewards": [
+      0.9125,
+      0.9125,
+      0.9125,
+      0.9125,
+      0.9125
+    ],
+    "n_valid": 5,
+    "trial_min": 0.9125,
+    "trial_max": 0.9125,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.8851999999999999,
+    "v5_b1_reward": 0.8949999999999999,
+    "delta_vs_v5_b1": 0.0175,
+    "move": "flat"
+  },
+  {
+    "task": "platform-124-event-accounts-not-returned",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9199999999999999,
+    "stderr": 0.019999999999999997,
+    "trial_rewards": [
+      0.9,
+      0.9,
+      0.9,
+      1.0,
+      0.9
+    ],
+    "n_valid": 5,
+    "trial_min": 0.9,
+    "trial_max": 1.0,
+    "spread": 0.1,
+    "sd": 0.04,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.7337,
+    "v5_b1_reward": 0.9,
+    "delta_vs_v5_b1": 0.02,
+    "move": "flat"
+  },
+  {
+    "task": "platform-125-controller-reboot-not-the-playbook",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.51,
+    "stderr": 0.024494897427831792,
+    "trial_rewards": [
+      0.55,
+      0.45,
+      0.55,
+      0.55,
+      0.45
+    ],
+    "n_valid": 5,
+    "trial_min": 0.45,
+    "trial_max": 0.55,
+    "spread": 0.1,
+    "sd": 0.04899,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.8468000000000002,
+    "v5_b1_reward": 0.55,
+    "delta_vs_v5_b1": -0.04,
+    "move": "flat"
+  },
+  {
+    "task": "platform-126-stop-job-from-tower-jobs",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.9400000000000001,
+    "stderr": 0.03674234614174768,
+    "trial_rewards": [
+      0.85,
+      0.85,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.85,
+    "trial_max": 1.0,
+    "spread": 0.15,
+    "sd": 0.073485,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.8651000000000001,
+    "v5_b1_reward": 0.85,
+    "delta_vs_v5_b1": 0.09,
+    "move": "up"
+  },
+  {
+    "task": "platform-127-catalog-keyword-match-prod-stage",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.944,
+    "stderr": 0.0342928563989645,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      0.86,
+      1.0,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.86,
+    "trial_max": 1.0,
+    "spread": 0.14,
+    "sd": 0.068586,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.5745,
+    "v5_b1_reward": 0.8320000000000001,
+    "delta_vs_v5_b1": 0.112,
+    "move": "up"
+  },
+  {
+    "task": "platform-128-failed-action-census-by-kind",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.8857139999999999,
+    "stderr": 5.551115123125783e-17,
+    "trial_rewards": [
+      0.885714,
+      0.885714,
+      0.885714,
+      0.885714,
+      0.885714
+    ],
+    "n_valid": 5,
+    "trial_min": 0.885714,
+    "trial_max": 0.885714,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.645,
+    "v5_b1_reward": 0.9542856000000001,
+    "delta_vs_v5_b1": -0.068572,
+    "move": "flat"
+  },
+  {
+    "task": "platform-129-destroyed-subject-hidden-without-guid",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.596,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-130-destroy-failed-retry-pending",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.748,
+    "stderr": 0.11200000000000002,
+    "trial_rewards": [
+      1.0,
+      0.58,
+      0.44,
+      0.72,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 0.44,
+    "trial_max": 1.0,
+    "spread": 0.56,
+    "sd": 0.224,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 2.3425,
+    "v5_b1_reward": 0.748,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-131-deployment-first-resource-blind-spot",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.86,
+    "stderr": 0.04427188724235732,
+    "trial_rewards": [
+      0.86,
+      0.72,
+      1.0,
+      0.86,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.72,
+    "trial_max": 1.0,
+    "spread": 0.28,
+    "sd": 0.088544,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 1.4644,
+    "v5_b1_reward": 0.944,
+    "delta_vs_v5_b1": -0.084,
+    "move": "flat"
+  },
+  {
+    "task": "platform-132-event-seat-math-standalone-workshop",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.7939999999999999,
+    "stderr": 0.0342928563989645,
+    "trial_rewards": [
+      0.85,
+      0.71,
+      0.71,
+      0.85,
+      0.85
+    ],
+    "n_valid": 5,
+    "trial_min": 0.71,
+    "trial_max": 0.85,
+    "spread": 0.14,
+    "sd": 0.068586,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 0.8841,
+    "v5_b1_reward": 0.6819999999999999,
+    "delta_vs_v5_b1": 0.112,
+    "move": "up"
+  },
+  {
+    "task": "platform-133-component-sub-components-hop",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.8606,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-134-pool-search-canary-two-clusters",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 1.0,
+    "stderr": 0.0,
+    "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "n_valid": 5,
+    "trial_min": 1.0,
+    "trial_max": 1.0,
+    "spread": 0.0,
+    "sd": 0.0,
+    "variable": false,
+    "errored_trials": 0,
+    "cost_usd": 0.5781999999999999,
+    "v5_b1_reward": 1.0,
+    "delta_vs_v5_b1": 0.0,
+    "move": "flat"
+  },
+  {
+    "task": "platform-135-catalog-component-drift-fanout",
+    "category": "platform",
+    "task_set": "10-12",
+    "origin": "new-10-12",
+    "reward": 0.774,
+    "stderr": 0.086,
+    "trial_rewards": [
+      0.86,
+      0.86,
+      0.86,
+      0.43,
+      0.86
+    ],
+    "n_valid": 5,
+    "trial_min": 0.43,
+    "trial_max": 0.86,
+    "spread": 0.43,
+    "sd": 0.172,
+    "variable": true,
+    "errored_trials": 0,
+    "cost_usd": 2.0127,
+    "v5_b1_reward": 0.916,
+    "delta_vs_v5_b1": -0.142,
+    "move": "down"
+  }
+];
+
+const SUMMARIES =
+[
+  {
+    "label": "ALL TASKS",
+    "kind": "overall",
+    "n_tasks": 136,
+    "reward_mean": 0.832317,
+    "n_saturated": 50,
+    "n_variable": 71,
+    "pct_variable": 52.21,
+    "mean_sd_all": 0.049551
+  },
+  {
+    "label": "set 10-10",
+    "kind": "set",
+    "n_tasks": 68,
+    "reward_mean": 0.891222,
+    "n_saturated": 39,
+    "n_variable": 24,
+    "pct_variable": 35.29,
+    "mean_sd_all": 0.038934
+  },
+  {
+    "label": "set 10-12",
+    "kind": "set",
+    "n_tasks": 68,
+    "reward_mean": 0.773412,
+    "n_saturated": 11,
+    "n_variable": 47,
+    "pct_variable": 69.12,
+    "mean_sd_all": 0.060169
+  },
+  {
+    "label": "platform",
+    "kind": "category",
+    "n_tasks": 70,
+    "reward_mean": 0.877612,
+    "n_saturated": 24,
+    "n_variable": 41,
+    "pct_variable": 58.57,
+    "mean_sd_all": 0.061092
+  },
+  {
+    "label": "icinga",
+    "kind": "category",
+    "n_tasks": 26,
+    "reward_mean": 0.757077,
+    "n_saturated": 10,
+    "n_variable": 14,
+    "pct_variable": 53.85,
+    "mean_sd_all": 0.036809
+  },
+  {
+    "label": "cloud",
+    "kind": "category",
+    "n_tasks": 20,
+    "reward_mean": 0.727135,
+    "n_saturated": 7,
+    "n_variable": 7,
+    "pct_variable": 35.0,
+    "mean_sd_all": 0.040557
+  },
+  {
+    "label": "cost",
+    "kind": "category",
+    "n_tasks": 20,
+    "reward_mean": 0.876779,
+    "n_saturated": 9,
+    "n_variable": 9,
+    "pct_variable": 45.0,
+    "mean_sd_all": 0.034715
+  },
+  {
+    "label": "origin v4-34",
+    "kind": "origin",
+    "n_tasks": 34,
+    "reward_mean": 0.914987,
+    "n_saturated": 19,
+    "n_variable": 15,
+    "pct_variable": 44.12,
+    "mean_sd_all": 0.048724
+  },
+  {
+    "label": "origin h4-rewritten",
+    "kind": "origin",
+    "n_tasks": 21,
+    "reward_mean": 0.928456,
+    "n_saturated": 15,
+    "n_variable": 4,
+    "pct_variable": 19.05,
+    "mean_sd_all": 0.024406
+  },
+  {
+    "label": "origin new-10-10",
+    "kind": "origin",
+    "n_tasks": 11,
+    "reward_mean": 0.799182,
+    "n_saturated": 5,
+    "n_variable": 3,
+    "pct_variable": 27.27,
+    "mean_sd_all": 0.029849
+  },
+  {
+    "label": "origin new-10-12",
+    "kind": "origin",
+    "n_tasks": 68,
+    "reward_mean": 0.773412,
+    "n_saturated": 11,
+    "n_variable": 47,
+    "pct_variable": 69.12,
+    "mean_sd_all": 0.060169
+  }
+]
+;
+
+const AXIS_W = 300, AXIS_PAD = 7, ROW_H = 20;
+
+const COLUMNS = [
+  { key: "task",          label: "task",    tip: "Task id. Chip shows which 68-task drop it came from." },
+  { key: "category",      label: "cat",     tip: "Service area, from the task id prefix." },
+  { key: "trials",        label: "trials (0 → 1)", tip: "Every individual trial reward. Open circles are trials; the filled dot is the mean.", nosort: true },
+  { key: "reward",        label: "mean",    tip: "Mean reward across the 5 trials." },
+  { key: "spread",        label: "spread",  tip: "max − min across the 5 trials. 0 means fully deterministic." },
+  { key: "sd",            label: "sd",      tip: "Population standard deviation across the 5 trials." },
+  { key: "cost_usd",      label: "cost($)", tip: "Total cost across the task's trials." },
+];
+
+let sortState = { key: "spread", dir: "desc" };
+
+function fmt(v, nd) { return (v === null || v === undefined) ? "—" : v.toFixed(nd === undefined ? 3 : nd); }
+
+function dotplot(row) {
+  const trials = row.trial_rewards || [];
+  const x = v => AXIS_PAD + v * (AXIS_W - 2 * AXIS_PAD);
+  const cy = ROW_H / 2;
+  let s = `<svg class="dp" viewBox="0 0 ${AXIS_W} ${ROW_H}" width="${AXIS_W}" height="${ROW_H}">`;
+  for (const g of [0, 0.25, 0.5, 0.75, 1]) {
+    s += `<line x1="${x(g).toFixed(1)}" y1="2" x2="${x(g).toFixed(1)}" y2="${ROW_H - 2}" class="grid"/>`;
+  }
+  if (trials.length) {
+    s += `<line x1="${x(row.trial_min).toFixed(1)}" y1="${cy}" x2="${x(row.trial_max).toFixed(1)}" y2="${cy}" class="rng"/>`;
+    const counts = new Map();
+    for (const v of trials) counts.set(v, (counts.get(v) || 0) + 1);
+    for (const [v, n] of [...counts.entries()].sort((a, b) => a[0] - b[0])) {
+      s += `<circle cx="${x(v).toFixed(1)}" cy="${cy}" r="${(3.2 + 0.5 * (n - 1)).toFixed(1)}" class="trial"/>`;
+    }
+    s += `<circle cx="${x(row.reward).toFixed(1)}" cy="${cy}" r="4.2" class="mean"/>`;
+  }
+  return s + "</svg>";
+}
+
+function sortRows(rows) {
+  const { key, dir } = sortState, sign = dir === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const va = a[key], vb = b[key];
+    if (va === null || va === undefined) return 1;
+    if (vb === null || vb === undefined) return -1;
+    if (typeof va === "string") return sign * va.localeCompare(vb);
+    if (va === vb) return a.task.localeCompare(b.task);
+    return sign * (va - vb);
+  });
+}
+
+function renderKpis() {
+  const o = SUMMARIES.find(s => s.kind === "overall");
+  const cells = [
+    [o.reward_mean.toFixed(4), "mean reward"],
+    [String(o.n_tasks), "tasks"],
+    [String(o.n_saturated), "saturated (=1.0)"],
+    [o.n_variable + " (" + o.pct_variable.toFixed(0) + "%)", "variable reward"],
+    [o.mean_sd_all.toFixed(3), "mean trial sd"],
+    [String(o.n_tasks * 5 - DATA.reduce((a, r) => a + r.n_valid, 0)), "trials excluded"],
+  ];
+  document.getElementById("kpis").innerHTML = cells
+    .map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`)
+    .join("");
+}
+
+function renderHeader() {
+  return "<tr>" + COLUMNS.map(c => {
+    const active = sortState.key === c.key;
+    const arrow = active ? (sortState.dir === "asc" ? "▲" : "▼") : "";
+    const axis = c.key === "trials"
+      ? `<div class="axis-head"><span>0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1</span></div>`
+      : "";
+    return `<th class="${active ? "sorted" : ""} ${c.key === "task" || c.key === "trials" ? "" : "num"}"`
+      + ` data-key="${c.key}" data-nosort="${c.nosort ? 1 : 0}"`
+      + ` title="${c.tip.replace(/"/g, "&quot;")}">${c.label}<span class="arrow">${arrow}</span>${axis}</th>`;
+  }).join("") + "</tr>";
+}
+
+function renderRow(r) {
+  const chip = `<span class="chip${r.task_set === "10-12" ? " s1012" : ""}">${r.task_set}</span>`
+    + (r.origin === "v4-34" || r.origin === "h4-rewritten" ? `<span class="chip">${r.origin}</span>` : "")
+    + (r.n_valid < 5 ? `<span class="chip s1012">n=${r.n_valid}</span>` : "");
+  const tip = (r.trial_rewards || []).map(v => v.toFixed(3)).join(" ");
+  return "<tr>"
+    + `<td class="task-cell">${r.task}${chip}</td>`
+    + `<td>${r.category}</td>`
+    + `<td title="${tip}">${dotplot(r)}</td>`
+    + `<td class="num"><strong>${fmt(r.reward)}</strong></td>`
+    + `<td class="num${r.variable ? "" : " det"}">${fmt(r.spread)}</td>`
+    + `<td class="num${r.variable ? "" : " det"}">${fmt(r.sd)}</td>`
+    + `<td class="num">${fmt(r.cost_usd, 3)}</td>`
+    + "</tr>";
+}
+
+function renderSummaryRow(s) {
+  const cls = s.kind === "overall" ? "summary-row overall" : "summary-row";
+  return `<tr class="${cls}">`
+    + `<td class="task-cell">${s.label} (${s.n_tasks})</td>`
+    + `<td></td>`
+    + `<td>${s.n_variable} variable · ${s.pct_variable.toFixed(0)}%</td>`
+    + `<td class="num">${s.reward_mean.toFixed(4)}</td>`
+    + `<td></td>`
+    + `<td class="num">${s.mean_sd_all.toFixed(3)}</td>`
+    + `<td></td>`
+    + "</tr>";
+}
+
+function render() {
+  const tbl = document.getElementById("tbl");
+  let html = "<thead>" + renderHeader() + "</thead><tbody>";
+  html += SUMMARIES.map(renderSummaryRow).join("");
+  html += sortRows(DATA).map(renderRow).join("");
+  html += "</tbody>";
+  tbl.innerHTML = html;
+  tbl.querySelectorAll("th").forEach(th => {
+    if (th.dataset.nosort === "1") return;
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortState.key === key) sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      else sortState = { key, dir: key === "task" || key === "category" ? "asc" : "desc" };
+      render();
+    });
+  });
+}
+
+renderKpis();
+render();
+</script>
+</div>
+</body>
+</html>
