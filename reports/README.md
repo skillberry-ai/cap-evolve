@@ -6,7 +6,7 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm), [`ui/heatmap_v5_b1_e1.html`](../ui/heatmap_v5_b1_e1.html) + [`ui/trials_v5_b1_e1.html`](../ui/trials_v5_b1_e1.html) (v5 baseline arm) |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm), [`ui/heatmap_v5_b1_e1.html`](../ui/heatmap_v5_b1_e1.html) + [`ui/trials_v5_b1_e1.html`](../ui/trials_v5_b1_e1.html) (v5 baseline arm), [`ui/heatmap_v5_g2_e1.html`](../ui/heatmap_v5_g2_e1.html) + [`ui/trials_v5_g2_e1.html`](../ui/trials_v5_g2_e1.html) (v5 G2-arm reuse) |
 | **3** | **why a task moved, and what it teaches** | **`reports/<exp>/<task>.md`** |
 
 ## Naming
@@ -22,6 +22,7 @@ arms, splits one level further; v5 does the same:
 | v4 T arm (task-by-task) | `v4/v4_t_e1/<task>.md` | 34 |
 | v4 G arm (global, shared bundle) | `v4/v4_g_e1/<task>.md` | 34 |
 | v5 baseline arm (original skill, zero-shot) | `v5/v5_b1_e1/<task>.md` | 136 |
+| v5 G2-arm reuse (`cand_0004`, zero-shot) | `v5/v5_g2_e1/<task>.md` | 136 |
 
 `v4/h4/` is the exception to "one file per task": it holds the **h4 held-out
 suite** — 30 new scenarios (`bench-v4-035` … `-064`) authored after the
@@ -68,12 +69,15 @@ python3 scripts/build_task_reports.py --stats     # coverage: how many written, 
 **Do not hand-edit inside the auto block** — edits there are overwritten on the next run.
 Numbers stay derived; narrative stays human.
 
-## The diff block (v4 only — v5's baseline arm gets none)
+## The diff block (v4 only — neither v5 arm gets one)
 
 `v5_b1_e1` is a zero-shot baseline with no `best/` directory anywhere, so
 `build_v5_b1_task_reports.py` calls the same `scripts/v4_report_common.py::build_diff_block()`
 every v4 generator uses and it returns `None` for all 136 tasks — the same path v4's
-never-optimized tasks already take. No special-casing.
+never-optimized tasks already take. `v5_g2_e1` reuses an already-optimized bundle
+(`artifacts/v4/v4_g_e1/best`) as-is rather than optimizing per task, so it has no per-task
+`best/` directory either; `build_v5_g2_task_reports.py` takes the identical path. No
+special-casing in either generator.
 
 ### The v4 arms' diff block
 
