@@ -1,6 +1,20 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 18:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 21:50 UTC (coordinator periodic check)_
+
+## Update 21:50 UTC 10-14
+- **Spend**: capped spend is 193.2M of 230M (gateway healthy).
+- **All v2/v2.1 searches have ended.**
+- **Bug found (errata 43-47)**: AO-2's commit_accept in pooled mode passed --val 0.0, so P2-accepted candidates were never committed. Affected: A ao21 s0-s2 and D ao21 s0.
+  - Their champions are now the P2-accepted candidates.
+  - The fix PR to main is in progress.
+- **Running**:
+  - v2.1 A window: 630 jobs, launched 21:36Z, ETA ~00:40Z.
+  - v2.1 D window: 1,400 jobs, launched 21:43Z, ETA ~23:00Z.
+- **Pending user decisions**: B/C transfer spend; the Overleaf branch.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 18:50 UTC (coordinator periodic check)_
 
 ## Update 18:50 UTC 10-14
 - **Spend**: capped spend is 193.2M of 230M (gateway healthy).

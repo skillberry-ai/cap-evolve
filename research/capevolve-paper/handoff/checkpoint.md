@@ -203,3 +203,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 
 ## Update 18:50 UTC 10-14 (periodic check)
 - Only A ao21 s0-s2 are left; s0 and s2 are in final confirmation. Nothing else is running.
+
+## Update 21:50 UTC 10-14 (periodic check)
+- The v2.1 windows are running: A (PID 3572884, order c9bdc5b8) and D (PID 3690162, order 46785abe). Watchers hash the results at the end.
+- The fix agent fix-ao2-commit is writing the commit_accept PR, plus an audit of other pooled --val paths.
+- The capevolve-runner loops are stopped. The capopt egress rule stays until the post-campaign cleanup.
