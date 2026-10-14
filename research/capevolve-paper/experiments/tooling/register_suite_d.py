@@ -204,6 +204,14 @@ def main():
     _er = PAPER / "experiments/final/manifests/scorer_equivalence_A_result.json"
     if _er.exists():
         items.append(("v2_11E_A_scorer_equivalence_result", _er, "40-row Suite A v2-vs-v1 scorer equivalence result", None))
+    S21 = CS / "scripts/V2"
+    for nm, fp, note in (("build_v21.py", S21 / "build_v21.py", "v2.1-AO2 builder (copy of build_v2.py adding arm ao21)"),
+                         ("launch_v21.sh", S21 / "launch_v21.sh", "v2.1-AO2 launcher (copy of launch_v2.sh calling build_v21.py)"),
+                         ("E_ao21_spec", S21 / "specs/E_ao21.capevolve.yaml", "v2.1-AO2 Suite E spec (v2.0 AO-2 spec + ao_plateau_floor 0.8)"),
+                         ("D_ao21_spec", S21 / "specs/D_ao21.capevolve.yaml", "v2.1-AO2 Suite D spec (v2.0 AO-2 spec + ao_plateau_floor 0.8)"),
+                         ("champions_V2_E.json", CS / "final_eval/champions_V2_E.json", "Suite E v2.0 champions (all six searches ended; frozen dirs equal the run candidates)")):
+        if fp.exists():
+            items.append(("v2_1_AO2_" + nm, fp, "11E v2.1-AO2 / v2.0 record: " + note, None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
