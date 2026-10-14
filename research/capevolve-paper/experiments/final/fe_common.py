@@ -84,7 +84,7 @@ RUN_ROOT_OVERRIDE = {("A", "hcstock"): RUNS / "E12A" / "hcstock", ("C", "hcstock
                      ("B", "hlext"): RUNS / "E10B" / "harnesslens_ext"}
 DAGGER = {("B", "ao"), ("C", "ao")}      # amendment 9G: agent-optimize on B/C had access to its own opt/sel gold actions; flagged, second family computed without them
 SEEDS = [0, 1, 2]
-FAMILY_FILES = {"sb_files": ["prompt.md", "task_template.md"], "tau_cap": None}   # None = policy/** tools/**
+FAMILY_FILES = {"sb_files": ["prompt.md", "task_template.md"], "sb_files_v2": ["prompt.md", "task_template.md"], "tau_cap": None}   # None = policy/** tools/**
 
 
 def suite_arms(suite, include_cheap=True, include_controls=True, include_exploratory=True):
@@ -154,6 +154,12 @@ def tree_files(root, kind):
     root = Path(root)
     if kind == "sb_files":
         return [f for f in FAMILY_FILES["sb_files"] if (root / f).is_file()]
+    if kind == "sb_files_v2":      # v2 Suite A window (amendment 11F): the two capability files + the skill-package tree (helpers under skills/*/scripts)
+        out = [f for f in FAMILY_FILES["sb_files_v2"] if (root / f).is_file()]
+        for p in sorted((root / "skills").rglob("*")) if (root / "skills").is_dir() else []:
+            if p.is_file() and "__pycache__" not in p.parts:
+                out.append(str(p.relative_to(root)))
+        return out
     out = []
     for sub in ("policy", "tools"):
         for p in sorted((root / sub).rglob("*")) if (root / sub).is_dir() else []:
@@ -176,7 +182,7 @@ def tree_hash_normalized(root, kind):
     (wt-tau examples/tau2_retail/adapters/adapter.py:210-221, wt-airE tau2_airline_c adapter.py:210-221), so the policy file is hashed after strip with '(none)' == ''; other files
     (tools code) are right-stripped.  SpreadsheetBench (kind sb_files): prompt.md and task_template.md are used byte-for-byte (bench/patches/new/adapter.py:981-984,
     :921), so the strict tree hash applies."""
-    if kind == "sb_files":
+    if kind in ("sb_files", "sb_files_v2"):
         return tree_hash(root, kind)[0]
     h = hashlib.sha256()
     for f in sorted(tree_files(root, kind)):

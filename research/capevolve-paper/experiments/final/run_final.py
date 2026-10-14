@@ -99,9 +99,10 @@ def _stage_candidate(job, dest):
     import shutil
     art = Path(job["artifact_dir"])
     kind = job["artifact_kind"]
-    if kind == "sb_files":
+    if kind in ("sb_files", "sb_files_v2"):
         dest.mkdir(parents=True, exist_ok=True)
-        for f in C.FAMILY_FILES["sb_files"]:
+        for f in C.tree_files(art, kind):
+            (dest / f).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(art / f, dest / f)
     else:
         seed_cap = wt_of(job["suite"]) / "examples" / TAU[job["suite"]]["example"] / "seed_capability"
@@ -132,7 +133,8 @@ def worker_A(job, attempt_dir):
     env["MODEL"] = "litellm_proxy/%s" % tgt
     env["LITELLM_PROXY_API_BASE"] = job.get("gateway") or GATEWAY
     env["LITELLM_PROXY_API_KEY"] = job["tag"] + ":target"          # metering tag, not a secret
-    env["SPREADSHEETBENCH_HARNESS_DIR"] = str(C.REPO / "third_party/spreadsheetbench")
+    code_root = Path(job["code_root"]) if job.get("code_root") else C.REPO      # v2 window (11F): main's adapter / core / helpers carrier at a registered SHA
+    env["SPREADSHEETBENCH_HARNESS_DIR"] = job.get("harness_dir") or str(C.REPO / "third_party/spreadsheetbench")
     env["SPREADSHEETBENCH_DATA_DIR"] = job["agent_view"]
     env["SPREADSHEETBENCH_GOLD_DIR"] = job["gold_dir"]
     env["SPREADSHEETBENCH_TASK_IDS"] = str(job["task"])
@@ -153,8 +155,8 @@ def worker_A(job, attempt_dir):
     env.update(job.get("env", {}))
     import importlib.util
     sys.path.insert(0, str(BENCH / "patches/new"))
-    sys.path.insert(0, str(C.REPO / "templates/adapters"))
-    sys.path.insert(0, str(C.REPO / "core"))
+    sys.path.insert(0, str(code_root / "templates/adapters"))
+    sys.path.insert(0, str(code_root / "core"))
     spec = importlib.util.spec_from_file_location("sb_adapter_final", job["adapter_path"])
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -204,11 +206,14 @@ def worker_tau(job, attempt_dir):
         env["TAU_JUDGE_MODEL"] = job["judge_model"]
     if job.get("final_split"):
         env["TAU_ALLOW_SEALED_TEST"] = "final-eval-only"
+    env.pop("TAU_SEED_DIR", None)       # the V2 adapters' reference/ guard stays inactive at scoring unless the order's job env sets it explicitly
     env.update(job.get("env", {}))
     sys.path.insert(0, str(wt_of(job["suite"]) / "core"))
-    sys.path.insert(0, str(wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters"))
+    ad_py = Path(job["adapter_py"]) if job.get("adapter_py") else wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters" / "adapter.py"      # v2 window: the V2 adapter copy (reference/ guard)
+    sys.path.insert(0, str(wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters"))      # siblings (model_config.py)
+    sys.path.insert(0, str(ad_py.parent))
     import importlib.util
-    spec = importlib.util.spec_from_file_location("tau_adapter_final", wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters" / "adapter.py")
+    spec = importlib.util.spec_from_file_location("tau_adapter_final", ad_py)
     ad = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ad)
     tid = str(job["task"])
@@ -829,15 +834,26 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
                 prob.append("sandbox egress check failed (exit %d): %s" % (r.returncode, (r.stdout + r.stderr)[-300:].replace("\n", " ")))
         except Exception as exc:
             prob.append("egress check failed: %r" % exc)
-        if not SB_API_PY.exists() or C.sha256_file(SB_API_PY) != SB_API_SHA:
-            prob.append("sandbox api.py sha256 %s != expected %s (idle-kernel timeout 10800 s patch)" % (C.file_sha(SB_API_PY), SB_API_SHA))
-        jx = HERE / "manifests/expected_jupyter_sha256.txt"
-        jp = C.REPO / "third_party/spreadsheetbench/code_exec_docker/jupyter.py"
-        if jx.exists():
-            if C.file_sha(jp) != jx.read_text().split()[0]:
-                prob.append("sandbox jupyter.py sha256 %s != expected %s (SB_DRAIN_ERROR fix)" % (C.file_sha(jp), jx.read_text().split()[0]))
+        v2h = (jobs[0].get("harness_dir") if jobs else None)
+        api_py = (Path(v2h) / "code_exec_docker/api.py") if v2h else SB_API_PY
+        if not api_py.exists() or C.sha256_file(api_py) != SB_API_SHA:
+            prob.append("sandbox api.py sha256 %s != expected %s (idle-kernel timeout 10800 s patch)" % (C.file_sha(api_py), SB_API_SHA))
+        if v2h:    # v2 window (11F): main's vendored jupyter.py (the adapter patches its staged copy: iopub idle wait) at the sha pinned in the order
+            jp = Path(v2h) / "code_exec_docker/jupyter.py"
+            want = jobs[0].get("harness_jupyter_sha256")
+            if not want or C.file_sha(jp) != want:
+                prob.append("v2 sandbox jupyter.py sha256 %s != pinned %s" % (C.file_sha(jp), want))
+            cr = jobs[0].get("code_root")
+            if not cr or C.git_head(Path(cr)) != jobs[0].get("code_root_sha"):
+                prob.append("v2 code_root %s is at %s, pinned %s" % (cr, C.git_head(Path(cr)) if cr else None, jobs[0].get("code_root_sha")))
         else:
-            print("NOTE: manifests/expected_jupyter_sha256.txt not recorded yet (waiting for baseline-eng's committed sha)")
+            jx = HERE / "manifests/expected_jupyter_sha256.txt"
+            jp = C.REPO / "third_party/spreadsheetbench/code_exec_docker/jupyter.py"
+            if jx.exists():
+                if C.file_sha(jp) != jx.read_text().split()[0]:
+                    prob.append("sandbox jupyter.py sha256 %s != expected %s (SB_DRAIN_ERROR fix)" % (C.file_sha(jp), jx.read_text().split()[0]))
+            else:
+                print("NOTE: manifests/expected_jupyter_sha256.txt not recorded yet (waiting for baseline-eng's committed sha)")
         for p in (SB_LO_BIN,):
             if not Path(p).exists():
                 prob.append("LibreOffice missing: %s" % p)
@@ -866,6 +882,7 @@ def cmd_prepare(a):
 def cmd_run(a):
     suite = a.suite
     meta, jobs = load_order(a.order)
+    a.capped_stop = a.capped_stop or int(meta.get("capped_stop") or 198_000_000)      # v2 windows carry 228000000 in the hashed order (cap 230M minus 2M)
     root = Path(a.root) if a.root else C.final_dir(suite)
     if a.extra:
         root = root / ("extra_%s" % a.extra)
@@ -992,7 +1009,7 @@ def main(argv=None):
         p.add_argument("--canary-n", type=int, default=0, help="dry runs: use only the first n canary tasks")
         p.add_argument("--hang-s", type=int, default=HANG_S)
         p.add_argument("--force", action="store_true")
-        p.add_argument("--capped-stop", type=int, default=198_000_000, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this")
+        p.add_argument("--capped-stop", type=int, default=None, help="stop dispatching and write PAGE_CAPPED_TOKENS if the gateway's capped counter passes this (default: the order's capped_stop, else 198000000)")
         p.add_argument("--check-error-drain", action="store_true", help="prepare, Suite A: error exec, 95 s idle, next exec must succeed (needs the SB_DRAIN_ERROR jupyter.py)")
         p.add_argument("--check-kernel-idle", action="store_true", help="prepare, Suite A: also run the ~12 min idle-kernel behavioural check")
     w = sp.add_parser("worker")

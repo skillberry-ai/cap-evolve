@@ -31,7 +31,7 @@ def build(suite, champions_path, out_root, manifests=None, dry=False):
     manifests = Path(manifests or C.MANIFESTS)
     champ = json.load(open(champions_path))
     v1 = json.load(open(manifests / ("artifacts_%s.json" % suite)))
-    kind = C.SUITES[suite]["artifact_kind"]
+    kind = "sb_files_v2" if suite == "A" else C.SUITES[suite]["artifact_kind"]     # A: + skills/** (helpers carrier)
     seed_art = v1["seed_artifact"]
     entries = []
     for arm in V2_ARMS:
@@ -60,21 +60,73 @@ def build(suite, champions_path, out_root, manifests=None, dry=False):
     return man, mpath
 
 
-def make_order(suite, mpath, out=None, tag_exp=None):
+V2_CODE_ROOT = "/home/dev/projects2/wt-v2run"        # main at a3f5eeb6d (amendment 11 erratum 1): adapter, core, helpers carrier, gold isolation, iopub idle-wait fix
+V2_TAU_ADAPTERS = {"D": "/home/dev/projects2/campaign-scratch/scripts/V2/adapters/retail/adapter.py", "E": "/home/dev/projects2/campaign-scratch/scripts/V2/adapters/airline/adapter.py"}
+V2_CAPPED_STOP = 228_000_000        # campaign cap 230M minus the same 2M margin as the v1 stop (198M of 200M); the v2 windows use none of the :4111 capped counter
+V2_CODE_SHA = "a3f5eeb6d54d9782c9fb3985ca1d63560f6cc4bb"
+
+
+def build_harness_dir(code_root, dst):
+    """v2 Suite A sandbox harness = main's vendored third_party/spreadsheetbench with api.py replaced by the campaign-patched api.py (idle-kernel timeout 10800 s, sha256 from
+    manifests/expected_api_sha256.txt, the one the v1 window used); jupyter.py stays main's vendored file (the adapter patches its staged copy)."""
+    import shutil
+    dst = Path(dst)
+    if not dst.exists():
+        shutil.copytree(Path(code_root) / "third_party/spreadsheetbench", dst)
+        shutil.copy2(C.REPO / "third_party/spreadsheetbench/code_exec_docker/api.py", dst / "code_exec_docker/api.py")
+    want = (C.HERE / "manifests/expected_api_sha256.txt").read_text().split()[0]
+    if C.file_sha(dst / "code_exec_docker/api.py") != want:
+        sys.exit("harness api.py sha256 != %s" % want)
+    return str(dst)
+
+
+def apply_a_overrides(jobs, meta, code_root, harness_dir):
+    """Every Suite A cell of the v2 window (v2 champions AND the in-window anchors) is scored by the v2 code path: main's adapter at a registered SHA with the helpers carrier."""
+    code_root = str(code_root)
+    sha = C.git_head(Path(code_root))
+    jup = C.file_sha(Path(harness_dir) / "code_exec_docker/jupyter.py")
+    for j in jobs:
+        j.update(code_root=code_root, code_root_sha=sha, harness_dir=str(harness_dir), harness_jupyter_sha256=jup, artifact_kind="sb_files_v2",
+                 adapter_path=str(Path(code_root) / "templates/adapters/spreadsheetbench/adapter.py"))
+        j["env"] = dict(j.get("env") or {}, CAPEVOLVE_HELPERS="1")
+    meta["scorer"] = {"window": "v2", "code_root": code_root, "code_root_sha": sha, "harness_dir": str(harness_dir), "harness_jupyter_sha256": jup,
+                      "adapter_sha256": C.file_sha(Path(code_root) / "templates/adapters/spreadsheetbench/adapter.py"), "env": {"CAPEVOLVE_HELPERS": "1"},
+                      "note": "v2 and the in-window anchors share this scorer (11F); the v1 window used bench/patches/new/adapter.py without a helpers carrier"}
+
+
+def make_order(suite, mpath, out=None, tag_exp=None, code_root=None, harness_dir=None):
     out = Path(out or (Path(mpath).parent / ("order_V2_%s.jsonl" % suite)))
+    code_root = code_root or V2_CODE_ROOT
     argv = ["--suite", suite, "--manifest", str(mpath), "--tasks", "final", "--arms", ",".join(V2_ARMS + (V1_COMPARATOR,)), "--no-end",
             "--tag-exp", tag_exp or ("FINAL-%s-V2" % suite), "--out", str(out)]
+    if suite == "A":
+        argv += ["--adapter-path", str(Path(code_root) / "templates/adapters/spreadsheetbench/adapter.py")]
     if O.main(argv):
         sys.exit("order.py failed")
     # held-out set only: drop the sel cells (D H65 / E H30 contain the selection split; 11C names test-40 / test-20 as the v2 held-out sets)
     rows = [json.loads(l) for l in open(out)]
     meta, jobs = rows[0], [r for r in rows[1:] if r.get("type") == "job"]
+    man = json.load(open(mpath))
+    # erratum 11 (3): an inert v2 champion (tree hash equal to the seed's) is flagged and mapped to the seed-check cell, primary delta 0; no separate rescoring cell
+    inert = sorted((e["arm"], e["seed"]) for e in man["entries"] if e["arm"] in V2_ARMS and e.get("identical_to_seed"))
+    if inert:
+        jobs = [j for j in jobs if (j["arm"], j["seed"]) not in inert]
+    meta["inert_mapped_to_seed_check"] = [{"arm": a_, "seed": s_} for a_, s_ in inert]
+    if suite == "A":
+        apply_a_overrides(jobs + meta.get("canary_jobs", []), meta, code_root, harness_dir)
+    else:       # D / E: the V2 adapter copy (v1 file + read-only reference/ guard) for every cell, anchors included
+        adp = V2_TAU_ADAPTERS[suite]
+        for j in jobs + meta.get("canary_jobs", []):
+            j["adapter_py"] = adp
+        meta["tau_seed_dir"] = None        # TAU_SEED_DIR unset in the window: the reference/ guard is inactive, scoring is code-identical to v1
+        meta["scorer"] = {"window": "v2", "adapter_py": adp, "TAU_SEED_DIR": "unset", "adapter_sha256": C.file_sha(adp),
+                          "note": "v2 and the in-window anchors share the V2 adapter copy (11F); the v1 window used the frozen v1 adapter (no reference/ guard)"}
     if suite in ("D", "E"):
         jobs = [j for j in jobs if j.get("split") != "sel"]
         meta["tasks"] = [t for t in meta["tasks"] if any(j["task"] == t for j in jobs)]
     for i, j in enumerate(jobs):
         j["idx"] = i
-    meta.update(n_jobs=len(jobs), window="v2", counts_by_arm={})
+    meta.update(n_jobs=len(jobs), window="v2", counts_by_arm={}, capped_stop=V2_CAPPED_STOP)
     for j in jobs:
         k = "%s/s%d" % (j["arm_label"], j["seed"])
         meta["counts_by_arm"][k] = meta["counts_by_arm"].get(k, 0) + 1
@@ -91,7 +143,9 @@ def comparison_family_v2(suite):
     """11G: Holm m = 4 within suite, paired, task = cluster: HC-2 vs seed, AO-2 vs seed, HC-2 vs v1 GEPA, AO-2 vs v1 GEPA (all against in-window anchors)."""
     return {"suite": suite, "window": "v2", "holm_denominator_primary": 4,
             "primary_11G": [{"arm": "hc2", "vs": "seed"}, {"arm": "ao2", "vs": "seed"}, {"arm": "hc2", "vs": "gepa"}, {"arm": "ao2", "vs": "gepa"}],
-            "descriptive_only": [{"arm": "hc2", "vs": "ao2"}, {"arm": "hc2|ao2", "vs": "best v1 competitor (data-dependent)"}, {"arm": "hc2|ao2", "vs": "v1 stock-gate hc / rule-P hc"}],
+            "descriptive_only": [{"arm": "hc2", "vs": "ao2"}, {"arm": "hc2|ao2", "vs": "best v1 competitor by test mean (data-dependent)"}, {"arm": "hc2|ao2", "vs": "every other v1 competitor"},
+                                 {"arm": "hc2|ao2", "vs": "v1 stock-gate hc / rule-P hc"}],
+            "descriptive_note": "descriptive rows use v1-window numbers (no in-window anchor) and carry the window-shift note: the seed's in-window v2 mean against its v1-window mean (shown after the v2 results, erratum 11 (5)-(6))",
             "anchors": "seed (A n=2, D/E n=10) and v1 GEPA champions re-scored inside this window; v1-window numbers are shown beside, never pooled (11F)"}
 
 
@@ -115,6 +169,11 @@ def register(suite, manifests=None, registry=None, note=""):
              ("v2window_script_v2_window_py", C.file_sha(__file__), __file__, ""), ("v2window_script_order_py", C.file_sha(C.HERE / "order.py"), C.HERE / "order.py", ""),
              ("v2window_script_run_final_py", C.file_sha(C.HERE / "run_final.py"), C.HERE / "run_final.py", ""), ("v2window_script_fe_common_py", C.file_sha(C.HERE / "fe_common.py"), C.HERE / "fe_common.py", ""),
              ("v2window_script_commit", hashlib.sha256((C.git_head() or "").encode()).hexdigest(), C.REPO, C.git_head())]
+    meta = json.loads(open(manifests / ("order_V2_%s.jsonl" % suite)).readline())
+    sc = meta.get("scorer") or {}
+    if sc:
+        items.append(("v2window_scorer_%s" % suite, hashlib.sha256(json.dumps(sc, sort_keys=True).encode()).hexdigest(), manifests / ("order_V2_%s.jsonl" % suite),
+                      "scorer of the v2 window (v1 window used a different adapter): " + json.dumps(sc, sort_keys=True)[:600]))
     n = sum(1 for name, sha, p, nt in items if reg.add(name, sha, p, ((note + " | ") if note else "") + nt, suites=[suite]))
     reg.write()
     print("registered %d new v2 window items (%d lines)" % (n, len(reg.lines)))
@@ -137,6 +196,7 @@ if __name__ == "__main__":
         sys.exit("--champions required for build")
     root = a.root or str(C.final_dir(a.suite).parent / "V2" / a.suite)
     man, mpath = build(a.suite, a.champions, root, a.manifests)
-    out, sha, meta = make_order(a.suite, mpath, a.out)
+    hd = build_harness_dir(V2_CODE_ROOT, Path(root) / "harness") if a.suite == "A" else None
+    out, sha, meta = make_order(a.suite, mpath, a.out, harness_dir=hd)
     print("v2 window %s: manifest %s; order %s: %d jobs, %d tasks, sha256 %s" % (a.suite, mpath, out, meta["n_jobs"], len(meta["tasks"]), sha))
     print("counts by arm:", {k: v for k, v in sorted(meta["counts_by_arm"].items())})
