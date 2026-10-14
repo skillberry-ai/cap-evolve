@@ -212,6 +212,16 @@ def main():
                          ("champions_V2_E.json", CS / "final_eval/champions_V2_E.json", "Suite E v2.0 champions (all six searches ended; frozen dirs equal the run candidates)")):
         if fp.exists():
             items.append(("v2_1_AO2_" + nm, fp, "11E v2.1-AO2 / v2.0 record: " + note, None))
+    FE = CS / "final_eval"
+    RESULT_NAMES = ["results_long.csv", "results_long_end.csv", "results_long_infra_missing.csv", "results_long_first_attempt_infra_zero.csv",
+                    "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
+                    "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
+                    "interruptions.jsonl", "canary.jsonl"]
+    for win in ("A", "B", "C", "D", "E", "V2/E"):   # add V2/D and V2/A only after their windows have ended
+        for rn in RESULT_NAMES:
+            fp = FE / win / rn
+            if fp.exists():
+                items.append(("results_" + win.replace("/", "_") + "_" + rn.replace("/", "_"), fp, f"final-window results file, window {win}, hashed BEFORE any analysis (content not read by the registrar)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
