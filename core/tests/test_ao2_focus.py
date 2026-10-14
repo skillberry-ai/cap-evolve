@@ -201,3 +201,24 @@ def test_proposer_exhaustion_never_strands_candidates_in_flight():
               n_proposals=10, since_improve=0, alive_p=[], idle=6)
     assert policy.stop_reason(in_flight=2, **kw) is None
     assert policy.stop_reason(in_flight=0, **kw) == "proposer_exhausted"
+
+
+@pytest.mark.parametrize("why,override", [("max_iterations reached (10/10)", True), ("max_usd reached ($300/$300)", False)])
+def test_the_conductor_is_not_bound_by_the_legacy_iteration_cap(tmp_path, why, override):
+    from types import SimpleNamespace
+    import unittest.mock as m
+    import conductor_backend
+    work = tmp_path / "w"
+    work.mkdir()
+    seen = {}
+
+    def propose(a, ctx):
+        seen["over_budget"] = a.over_budget
+        return 0, {"hypothesis_id": "h"}
+    fake = SimpleNamespace(ctx=SimpleNamespace(work=lambda t: work), spec={}, run_dir=SimpleNamespace(
+        budget_exhausted=lambda: (True, why)), ns=SimpleNamespace(), _too_small=lambda *a: "", cap_hash=lambda t: "h")
+    with m.patch.object(conductor_backend, "helper_refusal", lambda *a: None), \
+            m.patch.object(conductor_backend.digest, "cand_dir", lambda rd, t: tmp_path), \
+            m.patch.object(conductor_backend.act, "propose", propose):
+        conductor_backend.RealBackend.register(fake, {"tag": "cand_9", "parent": "seed", "kind": "propose"}, {})
+    assert bool(seen["over_budget"]) is override

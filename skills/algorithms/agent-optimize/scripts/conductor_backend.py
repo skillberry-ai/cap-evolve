@@ -427,8 +427,13 @@ class RealBackend(P2Port, conductor.Backend):
         small = self._too_small(job, work, parent, h)
         if small:
             return {"ok": False, "refused": "too_small", "detail": small}
+        stop, why = self.run_dir.budget_exhausted()
+        # the legacy per-commit max_iterations is not this engine's budget: its structured caps
+        # (max_candidates, max_metric_calls, tokens, usd) are. Seen live: 10 commits refused every proposal.
+        over = ("conductor: max_iterations is informational; structured caps bound the run"
+                if stop and why.startswith("max_iterations") else None)
         a = argparse.Namespace(**vars(self.ns), tag=tag, parent=parent, hypothesis_file=str(hyp) if h else None,
-                               small_edit_justification=None, over_budget=None, verb="propose")
+                               small_edit_justification=None, over_budget=over, verb="propose")
         try:
             rc, out = act.propose(a, self.ctx)
         except act.Refused as e:
