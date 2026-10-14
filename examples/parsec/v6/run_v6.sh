@@ -18,7 +18,7 @@
 # semantics), so raising it by one and resuming runs exactly one more iteration.
 #
 # Optional env: V6_MAX_WORKERS (15), V6_WORKER_IDLE_EXIT (600), V6_MAX_ATTEMPTS (3),
-# V6_DRIVER_MEM (16G), CCC_LOGS (~/ccc_logs). The dashboard listens on the driver's
+# V6_DRIVER_MEM (64G), CCC_LOGS (~/ccc_logs). The dashboard listens on the driver's
 # node at port 7878; reach it with  ssh -L 7878:<node>:7878 <login-node>.
 set -eo pipefail
 
@@ -61,7 +61,7 @@ if [[ "$SUBMIT" == true ]]; then
   args=(--suite-id "$SUITE_ID" --max-iterations "$MAX_ITERATIONS")
   [[ -n "$RUN_TS" ]] && args+=(--run-ts "$RUN_TS")
   [[ "$RESUME" == true ]] && args+=(--resume)
-  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-16G}" -n 1 -J "v6d_${SUITE_ID}" \
+  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 -J "v6d_${SUITE_ID}" \
        -oo "$LOGS/%J.stdout" -eo "$LOGS/%J.stderr" bash "$0" "${args[@]}"
   exit $?
 fi
