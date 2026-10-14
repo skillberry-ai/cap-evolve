@@ -222,6 +222,30 @@ def main():
             fp = FE / win / rn
             if fp.exists():
                 items.append(("results_" + win.replace("/", "_") + "_" + rn.replace("/", "_"), fp, f"final-window results file, window {win}, hashed BEFORE any analysis (content not read by the registrar)", None))
+    AO21_SEED = []
+    for sname in ("A", "D", "E"):
+        for k in (0, 1, 2):
+            base = V2 / f"{sname}/ao21/s{k}"
+            if not base.exists():
+                continue
+            proj = base / "project" if sname == "A" else base / ".capevolve/project"
+            sid = proj / ("inputs/split_ids.json" if sname == "A" else "split_ids.json")
+            AO21_SEED += [(f"{sname}_ao21_s{k}_spec", proj / "capevolve.yaml", f"v2.1-AO2 Suite {sname} seed {k} run spec"),
+                          (f"{sname}_ao21_s{k}_split_ids", sid, f"v2.1-AO2 Suite {sname} seed {k} proposer-visible split ids"),
+                          (f"{sname}_ao21_s{k}_build_record", base / "BUILD_RECORD.json", f"v2.1-AO2 Suite {sname} seed {k} build record"),
+                          (f"{sname}_ao21_s{k}_driver", base / "driver.sh", f"v2.1-AO2 Suite {sname} seed {k} driver"),
+                          (f"{sname}_ao21_s{k}_env", base / "env.sh", f"v2.1-AO2 Suite {sname} seed {k} env")]
+            for sd in sorted((V2 / f"{sname}/ao21/s{k}.sealed").glob("run_*/splits_full.json")):
+                AO21_SEED.append((f"{sname}_ao21_s{k}_splits_full_sealed", sd, f"v2.1-AO2 Suite {sname} seed {k} sealed full pool partition (hash only; content not read)"))
+    for it, fp, note in AO21_SEED:
+        if fp.exists():
+            items.append(("v2_1_AO2_" + it, fp, "11E v2.1-AO2 per-seed file: " + note, None))
+    for nm, fp, note in (("A_scaffold_v21.sh", V2 / "_tools/scaffold_v21.sh", "Suite A v2.1-AO2 scaffold (v2.0 scaffold + ao_plateau_floor 0.8)"),
+                         ("A_run_v21.sh", V2 / "_tools/run_v21.sh", "Suite A v2.1-AO2 launcher"),
+                         ("make_champions_ao21.py", CS / "scripts/V2/make_champions_ao21.py", "champions extraction for the ao21 arm"),
+                         ("champions_V2_D.json", CS / "final_eval/champions_V2_D.json", "Suite D v2.0 champions (all six = seed)")):
+        if fp.exists():
+            items.append(("v2_1_AO2_" + nm, fp, "11E record: " + note, None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
