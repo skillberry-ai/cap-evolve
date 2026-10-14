@@ -171,3 +171,34 @@ def test_a_second_launch_on_the_same_round_tag_fails_fast(tmp_path):
         holder.stdin.write("\n")
         holder.stdin.flush()
         holder.wait(timeout=10)
+
+
+def test_pooled_p2_accept_commits_without_full_val_rollouts(tmp_path):
+    """AO-2 under P2 pools train+val into F and sealed C, so a confirmed candidate has NO full-val rollouts.
+    commit_accept used to pass --val 0.0, which commit.py refuses ("cannot be verified"), crash-looping the
+    conductor with the champion stuck on the seed."""
+    sys.path.insert(0, str(SCRIPTS))
+    import conductor
+    import conductor_backend
+    from cap_evolve import harness
+    project, run_dir, adapter, seed, cand = _setup(tmp_path, "p2")
+    (cand / "marker.txt").write_text("changed")   # a distinct capability, so the commit is not a no-op
+    harness.evaluate_candidate(adapter, cand, run_dir=run_dir, split="train", n_trials=1, tag="cand_1")
+    assert not harness.split_result_from_rollouts(run_dir, "cand_1", "val").per_task
+    cfg = conductor.Cfg.from_spec({"promotion_rule": "P2", "split_mode": "pooled"})
+    be = conductor_backend.RealBackend(run_dir, project, {"promotion_rule": "P2"}, cfg, None)
+    be._rediagnose = lambda tag: None
+    be.ctx.work("cand_1").mkdir(parents=True, exist_ok=True)
+    for f in cand.iterdir():
+        (be.ctx.work("cand_1") / f.name).write_bytes(f.read_bytes())
+    assert run_dir.best_id == "seed"
+    be.commit_accept("cand_1", {"stage": "confirm", "confirmation": "accept"})
+    assert RunDir_best(run_dir.root) == "cand_1"
+    ev = [json.loads(l) for l in (run_dir.root / "events.jsonl").read_text().splitlines()]
+    acc = [e for e in ev if e.get("kind") == "accept"][-1]
+    assert "P2 pooled split" in acc["val_unverified"]
+
+
+def RunDir_best(root):
+    from cap_evolve import RunDir
+    return RunDir.open(Path(root)).best_id

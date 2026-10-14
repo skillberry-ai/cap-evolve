@@ -463,8 +463,21 @@ class RealBackend(P2Port, conductor.Backend):
     def commit_accept(self, tag, evidence):
         sr = harness.split_result_from_rollouts(self.run_dir, tag, "val")
         why = "the conductor's one-shot proposer writes hypothesis.json only; no agent session keeps a journal or ranked list"
-        extra = ["--val", str(sr.reward if sr.per_task else 0.0), "--missing-handover-justification", why,
+        extra = ["--missing-handover-justification", why,
                  "--missing-ranked-issues-justification", why, "--missing-diagnosis-justification", why]
+        if sr.per_task:
+            extra += ["--val", str(sr.reward)]
+        elif self.cfg.p2:
+            # pooled split (P2): train and val are pooled into F and the sealed C, so there are no full-val
+            # rollouts for commit.py to verify. Record the feedback-stratum estimate, flagged unverified with the
+            # confirmation verdict as the reason (C aggregates themselves stay out of the record).
+            per_task = [sum(v) / len(v) for v in self.rewards(tag, self.screen_ids(), None).values() if v]
+            if per_task:
+                extra += ["--val", str(sum(per_task) / len(per_task))]
+            extra += ["--val-unverified", "P2 pooled split: no full-val rollouts; accepted on confirmation "
+                      f"{(evidence or {}).get('confirmation', 'accept')}" + (" (val = feedback-stratum estimate)" if per_task else "")]
+        else:
+            extra += ["--val", "0.0"]
         rc, res = act.commit(self.ctx, tag, "accept", "conductor: " + json.dumps(evidence, default=str)[:200], extra)
         if rc != 0:
             raise RuntimeError(f"commit.py refused the accept of {tag}: {res}")
