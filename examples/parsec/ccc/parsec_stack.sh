@@ -37,15 +37,23 @@ case "$CMD" in
   "")        usage ;;
 esac
 
-: "${PARSEC_V4N:?PARSEC_V4N environment variable is required (see parsec_paths.py)}"
+# Which benchmark tree: PARSEC_BENCH=v5 reads $PARSEC_V5N, anything else (the
+# default) reads $PARSEC_V4N -- the same selection the shared adapter makes.
+if [[ "${PARSEC_BENCH:-v4}" == "v5" ]]; then
+  : "${PARSEC_V5N:?PARSEC_V5N environment variable is required when PARSEC_BENCH=v5 (see parsec_paths.py)}"
+  PARSEC_TREE="$PARSEC_V5N"
+else
+  : "${PARSEC_V4N:?PARSEC_V4N environment variable is required (see parsec_paths.py)}"
+  PARSEC_TREE="$PARSEC_V4N"
+fi
 
-# Host-scoped: $PARSEC_V4N is on shared GPFS, so an unscoped pid dir would let
+# Host-scoped: $PARSEC_TREE is on shared GPFS, so an unscoped pid dir would let
 # host A's recorded pid be `kill -0`-tested against host B's process table —
 # a false "already running" that silently skips starting parsec-live.
-PID_DIR="$PARSEC_V4N/_run/logs/pids/$(hostname -s)"
+PID_DIR="$PARSEC_TREE/_run/logs/pids/$(hostname -s)"
 
 # The four overrides below exist for parallel eval lanes (examples/parsec/h4):
-# $PARSEC_V4N is one shared GPFS tree, so N concurrent lanes pointed at the
+# $PARSEC_TREE is one shared GPFS tree, so N concurrent lanes pointed at the
 # defaults would collide on the live clone's prompts, the skills store, and the
 # log dir the cost-attribution window is read from. Defaults are unchanged, so
 # a single-lane run behaves exactly as before.
@@ -54,8 +62,8 @@ PID_DIR="$PARSEC_V4N/_run/logs/pids/$(hostname -s)"
 # the one whose config/prompts it serves: src/agent/system_prompt.py derives
 # _BASE_DIR from dirname^3(__file__), which resolves to this directory even when
 # its src/ is a symlink (Python leaves __file__ unresolved through symlinks).
-PARSEC_LIVE_ROOT="${PARSEC_LIVE_ROOT:-$PARSEC_V4N/_run/parsec-live}"
-LOG_DIR="${PARSEC_LOG_DIR:-$PARSEC_V4N/_run/logs/sims}"
+PARSEC_LIVE_ROOT="${PARSEC_LIVE_ROOT:-$PARSEC_TREE/_run/parsec-live}"
+LOG_DIR="${PARSEC_LOG_DIR:-$PARSEC_TREE/_run/logs/sims}"
 mkdir -p "$PID_DIR" "$LOG_DIR"
 
 # Container runtime and image. The image is built once, out of band, from the
@@ -65,13 +73,13 @@ SIM_IMAGE="${PARSEC_SIM_IMAGE:-simulation-harness:bench}"
 # One skills-store mount shared by all five: each writes only its own
 # parsec-<service>/ subdirectory, so they never collide. Across LANES they
 # would, hence the override.
-SKILLS_DIR="${PARSEC_SKILLS_DIR:-$PARSEC_V4N/_run/skills}"
+SKILLS_DIR="${PARSEC_SKILLS_DIR:-$PARSEC_TREE/_run/skills}"
 
 # Must be the SAME path adapter.py passes to the Harbor container, or the agent
 # reads an empty trace: adapter.py's default is
-# $PARSEC_V4N/_run/logs/parsec-trace/trace.jsonl (it uses setdefault, so an
+# $PARSEC_TREE/_run/logs/parsec-trace/trace.jsonl (it uses setdefault, so an
 # exported value here is honoured there too).
-PARSEC_SIM_TRACE="${PARSEC_SIM_TRACE:-$PARSEC_V4N/_run/logs/parsec-trace/trace.jsonl}"
+PARSEC_SIM_TRACE="${PARSEC_SIM_TRACE:-$PARSEC_TREE/_run/logs/parsec-trace/trace.jsonl}"
 
 # name:published_port:kind. The port numbers are the single source of truth in
 # examples/parsec/parsec_paths.py's MCP_PORTS — change them there.
@@ -355,7 +363,7 @@ require_up_preconditions() {
 
 case "$CMD" in
   up)
-    banner "starting parsec v4 stack under $PARSEC_V4N"
+    banner "starting parsec ${PARSEC_BENCH:-v4} stack under $PARSEC_TREE"
     require_up_preconditions
     for entry in "${SERVICES[@]}"; do
       IFS=: read -r name port kind <<< "$entry"
