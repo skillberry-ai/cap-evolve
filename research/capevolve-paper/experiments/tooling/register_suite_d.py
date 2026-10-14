@@ -246,7 +246,9 @@ def main():
                          ("make_champions_ao21.py", CS / "scripts/V2/make_champions_ao21.py", "champions extraction for the ao21 arm"),
                          ("champions_V2_D.json", CS / "final_eval/champions_V2_D.json", "Suite D v2.0 champions (all six = seed)"),
                          ("champions_V2_E_ao21.json", CS / "final_eval/champions_V2_E_ao21.json", "Suite E v2.1-AO2 champions (all three seeds ended; frozen/seed per run)"),
-                         ("champions_V2_D_ao21.json", CS / "final_eval/champions_V2_D_ao21.json", "Suite D v2.1-AO2 champions (all three seeds ended; frozen/seed per run)")):
+                         ("champions_V2_D_ao21.json", CS / "final_eval/champions_V2_D_ao21.json", "Suite D v2.1-AO2 champions (all three seeds ended; frozen/seed per run)"),
+                         ("v2_1_D_no_order.json", PAPER / "experiments/final/manifests/v2_1_D_no_order.json", "manifest note: no v2.1 D window or order (inert champions)"),
+                         ("v2_1_E_no_order.json", PAPER / "experiments/final/manifests/v2_1_E_no_order.json", "manifest note: no v2.1 E window or order (inert champions)")):
         if fp.exists():
             items.append(("v2_1_AO2_" + nm, fp, "11E record: " + note, None))
     for nm in ("counts_only.py", "status_report.py"):
