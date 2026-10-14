@@ -266,7 +266,7 @@ def stop_reason(*, caps: Caps, committed: int, reserved: int, tokens: int, token
         return "reward: stop_at_reward reached"
     if caps.max_candidates and n_proposals >= caps.max_candidates and in_flight == 0:
         return "max_candidates (numeric key)"      # proposals already launched are allowed to finish
-    if caps.max_idle and idle >= caps.max_idle:
+    if caps.max_idle and idle >= caps.max_idle and in_flight == 0:     # never strand candidates still evaluating
         return "proposer_exhausted"             # idle proposals' tokens are already inside `tokens` above
     spent_frac = (committed / mc) if mc else 0.0
     n = plateau_n(caps, n_proposals, spent_frac)

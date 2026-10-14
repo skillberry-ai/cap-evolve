@@ -137,6 +137,10 @@ class RealBackend(P2Port, conductor.Backend):
         self.jobs_dir.mkdir(parents=True, exist_ok=True)
         self.ns = argparse.Namespace(run_dir=str(self.root), project=str(project), strict=False)
         self.ctx = act.Ctx(self.ns)
+        if cfg.focus:
+            # focus proposals fix the PARENT's failing tasks across root causes, gated by _too_small; the
+            # cluster-membership hypothesis rule refused every such proposal live (predicted tasks span clusters)
+            self.ctx.cfg["failure_clustering"] = False
         self._rows: tuple = (None, [])
         self._hash: dict = {}
         self._threads: dict = {}

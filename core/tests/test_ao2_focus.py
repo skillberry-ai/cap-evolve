@@ -193,3 +193,11 @@ def test_merges_count_toward_max_candidates_and_never_flood(tmp_path):
     nodes = c.st["nodes"]
     assert not any(nodes[x].get("edit_kind") == "merge" for p in c.st.get("merged_pairs", []) for x in p
                    if nodes.get(x) and x != c.champion), "near-miss merges are between original edits only"
+
+
+def test_proposer_exhaustion_never_strands_candidates_in_flight():
+    caps = policy.Caps(max_idle=6)
+    kw = dict(caps=caps, committed=0, reserved=0, tokens=0, tokens_reserved=0, now=0.0, best_reward=None,
+              n_proposals=10, since_improve=0, alive_p=[], idle=6)
+    assert policy.stop_reason(in_flight=2, **kw) is None
+    assert policy.stop_reason(in_flight=0, **kw) == "proposer_exhausted"

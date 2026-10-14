@@ -1044,6 +1044,8 @@ class Conductor:
                 return
             if cap.max_candidates and self.st["n_proposals"] >= cap.max_candidates:
                 return
+            if cap.max_idle and int(self.st.get("idle_proposals", 0)) >= cap.max_idle:
+                return                      # exhausted: stop proposing; the run ends once in-flight nodes are decided
             used = {j.get("slot") for j in cs.live(self.st, "propose")}
             slot = next(i for i in range(self.cfg.k_prop) if i not in used)
             tag = self.new_tag()
