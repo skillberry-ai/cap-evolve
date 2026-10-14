@@ -1,0 +1,358 @@
+{
+ "bstar": "v2-final-state",
+ "champions_file": "/home/dev/projects2/campaign-scratch/final_eval/champions_V2_D.json",
+ "champions_file_sha256": "919b8fba97ebc44b3c34c46484f8bb29192d3f4cc40cac24253dcd42d1c34482",
+ "entries": [
+  {
+   "arm": "hc2",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V2/D/artifacts/B/hc2/s0",
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "mode": "B",
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V2/D/hc2/s0/frozen/seed",
+   "status": "ok",
+   "suite": "D",
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "hc2",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V2/D/artifacts/B/hc2/s1",
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "mode": "B",
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V2/D/hc2/s1/frozen/seed",
+   "status": "ok",
+   "suite": "D",
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "hc2",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V2/D/artifacts/B/hc2/s2",
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "mode": "B",
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V2/D/hc2/s2/frozen/seed",
+   "status": "ok",
+   "suite": "D",
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "ao2",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V2/D/artifacts/B/ao2/s0",
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "mode": "B",
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V2/D/ao2/s0/frozen/seed",
+   "status": "ok",
+   "suite": "D",
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "ao2",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V2/D/artifacts/B/ao2/s1",
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "mode": "B",
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V2/D/ao2/s1/frozen/seed",
+   "status": "ok",
+   "suite": "D",
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "ao2",
+   "caveats": [
+    "v2 champion = final state of the search (amendment 11)"
+   ],
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V2/D/artifacts/B/ao2/s2",
+   "identical_to_seed": true,
+   "identical_to_seed_normalized": true,
+   "inert": true,
+   "mode": "B",
+   "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V2/D/ao2/s2/frozen/seed",
+   "status": "ok",
+   "suite": "D",
+   "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s0/frozen/cand_0025",
+   "candidate_id": "cand_0025",
+   "caveats": [
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 564 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s0/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "ca989e3c20365dd3f712ae7b5cf7d3589f381ff069e5bf3c50db1a47a860c702",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/gepa/s0",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "85f8d6775e94256df7dad095418689723d1e761991e5e5cb83e9415d3eabfc52",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 15,
+   "n_events": 117,
+   "n_promotions": 14,
+   "n_screened": 26,
+   "native_finish": {
+    "count": 564,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "d954f72b50827847a971d1aa55bfd9d3e5aa9ed4b0d94330c162b2b61066bc42",
+   "own_seed_candidate": "cand_0000",
+   "own_seed_tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366",
+   "rollout_index": 564,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s0",
+   "seed": 0,
+   "selection": {
+    "champion_score": 0.68,
+    "comparison_count": 564,
+    "n_tasks": 25,
+    "own_count": 564,
+    "seed_n_tasks": 25,
+    "seed_score": 0.64,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "sel",
+    "split": "sel"
+   },
+   "selection_n_tasks": 25,
+   "selection_split": "sel",
+   "selection_value": 0.68,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "1ee3ab331cb643da55ef1ca5f4b198c7c9c6179a21c2739b5733388fbfacac65"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s1/frozen/cand_0019",
+   "candidate_id": "cand_0019",
+   "caveats": [
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 575 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s1/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "8d28215ea82c8b641335ddc0a7b5fdbb67cfbe51fb7e9b8f74dafcd4e2eeed35",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/gepa/s1",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "fef6374c692f37a15fb9aef53331a920abc7c2dab243c359ec42c76ad248ef1e",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 15,
+   "n_events": 125,
+   "n_promotions": 14,
+   "n_screened": 30,
+   "native_finish": {
+    "count": 575,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "f79ad87a3e35456bf905cd16b8696466eadf6f699f820f65b219b71e2738df90",
+   "own_seed_candidate": "cand_0000",
+   "own_seed_tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366",
+   "rollout_index": 382,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s1",
+   "seed": 1,
+   "selection": {
+    "champion_score": 0.8,
+    "comparison_count": 575,
+    "n_tasks": 25,
+    "own_count": 575,
+    "seed_n_tasks": 25,
+    "seed_score": 0.56,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "sel",
+    "split": "sel"
+   },
+   "selection_n_tasks": 25,
+   "selection_split": "sel",
+   "selection_value": 0.8,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "c882c169ad68cb5e76e65ce03677c61a7e5a55a34d59e69df5862b9250867adc"
+  },
+  {
+   "arm": "gepa",
+   "artifact_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s2/frozen/cand_0020",
+   "candidate_id": "cand_0020",
+   "caveats": [
+    "natively finished before the cutoff (run.log: exit 0); contributes its final returned artifact, count 556 disclosed"
+   ],
+   "dagger": false,
+   "event_sources": [
+    "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s2/candidates.jsonl"
+   ],
+   "files": {
+    "policy/policy.md": "c10035a31aea76f06a2a669b4b99318ceeaac27f4878a2fa11ebeeeb364a8bc0",
+    "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/B/gepa/s2",
+   "identical_to_own_seed": false,
+   "identical_to_seed": false,
+   "identical_to_seed_normalized": false,
+   "inert": false,
+   "infra_excluded_events": 0,
+   "limit": null,
+   "logged_sha256": "f6a798e193bf54f952f96e98e6882b552d259ea7b5c56e83abcf092bceaf9eda",
+   "logged_sha_matches": true,
+   "mode": "B",
+   "n_candidates_considered": 13,
+   "n_events": 136,
+   "n_promotions": 12,
+   "n_screened": 34,
+   "native_finish": {
+    "count": 556,
+    "evidence": "run.log: exit 0",
+    "stop_kind": "native_finish"
+   },
+   "normalized_tree_sha256": "0868e9c0f037d7bf4958ad936513effff8df912871eafa758fb7deb48035df53",
+   "own_seed_candidate": "cand_0000",
+   "own_seed_tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366",
+   "rollout_index": 390,
+   "run_dir": "/home/dev/projects2/campaign-scratch/runs/E20/GEPA/s2",
+   "seed": 2,
+   "selection": {
+    "champion_score": 0.68,
+    "comparison_count": 556,
+    "n_tasks": 25,
+    "own_count": 556,
+    "seed_n_tasks": 25,
+    "seed_score": 0.56,
+    "seed_source": "candidates.jsonl evaluated",
+    "seed_split": "sel",
+    "split": "sel"
+   },
+   "selection_n_tasks": 25,
+   "selection_split": "sel",
+   "selection_value": 0.68,
+   "status": "ok",
+   "suite": "D",
+   "surface_violation": false,
+   "tree_sha256": "b8a7a498ed2e140ad17e1fdfa44833ccad80326bc1b2486a9c945e6d9c1332d1"
+  }
+ ],
+ "generated_utc": "2026-10-14T03:50:14Z",
+ "seed_artifact": {
+  "distinct_seed_hashes": {
+   "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165": 21
+  },
+  "files": {
+   "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+   "tools/tools.py": "8aa9a49538743e6fefe7356ecbb5d2d50c3cb74c7eae1425e1fa842058840017"
+  },
+  "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/D/artifacts/seed",
+  "n_runs_agreeing": 21,
+  "normalized_tree_sha256": "bc0c966ebd2429fbfbd6d2de5bf8a2f122e517902d99728c519b97afe2586826",
+  "note": "3 run(s) have a first candidate that is not byte-identical to the seed capability (the arm's own starting point, e.g. MIPROv2's default instruction); the shared seed hash is the seed directory's, as registered",
+  "runs_deviating": [
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 0,
+    "tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 1,
+    "tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 2,
+    "tree_sha256": "b3255320f422a680d33a44f6f37b8fc0030d42605f25381aa0ba58a2ee6e1366"
+   }
+  ],
+  "seed_source_dir": "/home/dev/projects2/wt-tau/examples/tau2_retail/seed_capability",
+  "status": "ok",
+  "suite": "D",
+  "tree_sha256": "9ed1a9be71d99a0c84969e3a0c99f8b88f3b7993b00452dedcdf44e3424ce165"
+ },
+ "suite": "D",
+ "v1_manifest": "/home/dev/projects2/cap-evolve-campaign/research/capevolve-paper/experiments/final/manifests/artifacts_D.json",
+ "v1_manifest_sha256": "63f66add4007b0e5c2af230b7b47a2b51c7b7764670dfafb01125815a91348c5",
+ "window": "v2"
+}
