@@ -196,3 +196,7 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Update 12:50 UTC 10-14 (periodic check)
 - The A v2 window is running (PID 2933577, order e8634572, 24 workers). final-eval-eng's watcher hashes the results on exit and sends them to stats-reviewer.
 - Next: the A rows (HC-2 vs the v1 seed, registered; HC-2 vs AO-2 and AO-2 vs the v1 seed, descriptive). Then the ao21 A champions and their scoring. Then the full freeze.
+
+## Update 15:50 UTC 10-14 (periodic check)
+- All final windows are done and registered (v1 A-E; v2 A, D, E). The analysis is in analysis/out/unblind_20261014/.
+- The only runs left are A ao21 s0-s2 (capevolve-runner). After them: champions_V2_A_ao21.json, then a window or a seed-check mapping if inert, then the v2 freeze.

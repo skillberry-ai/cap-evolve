@@ -1,6 +1,20 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 12:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 15:50 UTC (coordinator periodic check)_
+
+## Update 15:50 UTC 10-14
+- **Spend**: capped spend is 193.0M of 230M (gateway healthy).
+- **SpreadsheetBench (A) v2 window**: DONE at 14:26Z (840/840, 0 infra). Registered and analysed (errata 41).
+  - HC-2 0.505 vs seed 0.364: +0.140 [0.045, 0.236], Holm 0.014.
+  - HC-2 vs GEPA: tie.
+  - Scaffold alone: +0.007.
+  - v2 HC-2 beats v1 rule-P hc by +0.112 [0.024, 0.200], and is indistinguishable from v1 hcstock.
+- **v2 vs v1 overall**: A, v2 better; E, v1 better or equal; D, v1 better (v2 = seed).
+- **Running**: the A v2.1-AO2 searches s0-s2 are at 443, 377 and 463 of 600 (ETA ~17-19Z). Then their champions file, their scoring, and the full freeze.
+- **Pending user decisions**: B/C transfer spend; the Overleaf branch.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 12:50 UTC (coordinator periodic check)_
 
 ## Update 12:50 UTC 10-14
 - **Spend**: capped spend is 192.5M of 230M (gateway healthy).
