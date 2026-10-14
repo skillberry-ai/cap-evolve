@@ -217,7 +217,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
