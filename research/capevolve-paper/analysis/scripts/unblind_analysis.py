@@ -28,8 +28,8 @@ RUNS = "/home/dev/projects2/campaign-scratch/runs"
 OUT = sys.argv[1]
 os.makedirs(OUT, exist_ok=True)
 
-WINDOWS = OrderedDict([("A", "A"), ("B", "B"), ("C", "C"), ("D", "D"), ("E", "E"), ("V2/D", "V2_D"), ("V2/E", "V2_E")])
-SPLITS = {"A": ("",), "B": ("test",), "C": ("test",), "D": ("test",), "E": ("test",), "V2/D": ("test",), "V2/E": ("test",)}
+WINDOWS = OrderedDict([("A", "A"), ("B", "B"), ("C", "C"), ("D", "D"), ("E", "E"), ("V2/D", "V2_D"), ("V2/E", "V2_E"), ("V2/A", "V2_A")])
+SPLITS = {"A": ("",), "B": ("test",), "C": ("test",), "D": ("test",), "E": ("test",), "V2/D": ("test",), "V2/E": ("test",), "V2/A": ("",)}
 MARGIN = 0.10
 
 
@@ -288,7 +288,23 @@ def metrics_fallback(suite, arm, seed):
     return _MET.get((suite, arm, seed))
 
 
+def ledger_v2(win, arm, seed):
+    """Gateway-ledger optimizer cost of a v2 search by tag V2-<suite>-<arm>-s<k> (the cost source of truth named in the run's manifest/cost_source.txt)."""
+    global _MET
+    metrics_fallback("-", "", 0)
+    key = ("LEDGER", f"V2-{win[3]}-{arm}-s{seed}")
+    if key not in _MET:
+        p = os.path.join(OUT, "metrics", "metrics_by_arm.csv")
+        for r in csv.DictReader(open(p)) if os.path.exists(p) else []:
+            _MET[("LEDGER", r["arm"])] = r
+    return _MET.get(key)
+
+
 def state_calls(d):
+    try:
+        return json.load(open(os.path.join(d, "logs", "rollout_counter.json")))["total"]
+    except Exception:
+        pass
     try:
         return json.load(open(os.path.join(d, ".capevolve", "run_main", "state.json")))["spent"]["metric_calls"]
     except Exception:
@@ -312,6 +328,10 @@ def cost_rows(win):
             m = metrics_fallback(win, arm, s)
             if m and m.get("optimizer_usd_priced"):
                 usd, toks, calls, src = float(m["optimizer_usd_priced"]), int(m["optimizer_noncache_tokens"] or 0), int(m["optimizer_calls"] or 0), "collect_metrics gateway ledger"
+        if usd is None and win == "V2/A":
+            m = ledger_v2(win, arm, s)
+            if m and m.get("optimizer_usd_priced"):
+                usd, toks, calls, src = float(m["optimizer_usd_priced"]), int(m["optimizer_noncache_tokens"] or 0), int(m["optimizer_calls"] or 0), "gateway ledger by tag (lower bound: some calls unpriced)"
         if cnt is None and win.startswith("V2/"):
             cnt = state_calls(d)
         out.append({"arm": arm, "seed": s, "optimizer_usd_proxy": usd, "optimizer_noncache_tokens": toks, "optimizer_calls": calls, "search_rollouts": cnt, "source": src})
@@ -439,7 +459,7 @@ def main():
 
     # ---- v1 families
     cf = json.load(open(os.path.join(MAN, "comparison_family.json")))
-    cfV = {s: json.load(open(os.path.join(MAN, f"comparison_family_V2_{s}.json"))) for s in "DE"}
+    cfV = {s: json.load(open(os.path.join(MAN, f"comparison_family_V2_{s}.json"))) for s in "ADE"}
     fams = defaultdict(list)
     for s in "ABC":
         F = cf[s]
@@ -463,11 +483,11 @@ def main():
         if s == "E":
             fams[s].append((family(W[s], Ws[s], "Suite E competitors E-comp", [rr(r) for r in F["E_comp_own_holm"]]), ("ao",), False))
     famv2 = {}
-    for s in "DE":
+    for s in "ADE":
         k = f"V2/{s}"
         rows = [rr(r) for r in cfV[s]["primary_11G"]]
         famv2[s] = family(W[k], Ws[k], f"v2 window Suite {s}: family V2 (11G, m = 4)", rows, tost=False)
-        desc = [("hc2", "ao2"), ("ao21", "seed"), ("ao21", "gepa")]
+        desc = [("hc2", "ao2"), ("ao21", "seed"), ("ao21", "gepa")] if s != "A" else [("hc2", "ao2"), ("ao2", "seed")]
         famv2[s + "_desc"] = family(W[k], Ws[k], f"v2 window Suite {s}: descriptive rows (no Holm claim)", desc)
 
     # ---- write per-suite markdown
@@ -476,7 +496,7 @@ def main():
         L = [f"# Window {w}: per-arm tables (user-directed early unblinding, erratum 36)", ""]
         nT = len(W[w].tasks); nF = len(set(W[w].fam))
         L += [f"Task set: {nT} tasks, {nF} families (cluster = family; split filter {SPLITS[w]}). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.", ""]
-        if w.startswith("V2/"):
+        if w.startswith("V2/") and w != "V2/A":
             L += ["v2 note: hc2/ao2 searches that returned the seed have no scored cell (erratum 11 (3)); they enter at the in-window seed score, delta 0. ao21 (v2.1) is inert by construction and no window cell exists.", ""]
         # synthesize ao2/ao21 etc. for V2 windows
         L += arm_table(W[w], Ws[w]) if True else []
@@ -508,6 +528,8 @@ def main():
             L += fam_table(F, tost, dag) + [""]
         if w.startswith("V2/"):
             s = w[3]
+            if s == "A":
+                L += ["**Suite A v2 start (erratum 38, 40):** v2 A started from the v1 seed + empty helper scaffold + 3 prompt lines; every helper script in the HC-2 champions was written by CapEvolve. AO-2 returned its v2 start (one artifact, three identical cells; artifact-level only). AO-2 vs seed = scaffold effect (descriptive); HC-2 vs AO-2 = search effect (descriptive); HC-2 vs seed is the registered row.", ""]
             L += fam_table(famv2[s]) + [""] + fam_table(famv2[s + "_desc"]) + [""]
         # infra
         rep = infra_counts(w)
@@ -534,7 +556,7 @@ def main():
         except Exception as e:
             cr = []
         if cr:
-            L += ["Search cost (optimizer = Sonnet 5.5 at the proxy list price of protocol/pricing.json, from the run's cost_summary.json; blank = no cost_summary.json in the run dir; search rollouts = counted rollouts of the B* manifest for v1 windows, and for v2 windows the run's state.json metric_calls, which on tau includes the host-side finalize rollouts and is NOT the counted-rollout definition):", "", "| arm | seed | optimizer USD (proxy) | optimizer non-cache-read tokens | optimizer calls | search rollouts | source |", "|---|---|---|---|---|---|---|"]
+            L += ["Search cost (optimizer = Sonnet 5.5 at the proxy list price of protocol/pricing.json, from the run's cost_summary.json; blank = no cost_summary.json in the run dir; search rollouts = counted rollouts of the B* manifest for v1 windows, and for v2 windows the run's logs/rollout_counter.json total on A, or state.json metric_calls on tau, which includes the host-side finalize rollouts and is NOT the counted-rollout definition):", "", "| arm | seed | optimizer USD (proxy) | optimizer non-cache-read tokens | optimizer calls | search rollouts | source |", "|---|---|---|---|---|---|---|"]
             for r in cr:
                 L.append(f"| {r['arm']} | {r['seed']} | {f(r['optimizer_usd_proxy'],2) if r['optimizer_usd_proxy'] is not None else ''} | {r['optimizer_noncache_tokens'] if r['optimizer_noncache_tokens'] is not None else ''} | {r['optimizer_calls'] if r['optimizer_calls'] is not None else ''} | {r['search_rollouts'] if r['search_rollouts'] is not None else ''} | {r.get('source') if r['optimizer_usd_proxy'] is not None else ''} |")
             L.append("")
@@ -546,24 +568,29 @@ def main():
     L = ["# v1 versus v2 (descriptive; user-directed early unblinding)", "",
          "Each delta is measured inside its own window against that window's own in-window seed (n = 10 trials per task on D and E). Windows are different time blocks and are never pooled. "
          "Rows are DESCRIPTIVE unless marked; the registered v2 confirmatory rows are family V2 (11G) in the v2 window files. Inert artifacts (champion = seed) enter at the seed score, delta 0.", ""]
-    PAIRS = {"D": {"v1 pt (stock-gate hill-climb, reference)": ("D", "pt"), "v1 rulep (rule P hill-climb)": ("D", "rulep")},
+    PAIRS = {"A": {"v1 hc (rule P hill-climb)": ("A", "hc"), "v1 hcstock (stock-gate hill-climb)": ("A", "hcstock"), "v1 ao (agent-optimize, inert)": ("A", "ao")},
+             "D": {"v1 pt (stock-gate hill-climb, reference)": ("D", "pt"), "v1 rulep (rule P hill-climb)": ("D", "rulep")},
              "E": {"v1 pt (stock-gate hill-climb, reference)": ("E", "pt"), "v1 rulep (rule P hill-climb)": ("E", "rulep"), "v1 ao (agent-optimize, dagger)": ("E", "ao")}}
     V2ARMS = {"hc2": "v2.0 HC-2", "ao2": "v2.0 AO-2", "ao21": "v2.1 AO-2 (inert by construction)"}
+    V2ARMS_A = {"hc2": "v2.0 HC-2", "ao2": "v2.0 AO-2 (= v2 start: scaffold effect; not inert)"}
     summary = []
-    for s in "DE":
+    for s in "ADE":
         k2 = f"V2/{s}"
         w2 = W[k2]
-        # give ao21 inert seeds
-        w2.seeds_of["ao21"] = {0, 1, 2}
-        for sd in (0, 1, 2):
-            w2.inert[("ao21", sd)] = True
-        L += [f"## Suite {s} ({'tau2 retail' if s == 'D' else 'tau2 airline'}, test {'40' if s == 'D' else '20'})", ""]
+        V2A = V2ARMS_A if s == "A" else V2ARMS
+        if s != "A":
+            w2.seeds_of["ao21"] = {0, 1, 2}
+            for sd in (0, 1, 2):
+                w2.inert[("ao21", sd)] = True
+        L += [f"## Suite {s} ({ {'A': 'SpreadsheetBench, T = 70, seed n = 2', 'D': 'tau2 retail, test 40', 'E': 'tau2 airline, test 20'}[s] })", ""]
+        if s == "A":
+            L += ["v2 A started from the v1 seed + empty helper scaffold + 3 prompt lines (erratum 40); every helper script is CapEvolve-written. The A v2.1-AO2 runs have no scored cell.", ""]
         L += ["| arm (window) | delta vs in-window seed | 95% CI (artifact, CR1) | 95% CI (pipeline, t2) | inert seeds | per-seed delta (seed 0, 1, 2) |", "|---|---|---|---|---|---|"]
         deltas = {}
         for lab, (win, arm) in PAIRS[s].items():
             c = contrast(W[win], arm, "seed")
             deltas[lab] = (win, arm, c)
-        for arm, lab in V2ARMS.items():
+        for arm, lab in V2A.items():
             c = contrast(w2, arm, "seed")
             deltas[lab] = (k2, arm, c)
         for lab, (win, arm, c) in deltas.items():
@@ -577,7 +604,7 @@ def main():
         # difference of deltas v2 minus v1, task-paired
         L += ["Difference of deltas (v2 arm minus v1 arm, each against its own window's seed; task-paired CR1 on the per-task difference of seed-averaged deltas; descriptive):", "",
               "| v2 arm | v1 arm | v2 minus v1 | 95% CI |", "|---|---|---|---|"]
-        for arm2, lab2 in V2ARMS.items():
+        for arm2, lab2 in V2A.items():
             for lab1, (win1, arm1) in PAIRS[s].items():
                 d2 = [None if (a is None or b is None) else a - b for a, b in zip(seedavg(w2.rows(arm2)[0]), w2.seedvec)]
                 d1 = [None if (a is None or b is None) else a - b for a, b in zip(seedavg(W[win1].rows(arm1)[0]), W[win1].seedvec)]

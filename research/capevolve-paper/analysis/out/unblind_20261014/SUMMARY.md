@@ -1,6 +1,6 @@
 # Unblinded results (user-directed early unblinding, analysis_plan erratum 36), 2026-10-14
 
-Files: window_<W>.md (per-window tables), v1_vs_v2.md, unblind_results.json. Script `analysis/scripts/unblind_analysis.py`. Suite A v2 has no window yet.
+Files: window_<W>.md (per-window tables), v1_vs_v2.md, unblind_results.json. Script `analysis/scripts/unblind_analysis.py`.
 
 # Window A: per-arm tables (user-directed early unblinding, erratum 36)
 
@@ -398,9 +398,69 @@ Seed-check minus seed (empirical null of window noise, 9D(ii)): +0.065, 95% CI [
 | ao21 vs seed | arm absent | | | | | not run | | | |
 | ao21 vs gepa | arm absent | | | | | not run | | | |
 
+# Window V2/A: per-arm tables (user-directed early unblinding, erratum 36)
+
+Task set: 70 tasks, 70 families (cluster = family; split filter ('',)). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.
+
+| arm | seeds | trials/task | mean reward (as measured) | mean (inert -> seed) | 95% CI (CR1, artifact-level) | per-seed mean (as measured) | inert seeds | infra_final cells | mean, infra_final missing |
+|---|---|---|---|---|---|---|---|---|---|
+| seed | 1 | 2 | 0.364 | 0.364 | [0.255, 0.473] | - | - | 0 | 0.364 |
+| seed-check | 1 | 1 | 0.329 | 0.329 | [0.216, 0.441] | - | - | 0 | 0.329 |
+| ao2 | 3 | 1 | 0.371 | 0.371 | [0.264, 0.478] | s0:0.386, s1:0.371, s2:0.357 | 0/3 | 0 | 0.371 |
+| gepa | 3 | 1 | 0.505 | 0.505 | [0.394, 0.615] | s0:0.557, s1:0.514, s2:0.443 | 0/3 | 0 | 0.505 |
+| hc2 | 3 | 1 | 0.505 | 0.505 | [0.395, 0.614] | s0:0.457, s1:0.543, s2:0.514 | 0/3 | 0 | 0.505 |
+
+Seed drift (5I, in-window seed, task-demeaned): blocks (index, mean, SE, n) = 0: +0.032 (SE 0.028, n=31); 1: -0.019 (SE 0.030, n=27); 2: -0.026 (SE 0.026, n=38); 3: +0.014 (SE 0.026, n=37); 4: +0.000 (SE 0.060, n=7). Range 0.059, SE of difference 0.052, drift flag (>2 SE): False.
+
+Seed-check minus seed (empirical null of window noise, 9D(ii)): -0.036, 95% CI [-0.120, 0.049], p 0.402.
+
+**Suite A v2 start (erratum 38, 40):** v2 A started from the v1 seed + empty helper scaffold + 3 prompt lines; every helper script in the HC-2 champions was written by CapEvolve. AO-2 returned its v2 start (one artifact, three identical cells; artifact-level only). AO-2 vs seed = scaffold effect (descriptive); HC-2 vs AO-2 = search effect (descriptive); HC-2 vs seed is the registered row.
+
+**v2 window Suite A: family V2 (11G, m = 4)** (Holm m = 4; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
+
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|
+| hc2 vs seed | +0.140 | [0.045, 0.236] | [-0.093, 0.374] | 0.005 | 0.014 | superior | +0.140 (0.014) | a 0/3, b 0/1 | +0.09, +0.18, +0.15 |
+| ao2 vs seed | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0.786 | 1.000 | n.s. | +0.007 (1.000) | a 0/3, b 0/1 | +0.02, +0.01, -0.01 |
+| hc2 vs gepa | +0.000 | [-0.054, 0.054] | [-0.159, 0.159] | 1.000 | 1.000 | n.s. | +0.000 (1.000) | a 0/3, b 0/3 | -0.05, +0.04, +0.01 |
+| ao2 vs gepa | -0.133 | [-0.212, -0.055] | [-0.306, 0.039] | 0.001 | 0.004 | inferior | -0.133 (0.004) | a 0/3, b 0/3 | -0.12, -0.13, -0.15 |
+
+**v2 window Suite A: descriptive rows (no Holm claim)** (Holm m = 2; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
+
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|
+| hc2 vs ao2 | +0.133 | [0.049, 0.217] | [-0.078, 0.344] | 0.002 | 0.005 | superior | +0.133 (0.005) | a 0/3, b 0/3 | +0.09, +0.17, +0.14 |
+| ao2 vs seed | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0.786 | 0.786 | n.s. | +0.007 (0.786) | a 0/3, b 0/1 | +0.02, +0.01, -0.01 |
+
 # v1 versus v2 (descriptive; user-directed early unblinding)
 
 Each delta is measured inside its own window against that window's own in-window seed (n = 10 trials per task on D and E). Windows are different time blocks and are never pooled. Rows are DESCRIPTIVE unless marked; the registered v2 confirmatory rows are family V2 (11G) in the v2 window files. Inert artifacts (champion = seed) enter at the seed score, delta 0.
+
+## Suite A (SpreadsheetBench, T = 70, seed n = 2)
+
+v2 A started from the v1 seed + empty helper scaffold + 3 prompt lines (erratum 40); every helper script is CapEvolve-written. The A v2.1-AO2 runs have no scored cell.
+
+| arm (window) | delta vs in-window seed | 95% CI (artifact, CR1) | 95% CI (pipeline, t2) | inert seeds | per-seed delta (seed 0, 1, 2) |
+|---|---|---|---|---|---|
+| v1 hc (rule P hill-climb) (A) | +0.029 | [-0.025, 0.082] | [-0.107, 0.164] | 1/3 | +0.029, +0.057, +0.000 |
+| v1 hcstock (stock-gate hill-climb) (A) | +0.105 | [0.025, 0.185] | [-0.099, 0.309] | 0/3 | +0.057, +0.143, +0.114 |
+| v1 ao (agent-optimize, inert) (A) | +0.000 | [0.000, 0.000] | [0.000, 0.000] | 3/3 | +0.000, +0.000, +0.000 |
+| v2.0 HC-2 (V2/A) | +0.140 | [0.045, 0.236] | [-0.093, 0.374] | 0/3 | +0.093, +0.179, +0.150 |
+| v2.0 AO-2 (= v2 start: scaffold effect; not inert) (V2/A) | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0/3 | +0.021, +0.007, -0.007 |
+
+Window-shift controls (same GEPA artifact scored in both windows when the tree hashes match): GEPA delta vs seed v1 window +0.138 [0.064, 0.212], v2 window +0.140 [0.048, 0.233]. Seed mean v1 0.357 vs v2 0.364; GEPA mean v1 0.495 vs v2 0.505.
+GEPA artifact tree hashes identical across windows: True.
+
+Difference of deltas (v2 arm minus v1 arm, each against its own window's seed; task-paired CR1 on the per-task difference of seed-averaged deltas; descriptive):
+
+| v2 arm | v1 arm | v2 minus v1 | 95% CI |
+|---|---|---|---|
+| v2.0 HC-2 | v1 hc (rule P hill-climb) | +0.112 | [0.024, 0.200] |
+| v2.0 HC-2 | v1 hcstock (stock-gate hill-climb) | +0.036 | [-0.060, 0.132] |
+| v2.0 HC-2 | v1 ao (agent-optimize, inert) | +0.140 | [0.045, 0.236] |
+| v2.0 AO-2 (= v2 start: scaffold effect; not inert) | v1 hc (rule P hill-climb) | -0.021 | [-0.089, 0.046] |
+| v2.0 AO-2 (= v2 start: scaffold effect; not inert) | v1 hcstock (stock-gate hill-climb) | -0.098 | [-0.188, -0.007] |
+| v2.0 AO-2 (= v2 start: scaffold effect; not inert) | v1 ao (agent-optimize, inert) | +0.007 | [-0.045, 0.059] |
 
 ## Suite D (tau2 retail, test 40)
 

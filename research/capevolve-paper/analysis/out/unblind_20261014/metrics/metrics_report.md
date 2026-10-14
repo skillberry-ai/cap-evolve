@@ -1,16 +1,16 @@
 # Campaign metrics report
 
-Generated 2026-10-14T07:01:22Z UTC from `/home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl` (newest call 2026-10-14T07:01:59Z). Re-run: `refresh_metrics.sh --once`.
+Generated 2026-10-14T14:40:44Z UTC from `/home/dev/projects2/campaign-scratch/logs/gateway_calls.jsonl` (newest call 2026-10-14T14:41:17Z). Re-run: `refresh_metrics.sh --once`.
 USD = proxy Anthropic list prices, Claude models only; RITS/Azure/GCP/gpt-oss are unpriced (tokens only, never $0); `lb` = priced sum is a lower bound.
 
 ## Reconciliation with gateway /health
 
-| quantity | /health | recomputed from log (first 596646 calls) | diff |
+| quantity | /health | recomputed from log (first 618222 calls) | diff |
 |---|---:|---:|---:|
-| total_tokens | 4,120,049,557 | 3,242,250,824 | 877,798,733 |
-| rits_tokens | 3,925,846,780 | 1,906,011,046 | 2,019,835,734 |
-| capped_tokens (non-RITS) | 192,109,932 | 116,362,204 | 75,747,728 |
-| calls | 596646 | 596646 | 0 |
+| total_tokens | 4,349,923,580 | 3,345,817,139 | 1,004,106,441 |
+| rits_tokens | 4,155,096,708 | 1,936,689,694 | 2,218,407,014 |
+| capped_tokens (non-RITS) | 192,734,027 | 118,659,914 | 74,074,113 |
+| calls | 618222 | 618222 | 0 |
 
 Gateway ledger counts usage.total_tokens when the upstream supplies it; for non-streamed Anthropic calls total_tokens = input+output and omits cache_creation tokens, so those cache writes are in the usage fields but not in the ledger (see naive_sum_... for the size).
 Naive Anthropic sum (input+output+cache_creation) minus ledger, by model/api/stream: `{"('claude-sonnet-5', 'anthropic', False)": 190737}`
@@ -19,8 +19,8 @@ Naive Anthropic sum (input+output+cache_creation) minus ledger, by model/api/str
 
 | scope | calls | errors | component non-cache tokens (basis for all sums) | ledger tokens (gateway basis) | RITS tokens | non-RITS tokens | proxy USD (priced) | unpriced non-cache tokens |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| overall | 2,001,227 | 201,193 | 9,412,126,376 | 9,411,935,639 | 3,926,904,805 | 192,115,795 | $2427.71 lb | 3,944,725,359 |
-| suite - | 962,395 | 137,699 | 3,947,461,338 | 3,947,317,274 | 1,112,783,836 | 21,741,005 | $1088.57 lb | 1,115,322,139 |
+| overall | 2,022,798 | 201,210 | 9,642,058,815 | 9,641,868,078 | 4,156,213,149 | 192,739,890 | $2430.65 lb | 4,174,033,703 |
+| suite - | 983,966 | 137,716 | 4,177,393,777 | 4,177,249,713 | 1,342,092,180 | 22,365,100 | $1091.51 lb | 1,344,630,483 |
 | suite A | 119,885 | 232 | 1,232,316,684 | 1,232,270,011 | 1,182,025,048 | 50,244,963 | $129.94 lb | 1,182,025,048 |
 | suite A-E12 | 9,134 | 36 | 48,868,783 | 48,868,783 | 47,318,243 | 1,550,540 | $6.00 lb | 47,318,243 |
 | suite B | 182,052 | 674 | 992,102,183 | 992,102,183 | 927,974,171 | 64,128,012 | $131.94 lb | 940,327,600 |
@@ -36,7 +36,7 @@ By suite and category (overhead = everything except main/chaser_eval):
 
 | suite|category | calls | ledger tokens | RITS tokens | proxy USD |
 |---|---:|---:|---:|---:|
-| -|smoke | 962,344 | 3,947,005,233 | 1,112,783,836 | $1087.30 |
+| -|smoke | 983,915 | 4,176,937,672 | 1,342,092,180 | $1090.24 |
 | -|untagged | 51 | 312,041 | 0 | $1.26 |
 | A-E12|main | 9,134 | 48,868,783 | 47,318,243 | $6.00 |
 | A|main | 114,631 | 1,192,662,232 | 1,146,342,029 | $119.17 |
@@ -279,10 +279,12 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | suite | arm | seed | category | calls | ledger tokens | RITS tokens | proxy USD |
 |---|---|---|---|---:|---:|---:|---:|
 | - | FINAL-D-t-s0 | all | smoke | 20,932 | 77,818,736 | 0 | $27.67 |
-| - | V2-A-hc2-s2 | all | smoke | 6,427 | 69,323,582 | 68,843,022 | $2.05 |
+| - | V2-A-hc2-s2 | all | smoke | 6,470 | 72,343,372 | 71,862,812 | $2.05 |
 | - | V2-D-hc2-s0 | all | smoke | 18,986 | 55,061,317 | 0 | $23.67 |
+| - | V2-A-ao21-s1 | all | smoke | 4,963 | 54,189,475 | 53,690,829 | $2.39 |
 | - | FINAL-D-rulep-s2 | all | smoke | 11,555 | 52,755,797 | 0 | $15.87 |
 | - | FINAL-D-ctl-s1 | all | smoke | 12,019 | 51,693,092 | 0 | $16.94 |
+| - | V2-A-ao21-s2 | all | smoke | 5,358 | 51,307,686 | 50,713,810 | $2.77 |
 | - | V2-D-ao21-s0 | all | smoke | 12,935 | 49,939,181 | 0 | $20.17 |
 | - | FINAL-D-nohist-s2 | all | smoke | 10,825 | 49,880,072 | 0 | $15.31 |
 | - | V2-A-ao2-s0 | all | smoke | 5,077 | 49,258,875 | 48,640,842 | $3.05 |
@@ -297,6 +299,7 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | V2-D-ao21-s1 | all | smoke | 12,819 | 43,856,678 | 0 | $19.35 |
 | - | V2-E-ao2-s0 | all | smoke | 14,286 | 43,142,080 | 0 | $26.05 |
 | - | V2-D-ao21-s2 | all | smoke | 12,531 | 42,217,005 | 0 | $18.62 |
+| - | V2-A-ao21-s0 | all | smoke | 4,040 | 39,682,191 | 39,269,691 | $1.83 |
 | - | V2-E-hc2-s0 | all | smoke | 12,119 | 39,180,580 | 0 | $20.18 |
 | - | FINAL-D-ctl-s0 | all | smoke | 9,301 | 38,440,018 | 0 | $12.75 |
 | D-null | E22-null-c2 | all | smoke | 10,274 | 38,185,227 | 0 | $14.52 |
@@ -340,6 +343,7 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-D-t-s2 | all | smoke | 6,844 | 23,391,516 | 0 | $9.27 |
 | - | FINAL-A-mipro-s0 | all | smoke | 1,893 | 23,251,537 | 23,251,537 | $0.00 |
 | - | FINAL-D-p-s2 | all | smoke | 5,934 | 23,205,883 | 0 | $8.29 |
+| - | FINAL-A-V2-hc2-s2 | all | smoke | 1,595 | 22,879,200 | 22,879,200 | $0.00 |
 | - | FINAL-A-ace-s2 | all | smoke | 852 | 22,400,754 | 22,400,754 | $0.00 |
 | - | FINAL-D-rulep-Tonly-s1 | all | smoke | 6,072 | 22,013,188 | 0 | $8.54 |
 | - | FINAL-D-ctl-Tonly-s2 | all | smoke | 5,780 | 21,740,809 | 0 | $8.08 |
@@ -365,8 +369,10 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-D-rulep-Ponly-s2 | all | smoke | 4,401 | 19,418,211 | 0 | $6.11 |
 | - | FINAL-D-1s-Tonly-s1 | all | smoke | 5,162 | 19,330,048 | 0 | $7.31 |
 | - | FINAL-A-seed-s0 | all | smoke | 2,174 | 19,163,409 | 19,163,409 | $0.00 |
+| - | FINAL-A-V2-hc2-s1 | all | smoke | 1,372 | 18,954,978 | 18,954,978 | $0.00 |
 | - | FINAL-D-rulep-Tonly-s2 | all | smoke | 5,217 | 18,731,716 | 0 | $7.30 |
 | - | FINAL-D-V2-gepa-s2 | all | smoke | 4,429 | 18,687,296 | 0 | $5.67 |
+| - | FINAL-A-V2-seed-s0 | all | smoke | 2,057 | 18,620,214 | 18,620,214 | $0.00 |
 | - | FINAL-E-seed-s0 | all | smoke | 8,222 | 18,485,948 | 0 | $7.65 |
 | - | FINAL-D-gepa-s2 | all | smoke | 4,100 | 18,478,789 | 0 | $5.77 |
 | - | FINAL-E-1s-s2 | all | smoke | 5,950 | 18,462,712 | 0 | $6.22 |
@@ -389,12 +395,10 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-D-1s-Ponly-s0 | all | smoke | 3,859 | 15,755,940 | 0 | $5.62 |
 | - | FINAL-D-ctl-Ponly-s0 | all | smoke | 3,786 | 15,702,405 | 0 | $5.43 |
 | - | FINAL-D-pt-Ponly-s2 | all | smoke | 3,961 | 15,557,223 | 0 | $5.54 |
-| - | V2-A-ao21-s0 | all | smoke | 1,650 | 15,293,212 | 15,021,502 | $1.23 |
 | - | FINAL-D-1s-Ponly-s1 | all | smoke | 3,558 | 15,151,276 | 0 | $5.21 |
 | - | FINAL-D-pt-Ponly-s0 | all | smoke | 3,660 | 15,114,524 | 0 | $5.07 |
 | - | FINAL-E-pt-s0 | all | smoke | 5,352 | 15,107,029 | 0 | $5.41 |
 | - | FINAL-E-rulep-s1 | all | smoke | 5,339 | 15,044,795 | 0 | $5.88 |
-| - | V2-A-ao21-s1 | all | smoke | 1,627 | 15,041,906 | 14,768,597 | $1.26 |
 | - | FINAL-A-wikiskill-s2 | all | smoke | 1,063 | 14,969,592 | 14,969,592 | $0.00 |
 | B | gepa | all | restart_waste | 3,214 | 14,958,308 | 14,814,038 | $0.48 |
 | - | FINAL-E-pt-s1 | all | smoke | 5,017 | 14,913,007 | 0 | $5.23 |
@@ -402,7 +406,6 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-E-V2-gepa-s0 | all | smoke | 3,387 | 14,590,432 | 0 | $3.91 |
 | - | FINAL-D-V2-seed-check-s0 | all | smoke | 4,454 | 14,440,213 | 0 | $5.68 |
 | - | V2-E-hc2-s2 | all | smoke | 4,441 | 14,321,118 | 0 | $7.07 |
-| - | V2-A-ao21-s2 | all | smoke | 1,773 | 14,217,732 | 13,881,824 | $1.57 |
 | - | FINAL-E-V2-hc2-s2 | all | smoke | 4,463 | 14,102,343 | 0 | $5.65 |
 | - | FINAL-D-rulep-Ponly-s1 | all | smoke | 3,610 | 14,087,785 | 0 | $5.09 |
 | - | FINAL-A-trace2skill-s0 | all | smoke | 1,126 | 14,023,492 | 14,023,492 | $0.00 |
@@ -440,18 +443,23 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-A-metaharness-s0 | all | smoke | 899 | 10,233,724 | 10,233,724 | $0.00 |
 | - | FINAL-A-ao-s2 | all | smoke | 1,100 | 10,058,945 | 10,058,945 | $0.00 |
 | - | FINAL-A-ao-s1 | all | smoke | 1,112 | 10,054,623 | 10,054,623 | $0.00 |
+| - | FINAL-A-V2-ao2-s1 | all | smoke | 1,100 | 10,042,493 | 10,042,493 | $0.00 |
 | - | FINAL-E-seed-check-s0 | all | smoke | 3,901 | 9,912,831 | 0 | $3.95 |
 | - | FINAL-B-oneshot-s2 | all | smoke | 2,136 | 9,843,714 | 9,715,517 | $0.00 |
 | - | FINAL-E-ao-s0 | all | smoke | 4,155 | 9,766,208 | 0 | $4.04 |
+| - | FINAL-A-V2-seed-check-s0 | all | smoke | 1,077 | 9,763,050 | 9,763,050 | $0.00 |
 | - | FINAL-E-ao-s2 | all | smoke | 3,979 | 9,718,179 | 0 | $3.97 |
+| - | FINAL-A-V2-ao2-s0 | all | smoke | 1,053 | 9,617,559 | 9,617,559 | $0.00 |
 | - | FINAL-A-hc-s2 | all | smoke | 1,105 | 9,513,616 | 9,513,616 | $0.00 |
 | - | FINAL-E-ao-s1 | all | smoke | 4,075 | 9,474,390 | 0 | $3.91 |
 | - | FINAL-B-ao-s1 | all | smoke | 2,111 | 9,394,352 | 9,269,085 | $0.00 |
+| - | FINAL-A-V2-ao2-s2 | all | smoke | 1,074 | 9,362,857 | 9,362,857 | $0.00 |
 | - | FINAL-E-pt-s2 | all | smoke | 3,807 | 9,215,038 | 0 | $3.76 |
 | - | FINAL-E-1s-s1 | all | smoke | 3,872 | 9,139,307 | 0 | $3.77 |
 | - | FINAL-B-seed-check-s0 | all | smoke | 2,138 | 9,106,448 | 8,975,774 | $0.00 |
 | - | FINAL-B-hc-s0 | all | smoke | 2,125 | 9,088,080 | 8,971,061 | $0.00 |
 | - | FINAL-B-ao-s2 | all | smoke | 2,095 | 9,044,369 | 8,913,847 | $0.00 |
+| - | FINAL-A-V2-gepa-s2 | all | smoke | 887 | 8,935,435 | 8,935,435 | $0.00 |
 | - | FINAL-B-hc-s1 | all | smoke | 2,123 | 8,931,431 | 8,810,784 | $0.00 |
 | - | FINAL-E-mipro-s2 | all | smoke | 3,678 | 8,883,210 | 0 | $3.69 |
 | - | FINAL-B-seed-s0 | all | smoke | 2,095 | 8,819,443 | 8,709,073 | $0.00 |
@@ -464,6 +472,7 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-A-trace2skill-s1 | all | smoke | 603 | 8,090,399 | 8,090,399 | $0.00 |
 | B-E12 | hcstock | all | restart_waste | 1,894 | 7,837,233 | 7,691,095 | $0.00 |
 | - | FINAL-A-wikiskill-s0 | all | smoke | 898 | 7,588,609 | 7,588,609 | $0.00 |
+| - | FINAL-A-V2-gepa-s0 | all | smoke | 685 | 7,191,999 | 7,191,999 | $0.00 |
 | - | FINAL-E-V2-seed-check-s0 | all | smoke | 2,686 | 6,904,537 | 0 | $2.81 |
 | - | FINAL-C-hc-end-s1 | all | smoke | 1,522 | 6,845,158 | 6,845,158 | $0.00 |
 | - | FINAL-A-metaharness-s2 | all | smoke | 602 | 6,616,406 | 6,616,406 | $0.00 |
@@ -476,6 +485,7 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | FINAL-C-oneshot-s0 | all | smoke | 1,170 | 6,037,455 | 6,037,455 | $0.00 |
 | - | FINAL-C-hc-s2 | all | smoke | 1,319 | 5,979,890 | 5,979,890 | $0.00 |
 | - | FINAL-A-evoskill-s0 | all | smoke | 563 | 5,924,124 | 5,924,124 | $0.00 |
+| - | FINAL-A-V2-hc2-s0 | all | smoke | 616 | 5,897,623 | 5,897,623 | $0.00 |
 | - | FINAL-C-hcstock-s2 | all | smoke | 1,148 | 5,606,790 | 5,606,790 | $0.00 |
 | B | ao | all | pilot | 1,161 | 5,524,975 | 5,168,526 | $1.30 |
 | - | FINAL-C-gepa-s2 | all | smoke | 1,065 | 5,465,595 | 5,465,595 | $0.00 |
@@ -500,8 +510,10 @@ Deployment cost per task = metered target(-role) tokens per counted rollout (inc
 | - | E26test-NOHIST-s99 | all | smoke | 885 | 3,164,034 | 0 | $1.20 |
 | B | hl-trial | all | no_run_dir | 363 | 3,007,425 | 2,419,795 | $1.69 |
 | B | hc | all | pilot | 619 | 2,777,762 | 2,641,597 | $0.54 |
+| - | FINAL-A-V2-gepa-s1 | all | smoke | 329 | 2,615,684 | 2,615,684 | $0.00 |
 | - | E00-azprobe-air41 | all | smoke | 704 | 2,574,104 | 0 | $2.83 |
 | A | evoskill | all | restart_waste | 804 | 2,573,286 | 2,573,286 | $0.00 |
+| - | FINAL-A-V2-canary-s0 | all | smoke | 372 | 2,405,055 | 2,405,055 | $0.00 |
 | - | FINAL-A-hcstock-s1 | all | smoke | 332 | 2,323,654 | 2,323,654 | $0.00 |
 | B | gepa | all | pilot | 466 | 2,297,765 | 2,241,304 | $0.20 |
 | - | FINAL-C-canary-s0 | all | smoke | 537 | 2,280,666 | 2,280,666 | $0.00 |

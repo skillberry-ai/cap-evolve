@@ -5981,7 +5981,363 @@
    }
   ]
  },
+ "V2/A": {
+  "families": [],
+  "cost": [
+   {
+    "arm": "ao2",
+    "seed": 0,
+    "optimizer_usd_proxy": 3.0472306,
+    "optimizer_noncache_tokens": 618033,
+    "optimizer_calls": 173,
+    "search_rollouts": 362,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "ao2",
+    "seed": 1,
+    "optimizer_usd_proxy": 2.7665571,
+    "optimizer_noncache_tokens": 589603,
+    "optimizer_calls": 145,
+    "search_rollouts": 362,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "ao2",
+    "seed": 2,
+    "optimizer_usd_proxy": 2.2160222000000003,
+    "optimizer_noncache_tokens": 461861,
+    "optimizer_calls": 126,
+    "search_rollouts": 362,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "ao21",
+    "seed": 0,
+    "optimizer_usd_proxy": 1.8323229,
+    "optimizer_noncache_tokens": 412500,
+    "optimizer_calls": 98,
+    "search_rollouts": 362,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "ao21",
+    "seed": 1,
+    "optimizer_usd_proxy": 2.3930664999999998,
+    "optimizer_noncache_tokens": 498646,
+    "optimizer_calls": 133,
+    "search_rollouts": 340,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "ao21",
+    "seed": 2,
+    "optimizer_usd_proxy": 2.7737842,
+    "optimizer_noncache_tokens": 593876,
+    "optimizer_calls": 153,
+    "search_rollouts": 404,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "hc2",
+    "seed": 0,
+    "optimizer_usd_proxy": 0.9915315,
+    "optimizer_noncache_tokens": 240119,
+    "optimizer_calls": 32,
+    "search_rollouts": 362,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "hc2",
+    "seed": 1,
+    "optimizer_usd_proxy": 0.8084846,
+    "optimizer_noncache_tokens": 207282,
+    "optimizer_calls": 28,
+    "search_rollouts": 362,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   },
+   {
+    "arm": "hc2",
+    "seed": 2,
+    "optimizer_usd_proxy": 2.0509092000000004,
+    "optimizer_noncache_tokens": 480560,
+    "optimizer_calls": 76,
+    "search_rollouts": 600,
+    "source": "gateway ledger by tag (lower bound: some calls unpriced)"
+   }
+  ]
+ },
  "v2_families": {
+  "A": {
+   "name": "v2 window Suite A: family V2 (11G, m = 4)",
+   "m": 4,
+   "rows": [
+    {
+     "a": "hc2",
+     "b": "seed",
+     "theta": 0.14047619047619048,
+     "cr_se": 0.04803903815264386,
+     "cr_ci": [
+      0.044640931567352576,
+      0.23631144938502838
+     ],
+     "p": 0.004668479962945948,
+     "per_seed": [
+      0.09285714285714286,
+      0.17857142857142858,
+      0.15
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 70,
+     "T": 70,
+     "seed_sd": 0.04364357804719848,
+     "pipe_ci": [
+      -0.09292714762133086,
+      0.3738795285737118
+     ],
+     "pipe_p": 0.12234772229851298,
+     "ci90": [
+      0.06038365422714778,
+      0.22056872672523317
+     ],
+     "tost_p": 0.7988095744860062,
+     "inert_a": "0/3",
+     "inert_b": "0/1",
+     "inert_block": false,
+     "all_inert": false,
+     "theta_sens": 0.14047619047619048,
+     "p_sens": 0.004668479962945948,
+     "holm": 0.014005439888837845,
+     "holm_sens": 0.014005439888837845
+    },
+    {
+     "a": "ao2",
+     "b": "seed",
+     "theta": 0.007142857142857143,
+     "cr_se": 0.02614652187195946,
+     "cr_ci": [
+      -0.045018026786641796,
+      0.059303741072356086
+     ],
+     "p": 0.7855264452169233,
+     "per_seed": [
+      0.02142857142857143,
+      0.007142857142857143,
+      -0.007142857142857143
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 70,
+     "T": 70,
+     "seed_sd": 0.014285714285714285,
+     "pipe_ci": [
+      -0.11082108387009143,
+      0.12510679815580572
+     ],
+     "pipe_p": 0.8188256501615678,
+     "ci90": [
+      -0.03644963203567667,
+      0.05073534632139096
+     ],
+     "tost_p": 0.00034778996057038825,
+     "inert_a": "0/3",
+     "inert_b": "0/1",
+     "inert_block": false,
+     "all_inert": false,
+     "theta_sens": 0.007142857142857143,
+     "p_sens": 0.7855264452169233,
+     "holm": 1.0,
+     "holm_sens": 1.0
+    },
+    {
+     "a": "hc2",
+     "b": "gepa",
+     "theta": 8.458842092382146e-18,
+     "cr_se": 0.02713189758521599,
+     "cr_ci": [
+      -0.05412665469081929,
+      0.0541266546908193
+     ],
+     "p": 0.9999999999999998,
+     "per_seed": [
+      -0.04761904761904761,
+      0.0380952380952381,
+      0.009523809523809535
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 70,
+     "T": 70,
+     "seed_sd": 0.04364357804719848,
+     "pipe_ci": [
+      -0.15931791166245388,
+      0.15931791166245388
+     ],
+     "pipe_p": 0.9999999999999998,
+     "ci90": [
+      -0.04523534555259678,
+      0.04523534555259679
+     ],
+     "tost_p": 0.00022501791642137725,
+     "inert_a": "0/3",
+     "inert_b": "0/3",
+     "inert_block": false,
+     "all_inert": false,
+     "theta_sens": 8.458842092382146e-18,
+     "p_sens": 0.9999999999999998,
+     "holm": 1.0,
+     "holm_sens": 1.0
+    },
+    {
+     "a": "ao2",
+     "b": "gepa",
+     "theta": -0.13333333333333333,
+     "cr_se": 0.03920066289585647,
+     "cr_ci": [
+      -0.21153651604663504,
+      -0.05513015062003161
+     ],
+     "p": 0.001119208412749817,
+     "per_seed": [
+      -0.11904761904761905,
+      -0.13333333333333333,
+      -0.14761904761904762
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 70,
+     "T": 70,
+     "seed_sd": 0.014285714285714284,
+     "pipe_ci": [
+      -0.3056930681805161,
+      0.03902640151384945
+     ],
+     "pipe_p": 0.07963240565435958,
+     "ci90": [
+      -0.1986901896466626,
+      -0.06797647702000406
+     ],
+     "tost_p": 0.8009574620420699,
+     "inert_a": "0/3",
+     "inert_b": "0/3",
+     "inert_block": false,
+     "all_inert": false,
+     "theta_sens": -0.13333333333333333,
+     "p_sens": 0.001119208412749817,
+     "holm": 0.004476833650999268,
+     "holm_sens": 0.004476833650999268
+    }
+   ]
+  },
+  "A_desc": {
+   "name": "v2 window Suite A: descriptive rows (no Holm claim)",
+   "m": 2,
+   "rows": [
+    {
+     "a": "hc2",
+     "b": "ao2",
+     "theta": 0.13333333333333333,
+     "cr_se": 0.04203255499941868,
+     "cr_ci": [
+      0.0494806804519483,
+      0.21718598621471835
+     ],
+     "p": 0.002259158410277795,
+     "per_seed": [
+      0.08571428571428574,
+      0.1714285714285714,
+      0.14285714285714285
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 70,
+     "T": 70,
+     "seed_sd": 0.04364357804719845,
+     "pipe_ci": [
+      -0.07752546370314106,
+      0.3441921303698077
+     ],
+     "pipe_p": 0.11270858024584118,
+     "ci90": [
+      0.06325503733927534,
+      0.20341162932739132
+     ],
+     "tost_p": 0.7847623499957299,
+     "inert_a": "0/3",
+     "inert_b": "0/3",
+     "inert_block": false,
+     "all_inert": false,
+     "theta_sens": 0.13333333333333333,
+     "p_sens": 0.002259158410277795,
+     "holm": 0.00451831682055559,
+     "holm_sens": 0.00451831682055559
+    },
+    {
+     "a": "ao2",
+     "b": "seed",
+     "theta": 0.007142857142857143,
+     "cr_se": 0.02614652187195946,
+     "cr_ci": [
+      -0.045018026786641796,
+      0.059303741072356086
+     ],
+     "p": 0.7855264452169233,
+     "per_seed": [
+      0.02142857142857143,
+      0.007142857142857143,
+      -0.007142857142857143
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 70,
+     "T": 70,
+     "seed_sd": 0.014285714285714285,
+     "pipe_ci": [
+      -0.11082108387009143,
+      0.12510679815580572
+     ],
+     "pipe_p": 0.8188256501615678,
+     "ci90": [
+      -0.03644963203567667,
+      0.05073534632139096
+     ],
+     "tost_p": 0.00034778996057038825,
+     "inert_a": "0/3",
+     "inert_b": "0/1",
+     "inert_block": false,
+     "all_inert": false,
+     "theta_sens": 0.007142857142857143,
+     "p_sens": 0.7855264452169233,
+     "holm": 0.7855264452169233,
+     "holm_sens": 0.7855264452169233
+    }
+   ]
+  },
   "D": {
    "name": "v2 window Suite D: family V2 (11G, m = 4)",
    "m": 4,
@@ -6461,6 +6817,66 @@
   }
  },
  "v1v2_summary": [
+  {
+   "suite": "A",
+   "v2": "v2.0 HC-2",
+   "v1": "v1 hc (rule P hill-climb)",
+   "diff": 0.11190476190476192,
+   "ci": [
+    0.02376141470898399,
+    0.20004810910053986
+   ]
+  },
+  {
+   "suite": "A",
+   "v2": "v2.0 HC-2",
+   "v1": "v1 hcstock (stock-gate hill-climb)",
+   "diff": 0.035714285714285705,
+   "ci": [
+    -0.06042074653479356,
+    0.13184931796336496
+   ]
+  },
+  {
+   "suite": "A",
+   "v2": "v2.0 HC-2",
+   "v1": "v1 ao (agent-optimize, inert)",
+   "diff": 0.14047619047619048,
+   "ci": [
+    0.044640931567352535,
+    0.2363114493850284
+   ]
+  },
+  {
+   "suite": "A",
+   "v2": "v2.0 AO-2 (= v2 start: scaffold effect; not inert)",
+   "v1": "v1 hc (rule P hill-climb)",
+   "diff": -0.021428571428571425,
+   "ci": [
+    -0.08872102895450235,
+    0.0458638860973595
+   ]
+  },
+  {
+   "suite": "A",
+   "v2": "v2.0 AO-2 (= v2 start: scaffold effect; not inert)",
+   "v1": "v1 hcstock (stock-gate hill-climb)",
+   "diff": -0.09761904761904762,
+   "ci": [
+    -0.18775782009154807,
+    -0.007480275146547172
+   ]
+  },
+  {
+   "suite": "A",
+   "v2": "v2.0 AO-2 (= v2 start: scaffold effect; not inert)",
+   "v1": "v1 ao (agent-optimize, inert)",
+   "diff": 0.007142857142857137,
+   "ci": [
+    -0.045018026786641796,
+    0.05930374107235607
+   ]
+  },
   {
    "suite": "D",
    "v2": "v2.0 HC-2",
