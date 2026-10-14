@@ -56,9 +56,9 @@ Search cost (optimizer = Sonnet 5.5 at the proxy list price of protocol/pricing.
 | ao2 | 0 | 3.05 | 618033 | 173 | 362 | gateway ledger by tag (lower bound: some calls unpriced) |
 | ao2 | 1 | 2.77 | 589603 | 145 | 362 | gateway ledger by tag (lower bound: some calls unpriced) |
 | ao2 | 2 | 2.22 | 461861 | 126 | 362 | gateway ledger by tag (lower bound: some calls unpriced) |
-| ao21 | 0 | 1.83 | 412500 | 98 | 362 | gateway ledger by tag (lower bound: some calls unpriced) |
-| ao21 | 1 | 2.39 | 498646 | 133 | 340 | gateway ledger by tag (lower bound: some calls unpriced) |
-| ao21 | 2 | 2.77 | 593876 | 153 | 404 | gateway ledger by tag (lower bound: some calls unpriced) |
+| ao21 | 0 | 1.83 | 412500 | 98 | 600 | gateway ledger by tag (lower bound: some calls unpriced) |
+| ao21 | 1 | 2.39 | 498646 | 133 | 584 | gateway ledger by tag (lower bound: some calls unpriced) |
+| ao21 | 2 | 2.77 | 593876 | 153 | 584 | gateway ledger by tag (lower bound: some calls unpriced) |
 | hc2 | 0 | 0.99 | 240119 | 32 | 362 | gateway ledger by tag (lower bound: some calls unpriced) |
 | hc2 | 1 | 0.81 | 207282 | 28 | 362 | gateway ledger by tag (lower bound: some calls unpriced) |
 | hc2 | 2 | 2.05 | 480560 | 76 | 600 | gateway ledger by tag (lower bound: some calls unpriced) |

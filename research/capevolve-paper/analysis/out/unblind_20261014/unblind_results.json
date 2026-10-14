@@ -6017,7 +6017,7 @@
     "optimizer_usd_proxy": 1.8323229,
     "optimizer_noncache_tokens": 412500,
     "optimizer_calls": 98,
-    "search_rollouts": 362,
+    "search_rollouts": 600,
     "source": "gateway ledger by tag (lower bound: some calls unpriced)"
    },
    {
@@ -6026,7 +6026,7 @@
     "optimizer_usd_proxy": 2.3930664999999998,
     "optimizer_noncache_tokens": 498646,
     "optimizer_calls": 133,
-    "search_rollouts": 340,
+    "search_rollouts": 584,
     "source": "gateway ledger by tag (lower bound: some calls unpriced)"
    },
    {
@@ -6035,7 +6035,7 @@
     "optimizer_usd_proxy": 2.7737842,
     "optimizer_noncache_tokens": 593876,
     "optimizer_calls": 153,
-    "search_rollouts": 404,
+    "search_rollouts": 584,
     "source": "gateway ledger by tag (lower bound: some calls unpriced)"
    },
    {
@@ -6066,6 +6066,10 @@
     "source": "gateway ledger by tag (lower bound: some calls unpriced)"
    }
   ]
+ },
+ "V21/D": {
+  "families": [],
+  "cost": []
  },
  "v2_families": {
   "A": {
@@ -6812,6 +6816,100 @@
      "a": "ao21",
      "b": "gepa",
      "missing": true
+    }
+   ]
+  }
+ },
+ "v21_families": {
+  "D": {
+   "name": "v2.1 window Suite D: AO-2 v2.1 (erratum 43; secondary under 11D, own Holm m = 2)",
+   "m": 2,
+   "rows": [
+    {
+     "a": "ao21",
+     "b": "seed",
+     "theta": 0.0066666666666666645,
+     "cr_se": 0.010754976321197348,
+     "cr_ci": [
+      -0.015087326283448103,
+      0.028420659616781432
+     ],
+     "p": 0.5389497096954123,
+     "per_seed": [
+      0.019999999999999993,
+      0.0,
+      0.0
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 40,
+     "T": 40,
+     "seed_sd": 0.01154700538379251,
+     "pipe_ci": [
+      -0.04777744233694031,
+      0.06111077567027365
+     ],
+     "pipe_p": 0.6508939989057703,
+     "ci90": [
+      -0.011454125371513274,
+      0.024787458704846603
+     ],
+     "tost_p": 6.039257982592972e-11,
+     "inert_a": "2/3",
+     "inert_b": "0/1",
+     "inert_block": true,
+     "all_inert": false,
+     "theta_sens": 0.0066666666666666645,
+     "p_sens": 0.5389497096954123,
+     "holm": 0.5389497096954123,
+     "holm_sens": 0.5389497096954123
+    },
+    {
+     "a": "ao21",
+     "b": "gepa",
+     "theta": -0.07166666666666667,
+     "cr_se": 0.032588909724583254,
+     "cr_ci": [
+      -0.13758395846053506,
+      -0.0057493748727982935
+     ],
+     "p": 0.033866312030911505,
+     "per_seed": [
+      -0.05833333333333331,
+      -0.07833333333333334,
+      -0.07833333333333334
+     ],
+     "seeds": [
+      0,
+      1,
+      2
+     ],
+     "S": 3,
+     "C": 40,
+     "T": 40,
+     "seed_sd": 0.01154700538379253,
+     "pipe_ci": [
+      -0.21478931710151383,
+      0.0714559837681805
+     ],
+     "pipe_p": 0.16401036518253287,
+     "ci90": [
+      -0.12657490990531367,
+      -0.016758423428019663
+     ],
+     "tost_p": 0.1949694407595326,
+     "inert_a": "2/3",
+     "inert_b": "0/3",
+     "inert_block": true,
+     "all_inert": false,
+     "theta_sens": -0.07166666666666667,
+     "p_sens": 0.033866312030911505,
+     "holm": 0.06773262406182301,
+     "holm_sens": 0.06773262406182301
     }
    ]
   }

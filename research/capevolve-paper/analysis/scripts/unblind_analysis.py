@@ -31,6 +31,16 @@ os.makedirs(OUT, exist_ok=True)
 WINDOWS = OrderedDict([("A", "A"), ("B", "B"), ("C", "C"), ("D", "D"), ("E", "E"), ("V2/D", "V2_D"), ("V2/E", "V2_E"), ("V2/A", "V2_A")])
 SPLITS = {"A": ("",), "B": ("test",), "C": ("test",), "D": ("test",), "E": ("test",), "V2/D": ("test",), "V2/E": ("test",), "V2/A": ("",)}
 MARGIN = 0.10
+V21 = OrderedDict()
+_REG = set()
+for _l in open(os.path.join(PAPER, "experiments", "registry.jsonl")):
+    _REG.add(json.loads(_l)["item"])
+for _s, _sp in (("D", ("test",)), ("A", ("",))):   # only windows whose results files are hash-registered
+    if f"results_V21_{_s}_results_long.csv" in _REG:
+        V21[f"V21/{_s}"] = (f"V21_{_s}", _sp)
+for _w, (_k, _sp) in V21.items():
+    WINDOWS[_w] = _k
+    SPLITS[_w] = _sp
 
 
 def rr(r):
@@ -312,6 +322,8 @@ def state_calls(d):
 
 
 def cost_rows(win):
+    if win.startswith("V21/"):
+        return []
     out = []
     rd = run_dirs(win)
     for (arm, s), v in sorted(rd.items()):
@@ -490,6 +502,11 @@ def main():
         desc = [("hc2", "ao2"), ("ao21", "seed"), ("ao21", "gepa")] if s != "A" else [("hc2", "ao2"), ("ao2", "seed")]
         famv2[s + "_desc"] = family(W[k], Ws[k], f"v2 window Suite {s}: descriptive rows (no Holm claim)", desc)
 
+    famv21 = {}
+    for w in V21:
+        sx = w[-1]
+        cfx = json.load(open(os.path.join(MAN, f"comparison_family_V21_{sx}.json")))
+        famv21[sx] = family(W[w], Ws[w], f"v2.1 window Suite {sx}: AO-2 v2.1 (erratum 43; secondary under 11D, own Holm m = 2)", [rr(r) for r in cfx["primary_11G"]])
     # ---- write per-suite markdown
     ARMLINES = {}
     for w in WINDOWS:
@@ -526,6 +543,19 @@ def main():
             J.setdefault("block_adjusted", {})[w] = [(a, th, ci, ps) for a, th, ci, ps in adj]
         for F, dag, tost in fams.get(w, []):
             L += fam_table(F, tost, dag) + [""]
+        if w.startswith("V21/"):
+            sx = w[-1]
+            L += ["**v2.1-AO2 (erratum 43 champions)**: the P2-accepted candidates whose commit was voided by the pooled-mode defect; secondary version (11D). Literal-final-state reading beside it: all three champions = the seed, delta 0 by construction (no scoring needed).", ""]
+            L += fam_table(famv21[sx]) + [""]
+            for sd in sorted(W[w].seeds_of.get("ao21", ())):
+                if W[w].inert.get(("ao21", sd)) or ("ao21", sd) not in W[w].M:
+                    continue
+                parts = []
+                for lab, ref in (("in-window seed", W[w].seedvec), ("seed-check (same artifact, n as the arms)", W[w].M[("seed-check", 0)])):
+                    r = pcb.paired_cluster_bootstrap([W[w].M[("ao21", sd)]], [ref], W[w].fam, B=20)
+                    parts.append(f"vs {lab}: {sgn(r['theta'])} [{f(r['cr_ci'][0])}, {f(r['cr_ci'][1])}], p {pf(r['cr_p_two_sided'])}")
+                L.append(f"Scored champion ao21 s{sd} alone (descriptive; the family row above averages it with the seeds that returned the seed): " + "; ".join(parts) + ".")
+            L.append("")
         if w.startswith("V2/"):
             s = w[3]
             if s == "A":
@@ -563,6 +593,7 @@ def main():
         md[w] = L
         J[w] = {"families": [F for F, _, _ in fams.get(w, [])], "cost": cr}
     J["v2_families"] = famv2
+    J["v21_families"] = famv21
 
     # ---- v1 vs v2
     L = ["# v1 versus v2 (descriptive; user-directed early unblinding)", "",
