@@ -1,6 +1,39 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-13 21:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 00:50 UTC (coordinator periodic check)_
+
+## Update 00:50 UTC 10-14
+- **Spend**: capped spend is 185.8M of 230M (gateway healthy, not blocked).
+  - The v1 final window stops itself at 198M. The v2 final windows stop at 228M (erratum 20).
+  - v1 E uses the Azure-direct gateway, which is not capped, so it adds nothing.
+- **v1 final**: E is at 4,783/5,550 (00:26), ETA ~01:30 UTC.
+  - E t infra_final is 8.0%. 429s are 1.3%, below the 3% rule.
+- **v2**:
+
+  | Arm | Suite | State |
+  |---|---|---|
+  | HC-2 and AO-2 | E | all six searches ended (AO-2 s0-s2: plateau at 41% of budget; HC-2: finalize_skipped). Next: the champions file, then v2.1-AO2 for E (erratum 14). |
+  | HC-2 | A | s0-s2 at 362/600, waiting on slow task 56427's confirm rollouts under the registered 3 h hang rule |
+  | AO-2 | A | s0 265, s1 322, s2 362 |
+  | HC-2 | D | s0-s2 running |
+  | AO-2 | D | s2 running; s0 and s1 still in the seed baseline for ~112 min (checking) |
+
+- **Isolation**:
+  - The P2 confirm-chunk means were logged to run events.jsonl (#847).
+  - On D/E these were readable by the optimizer until the shim swaps: HC-2 at 23:20:15Z and AO-2 at 23:21:19Z.
+  - There are 0 transcript reads across 12 runs.
+  - On A the file was never readable, and it has been hardened.
+  - Disclosed in errata 16-19.
+- **Scorers**:
+  - The v1 and v2 scorers are code-equivalent: A gives 40/40 identical results, and the D/E guard is inactive (errata 21 and 22).
+  - The A drain-error fix is covered by #824.
+- **Paper repo sync**:
+  - It was blocked between 17:46 and 23:30 by a gate false positive and an uncommitted artifacts dir. It is now fixed and caught up.
+  - Artifacts wave a is verified (20 assets, 2.49 GB). Wave b is starting.
+  - The Overleaf branch overleaf-2026-10-13-1437 would delete the current paper. It is NOT merged, and the user has been asked.
+- **Stalls**: A HC-2 (task 56427 tail, handled by the registered rule) and D AO-2 s0/s1 baseline (under check). No crashes.
+
+_Earlier: 2026-10-13 21:50 UTC (coordinator periodic check)_
 
 ## Update 21:50 UTC
 - **Spend**: capped spend is 183.3M of 230M; the v1 final window stops itself at 198M.

@@ -169,3 +169,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - v1: only E main is running (final-eval-eng). Extras run after E main. The v2 windows take priority over the extras.
 - v2: champions files are written per suite by the runners when all six of that suite's searches end. Each window then launches on the lead's go.
 - Held-out scores stay unopened until the v2 searches freeze (11D).
+
+## Update 00:50 UTC 10-14 (periodic check)
+- E v2.0: all six searches ended. tau-runner is to write the E champions file and launch v2.1-AO2 E. The lead gives the E window go after the champions file.
+- After v1 E main ends (~01:30): merge research/fe-v2-window, and the admit_v2 cap goes to 9. The extras (B/C transfer first) run only if no v2 window is ready.
+- Isolation: the D/E shims are now HC-2 bc628617 and AO-2 7d0abfd7. A uses harden_rundirs.sh (5-min re-sweep). The upstream fix is #847.
+- paper_repo_sync is the loop with PID 4111025. Check logs/paper_repo_sync.log for "GATE BLOCKED" or "dirty".
