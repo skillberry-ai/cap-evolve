@@ -175,3 +175,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - After v1 E main ends (~01:30): merge research/fe-v2-window, and the admit_v2 cap goes to 9. The extras (B/C transfer first) run only if no v2 window is ready.
 - Isolation: the D/E shims are now HC-2 bc628617 and AO-2 7d0abfd7. A uses harden_rundirs.sh (5-min re-sweep). The upstream fix is #847.
 - paper_repo_sync is the loop with PID 4111025. Check logs/paper_repo_sync.log for "GATE BLOCKED" or "dirty".
+
+## Update 03:50 UTC 10-14 (periodic check)
+- v1 final is complete for every suite. research/fe-v2-window is merged. The v2 E window has been running since 02:28Z (PID 1937639).
+- The D v2.0 searches are frozen: tau-runner is building the D champions file and launching D ao21. The D window has the lead's go, under the same gates as E.
+- A: capevolve-runner is preparing the A ao21 spec, which needs registration. The A champions file comes after hc2 s2 ends.
+- Constraint (errata 25): final-eval-eng shares no reward means with anyone before the v2 freeze.

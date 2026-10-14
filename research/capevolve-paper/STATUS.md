@@ -1,6 +1,27 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 00:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 03:50 UTC (coordinator periodic check)_
+
+## Update 03:50 UTC 10-14
+- **Spend**: capped spend is 189.4M of 230M (gateway healthy). The v2 windows stop at 228M.
+- **v1 final**: ALL SUITES COMPLETE. E: 5,480 done and 70 missing (infra_final) of 5,550. Held-out scores stay blind until the v2 freeze (11D). The extras (B/C transfer first) are queued behind the v2 windows.
+- **v2 searches**:
+
+  | Suite | State |
+  |---|---|
+  | E | v2.0 frozen. v2.1-AO2: s0 ended on budget, s2 on plateau at 80%, s1 running. |
+  | D | v2.0 frozen (AO-2 plateau at 42-46%, HC-2 ended). Next: champions file, D window, v2.1-AO2 D. |
+  | A | AO-2 all ended (plateau at 41%). HC-2 s0 and s1 ended; s2 in round 3. v2.1-AO2 A is being prepared. |
+
+- **v2 final windows**:
+  - E: launched 02:28Z (800 jobs, order c101de7d), finishing now. Results are hashed before any analysis.
+  - D: next.
+  - A: after HC-2 s2.
+  - The v2 E launch gate was canary round 8 at 0.6 (round 7 had five real zeros; errata 23).
+- **Disclosures**: held-out aggregates were seen before registration (errata 24-26). No window means are shared before the v2 freeze.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 00:50 UTC (coordinator periodic check)_
 
 ## Update 00:50 UTC 10-14
 - **Spend**: capped spend is 185.8M of 230M (gateway healthy, not blocked).
