@@ -7,7 +7,7 @@
       split_ids.json           feedback / confirm / test (from make_split.py)
       public_tasks.txt         F, for the dispatching adapter's transcript routing
       adapters  -> examples/parsec/v6/adapters     (the dispatcher)
-      optimizer -> examples/parsec/optimizer
+      optimizer -> examples/parsec/v6/optimizer   (multi-task, generalization-aware)
 
 ``--seed-artifact`` is verified byte-for-byte against ``--expect`` (a directory of the
 same 8 files, e.g. a checkout of parsec-history's artifacts/v5/seed) when given:
@@ -124,7 +124,10 @@ def main() -> int:
                                 max_iterations=args.max_iterations, stall=args.stall, max_usd=args.max_usd,
                                 max_optimizer_usd=args.max_optimizer_usd), encoding="utf-8")
     link(proj / "adapters", V6_DIR / "adapters")
-    link(proj / "optimizer", V6_DIR.parent / "optimizer")
+    # v6's own copy, not examples/parsec/optimizer: that one tells the optimizer "there
+    # is no cross-task generalization question this round" (true for v4_t2_e1/h4's
+    # single-task projects, false here) and is still used by those arms unchanged.
+    link(proj / "optimizer", V6_DIR / "optimizer")
     print(f"scaffolded {proj}")
     return 0
 

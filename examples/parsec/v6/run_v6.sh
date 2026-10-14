@@ -83,6 +83,23 @@ ARGS=(--suite-id "v6_$SUITE_ID" --run-id "$SUITE_ID" --max-iterations "$MAX_ITER
 [[ -n "$RUN_TS" ]] && ARGS+=(--run-ts "$RUN_TS")
 [[ "$RESUME" == true ]] && ARGS+=(--resume)
 cd "$PROJECT_ROOT"
+
+# run_ccc_experiment.sh's own Phase 1 runs setup_podman.sh unconditionally, even
+# though this driver never brings up the parsec stack itself (evaluation is
+# dispatched to lane workers) -- it starts a podman service and a session
+# dbus-daemon that never exit on their own. Without stopping them LSF never
+# leaves this job RUNning after the script returns, exactly the leak
+# lane_worker.sh had to fix. This node is this job's alone, so stopping them
+# unconditionally on exit is safe.
+cleanup_podman() {
+  local uid
+  uid="$(id -u)"
+  pkill -u "$uid" -f "^podman system service --time=0 unix:///tmp/podman-run-$uid/" 2>/dev/null || true
+  pkill -u "$uid" -f "^dbus-daemon --session --address=unix:path=/tmp/podman-run-$uid/" 2>/dev/null || true
+  pkill -u "$uid" -x catatonit 2>/dev/null || true
+}
+trap cleanup_podman EXIT
+
 set +e
 bash scripts/ccc/run_ccc_experiment.sh "${ARGS[@]}"
 RC=$?
