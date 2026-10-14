@@ -200,3 +200,6 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 ## Update 15:50 UTC 10-14 (periodic check)
 - All final windows are done and registered (v1 A-E; v2 A, D, E). The analysis is in analysis/out/unblind_20261014/.
 - The only runs left are A ao21 s0-s2 (capevolve-runner). After them: champions_V2_A_ao21.json, then a window or a seed-check mapping if inert, then the v2 freeze.
+
+## Update 18:50 UTC 10-14 (periodic check)
+- Only A ao21 s0-s2 are left; s0 and s2 are in final confirmation. Nothing else is running.

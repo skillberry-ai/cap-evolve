@@ -1,6 +1,19 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 15:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 18:50 UTC (coordinator periodic check)_
+
+## Update 18:50 UTC 10-14
+- **Spend**: capped spend is 193.2M of 230M (gateway healthy).
+- **Final windows**: all done and registered (v1 A-E; v2 A, D, E).
+- **Running**: the A v2.1-AO2 searches.
+  - s0 is at 600/600 and in final confirmation.
+  - s1 is at 506/600.
+  - s2 is at 584/600, in confirmation.
+  - ETA ~19-21Z. Then champions_V2_A_ao21.json, its scoring if any champion is non-seed, and the v2 freeze.
+- **Pending user decisions**: B/C transfer spend; the Overleaf branch.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 15:50 UTC (coordinator periodic check)_
 
 ## Update 15:50 UTC 10-14
 - **Spend**: capped spend is 193.0M of 230M (gateway healthy).
