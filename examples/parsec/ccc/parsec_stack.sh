@@ -385,7 +385,7 @@ case "$CMD" in
     echo "Now run: bash $0 status"
     ;;
   down)
-    banner "stopping parsec v4 stack"
+    banner "stopping parsec ${PARSEC_BENCH:-v4} stack"
     for entry in "${SERVICES[@]}"; do
       IFS=: read -r name port kind <<< "$entry"
       if [[ "$kind" == "sim" ]]; then
@@ -421,7 +421,7 @@ case "$CMD" in
     rm -f "$PID_DIR"/*.pid
     ;;
   status)
-    banner "waiting for parsec v4 stack health (max ${WAIT_BUDGET}s per check)"
+    banner "waiting for parsec ${PARSEC_BENCH:-v4} stack health (max ${WAIT_BUDGET}s per check)"
     for entry in "${SERVICES[@]}"; do
       IFS=: read -r name port kind <<< "$entry"
       wait_port "$name" "$port" || exit 1

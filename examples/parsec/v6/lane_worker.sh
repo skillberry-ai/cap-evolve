@@ -63,6 +63,31 @@ export PARSEC_LIVE_UV_FLAGS="--no-sync --frozen"
 export PYTHONDONTWRITEBYTECODE=1
 mkdir -p "$(dirname "$PARSEC_SIM_TRACE")"
 
+STACK_UP=false
+teardown_stack() {
+  if [[ "$STACK_UP" == true ]]; then
+    bash "$PARSEC_CCC_DIR/parsec_stack.sh" down || true
+  fi
+  # setup_podman.sh starts `podman system service --time=0` and a session
+  # dbus-daemon, and neither ever exits; LSF keeps the job (and its node) RUNning
+  # until every process in it is gone, so an idle worker would hold its node
+  # forever. The node is this job's alone (one worker per host), so stopping
+  # every such process of ours on it is safe.
+  local uid
+  uid="$(id -u)"
+  echo "teardown: removing task containers, stopping podman service and session dbus of uid $uid"
+  # Harbor's per-trial task containers outlive their trials; their conmon parents
+  # are this job's processes too.
+  podman ps -aq --filter name=__env- 2>/dev/null | xargs -r podman rm -f >/dev/null 2>&1 || true
+  pkill -u "$uid" -x conmon 2>/dev/null || true
+  pkill -u "$uid" -f "^podman system service --time=0 unix:///tmp/podman-run-$uid/" 2>/dev/null || true
+  pkill -u "$uid" -f "^dbus-daemon --session --address=unix:path=/tmp/podman-run-$uid/" 2>/dev/null || true
+  pkill -u "$uid" -x catatonit 2>/dev/null || true
+  sleep 1
+  echo "teardown: still running: $(pgrep -u "$uid" -fa 'podman|dbus-daemon|catatonit' | tr '\n' ';' || true)"
+}
+trap teardown_stack EXIT
+
 # shellcheck source=/dev/null
 source "$CCC_DIR/setup_podman.sh"
 if [[ -x "$HOME/.local/bin/docker" ]]; then
@@ -77,12 +102,6 @@ if ! podman image exists "$SIM_IMAGE"; then
   podman load -i "$SIM_TAR"
 fi
 
-STACK_UP=false
-teardown_stack() {
-  [[ "$STACK_UP" == true ]] || return 0
-  bash "$PARSEC_CCC_DIR/parsec_stack.sh" down || true
-}
-trap teardown_stack EXIT
 STACK_UP=true
 set +e
 bash "$PARSEC_CCC_DIR/parsec_stack.sh" up

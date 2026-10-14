@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -35,6 +36,23 @@ AGENT_FAILURE_PREFIX = "agent did not finish"
 def is_infra_error(error: str | None) -> bool:
     """An error that says the lane, not the agent, failed (seeding, harbor, simulators)."""
     return bool(error) and not str(error).startswith(AGENT_FAILURE_PREFIX)
+
+
+def remove_task_containers() -> int:
+    """Remove harbor's per-trial task containers (``<task>__<id>__env-main-1``) on this node.
+
+    Harbor leaves them running after the trial; v5 nodes still held dozens, up for days. A worker runs
+    many trials in a row on one node, so they would pile up and take its memory. The five
+    ``parsec-sim-*`` simulator containers never match the filter. Best-effort: never fails a trial.
+    """
+    try:
+        ids = subprocess.run(["podman", "ps", "-aq", "--filter", "name=__env-"], capture_output=True,
+                             text=True, timeout=120).stdout.split()
+        if ids:
+            subprocess.run(["podman", "rm", "-f", *ids], capture_output=True, text=True, timeout=300)
+        return len(ids)
+    except (OSError, subprocess.SubprocessError):
+        return 0
 
 
 def main() -> int:
@@ -61,6 +79,9 @@ def main() -> int:
     threading.Thread(target=beat, daemon=True).start()
 
     adapter = parsec_adapter.Adapter()
+    n = remove_task_containers()
+    if n:
+        print(f"removed {n} task container(s) left on this node by earlier jobs", flush=True)
     idle_since = time.monotonic()
     infra_errors = 0
     rc = 0
@@ -83,6 +104,7 @@ def main() -> int:
             adapter.apply(bundle)
             task = Task(id=item["task_id"], metadata={"task_dir": item["task_dir"]})
             rollout = adapter.run_target(task, bundle, seed=int(item["seed"]))
+            remove_task_containers()
             if is_infra_error(rollout.error):
                 infra_errors += 1
                 print(f"  infra error ({infra_errors}/{args.max_infra_errors}): {rollout.error}", flush=True)
