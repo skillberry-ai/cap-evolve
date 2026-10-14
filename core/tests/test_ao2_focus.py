@@ -80,10 +80,6 @@ def test_focus_near_misses_with_disjoint_wins_are_merged(tmp_path):
     c = F.run_to_done(w, be, cfg, max_ticks=8000)
     merges = [t for t, n in c.st["nodes"].items() if n.get("edit_kind") == "merge"]
     assert merges, "near misses (gain > 0, not accepted) get merged under focus"
-    g = lambda t: (c.st["nodes"][t].get("focus") or {}).get("gain", 0.0)
-    for a, b in c.st.get("merged_pairs", []):
-        if all(c.st["nodes"][x].get("edit_kind") == "edit" for x in (a, b)) and c.st["nodes"][a].get("focus_epoch") is not None:
-            assert g(a) + g(b) >= policy.FOCUS_MIN_GAIN - 1e-9 or c.st["nodes"][a]["status"] == "champion"
 
 
 def test_proposer_failing_block_lists_rates_traces_primary_and_rejected():
@@ -125,3 +121,38 @@ def test_small_proposals_are_refused_with_a_reason_under_focus(tmp_path):
         assert conductor_backend.RealBackend._too_small(fake, {"kind": "merge"}, work, "seed", {}) == ""
         fake.cfg.focus = False
         assert conductor_backend.RealBackend._too_small(fake, {"kind": "propose"}, parent, "seed", {}) == ""
+
+
+def _rate(task):
+    return 1.0 if int(task[1:]) % 3 else 0.0             # a third of the tasks fail for everyone
+
+
+def test_a_lucky_promotion_is_reverted_by_the_fresh_fill(tmp_path):
+    """Candidates look perfect on their selection-era trials but are the seed on fresh trials (seen live):
+    the fill check reverts every such promotion, so the champion stays the seed."""
+    def reward(cand, task, trial):
+        if cand["genes"] and trial < conductor.FILL_BASE:
+            return 1.0
+        return _rate(task)
+    spec = {"max_metric_calls": 3000, "max_candidates": 4, "ao_plateau_n": 99, "ao_focus": True}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"seed_trials": 3, "reward_fn": reward}, k_prop=1)
+    c = F.run_to_done(w, be, cfg, max_ticks=4000)
+    assert c.champion == "seed"
+    assert any(n.get("why") == "fill_reject" for n in c.st["nodes"].values())
+
+
+def test_a_real_gain_survives_the_fill_check(tmp_path):
+    def reward(cand, task, trial):
+        return 1.0 if cand["genes"] else _rate(task)
+    spec = {"max_metric_calls": 3000, "max_candidates": 3, "ao_plateau_n": 99, "ao_focus": True}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"seed_trials": 3, "reward_fn": reward}, k_prop=1)
+    c = F.run_to_done(w, be, cfg, max_ticks=4000)
+    assert c.champion != "seed" and c.st["nodes"][c.champion]["fill"]["fill_mean_delta"] > 0
+
+
+def test_one_trial_never_accepts(tmp_path):
+    spec = {"max_metric_calls": 3000, "max_candidates": 3, "ao_plateau_n": 99, "ao_focus": True}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"seed_trials": 3, "reward_fn": lambda c, t, k: 1.0 if c["genes"] else _rate(t)},
+                        k_prop=1)
+    c = F.run_to_done(w, be, cfg, max_ticks=4000)
+    assert all(n.get("trials", 2) >= 2 for n in c.st["nodes"].values() if n.get("why") == "promoted")

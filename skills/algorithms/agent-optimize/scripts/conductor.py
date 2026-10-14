@@ -75,6 +75,7 @@ class Cfg:
     focus_n: int = 1                    # first look: trials per focus cell
     focus_max: int = 3                  # last look; undecided after it = pruned (no resolvable gain)
     focus_canary: int = 6               # sample of the champion's passing tasks (regression stratum)
+    focus_accept_min: int = 2           # trials per focus cell before an ACCEPT (one trial is enough to kill)
     job_token_cap: int = 150_000
     chunk_timeout: float = 3 * 3600.0
     eval_retries: int = 3
@@ -135,7 +136,8 @@ class Cfg:
                    params=params, caps=caps, p2=p2, pipeline=num("ao_pipeline", default=2 if p2 and k > 1 else 1),
                    cost_eps=cost_eps, merge_bar=num("ao_merge_bar", cast=float, default=policy.COMPLEMENTARY),
                    focus=bool(spec.get("ao_focus")), focus_n=num("ao_focus_n", default=1),
-                   focus_max=num("ao_focus_max", default=3), focus_canary=num("ao_focus_canary", default=6))
+                   focus_max=num("ao_focus_max", default=3), focus_canary=num("ao_focus_canary", default=6),
+                   focus_accept_min=num("ao_focus_accept_min", default=2))
 
 
 def refuse_multi_objective(spec: dict) -> float | None:
@@ -492,6 +494,8 @@ class Conductor:
         if self.cfg.p2:
             self._p2_step()
             return
+        if self.cfg.focus:
+            self._check_fill()
         for tag in sorted(self.st["nodes"]):
             n = self.st["nodes"][tag]
             if n["status"] in ("proposed", "rung", "full", "stale") and not self._is_base(tag):
@@ -558,6 +562,30 @@ class Conductor:
             return
 
     # ---- focus rule (ao_focus) -------------------------------------------------------------
+    def _check_fill(self) -> None:
+        """A focus promotion is tentative until the new champion's fresh fill (all tasks, unselected trials)
+        beats the previous champion's reference on every task: paired mean - FILL_Z*se > 0. Catches a lucky
+        look and regressions outside the canary sample at no extra cost (the fill runs anyway); else revert."""
+        champ = self.champion
+        n = self.node(champ)
+        prev = n.get("fill_check")
+        ids = self.screen_ids()
+        if not prev or self._missing(champ, ids, self.ref_want(champ)):
+            return
+        d = policy.paired_deltas(self.b.rewards(champ, ids, self.ref_window(champ)),
+                                 self.b.rewards(prev, ids, self.ref_window(prev)), ids)
+        m, se, k = policy.mean_se(d, policy.FOCUS_SD_FLOOR)
+        ev = {"stage": "fill_check", "fill_mean_delta": round(m, 4), "se": round(se, 4), "n": k}
+        n.pop("fill_check")
+        if k and m - policy.FILL_Z * se > 0:
+            n["fill"] = ev
+            self.b.node_event(champ, "gated", **ev, kept=True)
+            return
+        self._finish_node(champ, "rejected", "fill_reject", ev)
+        self.node(prev)["status"] = "champion"
+        self.st.update(champion=prev, epoch=self.st["epoch"] + 1)
+        self.b.log("promotion_reverted", tag=champ, back_to=prev, **ev)
+
     def _focus_ids(self, n) -> tuple[list[str], list[str]]:
         """(focus, canaries) against the CURRENT champion, frozen per node per epoch: focus = tasks the
         champion does not always pass (all its draws), canaries = ``focus_canary`` of its passing tasks."""
@@ -594,6 +622,8 @@ class Conductor:
                                  len(self.screen_ids()), n["n_pass"])
         n["p_beat"], n["focus"] = v["p_beat"], {k: v[k] for k in ("gain", "mean", "se", "canary", "n")}
         route = "reward"
+        if v["verdict"] == "accept" and n["trials"] < self.cfg.focus_accept_min:
+            v["verdict"] = "more"                 # one trial per cell kills, never accepts: too noisy (seen live)
         if v["verdict"] == "accept" and self.cfg.cost_eps is not None:
             cps = self._cps(tag, ids, (0, n["trials"]), self.champion, self.ref_window(self.champion))
             ok, route = policy.mo_verdict(True, v["mean"], v["se"], v["n"], cps, self.cfg.cost_eps, 1.0)
@@ -610,6 +640,7 @@ class Conductor:
             # are selected upward: reusing them inflated the champion by ~0.1 per promotion in simulation)
             k = FILL_BASE + 10 * (self.st["epoch"] + 1)
             n["ref_window"] = [k, k + FILL_N]
+            n["fill_check"] = old                 # the fill must confirm the gain on EVERY task, else revert
             self.st.update(champion=tag, epoch=self.st["epoch"] + 1, proposals_since_improve=0)
         elif v["verdict"] == "kill" or n["trials"] >= self.cfg.focus_max:
             self._finish_node(tag, "pruned", "focus_" + (route if route != "reward" else v["why"]), ev)
@@ -780,8 +811,9 @@ class Conductor:
         if self.cfg.p2:
             self._p2_launch()
             return
-        if self.st.get("stopped"):
-            wants = [w for w in self._wants() if w[6] == "confirm"]
+        if self.st.get("stopped"):           # finish confirmations, and a pending focus fill check
+            fill = bool(self.cfg.focus and self.node(self.champion).get("fill_check"))
+            wants = [w for w in self._wants() if w[6] == "confirm" or (fill and w[6] == "baseline")]
         else:
             wants = self._wants()
         for prio, _k, tag, ids, window, owner, purpose in wants:
@@ -1060,11 +1092,17 @@ class Conductor:
             if r and r["stage"] not in ("confirm", "seq"):
                 self._p2_abandon_round(r, "stopped before the round reached its confirmation")
             return not cs.live(self.st) and not self.st.get("round")
+        if self.cfg.focus:
+            self._check_fill()
+            if self.node(self.champion).get("fill_check"):
+                return False
         return not cs.live(self.st) and not any(n["status"] == "confirming" for n in self.st["nodes"].values())
 
     def _keep_on_drain(self, j) -> bool:
         if j["kind"] != "eval":
             return False
+        if self.cfg.focus and j.get("purpose") == "baseline" and self.node(self.champion).get("fill_check"):
+            return True                    # the new champion's fill decides whether its promotion stands
         if self.cfg.p2:
             r = self.st.get("round")
             return bool(r) and r["stage"] in ("confirm", "seq") and j.get("round") == r["id"]

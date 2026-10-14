@@ -142,6 +142,7 @@ FOCUS_SD_FLOOR = 0.25      # per-task paired-delta sd floor (one or two trials c
 FOCUS_Z = 1.8              # one-sided ACCEPT bar (simulated on real per-task pass rates: false accept ~5% per null)
 FOCUS_Z_KILL = 0.8         # lighter KILL bar: a wrong kill costs one idea, a wrong accept costs the champion
 FOCUS_MIN_GAIN = 0.07      # accept only gains of >= 2 tasks of 30: large, resolvable improvements
+FILL_Z = 1.0               # a promotion is kept when its fresh full-set fill beats the old champion by > 1 se
 
 
 def focus_verdict(focus_d, canary_d, n_all: int, n_pass: int) -> dict:
