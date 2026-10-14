@@ -181,3 +181,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - The D v2.0 searches are frozen: tau-runner is building the D champions file and launching D ao21. The D window has the lead's go, under the same gates as E.
 - A: capevolve-runner is preparing the A ao21 spec, which needs registration. The A champions file comes after hc2 s2 ends.
 - Constraint (errata 25): final-eval-eng shares no reward means with anyone before the v2 freeze.
+
+## Update 06:50 UTC 10-14 (periodic check)
+- Only Suite A is running: hc2 s2 and ao21 s0-s2. The A window launches on a standing go when champions_V2_A.json arrives (gate: canary >= 0.6, capped_stop 228M).
+- The v2 freeze is declared once all of A ends. Then analysis is unblinded (errata 28), unless the user decides earlier.
+- The transfer orders B/C are registered (errata 30) but held for the user's cost go.
+- caps.json: azoai mini concurrency was raised to 30 (backup caps.json.bak_*).

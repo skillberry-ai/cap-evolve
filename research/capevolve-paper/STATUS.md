@@ -1,6 +1,28 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 03:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-14 06:50 UTC (coordinator periodic check)_
+
+## Update 06:50 UTC 10-14
+- **Spend**: capped spend is 192.1M of 230M (gateway healthy). The v2 optimizer cost so far is about $77 priced, across 26 searches.
+- **Azure**: per the user, the key is less contended. The azoai mini concurrency was raised from 15 to 30, and Azure windows now start at 96 workers (3% 429 rule kept).
+- **v1 final**: complete for all suites, and registered by hash (54e459510). Blind until the v2 freeze (errata 28).
+- **v2 final windows**:
+  - E: ended, 796 of 800 jobs.
+  - D: ended, 1200 of 1200 jobs (all D champions = seed).
+  - Both are registered, blind.
+  - v2.1 D/E: all six champions = seed, so there is no window; they map to the seed-check (errata 33-34).
+  - A: waits for the A champions file.
+- **v2 searches**:
+  - D and E have all ended (HC-2 x6, AO-2 x6, v2.1-AO2 x6).
+  - A: HC-2 s2 is at 600/600 started, with cand_0009 in confirmation. v2.1-AO2 A s0-s2 are at 141, 151 and 171 of 600 (launched 03:51Z; slow, est. several more hours).
+- **Search-time findings** (internal, not held-out):
+  - AO-2 has accepted no candidate on any suite (v2.0 or v2.1).
+  - HC-2 promoted on A (s0, s1) and E (s1, s2), and nothing on D.
+  - A post-promotion top-up gap was found (errata 29).
+- **Pending user decisions**: unblinding now or at the freeze; B/C transfer spend (~$285, or ~$140 / ~$95 cut); the Overleaf branch.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 03:50 UTC (coordinator periodic check)_
 
 ## Update 03:50 UTC 10-14
 - **Spend**: capped spend is 189.4M of 230M (gateway healthy). The v2 windows stop at 228M.
