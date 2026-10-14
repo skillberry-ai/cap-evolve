@@ -188,6 +188,7 @@ class Backend:
     def register(self, job: dict, result: dict) -> dict: raise NotImplementedError
     def node_event(self, tag: str, status: str, **kw) -> None: raise NotImplementedError
     def commit_accept(self, tag: str, evidence: dict) -> None: raise NotImplementedError
+    def restore_champion(self, tag: str) -> None: pass             # a reverted promotion: the run's best is ``tag`` again
     def commit_reject(self, tag: str, reason: str, evidence: dict) -> None: raise NotImplementedError
     def discard(self, tag: str) -> None: pass
     def merge_build(self, a: str, b: str, tag: str, kind: str) -> dict: raise NotImplementedError
@@ -562,7 +563,7 @@ class Conductor:
             return
 
     # ---- focus rule (ao_focus) -------------------------------------------------------------
-    def _check_fill(self) -> None:
+    def _check_fill(self, unfunded: bool = False) -> None:
         """A focus promotion is tentative until the new champion's fresh fill (all tasks, unselected trials)
         beats the previous champion's reference on every task: paired mean - FILL_Z*se > 0. Catches a lucky
         look and regressions outside the canary sample at no extra cost (the fill runs anyway); else revert."""
@@ -570,20 +571,21 @@ class Conductor:
         n = self.node(champ)
         prev = n.get("fill_check")
         ids = self.screen_ids()
-        if not prev or self._missing(champ, ids, self.ref_want(champ)):
+        if not prev or (self._missing(champ, ids, self.ref_want(champ)) and not unfunded):
             return
         d = policy.paired_deltas(self.b.rewards(champ, ids, self.ref_window(champ)),
                                  self.b.rewards(prev, ids, self.ref_window(prev)), ids)
         m, se, k = policy.mean_se(d, policy.FOCUS_SD_FLOOR)
         ev = {"stage": "fill_check", "fill_mean_delta": round(m, 4), "se": round(se, 4), "n": k}
         n.pop("fill_check")
-        if k and m - policy.FILL_Z * se > 0:
+        if k and m - policy.FILL_Z * se > 0 and not unfunded:
             n["fill"] = ev
             self.b.node_event(champ, "gated", **ev, kept=True)
             return
-        self._finish_node(champ, "rejected", "fill_reject", ev)
+        self._finish_node(champ, "rejected", "fill_unfunded" if unfunded else "fill_reject", ev)
         self.node(prev)["status"] = "champion"
         self.st.update(champion=prev, epoch=self.st["epoch"] + 1)
+        self.b.restore_champion(prev)          # commit.py moved the run's best_id on the accept; undo it
         self.b.log("promotion_reverted", tag=champ, back_to=prev, **ev)
 
     def _focus_ids(self, n) -> tuple[list[str], list[str]]:
@@ -1095,7 +1097,10 @@ class Conductor:
         if self.cfg.focus:
             self._check_fill()
             if self.node(self.champion).get("fill_check"):
-                return False
+                need = sum(self._missing(self.champion, self.screen_ids(), self.ref_want(self.champion)).values())
+                if cs.live(self.st, "eval") or self.fits(need):
+                    return False                     # running, or launches next tick
+                self._check_fill(unfunded=True)      # the fill cannot be funded: an unverified promotion reverts
         return not cs.live(self.st) and not any(n["status"] == "confirming" for n in self.st["nodes"].values())
 
     def _keep_on_drain(self, j) -> bool:

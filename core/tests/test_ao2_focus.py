@@ -156,3 +156,21 @@ def test_one_trial_never_accepts(tmp_path):
                         k_prop=1)
     c = F.run_to_done(w, be, cfg, max_ticks=4000)
     assert all(n.get("trials", 2) >= 2 for n in c.st["nodes"].values() if n.get("why") == "promoted")
+
+
+def test_a_revert_restores_the_runs_best_and_an_unfundable_fill_reverts(tmp_path):
+    def reward(cand, task, trial):
+        if cand["genes"] and trial < conductor.FILL_BASE:
+            return 1.0
+        return _rate(task)
+    restored = []
+    spec = {"max_metric_calls": 3000, "max_candidates": 3, "ao_plateau_n": 99, "ao_focus": True}
+    w, be, cfg = F.make(tmp_path, spec=spec, world_kw={"seed_trials": 3, "reward_fn": reward}, k_prop=1)
+    be.restore_champion = restored.append
+    c = F.run_to_done(w, be, cfg, max_ticks=4000)
+    assert c.champion == "seed" and restored and set(restored) == {"seed"}
+    # a promotion whose fill can no longer be funded is reverted at drain, never finalized unchecked
+    c.st["champion"] = "cand_1"
+    c.node("cand_1").update(status="champion", fill_check="seed", ref_window=[9000, 9002])
+    c.fits = lambda need: False
+    assert c.drain() and c.champion == "seed" and c.node("cand_1")["why"] == "fill_unfunded"

@@ -461,6 +461,10 @@ class RealBackend(P2Port, conductor.Backend):
             raise RuntimeError(f"commit.py refused the accept of {tag}: {res}")
         self._rediagnose(tag)
 
+    def restore_champion(self, tag) -> None:
+        self.run_dir.set_best(tag)
+        self.run_dir.log_event("best_restored", candidate=tag, why="focus promotion reverted by its fill check")
+
     def _rediagnose(self, tag) -> None:
         """Rebuild clusters.json from the NEW champion's val traces, so proposals target what it still fails."""
         rc, out, err = act.sh([act.PY, SKILLS / "phases" / "diagnose" / "scripts" / "run.py", "--run-dir", self.root,
