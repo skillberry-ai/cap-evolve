@@ -247,6 +247,10 @@ def main():
                          ("champions_V2_D.json", CS / "final_eval/champions_V2_D.json", "Suite D v2.0 champions (all six = seed)")):
         if fp.exists():
             items.append(("v2_1_AO2_" + nm, fp, "11E record: " + note, None))
+    for nm in ("counts_only.py", "status_report.py"):
+        fp = PAPER / "experiments/final" / nm
+        if fp.exists():
+            items.append(("v2_blind_helper_" + nm, fp, "counts-only helper: reads infra/error count fields by whitelist, never prints reward fields (blind period before the v2 freeze)", None))
     for f in E30_FILES:
         fp = SCRATCH.parent / "E30" / f
         if fp.exists():
