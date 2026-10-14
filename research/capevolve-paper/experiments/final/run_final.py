@@ -206,6 +206,7 @@ def worker_tau(job, attempt_dir):
         env["TAU_JUDGE_MODEL"] = job["judge_model"]
     if job.get("final_split"):
         env["TAU_ALLOW_SEALED_TEST"] = "final-eval-only"
+    env.pop("TAU_SEED_DIR", None)       # the V2 adapters' reference/ guard stays inactive at scoring unless the order's job env sets it explicitly
     env.update(job.get("env", {}))
     sys.path.insert(0, str(wt_of(job["suite"]) / "core"))
     ad_py = Path(job["adapter_py"]) if job.get("adapter_py") else wt_of(job["suite"]) / "examples" / cfg["example"] / "adapters" / "adapter.py"      # v2 window: the V2 adapter copy (reference/ guard)

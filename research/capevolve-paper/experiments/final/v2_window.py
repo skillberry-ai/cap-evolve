@@ -118,7 +118,8 @@ def make_order(suite, mpath, out=None, tag_exp=None, code_root=None, harness_dir
         adp = V2_TAU_ADAPTERS[suite]
         for j in jobs + meta.get("canary_jobs", []):
             j["adapter_py"] = adp
-        meta["scorer"] = {"window": "v2", "adapter_py": adp, "adapter_sha256": C.file_sha(adp),
+        meta["tau_seed_dir"] = None        # TAU_SEED_DIR unset in the window: the reference/ guard is inactive, scoring is code-identical to v1
+        meta["scorer"] = {"window": "v2", "adapter_py": adp, "TAU_SEED_DIR": "unset", "adapter_sha256": C.file_sha(adp),
                           "note": "v2 and the in-window anchors share the V2 adapter copy (11F); the v1 window used the frozen v1 adapter (no reference/ guard)"}
     if suite in ("D", "E"):
         jobs = [j for j in jobs if j.get("split") != "sel"]
