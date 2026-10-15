@@ -30,6 +30,7 @@ TRIALS = int(os.environ.get("TRIALS", "3"))
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "512"))
 SHORT_TOKENS = int(os.environ.get("SHORT_TOKENS", "16"))
 TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "300"))
+RETRY_WAITS_429 = (20, 40, 60, 60)
 PROMPT = (
     "Write a detailed, roughly 600-word technical explanation of how a hash table works, "
     "covering hashing, collisions, open addressing, chaining and resizing. Plain prose."
@@ -67,9 +68,19 @@ def call(ci_id, max_tokens):
         data=json.dumps(body).encode(),
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
     )
-    t0 = time.monotonic()
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
-        out = json.load(resp)
+    # A 429 (e.g. Azure's tokens-per-minute limit behind ETE) is a wait, not a result: retry it
+    # and time only the attempt that succeeds.
+    for wait in (*RETRY_WAITS_429, None):
+        t0 = time.monotonic()
+        try:
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                out = json.load(resp)
+            break
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or wait is None:
+                raise
+            print(f"    HTTP 429 (max_tokens={max_tokens}); retrying in {wait}s", flush=True)
+            time.sleep(wait)
     dt = time.monotonic() - t0
     usage = out.get("usage") or {}
     msg = ((out.get("choices") or [{}])[0]).get("message") or {}
