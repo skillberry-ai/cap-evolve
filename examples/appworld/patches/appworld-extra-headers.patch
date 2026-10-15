@@ -1,0 +1,99 @@
+diff --git a/experiments/code/simplified/language_model.py b/experiments/code/simplified/language_model.py
+index c3ba3ab..01012ed 100644
+--- a/experiments/code/simplified/language_model.py
++++ b/experiments/code/simplified/language_model.py
+@@ -101,6 +101,7 @@ def get_raw_lm_caller(
+     client_name: CLIENT_NAME_LITERAL,
+     api_key: str | None = None,
+     base_url: str | None = None,
++    extra_headers: dict[str, str] | None = None,
+ ) -> Callable[..., Any]:
+     valid_api_types = get_type_args(API_TYPE_LITERAL)
+     if api_type not in valid_api_types:
+@@ -120,6 +121,8 @@ def get_raw_lm_caller(
+         openai_args["api_key"] = api_key
+     if base_url is not None:
+         openai_args["base_url"] = base_url
++    if extra_headers is not None:
++        openai_args["default_headers"] = extra_headers
+     client = OpenAI(**openai_args)  # type: ignore
+     if api_type == "chat_completions":
+         return cast(Callable[..., Any], client.chat.completions.create)
+@@ -184,6 +187,7 @@ def non_cached_lm_call(
+     api_key: str | None = None,
+     model_list: list[Any] | None = None,
+     custom_llm_provider: str | None = None,
++    extra_headers: dict[str, str] | None = None,
+     api_type: API_TYPE_LITERAL = "chat_completions",
+     # below params are only from appworld
+     make_cacheable: bool = False,
+@@ -245,6 +249,8 @@ def non_cached_lm_call(
+         kwargs["model_list"] = model_list
+     if custom_llm_provider is not None:
+         kwargs["custom_llm_provider"] = custom_llm_provider
++    if extra_headers is not None and client_name == "litellm":
++        kwargs["extra_headers"] = extra_headers
+     if client_name not in ["openai", "litellm"]:
+         raise ValueError(
+             f"Invalid client_name: {client_name}. Valid values are: 'openai' or 'litellm'."
+@@ -258,6 +264,7 @@ def non_cached_lm_call(
+             client_name=client_name,
+             api_key=api_key,
+             base_url=base_url,
++            extra_headers=extra_headers,
+         )
+         kwargs = chat_completion_to_responses_input(**kwargs)
+         response_ = lm_caller(**kwargs)
+@@ -271,6 +278,7 @@ def non_cached_lm_call(
+         client_name=client_name,
+         api_key=api_key,
+         base_url=base_url,
++        extra_headers=extra_headers,
+     )
+     response_ = lm_caller(**kwargs)
+     response = to_dict(response_)
+@@ -311,6 +319,7 @@ def cached_lm_call(
+     api_key: str | None = None,
+     model_list: list[Any] | None = None,
+     custom_llm_provider: str | None = None,
++    extra_headers: dict[str, str] | None = None,
+     **kwargs: Any,
+ ) -> dict[str, Any]:
+     return non_cached_lm_call(
+@@ -341,6 +350,7 @@ def cached_lm_call(
+         api_key=api_key,
+         model_list=model_list,
+         custom_llm_provider=custom_llm_provider,
++        extra_headers=extra_headers,
+         make_cacheable=True,
+         **kwargs,
+     )
+@@ -602,6 +612,7 @@ class LanguageModel:
+         tool_parser_name: str | None = None,
+         drop_reasoning_content: bool = False,
+         api_type: API_TYPE_LITERAL = "chat_completions",
++        extra_headers_env: dict[str, str] | None = None,
+         **generation_kwargs: Any,
+     ) -> None:
+         self.model = name
+@@ -619,6 +630,11 @@ class LanguageModel:
+         self.lm_call = {True: cached_lm_call, False: non_cached_lm_call}[use_cache]
+         if api_key_env_name is not None:
+             generation_kwargs["api_key"] = os.environ[api_key_env_name]
++        if extra_headers_env:
++            # header name -> name of the env var holding its value; no secret in configs.
++            generation_kwargs["extra_headers"] = {
++                header: os.environ[env_name] for header, env_name in extra_headers_env.items()
++            }
+         if client_name == "openai":
+             generation_kwargs.pop("custom_llm_provider", None)
+         function = {
+@@ -764,6 +780,8 @@ class LanguageModel:
+         return return_message
+ 
+     def may_log_call(self, arguments: dict[str, Any], response: dict[str, Any]) -> None:
++        # Never log credentials (the extra_headers carry the provider key).
++        arguments = {k: v for k, v in arguments.items() if k not in ("extra_headers", "api_key")}
+         log_data = {"id": uuid.uuid4().hex, "input": arguments, "output": response}
+         if self.log_file_path:
+             os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
