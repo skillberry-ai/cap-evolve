@@ -1,0 +1,708 @@
+{
+ "bstar": "final-state",
+ "champions_file": "/home/dev/projects2/campaign-scratch/final_eval/champions_V3_B1_competitors.json",
+ "champions_file_sha256": "055607ade3c0a550e35bce3ee594bdfc796dac77f2dfd68b31e87f0404fde151",
+ "entries": [
+  {
+   "arm": "ao22",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "4c4cf6ecb488ab7293635d2eef225287623bab962eb9895f26ea3d5d92119c72",
+    "tools/tools.py": "f598c6a8c9ba8874740df9654d19fa6b50026f466b9d46e14d8ed287a77b15a6"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/ao22/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ff465e0a71cc2f34f0236c90a8cf73e69ea8693348e4f15fb8aba8d20aede4f0",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ao22/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "f6965cfe83d07e068a728fa5e280cda366c6466ca1cc69780421c4689e0a77a5"
+  },
+  {
+   "arm": "ao22",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "b0272a5010f6a210a5f0ec489e44ead007918e595c7983c638d4dc0b137837b8",
+    "tools/tools.py": "37d7846a4867b548370c829eb4ef5054231fa999c0964b4a6db3d7e8a01a7b2d"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/ao22/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "7d86bcaaa1e043975f75bd923d27edd3ad8d027bc03d50d868d646bdc41d1cbe",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ao22/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "45cb22643ddf5db6739f0967f91e0c2d237476093e35c2a3930d3df8fcedddb7"
+  },
+  {
+   "arm": "ao22",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "c20232cb2c672fe8ab4685311206ab85fd64f7ca02279c0d5e5b20c4a5f28947",
+    "tools/tools.py": "643fa17f445194af89dfcf71467e43886a94cdb734661e8262ce6200441a2b25"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/ao22/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "a226af236f58e6f852ac3bddc64b3ab7c0f728dfa5303c223a81f3b66a8f0735",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ao22/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "7f246820a63f9be64bf40fd5658e519c21eaf6ef664738a3c9dc27811f82b345"
+  },
+  {
+   "arm": "evoskill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a882fad029d260e9918edc142040010db3108ec7fc4d81579c32ede27f0cb244",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/evoskill/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "65c294fa834f165a9c53683b429d7888e7db286589ddc2352fc05cbd2ad04d2c",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/evoskill/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "1773d472aba38d8ee73f6db05ced51e877418495c44dd2c46c84e311674c0135"
+  },
+  {
+   "arm": "evoskill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "ba2e0eb7347221a6ba11e6c84e0dd3436e6e42eee9d7aae90b651bbd415de326",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/evoskill/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "1feff0026724ed7f2bff380b509c7811748281a6ab53cf828c904f864508bb41",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/evoskill/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "2cfc38899070ffdc4a89a90f27cc1a7f21469f5a70b221aa9a21447e3c19d3fa"
+  },
+  {
+   "arm": "evoskill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "cafa6fea81a7c564bda1d16e3faa22f7d0ae7039080aff25a31ef4b9e487cc86",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/evoskill/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "1d647c8d665275470e8160a189aee88a542936142f3074b594a100a456b4ba47",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/evoskill/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "68d162d3f2428aadf46fafc5178cb9bb755a615bfd4128cb57af88cb7ffd0745"
+  },
+  {
+   "arm": "gepa",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "38ad50ce3fac98d974cf458b194f2f84c66b0c95cd4f0c167ea94426673aa211",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/gepa/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ef8e94ad472e72f04699b09e772ace310b26024fb0ec4273cc30b87bc061cb38",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/gepa/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "0c853abdade41f2e7ab44c27a3dfd9674a2a16aaa1b81046ed9b6a5f52661b22"
+  },
+  {
+   "arm": "gepa",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "3fb1bf42dd94e49d3b78d7d57ef7590c9b87fb6ff2d641ac326d85681fd78dc3",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/gepa/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "c6ef410d451585fd248e126f67f788739d889014ac5b555515da7669c2f2dab5",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/gepa/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "d13d020b8226a91cb062597409e5123e9589b11a97d5af1564bfa0401dd309ca"
+  },
+  {
+   "arm": "gepa",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e5f6f31503af5663c7031496f4d519c56ae96cb282bae69f1d43750d8d83d998",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/gepa/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "db0d4c1bc1edb2c566afda7041b6b31057df2ea28a0b48ddd34d3798bdb7dd2a",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/gepa/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "b2040928d78485ae53d0117edf4b6f32c13adddbaf7bc4985632357373d613cc"
+  },
+  {
+   "arm": "gepafull",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "3fa33adbebba8c0f6b8d2d1d3259af41f4a8770e7f6c34f16d8a69c7063bdb2d",
+    "tools/tools.py": "bfb1ac15e642e4e2fbce0671f35b13209a4b4e9941461b47e810530f75db4c80"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/gepafull/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "3b6da712015a19bb5f39a285e8e3dcb87091512581c6557201194da0377f16be",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/gepafull/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "3b6da712015a19bb5f39a285e8e3dcb87091512581c6557201194da0377f16be"
+  },
+  {
+   "arm": "gepafull",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e19406293d8fdf7079c1d08a387a4f9cb56db3e15a0b8c5fbd650a0a9bf5c29c",
+    "tools/tools.py": "6e95f5c8f80bcb46413dac6724b3c69ffded6dfed669f153c36d63c709cfea97"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/gepafull/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "c3a8fea1ba81c6c74a25fbc65598333733278758ea19203a0930f20709ba8464",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/gepafull/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "c3a8fea1ba81c6c74a25fbc65598333733278758ea19203a0930f20709ba8464"
+  },
+  {
+   "arm": "gepafull",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e78b5d8c025201e57bfa0007000b4084d9e8499c5afc4727b5c08e785a3bbd26",
+    "tools/tools.py": "b20ce05e4134c1afdd6d525b2b54610f309a7307925c764dcc93a0b22b35ecce"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/gepafull/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "80e6a3b6dafb533d0563f1b7f8751dbd450c92b345552b61f3516ba2b80e00af",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/gepafull/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "80e6a3b6dafb533d0563f1b7f8751dbd450c92b345552b61f3516ba2b80e00af"
+  },
+  {
+   "arm": "hc3",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e66b65911fc032f359a6553323e8321bf0cab131014c00d4eae12391c4c10046",
+    "tools/tools.py": "0b2ffc2336df7bf4e995158d5367b92f923eb774f240f841a4d90bb4268bdc97"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/hc3/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "22be292e12f257e315d14dd7c50e8393013baa071df62851bbdb4a9905fc9bc6",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hc3/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "7fd6a9b2c6f076c83dc3a41f1d4d62c2fd48e6ff5996ec07a30b8d7097223fb6"
+  },
+  {
+   "arm": "hc3",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "8e4d2f25b4c929cd61b0179cf1c8febd8bd44aa82e1f4fe1f5165dfdf359f8e2",
+    "tools/tools.py": "29236add34153df8791285978d2cac23a3232834a7d71479d2060a1509103bae"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/hc3/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "a97274fcf6dbf94461e9c1f63434f4412fac8277bddf3b949b20fa09336aaf09",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hc3/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "eaa1c21bbd9885e9beb41bd0f896549e174e2fb1a4cea27d71694ff97c311659"
+  },
+  {
+   "arm": "hc3",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "ea47f8881d14c1a3c0039be615543ed194e16b5e9ade78837cdb47d141a35345",
+    "tools/tools.py": "83c68cf266ab9d07e8d5b4ab4a7c8af78ab749dc1b26adab76217041c960627d"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/hc3/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "7a313efa005a18ba4f2375b9fa98b8888739de5f25603b2b64d9081eea64205f",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hc3/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "7905378ca0c170414ddff26fb4b757b45cc1a6f87be706eb2ec943cad0dba925"
+  },
+  {
+   "arm": "hcstock",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "518ddee09e416a1b52d9a4ef1bf1c13a2714b037135a11dedc8ab760309745c3",
+    "tools/tools.py": "b8f48abcc01bf716ec1d083810bfe1836a8d18d8cee8baabfbb3201ab92d144f"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/hcstock/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "cdbd11a24497b4a351618c7ae04d251d77d520b1b61dc298ef00d54a41dbbc68",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "dc4ef1f1686f14f601b4699138a956f9f46ce64af4766c86783f5d53e2bb026e"
+  },
+  {
+   "arm": "hcstock",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "bc4a0a3431ddad3a34070fb1b1d8363f64d02a1a316c6e1af2c40f760c13a337",
+    "tools/tools.py": "59896237fb7f48ddf7b95b2b788cd433e02ba54e48bb97f393a89374c94036ee"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/hcstock/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "f6b6b21a88a9815b3a92184b70950938b688b0f39a592d9455a441670f468874",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "6f3298a03a72129431b8347b47a23b43e50283b79cb82d76bc64fbbf564d00d3"
+  },
+  {
+   "arm": "hcstock",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "be6f90032fa2babfff164a7ffa84af4270a87f6f38ffce2dd61d73a6fceace9a",
+    "tools/tools.py": "e0db427ceb24bafff0008a0be84014d60177b5309d37b50b614b71bff620dd32"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/hcstock/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "7b7ff1bd0834e1c0735be3109be6ea48a6e6b53dbe9935dc5724d68ac8ae3624",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "885a1eef46b5d5ee238b8e52db4a291d4616d2b98341809c8f48f9f991d33fb0"
+  },
+  {
+   "arm": "metaharness",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "67f9d7868ab7b319db6a69845c16f8d351535cd6ad574723b79a3906b1f924a7",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/metaharness/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "98650b664222f5ea69979363a5325f7138bdd4faae5dae7ad704afb09ec7ca00",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/metaharness/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "b72f5c4fc9cbb4ccae3eb28104d5bf7667819f3cf1fb1771afdd0caaa94a05df"
+  },
+  {
+   "arm": "metaharness",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "2a0c993b5d9cafa90c143078050f6c18669e0f1bfccf1f690f18be253e78084f",
+    "tools/tools.py": "6d8148b4dfa3cdf7ecb1abaa322cc17d5e72f764dae59f8ac5ebb13eb9f0b574"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/metaharness/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "769cbaf8e0c0b91a2287fea83c3d423581d22966f84b954785c5a931167d9dfd",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/metaharness/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "3048a1933883259098b9f559ccf9adf06cd10d0d790bc88930a1b2b761d6d6e6"
+  },
+  {
+   "arm": "metaharness",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "f8f241180bb0b311f78983b7f14035ad37188fe238234b624210f39df58d6f8a",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/metaharness/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "84fa88145548c5a2c913ba21bcce57feac9764bdcfedfda79ffa42d0c78aca99",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/metaharness/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "b345155074c555dd5f75f23a154cc2de5ab185fec1fac626b4a96f166582c25d"
+  },
+  {
+   "arm": "mipro",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "79a7151f2d68f494c3b33ef768f49cc8966b2386dbc55ca4a76a08c2008bce35",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/mipro/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "aa629aca5156cae665cd0fb89dff1975efa13cde67afdddd2b854b6e4c2d00e1",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/mipro/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "3bb84bbda1de87629a39da7722f4a5bad8f8da649ac161ec6ea0cecc4ba9f7d8"
+  },
+  {
+   "arm": "mipro",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "90cdb56fedba42445da311c78701f7d215f9974254c9aa3fc0c8d692df0ff346",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/mipro/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "f16f6e9f35d7d491968becd27fd4a0c923426fada317f0e5dab6dc607e31e3b2",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/mipro/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "83521c202bebc4c01ad1477ac3e3ee325c72e145bcc9cb946062aa2ea5a99979"
+  },
+  {
+   "arm": "mipro",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e967a606327f6a90f03b7c78fc417f4cdf9a7da30df1ce42d8aa27f9727413fe",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/mipro/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "0328fae54077ffa60ef907ae555f65c915f60cbe105c16cc342ee5f623fd2392",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/mipro/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "b308482807958c294ded045a0b0f5a8025759e0e9a4a973e33434b6364c6f81c"
+  },
+  {
+   "arm": "skillopt",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "dec2fd9ffdf48abec4e5dd38807db1e990dd357fdf91d98de447a8e5cfd900ec",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/skillopt/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "2a3049efa5953f216985b03f28c75d16a35f8e306aaff32501974b206420a9ac",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/skillopt/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "db38db2641284c2a6702880509c8ede046f7c5120fef115bf0bcdacd895c35d1"
+  },
+  {
+   "arm": "skillopt",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "7cdd82b89659ecb8010503f11271920736ceee271bb9de8ae5377c337d98fb40",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/skillopt/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "fe8881ff8f63806e9a187b92bcc5476c2842d765038190d2b4d631a2f42b9118",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/skillopt/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "be7532a0979514051f8750ca368c886cf0124e376b254ae5f23bd2c897348a75"
+  },
+  {
+   "arm": "skillopt",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "642844b8dbaf8961a9c39933eb84edc5f09b93a43480fe1b2cad9ce8a3babe91",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/skillopt/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "325612ff5bc30bd0dce1d815354168b0658eda20569068bbf32c5b9a2e25ff44",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/skillopt/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "f3d181955029b7f6341ea253c45e36e8fff9079c2adb1dd220d23e29a726dba8"
+  },
+  {
+   "arm": "trace2skill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "5619df6dcda596588d167a4f14707bfb77de0c7f9d5dc190b52998e3b481d2be",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/trace2skill/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "21a38e634269fdaf1fc72e589fe389c260b5ba58a3351f18de99a11a2da55589",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/trace2skill/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "614705e5507a16e585a49fe0a14f0c3be9f3072f9a17370c28655d9aa84445cd"
+  },
+  {
+   "arm": "trace2skill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "04be4791d099701e07ff7a371c40ee73de402c397805eed8d0ae7699d801cd2e",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/trace2skill/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "d41a5dd5ee8a793ff449971f9248e0566e3a7037aab39ebdb4beef67322e6c7d",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/trace2skill/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "1613eb924021a62ab372eb963e82d5dc527fe950130435b53835eb34ddd3c1c0"
+  },
+  {
+   "arm": "trace2skill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e7d7b7d96d02019fa2c78c82a21e45f4f607b74205fc0f30f783eaeb24081df8",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/trace2skill/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "0387167e13a309058ebd7e3213abc0a563b39b0ec14b5111d1de0146e43f881d",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/trace2skill/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "659b77c443af438eb15051bc20dd1c2c7824a647b9b283cb4fce381c4c883f00"
+  },
+  {
+   "arm": "wikiskill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "c24451a73d14b101dc1626c0aa9028adf7e999295464d6ea8a82af4e79db56e0",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/wikiskill/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "d0707bddc45bc029f718a0a81d70d31259aa04b68fc7760debd9775939f5563c",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/wikiskill/s0/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "ca104540f2ae28c942766d02c19fd852c065b9999dfc2f982c06c888f8c1ea90"
+  },
+  {
+   "arm": "wikiskill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "39bfa8140ff9ae4774b47518c1bbdd646ecdb5936e4906d94469176c8ab8ae59",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/wikiskill/s1",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "a0f94cdec3ac209f611619e0691e344ad060665c3e9584be40431769b707b916",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/wikiskill/s1/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "16755718fab621a917dd3b13a3b0297414697746cf361b4fa8f1331c22a7cf45"
+  },
+  {
+   "arm": "wikiskill",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "4f5fa9782f5ab9df74d329c5e23b35cf16418e21006da40ed8a9b91096bbac7b",
+    "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1/main/artifacts/B/wikiskill/s2",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "208411d395bce912ffad97868b8964d9f6fcbc3743b61fbb67f9c94a0831620a",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/wikiskill/s2/final",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "2215ba12fcaac94a5c8037a6ef0fa4fe7fc3b135b84e1de0ac7d782bfad69836"
+  }
+ ],
+ "frameworks": [
+  "ao22",
+  "evoskill",
+  "gepa",
+  "gepafull",
+  "hc3",
+  "hcstock",
+  "metaharness",
+  "mipro",
+  "skillopt",
+  "trace2skill",
+  "wikiskill"
+ ],
+ "generated_utc": "2026-10-15T17:07:25Z",
+ "seed_artifact": {
+  "distinct_seed_hashes": {
+   "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e": 24
+  },
+  "files": {
+   "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+   "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+  },
+  "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/E/artifacts/seed",
+  "n_runs_agreeing": 24,
+  "normalized_tree_sha256": "faf38337a142fb778e866834e6298e9536d05cd378489ffd860e83268745f30b",
+  "note": "12 run(s) have a first candidate that is not byte-identical to the seed capability (the arm's own starting point, e.g. MIPROv2's default instruction); the shared seed hash is the seed directory's, as registered",
+  "runs_deviating": [
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 0,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 1,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 2,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 0,
+    "tree_sha256": "94e850bfef6c16002dd644b594a4af93df5d07e4f2401797ef4fc817f9265ec8"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 1,
+    "tree_sha256": "1f575b6ff7cbe25ae41c6385c778bccbba7eb4272806ca70ce4dfbcd1ea7169c"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 2,
+    "tree_sha256": "ca25ba4da47535a22e9c78c7223fd6c52703688470e1c5f12b7ca6cf8860eb1a"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "2ccdc0183e07",
+    "seed": 0,
+    "tree_sha256": "35e33857b05d52aabb4fcbafc004387839c84975e578eca97905b8ee69fde04f"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "2ccdc0183e07",
+    "seed": 1,
+    "tree_sha256": "35e33857b05d52aabb4fcbafc004387839c84975e578eca97905b8ee69fde04f"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "2ccdc0183e07",
+    "seed": 2,
+    "tree_sha256": "35e33857b05d52aabb4fcbafc004387839c84975e578eca97905b8ee69fde04f"
+   },
+   {
+    "arm": "gepafull",
+    "candidate_id": "cand_0000",
+    "seed": 0,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepafull",
+    "candidate_id": "cand_0000",
+    "seed": 1,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepafull",
+    "candidate_id": "cand_0000",
+    "seed": 2,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   }
+  ],
+  "seed_source_dir": "/home/dev/projects2/wt-airE/examples/tau2_airline_c/seed_capability",
+  "status": "ok",
+  "suite": "E",
+  "tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e"
+ },
+ "suite": "E",
+ "window": "V3B1"
+}

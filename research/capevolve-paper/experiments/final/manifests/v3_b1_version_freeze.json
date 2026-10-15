@@ -1,0 +1,156 @@
+{
+ "bench": "B1 tau2 airline (V3)",
+ "generated_utc": "2026-10-15T17:08:33Z",
+ "versions": {
+  "ao22": {
+   "code_git_head_now": "418fd42709c3b09c327a35fa810c7230bdc9d730",
+   "code_worktree": "/home/dev/projects2/wt-v3run3",
+   "label": "AO-2.2",
+   "note": "git head read from the code worktree at 2026-10-15 17:1x UTC (after the runs ended); verify it equals the SHA at launch (ao22: 418fd4270 per team-lead)",
+   "seeds": {
+    "s0": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": null,
+     "instructions_sha256": null,
+     "k": 5,
+     "pre_iteration_edit_note": null,
+     "pre_iteration_edit_utc": null,
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "6c2743b3f522088dc714fb33c4209edd6bff66a7d30ae9dbf8b2d1dd2fe7e99d",
+     "spec_sha256": "ab4eafc3c0dbabb1e7792841d7510e6d88b795aaec0d67c12f51a2b2f156ba30",
+     "tag_prefix": "tag:V3-B1-ao22-s0"
+    },
+    "s1": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": null,
+     "instructions_sha256": null,
+     "k": 5,
+     "pre_iteration_edit_note": null,
+     "pre_iteration_edit_utc": null,
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "6c2743b3f522088dc714fb33c4209edd6bff66a7d30ae9dbf8b2d1dd2fe7e99d",
+     "spec_sha256": "ab4eafc3c0dbabb1e7792841d7510e6d88b795aaec0d67c12f51a2b2f156ba30",
+     "tag_prefix": "tag:V3-B1-ao22-s1"
+    },
+    "s2": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": null,
+     "instructions_sha256": null,
+     "k": 5,
+     "pre_iteration_edit_note": null,
+     "pre_iteration_edit_utc": null,
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "6c2743b3f522088dc714fb33c4209edd6bff66a7d30ae9dbf8b2d1dd2fe7e99d",
+     "spec_sha256": "ab4eafc3c0dbabb1e7792841d7510e6d88b795aaec0d67c12f51a2b2f156ba30",
+     "tag_prefix": "tag:V3-B1-ao22-s2"
+    }
+   }
+  },
+  "hc3": {
+   "code_git_head_now": "ac1f1f40c9466988333e65c4f4d12c0741b0b727",
+   "code_worktree": "/home/dev/projects2/wt-v3run2",
+   "label": "HC-3",
+   "note": "git head read from the code worktree at 2026-10-15 17:1x UTC (after the runs ended); verify it equals the SHA at launch (ao22: 418fd4270 per team-lead)",
+   "seeds": {
+    "s0": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": null,
+     "instructions_sha256": null,
+     "k": 5,
+     "pre_iteration_edit_note": null,
+     "pre_iteration_edit_utc": null,
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "830e03b7dcff0f02f25345e1a62573277b4ab793aef18444d0bef0d58a43cef3",
+     "spec_sha256": "4ba90eaa70c003979da89bb13c30b35f6bf2a93b5e08b3ca535ba86455931e21",
+     "tag_prefix": "tag:V3-B1-hc3-s0"
+    },
+    "s1": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": null,
+     "instructions_sha256": null,
+     "k": 5,
+     "pre_iteration_edit_note": null,
+     "pre_iteration_edit_utc": null,
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "830e03b7dcff0f02f25345e1a62573277b4ab793aef18444d0bef0d58a43cef3",
+     "spec_sha256": "4ba90eaa70c003979da89bb13c30b35f6bf2a93b5e08b3ca535ba86455931e21",
+     "tag_prefix": "tag:V3-B1-hc3-s1"
+    },
+    "s2": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": null,
+     "instructions_sha256": null,
+     "k": 5,
+     "pre_iteration_edit_note": null,
+     "pre_iteration_edit_utc": null,
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "830e03b7dcff0f02f25345e1a62573277b4ab793aef18444d0bef0d58a43cef3",
+     "spec_sha256": "4ba90eaa70c003979da89bb13c30b35f6bf2a93b5e08b3ca535ba86455931e21",
+     "tag_prefix": "tag:V3-B1-hc3-s2"
+    }
+   }
+  },
+  "hcstock": {
+   "code_git_head_now": "a7a83846f56bf0897ca06be85fbb3bd44b010f44",
+   "code_worktree": "/home/dev/projects2/wt-v3run",
+   "label": "HC-stock",
+   "note": "git head read from the code worktree at 2026-10-15 17:1x UTC (after the runs ended); verify it equals the SHA at launch (ao22: 418fd4270 per team-lead)",
+   "seeds": {
+    "s0": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": "685a074f080cdf8526ecf9f0a01eab9d51af891bb8e3c7b23f21804c370059bd",
+     "instructions_sha256": "a6370889bcfe848d5fd39bac5364816f66839c0ae85c79b86258ae0b670ba3f6",
+     "k": 5,
+     "pre_iteration_edit_note": "tools.py contract paragraph added to the benchmark facts (Meta-Harness wording) and candidate-fault feedback in score(); applied to all three seeds during the seed baseline, before the first optimizer iteration",
+     "pre_iteration_edit_utc": "2026-10-15T00:52Z",
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "c122d688f121a836182380605ac6001041b8b840c6b2a4ba7bd11c4c8cdedaaf",
+     "spec_sha256": "1ba82a7b31fb7bb1f4f57b09e56825da32704d8e411f12f02e5015fb9a3f820f",
+     "tag_prefix": "tag:V3-B1-hcstock-s0"
+    },
+    "s1": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": "685a074f080cdf8526ecf9f0a01eab9d51af891bb8e3c7b23f21804c370059bd",
+     "instructions_sha256": "a6370889bcfe848d5fd39bac5364816f66839c0ae85c79b86258ae0b670ba3f6",
+     "k": 5,
+     "pre_iteration_edit_note": "tools.py contract paragraph added to the benchmark facts (Meta-Harness wording) and candidate-fault feedback in score(); applied to all three seeds during the seed baseline, before the first optimizer iteration",
+     "pre_iteration_edit_utc": "2026-10-15T00:52Z",
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "c122d688f121a836182380605ac6001041b8b840c6b2a4ba7bd11c4c8cdedaaf",
+     "spec_sha256": "1ba82a7b31fb7bb1f4f57b09e56825da32704d8e411f12f02e5015fb9a3f820f",
+     "tag_prefix": "tag:V3-B1-hcstock-s1"
+    },
+    "s2": {
+     "R": 3000,
+     "adapter_sha256": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a",
+     "adapter_sha256_at_launch": "685a074f080cdf8526ecf9f0a01eab9d51af891bb8e3c7b23f21804c370059bd",
+     "instructions_sha256": "a6370889bcfe848d5fd39bac5364816f66839c0ae85c79b86258ae0b670ba3f6",
+     "k": 5,
+     "pre_iteration_edit_note": "tools.py contract paragraph added to the benchmark facts (Meta-Harness wording) and candidate-fault feedback in score(); applied to all three seeds during the seed baseline, before the first optimizer iteration",
+     "pre_iteration_edit_utc": "2026-10-15T00:52Z",
+     "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+     "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+     "shim_sha256": "c122d688f121a836182380605ac6001041b8b840c6b2a4ba7bd11c4c8cdedaaf",
+     "spec_sha256": "1ba82a7b31fb7bb1f4f57b09e56825da32704d8e411f12f02e5015fb9a3f820f",
+     "tag_prefix": "tag:V3-B1-hcstock-s2"
+    }
+   }
+  }
+ }
+}
