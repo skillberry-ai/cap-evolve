@@ -280,6 +280,7 @@ def main():
                          ("V21_D_order", PAPER / "experiments/final/manifests/order_V21_D.jsonl", "Suite D v2.1-AO2 window order file (1,400 jobs), registered before the first rollout (erratum 47)"),
                          ("V21_D_comparison_family", PAPER / "experiments/final/manifests/comparison_family_V21_D.json", "Suite D v2.1-AO2 window comparison family (ao21 vs seed, ao21 vs GEPA, Holm m = 2)"),
                          ("V21_D_artifact_manifest", PAPER / "experiments/final/manifests/artifacts_V21_D.json", "Suite D v2.1-AO2 window artifact manifest"),
+                         ("V3_B1_airline_adapter", CS / "scripts/V3/adapters/airline/adapter.py", "V3 B1 airline adapter; 8d4cf8b7 used by all finished runs (decisions.md 2026-10-15 00:52 UTC), then 9c797d8a (uuid suffix on the native-sims results filename; no scoring change), for future runs only"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
