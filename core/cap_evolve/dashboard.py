@@ -908,6 +908,7 @@ _CONFIG_KEY_GROUPS = {
     "capabilities": "Capability", "capability_path": "Capability",
     "capability_sources": "Capability", "actions": "Capability",
     "intervention": "Delivery", "skill_name": "Delivery", "protected_paths": "Delivery",
+    "editable_paths": "Delivery",
     "algorithm_skill": "Algorithm & optimizer", "optimizer_skill": "Algorithm & optimizer",
     "optimizer_model": "Algorithm & optimizer", "optimizer_max_turns": "Algorithm & optimizer",
     "optimizer_usd_per_iter": "Algorithm & optimizer",

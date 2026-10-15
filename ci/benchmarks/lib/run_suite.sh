@@ -731,6 +731,29 @@ ENV
       echo ">>> spreadsheetbench: WARM seed — baseline is the champion of run 30890657732" \
            "(cand_0002, val 0.580). base->opt is NOT comparable to a pristine-seed run." >&2
     fi
+    # FRAME LAYOUT (#871). The agent's user message becomes a SEALED task_frame.md (fields +
+    # the facts of the loop) with an editable guidance.md inserted into it; the spec's
+    # editable_paths lets the optimizer change only prompt.md and guidance.md. With
+    # SB_EMPTY_SEED=1 the guidance is EMPTY (no skill at all, as before) — the frame's loop
+    # facts replace the built-in template's, so this seed is NOT the old layout's seed.
+    if [ "${SB_FRAME:-0}" = "1" ]; then
+      if [ "${SB_WARM_SEED:-0}" = "1" ]; then
+        echo "::error:: SB_FRAME=1 and SB_WARM_SEED=1: the warm seed ships a task_template.md" \
+             "(the old layout) — there is no frame-layout warm seed." >&2
+        exit 1
+      fi
+      FRAME_SEED="$TPL/spreadsheetbench/seed_capability_frame"
+      rm -f "$PROJ/seed_capability/task_template.md"
+      cp "$FRAME_SEED/task_frame.md" "$PROJ/seed_capability/"
+      if [ "${SB_EMPTY_SEED:-0}" = "1" ]; then
+        : > "$PROJ/seed_capability/guidance.md"
+      else
+        cp "$FRAME_SEED/guidance.md" "$PROJ/seed_capability/"
+      fi
+      EXTRA_YAML="${EXTRA_YAML:-}
+editable_paths: [\"prompt.md\", \"guidance.md\"]"
+      echo ">>> spreadsheetbench: FRAME layout — sealed task_frame.md, editable prompt.md + guidance.md" >&2
+    fi
     # Gate strictness vs scoring mode. Hard scoring makes per-task reward Bernoulli, which widens
     # the gate's SE, so the k_se that is sane under soft scoring rejects almost everything under
     # hard. This bit us twice and silently: pilots 30799393875 and 30890657732 both ran the
@@ -768,6 +791,30 @@ ENV
     # surface inert. Both files are in its workdir; it just had no reason to know the second
     # one was fair game. This appendix is benchmark-specific, which is why it lives here
     # rather than in the shared template.
+    if [ "${SB_FRAME:-0}" = "1" ]; then
+    cat >> "$PROJ/optimizer/INSTRUCTIONS.md" <<'OPTNOTE'
+
+## The TWO files you may edit (this benchmark)
+Your capability is BOTH of these; the agent reads them on every task:
+
+1. **`prompt.md`** — the agent's SYSTEM message: who it is, how it should work, what to
+   check.
+
+2. **`guidance.md`** — inserted into the agent's FIRST USER message under "### Guidance",
+   right after the task fields. This is where per-task working advice goes: how to inspect,
+   solve and verify, type rules, pitfalls, examples. Plain text — no placeholders; braces
+   are literal. An empty file means no guidance section.
+
+**`task_frame.md` is SEALED** (read it, do not change it). It is the fixed rest of that user
+message: the task fields, filled in per task, and the facts of the interaction loop — up to
+N rounds, exactly ONE ```python block per round and only that block runs, the next message
+is the real output, reply without a code block to finish. Those facts are true whatever you
+write, so do not restate or contradict them; spend your words on how the agent should work.
+
+Decide per cluster which file is the right place to fix it, and say which you chose in
+PROCESS.md.
+OPTNOTE
+    else
     cat >> "$PROJ/optimizer/INSTRUCTIONS.md" <<'OPTNOTE'
 
 ## The TWO files you may edit (this benchmark)
@@ -793,6 +840,7 @@ most of the agent's instruction surface untouched:
 Decide per cluster which file is the right place to fix it, and say which you chose in
 PROCESS.md.
 OPTNOTE
+    fi
     OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
     SB_CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}/spreadsheetbench-data"
     SB_DEFAULT="$SB_CACHE/sample_data_200"
@@ -864,6 +912,9 @@ ENV
     # scoring, and the runner's work dir is wiped per job.
     SB_KEEP_LATEST_RUN="${SB_KEEP_LATEST_RUN:-1}"
     SB_SLOT_KEY="${TIER}__$(printf '%s' "$AGENT_MODEL" | tr -c 'A-Za-z0-9._-' '_')"
+    # The frame layout (#871) renders a different seed, so it keeps its own slot: a frame run
+    # must never overwrite, or be built on, the old layout's kept seed.
+    [ "${SB_FRAME:-0}" = "1" ] && SB_SLOT_KEY="${SB_SLOT_KEY}__frame"
     SB_LATEST_DIR="${SB_LATEST_DIR:-$HOME/.cache/capevolve-latest/spreadsheetbench-slots/$SB_SLOT_KEY}"
     echo ">>> spreadsheetbench kept-run slot: $SB_LATEST_DIR" >&2
     if [ "$SB_KEEP_LATEST_RUN" = "1" ]; then
@@ -1033,9 +1084,9 @@ PLAN
 REUSE_YAML=""
 if [ "${BENCH:-}" = "spreadsheetbench" ] && [ "${SB_REUSE_LATEST_BASELINE:-0}" = "1" ]; then
   PRIOR="$SB_LATEST_DIR/run_suite"
-  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" <<'PY' || exit 1
+  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" "${SB_FRAME:-0}" <<'PY' || exit 1
 import json, sys
-meta_p, prior_p, want_p, tier, empty_seed = sys.argv[1:6]
+meta_p, prior_p, want_p, tier, empty_seed, frame = sys.argv[1:7]
 try:
     meta, prior = json.load(open(meta_p)), json.load(open(prior_p))
 except OSError as e:
@@ -1047,6 +1098,9 @@ if meta.get("tier") != tier:
 if str(meta.get("empty_seed", "0")) != empty_seed:
     raise SystemExit(f"::error:: the kept run has SB_EMPTY_SEED={meta.get('empty_seed')}, this run "
                      f"asks for {empty_seed} — reusing it would silently swap the seed")
+if str(meta.get("frame", "0")) != frame:
+    raise SystemExit(f"::error:: the kept run has SB_FRAME={meta.get('frame', '0')}, this run asks "
+                     f"for {frame} — the two layouts render different seeds")
 for k in ("train", "val", "test"):
     if set(map(str, prior.get(k, []))) != set(map(str, want[k])):
         raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
@@ -1212,7 +1266,7 @@ if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && 
 {"bench": "$BENCH", "tier": "$TIER", "run_id": "${GITHUB_RUN_ID:-local}",
  "run_url": "${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}",
  "sha": "${GITHUB_SHA:-}", "agent_model": "$AGENT_MODEL", "iterations": "$ITER",
- "empty_seed": "${SB_EMPTY_SEED:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+ "empty_seed": "${SB_EMPTY_SEED:-0}", "frame": "${SB_FRAME:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 JSON
     _discard_dir "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
       && echo ">>> kept as the latest spreadsheetbench run: $SB_LATEST_DIR ($(du -sh "$SB_LATEST_DIR" | cut -f1))" >&2

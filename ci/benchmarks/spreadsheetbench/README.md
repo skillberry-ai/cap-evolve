@@ -156,6 +156,21 @@ and the seed's test result are rebuilt from them. A kept run graded after recalc
 therefore seed a run with the as-saved reward, and the other way round. The kept slot itself is
 never modified.
 
+### The frame layout (`SB_FRAME=1`, #871)
+
+`SB_FRAME=1` (in `overrides.env`) switches the capability to two parts:
+
+| part | file | who may change it |
+|---|---|---|
+| sealed frame of the agent's first message: the task fields and the facts of the loop (up to N rounds, ONE python block per round, the real output comes back, reply without code to finish) | `task_frame.md` | nobody: the spec's `editable_paths` seals it, and a candidate that edits it is discarded unmeasured |
+| system message | `prompt.md` | the optimizer |
+| working advice, inserted into the frame under "### Guidance" | `guidance.md` | the optimizer |
+
+With `SB_EMPTY_SEED=1` both editable files start empty. The frame replaces the built-in
+template's loop text, so a frame seed is a **different seed**: it is kept in its own slot
+(`<tier>__<model>__frame`), and `SB_REUSE_LATEST_BASELINE=1` refuses to mix the two layouts.
+`SB_FRAME=1` cannot be combined with `SB_WARM_SEED=1`.
+
 ## The `smoke` tier — 10 tasks that are also part of `full_verified`
 
 Smoke is the cheap signal guarding the tiers we report, so its roster is **not arbitrary**:
