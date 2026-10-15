@@ -28,7 +28,7 @@ import reconstruct as R  # noqa: E402
 import v2_window as V  # noqa: E402
 
 V3_ADAPTER_AIRLINE = C.SCRATCH / "scripts/V3/adapters/airline/adapter.py"
-V3_ADAPTER_SHA_PREFIX = "8d4cf8b7"
+V3_ADAPTER_SHA_PREFIX = "9c797d8a"      # 8d4cf8b7 for the searches; 9c797d8a = same adapter + a uuid suffix on the native-sims results filename (tau-runner: test_tool_consistency.py passes; registered by stats-reviewer, amendment 12 erratum 1)
 HL_V3 = C.SCRATCH / "baselines/harnesslens/tau_v3"
 HL_V3_FILES = ("src/harnesslens/benchmarks/opencode_tau2.py", "hl_final_eval_v3.py", "hl_fe_worker_v3.py")
 GPT_OSS = "openai/aws/gpt-oss-120b"
@@ -131,11 +131,20 @@ def build(bench, champions_path, out_root, manifests, a):
                             "normalized_tree_sha256": nh, "identical_to_seed": th == seed_art["tree_sha256"], "inert": th == seed_art["tree_sha256"], "dagger": False})
     man = {"suite": suite, "window": ver, "bstar": "final-state", "entries": entries, "seed_artifact": seed_art, "frameworks": frameworks,
            "champions_file": str(champions_path), "champions_file_sha256": C.file_sha(champions_path), "generated_utc": C.now_utc()}
-    mpath = Path(manifests) / ("artifacts_%s%s.json" % (ver, "_smoke" if a.smoke else ""))
+    blk = "_traineval" if a.block == "traineval" else ""
+    if a.block == "traineval":
+        if suite != "E" or a.smoke:
+            sys.exit("--block traineval is for B1 (suite E), not --smoke")
+        spl = C.jload(O.WT_TAU.parent / "wt-airE" / "protocol" / "tau_airline_splits.json") or C.jload(Path("/home/dev/projects2/wt-airE/protocol/tau_airline_splits.json"))
+        tr = [str(x) for x in spl["opt"] + spl["sel"]]
+        assert not (set(tr) & set(str(x) for x in spl["sealed_test"])), "train ids overlap the sealed test"
+        _orig = O.load_tasks
+        O.load_tasks = lambda suite_, which, k, rng: ([{"id": i, "family": i, "split": "train"} for i in tr], "final", C.sha256_bytes("\n".join(sorted(tr)).encode()))
+    mpath = Path(manifests) / ("artifacts_%s%s%s.json" % (ver, blk, "_smoke" if a.smoke else ""))
     C.write_json_atomic(mpath, man)
-    out = Path(manifests) / ("order_%s%s.jsonl" % (ver, "_smoke" if a.smoke else ""))
+    out = Path(manifests) / ("order_%s%s%s.jsonl" % (ver, blk, "_smoke" if a.smoke else ""))
     argv = ["--suite", suite, "--manifest", str(mpath), "--tasks", "smoke" if a.smoke else "final", "--arms", ",".join(frameworks), "--no-end",
-            "--trials-arm", str(a.trials), "--trials-seed", str(a.seed_trials), "--k", str(a.smoke_tasks),
+            "--trials-arm", str(a.trials), "--trials-seed", str(a.seed_trials if a.block == "test" else a.trials), "--k", str(a.smoke_tasks),
             "--tag-exp", ("FE-smoke-V3%s" % bench) if a.smoke else cfg["tag"], "--out", str(out)]
     if "harnesslens" in frameworks and suite == "E":
         argv += ["--hl-v0"]                    # the unmodified OpenCode harness as HarnessLens's own baseline cell (order.py's hl-v0 arm, seed-like n)
@@ -152,7 +161,15 @@ def build(bench, champions_path, out_root, manifests, a):
         sys.exit("order.py failed")
     rows = [json.loads(l) for l in open(out)]
     meta, jobs = rows[0], [r for r in rows[1:] if r.get("type") == "job"]
-    if suite == "E" and not a.smoke:                      # official 20 test ids only (the E 'final' task set also holds sel)
+    if a.block == "traineval":
+        jobs = [j for j in jobs if j["arm_label"] != "seed-check"]
+        for j in jobs:
+            j["final_split"] = False
+            j["block"] = "traineval"
+            j["tag"] = "tag:FINAL-E-V3B1-TRAIN-%s-s%d:traineval" % (j["arm_label"], j["seed"])
+        meta["canary_jobs"] = []
+        meta["block"] = "traineval"
+    if suite == "E" and not a.smoke and a.block == "test":                      # official 20 test ids only (the E 'final' task set also holds sel)
         jobs = [j for j in jobs if j.get("split") != "sel"]
         meta["tasks"] = [t for t in meta["tasks"] if any(j["task"] == t for j in jobs)]
     inert = sorted((e["arm"], e["seed"]) for e in entries if e["identical_to_seed"])
@@ -209,6 +226,7 @@ if __name__ == "__main__":
     ap.add_argument("--seed-dir", default=None, help="shared seed artifact dir (default: the frozen seed of the v1 manifest of that suite)")
     ap.add_argument("--trials", type=int, default=10, help="trials per task for a champion cell (brief: k = 10 on B1)")
     ap.add_argument("--seed-trials", type=int, default=20, help="trials per task for the seed anchor cell (default 2 x k; to be ruled by the statistics reviewer)")
+    ap.add_argument("--block", default="test", choices=["test", "traineval"], help="traineval (B1 only): every champion + the seed on the 30 official train ids, k = --trials, no seed-check, tag suffix :traineval")
     ap.add_argument("--smoke", action="store_true", help="dry-run order on SEARCH-split tasks")
     ap.add_argument("--smoke-tasks", type=int, default=2)
     ap.add_argument("--code-root", default=V.V2_CODE_ROOT, help="B2: main checkout carrying the adapter (helpers carrier)")

@@ -1,5 +1,11 @@
 {
- "artifact_manifest_sha256": "a21492739ebcfaa70bf318f0987c6c8166cbbcc5a8ab65ef44e0dc3fa04f471e",
+ "adapter": {
+  "difference": "uuid suffix on the native-sims results filename; tau-runner: test_tool_consistency.py 3/3 pass on 9c797d8a; stats-reviewer registered 9c797d8a (amendment 12 erratum 1)",
+  "path": "scripts/V3/adapters/airline/adapter.py",
+  "sha256_used_by_final": "9c797d8ac90425172fd5bc9c5e39d90cdaddb5eed938e90708c5de148869cbc9",
+  "sha256_used_by_searches": "8d4cf8b7df59ae666d287aeaf6cca3287767db6778ae35946e814d5699b0d91a"
+ },
+ "artifact_manifest_sha256": "beabc7e2759eba9710a494ee931b96f8de330beeab835273b2dbc28f8b00dd7e",
  "bench": "B1",
  "cells": [
   {
@@ -218,7 +224,7 @@
  ],
  "models": "openai/aws/gpt-oss-120b (agent, user simulator, judge) via :4113",
  "order": "manifests/order_V3B1.jsonl",
- "order_sha256": "48abbd4c21f078de77a37ef276980286ac6b57b4889cd408ce642741c29b41b8",
+ "order_sha256": "3b6a2caeab9ae952089818bce71ea94045aeb7dcd34e79e4ae619c575097bb67",
  "pending": {
   "ace": "search not final (no final/ yet); timing awaits the user",
   "harnesslens": "relaunched; held out of this order until final (final-eval entrypoint tau_v3 ready)"
@@ -227,5 +233,12 @@
  "seed_trials": 20,
  "seedcheck_trials": 10,
  "tasks": "official airline test-20",
+ "traineval_block": {
+  "artifact_manifest_sha256": "246bdea0e75c0d7056a845d037512ac86720ba1fa979f63cfb4406ba9bfce60a",
+  "design": "every champion (33 cells) + the seed on the 30 official train ids (opt 20 + sel 10), k=5, fresh seeds, tag suffix :traineval, descriptive (no test id)",
+  "jobs": 5100,
+  "order": "manifests/order_V3B1_traineval.jsonl",
+  "order_sha256": "015ecbc9ef98d703849b2209542da2c5f625556b79ed719014ab53ef773ec567"
+ },
  "trials_per_task": 10
 }

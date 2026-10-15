@@ -791,7 +791,7 @@ def tag_guard(suite, jobs):
                 prob.append("final-set job without FINAL-%s tag: %s" % (suite, j["job_id"]))
                 break
         else:
-            if tag.startswith("FINAL-") and not (suite in ("D", "E") and j.get("split") == "sel"):     # Suite D scores sel-25 inside the final window (H65)
+            if tag.startswith("FINAL-") and not (suite in ("D", "E") and j.get("split") in ("sel", "train")):     # Suite D scores sel-25 inside the final window (H65)
                 prob.append("search-split job carries a FINAL tag: %s" % j["job_id"])
                 break
             if str(j["task"]) in sealed:
