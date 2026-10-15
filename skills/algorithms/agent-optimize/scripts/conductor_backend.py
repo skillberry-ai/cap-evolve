@@ -427,6 +427,9 @@ class RealBackend(P2Port, conductor.Backend):
         small = self._too_small(job, work, parent, h)
         if small:
             return {"ok": False, "refused": "too_small", "detail": small}
+        dup = self._near_duplicate(job, work, parent)
+        if dup:
+            return {"ok": False, "refused": "near_duplicate", "detail": dup}
         stop, why = self.run_dir.budget_exhausted()
         # the legacy per-commit max_iterations is not this engine's budget: its structured caps
         # (max_candidates, max_metric_calls, tokens, usd) are. Seen live: 10 commits refused every proposal.
@@ -442,6 +445,27 @@ class RealBackend(P2Port, conductor.Backend):
             return {"ok": False, "refused": why, "detail": msg[:300]}
         parents = [parent] if job["kind"] == "propose" else list(job.get("parents") or [parent])
         return {"ok": True, "hash": self.cap_hash(tag), "parents": parents, "hypothesis_id": out.get("hypothesis_id")}
+
+    def _near_duplicate(self, job, work, parent) -> str:
+        """Diversity gate (the HC-2 one): a proposal whose diff against its parent overlaps one of the last
+        ``ao_diversity_window`` (default 2 x K) registered diffs at/above ``ao_diversity_threshold`` (default
+        0.6; 0 = off) is refused, and relaunched with this reason. Accepted-for-evaluation diffs are
+        remembered in the run dir, so a resumed run keeps its memory."""
+        thr = float(self.spec.get("ao_diversity_threshold", 0.6) or 0.0)
+        if thr <= 0 or job["kind"] != "propose":
+            return ""
+        from cap_evolve import hc2
+        d = hc2.diff_lines(digest.cand_dir(self.run_dir, parent), work)
+        if not d:
+            return ""
+        memo = hc2.RejectedDiffs(self.run_dir)
+        win = int(self.spec.get("ao_diversity_window") or 0) or 2 * max(1, int(self.cfg.k_prop))
+        if hc2.near_duplicate(d, memo.last(win), thr) is not None:
+            return (f"near-duplicate: this edit overlaps one of the last {win} proposals at >= {thr:g}. Make a "
+                    "different kind of edit aimed at a different root cause (different failing tasks, a different "
+                    "mechanism), not a rewording.")
+        memo.add(job["tag"], d)
+        return ""
 
     def _too_small(self, job, work, parent, h) -> str:
         """Focus runs want LARGE edits: a proposal must change >= ``ao_min_edit_lines`` capability lines and

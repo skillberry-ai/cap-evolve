@@ -9,6 +9,27 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Added
+- **HC-2/AO-2 gain fixes (search-time diagnosis)**: `hc2_broad_slot` (one proposal per round sees the failing
+  traces of ALL clusters), `hc2_cross_traces` (cluster slots also see traces of the other clusters; the
+  "address only the cluster below" instruction is gone), `hc2_merge_survivors` (positive-screen candidates of a
+  round are 3-way merged into one candidate of the next), `hc2_cheap_accept` (accept on the rung-2 screen and
+  validate the accepted chain once on C at the end; default off), and `num_trials` honoured by every P2 stage
+  (rung sizes are tasks, each run `num_trials` times; control, incumbent draws and confirmation get at least
+  that many per task). AO-2: proposals are bounded to one round by default (`ao_pipeline: 1`), near-duplicate
+  proposals are refused (`ao_diversity_threshold` 0.6), the derived plateau stop is gone (only an explicit `ao_plateau_n` stops a run early).
+### Changed
+- The default optimizer `INSTRUCTIONS.md`, the capability skills and the AO proposer prompt ask for the edit with
+  the largest expected reward gain on the whole task distribution (REAL and GENERAL), drop the
+  SAFE / narrowest-lever / "never loosen" framing and the demand to run what the sandbox cannot run, and apply the
+  tools.py checklist to code surfaces only.
+### Fixed
+- `helper_smoke` no longer rejects helpers that import numpy, pandas or openpyxl (`import ctypes` opens the
+  interpreter's own handle, which fired the `ctypes.dlopen` audit event).
+- `P2Evaluator.plan_round` degrades the incumbent's F top-up before reporting a round unfundable (after a
+  promotion the new incumbent has few F draws; the full top-up used to end the search with up to 40% of the
+  budget unspent).
+- The derived AO-2 plateau rule reduced to `spent_frac >= floor` while no champion existed and stopped every
+  unaccepted search at 41% of the budget; it is removed.
 - **Deterministic helper code in editable surfaces (opt-in)**: spec `helpers.enabled` (or
   `CAPEVOLVE_HELPERS=1`) and `surface.executable_dirs`. Adds `cap_evolve.helpers` (surface manifest,
   lint, kernel bootstrap of skills, `@candidate_helper` fault tag, per-task reward variance) and the

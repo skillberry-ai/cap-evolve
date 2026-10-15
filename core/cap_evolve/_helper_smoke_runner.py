@@ -60,6 +60,9 @@ def hook(event, args):
     if event in ("socket.__new__", "socket.connect", "socket.bind", "socket.sendto", "socket.getaddrinfo",
                  "socket.gethostbyname", "socket.gethostbyaddr", "socket.getnameinfo"):
         _bad(f"network access ({event})")
+    elif event == "ctypes.dlopen" and args and args[0] is None:
+        return          # `import ctypes` itself opens the interpreter's own handle (PyDLL(None)); numpy,
+                        # pandas and openpyxl import it. Naming a library, or looking a symbol up, is still refused.
     elif event in ("subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "os.fork",
                    "os.forkpty", "ctypes.dlopen", "ctypes.dlsym"):
         _bad(f"process/foreign-code use ({event})")

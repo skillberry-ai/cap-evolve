@@ -29,17 +29,18 @@ the *next* turn. Confirm which parts of a docstring your runtime actually SENDS 
 writing into it — some frameworks discard whole sections, and guidance written into
 that void does nothing (`references/field-notes.md` §1).
 
-**Ship MULTIPLE fixes per iteration — but every one must be REAL (targets a
-currently-failing task), SAFE (cannot change a passing task's behavior), and VERIFIED
-(proven to fix its target).** Several such fixes beat a long list that includes a
-speculative edit: one edit that regresses a passing task sinks the whole candidate at
-the val gate. Never add an edit to hit a count, and never re-add a rule or tool the run
-already tried and rejected.
+**Ship MULTIPLE fixes per iteration, each REAL (a failing trace shows the problem) and
+GENERAL (it covers a class of situations, not one task).** Aim for the edits with the
+largest expected reward gain over the whole task distribution: a guard, tool or
+procedure that removes a root cause shared by several tasks beats a patch for one. A
+speculative edit no trace supports is worse than none; never add an edit to hit a
+count, and never re-add a rule or tool the run already tried and rejected.
 
-**Per-change SAFETY (the rule that makes multi-change work).** Scope every guard to
-fire ONLY on the exact violating condition, and check its blast radius: run it on the
-args of 1–2 currently-PASSING tasks that use the same tool and confirm it does NOT
-fire. A guard that fires on a passing task is a regression — rescope or drop it.
+**Scope guards to the violating condition.** A guard should fire on the general
+condition that makes the call wrong (the id is not in the user's records, the record
+is in a state that forbids the action), not on a task's literals. Where you can run it
+on the arguments of a failing trace and of a passing one that uses the same tool, do;
+where you cannot, read it through against both.
 
 ## Pick the lever by failure type
 
@@ -66,8 +67,8 @@ code in the existing body instead?"
    exists: the primitive is exactly what the agent declines to call.
 3. **Add a discriminating-predicate guard** for an ACT-vs-REFUSE cluster — an in-body
    guard on the tool that owns the action, expressing the EXACT policy predicate, that
-   refuses only when the qualifying condition is (or is not) met. It is the narrowest
-   edit available here and the tool-side alternative to changing a global rule.
+   refuses only when the qualifying condition is (or is not) met. It is the tool-side
+   alternative to flipping a global rule.
 4. **Add a real targeted tool for a capability gap** — a task that needs a compute /
    composite / predicate tool it does not have stays failing after any docstring reword.
    Ship a tool the agent will CALL that changes the graded state — *Ex:* a

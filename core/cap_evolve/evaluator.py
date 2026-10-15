@@ -167,6 +167,7 @@ class P2Evaluator:
                                "CAPEVOLVE_EVAL_LEDGER=0 disables it")
         self.adapter, self.run_dir, self.params = adapter, run_dir, params
         self.workers = workers
+        self._inc_trials = None          # set by ``plan_round`` when the incumbent top-up had to be degraded
         self.splits = harness.ensure_pooled(run_dir)
         if not self.splits.feedback or not self.splits.confirm:
             raise ValueError("rule P2 needs a non-empty feedback and confirm stratum "
@@ -208,27 +209,37 @@ class P2Evaluator:
         finally:
             self.run_dir.release_metric_calls(token)
 
-    def _incumbent_shortfall(self, inc_dir: Path) -> dict:
+    def _incumbent_shortfall(self, inc_dir: Path, trials: int | None = None) -> dict:
         h = eval_index.cap_hash(inc_dir)
-        return eval_index.missing(self.run_dir, h, self.splits.feedback, self.params.incumbent_trials,
-                                  split="feedback")
+        want = trials or getattr(self, "_inc_trials", None) or self.params.incumbent_trials
+        return eval_index.missing(self.run_dir, h, self.splits.feedback, want, split="feedback")
 
     def plan_round(self, k_wanted: int, incumbent_dir: Path | None = None) -> RoundPlan:
         """Shrink K until the worst-case cost fits the remaining ``max_metric_calls``.
 
         ``incumbent_dir`` (optional) adds the cost of topping the incumbent's F draws up to
-        ``incumbent_trials`` per task."""
+        ``incumbent_trials`` per task. That top-up only sharpens the rung ranking, so when no K >= 1 fits
+        with the full top-up the plan degrades it (down to one draw per task) before it gives up: after
+        a promotion the new incumbent has almost no F draws, and the full top-up used to end the search
+        with up to 40% of the budget unspent (campaign erratum 29). The chosen level is remembered for
+        ``Round.incumbent_jobs``."""
         p = self.params
         cap = self.run_dir.budget.max_metric_calls
-        k = max(1, min(int(k_wanted), p.k_for_budget(cap)))
-        prep = sum(self._incumbent_shortfall(incumbent_dir).values()) if incumbent_dir else 0
+        k0 = max(1, min(int(k_wanted), p.k_for_budget(cap)))
         left = self.run_dir.remaining_metric_calls()
         n_c = len(self.splits.confirm)
-        while k >= 1:
-            cost = p.worst_case_cost(k, n_c) + prep
-            if left is None or cost <= left:
-                return RoundPlan(k=k, worst_case=cost, funded=True)
-            k -= 1
+        prep = 0
+        for want in range(p.incumbent_trials, 0, -1):
+            prep = sum(self._incumbent_shortfall(incumbent_dir, want).values()) if incumbent_dir else 0
+            k = k0
+            while k >= 1:
+                cost = p.worst_case_cost(k, n_c) + prep
+                if left is None or cost <= left:
+                    self._inc_trials = want
+                    return RoundPlan(k=k, worst_case=cost, funded=True)
+                k -= 1
+            if not incumbent_dir:
+                break
         return RoundPlan(k=0, worst_case=p.worst_case_cost(1, n_c) + prep, funded=False)
 
     # -- rounds -----------------------------------------------------------------------------------
@@ -291,6 +302,43 @@ class P2Evaluator:
         self._private("final_estimate", **out)
         self.run_dir.log_event("p2_final_estimate", n=out["n"])
         return out
+
+
+    def validate_chain(self, chain, seed_dir: Path, *, n_trials: int = 3, z_min: float = 0.0) -> dict:
+        """End-of-search validation for ``hc2_cheap_accept``: ``chain`` = ``[(cid, dir)]`` accepted in order,
+        latest last. The seed is measured on C once; the latest accepted candidate is measured against it
+        and kept when its paired delta is > 0 with z >= ``z_min``, otherwise the previous one is tried, down
+        to the seed. Each arm is ``n_trials`` fresh draws per C task and is paid for (or skipped) as a whole.
+
+        Returns ``{"chosen": cid or "seed", "tested": [{cid, mean, z, n}], "skipped": reason or None}``."""
+        C = self.splits.confirm
+        arm = int(n_trials) * len(C)
+        tested, skipped = [], None
+        if not self.run_dir.can_afford(2 * arm):
+            return {"chosen": chain[-1][0] if chain else "seed", "tested": [], "skipped": "budget"}
+        base = SEED_BASE["final"]
+
+        def measure(name, d):
+            res = harness.evaluate_candidate(
+                self.adapter, Path(d), run_dir=self.run_dir, split="confirm", ids=C, n_trials=n_trials,
+                tag=f"final__{name}", trial_offset=base, fixed_seeds=True, errored_policy=self.errored_policy,
+                workers=self.workers, budget_reserve=True)
+            return {pt["task_id"]: pt.get("trial_rewards") or [] for pt in res.per_task}
+        seed = measure("seed", seed_dir)
+        chosen = "seed"
+        for cid, d in reversed(list(chain)):
+            if tested and not self.run_dir.can_afford(arm):
+                skipped = "budget"
+                chosen = cid          # an earlier prefix cannot be measured: keep the one that was last accepted
+                break
+            r = racing.confirm_with_control(measure(cid, d), seed, z_conf=0.0, dmin=-1.0, n_planned=len(C))
+            tested.append({"cid": cid, "mean": r["mean"], "z": r["z"], "n": r["n"]})
+            if r["mean"] > 0 and r["z"] >= z_min:
+                chosen = cid
+                break
+        self._private("validate_chain", chosen=chosen, tested=tested)
+        self.run_dir.log_event("p2_validate_chain", chosen=chosen, tested=[t["cid"] for t in tested], skipped=skipped)
+        return {"chosen": chosen, "tested": tested, "skipped": skipped}
 
 
 class Round:
@@ -435,7 +483,7 @@ class Round:
     # ---- rungs -----------------------------------------------------------------------------------
     def _f_draws(self) -> tuple:
         r1, r2 = self.ev.params.rung_sizes
-        draws = racing.draw_order(self.ev.splits.feedback, r2, self._draw_key("F"))
+        draws = racing.draw_order(self.ev.splits.feedback, min(r2, len(self.ev.splits.feedback)), self._draw_key("F"))
         return draws, _passes(draws), r1, r2
 
     def rung_jobs(self, rung: int) -> list:
@@ -444,11 +492,15 @@ class Round:
             raise ValueError("rung must be 1 or 2")
         draws, passes, r1, r2 = self._f_draws()
         lo, hi = (0, r1) if rung == 1 else (r1, r2)
+        # rung sizes count TASKS; each task is evaluated ``trials`` times (pass k = trial k), so
+        # ``num_trials`` lowers the per-task noise of the kill decision instead of being ignored
+        t = self.ev.params.trials
+        rd = [x for _ in range(t) for x in draws[lo:hi]]
+        rp = [(x, k) for k in range(t) for x in draws[lo:hi]]
         live = self.state["live"][str(rung)]
         jobs = []
         for cid in live:
-            jobs += self._make_jobs(cid, f"rung{rung}", "feedback", draws[lo:hi], passes[lo:hi], "rung",
-                                    f"rung{rung}")
+            jobs += self._make_jobs(cid, f"rung{rung}", "feedback", rd, rp, "rung", f"rung{rung}")
         return jobs
 
     def _rung_stat(self, cid: str) -> dict:
@@ -528,7 +580,7 @@ class Round:
 
     # ---- confirmation ----------------------------------------------------------------------------
     def _n_conf_draws(self) -> int:
-        return self.ev.params.conf_n
+        return self.ev.params.conf_n_for(len(self.ev.splits.confirm))
 
     def _cost_conf(self) -> int:
         return self._n_conf_draws()
@@ -566,7 +618,7 @@ class Round:
                                     "control", "ctrl")
         cand_jobs = []
         for i, cid in enumerate(funded):
-            draws = racing.draw_order(C, p.conf_n, self._draw_key(f"C:{cid}"))
+            draws = racing.draw_order(C, p.conf_n_for(len(C)), self._draw_key(f"C:{cid}"))
             # each survivor gets its own seed block, so confirmations are independent of each other
             cand_jobs.append(self._make_jobs(cid, "confirm", "confirm", draws, _passes(draws), "confirm",
                                              "conf", seed_shift=100 * i))

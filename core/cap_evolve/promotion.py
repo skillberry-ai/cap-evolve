@@ -68,9 +68,10 @@ class P2Params:
     k: int = 8                       # candidates per round
     k_small: int = 6                 # ... when max_metric_calls <= small_budget
     small_budget: int = 600
-    rung_sizes: tuple = (12, 36)     # CUMULATIVE rollouts per candidate after rung 1 / rung 2
+    rung_sizes: tuple = (12, 36)     # CUMULATIVE distinct F tasks per candidate after rung 1 / rung 2 (x trials rollouts)
     max_survivors: int = 2           # candidates sent to confirmation per round
-    conf_n: int = 147                # fresh rollouts per confirmed candidate on C
+    conf_n: int = 147                # fresh rollouts per confirmed candidate on C; 0 = trials * |C| (auto)
+    trials: int = 1                  # num_trials: trials per task at every stage (rung sizes are in TASKS)
     ctrl_m: int = 4                  # incumbent control trials per C task
     incumbent_trials: int = 4        # incumbent trials per F task (ranking only)
     z_conf: float = 1.7              # one-sided; <= max_survivors tests per round (round FWER <= 0.10, also with heterogeneous per-task effects)
@@ -88,20 +89,26 @@ class P2Params:
         if spec.get("promotion_rule") != "P2":
             return None
         d = cls()
+        trials = max(1, int(spec.get("p2_trials", spec.get("num_trials", 1)) or 1))
+        # ``num_trials`` is honoured at every stage: the incumbent's ranking draws, the control and (unless
+        # ``p2_conf_n`` is set explicitly) the confirmation each get at least ``trials`` draws per task, and
+        # every rung evaluates each of its tasks ``trials`` times. trials = 1 changes nothing.
         out = cls(
+            trials=trials,
             k=int(spec.get("p2_k", d.k)), k_small=int(spec.get("p2_k_small", d.k_small)),
             small_budget=int(spec.get("p2_small_budget", d.small_budget)),
             rung_sizes=tuple(int(x) for x in spec.get("p2_rung_sizes", d.rung_sizes)),
             max_survivors=int(spec.get("p2_max_survivors", d.max_survivors)),
-            conf_n=int(spec.get("p2_conf_n", d.conf_n)), ctrl_m=int(spec.get("p2_ctrl_m", d.ctrl_m)),
-            incumbent_trials=int(spec.get("p2_incumbent_trials", d.incumbent_trials)),
+            conf_n=int(spec["p2_conf_n"]) if "p2_conf_n" in spec else (0 if trials > 1 else d.conf_n),
+            ctrl_m=max(trials, int(spec.get("p2_ctrl_m", d.ctrl_m))),
+            incumbent_trials=max(trials, int(spec.get("p2_incumbent_trials", d.incumbent_trials))),
             z_conf=float(spec.get("p2_z_conf", d.z_conf)), dmin=float(spec.get("p2_dmin", d.dmin)),
             min_coverage=float(spec.get("promotion_min_coverage", d.min_coverage)),
             chunk=int(spec.get("p2_chunk", d.chunk)),
             gs_looks=tuple(int(x) for x in spec.get("p2_gs_looks", d.gs_looks)),
             gs_c=float(spec.get("p2_gs_c", d.gs_c)),
             gs_futility=tuple(float(x) for x in spec.get("p2_gs_futility", d.gs_futility)))
-        if min(out.k, out.conf_n, out.ctrl_m, out.chunk, out.max_survivors, out.incumbent_trials) < 1:
+        if out.conf_n < 0 or min(out.k, out.ctrl_m, out.chunk, out.max_survivors, out.incumbent_trials) < 1:
             raise ValueError("p2_k, p2_conf_n, p2_ctrl_m, p2_chunk, p2_max_survivors and "
                              "p2_incumbent_trials must be >= 1")
         if len(out.rung_sizes) != 2 or not 0 < out.rung_sizes[0] <= out.rung_sizes[1]:
@@ -113,12 +120,17 @@ class P2Params:
     def k_for_budget(self, max_metric_calls: int) -> int:
         return self.k_small if 0 < max_metric_calls <= self.small_budget else self.k
 
+    def conf_n_for(self, n_confirm_tasks: int) -> int:
+        """Fresh rollouts per confirmed candidate: ``conf_n``, or ``trials * |C|`` when it is auto (0)."""
+        return self.conf_n if self.conf_n > 0 else max(1, self.trials * int(n_confirm_tasks))
+
     def worst_case_cost(self, k: int, n_control_tasks: int) -> int:
         """Rollouts a round of ``k`` can cost: rung 1 + rung 2 + control + the confirmations."""
         r1, r2 = self.rung_sizes
         survivors = min(self.max_survivors, max(1, k // 4))
-        return (k * r1 + max(1, k // 2) * (r2 - r1) + self.ctrl_m * n_control_tasks
-                + survivors * self.conf_n)
+        t = self.trials
+        return (k * r1 * t + max(1, k // 2) * (r2 - r1) * t + self.ctrl_m * n_control_tasks
+                + survivors * self.conf_n_for(n_control_tasks))
 
 
 

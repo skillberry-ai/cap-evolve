@@ -225,3 +225,14 @@ def test_fixture_traces_come_from_feedback_splits_only(tmp_path):
     with pytest.raises(ValueError, match="never come from"):
         helper_smoke.fixture_traces(tmp_path, "cand_1", ("feedback", "confirm"))
     assert helper_smoke.fixture_traces(tmp_path, "other") == []
+
+
+def test_importing_ctypes_transitively_is_not_a_foreign_code_violation(tmp_path):
+    """`import ctypes` runs `PyDLL(None)` (a handle to the interpreter itself), which fires a
+    `ctypes.dlopen` audit event; numpy, pandas and openpyxl import it. A helper whose only
+    sin is a data-library import must pass, while loading a named shared object must not."""
+    ok = _cand(tmp_path, "import ctypes\n\ndef f():\n    return 1\n", "c_ok")
+    assert _smoke(ok)["ok"], _smoke(ok)["detail"]
+    bad = _cand(tmp_path, "import ctypes\nctypes.CDLL('libc.so.6')\n", "c_bad")
+    r = _smoke(bad)
+    assert not r["ok"] and "foreign-code" in r["detail"]

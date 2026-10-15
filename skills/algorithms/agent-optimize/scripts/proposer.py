@@ -20,12 +20,13 @@ PROCEDURE = """Procedure (do every step; you may use subagents to read traces in
 2. Group the failing tasks by root cause and fix as MANY groups as you can in this ONE edit, your primary tasks first.
    A small edit is refused: change >= {min_lines} capability lines and predict >= {min_tasks} fixed tasks.
    You are judged on how many of the parent's failing tasks your edit fixes, net of any passing task it breaks.
-3. Prefer code over prose: where the agent computes prices/totals, looks things up or checks eligibility in its head,
+3. On a code surface, prefer code over prose: where the agent computes prices/totals, looks things up or checks eligibility in its head,
    add a deterministic tool (or make an existing tool return the needed fields / validate the call) plus one policy
    line saying when to use it. Wording-only edits rarely move these tasks.
-4. Keep a change only if it is REAL (a failing trace shows the problem), SAFE (re-read two passing traces: they would
-   still pass) and general (no task id, expected answer or copied value).
-5. Replay each task in predicted_tasks against your edit and name the turn it changes; drop tasks you cannot.
+4. Aim for the edit with the largest expected reward gain on the whole task distribution, not for these tasks alone.
+   Keep a change only if it is REAL (a failing trace shows the problem) and general (a rule for the class; no task id,
+   expected answer or copied value). Glance at a passing trace that uses the same rule; the conductor measures regressions.
+5. Read each task in predicted_tasks against your edit and name the turn it changes; drop tasks you cannot.
 """
 
 RULES = """Rules:

@@ -216,7 +216,7 @@ def test_the_conductor_is_not_bound_by_the_legacy_iteration_cap(tmp_path, why, o
         seen["over_budget"] = a.over_budget
         return 0, {"hypothesis_id": "h"}
     fake = SimpleNamespace(ctx=SimpleNamespace(work=lambda t: work), spec={}, run_dir=SimpleNamespace(
-        budget_exhausted=lambda: (True, why)), ns=SimpleNamespace(), _too_small=lambda *a: "", cap_hash=lambda t: "h")
+        budget_exhausted=lambda: (True, why)), ns=SimpleNamespace(), _too_small=lambda *a: "", _near_duplicate=lambda *a: "", cap_hash=lambda t: "h")
     with m.patch.object(conductor_backend, "helper_refusal", lambda *a: None), \
             m.patch.object(conductor_backend.digest, "cand_dir", lambda rd, t: tmp_path), \
             m.patch.object(conductor_backend.act, "propose", propose):

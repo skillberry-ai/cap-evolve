@@ -231,7 +231,7 @@ class Caps:
     stop_at_reward: float | None = None
     max_candidates: int | None = None        # only when the spec sets the numeric key explicitly
     plateau_n: int | None = None             # explicit proposals-without-gain; else derived
-    plateau_floor: float = 0.4               # fraction of the rollout budget that must be spent first
+    plateau_floor: float = 0.8               # fraction of the rollout budget that must be spent first (see plateau_n)
     max_idle: int = MAX_IDLE                 # 0 = off; a proposer that cannot yield a new candidate must not spin
     chunk: int = CHUNK
     proposer_cap: int = 150_000
@@ -240,14 +240,15 @@ class Caps:
 
 
 def plateau_n(caps: Caps, n_proposals: int, spent_frac: float) -> int | None:
-    """Proposals without a champion change that count as a plateau: ``max(6, 0.4 * budget_proposals)``
-    where ``budget_proposals`` is projected from the spend so far. None until the projection is
-    meaningful (5% of the rollout budget spent), so an early dry spell never stops a run."""
-    if caps.plateau_n:
-        return int(caps.plateau_n)
-    if not caps.max_metric_calls or spent_frac < 0.05 or n_proposals <= 0:
-        return None
-    return max(6, int(math.ceil(0.4 * n_proposals / spent_frac)))
+    """Proposals without a champion change that count as a plateau: ONLY the explicit ``ao_plateau_n``.
+
+    There is no derived plateau. The old derived rule (max(6, 0.4 * projected proposals)) compared a count of
+    proposals, which are launched far ahead of their evaluations, with the committed spend; while no champion
+    existed it reduced to ``spent_frac >= plateau_floor`` for any proposal count, so every unaccepted search
+    stopped at the floor (41% in campaign v2.0, 80% in v2.1) with budget unspent and proposals never
+    evaluated. A capped run ends on its budget, its tokens, its deadline or ``stop_at_reward``; a plateau
+    stop exists only when the spec asks for one."""
+    return int(caps.plateau_n) if caps.plateau_n else None
 
 
 def stop_reason(*, caps: Caps, committed: int, reserved: int, tokens: int, tokens_reserved: int,

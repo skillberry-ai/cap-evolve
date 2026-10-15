@@ -52,7 +52,13 @@ def run_dir(tmp_path):
 
 
 class FakeRound:
-    champion = None
+    @property
+    def champion(self):
+        return self.state.get("champion")
+
+    @champion.setter
+    def champion(self, v):
+        self.state["champion"] = v
 
     def __init__(self, ev, cands, round_id):
         self.ev, self.cands, self.round_id = ev, dict(cands), round_id
@@ -71,6 +77,9 @@ class FakeRound:
     def confirm(self, map_fn=None):
         return self.close_confirm()
 
+    def _save(self):
+        pass
+
     def close_confirm(self):
         first = sorted(self.cands)[0]
         self.champion = first if self.ev.accept else None
@@ -84,6 +93,12 @@ class FakeEvaluator:
     def __init__(self, accept=True, k=4):
         self.opened, self.accept, self.k = [], accept, k
         self.run_dir = None
+        self.params = SimpleNamespace(dmin=0.02)
+        self.validated = []
+
+    def validate_chain(self, chain, seed_dir, *, n_trials=3, z_min=0.0):
+        self.validated.append([c for c, _ in chain])
+        return {"chosen": chain[0][0], "tested": [], "skipped": None}
 
     def final_estimate(self, champion_dir, seed_dir, *, n_trials=4):
         return {"mean": 0.1, "se": 0.05, "n": 3}
@@ -559,3 +574,108 @@ def test_non_default_trials_are_passed_through(run_dir):
 def test_cli_forwards_the_key_in_the_hc2_json():
     src = (REPO / "core/cap_evolve/cli.py").read_text()
     assert 'k.startswith(("hc2_", "p2_"))' in src             # every hc2_* key travels in --hc2
+
+
+# ---- broad slot, cross-cluster traces, merged survivors -------------------------------------------
+
+def _recording_optimizer(seen, files=False):
+    lock = threading.Lock()
+
+    def opt(workdir, instructions):
+        wd = Path(workdir)
+        with lock:
+            seen.append({"name": wd.name, "instr": instructions,
+                         "traj": sorted(p.name.split("__")[0] for p in (wd / "trajectories").glob("*.json"))})
+        if files:
+            (wd / f"{wd.name}.md").write_text(f"edit from {wd.name}\n")
+        else:
+            (wd / "SKILL.md").write_text(f"base rule one\nunique edit for {wd.name} " + "x" * len(wd.name) + "\n")
+        return {"cost_usd": 0.0, "tokens": 1}
+    return opt
+
+
+def test_proposals_see_every_failure_type_and_the_broad_slot_sees_all(run_dir):
+    seen = []
+    params = hc2.HC2Params(k=3, per_cluster=1, broad_slot=True, cross_traces=1, minibatch=8)
+    _loop(run_dir, FakeEvaluator(), _recording_optimizer(seen), params=params)
+    assert len(seen) == 3
+    broad = [s for s in seen if "ALL failure types" in s["instr"] and "no single primary cluster" in s["instr"]]
+    assert len(broad) == 1
+    assert set(broad[0]["traj"]) == set(F_IDS)                   # every failing F task, one trace each
+    for s in seen:
+        assert not set(s["traj"]) & set(C_IDS)                   # C never leaks
+        assert "address only the cluster below" not in s["instr"]
+        assert "largest expected reward gain" in s["instr"]
+    cluster = [s for s in seen if s not in broad]
+    assert len(cluster) == 2
+    for s in cluster:
+        assert len(s["traj"]) > 1                                # primary cluster plus other clusters' traces
+
+
+def test_cross_traces_zero_restores_the_single_cluster_view(run_dir):
+    seen = []
+    params = hc2.HC2Params(k=2, per_cluster=2, cross_traces=0, minibatch=8)
+    _loop(run_dir, FakeEvaluator(), _recording_optimizer(seen), params=params)
+    assert all(len(s["traj"]) <= 2 for s in seen)
+
+
+def test_merge_trees_three_way(tmp_path):
+    def tree(name, files):
+        d = tmp_path / name
+        for rel, body in files.items():
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_text(body)
+        return d
+    base = tree("base", {"a.md": "l1\nl2\nl3\nl4\nl5\nl6\n", "b.md": "b\n"})
+    ours = tree("ours", {"a.md": "l1\nl2\nl3\nl4\nl5\nl6\n", "b.md": "b\n"})
+    v1 = tree("v1", {"a.md": "L1\nl2\nl3\nl4\nl5\nl6\n", "b.md": "b\n", "new1.md": "n1\n"})
+    v2 = tree("v2", {"a.md": "l1\nl2\nl3\nl4\nl5\nL6\n", "b.md": "b\n"})
+    v3 = tree("v3", {"a.md": "X\nl2\nl3\nl4\nl5\nl6\n", "b.md": "b2\n"})       # conflicts with v1 on line 1
+    out = tmp_path / "out"
+    res = hc2.merge_trees(base, ours, [("v1", v1), ("v2", v2), ("v3", v3)], out)
+    assert (out / "a.md").read_text() == "L1\nl2\nl3\nl4\nl5\nL6\n"            # clean line-level merge
+    assert (out / "new1.md").read_text() == "n1\n"
+    assert (out / "b.md").read_text() == "b2\n"                                   # only v3 touched b.md
+    assert res["merged"] == ["v1", "v2", "v3"] and res["skipped"] == ["v3:a.md"]  # v3's conflicting hunk is not applied
+
+
+def test_survivors_of_a_round_are_merged_into_one_candidate_of_the_next(run_dir):
+    seen = []
+    params = hc2.HC2Params(k=3, per_cluster=1, merge_survivors=True, minibatch=8, final_estimate_trials=0)
+    ev = FakeEvaluator(accept=False)
+    out = _loop(run_dir, ev, _recording_optimizer(seen, files=True), params=params, rounds=2)
+    assert len(ev.opened) == 2 and len(ev.opened[0]) == 3
+    r2 = ev.opened[1]
+    assert len(r2) == 3                                           # K stays 3: the merge takes one slot
+    merged = [c for c in r2 if c not in {s["name"] for s in seen[3:]}]
+    assert len(merged) == 1 and len(seen) == 3 + 2                # only K-1 proposer calls in round 2
+    tree = run_dir.root / "work" / merged[0]
+    assert len(list(tree.glob("cand_*.md"))) >= 2                 # edits of >= 2 round-1 candidates combined
+    events = [json.loads(l) for l in run_dir.events_path.read_text().splitlines()]
+    assert any(e["kind"] == "hc2_merge" and len(e["sources"]) >= 2 for e in events)
+    assert out["iterations"] == 6                                 # 3 + 3 candidates recorded
+
+
+def test_merge_is_off_by_default(run_dir):
+    seen = []
+    ev = FakeEvaluator(accept=False)
+    _loop(run_dir, ev, _recording_optimizer(seen, files=True), params=hc2.HC2Params(k=3, per_cluster=1, minibatch=8),
+          rounds=2)
+    assert len(seen) == 6 and not (run_dir.root / "hc2_merge_pool.json").exists()
+
+
+def test_cheap_accept_skips_the_round_confirmation_and_validates_the_chain_once(run_dir):
+    ev, seen = FakeEvaluator(accept=False), []
+    params = hc2.HC2Params(k=2, per_cluster=2, minibatch=8, cheap_accept=True, cheap_z=1.0)
+    out = _loop(run_dir, ev, _recording_optimizer(seen), params=params, rounds=1)
+    assert out["accepts"] == 1                                   # cheap accept, the fake never ran a C confirmation
+    assert run_dir.best_id != "seed"
+    assert ev.validated == [[run_dir.best_id]]                    # the accepted chain is validated once, at the end
+    assert out["chain_validation"]["chosen"] == run_dir.best_id
+    assert "internal_estimate" not in out
+
+
+def test_cheap_accept_is_off_by_default(run_dir):
+    ev = FakeEvaluator(accept=False)
+    out = _loop(run_dir, ev, _recording_optimizer([]), rounds=1)
+    assert out["accepts"] == 0 and not ev.validated and "chain_validation" not in out

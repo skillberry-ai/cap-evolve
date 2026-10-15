@@ -25,8 +25,9 @@ prose only on the clusters this capability can actually move.
 
 ## Pick the lever
 
-Each item is a bounded edit class. Fix the biggest cluster with the narrowest lever
-that reaches it; ship every class the traces call for in one candidate. Examples are
+Each item is an edit class. Aim each edit at the lever with the largest expected reward gain
+across the failure types in the traces, not at the one task you read; ship every class the traces call for
+in one candidate. Examples are
 1-line and generic; depth is in [`references/concepts.md`](references/concepts.md).
 
 1. **Rewrite a rule for clarity, positively framed** — say what TO do, specifically.

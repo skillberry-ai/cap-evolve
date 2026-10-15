@@ -88,6 +88,7 @@ class Cfg:
     cost_eps: float | None = None       # second objective (a ``cost`` objective in the spec): cost per success
     finalize: bool = True               # spec ``finalize: false``: record the champion, score nothing
     pipeline: int = 1                   # P2: proposals may run this many rounds ahead of the evaluating round
+                                        # (1 = at most K proposals unevaluated; each round's proposals see the previous verdicts)
     caps: policy.Caps = dataclasses.field(default_factory=policy.Caps)
 
     @property
@@ -118,7 +119,7 @@ class Cfg:
             max_metric_calls=num("max_metric_calls"), max_tokens=num("max_optimizer_tokens", "ao_max_tokens"),
             deadline=deadline, stop_at_reward=num("stop_at_reward", cast=float),
             max_candidates=num("max_candidates"), plateau_n=num("ao_plateau_n"),
-            plateau_floor=num("ao_plateau_floor", cast=float, default=0.4),
+            plateau_floor=num("ao_plateau_floor", cast=float, default=policy.Caps.plateau_floor),
             max_idle=num("ao_max_idle_proposals", default=policy.MAX_IDLE),
             chunk=num("ao_chunk", default=policy.CHUNK), proposer_cap=job_cap,
             finalize_rollouts=num("ao_finalize_reserve", default=0),
@@ -133,7 +134,7 @@ class Cfg:
                    target_alive=num("ao_target_alive"), merge=bool(spec.get("ao_merge")),
                    job_token_cap=job_cap, chunk_timeout=num("ao_chunk_timeout", cast=float, default=cls.chunk_timeout),
                    seed=num("ao_seed", default=0), tick_s=num("ao_tick_s", cast=float, default=cls.tick_s), ref_pooled=spec.get("split_mode") == "pooled", finalize=gatecfg.finalize_enabled(spec),
-                   params=params, caps=caps, p2=p2, pipeline=num("ao_pipeline", default=2 if p2 and k > 1 else 1),
+                   params=params, caps=caps, p2=p2, pipeline=num("ao_pipeline", default=1),
                    cost_eps=cost_eps, merge_bar=num("ao_merge_bar", cast=float, default=policy.COMPLEMENTARY),
                    focus=bool(spec.get("ao_focus")), focus_n=num("ao_focus_n", default=1),
                    focus_max=num("ao_focus_max", default=3), focus_canary=num("ao_focus_canary", default=6),

@@ -998,7 +998,7 @@ def _cmd_run(argv):
     if algorithm_name == "hill-climb" and spec.get("hc2"):
         alg_cmd += ["--hc2", json.dumps({k: v for k, v in spec.items()
                                          if k in ("hc2", "split_mode", "promotion_rule",
-                                                  "promotion_min_coverage", "max_metric_calls")
+                                                  "promotion_min_coverage", "max_metric_calls", "num_trials")
                                          or k.startswith(("hc2_", "p2_"))})]
     if algorithm_focus is not None:
         alg_cmd += ["--focus", algorithm_focus]

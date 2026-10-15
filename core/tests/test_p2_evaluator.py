@@ -257,3 +257,71 @@ def test_final_estimate_checks_both_arms_fit_before_running_either(tmp_path):
     with pytest.raises(BudgetExhausted):
         ev.final_estimate(cands["c0"], run_dir.candidate_dir("seed"))
     assert adapter.calls == []
+
+
+def test_plan_round_degrades_the_incumbent_top_up_instead_of_ending_the_search(tmp_path):
+    """Erratum 29: after a promotion the new incumbent has few F draws. The full top-up (incumbent_trials
+    per F task) used to make every K unfundable while the rest of the round fitted."""
+    params = promotion.P2Params.from_spec({"promotion_rule": "P2", "p2_conf_n": 24, "p2_ctrl_m": 1,
+                                           "p2_incumbent_trials": 3, "p2_rung_sizes": [4, 8]})
+    adapter, run_dir, ev, cands = _world(tmp_path, [], n=48, params=params)
+    inc = run_dir.candidate_dir("seed")
+    n_f, n_c = len(ev.feedback_ids()), len(ev.confirm_ids())
+    k1 = params.worst_case_cost(1, n_c)
+    full = sum(ev._incumbent_shortfall(inc, 3).values())
+    one = sum(ev._incumbent_shortfall(inc, 1).values())
+    assert full == 3 * n_f and one == n_f
+    budget = run_dir.spent.metric_calls + k1 + one + 1          # K=1 fits with one draw per task, not with three
+    run_dir.update_budget(max_metric_calls=budget)
+    assert k1 + full > run_dir.remaining_metric_calls() >= k1 + one
+    plan = ev.plan_round(4, incumbent_dir=inc)
+    assert plan.funded and plan.k == 1 and plan.worst_case == k1 + one
+    assert sum(ev._incumbent_shortfall(inc).values()) == one          # the Round tops up to the degraded level
+    # when the full top-up fits, nothing changes
+    run_dir.update_budget(max_metric_calls=run_dir.spent.metric_calls + params.worst_case_cost(4, n_c) + full)
+    plan = ev.plan_round(4, incumbent_dir=inc)
+    assert plan.funded and plan.k == 4 and ev._inc_trials == 3
+    # not even one draw per task fits: still unfunded
+    run_dir.update_budget(max_metric_calls=run_dir.spent.metric_calls + k1 + one - 1)
+    assert ev.plan_round(4, incumbent_dir=inc).funded is False
+
+
+# ---- num_trials -------------------------------------------------------------------------------------
+
+def test_num_trials_reaches_every_stage_of_a_round(tmp_path):
+    spec = {"promotion_rule": "P2", "num_trials": 3, "p2_rung_sizes": [4, 6], "p2_incumbent_trials": 1,
+            "p2_ctrl_m": 1, "p2_k": 2, "p2_k_small": 2, "p2_max_survivors": 1}
+    params = promotion.P2Params.from_spec(spec)
+    assert (params.trials, params.incumbent_trials, params.ctrl_m, params.conf_n) == (3, 3, 3, 0)
+    assert promotion.P2Params.from_spec({**spec, "p2_conf_n": 20}).conf_n == 20          # explicit wins
+    assert promotion.P2Params.from_spec({"promotion_rule": "P2"}).trials == 1             # default unchanged
+    adapter, run_dir, ev, cands = _world(tmp_path, [0.45, 0.0], n=48, params=params)
+    n_c = len(ev.confirm_ids())
+    assert params.conf_n_for(n_c) == 3 * n_c
+    assert params.worst_case_cost(2, n_c) == 2 * 4 * 3 + 1 * 2 * 3 + 3 * n_c + 1 * 3 * n_c
+    rnd = ev.open_round(cands, ("seed", run_dir.candidate_dir("seed")))
+    jobs = rnd.rung_jobs(1)
+    assert sum(j.rollouts for j in jobs) == 2 * 4 * 3                       # 2 candidates x 4 tasks x 3 trials
+    rnd.run_rung(1)
+    per_task = {}
+    for j in rnd.state["jobs"].values():
+        if j["stage"] == "rung1" and j["cid"] == "c0":
+            for t in j["ids"]:
+                per_task[t] = per_task.get(t, 0) + 1
+    assert len(per_task) == 4 and set(per_task.values()) == {3}              # each rung task ran in 3 trials
+    rnd.run_rung(2)
+    rnd.confirm()
+    ctrl = rnd._trials_on_c("seed", "control")
+    assert ctrl and all(len(v) == 3 for v in ctrl.values())                 # control: 3 trials per C task
+
+
+def test_validate_chain_keeps_the_latest_accepted_that_beats_the_seed_on_c(tmp_path):
+    adapter, run_dir, ev, cands = _world(tmp_path, [0.3, -0.3], n=48)
+    chain = [("c0", cands["c0"]), ("c1", cands["c1"])]
+    res = ev.validate_chain(chain, run_dir.candidate_dir("seed"), n_trials=2)
+    assert res["chosen"] == "c0" and [t["cid"] for t in res["tested"]] == ["c1", "c0"]
+    assert res["tested"][0]["mean"] < 0 < res["tested"][1]["mean"]
+    (tmp_path / "b").mkdir()
+    adapter2, run_dir2, ev2, cands2 = _world(tmp_path / "b", [-0.3], n=48)
+    assert ev2.validate_chain([("c0", cands2["c0"])], run_dir2.candidate_dir("seed"),
+                              n_trials=2)["chosen"] == "seed"
