@@ -1,6 +1,19 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-15 03:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-15 06:50 UTC (coordinator periodic check)_
+
+## Update 06:50 UTC 10-15
+- **V3 airline (B1)**: all 13 frameworks are launched, 3 seeds each.
+- **Finished**: Trace2Skill x3, WikiSkill s2.
+- **AO-2.2 to be relaunched** after a main PR. Two general bugs:
+  - the conductor ignores the project optimizer instructions;
+  - the unknown cluster_ids refusal loop ended s0 early.
+- **Spend on :4113**: $1,980 priced (gpt-oss $999, Sonnet $981; Sonnet price assumed).
+- **Errors**: 0 delivered gateway errors on target runs. Tool-consistency candidate faults are counted under rule 5a.
+- **Under check**: HarnessLens rollout counters unchanged for over 3 h (controllers alive).
+- **Pending user decisions**: spending ceiling; SpreadsheetBench test set.
+
+_Earlier: 2026-10-15 03:50 UTC (coordinator periodic check)_
 
 ## Update 03:50 UTC 10-15
 - **V3 airline (B1)**: 27 searches running, 9 frameworks x 3 seeds: CapEvolve HC-stock, HC-3 and AO-2.2; ACE; HarnessLens; WikiSkill; Meta-Harness; Trace2Skill; MIPROv2. GEPA, full-GEPA, SkillOpt and EvoSkill are in smoke.

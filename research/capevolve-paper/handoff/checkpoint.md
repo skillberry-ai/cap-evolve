@@ -218,3 +218,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - 27 B1 searches are running.
 - :4113 USD $817 (alert at $500 crossed; the alerts never block).
 - B2 is blocked on the user's test-set choice.
+
+## Update 06:50 UTC 10-15 (periodic check)
+- :4113 USD $1,980.
+- AO-2.2 waits on the capevolve-diagnose PR (instructions plus cluster_ids), then a fresh restart of all 3 seeds.
+- HarnessLens counters are stale for 3.5 h, with bl-harness checking.
+- ACE is the slowest framework, at about 100-150 rollouts/h per seed.
