@@ -46,5 +46,15 @@
    "m3": 0.39,
    "m24": 1.03
   }
+ },
+ "addendum1": {
+  "recorded_utc": "2026-10-15 01:32 UTC",
+  "label": "no exposure label in tables; provenance note in the registry only",
+  "families": {
+   "P1": "each CapEvolve arm vs seed, one Holm, m = 3",
+   "P2": "each CapEvolve arm vs competitors, one Holm per CapEvolve arm, m = |J|",
+   "companion": "full-family Holm p reported beside"
+  },
+  "retry_cap": "20 attempts or 24 h"
  }
 }
