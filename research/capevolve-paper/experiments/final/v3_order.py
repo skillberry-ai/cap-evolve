@@ -84,7 +84,7 @@ def _taskset_file(taskset, out_dir):
 
 def build(bench, champions_path, out_root, manifests, a):
     cfg = BENCH[bench]
-    suite, kind, ver = cfg["suite"], cfg["kind"], cfg["ver"]
+    suite, kind, ver = cfg["suite"], cfg["kind"], (a.ver or cfg["ver"])
     champ = json.load(open(champions_path))
     frameworks = sorted(champ)
     base_v1 = json.load(open(Path(C.MANIFESTS) / ("artifacts_%s.json" % suite)))
@@ -145,7 +145,7 @@ def build(bench, champions_path, out_root, manifests, a):
     out = Path(manifests) / ("order_%s%s%s.jsonl" % (ver, blk, "_smoke" if a.smoke else ""))
     argv = ["--suite", suite, "--manifest", str(mpath), "--tasks", "smoke" if a.smoke else "final", "--arms", ",".join(frameworks), "--no-end",
             "--trials-arm", str(a.trials), "--trials-seed", str(a.seed_trials if a.block == "test" else a.trials), "--k", str(a.smoke_tasks),
-            "--tag-exp", ("FE-smoke-V3%s" % bench) if a.smoke else cfg["tag"], "--out", str(out)]
+            "--tag-exp", ("FE-smoke-V3%s" % bench) if a.smoke else (("FINAL-E-%s" % ver) if a.ver else cfg["tag"]), "--out", str(out)]
     if "harnesslens" in frameworks and suite == "E":
         argv += ["--hl-v0"]                    # the unmodified OpenCode harness as HarnessLens's own baseline cell (order.py's hl-v0 arm, seed-like n)
     if suite == "A":
@@ -227,6 +227,7 @@ if __name__ == "__main__":
     ap.add_argument("--trials", type=int, default=10, help="trials per task for a champion cell (brief: k = 10 on B1)")
     ap.add_argument("--seed-trials", type=int, default=20, help="trials per task for the seed anchor cell (default 2 x k; to be ruled by the statistics reviewer)")
     ap.add_argument("--block", default="test", choices=["test", "traineval"], help="traineval (B1 only): every champion + the seed on the 30 official train ids, k = --trials, no seed-check, tag suffix :traineval")
+    ap.add_argument("--ver", default=None, help="window name for a follow-up order (e.g. V3B1F): file names, tags FINAL-E-<ver>, root")
     ap.add_argument("--smoke", action="store_true", help="dry-run order on SEARCH-split tasks")
     ap.add_argument("--smoke-tasks", type=int, default=2)
     ap.add_argument("--code-root", default=V.V2_CODE_ROOT, help="B2: main checkout carrying the adapter (helpers carrier)")
@@ -244,7 +245,7 @@ if __name__ == "__main__":
         sys.exit(0)
     if not a.champions:
         sys.exit("--champions required")
-    root = a.root or str(C.SCRATCH / "final_eval" / BENCH[a.bench]["ver"] / ("smoke" if a.smoke else "main"))
+    root = a.root or str(C.SCRATCH / "final_eval" / (a.ver or BENCH[a.bench]["ver"]) / ("smoke" if a.smoke else "main"))
     out, sha, meta = build(a.bench, a.champions, root, a.manifests, a)
     print("%s order %s: %d jobs, %d tasks, sha256 %s" % (a.bench, out, meta["n_jobs"], len(meta["tasks"]), sha))
     print("counts by arm:", {k: v for k, v in sorted(meta["counts_by_arm"].items())})
