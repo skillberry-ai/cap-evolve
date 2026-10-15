@@ -29,6 +29,14 @@ Seed-check minus seed (empirical null of window noise, 9D(ii)): +0.029, 95% CI [
 | ao21 vs seed | +0.014 | [-0.058, 0.087] | [-0.168, 0.197] | 0.695 | 0.695 | n.s. | +0.014 (0.695) | a 0/3, b 0/1 | +0.04, -0.03, +0.03 |
 | ao21 vs gepa | -0.119 | [-0.181, -0.057] | [-0.283, 0.044] | <0.001 | <0.001 | inferior | -0.119 (<0.001) | a 0/3, b 0/3 | -0.09, -0.16, -0.10 |
 
+**Descriptive row: ao21 vs v2.0 AO-2 (= the v2 start), each against its own window's seed** (different windows and time blocks, never pooled; task-paired CR1 on the difference of seed-averaged deltas):
+
+| quantity | value | 95% CI |
+|---|---|---|
+| ao21 delta vs its window seed (V21/A) | +0.014 | [-0.058, 0.087] |
+| v2.0 AO-2 delta vs its window seed (V2/A) | +0.007 | [-0.045, 0.059] |
+| ao21 minus v2.0 AO-2 (accepted-candidate effect over the v2 start) | +0.007 | [-0.071, 0.085] |
+
 Scored champion ao21 s0 alone (descriptive): vs in-window seed: +0.043 [-0.040, 0.126], p 0.307; vs seed-check (same artifact, n as the arms): +0.014 [-0.089, 0.118], p 0.784.
 Scored champion ao21 s1 alone (descriptive): vs in-window seed: -0.029 [-0.112, 0.055], p 0.497; vs seed-check (same artifact, n as the arms): -0.057 [-0.156, 0.041], p 0.251.
 Scored champion ao21 s2 alone (descriptive): vs in-window seed: +0.029 [-0.069, 0.126], p 0.559; vs seed-check (same artifact, n as the arms): +0.000 [-0.115, 0.115], p 1.000.

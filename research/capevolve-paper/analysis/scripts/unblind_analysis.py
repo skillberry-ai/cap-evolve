@@ -547,6 +547,18 @@ def main():
             sx = w[-1]
             L += ["**v2.1-AO2 (erratum 43 champions)**: the P2-accepted candidates whose commit was voided by the pooled-mode defect; secondary version (11D). Literal-final-state reading beside it: all three champions = the seed, delta 0 by construction (no scoring needed).", ""]
             L += fam_table(famv21[sx]) + [""]
+            if sx == "A":
+                a21 = [None if (x is None or y is None) else x - y for x, y in zip(seedavg(W[w].rows("ao21")[0]), W[w].seedvec)]
+                a20 = [None if (x is None or y is None) else x - y for x, y in zip(seedavg(W["V2/A"].rows("ao2")[0]), W["V2/A"].seedvec)]
+                dd = [None if (x is None or y is None) else x - y for x, y in zip(a21, a20)]
+                m = mean_ci(dd, W[w].fam)
+                m21, m20 = mean_ci(a21, W[w].fam), mean_ci(a20, W[w].fam)
+                L += ["**Descriptive row: ao21 vs v2.0 AO-2 (= the v2 start), each against its own window's seed** (different windows and time blocks, never pooled; task-paired CR1 on the difference of seed-averaged deltas):", "",
+                      "| quantity | value | 95% CI |", "|---|---|---|",
+                      f"| ao21 delta vs its window seed (V21/A) | {sgn(m21['mean'])} | [{f(m21['ci'][0])}, {f(m21['ci'][1])}] |",
+                      f"| v2.0 AO-2 delta vs its window seed (V2/A) | {sgn(m20['mean'])} | [{f(m20['ci'][0])}, {f(m20['ci'][1])}] |",
+                      f"| ao21 minus v2.0 AO-2 (accepted-candidate effect over the v2 start) | {sgn(m['mean'])} | [{f(m['ci'][0])}, {f(m['ci'][1])}] |", ""]
+                J.setdefault("v21_A_vs_v20_ao2", {"diff": m["mean"], "ci": m["ci"]})
             for sd in sorted(W[w].seeds_of.get("ao21", ())):
                 if W[w].inert.get(("ao21", sd)) or ("ao21", sd) not in W[w].M:
                     continue
