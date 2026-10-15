@@ -1,6 +1,30 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-15 06:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-15 09:50 UTC (coordinator periodic check)_
+
+## Update 09:50 UTC 10-15
+- **V3 airline (B1)**:
+  - **Finished**: Meta-Harness, MIPROv2, Trace2Skill and WikiSkill (all 3 seeds); HC-stock s0 and s1.
+  - **Running**: HC-stock s2, HC-3, AO-2.2 (4th launch on main 418fd4270 after PR #869), GEPA, full-GEPA, SkillOpt, EvoSkill, ACE, HarnessLens.
+- **Search-time (train, NOT held out) seed -> best, 30 train tasks k=5**:
+
+  | Arm | Seed -> best | Delta |
+  |---|---|---|
+  | HC-stock | 0.57 -> 0.84 | +0.27 |
+  | GEPA | 0.56 -> 0.76 | |
+  | SkillOpt | 0.56 -> 0.74 | |
+  | full-GEPA | 0.57 -> 0.72 | |
+  | EvoSkill | 0.58 -> 0.72 | |
+  | Trace2Skill | 0.55 -> 0.70 | |
+  | MIPRO | 0.56 -> 0.63 | |
+
+  Selection-optimistic; the held-out test comes after the searches.
+- **AO-2.2 after PR #869**: 0 tool-consistency faults and 0 refusals.
+- **Spend on :4113**: $2,826.
+- **Pending user decisions**: slow arms (HarnessLens, ACE), spending ceiling, SpreadsheetBench test set.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-15 06:50 UTC (coordinator periodic check)_
 
 ## Update 06:50 UTC 10-15
 - **V3 airline (B1)**: all 13 frameworks are launched, 3 seeds each.

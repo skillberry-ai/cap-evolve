@@ -224,3 +224,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - AO-2.2 waits on the capevolve-diagnose PR (instructions plus cluster_ids), then a fresh restart of all 3 seeds.
 - HarnessLens counters are stale for 3.5 h, with bl-harness checking.
 - ACE is the slowest framework, at about 100-150 rollouts/h per seed.
+
+## Update 09:50 UTC 10-15 (periodic check)
+- PR #869 is merged (AO project instructions and the lenient hypothesis path). AO-2.2 4th launch since 08:05Z.
+- :4113 USD $2,826.
+- Finished B1 frameworks: MH, MIPRO, T2S, WikiSkill.
+- Waiting on the user for: the time cap and ceiling; the B2 test set.
