@@ -154,3 +154,11 @@ writes `manifests/artifacts_V2_<S>.json` (v2 entries + the v1 GEPA champions + t
 `v2_window.py register --suite S` appends the hashes (champions file, manifest, tree hashes, order, 11G comparison family, scripts, commit) to the registry; run `git fetch && git merge` first (the registry is shared).
 Run: `run_final.py prepare|run --suite S --order manifests/order_V2_S.jsonl --root <FINAL_EVAL_ROOT>/V2/S --workers N` (same adapters, worker and scorer as the v1 windows).
 Dry test (fake champions from v1 artifacts): order sizes A 840, D 2,400, E 1,200 jobs; `prepare` passes for all three.
+
+## V3 final tests (added 2026-10-15; two benchmarks)
+
+`v3_order.py` (collect / build, `--smoke` for a dry-run order on search-split tasks): B1 = tau2 airline (suite E worker; V3 adapter scripts/V3/adapters/airline sha 8d4cf8b7; agent, user simulator and judge
+openai/aws/gpt-oss-120b via :4113; official 20 test ids; k = 10 trials per task for a champion cell; seed and seed-check cells; infra retries up to 30 per order (zero-error rule); a tool-consistency failure is a candidate fault,
+reward 0, not retried), B2 = SpreadsheetBench (suite A worker, main's adapter with the helpers carrier like the v2 A window; `--taskset clean70|test280`; gateway `--sb-gateway`).
+`collect` builds champions_V3_<B>.json from runs/V3/<B>/<framework>/s<k>/final/. Tags FINAL-E-V3B1-..., FINAL-A-V3B2-...; capped_stop 228000000; inert champions are mapped to the seed-check cell.
+Dry run (fake champions, no scoring of test ids): B1 smoke order on 2 train tasks, 32/32 jobs done through :4113 with 0 errors; B2 clean70 (630 jobs with 2 fake frameworks) and test280 (2,520) preflight clean.

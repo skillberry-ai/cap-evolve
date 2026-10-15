@@ -536,7 +536,7 @@ def execute_job(job, store, cm, py, hang_s=HANG_S, log=print):
             if not rec["hang"]:       # 429-aware backoff before the retry (Azure-direct suites); depends on the error class only
                 time.sleep(min(60, 10 * infra_n) if re.search(r"\b429\b|rate ?limit", rec.get("error_text") or "", re.I) else 0)
             hang_n += 1 if rec["hang"] else 0
-            exhausted = (rec["hang"] and hang_n > MAX_HANG_RETRIES) or infra_n > MAX_INFRA_RETRIES
+            exhausted = (rec["hang"] and hang_n > MAX_HANG_RETRIES) or infra_n > int(job.get("max_infra_retries") or MAX_INFRA_RETRIES)      # V3 orders: 30 (zero-error rule)
             rec["terminal"] = bool(exhausted)
             rec["final_status"] = "missing" if exhausted else None
             # amendment 5O: an infra error still infra after the retries is `infra_final` (scored 0 in the primary results, missing only in the
