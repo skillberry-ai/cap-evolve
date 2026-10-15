@@ -1,6 +1,30 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-14 21:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-15 00:50 UTC (coordinator periodic check)_
+
+## Update 00:50 UTC 10-15: V3 refocus (user direction)
+- **Focus**: two benchmarks.
+  - tau2 airline: agent and user simulator gpt-oss-120b, optimizer Sonnet 5.5, official split train 30 / test 20.
+  - SpreadsheetBench: agent Gemma-4-31B, optimizer Sonnet 5.5, split pending user choice.
+- **V3 rules** (baselines/V3_RUN_BRIEF.md, scratch): same seed, k=5 trials with fresh seeds, R=3000 rollouts binding, 3 seeds, zero LLM errors (retry, never score 0), candidate tool-consistency faults scored 0 (rule 5a).
+- **Infra**:
+  - New gateway :4113 on the user's LiteLLM token, with retries, reasoning strip, tool-name repair, output_config strip, and per-call cost and token metering.
+  - :4114 is a multi-key RITS Gemma pool.
+  - Smoke and pilot: 0 LLM errors on airline.
+- **Bugs fixed**:
+  - AO-2 pooled commit (PR #861, merged).
+  - ACE seed never scored (wrappers fixed).
+  - Competitor constant seeds.
+  - MIPRO swallowed concurrency errors.
+  - Asymmetric error handling.
+- **Running on airline**: CapEvolve HC (stock gate), ACE, HarnessLens, WikiSkill (3 seeds each).
+- **Next**:
+  - Meta-Harness, MIPRO, Trace2Skill, GEPA/SkillOpt/EvoSkill are in smoke and launch.
+  - CapEvolve improved HC and AO are waiting on the improvements PR.
+- **Old windows**: the v2.1 A window ends ~01:30Z. The D v2.1 voided-accept champion was not better than the seed (+0.02, n.s.).
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-14 21:50 UTC (coordinator periodic check)_
 
 ## Update 21:50 UTC 10-14
 - **Spend**: capped spend is 193.2M of 230M (gateway healthy).

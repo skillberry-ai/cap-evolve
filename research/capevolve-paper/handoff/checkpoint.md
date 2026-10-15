@@ -208,3 +208,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - The v2.1 windows are running: A (PID 3572884, order c9bdc5b8) and D (PID 3690162, order 46785abe). Watchers hash the results at the end.
 - The fix agent fix-ao2-commit is writing the commit_accept PR, plus an audit of other pooled --val paths.
 - The capevolve-runner loops are stopped. The capopt egress rule stays until the post-campaign cleanup.
+
+## Update 00:50 UTC 10-15 (periodic check)
+- V3 phase. The brief is campaign-scratch/baselines/V3_RUN_BRIEF.md.
+- Gateways: :4113 (V3; token cap raised to 5B; restart only via scripts/restart_gateway.sh) and :4114 (Gemma pool, 16/key). Pool keys live in campaign-scratch/secrets/ (mode 600, excluded from uploads).
+- Owners: tau-runner (CapEvolve B1), ace-fix (ACE), bl-harness (MH, HL), bl-wikiskill, bl-skills (Trace2Skill), bl-context (MIPRO), baseline-eng (GEPA, SkillOpt, EvoSkill), capevolve-diagnose (improvements PR), infra-gptoss (gateways).
