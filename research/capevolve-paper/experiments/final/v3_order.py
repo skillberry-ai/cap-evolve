@@ -46,7 +46,8 @@ def collect(bench, runs_root):
     kind = BENCH[bench]["kind"]
     out, problems = {}, []
     base = Path(runs_root) / bench
-    for fw in sorted(p.name for p in base.iterdir() if p.is_dir()) if base.is_dir() else []:
+    skip = ("smoke", "archive", "failed", "run1", "premature")      # smoke runs and archived / superseded run dirs are not frameworks
+    for fw in sorted(p.name for p in base.iterdir() if p.is_dir() and not any(w in p.name for w in skip)) if base.is_dir() else []:
         for s in range(3):
             fin = base / fw / ("s%d" % s) / "final"
             if not fin.is_dir():
