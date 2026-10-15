@@ -18,7 +18,7 @@ Task set: 20 tasks, 20 families (cluster = family; split filter ('test',)). Prim
 | trace2skill | 3 | 10 | 0.502 | 0.502 | [0.326, 0.678] | s0:0.515, s1:0.515, s2:0.475 | 0/3 | 0 | 0.502 |
 | wikiskill | 3 | 10 | 0.553 | 0.553 | [0.379, 0.728] | s0:0.565, s1:0.530, s2:0.565 | 0/3 | 0 | 0.553 |
 
-**Per-framework test mean (T = 20, k = 10 trials/task; mean of the 3 per-seed means; SE = SD of the 3 per-seed means / sqrt(3), n = 3 search seeds; per-seed means as measured)**
+**Per-framework test mean (T = 20; mean of the 3 per-seed means; SE = SD of the 3 per-seed means / sqrt(3), n = 3 search seeds; per-seed means as measured)**
 
 | framework | mean | SE across seeds | per-seed means | 95% CI of mean (artifact-level, CR1) |
 |---|---|---|---|---|

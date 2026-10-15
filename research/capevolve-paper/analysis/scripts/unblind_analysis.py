@@ -40,6 +40,8 @@ for _s, _sp in (("D", ("test",)), ("A", ("",))):   # only windows whose results 
         V21[f"V21/{_s}"] = (f"V21_{_s}", _sp)
 if "results_V3B1_main_results_long.csv" in _REG:   # V3 B1 test block (amendment 12, erratum 8: freeze declaration)
     V21["V3B1/main"] = ("V3B1", ("test",))
+if "results_V3B1_traineval_results_long.csv" in _REG:   # V3 B1 train-30 re-evaluation (descriptive)
+    V21["V3B1/traineval"] = ("V3B1_traineval", ("train",))
 for _w, (_k, _sp) in V21.items():
     WINDOWS[_w] = _k
     SPLITS[_w] = _sp
@@ -542,10 +544,10 @@ def main():
         # synthesize ao2/ao21 etc. for V2 windows
         L += arm_table(W[w], Ws[w]) if True else []
         L.append("")
-        if w == "V3B1/main":
-            L += ["**Per-framework test mean (T = 20, k = 10 trials/task; mean of the 3 per-seed means; SE = SD of the 3 per-seed means / sqrt(3), n = 3 search seeds; per-seed means as measured)**", "",
+        if w in ("V3B1/main", "V3B1/traineval"):
+            L += [f"**Per-framework {'train-30 re-evaluation (descriptive, k = 5)' if w.endswith('traineval') else 'test'} mean (T = {len(W[w].tasks)}; mean of the 3 per-seed means; SE = SD of the 3 per-seed means / sqrt(3), n = 3 search seeds; per-seed means as measured)**", "",
                   "| framework | mean | SE across seeds | per-seed means | 95% CI of mean (artifact-level, CR1) |", "|---|---|---|---|---|"]
-            for a in ["seed", "seed-check"] + sorted(x for x in W[w].arms if x not in ("seed", "seed-check")):
+            for a in [x for x in ("seed", "seed-check") if (x, 0) in W[w].M] + sorted(x for x in W[w].arms if x not in ("seed", "seed-check")):
                 if a in ("seed", "seed-check"):
                     v = W[w].M[(a, 0)]; mm = mean_ci(v, W[w].fam)
                     L.append(f"| {a} (n = {W[w].trials(a) or '-'} trials/task) | {f(mm['mean'])} | - | - | [{f(mm['ci'][0])}, {f(mm['ci'][1])}] |")
@@ -559,6 +561,23 @@ def main():
                 mm = mean_ci(seedavg([W[w].M[(a, sd)] for sd in sorted(W[w].seeds_of[a])]), W[w].fam)
                 L.append(f"| {a} | {f(mu)} | {f(se)} | {', '.join(f(x) for x in pm)} | [{f(mm['ci'][0])}, {f(mm['ci'][1])}] |")
             L.append("")
+            if w == "V3B1/traineval":
+                Wm = W["V3B1/main"]
+                L += ["**Train re-evaluation vs test, per framework (descriptive; delta = framework minus the seed scored in the same block; train = the 30 official train ids re-scored at k = 5 with fresh seeds, test = the 20 official test ids at k = 10; 'train minus test' = the selection-to-final gap in the sense of 5P-2, with the train re-score in place of the search-time selection split; SE across the 3 seeds)**", "",
+                      "| framework | train delta vs seed | SE | test delta vs seed | SE | train minus test |", "|---|---|---|---|---|---|"]
+                def seedmeans(Wx, a, ref):
+                    rm = sum(x for x in ref if x is not None) / sum(1 for x in ref if x is not None)
+                    out = []
+                    for sd in sorted(Wx.seeds_of[a]):
+                        xs = [x for x in Wx.M[(a, sd)] if x is not None]
+                        out.append(sum(xs) / len(xs) - rm)
+                    return out
+                for a in sorted(x for x in W[w].arms if x not in ("seed", "seed-check")):
+                    tr = seedmeans(W[w], a, W[w].seedvec); te = seedmeans(Wm, a, Wm.seedvec)
+                    mtr, mte = sum(tr) / 3, sum(te) / 3
+                    setr = statistics.stdev(tr) / math.sqrt(3); sete = statistics.stdev(te) / math.sqrt(3)
+                    L.append(f"| {a} | {sgn(mtr)} | {f(setr)} | {sgn(mte)} | {f(sete)} | {sgn(mtr - mte)} |")
+                L.append("")
         drift = seed_drift(w)
         if drift:
             L += [f"Seed drift (5I, in-window seed, task-demeaned): blocks (index, mean, SE, n) = " + "; ".join(f"{k}: {sgn(m,3)} (SE {se:.3f}, n={n})" for k, m, se, n in drift["blocks"]) +
