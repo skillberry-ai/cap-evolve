@@ -25,12 +25,19 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import uuid
 
 TRIALS = int(os.environ.get("TRIALS", "3"))
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "512"))
 SHORT_TOKENS = int(os.environ.get("SHORT_TOKENS", "16"))
 TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "300"))
 RETRY_WAITS_429 = (20, 40, 60, 60)
+LITELLM_HEADERS = {
+    "x-litellm-attempted-retries",
+    "x-litellm-cache-key",
+    "x-litellm-response-duration-ms",
+    "x-litellm-model-region",
+}
 PROMPT = (
     "Write a detailed, roughly 600-word technical explanation of how a hash table works, "
     "covering hashing, collisions, open addressing, chaining and resizing. Plain prose."
@@ -59,7 +66,9 @@ def call(ci_id, max_tokens):
     model, base, key = resolve(ci_id)
     body = {
         "model": model,
-        "messages": [{"role": "user", "content": PROMPT}],
+        # A unique id per request: the ETE LiteLLM gateway otherwise serves a cached answer
+        # in ~0.2s (run 38699969277, trials 2-3), which is not a generation.
+        "messages": [{"role": "user", "content": f"[request {uuid.uuid4()}] {PROMPT}"}],
         "max_tokens": max_tokens,
         "temperature": 0.7,
     }
@@ -75,6 +84,9 @@ def call(ci_id, max_tokens):
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
                 out = json.load(resp)
+                # LiteLLM's own view: internal retries (hidden 429 waits), cache, server time.
+                hdr = {k[len("x-litellm-"):]: v for k, v in resp.headers.items()
+                       if k.lower() in LITELLM_HEADERS}
             break
         except urllib.error.HTTPError as e:
             if e.code != 429 or wait is None:
@@ -92,6 +104,7 @@ def call(ci_id, max_tokens):
         # Where the text actually is: GLM can put it in reasoning_content instead of content.
         "fields": {k: len(v) if isinstance(v, str) else type(v).__name__ for k, v in msg.items()},
         "finish": ((out.get("choices") or [{}])[0]).get("finish_reason"),
+        "litellm": hdr,
     }
 
 
@@ -110,6 +123,10 @@ def one_trial(model):
         "content_chars": long_["content_chars"],
         "fields": long_["fields"],
         "finish": long_["finish"],
+        "litellm": {"short": short["litellm"], "long": long_["litellm"]},
+        # A gateway-side retry hides a rate-limit wait inside the timing: not a clean trial.
+        "retried": any(str(c["litellm"].get("attempted-retries", "0")) not in ("0", "")
+                       for c in (short, long_)),
         "long_s": long_["s"],
         "short_s": short["s"],
         "short_tokens": short["tokens"],
@@ -133,13 +150,16 @@ def main(models):
             except Exception as e:  # noqa: BLE001 — report and move to the next model
                 print(f"  trial {i}: ERROR {type(e).__name__}: {e}", flush=True)
                 break
-            rows.append(r)
+            if r["retried"]:
+                print(f"  trial {i}: gateway retried internally; excluded from the averages", flush=True)
+            else:
+                rows.append(r)
             print(
                 f"  trial {i}: long {r['tokens']} tok ({r['reasoning']} reasoning, "
                 f"{r['content_chars']} content chars) in {r['long_s']:.2f}s; "
                 f"short {r['short_tokens']} tok in {r['short_s']:.2f}s -> "
                 f"e2e {r['e2e_tps']:.1f} tok/s, decode {r['decode_tps']:.1f} tok/s, "
-                f"overhead {r['overhead_s']:.2f}s; finish={r['finish']} message fields={r['fields']}",
+                f"overhead {r['overhead_s']:.2f}s; finish={r['finish']} message fields={r['fields']} litellm={r['litellm']}",
                 flush=True,
             )
         if rows:

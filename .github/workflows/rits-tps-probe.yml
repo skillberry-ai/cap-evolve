@@ -22,7 +22,7 @@ on:
         default: "glm"
       trials:
         description: "Streaming requests per model"
-        default: "3"
+        default: "5"
       max_tokens:
         description: "max_tokens per request"
         default: "1024"
@@ -48,7 +48,7 @@ jobs:
       IBM_ETE_API_BASE: ${{ secrets.IBM_ETE_API_BASE }}
       IBM_ETE_API_KEY: ${{ secrets.IBM_ETE_API_KEY }}
       MODEL_PATTERN: ${{ github.event.inputs.model_pattern || 'glm' }}
-      TRIALS: ${{ github.event.inputs.trials || '3' }}
+      TRIALS: ${{ github.event.inputs.trials || '5' }}
       MAX_TOKENS: ${{ github.event.inputs.max_tokens || '1024' }}
     steps:
       - uses: actions/checkout@v4
