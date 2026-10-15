@@ -215,7 +215,10 @@ def test_live_reports_and_run_target_uses_the_capability_template():
     assert "_task_template_error(candidate_dir)" in src, "live() must report the reason once"
     assert "def live(self, candidate_dir)" in src
     assert "raise RuntimeError" not in src.split("def live(", 1)[1].split("def run_target", 1)[0]
-    assert "user_msg = _read_task_template(ctx).format(" in src, "run_target must use it"
+    # run_target renders through _render_user_message, whose old-layout branch is exactly
+    # _read_task_template(ctx).format(...) (#871 added the frame layout next to it).
+    assert "user_msg = _render_user_message(" in src, "run_target must use it"
+    assert "return _read_task_template(ctx).format(**fields)" in src
     assert "_TASK_TEMPLATE.format(" not in src, "the frozen template must no longer be used directly"
 
 

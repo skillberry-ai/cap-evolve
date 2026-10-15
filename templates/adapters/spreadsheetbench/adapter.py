@@ -62,6 +62,12 @@ WHAT THIS OPTIMIZES — ALL the text the agent reads, in two files:
   Per-task VALUES (instruction, paths, preview, answer_position) are still supplied by the
   adapter through placeholders that live() validates; see _task_template_error.
 
+  FRAME LAYOUT (#871, opt-in by shipping guidance.md): the user message is a SEALED
+  task_frame.md (the fields + the facts of the loop; adapter default in
+  seed_capability_frame/) with the editable guidance.md inserted at {guidance}. The skill is
+  then prompt.md + guidance.md, which carry every piece of advice; nothing load-bearing is
+  editable. Pair it with the spec's editable_paths so the core seal enforces the split.
+
 HOW IT WORKS:
   - tasks()       → loads all SpreadsheetBench instances from the fetched dataset.json.
   - run_target()  → a multi-round CodeAct loop: the model writes Python, code runs in a
@@ -1108,6 +1114,46 @@ _TEMPLATE_REQUIRED = frozenset({
 })
 _TEMPLATE_OPTIONAL = frozenset({"max_turns"})
 
+# FRAME LAYOUT (#871). A capability that ships guidance.md is rendered as a SEALED frame
+# (task_frame.md: the task fields + the facts of the interaction loop) with the editable
+# guidance.md inserted at {guidance}. The frame is not part of the skill, so a weak optimizer
+# cannot delete the loop contract or a placeholder; task_template.md is ignored in this layout.
+# A capability WITHOUT guidance.md renders exactly as before.
+_GUIDANCE_FILE = "guidance.md"
+_FRAME_FILE = "task_frame.md"
+_DEFAULT_FRAME = Path(__file__).resolve().parent / "seed_capability_frame" / _FRAME_FILE
+_FRAME_REQUIRED = _TEMPLATE_REQUIRED | {"guidance"}
+# Inserted with str.replace AFTER str.format, so guidance text may contain any braces.
+_GUIDANCE_SLOT = "\x00CAPEVOLVE_GUIDANCE\x00"
+
+
+def _frame_mode(ctx) -> bool:
+    """Does this capability use the sealed-frame layout?"""
+    return (Path(ctx) / _GUIDANCE_FILE).exists()
+
+
+def _read_frame(ctx) -> str:
+    """The sealed frame: the capability's own copy if it ships one, else the adapter default."""
+    path = Path(ctx) / _FRAME_FILE
+    if not path.exists():
+        path = _DEFAULT_FRAME
+    return _TEMPLATE_COMMENT_RE.sub("", path.read_text(encoding="utf-8"), count=1).strip() + "\n"
+
+
+def _read_guidance(ctx) -> str:
+    """The editable guidance text, comment-stripped. Empty file = no guidance section."""
+    text = (Path(ctx) / _GUIDANCE_FILE).read_text(encoding="utf-8")
+    return _TEMPLATE_COMMENT_RE.sub("", text, count=1).strip()
+
+
+def _render_user_message(ctx, **fields) -> str:
+    """The agent's first user message, for either layout."""
+    if not _frame_mode(ctx):
+        return _read_task_template(ctx).format(**fields)
+    msg = _read_frame(ctx).format(guidance=_GUIDANCE_SLOT, **fields)
+    guidance = _read_guidance(ctx)
+    return msg.replace(_GUIDANCE_SLOT, f"\n### Guidance\n{guidance}\n" if guidance else "")
+
 
 def _artifact_stamp(path: Path):
     """A change-detecting stamp for the graded output file, or None when it does not exist.
@@ -1163,7 +1209,22 @@ def _task_template_error(ctx) -> str | None:
     Both directions are unusable: a MISSING required placeholder means the agent is never told
     (say) where to write its answer, and an UNKNOWN one raises KeyError inside str.format on
     every single task.
+
+    In the frame layout the editable text has no placeholders at all, so only the sealed
+    frame is checked (a broken frame is a harness fault the seal exists to prevent).
     """
+    if _frame_mode(ctx):
+        text = _read_frame(ctx)
+        try:
+            found = {f for _, f, _, _ in string.Formatter().parse(text) if f}
+        except ValueError as e:
+            return f"task_frame.md is not a valid format string ({e})."
+        missing = sorted(_FRAME_REQUIRED - found)
+        unknown = sorted(found - _FRAME_REQUIRED - _TEMPLATE_OPTIONAL)
+        if missing or unknown:
+            return (f"task_frame.md broke the frame contract — missing {missing}, unknown {unknown}. "
+                    "The frame is sealed; restore it from the seed capability.")
+        return None
     path = Path(ctx) / "task_template.md"
     if not path.exists():
         return None
@@ -1612,7 +1673,8 @@ class Adapter(CapabilityAdapter):
                 input_file, local_dir, sid, container_dir,
                 entry["answer_position"], PREVIEW_ROWS,
             )
-            user_msg = _read_task_template(ctx).format(
+            user_msg = _render_user_message(
+                ctx,
                 instruction=entry["instruction"],
                 spreadsheet_path=f"{container_dir}/{input_file.name}",
                 spreadsheet_content=preview,
