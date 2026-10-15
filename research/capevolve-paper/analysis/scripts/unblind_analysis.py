@@ -554,7 +554,7 @@ def main():
                 for lab, ref in (("in-window seed", W[w].seedvec), ("seed-check (same artifact, n as the arms)", W[w].M[("seed-check", 0)])):
                     r = pcb.paired_cluster_bootstrap([W[w].M[("ao21", sd)]], [ref], W[w].fam, B=20)
                     parts.append(f"vs {lab}: {sgn(r['theta'])} [{f(r['cr_ci'][0])}, {f(r['cr_ci'][1])}], p {pf(r['cr_p_two_sided'])}")
-                L.append(f"Scored champion ao21 s{sd} alone (descriptive; the family row above averages it with the seeds that returned the seed): " + "; ".join(parts) + ".")
+                L.append(ff"Scored champion ao21 s{sd} alone (descriptive{'; the family row above averages it with the seeds that returned the seed' if any(W[w].inert.get(('ao21', q)) for q in W[w].seeds_of['ao21']) else ''}): " + "; ".join(parts) + ".")
             L.append("")
         if w.startswith("V2/"):
             s = w[3]
