@@ -436,7 +436,7 @@ class Conductor:
             if out.get("refused") in SCHEMA_REFUSALS:
                 # a paperwork refusal (hypothesis schema/validation, size rule) is not "the proposer cannot
                 # produce an edit": it is retried with its reason and does not feed the idle stop, except
-                # as a runaway guard after many in a row (airline AO-2.2 s0 stopped at 27 identical refusals)
+                # as a runaway guard after many in a row (a live run stopped on 27 identical refusals)
                 n = self.st["schema_refusals"] = int(self.st.get("schema_refusals", 0)) + 1
                 if self.cfg.caps.max_idle and n > SCHEMA_REFUSAL_FACTOR * self.cfg.caps.max_idle:
                     self.st["idle_proposals"] = int(self.st.get("idle_proposals", 0)) + 1
