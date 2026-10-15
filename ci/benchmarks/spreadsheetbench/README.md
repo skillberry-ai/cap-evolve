@@ -162,12 +162,12 @@ never modified.
 
 | part | file | who may change it |
 |---|---|---|
-| sealed frame of the agent's first message: the task fields and the facts of the loop (up to N rounds, ONE python block per round, the real output comes back, reply without code to finish) | `task_frame.md` | nobody: the spec's `editable_paths` seals it, and a candidate that edits it is discarded unmeasured |
+| sealed frame of the agent's first message: the adapter's built-in job description (task fields + the round structure: up to N rounds, ONE python block per round) with a `{guidance}` slot | `task_frame.md` | nobody: the spec's `editable_paths` seals it, and a candidate that edits it is discarded unmeasured |
 | system message | `prompt.md` | the optimizer |
 | working advice, inserted into the frame under "### Guidance" | `guidance.md` | the optimizer |
 
-With `SB_EMPTY_SEED=1` both editable files start empty. The frame replaces the built-in
-template's loop text, so a frame seed is a **different seed**: it is kept in its own slot
+With `SB_EMPTY_SEED=1` both editable files start empty, and the agent's message is byte-for-byte
+the old layout's no-skill message. A frame run still keeps its own slot
 (`<tier>__<model>__frame`), and `SB_REUSE_LATEST_BASELINE=1` refuses to mix the two layouts.
 `SB_FRAME=1` cannot be combined with `SB_WARM_SEED=1`.
 

@@ -61,7 +61,7 @@ WHAT THIS OPTIMIZES — ALL the text the agent reads, in two files:
   adapter through placeholders that live() validates; see _task_template_error.
 
   FRAME LAYOUT (#871, opt-in by shipping guidance.md): the user message is a SEALED
-  task_frame.md (the fields + the facts of the loop; adapter default in
+  task_frame.md (the built-in job description + a {guidance} slot; adapter default in
   seed_capability_frame/) with the editable guidance.md inserted at {guidance}. The skill is
   then prompt.md + guidance.md, which carry every piece of advice; nothing load-bearing is
   editable. Pair it with the spec's editable_paths so the core seal enforces the split.
@@ -881,7 +881,7 @@ _TEMPLATE_REQUIRED = frozenset({
 _TEMPLATE_OPTIONAL = frozenset({"max_turns"})
 
 # FRAME LAYOUT (#871). A capability that ships guidance.md is rendered as a SEALED frame
-# (task_frame.md: the task fields + the facts of the interaction loop) with the editable
+# (task_frame.md: the built-in job description, i.e. the task fields + the round structure) with the editable
 # guidance.md inserted at {guidance}. The frame is not part of the skill, so a weak optimizer
 # cannot delete the loop contract or a placeholder; task_template.md is ignored in this layout.
 # A capability WITHOUT guidance.md renders exactly as before.
