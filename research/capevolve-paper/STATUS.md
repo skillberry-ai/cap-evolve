@@ -1,6 +1,18 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-15 09:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-15 12:50 UTC (coordinator periodic check)_
+
+## Update 12:50 UTC 10-15
+- **V3 airline (B1)**:
+  - **Finished (3 seeds)**: HC-stock, GEPA, full-GEPA, SkillOpt, MIPRO, Meta-Harness, Trace2Skill, WikiSkill.
+  - **Partial**: EvoSkill 2/3; HC-3 ends at about 2,000 of 3,000 by its 8-round cap (actual rollouts are reported).
+  - **Running**: AO-2.2 (about 4 h left), ACE (about 12 h), HarnessLens (about 1.5 days at 50-70 rollouts/h).
+- **Search-time (train)**: HC-stock is +0.29 (30 train tasks k=5), the highest of all arms. This is not held out.
+- **Spend on :4113**: $3,457 ($3,000 alert crossed).
+- **Pending user decisions**: time cap for ACE/HarnessLens, spending ceiling, SpreadsheetBench test set.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-15 09:50 UTC (coordinator periodic check)_
 
 ## Update 09:50 UTC 10-15
 - **V3 airline (B1)**:

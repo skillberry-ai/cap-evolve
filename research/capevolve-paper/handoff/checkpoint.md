@@ -230,3 +230,9 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - :4113 USD $2,826.
 - Finished B1 frameworks: MH, MIPRO, T2S, WikiSkill.
 - Waiting on the user for: the time cap and ceiling; the B2 test set.
+
+## Update 12:50 UTC 10-15 (periodic check)
+- 8 B1 frameworks are complete.
+- HC-3 is capped by its 8 rounds (about 2,000 rollouts), with no restart (lead decision).
+- :4113 $3,457.
+- The B1 final window waits on AO-2.2, ACE and HarnessLens, or on a user time-cap decision.
