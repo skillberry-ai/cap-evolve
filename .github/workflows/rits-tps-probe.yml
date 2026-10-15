@@ -5,7 +5,7 @@
 # 1. Finds lite-rits's scraped rits.json on skillberry-1 (lite-rits's /v1/models is empty
 #    by design, so the catalog file is the only listing) and prints the models whose id
 #    matches MODEL_PATTERN.
-# 2. Streams a fixed prompt to each match through IBM_RITS_API_BASE and reports TTFT,
+# 2. Sends a fixed prompt to each match through IBM_RITS_API_BASE and reports TTFT,
 #    decode tok/s and end-to-end tok/s (ci/benchmarks/lib/rits_tps_probe.py).
 #
 # Pinned to skillberry-1: only that runner has the lite-rits proxy on localhost:4000.
@@ -25,7 +25,7 @@ on:
         default: "3"
       max_tokens:
         description: "max_tokens per request"
-        default: "512"
+        default: "1024"
   pull_request:
     paths:
       - .github/workflows/rits-tps-probe.yml
@@ -45,7 +45,7 @@ jobs:
       IBM_RITS_API_KEY: ${{ secrets.IBM_RITS_API_KEY }}
       MODEL_PATTERN: ${{ github.event.inputs.model_pattern || 'glm' }}
       TRIALS: ${{ github.event.inputs.trials || '3' }}
-      MAX_TOKENS: ${{ github.event.inputs.max_tokens || '512' }}
+      MAX_TOKENS: ${{ github.event.inputs.max_tokens || '1024' }}
     steps:
       - uses: actions/checkout@v4
       - name: Find matching models in lite-rits's rits.json
