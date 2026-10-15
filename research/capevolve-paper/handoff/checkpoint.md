@@ -236,3 +236,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - HC-3 is capped by its 8 rounds (about 2,000 rollouts), with no restart (lead decision).
 - :4113 $3,457.
 - The B1 final window waits on AO-2.2, ACE and HarnessLens, or on a user time-cap decision.
+
+## Update 15:50 UTC 10-15 (periodic check)
+- AO-2.2 is close to R.
+- The final-eval watcher fires when ao22 has final/ for all seeds; the B1 order is then built (needs the lead's go).
+- :4113 $3,859.

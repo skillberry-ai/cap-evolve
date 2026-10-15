@@ -1,6 +1,18 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-15 12:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-15 15:50 UTC (coordinator periodic check)_
+
+## Update 15:50 UTC 10-15
+- **V3 airline (B1)**:
+  - **Finished (3 seeds)**: 10 of 13 frameworks.
+  - **HC-3**: done at 1980/2160/2000 rollouts (8-round cap).
+  - **Running**: AO-2.2 (about 2,300-2,700 of 3,000, ends in about 1-2 h), ACE (about 1,900, about 10 h), HarnessLens (about 1,000, about 1.5 days).
+- **Verified 0 tool-consistency faults** for HC-3 and AO-2.2 from raw tau2 simulation records.
+- **Spend on :4113**: $3,859.
+- **Pending user decisions**: ACE/HarnessLens time cap; spending ceiling; SpreadsheetBench test set.
+- **Stalls/crashes**: none.
+
+_Earlier: 2026-10-15 12:50 UTC (coordinator periodic check)_
 
 ## Update 12:50 UTC 10-15
 - **V3 airline (B1)**:
