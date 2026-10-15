@@ -262,7 +262,11 @@ def worker_hl(job, attempt_dir):
     hl = job["hl"]
     out = Path(attempt_dir) / "hl_out"
     trial = int(job["trial"]) + 10 * int(job.get("attempt", 0))
-    if job["suite"] == "E":       # airline tree (tau_air): Azure gpt-4.1-mini target, gpt-4.1 judge/simulator through :4112 (coordinator: not gpt-5.5)
+    if hl.get("entry") == "v3":   # V3 B1: bl-harness's tau_v3 entrypoint (patched OpenCode call with the '--' separator), gpt-oss through :4113 for target, user simulator and judge
+        parts = job["tag"].split(":")
+        cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau_v3/hl_final_eval_v3.py"), "--out", str(out), "--tag-prefix", parts[1], "--arm", "harnesslens",
+               "--version", hl["version"], "--src-run-dir", hl.get("src_run_dir") or "-", "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1"]
+    elif job["suite"] == "E":       # airline tree (tau_air): Azure gpt-4.1-mini target, gpt-4.1 judge/simulator through :4112 (coordinator: not gpt-5.5)
         parts = job["tag"].split(":")
         cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau_air/hl_final_eval_air.py"), "--out", str(out), "--tag-prefix", parts[1], "--arm", parts[2],
                "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1",
@@ -273,7 +277,7 @@ def worker_hl(job, attempt_dir):
         cmd = [sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_final_eval.py"), "--out", str(out), "--tag-prefix", job["tag"].split(":")[1],
                "--version", hl["version"], "--tasks", "%s:%d" % (job["task"], trial), "--workers", "1"]
         cmd += ["--judge-model", job.get("judge_model") or "openai/azure/gpt-5.5"]     # every Suite B cell is judged by azure/gpt-5.5 (shared evaluator); only the OpenCode target harness is HarnessLens's
-    if hl.get("src_run_dir"):
+    if hl.get("src_run_dir") and hl.get("entry") != "v3":
         cmd += ["--src-run-dir", hl["src_run_dir"]]
     t0 = time.time()
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -292,7 +296,10 @@ def worker_hl(job, attempt_dir):
     else:                      # fe_results rows without target_calls: assume an exit made no target calls
         force, frule = bool(err and exit_like), "hl_worker_exit_no_target_calls_assumed"
     flags = {}
-    try:                       # bl-harness's per-trial descriptive flags (empty_completion, truncated_stream, worker_error)
+    try:
+        if hl.get("entry") == "v3":
+            raise FileNotFoundError("no flags helper for the V3 tree")      # bl-harness's tau_v3 entrypoint writes no hl_flags
+        # bl-harness's per-trial descriptive flags (empty_completion, truncated_stream, worker_error)
         fo = Path(attempt_dir) / "hl_flags.jsonl"
         subprocess.run([sys.executable, "-I", str(BASELINES / "harnesslens/tau/hl_trial_flags.py"), str(out / "tree"), str(fo)], capture_output=True, text=True, timeout=300)
         for x in C.jsonl(fo):
@@ -809,6 +816,12 @@ def preflight(suite, order_path, meta, jobs, expect_sha=None):
             prob.append("artifact dir missing: %s" % d)
             break
     prob += tag_guard(suite, jobs)
+    v3hl = next((j["hl"] for j in jobs if (j.get("hl") or {}).get("entry") == "v3"), None)
+    if v3hl:
+        for rel, want in (v3hl.get("files_sha256") or {}).items():
+            p = BASELINES / "harnesslens/tau_v3" / rel
+            if not p.exists() or C.file_sha(p) != want:
+                prob.append("V3 HarnessLens file %s sha256 %s != pinned %s" % (rel, C.file_sha(p) if p.exists() else None, want))
     seen = set()
     for j in [x for x in jobs if not x.get("hl")]:
         key = (j["artifact_dir"], j["artifact_tree_sha256"])

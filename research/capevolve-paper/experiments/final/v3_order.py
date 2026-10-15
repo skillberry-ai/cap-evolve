@@ -29,6 +29,8 @@ import v2_window as V  # noqa: E402
 
 V3_ADAPTER_AIRLINE = C.SCRATCH / "scripts/V3/adapters/airline/adapter.py"
 V3_ADAPTER_SHA_PREFIX = "8d4cf8b7"
+HL_V3 = C.SCRATCH / "baselines/harnesslens/tau_v3"
+HL_V3_FILES = ("src/harnesslens/benchmarks/opencode_tau2.py", "hl_final_eval_v3.py", "hl_fe_worker_v3.py")
 GPT_OSS = "openai/aws/gpt-oss-120b"
 GATEWAY_V3 = "http://127.0.0.1:4113/v1"
 MAX_INFRA_RETRIES_V3 = 30          # V3 brief rule 5: zero LLM errors (retry until success; the adapter's run_trials wrapper also loops, V3_MAX_RETRIES)
@@ -49,6 +51,14 @@ def collect(bench, runs_root):
             fin = base / fw / ("s%d" % s) / "final"
             if not fin.is_dir():
                 problems.append("%s s%d: no final/ yet" % (fw, s))
+                continue
+            if fw == "harnesslens":        # HarnessLens: the champion is a VERSION of its OpenCode harness (final/selected.json), not a policy/tools tree
+                sel = C.jload(fin / "selected.json")
+                if not sel or not sel.get("selected_version"):
+                    problems.append("%s s%d: final/selected.json missing or has no selected_version" % (fw, s))
+                    continue
+                out.setdefault(fw, {})[str(s)] = {"hl_version": sel["selected_version"], "final_dir": str(fin),
+                                                  "src_run_dir": str(base / fw / ("s%d" % s) / ("hl_s%d" % s) / "runs/train" / ("v3-hl-s%d" % s))}
                 continue
             files = C.tree_files(fin, kind)
             if not files:
@@ -92,6 +102,21 @@ def build(bench, champions_path, out_root, manifests, a):
             src = champ[fw].get(str(s))
             if not src:
                 sys.exit("champions file has no %s seed %d" % (fw, s))
+            if isinstance(src, dict):          # HarnessLens version champion
+                ver_ = src["hl_version"]
+                snap = Path(src["src_run_dir"]) / "rollout_evidence" / ("v3-hl-s%d" % s) / "versions_percell/airline" / ver_
+                if ver_ == "v0":
+                    th, files = "hl-v0-unmodified", {}
+                else:
+                    files = {str(p.relative_to(snap)): C.sha256_file(p) for p in sorted(snap.rglob("*")) if p.is_file()}
+                    if not files:
+                        sys.exit("HarnessLens %s s%d: version snapshot %s is empty or missing" % (ver_, s, snap))
+                    import hashlib
+                    th = hashlib.sha256("".join("%s\0%s\n" % (k, files[k]) for k in sorted(files)).encode()).hexdigest()
+                entries.append({"suite": suite, "mode": "B", "arm": fw, "seed": s, "status": "ok", "source_dir": src["final_dir"], "frozen_dir": str(snap), "tree_sha256": th, "files": files,
+                                "candidate_id": ver_, "hl_version": ver_, "hl_src_run_dir": src["src_run_dir"], "normalized_tree_sha256": th,
+                                "identical_to_seed": ver_ == "v0", "inert": ver_ == "v0", "dagger": False})
+                continue
             dst = Path(out_root) / "artifacts" / "B" / fw / ("s%d" % s)
             if not dst.exists():
                 R.freeze_copy(Path(src), dst, kind)
@@ -106,6 +131,8 @@ def build(bench, champions_path, out_root, manifests, a):
     argv = ["--suite", suite, "--manifest", str(mpath), "--tasks", "smoke" if a.smoke else "final", "--arms", ",".join(frameworks), "--no-end",
             "--trials-arm", str(a.trials), "--trials-seed", str(a.seed_trials), "--k", str(a.smoke_tasks),
             "--tag-exp", ("FE-smoke-V3%s" % bench) if a.smoke else cfg["tag"], "--out", str(out)]
+    if "harnesslens" in frameworks and suite == "E":
+        argv += ["--hl-v0"]                    # the unmodified OpenCode harness as HarnessLens's own baseline cell (order.py's hl-v0 arm, seed-like n)
     if suite == "A":
         if a.smoke:
             argv += ["--extra", "dryazure"]
@@ -124,8 +151,18 @@ def build(bench, champions_path, out_root, manifests, a):
         meta["tasks"] = [t for t in meta["tasks"] if any(j["task"] == t for j in jobs)]
     inert = sorted((e["arm"], e["seed"]) for e in entries if e["identical_to_seed"])
     jobs = [j for j in jobs if (j["arm"], j["seed"]) not in inert]
-    meta["inert_mapped_to_seed_check"] = [{"arm": x, "seed": y} for x, y in inert]
+    meta["inert_mapped_to_seed_check"] = [{"arm": x, "seed": y} for x, y in inert if x != "harnesslens"]
+    meta["inert_mapped_to_hl_v0"] = [{"arm": x, "seed": y} for x, y in inert if x == "harnesslens"]      # a HarnessLens champion that kept v0 is the unmodified harness: its anchor is the hl-v0 cell
     if suite == "E":
+        hlfiles = {rel: C.file_sha(HL_V3 / rel) for rel in HL_V3_FILES}
+        by_hl = {(e["arm"], e["seed"]): e for e in entries if e.get("hl_version")}
+        for j in jobs:
+            if j["arm"] == "harnesslens":
+                e = by_hl[(j["arm"], j["seed"])]
+                j["hl"] = {"entry": "v3", "version": e["hl_version"], "src_run_dir": e["hl_src_run_dir"], "snapshot_sha256": e["tree_sha256"], "files_sha256": hlfiles}
+            elif j["arm"] == "hl-v0":
+                j["hl"] = {"entry": "v3", "version": "v0", "src_run_dir": None, "snapshot_sha256": "hl-v0-unmodified", "files_sha256": hlfiles}
+        meta["hl_v3_files_sha256"] = hlfiles if any(j.get("hl") for j in jobs) else None
         assert V3_ADAPTER_AIRLINE.exists() and C.file_sha(V3_ADAPTER_AIRLINE).startswith(V3_ADAPTER_SHA_PREFIX), "V3 airline adapter sha != %s" % V3_ADAPTER_SHA_PREFIX
         for j in jobs + meta.get("canary_jobs", []):
             j.update(adapter_py=str(V3_ADAPTER_AIRLINE), target_model=GPT_OSS, user_model=GPT_OSS, judge_model=GPT_OSS, gateway=GATEWAY_V3,
