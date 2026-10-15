@@ -9,6 +9,7 @@ a <= 1.5k-token digest, the parent's identity and four rules. No SKILL.md is rea
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 MAX_PROMPT_BYTES = 7168
@@ -62,9 +63,43 @@ def failing_block(rates: dict, traces: dict, primary: list, rejected: list) -> s
     return "\n".join(out)
 
 
+PROJECT_MAX_BYTES = 6144
+_PLACEHOLDER = re.compile(r"\{\{[A-Z_]+\}\}")
+
+
+def project_instructions_section(text: str, max_bytes: int = PROJECT_MAX_BYTES) -> str:
+    """The project's own ``optimizer/INSTRUCTIONS.md`` (its benchmark facts and constraints) as a delimited
+    section of a job prompt. Template placeholders (``{{FAILURES}}``...) belong to the hill-climb prompt builder
+    and are dropped; the text is cut at ``max_bytes`` (the facts come first). Empty text gives ''."""
+    lines = []
+    for ln in (text or "").splitlines():
+        if _PLACEHOLDER.fullmatch(ln.strip()):
+            continue
+        lines.append(_PLACEHOLDER.sub("", ln))
+    body = "\n".join(lines).strip()
+    if not body:
+        return ""
+    data = body.encode("utf-8")
+    if len(data) > max_bytes:
+        body = data[:max_bytes].decode("utf-8", "ignore").rstrip() + "\n[... project instructions cut ...]"
+    return ("\n\n=== Project instructions from the user (benchmark facts and constraints; they bind every edit. "
+            "Where they describe iteration files such as JOURNAL.md or PROCESS.md, follow the procedure above "
+            "instead) ===\n" + body + "\n=== end of project instructions ===\n")
+
+
+def clusters_block(valid_clusters) -> str:
+    """The cluster ids hypothesis.json may cite (``[(id, label)]``), so the proposer never has to guess them."""
+    rows = [f"- {cid}: {str(label or '')[:100]}" for cid, label in valid_clusters or []]
+    if not rows:
+        return ""
+    return ("Valid cluster_ids for hypothesis.json (cite only these ids; an id not listed is dropped):\n"
+            + "\n".join(rows[:12]) + "\n")
+
+
 def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str = "", strict: bool = False,
                  kind: str = "propose", conflicts: list | None = None, refusal: str = "", failing: str = "",
-                 min_lines: int = 40, min_tasks: int = 3) -> str:
+                 min_lines: int = 40, min_tasks: int = 3, project_instructions: str = "",
+                 valid_clusters: list | None = None) -> str:
     head = {
         "propose": f"You are proposing one edit to candidate {parent!r} (already copied into {workdir}).",
         "merge": (f"{workdir} is a copy of branch {parent!r}; merging another branch into it conflicts in: "
@@ -76,7 +111,8 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
         target = (f"\nTarget cluster {cluster.get('id')}: {cluster.get('label') or ''}; failing tasks "
                   f"{', '.join(map(str, cluster.get('tasks') or []))}; headroom {cluster.get('headroom')}.")
     proc = PROCEDURE.format(min_lines=min_lines, min_tasks=min_tasks) if kind == "propose" else ""
-    body = f"{head}{target}\n{failing}\n\n{digest_text.strip()}\n\n{proc}{RULES.format(workdir=workdir)}"
+    ids = clusters_block(valid_clusters) if kind == "propose" else ""
+    body = f"{head}{target}\n{failing}\n{ids}\n{digest_text.strip()}\n\n{proc}{RULES.format(workdir=workdir)}"
     if strict:
         body += STRICT
     if refusal:
@@ -86,7 +122,7 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
     if len(data) > MAX_PROMPT_BYTES:      # shrink the digest, never the rules
         room = MAX_PROMPT_BYTES - len(body.replace(digest_text, "").encode("utf-8")) - 16
         body = body.replace(digest_text, digest_text.encode("utf-8")[:max(room, 0)].decode("utf-8", "ignore") + "...")
-    return body
+    return body + project_instructions_section(project_instructions)      # its own cap; never squeezes the rules
 
 
 def capability_diff_lines(parent_dir, cand_dir) -> int:

@@ -199,17 +199,35 @@ def propose(a, ctx):
         return 0, {"stage": "proposed", "parent": parent, "work": str(work),
                    "next": f"edit {work} (one coherent edit for ONE hypothesis), then re-run: "
                            f"act.py propose {tag} --parent {parent} --hypothesis-file H.json"}
-    h = _hypothesis(a, ctx)
+    lenient = bool(getattr(a, "lenient_hypothesis", False))
+    try:
+        h = _hypothesis(a, ctx)
+    except Refused as e:
+        if not lenient:
+            raise
+        ctx.warn(f"hypothesis ignored: {e}")
+        h = None
     out = {"parent": parent, "work": str(work)}
     if ctx.cfg["failure_clustering"]:
-        if h is None:
+        if h is None and not lenient:
             raise Refused("a hypothesis is required (--hypothesis-file: {id, cluster_ids, claim, "
                           "predicted_tasks, predicted_mechanism, edit_scope})")
-        clusters = digest.load_clusters(run_dir)
-        if clusters is None:
+        clusters = digest.load_clusters(run_dir) if h is not None else None
+        if h is None:
+            ctx.warn("no usable hypothesis.json: the candidate is evaluated without one")
+        elif clusters is None:
             ctx.infra("no clusters.json: hypothesis size rule NOT checked")
         else:
             ok, why = hypotheses.validate(h, clusters, a.small_edit_justification or "")
+            if not ok and getattr(a, "lenient_hypothesis", False):
+                # The conductor judges an edit by its measured effect, not by its paperwork: repair the
+                # hypothesis (drop unknown ids / out-of-cluster predictions), warn, and evaluate the candidate.
+                h, notes = hypotheses.repair(h, clusters)
+                for n in notes:
+                    ctx.warn(f"hypothesis repaired: {n}")
+                ok2, why2 = hypotheses.validate(h, clusters, a.small_edit_justification or "")
+                why = "; ".join(notes + ([f"not enforced: {why2}"] if not ok2 else [])) or why
+                ok = True
             if not ok:
                 raise Refused(f"hypothesis rejected: {why}")
             if why:
@@ -883,6 +901,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="verb", required=True)
     s = sub.add_parser("propose", parents=[common]); s.add_argument("tag"); s.add_argument("--parent")
     s.add_argument("--hypothesis-file"); s.add_argument("--small-edit-justification"); s.add_argument("--over-budget", metavar="REASON")
+    s.add_argument("--lenient-hypothesis", action="store_true", help="repair an unknown/empty cluster_ids or out-of-cluster prediction (warn) instead of refusing the candidate")
     s = sub.add_parser("probe", parents=[common]); s.add_argument("tag")
     s.add_argument("--tasks"); s.add_argument("--auto", action="store_true")
     s.add_argument("--n", type=int, default=1, help="trials per cell to reach (default 1)")

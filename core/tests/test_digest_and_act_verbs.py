@@ -804,3 +804,42 @@ def test_promoting_the_champion_or_pruning_an_unknown_tag_is_refused(tmp_path, c
     assert rc == 2 and "already the champion" in out["error"]
     rc, out = _act(monkeypatch, capsys, ["prune", "nonexist", "--reason", "x", *_args(rd, project)], Sh())
     assert rc == 2 and "unknown candidate" in out["error"]
+
+
+def test_lenient_hypothesis_repairs_paperwork_instead_of_refusing_the_candidate(tmp_path, capsys, monkeypatch):
+    """The conductor passes --lenient-hypothesis: unknown or empty cluster_ids, out-of-cluster predictions and a
+    missing hypothesis.json are warnings, not refusals (airline AO-2.2 s0 ended on 27 identical 'unknown
+    cluster_ids' refusals); without the flag they still refuse."""
+    rd, _, work, val = _run(tmp_path)
+    (rd.root / "clusters.json").write_text(json.dumps([{"cluster_id": "C1", "tasks": val[:2], "headroom": 0.02}]))
+    sh = Sh(**{"pregate.py": (0, json.dumps({"ok": True, "checks": [], "warnings": []}), "")})
+    base = ["propose", "cand_1", "--parent", "cur"]
+    cases = [(["A", "B", "C"], val[:2]), ([], val[:2]), (["C1"], [val[0], "zzz"])]
+    for i, (cids, tasks) in enumerate(cases):
+        f = tmp_path / f"h{i}.json"
+        f.write_text(json.dumps({"id": f"h{i}", "cluster_ids": cids, "claim": "c", "predicted_tasks": tasks,
+                                 "predicted_mechanism": "m", "edit_scope": ["policy"]}))
+        rc, out = _act(monkeypatch, capsys, [*base, "--hypothesis-file", str(f), *_args(rd)], sh)
+        assert rc == 2 and "hypothesis rejected" in out["error"], "strict (legacy) behavior is unchanged"
+        # a distinct byte content per case, or the duplicate-candidate check would refuse the 2nd and 3rd
+        (work / "cand_1" / "note.txt").write_text(f"edit {i}")
+        rc, out = _act(monkeypatch, capsys, [*base, "--lenient-hypothesis", "--hypothesis-file", str(f), *_args(rd)], sh)
+        assert rc == 0 and out["result"]["stage"] == "checked", out
+    rec = {h["id"]: h for h in hypotheses.load(rd)}
+    assert rec["h0"]["cluster_ids"] == [] and rec["h1"]["cluster_ids"] == []
+    assert rec["h2"]["cluster_ids"] == ["C1"] and rec["h2"]["predicted_tasks"] == [val[0]]
+    (work / "cand_1" / "note.txt").write_text("edit without a hypothesis")
+    rc, out = _act(monkeypatch, capsys, [*base, "--lenient-hypothesis", *_args(rd)], sh)
+    assert rc == 0 and out["result"]["stage"] == "checked"
+    rc, out = _act(monkeypatch, capsys, [*base, *_args(rd)], sh)
+    assert rc == 2 and "hypothesis is required" in out["error"]
+
+
+def test_repair_drops_only_what_is_wrong():
+    cl = [{"cluster_id": "A", "tasks": ["1", "2"], "headroom": 0.1}, {"cluster_id": "B", "tasks": ["3"], "headroom": 0.1}]
+    h, notes = hypotheses.repair({"cluster_ids": ["A", "Z"], "predicted_tasks": ["1", "3"]}, cl)
+    assert h["cluster_ids"] == ["A"] and h["predicted_tasks"] == ["1"] and len(notes) == 2
+    ok, _ = hypotheses.validate(h, cl)
+    assert ok
+    h2, notes2 = hypotheses.repair({"cluster_ids": ["A"], "predicted_tasks": ["1"]}, cl)
+    assert h2["cluster_ids"] == ["A"] and not notes2

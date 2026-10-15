@@ -302,7 +302,9 @@ class RealBackend(P2Port, conductor.Backend):
                                      strict=bool(job.get("strict")), kind=kind, conflicts=conflicts,
                                      refusal=job.get("refusal") or "", failing=failing,
                                      min_lines=int(self.spec.get("ao_min_edit_lines") or 40),
-                                     min_tasks=int(self.spec.get("ao_min_predicted") or 3))
+                                     min_tasks=int(self.spec.get("ao_min_predicted") or 3),
+                                     project_instructions=self._project_instructions(),
+                                     valid_clusters=self._valid_clusters())
         prompt.write_text(body, encoding="utf-8")
         with contextlib.suppress(OSError):        # the injected CLAUDE.md says "read ./INSTRUCTIONS.md FIRST"
             (work / "INSTRUCTIONS.md").write_text(body, encoding="utf-8")
@@ -316,6 +318,28 @@ class RealBackend(P2Port, conductor.Backend):
         if self.spec.get("optimizer_model"):
             cmd += ["--model", str(self.spec["optimizer_model"])]
         return self._spawn(job, cmd)
+
+    def _valid_clusters(self) -> list:
+        """``[(cluster_id, label)]`` of the clusters.json that ``hypotheses.validate`` checks ids against."""
+        try:
+            cl = digest.load_clusters(self.run_dir) or []
+        except Exception:  # noqa: BLE001 - a prompt hint, never a reason to fail a proposal
+            return []
+        return [(c.get("cluster_id"), c.get("label") or c.get("signature") or c.get("tag") or "")
+                for c in cl if c.get("cluster_id")]
+
+    def _project_instructions(self) -> str:
+        """The project's optimizer INSTRUCTIONS.md (the user's benchmark facts and constraints), which the
+        hill-climb path and the agent host already hand to their optimizer. ``ao_project_instructions: false``
+        turns it off. Absent file: ''."""
+        if self.spec.get("ao_project_instructions", True) in (False, "false", "False", 0):
+            return ""
+        from cap_evolve.specfile import resolve_instructions_file
+        try:
+            path, exists, _ = resolve_instructions_file(self.spec, self.project)
+            return path.read_text(encoding="utf-8") if exists else ""
+        except OSError:
+            return ""
 
     def transcript(self, job) -> Path:
         return self.jobs_dir / f"{job['id']}.transcript.jsonl"
@@ -436,7 +460,8 @@ class RealBackend(P2Port, conductor.Backend):
         over = ("conductor: max_iterations is informational; structured caps bound the run"
                 if stop and why.startswith("max_iterations") else None)
         a = argparse.Namespace(**vars(self.ns), tag=tag, parent=parent, hypothesis_file=str(hyp) if h else None,
-                               small_edit_justification=None, over_budget=over, verb="propose")
+                               small_edit_justification=None, over_budget=over, verb="propose",
+                               lenient_hypothesis=not self.spec.get("ao_strict_hypothesis"))
         try:
             rc, out = act.propose(a, self.ctx)
         except act.Refused as e:

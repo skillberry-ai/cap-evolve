@@ -8,6 +8,17 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Fixed
+- AO-2 no longer ends a search on hypothesis paperwork: the proposer prompt lists the valid `cluster_ids` (with
+  labels); an unknown or empty `cluster_ids`, out-of-cluster `predicted_tasks`, or a missing/unreadable
+  `hypothesis.json` is repaired with a warning and the candidate is evaluated (`act.py propose
+  --lenient-hypothesis`, passed by the conductor; `ao_strict_hypothesis: true` restores the refusal); such
+  refusals and the size rule no longer count toward `ao_max_idle_proposals` (a runaway guard of 5x that many in
+  a row remains).
+- AO-2 proposer and merge jobs now receive the project's own `optimizer/INSTRUCTIONS.md` (its benchmark facts
+  and constraints) as a delimited section of the job prompt, as the hill-climb path and the agent host already
+  did; template placeholders are dropped and the section is capped at 6 KiB. `ao_project_instructions: false`
+  turns it off.
 ### Added
 - **HC-2/AO-2 gain fixes (search-time diagnosis)**: `hc2_broad_slot` (one proposal per round sees the failing
   traces of ALL clusters), `hc2_cross_traces` (cluster slots also see traces of the other clusters; the

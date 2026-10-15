@@ -50,6 +50,9 @@ from cap_evolve import gatecfg, promotion
 FRESH_BASE = 1000          # first fresh-trial index (hill-climb: ``1000 + iterations * n_conf``)
 FILL_BASE, FILL_N = 3000, 2   # focus rule: a new champion's fresh reference fill (trial indices, trials per task)
 TERMINAL = ("champion", "rejected", "pruned", "superseded", "refused")
+#: Refusal reasons that are about a proposal's paperwork, not about whether the proposer produced an edit.
+SCHEMA_REFUSALS = ("hypothesis", "too_small")
+SCHEMA_REFUSAL_FACTOR = 5      # consecutive schema refusals tolerated, in multiples of ao_max_idle_proposals
 PRE_CONFIRM = ("proposed", "rung", "full", "screened", "stale", "racing")
 EXIT_REFUSED = 2
 
@@ -430,7 +433,15 @@ class Conductor:
             detail = str(out.get("detail") or res.get("tail") or "")[:300] if not res.get("ok", True) or out.get("detail") else ""
             self.b.log("proposal_failed", tag=tag, why=out.get("refused"), attempt=att[tag], detail=detail)
             self.st.setdefault("refusals", {})[tag] = {"why": out.get("refused"), "detail": detail, "attempt": att[tag]}
-            self.st["idle_proposals"] = int(self.st.get("idle_proposals", 0)) + 1      # refused / duplicate / failed
+            if out.get("refused") in SCHEMA_REFUSALS:
+                # a paperwork refusal (hypothesis schema/validation, size rule) is not "the proposer cannot
+                # produce an edit": it is retried with its reason and does not feed the idle stop, except
+                # as a runaway guard after many in a row (airline AO-2.2 s0 stopped at 27 identical refusals)
+                n = self.st["schema_refusals"] = int(self.st.get("schema_refusals", 0)) + 1
+                if self.cfg.caps.max_idle and n > SCHEMA_REFUSAL_FACTOR * self.cfg.caps.max_idle:
+                    self.st["idle_proposals"] = int(self.st.get("idle_proposals", 0)) + 1
+            else:
+                self.st["idle_proposals"] = int(self.st.get("idle_proposals", 0)) + 1  # no edit / duplicate / failed
             if out.get("refused") == "duplicate":
                 self.st["dup_refused"] = int(self.st.get("dup_refused", 0)) + 1
             if att[tag] > self.cfg.propose_retries or out.get("refused") == "duplicate":
@@ -461,6 +472,7 @@ class Conductor:
                 self.st["proposals_since_improve"] += 1
                 return
         self.st["idle_proposals"] = 0                                # a new evaluable candidate ends the idle streak
+        self.st["schema_refusals"] = 0
         parents = out.get("parents") or [j.get("parent") or self.champion]
         self.st["nodes"][tag] = {
             "tag": tag, "parents": parents, "parent": parents[0], "edit_kind": j.get("edit_kind", "edit"),

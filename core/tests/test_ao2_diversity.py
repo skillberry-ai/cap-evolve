@@ -58,3 +58,50 @@ def test_p2_proposals_are_bounded_to_one_round_by_default():
     assert cfg.pipeline == 1 and cfg.alive_cap == 4
     cfg2 = conductor.Cfg.from_spec({"promotion_rule": "P2", "split_mode": "pooled", "ao_k_prop": 4, "ao_pipeline": 2})
     assert cfg2.alive_cap == 8
+
+
+# ---- schema refusals do not feed the idle stop -------------------------------------------------------
+
+def _conductor_with_refusals(tmp_path, reason):
+    w, be, cfg = F.make(tmp_path, spec={"max_metric_calls": 900, "ao_plateau_n": 99, "ao_max_idle_proposals": 2})
+    c = conductor.Conductor(w.root, be, cfg, sleep=lambda s: None)
+    be.register = lambda job, res: {"ok": False, "refused": reason, "detail": "x"}
+    return c
+
+
+def _refuse(c, n):
+    for i in range(n):
+        c._reaped_propose({"tag": f"cand_{i + 1}", "parent": "seed", "id": f"j{i}", "kind": "propose"}, {"ok": True})
+    return int(c.st.get("idle_proposals", 0))
+
+
+def test_paperwork_refusals_do_not_end_the_search_but_a_runaway_of_them_still_does(tmp_path):
+    c = _conductor_with_refusals(tmp_path, "hypothesis")
+    cap = c.cfg.caps.max_idle
+    assert cap == 2 and _refuse(c, 4 * cap * conductor.SCHEMA_REFUSAL_FACTOR // 5 + 2) == 0     # well past max_idle
+    assert _refuse(c, 6 * cap * conductor.SCHEMA_REFUSAL_FACTOR) > 0                           # the runaway guard
+
+
+def test_genuine_no_edit_and_failed_outcomes_still_count_as_idle(tmp_path):
+    for reason in ("no_candidate", "pregate", "job_failed"):
+        c = _conductor_with_refusals(tmp_path / reason, reason)
+        assert _refuse(c, 3) >= 2, reason
+
+
+def test_the_valid_cluster_ids_are_in_every_proposer_prompt(tmp_path):
+    import json
+    import proposer
+    from cap_evolve import RunDir, Budget
+    rd = RunDir.create(tmp_path / "rd", ts="t", budget=Budget(max_iterations=5))
+    (rd.root / "clusters.json").write_text(json.dumps([{"cluster_id": "C1", "tasks": ["1"], "signature": "tool errors"},
+                                                       {"cluster_id": "C2", "tasks": ["2"], "label": "format"}]))
+    fake = SimpleNamespace(run_dir=rd)
+    ids = conductor_backend.RealBackend._valid_clusters(fake)
+    assert ids == [("C1", "tool errors"), ("C2", "format")]
+    body = proposer.build_prompt(workdir=tmp_path / "w", parent="seed", cluster=None, valid_clusters=ids)
+    assert "Valid cluster_ids" in body and "- C1: tool errors" in body and "- C2: format" in body
+    assert "Valid cluster_ids" not in proposer.build_prompt(workdir=tmp_path / "w", parent="seed", cluster=None)
+    merge = proposer.build_prompt(workdir=tmp_path / "w", parent="seed", cluster=None, kind="merge",
+                                  conflicts=["a"], valid_clusters=ids)
+    assert "Valid cluster_ids" not in merge
+    assert len(body.encode()) <= proposer.MAX_PROMPT_BYTES

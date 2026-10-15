@@ -42,6 +42,27 @@ def validate(h: dict, clusters: list[dict], justification: str = "") -> tuple[bo
     return (True, f"small edit allowed by justification ({msg})") if justification.strip() else (False, msg)
 
 
+def repair(h: dict, clusters: list[dict]) -> tuple[dict, list[str]]:
+    """A lenient copy of ``h`` for engines that must not refuse a candidate over its paperwork: unknown
+    ``cluster_ids`` are dropped, and ``predicted_tasks`` outside the remaining clusters are dropped (when no
+    known cluster remains the predictions are kept as stated). Returns ``(h2, notes)``; ``notes`` is empty when
+    nothing changed."""
+    h2, notes = dict(h), []
+    known = {c.get("cluster_id") for c in clusters}
+    ids = [i for i in (h.get("cluster_ids") or []) if i in known]
+    dropped = sorted(set(h.get("cluster_ids") or []) - set(ids))
+    if dropped or not h.get("cluster_ids"):
+        notes.append(f"unknown or empty cluster_ids {dropped or []} dropped; valid ids: {sorted(map(str, known))}")
+    h2["cluster_ids"] = ids
+    if ids:
+        pool = {str(t) for c in clusters if c.get("cluster_id") in ids for t in c.get("tasks") or []}
+        pred = [t for t in h.get("predicted_tasks") or [] if str(t) in pool]
+        if len(pred) != len(h.get("predicted_tasks") or []):
+            notes.append("predicted_tasks outside the targeted clusters dropped")
+            h2["predicted_tasks"] = pred
+    return h2, notes
+
+
 def repeat_of(h: dict, prior: list[dict]) -> str | None:
     """Id of the first PRUNED earlier hypothesis with the same cluster_ids and edit_scope."""
     key = (sorted(h.get("cluster_ids") or []), sorted(h.get("edit_scope") or []))
