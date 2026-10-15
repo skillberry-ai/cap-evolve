@@ -63,6 +63,9 @@ def call(model, max_tokens):
         "tokens": int(usage.get("completion_tokens") or 0),
         "reasoning": int((usage.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0),
         "content_chars": len(msg.get("content") or ""),
+        # Where the text actually is: GLM can put it in reasoning_content instead of content.
+        "fields": {k: len(v) if isinstance(v, str) else type(v).__name__ for k, v in msg.items()},
+        "finish": ((out.get("choices") or [{}])[0]).get("finish_reason"),
     }
 
 
@@ -79,6 +82,8 @@ def one_trial(model):
         "tokens": long_["tokens"],
         "reasoning": long_["reasoning"],
         "content_chars": long_["content_chars"],
+        "fields": long_["fields"],
+        "finish": long_["finish"],
         "long_s": long_["s"],
         "short_s": short["s"],
         "short_tokens": short["tokens"],
@@ -108,7 +113,7 @@ def main(models):
                 f"{r['content_chars']} content chars) in {r['long_s']:.2f}s; "
                 f"short {r['short_tokens']} tok in {r['short_s']:.2f}s -> "
                 f"e2e {r['e2e_tps']:.1f} tok/s, decode {r['decode_tps']:.1f} tok/s, "
-                f"overhead {r['overhead_s']:.2f}s",
+                f"overhead {r['overhead_s']:.2f}s; finish={r['finish']} message fields={r['fields']}",
                 flush=True,
             )
         if rows:
