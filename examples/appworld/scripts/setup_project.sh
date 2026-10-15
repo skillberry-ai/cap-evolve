@@ -18,7 +18,7 @@ cp "$AW_EVAL/reference/api_index.md" "$AW_EVAL/reference/react_agent_notes.md" "
 "$PY" "$EX/scripts/make_splits.py" "$PROJECT/split_ids.json"
 INSTR="$PROJECT/optimizer/INSTRUCTIONS.md"
 sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_ROOT_OPT}|$AW_EVAL/root_opt|g" \
-    -e "s|{AW_PY}|$PY|g" -e "s|{AW_LINTS}|$PROJECT/adapters/lints.py|g" \
+    -e "s|{AW_PY}|$PY|g" -e "s|{AW_LINTS}|$EX/adapters/lints.py|g" \
     "$EX/optimizer/INSTRUCTIONS.template.md" > "$INSTR"
 sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/capevolve.yaml" > "$PROJECT/capevolve.yaml"
 mkdir -p "$PROJECT/sandbox"

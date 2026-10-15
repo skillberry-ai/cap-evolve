@@ -26,9 +26,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "adapters"))
-from awpaths import ALTK_PYTHON, CAPE_RUN, EVAL, PROGRESS, ROOT_FULL, RUNS, SECRETS_FILE, read_split, sha256_tree, update_manifest  # noqa: E402
+from awpaths import ALTK_PYTHON, CAPE_RUN, EVAL, FINAL, PROGRESS, ROOT_FULL, RUNS, SECRETS_FILE, read_split, sha256_tree, update_manifest  # noqa: E402
 
-FINAL = RUNS / "final"
 ART = FINAL / "artifacts"
 RESULTS = FINAL / "results.jsonl"
 ORDER_SEED = 20261013
@@ -51,9 +50,21 @@ def freeze() -> int:
     ART.mkdir(parents=True)
     state = json.loads((CAPE_RUN / "state.json").read_text())
     best = state["best_id"]
+    reuse = os.environ.get("AW_REUSE_ARTIFACTS")   # e.g. runs/final/artifacts: keep seed + altk byte-identical
+    if reuse:
+        for arm in ("seed", "altk"):
+            shutil.copytree(Path(reuse) / arm, ART / arm)
+        shutil.copytree(CAPE_RUN / "candidates" / best, ART / "cape-hc",
+                        ignore=shutil.ignore_patterns(".git", "PROCESS.md", "JOURNAL.md", "DIAGNOSIS.json", "INSTRUCTIONS.md"))
+        hashes = {arm: sha256_tree(ART / arm) for arm in ARMS}
+        update_manifest(**{f"{FINAL.name}_artifacts": {"cape-hc_best_id": best, "reused_from": reuse,
+                                                       "inert_cape_hc": best == "seed", "sha256_tree": hashes}})
+        log(f"frozen: cape-hc={best}; seed and altk reused from {reuse}; hashes {hashes}")
+        print(json.dumps(hashes, indent=1))
+        return 0
     shutil.copytree(SEED_CAP, ART / "seed")
     shutil.copytree(CAPE_RUN / "candidates" / best, ART / "cape-hc",
-                    ignore=shutil.ignore_patterns(".git", "PROCESS.md", "JOURNAL.md", "DIAGNOSIS.json"))
+                    ignore=shutil.ignore_patterns(".git", "PROCESS.md", "JOURNAL.md", "DIAGNOSIS.json", "INSTRUCTIONS.md"))
     sel = json.loads((ALTK / "dose_selection.json").read_text())
     if sel["chosen"] == "altk-full":
         shutil.copytree(ALTK / "cand_full", ART / "altk")
@@ -76,7 +87,7 @@ def freeze() -> int:
 def run() -> int:
     os.environ["AW_ALLOW_SEALED"] = "final-eval-only"
     os.environ["AW_APPWORLD_ROOT"] = str(ROOT_FULL)
-    os.environ.setdefault("AW_EXPERIMENT", "final")
+    os.environ.setdefault("AW_EXPERIMENT", FINAL.name)
     os.environ.setdefault("AW_SECRETS_FILE", SECRETS_FILE)
     os.environ.pop(os.environ.get("AW_KEY_ENV", "RITS_API_KEY"), None)
     from adapter import Adapter, _task  # noqa: E402
@@ -102,8 +113,8 @@ def run() -> int:
             if not r.get("infra_error"):
                 done.add((r["arm"], r["task_id"], r["trial"]))
     todo = [j for j in jobs if j not in done]
-    update_manifest(final_window={"order_seed": ORDER_SEED, "trials": TRIALS, "workers": int(os.environ.get("AW_WORKERS", "48")),
-                                  "trial_random_seed": "5000 + trial", "infra_retries": 3})
+    update_manifest(**{f"{FINAL.name}_window": {"order_seed": ORDER_SEED, "trials": TRIALS, "workers": int(os.environ.get("AW_WORKERS", "48")),
+                                  "trial_random_seed": "5000 + trial", "infra_retries": 3}})
     log(f"start: {len(todo)} of {len(jobs)} episodes to run ({len(done)} done)")
     scratch = Path(tempfile.mkdtemp(prefix="final_", dir=EVAL / "scratch"))
     lock = threading.Lock()

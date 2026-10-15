@@ -18,6 +18,8 @@ MANIFEST = RUNS / "manifest.json"
 CAPE_NAME = os.environ.get("AW_CAPE_RUN", "cape_hc_s0")
 CAPE_RUN = RUNS / CAPE_NAME / ".capevolve" / f"run_{CAPE_NAME}"
 OPT_TRANSCRIPTS = RUNS / "optimizer_transcripts"
+# The final window's dir (runs/<AW_FINAL>); a re-run uses a new one so an earlier window stays intact.
+FINAL = RUNS / os.environ.get("AW_FINAL", "final")
 EXAMPLE = Path(__file__).resolve().parents[1]
 REPO = EXAMPLE.parents[1]
 # ALTK-Evolve needs Python >= 3.12, so it lives in its own venv (README: Setup).

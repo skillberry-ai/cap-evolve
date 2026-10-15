@@ -19,9 +19,8 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from awpaths import CAPE_RUN, MANIFEST, ROOT_FULL, RUNS, read_split  # noqa: E402
+from awpaths import CAPE_RUN, FINAL, MANIFEST, ROOT_FULL, RUNS, read_split  # noqa: E402
 
-FINAL = RUNS / "final"
 ARMS = ("seed", "cape-hc", "altk")
 TRIALS = 2
 DIFF = {1: "Easy", 2: "Medium", 3: "Hard"}

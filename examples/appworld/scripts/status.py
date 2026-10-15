@@ -67,7 +67,8 @@ def altk_row() -> list[str]:
 
 
 def final_row() -> list[str]:
-    st = RUNS / "final" / "status.json"
+    from awpaths import FINAL
+    st = FINAL / "status.json"
     if not st.is_file():
         return ["final", "not started", "0%", "", "0", "-", ""]
     s = json.loads(st.read_text())
