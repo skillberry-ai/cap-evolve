@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""rits_tps_probe.py — measure output speed (tokens/second) of RITS models.
+"""rits_tps_probe.py — measure output speed (tokens/second) of RITS and ETE gateway models.
 
 lite-rits does not stream token by token: a streaming request gets one empty chunk after the
 whole generation is done, plus the `usage` block (run 38698321564). So per-token timing is not
@@ -15,7 +15,9 @@ Token counts come from the server's `usage` block.
 
 Stdlib only, so it runs on the self-hosted runner without a venv.
 
-Usage: rits_tps_probe.py <wire-model> [<wire-model> ...]   (wire ids start with "rits/")
+Usage: rits_tps_probe.py <ci-model-id> [<ci-model-id> ...]
+CI ids carry a provider prefix (ibm-rits/, ibm-ete/, ibm-ete-int/), mapped to the wire id
+and credentials the same way resolve_provider.sh does.
 """
 import json
 import os
@@ -24,8 +26,6 @@ import time
 import urllib.error
 import urllib.request
 
-BASE = os.environ["IBM_RITS_API_BASE"].rstrip("/")
-KEY = os.environ["IBM_RITS_API_KEY"]
 TRIALS = int(os.environ.get("TRIALS", "3"))
 MAX_TOKENS = int(os.environ.get("MAX_TOKENS", "512"))
 SHORT_TOKENS = int(os.environ.get("SHORT_TOKENS", "16"))
@@ -36,11 +36,26 @@ PROMPT = (
 )
 
 
-def url():
-    return BASE + ("/chat/completions" if BASE.endswith("/v1") else "/v1/chat/completions")
+def resolve(ci_id):
+    """CI id -> (wire model, api base, api key). Mirrors resolve_provider.sh."""
+    for prefix, env, wire_prefix in (
+        ("ibm-ete-int/", "IBM_ETE_INT", ""),
+        ("ibm-ete/", "IBM_ETE", ""),
+        # lite-rits only routes ids that keep the "rits/" wire prefix.
+        ("ibm-rits/", "IBM_RITS", "rits/"),
+    ):
+        if ci_id.startswith(prefix):
+            base = os.environ[f"{env}_API_BASE"].rstrip("/")
+            return wire_prefix + ci_id[len(prefix):], base, os.environ[f"{env}_API_KEY"]
+    raise SystemExit(f"{ci_id}: no provider prefix (ibm-rits/, ibm-ete/, ibm-ete-int/)")
 
 
-def call(model, max_tokens):
+def url(base):
+    return base + ("/chat/completions" if base.endswith("/v1") else "/v1/chat/completions")
+
+
+def call(ci_id, max_tokens):
+    model, base, key = resolve(ci_id)
     body = {
         "model": model,
         "messages": [{"role": "user", "content": PROMPT}],
@@ -48,9 +63,9 @@ def call(model, max_tokens):
         "temperature": 0.7,
     }
     req = urllib.request.Request(
-        url(),
+        url(base),
         data=json.dumps(body).encode(),
-        headers={"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
     )
     t0 = time.monotonic()
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
@@ -135,7 +150,7 @@ def main(models):
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary:
         with open(step_summary, "a") as f:
-            f.write(f"## RITS tokens/second (max_tokens={MAX_TOKENS} vs {SHORT_TOKENS}, non-streaming)\n\n{table}\n")
+            f.write(f"## Tokens/second (max_tokens={MAX_TOKENS} vs {SHORT_TOKENS}, non-streaming)\n\n{table}\n")
     return 0 if any(n for _, n, *_ in summary) else 1
 
 
