@@ -54,9 +54,12 @@ def one_trial(model):
     chunks = 0
     usage = None
     reasoning_chunks = 0
+    raw_head = []  # first raw lines, printed when no token is parsed
     with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
         for raw in resp:
             line = raw.decode("utf-8", "replace").strip()
+            if line and len(raw_head) < 8:
+                raw_head.append(line[:300])
             if not line.startswith("data:"):
                 continue
             data = line[5:].strip()
@@ -81,7 +84,7 @@ def one_trial(model):
                         reasoning_chunks += 1
     t_end = time.monotonic()
     if t_first is None:
-        raise RuntimeError("stream returned no tokens")
+        raise RuntimeError("stream returned no tokens; first lines: " + " || ".join(raw_head))
     if usage and usage.get("completion_tokens"):
         ntok, src = int(usage["completion_tokens"]), "usage"
     else:
