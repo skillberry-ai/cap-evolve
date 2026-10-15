@@ -1,0 +1,145 @@
+# ============================================================================
+# Throughput probe — tokens/second of one model family (default: GLM) on RITS and ETE.
+# ============================================================================
+#
+# 1. Finds lite-rits's scraped rits.json on skillberry-1 (lite-rits's /v1/models is empty
+#    by design, so the catalog file is the only listing) and prints the models whose id
+#    matches MODEL_PATTERN. Then does the same on both ETE gateways' GET /models.
+# 2. Sends the same prompt to every match through its provider and reports
+#    end-to-end tok/s, decode tok/s and fixed overhead (ci/benchmarks/lib/rits_tps_probe.py).
+#
+# Pinned to skillberry-1: only that runner has the lite-rits proxy on localhost:4000.
+# Runs on manual dispatch, or on a PR that changes this workflow / the probe script.
+# ============================================================================
+
+name: RITS throughput probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_pattern:
+        description: "Case-insensitive regex on the RITS <vendor>/<model> id"
+        default: "glm"
+      trials:
+        description: "Streaming requests per model"
+        default: "5"
+      max_tokens:
+        description: "max_tokens per request"
+        default: "1024"
+  pull_request:
+    paths:
+      - .github/workflows/rits-tps-probe.yml
+      - ci/benchmarks/lib/rits_tps_probe.py
+
+jobs:
+  probe:
+    runs-on: [self-hosted, ibm-vpc, skillberry-1]
+    # Same trust guard as integration-tests.yml: PR code with secrets on the self-hosted
+    # runner only for known collaborators.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+    timeout-minutes: 30
+    env:
+      IBM_RITS_API_BASE: ${{ secrets.IBM_RITS_API_BASE }}
+      IBM_RITS_API_KEY: ${{ secrets.IBM_RITS_API_KEY }}
+      IBM_ETE_INT_API_BASE: ${{ secrets.IBM_ETE_INT_API_BASE }}
+      IBM_ETE_INT_API_KEY: ${{ secrets.IBM_ETE_INT_API_KEY }}
+      IBM_ETE_API_BASE: ${{ secrets.IBM_ETE_API_BASE }}
+      IBM_ETE_API_KEY: ${{ secrets.IBM_ETE_API_KEY }}
+      MODEL_PATTERN: ${{ github.event.inputs.model_pattern || 'glm' }}
+      TRIALS: ${{ github.event.inputs.trials || '5' }}
+      MAX_TOKENS: ${{ github.event.inputs.max_tokens || '1024' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find matching models in lite-rits's rits.json
+        id: find
+        run: |
+          set -uo pipefail
+          cat_file=/tmp/rits_catalog.json
+          : > "$cat_file"
+          # The catalog lives inside the lite-rits container; fall back to the host file system.
+          for c in $(docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | grep -i rits | awk '{print $1}'); do
+            echo "lite-rits container: $c"
+            p="$(docker exec "$c" sh -c 'find / -name rits.json -not -path "/proc/*" 2>/dev/null | head -1')"
+            if [ -n "$p" ]; then
+              echo "catalog: $c:$p"
+              docker exec "$c" cat "$p" > "$cat_file" && break
+            fi
+          done
+          if [ ! -s "$cat_file" ]; then
+            p="$(find "$HOME" /opt /srv -name rits.json 2>/dev/null | head -1)"
+            [ -n "$p" ] && echo "catalog: $p" && cp "$p" "$cat_file"
+          fi
+          if [ ! -s "$cat_file" ]; then
+            echo "::error:: could not find rits.json on this runner"; exit 1
+          fi
+          python3 - "$cat_file" <<'PY' > /tmp/models.txt
+          import json, os, re, sys
+          data = json.load(open(sys.argv[1]))
+          # Collect every string that looks like a "<vendor>/<model>" id, whatever the file shape.
+          ids = set()
+          def walk(x):
+              if isinstance(x, dict):
+                  for k, v in x.items():
+                      if isinstance(k, str) and "/" in k and " " not in k:
+                          ids.add(k)
+                      walk(v)
+              elif isinstance(x, list):
+                  for v in x: walk(v)
+              elif isinstance(x, str) and re.fullmatch(r"[\w.\-]+/[\w.\-:]+", x):
+                  ids.add(x)
+          walk(data)
+          print(f"catalog: {len(ids)} vendor/model ids", file=sys.stderr)
+          pat = re.compile(os.environ["MODEL_PATTERN"], re.I)
+          for m in sorted(i for i in ids if pat.search(i)):
+              print(m)
+          PY
+          echo "Models matching /$MODEL_PATTERN/i:"
+          cat /tmp/models.txt
+          {
+            echo "## RITS models matching \`/$MODEL_PATTERN/i\`"
+            echo
+            if [ -s /tmp/models.txt ]; then sed 's/^/- `/; s/$/`/' /tmp/models.txt; else echo "_none_"; fi
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ ! -s /tmp/models.txt ]; then
+            echo "::warning:: no RITS model matches /$MODEL_PATTERN/i"
+          fi
+          sed -i 's#^#ibm-rits/#' /tmp/models.txt
+      - name: Find matching models on the ETE gateways
+        run: |
+          set -uo pipefail
+          # Same GET <base>/models call sync-model-lists.yml uses; ids get the CI prefix.
+          : > /tmp/ete_models.txt
+          for label in ibm-ete-int ibm-ete; do
+            env_name="$(echo "$label" | tr 'a-z-' 'A-Z_')"
+            base_var="${env_name}_API_BASE"; key_var="${env_name}_API_KEY"
+            base="${!base_var:-}"; key="${!key_var:-}"
+            [ -n "$base" ] || { echo "::warning:: $label: no API base secret"; continue; }
+            code=$(curl -sS -m 90 -o /tmp/$label.models.json -w '%{http_code}' \
+              "${base%/}/models" -H "Authorization: Bearer $key") || code=curl-error
+            if [ "$code" != "200" ]; then echo "::warning:: $label /models: HTTP $code"; continue; fi
+            python3 - /tmp/$label.models.json "$label" <<'PY' | tee -a /tmp/ete_models.txt
+          import json, os, re, sys
+          ids = [m.get("id") for m in json.load(open(sys.argv[1])).get("data", []) if m.get("id")]
+          print(f"{sys.argv[2]}: {len(ids)} models", file=sys.stderr)
+          pat = re.compile(os.environ["MODEL_PATTERN"], re.I)
+          for m in sorted(i for i in ids if pat.search(i)):
+              print(f"{sys.argv[2]}/{m}")
+          PY
+          done
+          touch /tmp/ete_models.txt
+          {
+            echo "## ETE models matching \`/$MODEL_PATTERN/i\`"
+            echo
+            if [ -s /tmp/ete_models.txt ]; then sed 's/^/- `/; s/$/`/' /tmp/ete_models.txt; else echo "_none_"; fi
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/ete_models.txt >> /tmp/models.txt
+      - name: Measure tokens/second
+        run: |
+          set -euo pipefail
+          [ -s /tmp/models.txt ] || { echo "nothing to probe"; exit 0; }
+          mapfile -t models < /tmp/models.txt
+          python3 ci/benchmarks/lib/rits_tps_probe.py "${models[@]}"
