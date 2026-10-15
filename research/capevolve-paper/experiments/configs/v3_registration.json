@@ -1,0 +1,50 @@
+{
+ "amendment": "12",
+ "name": "V3 analysis plan",
+ "registered_utc": "2026-10-15 01:30 UTC",
+ "benchmarks": {
+  "B1": {
+   "setting": "tau2 airline, agent/user simulator/judge openai/aws/gpt-oss-120b via gateway :4113",
+   "search_data": "official train-30 only",
+   "final_set": "official test-20",
+   "final_trials_per_task": 10,
+   "seed_trials_per_task": 10,
+   "search_trials_per_task": 5,
+   "search_budget_rollouts": 3000,
+   "seeds": 3
+  },
+  "B2": {
+   "setting": "SpreadsheetBench, agent Gemma-4-31B-it via RITS",
+   "final_set": "pending user choice; dated addendum required before any B2 final rollout"
+  }
+ },
+ "capevolve_arms": [
+  "hcstock",
+  "hc3",
+  "ao22"
+ ],
+ "competitors": "frozen by a registry line (experiments/configs/v3_B1_competitors.json) before the first B1 final rollout; candidates: ace, harnesslens, metaharness, wikiskill, mipro, trace2skill, gepa, gepafull, skillopt, evoskill",
+ "primary_family": "each CapEvolve arm vs seed and vs each frozen competitor, one Holm per benchmark; m = 3 x (1 + n_competitors)",
+ "tests": "artifact-level CR1 t(C-1), family clusters; pipeline-level t(S-1) with SE^2 = SE_task^2 + s_seed^2/S (5M-2)",
+ "infra": "zero LLM errors: infra/gateway errors retried until success, never scored 0; candidate tool-consistency faults (5a) scored 0, counted, not retried",
+ "train_only": "every search decision uses train data only; test ids never read during search",
+ "descriptive": "search-time comparisons between CapEvolve arms and CapEvolve-arm vs CapEvolve-arm final contrasts are descriptive",
+ "planning_mde_B1": {
+  "within_var_per_trial": 0.1236,
+  "T": 20,
+  "S": 3,
+  "n_arm": 10,
+  "n_seed": 10,
+  "conditional_tau0.15": {
+   "m1": 0.122,
+   "m3": 0.144,
+   "m24": 0.183,
+   "m33": 0.188
+  },
+  "pipeline_tau0.15": {
+   "m1": 0.24,
+   "m3": 0.39,
+   "m24": 1.03
+  }
+ }
+}

@@ -14,6 +14,8 @@ REG = PAPER / "experiments" / "registry.jsonl"
 ITEMS = [
     ("suite_D_registration", PAPER / "experiments/configs/suite_D_registration.json", "cells, contrasts, Holm families, margin, final set"),
     ("analysis_plan_suite_D_amendment7", PAPER / "protocol/analysis_plan.md", "analysis plan incl. 5-AMENDMENT 7 (Suite D)"),
+    ("analysis_plan_amendment12_v3", PAPER / "protocol/analysis_plan.md", "analysis plan incl. 5-AMENDMENT 12 (V3 analysis plan; registered before any V3 final rollout)"),
+    ("v3_registration.json", PAPER / "experiments/configs/v3_registration.json", "machine-readable copy of amendment 12"),
     ("analysis_plan_amendment9", PAPER / "protocol/analysis_plan.md", "analysis plan incl. 5-AMENDMENT 9 (headline estimand, amendments table, inert rule, equivalence scope, AO dagger, E12B)"),
     ("suite_E_registration", PAPER / "experiments/configs/suite_E_registration.json", "Suite E (airline replication) cells, families, split hash, MDE"),
     ("suite_E_split_file", Path("/home/dev/projects2/wt-tau/protocol/tau_airline_splits.json"), "tau_airline_splits.json used by every Suite E cell and competitor"),
