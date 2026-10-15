@@ -213,3 +213,8 @@ cd /home/dev/projects2/cap-evolve-campaign && git pull --ff-only; read STATUS.md
 - V3 phase. The brief is campaign-scratch/baselines/V3_RUN_BRIEF.md.
 - Gateways: :4113 (V3; token cap raised to 5B; restart only via scripts/restart_gateway.sh) and :4114 (Gemma pool, 16/key). Pool keys live in campaign-scratch/secrets/ (mode 600, excluded from uploads).
 - Owners: tau-runner (CapEvolve B1), ace-fix (ACE), bl-harness (MH, HL), bl-wikiskill, bl-skills (Trace2Skill), bl-context (MIPRO), baseline-eng (GEPA, SkillOpt, EvoSkill), capevolve-diagnose (improvements PR), infra-gptoss (gateways).
+
+## Update 03:50 UTC 10-15 (periodic check)
+- 27 B1 searches are running.
+- :4113 USD $817 (alert at $500 crossed; the alerts never block).
+- B2 is blocked on the user's test-set choice.

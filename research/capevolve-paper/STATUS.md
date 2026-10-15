@@ -1,6 +1,19 @@
 # Campaign status (plain language)
 
-_Last updated: 2026-10-15 00:50 UTC (coordinator periodic check)_
+_Last updated: 2026-10-15 03:50 UTC (coordinator periodic check)_
+
+## Update 03:50 UTC 10-15
+- **V3 airline (B1)**: 27 searches running, 9 frameworks x 3 seeds: CapEvolve HC-stock, HC-3 and AO-2.2; ACE; HarnessLens; WikiSkill; Meta-Harness; Trace2Skill; MIPROv2. GEPA, full-GEPA, SkillOpt and EvoSkill are in smoke.
+- **Fixes since 00:50**:
+  - AO-2.2 restarted with job cap 400k and idle stop 20.
+  - HarnessLens: leading-dash OpenCode bug; output cap 64k (role sessions); env-name credential filter. HL seeds ended early from that filter and were clean-cut and resumed.
+  - Runaway guards verified.
+- **Spend on :4113** (priced, Sonnet price is an assumption): $817 (gpt-oss $354, Sonnet $467). The largest single item is the HarnessLens optimizer.
+- **Errors**: 0 gateway errors delivered. Tool-consistency candidate faults are counted under rule 5a.
+- **Pending user decision**: SpreadsheetBench test set (clean-70 / SkillOpt test-280 / both).
+- **Stalls/crashes**: none (all runs updated within the last hour).
+
+_Earlier: 2026-10-15 00:50 UTC (coordinator periodic check)_
 
 ## Update 00:50 UTC 10-15: V3 refocus (user direction)
 - **Focus**: two benchmarks.
