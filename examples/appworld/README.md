@@ -99,8 +99,10 @@ The claude-code optimizer has `Bash`, so by default it can read the whole host, 
 files the grader needs. In a first run its subagents did exactly that to "verify" helper code.
 `sandbox/claude` closes this: put `sandbox/` first on the run's `PATH`
 (`scripts/launch_cape_hc.sh` does) and every optimizer call runs the real CLI in a private mount
-namespace where `$AW_EVAL` is an empty tmpfs except for a read-only allowlist (the venv, AppWorld code,
-the reference docs, the lint cache) and the optimizer's own working dir. Other sessions' transcripts,
+namespace where `$AW_EVAL` is an empty tmpfs except for a read-only allowlist (the venv, AppWorld's
+`src/` and `experiments/`, the reference docs, the lint cache) and the optimizer's own working dir.
+**Not** the whole AppWorld clone: `generate/` holds the task generators, i.e. the solution and
+evaluation logic of every train/dev scenario. In one run an optimizer subagent read it. Other sessions' transcripts,
 the claude temp dir and the secrets file are covered too. The call runs in a nested user namespace as
 a normal user, so it cannot unmount any of it, and `/proc/<pid>/root` of outside processes is refused.
 It needs Linux with unprivileged user namespaces; no root.
