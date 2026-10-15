@@ -18,18 +18,18 @@ Seed-check minus seed (empirical null of window noise, 9D(ii)): +0.065, 95% CI [
 
 **v2 window Suite E: family V2 (11G, m = 4)** (Holm m = 4; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc2 vs seed | +0.100 | [0.023, 0.177] | [-0.189, 0.389] | 0.013 | 0.040 | superior | +0.107 (0.035) | a 1/3, b 0/1 | +0.00, +0.10, +0.20 |
-| ao2 vs seed | +0.000 | [0.000, 0.000] | [0.000, 0.000] | 1.000 | 1.000 | both returned the seed (delta 0 by construction) | +0.000 (1.000) | a 3/3, b 0/1 | +0.00, +0.00, +0.00 |
-| hc2 vs gepa | -0.055 | [-0.148, 0.038] | [-0.364, 0.254] | 0.232 | 0.464 | n.s. | -0.048 (0.591) | a 1/3, b 0/3 | -0.15, -0.05, +0.04 |
-| ao2 vs gepa | -0.155 | [-0.262, -0.048] | [-0.375, 0.065] | 0.007 | 0.028 | inferior | -0.155 (0.028) | a 3/3, b 0/3 | -0.15, -0.15, -0.15 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc2 vs seed | +0.100 | [0.023, 0.177] | [-0.189, 0.389] | 0.013 | 0.040 | - | superior | +0.107 (0.035) | a 1/3, b 0/1 | +0.00, +0.10, +0.20 |
+| ao2 vs seed | +0.000 | [0.000, 0.000] | [0.000, 0.000] | 1.000 | 1.000 | - | both returned the seed (delta 0 by construction) | +0.000 (1.000) | a 3/3, b 0/1 | +0.00, +0.00, +0.00 |
+| hc2 vs gepa | -0.055 | [-0.148, 0.038] | [-0.364, 0.254] | 0.232 | 0.464 | - | n.s. | -0.048 (0.591) | a 1/3, b 0/3 | -0.15, -0.05, +0.04 |
+| ao2 vs gepa | -0.155 | [-0.262, -0.048] | [-0.375, 0.065] | 0.007 | 0.028 | - | inferior | -0.155 (0.028) | a 3/3, b 0/3 | -0.15, -0.15, -0.15 |
 
 **v2 window Suite E: descriptive rows (no Holm claim)** (Holm m = 1; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc2 vs ao2 | +0.100 | [0.023, 0.177] | [-0.189, 0.389] | 0.013 | 0.013 | superior | +0.107 (0.012) | a 1/3, b 3/3 | -0.00, +0.10, +0.19 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc2 vs ao2 | +0.100 | [0.023, 0.177] | [-0.189, 0.389] | 0.013 | 0.013 | - | superior | +0.107 (0.012) | a 1/3, b 3/3 | -0.00, +0.10, +0.19 |
 | ao21 vs seed | arm absent | | | | | not run | | | |
 | ao21 vs gepa | arm absent | | | | | not run | | | |
 

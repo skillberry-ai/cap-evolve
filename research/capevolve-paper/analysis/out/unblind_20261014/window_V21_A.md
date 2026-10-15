@@ -24,10 +24,10 @@ Seed-check minus seed (empirical null of window noise, 9D(ii)): +0.029, 95% CI [
 
 **v2.1 window Suite A: AO-2 v2.1 (erratum 43; secondary under 11D, own Holm m = 2)** (Holm m = 2; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| ao21 vs seed | +0.014 | [-0.058, 0.087] | [-0.168, 0.197] | 0.695 | 0.695 | n.s. | +0.014 (0.695) | a 0/3, b 0/1 | +0.04, -0.03, +0.03 |
-| ao21 vs gepa | -0.119 | [-0.181, -0.057] | [-0.283, 0.044] | <0.001 | <0.001 | inferior | -0.119 (<0.001) | a 0/3, b 0/3 | -0.09, -0.16, -0.10 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ao21 vs seed | +0.014 | [-0.058, 0.087] | [-0.168, 0.197] | 0.695 | 0.695 | - | n.s. | +0.014 (0.695) | a 0/3, b 0/1 | +0.04, -0.03, +0.03 |
+| ao21 vs gepa | -0.119 | [-0.181, -0.057] | [-0.283, 0.044] | <0.001 | <0.001 | - | inferior | -0.119 (<0.001) | a 0/3, b 0/3 | -0.09, -0.16, -0.10 |
 
 **Descriptive row: ao21 vs v2.0 AO-2 (= the v2 start), each against its own window's seed** (different windows and time blocks, never pooled; task-paired CR1 on the difference of seed-averaged deltas):
 

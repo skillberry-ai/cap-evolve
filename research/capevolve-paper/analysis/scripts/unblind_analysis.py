@@ -38,6 +38,8 @@ for _l in open(os.path.join(PAPER, "experiments", "registry.jsonl")):
 for _s, _sp in (("D", ("test",)), ("A", ("",))):   # only windows whose results files are hash-registered
     if f"results_V21_{_s}_results_long.csv" in _REG:
         V21[f"V21/{_s}"] = (f"V21_{_s}", _sp)
+if "results_V3B1_main_results_long.csv" in _REG:   # V3 B1 test block (amendment 12, erratum 8: freeze declaration)
+    V21["V3B1/main"] = ("V3B1", ("test",))
 for _w, (_k, _sp) in V21.items():
     WINDOWS[_w] = _k
     SPLITS[_w] = _sp
@@ -220,7 +222,7 @@ def verdict(c, tost):
 
 def fam_table(F, tost=False, label_dagger=()):
     L = [f"**{F['name']}** (Holm m = {F['m']}; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)", "",
-         "| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |", "|---|---|---|---|---|---|---|---|---|---|"]
+         "| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for c in F["rows"]:
         if c.get("missing"):
             L.append(f"| {c['a']} vs {c['b']} | arm absent | | | | | not run | | | |"); continue
@@ -228,7 +230,7 @@ def fam_table(F, tost=False, label_dagger=()):
         db = " (dagger)" if c["b"] in label_dagger else ""
         pp = c.get("pipe_ci")
         L.append(f"| {c['a']}{da} vs {c['b']}{db} | {sgn(c['theta'])} | [{f(c['cr_ci'][0])}, {f(c['cr_ci'][1])}] | "
-                 f"{('[%s, %s]' % (f(pp[0]), f(pp[1]))) if pp else 'n/a'} | {pf(c['p'])} | {pf(c['holm'])} | {verdict(c, tost)} | "
+                 f"{('[%s, %s]' % (f(pp[0]), f(pp[1]))) if pp else 'n/a'} | {pf(c['p'])} | {pf(c['holm'])} | {pf(c.get('holm_full')) if c.get('holm_full') is not None else '-'} | {verdict(c, tost)} | "
                  f"{sgn(c['theta_sens'])} ({pf(c.get('holm_sens'))}) | a {c['inert_a']}, b {c['inert_b']} | {', '.join(sgn(x, 2) for x in c['per_seed'])} |")
     return L
 
@@ -322,6 +324,15 @@ def state_calls(d):
 
 
 def cost_rows(win):
+    if win.startswith("V3B1/"):
+        out = []
+        for fw in sorted(os.listdir(os.path.join(RUNS, "V3", "B1"))):
+            for k in range(3):
+                p = os.path.join(RUNS, "V3", "B1", fw, f"s{k}", "run_summary.json")
+                if os.path.exists(p):
+                    d = json.load(open(p))
+                    out.append({"arm": fw, "seed": k, "optimizer_usd_proxy": d.get("optimizer_usd"), "optimizer_noncache_tokens": d.get("optimizer_tokens_non_cache"), "optimizer_calls": d.get("optimizer_calls"), "search_rollouts": d.get("rollouts_used"), "source": f"run_summary.json (usd_total {d.get('usd_total')}, wall_s {d.get('wall_s')})"})
+        return out
     if win.startswith("V21/"):
         return []
     out = []
@@ -504,13 +515,26 @@ def main():
 
     famv21 = {}
     for w in V21:
+        if not w.startswith("V21/"):
+            continue
         sx = w[-1]
         cfx = json.load(open(os.path.join(MAN, f"comparison_family_V21_{sx}.json")))
         famv21[sx] = family(W[w], Ws[w], f"v2.1 window Suite {sx}: AO-2 v2.1 (erratum 43; secondary under 11D, own Holm m = 2)", [rr(r) for r in cfx["primary_11G"]])
+    if "V3B1/main" in V21:
+        w3 = "V3B1/main"
+        CE = ["hcstock", "hc3", "ao22"]
+        COMP = ["evoskill", "gepa", "gepafull", "metaharness", "mipro", "skillopt", "trace2skill", "wikiskill"]
+        F1 = family(W[w3], Ws[w3], "V3 B1 family P1: each CapEvolve arm vs the seed (Holm m = 3)", [(c, "seed") for c in CE])
+        F2 = [family(W[w3], Ws[w3], f"V3 B1 family P2: {c} vs each competitor (Holm m = 8)", [(c, b) for b in COMP]) for c in CE]
+        rows = [r for F in [F1] + F2 for r in F["rows"] if not r.get("missing")]
+        for r, h in zip(rows, pcb.holm([r["p"] for r in rows])):
+            r["holm_full"] = h
+        fams[w3] = [(F1, (), False)] + [(F, (), False) for F in F2]
+        J["v3_B1"] = {"P1": F1, "P2": F2}
     # ---- write per-suite markdown
     ARMLINES = {}
     for w in WINDOWS:
-        L = [f"# Window {w}: per-arm tables (user-directed early unblinding, erratum 36)", ""]
+        L = [f"# Window {w}: per-arm tables (" + ("released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
         nT = len(W[w].tasks); nF = len(set(W[w].fam))
         L += [f"Task set: {nT} tasks, {nF} families (cluster = family; split filter {SPLITS[w]}). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.", ""]
         if w.startswith("V2/") and w != "V2/A":
@@ -518,6 +542,23 @@ def main():
         # synthesize ao2/ao21 etc. for V2 windows
         L += arm_table(W[w], Ws[w]) if True else []
         L.append("")
+        if w == "V3B1/main":
+            L += ["**Per-framework test mean (T = 20, k = 10 trials/task; mean of the 3 per-seed means; SE = SD of the 3 per-seed means / sqrt(3), n = 3 search seeds; per-seed means as measured)**", "",
+                  "| framework | mean | SE across seeds | per-seed means | 95% CI of mean (artifact-level, CR1) |", "|---|---|---|---|---|"]
+            for a in ["seed", "seed-check"] + sorted(x for x in W[w].arms if x not in ("seed", "seed-check")):
+                if a in ("seed", "seed-check"):
+                    v = W[w].M[(a, 0)]; mm = mean_ci(v, W[w].fam)
+                    L.append(f"| {a} (n = {W[w].trials(a) or '-'} trials/task) | {f(mm['mean'])} | - | - | [{f(mm['ci'][0])}, {f(mm['ci'][1])}] |")
+                    continue
+                pm = []
+                for sd in sorted(W[w].seeds_of[a]):
+                    xs = [x for x in W[w].M[(a, sd)] if x is not None]
+                    pm.append(sum(xs) / len(xs))
+                mu = sum(pm) / len(pm)
+                se = statistics.stdev(pm) / math.sqrt(len(pm)) if len(pm) > 1 else float("nan")
+                mm = mean_ci(seedavg([W[w].M[(a, sd)] for sd in sorted(W[w].seeds_of[a])]), W[w].fam)
+                L.append(f"| {a} | {f(mu)} | {f(se)} | {', '.join(f(x) for x in pm)} | [{f(mm['ci'][0])}, {f(mm['ci'][1])}] |")
+            L.append("")
         drift = seed_drift(w)
         if drift:
             L += [f"Seed drift (5I, in-window seed, task-demeaned): blocks (index, mean, SE, n) = " + "; ".join(f"{k}: {sgn(m,3)} (SE {se:.3f}, n={n})" for k, m, se, n in drift["blocks"]) +

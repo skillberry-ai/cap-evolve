@@ -20,42 +20,42 @@ Inert artifacts re-scored in this window (as measured minus in-window seed; iden
 
 **Suite C primary 5A** (Holm m = 6; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc vs seed | +0.050 | [-0.021, 0.121] | [-0.181, 0.281] | 0.154 | 0.617 | n.s. | +0.050 (0.617) | a 1/3, b 0/1 | +0.13, +0.00, +0.02 |
-| hc vs oneshot | -0.083 | [-0.190, 0.023] | [-0.367, 0.200] | 0.118 | 0.590 | n.s. | -0.083 (0.590) | a 1/3, b 0/3 | -0.00, -0.13, -0.12 |
-| hc vs gepa | -0.028 | [-0.140, 0.084] | [-0.320, 0.264] | 0.609 | 1.000 | n.s. | -0.028 (1.000) | a 1/3, b 0/3 | +0.06, -0.08, -0.06 |
-| ao (dagger) vs seed | +0.000 | [0.000, 0.000] | [0.000, 0.000] | 1.000 | 1.000 | both returned the seed (delta 0 by construction) | +0.000 (1.000) | a 3/3, b 0/1 | +0.00, +0.00, +0.00 |
-| ao (dagger) vs oneshot | -0.133 | [-0.280, 0.013] | [-0.435, 0.168] | 0.072 | 0.434 | n.s. | -0.133 (0.434) | a 3/3, b 0/3 | -0.13, -0.13, -0.13 |
-| ao (dagger) vs gepa | -0.078 | [-0.206, 0.051] | [-0.342, 0.187] | 0.221 | 0.663 | n.s. | -0.078 (0.663) | a 3/3, b 0/3 | -0.08, -0.08, -0.08 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc vs seed | +0.050 | [-0.021, 0.121] | [-0.181, 0.281] | 0.154 | 0.617 | - | n.s. | +0.050 (0.617) | a 1/3, b 0/1 | +0.13, +0.00, +0.02 |
+| hc vs oneshot | -0.083 | [-0.190, 0.023] | [-0.367, 0.200] | 0.118 | 0.590 | - | n.s. | -0.083 (0.590) | a 1/3, b 0/3 | -0.00, -0.13, -0.12 |
+| hc vs gepa | -0.028 | [-0.140, 0.084] | [-0.320, 0.264] | 0.609 | 1.000 | - | n.s. | -0.028 (1.000) | a 1/3, b 0/3 | +0.06, -0.08, -0.06 |
+| ao (dagger) vs seed | +0.000 | [0.000, 0.000] | [0.000, 0.000] | 1.000 | 1.000 | - | both returned the seed (delta 0 by construction) | +0.000 (1.000) | a 3/3, b 0/1 | +0.00, +0.00, +0.00 |
+| ao (dagger) vs oneshot | -0.133 | [-0.280, 0.013] | [-0.435, 0.168] | 0.072 | 0.434 | - | n.s. | -0.133 (0.434) | a 3/3, b 0/3 | -0.13, -0.13, -0.13 |
+| ao (dagger) vs gepa | -0.078 | [-0.206, 0.051] | [-0.342, 0.187] | 0.221 | 0.663 | - | n.s. | -0.078 (0.663) | a 3/3, b 0/3 | -0.08, -0.08, -0.08 |
 
 **Suite C primary 5A WITHOUT dagger arms ['ao'] (Holm rescaled)** (Holm m = 3; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc vs seed | +0.050 | [-0.021, 0.121] | [-0.181, 0.281] | 0.154 | 0.354 | n.s. | +0.050 (0.354) | a 1/3, b 0/1 | +0.13, +0.00, +0.02 |
-| hc vs oneshot | -0.083 | [-0.190, 0.023] | [-0.367, 0.200] | 0.118 | 0.354 | n.s. | -0.083 (0.354) | a 1/3, b 0/3 | -0.00, -0.13, -0.12 |
-| hc vs gepa | -0.028 | [-0.140, 0.084] | [-0.320, 0.264] | 0.609 | 0.609 | n.s. | -0.028 (0.609) | a 1/3, b 0/3 | +0.06, -0.08, -0.06 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc vs seed | +0.050 | [-0.021, 0.121] | [-0.181, 0.281] | 0.154 | 0.354 | - | n.s. | +0.050 (0.354) | a 1/3, b 0/1 | +0.13, +0.00, +0.02 |
+| hc vs oneshot | -0.083 | [-0.190, 0.023] | [-0.367, 0.200] | 0.118 | 0.354 | - | n.s. | -0.083 (0.354) | a 1/3, b 0/3 | -0.00, -0.13, -0.12 |
+| hc vs gepa | -0.028 | [-0.140, 0.084] | [-0.320, 0.264] | 0.609 | 0.609 | - | n.s. | -0.028 (0.609) | a 1/3, b 0/3 | +0.06, -0.08, -0.06 |
 
 **Suite C secondary 5B(i) vs seed** (Holm m = 2; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| gepa vs seed | +0.078 | [-0.051, 0.206] | [-0.188, 0.343] | 0.221 | 0.221 | n.s. | +0.078 (0.221) | a 0/3, b 0/1 | +0.08, +0.08, +0.07 |
-| hcstock vs seed | +0.100 | [-0.007, 0.207] | [-0.218, 0.418] | 0.064 | 0.129 | n.s. | +0.100 (0.129) | a 1/3, b 0/1 | +0.12, +0.00, +0.18 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| gepa vs seed | +0.078 | [-0.051, 0.206] | [-0.188, 0.343] | 0.221 | 0.221 | - | n.s. | +0.078 (0.221) | a 0/3, b 0/1 | +0.08, +0.08, +0.07 |
+| hcstock vs seed | +0.100 | [-0.007, 0.207] | [-0.218, 0.418] | 0.064 | 0.129 | - | n.s. | +0.100 (0.129) | a 1/3, b 0/1 | +0.12, +0.00, +0.18 |
 
 **Suite C secondary 5B(ii) CapEvolve vs others** (Holm m = 1; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc vs ao (dagger) | +0.050 | [-0.021, 0.121] | [-0.181, 0.281] | 0.154 | 0.154 | n.s. | +0.050 (0.154) | a 1/3, b 3/3 | +0.13, +0.00, +0.02 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc vs ao (dagger) | +0.050 | [-0.021, 0.121] | [-0.181, 0.281] | 0.154 | 0.154 | - | n.s. | +0.050 (0.154) | a 1/3, b 3/3 | +0.13, +0.00, +0.02 |
 
 **Suite C S-stock (5P-1)** (Holm m = 2; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hcstock vs seed | +0.100 | [-0.007, 0.207] | [-0.218, 0.418] | 0.064 | 0.129 | n.s. | +0.100 (0.129) | a 1/3, b 0/1 | +0.12, +0.00, +0.18 |
-| hcstock vs gepa | +0.022 | [-0.056, 0.101] | [-0.259, 0.304] | 0.560 | 0.560 | n.s. | +0.022 (0.560) | a 1/3, b 0/3 | +0.04, -0.08, +0.11 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hcstock vs seed | +0.100 | [-0.007, 0.207] | [-0.218, 0.418] | 0.064 | 0.129 | - | n.s. | +0.100 (0.129) | a 1/3, b 0/1 | +0.12, +0.00, +0.18 |
+| hcstock vs gepa | +0.022 | [-0.056, 0.101] | [-0.259, 0.304] | 0.560 | 0.560 | - | n.s. | +0.022 (0.560) | a 1/3, b 0/3 | +0.04, -0.08, +0.11 |
 
 Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 

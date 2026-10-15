@@ -18,19 +18,19 @@ Seed-check minus seed (empirical null of window noise, 9D(ii)): -0.036, 95% CI [
 
 **v2 window Suite A: family V2 (11G, m = 4)** (Holm m = 4; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc2 vs seed | +0.140 | [0.045, 0.236] | [-0.093, 0.374] | 0.005 | 0.014 | superior | +0.140 (0.014) | a 0/3, b 0/1 | +0.09, +0.18, +0.15 |
-| ao2 vs seed | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0.786 | 1.000 | n.s. | +0.007 (1.000) | a 0/3, b 0/1 | +0.02, +0.01, -0.01 |
-| hc2 vs gepa | +0.000 | [-0.054, 0.054] | [-0.159, 0.159] | 1.000 | 1.000 | n.s. | +0.000 (1.000) | a 0/3, b 0/3 | -0.05, +0.04, +0.01 |
-| ao2 vs gepa | -0.133 | [-0.212, -0.055] | [-0.306, 0.039] | 0.001 | 0.004 | inferior | -0.133 (0.004) | a 0/3, b 0/3 | -0.12, -0.13, -0.15 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc2 vs seed | +0.140 | [0.045, 0.236] | [-0.093, 0.374] | 0.005 | 0.014 | - | superior | +0.140 (0.014) | a 0/3, b 0/1 | +0.09, +0.18, +0.15 |
+| ao2 vs seed | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0.786 | 1.000 | - | n.s. | +0.007 (1.000) | a 0/3, b 0/1 | +0.02, +0.01, -0.01 |
+| hc2 vs gepa | +0.000 | [-0.054, 0.054] | [-0.159, 0.159] | 1.000 | 1.000 | - | n.s. | +0.000 (1.000) | a 0/3, b 0/3 | -0.05, +0.04, +0.01 |
+| ao2 vs gepa | -0.133 | [-0.212, -0.055] | [-0.306, 0.039] | 0.001 | 0.004 | - | inferior | -0.133 (0.004) | a 0/3, b 0/3 | -0.12, -0.13, -0.15 |
 
 **v2 window Suite A: descriptive rows (no Holm claim)** (Holm m = 2; delta = arm minus comparator; artifact-level CR1 t(C-1) with Holm, pipeline-level t(S-1) beside it; sens = infra_final treated as missing, raw p / Holm)
 
-| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
-|---|---|---|---|---|---|---|---|---|---|
-| hc2 vs ao2 | +0.133 | [0.049, 0.217] | [-0.078, 0.344] | 0.002 | 0.005 | superior | +0.133 (0.005) | a 0/3, b 0/3 | +0.09, +0.17, +0.14 |
-| ao2 vs seed | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0.786 | 0.786 | n.s. | +0.007 (0.786) | a 0/3, b 0/1 | +0.02, +0.01, -0.01 |
+| row | delta | 95% CI (artifact) | 95% CI (pipeline) | p | Holm p | full-family Holm p | verdict | sens delta (Holm) | inert a/b | per-seed delta |
+|---|---|---|---|---|---|---|---|---|---|---|
+| hc2 vs ao2 | +0.133 | [0.049, 0.217] | [-0.078, 0.344] | 0.002 | 0.005 | - | superior | +0.133 (0.005) | a 0/3, b 0/3 | +0.09, +0.17, +0.14 |
+| ao2 vs seed | +0.007 | [-0.045, 0.059] | [-0.111, 0.125] | 0.786 | 0.786 | - | n.s. | +0.007 (0.786) | a 0/3, b 0/1 | +0.02, +0.01, -0.01 |
 
 Infrastructure and missing cells (per_arm_report.json of THIS window; counts only; key prefix is the scoring mode):
 
