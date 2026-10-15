@@ -246,7 +246,7 @@ def test_a_merge_resolve_job_gets_a_copy_of_the_trunk_and_the_donor_path(tmp_pat
         cfg=SimpleNamespace(cost_eps=None), optimizer="mock",
         _paths=lambda j: (tmp_path / "j.log", tmp_path / "j.rc", tmp_path / "j.prompt.md"),
         _spawn=lambda j, cmd, env=None: {"pid": 1}, transcript=lambda j: tmp_path / "t.jsonl", job_usd_cap=lambda: 0,
-        _inject_context=lambda work, parent: None, _project_instructions=lambda: "")
+        _inject_context=lambda work, parent: None, _project_instructions=lambda: "", _valid_clusters=lambda: [])
     job = {"id": "j1", "kind": "merge", "tag": "cand_9", "parent": "cand_1", "parents": ["cand_1", "cand_2"],
            "conflicts": [{"where": "policy/policy.md::Rules", "trunk": ["cand_2"], "donor": ["cand_1"]}]}
     with m.patch.object(conductor_backend.act, "sh", sh), \

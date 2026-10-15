@@ -70,6 +70,7 @@ def test_the_launched_job_prompt_and_workdir_instructions_carry_the_project_sent
         _spawn=lambda j, cmd, env=None: {"pid": 1}, transcript=lambda j: tmp_path / "t.jsonl", job_usd_cap=lambda: 0,
         _inject_context=lambda w, p: None)
     fake._project_instructions = lambda: conductor_backend.RealBackend._project_instructions(fake)
+    fake._valid_clusters = lambda: []
     job = {"id": "j1", "kind": "merge", "tag": "cand_9", "parent": "cand_1", "parents": ["cand_1", "cand_2"],
            "conflicts": [{"where": "policy/policy.md::Rules", "trunk": ["cand_2"], "donor": ["cand_1"]}]}
     with m.patch.object(conductor_backend.act, "sh", sh), \
