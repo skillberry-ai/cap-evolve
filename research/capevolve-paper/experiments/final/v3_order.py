@@ -111,6 +111,11 @@ def build(bench, champions_path, out_root, manifests, a):
                     files = {str(p.relative_to(snap)): C.sha256_file(p) for p in sorted(snap.rglob("*")) if p.is_file()}
                     if not files:
                         sys.exit("HarnessLens %s s%d: version snapshot %s is empty or missing" % (ver_, s, snap))
+                    fz = Path(src["final_dir"]).parent / "frozen" / ver_      # bl-harness: frozen/<vN> (read-only) and final/ hold byte-identical copies of the snapshot
+                    if fz.is_dir():
+                        fzf = {str(p.relative_to(fz)): C.sha256_file(p) for p in sorted(fz.rglob("*")) if p.is_file()}
+                        if fzf != files:
+                            sys.exit("HarnessLens %s s%d: frozen/%s differs from the evaluated snapshot %s" % (ver_, s, ver_, snap))
                     import hashlib
                     th = hashlib.sha256("".join("%s\0%s\n" % (k, files[k]) for k in sorted(files)).encode()).hexdigest()
                 entries.append({"suite": suite, "mode": "B", "arm": fw, "seed": s, "status": "ok", "source_dir": src["final_dir"], "frozen_dir": str(snap), "tree_sha256": th, "files": files,
