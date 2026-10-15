@@ -54,8 +54,8 @@ def test_the_frame_seed_ships_all_three_files_and_its_frame_is_valid(tmp_path):
 def test_the_contract_is_always_in_the_message_even_with_empty_guidance(tmp_path):
     m = _adapter()
     msg = m._render_user_message(_cap(tmp_path, guidance=""), **_FIELDS)
-    assert "exactly ONE ```python fenced code block" in msg
-    assert "reply without a code block to finish" in msg
+    assert "exactly ONE python code block" in msg
+    assert "1. Information-gathering code" in msg and "2. Final solution code" in msg
     assert "up to 30 rounds" in msg
     assert "### Guidance" not in msg              # empty guidance ⇒ no section
     assert "<!--" not in msg and "\x00" not in msg
@@ -63,12 +63,19 @@ def test_the_contract_is_always_in_the_message_even_with_empty_guidance(tmp_path
         assert v in msg
 
 
+def test_empty_guidance_renders_exactly_the_old_no_skill_message(tmp_path):
+    """The frame is the built-in template plus a slot: an empty-guidance frame seed shows the
+    agent byte-for-byte what the old layout's no-skill seed showed it (#871 frame v2)."""
+    m = _adapter()
+    assert m._render_user_message(_cap(tmp_path, guidance=""), **_FIELDS) == m._TASK_TEMPLATE.format(**_FIELDS)
+
+
 def test_guidance_is_inserted_verbatim_and_may_contain_braces(tmp_path):
     m = _adapter()
     g = "<!-- note -->\nVerify with {data_only=True} and print {answer_position} cells."
     msg = m._render_user_message(_cap(tmp_path, guidance=g), **_FIELDS)
     assert "### Guidance\nVerify with {data_only=True} and print {answer_position} cells." in msg
-    assert msg.index("### Guidance") < msg.index("### How this session works")
+    assert msg.index("### output_path") < msg.index("### Guidance") < msg.index("You have up to")
     assert "note" not in msg
 
 
@@ -77,14 +84,14 @@ def test_a_task_template_is_ignored_in_the_frame_layout(tmp_path):
     m = _adapter()
     cap = _cap(tmp_path, guidance="g", template="just do it {output_path}")
     msg = m._render_user_message(cap, **_FIELDS)
-    assert "just do it" not in msg and "exactly ONE ```python" in msg
+    assert "just do it" not in msg and "exactly ONE python code block" in msg
     assert m._task_template_error(cap) is None
 
 
 def test_the_adapter_default_frame_is_used_when_the_capability_has_none(tmp_path):
     m = _adapter()
     msg = m._render_user_message(_cap(tmp_path, guidance="g", frame=False), **_FIELDS)
-    assert "exactly ONE ```python" in msg
+    assert "exactly ONE python code block" in msg
 
 
 def test_a_broken_frame_is_reported_not_raised(tmp_path):

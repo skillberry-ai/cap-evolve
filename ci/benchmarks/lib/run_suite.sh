@@ -732,10 +732,10 @@ ENV
            "(cand_0002, val 0.580). base->opt is NOT comparable to a pristine-seed run." >&2
     fi
     # FRAME LAYOUT (#871). The agent's user message becomes a SEALED task_frame.md (fields +
-    # the facts of the loop) with an editable guidance.md inserted into it; the spec's
+    # the built-in round structure) with an editable guidance.md inserted into it; the spec's
     # editable_paths lets the optimizer change only prompt.md and guidance.md. With
-    # SB_EMPTY_SEED=1 the guidance is EMPTY (no skill at all, as before) — the frame's loop
-    # facts replace the built-in template's, so this seed is NOT the old layout's seed.
+    # SB_EMPTY_SEED=1 the guidance is EMPTY, and the agent's message is byte-for-byte the old
+    # layout's no-skill message — but it is a separate slot, so the seed is measured again.
     if [ "${SB_FRAME:-0}" = "1" ]; then
       if [ "${SB_WARM_SEED:-0}" = "1" ]; then
         echo "::error:: SB_FRAME=1 and SB_WARM_SEED=1: the warm seed ships a task_template.md" \
@@ -745,6 +745,8 @@ ENV
       FRAME_SEED="$TPL/spreadsheetbench/seed_capability_frame"
       rm -f "$PROJ/seed_capability/task_template.md"
       cp "$FRAME_SEED/task_frame.md" "$PROJ/seed_capability/"
+      # Which frame this seed renders: a kept seed is reused only under the SAME frame text.
+      SB_FRAME_SHA="$(sha256sum "$PROJ/seed_capability/task_frame.md" | cut -c1-16)"
       if [ "${SB_EMPTY_SEED:-0}" = "1" ]; then
         : > "$PROJ/seed_capability/guidance.md"
       else
@@ -806,10 +808,13 @@ Your capability is BOTH of these; the agent reads them on every task:
    are literal. An empty file means no guidance section.
 
 **`task_frame.md` is SEALED** (read it, do not change it). It is the fixed rest of that user
-message: the task fields, filled in per task, and the facts of the interaction loop — up to
-N rounds, exactly ONE ```python block per round and only that block runs, the next message
-is the real output, reply without a code block to finish. Those facts are true whatever you
-write, so do not restate or contradict them; spend your words on how the agent should work.
+message: the task fields, filled in per task, and the round structure (up to N rounds,
+exactly ONE python code block per round: inspect first, then the solution that writes
+output_path). Only a fenced python block is executed, and its real output comes back as the
+next message. You cannot remove or reword the frame, but your guidance is read right after
+the task fields, so ADD to it or correct it there — for example, tell the agent to re-open
+output_path and verify its values before it stops, even though the frame says it is done
+once the file exists.
 
 Decide per cluster which file is the right place to fix it, and say which you chose in
 PROCESS.md.
@@ -1106,9 +1111,9 @@ PLAN
 REUSE_YAML=""
 if [ "${BENCH:-}" = "spreadsheetbench" ] && [ "${SB_REUSE_LATEST_BASELINE:-0}" = "1" ]; then
   PRIOR="$SB_LATEST_DIR/run_suite"
-  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" "${SB_FRAME:-0}" <<'PY' || exit 1
+  "$PY" - "$SB_LATEST_DIR/latest.json" "$PRIOR/splits.json" "$PROJ/inputs/split_ids.json" "$TIER" "${SB_EMPTY_SEED:-0}" "${SB_FRAME:-0}" "${SB_FRAME_SHA:-}" <<'PY' || exit 1
 import json, sys
-meta_p, prior_p, want_p, tier, empty_seed, frame = sys.argv[1:7]
+meta_p, prior_p, want_p, tier, empty_seed, frame, frame_sha = sys.argv[1:8]
 try:
     meta, prior = json.load(open(meta_p)), json.load(open(prior_p))
 except OSError as e:
@@ -1123,6 +1128,9 @@ if str(meta.get("empty_seed", "0")) != empty_seed:
 if str(meta.get("frame", "0")) != frame:
     raise SystemExit(f"::error:: the kept run has SB_FRAME={meta.get('frame', '0')}, this run asks "
                      f"for {frame} — the two layouts render different seeds")
+if frame == "1" and meta.get("frame_sha", "") != frame_sha:
+    raise SystemExit(f"::error:: the kept run's task_frame.md ({meta.get('frame_sha', 'none')}) is not "
+                     f"this run's ({frame_sha}) — its seed was measured under another frame")
 for k in ("train", "val", "test"):
     if set(map(str, prior.get(k, []))) != set(map(str, want[k])):
         raise SystemExit(f"::error:: the kept run's {k} split differs from this tier's split_ids.json")
@@ -1288,7 +1296,7 @@ if [ "$BENCH" = "spreadsheetbench" ] && [ "${SB_KEEP_LATEST_RUN:-0}" = "1" ] && 
 {"bench": "$BENCH", "tier": "$TIER", "run_id": "${GITHUB_RUN_ID:-local}",
  "run_url": "${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_ID:-}",
  "sha": "${GITHUB_SHA:-}", "agent_model": "$AGENT_MODEL", "iterations": "$ITER",
- "empty_seed": "${SB_EMPTY_SEED:-0}", "frame": "${SB_FRAME:-0}", "reward_metric": "${SB_REWARD_METRIC:-}", "gold_separate_from_agent_mount": "$(cat "$OUT/gold_separate_from_agent_mount" 2>/dev/null)", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+ "empty_seed": "${SB_EMPTY_SEED:-0}", "frame": "${SB_FRAME:-0}", "frame_sha": "${SB_FRAME_SHA:-}", "reward_metric": "${SB_REWARD_METRIC:-}", "gold_separate_from_agent_mount": "$(cat "$OUT/gold_separate_from_agent_mount" 2>/dev/null)", "saved_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
 JSON
     _discard_dir "$SB_LATEST_DIR" && mv "$STAGE" "$SB_LATEST_DIR" \
       && echo ">>> kept as the latest spreadsheetbench run: $SB_LATEST_DIR ($(du -sh "$SB_LATEST_DIR" | cut -f1))" >&2
