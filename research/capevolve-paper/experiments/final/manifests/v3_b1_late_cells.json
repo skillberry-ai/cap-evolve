@@ -1,0 +1,103 @@
+{
+ "artifact_manifest_sha256": "12f80062fa729197dd9b1699ed4fb196a6ca6de2c62d02905dab0c31dc206f5c",
+ "bench": "B1",
+ "cells": [
+  {
+   "framework": "ace",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ace/s0/final",
+   "tree_sha256": "b12b21abe3442ebec4423ba0f9d48477582b493d23a7dfb78d91527ded912be9"
+  },
+  {
+   "framework": "ace",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ace/s1/final",
+   "tree_sha256": "0d157efbef87b2af16c38afce6670a304d1774c46c0dd5af9a35c5971f3337e5"
+  },
+  {
+   "framework": "ace",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ace/s2/final",
+   "tree_sha256": "f06f284ff45f6c307f994c8426029c7bef85663628ac4ac66c4ee6cac13b3bfa"
+  },
+  {
+   "framework": "ao22",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ao22/s0/final",
+   "tree_sha256": "f6965cfe83d07e068a728fa5e280cda366c6466ca1cc69780421c4689e0a77a5"
+  },
+  {
+   "framework": "ao22",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ao22/s1/final",
+   "tree_sha256": "45cb22643ddf5db6739f0967f91e0c2d237476093e35c2a3930d3df8fcedddb7"
+  },
+  {
+   "framework": "ao22",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/ao22/s2/final",
+   "tree_sha256": "7f246820a63f9be64bf40fd5658e519c21eaf6ef664738a3c9dc27811f82b345"
+  },
+  {
+   "framework": "harnesslens",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/harnesslens/s0/final",
+   "tree_sha256": "hl-v0-unmodified"
+  },
+  {
+   "framework": "harnesslens",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/harnesslens/s1/final",
+   "tree_sha256": "hl-v0-unmodified"
+  },
+  {
+   "framework": "harnesslens",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/harnesslens/s2/final",
+   "tree_sha256": "hl-v0-unmodified"
+  },
+  {
+   "framework": "hc3",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hc3/s0/final",
+   "tree_sha256": "7fd6a9b2c6f076c83dc3a41f1d4d62c2fd48e6ff5996ec07a30b8d7097223fb6"
+  },
+  {
+   "framework": "hc3",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hc3/s1/final",
+   "tree_sha256": "eaa1c21bbd9885e9beb41bd0f896549e174e2fb1a4cea27d71694ff97c311659"
+  },
+  {
+   "framework": "hc3",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hc3/s2/final",
+   "tree_sha256": "7905378ca0c170414ddff26fb4b757b45cc1a6f87be706eb2ec943cad0dba925"
+  },
+  {
+   "framework": "hcstock",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/final",
+   "tree_sha256": "dc4ef1f1686f14f601b4699138a956f9f46ce64af4766c86783f5d53e2bb026e"
+  },
+  {
+   "framework": "hcstock",
+   "seed": 1,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/final",
+   "tree_sha256": "6f3298a03a72129431b8347b47a23b43e50283b79cb82d76bc64fbbf564d00d3"
+  },
+  {
+   "framework": "hcstock",
+   "seed": 2,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/final",
+   "tree_sha256": "885a1eef46b5d5ee238b8e52db4a291d4616d2b98341809c8f48f9f991d33fb0"
+  }
+ ],
+ "champions_file": "/home/dev/projects2/campaign-scratch/final_eval/champions_V3B1LATE.json",
+ "champions_file_sha256": "8df3a5efedc8349c399cc76a56ed82edc36e8525fd3a42052acd8cf0b4f4bb7d",
+ "design": "ACE x3 (new) + hl-v0 once (n=20, HL entrypoint; the three HarnessLens seeds all selected v0, mapped to this cell) + the 9 CapEvolve champions (hcstock, hc3, ao22 x3, re-scored with fresh trials) + seed n=20 + seed-check k=10; test-20, k=10; adapter 9c797d8a; gpt-oss via :4113",
+ "family": "rows to be fixed by the statistics reviewer (secondary family, own Holm); this file lists the cells only",
+ "order": "manifests/order_V3B1LATE.jsonl",
+ "order_sha256": "8450d76be0f4dac370f736f430176095cfeb58ae2279d89801d2d94d2ebf10cd",
+ "window": "V3B1LATE"
+}
