@@ -1,0 +1,72 @@
+{
+ "bench": "B1",
+ "window": "V3B1LATE",
+ "note": "late competitors (addendum 2 and 3 of amendment 12); contrasts only within this window (11F); written by the reviewer",
+ "families": {
+  "LC-ACE": {
+   "holm_m": 3,
+   "rows": [
+    {
+     "arm": "hcstock",
+     "vs": "ace"
+    },
+    {
+     "arm": "hc3",
+     "vs": "ace"
+    },
+    {
+     "arm": "ao22",
+     "vs": "ace"
+    }
+   ],
+   "intervals": "artifact-level CR1 t and pipeline-level t(S-1)"
+  },
+  "LC-HL": {
+   "holm_m": 3,
+   "rows": [
+    {
+     "arm": "hcstock",
+     "vs": "harnesslens"
+    },
+    {
+     "arm": "hc3",
+     "vs": "harnesslens"
+    },
+    {
+     "arm": "ao22",
+     "vs": "harnesslens"
+    }
+   ],
+   "intervals": "artifact-level only: the three HarnessLens seeds are one artifact (hl-v0), seed-level spread zero by construction",
+   "comparator_note": "hl-v0 = HarnessLens's own baseline in HarnessLens's runtime; scored once at n = 20 trials per task standing for 3 seeds"
+  }
+ },
+ "descriptive_only": [
+  {
+   "arm": "ace",
+   "vs": "seed"
+  },
+  {
+   "arm": "harnesslens",
+   "vs": "seed"
+  },
+  {
+   "arm": "each CapEvolve arm",
+   "vs": "seed (re-score in this window; window-to-window noise check against the main window)"
+  }
+ ],
+ "not_computed": "any contrast between a cell of this window and a cell of the main window",
+ "scorer_pins": {
+  "adapter": "9c797d8ac90425172fd5bc9c5e39d90cdaddb5eed938e90708c5de148869cbc9",
+  "hl_files": {
+   "hl_fe_worker_v3.py": "1e291539d7c2870ab665ca614b2849543a937ab56214c05f9c15722b31d01a11",
+   "hl_final_eval_v3.py": "06b382222687369ce7232ae8321f08b1e34e1ce7d102c8ca5ea50248f6d682e8",
+   "opencode_tau2.py": "079437d4d6ed2a0f95e0ff5319b73b16c220b747e58835e39298227305d74fd5"
+  },
+  "hl_files_paths": {
+   "opencode_tau2.py": "campaign-scratch/baselines/harnesslens/tau_v3/src/harnesslens/benchmarks/opencode_tau2.py (079437d4; the other copy under baselines/harnesslens/src is a different tree, ae07b1a4, not used)",
+   "hl_final_eval_v3.py": "campaign-scratch/baselines/harnesslens/tau_v3/hl_final_eval_v3.py",
+   "hl_fe_worker_v3.py": "campaign-scratch/baselines/harnesslens/tau_v3/hl_fe_worker_v3.py"
+  }
+ }
+}
