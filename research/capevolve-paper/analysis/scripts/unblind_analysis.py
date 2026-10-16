@@ -40,6 +40,8 @@ for _s, _sp in (("D", ("test",)), ("A", ("",))):   # only windows whose results 
         V21[f"V21/{_s}"] = (f"V21_{_s}", _sp)
 if "results_V3B1_main_results_long.csv" in _REG:   # V3 B1 test block (amendment 12, erratum 8: freeze declaration)
     V21["V3B1/main"] = ("V3B1", ("test",))
+if "results_V3B1LATE_main_results_long.csv" in _REG:   # V3 B1 late-competitor window (addendum 3, erratum 13)
+    V21["V3B1LATE/main"] = ("V3B1LATE", ("test",))
 if "results_V3B1_traineval_results_long.csv" in _REG:   # V3 B1 train-30 re-evaluation (descriptive)
     V21["V3B1/traineval"] = ("V3B1_traineval", ("train",))
 for _w, (_k, _sp) in V21.items():
@@ -533,10 +535,24 @@ def main():
             r["holm_full"] = h
         fams[w3] = [(F1, (), False)] + [(F, (), False) for F in F2]
         J["v3_B1"] = {"P1": F1, "P2": F2}
+    if "V3B1LATE/main" in V21:
+        wl = "V3B1LATE/main"
+        for _x in (W[wl], Ws[wl]):
+            _x.seeds_of["hl-v0"] = {0}
+            _x.seeds_of.pop("harnesslens", None)
+        CE = ["hcstock", "hc3", "ao22"]
+        F_ace = family(W[wl], Ws[wl], "LC-ACE: each CapEvolve arm vs ACE (Holm m = 3; secondary, own family)", [(c, "ace") for c in CE])
+        F_hl = family(W[wl], Ws[wl], "LC-HL: each CapEvolve arm vs hl-v0 (Holm m = 3; secondary; ARTIFACT-LEVEL ONLY: hl-v0 is one artifact standing for the 3 HarnessLens seeds)", [(c, "hl-v0") for c in CE])
+        for _r in F_hl["rows"]:
+            _r.pop("pipe_ci", None)      # LC-HL is artifact-level only (addendum 3): hl-v0 is one artifact standing for 3 seeds
+            _r.pop("pipe_p", None)
+        F_desc = family(W[wl], Ws[wl], "Descriptive rows in this window (no Holm claim): late competitors and CapEvolve arms vs the in-window seed", [("ace", "seed"), ("hl-v0", "seed")] + [(c, "seed") for c in CE])
+        fams[wl] = [(F_ace, (), False), (F_hl, (), False), (F_desc, (), False)]
+        J["v3_LATE"] = {"LC-ACE": F_ace, "LC-HL": F_hl, "desc": F_desc}
     # ---- write per-suite markdown
     ARMLINES = {}
     for w in WINDOWS:
-        L = [f"# Window {w}: per-arm tables (" + ("released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
+        L = [f"# Window {w}: per-arm tables (" + ("released under the V3 B1 LATE freeze declaration, amendment 12 erratum 13" if w.startswith("V3B1LATE") else "released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
         nT = len(W[w].tasks); nF = len(set(W[w].fam))
         L += [f"Task set: {nT} tasks, {nF} families (cluster = family; split filter {SPLITS[w]}). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.", ""]
         if w.startswith("V2/") and w != "V2/A":
@@ -578,6 +594,21 @@ def main():
                     setr = statistics.stdev(tr) / math.sqrt(3); sete = statistics.stdev(te) / math.sqrt(3)
                     L.append(f"| {a} | {sgn(mtr)} | {f(setr)} | {sgn(mte)} | {f(sete)} | {sgn(mtr - mte)} |")
                 L.append("")
+        if w == "V3B1LATE/main":
+            Wm = W["V3B1/main"]
+            L += ["**Window-to-window noise check (descriptive; the same frozen artifacts scored in the main window and again here; difference = this window minus main window; task-paired CR1 on the per-task difference of seed-averaged scores; hl-v0 and ACE have no main-window cell). It is a measure of how much the same artifact moves between time blocks and enters no test.**", "",
+                  "| cell | main window mean | this window mean | difference | 95% CI | per-seed difference |", "|---|---|---|---|---|---|"]
+            for a in ["seed", "seed-check"] + ["hcstock", "hc3", "ao22"]:
+                if a in ("seed", "seed-check"):
+                    x, y = W[w].M[(a, 0)], Wm.M[(a, 0)]
+                    ps = ""
+                else:
+                    x = seedavg([W[w].M[(a, sd)] for sd in range(3)]); y = seedavg([Wm.M[(a, sd)] for sd in range(3)])
+                    ps = ", ".join(sgn(mean_ci(W[w].M[(a, sd)], W[w].fam)["mean"] - mean_ci(Wm.M[(a, sd)], Wm.fam)["mean"], 3) for sd in range(3))
+                dd = [None if (u is None or v is None) else u - v for u, v in zip(x, y)]
+                m = mean_ci(dd, W[w].fam)
+                L.append(f"| {a} | {f(mean_ci(y, Wm.fam)['mean'])} | {f(mean_ci(x, W[w].fam)['mean'])} | {sgn(m['mean'])} | [{f(m['ci'][0])}, {f(m['ci'][1])}] | {ps} |")
+            L.append("")
         drift = seed_drift(w)
         if drift:
             L += [f"Seed drift (5I, in-window seed, task-demeaned): blocks (index, mean, SE, n) = " + "; ".join(f"{k}: {sgn(m,3)} (SE {se:.3f}, n={n})" for k, m, se, n in drift["blocks"]) +

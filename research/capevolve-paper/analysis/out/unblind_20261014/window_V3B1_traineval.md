@@ -80,6 +80,9 @@ Search cost (optimizer = Sonnet 5.5 at the proxy list price of protocol/pricing.
 
 | arm | seed | optimizer USD (proxy) | optimizer non-cache-read tokens | optimizer calls | search rollouts | source |
 |---|---|---|---|---|---|---|
+| ace | 0 | 68.96 | 20877330 | 631 | 2995 | run_summary.json (usd_total 297.65, wall_s 87823.7) |
+| ace | 1 | 68.96 | 20871548 | 608 | 2995 | run_summary.json (usd_total 305.1691, wall_s 91352.3) |
+| ace | 2 | 68.20 | 20601793 | 612 | 3000 | run_summary.json (usd_total 309.4522, wall_s 95066.2) |
 | ao22 | 0 | 39.44 | 13811497 | 3150 | 2960 | run_summary.json (usd_total 112.725, wall_s 27881) |
 | ao22 | 1 | 44.99 | 15626903 | 3251 | 2840 | run_summary.json (usd_total 128.9855, wall_s 28664) |
 | ao22 | 2 | 47.41 | 16464396 | 3617 | 2860 | run_summary.json (usd_total 140.0098, wall_s 31744) |
@@ -94,7 +97,7 @@ Search cost (optimizer = Sonnet 5.5 at the proxy list price of protocol/pricing.
 | gepafull | 2 | 8.11 |  |  | 2970 | run_summary.json (usd_total None, wall_s 24304.7) |
 | harnesslens | 0 |  |  |  | 1142 |  |
 | harnesslens | 1 |  |  |  | 1021 |  |
-| harnesslens | 2 |  |  |  | 213 |  |
+| harnesslens | 2 |  |  |  | 1539 |  |
 | harnesslens_archive_premature_end | 0 |  |  |  | 212 |  |
 | harnesslens_archive_premature_end | 1 |  |  |  | 150 |  |
 | harnesslens_archive_premature_end | 2 |  |  |  | 213 |  |
