@@ -14,9 +14,15 @@
 #   export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
 #   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 1 --submit
 #   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 2 --run-ts <ts> --resume --submit
+#   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 3 --run-ts <ts> --resume \
+#        --stall 0 --submit --after <driver-jobid>
 #
 # --max-iterations is the run's cumulative budget on --resume (cap-evolve's own
 # semantics), so raising it by one and resuming runs exactly one more iteration.
+# --stall N overrides the run's stall limit (0 = never stop on consecutive rejects);
+# a resumed run otherwise keeps the limit frozen in its state.json at creation.
+# --after JOBID (with --submit) holds the driver in LSF until that job has ended,
+# whether it succeeded or not, so iterations can be chained without anyone watching.
 #
 # Optional env: V6_MAX_WORKERS (15), V6_WORKER_IDLE_EXIT (600), V6_MAX_ATTEMPTS (3),
 # V6_DRIVER_MEM (64G), CCC_LOGS (~/ccc_logs). The dashboard listens on the driver's
@@ -42,6 +48,8 @@ MAX_ITERATIONS=""
 RUN_TS=""
 RESUME=false
 SUBMIT=false
+STALL=""
+AFTER=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --suite-id)        SUITE_ID="$2"; shift 2 ;;
@@ -49,12 +57,16 @@ while [[ $# -gt 0 ]]; do
     --run-ts)          RUN_TS="$2"; shift 2 ;;
     --resume)          RESUME=true; shift ;;
     --submit)          SUBMIT=true; shift ;;
-    -h|--help)         sed -n '2,26p' "$0"; exit 0 ;;
+    --stall)           STALL="$2"; shift 2 ;;
+    --after)           AFTER="$2"; shift 2 ;;
+    -h|--help)         sed -n '2,29p' "$0"; exit 0 ;;
     *)                 echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 [[ -n "$SUITE_ID" && -n "$MAX_ITERATIONS" ]] || {
-  echo "usage: run_v6.sh --suite-id ID --max-iterations N [--run-ts TS --resume] [--submit]" >&2; exit 2; }
+  echo "usage: run_v6.sh --suite-id ID --max-iterations N [--run-ts TS --resume] [--stall N]" \
+       "[--submit [--after JOBID]]" >&2; exit 2; }
+[[ -z "$AFTER" || "$SUBMIT" == true ]] || { echo "--after needs --submit" >&2; exit 2; }
 
 PROJECT_DIR=".capevolve/v6_${SUITE_ID}/project"
 [[ -f "$PROJECT_ROOT/$PROJECT_DIR/capevolve.yaml" ]] || {
@@ -67,7 +79,10 @@ if [[ "$SUBMIT" == true ]]; then
   args=(--suite-id "$SUITE_ID" --max-iterations "$MAX_ITERATIONS")
   [[ -n "$RUN_TS" ]] && args+=(--run-ts "$RUN_TS")
   [[ "$RESUME" == true ]] && args+=(--resume)
-  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 -J "v6d_${SUITE_ID}" \
+  [[ -n "$STALL" ]] && args+=(--stall "$STALL")
+  dep=()
+  [[ -n "$AFTER" ]] && dep=(-w "ended($AFTER)")
+  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 -J "v6d_${SUITE_ID}" "${dep[@]}" \
        -oo "$LOGS/%J.stdout" -eo "$LOGS/%J.stderr" bash "$0" "${args[@]}"
   exit $?
 fi
@@ -87,6 +102,7 @@ ARGS=(--suite-id "v6_$SUITE_ID" --run-id "$SUITE_ID" --max-iterations "$MAX_ITER
       --spec "$PROJECT_DIR/capevolve.yaml" --project "$PROJECT_DIR")
 [[ -n "$RUN_TS" ]] && ARGS+=(--run-ts "$RUN_TS")
 [[ "$RESUME" == true ]] && ARGS+=(--resume)
+[[ -n "$STALL" ]] && ARGS+=(--extra-args "--stall $STALL")
 cd "$PROJECT_ROOT"
 
 # Two things on this node never exit by themselves, and LSF holds the job (and
