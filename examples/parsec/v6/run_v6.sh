@@ -10,7 +10,8 @@
 # session, and with it the whole run.
 #
 # Usage:
-#   source ~/.v5_g2e1_env.sh        # PARSEC_V5N, LLM_API_KEY/BASE, HARNESS_LLM_SIMULATION_MODEL, CE_BIN
+#   source ~/.v5_g2e1_env.sh        # LLM_API_KEY/BASE, HARNESS_LLM_SIMULATION_MODEL, CE_BIN
+#   export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
 #   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 1 --submit
 #   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 2 --run-ts <ts> --resume --submit
 #
@@ -22,7 +23,12 @@
 # node at port 7878; reach it with  ssh -L 7878:<node>:7878 <login-node>.
 set -eo pipefail
 
-: "${PARSEC_V5N:?PARSEC_V5N environment variable is required}"
+export PARSEC_BENCH="${PARSEC_BENCH:-v6}"
+case "$PARSEC_BENCH" in
+  v6) TREE="${PARSEC_V6N:?PARSEC_V6N environment variable is required (the v6 benchmark tree)}" ;;
+  v5) TREE="${PARSEC_V5N:?PARSEC_V5N environment variable is required when PARSEC_BENCH=v5}" ;;
+  *)  echo "PARSEC_BENCH=$PARSEC_BENCH is not v5 or v6" >&2; exit 2 ;;
+esac
 : "${LLM_API_KEY:?LLM_API_KEY environment variable is required by the lane workers}"
 : "${LLM_API_BASE:?LLM_API_BASE environment variable is required by the lane workers}"
 : "${HARNESS_LLM_SIMULATION_MODEL:?HARNESS_LLM_SIMULATION_MODEL environment variable is required}"
@@ -67,9 +73,8 @@ if [[ "$SUBMIT" == true ]]; then
 fi
 
 PROJ_ABS="$PROJECT_ROOT/$PROJECT_DIR"
-export PARSEC_BENCH=v5
 export PARSEC_JOBS_SUITE="v6_${SUITE_ID}"
-export V6_QUEUE_ROOT="$PARSEC_V5N/_run/v6-queue/v6_${SUITE_ID}"
+export V6_QUEUE_ROOT="$TREE/_run/v6-queue/v6_${SUITE_ID}"
 export V6_PUBLIC_TASKS="$PROJ_ABS/public_tasks.txt"
 export V6_SEALED_JOBS_ROOT="$PROJ_ABS.sealed/jobs"
 export PYTHONPATH="$PROJECT_ROOT/core:$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"

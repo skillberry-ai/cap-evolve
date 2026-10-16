@@ -3,8 +3,9 @@
 
 Which tree is selected by ``$PARSEC_BENCH``: ``v4`` (default, so the v4/h4 arms
 are unchanged) reads ``$PARSEC_V4N`` and ``bench-v4-*`` tasks; ``v5`` reads
-``$PARSEC_V5N`` and ``bench-v5-*`` tasks, with the v5 sweeps' own trial
-timeouts so v5/v6 arms stay comparable with ``v5_b1_e1``.
+``$PARSEC_V5N`` and ``bench-v5-*`` tasks; ``v6`` reads ``$PARSEC_V6N`` and
+``bench-v6-*`` tasks. v5 and v6 use the v5 sweeps' own trial timeouts, so a v6
+arm stays comparable with ``v5_b1_e1``.
 
 Multi-task: tasks() enumerates every ``bench-<tree>-*`` directory under
 ``<tree root>/_run/tasks/`` and returns one Task per id, regardless of the
@@ -100,6 +101,10 @@ _PROFILES = {
            "trial_timeout_sec": 40 * 60},
     "v5": {"resolve": parsec_paths.resolve_v5n_or_none, "required_msg": parsec_paths.V5N_REQUIRED_MSG,
            "prefix": "bench-v5-", "jobs": "v5", "agent_timeout_multiplier": 1.0,
+           "trial_timeout_sec": 20 * 60},
+    # The unified 200-task tree (build_v6_tree.py): same runtime, simulators and timeouts as v5.
+    "v6": {"resolve": parsec_paths.resolve_v6n_or_none, "required_msg": parsec_paths.V6N_REQUIRED_MSG,
+           "prefix": "bench-v6-", "jobs": "v6", "agent_timeout_multiplier": 1.0,
            "trial_timeout_sec": 20 * 60},
 }
 BENCH = os.environ.get("PARSEC_BENCH", "v4").strip() or "v4"

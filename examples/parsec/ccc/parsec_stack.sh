@@ -37,9 +37,13 @@ case "$CMD" in
   "")        usage ;;
 esac
 
-# Which benchmark tree: PARSEC_BENCH=v5 reads $PARSEC_V5N, anything else (the
-# default) reads $PARSEC_V4N -- the same selection the shared adapter makes.
-if [[ "${PARSEC_BENCH:-v4}" == "v5" ]]; then
+# Which benchmark tree: PARSEC_BENCH=v5 reads $PARSEC_V5N, v6 reads $PARSEC_V6N,
+# anything else (the default) reads $PARSEC_V4N -- the same selection the shared
+# adapter makes.
+if [[ "${PARSEC_BENCH:-v4}" == "v6" ]]; then
+  : "${PARSEC_V6N:?PARSEC_V6N environment variable is required when PARSEC_BENCH=v6 (see parsec_paths.py)}"
+  PARSEC_TREE="$PARSEC_V6N"
+elif [[ "${PARSEC_BENCH:-v4}" == "v5" ]]; then
   : "${PARSEC_V5N:?PARSEC_V5N environment variable is required when PARSEC_BENCH=v5 (see parsec_paths.py)}"
   PARSEC_TREE="$PARSEC_V5N"
 else

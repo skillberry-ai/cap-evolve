@@ -10,7 +10,7 @@
 # hand-off differs: trials instead of a whole `cap-evolve run`.
 #
 # Usage (normally via the dispatcher, not by hand):
-#   export PARSEC_V5N=... LLM_API_KEY=... LLM_API_BASE=... HARNESS_LLM_SIMULATION_MODEL=...
+#   export PARSEC_V6N=... LLM_API_KEY=... LLM_API_BASE=... HARNESS_LLM_SIMULATION_MODEL=...
 #   export CE_BIN=/path/to/.venv/bin/cap-evolve     # its python runs the worker
 #   bash examples/parsec/v6/lane_worker.sh --queue <queue-root> [--idle-exit SEC]
 #
@@ -18,7 +18,13 @@
 # proved broken, otherwise parsec_stack.sh's own code.
 set -eo pipefail
 
-: "${PARSEC_V5N:?PARSEC_V5N environment variable is required (see parsec_paths.py)}"
+# The tree, inherited from the dispatcher through bsub: v6 (default) or v5.
+export PARSEC_BENCH="${PARSEC_BENCH:-v6}"
+case "$PARSEC_BENCH" in
+  v6) TREE="${PARSEC_V6N:?PARSEC_V6N environment variable is required when PARSEC_BENCH=v6}" ;;
+  v5) TREE="${PARSEC_V5N:?PARSEC_V5N environment variable is required when PARSEC_BENCH=v5}" ;;
+  *)  echo "PARSEC_BENCH=$PARSEC_BENCH is not v5 or v6" >&2; exit 2 ;;
+esac
 : "${LLM_API_KEY:?LLM_API_KEY environment variable is required by parsec_stack.sh up}"
 : "${LLM_API_BASE:?LLM_API_BASE environment variable is required by parsec_stack.sh up}"
 : "${HARNESS_LLM_SIMULATION_MODEL:?HARNESS_LLM_SIMULATION_MODEL environment variable is required by parsec_stack.sh up}"
@@ -44,7 +50,7 @@ done
 [[ -n "$QUEUE" ]] || { echo "usage: lane_worker.sh --queue DIR [--idle-exit SEC]" >&2; exit 2; }
 
 LANE="${V5_LANE:-${LSB_JOBID:-$(hostname -s)}}"
-LANES_ROOT="${V5_LANES_ROOT:-$PARSEC_V5N/_run/v5-lanes}"
+LANES_ROOT="${V5_LANES_ROOT:-$TREE/_run/v5-lanes}"   # same default make_lane.sh computes
 LANE_DIR="$LANES_ROOT/$LANE"
 LANE_LOGS="$LANE_DIR/_v5/logs"
 
@@ -52,7 +58,6 @@ echo "lane worker: host=$(hostname) lane=$LANE queue=$QUEUE job=${LSB_JOBID:-non
 
 bash "$V5_DIR/make_lane.sh" "$LANE" || exit 3
 
-export PARSEC_BENCH=v5
 export PARSEC_LIVE_ROOT="$LANE_DIR"
 export PARSEC_LIVE_PROMPTS_DIR="$LANE_DIR/config/prompts"
 export PARSEC_SKILLS_DIR="$LANE_DIR/_v5/skills"

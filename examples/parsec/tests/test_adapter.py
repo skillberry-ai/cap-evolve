@@ -957,6 +957,12 @@ class TestBenchProfile(unittest.TestCase):
         self.assertEqual((c["bench"], c["prefix"], c["timeout"], c["mult"]), ("v5", "bench-v5-", 1200, 1.0))
         self.assertEqual(c["root"], "/tmp/v5tree")
 
+    def test_v6_reads_its_own_tree_with_v5s_timeouts(self):
+        c = self._constants({"PARSEC_BENCH": "v6", "PARSEC_V6N": "/tmp/v6tree", "PARSEC_V5N": "/tmp/v5tree"})
+        self.assertEqual((c["bench"], c["prefix"], c["timeout"], c["mult"]), ("v6", "bench-v6-", 1200, 1.0))
+        self.assertEqual(c["root"], "/tmp/v6tree")
+        self.assertEqual(c["jobs"], "/tmp/v6tree/_run/jobs/v6")
+
     def test_jobs_suite_override(self):
         c = self._constants({"PARSEC_BENCH": "v5", "PARSEC_V5N": "/tmp/v5tree", "PARSEC_JOBS_SUITE": "v6_g2_e1"})
         self.assertEqual(c["jobs"], "/tmp/v5tree/_run/jobs/v6_g2_e1")

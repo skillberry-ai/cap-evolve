@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Draw v6's F / C / test split: stratified by category and by drop, seeded, written once.
 
-Every bench-v5-* task under $PARSEC_V5N/_run/tasks is assigned to the feedback set F
+Every bench-v6-* task under $PARSEC_V6N/_run/tasks is assigned to the feedback set F
 (the optimizer sees its traces), the confirm set C (hidden; decides accepts) or test
 (sealed until finalize). Within each (category, drop) stratum the tasks are shuffled
 with ``--seed`` and dealt round-robin in the order of ``--fractions``, so every set
 gets the same mix of categories and drops. A drop is named by a membership file
 (``--drop NAME=FILE``, one task id per line); tasks in no file belong to ``--base-drop``.
+When the tree carries ``task_sets.json`` (written by build_v6_tree.py), each task's ``drop``
+is read from it and ``--drop`` files are not needed.
 
 ``--exclude FILE`` keeps listed tasks out of all three sets.
 
@@ -15,7 +17,7 @@ Writes ``split_ids.json`` ({"feedback", "confirm", "test"}, read by cap-evolve u
 ``split_report.md`` (the per-stratum counts, for review).
 
 Usage:
-    export PARSEC_V5N=/path/to/rhdp-parsec/v5_2026-10-10
+    export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
     python3 examples/parsec/v6/make_split.py --out <dir> \\
         --drop 10-12=<task_set_10-12.txt> [--drop jb-3=<file>] [--exclude <file>] [--seed 6]
 """
@@ -96,20 +98,23 @@ def main() -> int:
     ap.add_argument("--exclude", type=Path)
     ap.add_argument("--fractions", default="1,1,1", help="feedback,confirm,test weights (default thirds)")
     ap.add_argument("--seed", type=int, default=6)
-    ap.add_argument("--tasks-dir", type=Path, help="default $PARSEC_V5N/_run/tasks")
+    ap.add_argument("--tasks-dir", type=Path, help="default $PARSEC_V6N/_run/tasks")
     args = ap.parse_args()
 
     tasks_dir = args.tasks_dir
     if tasks_dir is None:
         import os
-        root = os.environ.get("PARSEC_V5N")
+        root = os.environ.get("PARSEC_V6N")
         if not root:
-            print("set PARSEC_V5N or pass --tasks-dir", file=sys.stderr)
+            print("set PARSEC_V6N or pass --tasks-dir", file=sys.stderr)
             return 2
         tasks_dir = Path(root) / "_run" / "tasks"
-    ids = sorted(d.name[len("bench-v5-"):] for d in tasks_dir.glob("bench-v5-*") if d.is_dir())
+    ids = sorted(d.name[len("bench-v6-"):] for d in tasks_dir.glob("bench-v6-*") if d.is_dir())
 
     drops = {}
+    sets_file = tasks_dir.resolve().parents[1] / "task_sets.json"
+    if sets_file.is_file() and not args.drop:
+        drops = {t: v["drop"] for t, v in json.loads(sets_file.read_text()).items()}
     for spec in args.drop:
         name, _, f = spec.partition("=")
         for t in read_ids(Path(f)):

@@ -11,8 +11,8 @@ real measurement after that returns as an error, which the gate drops rather
 than scoring. The loop, gate, budgets and dashboard are cap-evolve's own.
 
 Each trial itself runs inside a lane through the shared parsec adapter
-(``examples/parsec/adapters/adapter.py``, ``PARSEC_BENCH=v5``), so a v6 trial is
-measured exactly as a v5 one was.
+(``examples/parsec/adapters/adapter.py``, ``PARSEC_BENCH=v6``), whose v6 profile has v5's
+runtime and timeouts, so a v6 trial is measured exactly as a v5 one was.
 
 Transcripts of tasks the optimizer may not see (the hidden stratum C, and test)
 are written under ``V6_SEALED_JOBS_ROOT`` instead of the shared jobs tree, the same
@@ -41,7 +41,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-os.environ.setdefault("PARSEC_BENCH", "v5")
+os.environ.setdefault("PARSEC_BENCH", "v6")
 
 _V6_DIR = Path(__file__).resolve().parents[1]
 _SHARED = _V6_DIR.parent / "adapters" / "adapter.py"
