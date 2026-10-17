@@ -2204,14 +2204,14 @@ def _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs) -> N
     cp = costaware.CostParams.from_spec(spec_for_run(run_dir) or {})
     if not cp.enabled or decision.indecisive or "mode" in gate_kwargs and gate_kwargs["mode"] not in ("paired", "significant"):
         return
-    if "REJECTED by gate_max_broke" in decision.reason or getattr(decision, "broke", None) and not decision.accept \
-            and gate_kwargs.get("gate_max_broke") is not None:
+    if "REJECTED by gate_max_broke" in decision.reason:
         return                                  # a composition veto is not overturned by a cost win
     cur_rows = _tokens_per_rollout(current_val)
     if not cur_rows or not cur_rows[0]["tokens"]:      # a resumed incumbent has no token total: read its ledger rows
         from . import eval_index
         h = eval_index.cap_hash(run_dir.candidate_dir(run_dir.best_id))
-        cur_rows = [r for r in eval_index.rows(run_dir) if r.get("cap_hash") == h and r.get("split") == "val"]
+        cur_rows = [r for r in eval_index.rows(run_dir) if r.get("cap_hash") == h and r.get("split") == "val"
+                    and r.get("env_fp", "") == eval_index.env_fp()]
     rel = costaware.relative_cost(_tokens_per_rollout(cand_val), cur_rows, cp)
     se = (decision.resolvable_effect_size or 0.0) / 2.0
     z = (decision.delta / se) if se > 0 else (float("inf") if decision.delta > 0 else 0.0)
@@ -3745,6 +3745,7 @@ def run_step(
     # cannot localize the edit, and ``_paired_deltas(footprint=None)`` is byte-identical to
     # the behaviour before this existed — so a capability whose surface cannot be detected
     # is measured exactly as it always was rather than restricted on a guess.
+    cost_flipped = False
     if p2_out is None:
         fp = None
         if footprint_gate:
@@ -3802,7 +3803,9 @@ def run_step(
             decision.accept, decision.indecisive = False, True
             decision.reason += ("; UNRESOLVED MISSING: imputing the missing pairs at "
                                 f"{gcfg.missing_impute:g} flips the screen, and the retries did not recover them")
+        _was_accept = decision.accept
         _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs)
+        cost_flipped = decision.accept and not _was_accept
         accepted = decision.accept
         regressions = []
         if accepted and no_regression:
@@ -3855,7 +3858,13 @@ def run_step(
                 held["par"] = evaluate_candidate(adapter, parent_dir, tag=f"{cid}__confbase", **kw)
                 return _paired_deltas(held["par"], held["cand"], footprint=None) or []
 
-            if accepted:
+            if accepted and cost_flipped:
+                # a cost-path accept (reward non-inferior, clearly cheaper) cannot pass rule P's reward screen by
+                # construction; its non-inferiority is already tested above, so no confirmation rollouts are spent
+                pres = promotion_mod.PromotionResult(True, "promoted", promotion_mod.screen(paired_deltas or [], promo.k_se),
+                                                     None, "cost path: reward non-inferior and clearly cheaper",
+                                                     dataclasses.asdict(promo))
+            elif accepted:
                 try:
                     pres = promotion_mod.decide(paired_deltas or [], _fresh_deltas, promo,
                                                 n_planned=len(paired_deltas or []))
@@ -3880,7 +3889,7 @@ def run_step(
                 accepted = False
                 decision.reason += ("; UNCONFIRMED (pending, not a reject): " if pres.stage == "unconfirmed"
                                     else "; REJECTED by promotion rule P: ") + pres.reason
-            elif pres.promote:
+            elif pres.promote and "cand" in held:
                 baseline_val = held["cand"]
             run_dir.log_event("promotion", candidate=cid, **{k: v for k, v in promo_rec.items() if k != "rule"})
     else:

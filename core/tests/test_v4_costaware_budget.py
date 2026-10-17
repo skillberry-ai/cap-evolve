@@ -428,3 +428,20 @@ def test_stock_gate_does_not_overturn_a_broke_veto_and_falls_back_to_the_ledger_
     d2 = GateDecision(accept=False, reason="paired", delta=0.0, resolvable_effect_size=0.06)
     harness._apply_cost_gate(rd, d2, cur, _sr(0.5, 300), {"mode": "paired"})
     assert d2.accept and "cost win" in d2.reason
+
+
+def test_stock_gate_cost_flip_is_not_blocked_by_a_broke_count_within_the_limit(tmp_path):
+    from cap_evolve import harness
+    from cap_evolve.gate import GateDecision
+    _, rd = make_run(tmp_path, spec={"cost_lambda": 0.5, "cost_accept": True})
+    d = GateDecision(accept=False, reason="paired", delta=0.0, resolvable_effect_size=0.06, broke=["t1"])
+    harness._apply_cost_gate(rd, d, _sr(0.5, 1000), _sr(0.5, 300), {"mode": "paired", "gate_max_broke": 2})
+    assert d.accept
+
+
+def test_budget_driven_briefing_does_not_say_a_million_rounds():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "skills" / "algorithms" / "agent-optimize" / "scripts"))
+    import host
+    import inspect
+    src = inspect.getsource(host)
+    assert "until the rollout budget is exhausted" in src

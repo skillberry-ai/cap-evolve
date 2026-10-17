@@ -858,7 +858,7 @@ class Round:
                     cost_note = f"; {j.reason}"
             if act == "kill" and self.ev.cost.accept and i == len(p.gs_looks) - 1 and nn >= 2:
                 # the last look found no reward win; a clearly cheaper, non-inferior candidate may still land (cost path)
-                se = abs(mean / z) if z else 0.0
+                se = getattr(self, "_last_seq_se", math.inf) or math.inf
                 j = costaware.judge(self.ev.cost, passed=False, mean=mean, se=se, z=z, dmin=p.dmin,
                                     rel=self._rel_cost(cid, "seq", "confirm", ref_tags=self._tags(inc_cid, "control")))
                 if j.accept:
@@ -885,6 +885,7 @@ class Round:
         v = racing.within_task_variance({str(i): ys for i, ys in enumerate(rows)})
         se = max(racing.pooled_se(n, counts, v, max(1, m)), racing.heterogeneity_se(task_d))
         mean = tot / n
+        self._last_seq_se = se
         return mean, (mean / se if se > 0 else 0.0), n
 
     def _seq_done(self, cid: str, v: ConfirmVerdict) -> ConfirmVerdict:

@@ -586,7 +586,10 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     gate_conc = int(spec.get("measure_concurrency") or GATE_CONCURRENCY)
 
     if not stop:
-        stop = (f"Spend at most {rounds} rounds, gate every candidate on FULL val, and "
+        from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS
+        spend = ("Keep proposing until the rollout budget is exhausted" if rounds >= BUDGET_DRIVEN_ITERATIONS
+                 else f"Spend at most {rounds} rounds")
+        stop = (f"{spend}, gate every candidate on FULL val, and "
                 "finish by sealing test exactly once with measure.py.")
 
     text = f"""# Drive the agent-optimize loop on an existing run — unattended
