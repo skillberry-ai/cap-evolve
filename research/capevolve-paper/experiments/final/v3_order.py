@@ -99,7 +99,7 @@ def build(bench, champions_path, out_root, manifests, a):
         seed_art = base_v1["seed_artifact"]
     entries = []
     for fw in frameworks:
-        for s in range(3):
+        for s in (sorted(int(k) for k in champ[fw]) if a.cells_mode else range(3)):     # --cells-mode: each key of the champions file is one cell (any artifact), seed slot 0
             src = champ[fw].get(str(s))
             if not src:
                 sys.exit("champions file has no %s seed %d" % (fw, s))
@@ -227,6 +227,7 @@ if __name__ == "__main__":
     ap.add_argument("--trials", type=int, default=10, help="trials per task for a champion cell (brief: k = 10 on B1)")
     ap.add_argument("--seed-trials", type=int, default=20, help="trials per task for the seed anchor cell (default 2 x k; to be ruled by the statistics reviewer)")
     ap.add_argument("--block", default="test", choices=["test", "traineval"], help="traineval (B1 only): every champion + the seed on the 30 official train ids, k = --trials, no seed-check, tag suffix :traineval")
+    ap.add_argument("--cells-mode", action="store_true", help="champions file = {cell_name: {\"0\": artifact_dir}}: descriptive windows over arbitrary artifacts (e.g. accept chains)")
     ap.add_argument("--ver", default=None, help="window name for a follow-up order (e.g. V3B1F): file names, tags FINAL-E-<ver>, root")
     ap.add_argument("--smoke", action="store_true", help="dry-run order on SEARCH-split tasks")
     ap.add_argument("--smoke-tasks", type=int, default=2)

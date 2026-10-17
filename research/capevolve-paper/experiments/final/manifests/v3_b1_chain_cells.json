@@ -1,0 +1,185 @@
+{
+ "artifact_manifest_sha256": "29e16e2fd8c11dd83db5a82071c506abef856cb44cb3cc48d7c2aeb91a31f6f7",
+ "cells": [
+  {
+   "candidate": "cand_0001",
+   "chain_length": 4,
+   "chain_position": 1,
+   "framework": "hcstock",
+   "parent": "seed",
+   "search_seed": 0,
+   "tree_sha256": "500a396c0d47e8e125f9b963362a5fcaf2176c56c62f9370dff14249401c94d6"
+  },
+  {
+   "candidate": "cand_0002",
+   "chain_length": 4,
+   "chain_position": 2,
+   "framework": "hcstock",
+   "parent": "cand_0001",
+   "search_seed": 0,
+   "tree_sha256": "136220ff586b30530070c694deca1e0e6d5b85d7b7b96e1f38dd420d7146b3a8"
+  },
+  {
+   "candidate": "cand_0005",
+   "chain_length": 4,
+   "chain_position": 3,
+   "framework": "hcstock",
+   "parent": "cand_0002",
+   "search_seed": 0,
+   "tree_sha256": "f609514c08416b2eeb49c569379a1aa396fec2a7ebfbcc5534fcf0fbb95da8ac"
+  },
+  {
+   "candidate": "cand_0001",
+   "chain_length": 4,
+   "chain_position": 1,
+   "framework": "hcstock",
+   "parent": "seed",
+   "search_seed": 1,
+   "tree_sha256": "ebfec36b2f2fa6698e2220d8f699de13488a31c7db17a4b5ef339864ff13e17d"
+  },
+  {
+   "candidate": "cand_0002",
+   "chain_length": 4,
+   "chain_position": 2,
+   "framework": "hcstock",
+   "parent": "cand_0001",
+   "search_seed": 1,
+   "tree_sha256": "950e59bd3926be2e1de82c4472c76472629cb44d0156c975f3a22fddaca9b8da"
+  },
+  {
+   "candidate": "cand_0009",
+   "chain_length": 4,
+   "chain_position": 3,
+   "framework": "hcstock",
+   "parent": "cand_0002",
+   "search_seed": 1,
+   "tree_sha256": "6e65339e6eae7efbf956eecf225ac73175e664580e880bd68480526d2481b6e9"
+  },
+  {
+   "candidate": "cand_0001",
+   "chain_length": 4,
+   "chain_position": 1,
+   "framework": "hcstock",
+   "parent": "seed",
+   "search_seed": 2,
+   "tree_sha256": "ce390855970528ea30db4d2824eea8fedd6e50f146f38c92ba2b1ff30c6f1e89"
+  },
+  {
+   "candidate": "cand_0002",
+   "chain_length": 4,
+   "chain_position": 2,
+   "framework": "hcstock",
+   "parent": "cand_0001",
+   "search_seed": 2,
+   "tree_sha256": "1f693f3aff738a76b9e163c5824932f9c3654c198834388eb9b3e86aec10caa6"
+  },
+  {
+   "candidate": "cand_0011",
+   "chain_length": 4,
+   "chain_position": 3,
+   "framework": "hcstock",
+   "parent": "cand_0002",
+   "search_seed": 2,
+   "tree_sha256": "3340dcbf430fc7eced400add1ca88cd5d3b62e78e2c20dfae48361159e47cd01"
+  },
+  {
+   "candidate": "cand_0002",
+   "chain_length": 3,
+   "chain_position": 1,
+   "framework": "hc3",
+   "parent": "seed",
+   "search_seed": 0,
+   "tree_sha256": "e6038277aea68295de141b651874a3418be8ab275155bef2f33107b308a29bd6"
+  },
+  {
+   "candidate": "cand_0005",
+   "chain_length": 3,
+   "chain_position": 2,
+   "framework": "hc3",
+   "parent": "cand_0002",
+   "search_seed": 0,
+   "tree_sha256": "3bfd04f37b8192f5701a082a4e4cf1aea88ec9f45a95dd883010f2d2dd2c0f75"
+  },
+  {
+   "candidate": "cand_0002",
+   "chain_length": 6,
+   "chain_position": 1,
+   "framework": "hc3",
+   "parent": "seed",
+   "search_seed": 1,
+   "tree_sha256": "141124c379388f7176e2da6fad72167b947f62dfa87f6106d31cecfc3fae7373"
+  },
+  {
+   "candidate": "cand_0008",
+   "chain_length": 6,
+   "chain_position": 2,
+   "framework": "hc3",
+   "parent": "cand_0002",
+   "search_seed": 1,
+   "tree_sha256": "a88ed88bb4a4737452f3438a674905d84b8292ae161af599f76900af487bbb9d"
+  },
+  {
+   "candidate": "cand_0009",
+   "chain_length": 6,
+   "chain_position": 3,
+   "framework": "hc3",
+   "parent": "cand_0008",
+   "search_seed": 1,
+   "tree_sha256": "6f5bcf8202d042774687d59ca990255c5664c16f2aea5a1131f09b5e7a97677d"
+  },
+  {
+   "candidate": "cand_0014",
+   "chain_length": 6,
+   "chain_position": 4,
+   "framework": "hc3",
+   "parent": "cand_0009",
+   "search_seed": 1,
+   "tree_sha256": "12fa3712ff9a2c0ea377d285e7b99d3fbf9ab985c94337888df170f45f7ed342"
+  },
+  {
+   "candidate": "cand_0018",
+   "chain_length": 6,
+   "chain_position": 5,
+   "framework": "hc3",
+   "parent": "cand_0014",
+   "search_seed": 1,
+   "tree_sha256": "87e195735b3ec7568d0864eaf4fd8c105fc41e0552c4a01f9b9881e4adb3a54e"
+  },
+  {
+   "candidate": "cand_0004",
+   "chain_length": 4,
+   "chain_position": 1,
+   "framework": "hc3",
+   "parent": "seed",
+   "search_seed": 2,
+   "tree_sha256": "45e0b242983fa06779d0ed962fc2302961e5ae49f5cf672ddfb1a529c966dea8"
+  },
+  {
+   "candidate": "cand_0007",
+   "chain_length": 4,
+   "chain_position": 2,
+   "framework": "hc3",
+   "parent": "cand_0004",
+   "search_seed": 2,
+   "tree_sha256": "31e44183224a018145517f3d8e6ffb5745706e8dc48818878a835eb36c1e311d"
+  },
+  {
+   "candidate": "cand_0020",
+   "chain_length": 4,
+   "chain_position": 3,
+   "framework": "hc3",
+   "parent": "cand_0007",
+   "search_seed": 2,
+   "tree_sha256": "a80b38fd9fd42f9b5cf5adef4b7dd09109d9affd23fa6369768e2e26b6f73879"
+  }
+ ],
+ "champions_file": "/home/dev/projects2/campaign-scratch/final_eval/champions_V3B1CHAIN.json",
+ "champions_file_sha256": "54690bd5c467adfc6703bc63eb144175ad76cca8a43929f5a8e6b25e4e871362",
+ "design": "every ACCEPTED intermediate candidate of the hcstock and hc3 search chains (final champion excluded: already scored in V3B1; rejected candidates excluded); test-20, k=10, seed n=20, seed-check k=10; adapter 9c797d8a; gpt-oss via :4113",
+ "kind": "DESCRIPTIVE (no P1/P2, no Holm, no selection)",
+ "missing_snapshots": [],
+ "n_cells": 19,
+ "order": "manifests/order_V3B1CHAIN.jsonl",
+ "order_sha256": "39cb64a923912ecc323bc6d3bacfe9447ea4febf29117ed442f59d1c239e7230",
+ "window": "V3B1CHAIN"
+}
