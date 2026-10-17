@@ -103,6 +103,32 @@ the optimizer runs prose-fed exactly as before, and `mock` stays fully offline. 
 the output isn't parseable JSON, `cost.total_cost_usd` is `null` and the loop
 continues without a cost figure (never an error).
 
+## Optimizer isolation (optional, fail-closed)
+
+Agent CLIs run with a shell, so by default the optimizer can read every file on the host,
+including the gold data the grader needs (#875). Turn on isolation in `capevolve.yaml`:
+
+```yaml
+optimizer_isolation: auto            # off (default) | auto | namespace | sandbox
+optimizer_hide: [/data/gold, ~/.claude/projects]
+optimizer_expose: [/data/gold/public_docs]   # optional: read-only inside a hidden dir
+```
+
+`cap-evolve run` hands the config to every call, and this script applies it:
+- **namespace**: works for any CLI. The call runs in a private mount namespace where each hidden
+  dir is an empty tmpfs and each hidden file is empty. The optimizer's working dir and the
+  `optimizer_expose` paths are bound back. It runs as a normal user in a nested user namespace,
+  so it cannot undo this. Needs Linux with unprivileged user namespaces; no root.
+- **sandbox**: claude-code only. Claude Code's bubblewrap sandbox, with `denyRead`, no unsandboxed
+  retries, and `permissions.deny` `Read(...)` rules (the sandbox wraps Bash only). Needs `bwrap`
+  and `socat`. It cannot start in containers whose `/dev/null` is a host bind; the probe detects that.
+- **auto**: `sandbox` for claude-code when its probe passes, else `namespace`.
+
+For claude-code, the Read/Grep deny rules are passed inline (`--settings`) in both modes. If
+the requested mode cannot run, the call exits 2 with the reason; the optimizer never runs
+unisolated. `cap-evolve check` proves the config offline: a marker planted in each hidden dir
+must be invisible to a shell started through the same wrapper.
+
 ## Back-compat
 
 A spec that still names an old per-CLI optimizer skill (`claude-code`, `ibm-bob`,

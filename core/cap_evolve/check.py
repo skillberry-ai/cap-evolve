@@ -66,6 +66,41 @@ def _check_intervention(rep, project_dir: Path) -> None:
                          "readiness is checked at run time, not here)")
 
 
+def _check_isolation(rep, project_dir: Path) -> None:
+    """Prove the spec's optimizer isolation offline (#875): no model call, a shell through the
+    same wrapper must not see a marker planted in each hidden dir. A requested mode that cannot
+    run here is a hard problem (the run would refuse every optimizer call)."""
+    import shutil
+    import tempfile
+
+    from . import isolation as _isolation
+    from .specfile import read_yaml
+
+    spec_path = Path(project_dir) / "capevolve.yaml"
+    if not spec_path.exists():
+        return
+    try:
+        cfg = _isolation.from_spec(read_yaml(spec_path.read_text(encoding="utf-8")) or {})
+    except _isolation.IsolationError as e:
+        rep.problems.append(str(e))
+        return
+    except Exception:  # a broken spec is reported by other checks
+        return
+    if not cfg:
+        return
+    optimizer = str((read_yaml(spec_path.read_text(encoding="utf-8")) or {}).get("optimizer_skill") or "generic")
+    work = Path(tempfile.mkdtemp(prefix=".isolation_check_", dir=str(project_dir)))
+    try:
+        problems = _isolation.self_check(cfg, workdir=str(work), optimizer=optimizer)
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    if problems:
+        rep.problems += [f"optimizer isolation: {p}" for p in problems]
+    else:
+        rep.notes.append(f"optimizer isolation ok ({_isolation.choose_mode(cfg, optimizer)}; "
+                         f"{len(cfg['hide'])} hidden path(s) invisible to an isolated call)")
+
+
 def load_adapter(project_dir: Path) -> CapabilityAdapter:
     """Import ``adapters/adapter.py`` and return its ``Adapter()`` instance."""
     project_dir = Path(project_dir)
@@ -133,6 +168,8 @@ def run_check(project_dir: Path, *, tolerance: float = 1e-6) -> CheckReport:
             + " — implement them in adapters/adapter.py"
         )
         return rep  # can't probe further safely
+
+    _check_isolation(rep, Path(project_dir))
 
     # Consuming-model tier mismatch (non-blocking). Runs before the task/scoring probes
     # so it is emitted even when those early-return, and never affects rep.ok.
