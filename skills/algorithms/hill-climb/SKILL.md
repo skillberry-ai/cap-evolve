@@ -88,6 +88,13 @@ Beyond `--run-dir` / `--project` / `--optimizer` / `--focus` / `--max-iterations
 - `--gate-mode` (default `auto`) + `--k-se` (default `1.0`) — `auto` lets the engine
   pick the paired gate; `significant|paired|strict|threshold` pin it. Raising `k-se`
   makes acceptance stricter.
+- `--editable-paths` (spec key `editable_paths`) — the ALLOW-LIST form of the seal: the
+  only capability files the optimizer may edit. Every other file of the run's seed
+  capability is sealed for the whole run (framework/optimizer working files such as
+  `JOURNAL.md` and `PROCESS.md` are never sealed, and files the optimizer adds are its
+  own scratch). A changed or deleted sealed file makes the step *indecisive*, as below,
+  and the optimizer's instructions list both sets. Use it to keep a fixed harness frame
+  (placeholders, interaction contract) next to an editable skill. Empty = off.
 - `--protected-paths` — globs sealing the eval surface (scorer, gold, tasks, splits;
   `default` expands to the built-in set). A candidate that edits one is *indecisive*,
   never scored: the measurement would grade a compromised harness, so no reward is

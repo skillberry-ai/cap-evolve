@@ -1073,6 +1073,13 @@ def _cmd_run(argv):
             pp = [p.strip() for p in pp.split(",") if p.strip()]
         if pp:
             alg_cmd += ["--protected-paths", ",".join(str(p) for p in pp)]
+    # Allow-list seal (opt-in): only the hill-climb loop implements it so far.
+    if algorithm_name == "hill-climb":
+        ep = spec.get("editable_paths") or []
+        if isinstance(ep, str):
+            ep = [p.strip() for p in ep.split(",") if p.strip()]
+        if ep:
+            alg_cmd += ["--editable-paths", ",".join(str(p) for p in ep)]
     # Measurement switches (paper-mode). Every key is opt-in: an absent key adds no flag, so an
     # existing spec's command line is byte-identical.
     if algorithm_name in ("hill-climb", "skillopt", "gepa"):
