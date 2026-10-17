@@ -23,6 +23,8 @@ Nothing here touches the network at import time, so ``cap-evolve check`` stays o
 from __future__ import annotations
 
 import os
+import threading
+import uuid
 import sys
 import time
 from pathlib import Path
@@ -246,7 +248,7 @@ class Adapter(CapabilityAdapter):
             cand = Path(ctx)
             if cand.parent.name not in ("candidates", "work"):
                 return None
-            stamp = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+            stamp = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}_{threading.get_ident()}_{uuid.uuid4().hex[:6]}"
             return (cand.parent.parent / "native_sims" / cand.name / str(split)
                     / f"results_{stamp}.json")
         except Exception:  # noqa: BLE001 — never let an optional artifact break the eval

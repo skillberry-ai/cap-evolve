@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import uuid
 import sys
 import time
 from pathlib import Path
@@ -180,7 +182,7 @@ class Adapter(CapabilityAdapter):
         native = ctx.parent.parent / "native_sims" / ctx.name
         native.mkdir(parents=True, exist_ok=True)
         while True:
-            stamp = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+            stamp = f"{time.strftime('%Y%m%d_%H%M%S')}_{os.getpid()}_{threading.get_ident()}_{uuid.uuid4().hex[:6]}"
             save_path = native / f"results_{stamp}.json"
             if not save_path.exists():
                 break

@@ -50,14 +50,14 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable, Mapping
 
-from . import eval_index, harness, racing
+from . import costaware, eval_index, harness, racing
 from .promotion import P2Params
 from .rundir import BudgetExhausted, _atomic_write
 
 #: Verdict statuses. ``kill``/``advance`` come from rungs, ``accept``/``reject`` from a confirmation,
 #: ``unconfirmed`` = survived but the budget could not fund its confirmation (pending, not a reject),
 #: ``unfunded`` = a rung could not be funded (the round ends).
-STATUSES = ("kill", "advance", "accept", "reject", "unconfirmed", "unfunded")
+STATUSES = ("kill", "advance", "accept", "reject", "unconfirmed", "unfunded", "extend")
 
 #: Stage names a Job can carry.
 STAGES = ("rung1", "rung2", "control", "confirm", "seq", "incumbent")
@@ -105,6 +105,8 @@ class ConfirmVerdict:
     z: float | None = None
     n: int = 0
     reason: str = ""
+    rel_cost: float | None = None   # candidate cost per rollout relative to the incumbent's (cost-aware gate)
+    path: str = ""                  # reward | cost | cost_adjusted | ... (see ``costaware.Judgement``)
 
     def bit(self) -> str:
         """What the proposer is told about C: ``accept`` | ``reject`` | ``pending``. Nothing else."""
@@ -120,6 +122,7 @@ class RoundPlan:
     k: int                      # candidates the round can afford (<= k_wanted)
     worst_case: int             # rollouts: rung 1 + rung 2 + control + survivors * conf_n
     funded: bool                # False: even K=1 does not fit; run no round
+    direct: bool = False        # shrunk final round: one candidate, no rungs, straight to control + confirmation
 
 
 def thread_map(max_workers: int) -> Callable:
@@ -159,7 +162,7 @@ class P2Evaluator:
     """Owns the F/C split, the incumbent's pooled F draws, and budget reservations for P2 rounds."""
 
     def __init__(self, adapter, run_dir, params, *, workers: int | None = None,
-                 errored_policy: str | None = None):
+                 errored_policy: str | None = None, cost: "costaware.CostParams | None" = None):
         """``params`` = ``promotion.P2Params``. Requires ``split_mode: pooled`` splits (``Splits.pooled``)
         (the partition is created on first use, see ``harness.ensure_pooled``)."""
         if not eval_index.enabled():
@@ -173,6 +176,7 @@ class P2Evaluator:
             raise ValueError("rule P2 needs a non-empty feedback and confirm stratum "
                              f"(got {len(self.splits.feedback)} / {len(self.splits.confirm)})")
         self.errored_policy = errored_policy or self._default_policy()
+        self.cost = cost if cost is not None else self._default_cost()
         self._lock = threading.Lock()
         self._round_dir().mkdir(parents=True, exist_ok=True)
 
@@ -183,6 +187,11 @@ class P2Evaluator:
         if raw:
             return harness.resolve_errored_policy(raw, self.run_dir)
         return "fail" if getattr(self.adapter, "supports_error_kind", False) else "drop"
+
+    def _default_cost(self) -> "costaware.CostParams":
+        """Cost-aware acceptance from the run's spec (``cost_lambda`` ... , see ``costaware``); off by default."""
+        from .specfile import spec_for_run
+        return costaware.CostParams.from_spec(spec_for_run(self.run_dir) or {})
 
     # -- split accessors ------------------------------------------------------------------------
     def feedback_ids(self) -> list:
@@ -214,11 +223,15 @@ class P2Evaluator:
         want = trials or getattr(self, "_inc_trials", None) or self.params.incumbent_trials
         return eval_index.missing(self.run_dir, h, self.splits.feedback, want, split="feedback")
 
-    def plan_round(self, k_wanted: int, incumbent_dir: Path | None = None) -> RoundPlan:
+    def plan_round(self, k_wanted: int, incumbent_dir: Path | None = None, *,
+                   allow_direct: bool = False) -> RoundPlan:
         """Shrink K until the worst-case cost fits the remaining ``max_metric_calls``.
 
         ``incumbent_dir`` (optional) adds the cost of topping the incumbent's F draws up to
-        ``incumbent_trials`` per task. That top-up only sharpens the rung ranking, so when no K >= 1 fits
+        ``incumbent_trials`` per task. ``allow_direct`` (hill-climb): when not even K = 1 with rungs fits, the
+        last round SHRINKS instead of ending the search with budget unspent: one candidate, no rungs, straight
+        to the control + confirmation on C (the rungs are kill-only filters; the confirmation is the test).
+        That top-up only sharpens the rung ranking, so when no K >= 1 fits
         with the full top-up the plan degrades it (down to one draw per task) before it gives up: after
         a promotion the new incumbent has almost no F draws, and the full top-up used to end the search
         with up to 40% of the budget unspent (campaign erratum 29). The chosen level is remembered for
@@ -240,6 +253,9 @@ class P2Evaluator:
                 k -= 1
             if not incumbent_dir:
                 break
+        direct_cost = self.params.ctrl_m * n_c + self.params.conf_n_for(n_c)
+        if allow_direct and (left is None or direct_cost <= left):
+            return RoundPlan(k=1, worst_case=direct_cost, funded=True, direct=True)
         return RoundPlan(k=0, worst_case=p.worst_case_cost(1, n_c) + prep, funded=False)
 
     # -- rounds -----------------------------------------------------------------------------------
@@ -255,8 +271,9 @@ class P2Evaluator:
         with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps({"kind": kind, "ts": time.time(), **clean}) + "\n")
 
-    def open_round(self, candidates: Mapping[str, Path], incumbent: tuple) -> "Round":
-        """``candidates = {cid: workdir}``, ``incumbent = (cid, dir)``. Persists the round."""
+    def open_round(self, candidates: Mapping[str, Path], incumbent: tuple, *, direct: bool = False) -> "Round":
+        """``candidates = {cid: workdir}``, ``incumbent = (cid, dir)``. Persists the round. ``direct`` = a shrunk
+        final round: the candidates skip the rungs and go straight to the confirmation."""
         with self._lock:
             no = len(list(self._round_dir().glob("r*.json")))
             round_id = f"r{no:03d}"
@@ -264,6 +281,9 @@ class P2Evaluator:
                      "candidates": {str(c): str(d) for c, d in candidates.items()},
                      "live": {"1": list(map(str, candidates)), "2": []}, "stage": "open",
                      "jobs": {}, "rungs": {}, "confirms": {}, "champion": None, "opened": time.time()}
+            if direct:
+                state.update(direct=True, stage="rung2_closed")
+                state["live"]["confirm"] = list(map(str, candidates))
             _atomic_write(self._round_dir() / f"{round_id}.json", json.dumps(state, indent=1))
         self.run_dir.log_event("p2_round_open", round=round_id, k=len(candidates),
                                incumbent=str(incumbent[0]), n_feedback=len(self.splits.feedback),
@@ -480,6 +500,25 @@ class Round:
         h = eval_index.cap_hash(Path(self.state["incumbent"][1]))
         return eval_index.counts(self.ev.run_dir, h, "feedback")
 
+    # ---- cost-aware acceptance (opt-in, see ``costaware``) -----------------------------------------
+    def _rel_cost(self, cid: str, stage_prefix: str, split: str, ref_tags=None) -> float | None:
+        """Candidate cost per rollout relative to the incumbent's, over the tasks both were measured on.
+        ``ref_tags`` = the incumbent's control tags (confirmation); None = every ledger row of its hash (rungs)."""
+        cp = self.ev.cost
+        if not cp.enabled:
+            return None
+        tags = set(self._tags(cid, stage_prefix))
+        rows = [r for r in eval_index.rows(self.ev.run_dir) if r.get("split") == split]
+        cand = [r for r in rows if r.get("tag") in tags]
+        if ref_tags is None:
+            h = eval_index.cap_hash(Path(self.state["incumbent"][1]))
+            ref = [r for r in rows if r.get("cap_hash") == h]
+        else:
+            ref = [r for r in rows if r.get("tag") in set(ref_tags)]
+        shared = {r["task"] for r in cand} & {r["task"] for r in ref}
+        return costaware.relative_cost([r for r in cand if r["task"] in shared],
+                                       [r for r in ref if r["task"] in shared], cp)
+
     # ---- rungs -----------------------------------------------------------------------------------
     def _f_draws(self) -> tuple:
         r1, r2 = self.ev.params.rung_sizes
@@ -533,7 +572,7 @@ class Round:
         m = max(1, int(round(sum(m_acc) / len(m_acc))))
         se = racing.pooled_se(n, counts, v, m)
         mean = tot / n
-        return {"mean": mean, "z": (mean / se if se > 0 else 0.0), "n": n}
+        return {"mean": mean, "z": (mean / se if se > 0 else 0.0), "n": n, "se": se}
 
     def close_rung(self, rung: int) -> dict:
         """``{cid: RungVerdict}``; kill-only halving on the pooled F draws. Never accepts."""
@@ -542,12 +581,20 @@ class Round:
         stats = {cid: self._rung_stat(cid) for cid in live}
         k = len(self.state["candidates"])
         keep_n = max(1, k // 2) if rung == 1 else min(p.max_survivors, max(1, k // 4))
-        keep = set(racing.halve(stats, keep_n))
+        # cost path (``cost_accept``): a clearly cheaper candidate whose reward is not clearly worse stays alive
+        # for the confirmation even with a non-positive screen mean (it cannot win a screen on reward)
+        cp = self.ev.cost
+        rels = {cid: self._rel_cost(cid, "rung", "feedback") for cid in stats} if cp.accept else {}
+        cheap = {cid for cid, r in rels.items() if r is not None and r <= -cp.min_saving
+                 and stats[cid]["mean"] - cp.noninf_z * stats[cid].get("se", 0.0) >= -cp.margin}
+        ranked = {cid: ({**st, "mean": max(st["mean"], 1e-9)} if cid in cheap else st) for cid, st in stats.items()}
+        keep = set(racing.halve(ranked, keep_n))
         out = {}
         for cid, st in stats.items():
             status = "advance" if cid in keep else "kill"
-            why = ("kept: top %d by paired z with mean > 0" % keep_n if status == "advance"
-                   else ("mean <= 0" if st["mean"] <= 0 else "outside the top %d by paired z" % keep_n))
+            why = ("kept: top %d by paired z with mean > 0" % keep_n if status == "advance" and cid not in cheap
+                   else ("kept: cheaper at non-inferior reward (cost path)" if status == "advance"
+                         else ("mean <= 0" if st["mean"] <= 0 else "outside the top %d by paired z" % keep_n)))
             out[cid] = RungVerdict(cid, status, st["mean"], st["z"], st["n"], why)
         self.state["rungs"][str(rung)] = {c: asdict(v) for c, v in out.items()}
         if rung == 1:
@@ -585,8 +632,40 @@ class Round:
     def _cost_conf(self) -> int:
         return self._n_conf_draws()
 
+    def _prior_control(self) -> tuple:
+        """``(tags, per_task_draws)``: control rollouts of this round's incumbent from EARLIER rounds (``p2_reuse_control``).
+        Only complete controls count (every C task has at least one draw); the reusable depth is the minimum
+        draws per task. A promoted incumbent has a new id, so nothing is reused across a champion change."""
+        if not self.ev.params.reuse_control:
+            return [], 0
+        inc_cid = self.state["incumbent"][0]
+        tags = []
+        for f in sorted(self.ev._round_dir().glob("r*.json")):
+            if f.stem == self.round_id:
+                continue
+            try:
+                st = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if st.get("incumbent", [None])[0] != inc_cid:
+                continue
+            for j in st.get("jobs", {}).values():
+                if j["cid"] == inc_cid and j["stage"] == "control" and \
+                        (self.ev._round_dir() / "done" / f"{j['job_id'].replace(':', '_')}.ok").exists():
+                    tags.append(j["tag"])
+        if not tags:
+            return [], 0
+        sr = harness.split_result_from_rollouts(self.ev.run_dir, tags, "confirm", errored_policy=self.ev.errored_policy)
+        have = {str(pt["task_id"]): len(pt.get("trial_rewards") or []) for pt in sr.per_task}
+        depth = min((have.get(str(t), 0) for t in self.ev.splits.confirm), default=0)
+        return (tags, depth) if depth > 0 else ([], 0)
+
+    def _ctrl_passes(self) -> int:
+        """Control passes over C this round still has to run."""
+        return max(0, self.ev.params.ctrl_m - self._prior_control()[1])
+
     def _cost_ctrl(self) -> int:
-        return self.ev.params.ctrl_m * len(self.ev.splits.confirm)
+        return self._ctrl_passes() * len(self.ev.splits.confirm)
 
     def confirm_plan(self) -> tuple:
         """``(funded, unfunded)`` survivor lists: as many survivors (best rung z first) as fit the
@@ -606,6 +685,8 @@ class Round:
     def confirm_jobs(self) -> list:
         """Control jobs (incumbent on C, ``ctrl_m`` trials) and fresh confirmation jobs per funded survivor."""
         p = self.ev.params
+        if self.state.get("extending"):
+            return self._extension_jobs()
         funded, unfunded = self.confirm_plan()
         self.state["confirm_funded"], self.state["confirm_unfunded"] = funded, unfunded
         if not funded:
@@ -613,9 +694,11 @@ class Round:
             return []
         C = self.ev.splits.confirm
         inc_cid = self.state["incumbent"][0]
-        ctrl_draws = [t for _ in range(p.ctrl_m) for t in C]
-        ctrl_jobs = self._make_jobs(inc_cid, "control", "confirm", ctrl_draws, _passes(ctrl_draws),
-                                    "control", "ctrl")
+        reuse_tags, _ = self._prior_control()
+        self.state["control_reuse"] = reuse_tags
+        ctrl_draws = [t for _ in range(self._ctrl_passes()) for t in C]
+        ctrl_jobs = (self._make_jobs(inc_cid, "control", "confirm", ctrl_draws, _passes(ctrl_draws),
+                                     "control", "ctrl") if ctrl_draws else [])
         cand_jobs = []
         for i, cid in enumerate(funded):
             draws = racing.draw_order(C, p.conf_n_for(len(C)), self._draw_key(f"C:{cid}"))
@@ -625,8 +708,26 @@ class Round:
         self._save()
         return interleave(ctrl_jobs, *cand_jobs)
 
+    def _extension_jobs(self) -> list:
+        """The one extra block of fresh C draws for the near-miss candidates (``p2_extend_z``). The control is
+        not re-run: the extension is judged against the same control draws. Idempotent per candidate."""
+        p = self.ev.params
+        C = self.ev.splits.confirm
+        left = self.ev.run_dir.remaining_metric_calls()
+        jobs, cost = [], 0
+        for i, cid in enumerate(self.state["extending"]):
+            if left is not None and cost + self._cost_conf() > left:
+                self.state.setdefault("extend_unfunded", []).append(cid)
+                continue
+            cost += self._cost_conf()
+            draws = racing.draw_order(C, p.conf_n_for(len(C)), self._draw_key(f"C2:{cid}"))
+            jobs += self._make_jobs(cid, "confirm", "confirm", draws, _passes(draws), "confirm", "cx",
+                                    seed_shift=1000 + 100 * i)
+        self._save()
+        return jobs
+
     def _trials_on_c(self, cid: str, stage: str) -> dict:
-        tags = self._tags(cid, stage)
+        tags = self._tags(cid, stage) + (list(self.state.get("control_reuse") or []) if stage == "control" else [])
         if not tags:
             return {}
         sr = harness.split_result_from_rollouts(self.ev.run_dir, tags, "confirm",
@@ -639,26 +740,57 @@ class Round:
         ``unconfirmed``, never a reject."""
         p = self.ev.params
         inc_cid = self.state["incumbent"][0]
+        self.state["extending"] = None            # the extension block (if any) has been run by now
         ctrl = self._trials_on_c(inc_cid, "control")
         out: dict = {}
         n_c = len(self.ev.splits.confirm)
-        accepted = []
+        accepted, near_miss = [], []
         for cid in self.state.get("confirm_funded", []):
             cand = self._trials_on_c(cid, "confirm")
-            r = racing.confirm_with_control(cand, ctrl, z_conf=p.z_conf, dmin=p.dmin,
-                                            min_coverage=p.min_coverage, n_planned=n_c)
-            v = ConfirmVerdict(cid, "accept" if r["pass"] else "reject", r["mean"], r["z"], r["n"],
-                               f"mean {r['mean']:+.4f}, z {r['z']:.2f} on {r['n']} paired C tasks "
-                               f"(need mean >= {p.dmin:g}, z >= {p.z_conf:g})")
+            second = cid in self.state.get("extended", [])      # pooled second look: a stricter bar
+            r = racing.confirm_with_control(cand, ctrl, z_conf=p.z_conf + (p.extend_margin if second else 0.0),
+                                            dmin=p.dmin, min_coverage=p.min_coverage, n_planned=n_c)
+            reason = (f"mean {r['mean']:+.4f}, z {r['z']:.2f} on {r['n']} paired C tasks "
+                      f"(need mean >= {p.dmin:g}, z >= {p.z_conf:g})")
+            ok, rel, path = r["pass"], None, "reward"
+            if p.extend_z and not r["pass"] and cid not in self.state.get("extended", []) \
+                    and r["mean"] > 0 and r["z"] >= p.extend_z:
+                near_miss.append(cid)
+                continue
+            if self.ev.cost.enabled and r["n"] >= 2 and r["coverage"] >= p.min_coverage:
+                rel = self._rel_cost(cid, "confirm", "confirm", ref_tags=self._tags(inc_cid, "control")
+                                    + list(self.state.get("control_reuse") or []))
+                j = costaware.judge(self.ev.cost, passed=r["pass"], mean=r["mean"], se=r["se"], z=r["z"],
+                                    dmin=p.dmin, rel=rel)
+                ok, path = j.accept, j.path
+                if j.reason:
+                    reason += "; " + j.reason
+                if rel is not None:
+                    reason += f"; relative cost {rel:+.1%}"
+            v = ConfirmVerdict(cid, "accept" if ok else "reject", r["mean"], r["z"], r["n"], reason,
+                               rel_cost=rel, path=path)
             out[cid] = v
-            if r["pass"]:
+            if ok:
                 accepted.append(v)
+        if near_miss and self.ev.run_dir.can_afford(self._cost_conf() * len(near_miss)):
+            # Nothing is decided yet: the caller runs ``confirm_jobs`` (now the extension block) and calls
+            # ``close_confirm`` again, which recomputes every verdict from the pooled draws.
+            self.state["extending"] = near_miss
+            self.state["extended"] = list(self.state.get("extended", [])) + near_miss
+            self.state["stage"] = "confirm_extend"
+            self._save()
+            self.ev.run_dir.log_event("p2_confirm_extend", round=self.round_id, candidates=near_miss)
+            return {c: ConfirmVerdict(c, "extend", reason="near-miss: one more block of fresh C draws")
+                    for c in near_miss}
+        for cid in near_miss:                    # the extension does not fit the budget: a plain reject of the near-miss
+            out[cid] = ConfirmVerdict(cid, "reject", reason="near-miss; the extension did not fit the budget")
         for cid in self.state.get("confirm_unfunded", []):
             out[cid] = ConfirmVerdict(cid, "unconfirmed", reason="the budget could not fund its confirmation")
         for cid, rv in (self.state["rungs"].get("2") or self.state["rungs"].get("1") or {}).items():
             if cid not in out and rv["status"] == "unfunded":
                 out[cid] = ConfirmVerdict(cid, "unconfirmed", reason="rung unfunded")
-        champ = max(accepted, key=lambda v: v.mean).cid if accepted else None
+        lam = self.ev.cost.lam
+        champ = (max(accepted, key=lambda v: v.mean - lam * (v.rel_cost or 0.0)).cid) if accepted else None
         self.state["confirms"] = {c: asdict(v) for c, v in out.items()}
         self.state["champion"], self.state["stage"] = champ, "closed"
         self._save()
@@ -670,13 +802,17 @@ class Round:
         return out
 
     def confirm(self, map_fn: Callable | None = None) -> dict:
-        """``confirm_jobs`` + run + ``close_confirm`` in one call."""
+        """``confirm_jobs`` + run + ``close_confirm`` in one call (plus the near-miss extension, once)."""
         jobs = self.confirm_jobs()
         if jobs and not self._run_jobs(jobs, map_fn):
             funded = self.state.get("confirm_funded", [])
             self.state["confirm_unfunded"] = list(self.state.get("confirm_unfunded", [])) + funded
             self.state["confirm_funded"] = []
-        return self.close_confirm()
+        out = self.close_confirm()
+        if any(v.status == "extend" for v in out.values()):
+            self._run_jobs(self.confirm_jobs(), map_fn)     # a block that does not fit just leaves fewer draws
+            out = self.close_confirm()
+        return out
 
     # ---- K = 1 -----------------------------------------------------------------------------------
     def sequential(self, cid: str, map_fn: Callable | None = None) -> ConfirmVerdict:
@@ -697,7 +833,7 @@ class Round:
                                     "control", "ctrl")
         draws = racing.draw_order(C, n_max, self._draw_key(f"S:{cid}"))
         passes = _passes(draws)
-        prev = 0
+        prev, cost_note = 0, ""
         for i, n in enumerate(p.gs_looks):
             jobs = self._make_jobs(cid, "seq", "confirm", draws[prev:n], passes[prev:n], "seq", f"seq{i}")
             if i == 0:      # the control is measured in the same window as the first look
@@ -713,11 +849,18 @@ class Round:
             act = racing.gs_decide(i, nn, z, looks=p.gs_looks, c=p.gs_c, futility=p.gs_futility)
             if act == "accept" and mean < p.dmin:
                 act = "continue" if i < len(p.gs_looks) - 1 else "kill"
+            if act == "accept" and self.ev.cost.enabled:      # reward win: the cost term can only veto a marginal one
+                j = costaware.judge(self.ev.cost, passed=True, mean=mean, se=math.inf, z=z, dmin=p.dmin,
+                                    rel=self._rel_cost(cid, "seq", "confirm",
+                                                       ref_tags=self._tags(inc_cid, "control")))
+                if not j.accept:
+                    act = "kill"
+                    cost_note = f"; {j.reason}"
             if act != "continue":
                 status = "accept" if act == "accept" else "reject"
                 return self._seq_done(cid, ConfirmVerdict(
                     cid, status, mean, z, nn, f"look {i + 1}/{len(p.gs_looks)}: mean {mean:+.4f}, z {z:.2f} "
-                    f"on {nn} rollouts"))
+                    f"on {nn} rollouts{cost_note}"))
         return self._seq_done(cid, ConfirmVerdict(cid, "reject", n=prev, reason="no decision"))
 
     def _seq_stat(self, cand: dict, phat: dict, m: int) -> tuple:

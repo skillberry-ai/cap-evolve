@@ -8,6 +8,29 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added (V4 search fixes)
+- **Cost-aware acceptance** (`cost_lambda`, `cost_accept`, `cost_metric`, `cost_clear_z`, `cost_margin`, `cost_min_saving`,
+  `cost_noninf_z`, `cost_min_n`; all off by default, `core/cap_evolve/costaware.py`). The agent cost of a candidate (prompt plus
+  completion tokens per rollout, from its own rollouts, relative to the incumbent's) enters the P2 confirmation, the HC-2 cheap
+  accept and the group-sequential test: a marginal reward win that is much more expensive is rejected, a clear win (`z >= cost_clear_z`)
+  never is, a cheaper candidate is never penalised, and among several accepts the champion maximises `mean - lambda x cost`.
+  `cost_accept` adds a cost path: reward non-inferior and clearly cheaper is an accept.
+- **Compress operator**: `hc2_compress_every` (HC-2) and `ao_compress_every` (agent-optimize) periodically ask a proposer to rewrite the
+  champion shorter, more deterministic and de-duplicated; it is accepted through the same gate (cost path).
+- **Budget-driven search**: when `max_metric_calls` or `max_usd` is set and `max_iterations` is not, the iteration cap is 0 (none) and
+  hill-climb keeps proposing until the budget binds; the last HC-2 round shrinks to one direct candidate (no rungs, control plus
+  confirmation) instead of ending the search with budget unspent. An explicit `max_iterations` still wins; `hc2_plateau_rounds`
+  (off) is the only plateau stop. A run-state `max_iterations: 0` now survives a reopen.
+- Proposer prompts of hill-climb, HC-2 and agent-optimize encourage adding or improving executable scripts and code in skills, fixed
+  checklists and verification commands (determinism), and text edits, and ask for a small package.
+- Agent-optimize: `p2_extend_z` (a near-miss confirmation gets one more block of fresh C draws, pooled and judged at a stricter bar),
+  `p2_reuse_control` (reuse the unchanged incumbent's control draws from earlier rounds).
+### Fixed (V4)
+- The diversity gate compared whole diffs, so two different rewrites of the same file looked alike through the parent lines both
+  deleted; it now compares the ADDED lines (8-13 false refusals and a wasted second proposer job per V3 agent-optimize search).
+- A P2 evaluation job that fails once is retried in its worker thread before the conductor counts a failure (26 `EOFError` job
+  failures per V3 search); the tau2 adapters name native-sim files by process, thread and a random suffix so two evaluations never
+  collide and make tau2 prompt on stdin.
 ### Fixed
 - AO-2 no longer ends a search on hypothesis paperwork: the proposer prompt lists the valid `cluster_ids` (with
   labels); an unknown or empty `cluster_ids`, out-of-cluster `predicted_tasks`, or a missing/unreadable

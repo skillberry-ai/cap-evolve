@@ -40,6 +40,8 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import costaware
+from .proposer_guidance import COMPRESS_NOTE
 from .evaluator import thread_map
 
 
@@ -63,7 +65,12 @@ class HC2Params:
     cheap_accept: bool = False       # accept on the rung-2 screen; validate the accepted chain once at the end
     cheap_z: float = 1.0             # rung-2 paired z a cheap accept needs (mean >= the P2 dmin as well)
     validate_trials: int = 0         # trials per C task of each end-of-search validation arm (0 = num_trials)
-    max_rounds: int = 0              # 0 = the run's max_iterations
+    max_rounds: int = 0              # 0 = the run's max_iterations (itself 0 = unlimited when a budget is set)
+    plateau_rounds: int = 0          # stop after N consecutive rounds without a champion change. 0 = off (default):
+                                     # only the budget (or max_rounds) ends the search. Counted per process
+    compress_every: int = 0          # every N-th round one slot COMPRESSES the incumbent (shorter, more deterministic,
+                                     # de-duplicated; same gate, cost path). 0 = off
+
     final_estimate_trials: int = 4   # trials per arm of the closing champion-vs-seed estimate on C;
                                      # 0 = no reservation and no estimate (for budgets that cannot afford it)
 
@@ -96,11 +103,15 @@ class HC2Params:
             cheap_z=float(spec.get("hc2_cheap_z", d.cheap_z)),
             validate_trials=int(spec.get("hc2_validate_trials", d.validate_trials)),
             max_rounds=int(spec.get("hc2_max_rounds", d.max_rounds)),
+            compress_every=int(spec.get("hc2_compress_every", d.compress_every)),
+            plateau_rounds=int(spec.get("hc2_plateau_rounds", d.plateau_rounds)),
             final_estimate_trials=int(spec.get("hc2_final_estimate_trials", d.final_estimate_trials)))
         if min(out.k, out.minibatch, out.per_cluster, out.broad_max) < 1 or out.pairs < 0 or out.retries < 0 \
             or out.final_estimate_trials < 0 or out.cross_traces < 0 or out.merge_max < 2:
             raise ValueError("hc2_k, hc2_minibatch and hc2_per_cluster must be >= 1; "
                              "hc2_pairs, hc2_retries and hc2_final_estimate_trials >= 0")
+        if out.compress_every < 0 or out.plateau_rounds < 0:
+            raise ValueError("hc2_compress_every and hc2_plateau_rounds must be >= 0")
         if not 0.0 < out.diversity_threshold <= 1.0:
             raise ValueError("hc2_diversity_threshold must be in (0, 1]")
         return out
@@ -332,6 +343,15 @@ GOAL_NOTE = ("Aim for the edit with the largest expected reward gain on the WHOL
 
 def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm: str, params: HC2Params,
                        shown: dict, rejected_notes, retry_note: str = "", role: str = "cluster") -> str:
+    if role == "compress":
+        label = "the whole incumbent (compress / refactor round)"
+        lead = ("This proposal is one of several made in parallel from the same incumbent, and it is the "
+                "COMPRESS slot. Traces in trajectories/ show what must keep working.")
+        extra = [lead, COMPRESS_NOTE, "Tasks that must keep passing are in trajectories/ and contrast/."]
+        if retry_note:
+            extra.append(retry_note)
+        return ctx.instructions(adapter_val, list(cluster), label, algorithm=algorithm,
+                                parent_dir=parent_dir, extra="\n\n".join(extra))
     if role == "broad":
         label = f"failing traces of {len(cluster)} task(s) across ALL failure types on the feedback stratum"
         lead = ("This proposal is one of several made in parallel from the same incumbent. Your traces in "
@@ -480,11 +500,23 @@ def _shingles(lines: frozenset, n: int = 3) -> frozenset:
     return frozenset(out)
 
 
+def _added(lines: frozenset) -> frozenset:
+    return frozenset(ln for ln in lines if ln.partition("\t")[2][:1] == "+")
+
+
 def diff_overlap(x: frozenset, y: frozenset) -> float:
     """Similarity of two diffs, 0.0 when either is empty: the larger of the Jaccard of the changed lines
-    and the Jaccard of their word 3-grams, so a lightly reworded copy of an edit still counts."""
+    and the Jaccard of their word 3-grams, so a lightly reworded copy of an edit still counts.
+
+    Compared on the ADDED lines when both diffs add any: two different rewrites of the same file both delete
+    the same parent lines, and counting those made unrelated edits look like duplicates (campaign V3: 8-13
+    false refusals per agent-optimize search, each costing a second proposer job). A pure deletion is compared
+    on its removed lines."""
     if not x or not y:
         return 0.0
+    ax, ay = _added(x), _added(y)
+    if ax and ay:
+        x, y = ax, ay
     lines = len(x & y) / len(x | y)
     sx, sy = _shingles(x), _shingles(y)
     return max(lines, len(sx & sy) / len(sx | sy))
@@ -594,19 +626,19 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
     from . import harness
     rejected, history, store = harness._init_memory_store(run_dir, store)
     rdiffs = RejectedDiffs(run_dir)
-    n_rounds = params.max_rounds or max_iterations
+    n_rounds = params.max_rounds or max_iterations     # 0 (the default when a rollout budget is set) = no round cap
     window = params.diversity_window or params.k
     if hasattr(evaluator, "workers"):
         evaluator.workers = 1
     env = dict(adapter=adapter, run_dir=run_dir, evaluator=evaluator, ctx=ctx, rejected=rejected,
                history=history, store=store, rdiffs=rdiffs, workers=workers, algorithm=algorithm, params=params)
-    steps, stop = [], ""
+    steps, stop, flat = [], "", 0
 
     pend = _load_pending(run_dir)
     if pend:
         steps += _finish_round(pend, **env)
 
-    while _rounds_done(run_dir) < n_rounds:
+    while not n_rounds or _rounds_done(run_dir) < n_rounds:       # 0 = unlimited: the budget stops the search
         exhausted, _ = run_dir.budget_exhausted()
         if exhausted:
             break
@@ -626,17 +658,27 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
             except Exception:  # noqa: BLE001 - cannot be held: the estimate will be skipped and recorded
                 hold = None
         try:
-            plan = evaluator.plan_round(params.k, incumbent_dir=run_dir.candidate_dir(run_dir.best_id))
+            plan = evaluator.plan_round(params.k, incumbent_dir=run_dir.candidate_dir(run_dir.best_id),
+                                        allow_direct=True)
         finally:
             run_dir.release_metric_calls(hold)
         if not plan.funded:
             stop = "budget_unfunded"
             break
+        if params.plateau_rounds and flat >= params.plateau_rounds:
+            stop = f"plateau: {flat} rounds without a champion change (hc2_plateau_rounds)"
+            break
+        best_before = run_dir.best_id
         pend = _propose_round(plan.k, window, _rounds_done(run_dir), **env, optimizer=optimizer)
+        if pend is not None and plan.direct:
+            pend["direct"] = True
+            _save_pending(run_dir, pend)
+            run_dir.log_event("hc2_direct_round", worst_case=plan.worst_case)
         if pend is None:
             stop = "no_failures"
             break
         steps += _finish_round(pend, **env)
+        flat = 0 if run_dir.best_id != best_before else flat + 1
     _, why = run_dir.budget_exhausted()
     validation = validate_accepted_chain(evaluator, run_dir, params) if params.cheap_accept else None
     internal = (None if params.cheap_accept
@@ -717,10 +759,14 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
     if params.broad_slot and n_prop >= 1:
         order = sorted(failed, key=lambda t: (-len(failed[t]), t))
         slots.append(("broad", order[:params.broad_max], ()))
-    n_cl = n_prop - len(slots)
+    compress = (params.compress_every > 0 and round_index > 0 and round_index % params.compress_every == 0
+                and incumbent_id != "seed" and n_prop >= 2)
+    n_cl = n_prop - len(slots) - (1 if compress else 0)
     for cl in (split_to_k(all_clusters, n_cl) if n_cl > 0 else []):
         others = [t for o in all_clusters if not set(o) & set(cl) for t in o[:params.cross_traces]]
         slots.append(("cluster", cl, others))
+    if compress:
+        slots.append(("compress", list(batch)[:params.per_cluster], ()))
     if not slots and not merged:
         return None
     cids = ([merged["cid"]] if merged else []) + [f"cand_{base + (2 if merged else 1) + j:04d}" for j in range(len(slots))]
@@ -821,18 +867,31 @@ def _open_or_resume(evaluator, run_dir, pend, live, incumbent):
             continue
         if set(st.get("candidates", {})) == set(live):
             return evaluator.resume_round(st["round_id"])
-    return evaluator.open_round(live, (pend["incumbent"], run_dir.candidate_dir(pend["incumbent"])))
+    return evaluator.open_round(live, (pend["incumbent"], run_dir.candidate_dir(pend["incumbent"])),
+                                **({"direct": True} if pend.get("direct") else {}))
 
 
 def _cheap_confirm(rnd, rung2, cheap_z, dmin):
     """``hc2_cheap_accept``: the best rung-2 survivor with mean >= dmin and z >= cheap_z is the champion
     without a C confirmation (the accepted chain is validated once at the end of the search)."""
     from .evaluator import ConfirmVerdict
-    ok = [(v.z, c, v) for c, v in rung2.items() if v.status == "advance" and v.mean >= dmin and v.z >= cheap_z]
+    cp = getattr(rnd.ev, "cost", None) or costaware.CostParams()
+    rel = {c: (rnd._rel_cost(c, "rung", "feedback") if cp.enabled else None) for c in rung2}
+    ok = []
+    for c, v in rung2.items():
+        if v.status != "advance":
+            continue
+        passed = v.mean >= dmin and v.z >= cheap_z
+        if cp.enabled:      # the cost term: veto a marginal win that is much more expensive; accept a cheaper tie
+            se = abs(v.mean / v.z) if v.z else float("inf")
+            j = costaware.judge(cp, passed=passed, mean=v.mean, se=se, z=v.z, dmin=dmin, rel=rel[c])
+            passed = j.accept
+        if passed:
+            ok.append((v.mean - cp.lam * (rel[c] or 0.0) if cp.enabled else v.z, c, v))
     out = {c: ConfirmVerdict(c, "reject", v.mean, v.z, v.n, "cheap screen: below the accept bar")
            for c, v in rung2.items() if v.status == "advance"}
     if ok:
-        _, cid, v = max(ok)
+        _, cid, v = max(ok, key=lambda t: (t[0], t[1]))
         out[cid] = ConfirmVerdict(cid, "accept", v.mean, v.z, v.n,
                                   f"cheap accept on the screen (mean {v.mean:+.3f}, z {v.z:.2f}); validated at the end")
         rnd.state["champion"] = cid
@@ -849,6 +908,8 @@ def _drive(rnd, map_fn, params=None):
     if st.get("stage") == "closed":
         return (_verdicts(st["rungs"].get("1"), RungVerdict), _verdicts(st["rungs"].get("2"), RungVerdict),
                 _verdicts(st.get("confirms"), ConfirmVerdict))
+    if st.get("direct"):                  # a shrunk final round: no rungs, the confirmation is the whole test
+        return {}, {}, rnd.confirm(map_fn=map_fn)
     rung1 = rnd.run_rung(1, map_fn=map_fn)
     rung2, confirm = {}, {}
     if any(v.status == "advance" for v in rung1.values()):

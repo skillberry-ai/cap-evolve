@@ -256,3 +256,17 @@ def spec_for_run(run_dir, project: Path | None = None) -> dict:
         return read_yaml(path.read_text(encoding="utf-8")) or {}
     except Exception:  # noqa: BLE001
         return {}
+
+
+def resolve_max_iterations(spec: dict | None, default: int = 10) -> int:
+    """The iteration cap a run is started with. An explicit ``max_iterations`` always wins (``0`` = no cap).
+    When the key is ABSENT and the spec sets a rollout (``max_metric_calls``) or dollar (``max_usd``) budget, the
+    cap is 0: the budget is the stopping rule and the search keeps proposing until it binds, instead of
+    stopping at an arbitrary round count with budget unspent. With no budget either, ``default`` (10)."""
+    spec = spec or {}
+    v = spec.get("max_iterations")
+    if v not in (None, ""):
+        return int(v)
+    if int(spec.get("max_metric_calls") or 0) > 0 or float(spec.get("max_usd") or 0) > 0:
+        return 0
+    return default

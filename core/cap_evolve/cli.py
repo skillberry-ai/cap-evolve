@@ -52,6 +52,11 @@ from . import __version__
 from .check import run_check
 
 
+
+def _resolve_max_iterations(spec: dict) -> int:
+    from .specfile import resolve_max_iterations
+    return resolve_max_iterations(spec)
+
 def _find_skills_dir() -> Path | None:
     for cand in [
         os.environ.get("CAPEVOLVE_SKILLS_DIR"),
@@ -798,7 +803,7 @@ def _cmd_run(argv):
                           "target_model": spec.get("target_model", ""),
                           "orchestration_mode": orchestration_mode,
                           "gate_mode": spec.get("gate_mode", "auto (paired)"),
-                          "budget": {"max_iterations": spec.get("max_iterations", 10),
+                          "budget": {"max_iterations": _resolve_max_iterations(spec),
                                      "stall": spec.get("stall", 0),
                                      "max_metric_calls": spec.get("max_metric_calls", 0),
                                      "max_usd": spec.get("max_usd", 0.0),
@@ -855,7 +860,7 @@ def _cmd_run(argv):
     # 1) baseline (creates the run dir; capture its relative path)
     base_cmd = [py, skill_run("baseline"), "--base", base, "--project", project,
                 "--capability", cap_path, "--seed", str(spec.get("split_seed", 0)),
-                "--ratios", ratios, "--max-iterations", str(spec.get("max_iterations", 10)),
+                "--ratios", ratios, "--max-iterations", str(_resolve_max_iterations(spec)),
                 "--stall", str(spec.get("stall", 0)), "--n-trials", str(spec.get("num_trials", 1)),
                 "--max-metric-calls", str(spec.get("max_metric_calls", 0)),
                 "--max-usd", str(spec.get("max_usd", 0.0)),
@@ -976,7 +981,7 @@ def _cmd_run(argv):
 
     # 2) algorithm (hill-climb variants select their schedule via --focus)
     alg_cmd = [py, skill_run(algorithm_name), "--run-dir", run_dir, "--project", project,
-               "--optimizer", opt_cmd, "--max-iterations", str(spec.get("max_iterations", 10)),
+               "--optimizer", opt_cmd, "--max-iterations", str(_resolve_max_iterations(spec)),
                "--n-trials", str(spec.get("num_trials", 1)),
                "--gate-mode", str(spec.get("gate_mode", "auto")),
                "--k-se", str(spec.get("gate_k_se", 1.0)),
@@ -1265,7 +1270,7 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
 
     val = _val_size(spec, project)
     trials = int(spec.get("num_trials", 1) or 1)
-    iters = int(spec.get("max_iterations", 10) or 10)
+    iters = _resolve_max_iterations(spec) or 10
     # The optimizer's cost is priced for the "propose" routing role (#665 ws5), matching
     # how the actual optimizer invocation resolves its model (see opt_cmd above, ~line 725)
     # instead of reading optimizer_model directly — same fallback when model_routing is absent.

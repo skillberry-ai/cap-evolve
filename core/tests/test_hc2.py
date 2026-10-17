@@ -109,7 +109,7 @@ class FakeEvaluator:
     def confirm_ids(self):
         return list(C_IDS)
 
-    def plan_round(self, k_wanted, incumbent_dir=None):
+    def plan_round(self, k_wanted, incumbent_dir=None, *, allow_direct=False):
         return RoundPlan(min(k_wanted, self.k), 100, True)
 
     def _round_dir(self):
@@ -338,9 +338,9 @@ def _capped_fake(run_dir, **kw):
     ev.remaining_at_plan = []
     orig = ev.plan_round
 
-    def plan(k_wanted, incumbent_dir=None):
+    def plan(k_wanted, incumbent_dir=None, **kw):
         ev.remaining_at_plan.append(run_dir.remaining_metric_calls())
-        return orig(k_wanted, incumbent_dir)
+        return orig(k_wanted, incumbent_dir, **kw)
     ev.plan_round = plan
     return ev
 

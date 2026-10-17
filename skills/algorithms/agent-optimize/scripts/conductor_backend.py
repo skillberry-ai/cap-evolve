@@ -119,6 +119,8 @@ class P2Port:
                 rnd.state["confirm_unfunded"] = list(rnd.state.get("confirm_unfunded", [])) + list(rnd.state.get("confirm_funded", []))
                 rnd.state["confirm_funded"] = []
             out = rnd.close_confirm()
+            if any(v.status == "extend" for v in out.values()):
+                return {"extend": [c for c, v in out.items() if v.status == "extend"], "verdicts": {}}
             return {"verdicts": {c: {"status": v.status, "mean": v.mean, "z": v.z} for c, v in out.items()},
                     "champion": rnd.champion}
         n = int(stage[-1])
@@ -304,7 +306,7 @@ class RealBackend(P2Port, conductor.Backend):
                                      min_lines=int(self.spec.get("ao_min_edit_lines") or 40),
                                      min_tasks=int(self.spec.get("ao_min_predicted") or 3),
                                      project_instructions=self._project_instructions(),
-                                     valid_clusters=self._valid_clusters())
+                                     valid_clusters=self._valid_clusters(), compress=bool(job.get("compress")))
         prompt.write_text(body, encoding="utf-8")
         with contextlib.suppress(OSError):        # the injected CLAUDE.md says "read ./INSTRUCTIONS.md FIRST"
             (work / "INSTRUCTIONS.md").write_text(body, encoding="utf-8")
@@ -448,7 +450,7 @@ class RealBackend(P2Port, conductor.Backend):
             return {"ok": False, "refused": bad[0], "detail": bad[1]}
         h = proposer.read_hypothesis(work)
         hyp = work / proposer.HYPOTHESIS_FILE
-        small = self._too_small(job, work, parent, h)
+        small = "" if job.get("compress") else self._too_small(job, work, parent, h)
         if small:
             return {"ok": False, "refused": "too_small", "detail": small}
         dup = self._near_duplicate(job, work, parent)
@@ -673,7 +675,14 @@ class RealBackend(P2Port, conductor.Backend):
                 if job.get("p2seq"):
                     v = rnd.sequential(job["p2seq"]["cid"])
                     return {"ok": True, "verdict": {"cid": v.cid, "status": v.status, "mean": v.mean, "z": v.z}}
-                rnd.run_job(self._job(job["p2"]))
+                try:
+                    rnd.run_job(self._job(job["p2"]))
+                except BudgetExhausted:
+                    raise
+                except Exception as first:  # noqa: BLE001 - one in-thread retry of a transient failure (an adapter
+                    # that prompts on stdin, a torn file): the job is idempotent, finished rollouts are not repeated
+                    self.run_dir.log_event("p2_job_retry", job=job["p2"].get("job_id"), error=f"{type(first).__name__}: {first}"[:200])
+                    rnd.run_job(self._job(job["p2"]))
                 return {"ok": True}
             except BudgetExhausted:
                 return {"ok": True, "unfunded": True}

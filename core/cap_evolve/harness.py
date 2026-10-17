@@ -14,6 +14,7 @@ builds one from a skill's ``run.py`` so external agents plug in the same way.
 from __future__ import annotations
 
 import contextlib
+import itertools
 import json
 import logging
 import math
@@ -5026,7 +5027,9 @@ class OptimizerContext:
             algorithm=algorithm, instructions_file=self.instructions_file,
             bench_repo=self.bench_repo, optimizer_name=self.optimizer_name,
             seed_empty=seed_empty, target_reader=self.target_reader)
-        return (text.rstrip() + "\n\n" + extra.strip() + "\n") if extra.strip() else text
+        from .proposer_guidance import EDIT_KINDS_NOTE
+        extra = (EDIT_KINDS_NOTE + ("\n\n" + extra.strip() if extra.strip() else ""))
+        return text.rstrip() + "\n\n" + extra + "\n"
 
 
 def parse_protected_paths(value) -> tuple[str, ...] | None:
@@ -5149,7 +5152,7 @@ def hill_climb_loop(
     baseline_val = current_val.reward   # the bar every candidate must clear, at loop entry
     convergence_stop = ""
     budget_stop = ""
-    for i in range(max_iterations):
+    for i in (range(max_iterations) if max_iterations else itertools.count()):      # 0 = unlimited: the budget stops the loop
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
             break
