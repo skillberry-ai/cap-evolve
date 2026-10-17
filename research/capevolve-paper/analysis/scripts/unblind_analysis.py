@@ -14,7 +14,7 @@ delta against the seed is exactly 0 (9D (i)); the as-measured re-score of an ine
 Reads only hash-registered result files (verified before the run by the caller). Pure standard library.
     python3 -I unblind_analysis.py OUTDIR
 """
-import csv, json, math, os, statistics, sys
+import csv, glob, json, math, os, statistics, sys
 from collections import defaultdict, OrderedDict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -42,6 +42,8 @@ if "results_V3B1_main_results_long.csv" in _REG:   # V3 B1 test block (amendment
     V21["V3B1/main"] = ("V3B1", ("test",))
 if "results_V3B1LATE_main_results_long.csv" in _REG:   # V3 B1 late-competitor window (addendum 3, erratum 13)
     V21["V3B1LATE/main"] = ("V3B1LATE", ("test",))
+if "results_V3B1CHAIN_main_results_long.csv" in _REG:   # V3 B1 chain window, descriptive (erratum 15, 16)
+    V21["V3B1CHAIN/main"] = ("V3B1CHAIN", ("test",))
 if "results_V3B1_traineval_results_long.csv" in _REG:   # V3 B1 train-30 re-evaluation (descriptive)
     V21["V3B1/traineval"] = ("V3B1_traineval", ("train",))
 for _w, (_k, _sp) in V21.items():
@@ -549,10 +551,44 @@ def main():
         F_desc = family(W[wl], Ws[wl], "Descriptive rows in this window (no Holm claim): late competitors and CapEvolve arms vs the in-window seed", [("ace", "seed"), ("hl-v0", "seed")] + [(c, "seed") for c in CE])
         fams[wl] = [(F_ace, (), False), (F_hl, (), False), (F_desc, (), False)]
         J["v3_LATE"] = {"LC-ACE": F_ace, "LC-HL": F_hl, "desc": F_desc}
+    chain_md = None
+    if "V3B1CHAIN/main" in V21:
+        wc = "V3B1CHAIN/main"
+        Wc, Wm = W[wc], W["V3B1/main"]
+        champ_path = os.path.join(FE, "champions_V3B1CHAIN.json")
+        chains = {}
+        for a in Wc.arms:
+            if a in ("seed", "seed-check"):
+                continue
+            fw, sd, *c = a.split("_")
+            chains.setdefault((fw, int(sd[1:])), []).append("_".join(c))
+        rows = ["**CHAIN window (descriptive; commissioned after the main results were seen, erratum 16). Per chain: held-out mean of each ACCEPTED intermediate candidate (k = 10, test-20) minus the in-window seed (n = 20), with the artifact-level CR1 CI; the last row of each chain is the final champion from the MAIN window, shown for reference and NOT in this window (different time block). 'search-time rollouts' = cumulative counted rollouts at the candidate's evaluation, from candidates.jsonl.**", "",
+                "| chain | step | candidate | search-time rollouts | held-out mean | delta vs in-window seed | 95% CI | step change |", "|---|---|---|---|---|---|---|---|"]
+        for (fw, sd), cs in sorted(chains.items()):
+            cs = sorted(cs)
+            prev = None
+            cf = [json.loads(l) for l in open(glob.glob(os.path.join(RUNS, "V3", "B1", fw, f"s{sd}", "**", "candidates.jsonl"), recursive=True)[0])]
+            roll = {r["candidate"]: r.get("rollouts_cum") for r in cf}
+            for i, c in enumerate(cs, 1):
+                key = f"{fw}_s{sd}_{c}"
+                v = Wc.M[(key, 0)]
+                d = [None if (x is None or y is None) else x - y for x, y in zip(v, Wc.seedvec)]
+                m = mean_ci(d, Wc.fam)
+                mean = mean_ci(v, Wc.fam)["mean"]
+                step = "" if prev is None else sgn(mean - prev)
+                prev = mean
+                rows.append(f"| {fw} s{sd} | {i} | {c} | {roll.get(c, '')} | {f(mean)} | {sgn(m['mean'])} | [{f(m['ci'][0])}, {f(m['ci'][1])}] | {step} |")
+            fin = json.load(open(os.path.join(RUNS, "V3", "B1", fw, f"s{sd}", "run_summary.json"))).get("champion")
+            v = Wm.M[(fw, sd)]
+            d = [None if (x is None or y is None) else x - y for x, y in zip(v, Wm.seedvec)]
+            m = mean_ci(d, Wm.fam); mean = mean_ci(v, Wm.fam)["mean"]
+            rows.append(f"| {fw} s{sd} | final | {fin} (main window) | {roll.get(fin, '')} | {f(mean)} | {sgn(m['mean'])} vs main-window seed | [{f(m['ci'][0])}, {f(m['ci'][1])}] | {sgn(mean - prev) + ' (cross-window)' if prev is not None else ''} |")
+        rows.append("")
+        chain_md = rows
     # ---- write per-suite markdown
     ARMLINES = {}
     for w in WINDOWS:
-        L = [f"# Window {w}: per-arm tables (" + ("released under the V3 B1 LATE freeze declaration, amendment 12 erratum 13" if w.startswith("V3B1LATE") else "released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
+        L = [f"# Window {w}: per-arm tables (" + ("descriptive CHAIN window, amendment 12 errata 15, 16" if w.startswith("V3B1CHAIN") else "released under the V3 B1 LATE freeze declaration, amendment 12 erratum 13" if w.startswith("V3B1LATE") else "released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
         nT = len(W[w].tasks); nF = len(set(W[w].fam))
         L += [f"Task set: {nT} tasks, {nF} families (cluster = family; split filter {SPLITS[w]}). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.", ""]
         if w.startswith("V2/") and w != "V2/A":
@@ -609,6 +645,8 @@ def main():
                 m = mean_ci(dd, W[w].fam)
                 L.append(f"| {a} | {f(mean_ci(y, Wm.fam)['mean'])} | {f(mean_ci(x, W[w].fam)['mean'])} | {sgn(m['mean'])} | [{f(m['ci'][0])}, {f(m['ci'][1])}] | {ps} |")
             L.append("")
+        if w == "V3B1CHAIN/main" and chain_md:
+            L += chain_md
         drift = seed_drift(w)
         if drift:
             L += [f"Seed drift (5I, in-window seed, task-demeaned): blocks (index, mean, SE, n) = " + "; ".join(f"{k}: {sgn(m,3)} (SE {se:.3f}, n={n})" for k, m, se, n in drift["blocks"]) +
