@@ -1270,7 +1270,7 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
 
     val = _val_size(spec, project)
     trials = int(spec.get("num_trials", 1) or 1)
-    iters = _resolve_max_iterations(spec) or 10
+    iters = min(_resolve_max_iterations(spec) or 10, 10 if not spec.get("max_iterations") else 10**9)   # budget-driven runs are priced as 10 rounds; the rollout budget is the real bound
     # The optimizer's cost is priced for the "propose" routing role (#665 ws5), matching
     # how the actual optimizer invocation resolves its model (see opt_cmd above, ~line 725)
     # instead of reading optimizer_model directly — same fallback when model_routing is absent.

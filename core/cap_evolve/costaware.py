@@ -62,6 +62,7 @@ class CostParams:
         # a configured compress operator can only land through the cost path, so it defaults that path on
         # (an explicit ``cost_accept: false`` still wins)
         if "cost_accept" not in spec and (int(spec.get("hc2_compress_every") or 0) > 0
+                                          or int(spec.get("hc_compress_every") or 0) > 0
                                           or int(spec.get("ao_compress_every") or 0) > 0):
             force_accept = True
         out = cls(lam=float(spec.get("cost_lambda", d.lam) or 0.0),

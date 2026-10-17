@@ -975,7 +975,7 @@ class Conductor:
         out = self.b.p2_close(r["id"], r["stage"], unfunded)
         if out.get("extend"):                         # near-miss: one more block of fresh C draws, same stage again
             r["jobs"].pop("confirm", None)
-            self.b.log("p2_confirm_extend", round=r["id"], tags=out["extend"])
+            self.b.log("p2_confirm_extend", round=r["id"], n=len(out["extend"]))
             return
         verdicts = out.get("verdicts", {})
         if r["stage"] == "confirm":

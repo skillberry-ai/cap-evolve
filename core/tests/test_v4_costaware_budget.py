@@ -140,21 +140,19 @@ def test_cost_off_leaves_the_confirmation_verdict_untouched(tmp_path):
 # ---- budget-driven search -------------------------------------------------------------------------------
 
 def test_max_iterations_follows_the_budget_unless_set():
-    assert resolve_max_iterations({"max_metric_calls": 3000}) == 0
-    assert resolve_max_iterations({"max_usd": 50}) == 0
+    from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS as B
+    assert resolve_max_iterations({"max_metric_calls": 3000}) == B
+    assert resolve_max_iterations({"max_usd": 50}) == B
     assert resolve_max_iterations({}) == 10
     assert resolve_max_iterations({"max_metric_calls": 3000, "max_iterations": 8}) == 8
-    assert resolve_max_iterations({"max_metric_calls": 3000, "max_iterations": 0}) == 0
     assert resolve_max_iterations({"max_iterations": 5}) == 5
 
 
-def test_a_zero_iteration_budget_survives_the_run_state_round_trip(tmp_path):
-    from cap_evolve import Budget, RunDir
-    rd = RunDir.create(tmp_path / ".capevolve", ts="z", budget=Budget(max_iterations=0, max_metric_calls=100))
-    assert RunDir.open(rd.root).budget.max_iterations == 0
-    rd.update_spent(iterations=500)
-    assert rd.budget_exhausted() == (False, "")                          # no cap: 500 iterations do not stop it
-    assert Budget.from_dict({}).max_iterations == 20                     # an ABSENT key keeps the legacy default
+def test_an_explicit_zero_still_means_zero_iterations(tmp_path):
+    from cap_evolve import Budget
+    assert resolve_max_iterations({"max_metric_calls": 3000, "max_iterations": 0}) == 0
+    assert Budget.from_dict({"max_iterations": 0}).max_iterations == 20      # unchanged legacy reading of a stored 0
+    assert Budget.from_dict({}).max_iterations == 20
 
 
 def test_plan_round_shrinks_the_last_round_to_one_direct_candidate(tmp_path):
@@ -288,3 +286,120 @@ def test_hc_instructions_carry_the_edit_kinds_note(tmp_path):
     sv = SplitResult(split="val", reward=0.5, stderr=0.1, per_task=[{"task_id": "a", "reward": 0.0, "feedback": "x"}])
     text = ctx.instructions(sv, None, "all", algorithm="hill-climb", extra="EXTRA-BLOCK")
     assert "DETERMINISM" in text and text.rstrip().endswith("EXTRA-BLOCK")
+
+
+def test_compress_prompt_drops_the_failing_task_blocks():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "skills" / "algorithms" / "agent-optimize" / "scripts"))
+    import proposer
+    c = proposer.build_prompt(workdir="/w", parent="cand_3", cluster={"id": "k1", "label": "x", "tasks": ["7"]},
+                              failing="Parent's failing tasks: 7", compress=True, valid_clusters=[("k1", "x")])
+    assert "Target cluster" not in c and "failing tasks" not in c and "Valid cluster_ids" not in c
+
+
+def test_plateau_counter_survives_a_restart(tmp_path):
+    class RD:
+        root = tmp_path
+    hc2._save_flat(RD, 3)
+    assert hc2._load_flat(RD) == 3 and hc2._load_flat(type("R", (), {"root": tmp_path / "none"})) == 0
+
+
+def test_sequential_precheck_ignores_reused_control(tmp_path):
+    adapter, run_dir = make_run(tmp_path, n_train=24, n_val=24, default=0.4)
+    params = promotion.P2Params.from_spec({"promotion_rule": "P2", "p2_conf_n": 48, "p2_ctrl_m": 4, "p2_reuse_control": True})
+    ev = evaluator.P2Evaluator(adapter, run_dir, params)
+    inc = ("seed", run_dir.candidate_dir("seed"))
+    ev.open_round({"c0": make_candidate(tmp_path, "c0", {"default": 0.9, "p": {}, "salt": 3})}, inc, direct=True).confirm()
+    n_c = len(ev.confirm_ids())
+    run_dir.update_budget(max_metric_calls=run_dir.spent.metric_calls + params.gs_looks[0] + n_c)     # < ctrl_m*|C| + first look
+    r = ev.open_round({"c1": make_candidate(tmp_path, "c1", {"default": 0.9, "p": {}, "salt": 4})}, inc)
+    assert r.sequential("c1").status == "unconfirmed"
+    assert run_dir.spent.metric_calls <= run_dir.budget.max_metric_calls
+
+
+def test_a_budget_driven_loop_stops_when_rounds_keep_producing_nothing(tmp_path):
+    from cap_evolve import Budget, RunDir
+    from test_hc2 import FakeEvaluator, _loop, _optimizer     # noqa: E402
+    rd = RunDir.create(tmp_path, ts="idle", budget=Budget(max_iterations=1_000_000))
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    (seed / "SKILL.md").write_text("x\n")
+    rd.snapshot("seed", seed)
+    rd.set_best("seed")
+    for t in ("f0", "f1"):
+        d = rd.rollouts / "feedback"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{t}__seed__t0.json").write_text(json.dumps({"input": "x", "rollout": {"task_id": t, "output": "o", "error": None},
+                                                         "score": {"reward": 0.0, "feedback": "fail"}}))
+    out = _loop(rd, FakeEvaluator(accept=False), lambda workdir, instructions: None, rounds=1_000_000)
+    assert out["stop_reason"].startswith("no_progress"), out["stop_reason"]
+    assert rd.spent.iterations == hc2.MAX_IDLE_ROUNDS
+
+
+# ---- the STOCK hill-climb gate -----------------------------------------------------------------------------
+
+def _sr(reward, tokens, n=12):
+    from cap_evolve.loop import SplitResult
+    return SplitResult(split="val", reward=reward, stderr=0.02, tokens=tokens * n, cost_usd=0.0,
+                       per_task=[{"task_id": f"t{i}", "reward": reward, "n": 1, "raw": {"n_trials": 1}} for i in range(n)])
+
+
+def _stock(tmp_path, spec, delta, se, cand_tokens, base_tokens=1000, accept=True):
+    from cap_evolve import harness
+    from cap_evolve.gate import GateDecision
+    _, rd = make_run(tmp_path, spec=spec)
+    d = GateDecision(accept=accept, reason="paired", delta=delta, resolvable_effect_size=2 * se)
+    harness._apply_cost_gate(rd, d, _sr(0.5, base_tokens), _sr(0.5 + delta, cand_tokens), {"mode": "paired"})
+    return d
+
+
+def test_stock_gate_is_untouched_without_cost_keys(tmp_path):
+    assert _stock(tmp_path, {"num_trials": 1}, 0.05, 0.03, 9000).accept
+
+
+def test_stock_gate_rejects_a_marginal_expensive_win_and_keeps_a_clear_one(tmp_path):
+    assert not _stock(tmp_path, {"cost_lambda": 1.0}, 0.05, 0.03, 3000).accept
+    (tmp_path / "b").mkdir()
+    assert _stock(tmp_path / "b", {"cost_lambda": 1.0}, 0.30, 0.03, 3000).accept          # z = 10: never rejected on cost
+
+
+def test_stock_gate_cost_path_accepts_a_much_cheaper_non_inferior_candidate(tmp_path):
+    d = _stock(tmp_path, {"cost_lambda": 0.5, "cost_accept": True}, 0.0, 0.03, 500, accept=False)
+    assert d.accept and "cost win" in d.reason
+
+
+def test_compress_every_for_the_stock_loop_reads_the_spec(tmp_path):
+    from cap_evolve import harness
+    _, rd = make_run(tmp_path, spec={"hc_compress_every": 4})
+    assert harness._hc_compress_every(rd) == 4
+    (tmp_path / "c").mkdir()
+    _, rd2 = make_run(tmp_path / "c")
+    assert harness._hc_compress_every(rd2) == 0
+
+
+# ---- cap_hash and the cost rung path -------------------------------------------------------------------------
+
+def test_a_compressed_candidate_is_a_new_hash_so_its_rollouts_are_never_pooled_with_the_parents(tmp_path):
+    from cap_evolve import eval_index
+    a = make_candidate(tmp_path, "a", {"default": 0.5, "p": {}, "salt": 1, "tokens": 1000})
+    b = make_candidate(tmp_path, "b", {"default": 0.5, "p": {}, "salt": 1, "tokens": 500})
+    assert eval_index.cap_hash(a) != eval_index.cap_hash(b)
+    assert eval_index.cap_hash(a) == eval_index.cap_hash(a)
+
+
+def test_cost_rung_path_keeps_a_cheaper_candidate_with_a_nonpositive_screen_mean(tmp_path):
+    spec = {"cost_lambda": 0.5, "cost_accept": True, "cost_min_n": 5}
+    run_dir, ev, cand = _priced_world(tmp_path, spec, cand_tokens=400, effect=0.0)
+    rnd = ev.open_round({"c0": cand}, ("seed", run_dir.candidate_dir("seed")))
+    out = rnd.run_rung(1)
+    st = out["c0"]
+    assert st.status == "advance" and "cost path" in st.reason
+
+
+def test_a_deterministic_near_miss_is_extended_then_decided(tmp_path):
+    from cap_evolve import racing
+    p = promotion.P2Params.from_spec({"promotion_rule": "P2", "p2_z_conf": 3.0, "p2_extend_z": 0.5})
+    # a modest effect measured on few draws: z between 0.5 and 3
+    cand = {f"t{i}": [1.0, 0.0, 1.0][: 1 + (i % 3)] for i in range(10)}
+    ctrl = {f"t{i}": [0.0, 1.0, 0.0] for i in range(10)}
+    r = racing.confirm_with_control(cand, ctrl, z_conf=p.z_conf, dmin=0.02, n_planned=10)
+    assert not r["pass"] and r["mean"] > 0 and r["z"] >= p.extend_z      # exactly the near-miss the extension targets

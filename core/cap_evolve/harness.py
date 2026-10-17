@@ -14,7 +14,6 @@ builds one from a skill's ``run.py`` so external agents plug in the same way.
 from __future__ import annotations
 
 import contextlib
-import itertools
 import json
 import logging
 import math
@@ -2188,6 +2187,33 @@ def movement(parent_per_task, cand_per_task) -> dict:
     return {**moves, "n_shared": len(shared)}
 
 
+def _tokens_per_rollout(sr: SplitResult) -> list:
+    """Per-rollout cost proxies of a split result as ledger-style rows: ``tokens`` (else USD) averaged per rollout."""
+    n = sum(int((pt.get("raw") or {}).get("n_trials") or pt.get("n") or 1) for pt in (sr.per_task or [])) or 0
+    if not n:
+        return []
+    return [{"tokens": sr.tokens / n, "cost": (sr.cost_usd / n) if sr.cost_usd else None}] * n
+
+
+def _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs) -> None:
+    """Cost-aware acceptance for the STOCK hill-climb gate (``cost_lambda`` / ``cost_accept``, see ``costaware``).
+    Mutates ``decision``: a marginal win that is much more expensive is rejected, a clearly cheaper non-inferior
+    candidate is accepted; a clear reward win is never touched. No-op unless a cost key is set."""
+    from . import costaware
+    from .specfile import spec_for_run
+    cp = costaware.CostParams.from_spec(spec_for_run(run_dir) or {})
+    if not cp.enabled or decision.indecisive or "mode" in gate_kwargs and gate_kwargs["mode"] not in ("paired", "significant"):
+        return
+    rel = costaware.relative_cost(_tokens_per_rollout(cand_val), _tokens_per_rollout(current_val), cp)
+    se = (decision.resolvable_effect_size or 0.0) / 2.0
+    z = (decision.delta / se) if se > 0 else (float("inf") if decision.delta > 0 else 0.0)
+    j = costaware.judge(cp, passed=decision.accept, mean=decision.delta, se=se, z=z, dmin=0.0, rel=rel)
+    run_dir.log_event("cost_gate", rel=rel, path=j.path, accept=j.accept)
+    if j.accept != decision.accept:
+        decision.accept = j.accept
+        decision.reason += f"; {j.reason}"
+
+
 def _pareto_metrics_kwargs(current_val: SplitResult, cand_val: SplitResult) -> dict:
     """``metrics_candidate``/``metrics_current``/their stderrs for ``gate.decide(mode="pareto")``.
 
@@ -3768,6 +3794,7 @@ def run_step(
             decision.accept, decision.indecisive = False, True
             decision.reason += ("; UNRESOLVED MISSING: imputing the missing pairs at "
                                 f"{gcfg.missing_impute:g} flips the screen, and the retries did not recover them")
+        _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs)
         accepted = decision.accept
         regressions = []
         if accepted and no_regression:
@@ -5068,6 +5095,15 @@ def _convergence_observations(steps) -> list:
     return out
 
 
+def _hc_compress_every(run_dir) -> int:
+    """Spec ``hc_compress_every`` (0 = off): every N-th iteration of the stock hill-climb asks for a compress/refactor edit."""
+    from .specfile import spec_for_run
+    try:
+        return max(0, int((spec_for_run(run_dir) or {}).get("hc_compress_every") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def hill_climb_loop(
     adapter,
     *,
@@ -5152,7 +5188,7 @@ def hill_climb_loop(
     baseline_val = current_val.reward   # the bar every candidate must clear, at loop entry
     convergence_stop = ""
     budget_stop = ""
-    for i in (range(max_iterations) if max_iterations else itertools.count()):      # 0 = unlimited: the budget stops the loop
+    for i in range(max_iterations):
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
             break
@@ -5166,6 +5202,11 @@ def hill_climb_loop(
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
         instructions = ctx.instructions(current_val, focus_ids, label,
                                         algorithm=algorithm, parent_dir=parent_dir)
+        every = _hc_compress_every(run_dir)
+        if every and i and i % every == 0 and run_dir.best_id != "seed":
+            from .proposer_guidance import COMPRESS_NOTE
+            instructions = instructions.rstrip() + "\n\n" + COMPRESS_NOTE + "\n"
+            run_dir.log_event("hc_compress_round", iteration=i)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.

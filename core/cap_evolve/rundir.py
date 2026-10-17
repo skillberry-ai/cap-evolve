@@ -109,7 +109,7 @@ def _pid_alive(pid) -> bool:
 
 @dataclass
 class Budget:
-    max_iterations: int = 20      # 0 = no iteration cap (see ``specfile.resolve_max_iterations``)
+    max_iterations: int = 20      # see ``specfile.resolve_max_iterations``
     max_metric_calls: int = 0     # 0 = unlimited
     max_usd: float = 0.0          # 0 = unlimited (total: runner + optimizer + intake)
     stall: int = 0                # consecutive no-accepts before stop; 0 = off
@@ -130,8 +130,7 @@ class Budget:
     def from_dict(cls, d: dict) -> "Budget":
         d = d or {}
         return cls(
-            # 0 is "no iteration cap" (a rollout/usd budget bounds the run); only an ABSENT key means the legacy 20
-            max_iterations=20 if d.get("max_iterations") is None else int(d["max_iterations"]),
+            max_iterations=int(d.get("max_iterations") or 20),
             max_metric_calls=int(d.get("max_metric_calls") or 0),
             max_usd=float(d.get("max_usd") or 0.0),
             stall=int(d.get("stall") or 0),

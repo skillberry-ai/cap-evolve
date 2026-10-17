@@ -65,7 +65,7 @@ class HC2Params:
     cheap_accept: bool = False       # accept on the rung-2 screen; validate the accepted chain once at the end
     cheap_z: float = 1.0             # rung-2 paired z a cheap accept needs (mean >= the P2 dmin as well)
     validate_trials: int = 0         # trials per C task of each end-of-search validation arm (0 = num_trials)
-    max_rounds: int = 0              # 0 = the run's max_iterations (itself 0 = unlimited when a budget is set)
+    max_rounds: int = 0              # 0 = the run's max_iterations (budget-driven runs: effectively unlimited)
     plateau_rounds: int = 0          # stop after N consecutive rounds without a champion change. 0 = off (default):
                                      # only the budget (or max_rounds) ends the search. Counted per process
     compress_every: int = 0          # every N-th round one slot COMPRESSES the incumbent (shorter, more deterministic,
@@ -626,19 +626,24 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
     from . import harness
     rejected, history, store = harness._init_memory_store(run_dir, store)
     rdiffs = RejectedDiffs(run_dir)
-    n_rounds = params.max_rounds or max_iterations     # 0 (the default when a rollout budget is set) = no round cap
+    n_rounds = params.max_rounds or max_iterations     # a budget-driven run passes specfile.BUDGET_DRIVEN_ITERATIONS
     window = params.diversity_window or params.k
     if hasattr(evaluator, "workers"):
         evaluator.workers = 1
     env = dict(adapter=adapter, run_dir=run_dir, evaluator=evaluator, ctx=ctx, rejected=rejected,
                history=history, store=store, rdiffs=rdiffs, workers=workers, algorithm=algorithm, params=params)
-    steps, stop, flat = [], "", 0
+    steps, stop = [], ""
+    flat = _load_flat(run_dir)
+    idle = 0                 # consecutive rounds that evaluated nothing (all dropped / no diff)
 
     pend = _load_pending(run_dir)
     if pend:
+        before = run_dir.best_id
         steps += _finish_round(pend, **env)
+        flat = 0 if run_dir.best_id != before else flat + 1
+        _save_flat(run_dir, flat)
 
-    while not n_rounds or _rounds_done(run_dir) < n_rounds:       # 0 = unlimited: the budget stops the search
+    while _rounds_done(run_dir) < n_rounds:
         exhausted, _ = run_dir.budget_exhausted()
         if exhausted:
             break
@@ -679,6 +684,11 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
             break
         steps += _finish_round(pend, **env)
         flat = 0 if run_dir.best_id != best_before else flat + 1
+        _save_flat(run_dir, flat)
+        idle = idle + 1 if not pend["diffs"] else 0
+        if idle >= MAX_IDLE_ROUNDS:
+            stop = f"no_progress: {idle} rounds in a row produced no candidate to evaluate"
+            break
     _, why = run_dir.budget_exhausted()
     validation = validate_accepted_chain(evaluator, run_dir, params) if params.cheap_accept else None
     internal = (None if params.cheap_accept
@@ -691,6 +701,23 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
     (Path(run_dir.root) / "summary.json").write_text(
         json.dumps({k: v for k, v in result.items() if k != "steps"}, indent=2), encoding="utf-8")
     return result
+
+
+#: Rounds in a row that evaluate nothing before the loop stops (a failing or empty proposer must not spin when
+#: the iteration cap is budget-driven and the dropped rounds spend no rollouts).
+MAX_IDLE_ROUNDS = 5
+
+
+def _load_flat(run_dir) -> int:
+    try:
+        return int(json.loads((Path(run_dir.root) / "hc2_flat.json").read_text(encoding="utf-8"))["flat"])
+    except (OSError, ValueError, KeyError):
+        return 0
+
+
+def _save_flat(run_dir, flat: int) -> None:
+    from .rundir import _atomic_write
+    _atomic_write(Path(run_dir.root) / "hc2_flat.json", json.dumps({"flat": flat}))
 
 
 def _load_pending(run_dir):
@@ -807,7 +834,8 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
                 dropped[cid] = "near-duplicate of a recent or sibling diff"
                 break
             note = ("Your previous attempt duplicated an edit that was already tried. Make a "
-                    "different kind of edit, aimed at a different root cause in this cluster.")
+                    + ("different compression: other rules, other scripts or other tool output."
+                       if role == "compress" else "different kind of edit, aimed at a different root cause in this cluster."))
             workdirs[cid], i2, shown[cid] = _prepare(adapter, run_dir, evaluator, ctx, params, view, cid,
                                                      cl, retry_note=note, others=others, role=role, **kw)
             rep, err = _propose(optimizer, workdirs[cid], i2)

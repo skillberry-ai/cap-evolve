@@ -41,8 +41,8 @@ through the same gate as any edit; configuring the operator turns the cost path 
 ## 3. Budget-driven search
 
 * `max_iterations` is no longer a hidden second budget. If `max_metric_calls` (or `max_usd`) is set and `max_iterations` is left
-  out, the cap is 0 (none), and the loop proposes until the budget binds. An explicit `max_iterations` still wins (`0` =
-  none), and so does `hc2_max_rounds`.
+  out, the cap is effectively none, and the loop proposes until the budget binds (it also stops after 5 consecutive rounds that
+  evaluate nothing). An explicit `max_iterations` still wins (`0` = zero iterations, as before), and so does `hc2_max_rounds`.
 * The last round shrinks. When not even one candidate with its rungs fits, HC-2 runs one direct round (no rungs, the control plus
   a confirmation) if that fits, instead of stopping.
 * The only plateau stop is explicit and off by default: `hc2_plateau_rounds: N` stops after N rounds without a champion change.
@@ -58,3 +58,5 @@ Every proposer prompt (hill-climb, HC-2 and agent-optimize) lists three kinds of
 snippet inside a skill, with a clear entry point, a usage line and loud failures), determinism (a checklist, a verification
 command, a reusable helper the agent must run), and text. It also tells the proposer that every added line is re-read on every
 rollout, so redundant text should go.
+
+Note: configuring a compress operator turns the cost path on for every candidate, so any cluster candidate that is at least 15% cheaper with non-inferior reward can also be accepted. Set `cost_accept: false` to prevent that.

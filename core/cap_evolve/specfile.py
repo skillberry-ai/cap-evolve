@@ -258,15 +258,20 @@ def spec_for_run(run_dir, project: Path | None = None) -> dict:
         return {}
 
 
+#: "No iteration cap; the rollout/usd budget decides". An explicit ``max_iterations: 0`` keeps its old meaning
+#: (measure the seed, optimize nothing).
+BUDGET_DRIVEN_ITERATIONS = 1_000_000
+
+
 def resolve_max_iterations(spec: dict | None, default: int = 10) -> int:
-    """The iteration cap a run is started with. An explicit ``max_iterations`` always wins (``0`` = no cap).
+    """The iteration cap a run is started with. An explicit ``max_iterations`` always wins (``0`` = zero iterations, as before).
     When the key is ABSENT and the spec sets a rollout (``max_metric_calls``) or dollar (``max_usd``) budget, the
-    cap is 0: the budget is the stopping rule and the search keeps proposing until it binds, instead of
+    cap is ``BUDGET_DRIVEN_ITERATIONS``: the budget is the stopping rule and the search keeps proposing until it binds, instead of
     stopping at an arbitrary round count with budget unspent. With no budget either, ``default`` (10)."""
     spec = spec or {}
     v = spec.get("max_iterations")
     if v not in (None, ""):
         return int(v)
     if int(spec.get("max_metric_calls") or 0) > 0 or float(spec.get("max_usd") or 0) > 0:
-        return 0
+        return BUDGET_DRIVEN_ITERATIONS
     return default

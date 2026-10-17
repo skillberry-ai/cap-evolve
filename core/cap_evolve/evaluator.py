@@ -779,9 +779,12 @@ class Round:
             self.state["extended"] = list(self.state.get("extended", [])) + near_miss
             self.state["stage"] = "confirm_extend"
             self._save()
-            self.ev.run_dir.log_event("p2_confirm_extend", round=self.round_id, candidates=near_miss)
+            self.ev.run_dir.log_event("p2_confirm_extend", round=self.round_id, n=len(near_miss))
             return {c: ConfirmVerdict(c, "extend", reason="near-miss: one more block of fresh C draws")
                     for c in near_miss}
+        for cid in list(self.state.get("extend_unfunded", [])):      # the extension block did not fit: the first look stands
+            if cid not in out and cid in self.state.get("confirm_unfunded", []):
+                out[cid] = ConfirmVerdict(cid, "reject", reason="near-miss; the extension block did not fit the budget")
         for cid in near_miss:                    # the extension does not fit the budget: a plain reject of the near-miss
             out[cid] = ConfirmVerdict(cid, "reject", reason="near-miss; the extension did not fit the budget")
         for cid in self.state.get("confirm_unfunded", []):
@@ -826,7 +829,7 @@ class Round:
         inc_cid = self.state["incumbent"][0]
         n_max = p.gs_looks[-1]
         left = self.ev.run_dir.remaining_metric_calls()
-        if left is not None and self._cost_ctrl() + p.gs_looks[0] > left:
+        if left is not None and p.ctrl_m * len(C) + p.gs_looks[0] > left:     # sequential() never reuses control draws
             return self._seq_done(cid, ConfirmVerdict(cid, "unconfirmed", reason="budget"))
         ctrl_draws = [t for _ in range(p.ctrl_m) for t in C]
         ctrl_jobs = self._make_jobs(inc_cid, "control", "confirm", ctrl_draws, _passes(ctrl_draws),

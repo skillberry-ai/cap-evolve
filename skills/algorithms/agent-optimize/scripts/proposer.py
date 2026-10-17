@@ -126,9 +126,10 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
                   f"{', '.join(map(str, cluster.get('tasks') or []))}; headroom {cluster.get('headroom')}.")
     proc = PROCEDURE.format(min_lines=min_lines, min_tasks=min_tasks) if kind == "propose" else ""
     if compress and kind == "propose":
+        target, failing, ids = "", "", ""
         head = f"You are COMPRESSING candidate {parent!r} (already copied into {workdir}): this is a refactor, not a bug-fix round."
         proc = COMPRESS_PROCEDURE
-    ids = clusters_block(valid_clusters) if kind == "propose" else ""
+    ids = "" if compress else (clusters_block(valid_clusters) if kind == "propose" else "")
     body = f"{head}{target}\n{failing}\n{ids}\n{digest_text.strip()}\n\n{proc}{RULES.format(workdir=workdir)}"
     if strict:
         body += STRICT

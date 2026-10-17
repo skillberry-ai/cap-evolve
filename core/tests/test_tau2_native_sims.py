@@ -135,7 +135,7 @@ def test_path_is_run_dir_native_sims_tag_split(tmp_path):
     p = a._sim_save_path(_candidate_dir(tmp_path, "seed"), "val")
     assert p.parent == run / "native_sims" / "seed" / "val", \
         "the run dir, then native_sims, then the tag, then the split"
-    assert re.fullmatch(r"results_\d{8}_\d{6}_\d+\.json", p.name), p.name
+    assert re.fullmatch(r"results_\d{8}_\d{6}_\d+_\d+_[0-9a-f]{6}\.json", p.name), p.name
 
 
 def test_tag_separates_the_baseline_from_an_iteration(tmp_path):
@@ -213,7 +213,9 @@ def test_the_stamp_carries_the_pid_so_concurrent_candidates_cannot_collide(tmp_p
     import os
     a = _adapter()
     p = a._sim_save_path(_candidate_dir(tmp_path, "seed"), "val")
-    assert p.stem.endswith(f"_{os.getpid()}"), p.name
+    assert f"_{os.getpid()}_" in p.stem, p.name
+    q = a._sim_save_path(_candidate_dir(tmp_path, "seed"), "val")
+    assert p.name != q.name          # a thread/random suffix: two calls in one second never collide
 
 
 # --- the opt-out -------------------------------------------------------------------
