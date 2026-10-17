@@ -459,6 +459,7 @@ def _header_lines(summary: dict, graph: dict, width: int, *, color: bool,
     model = (summary.get("target_profile") or {}).get("model") or ""
     budget = summary.get("budget") or {}
     max_it = budget.get("max_iterations") or 0
+    max_it = 0 if max_it >= 1_000_000 else max_it       # budget-driven: no iteration bar
     it = len(summary.get("per_iteration") or [])
 
     title = [("cap-evolve", _C.BOLD), (" · ", _C.GREY),

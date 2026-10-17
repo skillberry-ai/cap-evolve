@@ -142,7 +142,7 @@ def test_cost_off_leaves_the_confirmation_verdict_untouched(tmp_path):
 def test_max_iterations_follows_the_budget_unless_set():
     from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS as B
     assert resolve_max_iterations({"max_metric_calls": 3000}) == B
-    assert resolve_max_iterations({"max_usd": 50}) == B
+    assert resolve_max_iterations({"max_usd": 50}) == 10          # USD alone may never bind (unmetered target)
     assert resolve_max_iterations({}) == 10
     assert resolve_max_iterations({"max_metric_calls": 3000, "max_iterations": 8}) == 8
     assert resolve_max_iterations({"max_iterations": 5}) == 5
@@ -403,3 +403,28 @@ def test_a_deterministic_near_miss_is_extended_then_decided(tmp_path):
     ctrl = {f"t{i}": [0.0, 1.0, 0.0] for i in range(10)}
     r = racing.confirm_with_control(cand, ctrl, z_conf=p.z_conf, dmin=0.02, n_planned=10)
     assert not r["pass"] and r["mean"] > 0 and r["z"] >= p.extend_z      # exactly the near-miss the extension targets
+
+
+def test_only_a_rollout_budget_makes_the_iteration_cap_budget_driven():
+    from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS as B
+    assert resolve_max_iterations({"max_usd": 50}) == 10 and resolve_max_iterations({"max_metric_calls": 9}) == B
+
+
+def test_stock_gate_does_not_overturn_a_broke_veto_and_falls_back_to_the_ledger_after_resume(tmp_path):
+    from cap_evolve import harness
+    from cap_evolve.gate import GateDecision
+    _, rd = make_run(tmp_path, spec={"cost_lambda": 0.5, "cost_accept": True})
+    d = GateDecision(accept=False, reason="paired; REJECTED by gate_max_broke=0 - broke ['t1']", delta=0.0,
+                     resolvable_effect_size=0.06)
+    harness._apply_cost_gate(rd, d, _sr(0.5, 1000), _sr(0.5, 300), {"mode": "paired"})
+    assert not d.accept
+    # resumed incumbent: SplitResult carries no token total, so the reference is read from the ledger rows
+    cur = _sr(0.5, 0)
+    cur.tokens = 0
+    import json as _j
+    h = __import__("cap_evolve.eval_index", fromlist=["x"]).cap_hash(rd.candidate_dir("seed"))
+    (Path(rd.root) / "eval_index.jsonl").write_text("".join(_j.dumps({"cap_hash": h, "split": "val", "task": f"t{i}", "trial_idx": i,
+        "tag": "seed", "k": i, "env_fp": "", "window_id": 0, "reward": 0.5, "subset": False, "cost": None, "tokens": 1000, "ts": 0.0}) + "\n" for i in range(12)))
+    d2 = GateDecision(accept=False, reason="paired", delta=0.0, resolvable_effect_size=0.06)
+    harness._apply_cost_gate(rd, d2, cur, _sr(0.5, 300), {"mode": "paired"})
+    assert d2.accept and "cost win" in d2.reason

@@ -1133,7 +1133,8 @@ def main(argv=None) -> int:
         return 2
 
     spec = _spec(project, Path(args.spec).resolve() if args.spec else None)
-    rounds = int(spec.get("max_iterations", 0) or 0) or 10
+    from cap_evolve.specfile import resolve_max_iterations
+    rounds = resolve_max_iterations(spec) or 10
 
     if args.seal_only:
         out = _seal(run_dir, project, spec, timeout=args.timeout)
@@ -1428,7 +1429,8 @@ def main(argv=None) -> int:
     # sentence pointed at a knob already 7x larger than what the agent used — and sent the next
     # operator to raise it again.
     incomplete = ""
-    if 0 <= rounds_done < rounds_budget:
+    from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS
+    if 0 <= rounds_done < rounds_budget < BUDGET_DRIVEN_ITERATIONS:
         reasons = f"{stop_reason or ''} {agent_stop or ''}"
         turn_limited = "max_turns" in reasons
         # Ran to a clean stop of its own accord, with rounds and turns still to spend.

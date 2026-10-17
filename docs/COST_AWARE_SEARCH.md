@@ -40,7 +40,7 @@ through the same gate as any edit; configuring the operator turns the cost path 
 
 ## 3. Budget-driven search
 
-* `max_iterations` is no longer a hidden second budget. If `max_metric_calls` (or `max_usd`) is set and `max_iterations` is left
+* `max_iterations` is no longer a hidden second budget. If `max_metric_calls` is set and `max_iterations` is left
   out, the cap is effectively none, and the loop proposes until the budget binds (it also stops after 5 consecutive rounds that
   evaluate nothing). An explicit `max_iterations` still wins (`0` = zero iterations, as before), and so does `hc2_max_rounds`.
 * The last round shrinks. When not even one candidate with its rungs fits, HC-2 runs one direct round (no rungs, the control plus

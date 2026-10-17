@@ -2204,7 +2204,15 @@ def _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs) -> N
     cp = costaware.CostParams.from_spec(spec_for_run(run_dir) or {})
     if not cp.enabled or decision.indecisive or "mode" in gate_kwargs and gate_kwargs["mode"] not in ("paired", "significant"):
         return
-    rel = costaware.relative_cost(_tokens_per_rollout(cand_val), _tokens_per_rollout(current_val), cp)
+    if "REJECTED by gate_max_broke" in decision.reason or getattr(decision, "broke", None) and not decision.accept \
+            and gate_kwargs.get("gate_max_broke") is not None:
+        return                                  # a composition veto is not overturned by a cost win
+    cur_rows = _tokens_per_rollout(current_val)
+    if not cur_rows or not cur_rows[0]["tokens"]:      # a resumed incumbent has no token total: read its ledger rows
+        from . import eval_index
+        h = eval_index.cap_hash(run_dir.candidate_dir(run_dir.best_id))
+        cur_rows = [r for r in eval_index.rows(run_dir) if r.get("cap_hash") == h and r.get("split") == "val"]
+    rel = costaware.relative_cost(_tokens_per_rollout(cand_val), cur_rows, cp)
     se = (decision.resolvable_effect_size or 0.0) / 2.0
     z = (decision.delta / se) if se > 0 else (float("inf") if decision.delta > 0 else 0.0)
     j = costaware.judge(cp, passed=decision.accept, mean=decision.delta, se=se, z=z, dmin=0.0, rel=rel)
@@ -2839,7 +2847,7 @@ def _run_ending_signal(run_dir: RunDir) -> str:
     this_iter = s.iterations + 1
     parts: list[str] = []
     iters_left = None
-    if b.max_iterations:
+    if b.max_iterations and b.max_iterations < 1_000_000:       # 1e6 = budget-driven (specfile.BUDGET_DRIVEN_ITERATIONS)
         iters_left = max(b.max_iterations - this_iter, 0)
         parts.append(f"iteration {this_iter}/{b.max_iterations} ({iters_left} after this one)")
     if b.max_usd:

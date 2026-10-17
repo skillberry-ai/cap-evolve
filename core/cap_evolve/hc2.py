@@ -67,7 +67,7 @@ class HC2Params:
     validate_trials: int = 0         # trials per C task of each end-of-search validation arm (0 = num_trials)
     max_rounds: int = 0              # 0 = the run's max_iterations (budget-driven runs: effectively unlimited)
     plateau_rounds: int = 0          # stop after N consecutive rounds without a champion change. 0 = off (default):
-                                     # only the budget (or max_rounds) ends the search. Counted per process
+                                     # only the budget (or max_rounds) ends the search. Persisted across restarts
     compress_every: int = 0          # every N-th round one slot COMPRESSES the incumbent (shorter, more deterministic,
                                      # de-duplicated; same gate, cost path). 0 = off
 
@@ -638,7 +638,7 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
 
     pend = _load_pending(run_dir)
     if pend:
-        before = run_dir.best_id
+        before = pend.get("best_before", run_dir.best_id)
         steps += _finish_round(pend, **env)
         flat = 0 if run_dir.best_id != before else flat + 1
         _save_flat(run_dir, flat)
@@ -672,12 +672,16 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
             break
         if params.plateau_rounds and flat >= params.plateau_rounds:
             stop = f"plateau: {flat} rounds without a champion change (hc2_plateau_rounds)"
+            _save_flat(run_dir, 0)          # a later resume with more budget starts a fresh count
             break
         best_before = run_dir.best_id
         pend = _propose_round(plan.k, window, _rounds_done(run_dir), **env, optimizer=optimizer)
-        if pend is not None and plan.direct:
-            pend["direct"] = True
+        if pend is not None:
+            pend["best_before"] = best_before
+            if plan.direct:
+                pend["direct"] = True
             _save_pending(run_dir, pend)
+        if pend is not None and plan.direct:
             run_dir.log_event("hc2_direct_round", worst_case=plan.worst_case)
         if pend is None:
             stop = "no_failures"

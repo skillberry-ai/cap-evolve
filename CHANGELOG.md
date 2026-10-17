@@ -17,7 +17,7 @@ All notable changes to cap-evolve are documented here. The format follows
   `cost_accept` adds a cost path: reward non-inferior and clearly cheaper is an accept.
 - **Compress operator**: `hc2_compress_every` (HC-2) and `ao_compress_every` (agent-optimize) periodically ask a proposer to rewrite the
   champion shorter, more deterministic and de-duplicated; it is accepted through the same gate (cost path).
-- **Budget-driven search**: when `max_metric_calls` or `max_usd` is set and `max_iterations` is not, the iteration cap is effectively none (`specfile.BUDGET_DRIVEN_ITERATIONS`) and
+- **Budget-driven search**: when `max_metric_calls` is set and `max_iterations` is not, the iteration cap is effectively none (`specfile.BUDGET_DRIVEN_ITERATIONS`) and
   hill-climb keeps proposing until the budget binds; the last HC-2 round shrinks to one direct candidate (no rungs, control plus
   confirmation) instead of ending the search with budget unspent. An explicit `max_iterations` still wins; `hc2_plateau_rounds`
   (off) is the only plateau stop. An explicit `max_iterations: 0` keeps meaning zero iterations. A budget-driven HC-2 search also stops after 5 consecutive rounds that evaluate nothing, and `hc2_plateau_rounds` survives a restart.

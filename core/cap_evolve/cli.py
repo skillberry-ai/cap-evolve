@@ -1617,6 +1617,8 @@ def _doctor_checks(project: Path) -> list[dict]:
         add("splits", "ok", f"ratios {r[0]}/{r[1]}/{r[2]} seed {spec.get('split_seed')}")
 
     it = int(spec.get("max_iterations") or 0)
+    if not spec.get("max_iterations"):
+        it = min(_resolve_max_iterations(spec), 10**6) if spec.get("max_metric_calls") else it
     if it <= 0 and not (spec.get("max_metric_calls") or spec.get("max_usd")):
         add("budget", "warn", "no cap set (max_iterations/max_metric_calls/max_usd all 0)",
             "cap-evolve estimate   # then set a cap you are willing to spend")

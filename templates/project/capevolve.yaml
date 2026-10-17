@@ -127,7 +127,7 @@ gate_k_se: 1.0
 # hc2: true                     # HC-2 keys beyond the basics: hc2_max_rounds (0 = until the budget binds), hc2_plateau_rounds (0 = off:
 #                               #   stop after N rounds without a champion change), hc2_compress_every (0 = off: every N-th round one slot
 #                               #   COMPRESSES the incumbent -- shorter, more deterministic, de-duplicated -- through the same gate).
-# max_iterations: (omit)        # Omit it when max_metric_calls (or max_usd) is set: the iteration cap is then effectively none and the
+# max_iterations: (omit)        # Omit it when max_metric_calls is set: the iteration cap is then effectively none and the
 #                               #   search proposes until the budget binds (an explicit 0 still means zero iterations). The last round shrinks (one direct candidate)
 #                               #   instead of the search stopping with budget unspent. An explicit max_iterations still wins.
 # hc_compress_every: 0         # stock hill-climb: every N-th iteration asks for a compress/refactor edit; 0 = off

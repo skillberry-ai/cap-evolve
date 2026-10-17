@@ -508,7 +508,7 @@ class Round:
         if not cp.enabled:
             return None
         tags = set(self._tags(cid, stage_prefix))
-        rows = [r for r in eval_index.rows(self.ev.run_dir) if r.get("split") == split]
+        rows = [r for r in eval_index.rows(self.ev.run_dir) if r.get("split") == split and r.get("env_fp", "") == eval_index.env_fp()]
         cand = [r for r in rows if r.get("tag") in tags]
         if ref_tags is None:
             h = eval_index.cap_hash(Path(self.state["incumbent"][1]))
@@ -751,7 +751,7 @@ class Round:
             r = racing.confirm_with_control(cand, ctrl, z_conf=p.z_conf + (p.extend_margin if second else 0.0),
                                             dmin=p.dmin, min_coverage=p.min_coverage, n_planned=n_c)
             reason = (f"mean {r['mean']:+.4f}, z {r['z']:.2f} on {r['n']} paired C tasks "
-                      f"(need mean >= {p.dmin:g}, z >= {p.z_conf:g})")
+                      f"(need mean >= {p.dmin:g}, z >= {p.z_conf + (p.extend_margin if second else 0.0):g})")
             ok, rel, path = r["pass"], None, "reward"
             if p.extend_z and not r["pass"] and cid not in self.state.get("extended", []) \
                     and r["mean"] > 0 and r["z"] >= p.extend_z:
@@ -782,9 +782,6 @@ class Round:
             self.ev.run_dir.log_event("p2_confirm_extend", round=self.round_id, n=len(near_miss))
             return {c: ConfirmVerdict(c, "extend", reason="near-miss: one more block of fresh C draws")
                     for c in near_miss}
-        for cid in list(self.state.get("extend_unfunded", [])):      # the extension block did not fit: the first look stands
-            if cid not in out and cid in self.state.get("confirm_unfunded", []):
-                out[cid] = ConfirmVerdict(cid, "reject", reason="near-miss; the extension block did not fit the budget")
         for cid in near_miss:                    # the extension does not fit the budget: a plain reject of the near-miss
             out[cid] = ConfirmVerdict(cid, "reject", reason="near-miss; the extension did not fit the budget")
         for cid in self.state.get("confirm_unfunded", []):
@@ -859,6 +856,13 @@ class Round:
                 if not j.accept:
                     act = "kill"
                     cost_note = f"; {j.reason}"
+            if act == "kill" and self.ev.cost.accept and i == len(p.gs_looks) - 1 and nn >= 2:
+                # the last look found no reward win; a clearly cheaper, non-inferior candidate may still land (cost path)
+                se = abs(mean / z) if z else 0.0
+                j = costaware.judge(self.ev.cost, passed=False, mean=mean, se=se, z=z, dmin=p.dmin,
+                                    rel=self._rel_cost(cid, "seq", "confirm", ref_tags=self._tags(inc_cid, "control")))
+                if j.accept:
+                    act, cost_note = "accept", f"; {j.reason}"
             if act != "continue":
                 status = "accept" if act == "accept" else "reject"
                 return self._seq_done(cid, ConfirmVerdict(
