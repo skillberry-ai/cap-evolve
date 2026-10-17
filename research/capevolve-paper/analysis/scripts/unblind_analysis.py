@@ -44,6 +44,8 @@ if "results_V3B1LATE_main_results_long.csv" in _REG:   # V3 B1 late-competitor w
     V21["V3B1LATE/main"] = ("V3B1LATE", ("test",))
 if "results_V3B1CHAIN_main_results_long.csv" in _REG:   # V3 B1 chain window, descriptive (erratum 15, 16)
     V21["V3B1CHAIN/main"] = ("V3B1CHAIN", ("test",))
+if "results_V3B1REJ_main_results_long.csv" in _REG:   # V3 B1 rejected-candidates window, descriptive (erratum 19)
+    V21["V3B1REJ/main"] = ("V3B1REJ", ("test",))
 if "results_V3B1_traineval_results_long.csv" in _REG:   # V3 B1 train-30 re-evaluation (descriptive)
     V21["V3B1/traineval"] = ("V3B1_traineval", ("train",))
 for _w, (_k, _sp) in V21.items():
@@ -588,7 +590,7 @@ def main():
     # ---- write per-suite markdown
     ARMLINES = {}
     for w in WINDOWS:
-        L = [f"# Window {w}: per-arm tables (" + ("descriptive CHAIN window, amendment 12 errata 15, 16" if w.startswith("V3B1CHAIN") else "released under the V3 B1 LATE freeze declaration, amendment 12 erratum 13" if w.startswith("V3B1LATE") else "released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
+        L = [f"# Window {w}: per-arm tables (" + ("descriptive window, amendment 12 errata 15, 16, 19" if w.startswith(("V3B1CHAIN", "V3B1REJ")) else "released under the V3 B1 LATE freeze declaration, amendment 12 erratum 13" if w.startswith("V3B1LATE") else "released under the V3 B1 freeze declaration, amendment 12 erratum 8" if w.startswith("V3") else "user-directed early unblinding, erratum 36") + ")", ""]
         nT = len(W[w].tasks); nF = len(set(W[w].fam))
         L += [f"Task set: {nT} tasks, {nF} families (cluster = family; split filter {SPLITS[w]}). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.", ""]
         if w.startswith("V2/") and w != "V2/A":

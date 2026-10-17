@@ -1,4 +1,4 @@
-# Window V3B1CHAIN/main: per-arm tables (descriptive CHAIN window, amendment 12 errata 15, 16)
+# Window V3B1CHAIN/main: per-arm tables (descriptive window, amendment 12 errata 15, 16, 19)
 
 Task set: 20 tasks, 20 families (cluster = family; split filter ('test',)). Primary basis infra_final = failure; sensitivity infra_final = missing. Mean (as measured) includes the physical re-score of inert artifacts; mean (inert -> seed) is the contrast basis.
 

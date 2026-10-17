@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -312,6 +312,7 @@ def main():
                          ("V3B1REJ_artifact_manifest", PAPER / "experiments/final/manifests/artifacts_V3B1REJ.json", "V3 B1 REJ artifact manifest"),
                          ("V3B1REJ_cells", PAPER / "experiments/final/manifests/v3_b1_rej_cells.json", "V3 B1 REJ cell list (candidate, parent, gate reason, tree hash)"),
                          ("V3B1REJ_champions", CS / "final_eval/champions_V3B1REJ.json", "V3 B1 REJ cells file"),
+                         ("rej_analysis.py", PAPER / "analysis/scripts/rej_analysis.py", "REJ-versus-accepted descriptive analysis script (amendment 12 erratum 20), registered after its first run"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
