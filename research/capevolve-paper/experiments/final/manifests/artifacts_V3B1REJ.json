@@ -1,0 +1,958 @@
+{
+ "bstar": "final-state",
+ "champions_file": "/home/dev/projects2/campaign-scratch/final_eval/champions_V3B1REJ.json",
+ "champions_file_sha256": "b3071f172f000eb1424908fe346583897735acc7f56873e6e92104bf3d15f4f2",
+ "entries": [
+  {
+   "arm": "hcstock_s0_cand_0003",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e53c5d045e0e2d0c5c45550e9a8f389621606eb48a5f8ad777614b81d54a3690",
+    "tools/tools.py": "35ad676f5f5e19de308afe78e1cc11cd3550e2958d7e252a711f7d8600311113"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0003/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "e7ad8a3afaa0b394582e3fc5cb1ffb93b5507d75405d583b32c5aa36f9b9e21f",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0003",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "517af5dbc1e7312678308696e9eec185710a66e7e6f4ba6bda095323df41cdcd"
+  },
+  {
+   "arm": "hcstock_s0_cand_0004",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "448eda75292a463a29d7558b9d6f49e8a9d9710188611a70753a3328712a7a0c",
+    "tools/tools.py": "7378caea70449e4c72c30f64cc6db66b3cf5a96c205c49008459fc0970673244"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0004/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "cd2a992631e697843ab70477751c254c41eb57d9fb6c16cb562ac4add1a5412c",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0004",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "9ed7a6ac59f4a182a81842b405cbb1b9aa5c596003b6070296e971a38da3cfd1"
+  },
+  {
+   "arm": "hcstock_s0_cand_0006",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "2c5337240d6ce440a90e6fcb0390a481ad8d49b78502b5d246e5ab616f5915ec",
+    "tools/tools.py": "04184093565f2a1dd4062d291b91685d2b34743674cd4612de0e175efbfd8f43"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0006/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "9db92e69542c91a159368b5991d5a94e898c7a8733e21dbe93fa5789c6e59095",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0006",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "8780ad62ab07382c995c41f76811b2d321035d8c2df70df08279e81eef634d1a"
+  },
+  {
+   "arm": "hcstock_s0_cand_0007",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "540d79558a7392f518458bacf3bf5f135839f42ec20472c2cd1c82c6e10de0f6",
+    "tools/tools.py": "de8818f2a3704a75b4d8cac28336614c3d480ecd87574a06b1ddc251d358b06b"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0007/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "3f1137f3cdc0ddabc1fca6063063ca5778ab6f81a27962ac12b2f45f449e3797",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0007",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "2ded177f98eff17c5a003c821b257976ee62e8c97259b7bdc22b9310b8c3f60a"
+  },
+  {
+   "arm": "hcstock_s0_cand_0008",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a6b2a0cbb561c7864d661f5bac77cac12775f0caa5b7b71b321dc82aad2fe1fc",
+    "tools/tools.py": "e33bc2e041f65843cbc60f4d8e19d43e505ead910a7df4db59058dc0c2dbbcb4"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0008/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "b33f08a4a9fa4ca24636a64b8a50d12beec3b5e3734e6e17b8f78f3c3468e800",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0008",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "c5c063f8edb01a8c8384374ffcdbfdf5af9b53624c62742eec5114cd4cdd2699"
+  },
+  {
+   "arm": "hcstock_s0_cand_0009",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "7721d10ab0db1b3dfe64442fbc57570461a9c86a5858bae06ee3e5060fa66aa2",
+    "tools/tools.py": "b8f48abcc01bf716ec1d083810bfe1836a8d18d8cee8baabfbb3201ab92d144f"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0009/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "48c54b7603c0fda2ca656dcc7eb1299e32b683ce42174f9cea3c7bc01a591580",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0009",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "2ea470d3d61c579f36fed8e32ad1372d01054a4027b053ee75f58d0b173926a3"
+  },
+  {
+   "arm": "hcstock_s0_cand_0010",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "2653586724323521fc945dc55fc7221e0c974a9ac988235238ef03bb72b2ca3d",
+    "tools/tools.py": "b8f48abcc01bf716ec1d083810bfe1836a8d18d8cee8baabfbb3201ab92d144f"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0010/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "75c587f867bb24db950243eb004d515e7ee6a4e4ebabe4ecad2f1f7fdcaf89dc",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0010",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "f86254a1dd95955237c4e2d2181d1e839c6af2eca36ad86f1e36eea33f9dc2ed"
+  },
+  {
+   "arm": "hcstock_s0_cand_0011",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "b5c68a1faa09514fffb10f2a0e745392eedcea8eec45da1cc46617e18ec76324",
+    "tools/tools.py": "b8f48abcc01bf716ec1d083810bfe1836a8d18d8cee8baabfbb3201ab92d144f"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0011/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "d69e85672155df500b97250b3444850209281b28b113049f1f38c9cd5cd88a3d",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0011",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "2733e72eb5d289a1e23477cdd44adb3e6b559e9aa1fcecdb659fa2fe889936e9"
+  },
+  {
+   "arm": "hcstock_s0_cand_0013",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "c903442a286731216786ae306b5d259f49df0ec201cb2bbf6d6bc141483ec77b",
+    "tools/tools.py": "9b1ac815b179bb918a6164ad9d8a3e9dc5146878ed79a0c8136983f5f26df0fa"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0013/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ac58b7dcfa78e1c0d39e8d9af5d75fd5aea292fad08491006ee62c89df94f055",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0013",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "5cbb72c2b621f16054276607707051002221a2605084681f613a85a736f5ac60"
+  },
+  {
+   "arm": "hcstock_s0_cand_0014",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "da30018581f0a907f37c4a27cdec04dc2194b7cc8f4e1f6fef7718b8283600ed",
+    "tools/tools.py": "8c55fa221d4ffb436d6666ebda23c8b64db309102a2a1615087d3bf02e747000"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0014/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "b0548041f33be93046ffa0e3f3195c8dc941806c847e1045c9e8a182d4c07c98",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0014",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "50b53366f0072277b45dd8074f6b8d65f002bc61cd1b09f9c0c04f9b4d9c76ae"
+  },
+  {
+   "arm": "hcstock_s0_cand_0015",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "4611135887c8dc96310bbb64bc2160f4bf2fa2e94b5d5f02b6a6d8a8342ce8cb",
+    "tools/tools.py": "c6b7c1653faa58e408dfcc2edaa4f7db114e433001a756dcda02490b8d0e3b96"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0015/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "d133d307aeb1d5ddc450136655679fb20b4080aa3e1daf0b5e3a0713a6028bf8",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0015",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "9efb2c182ba8043ba09f88ce253c5509d9014644e6f9cf969ad68eb894eed72f"
+  },
+  {
+   "arm": "hcstock_s0_cand_0016",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "3672eb89e99ecd96a67f2566b9019a5ebd9c74e4880e81717c9c977a5fc8e44a",
+    "tools/tools.py": "7e1c32312128a0560cea582e1a17bde884fb45dc00887156e8fe1ef541a7436b"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0016/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "54d91ee789e5d0c336b9b6c691758bc8bcb438781fece9c09f2ed36eeff55a65",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0016",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "5eda2fb597454620baa23c5e038593b6bcd245c8ea3f3380a8f4a6bcf8fb81b9"
+  },
+  {
+   "arm": "hcstock_s0_cand_0017",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "833d6469c19ee03f2daa544d9878f9bf1c7d4046ed8a2f4cb547647d301cc251",
+    "tools/tools.py": "aeb288a23fa44a0bcd6b27e3346e5293839ffe952d4a37a3cde3228bbe7716fb"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0017/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ffc41f924cae570423916919d592d0dbd7d982ddcd9cecc46c8795eb3bba21b5",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0017",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "6e9f1ac981a2476cfbc7074d35a0ebf2eb0c343279fb4077cfb1d0ecc49e48ad"
+  },
+  {
+   "arm": "hcstock_s0_cand_0018",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "ae34a1484ffc4e6b87880dc695bf5aa009474a64bad64a40d114d17daebd1d58",
+    "tools/tools.py": "ae4d044ed2b76206ef07b83b5359ec0e0a64d59613a92570864b8735cc26f4d6"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0018/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "0cfab8ee541b0e706751cfe70125b4701a4b6270ba249cc02331bd23eb3fc7dd",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0018",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "cd5d635fab6be4f644eed0f1ce9365dba79e9605f9c131dd39f4a28871abbc44"
+  },
+  {
+   "arm": "hcstock_s0_cand_0019",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "24c88be99ef0322001795f24998b0a420c1ac556b430797b8b27da215d3763eb",
+    "tools/tools.py": "e68c990abddce8120aa4d6d7feea6188bd0228ebf1525429e1e87d447d4cdf23"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s0_cand_0019/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ea0801ee456be4d121693ce1ec66094e331165e3d98ff44ad3eaded2f2a4b831",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s0/frozen/cand_0019",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "b071eff8acb9e478ebc9b65087a0d4766caeecdc2d9b731213b1f5778a5f8d47"
+  },
+  {
+   "arm": "hcstock_s1_cand_0003",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "2064eda21b0bec74f316bb1b772a826b35a21ea038191a32fc671255f7a81884",
+    "tools/tools.py": "e6b14e3a3ec6a715361ecda9d184356bdd2e10744921d18864b0ec9a49afb4c0"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0003/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "1289ce66842ce5a5dc4ff2a0dc24202249a1781732dad5b5066715a93a1f23d3",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0003",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "8a664134cb2fd6f5d7164507e2040c2231667f3c3f9b6625f502f1c3da2d216c"
+  },
+  {
+   "arm": "hcstock_s1_cand_0004",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "8a5cb2b5e0518d6c9742022117a874fdff7c71702eda1f5be68f9fa0faf42e4b",
+    "tools/tools.py": "8e5dc288f1cf2b1769815b16904a9168d40f42b1cd33debe8ce69b8efcdc9fa9"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0004/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "699c1577530043354ba612f88d34dc819d1ab37700b3ca4c05e9c108c07de87a",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0004",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "31463238ddf41e3c23752b24131483d283a1f3b8bfb1198710c9822a235bd353"
+  },
+  {
+   "arm": "hcstock_s1_cand_0005",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "e3a83dad3d7757e3f1c6607800ee2ed93998841248a764d3ef328442f647669e",
+    "tools/tools.py": "46229cf922ab2652a5fcc94b3d9827e68a216f48c8ca28db15f4b1206027bdde"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0005/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "805569a1a3abc865b2ffef091edca637711e3a9614a821c2e94563ec39f4c212",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0005",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "47b7ff607a27386a7e309e44d759d9f88e3f059ee1243cec00b4c8c1d2c6ee42"
+  },
+  {
+   "arm": "hcstock_s1_cand_0006",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a83fce39da4a559ca86d9aec35d61b30b9873f04b6bf4d7c56bac5e3ff4500d6",
+    "tools/tools.py": "17b1a04e54ef22cf4da7ea906c6abe84769359cc9e8371b60eb46407e0331793"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0006/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ef03eac0d76c12820f6137fe42a025be26a3e58963ef026ac4bd622c00c28572",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0006",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "bc8bc61b3aa2a5780a3c34ce0f8ab1718ee54586fab1f72c1524955e62348526"
+  },
+  {
+   "arm": "hcstock_s1_cand_0007",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "dc495233c644d09a029adffcfeee2270e0a7f5b3618b894517e344f8a745d762",
+    "tools/tools.py": "805e981189f15f9bf3823a80ba1aed0db3e13469cb7e5c582a3f643fa80ecb73"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0007/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "1d56fa3d8780aa2522a7f0487af5e027739ce1c9ff2e60b21fe2ce9ea345bd7f",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0007",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "3629ba82ac003ce3fbe1bb32b7b1886a86000ff0a99f04aa4d4cf111e7f9d585"
+  },
+  {
+   "arm": "hcstock_s1_cand_0008",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a533cd4aa80db0200685e18db7b23fde66da53ad596b5c07d7af4d5a53c72b87",
+    "tools/tools.py": "d072d24b1e5188aaa87fe73496b95d49e9cdeade4c64990337845534edb74139"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0008/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "2a5134699a91ec1a022c99fa6afbb2de4463f9e04aecc01202f4efef2a42f174",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0008",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "358705650a3fcea66caa1e697b972f31ef0597ff5de6cbfb93c7cdcacb8c9cb3"
+  },
+  {
+   "arm": "hcstock_s1_cand_0010",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a4b8e54ced4e5473efe1abb733a8fddc386b008cabb69d9d963f0bf21cd97e1f",
+    "tools/tools.py": "6ce64b510a692fa608bcd6757b91ad5cb366f6fa3dac2483d43853204c0e8ec1"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0010/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "df56cc10bfcea6900ba193ee3eb98a7e226953f101d41da3724db069fe4dc6e2",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0010",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "c85d951a9002418aa98cc69a747b5400076467e0fbf19c343e1d3cbf82979f98"
+  },
+  {
+   "arm": "hcstock_s1_cand_0011",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "ab83b005b9f02d978a50caa6c15d79ba3404275b9de152bcdbfd1b5936ec2272",
+    "tools/tools.py": "149b8da949d2d58b484442a11d27691557f5c8f6ad80899ff26b86cf9eca52cc"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0011/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "35b57ef125a8a39b509f9260feba4d1baff9eef4196af0ce6b406b4f3fb10ca7",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0011",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "e1c183308e6a4a7f125ff10246944c0d880814ebaf168d75b26bd2c9ba4485d7"
+  },
+  {
+   "arm": "hcstock_s1_cand_0012",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "6ac3b0515595f898ebee66274cd39a47c0603f9d3dd52f6dc4025f21b19b46c0",
+    "tools/tools.py": "149b8da949d2d58b484442a11d27691557f5c8f6ad80899ff26b86cf9eca52cc"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0012/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "7f91f384042091c48e1424b9d4b0677f292e8c63175f8c1177f294b90fc90009",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0012",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "302f4a7f0516d9ec55095d3d551b66c3c1cbd4259ec45d63b05f9077fda022f0"
+  },
+  {
+   "arm": "hcstock_s1_cand_0013",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "088df94361d3c16218357713399b1159d2cd176cc761f62f8ed10ca6db4f3de1",
+    "tools/tools.py": "cd03693c8f3a18985e5e4f028733db082d20629e6ebaf5000a1a3a297e6fd6d5"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0013/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "8370317bf0204beaf0414cbe18b651a6096da2f59a5eb1b77dfdd7ae732b8acc",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0013",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "bf5ef36bba975503f859c4b30d1bc4fcd14d3ed9ea80209d3b000cb95a4d64c9"
+  },
+  {
+   "arm": "hcstock_s1_cand_0014",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "d8966b11d88f537c4540145a23e35780f028894e03ce04b84843ea58f3e789da",
+    "tools/tools.py": "8be67ba9b594d247f2c382dc232fea31b717bad0d5bc94482e2478b7f202abea"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0014/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "2a0d4262c21284377b94846d0ae652513434ef917558add0dba54fb42d27222b",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0014",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "0c7e3ea46f8d16e45a210027ddace2a170d8e44660c56a2c2a617c4098b1bb43"
+  },
+  {
+   "arm": "hcstock_s1_cand_0015",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "2a0f92a8b6f076d23380ea277de5f2de7a0b8dd7167b5c5f3d1d59428bd4ee81",
+    "tools/tools.py": "b836fdb76635cedf65ec3f4ac0351d6d3d7716659d1a9ec706b34241fe768378"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0015/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "682bf352021fd250d9925404d0f63093d50d25448fab2b88965093821433baf2",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0015",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "6f7b09825dfd5a2d41685ad9349389ea9690de09fcb571906d7c28a50843b2a7"
+  },
+  {
+   "arm": "hcstock_s1_cand_0016",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "2391b14ea576361df75d75414f9825d4d54a43af4e280a88834bb23ac2617dfb",
+    "tools/tools.py": "0ea8c51822c5d152513ffcad7de2138836a7c2e2c91df154e1563590fcc8c11c"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0016/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ad037cbb6ba013c2eff0b58746944042bc024e8267bce24cd98991943dad9aa3",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0016",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "731707efc048ee3a1d510437952c92c8533099dae79e1a974d46b88fff50a242"
+  },
+  {
+   "arm": "hcstock_s1_cand_0017",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "0929cf9b0a6968f302cad08ce59f8f21d5c5b990ad223897bab589ed6acca023",
+    "tools/tools.py": "25a3b5980aa462ad8186760d7191f85223e3361add807b6c4623648ce6cb2f9b"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0017/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "2fa53e0e7a6999d2ee13698c3dea2f130f85a04ee78ac30e56dcd2124fa47b33",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0017",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "9ae7346143384870668219d114debb9eb262e6aeebc52b3105ed22b9aa07dcdd"
+  },
+  {
+   "arm": "hcstock_s1_cand_0019",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "181887ed056312f47b74e5d1d5be8d571cb3c2dea32e117e3521946746adfa3e",
+    "tools/tools.py": "290e2b45b62708c62b0683ba5ad00971105910611e332ead2dc6057b2a8e334d"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s1_cand_0019/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "63680597da16394c7fc4b1273d9c34d90c24beec33ad68d277fd4b3dbc3449ea",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s1/frozen/cand_0019",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "ffb61c52399c821cb8ed53c16cf02760bcd47105edc88d3a7614b14f9cc7091e"
+  },
+  {
+   "arm": "hcstock_s2_cand_0003",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a81eb8ef3d0a2ca58d722d4dab4e8061400a1c87ae48a0bd492679f2d074c2c6",
+    "tools/tools.py": "7d9c742664b9ade34cd380d5a104849f55f3b446e1e408b448f315b66bbcc13e"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0003/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "a7f01b40075aeccfaed7a4a90861f7e44645715bc2265babb13ebce1a253fab9",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0003",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "f1371797bc7cbceeb6e0882a4f8b4fd24cb5b2279e1638abc66c855360c34d3f"
+  },
+  {
+   "arm": "hcstock_s2_cand_0004",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "a1cbfc43337a0058bf381c25ed6afa84ecf72c7c3dc4e7b9f78ead95a9107163",
+    "tools/tools.py": "6fd6c898727fdcdbd6f2938057e8e11b5db3608b8338507c9b5ef61bdee56847"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0004/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "80beb961ccaa47f272ff1b08ea1ebba296f43fada23f2f797281d20bd9aa9be3",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0004",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "d2eb2443fd6fdac36e89dc5ff118ce9c1d8d3bc1ab82371dc8f79930fd96b986"
+  },
+  {
+   "arm": "hcstock_s2_cand_0005",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "7eaba2d1496975de7347a03121d94bacd622fa7523f01bedd66d5815157de0cc",
+    "tools/tools.py": "bb70c8d37dba9da80af38d8cd02a12825517bc023ff9d0e3af111bba8a8df752"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0005/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "034d5beeec5fd215c29706468782eeaff2dfb5a9310eb8b7eda1d4e0dc65b69e",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0005",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "ca88710f364563a90c5e2c019a80539ac5725209353b492e881e1109fa2274be"
+  },
+  {
+   "arm": "hcstock_s2_cand_0006",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "b0a7f74b6b2a1b4227f562a9d84cb7e62e3d687a837a073e6dae82f95b391c0d",
+    "tools/tools.py": "f6ed8cacf2fa4907a1af1aac8bc9c757dde19626b31ebbc6452e11d3e3cf7945"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0006/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "deb8b7609904fb0b9b5def69e49a9289ce46ee92949f22ec4bf0c0317d1c4829",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0006",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "2916de5f6cc8d18bf381b053358ccc944e51e7a1df4a19cff901706baf248ff4"
+  },
+  {
+   "arm": "hcstock_s2_cand_0007",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "28dae03ef7506767a71fe12dd9895b50e0661b5258e584245b9a14e6adca21cc",
+    "tools/tools.py": "dd8a7dec9c961cbada4597b9849cb44d9df3dab3c75e1c556cc7e24a2a058121"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0007/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "029b40df71a19d3cceeaa64744d6778f6acf419043951b1134426e9516a19312",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0007",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "ae8fdba625ec3b57f53667babc9d540fcb82a73b8154963e24d01b84913305ed"
+  },
+  {
+   "arm": "hcstock_s2_cand_0008",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "1dd6f583dcc4d1df055dc20b2ed9a28a7521c36b1fb4be39bcc4dd9779b7a262",
+    "tools/tools.py": "240db5b65ea88c032f4aaddecaa604f3359f7eebd7a5f0774811d170749a72c5"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0008/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "7cd98d0e15374192ce551ef8509a51c6521f823a9426153b8be4eaab67debcd2",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0008",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "c2800153a77495256ce75cdd78e50b551a1a84f87e79dc1ea12872c13853deab"
+  },
+  {
+   "arm": "hcstock_s2_cand_0009",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "c5b4adf21e28904b4f62c51cb30267e25d9e71419d92b2e41aa7cc8c7ee9bb63",
+    "tools/tools.py": "3b89cc33dbe7f3f6b17346a4d8f80b336ef06b1c7c564ed750c7e140c25dfef9"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0009/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ce24e710e17d73ca7cf70bf0965043264634de8210d28292b650511a04dd12e0",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0009",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "3677d73a2fe87b8b0814183a43f3161c30540c00a0e6007ece2b6e1a7cadfe84"
+  },
+  {
+   "arm": "hcstock_s2_cand_0010",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "b159a152da7fbdc81eac34eafe86874e7bbb38f948bcf090e881272486929e58",
+    "tools/tools.py": "3da438513439acbf74173e5feabf29214b36499d151929293a5f3b913722a399"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0010/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "450cee54c21314b7ac574066b359ef9d83b1990b960dfde423f1cab2fb209540",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0010",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "9e6246ba1cf9546a6b07ce72d61d2569914b0e2a1c342d077d787097d59a3493"
+  },
+  {
+   "arm": "hcstock_s2_cand_0012",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "686bd719a4329438d053a1e1ed3836bfabb14dee9dd2c3999fb77431e8911ff2",
+    "tools/tools.py": "eaa6b8b2b4c1e6257d1f616bf27db3ab843ecb9af2b4097b813787f574963beb"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0012/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "8ceab253572cc2184dfb56f12639a5da66b78c0bfcd68d16a22c3cd24b3c9dfe",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0012",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "8de681b2f5580eec6bf7f82ad778c64ec3ff0166a3dad855145b4f62f09275df"
+  },
+  {
+   "arm": "hcstock_s2_cand_0013",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "cffd7eb84f1b2205c827dd596b649d2832c9f3ebba1d2ab292c58e033e71267b",
+    "tools/tools.py": "f1380b933e192fe045c3c70195b523db6e5f837b6eea0299909e9b4743bf962d"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0013/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "98cefed9565a6beebcbee309c68d9900b9e1e3b175378d9e3ce238c12433463d",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0013",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "705692effe63798fc544cff0f1214dcf35062dcd18676b0b54158ee5eeb1d938"
+  },
+  {
+   "arm": "hcstock_s2_cand_0014",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "c6196b4762fb1bcae218bc6d604086361877b7b416e896faf08233edb9a335f5",
+    "tools/tools.py": "4c73a4cf6706d6301386f87404df5b7acf008b89442fd3bb55e63acd3dad871f"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0014/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "c9dc4c0c4e40be08397860d3d261aa3da858473dab077e5b9cb64d56bfce6e22",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0014",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "59b855c3bb743338352e805e339f56b7b20792a4f51360349f7641cb9e9b85dd"
+  },
+  {
+   "arm": "hcstock_s2_cand_0015",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "72447145f975d999f27bd3a236138965a869019aa9eef8fa9932add64155923e",
+    "tools/tools.py": "1e5267085c3ece84c42f89f9d52855235475b6d1cd4e3121fd4356698e857c60"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0015/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "5076eea48b5daf69d986b83cd4bc78fda58d684c11ae00e66a247f6089e6f245",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0015",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "e5bce5cc2ef47b00ac81527510411e24dcae84049954daf042c31bb0aab364d2"
+  },
+  {
+   "arm": "hcstock_s2_cand_0016",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "ca1319c1eb4d6a4365ba4cb1649536e3f535e9c6516b69ab34efa8b311fe8bf9",
+    "tools/tools.py": "4871940164a12a96ac6b886596e1bc987b85dce107502e6fd4fb195f22ead12a"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0016/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "ce4623631f12d9d39cea905054d182f7b02b61473f135a0db707a82adb68eb1b",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0016",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "31ed631b9133a4c9b60d7f49ca8675c847c0517f7020a7a95a759c1715adf68c"
+  },
+  {
+   "arm": "hcstock_s2_cand_0017",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "f8e809e2e56bb213afa568e8773a68a93de9d07ba1e2a6b97bc6fc9721a39534",
+    "tools/tools.py": "14c0f42f4869a12b9c189d784227a05077ebaa7b4ee32a33b2c3a0d8e309b407"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0017/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "19b9cfa225a375ecc7401c959335060daf9d3d361affd0e2b06e1506a9ba0e77",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0017",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "b68939c60421ca8f71bc82d97cd063542da1eaeb3085bc8901292b5e35521f75"
+  },
+  {
+   "arm": "hcstock_s2_cand_0018",
+   "dagger": false,
+   "files": {
+    "policy/policy.md": "be6f90032fa2babfff164a7ffa84af4270a87f6f38ffce2dd61d73a6fceace9a",
+    "tools/tools.py": "1564a85fea923800f4a198f0e7d6535eb34d23264bed6ab87a2bc0b5a5107430"
+   },
+   "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/V3B1REJ/main/artifacts/B/hcstock_s2_cand_0018/s0",
+   "identical_to_seed": false,
+   "inert": false,
+   "mode": "B",
+   "normalized_tree_sha256": "3080f4992ab67eaf7c907141d44a9b10d2e387a8e5e169d33153d7201b92cab2",
+   "seed": 0,
+   "source_dir": "/home/dev/projects2/campaign-scratch/runs/V3/B1/hcstock/s2/frozen/cand_0018",
+   "status": "ok",
+   "suite": "E",
+   "tree_sha256": "066072b037cb7eab7c5df7620dfb59ae465653edcf6b3a8743ea149f69953a12"
+  }
+ ],
+ "frameworks": [
+  "hcstock_s0_cand_0003",
+  "hcstock_s0_cand_0004",
+  "hcstock_s0_cand_0006",
+  "hcstock_s0_cand_0007",
+  "hcstock_s0_cand_0008",
+  "hcstock_s0_cand_0009",
+  "hcstock_s0_cand_0010",
+  "hcstock_s0_cand_0011",
+  "hcstock_s0_cand_0013",
+  "hcstock_s0_cand_0014",
+  "hcstock_s0_cand_0015",
+  "hcstock_s0_cand_0016",
+  "hcstock_s0_cand_0017",
+  "hcstock_s0_cand_0018",
+  "hcstock_s0_cand_0019",
+  "hcstock_s1_cand_0003",
+  "hcstock_s1_cand_0004",
+  "hcstock_s1_cand_0005",
+  "hcstock_s1_cand_0006",
+  "hcstock_s1_cand_0007",
+  "hcstock_s1_cand_0008",
+  "hcstock_s1_cand_0010",
+  "hcstock_s1_cand_0011",
+  "hcstock_s1_cand_0012",
+  "hcstock_s1_cand_0013",
+  "hcstock_s1_cand_0014",
+  "hcstock_s1_cand_0015",
+  "hcstock_s1_cand_0016",
+  "hcstock_s1_cand_0017",
+  "hcstock_s1_cand_0019",
+  "hcstock_s2_cand_0003",
+  "hcstock_s2_cand_0004",
+  "hcstock_s2_cand_0005",
+  "hcstock_s2_cand_0006",
+  "hcstock_s2_cand_0007",
+  "hcstock_s2_cand_0008",
+  "hcstock_s2_cand_0009",
+  "hcstock_s2_cand_0010",
+  "hcstock_s2_cand_0012",
+  "hcstock_s2_cand_0013",
+  "hcstock_s2_cand_0014",
+  "hcstock_s2_cand_0015",
+  "hcstock_s2_cand_0016",
+  "hcstock_s2_cand_0017",
+  "hcstock_s2_cand_0018"
+ ],
+ "generated_utc": "2026-10-17T12:55:39Z",
+ "seed_artifact": {
+  "distinct_seed_hashes": {
+   "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e": 24
+  },
+  "files": {
+   "policy/policy.md": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+   "tools/tools.py": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c"
+  },
+  "frozen_dir": "/home/dev/projects2/campaign-scratch/final_eval/E/artifacts/seed",
+  "n_runs_agreeing": 24,
+  "normalized_tree_sha256": "faf38337a142fb778e866834e6298e9536d05cd378489ffd860e83268745f30b",
+  "note": "12 run(s) have a first candidate that is not byte-identical to the seed capability (the arm's own starting point, e.g. MIPROv2's default instruction); the shared seed hash is the seed directory's, as registered",
+  "runs_deviating": [
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 0,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 1,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepa",
+    "candidate_id": "cand_0000",
+    "seed": 2,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 0,
+    "tree_sha256": "94e850bfef6c16002dd644b594a4af93df5d07e4f2401797ef4fc817f9265ec8"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 1,
+    "tree_sha256": "1f575b6ff7cbe25ae41c6385c778bccbba7eb4272806ca70ce4dfbcd1ea7169c"
+   },
+   {
+    "arm": "ace",
+    "candidate_id": "epoch1_end",
+    "seed": 2,
+    "tree_sha256": "ca25ba4da47535a22e9c78c7223fd6c52703688470e1c5f12b7ca6cf8860eb1a"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "2ccdc0183e07",
+    "seed": 0,
+    "tree_sha256": "35e33857b05d52aabb4fcbafc004387839c84975e578eca97905b8ee69fde04f"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "2ccdc0183e07",
+    "seed": 1,
+    "tree_sha256": "35e33857b05d52aabb4fcbafc004387839c84975e578eca97905b8ee69fde04f"
+   },
+   {
+    "arm": "mipro",
+    "candidate_id": "2ccdc0183e07",
+    "seed": 2,
+    "tree_sha256": "35e33857b05d52aabb4fcbafc004387839c84975e578eca97905b8ee69fde04f"
+   },
+   {
+    "arm": "gepafull",
+    "candidate_id": "cand_0000",
+    "seed": 0,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepafull",
+    "candidate_id": "cand_0000",
+    "seed": 1,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   },
+   {
+    "arm": "gepafull",
+    "candidate_id": "cand_0000",
+    "seed": 2,
+    "tree_sha256": "f6fc044891f0eb634ce616b41e36cd4873e999912462cb294749d38cd2dc17af"
+   }
+  ],
+  "seed_source_dir": "/home/dev/projects2/wt-airE/examples/tau2_airline_c/seed_capability",
+  "status": "ok",
+  "suite": "E",
+  "tree_sha256": "440bf0aae6d019007504832e4a08a882e544d623efd85af4b0411194f7b5c28e"
+ },
+ "suite": "E",
+ "window": "V3B1REJ"
+}
