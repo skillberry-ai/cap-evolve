@@ -233,6 +233,14 @@ if [ "$RESOLVED_PROVIDER" = "ibm-rits" ]; then
   # Kept for the artifacts; the proxy log holds requests and errors, never the key.
   trap 'cp "$RITS_PROXY_DIR/proxy.log" "$OUT/rits-messages-proxy.log" 2>/dev/null; stop_rits_messages_proxy' EXIT
 fi
+# Experiment-only (#871): the hosts' network drops idle connections, and lite-rits has no
+# keepalive, so long agent calls through it never return. Send the agent through the job's own
+# proxy instead (it has the keepalive shim and also serves /chat/completions). Same model only.
+if [ "${SB_AGENT_VIA_PRIVATE_PROXY:-0}" = "1" ] && [ -n "${RITS_PROXY_PID:-}" ] \
+   && [ "$AGENT_MODEL_WIRE" = "$OPTIMIZER_MODEL_WIRE" ]; then
+  AGENT_API_BASE="$ANTHROPIC_BASE_URL"
+  echo ">>> agent '$AGENT_MODEL_WIRE' -> the job's private RITS proxy $AGENT_API_BASE (SB_AGENT_VIA_PRIVATE_PROXY=1)" >&2
+fi
 # NB: OPTIMIZER_MODEL itself is NEVER reassigned to the wire form here — it stays the
 # CI-facing "ibm-ete-int/…"/"ibm-ete/…"/"ibm-rits/…"-prefixed alias, used for the
 # progress line below and metrics.py's provenance display further down. resolve_provider
