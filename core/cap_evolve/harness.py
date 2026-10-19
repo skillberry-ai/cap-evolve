@@ -39,6 +39,7 @@ from . import eval_index
 from .loop import SplitResult, aggregate_scores, has_valid_trials, pool_split_results
 from . import coverage as coverage_mod
 from . import gatecfg
+from . import abl_gate
 from .rundir import BudgetExhausted, RunDir, _atomic_write
 from .splits import Splits, make_pooled_partition, make_splits
 from .trials import candidate_scope, run_trials_pool
@@ -2015,7 +2016,7 @@ def paired_se_floor(run_dir: RunDir, cid: str, parent_id: str, tasks, n_total: i
 
 
 def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
-                           parent_of: dict | None = None) -> dict | None:
+                           parent_of: dict | None = None, ids=None) -> dict | None:
     """Per-task reward Δ of candidate ``cid`` vs its PARENT, from rollouts.
 
     Returns ``{"broke": [...], "fixed": [...], "unresolved": [...], "delta": float}``.
@@ -2046,6 +2047,9 @@ def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
     parent_id = parent_of.get(cid, "seed")
     cand = _per_task_rewards(run_dir, cid, split)
     par = _per_task_rewards(run_dir, parent_id, split)
+    if ids is not None:      # ablation (abl_gate disjoint): only the proposer's tasks are described
+        cand = {t: v for t, v in cand.items() if str(t) in ids}
+        par = {t: v for t, v in par.items() if str(t) in ids}
     if not cand or not par:
         return None
     shared = [t for t in cand if t in par]
@@ -2056,7 +2060,7 @@ def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
     delta = sum(cand[t] - par[t] for t in shared) / len(shared)
     gcfg = gatecfg.GateConfig.for_run(run_dir)
     if gcfg.ledger_noise_guard:
-        pooled = _pooled_task_rates(run_dir, cid, parent_id, split, cand, par)
+        pooled = _pooled_task_rates(run_dir, cid, parent_id, split, cand, par, ids=ids)
         cand, par, n_min = pooled
         if n_min < gcfg.ledger_min_trials:
             flips = sorted(t for t in shared if abs(cand[t] - par[t]) > 1e-9)
@@ -2085,7 +2089,8 @@ def null_flip_expectation(rates, n: int) -> float:
     return total
 
 
-def _pooled_task_rates(run_dir: RunDir, cid: str, parent_id: str, split: str, cand: dict, par: dict):
+def _pooled_task_rates(run_dir: RunDir, cid: str, parent_id: str, split: str, cand: dict, par: dict,
+                       ids=None):
     """Per-task rates pooled over EVERY draw of each side's capability hash (the evidence ledger),
     falling back to the tag's own rollouts. Returns ``(cand_rates, par_rates, min_draws_per_task)``."""
     def side(tag, fallback):
@@ -2094,8 +2099,8 @@ def _pooled_task_rates(run_dir: RunDir, cid: str, parent_id: str, split: str, ca
             cnt = eval_index.counts(run_dir, h, split)
         except Exception:  # noqa: BLE001
             cnt = {}
-        rates = {t: s / n for t, (s, n) in cnt.items() if n}
-        ns = {t: n for t, (s, n) in cnt.items() if n}
+        rates = {t: s / n for t, (s, n) in cnt.items() if n and (ids is None or str(t) in ids)}
+        ns = {t: n for t, (s, n) in cnt.items() if n and (ids is None or str(t) in ids)}
         for t, v in fallback.items():
             if t not in rates:
                 rates[t], ns[t] = v, 1
@@ -2309,6 +2314,7 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     its outcome + the tasks it measurably broke/fixed. Deterministic — the measured record;
     the optimizer's own narrative lives in JOURNAL.md."""
     parent_of = _parent_map(run_dir)
+    f_ids = abl_gate.proposer_ids(run_dir)     # None unless abl_gate: disjoint
     # Outcome per candidate from step events (accept/reject + val + parent).
     rows: list[dict] = []
     try:
@@ -2341,7 +2347,12 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         pval = rec.get("parent_val")
         d = (f"{val - pval:+.3f}" if isinstance(val, (int, float))
              and isinstance(pval, (int, float)) else "")
-        imp = _candidate_task_impact(run_dir, cid, gate_split(run_dir), parent_of=parent_of) or {}
+        if f_ids is not None and val is not None:
+            val = abl_gate.proposer_val(run_dir, cid)
+            pval = abl_gate.proposer_val(run_dir, par)
+            d = (f"{val - pval:+.3f}" if val is not None and pval is not None else "")
+        imp = _candidate_task_impact(run_dir, cid, gate_split(run_dir), parent_of=parent_of,
+                                     ids=f_ids) or {}
         broke = "{" + ", ".join(str(t) for t in (imp.get("broke") or [])[:20]) + "}"
         fixed = "{" + ", ".join(str(t) for t in (imp.get("fixed") or [])[:20]) + "}"
         unres = "{" + ", ".join(str(t) for t in (imp.get("unresolved") or [])[:20]) + "}"
@@ -2442,7 +2453,12 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     # Framework-owned RESULT: the gate outcome + the tasks this candidate measurably
     # broke/fixed (vs its parent), folded VISIBLY into the journal so the next iteration
     # learns what actually worked/regressed from the narrative — not just a terse comment.
-    impact = _candidate_task_impact(run_dir, cid, gate_split(run_dir)) or {}
+    f_ids = abl_gate.proposer_ids(run_dir)     # None unless abl_gate: disjoint
+    impact = _candidate_task_impact(run_dir, cid, gate_split(run_dir), ids=f_ids) or {}
+    if f_ids is not None:
+        val, delta = abl_gate.proposer_val_delta(run_dir, cid, _parent_map(run_dir).get(cid, "seed"),
+                                                 val, delta)
+        reason = abl_gate.scrub_reason(reason, abl_gate.settings(run_dir)[2]) if reason else reason
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
     unres = ", ".join(str(t) for t in (impact.get("unresolved") or [])[:30]) or "—"
@@ -2617,6 +2633,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
     ``workdir/prior_iterations/<cid>/`` so the optimizer has REAL in-dir access to all
     prior iterations' working dirs (not just the parent's trajectories)."""
     parent_of = _parent_map(run_dir)
+    f_ids = abl_gate.proposer_ids(run_dir)     # None unless abl_gate: disjoint
     rows: list[dict] = []
     try:
         if run_dir.events_path.exists():
@@ -2638,6 +2655,8 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
         par = str(rec.get("parent") or "seed")
         outcome = "ACCEPT" if rec.get("accept") else "reject"
         val = rec.get("val")
+        if f_ids is not None and val is not None:
+            val = abl_gate.proposer_val(run_dir, cid)
         vstr = f"{val:.3f}" if isinstance(val, (int, float)) else ""
         # Copy this prior iteration's PROCESS.md + diff-vs-parent into the workdir.
         dst = prior_root / cid
@@ -3178,6 +3197,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     from . import abl_context
     _abl_hist, _abl_info = abl_context.settings(run_dir)     # (None, None) for a stock run
     abl_context.transform_trajectories(workdir / "trajectories", _abl_info)
+    abl_gate.filter_step_trajectories(run_dir, workdir / "trajectories")   # no-op unless disjoint
 
     # 2, 2b, 3) capability skills + capability_sources + the diagnose skill, as local
     # guidance under ./guidance/ — shared with ``stage_capability_guidance`` so baseline
@@ -3642,6 +3662,7 @@ def run_step(
         # Rule P screens on the full UNMASKED vector with the paired k_se gate and nothing else.
         footprint_gate = False
         gate_kwargs.update(mode="paired", k_se=promo.k_se)
+    abl_mode, abl_f, abl_g = abl_gate.settings(run_dir)   # (None, [], []) on the stock path
     cid = candidate_id or f"cand_{run_dir.spent.iterations + 1:04d}"
     # Lineage edge for the dashboard/report: the parent is the candidate this step
     # was forked from (the current best by default in a global hill-climb). Captured
@@ -3801,18 +3822,23 @@ def run_step(
     # cannot localize the edit, and ``_paired_deltas(footprint=None)`` is byte-identical to
     # the behaviour before this existed — so a capability whose surface cannot be detected
     # is measured exactly as it always was rather than restricted on a guess.
+    abl_shadow = None
     if p2_out is None:
+        # abl_gate disjoint: the gate sees the G tasks only (identity views on the stock path).
+        g_cur, g_cand = abl_gate.gate_views(run_dir, current_val, cand_val)
         fp = None
         if footprint_gate:
             fp = footprint_mod.footprint(
                 run_dir, parent_dir=run_dir.candidate_dir(parent_id or "seed"),
                 cand_dir=workdir, tags=(parent_id or "seed", cid), split="val",
-                all_task_ids=[pt.get("task_id") for pt in (cand_val.per_task or [])])
+                all_task_ids=[pt.get("task_id") for pt in (g_cand.per_task or [])])
+            if fp is not None and abl_mode == "disjoint":
+                fp = {t for t in fp if str(t) in set(abl_g)}
             if fp is not None:
                 run_dir.log_event("gate_footprint", candidate=cid, parent=parent_id,
-                                  n_in_footprint=len(fp), n_tasks=len(cand_val.per_task or []),
+                                  n_in_footprint=len(fp), n_tasks=len(g_cand.per_task or []),
                                   tasks=sorted(map(str, fp))[:60])
-        paired_deltas = _paired_deltas(current_val, cand_val, footprint=fp)
+        paired_deltas = _paired_deltas(g_cur, g_cand, footprint=fp)
         # Only when restricted: the zeros make the cross-task spread an unreliable SE estimate on
         # a small footprint, so it is floored by what per-task trial noise implies. Unrestricted
         # vectors keep the SE they always had, so no existing verdict moves.
@@ -3826,7 +3852,7 @@ def run_step(
         # that measurably went 1.0 → 0.0 did so whether or not the footprint expected it to, and
         # under-including here would hide exactly the trade this records. It never touches the
         # verdict unless the caller set ``gate_max_broke`` in ``gate_kwargs``.
-        mv = movement(current_val.per_task, cand_val.per_task)
+        mv = movement(g_cur.per_task, g_cand.per_task)
         # Multi-objective (#684 item 8): when the caller pinned ``mode="pareto"`` (via
         # ``gate_kwargs``, itself from ``capevolve.yaml``'s ``gate_mode``/``objectives``),
         # supply the non-reward metric gate.py's pareto mode needs. A no-op dict ({}) for
@@ -3834,22 +3860,32 @@ def run_step(
         pareto_metrics = (_pareto_metrics_kwargs(current_val, cand_val)
                           if gate_kwargs.get("mode") == "pareto" else {})
         planned = planned_val_ids(run_dir)
+        if abl_mode == "disjoint":
+            planned = [t for t in planned if str(t) in set(abl_g)]
         if gcfg.coverage_policy == "tipping":
             paired_deltas, cand_val, cov_info = _apply_tipping(
                 adapter, run_dir, workdir, cid, current_val, cand_val, planned, paired_deltas, gcfg,
                 k_se=float(gate_kwargs.get("k_se", 1.0)), n_trials=n_trials,
                 errored_policy=sw["errored_trial_policy"], footprint=fp)
             mv = movement(current_val.per_task, cand_val.per_task)
-        jcov = joint_coverage(current_val, cand_val, planned)
+        jcov = joint_coverage(g_cur, g_cand, planned)
         decision = gate_mod.decide(
-            current_val.reward, cand_val.reward, split="val",
-            candidate_stderr=cand_val.stderr, current_stderr=current_val.stderr,
+            g_cur.reward, g_cand.reward, split="val",
+            candidate_stderr=g_cand.stderr, current_stderr=g_cur.stderr,
             paired_deltas=paired_deltas,
-            coverage=jcov if sw["coverage"] == "joint" else cand_val.coverage, run_dir=run_dir,
+            coverage=jcov if sw["coverage"] == "joint" else g_cand.coverage, run_dir=run_dir,
             broke=mv["broke"], fixed=mv["fixed"],
             **pareto_metrics,
             **gate_kwargs,
         )
+        if abl_mode == "none":
+            # GATE-NONE: the stock verdict is computed and kept for analysis, but every scored, valid,
+            # decisive candidate is accepted. Indecisive / unscored steps stay not accepted.
+            abl_shadow = decision.to_dict()
+            if not decision.indecisive and cand_val.n_scored > 0:
+                decision.reason = (f"GATE-NONE: accepted without test; stock gate would have said "
+                                   f"accept={bool(decision.accept)} ({decision.reason})")
+                decision.accept = True
 
         if (cov_info is not None and decision.accept
                 and (cov_info.get("tipping") or {}).get("flips")):
@@ -3860,7 +3896,7 @@ def run_step(
                                 f"{gcfg.missing_impute:g} flips the screen, and the retries did not recover them")
         accepted = decision.accept
         regressions = []
-        if accepted and no_regression:
+        if accepted and no_regression and abl_mode != "none":
             # A regression is ANY task whose reward strictly dropped (works for graded
             # rewards too, not just binary pass/fail). Restricted to tasks BOTH sides
             # actually measured — an unscored task is missing data, and treating its
@@ -3871,9 +3907,9 @@ def run_step(
             # consequence than the reported lists: it turns a gate-passing candidate into a
             # rejection, so a single flipped rollout out of ten used to be able to veto a
             # genuinely better edit outright.
-            parent_reward = {pt["task_id"]: pt for pt in current_val.per_task
+            parent_reward = {pt["task_id"]: pt for pt in g_cur.per_task
                              if has_valid_trials(pt)}
-            cand_reward = {pt["task_id"]: pt for pt in cand_val.per_task
+            cand_reward = {pt["task_id"]: pt for pt in g_cand.per_task
                            if has_valid_trials(pt)}
             regressions = sorted(
                 t for t, pt in parent_reward.items()
@@ -3942,6 +3978,7 @@ def run_step(
         # Rule P2: the verdict came from the evaluator (rung 1 on F, then the group-sequential test on
         # C), not from the legacy paired gate on val.
         fp, paired_deltas, planned = None, None, run_dir.read_splits().ids("feedback")
+        g_cur, g_cand = current_val, cand_val
         mv = movement(current_val.per_task, cand_val.per_task)
         decision = gate_mod.GateDecision(accept=p2_out["accept"], reason=p2_out["reason"],
                                          delta=p2_out["delta"], indecisive=p2_out["indecisive"])
@@ -3953,6 +3990,11 @@ def run_step(
     # (trajectories/, guidance/, INSTRUCTIONS/MEMORY/STATE) so the stored candidate is
     # capability-only and the diff shows just the real edit. Only an accepted candidate
     # becomes the new best (parent for the next step).
+    abl_reason_full = decision.reason
+    if abl_mode == "disjoint":
+        # Everything the proposer can read (journal stamp, rejected.jsonl, history.jsonl, graph note) gets
+        # the aggregate gate numbers only; the unscrubbed text lives in the step event for analysis.
+        decision.reason = abl_gate.scrub_reason(decision.reason, abl_g)
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
     
     # Validate DIAGNOSIS.json if present (advisory only, never blocks)
@@ -3976,7 +4018,13 @@ def run_step(
     # "measured, broke nothing", never "there was nothing to compare".
     # Both statistics, always: the unmasked mean paired delta and the one the gate used, with
     # the SE behind each and the joint (parent ∩ candidate) coverage. See ``gate_statistics``.
-    _step_extra.update(gate_statistics(current_val, cand_val, fp,
+    if abl_mode == "none":
+        _step_extra["abl_gate_shadow"] = abl_shadow
+    elif abl_mode == "disjoint":
+        _step_extra["abl_gate_disjoint"] = {
+            "n_feedback": len(abl_f), "n_gate": len(abl_g), "gate_reward": g_cand.reward,
+            "gate_parent_reward": g_cur.reward, "reason_full": abl_reason_full}
+    _step_extra.update(gate_statistics(g_cur, g_cand, fp,
                                        se_floor=gate_kwargs.get("paired_se_floor", 0.0),
                                        planned=planned))
     if promo_rec is not None:
@@ -4004,6 +4052,11 @@ def run_step(
     # whole process stays inspectable (git log / LEDGER / JOURNAL).
     delta = cand_val.reward - current_val.reward
     summary = f"candidate {cid} (val {cand_val.reward:.3f}, Δ {delta:+.3f})"
+    if abl_mode == "disjoint":
+        _fv = abl_gate.proposer_val(run_dir, cid)
+        _fp = abl_gate.proposer_val(run_dir, parent_id or "seed")
+        summary = (f"candidate {cid} (feedback-set val {_fv:.3f}, Δ {_fv - _fp:+.3f})"
+                   if _fv is not None and _fp is not None else f"candidate {cid}")
     # ``record_iteration`` above already folded the optimizer's appended JOURNAL entry
     # into the run-level append-only journal.
     if accepted:
@@ -5251,6 +5304,9 @@ def hill_climb_loop(
                              errored_policy=(gate_kwargs or {}).get("errored_trial_policy"))
 
     current_val = _heal(current_val)
+    _abl_f = abl_gate.proposer_ids(run_dir)      # None unless abl_gate: disjoint
+    if _abl_f is not None:
+        order = [t for t in order if str(t) in _abl_f]
     steps = []
     baseline_val = current_val.reward   # the bar every candidate must clear, at loop entry
     convergence_stop = ""
@@ -5267,7 +5323,7 @@ def hill_climb_loop(
         else:
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
-        instructions = ctx.instructions(current_val, focus_ids, label,
+        instructions = ctx.instructions(abl_gate.for_proposer(run_dir, current_val), focus_ids, label,
                                         algorithm=algorithm, parent_dir=parent_dir)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
