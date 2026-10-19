@@ -2672,7 +2672,8 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
         "than repeat a rejected or already-tried edit. Cross-reference LEDGER.md for which "
         "of them the gate accepted vs rejected, and JOURNAL.md for the lessons.\n"
     )
-    (workdir / "RUNMAP.md").write_text(text, encoding="utf-8")
+    from . import abl_context
+    (workdir / "RUNMAP.md").write_text(abl_context.runmap_text(text), encoding="utf-8")
 
 
 _PROCESS_PRIOR_LINE = "- Prior iterations I read from ./prior_iterations/ + ./RUNMAP.md (which, and what I learned):\n"
@@ -2707,6 +2708,9 @@ def history_enabled() -> bool:
     the insights accumulators and the currently-passing block). PROCESS.md and the current-best
     trajectories stay. The gate, evaluator and scoring never read it."""
     from .optimizer_config import _env
+    from . import abl_context
+    if abl_context.history_none():      # abl_history: none (ablation program) == history off
+        return False
     v = _env("history")
     return True if v is None else v
 
@@ -2857,14 +2861,19 @@ def _augment_instructions(instructions: str, workdir: Path, run_dir: RunDir) -> 
     seed_framework_memory(workdir, run_dir)
 
     if not history_enabled():
-        return (f"{instructions}\n\n{_run_ending_signal(run_dir)}"
+        from . import abl_context
+        no_hist = abl_context.history_none()
+        return (f"{abl_context.strip_history_refs(instructions) if no_hist else instructions}"
+                f"\n\n{_run_ending_signal(run_dir)}"
                 "## Cross-iteration files in THIS working dir\n"
                 "- `PROCESS.md` — EXPLAINABILITY (yours, REQUIRED this iteration): fill it in as you "
                 "work (ranked issues, every edit + class, verify-the-fix, subagents/features used, "
                 "what to preserve, what you skipped). It is snapshotted with your candidate.\n"
-                f"- `{run_dir.rejected_path}` — ALREADY-REFUTED approaches (framework, read-only; JSON "
-                "lines, one per rejected candidate with the gate's reason). Read it and make each "
-                "proposal STRUCTURALLY different from what is in it.\n\n")
+                + ("" if no_hist else
+                   f"- `{run_dir.rejected_path}` — ALREADY-REFUTED approaches (framework, read-only; JSON "
+                   "lines, one per rejected candidate with the gate's reason). Read it and make each "
+                   "proposal STRUCTURALLY different from what is in it.\n")
+                + "\n")
 
     pointer = (
         _run_ending_signal(run_dir)
@@ -3166,6 +3175,9 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
     # rejected candidate mixed together). Always preserves the "something to read"
     # guarantee via per-tag fallback then the native dir.
     _copy_step_trajectories(adapter, run_dir, workdir, split, tag=tag)
+    from . import abl_context
+    _abl_hist, _abl_info = abl_context.settings(run_dir)     # (None, None) for a stock run
+    abl_context.transform_trajectories(workdir / "trajectories", _abl_info)
 
     # 2, 2b, 3) capability skills + capability_sources + the diagnose skill, as local
     # guidance under ./guidance/ — shared with ``stage_capability_guidance`` so baseline
@@ -3372,7 +3384,8 @@ def _write_instructions_pointer(path: Path, skills_dir: str, *, run_dir=None,
     # optimizer that does not know about it re-proposes what the run has already paid to rule
     # out. Named by absolute path because it lives in the run dir, not the working dir.
     rejected_note = ""
-    if run_dir is not None:
+    from . import abl_context
+    if run_dir is not None and not abl_context.history_none():
         rejected_path = getattr(run_dir, "rejected_path", None)
         if rejected_path is not None:
             rejected_note = (
@@ -4149,6 +4162,10 @@ def _classify(per):
 
 
 def _fmt(pt) -> str:
+    from . import abl_context
+    hooked = abl_context.fmt_failure(pt)       # abl_info: reward -> no feedback text
+    if hooked is not None:
+        return hooked
     return f"- {pt.get('task_id')} (reward {float(pt.get('reward', 0) or 0):.2f}): " \
            f"{str(pt.get('feedback', '')).strip()[:400]}"
 
@@ -4737,7 +4754,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     if tmpl and "{{FOCUS_SUMMARY}}" in tmpl:
         for k, v in repl.items():
             tmpl = tmpl.replace(k, v)
-        return tmpl
+        return _abl_finish_instructions(tmpl)
     if tmpl:
         why = "has no {{FOCUS_SUMMARY}} placeholder, so it cannot be rendered"
     # Falling back is a fact worth stating: the optimizer is about to read cap-evolve's
@@ -4782,7 +4799,18 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         "iteration — new tools and docstring edits do NOT count toward that bar. The "
         "measure is how MANY real clusters you fix in-code, not how much you spend.",
     ]
-    return "\n".join(p for p in parts if p is not None)
+    return _abl_finish_instructions("\n".join(p for p in parts if p is not None))
+
+
+def _abl_finish_instructions(text: str) -> str:
+    """Ablation program hook (no-op for a stock run): strip history references / add the info note."""
+    from . import abl_context
+    if abl_context.history_none():
+        text = abl_context.strip_history_refs(text)
+    note = abl_context.info_note(abl_context.current_info())
+    if note:
+        text = text.rstrip() + "\n\n" + note
+    return text
 
 
 @dataclass
