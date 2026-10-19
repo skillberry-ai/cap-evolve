@@ -167,3 +167,19 @@ def test_run_step_violation_costs_nothing(tmp_path):
     evs = [json.loads(l) for l in (rd.root / "events.jsonl").read_text().splitlines() if l.strip()]
     assert any(e.get("kind") == "surface_violation" for e in evs)
     assert harness._surface_streak(rd) == 1
+
+
+def test_root_level_scratch_files_are_not_capability_edits(tmp_path):
+    """The harness injects INSTRUCTIONS.md (and the proposer writes DIAGNOSIS.json) at the workdir root; the
+    adapter never reads them, so they must not count as a surface violation (found in the smoke, all CAP arms)."""
+    import shutil
+    from cap_evolve import abl_surface
+    seed = tmp_path / "seed"; (seed / "policy").mkdir(parents=True); (seed / "tools").mkdir()
+    (seed / "policy/policy.md").write_text("p"); (seed / "tools/tools.py").write_text('def f():\n    """d"""\n    return 1\n')
+    cand = tmp_path / "cand"; shutil.copytree(seed, cand)
+    for n in ("INSTRUCTIONS.md", "DIAGNOSIS.json", "NOTES.txt"):
+        (cand / n).write_text("x")
+    for arm in ("P", "TD", "TC"):
+        assert abl_surface.surface_violation(arm, seed, cand) is None, arm
+    (cand / "reference").mkdir(); (cand / "reference/x.md").write_text("y")
+    assert "reference/x.md" in abl_surface.surface_violation("P", seed, cand)

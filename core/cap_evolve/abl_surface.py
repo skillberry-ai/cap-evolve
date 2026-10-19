@@ -11,7 +11,9 @@ _EXTRA_IGNORE = ("PROCESS.md", "__pycache__", ".git", ".pytest_cache")
 
 def _ignored(rel: Path) -> bool:
     from .harness import _SNAPSHOT_IGNORE
-    return rel.parts[0] in _SNAPSHOT_IGNORE or any(
+    # Root-level files (INSTRUCTIONS.md, DIAGNOSIS.json, PROCESS.md, ...) are harness/proposer scratch: the
+    # adapter reads only policy/, tools/ and reference/, so they cannot change the agent under test.
+    return len(rel.parts) == 1 or rel.parts[0] in _SNAPSHOT_IGNORE or any(
         p in _EXTRA_IGNORE or p.endswith(".pyc") for p in rel.parts)
 
 
