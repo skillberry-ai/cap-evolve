@@ -52,6 +52,8 @@ def load(run_dir_or_spec) -> AblConfig:
         v = spec.get(key)
         if v is None:
             continue
+        if isinstance(v, str):
+            v = v.strip().upper() if name == "capability" else v.strip().lower()
         if not isinstance(v, str) or v not in allowed:
             raise ValueError(f"{key}={v!r} is invalid; expected one of {list(allowed)}")
         vals[name] = v
@@ -66,4 +68,6 @@ def load(run_dir_or_spec) -> AblConfig:
                              "(abl_feedback_ids, abl_gate_ids)")
     elif fb or gt:
         raise ValueError("abl_feedback_ids/abl_gate_ids are only valid with abl_gate=disjoint")
+    if vals.get("gate") == "disjoint" and str(spec.get("coverage_policy", "")).strip().lower() == "tipping":
+        raise ValueError("abl_gate: disjoint is not supported with coverage_policy: tipping")
     return AblConfig(feedback_ids=fb, gate_ids=gt, **vals)

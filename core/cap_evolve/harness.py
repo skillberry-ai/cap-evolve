@@ -3673,6 +3673,8 @@ def run_step(
         shutil.rmtree(workdir)
     workdir.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(parent_dir, workdir)
+    from . import abl_context as _abl_ctx
+    _abl_ctx.clean_carryover(run_dir, workdir)      # HIST-NONE: nothing of earlier steps rides along in the parent dir
 
     # Give the optimizer the full trajectories + capability guidance, in its own dir.
     # ``ctx`` is the SHARED assembler every algorithm passes; an absent one (a bare
@@ -4059,9 +4061,12 @@ def run_step(
                    if _fv is not None and _fp is not None else f"candidate {cid}")
     # ``record_iteration`` above already folded the optimizer's appended JOURNAL entry
     # into the run-level append-only journal.
+    _mem_val = cand_val.reward
+    if abl_mode == "disjoint":                  # the memory files must not carry the full-split (gate-set) level
+        _mem_val = _fv if _fv is not None else None
     if accepted:
         if history is not None:
-            history.add(cid, summary, cand_val.reward)
+            history.add(cid, summary, _mem_val)
     elif decision.indecisive:
         # Do NOT record an indecisive step as a rejection. The rejected list is fed
         # back to the optimizer as "these edits did not work" guidance, and an
@@ -4077,7 +4082,7 @@ def run_step(
                 # Authoring smells the candidate carries are part of why it is worth
                 # revisiting — the next iteration should see them, not rediscover them.
                 reason += " | validation warnings: " + "; ".join(validation.warnings[:5])
-            rejected.add(cid, summary, reason, cand_val.reward)
+            rejected.add(cid, summary, reason, _mem_val)
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",

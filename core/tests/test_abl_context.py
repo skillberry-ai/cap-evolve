@@ -159,8 +159,9 @@ def test_inject_context_applies_info(tmp_path, monkeypatch):
 def test_hidden_paths_and_cli(tmp_path, capsys):
     from cap_evolve import abl_context as a
     assert a.hidden_paths(None, None, None) == []
-    assert a.hidden_paths("state", None) == ["rollouts", "native_sims", "eval_index.jsonl"]
-    assert a.hidden_paths(None, "eval") == ["rollouts", "native_sims", "eval_index.jsonl"]
+    assert a.hidden_paths("state", None) == ["rollouts", "native_sims", "eval_index.jsonl", "baseline.json",
+                                             "champion.json", "state.json", "candidates"]
+    assert a.hidden_paths(None, "eval") == a.hidden_paths("state", None)
     none = a.hidden_paths("none", None)
     assert none[:4] == ["rollouts", "native_sims", "candidates", "work"] and "LEDGER.md" in none
     assert "graph.jsonl" in a.hidden_paths(None, None, "disjoint")
@@ -169,7 +170,7 @@ def test_hidden_paths_and_cli(tmp_path, capsys):
     spec = tmp_path / "s.yaml"
     spec.write_text("abl_history: state\n")
     assert a._main(["hidden", str(spec)]) == 0
-    assert capsys.readouterr().out.strip() == "rollouts,native_sims,eval_index.jsonl"
+    assert capsys.readouterr().out.strip() == ",".join(a.hidden_paths("state", None))
 
 
 def test_runmap_drops_trace_sentence_only_for_state(tmp_path):

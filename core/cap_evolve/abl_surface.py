@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import os
 from pathlib import Path
 
 POLICY = "policy/policy.md"
@@ -30,14 +31,35 @@ def _files(root: Path) -> dict:
 
 
 def _bytes(p):
-    return p.read_bytes() if p is not None else None
+    if p is None:
+        return None
+    try:
+        if p.is_symlink():
+            return b"SYMLINK:" + os.readlink(p).encode("utf-8", "surrogateescape")
+        return p.read_bytes()
+    except OSError:
+        return b"UNREADABLE"
 
 
 def _parse(path):
-    try:
-        return ast.parse(path.read_text(encoding="utf-8"))
-    except (SyntaxError, ValueError, UnicodeDecodeError):
+    try:                      # bytes: honours a coding cookie, so a non-UTF-8 tools.py still parses
+        return ast.parse(Path(path).read_bytes())
+    except (SyntaxError, ValueError, OSError):
         return None
+
+
+def _doc_rewrites(tree) -> int:
+    """Occurrences of the constructs that can rewrite a docstring at runtime (``f.__doc__ = ..``,
+    ``setattr(f, '__doc__', ..)``, ``functools.wraps`` / ``update_wrapper``): a TC candidate may not add one."""
+    n = 0
+    for x in ast.walk(tree):
+        if isinstance(x, ast.Attribute) and x.attr in ("__doc__", "wraps", "update_wrapper"):
+            n += 1
+        elif isinstance(x, ast.Name) and x.id in ("__doc__", "wraps", "update_wrapper"):
+            n += 1
+        elif isinstance(x, ast.Constant) and x.value == "__doc__":
+            n += 1
+    return n
 
 
 _DOC_NODES = (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
@@ -104,4 +126,12 @@ def surface_violation(arm: str, parent_dir, cand_dir) -> str | None:
                 for q, d in pd.items():
                     if q in cd and cd[q] != d:
                         bad.append(f"{TOOLS} docstring of pre-existing {q} changed")
+                if ast.get_docstring(pt, clean=False) != ast.get_docstring(ct, clean=False):
+                    bad.append(f"{TOOLS} module docstring changed")
+                if _doc_rewrites(ct) > _doc_rewrites(pt):
+                    bad.append(f"{TOOLS} adds a runtime docstring rewrite (__doc__ / wraps / update_wrapper)")
+        elif arm == "TD" and (pt is None) != (ct is None):
+            bad.append(f"{TOOLS} {'no longer parses' if ct is None else 'now parses'} (docstring-only arm)")
+        elif arm == "TD" and pt is None and ct is None and _bytes(pf.get(TOOLS)) != _bytes(cf.get(TOOLS)):
+            bad.append(f"{TOOLS} changed and cannot be parsed (docstring-only arm)")
     return "; ".join(bad) if bad else None

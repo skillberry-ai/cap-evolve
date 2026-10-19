@@ -15,6 +15,7 @@ them from the run's spec and activates them for this process.
 from __future__ import annotations
 
 import json
+import shutil
 import os
 import re
 import sys
@@ -275,10 +276,13 @@ def transform_trajectories(dst_dir, info: str | None) -> None:
 
 # ---------------------------------------------------------------- sandbox hiding
 
-_HIDE_NONE = ["rollouts", "native_sims", "candidates", "work", "rejected.jsonl", "history.jsonl",
+_HIDE_NONE = ["rollouts", "native_sims", "candidates", "work", "baseline.json", "champion.json", "state.json", "rejected.jsonl", "history.jsonl",
               "JOURNAL.md", "LEDGER.md", "INSIGHTS.md", "META_INSIGHTS.md",
               "FRAMEWORK_IMPROVEMENTS.md", "graph.jsonl", "eval_index.jsonl", "candidates.jsonl"]
-_HIDE_TRACES = ["rollouts", "native_sims", "eval_index.jsonl"]
+# baseline.json / champion.json / state.json carry per-task rewards, grader feedback or the full-split val;
+# candidates/ holds every earlier step's rendered INSTRUCTIONS.md (its failure index quotes grader feedback).
+_HIDE_TRACES = ["rollouts", "native_sims", "eval_index.jsonl", "baseline.json", "champion.json", "state.json",
+                "candidates"]
 
 
 def hidden_paths(history: str | None, info: str | None, gate: str | None = None) -> list[str]:
@@ -316,3 +320,24 @@ def _main(argv) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(_main(sys.argv[1:]))
+
+
+def clean_carryover(run_dir, workdir) -> list:
+    """HIST-NONE: the workdir starts as a copy of the parent candidate, which also holds the files an earlier
+    proposer left at the top level (PROCESS.md, DIAGNOSIS.json, notes dirs). Remove every top-level entry that the
+    SEED capability does not have, so no earlier step's analysis rides along. No-op for every other run."""
+    hist, _ = settings(run_dir)
+    if hist != "none":
+        return []
+    seed = Path(run_dir.candidate_dir("seed"))
+    keep = {p.name for p in seed.iterdir()} if seed.is_dir() else {"policy", "tools", "reference"}
+    removed = []
+    for p in sorted(Path(workdir).iterdir()):
+        if p.name in keep:
+            continue
+        if p.is_dir() and not p.is_symlink():
+            shutil.rmtree(p)
+        else:
+            p.unlink()
+        removed.append(p.name)
+    return removed
