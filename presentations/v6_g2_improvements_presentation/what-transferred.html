@@ -1,0 +1,1045 @@
+<title>What Transferred — v6 G2 held-out</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,72,400;0,72,500;0,72,600;1,72,400;1,72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper: #eef1f0;
+    --paper-raised: #e2e7e5;
+    --ink: #171b1f;
+    --ink-soft: #4b535a;
+    --hair: #c7cec9;
+    --accent: #b5791e;
+    --accent-ink: #171b1f;
+    --diff-add-bg: #dcf0e2;
+    --diff-add-ink: #1e6b3f;
+    --diff-add-mark: #3fae6a;
+    --diff-rem-bg: #f6dede;
+    --diff-rem-ink: #8a2b2b;
+    --diff-rem-mark: #c64545;
+    --panel: #14181c;
+    --panel-ink: #d9dedb;
+    --panel-hair: #2b3238;
+    --shadow: rgba(20,24,20,0.08);
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper: #10141a;
+      --paper-raised: #171d24;
+      --ink: #e7ebe8;
+      --ink-soft: #a3adaa;
+      --hair: #2c3339;
+      --accent: #e0a949;
+      --accent-ink: #10141a;
+      --diff-add-bg: #103824;
+      --diff-add-ink: #7fd9a1;
+      --diff-add-mark: #57d68d;
+      --diff-rem-bg: #3a1717;
+      --diff-rem-ink: #ed9a9a;
+      --diff-rem-mark: #e5686b;
+      --panel: #0a0d10;
+      --panel-ink: #c7cec9;
+      --panel-hair: #23292d;
+      --shadow: rgba(0,0,0,0.4);
+    }
+  }
+
+  :root[data-theme="dark"]{
+    --paper: #10141a;
+    --paper-raised: #171d24;
+    --ink: #e7ebe8;
+    --ink-soft: #a3adaa;
+    --hair: #2c3339;
+    --accent: #e0a949;
+    --accent-ink: #10141a;
+    --diff-add-bg: #103824;
+    --diff-add-ink: #7fd9a1;
+    --diff-add-mark: #57d68d;
+    --diff-rem-bg: #3a1717;
+    --diff-rem-ink: #ed9a9a;
+    --diff-rem-mark: #e5686b;
+    --panel: #0a0d10;
+    --panel-ink: #c7cec9;
+    --panel-hair: #23292d;
+    --shadow: rgba(0,0,0,0.4);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  .deck{
+    height: 100vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+  .deck::-webkit-scrollbar{ display:none; }
+
+  section.slide{
+    min-height: 100vh;
+    width: 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(28px, 6vw, 88px);
+    position: relative;
+  }
+
+  .folio{
+    position: absolute;
+    top: clamp(20px, 4vw, 40px);
+    left: clamp(28px, 6vw, 88px);
+    right: clamp(28px, 6vw, 88px);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .folio .n{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
+
+  /* ---------- Cover ---------- */
+  .cover{
+    max-width: 980px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .eyebrow{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  .cover h1{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(2.6rem, 6.5vw, 5.2rem);
+    line-height: 1.02;
+    margin: 0 0 22px;
+    text-wrap: balance;
+    max-width: 14ch;
+  }
+  .cover .lede{
+    font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+    color: var(--ink-soft);
+    max-width: 62ch;
+    line-height: 1.55;
+    margin: 0 0 44px;
+  }
+  .cover .lede strong{ color: var(--ink); font-weight: 600; }
+
+  table.roster{
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 760px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.86rem;
+  }
+  table.roster th{
+    text-align: left;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    padding: 0 14px 10px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  table.roster td{
+    padding: 12px 14px 12px 0;
+    border-bottom: 1px solid var(--hair);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  table.roster td.task{ font-family: "IBM Plex Sans", sans-serif; font-weight: 500; white-space: normal; }
+  table.roster tr:last-child td{ border-bottom: none; }
+  .score-move{ font-variant-numeric: tabular-nums; display:flex; align-items:center; gap:6px; }
+  .score-move .before{ color: var(--diff-rem-mark); }
+  .score-move .after{ color: var(--diff-add-mark); }
+  .score-move .arrow{ color: var(--ink-soft); }
+
+  .score-cap{
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--diff-rem-mark);
+    white-space: nowrap;
+  }
+  .score-cap .lock{ font-size: 0.85em; }
+  .score-cap .sep{ color: var(--ink-soft); font-weight: 400; }
+  table.roster tr.split td{ border-bottom: none; padding-bottom: 2px; }
+  table.roster tr.split + tr td{ padding-top: 2px; color: var(--ink-soft); font-size: 0.86rem; }
+
+  .scrollhint{
+    margin-top: 40px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scrollhint .chev{ animation: bob 1.8s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){ .scrollhint .chev{ animation: none; } }
+  @keyframes bob{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(4px); } }
+
+  /* ---------- Item slides ---------- */
+  .item{
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(300px, 420px) 1fr;
+    gap: clamp(28px, 4vw, 64px);
+    align-items: start;
+  }
+  @media (max-width: 860px){
+    .item{ grid-template-columns: 1fr; }
+  }
+
+  .item-left{ padding-top: 46px; }
+  .tags{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 20px; }
+  .tag{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    padding: 4px 9px;
+    border: 1px solid var(--hair);
+    border-radius: 3px;
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+  }
+  .tag.muted{
+    color: var(--diff-rem-mark);
+    border-color: var(--diff-rem-mark);
+    background: var(--diff-rem-bg);
+  }
+  .item h2{
+    font-family: "Newsreader", serif;
+    font-weight: 500;
+    font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+    line-height: 1.08;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .item .taskname{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    margin: 0 0 26px;
+  }
+  .score-badge{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 28px;
+  }
+  .score-badge .before{ color: var(--diff-rem-mark); }
+  .score-badge .after{ color: var(--diff-add-mark); }
+  .score-badge .arrow{ color: var(--ink-soft); font-size: 1.1rem; }
+  .score-badge .cap{
+    display:block;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .request{
+    margin: 0 0 24px;
+    padding: 13px 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--paper-raised);
+    border-radius: 0 5px 5px 0;
+  }
+  .request .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .request p{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-size: 1.08rem;
+    line-height: 1.4;
+    color: var(--ink);
+    margin: 0;
+  }
+  .request .note{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .block{ margin-bottom: 22px; }
+  .block h3{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+  .block p{
+    font-size: 1.01rem;
+    line-height: 1.6;
+    color: var(--ink);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .diffpanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+  }
+  .diffpanel + .diffpanel{ margin-top: 18px; }
+  .diff-tab{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--panel-hair);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--panel-ink);
+  }
+  .diff-tab .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); flex-shrink:0; }
+  .diff-tab .reward{
+    margin-left: auto;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .diff-tab .reward.bad{ color: var(--diff-rem-mark); }
+  .diff-tab .reward.good{ color: var(--diff-add-mark); }
+  .diff-lines{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.84rem;
+    line-height: 1.65;
+    padding: 4px 0;
+    overflow-x: auto;
+  }
+  .diff-lines .row{
+    display: flex;
+    padding: 3px 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-lines .row .mark{
+    width: 1.4em;
+    flex-shrink: 0;
+    user-select: none;
+    opacity: 0.85;
+  }
+  .row.rem{ background: var(--diff-rem-bg); color: var(--diff-rem-ink); }
+  .row.rem .mark{ color: var(--diff-rem-mark); }
+  .row.add{ background: var(--diff-add-bg); color: var(--diff-add-ink); }
+  .row.add .mark{ color: var(--diff-add-mark); }
+  .row.ctx{ color: var(--panel-ink); opacity: 0.6; }
+  .row.ctx .mark{ color: var(--panel-ink); }
+  .row.call{ color: var(--panel-ink); }
+  .row.call .mark{ color: var(--accent); }
+  .diff-note{
+    padding: 10px 16px 14px;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    opacity: 0.75;
+    border-top: 1px dashed var(--panel-hair);
+  }
+
+  /* ---------- Closing ---------- */
+  .closing{
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .closing h2{
+    font-family: "Newsreader", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.7rem, 3.6vw, 2.6rem);
+    line-height: 1.28;
+    margin: 0 0 32px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .closing .attn{ color: var(--accent); font-style: normal; }
+  .recap{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 40px;
+  }
+  @media (max-width: 760px){ .recap{ grid-template-columns: 1fr 1fr; } }
+  .recap .card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 14px 14px 16px;
+    background: var(--paper-raised);
+  }
+  .recap .card .k{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+  .recap .card .move{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .recap .card .move .before{ color: var(--diff-rem-mark); }
+  .recap .card .move .after{ color: var(--diff-add-mark); }
+  .closing .evidence-note{
+    margin-top: 28px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 66ch;
+  }
+
+  /* ---------- Locked-ceiling slides ---------- */
+  .ceilings{
+    display: flex;
+    gap: 14px;
+    margin-bottom: 26px;
+    flex-wrap: wrap;
+  }
+  .ceiling-card{
+    border: 1px solid var(--hair);
+    border-radius: 6px;
+    padding: 12px 16px;
+    background: var(--paper-raised);
+    min-width: 190px;
+  }
+  .ceiling-card .cap{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .ceiling-card .task{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .ceiling-card .val{
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--diff-rem-mark);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .ceiling-card .val .lock{ font-size: 1rem; }
+  .ceiling-card .sub{
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .tracepanel{
+    background: var(--panel);
+    border: 1px solid var(--panel-hair);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 12px 30px var(--shadow);
+    padding: 22px 22px 20px;
+  }
+  .trace-step{
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--panel-ink);
+    padding: 10px 14px;
+    border: 1px solid var(--panel-hair);
+    border-radius: 5px;
+    background: rgba(255,255,255,0.02);
+  }
+  .trace-step .k{
+    display:block;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .trace-arrow{
+    text-align: center;
+    color: var(--ink-soft);
+    font-family: "IBM Plex Mono", monospace;
+    padding: 4px 0;
+    font-size: 0.9rem;
+  }
+  .trace-fork{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  @media (max-width: 520px){ .trace-fork{ grid-template-columns: 1fr; } }
+  .trace-branch{
+    border-radius: 5px;
+    padding: 12px 14px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
+  .trace-branch.blocked{
+    border: 1px dashed var(--panel-hair);
+    color: var(--ink-soft);
+    opacity: 0.7;
+  }
+  .trace-branch.blocked .k{ color: var(--diff-rem-mark); text-decoration: line-through; }
+  .trace-branch.reached{
+    border: 1px solid var(--accent);
+    background: rgba(224,169,73,0.08);
+    color: var(--panel-ink);
+  }
+  .trace-branch.reached .k{ color: var(--accent); }
+  .trace-branch .k{
+    display:block;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .diff-note.stark{
+    border-top: 1px dashed var(--panel-hair);
+    font-style: italic;
+  }
+
+  /* ---------- Nav ---------- */
+  .navdots{
+    position: fixed;
+    right: clamp(14px, 3vw, 32px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 20;
+  }
+  .navdots button{
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-soft);
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .navdots button:hover{ transform: scale(1.25); }
+  .navdots button:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .navdots button[aria-current="true"]{
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 640px){
+    .navdots{ display:none; }
+  }
+
+  /* ---------- Candidate trajectory strip (G2 deck) ---------- */
+  .traj{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:stretch;
+    margin: 14px 0 4px;
+    font-family:"IBM Plex Mono", monospace;
+  }
+  .traj .step{
+    border:1px solid var(--hair);
+    border-radius:4px;
+    padding:7px 10px;
+    background:var(--paper-raised);
+    min-width:62px;
+    text-align:center;
+  }
+  .traj .step .c{
+    display:block; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:3px;
+  }
+  .traj .step .v{ display:block; font-size:0.92rem; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .traj .step.lo{ border-color:var(--diff-rem-mark); background:var(--diff-rem-bg); }
+  .traj .step.lo .v{ color:var(--diff-rem-ink); }
+  .traj .step.hi{ border-color:var(--diff-add-mark); background:var(--diff-add-bg); }
+  .traj .step.hi .v{ color:var(--diff-add-ink); }
+  .traj .step.best{ outline:2px solid var(--accent); outline-offset:1px; }
+  .traj-note{
+    font-family:"IBM Plex Mono", monospace; font-size:0.7rem; color:var(--ink-soft);
+    letter-spacing:0.02em; margin:2px 0 0;
+  }
+  .verdict{
+    display:flex; gap:10px; align-items:flex-start;
+    border-left:3px solid var(--accent); background:var(--paper-raised);
+    padding:14px 16px; margin:16px 0 0; border-radius:0 4px 4px 0;
+  }
+  .verdict .vk{
+    font-family:"IBM Plex Mono", monospace; font-size:0.64rem; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--accent); white-space:nowrap; padding-top:2px;
+  }
+  .verdict p{ margin:0; font-size:0.92rem; line-height:1.5; color:var(--ink); }
+  .status-ok{ color:var(--diff-add-mark); font-weight:600; }
+  .status-no{ color:var(--diff-rem-mark); font-weight:600; }
+
+  /* ---------- Appendix: per-file stat badge ---------- */
+  .filestat{
+    display: inline-flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+    margin-bottom: 28px;
+  }
+  .filestat .size{ color: var(--ink-soft); }
+  .filestat .delta{ font-weight:600; }
+  .filestat .delta.add{ color: var(--diff-add-mark); }
+  .filestat .delta.rem{ color: var(--diff-rem-mark); }
+  .filestat.unchanged .size{ color: var(--ink); font-weight:600; }
+
+  /* v6 additions: bar chart (from what-the-bundle-bought.html) plus a red fill */
+  .stat .lbl{font-family:"IBM Plex Mono",monospace; font-size:0.66rem; letter-spacing:0.09em; text-transform:uppercase; color:var(--ink-soft); margin-top:9px; display:block; line-height:1.45;}
+  .bars{margin:18px 0 4px;}
+  .bar{display:grid; grid-template-columns:132px 1fr 72px; align-items:center; gap:12px; margin-bottom:9px; font-family:"IBM Plex Mono",monospace; font-size:0.76rem;}
+  .bar .lbl{color:var(--ink-soft); text-align:right;}
+  .bar .track{background:var(--paper-raised); border:1px solid var(--hair); border-radius:3px; height:19px; position:relative; overflow:hidden;}
+  .bar .fill{position:absolute; left:0; top:0; bottom:0; background:var(--accent); opacity:0.78;}
+  .bar .fill.mut{background:var(--ink-soft); opacity:0.42;}
+  .bar .fill.good{background:var(--diff-add-mark); opacity:0.75;}
+  .bar .v{font-variant-numeric:tabular-nums; color:var(--ink);}
+  .bar .fill.bad{background:var(--diff-rem-mark); opacity:0.75;}
+  @media (max-width:560px){ .bar{grid-template-columns:70px 1fr 52px; gap:8px;} }
+</style>
+
+<div class="deck" id="deck" tabindex="0">
+
+  <section class="slide" id="s0">
+    <div class="folio"><span>Skill audit &middot; v6 G2 held&#8209;out arm</span><span class="n">i</span></div>
+    <div class="cover">
+      <p class="eyebrow">Diagnostic report &middot; cand_0005 vs. seed &middot; sealed test split</p>
+      <h1>What transferred</h1>
+      <p class="lede">The first parsec run where the gate read <strong>only tasks the optimizer never saw</strong>, and the result was then scored once on 66 sealed test tasks. The final bundle, <code>cand_0005</code>, raised test reward from <strong>0.813 to 0.850</strong> (paired 95% CI +0.011 to +0.065). This deck asks which edits produced that, using the test trials themselves rather than the optimizer&rsquo;s own claims. <strong>The two edits that transferred were not about any task.</strong> They repair how the agent handles its environment: a call that never answered, and tools that are listed but never served. It also reports what did not work: one task the bundle broke, and one acceptance the gate got wrong.</p>
+      <table class="roster">
+        <thead>
+          <tr><th>Item</th><th>Finding</th><th>Test evidence</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>01</td><td class="task">A call that never answered was treated as a final answer</td><td><span class="score-move"><span class="before">6</span><span class="arrow">&rarr;</span><span class="after">108</span></span> retries</td></tr>
+          <tr><td>02</td><td class="task">The manual made dead tools mandatory</td><td><span class="score-move"><span class="before">137</span><span class="arrow">&rarr;</span><span class="after">48</span></span> dead calls</td></tr>
+          <tr class="split"><td>03</td><td class="task">A correct rule broke a task &mdash; <em>platform&#8209;131</em></td><td><span class="score-move"><span class="before">98.5%</span><span class="arrow">&rarr;</span><span class="after" style="color:var(--diff-rem-ink)">59.0%</span></span></td></tr>
+          <tr><td>04</td><td class="task">The gate accepted a candidate on a bad baseline</td><td><span class="score-cap">z 5.14 &rarr; 0.26</span></td></tr>
+        </tbody>
+      </table>
+      <p class="scrollhint"><span class="chev">&darr;</span> every figure comes from the 1,320 sealed test trials of run_g2_e1 &mdash; seed vs. cand_0005, ten trials per task; errored trials are excluded, as the harness excludes them</p>
+    </div>
+  </section>
+
+  <section class="slide" id="s1">
+    <div class="folio"><span>Retry rule &middot; every specialist</span><span class="n">01</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">shared_context.md</span></div>
+        <h2>A call that never answered was treated as a final answer</h2>
+        <p class="taskname">harness property &middot; affects any task</p>
+        <div class="score-badge">
+          <span><span class="cap">seed</span><span class="before">0.651</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0005</span><span class="after">0.733</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">What the simulator returns when a call times out &mdash; verbatim</div>
+          <p>&ldquo;query_aap2 did not respond within 240s. The simulated service accepted the request and never answered; treat this as the tool being unavailable rather than as a result.&rdquo;</p>
+          <div class="note">Fixed text, any tool. Nothing was measured &mdash; a second attempt usually succeeds.</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>The seed told every specialist never to repeat a call with the same parameters. That rule forbade the one action that recovers from a timeout. So a timed&#8209;out call ended the investigation, and the agent reported the gap or asked the user to retry.</p>
+        </div>
+        <div class="block">
+          <h3>What changed on the test tasks</h3>
+          <p>Over the valid test trials, the seed made <strong>6</strong> repeat calls after 160 timeouts. cand_0005 made <strong>108</strong> after 152. On trials that hit at least one timeout, reward rose from <strong>0.651 to 0.733</strong>; on trials that hit none, from 0.845 to 0.875.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; seed</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>**NEVER call the same tool with the same</div>
+            <div class="row rem"><span class="mark">&minus;</span>parameters twice in a conversation.**</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; cand_0005</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>**A call that NEVER ANSWERED has not been tried</div>
+            <div class="row add"><span class="mark">+</span>yet &mdash; re-issue it once.** Two failures look</div>
+            <div class="row add"><span class="mark">+</span>similar and need opposite responses:</div>
+            <div class="row add"><span class="mark">+</span>- No answer at all &rarr; re-issue that one call once,</div>
+            <div class="row add"><span class="mark">+</span>  as your next call. Use this ONLY when the result</div>
+            <div class="row add"><span class="mark">+</span>  literally says the service *did not respond within*</div>
+            <div class="row add"><span class="mark">+</span>  some number of seconds.</div>
+            <div class="row add"><span class="mark">+</span>- The service ANSWERED &rarr; do not re-issue it.</div>
+            <div class="row add"><span class="mark">+</span>  An empty result, not found, a validation error,</div>
+            <div class="row add"><span class="mark">+</span>  a 429, or "not modelled" all mean it DID respond.</div>
+            <div class="row add"><span class="mark">+</span>- At most one re-issue per call, and none once two</div>
+            <div class="row add"><span class="mark">+</span>  calls have already failed to answer.</div>
+            <div class="row add"><span class="mark">+</span>- Make the re-issue yourself. Do not close by</div>
+            <div class="row add"><span class="mark">+</span>  telling the user to retry the query.</div>
+          </div>
+          <div class="diff-note">Condensed from the full rule; the wording is the bundle&rsquo;s own. The &ldquo;answered&rdquo; branch matters as much as the retry: an early draft retried real errors too, and the optimizer narrowed it after a review caught that.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s1e">
+    <div class="folio"><span>platform&#8209;145&#8209;prod&#8209;stage&#8209;deploys&#8209;from&#8209;fork &middot; the actual trials</span><span class="n">02</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">agent.jsonl</span><span class="tag">test split</span></div>
+        <h2>The same timeout, two outcomes</h2>
+        <p class="taskname">platform-145-prod-stage-deploys-from-fork &middot; a test task the optimizer never saw</p>
+        <div class="score-badge">
+          <span><span class="cap">seed</span><span class="before">31%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0005</span><span class="after">88%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The test request &mdash; opening line, verbatim</div>
+          <p>&ldquo;Courier Routing lab orders are failing. The one I care about is job 4408817 on the <code>partner0</code> AAP2 controller&hellip;&rdquo;</p>
+          <div class="note">The first call needed is the job log. On both trials shown, a call timed out.</div>
+        </div>
+        <div class="block">
+          <h3>The largest single gain on the test split</h3>
+          <p>Across this task&rsquo;s ten trials, the seed hit 3 timeouts and retried none. cand_0005 hit 11 and retried 9. The seed also reached for a dead tool once it lost the job log; cand_0005 never did.</p>
+        </div>
+      </div>
+      <div>
+        <div class="tracepanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; trial 0<span class="reward bad">reward 0.15</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">1</span>query_aap2 get_job_log 4408817</div>
+            <div class="row rem"><span class="mark">&times;</span>&nbsp;&rarr; did not respond within 240s</div>
+            <div class="row ctx"><span class="mark">2</span>pivots: catalog search, Splunk, GitHub search&hellip;</div>
+            <div class="row rem"><span class="mark">&times;</span>&nbsp;&rarr; nothing found, wrong catalog name</div>
+            <div class="row ctx"><span class="mark">9</span>query_provisions_db SELECT &hellip;</div>
+            <div class="row rem"><span class="mark">&times;</span>&nbsp;&rarr; not modelled by the simulation</div>
+            <div class="row ctx"><span class="mark">13</span>query_aap2 get_job_events 4408817</div>
+            <div class="row rem"><span class="mark">&times;</span>&nbsp;&rarr; did not respond within 240s</div>
+            <div class="row ctx"><span class="mark">&nbsp;</span>14 calls; the job log is never read</div>
+          </div>
+        </div>
+        <div class="tracepanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0005 &middot; trial 1<span class="reward good">reward 0.88</span></div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">1</span>query_aap2 get_job_log 4408817 &rarr; failed job, variable</div>
+            <div class="row add"><span class="mark">2</span>lookup_catalog_item &rarr; found</div>
+            <div class="row ctx"><span class="mark">3</span>fetch prod.yaml</div>
+            <div class="row rem"><span class="mark">&times;</span>&nbsp;&rarr; did not respond within 240s</div>
+            <div class="row add"><span class="mark">5</span>fetch prod.yaml &mdash; same call, re&#8209;issued</div>
+            <div class="row add"><span class="mark">&check;</span>&nbsp;&rarr; content returned</div>
+            <div class="row ctx"><span class="mark">&nbsp;</span>reads the config, names the failing variable</div>
+          </div>
+          <div class="diff-note">Real trials from the sealed test split. The seed lost both the job log and the job events to timeouts and never retried either.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s2">
+    <div class="folio"><span>Dead tools &middot; shared context and three specialists</span><span class="n">03</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">shared_context.md</span><span class="tag">cost_agent.md</span><span class="tag">aap2_agent.md</span></div>
+        <h2>The manual made dead tools mandatory</h2>
+        <p class="taskname">harness property &middot; affects any task that names a sandbox</p>
+        <div class="score-badge">
+          <span><span class="cap">seed</span><span class="before">137</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0005</span><span class="after">48</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">What the simulator returns for these tools &mdash; verbatim</div>
+          <p>&ldquo;query_provisions_db is not modelled by the simulation. The benchmark excludes it deliberately; the question should be answerable from the identifiers you were given.&rdquo;</p>
+          <div class="note">Every call to these tools gets this reply. They never succeed.</div>
+        </div>
+        <div class="block">
+          <h3>The problem</h3>
+          <p>The seed made two of these tools a required first step: describe a table before any query, and check the provisions database whenever a sandbox is named. Six more places told the agent to fall back on the same route. Every such call wasted a round.</p>
+        </div>
+        <div class="block">
+          <h3>What changed on the test tasks</h3>
+          <p>Calls to unmodeled tools fell from <strong>137 to 48</strong> over the valid test trials. In the seed, nine trials opened with one. The optimizer also had to remove all six standing contradictions: one leftover instruction elsewhere cancels the edit.</p>
+        </div>
+      </div>
+      <div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; seed, two passages</div>
+          <div class="diff-lines">
+            <div class="row rem"><span class="mark">&minus;</span>**MANDATORY: Call `db_describe_table` before</div>
+            <div class="row rem"><span class="mark">&minus;</span>querying ANY table you haven't already described</div>
+            <div class="row rem"><span class="mark">&minus;</span>in this conversation.**</div>
+            <div class="row ctx"><span class="mark">&nbsp;</span>&hellip;</div>
+            <div class="row rem"><span class="mark">&minus;</span>- When a user mentions a sandbox by name, ALWAYS</div>
+            <div class="row rem"><span class="mark">&minus;</span>  query the provision DB first to check the `cloud`</div>
+            <div class="row rem"><span class="mark">&minus;</span>  column before choosing a cost tool.</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>shared_context.md &mdash; cand_0005</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>**Some tools are listed for you but are not served</div>
+            <div class="row add"><span class="mark">+</span>here, and a listed tool is not a working tool.**</div>
+            <div class="row add"><span class="mark">+</span>When a result says the tool is *not modelled*,</div>
+            <div class="row add"><span class="mark">+</span>that is final for that tool for the whole</div>
+            <div class="row add"><span class="mark">+</span>conversation: do not call it again with any</div>
+            <div class="row add"><span class="mark">+</span>arguments, and do not describe your answer as</div>
+            <div class="row add"><span class="mark">+</span>blocked on it.</div>
+          </div>
+          <div class="diff-note">The cloud is now read from the sandbox name&rsquo;s shape, which the same file already documented. The rule is keyed on a tool <em>being served</em>, not on it being listed: these tools are in every agent&rsquo;s tool list, so &ldquo;if it is in your tool list&rdquo; would have read as permission.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s3">
+    <div class="folio"><span>platform&#8209;131&#8209;deployment&#8209;first&#8209;resource&#8209;blind&#8209;spot</span><span class="n">04</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">babylon_agent.md</span><span class="tag">regression</span></div>
+        <h2>A correct rule broke a task</h2>
+        <p class="taskname">platform-131 &middot; the largest regression on the test split</p>
+        <div class="score-badge">
+          <span><span class="cap">seed</span><span class="after">98.5%</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">cand_0005</span><span class="before">59.0%</span></span>
+        </div>
+        <div class="request">
+          <div class="cap">The test request &mdash; verbatim, abridged</div>
+          <p>&ldquo;&hellip;on the Babylon cluster <code>merlin</code>. The portal shows the lab as green, but their workbenches can&rsquo;t get any accelerators. &hellip;tell me which part, what state it&rsquo;s in, and which AAP2 job I should open.&rdquo;</p>
+        </div>
+        <div class="block">
+          <h3>What happened</h3>
+          <p>cand_0005 added a true statement about the simulator: listing subjects by identifier &ldquo;resolves without a cluster.&rdquo; So on this task the agent dropped the <code>cluster</code> argument. The task&rsquo;s reward contract requires that exact call <em>with</em> <code>cluster: merlin</code>, so its tool&#8209;call score fell to 0. The agent also stopped before opening the job the user asked about.</p>
+        </div>
+        <div class="block">
+          <h3>Bundle or contract?</h3>
+          <p>The rule is right for the simulator, and the contract is strict about an argument the simulator doesn&rsquo;t need. Which one should change needs domain review. Either way, this task loses 0.395, past the paper&rsquo;s 0.20 per&#8209;task deployability limit.</p>
+        </div>
+      </div>
+      <div>
+        <div class="tracepanel">
+          <div class="diff-tab"><span class="dot"></span>seed &middot; trial 1<span class="reward good">reward 1.00</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">1</span>get_workshop  f3nlx, cluster merlin</div>
+            <div class="row add"><span class="mark">2</span>list_anarchy_subjects  guid f3nlx, <strong>cluster merlin</strong></div>
+            <div class="row add"><span class="mark">3</span>list_deployments  namespace, cluster merlin</div>
+            <div class="row add"><span class="mark">4</span>query_aap2 get_job_log  5562091</div>
+          </div>
+        </div>
+        <div class="tracepanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0005 &middot; trial 1<span class="reward bad">reward 0.56</span></div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">1</span>get_workshop  f3nlx, cluster merlin</div>
+            <div class="row rem"><span class="mark">2</span>list_anarchy_subjects  guid f3nlx &mdash; <strong>no cluster</strong></div>
+            <div class="row rem"><span class="mark">&nbsp;</span>stops; never lists deployments, never opens the job</div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>babylon_agent.md &mdash; added in cand_0005</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">+</span>**Most actions need a `cluster`.** Only these</div>
+            <div class="row add"><span class="mark">+</span>resolve without one: `list_anarchy_subjects` and</div>
+            <div class="row add"><span class="mark">+</span>`list_anarchy_actions` when you pass a `guid`, &hellip;</div>
+          </div>
+          <div class="diff-note">Nine of ten cand_0005 trials made the cluster&#8209;less call. The seed passed <code>cluster</code> every time.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s4">
+    <div class="folio"><span>The gate &middot; cand_0002, iteration 2</span><span class="n">05</span></div>
+    <div class="item">
+      <div class="item-left">
+        <div class="tags"><span class="tag">confirmation split</span><span class="tag">false accept</span></div>
+        <h2>The gate accepted a candidate on a bad baseline</h2>
+        <p class="taskname">cand_0002 &middot; accepted at look 4 of 5</p>
+        <div class="score-badge">
+          <span><span class="cap">as gated</span><span class="after">z 5.14</span></span>
+          <span class="arrow">&rarr;</span>
+          <span><span class="cap">bad batch removed</span><span class="before">z 0.26</span></span>
+        </div>
+        <div class="block">
+          <h3>What happened</h3>
+          <p>Before judging a candidate, the gate re&#8209;measures the champion: four trials on each of the 67 hidden tasks, run as four batches. In cand_0002&rsquo;s round, the seed&rsquo;s first batch scored about half its normal level. On 47 of its 65 tasks it fell more than 0.3 below the same task&rsquo;s other three batches. The trials completed and returned verifier output, so the infrastructure check did not reject them.</p>
+        </div>
+        <div class="block">
+          <h3>What it changed</h3>
+          <p>Averaging that batch in lowered the seed&rsquo;s baseline, so cand_0002 looked far better than it was. A full re&#8209;measurement after the run agrees there was no gain: cand_0002 scored 0.804, the seed 0.821.</p>
+        </div>
+        <div class="block">
+          <h3>Why it still matters</h3>
+          <p>cand_0005 was built on cand_0002 &mdash; 93% of the lines cand_0002 added are still in it. The test result compares cand_0005 with the seed directly, so it stands. What cannot be known is whether cand_0005 would have been found if cand_0002 had been rejected.</p>
+        </div>
+      </div>
+      <div>
+        <div class="ceiling-card">
+          <div class="diff-tab"><span class="dot"></span>seed re&#8209;measurement, round 2 &mdash; 67 hidden tasks each</div>
+          <div class="bars">
+            <div class="bar"><span class="lbl">batch 1</span><span class="track"><span class="fill bad" style="width:40.1%"></span></span><span class="v">0.401</span></div>
+            <div class="bar"><span class="lbl">batch 2</span><span class="track"><span class="fill good" style="width:74.8%"></span></span><span class="v">0.748</span></div>
+            <div class="bar"><span class="lbl">batch 3</span><span class="track"><span class="fill good" style="width:80.2%"></span></span><span class="v">0.802</span></div>
+            <div class="bar"><span class="lbl">batch 4</span><span class="track"><span class="fill good" style="width:76.0%"></span></span><span class="v">0.760</span></div>
+          </div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0002&rsquo;s paired gain, recomputed</div>
+          <div class="diff-lines">
+            <div class="row ctx"><span class="mark">&nbsp;</span>baseline          gain      z     decision</div>
+            <div class="row rem"><span class="mark">&times;</span>all 4 batches    +0.100   5.14   accept</div>
+            <div class="row add"><span class="mark">&check;</span>batches 2&ndash;4    +0.005   0.26   reject</div>
+          </div>
+          <div class="diff-note">Same 128 cand_0002 trials, same statistic as the gate; only the baseline changes. The acceptance boundary at this look was about 2.0.</div>
+        </div>
+        <div class="diffpanel">
+          <div class="diff-tab"><span class="dot"></span>cand_0005&rsquo;s own gate was clean</div>
+          <div class="diff-lines">
+            <div class="row add"><span class="mark">&check;</span>cand_0002 baseline batches: .763 .771 .814 .763</div>
+            <div class="row add"><span class="mark">&check;</span>accepted at look 5: gain +0.039, z 2.45, bound 1.62</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="s5">
+    <div class="folio"><span>What this means</span><span class="n">06</span></div>
+    <div class="closing">
+      <p class="eyebrow">Recap</p>
+      <h2>The edits that transferred repaired the environment, not the tasks</h2>
+      <div class="recap">
+        <div class="item">
+          <h3>What transferred</h3>
+          <p>Two harness repairs: retry a call that never answered, and stop calling tools that are never served. Neither mentions a task. The optimizer chose them for that reason: it ranked edits by whether the mechanism lived in the simulator, since such a mechanism must also be present in tasks it could not see.</p>
+        </div>
+        <div class="item">
+          <h3>What their value depends on</h3>
+          <p>Both fixes repair the agent&rsquo;s handling of the <em>simulator</em>. How much they help in production depends on how often real services time out and how many listed tools are actually unavailable there.</p>
+        </div>
+        <div class="item">
+          <h3>What did not work</h3>
+          <p>One rule that is true of the simulator broke a task whose reward contract asks for more (platform&#8209;131, &minus;0.395). And one acceptance came from a bad baseline batch, which the infrastructure check could not catch, because the trials completed.</p>
+        </div>
+        <div class="item">
+          <h3>For the gate</h3>
+          <p>A statistical gate is only as sound as the baseline it averages. A baseline batch that disagrees this sharply with other batches of the same bundle should be re&#8209;measured before it enters a decision.</p>
+        </div>
+      </div>
+      <p class="traj-note">Test split: 66 tasks, 10 trials per task, scored once. Seed 0.813 &rarr; cand_0005 0.850, paired 95% CI +0.011 to +0.065. On the 52 tasks never used in v4 the gain is +0.032, CI +0.001 to +0.065. One optimizer seed; no further runs of this arm are planned. Full record: results/v6/v6_g2_e1/ on the parsec-history branch.</p>
+    </div>
+  </section>
+
+</div>
+
+<nav class="navdots" id="navdots" aria-label="Slide navigation"></nav>
+
+<script>
+(function(){
+  var deck = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('section.slide'));
+  var dotsWrap = document.getElementById('navdots');
+
+  slides.forEach(function(s, i){
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Go to slide ' + (i+1) + ' of ' + slides.length);
+    b.addEventListener('click', function(){
+      s.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    });
+    dotsWrap.appendChild(b);
+  });
+
+  function reduceMotion(){
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function setActive(){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){
+      if (s.offsetTop <= mid) idx = i;
+    });
+    Array.prototype.forEach.call(dotsWrap.children, function(b, i){
+      b.setAttribute('aria-current', i === idx ? 'true' : 'false');
+    });
+  }
+
+  deck.addEventListener('scroll', setActive, { passive: true });
+  setActive();
+
+  deck.addEventListener('keydown', function(e){
+    var mid = deck.scrollTop + deck.clientHeight / 2;
+    var idx = 0;
+    slides.forEach(function(s, i){ if (s.offsetTop <= mid) idx = i; });
+    if (e.key === 'ArrowDown' || e.key === 'PageDown'){
+      e.preventDefault();
+      var next = slides[Math.min(idx + 1, slides.length - 1)];
+      next.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    } else if (e.key === 'ArrowUp' || e.key === 'PageUp'){
+      e.preventDefault();
+      var prev = slides[Math.max(idx - 1, 0)];
+      prev.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+    }
+  });
+})();
+</script>
