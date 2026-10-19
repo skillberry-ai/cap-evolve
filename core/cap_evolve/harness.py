@@ -3504,6 +3504,70 @@ def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, err
     }
 
 
+def _abl_cfg(run_dir: RunDir):
+    """The ablation config, or None when no abl_* key is set (stock path: no work)."""
+    from . import abl
+    cfg = abl.load(run_dir)
+    return cfg if cfg.active else None
+
+
+_SURFACE_STREAK = "abl_surface_streak.json"
+_MAX_SURFACE_VIOLATIONS = 10
+
+
+def _surface_streak(run_dir: RunDir) -> int:
+    try:
+        return int(json.loads((run_dir.root / _SURFACE_STREAK).read_text(encoding="utf-8"))["n"])
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def _surface_streak_reset(run_dir: RunDir) -> None:
+    p = run_dir.root / _SURFACE_STREAK
+    if p.exists():
+        p.write_text(json.dumps({"n": 0}), encoding="utf-8")
+
+
+def _surface_reject_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, arm: str,
+                         detail: str, current_val: SplitResult, optimizer_seconds: float,
+                         opt_cost_usd: float, opt_tokens: int, optimizer_error,
+                         rejected=None, memory_skill: str | None = None) -> dict:
+    """A REJECTED step (not indecisive) for an edit outside the ablation arm's surface.
+
+    No rollouts are paid. Filed in the rejected memory so the proposer is told why.
+    """
+    reason = f"SURFACE VIOLATION ({arm}): {detail}"
+    run_dir.log_event("surface_violation", candidate=cid, arm=arm, detail=detail)
+    if rejected is not None:
+        rejected.add(cid, f"candidate {cid} (not scored: surface violation)", reason, None)
+    (run_dir.root / _SURFACE_STREAK).write_text(
+        json.dumps({"n": _surface_streak(run_dir) + 1}), encoding="utf-8")
+    run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
+    record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
+                     reason=reason, val=None, parent_val=current_val.reward,
+                     indecisive=False, memory_skill=memory_skill,
+                     optimizer_seconds=round(optimizer_seconds, 2),
+                     opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
+    run_dir.record_spend_warnings()
+    return {
+        "candidate_id": cid,
+        "accepted": False,
+        "decision": {"accept": False, "reason": reason, "delta": 0.0, "threshold": 0.0,
+                     "indecisive": False},
+        "candidate_val": None,
+        "parent_val": current_val.to_dict(),
+        "surface_violation": {"arm": arm, "detail": detail},
+        "regressions": [],
+        "broke": [],
+        "fixed": [],
+        "optimizer_seconds": optimizer_seconds,
+        "optimizer_usd": opt_cost_usd,
+        "optimizer_tokens": opt_tokens,
+        "optimizer_error": optimizer_error,
+        "workdir": str(workdir),
+    }
+
+
 def run_step(
     adapter,
     *,
@@ -3652,6 +3716,20 @@ def run_step(
                                 optimizer_error=optimizer_error, kind="validation",
                                 event="capability_invalid", detail_key="validation",
                                 rejected=rejected, memory_skill=ctx.memory_skill)
+
+    # Ablation switch abl_capability: edit-surface enforcement. No-op without abl_* keys.
+    _abl = _abl_cfg(run_dir)
+    if _abl is not None and _abl.capability:
+        from .abl_surface import surface_violation
+        _viol = surface_violation(_abl.capability, parent_dir, workdir)
+        if _viol:
+            return _surface_reject_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                                        arm=_abl.capability, detail=_viol,
+                                        current_val=current_val, optimizer_seconds=optimizer_seconds,
+                                        opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                                        optimizer_error=optimizer_error, rejected=rejected,
+                                        memory_skill=ctx.memory_skill)
+    _surface_streak_reset(run_dir)
 
     p2_out = None
     try:
@@ -5187,6 +5265,9 @@ def hill_climb_loop(
         steps.append(step)
         if step.get("budget_unfunded"):
             budget_stop = "budget_reserved"
+            break
+        if step.get("surface_violation") and _surface_streak(run_dir) >= _MAX_SURFACE_VIOLATIONS:
+            budget_stop = "surface_violations"
             break
         if step["accepted"]:
             # Under rule P the next baseline is the incumbent's FRESH confirmation measurement.
