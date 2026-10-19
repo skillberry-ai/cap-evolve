@@ -19,6 +19,10 @@ one directory per candidate. v4's packages are larger: a shared 8-file multi-age
 | [`v4/v4_g_e1/`](v4/v4_g_e1/) | the G arm: one shared-bundle run across all 34 tasks at once — `v4/v4_g_e1/best/` (the accepted candidate) and `v4/v4_g_e1/rejected/cand_*/` |
 | [`v5/seed/`](v5/seed/) | the original parsec skill v5's baseline arm evaluated on all 136 tasks — verified byte-identical to parsec commit `28e2c40` and to `v4/seed/`. No `best/`: nothing in that arm was optimized. See [`v5/README.md`](v5/README.md) for why the byte verification matters. |
 | `v5_g2_e1`'s skill | reuses [`v4/v4_g_e1/best`](v4/v4_g_e1/) (`cand_0004`) by reference — no new `v5/v5_g2_e1/` directory. Verified byte-identical to that path on `parsec-history`; same reasoning as the `v5/seed/` verification above. |
+| [`v6/v6_g2_e1/seed/`](v6/v6_g2_e1/seed/) | the unmodified bundle v6_g2_e1 hill-climbed from, on the unified 200-task set |
+| [`v6/v6_g2_e1/accepted/cand_0002/`](v6/v6_g2_e1/accepted/) | the run's FIRST accepted candidate (iteration 2) — later superseded as champion by `cand_0005`, but accepted on its own confirm-split test and never reverted-from; kept separate from `rejected/` because it was never rejected |
+| [`v6/v6_g2_e1/best/`](v6/v6_g2_e1/best/) | the run's final champion, `cand_0005` (iteration 5) — the one scored on the sealed test split |
+| [`v6/v6_g2_e1/rejected/cand_{0001,0003,0004,0006}/`](v6/v6_g2_e1/rejected/) | the four candidates the confirm-split gate rejected or killed before confirmation — `cand_0001`/`cand_0003` rejected on the group-sequential confirm test, `cand_0004`/`cand_0006` killed at the feedback-split screening rung, never reaching confirm |
 
 `v1/seed/SKILL.md` and `v1/best/SKILL.md` are **byte-identical** (`diff` reports no
 difference). v1's headline run never accepted a candidate — `best_id == "seed"` in

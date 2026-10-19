@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parsec v6 — G2 Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* layout concept: a dark operations console — KPI strip, tabbed evidence panels, data tables that read like a lab notebook */
+:root{
+  --bg:#f4f6f9; --bg-panel:#ffffff; --bg-sunken:#eef1f6;
+  --fg:#141c2b; --fg-dim:#5b6b85; --fg-faint:#8a98b2;
+  --border:#d7deea;
+  --accent:#1f6f78; --accent-soft:#e3f1f0;
+  --good:#1c8a5e; --good-soft:#e3f6ec;
+  --warn:#a8710a; --warn-soft:#fbf0dd;
+  --bad:#b4382f; --bad-soft:#fbe9e7;
+  --killed:#6b5fa8; --killed-soft:#efeaf9;
+  --font-display:'IBM Plex Sans',Inter,ui-sans-serif,system-ui,sans-serif;
+  --font-body:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0f16; --bg-panel:#121826; --bg-sunken:#0e1420;
+    --fg:#e8edf7; --fg-dim:#9aa7c0; --fg-faint:#6b7893;
+    --border:#232c3f;
+    --accent:#4fc3bf; --accent-soft:#132827;
+    --good:#4ad495; --good-soft:#102a1f;
+    --warn:#f0b84e; --warn-soft:#2c2110;
+    --bad:#f17b70; --bad-soft:#2c1512;
+    --killed:#b3a4ec; --killed-soft:#1e1a30;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0f16; --bg-panel:#121826; --bg-sunken:#0e1420;
+  --fg:#e8edf7; --fg-dim:#9aa7c0; --fg-faint:#6b7893;
+  --border:#232c3f;
+  --accent:#4fc3bf; --accent-soft:#132827;
+  --good:#4ad495; --good-soft:#102a1f;
+  --warn:#f0b84e; --warn-soft:#2c2110;
+  --bad:#f17b70; --bad-soft:#2c1512;
+  --killed:#b3a4ec; --killed-soft:#1e1a30;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--fg); font-family:var(--font-body);
+  font-size:14.5px; line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+}
+main{max-width:1280px; margin:0 auto; padding-block:36px 72px;}
+h1,h2,h3{font-family:var(--font-display); letter-spacing:-.3px; text-wrap:balance; margin:0}
+.mono{font-family:var(--font-mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* header */
+header{display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:flex-start; margin-bottom:22px;}
+.eyebrow{font-size:11.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--accent); font-weight:600;}
+h1{font-size:clamp(26px,3.6vw,38px); margin:7px 0 10px;}
+.intro{max-width:680px; color:var(--fg-dim); font-size:14px; min-width:0;}
+.badge-row{display:flex; gap:8px; flex-wrap:wrap;}
+.badge{border:1px solid var(--border); border-radius:99px; padding:7px 13px; font-size:12px; color:var(--fg-dim); white-space:nowrap; background:var(--bg-panel);}
+
+/* caveat strip */
+.caveat{
+  display:flex; gap:10px; align-items:flex-start; margin:0 0 24px;
+  padding:13px 16px; border-radius:10px; border:1px solid var(--warn); background:var(--warn-soft);
+  color:var(--fg); font-size:13px; line-height:1.6;
+}
+.caveat b{color:var(--warn); font-weight:600;}
+
+/* KPIs */
+.kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:26px;}
+.kpi{
+  border:1px solid var(--border); background:var(--bg-panel); border-radius:14px; padding:17px 18px; min-width:0;
+}
+.kpi .label{font-size:11.5px; letter-spacing:.6px; text-transform:uppercase; color:var(--fg-faint); font-weight:600;}
+.kpi .value{font-family:var(--font-display); font-size:clamp(24px,3vw,30px); margin:7px 0 4px; letter-spacing:-.5px;}
+.kpi .value.good{color:var(--good)}
+.kpi .sub{font-size:12.5px; color:var(--fg-dim);}
+
+/* tabs */
+.tabs{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 20px; border-bottom:1px solid var(--border); padding-bottom:0;}
+.tabs button{
+  cursor:pointer; border:none; background:transparent; color:var(--fg-dim); font-family:var(--font-body);
+  font-size:13.5px; font-weight:500; padding:10px 15px; border-radius:8px 8px 0 0; border-bottom:2px solid transparent;
+}
+.tabs button:hover{color:var(--fg); background:var(--bg-sunken);}
+.tabs button.active{color:var(--accent); border-bottom-color:var(--accent); font-weight:600;}
+.tabs button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+.panel-view{display:none;}
+.panel-view.active{display:block;}
+
+/* insight cards */
+.insights{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 24px;}
+.insight{background:var(--bg-panel); border:1px solid var(--border); border-radius:12px; padding:15px 16px; min-width:0;}
+.insight .ihead{font-weight:600; font-size:13px; margin-bottom:5px; display:flex; gap:7px; align-items:center;}
+.insight .ihead .dot{width:8px; height:8px; border-radius:99px; flex:none;}
+.insight p{margin:0; color:var(--fg-dim); font-size:12.8px; line-height:1.55;}
+
+/* layout grid */
+.grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:14px;}
+.panel{background:var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding:20px 22px; min-width:0; margin-bottom:14px;}
+.panel h2{font-size:16px; margin-bottom:3px;}
+.panel .sub{color:var(--fg-dim); font-size:12.5px; margin-bottom:14px;}
+.chartbox{min-width:0;}
+
+/* tables */
+.twrap{overflow-x:auto; border-radius:10px; border:1px solid var(--border);}
+table{width:100%; border-collapse:collapse; font-size:12.8px; min-width:620px;}
+th{
+  text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--fg-faint);
+  font-weight:600; padding:10px 12px; background:var(--bg-sunken); border-bottom:1px solid var(--border); white-space:nowrap;
+}
+td{padding:9px 12px; border-bottom:1px solid var(--border); color:var(--fg); white-space:nowrap;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg-sunken);}
+.r-num{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+.pill{display:inline-block; padding:3px 9px; border-radius:99px; font-size:11px; font-weight:600; white-space:nowrap;}
+.pill.accept{background:var(--good-soft); color:var(--good);}
+.pill.reject{background:var(--bad-soft); color:var(--bad);}
+.pill.killed{background:var(--killed-soft); color:var(--killed);}
+.delta-pos{color:var(--good); font-weight:600;}
+.delta-neg{color:var(--bad); font-weight:600;}
+.delta-flat{color:var(--fg-faint);}
+
+/* task filter controls */
+.tbl-controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center;}
+.tbl-controls select,.tbl-controls input{
+  font-family:var(--font-body); font-size:12.5px; padding:7px 10px; border-radius:8px; border:1px solid var(--border);
+  background:var(--bg-sunken); color:var(--fg);
+}
+.tbl-controls .count{font-size:12px; color:var(--fg-faint); margin-left:auto;}
+
+/* candidate narrative cards */
+.cand-cards{display:grid; grid-template-columns:1fr; gap:14px;}
+.cand-card{background:var(--bg-panel); border:1px solid var(--border); border-radius:14px; padding:20px 22px; min-width:0;}
+.cand-card.good{border-left:3px solid var(--good);}
+.cand-card.bad{border-left:3px solid var(--bad);}
+.cc-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px;}
+.cc-head h3{font-size:16px;}
+.cc-head .tag{font-size:12px; color:var(--fg-dim);}
+.cc-stat-row{display:flex; gap:18px; flex-wrap:wrap; margin:10px 0 14px; font-size:12.5px;}
+.cc-stat-row .stat b{display:block; font-family:var(--font-mono); font-size:15px; margin-bottom:1px;}
+.cc-stat-row .stat span{color:var(--fg-faint); font-size:11px; text-transform:uppercase; letter-spacing:.4px;}
+.cc-body h4{font-size:12.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--fg-faint); margin:14px 0 7px; font-weight:600;}
+.cc-body h4:first-child{margin-top:0;}
+.cc-body ul{margin:0; padding-left:20px; color:var(--fg); font-size:13.2px; line-height:1.65;}
+.cc-body li{margin-bottom:7px;}
+.cc-body li b{font-weight:600;}
+.cc-body .quote{
+  display:block; margin-top:4px; padding:8px 11px; background:var(--bg-sunken); border-radius:8px;
+  font-size:12.3px; color:var(--fg-dim); font-style:italic; border-left:2px solid var(--border);
+}
+
+.footnote{color:var(--fg-faint); font-size:12px; line-height:1.7; margin-top:26px; border-top:1px solid var(--border); padding-top:16px;}
+.footnote a{color:var(--accent);}
+.footnote code{font-family:var(--font-mono); background:var(--bg-sunken); padding:1px 5px; border-radius:4px; font-size:11.5px;}
+
+@media (max-width:900px){
+  .kpis{grid-template-columns:repeat(2,1fr);}
+  .insights{grid-template-columns:1fr;}
+  .grid2{grid-template-columns:1fr;}
+}
+@media (max-width:520px){
+  main{padding-block:24px 48px;}
+  .panel{padding:16px 15px;}
+  .kpi{padding:13px 14px;}
+}
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <div style="min-width:0">
+      <div class="eyebrow">CapEvolve · Parsec v6 Benchmark</div>
+      <h1>G2 Hill-Climb — Held-Out Test Results</h1>
+      <div class="intro">Six optimizer iterations over a shared, 8-file multi-agent prompt bundle (orchestrator + 6 domain agents + shared context), gated on a hidden confirm split, then scored once on a sealed 66-task test set never shown to the optimizer.</div>
+    </div>
+    <div class="badge-row">
+      <span class="badge">66 test tasks · 10 trials each</span>
+      <span class="badge">claude-sonnet-4-6 agent</span>
+      <span class="badge">claude-opus-5 optimizer</span>
+    </div>
+  </header>
+
+  <div class="caveat">
+    <span style="font-size:16px; line-height:1;">⚠</span>
+    <div><b>No competitor frameworks yet.</b> This run only compares CapEvolve's optimized bundle (<span class="mono">cand_0005</span>) against the unmodified seed prompt — there is no GEPA/AutoPrompt/other-framework arm here. Add that comparison before citing this as framework-vs-framework evidence.</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Test reward (champion)</div>
+      <div class="value good num">84.96%</div>
+      <div class="sub"><span class="mono">cand_0005</span>, 66 held-out tasks</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Improvement vs. seed</div>
+      <div class="value good num">+3.69 pp</div>
+      <div class="sub">81.26% → 84.96%, sealed test split</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Accepted candidates</div>
+      <div class="value num">2 of 6</div>
+      <div class="sub">iterations 2 &amp; 5 passed the C-split gate</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Total run cost</div>
+      <div class="value num">$1,164</div>
+      <div class="sub">$809 eval + $355 optimizer, 6 iterations</div>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="active" data-tab="overview" onclick="showTab('overview',this)">Overview</button>
+    <button data-tab="iterations" onclick="showTab('iterations',this)">Per-iteration (F / C)</button>
+    <button data-tab="test" onclick="showTab('test',this)">Test-split results</button>
+    <button data-tab="changes" onclick="showTab('changes',this)">What the optimizer changed</button>
+  </div>
+
+  <!-- ============ OVERVIEW ============ -->
+  <section class="panel-view active" id="tab-overview">
+    <div class="insights">
+      <div class="insight">
+        <div class="ihead"><span class="dot" style="background:var(--good)"></span>The gain generalizes</div>
+        <p>Both candidates the C-split gate accepted (iter 2, iter 5) show a positive test-split delta — the first time in this benchmark's v4→v5→v6 history that an accepted candidate's F-split gain shows up on sealed, never-touched test tasks.</p>
+      </div>
+      <div class="insight">
+        <div class="ihead"><span class="dot" style="background:var(--warn)"></span>F and C disagree, as designed</div>
+        <p>F-split screens (12 random tasks) ranged −0.03 to +0.17 across the 6 candidates with no consistent relationship to the C-split outcome — exactly the overfitting signal this split was built to catch (see v4/v5).</p>
+      </div>
+      <div class="insight">
+        <div class="ihead"><span class="dot" style="background:var(--killed)"></span>Two iterations died cheap</div>
+        <p>Iterations 4 and 6 were killed at the F-split rung before ever reaching the confirm split — together they cost $131 of optimizer time against $0 of confirm-split eval, the gate's early-stop working as intended.</p>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel chartbox">
+        <h2>F-split screen vs. C-split decision, by iteration</h2>
+        <div class="sub">Paired delta on the 12-task feedback screen (bars) against what happened on the hidden confirm split (color)</div>
+        <div id="chart-overview-bars" style="height:320px"></div>
+      </div>
+      <div class="panel chartbox">
+        <h2>Optimizer spend per iteration</h2>
+        <div class="sub">Cost of drafting each candidate, independent of its outcome</div>
+        <div id="chart-overview-cost" style="height:320px"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Reward trajectory: seed → champion</h2>
+      <div class="sub">The three numbers that matter for the paper — not iteration-by-iteration noise, but where the final champion lands relative to the untouched seed, on each split</div>
+      <div id="chart-overview-trajectory" style="height:280px"></div>
+    </div>
+  </section>
+
+  <!-- ============ PER-ITERATION ============ -->
+  <section class="panel-view" id="tab-iterations">
+    <div class="panel">
+      <h2>Every iteration, F screen and C decision</h2>
+      <div class="sub">F = paired delta on the 12-task feedback rung vs. the then-incumbent, measured before any confirm-split spend. C = what the group-sequential test on the hidden confirm split decided. <code class="mono">broke</code>/<code class="mono">fixed</code> count confirm-split tasks that moved by more than 2 standard errors (from the run's LEDGER).</div>
+      <div class="twrap">
+        <table id="tbl-iterations">
+          <thead><tr>
+            <th>Iter</th><th>Candidate</th><th>Parent</th>
+            <th class="r-num">F Δ</th><th class="r-num">F z</th>
+            <th>C decision</th><th class="r-num">C val</th>
+            <th class="r-num">Broke</th><th class="r-num">Fixed</th>
+            <th class="r-num">Optimizer $</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Reading this table</h2>
+      <ul style="margin:0; padding-left:20px; color:var(--fg-dim); font-size:13px; line-height:1.7;">
+        <li><b>Iteration 2</b> (<span class="mono">cand_0002</span>) — the strongest F signal (+0.168, z 1.53) and the first acceptance. Became champion, held it through iteration 4.</li>
+        <li><b>Iteration 5</b> (<span class="mono">cand_0005</span>) — a weaker F signal (+0.078, z 0.65) but still cleared the confirm-split gate, and became the final champion carried into the test-split evaluation.</li>
+        <li><b>Iterations 4 and 6</b> — negative F deltas, killed at rung 1 before any confirm-split spend. Iteration 4's optimizer actually found the right diagnosis (a confound in the run's own internal estimate — see "What changed") but the candidate it shipped still didn't clear the F screen.</li>
+        <li><b>Iterations 1 and 3</b> — positive but weak F signals that did not survive the confirm split's group-sequential test.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ TEST ============ -->
+  <section class="panel-view" id="tab-test">
+    <div class="insights">
+      <div class="insight">
+        <div class="ihead"><span class="dot" style="background:var(--good)"></span>Broad, not concentrated</div>
+        <p>27 of 66 test tasks improved by more than 0.05, against 6 regressions of the same size — a net gain spread across three of four categories, not one lucky task carrying the mean.</p>
+      </div>
+      <div class="insight">
+        <div class="ihead"><span class="dot" style="background:var(--accent)"></span>Platform carries the gain</div>
+        <p>Platform (34 of 66 tasks) moved +5.25pp, more than twice cost's +3.38pp and four times icinga's +2.0pp. Cloud is flat (+0.6pp) — see the per-task table for why.</p>
+      </div>
+      <div class="insight">
+        <div class="ihead"><span class="dot" style="background:var(--bad)"></span>One real regression</div>
+        <p><span class="mono">platform-131</span> dropped 39.5 points (0.985 → 0.590) — the single largest move in either direction. Worth a follow-up read of that task's transcript before trusting this champion further.</p>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel chartbox">
+        <h2>Test reward by category</h2>
+        <div class="sub">Seed vs. champion (<span class="mono">cand_0005</span>), mean reward per category</div>
+        <div id="chart-test-category" style="height:300px"></div>
+      </div>
+      <div class="panel chartbox">
+        <h2>Task outcome split</h2>
+        <div class="sub">Of 66 test tasks, by whether the champion moved the reward by more than 0.05</div>
+        <div id="chart-test-donut" style="height:300px"></div>
+      </div>
+    </div>
+
+    <div class="panel chartbox">
+      <h2>Every test task: seed vs. champion</h2>
+      <div class="sub">Points above the diagonal improved; below it regressed. Marker color is category.</div>
+      <div id="chart-test-scatter" style="height:460px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Per-task test results</h2>
+      <div class="tbl-controls">
+        <select id="catFilter" onchange="renderTaskTable()">
+          <option value="">All categories</option>
+          <option value="cloud">cloud</option>
+          <option value="cost">cost</option>
+          <option value="icinga">icinga</option>
+          <option value="platform">platform</option>
+        </select>
+        <select id="sortFilter" onchange="renderTaskTable()">
+          <option value="delta_desc">Sort: biggest improvement first</option>
+          <option value="delta_asc">Sort: biggest regression first</option>
+          <option value="task">Sort: task id</option>
+        </select>
+        <span class="count" id="taskCount"></span>
+      </div>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Task</th><th>Category</th><th class="r-num">Seed</th><th class="r-num">Champion</th><th class="r-num">Δ</th></tr></thead>
+          <tbody id="task-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHAT CHANGED ============ -->
+  <section class="panel-view" id="tab-changes">
+    <div class="panel" style="margin-bottom:20px;">
+      <h2>How to read this tab</h2>
+      <div class="sub" style="margin-bottom:0;">Pulled from each candidate's own <code class="mono">PROCESS.md</code> — the optimizer's required, per-iteration explainability record. Quotes are verbatim. "Helped" means the edit is in the final champion (<span class="mono">cand_0005</span>, built on <span class="mono">cand_0002</span>); "didn't help" means the edit was proposed, and in two cases independently rediscovered, but the candidate carrying it was rejected or killed before reaching test.</div>
+    </div>
+
+    <div class="cand-cards">
+      <div class="cand-card good">
+        <div class="cc-head">
+          <h3>✓ cand_0002 — iteration 2, ACCEPTED, first champion</h3>
+          <span class="tag">parent: seed</span>
+        </div>
+        <div class="cc-stat-row">
+          <div class="stat"><b>+0.168</b><span>F-split delta</span></div>
+          <div class="stat"><b>0.950</b><span>confirm-split val</span></div>
+          <div class="stat"><b>6 / 0</b><span>fixed / broke</span></div>
+          <div class="stat"><b>$49</b><span>optimizer cost</span></div>
+        </div>
+        <div class="cc-body">
+          <h4>What it changed</h4>
+          <ul>
+            <li><b>A conclusion checklist in <span class="mono">shared_context.md</span></b> — the single highest-leverage edit of the run. Diagnosis across 284 near-miss trials found 227 of the losses were "the right fact is in a table cell, a heading, or a label — but never stated as a sentence." A six-shape checklist (absence, how-many, number-vs-limit, not-a-measurement, remedy, per-entity) targets exactly that.
+              <span class="quote">"The loss is overwhelmingly unstated conclusions, not missing data."</span>
+            </li>
+            <li><b>Rewrote the epoch/elapsed-time procedure in <span class="mono">icinga_agent.md</span></b> to calendar subtraction instead of building an epoch for "now" by eye — verified against 36/36 anchors by executing the arithmetic in Python, not by reasoning about it.</li>
+            <li><b>Error-result repair in <span class="mono">cost_agent.md</span></b> — a result shaped like <span class="mono">{"error": ...}</span> was being charted as <span class="mono">$0.00</span>; the fix reclassifies it as a failed call and forces a partial label instead of a false total.</li>
+          </ul>
+          <h4>Caught and reverted mid-iteration</h4>
+          <ul>
+            <li>A carve-out on a job-log file-path shortcut — a pre-ship check showed it would force an unnecessary extra tool call into a currently-passing task 9 of 10 times. Dropped before shipping.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="cand-card good">
+        <div class="cc-head">
+          <h3>✓ cand_0005 — iteration 5, ACCEPTED, final champion</h3>
+          <span class="tag">parent: cand_0002</span>
+        </div>
+        <div class="cc-stat-row">
+          <div class="stat"><b>+0.078</b><span>F-split delta</span></div>
+          <div class="stat"><b>0.873</b><span>confirm-split val</span></div>
+          <div class="stat"><b>+3.69pp</b><span>test-split delta</span></div>
+          <div class="stat"><b>$58</b><span>optimizer cost</span></div>
+        </div>
+        <div class="cc-body">
+          <h4>What it changed</h4>
+          <ul>
+            <li><b>Fixed a measurement confound before touching the prompt.</b> The run's own internal estimate said the champion was <i>worse</i> than seed (Δ −0.018). Re-deriving per-task from raw rollouts found the opposite sign (+0.024, rising to +0.050 once timeout-corrupted rollouts are excluded) — the simulator's tool timeout fires at 10× different rates between the seed's and the champion's measurement rounds (0.44% vs 4.66%), and a timeout costs −0.27 mean reward. Two prior iterations had reasoned from the confounded number and drawn the opposite conclusion.</li>
+            <li><b>Rewrote the retry rule in <span class="mono">shared_context.md</span>.</b> The seed's blanket "never call the same tool with the same parameters twice" forbids re-issuing a call that merely timed out — and a re-issued call returns real data 10 or 11 times out of 11. One transcript closed by telling the <i>user</i> to retry a query the agent itself could have retried, on a task that solves 10/10 when it doesn't time out.</li>
+            <li><b>Deleted two "MANDATORY" instructions</b> that routed every call through <span class="mono">query_provisions_db</span> and <span class="mono">db_describe_table</span> — tools the harness serves at a measured <b>0% success rate</b> (302/302 and more, across the whole benchmark, not just the visible tasks). Six further standing contradictions elsewhere in the prompt told the agent to fall back to the same dead tools; all six had to go.</li>
+            <li><b>Fixed a fictional directory layout</b> in <span class="mono">icinga_agent.md</span> (<span class="mono">groups/&lt;group&gt;/...</span>) that appears in zero of 200 tasks' real seed data, replacing it with the path shape every graded fetch actually uses.</li>
+          </ul>
+          <h4>Caught and reverted mid-iteration</h4>
+          <ul>
+            <li>Deleted a documented path-fallback convention as "guessing" — restored after a reviewer showed it is a real convention used in 21 successful fetches with no prior search returning anything.</li>
+            <li>Discouraged a search tool for being useful only 22/339 times on average — restored after a reviewer showed it is the graded, expected call on several individual tasks and the edit would have cost ~0.15 reward per rollout there.</li>
+            <li>Wrote "whatever you've already stated still counts" when a round-limit cuts an agent off — a reviewer found this is false under a <i>wall-clock</i> cutoff specifically (verified: 2 rollouts scored exactly 0.0 regardless of partial progress). Rewrote to name both limits correctly.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="cand-card bad">
+        <div class="cc-head">
+          <h3>✗ cand_0004 — iteration 4, killed at F-split rung 1</h3>
+          <span class="tag">parent: cand_0002</span>
+        </div>
+        <div class="cc-stat-row">
+          <div class="stat"><b>−0.004</b><span>F-split delta</span></div>
+          <div class="stat"><b>killed</b><span>never reached confirm split</span></div>
+          <div class="stat"><b>$22</b><span>optimizer cost</span></div>
+        </div>
+        <div class="cc-body">
+          <h4>What it found (correctly) but didn't help</h4>
+          <ul>
+            <li>This iteration <b>first discovered</b> the timeout-rate confound that cand_0005 later used to correct course — same measurement, same two root causes (unanswered-tool-call handling, routing into dead tools). The diagnosis was right.</li>
+            <li>Despite the correct diagnosis, the specific candidate this iteration shipped scored −0.004 on the 12-task F screen against the then-incumbent and was killed before any confirm-split spend — the edit's execution didn't translate the diagnosis into a measurable gain on that screen, whatever the underlying cause.</li>
+          </ul>
+          <h4>Lesson carried forward</h4>
+          <p style="margin:0; color:var(--fg-dim); font-size:13px;">cand_0005's own PROCESS.md explicitly credits this iteration's diagnosis and rebuilds on it rather than re-deriving from scratch — the diagnosis survived even though the candidate didn't.</p>
+        </div>
+      </div>
+
+      <div class="cand-card bad">
+        <div class="cc-head">
+          <h3>✗ cand_0006 — iteration 6, killed at F-split rung 1</h3>
+          <span class="tag">parent: cand_0005</span>
+        </div>
+        <div class="cc-stat-row">
+          <div class="stat"><b>−0.032</b><span>F-split delta</span></div>
+          <div class="stat"><b>killed</b><span>never reached confirm split</span></div>
+          <div class="stat"><b>$109</b><span>optimizer cost, highest of the run</span></div>
+        </div>
+        <div class="cc-body">
+          <h4>What didn't help</h4>
+          <ul>
+            <li>The most expensive optimizer call of the run (~3h of drafting) produced the single worst F-split delta of any iteration (−0.032, z −0.33) — built on top of the final champion, with no actionable failure cluster left in focus per the optimizer's own brief, which it later described as "no actionable failures in focus."</li>
+            <li>Killed at the F-split rung before touching the confirm split, so it never got a chance to break anything the gate would record — the cheapest possible failure mode, despite being the most expensive candidate to produce.</li>
+          </ul>
+          <h4>Lesson</h4>
+          <p style="margin:0; color:var(--fg-dim); font-size:13px;">Diminishing returns: once the two highest-leverage harness-level fixes (timeout handling, dead-tool routing) were already shipped in cand_0005, the remaining search space produced noise rather than signal — the gate caught it cheaply.</p>
+        </div>
+      </div>
+
+      <div class="cand-card bad">
+        <div class="cc-head">
+          <h3>✗ cand_0001 &amp; cand_0003 — rejected on the confirm split</h3>
+          <span class="tag">parents: seed, cand_0002</span>
+        </div>
+        <div class="cc-stat-row">
+          <div class="stat"><b>+0.061 / +0.019</b><span>F-split delta</span></div>
+          <div class="stat"><b>reject</b><span>both, group-sequential test</span></div>
+          <div class="stat"><b>$83 / $34</b><span>optimizer cost</span></div>
+        </div>
+        <div class="cc-body">
+          <p style="margin:0; color:var(--fg-dim); font-size:13px;">Both showed small positive F-split signals that did not survive the confirm split's group-sequential test — the classic F/C disagreement this gate exists to catch. <span class="mono">cand_0001</span>'s three fixed tasks (icinga-204, platform-126, platform-158) were preserved by copying its files forward into cand_0002 rather than reverting to seed, per the run's own JOURNAL guidance to treat a near-miss as a power problem, not a design problem.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="footnote">
+    Run <code>v6_g2_e1</code> · hill-climb algorithm, <code>promotion_rule: P2</code>, <code>split_mode: pooled</code> ·
+    confirm-split group-sequential looks at n = 16/33/67/133/200 · <code>stall: 0</code> (iterations never auto-stopped on
+    consecutive rejects) · test split sealed and scored exactly once, after the champion (<code>cand_0005</code>) was fixed
+    by iteration 5's acceptance · test-split <code>final.json</code> reconstructed from completed rollouts after the
+    finalize driver was interrupted by a host-level LSF fault partway through the (optional) train/val bookend —
+    the sealed test scoring itself completed and was logged before that fault, and was not re-run.
+    Full writeup: <a href="../results/v6/v6_g2_e1/summary.md">results/v6/v6_g2_e1/summary.md</a> ·
+    generated ledger: <a href="../results/v6/v6_g2_e1/results.json">results.json</a> ·
+    per-candidate process records: <a href="../results/v6/v6_g2_e1/source/process/">source/process/</a>.
+    This page's data block is generated by
+    <a href="../scripts/build_v6_g2_dashboard.py">scripts/build_v6_g2_dashboard.py</a> from
+    <code>results.json</code> — never hand-typed.
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<script>
+const DATA = {"seed_f": 0.83, "seed_c": 0.8213, "seed_test": 0.812648, "iterations": [{"iter": 1, "cand": "cand_0001", "parent": "seed", "f_delta": 0.060493, "f_z": 0.6005, "c_decision": "reject", "c_val": 0.870833, "broke": 0, "fixed": 3, "opt_usd": 82.699899}, {"iter": 2, "cand": "cand_0002", "parent": "seed", "f_delta": 0.168125, "f_z": 1.5308, "c_decision": "accept", "c_val": 0.95, "broke": 0, "fixed": 6, "opt_usd": 49.402078}, {"iter": 3, "cand": "cand_0003", "parent": "cand_0002", "f_delta": 0.018957, "f_z": 0.1791, "c_decision": "reject", "c_val": 0.839038, "broke": 0, "fixed": 0, "opt_usd": 33.623127}, {"iter": 4, "cand": "cand_0004", "parent": "cand_0002", "f_delta": -0.004307, "f_z": -0.0347, "c_decision": "killed_rung1", "c_val": null, "broke": 0, "fixed": 0, "opt_usd": 22.448462}, {"iter": 5, "cand": "cand_0005", "parent": "cand_0002", "f_delta": 0.078175, "f_z": 0.6466, "c_decision": "accept", "c_val": 0.872837, "broke": 0, "fixed": 0, "opt_usd": 58.185467}, {"iter": 6, "cand": "cand_0006", "parent": "cand_0005", "f_delta": -0.03206, "f_z": -0.3267, "c_decision": "killed_rung1", "c_val": null, "broke": 0, "fixed": 0, "opt_usd": 108.656607}], "test": {"best_id": "cand_0005", "champion_reward": 0.84956, "seed_reward": 0.812648, "delta": 0.036912, "n_tasks": 66, "n_trials": 10}, "test_by_cat": [{"cat": "cloud", "n": 9, "seed": 0.760713, "cand": 0.766574, "delta": 0.005861}, {"cat": "cost", "n": 10, "seed": 0.831407, "cand": 0.865194, "delta": 0.033787}, {"cat": "icinga", "n": 13, "seed": 0.780108, "cand": 0.80007, "delta": 0.019962}, {"cat": "platform", "n": 34, "seed": 0.833321, "cand": 0.885852, "delta": 0.052531}], "test_counts": {"improved": 27, "regressed": 6, "same": 33}, "cost": {"total_eval_usd": 809.37, "total_opt_usd": 355.02, "total_usd": 1164.38, "runner_seconds": 153426, "optimizer_seconds": 32181, "iterations": 6}, "test_tasks": [{"task": "cloud-025-gcp-project-status", "cat": "cloud", "seed": 0.946667, "cand": 1.0, "delta": 0.053333}, {"task": "cloud-026-gpu-abuse-triage", "cat": "cloud", "seed": 0.913333, "cand": 0.955, "delta": 0.041667}, {"task": "cloud-027-azure-pool-database-trap", "cat": "cloud", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "cloud-301-gcp-delete-counter-not-a-state", "cat": "cloud", "seed": 0.946667, "cand": 1.0, "delta": 0.053333}, {"task": "cloud-302-cloudtrail-local-time-window", "cat": "cloud", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "cloud-308-azure-leftover-tag-on-free-sub", "cat": "cloud", "seed": 0.175, "cand": 0.116667, "delta": -0.058333}, {"task": "cloud-313-azure-no-single-pool-fits", "cat": "cloud", "seed": 0.8, "cand": 0.88, "delta": 0.08}, {"task": "cloud-316-cleaned-sandbox-live-iam-keys", "cat": "cloud", "seed": 0.486, "cand": 0.36, "delta": -0.126}, {"task": "cloud-319-billing-lab-unknown-to-babylon", "cat": "cloud", "seed": 0.57875, "cand": 0.5875, "delta": 0.00875}, {"task": "cost-029-no-cost-rows-for-guid", "cat": "cost", "seed": 0.8, "cand": 0.8, "delta": 0.0}, {"task": "cost-050-partial-account-coverage", "cat": "cost", "seed": 0.825, "cand": 0.825, "delta": 0.0}, {"task": "cost-053-capacity-dropped-reservations", "cat": "cost", "seed": 0.904, "cand": 0.888, "delta": -0.016}, {"task": "cost-064-reservation-release-active-job-check", "cat": "cost", "seed": 0.746, "cand": 0.676, "delta": -0.07}, {"task": "cost-401-monitor-drilldown-wrong-month", "cat": "cost", "seed": 0.775, "cand": 0.94375, "delta": 0.16875}, {"task": "cost-406-gcp-daily-rows-is-not-day-coverage", "cat": "cost", "seed": 0.678, "cand": 0.748, "delta": 0.07}, {"task": "cost-409-top-spender-chain-to-instance-type", "cat": "cost", "seed": 0.9075, "cand": 1.0, "delta": 0.0925}, {"task": "cost-411-org-week-linked-account-league", "cat": "cost", "seed": 0.92, "cand": 1.0, "delta": 0.08}, {"task": "cost-413-gcp-unknown-project-bucket", "cat": "cost", "seed": 0.93, "cand": 0.988333, "delta": 0.058333}, {"task": "cost-414-az-id-is-not-a-zone-name", "cat": "cost", "seed": 0.828572, "cand": 0.782858, "delta": -0.045714}, {"task": "icinga-010-stuck-anarchysubjects", "cat": "icinga", "seed": 0.467, "cand": 0.509, "delta": 0.042}, {"task": "icinga-012-nodes-ready-threshold", "cat": "icinga", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "icinga-047-downtime-similar-host-names", "cat": "icinga", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "icinga-072-alert-output-not-decoy-metrics", "cat": "icinga", "seed": 0.0, "cand": 0.0, "delta": 0.0}, {"task": "icinga-202-flapping-recovery-is-not-resolution", "cat": "icinga", "seed": 0.853334, "cand": 0.946667, "delta": 0.093333}, {"task": "icinga-203-perfdata-headroom-to-critical", "cat": "icinga", "seed": 0.64, "cand": 0.64, "delta": 0.0}, {"task": "icinga-205-notifications-disabled-nobody-paged", "cat": "icinga", "seed": 0.653333, "cand": 0.826667, "delta": 0.173334}, {"task": "icinga-207-host-down-masks-service-alerts", "cat": "icinga", "seed": 0.891667, "cand": 0.841667, "delta": -0.05}, {"task": "icinga-210-command-vars-override-script-default", "cat": "icinga", "seed": 0.988333, "cand": 1.0, "delta": 0.011667}, {"task": "icinga-219-host-down-pings-old-address", "cat": "icinga", "seed": 0.977143, "cand": 1.0, "delta": 0.022857}, {"task": "icinga-221-crc-counter-never-resets", "cat": "icinga", "seed": 0.938333, "cand": 1.0, "delta": 0.061667}, {"task": "icinga-224-dead-first-replica-eats-timeout", "cat": "icinga", "seed": 0.980833, "cand": 0.988333, "delta": 0.0075}, {"task": "icinga-225-monitor-outlived-its-namespace", "cat": "icinga", "seed": 0.751428, "cand": 0.648572, "delta": -0.102857}, {"task": "platform-001-ee-entrypoint-rca", "cat": "platform", "seed": 0.72, "cand": 0.8725, "delta": 0.1525}, {"task": "platform-003-tojson-dict-literal-rca", "cat": "platform", "seed": 0.621, "cand": 0.6125, "delta": -0.0085}, {"task": "platform-006-version-tag-not-a-ref", "cat": "platform", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "platform-008-log-does-not-say", "cat": "platform", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "platform-020-ocpv-vm-inventory", "cat": "platform", "seed": 0.79, "cand": 1.0, "delta": 0.21}, {"task": "platform-021-babylon-missing-cluster-trap", "cat": "platform", "seed": 0.94, "cand": 1.0, "delta": 0.06}, {"task": "platform-022-job-on-no-controller", "cat": "platform", "seed": 0.63, "cand": 0.7, "delta": 0.07}, {"task": "platform-033-schema-change-not-the-oom", "cat": "platform", "seed": 0.785714, "cand": 0.914286, "delta": 0.128571}, {"task": "platform-037-ocpv-healthy-vm-degraded-machineset", "cat": "platform", "seed": 0.895, "cand": 1.0, "delta": 0.105}, {"task": "platform-038-anarchy-subject-guid-cross-cluster", "cat": "platform", "seed": 0.92, "cand": 1.0, "delta": 0.08}, {"task": "platform-065-other-guid-job-not-the-failure", "cat": "platform", "seed": 0.832, "cand": 0.93, "delta": 0.098}, {"task": "platform-102-no-proxy-misses-api-domain", "cat": "platform", "seed": 0.558, "cand": 0.70125, "delta": 0.14325}, {"task": "platform-103-olm-channel-not-in-catalog", "cat": "platform", "seed": 0.844444, "cand": 0.884, "delta": 0.039556}, {"task": "platform-105-failed-revision-not-main", "cat": "platform", "seed": 0.694444, "cand": 0.696, "delta": 0.001556}, {"task": "platform-108-duplicate-guid-concurrent-run", "cat": "platform", "seed": 0.754166, "cand": 0.795, "delta": 0.040833}, {"task": "platform-109-quoted-false-is-truthy", "cat": "platform", "seed": 0.766667, "cand": 0.72, "delta": -0.046667}, {"task": "platform-110-renamed-catalog-item", "cat": "platform", "seed": 0.875, "cand": 0.8875, "delta": 0.0125}, {"task": "platform-114-ee-nightly-float-not-a-commit", "cat": "platform", "seed": 0.989583, "cand": 1.0, "delta": 0.010417}, {"task": "platform-128-failed-action-census-by-kind", "cat": "platform", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "platform-129-destroyed-subject-hidden-without-guid", "cat": "platform", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "platform-131-deployment-first-resource-blind-spot", "cat": "platform", "seed": 0.985, "cand": 0.59, "delta": -0.395}, {"task": "platform-132-event-seat-math-standalone-workshop", "cat": "platform", "seed": 0.71, "cand": 0.724, "delta": 0.014}, {"task": "platform-135-catalog-component-drift-fanout", "cat": "platform", "seed": 0.875556, "cand": 0.747, "delta": -0.128556}, {"task": "platform-138-project-prefix-not-a-dns-label", "cat": "platform", "seed": 0.871666, "cand": 1.0, "delta": 0.128334}, {"task": "platform-141-nested-loop-item-collision", "cat": "platform", "seed": 0.883333, "cand": 0.988333, "delta": 0.105}, {"task": "platform-142-duplicate-yaml-key-last-wins", "cat": "platform", "seed": 0.676667, "cand": 0.85, "delta": 0.173333}, {"task": "platform-144-version-compared-as-string", "cat": "platform", "seed": 1.0, "cand": 1.0, "delta": 0.0}, {"task": "platform-145-prod-stage-deploys-from-fork", "cat": "platform", "seed": 0.310834, "cand": 0.883333, "delta": 0.5725}, {"task": "platform-149-alphabetised-workloads-before-operator", "cat": "platform", "seed": 0.991667, "cand": 0.988095, "delta": -0.003571}, {"task": "platform-151-backup-schedule-is-commented-out", "cat": "platform", "seed": 0.94, "cand": 1.0, "delta": 0.06}, {"task": "platform-157-drain-blocked-by-node-local-disk", "cat": "platform", "seed": 0.804546, "cand": 0.836364, "delta": 0.031818}, {"task": "platform-159-renewal-run-never-saw-host", "cat": "platform", "seed": 0.747619, "cand": 0.79881, "delta": 0.05119}, {"task": "platform-160-event-attendee-codes-any-cluster", "cat": "platform", "seed": 0.92, "cand": 1.0, "delta": 0.08}, {"task": "platform-164-workshop-item-replaced-by-v2", "cat": "platform", "seed": 1.0, "cand": 1.0, "delta": 0.0}]};
+
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function showTab(id, btn){
+  document.querySelectorAll('.panel-view').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(id==='iterations') renderIterTable();
+  if(id==='test'){ renderTaskTable(); drawTestCharts(); }
+  if(id==='overview') drawOverviewCharts();
+}
+
+function colorForDecision(d){
+  if(d==='accept') return cssVar('--good');
+  if(d==='reject') return cssVar('--bad');
+  return cssVar('--killed');
+}
+function labelForDecision(d){
+  if(d==='accept') return 'Accepted';
+  if(d==='reject') return 'Rejected (confirm split)';
+  return 'Killed at F rung 1';
+}
+
+function renderIterTable(){
+  const tb = document.querySelector('#tbl-iterations tbody');
+  if(tb.children.length) return;
+  DATA.iterations.forEach(it=>{
+    const tr = document.createElement('tr');
+    const dClass = it.f_delta>0 ? 'delta-pos' : (it.f_delta<0 ? 'delta-neg' : 'delta-flat');
+    const pillClass = it.c_decision==='accept'?'accept':(it.c_decision==='reject'?'reject':'killed');
+    tr.innerHTML = `
+      <td class="num">${it.iter}</td>
+      <td class="mono">${it.cand}</td>
+      <td class="mono" style="color:var(--fg-dim)">${it.parent}</td>
+      <td class="r-num ${dClass}">${it.f_delta>0?'+':''}${it.f_delta.toFixed(4)}</td>
+      <td class="r-num">${it.f_z.toFixed(2)}</td>
+      <td><span class="pill ${pillClass}">${labelForDecision(it.c_decision)}</span></td>
+      <td class="r-num">${it.c_val!==null ? it.c_val.toFixed(3) : '—'}</td>
+      <td class="r-num">${it.broke}</td>
+      <td class="r-num">${it.fixed}</td>
+      <td class="r-num">$${it.opt_usd.toFixed(2)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function renderTaskTable(){
+  const cat = document.getElementById('catFilter').value;
+  const sort = document.getElementById('sortFilter').value;
+  let rows = DATA.test_tasks.filter(r => !cat || r.cat===cat);
+  if(sort==='delta_desc') rows = rows.slice().sort((a,b)=>b.delta-a.delta);
+  else if(sort==='delta_asc') rows = rows.slice().sort((a,b)=>a.delta-b.delta);
+  else rows = rows.slice().sort((a,b)=>a.task.localeCompare(b.task));
+  const tb = document.getElementById('task-tbody');
+  tb.innerHTML = '';
+  rows.forEach(r=>{
+    const dClass = r.delta>0.001 ? 'delta-pos' : (r.delta<-0.001 ? 'delta-neg' : 'delta-flat');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="mono">${r.task}</td><td style="color:var(--fg-dim)">${r.cat}</td>
+      <td class="r-num">${r.seed.toFixed(3)}</td><td class="r-num">${r.cand.toFixed(3)}</td>
+      <td class="r-num ${dClass}">${r.delta>0?'+':''}${r.delta.toFixed(3)}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('taskCount').textContent = rows.length + ' of ' + DATA.test_tasks.length + ' tasks';
+}
+
+let overviewDrawn=false, testDrawn=false;
+
+function plotlyBaseLayout(extra){
+  const fg = cssVar('--fg'), fgDim = cssVar('--fg-dim'), border = cssVar('--border'), bg='transparent';
+  return Object.assign({
+    paper_bgcolor:bg, plot_bgcolor:bg,
+    font:{family:"Inter, ui-sans-serif, system-ui, sans-serif", color:fg, size:12},
+    margin:{t:10,r:16,l:50,b:40},
+    xaxis:{gridcolor:border, zerolinecolor:border, color:fgDim, tickfont:{color:fgDim}},
+    yaxis:{gridcolor:border, zerolinecolor:border, color:fgDim, tickfont:{color:fgDim}},
+    legend:{font:{color:fgDim}},
+    hoverlabel:{bgcolor:cssVar('--bg-panel'), font:{color:fg}}
+  }, extra||{});
+}
+
+function drawOverviewCharts(){
+  if(overviewDrawn) return; overviewDrawn=true;
+  const its = DATA.iterations;
+  const colors = its.map(it=>colorForDecision(it.c_decision));
+  Plotly.newPlot('chart-overview-bars', [{
+    x: its.map(it=>'iter '+it.iter), y: its.map(it=>it.f_delta),
+    type:'bar', marker:{color:colors},
+    text: its.map(it=>labelForDecision(it.c_decision)), textposition:'none',
+    hovertemplate:'%{x}<br>F Δ=%{y:.4f}<br>%{text}<extra></extra>'
+  }], plotlyBaseLayout({
+    yaxis:{title:'F-split paired delta', gridcolor:cssVar('--border'), zerolinecolor:cssVar('--fg-faint'), zerolinewidth:1.5, color:cssVar('--fg-dim')},
+    xaxis:{title:'', color:cssVar('--fg-dim')}
+  }), {displayModeBar:false, responsive:true});
+
+  Plotly.newPlot('chart-overview-cost', [{
+    x: its.map(it=>'iter '+it.iter), y: its.map(it=>it.opt_usd),
+    type:'bar', marker:{color: cssVar('--accent')},
+    hovertemplate:'%{x}<br>$%{y:.2f}<extra></extra>'
+  }], plotlyBaseLayout({
+    yaxis:{title:'Optimizer cost (USD)', color:cssVar('--fg-dim')},
+    xaxis:{title:'', color:cssVar('--fg-dim')}
+  }), {displayModeBar:false, responsive:true});
+
+  const splits = ['F split','C split (confirm)','Test split (sealed)'];
+  const seedVals = [DATA.seed_f, DATA.seed_c, DATA.seed_test];
+  const champVals = [DATA.iterations[4].f_delta + DATA.seed_f, DATA.iterations[4].c_val, DATA.test.champion_reward];
+  Plotly.newPlot('chart-overview-trajectory', [
+    {x:splits, y:seedVals, name:'Seed', type:'bar', marker:{color:cssVar('--fg-faint')}},
+    {x:splits, y:champVals, name:'Champion (cand_0005)', type:'bar', marker:{color:cssVar('--good')}}
+  ], plotlyBaseLayout({
+    yaxis:{title:'Mean reward', range:[0,1], color:cssVar('--fg-dim')},
+    xaxis:{color:cssVar('--fg-dim')},
+    barmode:'group'
+  }), {displayModeBar:false, responsive:true});
+}
+
+function drawTestCharts(){
+  if(testDrawn) return; testDrawn=true;
+  const cats = DATA.test_by_cat;
+  Plotly.newPlot('chart-test-category', [
+    {x:cats.map(c=>c.cat), y:cats.map(c=>c.seed), name:'Seed', type:'bar', marker:{color:cssVar('--fg-faint')}},
+    {x:cats.map(c=>c.cat), y:cats.map(c=>c.cand), name:'Champion', type:'bar', marker:{color:cssVar('--accent')}}
+  ], plotlyBaseLayout({
+    yaxis:{title:'Mean reward', range:[0,1], color:cssVar('--fg-dim')},
+    xaxis:{color:cssVar('--fg-dim')},
+    barmode:'group'
+  }), {displayModeBar:false, responsive:true});
+
+  Plotly.newPlot('chart-test-donut', [{
+    values:[DATA.test_counts.improved, DATA.test_counts.regressed, DATA.test_counts.same],
+    labels:['Improved (>+0.05)','Regressed (<-0.05)','~Unchanged'],
+    type:'pie', hole:.58,
+    marker:{colors:[cssVar('--good'), cssVar('--bad'), cssVar('--fg-faint')]},
+    textfont:{color:cssVar('--fg')},
+    hovertemplate:'%{label}: %{value} tasks<extra></extra>'
+  }], plotlyBaseLayout({showlegend:true, legend:{orientation:'h', y:-0.15, font:{color:cssVar('--fg-dim')}}}),
+  {displayModeBar:false, responsive:true});
+
+  const catColors = {cloud:'#4f8ff0', cost:'#f0b84e', icinga:'#b3a4ec', platform:'#4ad495'};
+  const byCat = {};
+  DATA.test_tasks.forEach(t=>{ (byCat[t.cat]=byCat[t.cat]||[]).push(t); });
+  const traces = Object.keys(byCat).map(cat=>({
+    x:byCat[cat].map(t=>t.seed), y:byCat[cat].map(t=>t.cand),
+    text:byCat[cat].map(t=>t.task),
+    mode:'markers', type:'scatter', name:cat,
+    marker:{color:catColors[cat]||cssVar('--accent'), size:9, opacity:.85, line:{width:1,color:cssVar('--bg-panel')}},
+    hovertemplate:'%{text}<br>seed=%{x:.3f} champ=%{y:.3f}<extra></extra>'
+  }));
+  traces.push({x:[0,1], y:[0,1], mode:'lines', type:'scatter', name:'y = x', line:{color:cssVar('--fg-faint'), dash:'dot', width:1.5}, hoverinfo:'skip'});
+  Plotly.newPlot('chart-test-scatter', traces, plotlyBaseLayout({
+    xaxis:{title:'Seed reward', range:[-0.03,1.03], color:cssVar('--fg-dim')},
+    yaxis:{title:'Champion reward', range:[-0.03,1.03], color:cssVar('--fg-dim')},
+    legend:{orientation:'h', y:1.08, font:{color:cssVar('--fg-dim')}},
+    margin:{t:40,r:16,l:55,b:50}
+  }), {displayModeBar:false, responsive:true});
+}
+
+drawOverviewCharts();
+</script>
+</body>
+</html>

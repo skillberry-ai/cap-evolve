@@ -14,14 +14,16 @@ one was accepted or rejected, what a number does and doesn't mean. That has no h
 machine-written (by `ci/benchmarks/lib/record.py` on `main`) and periodically pruned; it
 carries the numbers, not the story behind them. This branch is where the story lives.
 
-Three independent experiments are recorded here, sharing nothing except the branch — v1 and
-v2 both target parsec's AAP2 job-diagnosis domain, v4 is wider (see below):
+Four independent experiments are recorded here, sharing nothing except the branch — v1 and
+v2 both target parsec's AAP2 job-diagnosis domain, v4/v5/v6 are wider (see below):
 
 | experiment | tasks | source |
 |---|---|---|
 | **v1** | 30 trace-extracted `traces_parsec-aap2-*` tasks, real production traces | `parsec-intake_v1` worktree |
 | **v2** | 10 hand-authored `bench-aap2-*` scenarios, one isolated simulator per task | `parsec-intake_v2` worktree |
 | **v4** | 34-task multi-agent AAP2/GCP/ICINGA benchmark (`platform-*`, `cloud-*`, `cost-*`, `icinga-*`), harbor-native | `parsec-intake_v4` worktree |
+| **v5** | from-scratch 136-task rebuild of v4's shape, no shared content with v4 | `parsec-intake_v5` worktree |
+| **v6** | unified 200-task set (v4's 34 + v5's 166), first arm with a hidden feedback/confirm/test split | `parsec-intake_v6` worktree |
 
 They are not comparable to each other — different task sets, different simulators, different
 scoring — see [`results/v1/summary.md`](results/v1/summary.md)'s "v1 is not comparable to
@@ -33,20 +35,27 @@ vs. v1/v2's single `SKILL.md`). It now has two arms — T (task-by-task) and G (
 bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; see
 [`results/v4/README.md`](results/v4/README.md).
 
+v6 unifies v4's 34 tasks and v5's held-out 166 into one 200-task set, and is the first arm family
+in this branch to run with a genuine hidden split: feedback (visible to the optimizer), confirm
+(hidden, gates accept/reject), and test (sealed, scored once). Its one arm so far (`v6_g2_e1`) is
+the first in this branch with a positive, completed, held-out test-split result; see
+[`results/v6/README.md`](results/v6/README.md).
+
 ## Layout
 
 | directory | what's in it |
 |---|---|
-| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape); `v5/` is a from-scratch 136-task rebuild with its own per-arm ledgers: the baseline arm `v5_b1_e1/` and the G2-arm reuse `v5_g2_e1/` (v4's accepted G2 candidate, no v5-specific optimization) |
-| [`recipes/`](recipes/) | the cap-evolve configs a rerun needs, copied verbatim — and, critically, where each recipe disagrees with what its run actually did |
+| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape); `v5/` is a from-scratch 136-task rebuild with its own per-arm ledgers: the baseline arm `v5_b1_e1/` and the G2-arm reuse `v5_g2_e1/` (v4's accepted G2 candidate, no v5-specific optimization); `v6/` is the unified 200-task set with its own hill-climb arm `v6_g2_e1/` — its `results.json` has a different shape from v4/v5's (test-split-only `task_ledger`, plus a separate per-iteration `iterations_detail` — see its own `summary.md` for why there's no per-task F/C ledger) |
+| [`recipes/`](recipes/) | the cap-evolve configs a rerun needs, copied verbatim — and, critically, where each recipe disagrees with what its run actually did; v6's recipe includes `split_ids.json`, the full published feedback/confirm/test partition (see `recipes/v6/v6_g2_e1/README.md`) |
 | [`artifacts/`](artifacts/) | the skill packages themselves: seed, champion, rejected, and (for v2) discarded candidates |
-| [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it |
-| [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms, `build_v5_b1_*` for v5's baseline arm, and `build_v5_g2_*` for v5's G2-arm reuse — everything numeric in this branch is derived by one of these, never hand-typed twice |
+| [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it; v6's reports are test-split only, for the same reason its `results.json` is |
+| [`scripts/`](scripts/) | the generators: `build_results_json.py`, `build_task_reports.py`, `build_heatmap.py`, `extract_rollout_scores.py` (v1/v2), their `v4_t_e1`/`v4_g_e1`-named counterparts for v4's two arms, `build_v5_b1_*` for v5's baseline arm, `build_v5_g2_*` for v5's G2-arm reuse, and `build_v6_g2_*` for v6's hill-climb arm — everything numeric in this branch is derived by one of these, never hand-typed twice. All of `build_v4_g_task_reports.py`/`build_v4_t_task_reports.py`/`build_v5_*_task_reports.py`/`build_v6_g2_task_reports.py` share `v4_report_common.py`'s splice logic. |
 | [`docs/`](docs/) | the design record — specs and implementation plans for parsec v4, plus its intake handoff; describes decisions, not code, so it lives here rather than on `parsec-intake_v4` |
 | [`ui/heatmap.html`](ui/heatmap.html) | a static, generated per-task/per-candidate heatmap for v1/v2 |
 | [`ui/heatmap_v4_t.html`](ui/heatmap_v4_t.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
 | [`ui/heatmap_v5_b1_e1.html`](ui/heatmap_v5_b1_e1.html), [`ui/trials_v5_b1_e1.html`](ui/trials_v5_b1_e1.html) | v5's baseline arm: the same sortable heatmap, plus a per-trial view that draws every individual trial — 56% of v5's tasks vary across identical trials, which a page of means would hide |
 | [`ui/heatmap_v5_g2_e1.html`](ui/heatmap_v5_g2_e1.html), [`ui/trials_v5_g2_e1.html`](ui/trials_v5_g2_e1.html) | v5's G2-arm reuse: `cand_0004` vs. the baseline, same column shape with a `v5_b1`/`Δ vs b1` pair in place of the baseline's `v4 T1`/`Δ vs v4` pair |
+| [`ui/heatmap_v6_g2_e1.html`](ui/heatmap_v6_g2_e1.html) | v6's hill-climb arm, sealed test split only (seed vs. final champion) — no per-candidate columns, since only two capabilities were ever scored on this split |
 | [`presentations/management_review_presentation/`](presentations/management_review_presentation/) | hand-authored, not generated: the general cap-evolve pitch/roadmap deck (Reveal.js, vendored) — Parsec is one roadmap thread in it, not its subject |
 | [`presentations/parsec_optimization_presentation/`](presentations/parsec_optimization_presentation/) | hand-authored, not generated: the Parsec v1+v2 PoC deck (Reveal.js, vendored) for an IBM/Red Hat audience |
 | [`presentations/presentation_v4/`](presentations/presentation_v4/) | fork of the Parsec deck above, being extended with v4 — cover slide updated so far, rest of the deck still v1/v2 only |

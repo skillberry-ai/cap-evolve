@@ -1,0 +1,30 @@
+{
+  "best_id": "cand_0005",
+  "budget": {
+    "max_iterations": 6,
+    "max_metric_calls": 0,
+    "max_usd": 2500.0,
+    "stall": 0,
+    "max_optimizer_usd": 600.0,
+    "stop_at_reward": 0.0
+  },
+  "spent": {
+    "iterations": 6,
+    "metric_calls": 4749,
+    "usd": 809.3672999999999,
+    "stall": 1,
+    "runner_tokens": 249317854,
+    "runner_seconds": 153425.98741984367,
+    "optimizer_seconds": 32181.491642951965,
+    "optimizer_usd": 355.0156397500001,
+    "optimizer_tokens": 154990690,
+    "intake_usd": 0.0,
+    "intake_tokens": 0,
+    "intake_seconds": 0.0,
+    "best_val": 0.9500000000000001,
+    "usersim_usd": 0.0
+  },
+  "sealed_dir": "/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-ps-worktrees/parsec-intake_v6/.capevolve.sealed/run_g2_e1",
+  "reserved": {},
+  "warnings_fired": []
+}
