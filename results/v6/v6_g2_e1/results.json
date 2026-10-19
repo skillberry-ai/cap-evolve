@@ -1,0 +1,744 @@
+{
+  "run": "v6_g2_e1",
+  "best_id": "cand_0005",
+  "test_reward": 0.84956,
+  "test_baseline_reward": 0.812648,
+  "test_delta": 0.036912,
+  "test_n_tasks": 66,
+  "test_n_trials": 10,
+  "spent": {
+    "iterations": 6,
+    "eval_usd": 809.37,
+    "optimizer_usd": 355.02,
+    "total_usd": 1164.38,
+    "runner_seconds": 153425.98741984367,
+    "optimizer_seconds": 32181.491642951965
+  },
+  "iterations_detail": [
+    {
+      "iteration": 1,
+      "candidate": "cand_0001",
+      "parent": "seed",
+      "f_screen_delta": 0.060493,
+      "f_screen_z": 0.6005,
+      "f_screen_n": 12,
+      "c_decision": "reject",
+      "c_val": 0.870833,
+      "broke": [],
+      "fixed": [
+        "icinga-204-downtime-window-expired",
+        "platform-126-stop-job-from-tower-jobs",
+        "platform-158-lab-instances-outside-default-region"
+      ],
+      "optimizer_usd": 82.699899,
+      "optimizer_tokens": 20519494
+    },
+    {
+      "iteration": 2,
+      "candidate": "cand_0002",
+      "parent": "seed",
+      "f_screen_delta": 0.168125,
+      "f_screen_z": 1.5308,
+      "f_screen_n": 12,
+      "c_decision": "accept",
+      "c_val": 0.95,
+      "broke": [],
+      "fixed": [
+        "cloud-057-cloudtrail-select-only-refusal",
+        "cost-407-aws-historical-query-came-back-org-wide",
+        "icinga-216-flexible-downtime-duration",
+        "platform-007-directory-path-fetch",
+        "platform-032-shared-secret-not-a-registry-outage",
+        "platform-126-stop-job-from-tower-jobs"
+      ],
+      "optimizer_usd": 49.402078,
+      "optimizer_tokens": 14731198
+    },
+    {
+      "iteration": 3,
+      "candidate": "cand_0003",
+      "parent": "cand_0002",
+      "f_screen_delta": 0.018957,
+      "f_screen_z": 0.1791,
+      "f_screen_n": 12,
+      "c_decision": "reject",
+      "c_val": 0.839038,
+      "broke": [],
+      "fixed": [],
+      "optimizer_usd": 33.623127,
+      "optimizer_tokens": 16348824
+    },
+    {
+      "iteration": 4,
+      "candidate": "cand_0004",
+      "parent": "cand_0002",
+      "f_screen_delta": -0.004307,
+      "f_screen_z": -0.0347,
+      "f_screen_n": 11,
+      "c_decision": "killed_rung1",
+      "c_val": null,
+      "broke": [],
+      "fixed": [],
+      "optimizer_usd": 22.448462,
+      "optimizer_tokens": 21145862
+    },
+    {
+      "iteration": 5,
+      "candidate": "cand_0005",
+      "parent": "cand_0002",
+      "f_screen_delta": 0.078175,
+      "f_screen_z": 0.6466,
+      "f_screen_n": 12,
+      "c_decision": "accept",
+      "c_val": 0.872837,
+      "broke": [],
+      "fixed": [],
+      "optimizer_usd": 58.185467,
+      "optimizer_tokens": 51444932
+    },
+    {
+      "iteration": 6,
+      "candidate": "cand_0006",
+      "parent": "cand_0005",
+      "f_screen_delta": -0.03206,
+      "f_screen_z": -0.3267,
+      "f_screen_n": 12,
+      "c_decision": "killed_rung1",
+      "c_val": null,
+      "broke": [],
+      "fixed": [],
+      "optimizer_usd": 108.656607,
+      "optimizer_tokens": 30800380
+    }
+  ],
+  "category_summary": {
+    "cloud": {
+      "n_tasks": 9,
+      "seed_mean": 0.760713,
+      "champion_mean": 0.766574,
+      "delta": 0.005861
+    },
+    "cost": {
+      "n_tasks": 10,
+      "seed_mean": 0.831407,
+      "champion_mean": 0.865194,
+      "delta": 0.033787
+    },
+    "icinga": {
+      "n_tasks": 13,
+      "seed_mean": 0.780108,
+      "champion_mean": 0.80007,
+      "delta": 0.019962
+    },
+    "platform": {
+      "n_tasks": 34,
+      "seed_mean": 0.833321,
+      "champion_mean": 0.885852,
+      "delta": 0.052531
+    },
+    "overall": {
+      "n_tasks": 66,
+      "seed_mean": 0.812648,
+      "champion_mean": 0.84956,
+      "delta": 0.036912
+    }
+  },
+  "task_ledger": [
+    {
+      "task": "cloud-025-gcp-project-status",
+      "category": "cloud",
+      "seed": 0.946667,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.053333
+    },
+    {
+      "task": "cloud-026-gpu-abuse-triage",
+      "category": "cloud",
+      "seed": 0.913333,
+      "seed_n": 10,
+      "champion": 0.955,
+      "champion_n": 10,
+      "delta_vs_seed": 0.041667
+    },
+    {
+      "task": "cloud-027-azure-pool-database-trap",
+      "category": "cloud",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "cloud-301-gcp-delete-counter-not-a-state",
+      "category": "cloud",
+      "seed": 0.946667,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.053333
+    },
+    {
+      "task": "cloud-302-cloudtrail-local-time-window",
+      "category": "cloud",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "cloud-308-azure-leftover-tag-on-free-sub",
+      "category": "cloud",
+      "seed": 0.175,
+      "seed_n": 10,
+      "champion": 0.116667,
+      "champion_n": 10,
+      "delta_vs_seed": -0.058333
+    },
+    {
+      "task": "cloud-313-azure-no-single-pool-fits",
+      "category": "cloud",
+      "seed": 0.8,
+      "seed_n": 10,
+      "champion": 0.88,
+      "champion_n": 10,
+      "delta_vs_seed": 0.08
+    },
+    {
+      "task": "cloud-316-cleaned-sandbox-live-iam-keys",
+      "category": "cloud",
+      "seed": 0.486,
+      "seed_n": 10,
+      "champion": 0.36,
+      "champion_n": 10,
+      "delta_vs_seed": -0.126
+    },
+    {
+      "task": "cloud-319-billing-lab-unknown-to-babylon",
+      "category": "cloud",
+      "seed": 0.57875,
+      "seed_n": 10,
+      "champion": 0.5875,
+      "champion_n": 10,
+      "delta_vs_seed": 0.00875
+    },
+    {
+      "task": "cost-029-no-cost-rows-for-guid",
+      "category": "cost",
+      "seed": 0.8,
+      "seed_n": 10,
+      "champion": 0.8,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "cost-050-partial-account-coverage",
+      "category": "cost",
+      "seed": 0.825,
+      "seed_n": 10,
+      "champion": 0.825,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "cost-053-capacity-dropped-reservations",
+      "category": "cost",
+      "seed": 0.904,
+      "seed_n": 10,
+      "champion": 0.888,
+      "champion_n": 10,
+      "delta_vs_seed": -0.016
+    },
+    {
+      "task": "cost-064-reservation-release-active-job-check",
+      "category": "cost",
+      "seed": 0.746,
+      "seed_n": 10,
+      "champion": 0.676,
+      "champion_n": 10,
+      "delta_vs_seed": -0.07
+    },
+    {
+      "task": "cost-401-monitor-drilldown-wrong-month",
+      "category": "cost",
+      "seed": 0.775,
+      "seed_n": 10,
+      "champion": 0.94375,
+      "champion_n": 10,
+      "delta_vs_seed": 0.16875
+    },
+    {
+      "task": "cost-406-gcp-daily-rows-is-not-day-coverage",
+      "category": "cost",
+      "seed": 0.678,
+      "seed_n": 10,
+      "champion": 0.748,
+      "champion_n": 10,
+      "delta_vs_seed": 0.07
+    },
+    {
+      "task": "cost-409-top-spender-chain-to-instance-type",
+      "category": "cost",
+      "seed": 0.9075,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0925
+    },
+    {
+      "task": "cost-411-org-week-linked-account-league",
+      "category": "cost",
+      "seed": 0.92,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.08
+    },
+    {
+      "task": "cost-413-gcp-unknown-project-bucket",
+      "category": "cost",
+      "seed": 0.93,
+      "seed_n": 10,
+      "champion": 0.988333,
+      "champion_n": 10,
+      "delta_vs_seed": 0.058333
+    },
+    {
+      "task": "cost-414-az-id-is-not-a-zone-name",
+      "category": "cost",
+      "seed": 0.828572,
+      "seed_n": 10,
+      "champion": 0.782858,
+      "champion_n": 10,
+      "delta_vs_seed": -0.045714
+    },
+    {
+      "task": "icinga-010-stuck-anarchysubjects",
+      "category": "icinga",
+      "seed": 0.467,
+      "seed_n": 10,
+      "champion": 0.509,
+      "champion_n": 10,
+      "delta_vs_seed": 0.042
+    },
+    {
+      "task": "icinga-012-nodes-ready-threshold",
+      "category": "icinga",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "icinga-047-downtime-similar-host-names",
+      "category": "icinga",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "icinga-072-alert-output-not-decoy-metrics",
+      "category": "icinga",
+      "seed": 0.0,
+      "seed_n": 10,
+      "champion": 0.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "icinga-202-flapping-recovery-is-not-resolution",
+      "category": "icinga",
+      "seed": 0.853334,
+      "seed_n": 10,
+      "champion": 0.946667,
+      "champion_n": 10,
+      "delta_vs_seed": 0.093333
+    },
+    {
+      "task": "icinga-203-perfdata-headroom-to-critical",
+      "category": "icinga",
+      "seed": 0.64,
+      "seed_n": 10,
+      "champion": 0.64,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "icinga-205-notifications-disabled-nobody-paged",
+      "category": "icinga",
+      "seed": 0.653333,
+      "seed_n": 10,
+      "champion": 0.826667,
+      "champion_n": 10,
+      "delta_vs_seed": 0.173334
+    },
+    {
+      "task": "icinga-207-host-down-masks-service-alerts",
+      "category": "icinga",
+      "seed": 0.891667,
+      "seed_n": 10,
+      "champion": 0.841667,
+      "champion_n": 10,
+      "delta_vs_seed": -0.05
+    },
+    {
+      "task": "icinga-210-command-vars-override-script-default",
+      "category": "icinga",
+      "seed": 0.988333,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.011667
+    },
+    {
+      "task": "icinga-219-host-down-pings-old-address",
+      "category": "icinga",
+      "seed": 0.977143,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.022857
+    },
+    {
+      "task": "icinga-221-crc-counter-never-resets",
+      "category": "icinga",
+      "seed": 0.938333,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.061667
+    },
+    {
+      "task": "icinga-224-dead-first-replica-eats-timeout",
+      "category": "icinga",
+      "seed": 0.980833,
+      "seed_n": 10,
+      "champion": 0.988333,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0075
+    },
+    {
+      "task": "icinga-225-monitor-outlived-its-namespace",
+      "category": "icinga",
+      "seed": 0.751428,
+      "seed_n": 10,
+      "champion": 0.648572,
+      "champion_n": 10,
+      "delta_vs_seed": -0.102857
+    },
+    {
+      "task": "platform-001-ee-entrypoint-rca",
+      "category": "platform",
+      "seed": 0.72,
+      "seed_n": 10,
+      "champion": 0.8725,
+      "champion_n": 10,
+      "delta_vs_seed": 0.1525
+    },
+    {
+      "task": "platform-003-tojson-dict-literal-rca",
+      "category": "platform",
+      "seed": 0.621,
+      "seed_n": 10,
+      "champion": 0.6125,
+      "champion_n": 8,
+      "delta_vs_seed": -0.0085
+    },
+    {
+      "task": "platform-006-version-tag-not-a-ref",
+      "category": "platform",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "platform-008-log-does-not-say",
+      "category": "platform",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "platform-020-ocpv-vm-inventory",
+      "category": "platform",
+      "seed": 0.79,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.21
+    },
+    {
+      "task": "platform-021-babylon-missing-cluster-trap",
+      "category": "platform",
+      "seed": 0.94,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.06
+    },
+    {
+      "task": "platform-022-job-on-no-controller",
+      "category": "platform",
+      "seed": 0.63,
+      "seed_n": 10,
+      "champion": 0.7,
+      "champion_n": 10,
+      "delta_vs_seed": 0.07
+    },
+    {
+      "task": "platform-033-schema-change-not-the-oom",
+      "category": "platform",
+      "seed": 0.785714,
+      "seed_n": 10,
+      "champion": 0.914286,
+      "champion_n": 10,
+      "delta_vs_seed": 0.128571
+    },
+    {
+      "task": "platform-037-ocpv-healthy-vm-degraded-machineset",
+      "category": "platform",
+      "seed": 0.895,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.105
+    },
+    {
+      "task": "platform-038-anarchy-subject-guid-cross-cluster",
+      "category": "platform",
+      "seed": 0.92,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.08
+    },
+    {
+      "task": "platform-065-other-guid-job-not-the-failure",
+      "category": "platform",
+      "seed": 0.832,
+      "seed_n": 10,
+      "champion": 0.93,
+      "champion_n": 10,
+      "delta_vs_seed": 0.098
+    },
+    {
+      "task": "platform-102-no-proxy-misses-api-domain",
+      "category": "platform",
+      "seed": 0.558,
+      "seed_n": 10,
+      "champion": 0.70125,
+      "champion_n": 8,
+      "delta_vs_seed": 0.14325
+    },
+    {
+      "task": "platform-103-olm-channel-not-in-catalog",
+      "category": "platform",
+      "seed": 0.844444,
+      "seed_n": 9,
+      "champion": 0.884,
+      "champion_n": 10,
+      "delta_vs_seed": 0.039556
+    },
+    {
+      "task": "platform-105-failed-revision-not-main",
+      "category": "platform",
+      "seed": 0.694444,
+      "seed_n": 9,
+      "champion": 0.696,
+      "champion_n": 10,
+      "delta_vs_seed": 0.001556
+    },
+    {
+      "task": "platform-108-duplicate-guid-concurrent-run",
+      "category": "platform",
+      "seed": 0.754166,
+      "seed_n": 8,
+      "champion": 0.795,
+      "champion_n": 10,
+      "delta_vs_seed": 0.040833
+    },
+    {
+      "task": "platform-109-quoted-false-is-truthy",
+      "category": "platform",
+      "seed": 0.766667,
+      "seed_n": 9,
+      "champion": 0.72,
+      "champion_n": 10,
+      "delta_vs_seed": -0.046667
+    },
+    {
+      "task": "platform-110-renamed-catalog-item",
+      "category": "platform",
+      "seed": 0.875,
+      "seed_n": 10,
+      "champion": 0.8875,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0125
+    },
+    {
+      "task": "platform-114-ee-nightly-float-not-a-commit",
+      "category": "platform",
+      "seed": 0.989583,
+      "seed_n": 8,
+      "champion": 1.0,
+      "champion_n": 7,
+      "delta_vs_seed": 0.010417
+    },
+    {
+      "task": "platform-128-failed-action-census-by-kind",
+      "category": "platform",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "platform-129-destroyed-subject-hidden-without-guid",
+      "category": "platform",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "platform-131-deployment-first-resource-blind-spot",
+      "category": "platform",
+      "seed": 0.985,
+      "seed_n": 10,
+      "champion": 0.59,
+      "champion_n": 10,
+      "delta_vs_seed": -0.395
+    },
+    {
+      "task": "platform-132-event-seat-math-standalone-workshop",
+      "category": "platform",
+      "seed": 0.71,
+      "seed_n": 10,
+      "champion": 0.724,
+      "champion_n": 10,
+      "delta_vs_seed": 0.014
+    },
+    {
+      "task": "platform-135-catalog-component-drift-fanout",
+      "category": "platform",
+      "seed": 0.875556,
+      "seed_n": 9,
+      "champion": 0.747,
+      "champion_n": 10,
+      "delta_vs_seed": -0.128556
+    },
+    {
+      "task": "platform-138-project-prefix-not-a-dns-label",
+      "category": "platform",
+      "seed": 0.871666,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.128334
+    },
+    {
+      "task": "platform-141-nested-loop-item-collision",
+      "category": "platform",
+      "seed": 0.883333,
+      "seed_n": 10,
+      "champion": 0.988333,
+      "champion_n": 10,
+      "delta_vs_seed": 0.105
+    },
+    {
+      "task": "platform-142-duplicate-yaml-key-last-wins",
+      "category": "platform",
+      "seed": 0.676667,
+      "seed_n": 10,
+      "champion": 0.85,
+      "champion_n": 10,
+      "delta_vs_seed": 0.173333
+    },
+    {
+      "task": "platform-144-version-compared-as-string",
+      "category": "platform",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    },
+    {
+      "task": "platform-145-prod-stage-deploys-from-fork",
+      "category": "platform",
+      "seed": 0.310834,
+      "seed_n": 10,
+      "champion": 0.883333,
+      "champion_n": 9,
+      "delta_vs_seed": 0.5725
+    },
+    {
+      "task": "platform-149-alphabetised-workloads-before-operator",
+      "category": "platform",
+      "seed": 0.991667,
+      "seed_n": 6,
+      "champion": 0.988095,
+      "champion_n": 9,
+      "delta_vs_seed": -0.003571
+    },
+    {
+      "task": "platform-151-backup-schedule-is-commented-out",
+      "category": "platform",
+      "seed": 0.94,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.06
+    },
+    {
+      "task": "platform-157-drain-blocked-by-node-local-disk",
+      "category": "platform",
+      "seed": 0.804546,
+      "seed_n": 10,
+      "champion": 0.836364,
+      "champion_n": 10,
+      "delta_vs_seed": 0.031818
+    },
+    {
+      "task": "platform-159-renewal-run-never-saw-host",
+      "category": "platform",
+      "seed": 0.747619,
+      "seed_n": 10,
+      "champion": 0.79881,
+      "champion_n": 10,
+      "delta_vs_seed": 0.05119
+    },
+    {
+      "task": "platform-160-event-attendee-codes-any-cluster",
+      "category": "platform",
+      "seed": 0.92,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.08
+    },
+    {
+      "task": "platform-164-workshop-item-replaced-by-v2",
+      "category": "platform",
+      "seed": 1.0,
+      "seed_n": 10,
+      "champion": 1.0,
+      "champion_n": 10,
+      "delta_vs_seed": 0.0
+    }
+  ],
+  "generated_at": "2026-10-19T07:24:10Z",
+  "reconstructed_after_crash": true
+}

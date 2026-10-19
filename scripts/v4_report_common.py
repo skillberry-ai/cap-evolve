@@ -87,17 +87,25 @@ def build_diff_block(seed_dir, best_dir, seed_link, best_link):
 
 
 def build_report(title, auto_block, diff_block, existing_text, prefilled_hand=None):
-    """Splice auto_block/diff_block into existing_text, preserving hand narrative."""
+    """Splice auto_block/diff_block into existing_text, preserving hand narrative.
+
+    Uses a lambda replacement with re.sub, not a bare string: re.sub treats a string
+    replacement's backslash sequences (\\n, \\1, ...) as regex escapes/backreferences,
+    which silently turns a literal "\\n" inside a diffed file's own text (e.g. a worked
+    example quoting a JSON/YAML string with embedded "\\n") into a real newline. A task
+    whose seed/best bundle happens to diff on such a line is otherwise corrupted on
+    every regeneration -- caught via v6_g2_e1's shared_context.md worked example.
+    """
     if existing_text is None:
         hand = prefilled_hand if prefilled_hand is not None else PLACEHOLDER
         text = f"# {title}\n\n{auto_block}\n\n{hand}\n"
     elif AUTO_RE.search(existing_text):
-        text = AUTO_RE.sub(auto_block, existing_text, count=1)
+        text = AUTO_RE.sub(lambda _m: auto_block, existing_text, count=1)
     else:
         text = existing_text.rstrip("\n") + "\n\n" + auto_block + "\n"
 
     if diff_block is None:
         return DIFF_RE.sub("", text) if DIFF_RE.search(text) else text
     if DIFF_RE.search(text):
-        return DIFF_RE.sub(diff_block, text, count=1)
+        return DIFF_RE.sub(lambda _m: diff_block, text, count=1)
     return text.rstrip("\n") + "\n\n" + diff_block + "\n"

@@ -1,0 +1,6713 @@
+{
+  "test": {
+    "split": "test",
+    "reward": 0.8495603626262626,
+    "stderr": 0.0255070011856954,
+    "pass_k": {
+      "1": 0.5293350168350168,
+      "2": 0.48223905723905724
+    },
+    "pass_at_k": {
+      "1": 0.5293350168350168,
+      "2": 0.5764309764309764
+    },
+    "per_task": [
+      {
+        "task_id": "cloud-025-gcp-project-status",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13140000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-026-gpu-abuse-triage",
+        "reward": 0.9550000000000001,
+        "feedback": "Partial success (reward 0.925). Metrics: completion=1.0, tool_calls=0.75, answer=1.0.",
+        "n": 10,
+        "stderr": 0.012247448713915884,
+        "trial_rewards": [
+          1.0,
+          0.925,
+          1.0,
+          1.0,
+          0.925,
+          0.925,
+          0.925,
+          1.0,
+          0.925,
+          0.925
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.06734
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-027-azure-pool-database-trap",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.25486
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-301-gcp-delete-counter-not-a-state",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.09008000000000001
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-302-cloudtrail-local-time-window",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13677
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-308-azure-leftover-tag-on-free-sub",
+        "reward": 0.116667,
+        "feedback": "Partial success (reward 0.117). Metrics: completion=1.0, tool_calls=0.0, answer=0.166667.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.53069
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-313-azure-no-single-pool-fits",
+        "reward": 0.8800000000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.08,
+        "trial_rewards": [
+          0.4,
+          0.4,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.04716
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-316-cleaned-sandbox-live-iam-keys",
+        "reward": 0.36,
+        "feedback": "Partial success (reward 0.360). Metrics: completion=1.0, tool_calls=0.5, answer=0.3.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.36,
+          0.36,
+          0.36,
+          0.36,
+          0.36,
+          0.36,
+          0.36,
+          0.36,
+          0.36,
+          0.36
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.31715
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-319-billing-lab-unknown-to-babylon",
+        "reward": 0.5875,
+        "feedback": "Partial success (reward 0.588). Metrics: completion=1.0, tool_calls=0.5, answer=0.625.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.40095000000000003
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-029-no-cost-rows-for-guid",
+        "reward": 0.8,
+        "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.12771
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-050-partial-account-coverage",
+        "reward": 0.825,
+        "feedback": "Partial success (reward 0.825). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13304
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-053-capacity-dropped-reservations",
+        "reward": 0.8879999999999999,
+        "feedback": "Partial success (reward 0.840). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.03414999593297519,
+        "trial_rewards": [
+          0.84,
+          1.0,
+          0.84,
+          1.0,
+          0.68,
+          1.0,
+          0.84,
+          0.84,
+          1.0,
+          0.84
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.26494999999999996
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-064-reservation-release-active-job-check",
+        "reward": 0.6759999999999999,
+        "feedback": "Partial success (reward 0.620). Metrics: completion=1.0, tool_calls=0.666667, answer=0.6.",
+        "n": 10,
+        "stderr": 0.02286190426597633,
+        "trial_rewards": [
+          0.62,
+          0.76,
+          0.76,
+          0.76,
+          0.62,
+          0.76,
+          0.62,
+          0.62,
+          0.62,
+          0.62
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.22554
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-401-monitor-drilldown-wrong-month",
+        "reward": 0.94375,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.05625000000000001,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.4375,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14149
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-406-gcp-daily-rows-is-not-day-coverage",
+        "reward": 0.748,
+        "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.018666666666666668,
+        "trial_rewards": [
+          0.86,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.86
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.21073
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-409-top-spender-chain-to-instance-type",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.33598999999999996
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-411-org-week-linked-account-league",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.1331
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-413-gcp-unknown-project-bucket",
+        "reward": 0.9883333000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.011666699999999997,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          0.883333,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.12732
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-414-az-id-is-not-a-zone-name",
+        "reward": 0.7828575000000001,
+        "feedback": "Partial success (reward 0.771). Metrics: completion=1.0, tool_calls=1.0, answer=0.714286.",
+        "n": 10,
+        "stderr": 0.011428499999999998,
+        "trial_rewards": [
+          0.885714,
+          0.771429,
+          0.771429,
+          0.771429,
+          0.771429,
+          0.771429,
+          0.771429,
+          0.771429,
+          0.771429,
+          0.771429
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.19693
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-010-stuck-anarchysubjects",
+        "reward": 0.509,
+        "feedback": "Partial success (reward 0.495). Metrics: completion=1.0, tool_calls=0.25, answer=0.6.",
+        "n": 10,
+        "stderr": 0.014000000000000002,
+        "trial_rewards": [
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.635,
+          0.495,
+          0.495
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.30657
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-012-nodes-ready-threshold",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.21162
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-047-downtime-similar-host-names",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14003
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-072-alert-output-not-decoy-metrics",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=1.0, tool_calls=0.0, answer=0.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.41967999999999994
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-202-flapping-recovery-is-not-resolution",
+        "reward": 0.9466667,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.04073399890346856,
+        "trial_rewards": [
+          1.0,
+          0.866667,
+          1.0,
+          0.6,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.15395
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-203-perfdata-headroom-to-critical",
+        "reward": 0.64,
+        "feedback": "Partial success (reward 0.640). Metrics: completion=1.0, tool_calls=0.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14289000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-205-notifications-disabled-nobody-paged",
+        "reward": 0.8266669,
+        "feedback": "Partial success (reward 0.867). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.028458383737368732,
+        "trial_rewards": [
+          0.733333,
+          0.866667,
+          0.6,
+          0.866667,
+          0.866667,
+          0.866667,
+          0.866667,
+          0.866667,
+          0.866667,
+          0.866667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.15993
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-207-host-down-masks-service-alerts",
+        "reward": 0.8416669000000001,
+        "feedback": "Partial success (reward 0.917). Metrics: completion=1.0, tool_calls=1.0, answer=0.888889.",
+        "n": 10,
+        "stderr": 0.04383263835531439,
+        "trial_rewards": [
+          0.5,
+          0.916667,
+          0.75,
+          0.75,
+          0.916667,
+          0.916667,
+          0.916667,
+          0.916667,
+          0.916667,
+          0.916667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14984000000000003
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-210-command-vars-override-script-default",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.15901
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-219-host-down-pings-old-address",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14393
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-221-crc-counter-never-resets",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.23553000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-224-dead-first-replica-eats-timeout",
+        "reward": 0.9883333000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.011666699999999997,
+        "trial_rewards": [
+          0.883333,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.31632
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-225-monitor-outlived-its-namespace",
+        "reward": 0.6485716,
+        "feedback": "Partial success (reward 0.786). Metrics: completion=1.0, tool_calls=0.5, answer=0.857143.",
+        "n": 10,
+        "stderr": 0.03321064987794661,
+        "trial_rewards": [
+          0.671429,
+          0.671429,
+          0.671429,
+          0.442857,
+          0.557143,
+          0.557143,
+          0.671429,
+          0.785714,
+          0.671429,
+          0.785714
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.51879
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-001-ee-entrypoint-rca",
+        "reward": 0.8724999999999999,
+        "feedback": "Partial success (reward 0.275). Metrics: completion=1.0, tool_calls=0.333333, answer=0.25.",
+        "n": 10,
+        "stderr": 0.07559486314117735,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.725,
+          1.0,
+          0.725,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.275
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07994
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-003-tojson-dict-literal-rca",
+        "reward": 0.6124999999999999,
+        "feedback": "Partial success (reward 0.700). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+        "n": 8,
+        "stderr": 0.05878988008152423,
+        "trial_rewards": [
+          0.7,
+          0.7,
+          0.28,
+          0.42,
+          0.7,
+          0.7,
+          0.7,
+          0.7
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 2,
+          "valid_trials": 8,
+          "cost_usd": 0.08901
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-006-version-tag-not-a-ref",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.055510000000000004
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-008-log-does-not-say",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.05693
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-020-ocpv-vm-inventory",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.16584000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-021-babylon-missing-cluster-trap",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13466
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-022-job-on-no-controller",
+        "reward": 0.7,
+        "feedback": "Partial success (reward 0.700). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.7,
+          0.7,
+          0.7,
+          0.7,
+          0.7,
+          0.7,
+          0.7,
+          0.7,
+          0.7,
+          0.7
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.05447
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-033-schema-change-not-the-oom",
+        "reward": 0.9142856,
+        "feedback": "Partial success (reward 0.893). Metrics: completion=1.0, tool_calls=1.0, answer=0.857143.",
+        "n": 10,
+        "stderr": 0.014285733333333333,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.892857,
+          0.892857,
+          0.892857,
+          0.892857,
+          0.892857,
+          0.892857,
+          0.892857,
+          0.892857
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.29903
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-037-ocpv-healthy-vm-degraded-machineset",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.22105999999999998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-038-anarchy-subject-guid-cross-cluster",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.20615
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-065-other-guid-job-not-the-failure",
+        "reward": 0.93,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.037623869492059904,
+        "trial_rewards": [
+          0.86,
+          0.72,
+          1.0,
+          1.0,
+          1.0,
+          0.72,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13808
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-102-no-proxy-misses-api-domain",
+        "reward": 0.7012499999999999,
+        "feedback": "Partial success (reward 0.290). Metrics: completion=1.0, tool_calls=0.5, answer=0.2.",
+        "n": 8,
+        "stderr": 0.0682023643285187,
+        "trial_rewards": [
+          1.0,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.72,
+          0.29
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 2,
+          "valid_trials": 8,
+          "cost_usd": 0.05858
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-103-olm-channel-not-in-catalog",
+        "reward": 0.884,
+        "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+        "n": 10,
+        "stderr": 0.04735680169380811,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.71,
+          1.0,
+          0.71,
+          1.0,
+          0.71,
+          0.71
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.45854999999999996
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-105-failed-revision-not-main",
+        "reward": 0.696,
+        "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+        "n": 10,
+        "stderr": 0.014000000000000002,
+        "trial_rewards": [
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.57,
+          0.71,
+          0.71,
+          0.71,
+          0.71
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07844999999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-108-duplicate-guid-concurrent-run",
+        "reward": 0.7949999,
+        "feedback": "Partial success (reward 0.783). Metrics: completion=1.0, tool_calls=0.666667, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.027222195238220188,
+        "trial_rewards": [
+          0.783333,
+          0.666667,
+          0.783333,
+          0.783333,
+          0.9,
+          0.9,
+          0.783333,
+          0.666667,
+          0.9,
+          0.783333
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13271
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-109-quoted-false-is-truthy",
+        "reward": 0.72,
+        "feedback": "Partial success (reward 0.650). Metrics: completion=1.0, tool_calls=1.0, answer=0.5.",
+        "n": 10,
+        "stderr": 0.04666666666666666,
+        "trial_rewards": [
+          0.65,
+          0.65,
+          1.0,
+          0.65,
+          0.65,
+          1.0,
+          0.65,
+          0.65,
+          0.65,
+          0.65
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.5399200000000001
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-110-renamed-catalog-item",
+        "reward": 0.8875,
+        "feedback": "Partial success (reward 0.875). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.0125,
+        "trial_rewards": [
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          1.0,
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.05845
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-114-ee-nightly-float-not-a-commit",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 7,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 3,
+          "valid_trials": 7,
+          "cost_usd": 0.07059
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-128-failed-action-census-by-kind",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.2313
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-129-destroyed-subject-hidden-without-guid",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13943
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-131-deployment-first-resource-blind-spot",
+        "reward": 0.5900000000000001,
+        "feedback": "Partial success (reward 0.560). Metrics: completion=1.0, tool_calls=0.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.019999999999999987,
+        "trial_rewards": [
+          0.56,
+          0.56,
+          0.71,
+          0.56,
+          0.56,
+          0.56,
+          0.56,
+          0.56,
+          0.71,
+          0.56
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.24025
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-132-event-seat-math-standalone-workshop",
+        "reward": 0.724,
+        "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+        "n": 10,
+        "stderr": 0.014000000000000002,
+        "trial_rewards": [
+          0.85,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.21568
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-135-catalog-component-drift-fanout",
+        "reward": 0.747,
+        "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.05887934933215361,
+        "trial_rewards": [
+          1.0,
+          0.86,
+          0.43,
+          0.86,
+          0.58,
+          0.58,
+          0.86,
+          0.86,
+          0.58,
+          0.86
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.40496
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-138-project-prefix-not-a-dns-label",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.23489
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-141-nested-loop-item-collision",
+        "reward": 0.9883333000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.011666699999999997,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.883333,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.24782
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-142-duplicate-yaml-key-last-wins",
+        "reward": 0.8499999,
+        "feedback": "Partial success (reward 0.900). Metrics: completion=1.0, tool_calls=0.666667, answer=1.0.",
+        "n": 10,
+        "stderr": 0.038729843025028306,
+        "trial_rewards": [
+          0.55,
+          0.9,
+          0.9,
+          0.783333,
+          0.783333,
+          0.883333,
+          1.0,
+          0.9,
+          0.9,
+          0.9
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.41502
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-144-version-compared-as-string",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.36673999999999995
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-145-prod-stage-deploys-from-fork",
+        "reward": 0.8833331111111111,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.033678765702773984,
+        "trial_rewards": [
+          0.883333,
+          0.883333,
+          0.883333,
+          0.65,
+          1.0,
+          0.883333,
+          0.883333,
+          0.883333,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 9,
+          "cost_usd": 0.35398
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-149-alphabetised-workloads-before-operator",
+        "reward": 0.9880952222222221,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 9,
+        "stderr": 0.011904777777777776,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.892857,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 9,
+          "cost_usd": 0.08042
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-151-backup-schedule-is-commented-out",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.05456
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-157-drain-blocked-by-node-local-disk",
+        "reward": 0.836364,
+        "feedback": "Partial success (reward 0.836). Metrics: completion=1.0, tool_calls=0.666667, answer=0.909091.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.21977000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-159-renewal-run-never-saw-host",
+        "reward": 0.7988097,
+        "feedback": "Partial success (reward 0.810). Metrics: completion=1.0, tool_calls=0.666667, answer=0.857143.",
+        "n": 10,
+        "stderr": 0.010714299999999998,
+        "trial_rewards": [
+          0.809524,
+          0.809524,
+          0.809524,
+          0.809524,
+          0.702381,
+          0.809524,
+          0.809524,
+          0.809524,
+          0.809524,
+          0.809524
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.3578
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-160-event-attendee-codes-any-cluster",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.1348
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-164-workshop-item-replaced-by-v2",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.27488999999999997
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 138.01529999999997,
+    "tokens": 42924800,
+    "seconds": 13360.16,
+    "cost_source": {},
+    "n_tasks": 66,
+    "n_scored": 66
+  },
+  "best_id": "cand_0005",
+  "test_baseline": {
+    "split": "test",
+    "reward": 0.8126484841329966,
+    "stderr": 0.02518271438442886,
+    "pass_k": {
+      "1": 0.4290824915824916,
+      "2": 0.3692760942760943
+    },
+    "pass_at_k": {
+      "1": 0.4290824915824916,
+      "2": 0.4888888888888889
+    },
+    "per_task": [
+      {
+        "task_id": "cloud-025-gcp-project-status",
+        "reward": 0.9466667,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0533333,
+        "trial_rewards": [
+          1.0,
+          0.466667,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07111999999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-026-gpu-abuse-triage",
+        "reward": 0.9133333,
+        "feedback": "Partial success (reward 0.925). Metrics: completion=1.0, tool_calls=0.75, answer=1.0.",
+        "n": 10,
+        "stderr": 0.011666700000000007,
+        "trial_rewards": [
+          0.925,
+          0.925,
+          0.925,
+          0.808333,
+          0.925,
+          0.925,
+          0.925,
+          0.925,
+          0.925,
+          0.925
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.06379
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-027-azure-pool-database-trap",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.10699999999999998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-301-gcp-delete-counter-not-a-state",
+        "reward": 0.9466667,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0533333,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.466667,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07731
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-302-cloudtrail-local-time-window",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.20034999999999997
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-308-azure-leftover-tag-on-free-sub",
+        "reward": 0.175,
+        "feedback": "Partial success (reward 0.117). Metrics: completion=1.0, tool_calls=0.0, answer=0.166667.",
+        "n": 10,
+        "stderr": 0.019444333333333334,
+        "trial_rewards": [
+          0.233333,
+          0.233333,
+          0.233333,
+          0.233333,
+          0.116667,
+          0.233333,
+          0.116667,
+          0.116667,
+          0.116667,
+          0.116667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.15119
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-313-azure-no-single-pool-fits",
+        "reward": 0.8,
+        "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+        "n": 10,
+        "stderr": 0.07888106377466154,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.6,
+          1.0,
+          0.4,
+          1.0,
+          0.4,
+          1.0,
+          0.8,
+          0.8
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.04403
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-316-cleaned-sandbox-live-iam-keys",
+        "reward": 0.48600000000000004,
+        "feedback": "Partial success (reward 0.500). Metrics: completion=1.0, tool_calls=0.5, answer=0.5.",
+        "n": 10,
+        "stderr": 0.014000000000000002,
+        "trial_rewards": [
+          0.5,
+          0.36,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5,
+          0.5
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.1391
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cloud-319-billing-lab-unknown-to-babylon",
+        "reward": 0.5787500000000001,
+        "feedback": "Partial success (reward 0.588). Metrics: completion=1.0, tool_calls=0.5, answer=0.625.",
+        "n": 10,
+        "stderr": 0.008750000000000003,
+        "trial_rewards": [
+          0.5,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875,
+          0.5875
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.35009999999999997
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-029-no-cost-rows-for-guid",
+        "reward": 0.8,
+        "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.8
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.0739
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-050-partial-account-coverage",
+        "reward": 0.825,
+        "feedback": "Partial success (reward 0.825). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825,
+          0.825
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07026
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-053-capacity-dropped-reservations",
+        "reward": 0.9039999999999999,
+        "feedback": "Partial success (reward 0.840). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.026127890589687237,
+        "trial_rewards": [
+          1.0,
+          0.84,
+          0.84,
+          1.0,
+          1.0,
+          0.84,
+          0.84,
+          1.0,
+          0.84,
+          0.84
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.13277
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-064-reservation-release-active-job-check",
+        "reward": 0.746,
+        "feedback": "Partial success (reward 0.760). Metrics: completion=1.0, tool_calls=0.666667, answer=0.8.",
+        "n": 10,
+        "stderr": 0.014000000000000002,
+        "trial_rewards": [
+          0.76,
+          0.76,
+          0.76,
+          0.76,
+          0.62,
+          0.76,
+          0.76,
+          0.76,
+          0.76,
+          0.76
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.12353
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-401-monitor-drilldown-wrong-month",
+        "reward": 0.775,
+        "feedback": "Partial success (reward 0.438). Metrics: completion=1.0, tool_calls=1.0, answer=0.25.",
+        "n": 10,
+        "stderr": 0.09185586535436918,
+        "trial_rewards": [
+          1.0,
+          0.4375,
+          0.4375,
+          1.0,
+          0.4375,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.4375
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08755
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-406-gcp-daily-rows-is-not-day-coverage",
+        "reward": 0.678,
+        "feedback": "Partial success (reward 0.720). Metrics: completion=1.0, tool_calls=1.0, answer=0.6.",
+        "n": 10,
+        "stderr": 0.06616141876753652,
+        "trial_rewards": [
+          0.44,
+          0.44,
+          0.44,
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          0.44,
+          0.86,
+          0.72
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.09518
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-409-top-spender-chain-to-instance-type",
+        "reward": 0.9075,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.09250000000000001,
+        "trial_rewards": [
+          0.075,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.19396
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-411-org-week-linked-account-league",
+        "reward": 0.9199999999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.08,
+        "trial_rewards": [
+          0.2,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08299
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-413-gcp-unknown-project-bucket",
+        "reward": 0.93,
+        "feedback": "Partial success (reward 0.417). Metrics: completion=1.0, tool_calls=1.0, answer=0.166667.",
+        "n": 10,
+        "stderr": 0.05820352965413696,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.883333,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.416667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07376999999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "cost-414-az-id-is-not-a-zone-name",
+        "reward": 0.8285715,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.04587270368439892,
+        "trial_rewards": [
+          0.657143,
+          1.0,
+          0.771429,
+          0.885714,
+          0.885714,
+          0.771429,
+          0.657143,
+          1.0,
+          0.657143,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.1311
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-010-stuck-anarchysubjects",
+        "reward": 0.46699999999999997,
+        "feedback": "Partial success (reward 0.495). Metrics: completion=1.0, tool_calls=0.25, answer=0.6.",
+        "n": 10,
+        "stderr": 0.028000000000000004,
+        "trial_rewards": [
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.495,
+          0.215,
+          0.495,
+          0.495,
+          0.495
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.15450999999999998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-012-nodes-ready-threshold",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08539
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-047-downtime-similar-host-names",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.0704
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-072-alert-output-not-decoy-metrics",
+        "reward": 0.0,
+        "feedback": "Task not solved (reward 0.0). Metrics: completion=1.0, tool_calls=0.0, answer=0.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.0661
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-202-flapping-recovery-is-not-resolution",
+        "reward": 0.8533336,
+        "feedback": "Partial success (reward 0.867). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.04640133884830863,
+        "trial_rewards": [
+          0.466667,
+          0.866667,
+          0.866667,
+          0.866667,
+          1.0,
+          1.0,
+          0.866667,
+          0.866667,
+          0.866667,
+          0.866667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08671
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-203-perfdata-headroom-to-critical",
+        "reward": 0.64,
+        "feedback": "Partial success (reward 0.640). Metrics: completion=1.0, tool_calls=0.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64,
+          0.64
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08552000000000001
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-205-notifications-disabled-nobody-paged",
+        "reward": 0.6533332,
+        "feedback": "Partial success (reward 0.600). Metrics: completion=1.0, tool_calls=1.0, answer=0.5.",
+        "n": 10,
+        "stderr": 0.021773187724967304,
+        "trial_rewards": [
+          0.733333,
+          0.733333,
+          0.6,
+          0.733333,
+          0.6,
+          0.6,
+          0.6,
+          0.733333,
+          0.6,
+          0.6
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.19169
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-207-host-down-masks-service-alerts",
+        "reward": 0.8916668,
+        "feedback": "Partial success (reward 0.833). Metrics: completion=1.0, tool_calls=1.0, answer=0.777778.",
+        "n": 10,
+        "stderr": 0.012729478765448334,
+        "trial_rewards": [
+          0.916667,
+          0.916667,
+          0.916667,
+          0.916667,
+          0.833333,
+          0.916667,
+          0.833333,
+          0.916667,
+          0.916667,
+          0.833333
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07922
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-210-command-vars-override-script-default",
+        "reward": 0.9883333000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.011666699999999997,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.883333,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08849
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-219-host-down-pings-old-address",
+        "reward": 0.9771428999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.022857099999999998,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          0.771429,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.09135
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-221-crc-counter-never-resets",
+        "reward": 0.9383333,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.061666700000000005,
+        "trial_rewards": [
+          0.383333,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14566
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-224-dead-first-replica-eats-timeout",
+        "reward": 0.9808332999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.019166700000000005,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.808333,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.37370000000000003
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "icinga-225-monitor-outlived-its-namespace",
+        "reward": 0.7514284,
+        "feedback": "Partial success (reward 0.786). Metrics: completion=1.0, tool_calls=0.5, answer=0.857143.",
+        "n": 10,
+        "stderr": 0.024392790281009945,
+        "trial_rewards": [
+          0.785714,
+          0.557143,
+          0.785714,
+          0.785714,
+          0.785714,
+          0.785714,
+          0.785714,
+          0.785714,
+          0.671429,
+          0.785714
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.44654
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-001-ee-entrypoint-rca",
+        "reward": 0.72,
+        "feedback": "Partial success (reward 0.725). Metrics: completion=1.0, tool_calls=0.666667, answer=0.75.",
+        "n": 10,
+        "stderr": 0.041633319989322654,
+        "trial_rewards": [
+          0.625,
+          0.9,
+          0.725,
+          0.625,
+          0.625,
+          1.0,
+          0.725,
+          0.625,
+          0.625,
+          0.725
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07181000000000001
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-003-tojson-dict-literal-rca",
+        "reward": 0.621,
+        "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+        "n": 10,
+        "stderr": 0.04859012245302536,
+        "trial_rewards": [
+          0.28,
+          0.85,
+          0.57,
+          0.56,
+          0.7,
+          0.71,
+          0.56,
+          0.71,
+          0.56,
+          0.71
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.09564
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-006-version-tag-not-a-ref",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.050960000000000005
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-008-log-does-not-say",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.05375
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-020-ocpv-vm-inventory",
+        "reward": 0.79,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.10692676621563627,
+        "trial_rewards": [
+          0.3,
+          1.0,
+          1.0,
+          0.3,
+          1.0,
+          1.0,
+          1.0,
+          0.3,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.09529000000000001
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-021-babylon-missing-cluster-trap",
+        "reward": 0.9400000000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.06,
+        "trial_rewards": [
+          0.4,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.08792
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-022-job-on-no-controller",
+        "reward": 0.63,
+        "feedback": "Partial success (reward 0.700). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0285773803324704,
+        "trial_rewards": [
+          0.7,
+          0.7,
+          0.7,
+          0.525,
+          0.525,
+          0.525,
+          0.7,
+          0.525,
+          0.7,
+          0.7
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.04735
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-033-schema-change-not-the-oom",
+        "reward": 0.7857143,
+        "feedback": "Partial success (reward 0.464). Metrics: completion=1.0, tool_calls=1.0, answer=0.285714.",
+        "n": 10,
+        "stderr": 0.0696199156353107,
+        "trial_rewards": [
+          0.892857,
+          1.0,
+          0.571429,
+          0.892857,
+          0.678571,
+          0.892857,
+          0.464286,
+          1.0,
+          1.0,
+          0.464286
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.35276
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-037-ocpv-healthy-vm-degraded-machineset",
+        "reward": 0.8949999999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.07,
+        "trial_rewards": [
+          0.475,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.475,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.0974
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-038-anarchy-subject-guid-cross-cluster",
+        "reward": 0.9199999999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.08,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.2,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.14387
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-065-other-guid-job-not-the-failure",
+        "reward": 0.8320000000000001,
+        "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 10,
+        "stderr": 0.04572380853195266,
+        "trial_rewards": [
+          0.44,
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          1.0,
+          0.86,
+          0.86,
+          0.86,
+          0.86
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.1791
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-102-no-proxy-misses-api-domain",
+        "reward": 0.558,
+        "feedback": "Partial success (reward 0.570). Metrics: completion=1.0, tool_calls=0.5, answer=0.6.",
+        "n": 10,
+        "stderr": 0.053950594683160505,
+        "trial_rewards": [
+          0.57,
+          0.57,
+          0.43,
+          0.71,
+          0.43,
+          0.72,
+          0.29,
+          0.86,
+          0.43,
+          0.57
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.07368
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-103-olm-channel-not-in-catalog",
+        "reward": 0.8444444444444444,
+        "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 9,
+        "stderr": 0.015555555555555557,
+        "trial_rewards": [
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          0.72,
+          0.86,
+          0.86,
+          0.86,
+          0.86
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 9,
+          "cost_usd": 0.23340999999999998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-105-failed-revision-not-main",
+        "reward": 0.6944444444444444,
+        "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+        "n": 9,
+        "stderr": 0.015555555555555557,
+        "trial_rewards": [
+          0.71,
+          0.71,
+          0.57,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 9,
+          "cost_usd": 0.06998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-108-duplicate-guid-concurrent-run",
+        "reward": 0.7541665,
+        "feedback": "Partial success (reward 0.783). Metrics: completion=1.0, tool_calls=0.666667, answer=0.833333.",
+        "n": 8,
+        "stderr": 0.05286908622045319,
+        "trial_rewards": [
+          0.433333,
+          0.666667,
+          0.9,
+          0.9,
+          0.783333,
+          0.783333,
+          0.783333,
+          0.783333
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 2,
+          "valid_trials": 8,
+          "cost_usd": 0.1004
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-109-quoted-false-is-truthy",
+        "reward": 0.7666666666666666,
+        "feedback": "Partial success (reward 0.650). Metrics: completion=1.0, tool_calls=1.0, answer=0.5.",
+        "n": 9,
+        "stderr": 0.029166666666666657,
+        "trial_rewards": [
+          0.825,
+          0.825,
+          0.825,
+          0.65,
+          0.825,
+          0.825,
+          0.825,
+          0.65,
+          0.65
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 9,
+          "cost_usd": 0.71221
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-110-renamed-catalog-item",
+        "reward": 0.875,
+        "feedback": "Partial success (reward 0.875). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875,
+          0.875
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.06113
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-114-ee-nightly-float-not-a-commit",
+        "reward": 0.989583375,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 8,
+        "stderr": 0.010416624999999999,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          0.916667,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 2,
+          "valid_trials": 8,
+          "cost_usd": 0.06541
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-128-failed-action-census-by-kind",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.09858
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-129-destroyed-subject-hidden-without-guid",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.11300000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-131-deployment-first-resource-blind-spot",
+        "reward": 0.985,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.015000000000000001,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.85,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.18184
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-132-event-seat-math-standalone-workshop",
+        "reward": 0.71,
+        "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71,
+          0.71
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.1341
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-135-catalog-component-drift-fanout",
+        "reward": 0.8755555555555555,
+        "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+        "n": 9,
+        "stderr": 0.015555555555555557,
+        "trial_rewards": [
+          1.0,
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          0.86,
+          0.86
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 1,
+          "valid_trials": 9,
+          "cost_usd": 0.13221
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-138-project-prefix-not-a-dns-label",
+        "reward": 0.8716664,
+        "feedback": "Partial success (reward 0.883). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.011666600000000004,
+        "trial_rewards": [
+          0.883333,
+          0.766667,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.17024
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-141-nested-loop-item-collision",
+        "reward": 0.883333,
+        "feedback": "Partial success (reward 0.883). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333,
+          0.883333
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.15672999999999998
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-142-duplicate-yaml-key-last-wins",
+        "reward": 0.6766669999999999,
+        "feedback": "Partial success (reward 0.767). Metrics: completion=1.0, tool_calls=1.0, answer=0.666667.",
+        "n": 10,
+        "stderr": 0.060000000000000005,
+        "trial_rewards": [
+          0.766667,
+          0.316667,
+          0.766667,
+          0.766667,
+          0.766667,
+          0.316667,
+          0.766667,
+          0.766667,
+          0.766667,
+          0.766667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.2298
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-144-version-compared-as-string",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.24652
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-145-prod-stage-deploys-from-fork",
+        "reward": 0.3108336,
+        "feedback": "Partial success (reward 0.342). Metrics: completion=1.0, tool_calls=0.75, answer=0.166667.",
+        "n": 10,
+        "stderr": 0.02130217574239777,
+        "trial_rewards": [
+          0.15,
+          0.341667,
+          0.225,
+          0.341667,
+          0.341667,
+          0.341667,
+          0.341667,
+          0.341667,
+          0.341667,
+          0.341667
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.38334
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-149-alphabetised-workloads-before-operator",
+        "reward": 0.9916666666666667,
+        "feedback": "Partial success (reward 0.950). Metrics: completion=1.0, tool_calls=0.8, answer=1.0.",
+        "n": 6,
+        "stderr": 0.008333333333333342,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.95
+        ],
+        "raw": {
+          "n_trials": 10,
+          "errored": true,
+          "errored_trials": 4,
+          "valid_trials": 6,
+          "cost_usd": 0.10161
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-151-backup-schedule-is-commented-out",
+        "reward": 0.9400000000000001,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.06,
+        "trial_rewards": [
+          0.4,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.04832
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-157-drain-blocked-by-node-local-disk",
+        "reward": 0.8045458,
+        "feedback": "Partial success (reward 0.836). Metrics: completion=1.0, tool_calls=0.666667, answer=0.909091.",
+        "n": 10,
+        "stderr": 0.0318182,
+        "trial_rewards": [
+          0.836364,
+          0.836364,
+          0.836364,
+          0.518182,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364,
+          0.836364
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.11618999999999999
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-159-renewal-run-never-saw-host",
+        "reward": 0.7476192,
+        "feedback": "Partial success (reward 0.810). Metrics: completion=1.0, tool_calls=0.666667, answer=0.857143.",
+        "n": 10,
+        "stderr": 0.04364359744434966,
+        "trial_rewards": [
+          0.809524,
+          0.809524,
+          0.809524,
+          0.595238,
+          0.809524,
+          0.809524,
+          0.809524,
+          0.404762,
+          0.809524,
+          0.809524
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.20817000000000002
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-160-event-attendee-codes-any-cluster",
+        "reward": 0.9199999999999999,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.08,
+        "trial_rewards": [
+          1.0,
+          0.2,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.11089
+        },
+        "metrics": []
+      },
+      {
+        "task_id": "platform-164-workshop-item-replaced-by-v2",
+        "reward": 1.0,
+        "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+        "n": 10,
+        "stderr": 0.0,
+        "trial_rewards": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "raw": {
+          "n_trials": 10,
+          "valid_trials": 10,
+          "cost_usd": 0.16158999999999998
+        },
+        "metrics": []
+      }
+    ],
+    "cost_usd": 94.19479999999996,
+    "tokens": 28472670,
+    "seconds": 14261.0,
+    "cost_source": {},
+    "n_tasks": 66,
+    "n_scored": 66
+  },
+  "baseline_id": "seed",
+  "test_delta": 0.036912,
+  "best": {
+    "val": {
+      "status": "skipped: finalize crashed (LSF job 1702040, exit 255) before the train/val bookend ran; not fabricated"
+    },
+    "train": {
+      "status": "skipped: finalize crashed (LSF job 1702040, exit 255) before the train/val bookend ran; not fabricated"
+    },
+    "test": {
+      "split": "test",
+      "reward": 0.8495603626262626,
+      "stderr": 0.0255070011856954,
+      "pass_k": {
+        "1": 0.5293350168350168,
+        "2": 0.48223905723905724
+      },
+      "pass_at_k": {
+        "1": 0.5293350168350168,
+        "2": 0.5764309764309764
+      },
+      "per_task": [
+        {
+          "task_id": "cloud-025-gcp-project-status",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13140000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-026-gpu-abuse-triage",
+          "reward": 0.9550000000000001,
+          "feedback": "Partial success (reward 0.925). Metrics: completion=1.0, tool_calls=0.75, answer=1.0.",
+          "n": 10,
+          "stderr": 0.012247448713915884,
+          "trial_rewards": [
+            1.0,
+            0.925,
+            1.0,
+            1.0,
+            0.925,
+            0.925,
+            0.925,
+            1.0,
+            0.925,
+            0.925
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.06734
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-027-azure-pool-database-trap",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.25486
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-301-gcp-delete-counter-not-a-state",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.09008000000000001
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-302-cloudtrail-local-time-window",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13677
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-308-azure-leftover-tag-on-free-sub",
+          "reward": 0.116667,
+          "feedback": "Partial success (reward 0.117). Metrics: completion=1.0, tool_calls=0.0, answer=0.166667.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.53069
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-313-azure-no-single-pool-fits",
+          "reward": 0.8800000000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.08,
+          "trial_rewards": [
+            0.4,
+            0.4,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.04716
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-316-cleaned-sandbox-live-iam-keys",
+          "reward": 0.36,
+          "feedback": "Partial success (reward 0.360). Metrics: completion=1.0, tool_calls=0.5, answer=0.3.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.36,
+            0.36,
+            0.36,
+            0.36,
+            0.36,
+            0.36,
+            0.36,
+            0.36,
+            0.36,
+            0.36
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.31715
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-319-billing-lab-unknown-to-babylon",
+          "reward": 0.5875,
+          "feedback": "Partial success (reward 0.588). Metrics: completion=1.0, tool_calls=0.5, answer=0.625.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.40095000000000003
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-029-no-cost-rows-for-guid",
+          "reward": 0.8,
+          "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.12771
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-050-partial-account-coverage",
+          "reward": 0.825,
+          "feedback": "Partial success (reward 0.825). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13304
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-053-capacity-dropped-reservations",
+          "reward": 0.8879999999999999,
+          "feedback": "Partial success (reward 0.840). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.03414999593297519,
+          "trial_rewards": [
+            0.84,
+            1.0,
+            0.84,
+            1.0,
+            0.68,
+            1.0,
+            0.84,
+            0.84,
+            1.0,
+            0.84
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.26494999999999996
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-064-reservation-release-active-job-check",
+          "reward": 0.6759999999999999,
+          "feedback": "Partial success (reward 0.620). Metrics: completion=1.0, tool_calls=0.666667, answer=0.6.",
+          "n": 10,
+          "stderr": 0.02286190426597633,
+          "trial_rewards": [
+            0.62,
+            0.76,
+            0.76,
+            0.76,
+            0.62,
+            0.76,
+            0.62,
+            0.62,
+            0.62,
+            0.62
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.22554
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-401-monitor-drilldown-wrong-month",
+          "reward": 0.94375,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.05625000000000001,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.4375,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14149
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-406-gcp-daily-rows-is-not-day-coverage",
+          "reward": 0.748,
+          "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.018666666666666668,
+          "trial_rewards": [
+            0.86,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.86
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.21073
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-409-top-spender-chain-to-instance-type",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.33598999999999996
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-411-org-week-linked-account-league",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.1331
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-413-gcp-unknown-project-bucket",
+          "reward": 0.9883333000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.011666699999999997,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            0.883333,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.12732
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-414-az-id-is-not-a-zone-name",
+          "reward": 0.7828575000000001,
+          "feedback": "Partial success (reward 0.771). Metrics: completion=1.0, tool_calls=1.0, answer=0.714286.",
+          "n": 10,
+          "stderr": 0.011428499999999998,
+          "trial_rewards": [
+            0.885714,
+            0.771429,
+            0.771429,
+            0.771429,
+            0.771429,
+            0.771429,
+            0.771429,
+            0.771429,
+            0.771429,
+            0.771429
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.19693
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-010-stuck-anarchysubjects",
+          "reward": 0.509,
+          "feedback": "Partial success (reward 0.495). Metrics: completion=1.0, tool_calls=0.25, answer=0.6.",
+          "n": 10,
+          "stderr": 0.014000000000000002,
+          "trial_rewards": [
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.635,
+            0.495,
+            0.495
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.30657
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-012-nodes-ready-threshold",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.21162
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-047-downtime-similar-host-names",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14003
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-072-alert-output-not-decoy-metrics",
+          "reward": 0.0,
+          "feedback": "Task not solved (reward 0.0). Metrics: completion=1.0, tool_calls=0.0, answer=0.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.41967999999999994
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-202-flapping-recovery-is-not-resolution",
+          "reward": 0.9466667,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.04073399890346856,
+          "trial_rewards": [
+            1.0,
+            0.866667,
+            1.0,
+            0.6,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.15395
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-203-perfdata-headroom-to-critical",
+          "reward": 0.64,
+          "feedback": "Partial success (reward 0.640). Metrics: completion=1.0, tool_calls=0.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14289000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-205-notifications-disabled-nobody-paged",
+          "reward": 0.8266669,
+          "feedback": "Partial success (reward 0.867). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.028458383737368732,
+          "trial_rewards": [
+            0.733333,
+            0.866667,
+            0.6,
+            0.866667,
+            0.866667,
+            0.866667,
+            0.866667,
+            0.866667,
+            0.866667,
+            0.866667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.15993
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-207-host-down-masks-service-alerts",
+          "reward": 0.8416669000000001,
+          "feedback": "Partial success (reward 0.917). Metrics: completion=1.0, tool_calls=1.0, answer=0.888889.",
+          "n": 10,
+          "stderr": 0.04383263835531439,
+          "trial_rewards": [
+            0.5,
+            0.916667,
+            0.75,
+            0.75,
+            0.916667,
+            0.916667,
+            0.916667,
+            0.916667,
+            0.916667,
+            0.916667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14984000000000003
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-210-command-vars-override-script-default",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.15901
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-219-host-down-pings-old-address",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14393
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-221-crc-counter-never-resets",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.23553000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-224-dead-first-replica-eats-timeout",
+          "reward": 0.9883333000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.011666699999999997,
+          "trial_rewards": [
+            0.883333,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.31632
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-225-monitor-outlived-its-namespace",
+          "reward": 0.6485716,
+          "feedback": "Partial success (reward 0.786). Metrics: completion=1.0, tool_calls=0.5, answer=0.857143.",
+          "n": 10,
+          "stderr": 0.03321064987794661,
+          "trial_rewards": [
+            0.671429,
+            0.671429,
+            0.671429,
+            0.442857,
+            0.557143,
+            0.557143,
+            0.671429,
+            0.785714,
+            0.671429,
+            0.785714
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.51879
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-001-ee-entrypoint-rca",
+          "reward": 0.8724999999999999,
+          "feedback": "Partial success (reward 0.275). Metrics: completion=1.0, tool_calls=0.333333, answer=0.25.",
+          "n": 10,
+          "stderr": 0.07559486314117735,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.725,
+            1.0,
+            0.725,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.275
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07994
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-003-tojson-dict-literal-rca",
+          "reward": 0.6124999999999999,
+          "feedback": "Partial success (reward 0.700). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+          "n": 8,
+          "stderr": 0.05878988008152423,
+          "trial_rewards": [
+            0.7,
+            0.7,
+            0.28,
+            0.42,
+            0.7,
+            0.7,
+            0.7,
+            0.7
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 2,
+            "valid_trials": 8,
+            "cost_usd": 0.08901
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-006-version-tag-not-a-ref",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.055510000000000004
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-008-log-does-not-say",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.05693
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-020-ocpv-vm-inventory",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.16584000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-021-babylon-missing-cluster-trap",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13466
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-022-job-on-no-controller",
+          "reward": 0.7,
+          "feedback": "Partial success (reward 0.700). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7,
+            0.7
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.05447
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-033-schema-change-not-the-oom",
+          "reward": 0.9142856,
+          "feedback": "Partial success (reward 0.893). Metrics: completion=1.0, tool_calls=1.0, answer=0.857143.",
+          "n": 10,
+          "stderr": 0.014285733333333333,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.892857,
+            0.892857,
+            0.892857,
+            0.892857,
+            0.892857,
+            0.892857,
+            0.892857,
+            0.892857
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.29903
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-037-ocpv-healthy-vm-degraded-machineset",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.22105999999999998
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-038-anarchy-subject-guid-cross-cluster",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.20615
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-065-other-guid-job-not-the-failure",
+          "reward": 0.93,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.037623869492059904,
+          "trial_rewards": [
+            0.86,
+            0.72,
+            1.0,
+            1.0,
+            1.0,
+            0.72,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13808
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-102-no-proxy-misses-api-domain",
+          "reward": 0.7012499999999999,
+          "feedback": "Partial success (reward 0.290). Metrics: completion=1.0, tool_calls=0.5, answer=0.2.",
+          "n": 8,
+          "stderr": 0.0682023643285187,
+          "trial_rewards": [
+            1.0,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.72,
+            0.29
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 2,
+            "valid_trials": 8,
+            "cost_usd": 0.05858
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-103-olm-channel-not-in-catalog",
+          "reward": 0.884,
+          "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+          "n": 10,
+          "stderr": 0.04735680169380811,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.71,
+            1.0,
+            0.71,
+            1.0,
+            0.71,
+            0.71
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.45854999999999996
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-105-failed-revision-not-main",
+          "reward": 0.696,
+          "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+          "n": 10,
+          "stderr": 0.014000000000000002,
+          "trial_rewards": [
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.57,
+            0.71,
+            0.71,
+            0.71,
+            0.71
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07844999999999999
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-108-duplicate-guid-concurrent-run",
+          "reward": 0.7949999,
+          "feedback": "Partial success (reward 0.783). Metrics: completion=1.0, tool_calls=0.666667, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.027222195238220188,
+          "trial_rewards": [
+            0.783333,
+            0.666667,
+            0.783333,
+            0.783333,
+            0.9,
+            0.9,
+            0.783333,
+            0.666667,
+            0.9,
+            0.783333
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13271
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-109-quoted-false-is-truthy",
+          "reward": 0.72,
+          "feedback": "Partial success (reward 0.650). Metrics: completion=1.0, tool_calls=1.0, answer=0.5.",
+          "n": 10,
+          "stderr": 0.04666666666666666,
+          "trial_rewards": [
+            0.65,
+            0.65,
+            1.0,
+            0.65,
+            0.65,
+            1.0,
+            0.65,
+            0.65,
+            0.65,
+            0.65
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.5399200000000001
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-110-renamed-catalog-item",
+          "reward": 0.8875,
+          "feedback": "Partial success (reward 0.875). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.0125,
+          "trial_rewards": [
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            1.0,
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.05845
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-114-ee-nightly-float-not-a-commit",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 7,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 3,
+            "valid_trials": 7,
+            "cost_usd": 0.07059
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-128-failed-action-census-by-kind",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.2313
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-129-destroyed-subject-hidden-without-guid",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13943
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-131-deployment-first-resource-blind-spot",
+          "reward": 0.5900000000000001,
+          "feedback": "Partial success (reward 0.560). Metrics: completion=1.0, tool_calls=0.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.019999999999999987,
+          "trial_rewards": [
+            0.56,
+            0.56,
+            0.71,
+            0.56,
+            0.56,
+            0.56,
+            0.56,
+            0.56,
+            0.71,
+            0.56
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.24025
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-132-event-seat-math-standalone-workshop",
+          "reward": 0.724,
+          "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+          "n": 10,
+          "stderr": 0.014000000000000002,
+          "trial_rewards": [
+            0.85,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.21568
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-135-catalog-component-drift-fanout",
+          "reward": 0.747,
+          "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.05887934933215361,
+          "trial_rewards": [
+            1.0,
+            0.86,
+            0.43,
+            0.86,
+            0.58,
+            0.58,
+            0.86,
+            0.86,
+            0.58,
+            0.86
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.40496
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-138-project-prefix-not-a-dns-label",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.23489
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-141-nested-loop-item-collision",
+          "reward": 0.9883333000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.011666699999999997,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.883333,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.24782
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-142-duplicate-yaml-key-last-wins",
+          "reward": 0.8499999,
+          "feedback": "Partial success (reward 0.900). Metrics: completion=1.0, tool_calls=0.666667, answer=1.0.",
+          "n": 10,
+          "stderr": 0.038729843025028306,
+          "trial_rewards": [
+            0.55,
+            0.9,
+            0.9,
+            0.783333,
+            0.783333,
+            0.883333,
+            1.0,
+            0.9,
+            0.9,
+            0.9
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.41502
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-144-version-compared-as-string",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.36673999999999995
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-145-prod-stage-deploys-from-fork",
+          "reward": 0.8833331111111111,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 9,
+          "stderr": 0.033678765702773984,
+          "trial_rewards": [
+            0.883333,
+            0.883333,
+            0.883333,
+            0.65,
+            1.0,
+            0.883333,
+            0.883333,
+            0.883333,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 1,
+            "valid_trials": 9,
+            "cost_usd": 0.35398
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-149-alphabetised-workloads-before-operator",
+          "reward": 0.9880952222222221,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 9,
+          "stderr": 0.011904777777777776,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.892857,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 1,
+            "valid_trials": 9,
+            "cost_usd": 0.08042
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-151-backup-schedule-is-commented-out",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.05456
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-157-drain-blocked-by-node-local-disk",
+          "reward": 0.836364,
+          "feedback": "Partial success (reward 0.836). Metrics: completion=1.0, tool_calls=0.666667, answer=0.909091.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.21977000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-159-renewal-run-never-saw-host",
+          "reward": 0.7988097,
+          "feedback": "Partial success (reward 0.810). Metrics: completion=1.0, tool_calls=0.666667, answer=0.857143.",
+          "n": 10,
+          "stderr": 0.010714299999999998,
+          "trial_rewards": [
+            0.809524,
+            0.809524,
+            0.809524,
+            0.809524,
+            0.702381,
+            0.809524,
+            0.809524,
+            0.809524,
+            0.809524,
+            0.809524
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.3578
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-160-event-attendee-codes-any-cluster",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.1348
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-164-workshop-item-replaced-by-v2",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.27488999999999997
+          },
+          "metrics": []
+        }
+      ],
+      "cost_usd": 138.01529999999997,
+      "tokens": 42924800,
+      "seconds": 13360.16,
+      "cost_source": {},
+      "n_tasks": 66,
+      "n_scored": 66
+    }
+  },
+  "seed": {
+    "val": {
+      "status": "skipped: finalize crashed (LSF job 1702040, exit 255) before the train/val bookend ran; not fabricated"
+    },
+    "train": {
+      "status": "skipped: finalize crashed (LSF job 1702040, exit 255) before the train/val bookend ran; not fabricated"
+    },
+    "test": {
+      "split": "test",
+      "reward": 0.8126484841329966,
+      "stderr": 0.02518271438442886,
+      "pass_k": {
+        "1": 0.4290824915824916,
+        "2": 0.3692760942760943
+      },
+      "pass_at_k": {
+        "1": 0.4290824915824916,
+        "2": 0.4888888888888889
+      },
+      "per_task": [
+        {
+          "task_id": "cloud-025-gcp-project-status",
+          "reward": 0.9466667,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0533333,
+          "trial_rewards": [
+            1.0,
+            0.466667,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07111999999999999
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-026-gpu-abuse-triage",
+          "reward": 0.9133333,
+          "feedback": "Partial success (reward 0.925). Metrics: completion=1.0, tool_calls=0.75, answer=1.0.",
+          "n": 10,
+          "stderr": 0.011666700000000007,
+          "trial_rewards": [
+            0.925,
+            0.925,
+            0.925,
+            0.808333,
+            0.925,
+            0.925,
+            0.925,
+            0.925,
+            0.925,
+            0.925
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.06379
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-027-azure-pool-database-trap",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.10699999999999998
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-301-gcp-delete-counter-not-a-state",
+          "reward": 0.9466667,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0533333,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.466667,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07731
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-302-cloudtrail-local-time-window",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.20034999999999997
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-308-azure-leftover-tag-on-free-sub",
+          "reward": 0.175,
+          "feedback": "Partial success (reward 0.117). Metrics: completion=1.0, tool_calls=0.0, answer=0.166667.",
+          "n": 10,
+          "stderr": 0.019444333333333334,
+          "trial_rewards": [
+            0.233333,
+            0.233333,
+            0.233333,
+            0.233333,
+            0.116667,
+            0.233333,
+            0.116667,
+            0.116667,
+            0.116667,
+            0.116667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.15119
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-313-azure-no-single-pool-fits",
+          "reward": 0.8,
+          "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+          "n": 10,
+          "stderr": 0.07888106377466154,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.6,
+            1.0,
+            0.4,
+            1.0,
+            0.4,
+            1.0,
+            0.8,
+            0.8
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.04403
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-316-cleaned-sandbox-live-iam-keys",
+          "reward": 0.48600000000000004,
+          "feedback": "Partial success (reward 0.500). Metrics: completion=1.0, tool_calls=0.5, answer=0.5.",
+          "n": 10,
+          "stderr": 0.014000000000000002,
+          "trial_rewards": [
+            0.5,
+            0.36,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+            0.5
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.1391
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cloud-319-billing-lab-unknown-to-babylon",
+          "reward": 0.5787500000000001,
+          "feedback": "Partial success (reward 0.588). Metrics: completion=1.0, tool_calls=0.5, answer=0.625.",
+          "n": 10,
+          "stderr": 0.008750000000000003,
+          "trial_rewards": [
+            0.5,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875,
+            0.5875
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.35009999999999997
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-029-no-cost-rows-for-guid",
+          "reward": 0.8,
+          "feedback": "Partial success (reward 0.800). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8,
+            0.8
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.0739
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-050-partial-account-coverage",
+          "reward": 0.825,
+          "feedback": "Partial success (reward 0.825). Metrics: completion=1.0, tool_calls=1.0, answer=0.75.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825,
+            0.825
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07026
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-053-capacity-dropped-reservations",
+          "reward": 0.9039999999999999,
+          "feedback": "Partial success (reward 0.840). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.026127890589687237,
+          "trial_rewards": [
+            1.0,
+            0.84,
+            0.84,
+            1.0,
+            1.0,
+            0.84,
+            0.84,
+            1.0,
+            0.84,
+            0.84
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.13277
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-064-reservation-release-active-job-check",
+          "reward": 0.746,
+          "feedback": "Partial success (reward 0.760). Metrics: completion=1.0, tool_calls=0.666667, answer=0.8.",
+          "n": 10,
+          "stderr": 0.014000000000000002,
+          "trial_rewards": [
+            0.76,
+            0.76,
+            0.76,
+            0.76,
+            0.62,
+            0.76,
+            0.76,
+            0.76,
+            0.76,
+            0.76
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.12353
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-401-monitor-drilldown-wrong-month",
+          "reward": 0.775,
+          "feedback": "Partial success (reward 0.438). Metrics: completion=1.0, tool_calls=1.0, answer=0.25.",
+          "n": 10,
+          "stderr": 0.09185586535436918,
+          "trial_rewards": [
+            1.0,
+            0.4375,
+            0.4375,
+            1.0,
+            0.4375,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.4375
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08755
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-406-gcp-daily-rows-is-not-day-coverage",
+          "reward": 0.678,
+          "feedback": "Partial success (reward 0.720). Metrics: completion=1.0, tool_calls=1.0, answer=0.6.",
+          "n": 10,
+          "stderr": 0.06616141876753652,
+          "trial_rewards": [
+            0.44,
+            0.44,
+            0.44,
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            0.44,
+            0.86,
+            0.72
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.09518
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-409-top-spender-chain-to-instance-type",
+          "reward": 0.9075,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.09250000000000001,
+          "trial_rewards": [
+            0.075,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.19396
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-411-org-week-linked-account-league",
+          "reward": 0.9199999999999999,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.08,
+          "trial_rewards": [
+            0.2,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08299
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-413-gcp-unknown-project-bucket",
+          "reward": 0.93,
+          "feedback": "Partial success (reward 0.417). Metrics: completion=1.0, tool_calls=1.0, answer=0.166667.",
+          "n": 10,
+          "stderr": 0.05820352965413696,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.883333,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.416667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07376999999999999
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "cost-414-az-id-is-not-a-zone-name",
+          "reward": 0.8285715,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.04587270368439892,
+          "trial_rewards": [
+            0.657143,
+            1.0,
+            0.771429,
+            0.885714,
+            0.885714,
+            0.771429,
+            0.657143,
+            1.0,
+            0.657143,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.1311
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-010-stuck-anarchysubjects",
+          "reward": 0.46699999999999997,
+          "feedback": "Partial success (reward 0.495). Metrics: completion=1.0, tool_calls=0.25, answer=0.6.",
+          "n": 10,
+          "stderr": 0.028000000000000004,
+          "trial_rewards": [
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.495,
+            0.215,
+            0.495,
+            0.495,
+            0.495
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.15450999999999998
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-012-nodes-ready-threshold",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08539
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-047-downtime-similar-host-names",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.0704
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-072-alert-output-not-decoy-metrics",
+          "reward": 0.0,
+          "feedback": "Task not solved (reward 0.0). Metrics: completion=1.0, tool_calls=0.0, answer=0.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.0661
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-202-flapping-recovery-is-not-resolution",
+          "reward": 0.8533336,
+          "feedback": "Partial success (reward 0.867). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.04640133884830863,
+          "trial_rewards": [
+            0.466667,
+            0.866667,
+            0.866667,
+            0.866667,
+            1.0,
+            1.0,
+            0.866667,
+            0.866667,
+            0.866667,
+            0.866667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08671
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-203-perfdata-headroom-to-critical",
+          "reward": 0.64,
+          "feedback": "Partial success (reward 0.640). Metrics: completion=1.0, tool_calls=0.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64,
+            0.64
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08552000000000001
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-205-notifications-disabled-nobody-paged",
+          "reward": 0.6533332,
+          "feedback": "Partial success (reward 0.600). Metrics: completion=1.0, tool_calls=1.0, answer=0.5.",
+          "n": 10,
+          "stderr": 0.021773187724967304,
+          "trial_rewards": [
+            0.733333,
+            0.733333,
+            0.6,
+            0.733333,
+            0.6,
+            0.6,
+            0.6,
+            0.733333,
+            0.6,
+            0.6
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.19169
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-207-host-down-masks-service-alerts",
+          "reward": 0.8916668,
+          "feedback": "Partial success (reward 0.833). Metrics: completion=1.0, tool_calls=1.0, answer=0.777778.",
+          "n": 10,
+          "stderr": 0.012729478765448334,
+          "trial_rewards": [
+            0.916667,
+            0.916667,
+            0.916667,
+            0.916667,
+            0.833333,
+            0.916667,
+            0.833333,
+            0.916667,
+            0.916667,
+            0.833333
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07922
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-210-command-vars-override-script-default",
+          "reward": 0.9883333000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.011666699999999997,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.883333,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08849
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-219-host-down-pings-old-address",
+          "reward": 0.9771428999999999,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.022857099999999998,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            0.771429,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.09135
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-221-crc-counter-never-resets",
+          "reward": 0.9383333,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.061666700000000005,
+          "trial_rewards": [
+            0.383333,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14566
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-224-dead-first-replica-eats-timeout",
+          "reward": 0.9808332999999999,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.019166700000000005,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.808333,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.37370000000000003
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "icinga-225-monitor-outlived-its-namespace",
+          "reward": 0.7514284,
+          "feedback": "Partial success (reward 0.786). Metrics: completion=1.0, tool_calls=0.5, answer=0.857143.",
+          "n": 10,
+          "stderr": 0.024392790281009945,
+          "trial_rewards": [
+            0.785714,
+            0.557143,
+            0.785714,
+            0.785714,
+            0.785714,
+            0.785714,
+            0.785714,
+            0.785714,
+            0.671429,
+            0.785714
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.44654
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-001-ee-entrypoint-rca",
+          "reward": 0.72,
+          "feedback": "Partial success (reward 0.725). Metrics: completion=1.0, tool_calls=0.666667, answer=0.75.",
+          "n": 10,
+          "stderr": 0.041633319989322654,
+          "trial_rewards": [
+            0.625,
+            0.9,
+            0.725,
+            0.625,
+            0.625,
+            1.0,
+            0.725,
+            0.625,
+            0.625,
+            0.725
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07181000000000001
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-003-tojson-dict-literal-rca",
+          "reward": 0.621,
+          "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+          "n": 10,
+          "stderr": 0.04859012245302536,
+          "trial_rewards": [
+            0.28,
+            0.85,
+            0.57,
+            0.56,
+            0.7,
+            0.71,
+            0.56,
+            0.71,
+            0.56,
+            0.71
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.09564
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-006-version-tag-not-a-ref",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.050960000000000005
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-008-log-does-not-say",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.05375
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-020-ocpv-vm-inventory",
+          "reward": 0.79,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.10692676621563627,
+          "trial_rewards": [
+            0.3,
+            1.0,
+            1.0,
+            0.3,
+            1.0,
+            1.0,
+            1.0,
+            0.3,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.09529000000000001
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-021-babylon-missing-cluster-trap",
+          "reward": 0.9400000000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.06,
+          "trial_rewards": [
+            0.4,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.08792
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-022-job-on-no-controller",
+          "reward": 0.63,
+          "feedback": "Partial success (reward 0.700). Metrics: completion=1.0, tool_calls=0.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0285773803324704,
+          "trial_rewards": [
+            0.7,
+            0.7,
+            0.7,
+            0.525,
+            0.525,
+            0.525,
+            0.7,
+            0.525,
+            0.7,
+            0.7
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.04735
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-033-schema-change-not-the-oom",
+          "reward": 0.7857143,
+          "feedback": "Partial success (reward 0.464). Metrics: completion=1.0, tool_calls=1.0, answer=0.285714.",
+          "n": 10,
+          "stderr": 0.0696199156353107,
+          "trial_rewards": [
+            0.892857,
+            1.0,
+            0.571429,
+            0.892857,
+            0.678571,
+            0.892857,
+            0.464286,
+            1.0,
+            1.0,
+            0.464286
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.35276
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-037-ocpv-healthy-vm-degraded-machineset",
+          "reward": 0.8949999999999999,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.07,
+          "trial_rewards": [
+            0.475,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.475,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.0974
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-038-anarchy-subject-guid-cross-cluster",
+          "reward": 0.9199999999999999,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.08,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.2,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.14387
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-065-other-guid-job-not-the-failure",
+          "reward": 0.8320000000000001,
+          "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 10,
+          "stderr": 0.04572380853195266,
+          "trial_rewards": [
+            0.44,
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            1.0,
+            0.86,
+            0.86,
+            0.86,
+            0.86
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.1791
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-102-no-proxy-misses-api-domain",
+          "reward": 0.558,
+          "feedback": "Partial success (reward 0.570). Metrics: completion=1.0, tool_calls=0.5, answer=0.6.",
+          "n": 10,
+          "stderr": 0.053950594683160505,
+          "trial_rewards": [
+            0.57,
+            0.57,
+            0.43,
+            0.71,
+            0.43,
+            0.72,
+            0.29,
+            0.86,
+            0.43,
+            0.57
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.07368
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-103-olm-channel-not-in-catalog",
+          "reward": 0.8444444444444444,
+          "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 9,
+          "stderr": 0.015555555555555557,
+          "trial_rewards": [
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            0.72,
+            0.86,
+            0.86,
+            0.86,
+            0.86
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 1,
+            "valid_trials": 9,
+            "cost_usd": 0.23340999999999998
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-105-failed-revision-not-main",
+          "reward": 0.6944444444444444,
+          "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+          "n": 9,
+          "stderr": 0.015555555555555557,
+          "trial_rewards": [
+            0.71,
+            0.71,
+            0.57,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 1,
+            "valid_trials": 9,
+            "cost_usd": 0.06998
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-108-duplicate-guid-concurrent-run",
+          "reward": 0.7541665,
+          "feedback": "Partial success (reward 0.783). Metrics: completion=1.0, tool_calls=0.666667, answer=0.833333.",
+          "n": 8,
+          "stderr": 0.05286908622045319,
+          "trial_rewards": [
+            0.433333,
+            0.666667,
+            0.9,
+            0.9,
+            0.783333,
+            0.783333,
+            0.783333,
+            0.783333
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 2,
+            "valid_trials": 8,
+            "cost_usd": 0.1004
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-109-quoted-false-is-truthy",
+          "reward": 0.7666666666666666,
+          "feedback": "Partial success (reward 0.650). Metrics: completion=1.0, tool_calls=1.0, answer=0.5.",
+          "n": 9,
+          "stderr": 0.029166666666666657,
+          "trial_rewards": [
+            0.825,
+            0.825,
+            0.825,
+            0.65,
+            0.825,
+            0.825,
+            0.825,
+            0.65,
+            0.65
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 1,
+            "valid_trials": 9,
+            "cost_usd": 0.71221
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-110-renamed-catalog-item",
+          "reward": 0.875,
+          "feedback": "Partial success (reward 0.875). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875,
+            0.875
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.06113
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-114-ee-nightly-float-not-a-commit",
+          "reward": 0.989583375,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 8,
+          "stderr": 0.010416624999999999,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            0.916667,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 2,
+            "valid_trials": 8,
+            "cost_usd": 0.06541
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-128-failed-action-census-by-kind",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.09858
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-129-destroyed-subject-hidden-without-guid",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.11300000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-131-deployment-first-resource-blind-spot",
+          "reward": 0.985,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.015000000000000001,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.85,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.18184
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-132-event-seat-math-standalone-workshop",
+          "reward": 0.71,
+          "feedback": "Partial success (reward 0.710). Metrics: completion=1.0, tool_calls=0.5, answer=0.8.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71,
+            0.71
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.1341
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-135-catalog-component-drift-fanout",
+          "reward": 0.8755555555555555,
+          "feedback": "Partial success (reward 0.860). Metrics: completion=1.0, tool_calls=1.0, answer=0.8.",
+          "n": 9,
+          "stderr": 0.015555555555555557,
+          "trial_rewards": [
+            1.0,
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            0.86,
+            0.86
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 1,
+            "valid_trials": 9,
+            "cost_usd": 0.13221
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-138-project-prefix-not-a-dns-label",
+          "reward": 0.8716664,
+          "feedback": "Partial success (reward 0.883). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.011666600000000004,
+          "trial_rewards": [
+            0.883333,
+            0.766667,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.17024
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-141-nested-loop-item-collision",
+          "reward": 0.883333,
+          "feedback": "Partial success (reward 0.883). Metrics: completion=1.0, tool_calls=1.0, answer=0.833333.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333,
+            0.883333
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.15672999999999998
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-142-duplicate-yaml-key-last-wins",
+          "reward": 0.6766669999999999,
+          "feedback": "Partial success (reward 0.767). Metrics: completion=1.0, tool_calls=1.0, answer=0.666667.",
+          "n": 10,
+          "stderr": 0.060000000000000005,
+          "trial_rewards": [
+            0.766667,
+            0.316667,
+            0.766667,
+            0.766667,
+            0.766667,
+            0.316667,
+            0.766667,
+            0.766667,
+            0.766667,
+            0.766667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.2298
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-144-version-compared-as-string",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.24652
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-145-prod-stage-deploys-from-fork",
+          "reward": 0.3108336,
+          "feedback": "Partial success (reward 0.342). Metrics: completion=1.0, tool_calls=0.75, answer=0.166667.",
+          "n": 10,
+          "stderr": 0.02130217574239777,
+          "trial_rewards": [
+            0.15,
+            0.341667,
+            0.225,
+            0.341667,
+            0.341667,
+            0.341667,
+            0.341667,
+            0.341667,
+            0.341667,
+            0.341667
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.38334
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-149-alphabetised-workloads-before-operator",
+          "reward": 0.9916666666666667,
+          "feedback": "Partial success (reward 0.950). Metrics: completion=1.0, tool_calls=0.8, answer=1.0.",
+          "n": 6,
+          "stderr": 0.008333333333333342,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.95
+          ],
+          "raw": {
+            "n_trials": 10,
+            "errored": true,
+            "errored_trials": 4,
+            "valid_trials": 6,
+            "cost_usd": 0.10161
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-151-backup-schedule-is-commented-out",
+          "reward": 0.9400000000000001,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.06,
+          "trial_rewards": [
+            0.4,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.04832
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-157-drain-blocked-by-node-local-disk",
+          "reward": 0.8045458,
+          "feedback": "Partial success (reward 0.836). Metrics: completion=1.0, tool_calls=0.666667, answer=0.909091.",
+          "n": 10,
+          "stderr": 0.0318182,
+          "trial_rewards": [
+            0.836364,
+            0.836364,
+            0.836364,
+            0.518182,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364,
+            0.836364
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.11618999999999999
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-159-renewal-run-never-saw-host",
+          "reward": 0.7476192,
+          "feedback": "Partial success (reward 0.810). Metrics: completion=1.0, tool_calls=0.666667, answer=0.857143.",
+          "n": 10,
+          "stderr": 0.04364359744434966,
+          "trial_rewards": [
+            0.809524,
+            0.809524,
+            0.809524,
+            0.595238,
+            0.809524,
+            0.809524,
+            0.809524,
+            0.404762,
+            0.809524,
+            0.809524
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.20817000000000002
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-160-event-attendee-codes-any-cluster",
+          "reward": 0.9199999999999999,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.08,
+          "trial_rewards": [
+            1.0,
+            0.2,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.11089
+          },
+          "metrics": []
+        },
+        {
+          "task_id": "platform-164-workshop-item-replaced-by-v2",
+          "reward": 1.0,
+          "feedback": "Task fully solved (reward 1.0). Metrics: completion=1.0, tool_calls=1.0, answer=1.0.",
+          "n": 10,
+          "stderr": 0.0,
+          "trial_rewards": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "raw": {
+            "n_trials": 10,
+            "valid_trials": 10,
+            "cost_usd": 0.16158999999999998
+          },
+          "metrics": []
+        }
+      ],
+      "cost_usd": 94.19479999999996,
+      "tokens": 28472670,
+      "seconds": 14261.0,
+      "cost_source": {},
+      "n_tasks": 66,
+      "n_scored": 66
+    }
+  },
+  "train_equals_val": false,
+  "reconstruction_note": "This final.json was reconstructed from already-completed test rollouts after the finalize driver (LSF job 1702040) crashed (exit 255) during the post-test train/val bookend step \u2014 NOT during test scoring. Both test evaluations (cand_0005 as 'FINAL', seed as 'FINAL_seed') had already fully completed and were logged in events.jsonl before the crash. No test rollout was re-run or re-scored; this script only re-reads the 1320 rollout files already on disk via split_result_from_rollouts(), the same function cap-evolve's own resume path uses. The train/val bookend was never run and is marked skipped above, not fabricated."
+}

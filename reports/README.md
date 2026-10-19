@@ -6,14 +6,14 @@ One file per task answering: **what did we change, what worked, what didn't, and
 | level | what | where |
 |---|---|---|
 | 1 | headline numbers for the whole benchmark, next to other benchmarks | the `parsec` row on the dashboard (`benchmark-history`) |
-| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm), [`ui/heatmap_v5_b1_e1.html`](../ui/heatmap_v5_b1_e1.html) + [`ui/trials_v5_b1_e1.html`](../ui/trials_v5_b1_e1.html) (v5 baseline arm), [`ui/heatmap_v5_g2_e1.html`](../ui/heatmap_v5_g2_e1.html) + [`ui/trials_v5_g2_e1.html`](../ui/trials_v5_g2_e1.html) (v5 G2-arm reuse) |
+| 2 | per-task scores across candidates and runs, as a heatmap | [`ui/heatmap.html`](../ui/heatmap.html) (v1/v2), [`ui/heatmap_v4_t.html`](../ui/heatmap_v4_t.html) (v4 T arm), [`ui/heatmap_v4_g_e1.html`](../ui/heatmap_v4_g_e1.html) (v4 G arm), [`ui/heatmap_v5_b1_e1.html`](../ui/heatmap_v5_b1_e1.html) + [`ui/trials_v5_b1_e1.html`](../ui/trials_v5_b1_e1.html) (v5 baseline arm), [`ui/heatmap_v5_g2_e1.html`](../ui/heatmap_v5_g2_e1.html) + [`ui/trials_v5_g2_e1.html`](../ui/trials_v5_g2_e1.html) (v5 G2-arm reuse), [`ui/heatmap_v6_g2_e1.html`](../ui/heatmap_v6_g2_e1.html) (v6 G2 arm, sealed test split only) |
 | **3** | **why a task moved, and what it teaches** | **`reports/<exp>/<task>.md`** |
 
 ## Naming
 
-Four experiments each get their own subfolder — `v1/`, `v2/`, `v4/`, `v5/` — mirroring
+Five experiments each get their own subfolder — `v1/`, `v2/`, `v4/`, `v5/`, `v6/` — mirroring
 `artifacts/<exp>/`, so the task-id namespaces never collide or imply kinship. v4, with two
-arms, splits one level further; v5 does the same:
+arms, splits one level further; v5 and v6 do the same:
 
 | experiment | pattern | count |
 |---|---|--:|
@@ -23,6 +23,7 @@ arms, splits one level further; v5 does the same:
 | v4 G arm (global, shared bundle) | `v4/v4_g_e1/<task>.md` | 34 |
 | v5 baseline arm (original skill, zero-shot) | `v5/v5_b1_e1/<task>.md` | 136 |
 | v5 G2-arm reuse (`cand_0004`, zero-shot) | `v5/v5_g2_e1/<task>.md` | 136 |
+| v6 G2 arm (hill-climb, global/shared bundle) | `v6/v6_g2_e1/<task>.md` | 66 (sealed test split only — see below) |
 
 `v4/h4/` is the exception to "one file per task": it holds the **h4 held-out
 suite** — 30 new scenarios (`bench-v4-035` … `-064`) authored after the
@@ -69,7 +70,7 @@ python3 scripts/build_task_reports.py --stats     # coverage: how many written, 
 **Do not hand-edit inside the auto block** — edits there are overwritten on the next run.
 Numbers stay derived; narrative stays human.
 
-## The diff block (v4 only — neither v5 arm gets one)
+## The diff block (v4 and v6 only — neither v5 arm gets one)
 
 `v5_b1_e1` is a zero-shot baseline with no `best/` directory anywhere, so
 `build_v5_b1_task_reports.py` calls the same `scripts/v4_report_common.py::build_diff_block()`
@@ -78,6 +79,14 @@ never-optimized tasks already take. `v5_g2_e1` reuses an already-optimized bundl
 (`artifacts/v4/v4_g_e1/best`) as-is rather than optimizing per task, so it has no per-task
 `best/` directory either; `build_v5_g2_task_reports.py` takes the identical path. No
 special-casing in either generator.
+
+`v6_g2_e1` DOES get a diff block (seed vs. `artifacts/v6/v6_g2_e1/best/`, the global shared
+bundle, same as v4's G arm) — but only 66 reports exist, not v6's full 200-task set. Its
+`results.json` only ever has per-task rows for the **sealed test split** (the only split with a
+stable, full per-task ledger — see `results/v6/v6_g2_e1/summary.md`'s "Why there's no per-task
+F/C ledger"), so `build_v6_g2_task_reports.py` only has 66 rows to generate from. There is no
+`reports/v6/v6_g2_e1/<feedback-or-confirm-task>.md` for any of the other 134 tasks, and there
+never will be for this split design — not a gap to fill in later.
 
 ### The v4 arms' diff block
 
