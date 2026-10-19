@@ -90,7 +90,6 @@ class Cfg:
     p2: object | None = None            # promotion.P2Params when promotion_rule is P2 (round mode)
     cost_eps: float | None = None       # second objective (a ``cost`` objective in the spec): cost per success
     finalize: bool = True               # spec ``finalize: false``: record the champion, score nothing
-    compress_every: int = 0             # ao_compress_every: every N proposals, one slot-0 job COMPRESSES the champion (0 = off)
     pipeline: int = 1                   # P2: proposals may run this many rounds ahead of the evaluating round
                                         # (1 = at most K proposals unevaluated; each round's proposals see the previous verdicts)
     caps: policy.Caps = dataclasses.field(default_factory=policy.Caps)
@@ -142,8 +141,7 @@ class Cfg:
                    cost_eps=cost_eps, merge_bar=num("ao_merge_bar", cast=float, default=policy.COMPLEMENTARY),
                    focus=bool(spec.get("ao_focus")), focus_n=num("ao_focus_n", default=1),
                    focus_max=num("ao_focus_max", default=3), focus_canary=num("ao_focus_canary", default=6),
-                   focus_accept_min=num("ao_focus_accept_min", default=2),
-                   compress_every=num("ao_compress_every", default=0))
+                   focus_accept_min=num("ao_focus_accept_min", default=2))
 
 
 def refuse_multi_objective(spec: dict) -> float | None:
@@ -973,10 +971,6 @@ class Conductor:
 
     def _p2_close_stage(self, r, unfunded: bool) -> None:
         out = self.b.p2_close(r["id"], r["stage"], unfunded)
-        if out.get("extend"):                         # near-miss: one more block of fresh C draws, same stage again
-            r["jobs"].pop("confirm", None)
-            self.b.log("p2_confirm_extend", round=r["id"], n=len(out["extend"]))
-            return
         verdicts = out.get("verdicts", {})
         if r["stage"] == "confirm":
             self._p2_apply_confirm(verdicts, out.get("champion"))
@@ -1054,8 +1048,7 @@ class Conductor:
                     self._give_up(j["tag"], j)
                     continue
                 self._launch_propose(j["tag"], j["parent"], j.get("slot", 0), retry=True, edit_kind=j.get("edit_kind", "edit"),
-                                     refusal=(self.st.get("refusals", {}).get(j["tag"]) or {}).get("detail", ""),
-                                     compress=bool(j.get("compress")))
+                                     refusal=(self.st.get("refusals", {}).get(j["tag"]) or {}).get("detail", ""))
         while True:
             live = cs.live(self.st, "propose") + cs.live(self.st, "merge")
             if len(live) >= self.cfg.k_prop or self.in_flight_nodes() + len(live) >= self.cfg.alive_cap:
@@ -1074,32 +1067,16 @@ class Conductor:
             tips = {t: self.node(t).get("p_beat", 0.0) for t in self.alive_tips()}
             stuck = {t: n.get("stuck", 0) for t, n in self.st["nodes"].items()}
             parent = policy.pick_parent(slot, self.champion, tips, rng, stuck)
-            compress = self._compress_due(slot)
-            if compress:
-                parent = self.champion
-                self.st["compress_last"] = self.st["n_proposals"]
-                self.st.setdefault("compressed", []).append(self.champion)
-            self._launch_propose(tag, parent, slot, compress=compress)
+            self._launch_propose(tag, parent, slot)
 
     def _token_room(self) -> bool:
         c = self.cfg.caps
         return cs.tokens_fit({"tokens_committed": self.tokens_used(), "jobs": self.st["jobs"]}, self.cfg.job_token_cap,
                              c.max_tokens, c.finalize_tokens)
 
-    def _compress_due(self, slot: int) -> bool:
-        """``ao_compress_every`` N > 0: slot 0 compresses the champion (a refactor job: shorter, more deterministic,
-        de-duplicated; accepted through the same gate) once every N proposals, and at most once per champion."""
-        n = self.cfg.compress_every
-        if n <= 0 or slot != 0 or self.champion in self.st.get("compressed", []):
-            return False
-        if self._is_base(self.champion):
-            return False                 # still the seed: there is no accumulated text to compress
-        return self.st["n_proposals"] - int(self.st.get("compress_last", 0)) >= n
-
-    def _launch_propose(self, tag, parent, slot, retry=False, edit_kind="edit", refusal="", compress=False) -> None:
+    def _launch_propose(self, tag, parent, slot, retry=False, edit_kind="edit", refusal="") -> None:
         j = cs.new_job(self.st, "propose", tag=tag, parent=parent, slot=slot, retry=False, edit_kind=edit_kind,
-                       compress=compress, strict=retry, refusal=refusal, reserved_tokens=self.cfg.job_token_cap,
-                       reserved_rollouts=0)
+                       strict=retry, refusal=refusal, reserved_tokens=self.cfg.job_token_cap, reserved_rollouts=0)
         self._start(j)
 
     # ---- 6. stop / drain / finish -------------------------------------------------------

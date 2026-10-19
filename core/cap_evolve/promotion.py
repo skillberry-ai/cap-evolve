@@ -78,10 +78,6 @@ class P2Params:
     dmin: float = 0.02
     min_coverage: float = 0.6
     chunk: int = 20                  # rollouts per Job
-    extend_z: float = 0.0            # >0: a near-miss confirmation (mean > 0, extend_z <= z < z_conf) gets ONE more block of
-                                     # fresh C draws, pooled with the first and judged at z_conf + extend_margin. 0 = off
-    extend_margin: float = 0.25      # extra z the pooled second look needs (the cost of looking twice)
-    reuse_control: bool = False      # reuse earlier rounds' control draws of the SAME incumbent; run only the shortfall
     gs_looks: tuple = (12, 24, 49, 98, 147)
     gs_c: float = 1.6                # O'Brien-Fleming-type boundary constant: false accept ~0.05 per candidate
     gs_futility: tuple = (-0.5, 0.0, 0.3, 0.7)
@@ -109,17 +105,12 @@ class P2Params:
             z_conf=float(spec.get("p2_z_conf", d.z_conf)), dmin=float(spec.get("p2_dmin", d.dmin)),
             min_coverage=float(spec.get("promotion_min_coverage", d.min_coverage)),
             chunk=int(spec.get("p2_chunk", d.chunk)),
-            extend_z=float(spec.get("p2_extend_z", d.extend_z)),
-            extend_margin=float(spec.get("p2_extend_margin", d.extend_margin)),
-            reuse_control=str(spec.get("p2_reuse_control", d.reuse_control)).strip().lower() in ("1", "true", "yes", "on"),
             gs_looks=tuple(int(x) for x in spec.get("p2_gs_looks", d.gs_looks)),
             gs_c=float(spec.get("p2_gs_c", d.gs_c)),
             gs_futility=tuple(float(x) for x in spec.get("p2_gs_futility", d.gs_futility)))
         if out.conf_n < 0 or min(out.k, out.ctrl_m, out.chunk, out.max_survivors, out.incumbent_trials) < 1:
             raise ValueError("p2_k, p2_conf_n, p2_ctrl_m, p2_chunk, p2_max_survivors and "
                              "p2_incumbent_trials must be >= 1")
-        if out.extend_z < 0 or out.extend_margin < 0 or (out.extend_z and out.extend_z >= out.z_conf):
-            raise ValueError("p2_extend_z must be in [0, p2_z_conf) and p2_extend_margin >= 0")
         if len(out.rung_sizes) != 2 or not 0 < out.rung_sizes[0] <= out.rung_sizes[1]:
             raise ValueError("p2_rung_sizes must be two cumulative sizes, 0 < r1 <= r2")
         if not out.gs_looks or list(out.gs_looks) != sorted(out.gs_looks):

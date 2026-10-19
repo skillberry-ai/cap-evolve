@@ -2187,41 +2187,6 @@ def movement(parent_per_task, cand_per_task) -> dict:
     return {**moves, "n_shared": len(shared)}
 
 
-def _tokens_per_rollout(sr: SplitResult) -> list:
-    """Per-rollout cost proxies of a split result as ledger-style rows: ``tokens`` (else USD) averaged per rollout."""
-    n = sum(int((pt.get("raw") or {}).get("n_trials") or pt.get("n") or 1) for pt in (sr.per_task or [])) or 0
-    if not n:
-        return []
-    return [{"tokens": sr.tokens / n, "cost": (sr.cost_usd / n) if sr.cost_usd else None}] * n
-
-
-def _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs) -> None:
-    """Cost-aware acceptance for the STOCK hill-climb gate (``cost_lambda`` / ``cost_accept``, see ``costaware``).
-    Mutates ``decision``: a marginal win that is much more expensive is rejected, a clearly cheaper non-inferior
-    candidate is accepted; a clear reward win is never touched. No-op unless a cost key is set."""
-    from . import costaware
-    from .specfile import spec_for_run
-    cp = costaware.CostParams.from_spec(spec_for_run(run_dir) or {})
-    if not cp.enabled or decision.indecisive or "mode" in gate_kwargs and gate_kwargs["mode"] not in ("paired", "significant"):
-        return
-    if "REJECTED by gate_max_broke" in decision.reason:
-        return                                  # a composition veto is not overturned by a cost win
-    cur_rows = _tokens_per_rollout(current_val)
-    if not cur_rows or not cur_rows[0]["tokens"]:      # a resumed incumbent has no token total: read its ledger rows
-        from . import eval_index
-        h = eval_index.cap_hash(run_dir.candidate_dir(run_dir.best_id))
-        cur_rows = [r for r in eval_index.rows(run_dir) if r.get("cap_hash") == h and r.get("split") == "val"
-                    and r.get("env_fp", "") == eval_index.env_fp()]
-    rel = costaware.relative_cost(_tokens_per_rollout(cand_val), cur_rows, cp)
-    se = (decision.resolvable_effect_size or 0.0) / 2.0
-    z = (decision.delta / se) if se > 0 else (float("inf") if decision.delta > 0 else 0.0)
-    j = costaware.judge(cp, passed=decision.accept, mean=decision.delta, se=se, z=z, dmin=0.0, rel=rel)
-    run_dir.log_event("cost_gate", rel=rel, path=j.path, accept=j.accept)
-    if j.accept != decision.accept:
-        decision.accept = j.accept
-        decision.reason += f"; {j.reason}"
-
-
 def _pareto_metrics_kwargs(current_val: SplitResult, cand_val: SplitResult) -> dict:
     """``metrics_candidate``/``metrics_current``/their stderrs for ``gate.decide(mode="pareto")``.
 
@@ -2847,7 +2812,7 @@ def _run_ending_signal(run_dir: RunDir) -> str:
     this_iter = s.iterations + 1
     parts: list[str] = []
     iters_left = None
-    if b.max_iterations and b.max_iterations < 1_000_000:       # 1e6 = budget-driven (specfile.BUDGET_DRIVEN_ITERATIONS)
+    if b.max_iterations:
         iters_left = max(b.max_iterations - this_iter, 0)
         parts.append(f"iteration {this_iter}/{b.max_iterations} ({iters_left} after this one)")
     if b.max_usd:
@@ -3745,7 +3710,6 @@ def run_step(
     # cannot localize the edit, and ``_paired_deltas(footprint=None)`` is byte-identical to
     # the behaviour before this existed — so a capability whose surface cannot be detected
     # is measured exactly as it always was rather than restricted on a guess.
-    cost_flipped = False
     if p2_out is None:
         fp = None
         if footprint_gate:
@@ -3803,9 +3767,6 @@ def run_step(
             decision.accept, decision.indecisive = False, True
             decision.reason += ("; UNRESOLVED MISSING: imputing the missing pairs at "
                                 f"{gcfg.missing_impute:g} flips the screen, and the retries did not recover them")
-        _was_accept = decision.accept
-        _apply_cost_gate(run_dir, decision, current_val, cand_val, gate_kwargs)
-        cost_flipped = decision.accept and not _was_accept
         accepted = decision.accept
         regressions = []
         if accepted and no_regression:
@@ -3858,13 +3819,7 @@ def run_step(
                 held["par"] = evaluate_candidate(adapter, parent_dir, tag=f"{cid}__confbase", **kw)
                 return _paired_deltas(held["par"], held["cand"], footprint=None) or []
 
-            if accepted and cost_flipped:
-                # a cost-path accept (reward non-inferior, clearly cheaper) cannot pass rule P's reward screen by
-                # construction; its non-inferiority is already tested above, so no confirmation rollouts are spent
-                pres = promotion_mod.PromotionResult(True, "promoted", promotion_mod.screen(paired_deltas or [], promo.k_se),
-                                                     None, "cost path: reward non-inferior and clearly cheaper",
-                                                     dataclasses.asdict(promo))
-            elif accepted:
+            if accepted:
                 try:
                     pres = promotion_mod.decide(paired_deltas or [], _fresh_deltas, promo,
                                                 n_planned=len(paired_deltas or []))
@@ -3889,7 +3844,7 @@ def run_step(
                 accepted = False
                 decision.reason += ("; UNCONFIRMED (pending, not a reject): " if pres.stage == "unconfirmed"
                                     else "; REJECTED by promotion rule P: ") + pres.reason
-            elif pres.promote and "cand" in held:
+            elif pres.promote:
                 baseline_val = held["cand"]
             run_dir.log_event("promotion", candidate=cid, **{k: v for k, v in promo_rec.items() if k != "rule"})
     else:
@@ -5071,9 +5026,7 @@ class OptimizerContext:
             algorithm=algorithm, instructions_file=self.instructions_file,
             bench_repo=self.bench_repo, optimizer_name=self.optimizer_name,
             seed_empty=seed_empty, target_reader=self.target_reader)
-        from .proposer_guidance import EDIT_KINDS_NOTE
-        extra = (EDIT_KINDS_NOTE + ("\n\n" + extra.strip() if extra.strip() else ""))
-        return text.rstrip() + "\n\n" + extra + "\n"
+        return (text.rstrip() + "\n\n" + extra.strip() + "\n") if extra.strip() else text
 
 
 def parse_protected_paths(value) -> tuple[str, ...] | None:
@@ -5110,15 +5063,6 @@ def _convergence_observations(steps) -> list:
             id=s.get("candidate_id", ""), reward=float(cv.get("reward") or 0.0),
             accepted=bool(s.get("accepted")), stderr=float(cv.get("stderr") or 0.0)))
     return out
-
-
-def _hc_compress_every(run_dir) -> int:
-    """Spec ``hc_compress_every`` (0 = off): every N-th iteration of the stock hill-climb asks for a compress/refactor edit."""
-    from .specfile import spec_for_run
-    try:
-        return max(0, int((spec_for_run(run_dir) or {}).get("hc_compress_every") or 0))
-    except (TypeError, ValueError):
-        return 0
 
 
 def hill_climb_loop(
@@ -5219,11 +5163,6 @@ def hill_climb_loop(
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
         instructions = ctx.instructions(current_val, focus_ids, label,
                                         algorithm=algorithm, parent_dir=parent_dir)
-        every = _hc_compress_every(run_dir)
-        if every and i and i % every == 0 and run_dir.best_id != "seed":
-            from .proposer_guidance import COMPRESS_NOTE
-            instructions = instructions.rstrip() + "\n\n" + COMPRESS_NOTE + "\n"
-            run_dir.log_event("hc_compress_round", iteration=i)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.

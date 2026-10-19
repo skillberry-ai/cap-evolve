@@ -586,10 +586,7 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     gate_conc = int(spec.get("measure_concurrency") or GATE_CONCURRENCY)
 
     if not stop:
-        from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS
-        spend = ("Keep proposing until the rollout budget is exhausted" if rounds >= BUDGET_DRIVEN_ITERATIONS
-                 else f"Spend at most {rounds} rounds")
-        stop = (f"{spend}, gate every candidate on FULL val, and "
+        stop = (f"Spend at most {rounds} rounds, gate every candidate on FULL val, and "
                 "finish by sealing test exactly once with measure.py.")
 
     text = f"""# Drive the agent-optimize loop on an existing run — unattended
@@ -1136,8 +1133,7 @@ def main(argv=None) -> int:
         return 2
 
     spec = _spec(project, Path(args.spec).resolve() if args.spec else None)
-    from cap_evolve.specfile import resolve_max_iterations
-    rounds = resolve_max_iterations(spec) or 10
+    rounds = int(spec.get("max_iterations", 0) or 0) or 10
 
     if args.seal_only:
         out = _seal(run_dir, project, spec, timeout=args.timeout)
@@ -1432,8 +1428,7 @@ def main(argv=None) -> int:
     # sentence pointed at a knob already 7x larger than what the agent used — and sent the next
     # operator to raise it again.
     incomplete = ""
-    from cap_evolve.specfile import BUDGET_DRIVEN_ITERATIONS
-    if 0 <= rounds_done < rounds_budget < BUDGET_DRIVEN_ITERATIONS:
+    if 0 <= rounds_done < rounds_budget:
         reasons = f"{stop_reason or ''} {agent_stop or ''}"
         turn_limited = "max_turns" in reasons
         # Ran to a clean stop of its own accord, with rounds and turns still to spend.

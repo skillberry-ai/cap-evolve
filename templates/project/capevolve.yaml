@@ -114,24 +114,6 @@ gate_k_se: 1.0
 #                               #   Keys: ao_slots, ao_k_prop (parallel proposers), ao_chunk (20), ao_tick_s (5), ao_rungs, ao_merge, ao_job_token_cap,
 #                               #   ao_max_tokens, ao_plateau_n, ao_plateau_floor (0.4), ao_finalize_reserve, ao_final_estimate_trials (4; 0 = off); wall: deadline_utc.
 #                               #   Stopping is structured (rollouts, tokens, wall, stop_at_reward, plateau); stop_condition prose is ignored.
-# p2_extend_z: 0.0              #   P2: a near-miss confirmation (0 < mean, p2_extend_z <= z < p2_z_conf) gets ONE more block of fresh C draws,
-#                               #   pooled with the first and judged at p2_z_conf + p2_extend_margin (0.25). 0 = off
-# p2_reuse_control: false       #   P2: reuse earlier rounds' control draws of the same, unchanged incumbent; run only the shortfall
-# cost_lambda: 0.0              # COST-AWARE ACCEPTANCE (P2 / HC-2). Off at 0. A candidate that passes the reward test is rejected
-#                               #   only when mean - cost_lambda x max(relative agent cost, 0) < dmin AND z < cost_clear_z (3.0): a clear
-#                               #   reward win is never rejected, a cheaper candidate is never penalised. Cost = prompt + completion tokens
-#                               #   per rollout (cost_metric: tokens | usd), measured from the candidate's own rollouts vs the incumbent's.
-# cost_accept: false            #   the cost path: a candidate that fails the reward test is accepted when its reward is non-inferior
-#                               #   (lower bound >= -cost_margin 0.03) and its cost is >= cost_min_saving (0.15) lower. Defaults ON when a
-#                               #   compress operator is configured. Also cost_noninf_z (1.0), cost_min_n (10 priced rollouts per side).
-# hc2: true                     # HC-2 keys beyond the basics: hc2_max_rounds (0 = until the budget binds), hc2_plateau_rounds (0 = off:
-#                               #   stop after N rounds without a champion change), hc2_compress_every (0 = off: every N-th round one slot
-#                               #   COMPRESSES the incumbent -- shorter, more deterministic, de-duplicated -- through the same gate).
-# max_iterations: (omit)        # Omit it when max_metric_calls is set: the iteration cap is then effectively none and the
-#                               #   search proposes until the budget binds (an explicit 0 still means zero iterations). The last round shrinks (one direct candidate)
-#                               #   instead of the search stopping with budget unspent. An explicit max_iterations still wins.
-# hc_compress_every: 0         # stock hill-climb: every N-th iteration asks for a compress/refactor edit; 0 = off
-# ao_compress_every: 0          # agent-optimize: every N proposals, slot 0 COMPRESSES the champion (once per champion); 0 = off
 # split_mode: pooled            # pool = train + val, partitioned ONCE (seeded, stratified, persisted) into F and C
 # confirm_fraction: 0.48        #   share of the pool held as C; the proposer sees F, and only the accept/reject bit for C
 # budget_reserve: true          # reserve rollouts before every evaluation; a confirmation that does not fit is `unconfirmed`

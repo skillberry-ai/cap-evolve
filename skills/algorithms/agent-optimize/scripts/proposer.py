@@ -21,12 +21,9 @@ PROCEDURE = """Procedure (do every step; you may use subagents to read traces in
 2. Group the failing tasks by root cause and fix as MANY groups as you can in this ONE edit, your primary tasks first.
    A small edit is refused: change >= {min_lines} capability lines and predict >= {min_tasks} fixed tasks.
    You are judged on how many of the parent's failing tasks your edit fixes, net of any passing task it breaks.
-3. Prefer code and determinism over prose where the agent computes, looks up or checks things in its head: add or
-   improve an executable script, helper or tool (a calculator, validator, parser, lookup; make a tool return the
-   fields the agent needs or validate the call) plus one line saying when to run it; turn a step the agent skips
-   into a checklist or a verification command to run before answering. Clearer, shorter text is also a valid edit.
-   Test a new script on a small input if the sandbox allows. Every line you add is re-read on every rollout: delete
-   what your code or rule makes redundant.
+3. On a code surface, prefer code over prose: where the agent computes prices/totals, looks things up or checks eligibility in its head,
+   add a deterministic tool (or make an existing tool return the needed fields / validate the call) plus one policy
+   line saying when to use it. Wording-only edits rarely move these tasks.
 4. Aim for the edit with the largest expected reward gain on the whole task distribution, not for these tasks alone.
    Keep a change only if it is REAL (a failing trace shows the problem) and general (a rule for the class; no task id,
    expected answer or copied value). Glance at a passing trace that uses the same rule; the conductor measures regressions.
@@ -99,21 +96,10 @@ def clusters_block(valid_clusters) -> str:
             + "\n".join(rows[:12]) + "\n")
 
 
-COMPRESS_PROCEDURE = """Procedure:
-1. Read the parent's instructions, skills, scripts and tool descriptions in full.
-2. Rewrite them to be shorter, more deterministic and free of duplication without changing what the agent does on
-   tasks it handles correctly today: merge rules that repeat, delete rules no trace supports or that a script now
-   enforces, replace long prose procedures by a short checklist or a script, shorten tool descriptions and tool
-   OUTPUT the agent must read (return only the fields it uses). Keep every rule that fixes a failure class, every
-   example an output format depends on, and every safety check.
-3. Aim for 20% or more fewer tokens in the text and tool output. Add no new behaviour.
-"""
-
-
 def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str = "", strict: bool = False,
                  kind: str = "propose", conflicts: list | None = None, refusal: str = "", failing: str = "",
                  min_lines: int = 40, min_tasks: int = 3, project_instructions: str = "",
-                 valid_clusters: list | None = None, compress: bool = False) -> str:
+                 valid_clusters: list | None = None) -> str:
     head = {
         "propose": f"You are proposing one edit to candidate {parent!r} (already copied into {workdir}).",
         "merge": (f"{workdir} is a copy of branch {parent!r}; merging another branch into it conflicts in: "
@@ -125,11 +111,7 @@ def build_prompt(*, workdir, parent: str, cluster: dict | None, digest_text: str
         target = (f"\nTarget cluster {cluster.get('id')}: {cluster.get('label') or ''}; failing tasks "
                   f"{', '.join(map(str, cluster.get('tasks') or []))}; headroom {cluster.get('headroom')}.")
     proc = PROCEDURE.format(min_lines=min_lines, min_tasks=min_tasks) if kind == "propose" else ""
-    if compress and kind == "propose":
-        target, failing, ids = "", "", ""
-        head = f"You are COMPRESSING candidate {parent!r} (already copied into {workdir}): this is a refactor, not a bug-fix round."
-        proc = COMPRESS_PROCEDURE
-    ids = "" if compress else (clusters_block(valid_clusters) if kind == "propose" else "")
+    ids = clusters_block(valid_clusters) if kind == "propose" else ""
     body = f"{head}{target}\n{failing}\n{ids}\n{digest_text.strip()}\n\n{proc}{RULES.format(workdir=workdir)}"
     if strict:
         body += STRICT

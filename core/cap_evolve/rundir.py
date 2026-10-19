@@ -109,7 +109,7 @@ def _pid_alive(pid) -> bool:
 
 @dataclass
 class Budget:
-    max_iterations: int = 20      # see ``specfile.resolve_max_iterations``
+    max_iterations: int = 20
     max_metric_calls: int = 0     # 0 = unlimited
     max_usd: float = 0.0          # 0 = unlimited (total: runner + optimizer + intake)
     stall: int = 0                # consecutive no-accepts before stop; 0 = off

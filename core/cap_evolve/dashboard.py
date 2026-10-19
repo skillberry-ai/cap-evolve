@@ -638,7 +638,7 @@ def _budget_exhausted(budget, spent) -> str | None:
     if budget.stop_at_reward and spent.best_val >= budget.stop_at_reward - 1e-9:
         return f"reward ceiling reached (best val {spent.best_val:.4f} >= {budget.stop_at_reward:.4f})"
     checks = (
-        ("max_iterations", 0 if budget.max_iterations >= 1_000_000 else budget.max_iterations, spent.iterations),
+        ("max_iterations", budget.max_iterations, spent.iterations),
         ("max_metric_calls", budget.max_metric_calls, spent.metric_calls),
         ("max_usd", budget.max_usd, spent.usd + spent.optimizer_usd + spent.intake_usd),
         ("max_optimizer_usd", budget.max_optimizer_usd, spent.optimizer_usd),

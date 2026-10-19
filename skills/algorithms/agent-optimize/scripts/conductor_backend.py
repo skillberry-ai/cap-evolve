@@ -119,8 +119,6 @@ class P2Port:
                 rnd.state["confirm_unfunded"] = list(rnd.state.get("confirm_unfunded", [])) + list(rnd.state.get("confirm_funded", []))
                 rnd.state["confirm_funded"] = []
             out = rnd.close_confirm()
-            if any(v.status == "extend" for v in out.values()):
-                return {"extend": [c for c, v in out.items() if v.status == "extend"], "verdicts": {}}
             return {"verdicts": {c: {"status": v.status, "mean": v.mean, "z": v.z} for c, v in out.items()},
                     "champion": rnd.champion}
         n = int(stage[-1])
@@ -306,7 +304,7 @@ class RealBackend(P2Port, conductor.Backend):
                                      min_lines=int(self.spec.get("ao_min_edit_lines") or 40),
                                      min_tasks=int(self.spec.get("ao_min_predicted") or 3),
                                      project_instructions=self._project_instructions(),
-                                     valid_clusters=self._valid_clusters(), compress=bool(job.get("compress")))
+                                     valid_clusters=self._valid_clusters())
         prompt.write_text(body, encoding="utf-8")
         with contextlib.suppress(OSError):        # the injected CLAUDE.md says "read ./INSTRUCTIONS.md FIRST"
             (work / "INSTRUCTIONS.md").write_text(body, encoding="utf-8")
@@ -450,7 +448,7 @@ class RealBackend(P2Port, conductor.Backend):
             return {"ok": False, "refused": bad[0], "detail": bad[1]}
         h = proposer.read_hypothesis(work)
         hyp = work / proposer.HYPOTHESIS_FILE
-        small = "" if job.get("compress") else self._too_small(job, work, parent, h)
+        small = self._too_small(job, work, parent, h)
         if small:
             return {"ok": False, "refused": "too_small", "detail": small}
         dup = self._near_duplicate(job, work, parent)
