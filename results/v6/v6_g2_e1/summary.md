@@ -82,7 +82,7 @@ table (F-screen delta/z, C decision, fixed/broke counts, optimizer cost per iter
 | Iter | Candidate | C decision | What it changed |
 |---|---|:--:|---|
 | 1 | `cand_0001` | reject | A conclusion checklist draft, epoch-conversion repair, cost error-handling — all later folded into `cand_0002`. |
-| 2 | `cand_0002` | **accept** | The conclusion checklist (shipped), the icinga epoch/elapsed-time rewrite, cost error-result repair. First champion. |
+| 2 | `cand_0002` | **accept** (false — see caveat 5) | The conclusion checklist (shipped), the icinga epoch/elapsed-time rewrite, cost error-result repair. First champion, but its acceptance came from a degraded seed baseline batch. |
 | 3 | `cand_0003` | reject | Weak F signal (+0.019), didn't survive the confirm-split test. |
 | 4 | `cand_0004` | killed at F rung 1 | **Correctly diagnosed** a measurement confound (a 10× different tool-timeout rate between the seed's and the champion's measurement rounds) but the specific candidate shipped still scored below the F-screen threshold. |
 | 5 | `cand_0005` | **accept** | Fixed the confound cand_0004 found; rewrote the retry rule for timed-out tool calls; deleted two "MANDATORY" instructions routing to tools served at a measured 0% success rate; fixed a fictional directory layout in `icinga_agent.md`. Final champion. |
@@ -146,10 +146,37 @@ explicitly continued through iterations 5 and 6 regardless of outcome. `cand_000
    already-committed v4/v5 report — none of them diff on a line containing a literal backslash
    sequence).
 
+5. **`cand_0002`'s acceptance was false, caused by one degraded seed baseline batch.**
+   Before judging a candidate, the gate re-measures the champion with four trials on each of
+   the 67 confirmation tasks, run as four batches. In `cand_0002`'s round (`r001`) the seed's
+   batches averaged **0.401, 0.748, 0.802, 0.760**. In batch 1 the seed scored more than 0.3
+   below its own score in the other three batches on 47 of 65 tasks. Those trials completed and
+   returned verifier output, so the infrastructure-error rule did not reject them. Averaging the
+   batch in lowered the baseline: the gate's paired statistic was **+0.100, z 5.14** (accept;
+   boundary about 2.0). Recomputed on the same 128 `cand_0002` trials without batch 1, it is
+   **+0.005, z 0.26** — a reject. The full post-run re-measurement agrees: `cand_0002` 0.804 vs
+   seed 0.821. Recomputation is by an outside script, not a cap-evolve output; the inputs are the
+   sealed `rollouts/confirm/*__r001__seed__ctrl_*` and `*__r001__cand_0002__seq*` trials.
+
+   **What this changes.** `cand_0005` was built from `cand_0002` (93% of the lines `cand_0002`
+   added survive verbatim) and accepted for beating it. `cand_0002`'s own baseline batches in
+   that round were consistent (0.763, 0.771, 0.814, 0.763), so `cand_0005`'s acceptance is
+   sound. The sealed test result compares `cand_0005` with the seed directly and is unaffected.
+   What cannot be known is whether `cand_0005` would have been found had `cand_0002` been
+   rejected. The cause of batch 1's degradation is not established.
+6. **`platform-131` regressed 0.985 → 0.590, beyond the 0.20 per-task deployability limit.**
+   `cand_0005` added a rule to `babylon_agent.md` that `list_anarchy_subjects` with a `guid`
+   "resolves without a cluster". That is true of the simulator, but this task's reward contract
+   requires the call with `cluster: merlin`, so nine of ten trials scored 0 on tool calls; the
+   agent also stopped before opening the AAP2 job the request asks for. Whether the bundle or the
+   contract should change needs domain review.
+
 ## Next moves (open)
 
-- **Read `platform-131`'s transcript** — the one real regression large enough to investigate before
-  trusting this champion for anything beyond this report.
+- **Domain-review `platform-131`'s reward contract** (caveat 6): decide whether the required
+  `cluster` argument is right, or whether `cand_0005`'s rule should change.
+- **Find the cause of the degraded seed batch** (caveat 5), and make the gate re-measure a
+  baseline batch that disagrees this sharply with other batches of the same bundle.
 - **Re-run the train/val bookend** for this run if the full seed-vs-champion comparison across all
   three splits is wanted (caveat 1) — cheap (val is free, train is one more eval sweep).
 - **A competitor-framework arm** — this report only compares CapEvolve's own optimized bundle
