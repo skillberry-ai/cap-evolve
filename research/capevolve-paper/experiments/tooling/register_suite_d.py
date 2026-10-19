@@ -318,6 +318,7 @@ def main():
                          ("V4B1S2_champions", CS / "final_eval/champions_V4B1S2.json", "V4 B1 S2 champions file (hcv4 s2)"),
                          ("V4B1_hcv4_s2_run_summary", CS / "runs/V4/B1/hcv4/s2/run_summary.json", "hcv4 s2 run summary"),
                          ("V4B1_hcv4_s2_candidates", CS / "runs/V4/B1/hcv4/s2/candidates.jsonl", "hcv4 s2 candidates.jsonl (selection by train score)"),
+                         ("v4b1s2_analysis.py", PAPER / "analysis/scripts/v4b1s2_analysis.py", "V4B1S2 descriptive analysis script (amendment 12 erratum 23), registered after its first run"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
