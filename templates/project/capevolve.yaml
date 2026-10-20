@@ -17,6 +17,10 @@ optimizer_max_turns: 0                   # 0 = off; per-iteration WORK cap passe
 optimizer_usd_per_iter: 0.0              # 0 = off; per-iteration DOLLAR cap passed to the agent CLI
 #   (claude-code → --max-budget-usd N, enforced by the CLI itself). Optimizers without a
 #   native $ cap (e.g. ibm-bob) ignore it — bound those via optimizer_max_turns / max_optimizer_usd.
+optimizer_isolation: off                 # off | auto | namespace | sandbox — keep gold data out of the
+#   optimizer's reach (it has a shell). With it on, list what to hide; check proves it offline:
+# optimizer_hide: [/path/to/gold, ~/.claude/projects]
+# optimizer_expose: [/path/to/gold/public]   # optional, read-only inside a hidden dir
 # Optional per-decision-role model override (cap_evolve.model_routing.resolve_model).
 # Absent/omitted = every role falls back to optimizer_model above, unchanged. Only set
 # the roles you want to route differently (e.g. a cheap model for mechanical steps):

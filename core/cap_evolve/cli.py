@@ -754,6 +754,14 @@ def _cmd_run(argv):
     # then hands off — see the short-circuit after baseline).
     orchestration_mode = str(spec.get("orchestration_mode", "deterministic")).strip() or "deterministic"
     py = sys.executable
+    # Optimizer isolation (#875): validate the spec keys now and hand the resolved config to
+    # every optimizer call (run-optimizer reads it from the environment it inherits).
+    from . import isolation as _isolation
+    try:
+        _isolation.export(_isolation.from_spec(spec))
+    except _isolation.IsolationError as e:
+        print(json.dumps({"step": "spec", "error": str(e)}))
+        return 2
     if spec.get("errored_trial_policy"):
         # ONE rule for every evaluation in this run (baseline/seed, candidates, resume, gate_check,
         # finalize bookends): the phase scripts read it from the environment they inherit.

@@ -490,6 +490,23 @@ def main(argv=None) -> int:
     env = dict(os.environ)
     env.update(auth["env"])
 
+    # Optimizer isolation (#875): `cap-evolve run` exports the spec's optimizer_isolation /
+    # optimizer_hide / optimizer_expose. FAIL-CLOSED: a requested mode that cannot run here stops
+    # the call instead of letting the optimizer run with the gold data in reach.
+    iso_mode = None
+    try:
+        from cap_evolve import isolation as _iso
+        iso_cfg = _iso.load(env)
+    except ImportError:
+        iso_cfg = None
+    if iso_cfg:
+        try:
+            cmd, iso_env, iso_mode = _iso.wrap(cmd, iso_cfg, workdir=workdir, optimizer=name)
+        except _iso.IsolationError as e:
+            print(json.dumps({"optimizer": name, "isolation": iso_cfg.get("mode"), "error": str(e)}))
+            return 2
+        env.update(iso_env)
+
     extra_keys = tuple(str(row.get("env_keys", "")).replace(",", " ").split())
     # Popen + a live tee to --transcript as lines arrive, not subprocess.run() buffering the
     # whole run in memory until exit — see `_run_and_stream`'s docstring for why (a crash
@@ -504,7 +521,7 @@ def main(argv=None) -> int:
     if stderr:
         print(stderr, file=sys.stderr, end="", flush=True)
     result = {"optimizer": name, "cli_present": True, "returncode": returncode,
-              "auth_present": auth["present"],
+              "auth_present": auth["present"], "isolation": iso_mode,
               "stdout_tail": stdout[-800:], "stderr_tail": stderr[-800:]}
     # Best-effort cost capture: only when --json requested AND the row had a json_flag.
     # The prose-fed path (no --json, or empty json_flag) never reaches here, so the
