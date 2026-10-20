@@ -221,6 +221,7 @@ def skillopt_loop(
     store=None,
     protected_patterns=None,
     ctx: harness.OptimizerContext | None = None,
+    editable_patterns=None,
 ) -> dict:
     """Run the SkillOpt epochs × mini-batches climb.
 
@@ -313,6 +314,7 @@ def skillopt_loop(
                 n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
                 no_regression=no_regression, rejected=rejected, history=history, store=store,
                 ctx=ctx, protected_patterns=protected_patterns,
+                editable_patterns=editable_patterns,
             )
             if step.get("candidate_val") is None:
                 # Indecisive (protected-path tamper): no measurement exists, so it must
@@ -374,6 +376,7 @@ def skillopt_loop(
                 n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
                 rejected=rejected, history=history, store=store,
                 protected_patterns=protected_patterns, ctx=ctx,
+                editable_patterns=editable_patterns,
             )
             if slow_rec is not None:
                 slow_updates.append(slow_rec)
@@ -448,7 +451,7 @@ def _run_slow_update(
     prev_epoch_skill: SplitResult, prev_epoch_best_id, epoch: int, sample: int,
     edit_budget: int, n_trials: int, gate_kwargs: dict, no_regression: bool,
     rejected, history, store, protected_patterns=None,
-    ctx: harness.OptimizerContext | None = None,
+    ctx: harness.OptimizerContext | None = None, editable_patterns=None,
 ) -> dict | None:
     """Re-evaluate the epoch-start skill vs current best on a small TRAIN subset,
     categorize, and run ONE extra gated step. Counted in budget; sample is small
@@ -501,7 +504,7 @@ def _run_slow_update(
         optimizer=optimizer, instructions=instructions, current_val=current_val,
         n_trials=n_trials, gate_kwargs=gate_kwargs, candidate_id=cid,
         no_regression=no_regression, rejected=rejected, history=history, store=store,
-        ctx=ctx, protected_patterns=protected_patterns,
+        ctx=ctx, protected_patterns=protected_patterns, editable_patterns=editable_patterns,
     )
     step["epoch"] = epoch
     step["step_in_epoch"] = "slow"

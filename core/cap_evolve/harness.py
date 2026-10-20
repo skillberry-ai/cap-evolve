@@ -5111,6 +5111,35 @@ def sealed_capability_files(layout_dir: Path, editable_patterns) -> list[str]:
     return out
 
 
+def seal_manifest(run_dir: RunDir, editable_patterns, fallback_dir: Path | None = None) -> dict | None:
+    """The allow-list seal as a manifest of the run's SEED capability, or ``None`` (seal OFF).
+
+    One reference for every algorithm: the sealed files and their hashes come from
+    ``candidates/seed`` (``fallback_dir`` only when the run has no seed snapshot yet), so a
+    sealed file's bytes are fixed for the whole run whatever lineage a candidate descends from.
+    """
+    if not editable_patterns:
+        return None
+    seed = run_dir.candidate_dir("seed")
+    layout = seed if seed.is_dir() else (Path(fallback_dir) if fallback_dir else None)
+    if layout is None or not layout.is_dir():
+        return None
+    return integrity.snapshot_files(layout, sealed_capability_files(layout, editable_patterns))
+
+
+def check_sealed(candidate_dir: Path, run_dir: RunDir, editable_patterns) -> "integrity.TamperReport | None":
+    """Verify ``candidate_dir`` against the seed's sealed files; ``None`` when the seal is off.
+
+    For algorithms that do not go through :func:`run_step` (gepa, hc2, agent-optimize): a
+    changed or deleted sealed file gives a failing report, which the caller turns into an
+    indecisive step or a refusal BEFORE any rollout of the candidate runs.
+    """
+    manifest = seal_manifest(run_dir, editable_patterns)
+    if manifest is None:
+        return None
+    return integrity.verify(manifest, Path(candidate_dir))
+
+
 def _editable_note(editable_patterns, sealed: list[str]) -> str:
     """The optimizer-facing statement of the allow-list, appended to its instructions."""
     lines = ["", "## Editable files (allow-list — enforced)",

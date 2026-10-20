@@ -71,6 +71,10 @@ def main(argv=None) -> int:
                    help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
                         "tests). 'default' expands to the built-in set. Empty = off. A "
                         "candidate that edits one is INDECISIVE, not scored 0.0.")
+    p.add_argument("--editable-paths", default="",
+                   help="comma-separated globs: the ONLY capability files the optimizer may edit "
+                        "(allow-list). Every other file of the seed capability is sealed; a "
+                        "candidate that changes or deletes one is INDECISIVE. Empty = off.")
     args = p.parse_args(argv)
 
     run_dir = RunDir.open(Path(args.run_dir))
@@ -111,6 +115,7 @@ def main(argv=None) -> int:
         no_regression=args.no_regression, seed=args.seed, store=store,
         resume=args.resume, ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),
         protected_patterns=harness.parse_protected_paths(args.protected_paths),
+        editable_patterns=harness.parse_editable_paths(args.editable_paths),
     )
     run_dir.close_observers()
 

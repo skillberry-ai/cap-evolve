@@ -94,7 +94,8 @@ Beyond `--run-dir` / `--project` / `--optimizer` / `--focus` / `--max-iterations
   `JOURNAL.md` and `PROCESS.md` are never sealed, and files the optimizer adds are its
   own scratch). A changed or deleted sealed file makes the step *indecisive*, as below,
   and the optimizer's instructions list both sets. Use it to keep a fixed harness frame
-  (placeholders, interaction contract) next to an editable skill. Empty = off.
+  (placeholders, interaction contract) next to an editable skill. Empty = off. On the
+  `--hc2` path a proposal that changes a sealed file is dropped before any rollout.
 - `--protected-paths` — globs sealing the eval surface (scorer, gold, tasks, splits;
   `default` expands to the built-in set). A candidate that edits one is *indecisive*,
   never scored: the measurement would grade a compromised harness, so no reward is

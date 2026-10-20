@@ -78,8 +78,8 @@ def main(argv=None) -> int:
     p.add_argument("--editable-paths", default="",
                    help="comma-separated globs: the ONLY capability files the optimizer may edit "
                         "(allow-list). Every other file of the seed capability is sealed; a "
-                        "candidate that changes or deletes one is INDECISIVE. Empty = off. "
-                        "Not applied on the --hc2 path.")
+                        "candidate that changes or deletes one is INDECISIVE (on --hc2: dropped "
+                        "before any rollout). Empty = off.")
     p.add_argument("--hc2", default=None,
                    help="OPT-IN HC-2 (cap_evolve.hc2): JSON of the spec keys hc2, hc2_*, p2_*, "
                         "promotion_rule, split_mode. K parallel proposals per round on the shared "
@@ -149,7 +149,8 @@ def main(argv=None) -> int:
                                 errored_policy=gate_kwargs.get("errored_trial_policy"))
         result = hc2.hc2_loop(adapter, run_dir=run_dir, optimizer=optimizer, evaluator=evaluator,
                               params=hc2_params, ctx=ctx, max_iterations=args.max_iterations,
-                              store=store, workers=harness.DEFAULT_WORKERS)
+                              store=store, workers=harness.DEFAULT_WORKERS,
+                              editable_patterns=harness.parse_editable_paths(args.editable_paths))
         run_dir.close_observers()
         print(json.dumps(result, indent=2))
         return 0
