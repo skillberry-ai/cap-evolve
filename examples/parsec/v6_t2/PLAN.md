@@ -43,7 +43,7 @@ direct v6 T-versus-G comparison on that edit.
 | max_iterations / stall | 6 (author-stopped) / 0 | 3 / 2 | matches v4 T2; bounds cost |
 | stop_at_reward | — | 1.0 | no further spend once the task is solved |
 | budget | $2,500 / $600 optimizer | $50 / $20 optimizer per task | matches v4 T2 |
-| optimizer brief | v6 multi-task brief | v6 brief adapted to one task (no hidden-set language; keep the "prefer the general mechanism" guidance) | the brief must describe the setting truthfully |
+| optimizer brief | v6 multi-task brief | v6 brief adapted to one task: no mention of a later merge or of hidden tasks; keeps the "fix the general mechanism, never hard-code instance values" guidance | describes the single-task setting truthfully, without steering edits toward a merge |
 
 Comparison with v6_g2 on held-out data happens after the merge: the merged bundle is scored on
 C (4 trials per task, like G's re-measurement) and once on test (66 × 10), the same protocol as
@@ -71,12 +71,13 @@ G's cand_0005.
      executable; run_t2.sh points CAPEVOLVE_OPTIMIZER_REGISTRY at it. The row keeps its name, so
      the harness gives the optimizer the same native skills, CLAUDE.md and parallel note as v6_g2.
      No framework change.
-5. `examples/parsec/v6_t2/run_t2.sh`: submit one LSF driver per task, all pointing at ONE
-   shared `V6_QUEUE_ROOT` (`_run/v6-queue/v6_t2_e1`) and ONE worker pool. Item ids already
-   carry a batch hash, so drivers cannot collide. Each driver's adapter tops up workers to
-   `V6_MAX_WORKERS`, so with a shared queue the pool stays at that cap (15) in total, not 15 per
-   driver. **To verify:** `ensure()` counts workers by job name (queue name), so 10 drivers share
-   one cap.
+5. `examples/parsec/v6_t2/run_t2.sh`. Built: one LSF driver per task, all submitted at once, all
+   on ONE shared lane queue (`_run/v6-queue/v6_t2_<suite>`). The worker cap defaults to
+   tasks x num_trials (50 for 10 tasks), so every task can evaluate at the same moment without
+   waiting for a lane. v4 T2 ran its tasks one after another on a single lane, so it has no
+   parallel setting to copy; per-task settings follow v4, and parallelism is new here.
+   Item ids carry a batch hash, so drivers cannot collide; workers are counted per queue name,
+   so the cap is shared. `V6_SHARED_QUEUE=1` keeps a finishing driver from stopping the pool.
 6. A preflight: seed byte-identity, the 10 task dirs present, credentials file present, a
    dry-run scaffold.
 
@@ -84,8 +85,8 @@ G's cand_0005.
 
 v4 T2's per-task cost: mean $20.82, median $13.83 (range $1.39–$43.57). Ten of the hardest
 reachable tasks are likely nearer the mean: about $150–$250 in total, mostly optimizer.
-Elapsed: about 3–4 h with all 10 in parallel (each task's optimizer loop is serial;
-evaluations are 5 trials, far below the 15-worker pool).
+Elapsed: about 3–4 h with all 10 in parallel (each task's optimizer loop is serial; every task
+has its own 5 lanes available).
 
 ## Not decided yet
 - Merge procedure (v6_t4): static union first (cheap, one evaluation), then one-at-a-time with

@@ -2,7 +2,8 @@
 #
 # Submit (or resume) the v6_t2 task-by-task drivers: one LSF driver per task, each running stock
 # cap-evolve hill-climb on its own single-task project (scaffold_projects.py), all dispatching
-# their evaluations to ONE shared lane queue and ONE worker pool of at most V6_MAX_WORKERS.
+# their evaluations to ONE shared lane queue and ONE worker pool, sized by default so that every
+# submitted task can evaluate at once (tasks x num_trials workers).
 #
 # Each driver is examples/parsec/v6/run_v6.sh, unchanged in what it runs; this script only sets
 # the shared-queue environment and the v6_t2 optimizer registry, then submits it per task.
@@ -50,6 +51,12 @@ if [[ ${#ONLY[@]} -eq 0 ]]; then
 fi
 [[ ${#ONLY[@]} -gt 0 ]] || { echo "no v6_t2_${SUITE}_* projects; run scaffold_projects.py first" >&2; exit 2; }
 
+# Enough lane workers for every submitted task to evaluate at the same time (tasks x num_trials),
+# so no task waits for a lane behind another; V6_MAX_WORKERS in the environment overrides it.
+# Idle workers exit after V6_WORKER_IDLE_EXIT seconds, so an unused cap costs nothing.
+first_spec="$PROJECT_ROOT/.capevolve/v6_t2_${SUITE}_${ONLY[0]}/project/capevolve.yaml"
+trials="$(sed -n 's/^num_trials: *\([0-9]*\).*/\1/p' "$first_spec")"
+export V6_MAX_WORKERS="${V6_MAX_WORKERS:-$(( ${#ONLY[@]} * ${trials:-5} ))}"
 export V6_QUEUE_ROOT="$PARSEC_V6N/_run/v6-queue/v6_t2_${SUITE}"
 export V6_SHARED_QUEUE=1
 export V6_T2_DIR="$T2_DIR"

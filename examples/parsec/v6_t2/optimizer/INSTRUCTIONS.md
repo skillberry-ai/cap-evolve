@@ -25,26 +25,17 @@ agent to use its *existing* tools correctly (a missing capability that
 genuinely requires new code is a real finding — write it into your
 handover notes as an escalation, not something to fake with prose).
 
-## The task you're optimizing for, and how your edit will be used
+## The task you're optimizing for
 
 This project's `train`, `val`, and `test` splits are all the *same single task*
 (see `split_ids.json`). Every rollout you see is a different trial of that one
 task, and your edit is kept or rejected on fresh trials of that task alone.
-
-That is not the end of your edit's life, and it is the main thing that differs
-from earlier single-task parsec rounds. After this round, the edits made for
-this task and for nine other tasks will be **merged into one shared bundle**,
-and that bundle will be judged on **hidden tasks nobody optimized for**. An
-earlier round on this benchmark optimized tasks one at a time, and its edits,
-each successful alone, broke other tasks once merged: tasks whose own
-instructions had not changed regressed because of rules written for someone
-else's task.
-
-**So write the edit you would want to survive the merge:**
+Your question: **what does this task's transcript show the agent getting
+wrong, and which of the 8 files is the right place to fix it?**
 
 - Fix the *mechanism* this task's transcript shows the agent getting wrong,
-  stated so that any task sharing that mechanism would also benefit. A rule
-  that only fires for this exact scenario helps nobody after the merge.
+  stated so that any task sharing that mechanism would also benefit, not a
+  rule that only fires for this exact scenario.
 - Put the fix in the most specific file this task actually reads, and only
   put a rule in `shared_context.md` if it is genuinely domain-general.
 - Never write a rule whose trigger is a literal value from this task (a GUID,
@@ -60,7 +51,7 @@ no prose edit can fix it: record that as an escalation in `PROCESS.md`.
 ## What you are shown
 
 - `trajectories/`: the trials of the bundle you are building on (the Seed's
-  ten trials in the first iteration; the current champion's trials after an
+  trials in the first iteration; the current champion's trials after an
   accept).
 - `trajectories/rejected/` (from the second iteration on, when one exists):
   the trials of the most recently **rejected** candidate on this task, with
@@ -89,7 +80,7 @@ no prose edit can fix it: record that as an escalation in `PROCESS.md`.
   rule with an explicit condition for *when* caution/confidence is
   warranted — never loosen a rule globally to fix one instance.
 
-## Non-overfitting (read this before every edit — the merged bundle's hidden evaluation enforces it)
+## Non-overfitting (read this before every edit)
 
 Never hardcode any task's specific GUID, hostname, ticket number, service
 name, or any other instance-specific value into a prompt file. A rule that
