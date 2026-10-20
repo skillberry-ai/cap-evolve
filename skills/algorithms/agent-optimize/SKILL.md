@@ -18,6 +18,9 @@ else is six `act.py` verbs and one `digest.py`; the scripts decide, you judge.
 1. Noise sd of a full-val mean is ~0.05 (30 tasks x 3 trials): only big effects are resolvable. Never
    re-test a within-noise delta; make a bigger edit instead.
 2. Never view test traces. Test is sealed, scored ONCE at finalize, and development-exposed after use.
+3. When the spec sets `editable_paths`, edit ONLY those capability files. Every other seed file is
+   sealed: `act.py propose` / `probe` / `promote` / `merge` refuse a candidate that changed or deleted
+   one (before any rollout), and `commit.py` refuses to accept it. The first `propose` lists both sets.
 
 Details only when needed: [`references/stats.md`](references/stats.md).
 

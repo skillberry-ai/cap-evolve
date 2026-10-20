@@ -478,6 +478,27 @@ def _has_grown(run_dir: RunDir, candidate_id: str) -> bool:
     return any((run_dir.root / "work").glob(f"grow_{candidate_id}_r*.json"))
 
 
+def _sealed_refusal(run_dir: RunDir, candidate_id: str, src: Path) -> dict | None:
+    """The refusal for an ``accept`` whose working copy changed a sealed file, else ``None``.
+
+    The allow-list seal (spec ``editable_paths``, #871) is the same one every loop applies: the
+    run's seed snapshot defines the sealed files. ``act.py`` already refuses such a candidate
+    before any rollout; this is the last check before ``best_id`` moves, for a driver that
+    calls ``commit.py`` directly. A reject/inconclusive commit of a tampered candidate is fine.
+    """
+    from cap_evolve.specfile import spec_for_run
+    editable = harness.parse_editable_paths(spec_for_run(run_dir).get("editable_paths"))
+    rep = harness.check_sealed(src, run_dir, editable)
+    if rep is None or rep.ok:
+        return None
+    run_dir.log_event("tamper_detected", candidate=candidate_id, report=rep.to_dict(), reason=rep.reason)
+    return {"error": f"refusing to accept {candidate_id!r}: it changed a sealed capability file "
+                     f"(editable_paths): {rep.reason}",
+            "sealed": rep.to_dict(), "editable": list(editable or ()),
+            "fix": "restore the sealed files from the parent and re-measure under a fresh tag, "
+                   "or book this candidate with --decision reject"}
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="commit")
     p.add_argument("--run-dir", required=True)
@@ -638,6 +659,11 @@ def main(argv=None) -> int:
     accepted = args.decision == "accept"
     indecisive = args.decision == "inconclusive"
     provisional = args.decision == "provisional"
+    if accepted:
+        refusal = _sealed_refusal(run_dir, args.candidate_id, src)
+        if refusal:
+            print(json.dumps(refusal, indent=2))
+            return 2
 
     # An inconclusive round is UNRESOLVED, not refuted — ``grow.py`` exists precisely to
     # resolve it by buying more trials on this same candidate, and issue #420 item 3 found

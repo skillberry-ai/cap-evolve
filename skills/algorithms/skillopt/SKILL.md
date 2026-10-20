@@ -130,7 +130,8 @@ the gap has moved and this section is what needs re-deriving.
 the effective batch), `--edit-budget` / `--min-edit-budget` / `--lr-schedule`,
 `--slow-update-sample`, `--no-slow-update`. `--resume`, `--no-regression`,
 `--n-trials`, `--workers`, `--gate-mode`, `--k-se`, `--protected-paths`,
-`--store` behave as in hill-climb.
+`--editable-paths`, `--store` behave as in hill-climb (every step, the slow update
+included, goes through the same `run_step` seal).
 
 `--max-iterations` is accepted and **ignored** — the loop is epoch-driven, so
 `cap-evolve run`'s iteration cap has no effect here (`scripts/run.py:42-43`, whose

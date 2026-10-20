@@ -112,6 +112,10 @@ For a single-file capability the two coincide and the merge skips gracefully
   `spent.iterations`** (`record_iteration(..., indecisive=True)`): the rollouts and
   the optimizer call were really spent, so the spend meter counts it and only the
   evidence meter does not.
+- `--editable-paths` (spec key `editable_paths`; empty = off): the ALLOW-LIST form of
+  the seal, as in hill-climb. Every file of the run's seed capability that is not
+  editable is sealed; a child that changes or deletes one is **INDECISIVE** exactly as
+  above, before its minibatch eval, and the instructions list both sets of files.
 - `--workers` (default 1): pools the minibatch rollouts. Only safe when the
   adapter's `run_target` is thread-safe.
 - `--store` / `--store-commit-cmd` (default `git`): where accepted candidates are

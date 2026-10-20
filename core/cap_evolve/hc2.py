@@ -43,6 +43,12 @@ from pathlib import Path
 from .evaluator import thread_map
 
 
+def _harness():
+    """``cap_evolve.harness``, imported late: harness imports this module."""
+    from . import harness
+    return harness
+
+
 @dataclass(frozen=True)
 class HC2Params:
     """Spec keys are ``hc2_<field>``; ``hc2: true`` turns HC-2 on."""
@@ -583,13 +589,16 @@ def _rounds_done(run_dir) -> int:
 
 
 def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, max_iterations: int,
-             store=None, algorithm: str = "hill-climb:hc2", workers: int = 1) -> dict:
+             store=None, algorithm: str = "hill-climb:hc2", workers: int = 1, editable_patterns=None) -> dict:
     """Rounds of K parallel proposals judged by ``evaluator`` (a ``P2Evaluator``).
 
     Concurrency is bounded by ``workers`` in total: jobs fan out over ``thread_map(workers)`` and each
     job runs its rollouts serially (the evaluator's own ``workers`` is forced to 1), so nesting cannot
     multiply the two. An interrupted round (``hc2_pending.json`` + its ``p2/r*.json``) is resumed on
     entry, not re-proposed. One round counts as one iteration and one stall step.
+
+    ``editable_patterns`` (None = off) is the allow-list seal (``harness.check_sealed``): a proposal
+    that changes or deletes a sealed seed file is dropped before any rollout, like a duplicate.
     """
     from . import harness
     rejected, history, store = harness._init_memory_store(run_dir, store)
@@ -601,6 +610,7 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
     env = dict(adapter=adapter, run_dir=run_dir, evaluator=evaluator, ctx=ctx, rejected=rejected,
                history=history, store=store, rdiffs=rdiffs, workers=workers, algorithm=algorithm, params=params)
     steps, stop = [], ""
+    seal = dict(editable_patterns=editable_patterns)
 
     pend = _load_pending(run_dir)
     if pend:
@@ -632,7 +642,7 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
         if not plan.funded:
             stop = "budget_unfunded"
             break
-        pend = _propose_round(plan.k, window, _rounds_done(run_dir), **env, optimizer=optimizer)
+        pend = _propose_round(plan.k, window, _rounds_done(run_dir), **env, **seal, optimizer=optimizer)
         if pend is None:
             stop = "no_failures"
             break
@@ -691,7 +701,7 @@ def _add_cost(costs: dict, cid: str, rep) -> None:
 
 
 def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluator, ctx, rejected, history,
-                   store, rdiffs, workers, algorithm, optimizer):
+                   store, rdiffs, workers, algorithm, optimizer, editable_patterns=None):
     """Cluster, propose in parallel, apply the diversity gate; persist ``hc2_pending.json``."""
     incumbent_id = run_dir.best_id
     incumbent_dir = run_dir.candidate_dir(incumbent_id)
@@ -732,6 +742,7 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
     for cid, (role, cl, others) in zip(prop_cids, slots):
         workdirs[cid], instr[cid], shown[cid] = _prepare(adapter, run_dir, evaluator, ctx, params, view,
                                                          cid, cl, others=others, role=role, **kw)
+        instr[cid] = _with_seal_note(instr[cid], run_dir, editable_patterns)
     slot_of = {cid: sl for cid, sl in zip(prop_cids, slots)}
     costs, errors = {}, {}
     with ThreadPoolExecutor(max_workers=max(1, min(len(cids), workers))) as pool:
@@ -746,6 +757,8 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
     for cid in cids:
         d = diff_lines(incumbent_dir, workdirs[cid])
         if cid not in slot_of:                    # the merged candidate overlaps its sources by design
+            if _sealed_violation(run_dir, cid, incumbent_id, workdirs[cid], editable_patterns, dropped):
+                continue
             if d:
                 diffs[cid] = d
             else:
@@ -764,6 +777,7 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
                     "different kind of edit, aimed at a different root cause in this cluster.")
             workdirs[cid], i2, shown[cid] = _prepare(adapter, run_dir, evaluator, ctx, params, view, cid,
                                                      cl, retry_note=note, others=others, role=role, **kw)
+            i2 = _with_seal_note(i2, run_dir, editable_patterns)
             rep, err = _propose(optimizer, workdirs[cid], i2)
             _add_cost(costs, cid, rep)            # every attempt is paid for
             errors[cid] = err
@@ -772,6 +786,8 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
             continue
         if not d:
             dropped[cid] = "empty diff" + (f" (optimizer error: {errors[cid][:200]})" if errors[cid] else "")
+            continue
+        if _sealed_violation(run_dir, cid, incumbent_id, workdirs[cid], editable_patterns, dropped):
             continue
         diffs[cid] = d
     for c in costs.values():
@@ -782,6 +798,26 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
             "diffs": {c: sorted(d) for c, d in diffs.items()}, "recorded": []}
     _save_pending(run_dir, pend)
     return pend
+
+
+def _sealed_violation(run_dir, cid, incumbent_id, workdir, editable_patterns, dropped) -> bool:
+    """True (and ``cid`` dropped, no rollout) when ``workdir`` changed or deleted a sealed seed file."""
+    tamper = _harness().check_sealed(workdir, run_dir, editable_patterns)
+    if tamper is None or tamper.ok:
+        return False
+    run_dir.log_event("tamper_detected", candidate=cid, parent=incumbent_id,
+                      report=tamper.to_dict(), reason=tamper.reason)
+    dropped[cid] = "sealed file changed (editable_paths): " + tamper.reason
+    return True
+
+
+def _with_seal_note(instructions: str, run_dir, editable_patterns) -> str:
+    """Append the allow-list statement (which files are editable, which are sealed) when the seal is on."""
+    if not editable_patterns:
+        return instructions
+    seed = run_dir.candidate_dir("seed")
+    sealed = _harness().sealed_capability_files(seed, editable_patterns) if seed.is_dir() else []
+    return instructions.rstrip() + "\n" + _harness()._editable_note(editable_patterns, sealed)
 
 
 def _build_merged(run_dir, incumbent_id, incumbent_dir, num, params):

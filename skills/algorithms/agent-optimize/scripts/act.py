@@ -168,6 +168,33 @@ class Ctx:
         return round(self.run_dir.spent.optimizer_usd - float(n.get("opt_usd_at_propose") or 0.0), 4)
 
 
+# ---- the allow-list seal ----------------------------------------------------------------------
+
+def editable(ctx):
+    """The spec's ``editable_paths`` allow-list, or ``None`` (seal off)."""
+    return harness.parse_editable_paths((getattr(ctx, "spec", None) or {}).get("editable_paths"))
+
+
+def check_sealed(ctx, tag, cand: Path) -> None:
+    """Refuse ``tag`` when ``cand`` changed or deleted a file the allow-list seals.
+
+    The same seal hill-climb, skillopt, gepa and hc2 apply (``harness.check_sealed``): the
+    reference is the run's seed snapshot, so it holds on every branch of the DAG. Checked
+    before any rollout of the candidate, and again before it can become the champion.
+    """
+    allow = editable(ctx)
+    if not allow:
+        return
+    rep = harness.check_sealed(cand, ctx.run_dir, allow)
+    if rep is None or rep.ok:
+        return
+    ctx.run_dir.log_event("tamper_detected", candidate=tag, report=rep.to_dict(), reason=rep.reason)
+    raise Refused(f"{tag} changed a sealed capability file (editable_paths): {rep.reason}",
+                  sealed=rep.to_dict(), editable=list(allow),
+                  next=f"restore the sealed files in {cand} from the parent (edit only "
+                       f"{', '.join(allow)}), then re-run this verb")
+
+
 # ---- propose ---------------------------------------------------------------------------------
 
 def _hypothesis(a, ctx) -> dict | None:
@@ -196,9 +223,17 @@ def propose(a, ctx):
         if rc != 0:
             raise Refused("prepare_candidate failed", output=jload(out) or out, stderr=err[-400:])
         saved.write_text(parent)
-        return 0, {"stage": "proposed", "parent": parent, "work": str(work),
-                   "next": f"edit {work} (one coherent edit for ONE hypothesis), then re-run: "
-                           f"act.py propose {tag} --parent {parent} --hypothesis-file H.json"}
+        res = {"stage": "proposed", "parent": parent, "work": str(work),
+               "next": f"edit {work} (one coherent edit for ONE hypothesis), then re-run: "
+                       f"act.py propose {tag} --parent {parent} --hypothesis-file H.json"}
+        allow = editable(ctx)
+        if allow:
+            seed = run_dir.candidate_dir("seed")
+            res["editable"] = list(allow)
+            res["sealed"] = harness.sealed_capability_files(seed, allow) if seed.is_dir() else []
+            res["next"] += f" -- edit ONLY {', '.join(allow)}; the sealed files must stay byte-identical"
+        return 0, res
+    check_sealed(ctx, tag, work)
     h = _hypothesis(a, ctx)
     out = {"parent": parent, "work": str(work)}
     if ctx.cfg["failure_clustering"]:
@@ -351,6 +386,7 @@ def probe(a, ctx):
     d = digest.cand_dir(run_dir, tag)
     if not d.is_dir():
         raise Refused(f"no candidate dir for {tag!r}")
+    check_sealed(ctx, tag, d)
     val_ids = ctx.val_ids()
     node = graph.latest_node(run_dir, tag) or {}
     parent = (node.get("parents") or ["seed"])[0]
@@ -548,6 +584,9 @@ def promote(a, ctx):
                           f"(changed: {stale or 'no hashes recorded'}): re-run verify-merge",
                           next=f"act.py verify-merge {tag} --parents <A> <B>")
     d = digest.cand_dir(run_dir, tag)
+    check_sealed(ctx, tag, d)
+    if editable(ctx) and ctx.work(tag).is_dir():
+        check_sealed(ctx, tag, ctx.work(tag))   # commit.py snapshots the work dir, not d
     miss = eval_index.missing(run_dir, eval_index.cap_hash(d), ctx.val_ids(), 1)
     if miss:
         raise Refused(f"{tag} lacks full-val ledger coverage ({len(miss)} tasks unmeasured)",
@@ -619,6 +658,8 @@ def merge(a, ctx):
     wins = merge_n.wins_from_run(run_dir, tags, ctx.champion()) or {}
     res = merge_n.plan(tags, dir_of, g, touched_tasks=tt, wins=wins, all_tasks=ctx.val_ids(),
                        out_dir=ctx.work(out_tag), run_dir=run_dir)
+    if res.get("built") and ctx.work(out_tag).is_dir():
+        check_sealed(ctx, out_tag, ctx.work(out_tag))
     rec = merge_n.node_record(res, out_tag)
     out = {k: res.get(k) for k in ("merged", "unmerged", "conflicts", "max_I", "unknown_pairs", "probe", "eval_request")}
     out["tag"] = out_tag

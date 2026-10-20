@@ -51,6 +51,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import gate as gate_mod
+from . import harness
 from . import integrity
 from . import selection
 from .cache import EvalCache, hash_candidate_dir
@@ -489,6 +490,7 @@ def gepa_loop(
     resume: bool = False,
     protected_patterns=None,
     ctx: OptimizerContext | None = None,
+    editable_patterns=None,
 ) -> dict:
     """Run GEPA's sample-efficient reflective Pareto loop.
 
@@ -619,6 +621,12 @@ def gepa_loop(
                     if protected_patterns else None)
         if manifest is not None:
             integrity.set_readonly(workdir, manifest)
+        # The allow-list seal (editable_paths): every non-editable seed file, fixed for the run.
+        sealed_manifest = harness.seal_manifest(run_dir, editable_patterns)
+        if sealed_manifest is not None:
+            integrity.set_readonly(workdir, sealed_manifest)
+            instructions = instructions.rstrip() + "\n" + harness._editable_note(
+                editable_patterns, sorted(sealed_manifest["files"]))
 
         opt_error = None
         opt_cost_usd, opt_tokens = 0.0, 0
@@ -638,23 +646,26 @@ def gepa_loop(
         # iteration. A tampered child is INDECISIVE: no reward is recorded (not even
         # the minibatch one), it never enters the pool or the rejected memory, and
         # ``accepted=None`` leaves the stall counter untouched.
-        if manifest is not None:
-            report = integrity.verify(manifest, workdir)
-            if not report.ok:
-                run_dir.log_event("tamper_detected", candidate=cid, parent=parent["id"],
-                                  report=report.to_dict(), reason=report.reason)
-                _reason = "indecisive (integrity): " + report.reason
-                record_iteration(run_dir, workdir, cid, parent_id=parent["id"],
-                                 accepted=False, reason=_reason, indecisive=True,
-                                 memory_skill=ctx.memory_skill)
-                run_dir.log_event("step_indecisive", candidate=cid, reason=_reason)
-                steps.append({"candidate_id": cid, "parent_id": parent["id"], "minibatch": mb,
-                              "accepted": False, "candidate_val": None,
-                              "tamper": report.to_dict(), "optimizer_error": opt_error,
-                              "focus": focus_label, "workdir": str(workdir)})
-                run_dir.record_spend_warnings()
-                _save()
-                continue
+        report = None
+        for man in (manifest, sealed_manifest):
+            if man is not None and report is None:
+                r = integrity.verify(man, workdir)
+                report = None if r.ok else r
+        if report is not None:
+            run_dir.log_event("tamper_detected", candidate=cid, parent=parent["id"],
+                              report=report.to_dict(), reason=report.reason)
+            _reason = "indecisive (integrity): " + report.reason
+            record_iteration(run_dir, workdir, cid, parent_id=parent["id"],
+                             accepted=False, reason=_reason, indecisive=True,
+                             memory_skill=ctx.memory_skill)
+            run_dir.log_event("step_indecisive", candidate=cid, reason=_reason)
+            steps.append({"candidate_id": cid, "parent_id": parent["id"], "minibatch": mb,
+                          "accepted": False, "candidate_val": None,
+                          "tamper": report.to_dict(), "optimizer_error": opt_error,
+                          "focus": focus_label, "workdir": str(workdir)})
+            run_dir.record_spend_warnings()
+            _save()
+            continue
 
         # 6. eval child on the SAME minibatch; cheap LOCAL gate sum(child)>sum(parent).
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,

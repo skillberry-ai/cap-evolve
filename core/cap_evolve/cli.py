@@ -1068,8 +1068,9 @@ def _cmd_run(argv):
             pp = [p.strip() for p in pp.split(",") if p.strip()]
         if pp:
             alg_cmd += ["--protected-paths", ",".join(str(p) for p in pp)]
-    # Allow-list seal (opt-in): only the hill-climb loop implements it so far.
-    if algorithm_name == "hill-climb":
+    # Allow-list seal (opt-in). The deterministic loops get it as a flag; agent-optimize reads
+    # ``editable_paths`` from the run's spec itself (act.py / commit.py).
+    if algorithm_name in ("hill-climb", "skillopt", "gepa"):
         ep = spec.get("editable_paths") or []
         if isinstance(ep, str):
             ep = [p.strip() for p in ep.split(",") if p.strip()]
