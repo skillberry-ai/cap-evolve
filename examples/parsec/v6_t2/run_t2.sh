@@ -59,8 +59,11 @@ fi
 # cap is the number of nodes this run occupies. Drivers run only the optimizer and the gate, so
 # they need no cap of their own; trials beyond 15 wait in the queue.
 export V6_MAX_WORKERS="${V6_MAX_WORKERS:-15}"
-# One job per node: every driver and every lane worker asks LSF for a node of its own (bsub -x).
-export V6_EXCLUSIVE=1
+# V6_EXCLUSIVE=1 would ask LSF for a whole node per job (bsub -x). Off by default: on a busy
+# cluster almost no node is fully idle, and every -x job stayed pending. The adapter already
+# places each lane worker on a node holding none of this user's jobs, so simulator stacks never
+# share a node; drivers run no simulator.
+export V6_EXCLUSIVE="${V6_EXCLUSIVE:-0}"
 export V6_QUEUE_ROOT="$PARSEC_V6N/_run/v6-queue/v6_t2_${SUITE}"
 export V6_SHARED_QUEUE=1
 export V6_T2_DIR="$T2_DIR"
