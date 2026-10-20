@@ -1,4 +1,4 @@
-# v6_t2_e1 — task-by-task optimization on the v6 feedback split (plan, not yet run)
+# v6_t2_e1 — task-by-task optimization on the v6 feedback split
 
 Purpose: the T arm counterpart to `v6_g2_e1`, so T and G can be compared on the same 200-task
 release and the same published split. This first round optimizes 10 tasks. Merging (v6_t4) is
@@ -49,6 +49,16 @@ direct v6 T-versus-G comparison on that edit.
 Comparison with v6_g2 on held-out data happens after the merge: the merged bundle is scored on
 C (4 trials per task, like G's re-measurement) and once on test (66 × 10), the same protocol as
 G's cand_0005.
+
+## Batch 2 (launched 2026-10-20)
+
+Every other feedback task the Seed scores below 0.95 that the fast-path router does not misroute:
+24 tasks (platform 14, icinga 6, cost 3, cloud 1; Seed 0.760–0.946). With batch 1 this covers all
+34 reachable feedback tasks below 0.95. Of the 42 below 0.95, 8 are excluded as routing-gap tasks:
+cloud-074, cloud-304, cloud-310, cloud-315, cost-410, cost-419, icinga-013, platform-071. Same
+configuration as batch 1. Worker cap 60 for this launch, to leave free CCC nodes for others.
+Three batch-2 tasks were also T2-optimized in v4 (platform-005, -007, -032). They are re-run, not
+reused, because v6 revised the shared verifier.
 
 ## What has to be built
 

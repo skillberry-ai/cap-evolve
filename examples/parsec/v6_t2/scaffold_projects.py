@@ -36,9 +36,9 @@ REPO_ROOT = T2_DIR.parents[2]
 PROMPT_FILES = ["orchestrator.md", "shared_context.md", "aap2_agent.md", "babylon_agent.md",
                 "cost_agent.md", "icinga_agent.md", "ocpv_agent.md", "security_agent.md"]
 
-# The ten lowest-scoring feedback tasks under the Seed that the fast-path router does not send
-# to a specialist lacking a required tool (see PLAN.md for the exclusions and their reasons).
-TASK_IDS = [
+# Batch 1 (launched 2026-10-20): the ten lowest-scoring feedback tasks under the Seed that the
+# fast-path router does not send to a specialist lacking a required tool (see PLAN.md).
+BATCH1 = [
     "platform-158-lab-instances-outside-default-region",
     "cloud-057-cloudtrail-select-only-refusal",
     "platform-121-near-miss-pick-partner-repo",
@@ -50,6 +50,35 @@ TASK_IDS = [
     "cost-408-three-cloud-total-gcp-query-failed",
     "platform-004-events-then-config",
 ]
+# Batch 2 (launched 2026-10-20): every other feedback task the Seed scores below 0.95 that the router
+# does not misroute. Batch 1 + batch 2 = all 34 reachable feedback tasks below 0.95.
+BATCH2 = [
+    "icinga-206-stale-ok-check",
+    "platform-104-cfn-dependency-and-what-changed",
+    "icinga-212-fix-on-main-not-on-pinned-ref",
+    "platform-007-directory-path-fetch",
+    "platform-032-shared-secret-not-a-registry-outage",
+    "icinga-222-lag-check-runs-on-satellite",
+    "platform-153-override-uses-removed-variable-name",
+    "platform-148-precheck-caches-nxdomain",
+    "platform-101-vcpu-quota-from-catalog-sizing",
+    "cost-402-unused-cost-preset-has-no-utilisation",
+    "cost-418-capacity-window-starts-mid-review",
+    "platform-126-stop-job-from-tower-jobs",
+    "icinga-216-flexible-downtime-duration",
+    "platform-124-event-accounts-not-returned",
+    "platform-112-exec-pool-disk-not-the-bastion",
+    "platform-152-path-search-cannot-find-variable-uses",
+    "cost-051-gcp-net-of-credits",
+    "platform-137-generated-password-forbidden-chars",
+    "platform-136-provision-key-mode-too-open",
+    "icinga-201-soft-critical-not-yet-hard",
+    "icinga-045-hosts-search-filter",
+    "platform-155-order-time-was-queue-wait",
+    "platform-005-wrong-owner-trap",
+    "cloud-317-namesake-user-other-account",
+]
+TASK_IDS = BATCH1 + BATCH2
 SEED_TRIALS = 10
 
 # Every knob that decides cost or acceptance is spelled out, even where it equals cap-evolve's
