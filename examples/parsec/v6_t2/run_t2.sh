@@ -76,5 +76,10 @@ for task in "${ONLY[@]}"; do
     echo "  would run: bash examples/parsec/v6/run_v6.sh ${args[*]}"
   else
     echo "  $task: $(bash "$PROJECT_ROOT/examples/parsec/v6/run_v6.sh" "${args[@]}")"
+    # LSF can place several drivers on one node, and run_ccc_experiment.sh's Phase 1
+    # (setup_podman.sh) restarts the user's podman service and dbus there: drivers that start
+    # on the same node at the same moment kill each other's setup ("Terminated" in Phase 1).
+    # Spacing the submissions lets each one finish that setup before the next can land.
+    sleep "${V6_T2_SUBMIT_GAP:-20}"
   fi
 done
