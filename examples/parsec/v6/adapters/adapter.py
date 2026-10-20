@@ -28,6 +28,7 @@ Environment:
   V6_BATCH_TIMEOUT_SEC   give up on a batch's stragglers after this long (default 21600)
   V6_WORKER_IDLE_EXIT    a worker exits after this long with nothing to do (default 600)
   V6_LSF_QUEUE / V6_LSF_MEM / CCC_LOGS   bsub queue, memory and log dir
+  V6_EXCLUSIVE           1 = submit workers with bsub -x (a node to itself; default off)
 """
 from __future__ import annotations
 
@@ -126,7 +127,8 @@ class LsfWorkers:
         self.logs.mkdir(parents=True, exist_ok=True)
         submitted = 0
         for h in hosts:
-            out = self._run("bsub", "-q", self.lsf_queue, "-M", self.memory, "-n", "1", "-m", h,
+            excl = ["-x"] if os.environ.get("V6_EXCLUSIVE") == "1" else []
+            out = self._run("bsub", "-q", self.lsf_queue, "-M", self.memory, "-n", "1", *excl, "-m", h,
                             "-J", self.job_name, "-oo", str(self.logs / "%J.stdout"),
                             "-eo", str(self.logs / "%J.stderr"),
                             "bash", str(self.script), "--queue", str(self.queue_root),

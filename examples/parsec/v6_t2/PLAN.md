@@ -82,13 +82,13 @@ reused, because v6 revised the shared verifier.
      executable; run_t2.sh points CAPEVOLVE_OPTIMIZER_REGISTRY at it. The row keeps its name, so
      the harness gives the optimizer the same native skills, CLAUDE.md and parallel note as v6_g2.
      No framework change.
-5. `examples/parsec/v6_t2/run_t2.sh`. Built: one LSF driver per task, all submitted at once, all
-   on ONE shared lane queue (`_run/v6-queue/v6_t2_<suite>`). The worker cap defaults to
-   tasks x num_trials (50 for 10 tasks), so every task can evaluate at the same moment without
-   waiting for a lane. v4 T2 ran its tasks one after another on a single lane, so it has no
-   parallel setting to copy; per-task settings follow v4, and parallelism is new here.
-   Item ids carry a batch hash, so drivers cannot collide; workers are counted per queue name,
-   so the cap is shared. `V6_SHARED_QUEUE=1` keeps a finishing driver from stopping the pool.
+5. `examples/parsec/v6_t2/run_t2.sh`. Built: one LSF driver per task, all on ONE shared lane
+   queue (`_run/v6-queue/v6_t2_<suite>`) and ONE worker pool capped at **15 workers**. A worker
+   runs parsec and all five simulators on fixed ports, so it needs a node to itself (RUN_H4.md:
+   "one node per job"); the cap is the number of nodes occupied. Drivers run only the optimizer
+   and the gate, start no simulator, and may share nodes. Submissions are spaced 20 s apart so
+   drivers that land on one node do not collide in Phase-1 podman setup. v4 T2 ran its tasks one
+   after another on a single lane, so the parallel setup is new here.
 6. A preflight: seed byte-identity, the 10 task dirs present, credentials file present, a
    dry-run scaffold.
 

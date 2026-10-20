@@ -25,7 +25,8 @@
 # whether it succeeded or not, so iterations can be chained without anyone watching.
 #
 # Optional env: V6_MAX_WORKERS (15), V6_WORKER_IDLE_EXIT (600), V6_MAX_ATTEMPTS (3),
-# V6_DRIVER_MEM (64G), CCC_LOGS (~/ccc_logs), V6_QUEUE_ROOT (per-suite default), V6_SHARED_QUEUE (0).
+# V6_DRIVER_MEM (64G), CCC_LOGS (~/ccc_logs), V6_QUEUE_ROOT (per-suite default), V6_SHARED_QUEUE (0),
+# V6_EXCLUSIVE (0; 1 = bsub -x, a node to itself).
 # The dashboard listens on the driver's
 # node at port 7878; reach it with  ssh -L 7878:<node>:7878 <login-node>.
 set -eo pipefail
@@ -83,7 +84,10 @@ if [[ "$SUBMIT" == true ]]; then
   [[ -n "$STALL" ]] && args+=(--stall "$STALL")
   dep=()
   [[ -n "$AFTER" ]] && dep=(-w "ended($AFTER)")
-  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 -J "v6d_${SUITE_ID}" "${dep[@]}" \
+  # V6_EXCLUSIVE=1 asks LSF for a node of its own (-x), so no other job shares it.
+  excl=()
+  [[ "${V6_EXCLUSIVE:-0}" == 1 ]] && excl=(-x)
+  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 "${excl[@]}" -J "v6d_${SUITE_ID}" "${dep[@]}" \
        -oo "$LOGS/%J.stdout" -eo "$LOGS/%J.stderr" bash "$0" "${args[@]}"
   exit $?
 fi
