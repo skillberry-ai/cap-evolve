@@ -13,10 +13,12 @@
 #   export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
 #   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --max-iterations 3 [--only TASK ...]
 #   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --max-iterations 3 --resume [--only TASK ...]
+#   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --max-iterations 5 --resume --only TASK --after JOBID
 #   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --dry-run     # print, submit nothing
 #
 # Without --only, every task scaffolded under .capevolve/v6_t2_<suite>_*/ is submitted.
 # --resume reuses each task's run name (the task id), so a resubmission continues its run.
+# --after JOBID holds every submitted driver until that LSF job has ended (run_v6.sh --after).
 set -eo pipefail
 
 T2_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,6 +29,7 @@ SUITE=""
 MAX_ITERATIONS=""
 RESUME=false
 DRY_RUN=false
+AFTER=""
 ONLY=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -34,8 +37,9 @@ while [[ $# -gt 0 ]]; do
     --max-iterations) MAX_ITERATIONS="$2"; shift 2 ;;
     --resume)         RESUME=true; shift ;;
     --only)           ONLY+=("$2"); shift 2 ;;
+    --after)          AFTER="$2"; shift 2 ;;
     --dry-run)        DRY_RUN=true; shift ;;
-    -h|--help)        sed -n '2,18p' "$0"; exit 0 ;;
+    -h|--help)        sed -n '2,20p' "$0"; exit 0 ;;
     *)                echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -67,6 +71,7 @@ echo "v6_t2 ${SUITE}: ${#ONLY[@]} task(s), queue=$V6_QUEUE_ROOT workers<=${V6_MA
 for task in "${ONLY[@]}"; do
   args=(--suite-id "t2_${SUITE}_${task}" --max-iterations "${MAX_ITERATIONS:-0}" --run-ts "$task" --submit)
   [[ "$RESUME" == true ]] && args+=(--resume)
+  [[ -n "$AFTER" ]] && args+=(--after "$AFTER")
   if [[ "$DRY_RUN" == true ]]; then
     echo "  would run: bash examples/parsec/v6/run_v6.sh ${args[*]}"
   else

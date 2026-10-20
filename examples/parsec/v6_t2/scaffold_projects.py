@@ -124,7 +124,7 @@ def main() -> int:
     ap.add_argument("--expect", type=Path, help="directory the seed must match byte for byte")
     ap.add_argument("--only", action="append", help="scaffold only this task (repeatable)")
     ap.add_argument("--num-trials", type=int, default=5)
-    ap.add_argument("--max-iterations", type=int, default=3)
+    ap.add_argument("--max-iterations", type=int, default=5)
     ap.add_argument("--stall", type=int, default=2)
     ap.add_argument("--max-usd", type=float, default=50.0)
     ap.add_argument("--max-optimizer-usd", type=float, default=20.0)

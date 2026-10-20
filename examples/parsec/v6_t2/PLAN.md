@@ -40,8 +40,9 @@ direct v6 T-versus-G comparison on that edit.
 | split | pooled F/C/test, P2 gate on hidden C | train = val = this one F task; no C, no test per task | the per-task gate can only see its own task; held-out evaluation happens after the merge |
 | gate | P2 group-sequential on C | paired hill-climb gate on this task (5 fresh trials vs the incumbent's) | single task |
 | trials per candidate evaluation | screen 1/task, C ≈ 3/task | 5 | enough to separate a real fix on one task from noise; half the cost of 10 |
-| max_iterations / stall | 6 (author-stopped) / 0 | 3 / 2 | matches v4 T2; bounds cost |
-| stop_at_reward | — | 1.0 | no further spend once the task is solved |
+| max_iterations / stall | 6 (author-stopped) / 0 | 5 / 2 | v4 T2 used 3; raised to 5 (2026-10-20) for more room per task |
+| stop_at_reward | — | 1.0 | a task stops as soon as a candidate scores 1.0 |
+| finalize (per-task test) | true (sealed test, once) | false: no per-task test | train = val = test is one task, so a per-task "test" would only re-measure val; held-out evaluation is done on the merged bundle |
 | budget | $2,500 / $600 optimizer | $50 / $20 optimizer per task | matches v4 T2 |
 | optimizer brief | v6 multi-task brief | v6 brief adapted to one task: no mention of a later merge or of hidden tasks; keeps the "fix the general mechanism, never hard-code instance values" guidance | describes the single-task setting truthfully, without steering edits toward a merge |
 
