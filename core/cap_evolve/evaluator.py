@@ -65,7 +65,7 @@ STAGES = ("rung1", "rung2", "control", "confirm", "seq", "incumbent")
 #: Fresh-seed ranges (``trial_offset``) per use. Disjoint by construction: a confirmation never reuses
 #: a rung seed, a control never reuses a confirmation seed, and rounds step within their block.
 SEED_BASE = {"incumbent": 100_000, "rung": 200_000, "control": 300_000, "confirm": 400_000,
-             "seq": 500_000, "final": 600_000}
+             "seq": 500_000, "final": 600_000, "champion": 700_000}
 SEED_BLOCK = 10_000     # per round, within a base
 
 

@@ -81,6 +81,7 @@ class P2Params:
     gs_looks: tuple = (12, 24, 49, 98, 147)
     gs_c: float = 1.6                # O'Brien-Fleming-type boundary constant: false accept ~0.05 per candidate
     gs_futility: tuple = (-0.5, 0.0, 0.3, 0.7)
+    champion_trials: int = 2         # F trials per task for a new champion, so the next proposer reads its traces (0 = off)
 
     @classmethod
     def from_spec(cls, spec: dict | None):
@@ -107,7 +108,10 @@ class P2Params:
             chunk=int(spec.get("p2_chunk", d.chunk)),
             gs_looks=tuple(int(x) for x in spec.get("p2_gs_looks", d.gs_looks)),
             gs_c=float(spec.get("p2_gs_c", d.gs_c)),
-            gs_futility=tuple(float(x) for x in spec.get("p2_gs_futility", d.gs_futility)))
+            gs_futility=tuple(float(x) for x in spec.get("p2_gs_futility", d.gs_futility)),
+            champion_trials=int(spec.get("p2_champion_trials", d.champion_trials)))
+        if out.champion_trials < 0:
+            raise ValueError("p2_champion_trials must be >= 0")
         if out.conf_n < 0 or min(out.k, out.ctrl_m, out.chunk, out.max_survivors, out.incumbent_trials) < 1:
             raise ValueError("p2_k, p2_conf_n, p2_ctrl_m, p2_chunk, p2_max_survivors and "
                              "p2_incumbent_trials must be >= 1")
