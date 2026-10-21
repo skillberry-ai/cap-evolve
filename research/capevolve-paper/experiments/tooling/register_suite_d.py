@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -335,6 +335,7 @@ def main():
                          ("ABLW1_order", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "order_ABLW1.jsonl", "ABL-W1 held-out window order (3,200 jobs: 12 ablation champions, HC-stock s0 reference, seed n = 20, seed-check), registered before launch (amendment 12 erratum 25); file lives in the paper repo checkout"),
                          ("ABLW1_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_ABLW1.json", "ABL-W1 artifact manifest"),
                          ("ABLW1_champions", CS / "final_eval/champions_ABL_W1.json", "ABL-W1 champions file (13 cells including the HC-stock reference)"),
+                         ("ablw1_analysis.py", PAPER / "analysis/scripts/ablw1_analysis.py", "ABL-W1 analysis script (amendment 12 erratum 29), registered after its first run"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
