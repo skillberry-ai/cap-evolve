@@ -590,7 +590,7 @@
       "candidate": "cand_0001",
       "val": 0.8400000000000001,
       "accept": true,
-      "optimizer_failed": true
+      "optimizer_failed": false
      },
      {
       "candidate": "cand_0002",
@@ -671,7 +671,7 @@
       "candidate": "cand_0002",
       "val": 0.883333,
       "accept": true,
-      "optimizer_failed": true
+      "optimizer_failed": false
      },
      {
       "candidate": "cand_0003",
@@ -836,7 +836,7 @@
       "candidate": "cand_0002",
       "val": 0.8949999999999999,
       "accept": true,
-      "optimizer_failed": true
+      "optimizer_failed": false
      },
      {
       "candidate": "cand_0003",
@@ -1114,7 +1114,7 @@
       "candidate": "cand_0001",
       "val": 1.0,
       "accept": true,
-      "optimizer_failed": true
+      "optimizer_failed": false
      }
     ],
     "ended": true,
@@ -1140,7 +1140,7 @@
       "candidate": "cand_0001",
       "val": 1.0,
       "accept": true,
-      "optimizer_failed": true
+      "optimizer_failed": false
      }
     ],
     "ended": true,
@@ -1315,7 +1315,7 @@
       "candidate": "cand_0001",
       "val": 1.0,
       "accept": true,
-      "optimizer_failed": true
+      "optimizer_failed": false
      }
     ],
     "ended": true,

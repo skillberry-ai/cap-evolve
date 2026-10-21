@@ -79,10 +79,15 @@ def t2_result(suite: str, task: str) -> dict | None:
         except ValueError:
             continue
         if e.get("kind") == "optimizer_error":
-            failed.add(e.get("candidate"))      # the optimizer made no edit; the "candidate" is its parent
+            failed.add(e.get("candidate"))
         elif e.get("kind") == "step":
+            # An optimizer_error with no optimizer spend means the CLI never ran (on 2026-10-21 the
+            # claude binary was truncated by a full disk and core-dumped), so no edit was made. A
+            # non-zero exit after a completed, billed session is logged as optimizer_error too, but
+            # its edits are real and were evaluated, so it is not flagged.
+            no_edit = e.get("candidate") in failed and not (e.get("opt_cost_usd") or 0)
             steps.append({"candidate": e.get("candidate"), "val": e.get("val"), "accept": bool(e.get("accept")),
-                          "optimizer_failed": e.get("candidate") in failed})
+                          "optimizer_failed": no_edit})
             opt += e.get("opt_cost_usd") or 0.0
             ev += e.get("cost_usd") or 0.0
         elif e.get("kind") == "finalize_skipped":
@@ -213,7 +218,7 @@ These are fit numbers on the task each bundle was optimized for, not a merged or
 <b>above-threshold</b> — Seed in [0.95, 1.0), left out by the 0.95 cutoff; <b>unfixable-routing</b> — parsec's
 regex fast path (<code>classify_fast</code>) sends the request to a specialist that lacks a tool the verifier requires,
 so no skill edit can reach it. Steps: A = accepted candidate, r = rejected, x = the optimizer failed to run
-(no edit was made; the unchanged bundle was re-measured). Suite v6_t2_{suite}.</p>
+(the CLI never ran, so no edit was made and the unchanged bundle was re-measured). Suite v6_t2_{suite}.</p>
 </main>
 <script>
 const ROWS = {data};

@@ -4,7 +4,12 @@ Purpose: the T arm counterpart to `v6_g2_e1`, so T and G can be compared on the 
 release and the same published split. This first round optimizes 10 tasks. Merging (v6_t4) is
 decided after these finish.
 
-## Tasks (10)
+
+**Status: complete (2026-10-21).** All 34 optimized tasks reached 1.0. Results, incidents and the
+67-task report are in [`results/v6_t2_e1/`](../../../results/v6_t2_e1/README.md). The sections
+below are the plan as run; "Cost and time" is the pre-run estimate, kept for comparison.
+
+## Tasks: batch 1 (10)
 
 The 10 lowest-scoring feedback tasks under the Seed (v6_g2_e1's own 10-trial Seed sweep). Excluded:
 tasks that `classify_fast()` routes to a specialist lacking a tool the task's verifier requires.
@@ -92,13 +97,15 @@ reused, because v6 revised the shared verifier.
 6. A preflight: seed byte-identity, the 10 task dirs present, credentials file present, a
    dry-run scaffold.
 
-## Cost and time (estimate, not measured)
+## Cost and time (pre-run estimate; actual: $281 optimizer + $38 eval for 34 tasks)
 
 v4 T2's per-task cost: mean $20.82, median $13.83 (range $1.39–$43.57). Ten of the hardest
 reachable tasks are likely nearer the mean: about $150–$250 in total, mostly optimizer.
 Elapsed: about 3–4 h with all 10 in parallel (each task's optimizer loop is serial; every task
 has its own 5 lanes available).
 
-## Not decided yet
-- Merge procedure (v6_t4): static union first (cheap, one evaluation), then one-at-a-time with
-  a check only if the union regresses. Decided after the 10 finish.
+## Merge (v6_t4): next
+
+Start with a static union of the 34 task-specific bundles, scored on the full feedback split, then
+on C and the sealed test split (G's protocol). Merge strategy to be discussed; keep T and G
+separate (no global optimization step inside the T merge).

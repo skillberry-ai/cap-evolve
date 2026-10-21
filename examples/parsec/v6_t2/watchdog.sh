@@ -7,7 +7,8 @@
 #   2. resubmits, as a resume, any task whose run has not ended and has no driver pending or running
 #      (a driver lost to a node failure or a kill), at most MAX_RESUBMITS times per task;
 #   3. exits once every scaffolded task's run has ended, or after DEADLINE_H hours.
-# Everything it does is logged to $LOG; a status snapshot is written to $STATUS when it exits.
+# Everything it does is logged to results/v6_t2_<suite>/watchdog/watchdog.log; a status snapshot is
+# written to status.json beside it when it exits.
 #
 # Usage (from the worktree root):
 #   bsub -q normal -n 1 -M 4G -J v6t2_watchdog -oo ~/ccc_logs/%J.stdout -eo ~/ccc_logs/%J.stderr \
@@ -20,9 +21,13 @@ SUITE="${2:-}"
 [[ "${1:-}" == --suite-id && -n "$SUITE" ]] || { echo "usage: watchdog.sh --suite-id ID" >&2; exit 2; }
 MAX_RESUBMITS="${V6_T2_MAX_RESUBMITS:-3}"
 DEADLINE_H="${V6_T2_WATCHDOG_HOURS:-14}"
-LOG="${CCC_LOGS:-$HOME/ccc_logs}/v6t2_${SUITE}_watchdog.log"
-STATUS="${CCC_LOGS:-$HOME/ccc_logs}/v6t2_${SUITE}_status.json"
-COUNTS="${CCC_LOGS:-$HOME/ccc_logs}/v6t2_${SUITE}_resubmits.tsv"
+# The watchdog's own record lives with the experiment, not in ~/ccc_logs/ (which holds only the
+# LSF job stdout/stderr): results/v6_t2_<suite>/watchdog/.
+OUT_DIR="$PROJECT_ROOT/results/v6_t2_${SUITE}/watchdog"
+mkdir -p "$OUT_DIR"
+LOG="$OUT_DIR/watchdog.log"
+STATUS="$OUT_DIR/status.json"
+COUNTS="$OUT_DIR/resubmits.tsv"
 touch "$COUNTS"
 
 log() { echo "[$(date '+%m-%d %H:%M:%S')] $*" >> "$LOG"; }

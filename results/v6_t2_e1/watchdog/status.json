@@ -1,0 +1,277 @@
+{
+ "written": "2026-10-20 16:49",
+ "tasks": [
+  {
+   "task": "platform-158-lab-instances-outside-default-region",
+   "seed": 0.46375,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 20.58
+  },
+  {
+   "task": "cloud-057-cloudtrail-select-only-refusal",
+   "seed": 0.5,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 6.0
+  },
+  {
+   "task": "platform-121-near-miss-pick-partner-repo",
+   "seed": 0.5,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 4.14
+  },
+  {
+   "task": "cloud-058-malformed-account-id",
+   "seed": 0.6,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 3.74
+  },
+  {
+   "task": "cost-407-aws-historical-query-came-back-org-wide",
+   "seed": 0.6,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 3.24
+  },
+  {
+   "task": "platform-116-timeout-headroom-from-history",
+   "seed": 0.64875,
+   "best": 1.0,
+   "steps": "AAA",
+   "ended": true,
+   "opt_usd": 24.36
+  },
+  {
+   "task": "icinga-215-ack-comment-author-and-expiry",
+   "seed": 0.6685716,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 6.13
+  },
+  {
+   "task": "icinga-204-downtime-window-expired",
+   "seed": 0.69,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 8.05
+  },
+  {
+   "task": "cost-408-three-cloud-total-gcp-query-failed",
+   "seed": 0.734,
+   "best": 1.0,
+   "steps": "ArA",
+   "ended": true,
+   "opt_usd": 13.74
+  },
+  {
+   "task": "platform-004-events-then-config",
+   "seed": 0.7599997000000001,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 8.21
+  },
+  {
+   "task": "icinga-206-stale-ok-check",
+   "seed": 0.7599998,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 6.91
+  },
+  {
+   "task": "platform-104-cfn-dependency-and-what-changed",
+   "seed": 0.77,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 8.91
+  },
+  {
+   "task": "icinga-212-fix-on-main-not-on-pinned-ref",
+   "seed": 0.775,
+   "best": 1.0,
+   "steps": "AAA",
+   "ended": true,
+   "opt_usd": 9.48
+  },
+  {
+   "task": "platform-007-directory-path-fetch",
+   "seed": 0.775,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 6.98
+  },
+  {
+   "task": "platform-032-shared-secret-not-a-registry-outage",
+   "seed": 0.7825,
+   "best": 1.0,
+   "steps": "AArA",
+   "ended": true,
+   "opt_usd": 23.19
+  },
+  {
+   "task": "icinga-222-lag-check-runs-on-satellite",
+   "seed": 0.8049997,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 5.87
+  },
+  {
+   "task": "platform-153-override-uses-removed-variable-name",
+   "seed": 0.8305552,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 10.12
+  },
+  {
+   "task": "platform-148-precheck-caches-nxdomain",
+   "seed": 0.83125,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 9.75
+  },
+  {
+   "task": "platform-101-vcpu-quota-from-catalog-sizing",
+   "seed": 0.8400000000000001,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 11.25
+  },
+  {
+   "task": "cost-402-unused-cost-preset-has-no-utilisation",
+   "seed": 0.8400000000000001,
+   "best": 0.8400000000000001,
+   "steps": "rr",
+   "ended": true,
+   "opt_usd": 7.83
+  },
+  {
+   "task": "cost-418-capacity-window-starts-mid-review",
+   "seed": 0.8424999999999999,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 6.02
+  },
+  {
+   "task": "platform-126-stop-job-from-tower-jobs",
+   "seed": 0.865,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 4.52
+  },
+  {
+   "task": "icinga-216-flexible-downtime-duration",
+   "seed": 0.8716664,
+   "best": 1.0,
+   "steps": "rArA",
+   "ended": true,
+   "opt_usd": 14.29
+  },
+  {
+   "task": "platform-124-event-accounts-not-returned",
+   "seed": 0.89,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 1.92
+  },
+  {
+   "task": "platform-112-exec-pool-disk-not-the-bastion",
+   "seed": 0.89,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 5.48
+  },
+  {
+   "task": "platform-152-path-search-cannot-find-variable-uses",
+   "seed": 0.8988887,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 1.95
+  },
+  {
+   "task": "cost-051-gcp-net-of-credits",
+   "seed": 0.9039999999999999,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 2.98
+  },
+  {
+   "task": "platform-137-generated-password-forbidden-chars",
+   "seed": 0.9099999999999999,
+   "best": 1.0,
+   "steps": "AAA",
+   "ended": true,
+   "opt_usd": 10.4
+  },
+  {
+   "task": "platform-136-provision-key-mode-too-open",
+   "seed": 0.916,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 3.21
+  },
+  {
+   "task": "icinga-201-soft-critical-not-yet-hard",
+   "seed": 0.9183332,
+   "best": 1.0,
+   "steps": "AA",
+   "ended": true,
+   "opt_usd": 7.21
+  },
+  {
+   "task": "icinga-045-hosts-search-filter",
+   "seed": 0.9199999999999999,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 3.38
+  },
+  {
+   "task": "platform-155-order-time-was-queue-wait",
+   "seed": 0.9233334,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 3.34
+  },
+  {
+   "task": "platform-005-wrong-owner-trap",
+   "seed": 0.9289999999999999,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 5.73
+  },
+  {
+   "task": "cloud-317-namesake-user-other-account",
+   "seed": 0.9455555,
+   "best": 1.0,
+   "steps": "A",
+   "ended": true,
+   "opt_usd": 5.51
+  }
+ ]
+}
