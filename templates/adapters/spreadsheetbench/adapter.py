@@ -651,6 +651,58 @@ def _patch_jupyter_wait(src: str) -> str:
     return src[:start] + _WAIT_FOR_MESSAGES_FIXED + src[end:]
 
 
+# The vendored __enter__ picks a free port, RELEASES it, then asks the engine to publish it, so a
+# concurrent container can take the port in between. Under rootless podman this surfaces as
+# `rootlessport listen tcp 0.0.0.0:<p>: bind: address already in use`, and pasta's netns setup fails
+# intermittently too (`netlink: Unexpected sequence number`). Both happen before the agent's first
+# turn, so the staged copy retries the start with a fresh port: no LLM call has been made, nothing is
+# charged, and each retry is logged. A start that still fails after the last attempt raises as before
+# and stays an infra error.
+CONTAINER_START_ATTEMPTS = int(os.environ.get("SPREADSHEETBENCH_CONTAINER_START_ATTEMPTS", "5"))
+_CONTAINER_RUN_VENDORED = '''        port = self._get_free_port()
+        # Run the container and expose the port
+        self.container = self.client.containers.run(
+            self.DOCKER_IMAGE,
+            name=self.name,
+            detach=True,
+            ports={"8888/tcp": port},
+            volumes={absolute_path: {'bind': '/mnt/data', 'mode': 'rw'}},
+            remove=True,  # Removes container when it's stopped
+            **self.RESOURCE_CONSTRAINTS,
+        )
+'''
+_CONTAINER_RUN_RETRIED = f'''        for _attempt in range(1, {CONTAINER_START_ATTEMPTS} + 1):
+            port = self._get_free_port()
+            try:
+                self.container = self.client.containers.run(
+                    self.DOCKER_IMAGE,
+                    name=self.name,
+                    detach=True,
+                    ports={{"8888/tcp": port}},
+                    volumes={{absolute_path: {{'bind': '/mnt/data', 'mode': 'rw'}}}},
+                    remove=True,  # Removes container when it's stopped
+                    **self.RESOURCE_CONSTRAINTS,
+                )
+                break
+            except docker.errors.APIError as e:
+                # A failed start leaves a Created container holding the name; drop it before retrying.
+                try:
+                    self.client.containers.get(self.name).remove(force=True)
+                except Exception:
+                    pass
+                if _attempt == {CONTAINER_START_ATTEMPTS}:
+                    raise
+                logging.warning(f"CAPEVOLVE_CONTAINER_START_RETRY attempt={{_attempt}} name={{self.name}} error={{e}}")
+                time.sleep(0.5 * _attempt)
+'''
+
+
+def _patch_container_start(src: str) -> str:
+    if _CONTAINER_RUN_VENDORED not in src:
+        raise RuntimeError("vendored jupyter.py changed: the container-start retry patch no longer applies")
+    return src.replace(_CONTAINER_RUN_VENDORED, _CONTAINER_RUN_RETRIED, 1)
+
+
 class _Sandbox:
     def __init__(self) -> None:
         vendor = _Vendor.get()
@@ -665,7 +717,7 @@ class _Sandbox:
         for name in ("api.py", "jupyter.py"):
             text = (vendor["code_dir"] / name).read_text(encoding="utf-8")
             if name == "jupyter.py":
-                text = _patch_jupyter_wait(text)
+                text = _patch_container_start(_patch_jupyter_wait(text))
             (self.runtime_dir / name).write_text(text, encoding="utf-8")
         (self.runtime_dir / "config.json").write_text(
             json.dumps({"volumes_path": str(data_dir.resolve())}), encoding="utf-8"
