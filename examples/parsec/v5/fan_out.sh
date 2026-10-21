@@ -177,6 +177,8 @@ for h in "${ALL_OK_HOSTS[@]}"; do
   for u in "${USED_HOSTS[@]}"; do [[ "$h" == "$u" ]] && skip=true && break; done
   [[ "$skip" == true ]] && continue
   is_reserved "$h" && continue
+  # Optional blocklist: hosts known to have a broken local podman store (one host per line).
+  [[ -n "${V5_BAD_HOSTS_FILE:-}" && -f "$V5_BAD_HOSTS_FILE" ]] && grep -qx -- "$h" "$V5_BAD_HOSTS_FILE" && continue
   AVAILABLE_HOSTS+=("$h")
 done
 

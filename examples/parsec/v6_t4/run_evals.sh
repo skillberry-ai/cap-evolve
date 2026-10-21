@@ -15,7 +15,7 @@ set -uo pipefail
 
 T4_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$T4_DIR/../../.." && pwd)"
-MAX_CONCURRENT="${V6_T4_MAX_CONCURRENT:-20}"
+MAX_CONCURRENT="${V6_T4_MAX_CONCURRENT:-30}"
 OUT="$PROJECT_ROOT/results/v6_t4_e1/eval"
 LOG="$OUT/run_evals.log"
 mkdir -p "$OUT"
@@ -41,12 +41,26 @@ pending_in() {   # tasks of suite $1 with no baseline.json yet
   echo "$n"
 }
 
-reap_finished() {   # a parsec eval job hangs in RUN after writing its result (RUN_H4.md); free its node
-  local j name suite task
-  bjobs -u "$USER" -noheader -o "jobid stat job_name" 2>/dev/null | awk '$2=="RUN" && $3 ~ /^v5_v6t4_m[0-9]_/ {print $1, $3}' |
-  while read -r j name; do
+# Hosts whose local podman store is broken: a job there fails stack setup and never exits.
+export V5_BAD_HOSTS_FILE="$OUT/bad_hosts.txt"
+touch "$V5_BAD_HOSTS_FILE"
+JOB_LOGS="${CCC_LOGS:-/dccstor/knewedge2/boazc/ccc_logs}"   # where fan_out.sh points bsub -oo/-eo
+
+reap_finished() {
+  # A parsec eval job stays in RUN after it is done (RUN_H4.md), so free its node:
+  #   - result written            -> kill it, keep the result
+  #   - stack setup failed (FATAL) -> kill it, block its host; fan_out resubmits the task elsewhere
+  local j name host suite task
+  bjobs -u "$USER" -noheader -o "jobid stat exec_host job_name" 2>/dev/null |
+    awk '$2=="RUN" && $4 ~ /^v5_v6t4_m[0-9]_/ {print $1, $3, $4}' |
+  while read -r j host name; do
     suite="$(sed -E 's/^v5_(v6t4_m[0-9])_.*/\1/' <<< "$name")"; task="${name#v5_${suite}_}"
-    [[ -f "results/v5_${suite}/${task}/run/baseline.json" ]] && bkill "$j" >/dev/null 2>&1 && log "reaped finished job $j ($suite $task)"
+    if [[ -f "results/v5_${suite}/${task}/run/baseline.json" ]]; then
+      bkill "$j" >/dev/null 2>&1 && log "reaped finished job $j ($suite $task)"
+    elif grep -qs "FATAL: parsec_stack.sh up failed" "$JOB_LOGS/$j.stdout" "$JOB_LOGS/$j.stderr"; then
+      bkill "$j" >/dev/null 2>&1 && log "killed failed-setup job $j on $host ($suite $task); host blocked"
+      grep -qx -- "$host" "$V5_BAD_HOSTS_FILE" || echo "$host" >> "$V5_BAD_HOSTS_FILE"
+    fi
   done
 }
 
