@@ -41,7 +41,17 @@ pending_in() {   # tasks of suite $1 with no baseline.json yet
   echo "$n"
 }
 
+reap_finished() {   # a parsec eval job hangs in RUN after writing its result (RUN_H4.md); free its node
+  local j name suite task
+  bjobs -u "$USER" -noheader -o "jobid stat job_name" 2>/dev/null | awk '$2=="RUN" && $3 ~ /^v5_v6t4_m[0-9]_/ {print $1, $3}' |
+  while read -r j name; do
+    suite="$(sed -E 's/^v5_(v6t4_m[0-9])_.*/\1/' <<< "$name")"; task="${name#v5_${suite}_}"
+    [[ -f "results/v5_${suite}/${task}/run/baseline.json" ]] && bkill "$j" >/dev/null 2>&1 && log "reaped finished job $j ($suite $task)"
+  done
+}
+
 while true; do
+  reap_finished
   open=0
   for s in "${SUITES[@]}"; do
     [[ -f ".capevolve/v5_${s}.tasks" ]] || continue
@@ -65,5 +75,5 @@ while true; do
     fi
   done
   (( open == 0 )) && { log "all suites scored"; break; }
-  sleep 180
+  sleep 90
 done
