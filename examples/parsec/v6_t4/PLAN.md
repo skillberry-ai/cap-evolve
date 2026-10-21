@@ -47,6 +47,8 @@ with the Seed's existing 10-trial F and test numbers (v6_g2_e1), paired by task.
 
 About 400 trials per method (~$100 at ~$0.25/trial), so ~$300 for all three.
 
+**Executed (2026-10-21):** 5 trials per task (3 + a 2-trial top-up at fresh seeds), not 3; results in `results/v6_t4_e1/README.md`.
+
 **Execution:** one LSF job per task, on its own node (the h4 pattern, `examples/parsec/RUN_H4.md`),
 at most 20 concurrent. No shared lane queue.
 
