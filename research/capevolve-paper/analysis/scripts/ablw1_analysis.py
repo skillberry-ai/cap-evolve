@@ -7,7 +7,7 @@ when it flags; infra counts. Exploratory: raw p only, no Holm decision, one sear
 import csv, datetime as dt, json, math, os, statistics, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import paired_cluster_bootstrap as pcb
-FE = "/home/dev/projects2/campaign-scratch/final_eval/ABLW1/main"; OUT = sys.argv[1]
+WIN = sys.argv[2] if len(sys.argv) > 2 else "ABLW1"; FE = f"/home/dev/projects2/campaign-scratch/final_eval/{WIN}/main"; OUT = sys.argv[1]
 R = [r for r in csv.DictReader(open(f"{FE}/results_long.csv")) if r["split"] == "test"]
 tasks = sorted({r["task"] for r in R}, key=lambda t: (len(t), t)); ix = {t: i for i, t in enumerate(tasks)}
 famd = {r["task"]: r["family"] for r in R}; fam = [famd[t] for t in tasks]
@@ -35,8 +35,9 @@ vadj = lambda a: [mean(acc[(a, t)]) for t in tasks]
 arms = sorted(a for a in M if a not in ("seed", "seed-check", "HC-stock-s0-ref"))
 rep = json.load(open(f"{FE}/per_arm_report.json"))
 tot = {x: sum(v[x] for v in rep.values()) for x in ("jobs", "done", "infra_attempts", "infra_final", "hangs", "candidate_errors", "missing_hang", "empty_output", "raw_tool_text_last")}
-L = ["# ABL-W1: 12 ablation champions on the held-out test-20 (exploratory; designed after the V3 B1 results were seen)", "",
-     "Task set: 20 tasks, 20 families; k = 10 trials per task per champion; seed n = 20; seed-check k = 10; HC-stock-s0-ref = the main-window HC-stock seed-0 champion re-scored in this window. One search seed per arm: no pipeline-level interval, no claim about a component's general importance; raw p only, no family claim, no Holm decision (addendum 6).", "",
+_WHAT = "12 ablation champions" if WIN == "ABLW1" else "3 native Claude Code champions"
+L = [f"# {WIN}: {_WHAT} on the held-out test-20 (exploratory; designed after the V3 B1 results were seen)", "",
+     "Task set: 20 tasks, 20 families; k = 10 trials per task per champion; seed n = 20; seed-check k = 10; HC-stock-s0-ref = the main-window HC-stock seed-0 champion re-scored in this window. One search seed per arm: no pipeline-level interval, no claim about a component's general importance; raw p only, no family claim, no Holm decision (addenda 6 and 7).", "",
      f"Infrastructure (per_arm_report.json): {tot}", "",
      "## Window checks", ""]
 sc = dlt(M["seed-check"], M["seed"])
@@ -59,4 +60,4 @@ for a in arms:
     L.append(f"| {a} | {f(mean(M[a]))} | {sg(d[0])} | [{f(d[1][0])}, {f(d[1][1])}] | {d[2]:.3f} | {s1}{sg(dh[0])} | [{f(dh[1][0])}, {f(dh[1][1])}] | {dh[2]:.3f} |")
 L += ["", ("The 'difference to HC-stock-s0-ref' column uses the block-adjusted scores (drift flagged)." if flag else "The 'difference to HC-stock-s0-ref' column uses the plain scores (no drift flag)."), "",
       f"Count of arms with a positive delta over the seed: {sum(1 for r in rows if r[2][0] > 0)} of {len(rows)}; with the CI excluding 0 upward: {sum(1 for r in rows if r[2][1][0] > 0)}; arms whose delta exceeds HC-stock-s0-ref's: {sum(1 for r in rows if r[3][0] > 0)}; with the difference CI excluding 0: {sum(1 for r in rows if r[3][1][0] > 0 or r[3][1][1] < 0)}."]
-os.makedirs(OUT, exist_ok=True); open(os.path.join(OUT, "ablw1.md"), "w").write("\n".join(L) + "\n"); print("\n".join(L))
+os.makedirs(OUT, exist_ok=True); open(os.path.join(OUT, f"{WIN.lower()}.md"), "w").write("\n".join(L) + "\n"); print("\n".join(L))

@@ -1,6 +1,6 @@
-# ABL-W1: 12 ablation champions on the held-out test-20 (exploratory; designed after the V3 B1 results were seen)
+# ABLW1: 12 ablation champions on the held-out test-20 (exploratory; designed after the V3 B1 results were seen)
 
-Task set: 20 tasks, 20 families; k = 10 trials per task per champion; seed n = 20; seed-check k = 10; HC-stock-s0-ref = the main-window HC-stock seed-0 champion re-scored in this window. One search seed per arm: no pipeline-level interval, no claim about a component's general importance; raw p only, no family claim, no Holm decision (addendum 6).
+Task set: 20 tasks, 20 families; k = 10 trials per task per champion; seed n = 20; seed-check k = 10; HC-stock-s0-ref = the main-window HC-stock seed-0 champion re-scored in this window. One search seed per arm: no pipeline-level interval, no claim about a component's general importance; raw p only, no family claim, no Holm decision (addenda 6 and 7).
 
 Infrastructure (per_arm_report.json): {'jobs': 3200, 'done': 3200, 'infra_attempts': 0, 'infra_final': 0, 'hangs': 0, 'candidate_errors': 0, 'missing_hang': 0, 'empty_output': 0, 'raw_tool_text_last': 0}
 
