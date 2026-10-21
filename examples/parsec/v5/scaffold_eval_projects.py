@@ -94,7 +94,7 @@ def all_task_ids(v5n: Path) -> list[str]:
     )
 
 
-def render_capevolve_yaml(num_trials: int, max_usd: float) -> str:
+def render_capevolve_yaml(num_trials: int, max_usd: float, split_seed: int = 0) -> str:
     # Mirrors h4's project yaml so a reader can diff the two, with
     # max_iterations pinned to 0: this project is measured, never optimized.
     # The optimizer_* keys stay because the schema carries them and a reader
@@ -111,6 +111,7 @@ split_ids_file: split_ids.json
 num_trials: {num_trials}
 max_iterations: 0
 max_usd: {max_usd}
+split_seed: {split_seed}
 """
 
 
@@ -167,6 +168,7 @@ def scaffold_all(
     capevolve_dir: Path = CAPEVOLVE_DIR,
     num_trials: int = 5,
     max_usd: float = 50.0,
+    split_seed: int = 0,
     common_adapters_src: Path = COMMON_ADAPTERS_SRC,
     common_optimizer_src: Path = COMMON_OPTIMIZER_SRC,
     force: bool = False,
@@ -193,7 +195,7 @@ def scaffold_all(
 
         yaml_path = proj / "capevolve.yaml"
         if force or not yaml_path.exists():
-            yaml_path.write_text(render_capevolve_yaml(num_trials, max_usd), encoding="utf-8")
+            yaml_path.write_text(render_capevolve_yaml(num_trials, max_usd, split_seed), encoding="utf-8")
         created.append(yaml_path)
 
         split_path = proj / "split_ids.json"
@@ -228,6 +230,9 @@ def main() -> int:
     parser.add_argument("--tasks", default="all",
                         help="'all' (default, every bench-v5-* task found) or a comma list")
     parser.add_argument("--num-trials", type=int, default=5)
+    parser.add_argument("--split-seed", type=int, default=0,
+                        help="trial k is seeded split_seed + k: a top-up suite set to the earlier "
+                             "suite's trial count draws new seeds instead of replaying them")
     parser.add_argument("--max-usd", type=float, default=50.0)
     parser.add_argument("--force", action="store_true",
                         help="also rewrite capevolve.yaml/split_ids.json if present")
@@ -267,7 +272,7 @@ def main() -> int:
 
     paths = scaffold_all(
         args.suite_id, artifact, task_ids,
-        num_trials=args.num_trials, max_usd=args.max_usd, force=args.force,
+        num_trials=args.num_trials, max_usd=args.max_usd, split_seed=args.split_seed, force=args.force,
     )
     print(f"suite {args.suite_id}: scaffolded {len(task_ids)} project(s), "
           f"{len(paths)} paths touched, artifact {artifact}")

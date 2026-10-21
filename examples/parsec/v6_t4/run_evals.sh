@@ -52,9 +52,9 @@ reap_finished() {
   #   - stack setup failed (FATAL) -> kill it, block its host; fan_out resubmits the task elsewhere
   local j name host suite task
   bjobs -u "$USER" -noheader -o "jobid stat exec_host job_name" 2>/dev/null |
-    awk '$2=="RUN" && $4 ~ /^v5_v6t4_m[0-9]_/ {print $1, $3, $4}' |
+    awk '$2=="RUN" && $4 ~ /^v5_v6t4_m[0-9]x?_/ {print $1, $3, $4}' |
   while read -r j host name; do
-    suite="$(sed -E 's/^v5_(v6t4_m[0-9])_.*/\1/' <<< "$name")"; task="${name#v5_${suite}_}"
+    suite="$(sed -E 's/^v5_(v6t4_m[0-9]x?)_.*/\1/' <<< "$name")"; task="${name#v5_${suite}_}"
     if [[ -f "results/v5_${suite}/${task}/run/baseline.json" ]]; then
       bkill "$j" >/dev/null 2>&1 && log "reaped finished job $j ($suite $task)"
     elif grep -qs "FATAL: parsec_stack.sh up failed" "$JOB_LOGS/$j.stdout" "$JOB_LOGS/$j.stderr"; then
@@ -75,6 +75,10 @@ while true; do
       if [[ -z "${started[$s]:-}" || "${started[$s]}" != done ]]; then
         python3 "$T4_DIR/collect_evals.py" --suite "$s" >> "$LOG" 2>&1
         log "$s: all tasks scored; cost/time recorded"
+        if [[ "$s" == *x ]]; then   # a top-up suite: pool it with its base suite's trials
+          python3 "$T4_DIR/collect_evals.py" --suite "${s%x}_5t" --pool "${s%x}" "$s" >> "$LOG" 2>&1
+          log "${s%x}_5t: pooled ${s%x} + $s"
+        fi
         started[$s]=done
       fi
       continue

@@ -43,7 +43,12 @@ def seed_scores() -> dict[str, dict[str, float]]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--suite", required=True)
+    ap.add_argument("--pool", nargs="+", metavar="SUITE",
+                    help="pool these suites' trials per task (e.g. a 3-trial suite and its 2-trial top-up "
+                         "at fresh seeds) into one 5-trial estimate; written as eval/<--suite>.json")
     args = ap.parse_args()
+    if args.pool:
+        return pooled(args.suite, args.pool)
 
     root = REPO_ROOT / "results" / f"v5_{args.suite}"
     splits = json.loads((G2_RUN / "splits.json").read_text())
@@ -90,6 +95,45 @@ def main() -> int:
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(json.dumps(out, indent=1), encoding="utf-8")
     print(json.dumps({"suite": args.suite, **out["cost"], "F": reward["feedback"], "test": reward["test"]}, indent=1))
+    return 0
+
+
+def pooled(name: str, suites: list[str]) -> int:
+    """One estimate per task from every valid trial across ``suites`` (same bundle, disjoint seeds)."""
+    splits = json.loads((G2_RUN / "splits.json").read_text())
+    split_of = {t: "feedback" for t in splits["feedback"]} | {t: "test" for t in splits["test"]}
+    seed = seed_scores()
+    trials: dict[str, list[float]] = {}
+    cost = {"eval_usd": 0.0, "eval_tokens": 0, "serial_seconds": 0.0}
+    for s in suites:
+        root = REPO_ROOT / "results" / f"v5_{s}"
+        for task_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+            b = task_dir / "run" / "baseline.json"
+            if not b.is_file():
+                continue
+            r = v5collect.read_task_result(b, task_dir.name)
+            if r is None:
+                continue
+            trials.setdefault(task_dir.name, []).extend(float(x) for x in (r.get("trial_rewards") or []))
+            for k, f in (("eval_usd", "cost_usd"), ("eval_tokens", "tokens"), ("serial_seconds", "seconds")):
+                cost[k] += r.get(f) or 0
+    reward = {}
+    for split in ("feedback", "test"):
+        rows = [(t, statistics.fmean(v), len(v)) for t, v in trials.items() if split_of.get(t) == split and v]
+        paired = [(m, seed[split][t]) for t, m, _ in rows if t in seed[split]]
+        d = [a - b for a, b in paired]
+        reward[split] = {"n_tasks": len(paired), "trials_per_task": sorted({n for _, _, n in rows}),
+                         "mean": statistics.fmean([a for a, _ in paired]) if paired else None,
+                         "seed_mean_same_tasks": statistics.fmean([b for _, b in paired]) if paired else None,
+                         "paired_delta": statistics.fmean(d) if d else None,
+                         "delta_se": (statistics.stdev(d) / len(d) ** 0.5) if len(d) > 1 else None}
+    out = {"suite": name, "pooled_from": suites, "cost": cost, "reward": reward,
+           "note": "Trials pooled per task across the listed suites (same bundle, disjoint seeds). Seed = "
+                   "v6_g2_e1's 10-trial Seed measurement on the same tasks (paired). Errored trials are "
+                   "absent, never scored as 0."}
+    dst = REPO_ROOT / "results" / "v6_t4_e1" / "eval" / f"{name}.json"
+    dst.write_text(json.dumps(out, indent=1), encoding="utf-8")
+    print(json.dumps({"suite": name, **cost, "F": reward["feedback"], "test": reward["test"]}, indent=1))
     return 0
 
 
