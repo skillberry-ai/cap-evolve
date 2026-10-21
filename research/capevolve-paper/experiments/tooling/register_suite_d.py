@@ -331,6 +331,7 @@ def main():
                          ("ABL_GATE-K2_s0_run_summary", CS / "runs/ABL/GATE-K2/s0/run_summary.json", "ablation GATE-K2 seed 0 run summary (amendment 12 erratum 24)"),
                          ("ABL_GATE-NONE_s0_run_summary", CS / "runs/ABL/GATE-NONE/s0/run_summary.json", "ablation GATE-NONE seed 0 run summary (amendment 12 erratum 24)"),
                          ("ABL_GATE-DISJOINT_s0_run_summary", CS / "runs/ABL/GATE-DISJOINT/s0/run_summary.json", "ablation GATE-DISJOINT seed 0 run summary (amendment 12 erratum 24)"),
+                         ("ABLW1_champions_draft", CS / "final_eval/champions_ABL_W1.json", "ABL-W1 champions file as first sent (12 ablation champions, no HC-stock reference cell); the window needs a rebuilt order (amendment 12 erratum 24)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
