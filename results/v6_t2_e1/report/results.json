@@ -1,0 +1,1445 @@
+{
+ "suite": "v6_t2_e1",
+ "summary": {
+  "n_tasks": 67,
+  "by_class": {
+   "optimized": 34,
+   "at-ceiling": 19,
+   "above-threshold": 6,
+   "unfixable-routing": 8
+  },
+  "seed_mean": 0.8300111671641791,
+  "final_mean": 0.9351058955223881,
+  "optimized_solved": 33,
+  "optimizer_usd": 274.42,
+  "eval_usd": 37.81,
+  "note": "final = the task's own T2 champion where one exists, else the Seed. These are fit numbers on the task each bundle was optimized for: 34 separate bundles, not one. Seed = v6_g2_e1's 10 Seed trials; T2 champion = its own 5-trial evaluation."
+ },
+ "tasks": [
+  {
+   "task": "cloud-055-azure-subscription-not-found",
+   "category": "cloud",
+   "class": "above-threshold",
+   "seed": 0.9650000000000001,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 0.9650000000000001
+  },
+  {
+   "task": "cloud-057-cloudtrail-select-only-refusal",
+   "category": "cloud",
+   "class": "optimized",
+   "seed": 0.5,
+   "seed_trials": 10,
+   "route": "security",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 6.0,
+    "eval_usd": 0.4
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cloud-058-malformed-account-id",
+   "category": "cloud",
+   "class": "optimized",
+   "seed": 0.6,
+   "seed_trials": 10,
+   "route": "security",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 3.74,
+    "eval_usd": 0.34
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cloud-074-assigned-account-still-billing",
+   "category": "cloud",
+   "class": "unfixable-routing",
+   "seed": 0.6200003,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [
+    "query_aws_costs"
+   ],
+   "t2": null,
+   "final": 0.6200003
+  },
+  {
+   "task": "cloud-304-marketplace-active-past-end",
+   "category": "cloud",
+   "class": "unfixable-routing",
+   "seed": 0.1600001,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [
+    "query_marketplace_agreements"
+   ],
+   "t2": null,
+   "final": 0.1600001
+  },
+  {
+   "task": "cloud-307-azure-two-project-tags",
+   "category": "cloud",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "cloud-310-stopped-lab-restarted-billing",
+   "category": "cloud",
+   "class": "unfixable-routing",
+   "seed": 0.7266663999999999,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [
+    "query_aws_costs"
+   ],
+   "t2": null,
+   "final": 0.7266663999999999
+  },
+  {
+   "task": "cloud-311-owner-handover-inventory",
+   "category": "cloud",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "cloud-315-min-cost-drops-unestimated",
+   "category": "cloud",
+   "class": "unfixable-routing",
+   "seed": 0.21333359999999998,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [
+    "query_marketplace_agreements"
+   ],
+   "t2": null,
+   "final": 0.21333359999999998
+  },
+  {
+   "task": "cloud-317-namesake-user-other-account",
+   "category": "cloud",
+   "class": "optimized",
+   "seed": 0.9455555,
+   "seed_trials": 10,
+   "route": "security",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 5.51,
+    "eval_usd": 0.46
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cost-028-highest-spend-provider",
+   "category": "cost",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "cost-051-gcp-net-of-credits",
+   "category": "cost",
+   "class": "optimized",
+   "seed": 0.9039999999999999,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 2.98,
+    "eval_usd": 0.39
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cost-073-end-exclusive-alert-day",
+   "category": "cost",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "cost-402-unused-cost-preset-has-no-utilisation",
+   "category": "cost",
+   "class": "optimized",
+   "seed": 0.8400000000000001,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 0.8400000000000001,
+    "best_id": "seed",
+    "iterations": 5,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.8400000000000001,
+      "accept": false,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.8400000000000001,
+      "accept": false,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 0.808,
+      "accept": false,
+      "optimizer_failed": true
+     },
+     {
+      "candidate": "cand_0004",
+      "val": 0.616,
+      "accept": false,
+      "optimizer_failed": true
+     },
+     {
+      "candidate": "cand_0005",
+      "val": 0.68,
+      "accept": false,
+      "optimizer_failed": true
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 7.83,
+    "eval_usd": 2.86
+   },
+   "final": 0.8400000000000001
+  },
+  {
+   "task": "cost-407-aws-historical-query-came-back-org-wide",
+   "category": "cost",
+   "class": "optimized",
+   "seed": 0.6,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 3.24,
+    "eval_usd": 0.41
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cost-408-three-cloud-total-gcp-query-failed",
+   "category": "cost",
+   "class": "optimized",
+   "seed": 0.734,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0003",
+    "iterations": 3,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.9720000000000001,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.752,
+      "accept": false,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 13.74,
+    "eval_usd": 1.34
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cost-410-released-sandbox-still-spending",
+   "category": "cost",
+   "class": "unfixable-routing",
+   "seed": 0.634,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [
+    "query_aap2"
+   ],
+   "t2": null,
+   "final": 0.634
+  },
+  {
+   "task": "cost-416-peak-day-is-a-cross-service-sum",
+   "category": "cost",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "cost-418-capacity-window-starts-mid-review",
+   "category": "cost",
+   "class": "optimized",
+   "seed": 0.8424999999999999,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.8949999999999999,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 6.02,
+    "eval_usd": 1.02
+   },
+   "final": 1.0
+  },
+  {
+   "task": "cost-419-chargeback-predates-current-tenant",
+   "category": "cost",
+   "class": "unfixable-routing",
+   "seed": 0.6714283,
+   "seed_trials": 10,
+   "route": "cost",
+   "route_missing_tools": [
+    "query_aap2"
+   ],
+   "t2": null,
+   "final": 0.6714283
+  },
+  {
+   "task": "icinga-013-acknowledged-not-an-issue",
+   "category": "icinga",
+   "class": "unfixable-routing",
+   "seed": 0.512,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [
+    "query_icinga"
+   ],
+   "t2": null,
+   "final": 0.512
+  },
+  {
+   "task": "icinga-015-problems-by-severity",
+   "category": "icinga",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "icinga-045-hosts-search-filter",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.9199999999999999,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 3.38,
+    "eval_usd": 0.38
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-046-services-search-cross-host",
+   "category": "icinga",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "icinga-201-soft-critical-not-yet-hard",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.9183332,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.9400000000000001,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 7.21,
+    "eval_usd": 0.91
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-204-downtime-window-expired",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.69,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.8,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 8.05,
+    "eval_usd": 1.03
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-206-stale-ok-check",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.7599998,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.866667,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 6.91,
+    "eval_usd": 0.97
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-212-fix-on-main-not-on-pinned-ref",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.775,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0003",
+    "iterations": 3,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.8400000000000001,
+      "accept": true,
+      "optimizer_failed": true
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.9400000000000001,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 9.48,
+    "eval_usd": 2.8
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-214-hostgroup-membership-rollup",
+   "category": "icinga",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "icinga-215-ack-comment-author-and-expiry",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.6685716,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 6.13,
+    "eval_usd": 0.48
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-216-flexible-downtime-duration",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.8716664,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0004",
+    "iterations": 4,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.8233330000000001,
+      "accept": false,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.883333,
+      "accept": true,
+      "optimizer_failed": true
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 0.8600002,
+      "accept": false,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0004",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 14.29,
+    "eval_usd": 1.67
+   },
+   "final": 1.0
+  },
+  {
+   "task": "icinga-222-lag-check-runs-on-satellite",
+   "category": "icinga",
+   "class": "optimized",
+   "seed": 0.8049997,
+   "seed_trials": 10,
+   "route": "icinga",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.9766666,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 5.87,
+    "eval_usd": 1.68
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-004-events-then-config",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.7599997000000001,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 8.21,
+    "eval_usd": 0.24
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-005-wrong-owner-trap",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.9289999999999999,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 5.73,
+    "eval_usd": 0.7
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-007-directory-path-fetch",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.775,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 6.98,
+    "eval_usd": 0.23
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-018-find-jobs-window",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "aap2",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-032-shared-secret-not-a-registry-outage",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.7825,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0004",
+    "iterations": 4,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.8775000000000001,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.8949999999999999,
+      "accept": true,
+      "optimizer_failed": true
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 0.6849999999999999,
+      "accept": false,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0004",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 23.19,
+    "eval_usd": 6.36
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-036-secret-redacted-not-absent",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-041-resource-pool-unfiltered-list",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-044-search-catalog-env-type",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-062-provisioning-job-trace",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "aap2",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-067-branch-name-not-the-cause",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-070-invented-fix-variables",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-071-unmonitored-proxy-not-esxi-alert",
+   "category": "platform",
+   "class": "unfixable-routing",
+   "seed": 0.383333,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [
+    "query_icinga"
+   ],
+   "t2": null,
+   "final": 0.383333
+  },
+  {
+   "task": "platform-101-vcpu-quota-from-catalog-sizing",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.8400000000000001,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.9,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 11.25,
+    "eval_usd": 2.1
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-104-cfn-dependency-and-what-changed",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.77,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.9,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 8.91,
+    "eval_usd": 0.69
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-112-exec-pool-disk-not-the-bastion",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.89,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 5.48,
+    "eval_usd": 0.52
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-116-timeout-headroom-from-history",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.64875,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0003",
+    "iterations": 3,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.7625,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.9824999999999999,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 24.36,
+    "eval_usd": 1.59
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-117-dependency-project-sync-failed",
+   "category": "platform",
+   "class": "above-threshold",
+   "seed": 0.9800000000000001,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 0.9800000000000001
+  },
+  {
+   "task": "platform-118-pending-pvcs-wait-for-first-consumer",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-119-pvc-storage-class-not-on-cluster",
+   "category": "platform",
+   "class": "above-threshold",
+   "seed": 0.986,
+   "seed_trials": 10,
+   "route": "ocpv",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 0.986
+  },
+  {
+   "task": "platform-121-near-miss-pick-partner-repo",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.5,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": true
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 4.14,
+    "eval_usd": 0.7
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-124-event-accounts-not-returned",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.89,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": true
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 1.92,
+    "eval_usd": 0.67
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-126-stop-job-from-tower-jobs",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.865,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 4.52,
+    "eval_usd": 0.67
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-133-component-sub-components-hop",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-134-pool-search-canary-two-clusters",
+   "category": "platform",
+   "class": "above-threshold",
+   "seed": 0.986,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 0.986
+  },
+  {
+   "task": "platform-136-provision-key-mode-too-open",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.916,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 3.21,
+    "eval_usd": 0.77
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-137-generated-password-forbidden-chars",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.9099999999999999,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0003",
+    "iterations": 3,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.9533332,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 0.9766666,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0003",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 10.4,
+    "eval_usd": 1.0
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-139-ami-id-pinned-to-one-region",
+   "category": "platform",
+   "class": "above-threshold",
+   "seed": 0.9883333000000001,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 0.9883333000000001
+  },
+  {
+   "task": "platform-148-precheck-caches-nxdomain",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.83125,
+   "seed_trials": 10,
+   "route": "aap2",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 9.75,
+    "eval_usd": 1.42
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-152-path-search-cannot-find-variable-uses",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.8988887,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": true
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 1.95,
+    "eval_usd": 0.28
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-153-override-uses-removed-variable-name",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.8305552,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.922222,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 10.12,
+    "eval_usd": 1.49
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-155-order-time-was-queue-wait",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.9233334,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0001",
+    "iterations": 1,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 3.34,
+    "eval_usd": 0.36
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-158-lab-instances-outside-default-region",
+   "category": "platform",
+   "class": "optimized",
+   "seed": 0.46375,
+   "seed_trials": 10,
+   "route": null,
+   "route_missing_tools": [],
+   "t2": {
+    "best": 1.0,
+    "best_id": "cand_0002",
+    "iterations": 2,
+    "steps": [
+     {
+      "candidate": "cand_0001",
+      "val": 0.875,
+      "accept": true,
+      "optimizer_failed": false
+     },
+     {
+      "candidate": "cand_0002",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
+     }
+    ],
+    "ended": true,
+    "optimizer_usd": 20.58,
+    "eval_usd": 0.88
+   },
+   "final": 1.0
+  },
+  {
+   "task": "platform-162-shared-session-needs-multiuser-item",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  },
+  {
+   "task": "platform-165-renamed-item-same-asset-uuid",
+   "category": "platform",
+   "class": "above-threshold",
+   "seed": 0.986,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 0.986
+  },
+  {
+   "task": "platform-167-ordered-workers-override-default",
+   "category": "platform",
+   "class": "at-ceiling",
+   "seed": 1.0,
+   "seed_trials": 10,
+   "route": "babylon",
+   "route_missing_tools": [],
+   "t2": null,
+   "final": 1.0
+  }
+ ]
+}
