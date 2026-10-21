@@ -1200,6 +1200,77 @@ def _read_task_template(ctx) -> str:
     return _helpers.render_skills_root(text, _SKILLS_IMPORT_ROOT) if _helpers.enabled() else text
 
 
+_HELPER_GATE_CACHE: dict[str, str | None] = {}
+_HELPER_GATE_LOCK = threading.Lock()
+
+
+def _helper_gate_config() -> dict | None:
+    """The run's helper config, or None when the gate does not apply.
+
+    The gate needs the spec's `helpers:` table (lint settings, ids_file, deny_roots). The harness does
+    not pass the spec to the adapter, so it is read from CAPEVOLVE_HELPERS_SPEC (a capevolve.yaml path),
+    which the exp895 launcher sets for EVERY arm. Unset means the gate is off, as before.
+    """
+    spec_path = os.environ.get("CAPEVOLVE_HELPERS_SPEC", "")
+    if not spec_path or not _helpers.enabled():
+        return None
+    from cap_evolve.specfile import read_yaml
+
+    cfg = _helpers.resolve(read_yaml(Path(spec_path).read_text(encoding="utf-8")))
+    return cfg if (cfg["lint"] or cfg["smoke"]) else None
+
+
+def _helper_tree_key(ctx) -> str:
+    """Content hash of the candidate's helper files: one gate verdict per distinct tree, reused across rollouts."""
+    import hashlib
+
+    h = hashlib.sha256()
+    for f in sorted((Path(ctx) / "skills").glob("*/scripts/*.py")) if (Path(ctx) / "skills").is_dir() else []:
+        h.update(f.relative_to(ctx).as_posix().encode() + b"\0" + f.read_bytes() + b"\0")
+    return h.hexdigest()
+
+
+def _helper_gate_error(ctx) -> str | None:
+    """Why this candidate's helper scripts fail the common pre-rollout gate, or None.
+
+    Hill-climb never calls the helper lint or smoke test (only agent-optimize's pregate does), so for
+    exp895 they run here, in the shared rollout layer, identically for every arm. It uses cap-evolve's own
+    `lint_candidate` (task ids, answer literals, task-identity branches, network use) and `run_smoke`
+    (each changed script imports cleanly in a subprocess that cannot read deny_roots). A failing candidate
+    scores 0 on every rollout without an LLM call; the harness still debits its full evaluation from the
+    budget. Returns a message, never raises, for the same reason as `_task_template_error`.
+    """
+    try:
+        cfg = _helper_gate_config()
+    except Exception as e:  # noqa: BLE001 — a broken config is the run's fault: fail loudly, not per candidate
+        raise RuntimeError(f"helper gate: could not load CAPEVOLVE_HELPERS_SPEC: {e}") from e
+    if cfg is None or not (Path(ctx) / "skills").is_dir():
+        return None
+    key = _helper_tree_key(ctx)
+    with _HELPER_GATE_LOCK:
+        if key in _HELPER_GATE_CACHE:
+            return _HELPER_GATE_CACHE[key]
+        from cap_evolve import helper_smoke
+
+        problems: list[str] = []
+        if cfg["lint"]:
+            r = _helpers.lint_candidate(Path(ctx), cfg)
+            if not r["ok"]:
+                problems += [f"lint: {f}" for f in r["findings"]]
+        if cfg["smoke"] and not problems:
+            r = helper_smoke.run_smoke(Path(ctx), cfg)
+            if not r["ok"]:
+                problems.append(f"smoke: {r['detail']}")
+        verdict = None
+        if problems:
+            verdict = ("CANDIDATE_HELPER_GATE: the helper scripts failed the pre-rollout check, so this candidate "
+                       "was not run. Fix these and it can be scored: " + " | ".join(problems)[:1500])
+        print(f"spreadsheetbench: helper gate {'FAILED' if verdict else 'passed'} for tree {key[:12]}",
+              file=sys.stderr)
+        _HELPER_GATE_CACHE[key] = verdict
+        return verdict
+
+
 def _task_template_error(ctx) -> str | None:
     """Why this candidate's template is unusable, or None if it is fine.
 
@@ -1619,6 +1690,12 @@ class Adapter(CapabilityAdapter):
                 # failure under errored_trial_policy=fail, not missing data.
                 return Rollout(task_id=task.id, error=tmpl_error,
                                metadata={"error_kind": "candidate"})
+            # Same contract for the helper scripts: the static lint and the import smoke run once per
+            # candidate, before any LLM call, and a failure is the candidate's fault (scored 0, no rollout).
+            helper_error = _helper_gate_error(ctx)
+            if helper_error:
+                return Rollout(task_id=task.id, error=helper_error,
+                               metadata=_helpers.candidate_fault_metadata(helper_error, helper_gate="failed"))
 
             # v2 helpers (off unless helpers.enabled): the candidate's skills/*/scripts are defined once in
             # the rollout's own kernel (text only: no mount, nothing under the data view, and only THIS
