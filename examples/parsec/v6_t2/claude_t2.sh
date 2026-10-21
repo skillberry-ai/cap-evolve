@@ -5,6 +5,9 @@
 # Invoked by the claude-code row of the v6_t2 registry.yaml beside this file, with cwd = the
 # iteration's workdir. `exec` hands the process to `claude`, so run-optimizer reads claude's own
 # stdout (the json result it parses for cost) as if no wrapper were here.
+#
+# V6_T2_CLAUDE_BIN overrides which `claude` runs (default: the one on PATH). Used on 2026-10-21
+# when the PATH copy (npm 2.1.306) core-dumped on CCC compute nodes.
 set -eo pipefail
 python3 "$(dirname "${BASH_SOURCE[0]}")/stage_rejected.py"
-exec claude "$@"
+exec "${V6_T2_CLAUDE_BIN:-claude}" "$@"

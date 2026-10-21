@@ -9,10 +9,10 @@
    "unfixable-routing": 8
   },
   "seed_mean": 0.8300111671641791,
-  "final_mean": 0.9351058955223881,
-  "optimized_solved": 33,
-  "optimizer_usd": 274.42,
-  "eval_usd": 37.81,
+  "final_mean": 0.9374939552238806,
+  "optimized_solved": 34,
+  "optimizer_usd": 281.12,
+  "eval_usd": 38.25,
   "note": "final = the task's own T2 champion where one exists, else the Seed. These are fit numbers on the task each bundle was optimized for: 34 separate bundles, not one. Seed = v6_g2_e1's 10 Seed trials; T2 champion = its own 5-trial evaluation."
  },
  "tasks": [
@@ -236,9 +236,9 @@
    "route": "cost",
    "route_missing_tools": [],
    "t2": {
-    "best": 0.8400000000000001,
-    "best_id": "seed",
-    "iterations": 5,
+    "best": 1.0,
+    "best_id": "cand_0006",
+    "iterations": 6,
     "steps": [
      {
       "candidate": "cand_0001",
@@ -269,13 +269,19 @@
       "val": 0.68,
       "accept": false,
       "optimizer_failed": true
+     },
+     {
+      "candidate": "cand_0006",
+      "val": 1.0,
+      "accept": true,
+      "optimizer_failed": false
      }
     ],
     "ended": true,
-    "optimizer_usd": 7.83,
-    "eval_usd": 2.86
+    "optimizer_usd": 14.53,
+    "eval_usd": 3.3
    },
-   "final": 0.8400000000000001
+   "final": 1.0
   },
   {
    "task": "cost-407-aws-historical-query-came-back-org-wide",
