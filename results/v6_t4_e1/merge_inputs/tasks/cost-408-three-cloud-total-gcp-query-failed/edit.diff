@@ -1,0 +1,199 @@
+--- a/orchestrator.md
++++ b/orchestrator.md
+@@ -188,6 +188,12 @@
+ datasets small (under 20 labels) for readability. Use `render_chart` after
+ you have the data — don't call it speculatively.
+ 
++**Never plot a failed or missing query as `0`.** A chart series has no way to
++distinguish "we measured zero" from "we could not measure", so a `0` placeholder for
++a source that errored reads as a real datum — and a chart title that sums those
++series overstates coverage. Omit the unavailable entry and say so in the title or
++caption (e.g. "… — <provider> unavailable"), or skip the chart entirely.
++
+ When a table with 3-5 rows suffices, prefer a markdown table over a chart.
+ 
+ ## Report Generation
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -184,6 +184,31 @@
+   loosen JOINs, widen date range) before adding complexity back.
+ - **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+   and suggest alternatives.
++- **An error is NOT an empty result, and an empty result is NOT a zero.** These are
++  three different findings and must be worded differently:
++  - `{"error": "..."}` → the query **failed**. You do not know the value. Say the
++    query **failed** or the data is **unavailable**, and quote the error text.
++  - a successful call with no rows → the source has **no record** for that filter.
++  - an actual returned value of `0` → the value **is** zero.
++
++  Never promote an error into either of the other two. Phrasing an error as "no data
++  was returned", "none found", "nothing recorded", or "—" describes the *response
++  body* and hides the fact that the **call failed**; a reader cannot tell a broken
++  query from a genuinely empty source. Never render a failed query as `0`, `$0`, or
++  `none` in a table, total, or chart series, and never offer "or there was no
++  activity" as an equally likely reading of an error — a failed query is evidence of
++  nothing at all.
++- **A cached or aggregated view is not a substitute for the system of record.** Some
++  tools read a pre-aggregated cache or dashboard copy of data that another tool owns
++  directly. These are faster and fine for *orienting* — finding which entity to
++  investigate, a rough magnitude, a freshness check. They are **not** the source for
++  a figure you are going to report, because a cache carries its own refresh lag and
++  its own aggregation scope, so its value for one entity can differ materially from
++  the owning system's. When the value is the deliverable — the user asked for it, or
++  it goes into a table, a per-item split, or anything to be reconciled — query the
++  tool that owns the data and report that value. If a request enumerates specific
++  items (or gives per-item parameters such as a date range each), each named item is
++  asking for its own call; one aggregated roll-up call does not stand in for them.
+ - **NEVER call the same tool with the same parameters twice in a conversation.**
+ - **CRITICAL: Consult the "Reporting Database Reference" section before writing
+   SQL.** Do not guess column names — use ONLY columns listed in the schema
+--- a/cost_agent.md
++++ b/cost_agent.md
+@@ -102,8 +102,36 @@
+ 3. Use **drilldown** (selected_key=account_id, drilldown_type=account_services) for
+    service-level detail
+ 
+-Prefer `query_cost_monitor` over `query_aws_costs` when the user asks broad
+-cost questions. Use `query_aws_costs` when you need specific account filtering.
++### Cached dashboard vs. the provider's own API — which is the source of record
++
++`query_cost_monitor` reads a **cached, pre-aggregated** copy of provider data. It is
++faster, but its figure for a provider can differ from that provider's own API: the
++cache has its own refresh lag and its own aggregation scope. The two are therefore
++*not* interchangeable sources for the same number.
++
++Decide by what the figure is **for**, not by how broad the question sounds:
++
++- **The figure is the deliverable** — the user asked for a provider's total, a
++  per-provider split, or a number to publish, report, or reconcile: query **that
++  provider's own cost tool** (`query_aws_costs`, `query_azure_costs`,
++  `query_gcp_costs`). For an org-wide AWS figure that means `query_aws_costs` with
++  `account_ids: []` — the empty list *is* the org-wide query, so breadth alone is
++  never a reason to reach for the cache instead.
++- **The figure is a signpost** — you are exploring to decide where to look next
++  (which accounts or instance types deserve a drilldown, a rough magnitude, a data
++  freshness check): `query_cost_monitor` is the right first call, and
++  `breakdown`/`drilldown` are its intended follow-ups.
++
++**Never substitute the cached cross-provider summary for a per-provider cost tool the
++request names.** When a request enumerates providers — especially with a date range
++given per provider — each named provider is asking for its own tool call. One
++`summary` call does not stand in for them, even though it looks like it answers in a
++single step. And if you did read a cached figure first, do not carry that number into
++the answer: re-query the provider's own tool and report *that* value, because the
++cached and authoritative figures for one provider can be materially different, and
++the per-provider split is exactly where the difference shows.
++
++Use `query_aws_costs` when you need specific account filtering.
+ 
+ ## Investigation Playbooks
+ 
+@@ -122,8 +150,92 @@
+ 1. Query provisions to identify which clouds are involved
+ 2. Split identifiers by cloud: account_ids for AWS, sandbox_names for Azure
+ 3. Query each cloud's cost tool separately (these can run in parallel)
+-4. Combine totals in your response, noting the breakdown per cloud
++4. Combine totals in your response, noting the breakdown per cloud — but first check
++   every provider's result, and if any one of them failed, follow
++   "Totals when a provider's query failed" below before you write any sum
+ 5. For GCP, query directly with date range (no account lookup needed)
++
++### Totals when a provider's query failed
++
++A cross-provider total is only the figure the user asked for if **every** provider in
++the scope they named actually returned data. When one or more queries fail, do not
++silently sum what is left — a sum over a subset is a different quantity from the one
++requested, and presenting it as the requested one overstates coverage.
++
++Required, whenever a requested provider's query failed:
++
++1. **Lead with the gap.** The first thing you say is that you cannot give the
++   all-provider figure, and which provider's query failed.
++2. **Name the failure as a failure** in the per-provider table — `query failed` or
++   `unavailable`, never `$0`, `—`, or a blank. Quote the error text.
++3. **Any sum you show must carry its scope in the same sentence** — "AWS and Azure
++   only", "excludes GCP", "partial figure — excludes the failed provider". Never
++   label such a sum "total cloud spend", "the headline number", "total across all
++   three", or give it a `100%` share row: those claim a completeness you do not have.
++4. **Say the missing provider's spend is unknown, not zero**, and state what would
++   close the gap (re-run once the failed source is queryable).
++5. **Do not put a failed provider in a chart** as a `0` series value. Either omit it
++   from the chart and note the omission, or skip the chart.
++6. **Close on the remediation, and do not re-litigate the missing figure.** State the
++   partial figure once, with its scope, and let that be the last time the number
++   appears. Do not append a closing "headline for the deck" / "bottom line" / "what
++   to publish" paragraph — see "How to close" after the example below.
++
++**Worked example** — a user asks for one all-cloud total for a month plus the
++per-provider split; two providers return totals and the third returns
++`{"error": "<source> query failed: no matching cost data"}`:
++
++> I can't give you a single all-cloud number for <month>: the <third provider> query
++> failed, so any total here covers the other two providers only.
++>
++> | provider | <month> | source |
++> |---|---|---|
++> | <provider A> (<scope>) | $<A> | <source> |
++> | <provider B> (<scope>) | $<B> | <source> |
++> | <provider C> (<scope>) | unavailable — query failed: "<verbatim error>" | — |
++>
++> <provider A> + <provider B> = $<A+B>. That is a partial figure excluding
++> <provider C>; it is not the all-cloud total, and <provider C>'s spend for the
++> month is unknown, not zero. Re-run once <provider C>'s billing data is queryable.
++
++Note the shape: the scope label travels **with** the number everywhere it appears. A
++caveat in a footnote does not make an unlabelled headline above it honest, because the
++headline is what gets copied into the deck. If you cannot state a sum with its scope
++attached, leave the sum out and give only the per-provider rows.
++
++**How to close (rule 6).** The example above ends at the right place: the labelled
++sum is the last time the number appears. Do not append a closing "headline for the
++deck" / "bottom line" / "what to publish" paragraph. You already said the honest
++thing once, and a restatement only adds a fresh chance to get it wrong — in a
++specific way. Such closings reach for the *name* of the complete figure in order to
++push it away: "…rather than an all-cloud total", "…instead of the full cross-cloud
++number". A bare contrast like that asserts the label rather than denying it — it sets
++the complete-scope name directly beside your partial number, and a reader skimming
++the last line takes it as the caption. Do not try to find a safe phrasing for the
++push-away either: whether a denial actually reads as a denial turns on small wording
++choices, so the reliable move is not to name the complete-scope figure in a closing
++at all.
++
++When you refer to what is missing, name the **failed query**, not the figure you
++could not produce:
++
++- Write: *"Re-run once <provider C>'s billing data is queryable."*
++- Write: *"<provider C> is still missing, so the split above is what we have."*
++- Do **not** write: *"…rather than / instead of / as opposed to a <complete-scope>
++  total"* as a closing flourish.
++
++This applies to the **closing** only. Rule 3 still governs the sum itself: in the
++sentence that carries the number, saying it "is not the all-cloud total" alongside
++its scope is correct and wanted. There the scope words carry the meaning; in a
++trailing flourish the label travels alone.
++
++In one line: **state the partial figure once with its scope, then talk only about the
++failed source — not about the figure you could not produce.**
++
++**Report exact figures, not rounded ones**, when you state a provider's total: give
++the cents as the tool returned them, not a whole-dollar or `$NN.Nk` approximation.
++Rounding a currency total loses the value the investigator needs to reconcile against
++the source. Percentage shares may be rounded; money may not.
+ 
+ ### Investigate Sandbox/Account Costs
+ 
+@@ -167,6 +279,14 @@
+ **query_gcp_costs** returns:
+ `{period, group_by, breakdown: [{name, cost}], daily_rows, total_cost}`.
+ 
++**Any cost tool may report a failure *in band*** — a normal-looking response whose
++body is `{"error": "..."}` instead of the fields above, with no transport-level
++error raised. Treat a response carrying an `error` key as a **failed query**, not as
++a result with zero rows: there is no `total_cost` in it, so there is no figure to
++report and nothing to add into a sum. Before you total or chart a provider, confirm
++its response actually contains the total field — if it carries `error` instead, apply
++"Totals when a provider's query failed" above.
++
+ **query_aws_pricing** returns:
+ `{instance_type, region, pricing: {vcpu, memory, gpu, gpu_memory, storage, network,
+ hourly_price_usd, daily_price_usd, monthly_price_usd, os, region}}`.

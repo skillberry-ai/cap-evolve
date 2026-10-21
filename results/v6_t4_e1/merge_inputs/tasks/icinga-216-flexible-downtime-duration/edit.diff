@@ -1,0 +1,149 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -198,6 +198,16 @@
+ - **Don't re-fetch data already in context.** If a prior tool call returned data
+   (e.g., job details, provision records), extract what you need from the existing
+   result before making another call.
++- **Epoch-seconds fields must be converted — one at a time, and checked by
++  multiplying back.** When a result returns a time as a bare 10-digit integer and
++  the user asked "at what time", "between which times", or "on what date", report
++  UTC wall-clock, not the integer. Derive each timestamp from *its own* epoch; never
++  convert one timestamp and then obtain another by adding or subtracting the interval
++  between them, which reproduces the correct interval while placing both endpoints at
++  the wrong time. Then verify each one by reconstructing the epoch from the date and
++  clock time you produced and comparing it to the original integer — they must match
++  exactly. An interval that checks out does **not** mean the endpoints are right; the
++  reconstruction is the only check that does.
+ 
+ ## Grounding — Use Tool Results, Never Hallucinate
+ 
+--- a/icinga_agent.md
++++ b/icinga_agent.md
+@@ -67,6 +67,127 @@
+ - Use `action: "get_downtimes"` for the host/service to check for scheduled maintenance.
+   If the service is already in downtime, report this first — the issue may already be
+   addressed before proceeding with deeper investigation.
++
++### Downtime Objects: Field Semantics
++
++`get_downtimes` rows carry these `attrs`:
++
++| Field | Meaning |
++|---|---|
++| `start_time`, `end_time` | **Unix epoch seconds** bounding the downtime's *window* |
++| `entry_time` | **Unix epoch seconds** when it was created (not when it takes effect) |
++| `fixed` | `true` = fixed downtime; `false` = **flexible** downtime |
++| `duration` | **Seconds.** The mute length, and only meaningful when `fixed: false` |
++| `was_cancelled` | Whether it was cancelled before/during its window |
++| `host_name`, `service_name` | Target. Empty `service_name` = a **host**-level downtime |
++
++**Pick the right row first.** A host-filtered call returns every downtime on that
++host, including unrelated ones with different windows, authors, and `fixed` values.
++Match on `service_name` before reading any field, and never blend fields from two rows.
++
++**How long alerts are actually muted — check `fixed` before choosing a field:**
++
++- **`fixed: true`** — suppression runs the whole window, `start_time` → `end_time`.
++  The mute length is the window length; `duration` is not the mute length.
++- **`fixed: false` (flexible)** — suppression does **not** begin at `start_time`. It
++  begins whenever the object first enters a problem state *inside* the window, and
++  then runs for `duration` seconds. The mute length is `duration / 3600` hours, not
++  the window length. If the object never goes non-OK inside the window, the downtime
++  expires unused and nothing is ever muted.
++
++Report the window span and the mute length as two separate, separately-labelled
++facts. Attach each number to its own noun: the span is a property of the *window*
++("the window is N hours long"), and only the `duration`-derived figure may be
++phrased as hours *muted*, *suppressed*, or *silenced*. Never attach the window span
++to those words — not even to deny it.
++
++### Converting Downtime Epochs to UTC Wall-Clock
++
++`start_time`, `end_time`, and `entry_time` are bare epoch integers, and "between
++which UTC times" is never answered by an epoch. No tool converts them for you, so
++you must convert each one by hand, using the procedure below.
++
++Two rules govern every conversion:
++
++1. **Convert each timestamp independently, straight from its own epoch.** Never
++   convert one endpoint and then derive the other by adding the span. That produces
++   a window whose span looks right while both endpoints are wrong.
++2. **Never eyeball `epoch mod 86400`.** These are 10-digit numbers, and a
++   single-step remainder on a 10-digit number is the most common source of a wrong
++   answer here. Use the staged subtraction in Step A, then the arithmetic check in
++   Step C, which catches the error when it happens.
++
++**Step A — split the epoch into whole days and seconds-into-the-day.** Subtract
++whole multiples of 86400 in descending place-value stages, largest first, so every
++individual subtraction stays small enough to be exact:
++
++    remaining = epoch; days = 0
++    for place in 10000, 1000, 100, 10, 1:
++        q = remaining div (86400 * place)     # 86400*10000 = 864,000,000
++        remaining = remaining - q * 86400 * place
++        days = days + q * place
++    # when the loop ends: days = epoch div 86400, remaining = epoch mod 86400
++
++**Step B — turn `remaining` into a clock time.**
++
++    hour   = remaining div 3600
++    minute = (remaining mod 3600) div 60
++
++The clock time depends **only** on `remaining` — never on the date, and UTC has no
++DST, so there is no offset to apply.
++
++**Step C — the reconstruction check. Do this for every timestamp, and do not skip
++it.** Multiply back and compare against the epoch you started from:
++
++    days * 86400 + hour * 3600 + minute * 60   ==   the original epoch ?
++
++If the two sides are not **exactly** equal, your conversion is wrong — redo Step A
++for that timestamp before writing anything. The difference tells you what slipped:
++a difference that is a whole multiple of 3600 means the hour is off by that many
++hours; a difference of ±86400 means the day is off by one. This check is the only
++thing that distinguishes a correct conversion from a plausible-looking wrong one,
++so run it even when the result already looks reasonable.
++
++**Step D — assign the date.** Compare each timestamp's `days` against the `days` of
++the "now" the request states: equal means the same UTC date as that stated now, `+1`
++means the next UTC day, and so on. Anchor on the stated now rather than deriving a
++calendar date from scratch.
++
++**A window may legitimately cross midnight.** If `end_time`'s `remaining` is
++*smaller* than `start_time`'s `remaining`, the window ends on the following UTC day
++and its end clock time is genuinely earlier than its start clock time (e.g. 21:00 →
++04:30). That is a normal overnight window, not an error — report it as-is. Do
++**not** "normalise" it by sliding both endpoints onto one date, and do not revise an
++endpoint's hour to make the window read more naturally. A span that matches
++`(end_time - start_time)` is **not** evidence the endpoints are right; only Step C is.
++
++**Worked example.** The request states it is now 2026-03-10 09:00 UTC. A row returns
++`start_time: 1773176400`, `end_time: 1773203400`.
++
++`start_time` = 1773176400, Step A:
++
++| place | `86400 * place` | q | subtract | remaining | days |
++|---|---|---|---|---|---|
++| 10000 | 864,000,000 | 2 | 1,728,000,000 | 45,176,400 | 20000 |
++| 1000 | 86,400,000 | 0 | 0 | 45,176,400 | 20000 |
++| 100 | 8,640,000 | 5 | 43,200,000 | 1,976,400 | 20500 |
++| 10 | 864,000 | 2 | 1,728,000 | 248,400 | 20520 |
++| 1 | 86,400 | 2 | 172,800 | 75,600 | 20522 |
++
++Step B: `hour` = 75600 div 3600 = **21**; `minute` = (75600 mod 3600) div 60 = **00**.
++Step C: 20522 × 86400 + 21 × 3600 + 0 = 1773100800 + 75600 = 1773176400 ✓ equals the
++epoch, so the conversion stands.
++Step D: `days` 20522 equals the stated now's `days`, so this is **2026-03-10 21:00 UTC**.
++
++`end_time` = 1773203400 the same way gives `days` = 20523, `remaining` = 16200,
++`hour` = 4, `minute` = 30. Step C: 20523 × 86400 + 4 × 3600 + 30 × 60 = 1773187200 +
++14400 + 1800 = 1773203400 ✓. `days` is the stated now + 1 → **2026-03-11 04:30 UTC**.
++16200 < 75600, so this window crosses midnight: 21:00 one day → 04:30 the next. Both
++endpoints came from their own epoch; neither was derived from the other.
++
++Show the Step A–C working for each timestamp as a short working-notes block in your
++answer, below the finished facts. Writing the check out is what makes it reliable;
++keep it brief and keep the finished wall-clock times as the headline.
+ 
+ ### Step 0.1: Determine the Deployment Platform
+ 

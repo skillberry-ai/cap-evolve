@@ -41,6 +41,12 @@ set -eo pipefail
 # No apostrophes in these messages: inside ${VAR:?word} bash processes quotes in
 # `word`, so a lone ' opens a quoted span that runs on until the next one and
 # silently scrambles the parse of everything below.
+# PARSEC_BENCH=v6 points the same machinery at the v6 tree ($PARSEC_V6N, bench-v6-* tasks), the way
+# make_lane.sh already does. v5 stays the default.
+if [[ "${PARSEC_BENCH:-v5}" == "v6" ]]; then
+  : "${PARSEC_V6N:?PARSEC_V6N environment variable is required when PARSEC_BENCH=v6}"
+  PARSEC_V5N="$PARSEC_V6N"
+fi
 : "${PARSEC_V5N:?PARSEC_V5N must be exported — bsub inherits the submitting shell env}"
 : "${LLM_API_KEY:?LLM_API_KEY must be exported — bsub inherits the submitting shell env}"
 : "${LLM_API_BASE:?LLM_API_BASE must be exported — bsub inherits the submitting shell env}"

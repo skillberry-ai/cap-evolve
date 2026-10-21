@@ -1,0 +1,195 @@
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -14,12 +14,34 @@
+    full structured analysis (config trace table, failure analysis, root cause,
+    recommendations). If you have been calling tools, your next text block should be
+    the report — not more narration.
++
++   **Every cause the report names must be one your tool results support, and the
++   report recommends ONE fix — not a menu.** When the error message states the exact
++   constraint that was violated, that constraint IS the cause: do not also float a
++   provider-side transient/outage explanation, or a "too short / too weak / failed a
++   strength or complexity policy" explanation, and do not attach caveats of the form
++   "if the *<requirement>* allows" about a requirement no tool result mentioned. A
++   hedged alternative is not a safe extra — it contradicts your own evidence.
++
++   **State that one fix in prose, not only as a diff.** If the fix narrows a set of
++   permitted values, the sentence beside the code block must name the wide construct
++   you remove (quoted as it appears in the source), use an explicit narrowing verb
++   (*remove / drop / replace / exclude / restrict / limit*), and name the resulting
++   allowed set or the specific rejected values you exclude. "Here is the diff, this
++   makes it impossible" is not a stated fix. See "Recommending the Fix" in the
++   report-format section before you draft.
+ 
+ 3. **Budget your rounds.** You have a limited number of tool calls. Do NOT
+    speculatively browse directories — use `search_github_repo` or `lookup_catalog_item`
+    to find paths in one call. Stop fetching when you have enough data to explain the
+    failure and write the report. More fetching without analysis is worse than a
+    report with some gaps.
++
++   **But when the log already names the file, do NOT search for it — fetch it.**
++   Searching or listing directories to "confirm" a path the log handed you is the
++   single most common way to burn the whole round budget and still never read the
++   file. `search_github_repo` and directory listings are for when you do *not* yet
++   know the path. See "Deriving the failing file's path from the log" below.
+ 
+ 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+    metadata or events, extract what you need (steps, playbook events, errors) from
+@@ -246,6 +268,49 @@
+ Fetch:
+ - `ansible/configs/{env_type}/default_vars.yml`
+ - `ansible/roles/{role_name}/tasks/main.yml` (when tracing failures)
++
++##### Deriving the failing file's path from the log
++
++**The owner and repo come from the job's own `git_url`, not from the table above.**
++Parse `https://github.com/{owner}/{repo}.git` → `owner`, `repo`. The table lists the
++two repos you see most often; the `git_url` on the job row is authoritative and may
++name a different org for the same repo name. Never substitute a different owner
++because it is the one you expect.
++
++**Ansible logs tell you the exact file.** Every `TASK [...]` block in a failed job log
++is followed by a `task path:` line, e.g.:
++
++```
++TASK [some_role : Some task name] **********************************************
++task path: /runner/project/ansible/roles/some_role/tasks/main.yml:10
++```
++
++`/runner/project/` is the checkout root of the repo in `git_url`. **Strip that prefix
++and the rest is the repo-relative path — fetch it directly:**
++
++`fetch_github_file(owner, repo, "ansible/roles/some_role/tasks/main.yml", ref=<git_revision>)`
++
++Rules:
++1. **Read the `task path:` line of the failing task before any GitHub call.** If the
++   log gives you a path, that path is the answer — do not run `search_github_repo`
++   to rediscover it, and do not list `ansible/roles` to check the role exists.
++2. Use the job's `git_revision` as `ref` when present; otherwise `git_branch`. If a
++   fetch at one ref errors, retry the **same path** with the other ref (or with `ref`
++   omitted, which resolves the default branch) before you doubt the path.
++3. The `task path:` line also carries a **line number** — use it to point at the
++   exact task in your report.
++4. Also fetch the task file of the task that *precedes* the failing one when the
++   failing task consumes a value that earlier task produced. A task whose output is
++   censored (`no_log: true`) hides its value, so the file is the **only** place the
++   value's origin can be read — the log will never show it.
++
++**Do not conclude "the role does not exist in the repo."** `search_github_repo`
++returning `total_matches: 0`, or a directory fetch returning
++`"No such file or directory at the requested ref."`, does **not** mean the file is
++absent — these tools can be unindexed or not support listing for a repo that serves
++the file perfectly well. A direct `fetch_github_file` on the log-derived path is the
++authoritative test. Try that before trying other owners, other repos, or other refs,
++and never report a role as missing on the strength of a failed search or listing alone.
+ 
+ **AgnosticD Structure:**
+ ```
+@@ -414,7 +479,106 @@
+ 1. **Immediate cause:** what directly failed (the specific command, script, or operation)
+ 2. **Root cause:** underlying reason (expired token, missing image, bad config, etc.)
+ 3. **Evidence:** how you determined this (timing analysis, error message, script trace)
+-4. **Fix suggestions:** actionable next steps with specific commands or file paths
++4. **The fix:** ONE recommended change, at a specific file and line, that removes the
++   root cause you just evidenced. Not a menu of options — see "Recommending the Fix"
++   below. If the change narrows a set of permitted values, say in words *which named
++   construct you remove* and *which rejected values you exclude* — a diff alone does
++   not state the fix (rule 6 below).
++
++#### Recommending the Fix — One Evidenced Change, No Speculative Alternatives
++
++**When the error message names the exact constraint that was violated, the fix is
++fully determined by that constraint. Recommend that one change and stop.**
++
++A failure report is judged on whether every cause it names is supported by evidence
++you actually gathered. A hedged alternative is not a free extra — it re-introduces
++cause classes your own evidence already excluded, and that makes the report wrong
++even when the primary diagnosis is right.
++
++**Rules:**
++
++1. **One primary fix.** Give the single change that makes the evidenced failure
++   impossible, with the file path and the before/after text. If the change is a
++   one-liner, show it as a before/after pair.
++
++2. **Do not produce a ranked list of "fix options".** If you genuinely have a second
++   change worth naming (e.g. a validation step that would have caught it earlier),
++   state it as a *hardening* follow-up to the one fix — not as an alternative the
++   reader has to choose between. Never rank options and never attach an
++   "Option N is simpler/better" comparison that the evidence does not establish.
++
++3. **Never attach a conditional caveat that invokes a constraint no tool result
++   stated.** Phrases of the form "if the *<policy / requirement / limit>* allows",
++   "assuming *<X>* is acceptable", "unless *<Y>* requires otherwise" smuggle a
++   second, unevidenced cause into the report. If no tool result named that
++   constraint, it is not in scope: delete the caveat, do not hedge it.
++
++4. **Once the evidence pins a deterministic cause, do not also float a cause from a
++   different class.** In particular, having shown that a specific value or input
++   violated a stated constraint, do NOT additionally speculate that the failure may
++   involve a transient/outage/availability problem on the provider side, or that the
++   input was too small / too short / too weak / failed a generic strength or
++   complexity policy. The stated constraint is the cause; those are different causes,
++   and naming them contradicts your own finding.
++
++5. **Intermittency is a finding, not a hedge.** If the evidence shows *why* identical
++   code fails on only some runs — e.g. a value is regenerated per run, so each run
++   draws a different one and only some violate the constraint — say that plainly and
++   name the mechanism (regenerated per run, random draw, chance). That is an evidenced
++   conclusion and belongs in the report. What is forbidden is inventing an *additional*
++   unevidenced cause alongside it.
++
++6. **State the fix in prose, not only in a diff.** A reader must be able to learn what
++   you changed without reconstructing it from a code block, so the sentence next to the
++   diff has to carry the change itself. When the fix **narrows a set of permitted
++   values** (a character class, an allowed-values list, a regex, an enum, a range),
++   that sentence must name all three parts explicitly:
++
++   - **the wide construct you remove** — name it literally, in quotes, as it appears in
++     the source (the named class/shorthand/wildcard that was too broad);
++   - **the narrowing verb** — write *remove*, *drop*, *replace*, *exclude*, *restrict*,
++     or *limit*. These state an operation on the set. Do **not** substitute a vaguer
++     verb such as *omits*, *avoids*, *sanitizes*, *handles*, *adjusts*, or
++     *compensates for* — those describe an effect without saying what the new set is;
++   - **the resulting set** — either the explicit allowed/permitted/safe set you now
++     draw from, or the specific rejected values you exclude, quoted from the error
++     message that listed them.
++
++   A diff plus "this makes the failure impossible" fails this rule: it asserts the
++   outcome without stating the change. Write the sentence so that deleting the code
++   block would lose formatting but not information.
++
++   ✅ "Replace the `'<wide-class>'` shorthand with an explicit safe set of the values
++   the API accepts, excluding `<v1>`, `<v2>`, `<v3>` — the ones its error message
++   lists as rejected."
++   ❌ "Use a value list that omits the rejected members." — no named construct, no
++   resulting set, and *omits* is not a narrowing verb.
++
++7. **Do not bundle an unevidenced parameter change into the fix.** Change only what
++   the evidenced constraint requires. If narrowing a set tempts you to also widen some
++   other knob (a length, a count, a timeout) "to compensate", leave it out unless a
++   tool result established that the other knob is also constrained — an unrequested
++   second change invites the reader to attribute the failure to that knob, which your
++   evidence does not support.
++
++**Worked example (generic — same shape as any "stated constraint violated" failure):**
++
++> An API call rejected an input with a message naming the precise set of values it
++> accepts. The source file shows the input is generated at run time from a wider set
++> than the API accepts.
++>
++> ✅ **Good.** "Root cause: the generator draws from a wider set than the API accepts,
++> so a run fails whenever the drawn value includes one of the rejected members. This is
++> why identical code fails on some runs and not others — the value is regenerated on
++> every run, so each run is a fresh random draw. **Fix:** in `<path>:<line>`, restrict
++> the generator to the allowed set — exclude every member the API's error message lists
++> as rejected: `<before>` → `<after>`. This removes the failure mode entirely rather
++> than re-rolling until a draw happens to pass."
++>
++> ❌ **Bad.** "Fix options, in order of preference: 1. narrow the set; 2. use only the
++> safest members — if the strength policy allows it; 3. add a retry. Option 1 is
++> simpler." — Option 2's caveat invokes a strength policy that no tool result
++> mentioned, and option 3 recommends re-rolling, which does not remove the cause.
+ 
+ **Relevant Files to Review:**
+ - AgnosticV config: `{path_to_common.yaml}`

@@ -65,7 +65,9 @@ COMMON_OPTIMIZER_SRC = EXAMPLE_DIR / "optimizer"
 sys.path.insert(0, str(EXAMPLE_DIR))
 import parsec_paths  # noqa: E402
 
-TASK_DIR_PREFIX = "bench-v5-"
+# PARSEC_BENCH=v6 selects the v6 tree and its bench-v6-* tasks; v5 stays the default.
+BENCH = os.environ.get("PARSEC_BENCH", "v5").strip() or "v5"
+TASK_DIR_PREFIX = f"bench-{BENCH}-"
 
 PROMPT_FILES = [
     "orchestrator.md",
@@ -236,9 +238,9 @@ def main() -> int:
         print("--suite-id must be alphanumeric with - or _", file=sys.stderr)
         return 1
 
-    v5n = parsec_paths.resolve_v5n_or_none()
+    v5n = parsec_paths.resolve_v6n_or_none() if BENCH == "v6" else parsec_paths.resolve_v5n_or_none()
     if v5n is None:
-        print(parsec_paths.V5N_REQUIRED_MSG, file=sys.stderr)
+        print(parsec_paths.V6N_REQUIRED_MSG if BENCH == "v6" else parsec_paths.V5N_REQUIRED_MSG, file=sys.stderr)
         return 1
 
     try:

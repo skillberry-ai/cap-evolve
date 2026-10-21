@@ -1,0 +1,3 @@
+Service Interconnect Lab orders on the `west` AAP2 controller keep failing before the OpenShift install even starts. In job `6173904` the step that waits for the cluster's API name to resolve gave up with NXDOMAIN. My guess is that Route 53 is not propagating new records in the sandbox zone, and I am about to open an AWS support case.
+
+Before I do: read the job log, find the role's files in the repository the job ran from, and read the role's tasks and defaults. Tell me whether Route 53 actually had the record, why the name still would not resolve, how long the wait gave the name to resolve, and what in the role causes this.
