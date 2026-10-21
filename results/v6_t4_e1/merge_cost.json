@@ -16,12 +16,15 @@
    "llm_usd": 0.0
   },
   "m3_smart": {
-   "builder": "a fresh Claude Code subagent with no access to any score (merge_inputs/ only)",
-   "started": "2026-10-21",
-   "wall_seconds": null,
-   "llm_tokens": null,
+   "builder": "a fresh Claude Code subagent with no access to any score (merge_inputs/ only); it spawned 3 sub-agents (aap2; icinga; cost+babylon+security) and wrote orchestrator + shared_context itself",
+   "model": "claude-opus-5-5 (this session's subagent model)",
+   "wall_seconds": 2975.6,
+   "llm_tokens": 189023,
+   "llm_tokens_note": "the top-level merger agent's reported total only; the 3 sub-agents it spawned are not included, so this is a LOWER BOUND on the merge's token use",
+   "tool_calls": 43,
    "llm_usd": null,
-   "status": "running; filled in from the agent's completion report"
+   "llm_usd_note": "not reported by the subagent harness; tokens are not split into input/output/cache, so a dollar figure would be a guess",
+   "status": "done 2026-10-21"
   }
  }
 }
