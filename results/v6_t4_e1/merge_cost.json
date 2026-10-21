@@ -1,0 +1,27 @@
+{
+ "note": "Cost of BUILDING each merged bundle (the merge step only). Evaluation cost is recorded separately, per method, when the bundles are scored. Methods 1 and 2 are deterministic scripts with no LLM call, so they have no token or dollar cost.",
+ "methods": {
+  "m1_order": {
+   "builder": "examples/parsec/v6_t4/build_merges.py (deterministic, no LLM)",
+   "wall_seconds": 9.99,
+   "wall_seconds_note": "one run of build_merges.py, which builds m1 and m2 together; re-run 2026-10-21 and reproduced both bundles byte-identical",
+   "llm_tokens": 0,
+   "llm_usd": 0.0
+  },
+  "m2_nonconflict": {
+   "builder": "examples/parsec/v6_t4/build_merges.py (deterministic, no LLM)",
+   "wall_seconds": 9.99,
+   "wall_seconds_note": "shared with m1_order: one script run builds both",
+   "llm_tokens": 0,
+   "llm_usd": 0.0
+  },
+  "m3_smart": {
+   "builder": "a fresh Claude Code subagent with no access to any score (merge_inputs/ only)",
+   "started": "2026-10-21",
+   "wall_seconds": null,
+   "llm_tokens": null,
+   "llm_usd": null,
+   "status": "running; filled in from the agent's completion report"
+  }
+ }
+}
