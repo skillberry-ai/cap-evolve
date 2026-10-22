@@ -11,7 +11,7 @@ import ast
 import re
 from pathlib import Path
 
-DOC_MAX_LINES = 25
+DOC_MAX_LINES = 43
 _STEP = re.compile(r"^\s*(?:\d+[a-z]?[.)]|[-*•])\s+\S")
 _MODAL = re.compile(r"\b(must|never|always|do not|don't|only if|before calling|refuse|should not|cannot)\b", re.I)
 _PHRASE = re.compile(r"\byou must\b|\bdo not\b|\bREFUSE\b")

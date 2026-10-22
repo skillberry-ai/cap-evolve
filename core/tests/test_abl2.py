@@ -178,7 +178,7 @@ def test_rejects_long_checklist_docstring(pc):
     doc = "\\n".join(f"        {i}. You must never skip step {i} before calling." for i in range(1, 9))
     set_tools(pc[1], lambda s: s.replace('"""Beta tool."""', '"""Beta.\\n' + doc + '\n        """'))
     assert "docstring_rules" in tv(pc)[1]
-    set_tools(pc[1], lambda s: s.replace('"""Alpha tool.', '"""Alpha tool.' + "\\n x" * 30))
+    set_tools(pc[1], lambda s: s.replace('"""Alpha tool.', '"""Alpha tool.' + "\\n x" * 50))
     assert "docstring_long" in tv(pc)[1]
 
 
