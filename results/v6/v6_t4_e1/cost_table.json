@@ -1,106 +1,178 @@
 {
- "rows": {
-  "Seed": {
-   "eval_usd": 215.286,
-   "opt_usd": 0.0,
-   "total_usd": 215.286,
-   "eval_tokens": 65017722,
-   "opt_tokens": 0,
-   "total_tokens": 65017722,
-   "eval_hours": 74.13698482194447,
-   "opt_hours": 0.0,
-   "total_hours": 74.13698482194447
-  },
-  "Global": {
-   "eval_usd": 594.0812999999999,
-   "opt_usd": 355.0156397500001,
-   "total_usd": 949.09693975,
-   "eval_tokens": 184300132,
-   "opt_tokens": 154990690,
-   "total_tokens": 339290822,
-   "eval_hours": 220.85573432555572,
-   "opt_hours": 8.939303234153323,
-   "total_hours": 229.79503755970904
-  },
+ "build": {
   "T-opt": {
-   "eval_usd": 38.257200000000005,
+   "eval_usd": 38.25719999999997,
    "opt_usd": 281.09010099999995,
-   "total_usd": 319.34730099999996,
+   "total_usd": 319.3473009999999,
    "eval_tokens": 11298810,
    "opt_tokens": 283431064,
    "total_tokens": 294729874,
-   "eval_hours": 24.931998990277773,
+   "eval_hours": 13.772906556388886,
    "opt_hours": 19.369894405272273,
-   "total_hours": 44.301893395550046
+   "total_hours": 33.14280096166116,
+   "eval_trials": 310
   },
   "T-mrg \u00b7 merge by order": {
-   "eval_usd": 186.73100000000008,
+   "eval_usd": 38.25719999999997,
    "opt_usd": 281.09010099999995,
-   "total_usd": 467.821101,
-   "eval_tokens": 57775159,
+   "total_usd": 319.3473009999999,
+   "eval_tokens": 11298810,
    "opt_tokens": 283431064,
-   "total_tokens": 341206223,
-   "eval_hours": 43.660144337499965,
+   "total_tokens": 294729874,
+   "eval_hours": 13.772906556388886,
    "opt_hours": 19.372669405272273,
-   "total_hours": 63.032813742772234
+   "total_hours": 33.14557596166116,
+   "eval_trials": 310,
+   "merge": {
+    "usd": 0.0,
+    "tokens": 0,
+    "seconds": 9.99
+   }
   },
   "T-mrg \u00b7 smart merge": {
-   "eval_usd": 239.18329999999995,
+   "eval_usd": 38.25719999999997,
    "opt_usd": 295.250101,
-   "total_usd": 534.4334009999999,
-   "eval_tokens": 75012276,
+   "total_usd": 333.5073009999999,
+   "eval_tokens": 11298810,
    "opt_tokens": 293583308,
-   "total_tokens": 368595584,
-   "eval_hours": 43.819906948611134,
+   "total_tokens": 304882118,
+   "eval_hours": 13.772906556388886,
    "opt_hours": 20.196449960827827,
-   "total_hours": 64.01635690943895
+   "total_hours": 33.96935651721672,
+   "eval_trials": 310,
+   "merge": {
+    "usd": 14.16,
+    "tokens": 10152244,
+    "seconds": 2975.6
+   }
   },
   "T-mrg \u00b7 non-conflicting hunks": {
-   "eval_usd": 159.07979999999995,
+   "eval_usd": 38.25719999999997,
    "opt_usd": 281.09010099999995,
-   "total_usd": 440.1699009999999,
-   "eval_tokens": 48822226,
+   "total_usd": 319.3473009999999,
+   "eval_tokens": 11298810,
    "opt_tokens": 283431064,
-   "total_tokens": 332253290,
-   "eval_hours": 44.24294812861113,
+   "total_tokens": 294729874,
+   "eval_hours": 13.772906556388886,
    "opt_hours": 19.372669405272273,
-   "total_hours": 63.61561753388341
+   "total_hours": 33.14557596166116,
+   "eval_trials": 310,
+   "merge": {
+    "usd": 0.0,
+    "tokens": 0,
+    "seconds": 9.99
+   }
+  },
+  "Global": {
+   "eval_usd": 402.86829999999964,
+   "opt_usd": 355.0156397500001,
+   "total_usd": 757.8839397499997,
+   "eval_tokens": 124853651,
+   "opt_tokens": 154990690,
+   "total_tokens": 279844341,
+   "eval_hours": 164.18390722666666,
+   "opt_hours": 8.939303234153323,
+   "total_hours": 173.12321046082,
+   "eval_trials": 2223,
+   "eval_parts": {
+    "train screens + incumbent sweeps": {
+     "usd": 108.64350000000009,
+     "tokens": 33782143,
+     "hours": 42.00348458472227,
+     "trials": 585
+    },
+    "validation gates": {
+     "usd": 294.22479999999956,
+     "tokens": 91071508,
+     "hours": 122.18042264194439,
+     "trials": 1638
+    }
+   }
   }
  },
- "t_mrg_increment_over_t_opt": {
+ "measure_5_trials": {
   "T-mrg \u00b7 merge by order": {
-   "eval_usd": 148.47380000000007,
-   "opt_usd": 0.0,
-   "total_usd": 148.47380000000007,
-   "eval_tokens": 46476349,
-   "opt_tokens": 0,
-   "total_tokens": 46476349,
-   "eval_hours": 18.728145347222192,
-   "opt_hours": 0.002775,
-   "total_hours": 18.73092034722219
+   "test": {
+    "usd": 78.02819999999993,
+    "tokens": 24393886,
+    "hours": 8.66226063027778,
+    "trials": 330
+   },
+   "train": {
+    "usd": 70.44559999999998,
+    "tokens": 22082463,
+    "hours": 7.759653403055554,
+    "trials": 335
+   }
   },
   "T-mrg \u00b7 smart merge": {
-   "eval_usd": 200.92609999999993,
-   "opt_usd": 14.16,
-   "total_usd": 215.08609999999993,
-   "eval_tokens": 63713466,
-   "opt_tokens": 10152244,
-   "total_tokens": 73865710,
-   "eval_hours": 18.887907958333358,
-   "opt_hours": 0.8265555555555555,
-   "total_hours": 19.714463513888912
+   "test": {
+    "usd": 107.93409999999999,
+    "tokens": 34222215,
+    "hours": 9.276339053611105,
+    "trials": 330
+   },
+   "train": {
+    "usd": 92.99199999999995,
+    "tokens": 29491251,
+    "hours": 8.075661550000001,
+    "trials": 335
+   }
   },
   "T-mrg \u00b7 non-conflicting hunks": {
-   "eval_usd": 120.82259999999995,
-   "opt_usd": 0.0,
-   "total_usd": 120.82259999999995,
-   "eval_tokens": 37523416,
-   "opt_tokens": 0,
-   "total_tokens": 37523416,
-   "eval_hours": 19.310949138333363,
-   "opt_hours": 0.002775,
-   "total_hours": 19.313724138333367
+   "test": {
+    "usd": 65.62950000000001,
+    "tokens": 20374874,
+    "hours": 9.592977471666664,
+    "trials": 330
+   },
+   "train": {
+    "usd": 55.19309999999999,
+    "tokens": 17148542,
+    "hours": 8.14900303333333,
+    "trials": 335
+   }
+  },
+  "Global": {
+   "test": {
+    "usd": 70.08590000000007,
+    "tokens": 21823977,
+    "hours": 24.658364411111087,
+    "trials": 330
+   },
+   "test_10_trials": {
+    "usd": 138.01529999999997,
+    "tokens": 42924800,
+    "hours": 39.9755036233333,
+    "trials": 660
+   },
+   "validation_remeasure_cand_0002": {
+    "usd": 53.197700000000026,
+    "tokens": 16521681,
+    "hours": 16.69632347555556,
+    "trials": 268
+   }
   }
  },
- "definitions": "Table 2: cost, tokens and time per arm (Seed, T-opt, T-mrg x3 cumulative over T-opt, Global).\n\nEvery number is read from the run records:\n  eval $ / tokens   G: events.jsonl `evaluate` records; T-opt: per-task state.json `spent`;\n                    T-mrg: per-task baseline.json via collect_evals (3 + 2 trial suites)\n  opt $ / tokens    G, T-opt: state.json optimizer_usd / optimizer_tokens; merge: merge_cost.json\n  eval time         agent time summed over every trial (rollout parsec_usage_window end - start),\n                    the same definition for every arm; compute, not wall clock\n  opt time          optimizer_seconds summed over optimizer calls; merge: merge_cost.json wall\nSeed = the three Seed reference measurements made in the G run (train 10 trials, validation 4,\ntest 10). They are shared by every arm and are not charged to G.\n"
+ "harness_overhead_unused": {
+  "T-mrg \u00b7 merge by order": {
+   "usd": 28.809299999999983,
+   "tokens": 9038570,
+   "hours": 2.3062313138888886,
+   "trials": 153
+  },
+  "T-mrg \u00b7 smart merge": {
+   "usd": 27.51069999999999,
+   "tokens": 8734182,
+   "hours": 1.5359073547222222,
+   "trials": 107
+  },
+  "T-mrg \u00b7 non-conflicting hunks": {
+   "usd": 13.724899999999996,
+   "tokens": 4247457,
+   "hours": 1.568968633333334,
+   "trials": 113
+  }
+ },
+ "definitions": "Table 2: what each arm cost, from the per-trial records.\n\nTable 2a, cost to BUILD the deployable bundle (no test, no post-hoc measurement):\n  T-opt          its 34 searches: candidate evaluations + optimizer (the reused Seed trials excluded)\n  T-mrg          T-opt + the merge (scripts: 10 s, no LLM; smart merge: the LLM merger)\n  Global         its search: train screens and incumbent sweeps + validation gates + optimizer\nTable 2b, cost to MEASURE a frozen bundle, at the same 5 trials per task for every arm:\n  test (66 tasks)  T-mrg: its 5 trials; Global: its first 5 of 10 test trials (t0-t4)\n  train (67 tasks) T-mrg only (Global's train numbers come from its search sweeps)\n\nColumns: eval = target agent; optim = optimizer agent (+ the smart merge's LLM merger).\nDollars and tokens are the trial records' own cost_usd/tokens, and state.json for the optimizer.\nTime is each trial's agent run time (rollout parsec_usage_window end - start) plus each optimizer\ncall's duration, summed: compute, not wall clock.\nNot counted anywhere: the shared Seed measurements, and the T-mrg eval projects' own finalize step,\nwhich re-scored some tasks a second time (unused; reported separately as harness overhead).\n"
 }

@@ -111,13 +111,14 @@ artifact is larger than G's.
 
 T-mrg total for all three methods: **$484.38** (eval $470.22 + merge $14.16).
 
-**Cost to produce a deployable bundle, before the test split is opened**, counting the shared
-$83.09 Seed sweep for both:
-- T path: $83.09 + T-opt $319.37 + merge $0–14 ≈ **$402–417**
-- G path: $83.09 + optimizer $355.02 + screens/validation gates $494.06 ≈ **$932**
+**Cost to produce a deployable bundle** (no test split, no Seed, no post-run remeasurement;
+Table 2a in `RESULTS_FOR_PAPER.md`):
+- T path: T-opt $319.35 + merge $0–14.16 = **$319–334**
+- G path: optimizer $355.02 + train screens and sweeps $108.64 + validation gates $294.22 = **$758**
 
-The T path cost about 2.3× less and gives a test result statistically equal to G's. The T path
-had no validation gate at all.
+The T path cost 42–44% of G and gives a test result statistically equal to G's. It had no
+validation gate. Measuring a frozen bundle on test at 5 trials per task costs about the same in
+both arms ($66–108 for the merges, $70 for G; Table 2b).
 
 ## Running example: AAP2 Rule 4 ("don't re-fetch job data")
 

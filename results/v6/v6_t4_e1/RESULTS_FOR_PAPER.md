@@ -19,8 +19,8 @@ but its 34 private bundles cannot be deployed together. T-mrg now answers that q
 **Merging the 34 independently optimized English edits into one bundle, without looking at any
 score, produced a bundle that scores the same as Global on the sealed test split.** Merge by order:
 test +0.046 over Seed; smart merge: +0.041; Global: +0.037. The task-by-task differences from Global
-(+0.009 ± 0.014 and +0.004 ± 0.012) are within noise. The T path reached this at about half of
-Global's total cost (Table 2), but its merged bundles are 1.3–2.4× larger than Global's (Table 3).
+(+0.009 ± 0.014 and +0.004 ± 0.012) are within noise. The T path built its bundle for 42–44% of
+Global's build cost (Table 2), but its merged bundles are 1.3–2.4× larger than Global's (Table 3).
 This reverses the hypothesis, taken from the historical v4 pilot, that task-local English edits
 would not compose. The reframing is therefore no longer "does integration work?". It becomes "it
 works; here is what integration costs and what it changes."
@@ -115,64 +115,96 @@ Global = +0.004 ± 0.012; non-conflicting − Global = −0.022 ± 0.015; merge 
 
 ## 3. Table 2 — Cost, tokens and compute time
 
-T-mrg rows are **cumulative**: T-opt + its merge + its own 5-trial evaluation on train and test.
-They therefore read directly against Global. The figure in brackets is the increment over T-opt.
-The Seed row holds the three shared Seed measurements (train 10, validation 4, test 10 trials per
-task). It is common to all arms and is not charged to any of them.
+Table 2 is split in two. **2a** is what each arm spent to *produce* its deployable bundle: no test
+split, no post-hoc measurement. **2b** is what it costs to *measure* a frozen bundle, at the same
+5 trials per task for every arm. Mixing the two, as an earlier draft did, charged T-mrg for a
+train-and-test evaluation and Global for a 10-trial test plus a post-run remeasurement, so the
+totals compared different amounts of measurement. The shared Seed measurements appear in neither:
+every arm reuses them.
 
-| Arm | Eval $ | Optim. $ | **Total $** | Eval tokens | Optim. tokens | **Total tokens** | Eval h | Optim. h | **Total h** |
-|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| Seed (shared reference) | 215.29 | — | **215.29** | 65.0M | — | **65.0M** | 74.1 | — | **74.1** |
-| T-opt | 38.26 | 281.09 | **319.35** | 11.3M | 283.4M | **294.7M** | 24.9 | 19.4 | **44.3** |
-| T-mrg · merge by order | 186.73 (+148.47) | 281.09 (+0) | **467.82** | 57.8M (+46.5M) | 283.4M (+0) | **341.2M** | 43.7 (+18.7) | 19.4 (+10 s) | **63.0** |
-| T-mrg · smart merge | 239.18 (+200.93) | 295.25 (+14.16) | **534.43** | 75.0M (+63.7M) | 293.6M (+10.2M) | **368.6M** | 43.8 (+18.9) | 20.2 (+0.8) | **64.0** |
-| T-mrg · non-conflicting | 159.08 (+120.82) | 281.09 (+0) | **440.17** | 48.8M (+37.5M) | 283.4M (+0) | **332.3M** | 44.2 (+19.3) | 19.4 (+10 s) | **63.6** |
-| Global (`cand_0005`) | 594.08 | 355.02 | **949.10** | 184.3M | 155.0M | **339.3M** | 220.9 | 8.9 | **229.8** |
+### Table 2a — cost to build the deployable bundle (main table)
+
+| Arm | Eval $ | Optim. $ | **Total $** | Eval tokens | Optim. tokens | **Total tokens** | Eval h | Optim. h | **Total h** | Eval trials |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| T-opt (34 per-task searches) | 38.26 | 281.09 | **319.35** | 11.3M | 283.4M | **294.7M** | 13.8 | 19.4 | **33.1** | 310 |
+| T-mrg · merge by order | 38.26 | 281.09 (+0) | **319.35** | 11.3M | 283.4M (+0) | **294.7M** | 13.8 | 19.4 (+10 s) | **33.1** | 310 |
+| T-mrg · smart merge | 38.26 | 295.25 (+14.16) | **333.51** | 11.3M | 293.6M (+10.2M) | **304.9M** | 13.8 | 20.2 (+0.8) | **34.0** | 310 |
+| T-mrg · non-conflicting | 38.26 | 281.09 (+0) | **319.35** | 11.3M | 283.4M (+0) | **294.7M** | 13.8 | 19.4 (+10 s) | **33.1** | 310 |
+| Global (`cand_0005`) | 402.87 | 355.02 | **757.88** | 124.9M | 155.0M | **279.8M** | 164.2 | 8.9 | **173.1** | 2,223 |
+
+T-mrg = T-opt + the merge; the figure in brackets is the merge. Global's evaluation is its search:
+train screens and incumbent sweeps ($108.64, 585 trials) and validation gates ($294.22, 1,638
+trials).
+
+### Table 2b — cost to measure a frozen bundle, 5 trials per task
+
+| Arm | Test (66 tasks): $ / tokens / h | Train (67 tasks): $ / tokens / h |
+|---|--:|--:|
+| T-mrg · merge by order | $78.03 / 24.4M / 8.7 | $70.45 / 22.1M / 7.8 |
+| T-mrg · smart merge | $107.93 / 34.2M / 9.3 | $92.99 / 29.5M / 8.1 |
+| T-mrg · non-conflicting | $65.63 / 20.4M / 9.6 | $55.19 / 17.1M / 8.1 |
+| Global (`cand_0005`) | $70.09 / 21.8M / 24.7 | — (its train reward comes from the search's own sweeps) |
+
+Global's row uses the first 5 of its 10 test trials per task (seeds 0–4). Its full 10-trial test
+cost $138.02 / 42.9M / 40.0 h. Measurement cost is what Table 3's bundle size predicts: per
+trial, the largest bundle (smart merge) costs most and non-conflicting least, with Global close to
+merge by order.
 
 **Definitions:**
-- **Eval** is the target agent running tasks. **Optim.** is the optimizer agent proposing edits,
-  plus, for the smart merge, the LLM merger. The other two merges are 10-second scripts with no
-  LLM.
-- **Dollars and tokens** are as recorded by the runs. The one exception is the smart merge's
-  $14.16, an estimate: its measured tokens priced at Claude Opus 5.5 list price ($4 input, $20
-  output, $0.20 cache read, $5 cache write per million tokens). 63% of that is output tokens.
-- **Compute time** is each trial's own agent run time (from its recorded start and end), summed,
-  plus each optimizer call's duration, summed. Work ran in parallel on up to 15–30 cluster workers,
-  so this measures effort, not wall clock. Global's run took 66.1 h of wall clock. The T-mrg
-  evaluation of all three bundles took well under a day; the final 2-trial top-up of all three took
-  1.5 h.
-- **Global's evaluation breakdown:** validation gates (candidate and incumbent) $294.22; train
-  incumbent sweeps $94.31; train screens $14.34; sealed test $138.02; post-run validation
-  remeasurement of `cand_0002` $53.20. Total $594.08.
+- **Eval** is the target agent running tasks; **Optim.** is the optimizer agent proposing edits,
+  plus the smart merge's LLM merger. The other two merges are 10-second scripts with no LLM.
+- **Dollars and tokens** are the per-trial records' own `cost_usd` and `tokens`, plus each run's
+  recorded optimizer spend. The smart merge's $14.16 is an estimate: its measured tokens priced at
+  Claude Opus 5.5 list price ($4 input, $20 output, $0.20 cache read, $5 cache write per million
+  tokens). 63% of that is output tokens.
+- **Compute time** is each trial's own agent run time (recorded start to end), summed, plus each
+  optimizer call's duration, summed. Work ran in parallel, so this is effort, not wall clock.
+  Global's run took 66.1 h of wall clock. T-opt ran 34 searches in parallel over about a day.
+- **Not counted:** the shared Seed measurements ($215.29: train 10, validation 4, test 10 trials
+  per task); Global's post-run validation remeasurement of `cand_0002` ($53.20, 268 trials), which
+  measured the previous candidate after the run; and a harness step in the T-mrg eval projects
+  that re-scored some tasks a second time ($13.72–28.81 per method, unused in any result).
 
 **Comments the table needs:**
-1. **Dollars:** the two merges that match Global on test cost $468 and $534 in total, against
-   Global's $949. That is 49% and 56% of Global.
-2. **Cost to produce a deployable bundle before opening test:** T about $319–334 (T-opt + merge;
-   T-mrg's own evaluation is the test-and-train measurement that follows). Global $811 (optimizer
-   + train screens and sweeps + validation gates and remeasurement). Neither includes the shared
-   Seed.
-3. **Tokens:** totals are similar (332–369M for T-mrg, 339M for Global), but the mix is reversed.
-   T spends 77–85% of its tokens in the optimizer; Global spends 54% in evaluation.
-4. **Compute time:** Global used about 3.6× the compute hours of T-mrg, almost all in evaluation.
-   T-opt's optimizer time (19.4 h) exceeds Global's (8.9 h) because it ran 34 separate searches.
-5. **Test evaluation costs differ by design:** Global's test line ($138) used 10 trials per task,
-   T-mrg's 5, so like-for-like Global's test line would be about half.
+1. **Build cost:** T reaches a deployable bundle for **$319–334**; Global spent **$758**. T is
+   **42–44%** of Global. Every merge method costs the same to build except the smart merge's $14.
+2. **Where the money goes.** T spends 88% on the optimizer (34 small searches; each candidate is
+   evaluated on one task). Global spends 53% on evaluation, almost all of it on validation gates
+   that check each candidate across many tasks. That is the difference in kind between the arms.
+3. **Tokens are not an effort measure here.** Totals look alike (295–305M for T, 280M for Global),
+   but price per token differs by about 3×. Evaluation tokens cost about $3.2 per million in every
+   arm. Optimizer tokens cost $0.99 per million for T and $2.29 for Global, because most optimizer
+   tokens are cache reads: the optimizer re-reading its own context on every turn. Cache reads are
+   billed at a tenth of input price but counted at full weight in the token total. Cache reads are
+   about 95% of T's optimizer tokens (measured on the 13 optimizer transcripts still on disk) and
+   97% of Global's. If the paper keeps token columns, footnote this, and
+   compare effort in dollars.
+4. **Compute time:** Global used 5.2× T's build compute (173 h vs 33 h). Two factors multiply:
+   Global ran 7.2× as many evaluation trials (2,223 vs 310), and its trials took longer on
+   average (266 s vs 160 s). The second factor is partly the simulator: 9% of trials logged in
+   the Global run took over 10 minutes, accounting for 82 of 295 hours, while T-mrg's evaluation
+   had none. Table 2b shows the same effect on measurement: Global's 5-trial test took 24.7 h of
+   compute against 8.7–9.6 h for each T-mrg bundle, for similar dollars. Present compute time as
+   measured, but note that it partly reflects infrastructure speed during each run. Trial counts
+   and dollars are the cleaner measures.
+5. **Optimizer time:** T-opt's 19.4 h exceeds Global's 8.9 h because it ran 34 separate searches.
 6. **Not a controlled efficiency claim:** the arms used different gates, budgets and trial counts.
    Keep the paper's existing caveat.
 
 **This changes numbers already in the paper:**
-- The paper reports Global at **$1,164.39**. That equals Seed **$215.29** + Global **$949.10**.
-  Table 2 separates them because the Seed measurements serve every arm. Paper text that says
-  "Global cost $1,164" should either say so explicitly or use $949 alongside the Seed row.
+- The paper reports Global at **$1,164.39**. That is build $757.88 + 10-trial test $138.02 +
+  post-run validation remeasurement $53.20 + shared Seed $215.29. Table 2 separates these; the
+  like-for-like comparison is build cost.
 - The paper's split of Global's evaluation ($83.09 Seed sweep, $494.06 screens + gates, $232.21
-  test) mixes Seed and candidate measurements. The figures above separate them: Global's test was
-  $138.02 and the Seed's test was $94.19.
+  test) mixes Seed and candidate measurements and includes the remeasurement in "gates". Per the
+  trial records, Global's own screens and gates were $402.87, its test $138.02, the Seed's test
+  $94.19, and the remeasurement $53.20.
 - The paper's **38.0 h (T-opt)** and **51.5 h (Global)** used the runs' `runner_seconds`, the wall
-  time of each evaluation batch while its trials ran in parallel. That undercounts compute, and by
-  different amounts for T and G. Table 2 uses one definition for every arm: summed per-trial agent
-  time plus optimizer time. That gives **44.3 h (T-opt)** and **229.8 h (Global)**. The paper's
-  cost table and the "summed compute time" sentences need updating to match.
+  time of each evaluation batch while its trials ran in parallel. That undercounts compute, by
+  different amounts for T and G. With one definition for every arm (summed per-trial agent time
+  plus optimizer time), build compute is **33.1 h (T-opt)** and **173.1 h (Global)**. T-opt's
+  figure excludes the 10 Seed trials it reused. The paper's cost table and the "summed compute
+  time" sentences need updating.
 - T-opt's dollar figures are unchanged ($281.09 optimizer + $38.26 eval = $319.35; the paper's
   $281.12 + $38.25 = $319.37 differs only by rounding across 34 runs).
 
