@@ -139,7 +139,8 @@ PROC = '''
     @is_tool(None)
     def get_procedure(self, topic: str) -> str:
         """Return the checklist."""
-        guides = {"cancel": ("CANCEL: 1) Get the user id. 2) Check eligibility. 3) Ask for yes. " * 6)}
+        long = "Get the user id, then check eligibility, then ask for a yes before any write. " * 3
+        guides = {"cancel": long, "book": long + "x", "bags": long + "y"}
         return guides[topic]
 '''
 
@@ -155,10 +156,21 @@ def test_rejects_multiline_steps_in_return(pc):
     @is_tool(None)
     def how(self) -> str:
         return """1. look up the user
-2. check the reservation
-3. ask for confirmation"""
+2. you must check the reservation
+3. never skip the confirmation"""
 ''')
     assert "return_prose" in tv(pc)[1]
+
+
+def test_short_hint_strings_and_long_data_strings_pass(pc):
+    set_tools(pc[1], lambda s: s + '''
+    @is_tool(None)
+    def fee(self, n: int) -> dict:
+        """Bag fee."""
+        note = "Tell the user the fee, and that it is charged per bag. " * 8
+        return {"fee": 50 * n, "hint": "tell the user the fee", "long": note}
+''')
+    assert tv(pc) is None
 
 
 def test_rejects_long_checklist_docstring(pc):

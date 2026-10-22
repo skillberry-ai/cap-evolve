@@ -12,7 +12,6 @@ import re
 from pathlib import Path
 
 DOC_MAX_LINES = 25
-RETURN_STR_MAX = 300
 _STEP = re.compile(r"^\s*(?:\d+[a-z]?[.)]|[-*•])\s+\S")
 _MODAL = re.compile(r"\b(must|never|always|do not|don't|only if|before calling|refuse|should not|cannot)\b", re.I)
 _PHRASE = re.compile(r"\byou must\b|\bdo not\b|\bREFUSE\b")
@@ -93,12 +92,41 @@ def _assigns(scope_nodes):
     return out
 
 
+_IMPERATIVE = re.compile(r"\b(must|never|always|do not|only if|before calling|refuse|you must)\b", re.I)
+LOOKUP_MIN_VALUES = 3
+LOOKUP_MIN_LEN = 150
+
+
 def _prose(s: str) -> str | None:
-    if len(s) > RETURN_STR_MAX:
-        return f"string of {len(s)} chars"
-    if "\n" in s and _step_lines(s, False) >= _STEPS_MIN:
-        return "multi-line numbered/bulleted steps"
+    """A returned string constant that is a multi-step checklist AND uses imperative policy phrasing."""
+    if _step_lines(s, False) >= _STEPS_MIN and _IMPERATIVE.search(s):
+        return "numbered/bulleted checklist with imperative rules"
     return None
+
+
+def _is_lookup(fn, outs, loc, mod_assigns) -> bool:
+    """procedure-lookup shape: returns ``table[key]`` / ``table.get(key)`` where table is a dict literal with
+    >= 3 long prose string values (get_procedure)."""
+    for o in outs:
+        for x in ast.walk(o):
+            t = None
+            if isinstance(x, ast.Subscript):
+                t = x.value
+            elif isinstance(x, ast.Call) and isinstance(x.func, ast.Attribute) and x.func.attr == "get":
+                t = x.func.value
+            if isinstance(t, ast.Name):
+                tabs = loc.get(t.id, []) + (mod_assigns.get(t.id, []) if t.id not in loc else [])
+            elif isinstance(t, ast.Dict):
+                tabs = [t]
+            else:
+                continue
+            for d in tabs:
+                if isinstance(d, ast.Dict):
+                    long_ = [v for v in d.values if v is not None
+                             and any(len(z) >= LOOKUP_MIN_LEN for z in _strings(v))]
+                    if len(long_) >= LOOKUP_MIN_VALUES:
+                        return True
+    return False
 
 
 def _return_findings(tree) -> list:
@@ -112,17 +140,19 @@ def _return_findings(tree) -> list:
             continue
         loc = _assigns(fn.body)
         why = None
+        if _is_lookup(fn, outs, loc, mod_assigns):
+            why = "procedure lookup (returns long prose chosen by a key)"
         cands = list(outs)
         names = {n.id for o in outs for n in ast.walk(o) if isinstance(n, ast.Name)}
         for nm in names:
             cands += loc.get(nm, []) + (mod_assigns.get(nm, []) if nm not in loc else [])
         for c in cands:
-            for s in _strings(c):
-                why = _prose(s)
-                if why:
-                    break
             if why:
                 break
+            for st in _strings(c):
+                why = _prose(st)
+                if why:
+                    break
         if why:
             out.append(("return_prose", q, why))
     return out
