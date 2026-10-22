@@ -139,8 +139,9 @@ PROC = '''
     @is_tool(None)
     def get_procedure(self, topic: str) -> str:
         """Return the checklist."""
-        long = "Get the user id, then check eligibility, then ask for a yes before any write. " * 3
-        guides = {"cancel": long, "book": long + "x", "bags": long + "y"}
+        guides = {"cancel": "Get the user id, then check eligibility, then ask for a yes before any write. " * 3,
+                  "book": "Get the user id, then search flights, then quote the total and ask for a yes first. " * 3,
+                  "bags": "Get the reservation, then read the allowance, then tell the user the fee clearly. " * 3}
         return guides[topic]
 '''
 
