@@ -1,0 +1,3 @@
+[10-20 16:07:52] watchdog start on cccxc507 job=1835753 suite=e1
+[10-20 16:49:18] all tasks ended
+[10-20 16:49:19] status written to /u/boazc/ccc_logs/v6t2_e1_status.json; watchdog exit

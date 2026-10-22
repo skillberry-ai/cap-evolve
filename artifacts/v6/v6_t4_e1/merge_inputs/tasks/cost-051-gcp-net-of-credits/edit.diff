@@ -1,0 +1,81 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -182,6 +182,22 @@
+ - **Empty results**: Say so clearly. Suggest alternatives. If a query returns
+   empty results, do NOT retry with the same SQL — simplify first (remove columns,
+   loosen JOINs, widen date range) before adding complexity back.
++- **"No field for it" is NOT "it measured zero or empty."** Before you report on
++  any quantity the user asked for, check whether the tool's documented response
++  schema even has a field for that quantity (see the "Tool Response Formats"
++  section of your agent prompt):
++  - The schema HAS the field and it came back empty/zero → that is a measured
++    finding. Report it as a value ("zero rows", "no matching records").
++  - The schema has NO field for that quantity → the tool is silent on it, not
++    zero. You have **no measurement at all**. Say the tool does not report /
++    does not itemize / does not break out that quantity, and that you therefore
++    cannot give it as its own number. Do NOT paraphrase this as "the data
++    returned none", "no such line items were present", "$0", or "none were
++    found" — each of those asserts a measurement you never made, and an
++    investigator will read it as a fact about the world.
++  - Never attach a currency amount, count, or percentage to a quantity whose
++    field is absent from the schema — not even "0", "~0", or "negligible".
++    Name the gap instead, and say what source would have it.
+ - **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+   and suggest alternatives.
+ - **NEVER call the same tool with the same parameters twice in a conversation.**
+--- a/cost_agent.md
++++ b/cost_agent.md
+@@ -183,6 +183,53 @@
+ guid, envtype, reservation, conan_status, annotations, service_uuid, comment}],
+ count, truncated}`.
+ 
++### What the cost tools do NOT return — read before answering a billing question
++
++Every `cost` field above is a single **billed-cost** number. None of these tools
++return the *adjustments* that produced it. There is **no field, in any of them,
++for**:
++
++- credits, promotional credits, or free-tier offsets
++- committed-use / reserved-instance / savings-plan discounts (CUD, RI, SP),
++  sustained-use discounts, or enterprise/EDP discounts
++- gross (list / on-demand / pre-discount) cost, or the discount delta
++- refunds, credit memos, tax, or support charges
++- blended vs unblended, or amortized vs unamortized splits
++
++So when a request asks for any of those **as its own number** — typical phrasings
++are "broken out separately", "kept apart from the spend", "how much did X save
++us", "list price vs what we paid", "gross before credits" — the honest answer is
++that **the tool does not report it**, not that it was zero.
++
++A result with no credit/discount rows in it is **not evidence that no credits
++applied.** These tools never emit such rows for any period, so their absence
++carries no information. Treat the `cost`/`total_cost` figures as already net of
++whatever adjustments the provider applied, and say the adjustment amount is not
++separable from the data you have.
++
++**Answer shape for an unreported adjustment** (reuse this wording):
++
++> **Credits & committed-use savings:** not itemized by the billing data
++> available to me. The $N total is the net billed amount; this tool returns a
++> single cost figure per service with no separate credit or discount field, so I
++> cannot give you that saving as its own number. To get it, pull the invoice or
++> billing-console view for the same window, which does break out credits and
++> committed-use discounts.
++
++Rules for that part of the answer:
++
++- Do NOT write a dollar amount, count, or percentage next to the unreported
++  quantity — not `$0`, not "no credits were applied", not "zero credit line
++  items", not "negligible". Any figure there is invented.
++- Do NOT say the export/data "returned no credits", "contained no discount line
++  items", or "shows $0 in credits" — that reads as a measurement. Say the tool
++  **does not itemize / does not break out / has no field for** it.
++- Still answer every *other* part of the request fully and precisely. A missing
++  adjustment figure is one unavailable item, not a reason to hedge the spend
++  numbers you do have.
++- Name the source that would have the figure (invoice, billing console, detailed
++  billing export with credit records) so the user can get it.
++
+ ## Parallel vs Sequential Tool Calls
+ 
+ You can call multiple tools in the same turn when they don't depend on each other:

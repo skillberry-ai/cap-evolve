@@ -1,0 +1,1865 @@
+{
+ "seed_words": 14753,
+ "rows": {
+  "Seed": {
+   "words": 14753,
+   "added": 0,
+   "removed": 0,
+   "files_changed": 0
+  },
+  "T-opt": {
+   "added": 47288,
+   "removed": 460,
+   "files_changed": 7,
+   "per_champion": {
+    "added": {
+     "median": 1239.0,
+     "min": 404,
+     "max": 3424
+    },
+    "removed": {
+     "median": 3.0,
+     "min": 0,
+     "max": 95
+    },
+    "files_changed": {
+     "median": 2.0,
+     "min": 1,
+     "max": 4
+    },
+    "words": {
+     "median": 15976.5,
+     "min": 15157,
+     "max": 18156
+    }
+   }
+  },
+  "T-mrg \u00b7 merge by order": {
+   "words": 41281,
+   "added": 26855,
+   "removed": 327,
+   "files_changed": 7,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 3662,
+     "added": 2002,
+     "removed": 5
+    },
+    "shared_context.md": {
+     "words": 6610,
+     "added": 4638,
+     "removed": 8
+    },
+    "aap2_agent.md": {
+     "words": 13227,
+     "added": 9975,
+     "removed": 176
+    },
+    "babylon_agent.md": {
+     "words": 3088,
+     "added": 1306,
+     "removed": 55
+    },
+    "cost_agent.md": {
+     "words": 5489,
+     "added": 4058,
+     "removed": 8
+    },
+    "icinga_agent.md": {
+     "words": 5635,
+     "added": 3405,
+     "removed": 1
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 2785,
+     "added": 1471,
+     "removed": 74
+    }
+   }
+  },
+  "T-mrg \u00b7 smart merge": {
+   "words": 59852,
+   "added": 45511,
+   "removed": 412,
+   "files_changed": 7,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 4107,
+     "added": 2447,
+     "removed": 5
+    },
+    "shared_context.md": {
+     "words": 12660,
+     "added": 10700,
+     "removed": 20
+    },
+    "aap2_agent.md": {
+     "words": 16877,
+     "added": 13647,
+     "removed": 198
+    },
+    "babylon_agent.md": {
+     "words": 4647,
+     "added": 2864,
+     "removed": 54
+    },
+    "cost_agent.md": {
+     "words": 5634,
+     "added": 4204,
+     "removed": 9
+    },
+    "icinga_agent.md": {
+     "words": 11357,
+     "added": 9147,
+     "removed": 21
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 3785,
+     "added": 2502,
+     "removed": 105
+    }
+   }
+  },
+  "T-mrg \u00b7 non-conflicting hunks": {
+   "words": 33127,
+   "added": 18595,
+   "removed": 221,
+   "files_changed": 7,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 2755,
+     "added": 1095,
+     "removed": 5
+    },
+    "shared_context.md": {
+     "words": 3753,
+     "added": 1776,
+     "removed": 3
+    },
+    "aap2_agent.md": {
+     "words": 11690,
+     "added": 8350,
+     "removed": 88
+    },
+    "babylon_agent.md": {
+     "words": 2624,
+     "added": 829,
+     "removed": 42
+    },
+    "cost_agent.md": {
+     "words": 4559,
+     "added": 3128,
+     "removed": 8
+    },
+    "icinga_agent.md": {
+     "words": 4449,
+     "added": 2219,
+     "removed": 1
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 2512,
+     "added": 1198,
+     "removed": 74
+    }
+   }
+  },
+  "Global": {
+   "words": 25060,
+   "added": 11125,
+   "removed": 818,
+   "files_changed": 7,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 2147,
+     "added": 501,
+     "removed": 19
+    },
+    "shared_context.md": {
+     "words": 7377,
+     "added": 5595,
+     "removed": 198
+    },
+    "aap2_agent.md": {
+     "words": 4343,
+     "added": 1055,
+     "removed": 140
+    },
+    "babylon_agent.md": {
+     "words": 2329,
+     "added": 523,
+     "removed": 31
+    },
+    "cost_agent.md": {
+     "words": 2512,
+     "added": 1086,
+     "removed": 13
+    },
+    "icinga_agent.md": {
+     "words": 3793,
+     "added": 1953,
+     "removed": 391
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1774,
+     "added": 412,
+     "removed": 26
+    }
+   }
+  }
+ },
+ "t_opt_champions": {
+  "platform-158-lab-instances-outside-default-region": {
+   "words": 18156,
+   "added": 3424,
+   "removed": 21,
+   "files_changed": 4,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 2481,
+     "added": 821,
+     "removed": 5
+    },
+    "shared_context.md": {
+     "words": 3209,
+     "added": 1236,
+     "removed": 7
+    },
+    "aap2_agent.md": {
+     "words": 4003,
+     "added": 575,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 2171,
+     "added": 792,
+     "removed": 9
+    }
+   }
+  },
+  "cloud-057-cloudtrail-select-only-refusal": {
+   "words": 15763,
+   "added": 1010,
+   "removed": 0,
+   "files_changed": 3,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1974,
+     "added": 309,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2408,
+     "added": 428,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1661,
+     "added": 273,
+     "removed": 0
+    }
+   }
+  },
+  "platform-121-near-miss-pick-partner-repo": {
+   "words": 15473,
+   "added": 726,
+   "removed": 6,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2085,
+     "added": 105,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 2452,
+     "added": 621,
+     "removed": 6
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "cloud-058-malformed-account-id": {
+   "words": 15904,
+   "added": 1151,
+   "removed": 0,
+   "files_changed": 3,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 2308,
+     "added": 643,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2213,
+     "added": 233,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1663,
+     "added": 275,
+     "removed": 0
+    }
+   }
+  },
+  "cost-407-aws-historical-query-came-back-org-wide": {
+   "words": 15731,
+   "added": 978,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2237,
+     "added": 257,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 2160,
+     "added": 721,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-116-timeout-headroom-from-history": {
+   "words": 17615,
+   "added": 2904,
+   "removed": 42,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 3472,
+     "added": 1492,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4798,
+     "added": 1412,
+     "removed": 42
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-215-ack-comment-author-and-expiry": {
+   "words": 15824,
+   "added": 1071,
+   "removed": 0,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 3302,
+     "added": 1071,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-204-downtime-window-expired": {
+   "words": 16793,
+   "added": 2040,
+   "removed": 0,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 4271,
+     "added": 2040,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "cost-408-three-cloud-total-gcp-query-failed": {
+   "words": 16413,
+   "added": 1667,
+   "removed": 7,
+   "files_changed": 3,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1737,
+     "added": 72,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2314,
+     "added": 334,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 2693,
+     "added": 1261,
+     "removed": 7
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-004-events-then-config": {
+   "words": 16323,
+   "added": 1616,
+   "removed": 46,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2386,
+     "added": 421,
+     "removed": 15
+    },
+    "aap2_agent.md": {
+     "words": 4592,
+     "added": 1195,
+     "removed": 31
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-206-stale-ok-check": {
+   "words": 16549,
+   "added": 1796,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2310,
+     "added": 330,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 3697,
+     "added": 1466,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-104-cfn-dependency-and-what-changed": {
+   "words": 16675,
+   "added": 1933,
+   "removed": 11,
+   "files_changed": 3,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1822,
+     "added": 157,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2681,
+     "added": 701,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4492,
+     "added": 1075,
+     "removed": 11
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-212-fix-on-main-not-on-pinned-ref": {
+   "words": 17428,
+   "added": 2676,
+   "removed": 1,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 4906,
+     "added": 2676,
+     "removed": 1
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-007-directory-path-fetch": {
+   "words": 15665,
+   "added": 947,
+   "removed": 35,
+   "files_changed": 4,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1817,
+     "added": 152,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2490,
+     "added": 510,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3580,
+     "added": 170,
+     "removed": 18
+    },
+    "babylon_agent.md": {
+     "words": 1935,
+     "added": 115,
+     "removed": 17
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-032-shared-secret-not-a-registry-outage": {
+   "words": 17476,
+   "added": 2731,
+   "removed": 8,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4735,
+     "added": 1315,
+     "removed": 8
+    },
+    "babylon_agent.md": {
+     "words": 3253,
+     "added": 1416,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-222-lag-check-runs-on-satellite": {
+   "words": 15858,
+   "added": 1110,
+   "removed": 5,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2309,
+     "added": 334,
+     "removed": 5
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 3007,
+     "added": 776,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-153-override-uses-removed-variable-name": {
+   "words": 15838,
+   "added": 1085,
+   "removed": 0,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 3065,
+     "added": 1085,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-148-precheck-caches-nxdomain": {
+   "words": 16698,
+   "added": 1951,
+   "removed": 6,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 5373,
+     "added": 1951,
+     "removed": 6
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-101-vcpu-quota-from-catalog-sizing": {
+   "words": 15990,
+   "added": 1237,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2948,
+     "added": 968,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3697,
+     "added": 269,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "cost-402-unused-cost-preset-has-no-utilisation": {
+   "words": 15993,
+   "added": 1241,
+   "removed": 1,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2284,
+     "added": 304,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 2375,
+     "added": 937,
+     "removed": 1
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "cost-418-capacity-window-starts-mid-review": {
+   "words": 16097,
+   "added": 1344,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2509,
+     "added": 529,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 2254,
+     "added": 815,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-126-stop-job-from-tower-jobs": {
+   "words": 15205,
+   "added": 484,
+   "removed": 32,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 2289,
+     "added": 484,
+     "removed": 32
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-216-flexible-downtime-duration": {
+   "words": 15996,
+   "added": 1243,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2111,
+     "added": 131,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 3343,
+     "added": 1112,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-124-event-accounts-not-returned": {
+   "words": 15413,
+   "added": 660,
+   "removed": 0,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4088,
+     "added": 660,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-112-exec-pool-disk-not-the-bastion": {
+   "words": 16241,
+   "added": 1581,
+   "removed": 93,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4916,
+     "added": 1581,
+     "removed": 93
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-152-path-search-cannot-find-variable-uses": {
+   "words": 15593,
+   "added": 840,
+   "removed": 0,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4268,
+     "added": 840,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "cost-051-gcp-net-of-credits": {
+   "words": 15387,
+   "added": 634,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2184,
+     "added": 204,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1869,
+     "added": 430,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-137-generated-password-forbidden-chars": {
+   "words": 16416,
+   "added": 1671,
+   "removed": 8,
+   "files_changed": 1,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 1980,
+     "added": 0,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 5091,
+     "added": 1671,
+     "removed": 8
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-136-provision-key-mode-too-open": {
+   "words": 15402,
+   "added": 649,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2409,
+     "added": 429,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3648,
+     "added": 220,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-201-soft-critical-not-yet-hard": {
+   "words": 16060,
+   "added": 1324,
+   "removed": 17,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2135,
+     "added": 159,
+     "removed": 4
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 3383,
+     "added": 1165,
+     "removed": 13
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "icinga-045-hosts-search-filter": {
+   "words": 15157,
+   "added": 404,
+   "removed": 0,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2186,
+     "added": 206,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2429,
+     "added": 198,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-155-order-time-was-queue-wait": {
+   "words": 15701,
+   "added": 960,
+   "removed": 12,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2126,
+     "added": 146,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 4230,
+     "added": 814,
+     "removed": 12
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "platform-005-wrong-owner-trap": {
+   "words": 15634,
+   "added": 895,
+   "removed": 14,
+   "files_changed": 4,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1842,
+     "added": 177,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2306,
+     "added": 327,
+     "removed": 1
+    },
+    "aap2_agent.md": {
+     "words": 3652,
+     "added": 237,
+     "removed": 13
+    },
+    "babylon_agent.md": {
+     "words": 1991,
+     "added": 154,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 1388,
+     "added": 0,
+     "removed": 0
+    }
+   }
+  },
+  "cloud-317-namesake-user-other-account": {
+   "words": 15963,
+   "added": 1305,
+   "removed": 95,
+   "files_changed": 2,
+   "per_file": {
+    "orchestrator.md": {
+     "words": 1665,
+     "added": 0,
+     "removed": 0
+    },
+    "shared_context.md": {
+     "words": 2251,
+     "added": 271,
+     "removed": 0
+    },
+    "aap2_agent.md": {
+     "words": 3428,
+     "added": 0,
+     "removed": 0
+    },
+    "babylon_agent.md": {
+     "words": 1837,
+     "added": 0,
+     "removed": 0
+    },
+    "cost_agent.md": {
+     "words": 1439,
+     "added": 0,
+     "removed": 0
+    },
+    "icinga_agent.md": {
+     "words": 2231,
+     "added": 0,
+     "removed": 0
+    },
+    "ocpv_agent.md": {
+     "words": 785,
+     "added": 0,
+     "removed": 0
+    },
+    "security_agent.md": {
+     "words": 2327,
+     "added": 1034,
+     "removed": 95
+    }
+   }
+  }
+ },
+ "definitions": "Table 3: skill-bundle size and edit size in words, per arm (same rows as Tables 1 and 2).\n\nWords are whitespace-split tokens over the 8 skill files (merge logs and optimizer notes excluded).\nAdded/removed come from a word-level difflib diff of each file against the Seed, summed over files.\nT-opt has 34 private bundles: its row sums the 34 diffs (each counted once), and also gives the\nper-champion median and range.\n"
+}

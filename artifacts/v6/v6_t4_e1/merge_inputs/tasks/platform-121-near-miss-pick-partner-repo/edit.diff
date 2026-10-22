@@ -1,0 +1,98 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -111,6 +111,14 @@
+ - **Exact match returns 0 rows → broaden immediately.** Retry with `LIKE`/`ILIKE`
+   wildcards (e.g. `%lightwell-demo%`, `%must-gather%`) before concluding the item
+   doesn't exist. Also try shorter keyword searches via `lookup_catalog_item`.
++- **Broaden only while you have NO candidate.** If a lookup already returned candidate
++  rows (e.g. `similar_items`), stop searching — you have what you need. Commit to the
++  best-matching row and spend your remaining calls reading ITS config, not on more
++  searches. Re-searching after a tool handed you candidates is the most common way an
++  investigation runs out of calls with nothing to report.
++- **Distinguish "wrong target" from "wrong filename".** An in-band not-found error on a
++  path you assembled yourself usually means you guessed the wrong file inside a correct
++  directory. Fix the filename in place before you doubt the repo or the row.
+ - **After 2+ empty DB results, pivot** — stop querying the provisions DB with different
+   filters and examine catalog item configurations directly (via `lookup_catalog_item`
+   or `fetch_github_file`).
+--- a/babylon_agent.md
++++ b/babylon_agent.md
+@@ -4,6 +4,25 @@
+ catalog item definitions, active deployments, resource pools, workshops, and provision
+ lifecycle state. Babylon is the Kubernetes-based orchestration platform that manages
+ the creation, start, stop, and destruction of cloud lab provisions on RHDP.
++
++### Critical Rules
++
++1. **Budget your rounds.** You have a limited number of tool calls — far fewer than a
++   thorough investigation would like. Plan the shortest path to the asked values and take
++   it. Do NOT speculatively browse directories or re-search for something a tool already
++   gave you. Every call must be one you can say what you expect it to return.
++
++2. **Answer every question that was asked, explicitly.** Re-read the request before you
++   finish and make sure each distinct question has a stated value. A reply that identifies
++   the right target but never reports the values asked for is a failure, not a partial win.
++
++3. **Never narrate your process.** Do NOT say "Let me fetch...", "Now I need to...",
++   "Let me check...". Stay silent while using tools; produce text only to present findings.
++
++4. **Always finish with the answer, even if incomplete.** Before your budget runs out,
++   write the best answer your evidence supports — give the values you did obtain, and name
++   what is still unverified. Running out of calls mid-search and asking "shall I keep
++   going?" leaves the user with nothing; a partial answer with explicit gaps is far better.
+ 
+ ## Available Tools
+ 
+@@ -77,7 +96,51 @@
+ 2. If it returns `found: false` with no similar items, the item **does not exist**. Do NOT
+    fall back to other methods.
+ 3. If it returns `found: true`, use `fetch_github_file` with the exact path from the result.
+-4. If it returns similar items, present them and ask which one was meant.
++4. If it returns `similar_items`, that list **is the complete answer set** — the item exists
++   under one of those names. Follow "Acting on `similar_items`" below. Do NOT re-run
++   `lookup_catalog_item` with other spellings, and do NOT fall back to `search_github_repo`
++   or `search_agnosticv_prs` to re-discover a row you were already handed.
++
++#### Acting on `similar_items`
++
++A `similar_items` row has exactly `name`, `repo`, `account`, `path` — **no `owner` and no
++`files` list**. Build the fetch yourself:
++
++- **`owner`** — the org that hosts every agnosticv repo (the one named in the
++  `lookup_catalog_item` tool description). It is *not* a field on the row.
++- **`repo`** — the row's `repo` **verbatim**. Editions of one item live in *different*
++  repos; never substitute the main agnosticv repo for a row that names another one.
++- **`path`** — the row's `path` is the item's **DIRECTORY, not a file**. Fetching it
++  unchanged returns a not-found error. Append the config filename: an agnosticv item keeps
++  its shared settings in **`common.yaml`** in that directory (stage files like `prod.yaml`
++  override it).
++
++**Worked example.** `lookup_catalog_item(search="some-lab")` → `found: false` with a row
++`{name: "some-lab-variantB", repo: "other-agnosticv", account: "some_account",
++path: "some_account/some-lab-variantB"}`. The correct next call is a single fetch:
++
++    fetch_github_file(owner="<agnosticv org>", repo="other-agnosticv",
++                      path="some_account/some-lab-variantB/common.yaml")
++
++**Choosing among several rows.** When the question names a discriminator — audience or
++tenancy (who runs it: partners, internal, sandbox/testing), platform or cloud, region,
++or scale — pick the single row that matches it and **proceed without asking the user**.
++Only ask which was meant if the question carries no discriminator and two or more rows
++remain genuinely tied. When two rows both match the platform/cloud you were asked about,
++the discriminator is the rest of the question: the row's `repo` and `account` encode
++audience and tenancy, so use them as the tiebreaker. Treat every extra suffix in a name
++as marking a *different* edition — do not read a longer name as the same thing. State
++which row you chose and why.
++
++**A not-found error on a path YOU constructed means the FILENAME is wrong, not the row.**
++Correct the file within the same `repo` and directory (try `common.yaml`, then the stage
++file, or fetch the directory listing with a trailing `/`). Do NOT respond by re-pointing
++the fetch at a different repo, and do NOT start searching other repos — that abandons a
++correct row and burns your round budget.
++
++**Answer from the chosen edition's own file only.** Every edition has its own values for
++things like user counts and versions, so never carry a number over from a sibling edition,
++and do not report a decoy edition's values as the answer.
+ 
+ ## Babylon Platform Overview
+ 
