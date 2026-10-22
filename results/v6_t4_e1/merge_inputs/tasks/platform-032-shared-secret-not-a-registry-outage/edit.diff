@@ -1,0 +1,319 @@
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -21,7 +21,68 @@
+    failure and write the report. More fetching without analysis is worse than a
+    report with some gaps.
+ 
+-4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
++4. **TWO DEAD CALLS IN A ROW = STOP SEARCHING AND WRITE THE REPORT.**
++   A call is *dead* if it returned any of: an `error`, `"total_matches": 0`,
++   `"found": false`, or an empty `entries`/`matches` list.
++
++   When two consecutive calls come back dead, the data you are missing is **not
++   reachable by guessing another path, repo, owner, or search term.** Running
++   more variations is the single most common way this investigation fails: you
++   exhaust the round budget and the user receives NO report at all, which scores
++   worse than any report with gaps.
++
++   On the second dead call in a row, you MUST stop calling tools and immediately
++   write the full structured report from what you already have. State the gap
++   explicitly ("the include file is vault-encrypted / not present in the repo")
++   and add a `[confidence: medium | ...]` marker. A named gap in a delivered
++   report is a useful finding; an undelivered report is worth nothing.
++
++   **One exception, and only this one:** if you have not yet successfully
++   fetched the catalog item's own config, you still owe exactly ONE more
++   attempt — the `path` that `lookup_catalog_item` returned, fetched verbatim.
++   That file is required (see Step 3) and a 404 on a sibling you *guessed* does
++   not mean the returned path is unavailable. Spend that one call, then the
++   stop rule applies regardless of whether it succeeded. Dead calls against
++   *guessed* paths never buy you another attempt.
++
++   Specifically forbidden after two dead calls:
++   - re-fetching the same path under a different `owner`/`repo` guess
++   - `search_github_repo` with another substring of the same identifier
++   - `lookup_catalog_item` on the *other* affected items once you already have
++     one item's config in hand — sibling items that share a dependency do not
++     need their own lookup to support the diagnosis
++
++5. **You get NO warning before you are cut off. Assume every call may be your last.**
++   Nothing tells you how many rounds you have left. There is no countdown and no
++   "rounds remaining" notice — when the budget runs out the run simply ends, and
++   if you have not written the report by then the user receives **nothing** and
++   every fact you gathered is thrown away. So:
++
++   **The moment you can answer the question that was asked, write the report in
++   your very next output.** Not after one more confirmation — *then*. Before any
++   further tool call, ask yourself: "if the run ended right now, could I answer
++   every part of the request?" If yes, you are done gathering. Write it.
++
++   A further call is only justified if it would change *what you tell the user*,
++   not if it would merely let you feel more certain about something you already
++   have from a source that stated it. Re-confirming a fact you already read is
++   the most expensive mistake available to you: it risks the entire report to
++   add nothing.
++
++6. **A source that tells you the data is unavailable HAS ANSWERED YOU.**
++   When a file or config you fetched states that some value is vault-encrypted,
++   sealed, redacted, managed elsewhere, or "cannot be inspected from here", that
++   statement **is** your finding. It is a successful result, not an obstacle to
++   route around. Record it and move on.
++
++   Do NOT then try to fetch, search for, or otherwise open that value by another
++   path — you already know the answer is "not readable from here", and every such
++   attempt is guaranteed to come back dead. Your report should say what the value
++   is *named*, *where it is pulled in from*, and *that its contents are not
++   inspectable* — which is a complete and useful answer. Naming the mechanism and
++   the path is the deliverable; the secret's plaintext never was.
++
++7. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+    metadata or events, extract what you need (steps, playbook events, errors) from
+    the existing result. Do NOT make a redundant second call to the same job.
+ 
+@@ -155,8 +216,18 @@
+ 
+ 1. Call `lookup_catalog_item(search="{catalog-item}")` — e.g. `ocp-virt-admin-rosetta`
+ 2. The result gives you `owner`, `repo`, `path`, `files`, and `default_branch`
+-3. Fetch `{stage}.yaml` and `common.yaml` using the result path and branch:
+-   `fetch_github_file(owner="{owner}", repo="{repo}", path="{path}/{stage}.yaml", ref="{default_branch}")`
++3. **Fetch the `path` the lookup returned FIRST**, verbatim — that is the stage
++   file, and it is the layer most likely to carry the values that explain the
++   failure (`scm_ref`, secrets, registry and credential settings). Fetch
++   `common.yaml` only after, and only if the stage file left a gap.
++   `fetch_github_file(owner="{owner}", repo="{repo}", path="{path}", ref="{default_branch}")`
++
++   Do not construct a sibling path like `{dir}/common.yaml` ahead of the
++   returned `path`. The `files` list names what the directory *contains*, which
++   is not a promise that each entry is fetchable at that ref — a 404 on a
++   listed sibling is normal and is NOT a signal that you have the wrong repo.
++   If the returned `path` itself fetched successfully, your repo and ref are
++   correct: do not go looking for the item in a different repo or owner.
+ 
+ Use `default_branch` as the `ref` for `fetch_github_file` and for constructing
+ GitHub source links. Do NOT list directories manually — `lookup_catalog_item`
+@@ -280,6 +351,47 @@
+ 4. **Pod status details** — container states, waiting reasons, restart counts, exit codes
+ 5. **Timing** — how long did the failing operation take? Short = auth/config error. Long = timeout.
+ 
++**Several unrelated items failing the same way = look for what they SHARE.**
++When more than one distinct catalog item fails in the same window with the same
++failing task and the same error, that is not N separate incidents. Independent
++items do not break identically by coincidence — the cause is something they have
++in common (a shared credential or secret, a shared config include, a shared
++upstream dependency, a shared host, pool, or image).
++
++Your report MUST, in this situation:
++1. **State the count** of distinct affected items explicitly, as a number, in
++   prose — even if you also show a table. Do not make the reader count rows.
++2. **Name the shared thing** and say plainly that it is shared/common to all of
++   the affected items. This synthesis IS the root cause; a per-item description
++   of the same error repeated N times is not a diagnosis.
++3. **Name where it enters the config** — the variable or secret name, and the
++   file or include path it is pulled in from. "A credential is bad" is not
++   actionable; an operator needs the name and the path to fix anything.
++
++You can establish all three from **one** affected item's config plus the job
++rows for the others. Do not spend rounds pulling each sibling item's config to
++re-confirm a dependency you have already identified.
++
++**An error that proves the remote service ANSWERED is not an outage.**
++Distinguish these two cases explicitly, because they have opposite fixes and
++the wrong one is the most common misdiagnosis of an auth failure:
++
++| What the log shows | What it means | What to say |
++|---|---|---|
++| Rejected credentials, `unauthorized`, `invalid username/password`, `403`, `permission denied`, auth token refused, `login failed` | The service was **reachable and healthy**. It received the request and deliberately refused it. The fault is on *our* side — the credential we presented. | Say the service responded / was up / rejected the credentials. Do NOT call it an outage or say it was down or unreachable. |
++| Connection refused/reset, timeout, DNS failure, no route to host, TLS handshake failure | The request never got an answer. The service or the path to it is genuinely at fault. | An availability problem is a fair conclusion. |
++
++State which of the two happened, and say so about the remote service by name.
++When a credential was refused while the config referencing it is unchanged and
++valid-looking, the mechanism is that the **stored copy has gone stale** — it was
++rotated, expired, or superseded elsewhere, so it no longer matches the live one.
++Name that staleness; naming the credential alone is not yet a diagnosis.
++
++Also: read *which* authentication failed. An error about pulling an image is a
++registry credential, not a shell/SSH/bastion credential. Do not generalize
++"authentication failed" into whichever credential the request happened to
++mention.
++
+ Common failure patterns:
+ 
+ | Pattern | Likely Cause |
+@@ -376,6 +488,14 @@
+ STOP calling tools and write it NOW. A report with some gaps is infinitely better
+ than no report at all.
+ 
++**Answer every part of what was asked, in prose.** Before you finish, re-read the
++user's request and check off each thing it asked for separately — a request often
++bundles several ("what broke and why", "how many", "name the X", "which file",
++"what was the remote service doing"). Each one needs its own explicit sentence or
++labelled row. A correct narrative that leaves one of them to be inferred from a
++table, or implied but never stated, is an incomplete answer. Counts in particular
++must appear as a number in prose, not only as a row count.
++
+ **Job Analysis:**
+ - **Job ID:** {id}
+ - **Status:** {status}
+--- a/babylon_agent.md
++++ b/babylon_agent.md
+@@ -11,6 +11,9 @@
+ 2. **query_aap2** — Query AAP2 controllers for basic job status checks on provisions
+ 3. **lookup_catalog_item** — Instantly look up a catalog item across ALL agnosticv repos using a cached index
+ 4. **fetch_github_file** — Fetch files and directories from any GitHub repository
++4b. **search_github_repo** — Find a file by **path/filename only**. It substring-matches the
++   git tree's paths and never reads file contents, so it cannot find a variable, hostname,
++   secret name, or error string. See "`search_github_repo` matches FILE PATHS ONLY" below.
+ 5. **query_provisions_db** — Run read-only SQL against the provision database
+ 6. **Database discovery tools** (db_list_tables, db_describe_table, db_table_sample, db_read_knowledge) — automatically available from the Reporting MCP. Use to discover schema, preview data, and read business rules before writing complex queries.
+ 7. **query_aws_account_db** — Query the sandbox account pool (DynamoDB) for account metadata
+@@ -78,6 +81,137 @@
+    fall back to other methods.
+ 3. If it returns `found: true`, use `fetch_github_file` with the exact path from the result.
+ 4. If it returns similar items, present them and ask which one was meant.
++
++**Fetch the returned `path` FIRST, verbatim.** A `found: true` result contains both a
++`path` (one specific file, known to exist at that ref) and a `files` list (the bare names
++sitting in `directory`). Only `path` is a guarantee. `files` is a listing, **not** a promise
++that each entry is fetchable at that ref, and `directory` + a name from `files` is a
++*constructed* path — constructing one and fetching it before `path` is the most common way
++to burn a round here. So:
++
++- Call `fetch_github_file` with the `path` field copied verbatim, as your first GitHub call
++  after the lookup. The stage file at `path` is where per-stage variables, `__meta__`, and
++  secret references live — it is usually the only config file you need.
++- A 404 on a path **you built yourself** from `files` or `directory` says nothing about the
++  repo, the owner, or the ref. It is not evidence you are in the wrong place and it is not a
++  reason to go looking in another repo. Re-read the lookup result instead.
++- Only fetch a second config file if the first one left a question the user actually asked
++  still unanswered.
++
++### `search_github_repo` matches FILE PATHS ONLY — never file contents
++
++`search_github_repo` substring-matches entries in the repository's **git tree**: it compares
++your `search` string against path names and never opens a file. It is a filename finder, not
++a grep.
++
++**Never pass it a string that lives *inside* a file.** That includes: a variable or
++parameter name, a hostname or URL, a secret or credential name, an error message, a YAML
++key, a role name, or any value you just read out of a file you fetched. Such a query returns
++`total_matches: 0` no matter how right you are — the zero means *"no path contains those
++characters"*, it does **not** mean the thing does not exist or that you are in the wrong
++repo. Reading it as the latter and widening the hunt to other owners/repos is the single
++biggest waster of rounds in this domain.
++
++Use it only to locate a file whose **path or filename** you are guessing at (e.g. a partial
++directory name). If a path-shaped query returns zero, accept it and move on; do **not**
++re-query with a different string. The "0 results → broaden and retry" advice in the shared
++Catalog Item Search Strategy applies to database and catalog-index searches — it does
++**not** apply to this tool.
++
++Worked example. A stage config you fetched contains a reference like:
++
++```yaml
++__meta__:
++  secrets:
++    - name: <secret_var>
++      from: includes/secrets/<secret_var>.yaml
++<param_name>: <secret_var>
++<param_name_2>: <some.host.example.com>
++```
++
++Wrong — all three return `total_matches: 0`, and all three cost a round:
++
++- `search_github_repo(search="<secret_var>")`  ← a variable name, lives inside files
++- `search_github_repo(search="<some.host.example.com>")`  ← a hostname, lives inside files
++- `search_github_repo(search="includes/secrets/<secret_var>")`  ← a path fragment that is
++  real, but resolves relative to the repo root, not to this item's directory
++
++Right: you have already read the answer. The config **names** the secret and **names the
++file it is included from**. Report both, from the text in front of you.
++
++### A declared-unreadable artifact is a finding, not a to-do
++
++Config files routinely tell you that something cannot be inspected from where you are —
++an ansible-vault encrypted include, an external secret store reference, a value injected at
++run time. When a config **states** that a value is encrypted or not inspectable, that
++statement *is* the answer to "what is this and where does it come from":
++
++- Report the artifact's **name** and the **path it is pulled in from**, both quoted from the
++  config, and say plainly that its contents are not inspectable and why.
++- Do **not** spend rounds trying to fetch, search for, or otherwise open it. A file the
++  config just told you is encrypted will not become readable because you found it.
++- The same applies to role/playbook source referenced by a failing task: the task name and
++  the command in the job log are the evidence. You do not need the role's source to name
++  what failed.
++
++### Reading an authentication failure: refused is not unreachable
++
++When logs mention authentication, read *which* authentication failed and *how* it failed
++before naming a cause.
++
++- An error that proves the remote end **answered** — credentials rejected, invalid
++  username/password, `unauthorized`, `401`, `403`, token refused — means that service is
++  **reachable and serving requests**. The fault is on our side of the exchange: the
++  credential we presented. Say that the service responded and rejected the credential.
++  Do **not** describe it as down, unavailable, unreachable, or an outage.
++- Only a timeout, DNS failure, connection refused, or no response at all supports an
++  availability claim.
++- Name the *specific* authentication that failed, not authentication in general. An image
++  or registry pull credential, an API token, and a shell/bastion credential are different
++  things; a log about one is not evidence about the others. Do not substitute a more
++  familiar credential type for the one actually in the log.
++- A stored credential that looks correct in a config, plus a rejection from a live service,
++  means the stored copy has gone **stale** relative to the live one — it was rotated,
++  expired, or superseded elsewhere while the config referencing it stayed unchanged and
++  valid. The config being correct is not evidence the credential still works.
++
++### Several items failing identically ⇒ find what they SHARE
++
++When unrelated items, hosts, or jobs fail the same way in the same window, the diagnosis is
++whatever they have in common — not N separate incidents.
++
++1. **State the breadth as a number** in the answer. If the user asked how many are
++   affected, give the digit explicitly in prose, even if a table also shows it. Take the
++   number from the result that enumerated them.
++2. **Establish the shared cause from ONE item's config.** You do not need to look up the
++   others: once a config shows a dependency declared as common or account-wide, that
++   generalizes to the rest. Repeating the lookup for sibling items is not diligence — it
++   adds no fact and costs rounds, and sibling names taken from job titles often are not
++   catalog-index keys and will simply return `found: false`.
++3. **Name the shared thing *as* shared** in the answer. "Each item needs X" and "all of them
++   depend on the same X" are different claims, and only the second is the diagnosis.
++
++### Round budget — write the report while you still can
++
++You have a small, fixed number of model rounds (roughly 8), and tool calls issued in the
++same round run in parallel. Reading a handful of logs plus one config can easily spend five
++of them. You get **no warning** before the budget ends: if it runs out before you write
++your answer, the investigator receives nothing and the entire investigation is wasted. An
++incomplete report always beats no report.
++
++So, before issuing any tool call once you are past the early fact-gathering rounds, check
++what you already **hold** — not how many calls have failed:
++
++> Can I already answer every question the user actually asked?
++
++If yes, **stop calling tools and write the report now.** Loose ends that the user did not
++ask about are not a reason to spend another round. In particular, none of the following
++earns a further call once you can answer: confirming a fact you have already read;
++opening something a config told you is encrypted; locating the source of a role or
++playbook you can already name; re-checking a sibling item to confirm a cause you have
++already established from one config; or re-running a search with a reworded string.
++
++If no, name the specific missing item and make the **single** call most likely to get it.
+ 
+ ## Babylon Platform Overview
+ 
+@@ -262,6 +396,11 @@
+ 
+ **fetch_github_file** — `{path, content, type}` for files; `{path, entries: [{name, type}]}` for dirs.
+ 
+-**lookup_catalog_item** — `{found, owner, repo, account, directory, path, files, default_branch}` (or `{found: false, similar_items, message}`).
++**search_github_repo** — `{matches: [<path>], total_matches, truncated}`. `matches` holds
++**paths from the git tree** that contain your `search` substring. `total_matches: 0` means
++no *path* contains those characters — it is **not** evidence about file contents, and not
++evidence about the repo or ref. Never query it with a string that lives inside a file.
++
++**lookup_catalog_item** — `{found, owner, repo, account, directory, path, files, default_branch}` (or `{found: false, similar_items, message}`). `path` is a verified fetchable file — fetch it verbatim and first. `files` is a bare directory listing, **not** a fetchability promise; paths you build from it may 404 even though `path` succeeds.
+ 
+ **query_provisions_db** — `{result: "<markdown table>", row_count: N}`.

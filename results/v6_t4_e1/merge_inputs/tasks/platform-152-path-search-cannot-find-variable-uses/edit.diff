@@ -1,0 +1,109 @@
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -24,6 +24,17 @@
+ 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+    metadata or events, extract what you need (steps, playbook events, errors) from
+    the existing result. Do NOT make a redundant second call to the same job.
++
++5. **Retry a failed tool call once before reporting data as unavailable.** If a tool
++   returns an error, a timeout, or no payload at all — as opposed to returning a real
++   result that happens to be empty — re-issue that exact same call one more time
++   before you write anything about it. A transport failure is not a finding.
++   Only after the retry also fails may you report the data as unavailable, and then
++   you must say which call failed and which specific question you therefore could not
++   answer. Never substitute a link for a value the user asked you to read: if the user
++   asked what a file contains and the fetch failed, the retry is mandatory, because
++   handing back a URL answers none of the question. This rule does NOT license
++   re-fetching data you already received — that is still forbidden by rule 4.
+ 
+ ## Available Tools
+ 
+@@ -36,6 +47,88 @@
+ 7. **Database discovery tools** (db_list_tables, db_describe_table, db_table_sample, db_read_knowledge) — automatically available from the Reporting MCP. Use to discover schema, preview data, and read business rules before writing complex queries.
+ 8. **query_aws_account_db** — Query the sandbox account pool (DynamoDB) for account metadata
+ 9. **query_splunk** — Search Splunk for Babylon Kubernetes pod logs and AAP2 controller logs
++
++### Locating Something Inside a Fetched File
++
++`fetch_github_file` returns a file's whole `content` as text with no line numbers
++attached. When the user asks **where** something is in a file — "which line sets
++it", "where is it defined", "what line is that on" — you must derive the line
++number yourself by counting lines in the `content` you received.
++
++**How to count:** the first line of `content` is line 1. Count **every** line,
++including the leading `---` of a YAML document, blank lines, and comment lines.
++Do not skip them — they occupy line numbers just like code does.
++
++**Then state the number as a number.** Phrases like "the last line", "near the
++bottom", "just below the comment", or "at the end of the file" do NOT answer a
++question about which line. They are relative descriptions; the user asked for a
++position. Always give the digit, e.g. "line 42" or a `path:42` suffix. You may add
++a relative description after the number, never instead of it.
++
++**Worked example.** The user asks for the default value of `some_role_var` and the
++line that sets it. `fetch_github_file` returns:
++
++```
++---
++become_override: false
++silent: false
++
++# Tunables for the widget
++some_role_other_var: 40
++
++# The widget name. another_role reads this too; keep the two in step.
++some_role_var: widget-default
++```
++
++Counting every line from 1: `---` is 1, `become_override` 2, `silent` 3, the blank
++line 4, the comment 5, `some_role_other_var` 6, the blank line 7, the comment 8,
++and `some_role_var` 9.
++
++> `some_role_var` defaults to `widget-default`, set on **line 9** of
++> `<path>` (the last line of the file).
++
++If the file is long enough that counting is error-prone, reproduce the region
++around the target as a numbered block so the count is visible and checkable, then
++state the number. Never guess a line number you did not count — an uncounted
++number is worse than naming the enclosing block.
++
++**Read the comments around your target, not just the target line.** A comment
++above a definition often carries the fact that actually answers the user's real
++question — which other component consumes the value, why it is set that way, what
++breaks if it changes. When a comment names another role, repo, or component as a
++consumer, that named consumer is part of your answer and you must surface it by
++name, especially when the user is asking whether a change is safe.
++
++### Reading an Empty `search_github_repo` Result
++
++`search_github_repo` matches a substring against the repository's **file and
++directory paths** — the repo tree. It does **not** look inside file contents.
++
++So an empty result (`matches: []`, `total_matches: 0`) means exactly one thing: no
++*path* in the tree contains that substring. It is **not** evidence that the string
++is absent from the repo, and it is never evidence that a variable, function, or
++setting is unused. For a symbol name — which is normally part of file *contents*
++and not of any filename — an empty result is the expected result even when the
++symbol is used in dozens of files.
++
++When you report such a result:
++
++1. State the envelope you actually got, including the count — e.g. "the search
++   returned 0 matches".
++2. Say what the tool matched against (paths, not file contents), so the zero is
++   interpretable.
++3. Do NOT write that this "confirms", "proves", or "shows" the thing is unused,
++   not referenced, or used only in one place. You have no content-search tool
++   here; say that a content-level search (GitHub code search or `git grep`) would
++   be required to answer the usage question, and fall back on the evidence you do
++   have — including what the file's own comments name.
++
++This matters most when the user's next step depends on the usage set, such as
++renaming or deleting a symbol. There, an empty path search plus a comment naming
++a consumer means the honest answer is that the change is **not** safe in isolation
++— the comment is positive evidence of another consumer, and the empty search is no
++evidence against it. Answer the user's safety question directly with that verdict
++rather than leaving it implicit or deferring it to a follow-up search.
+ 
+ ### Catalog Item Lookup Rules
+ 

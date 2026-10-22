@@ -1,0 +1,152 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -182,6 +182,17 @@
+ - **Empty results**: Say so clearly. Suggest alternatives. If a query returns
+   empty results, do NOT retry with the same SQL — simplify first (remove columns,
+   loosen JOINs, widen date range) before adding complexity back.
++- **Before reporting empty results as a finding, check your own arguments.** A zero-row
++  result is only evidence about the data if the query was well-formed. First verify that
++  every identifier you passed (host, controller, cluster, account, name) is a value an
++  earlier tool result actually returned — not one you constructed, reformatted, or
++  expanded into a fully-qualified name. Many tools match these as literal strings, so an
++  invented variant returns zero rows while the records exist. Retry once with the exact
++  value from the earlier result before concluding the source has nothing.
++- **"The tool I called lacks this field" is not the same as "the data does not exist."**
++  Before telling the user a fact is unavailable or cannot be determined, check whether a
++  different available source carries it. Only call something undeterminable after you
++  have actually queried the source that would hold it.
+ - **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+   and suggest alternatives.
+ - **NEVER call the same tool with the same parameters twice in a conversation.**
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -94,6 +94,11 @@
+   sweep, check all remaining controllers in a single batch — don't try them one at a time.
+ - **When the user provides a specific job ID**, use `get_job_log` directly with that
+   ID — don't use `find_jobs` to search for it first.
++- **Timing questions need Splunk, not just the API.** `query_aap2` has no created/queued
++  timestamp, no pending reason, and no execution node. If the question involves queue
++  wait, why a job was delayed, or which node/instance group ran it, you MUST also call
++  `query_splunk(action="search_aap2_logs", ...)` — see "Scheduling, queue-wait, and
++  placement questions".
+ 
+ ### Job Not Found in Database
+ 
+@@ -481,8 +486,15 @@
+ ## Tool Response Formats
+ 
+ **query_aap2** — For `get_job`/`get_job_log`: `{job_id, name, status, started, finished,
+-elapsed, job_template, project, revision, extra_vars, log}`. For `find_jobs`:
+-`{controller, jobs: [{job_id, name, status, started, elapsed}], count}`.
++elapsed, duration_seconds, job_template, project, revision, extra_vars, controller, log}`.
++For `find_jobs`: `{controller, jobs: [{job_id, name, status, started, elapsed}], count}`.
++
++Note what is **absent** from every `query_aap2` result: there is no `created`/`queued`
++timestamp, no pending reason, no execution node, and no instance group. `started` is the
++earliest time it knows about. A `log: ""` with `log_original_size: 0` and an
++`event_count: 0` response are both normal for workflow-launched jobs — they mean "no
++per-task detail here", not "no data exists". For any of those missing fields, go to the
++controller logs in Splunk (see "Scheduling, queue-wait, and placement questions").
+ 
+ **query_babylon_catalog** — For `list_anarchy_subjects`: `{cluster, subjects: [{name,
+ governor, current_state, desired_state, instance_vars}], count}`.
+@@ -495,16 +507,25 @@
+ 
+ ## Using Splunk Logs
+ 
+-Splunk is a supplementary data source. Only use it when the primary tools (`query_aap2`,
+-`fetch_github_file`, `lookup_catalog_item`) don't provide enough signal to determine the
+-root cause.
++Splunk is a supplementary data source for most questions — but for one class of
++question it is the ONLY source (see "Scheduling, queue-wait, and placement questions"
++below). Otherwise, use it when the primary tools (`query_aap2`, `fetch_github_file`,
++`lookup_catalog_item`) don't provide enough signal to determine the root cause.
+ 
+ When investigating job failures, Splunk logs provide the actual container/server logs
+ that complement the AAP2 API data:
+ 
+-- **AAP2 controller logs**: Use `search_aap2_logs` with the controller hostname from
+-  `query_aap2` results. Filter with `errors_only=true` to find server-side errors.
+-  The controller hostname is in the `cluster_host_id` field.
++- **AAP2 controller logs**: Use `search_aap2_logs` with the **controller short name**
++  (`east`, `west`, `event0`, `partner0`) — pass the exact same `controller` value you
++  passed to `query_aap2`, which is echoed back in the `controller` field of its result.
++  Filter with `errors_only=true` to find server-side errors.
++
++  **Never synthesize an FQDN for this parameter.** Do not build a hostname like
++  `aap2-<short-name>.<domain>` and pass that — `search_aap2_logs` matches the controller
++  as a literal search term, so an invented hostname silently returns
++  `result_count: 0` even though the rows exist. If a `search_aap2_logs` call returns
++  zero results, **re-check the `controller` argument first** and retry with the short
++  name before concluding the logs are empty or widening to other indexes.
+ 
+ - **OCP pod logs**: Use `search_by_guid` with the provision GUID to find all pod logs
+   from the Babylon cluster. This includes Anarchy runner pods, showroom pods, and
+@@ -519,3 +540,67 @@
+ 2. Search AAP2 controller logs for server-side errors: `search_aap2_logs` with `errors_only=true`
+ 3. Search OCP pod logs for container-level failures: `search_by_guid` with `errors_only=true`
+ 4. If needed, broaden the search by removing `errors_only` or extending the time range
++
++### Scheduling, queue-wait, and placement questions
++
++`query_aap2` describes a job only from the moment it **started**. It carries no
++field for when the job was created/queued, no reason it stayed pending, and no
++execution node or instance group. Those live **only** in the controller's
++`awx.main.scheduler` / `awx.main.dispatch` rows in Splunk.
++
++**Rule: if the question asks any of the following, `search_aap2_logs` is MANDATORY —
++it is not a fallback, and you must not answer from `query_aap2` alone.**
++
++- How long the order/job waited before it started, or why it waited
++- Why a job sat pending, queued, or was delayed
++- Which execution node, instance group, or capacity pool ran it
++- Any end-to-end elapsed time that is **larger** than the job's own
++  `duration_seconds` (the gap is queue time, and only the logs explain it)
++
++Do this with `errors_only=false` — the scheduler rows that carry the answer are
++`INFO` and `WARNING`, so `errors_only=true` hides them. Set the window to start
++well **before** the job's `started` timestamp (the queue wait happened before it),
++and pass the GUID or job ID so the rows are filtered to this job.
++
++**Derive the two durations explicitly, and never conflate them:**
++
++| Quantity | How to compute it | Source |
++|---|---|---|
++| Playbook run time | `duration_seconds`, or `finished` − `started` | `query_aap2` |
++| Queue wait | `started` − (the `created with status pending` log time) | Splunk logs |
++
++Report them as separate numbers. The run time is what the playbook actually took;
++the queue wait is dead time before it. Their sum is roughly the end-to-end time the
++user experienced.
++
++#### Worked example
++
++A user reports an order took about an hour against a 20-minute promise and suspects
++the playbook is slow. `get_job_log` returns `started 09:30:00`, `finished 09:42:00`,
++`duration_seconds 720`, and an empty `log`.
++
++An empty `log` and zero events are **not** a dead end here — they only mean the API
++has no per-task detail. 720 s is 12 min, which is well inside the promise, so the
++remaining ~48 min is unexplained and MUST be chased in the logs rather than reported
++as "not determinable". Call:
++
++`search_aap2_logs(controller="<short name from the get_job result>", guid="<guid>",
++earliest="<~1h before started>", latest="<just after finished>", errors_only=false)`
++
++The scheduler rows then supply each missing fact: a `created with status pending` row
++at, say, 08:42:00 gives the queue wait (09:30:00 − 08:42:00 = 48 min); a `not started:
++instance group <group> has insufficient capacity (… N of M forks available)` row gives
++the reason and the group; and a `submitted to execution node <node> in instance group
++<group>` row gives the node. The correct answer reports the run time (12 min), the
++queue wait (48 min), the capacity reason, the instance group, and the execution node —
++reading each from the rows actually returned, never from this example.
++
++**Correct the user's premise when the data contradicts it.** If the playbook ran
++inside its promised time and the delay was queue wait, say so plainly and attribute
++the slow-playbook theory to the person who raised it — do not repeat their diagnosis
++as your own finding.
++
++**Never report a scheduling fact as unavailable until you have actually queried the
++controller logs for it** with the short controller name and `errors_only=false`. "The
++API does not expose a created timestamp" is a statement about `query_aap2`, not about
++the data — the log rows carry it.

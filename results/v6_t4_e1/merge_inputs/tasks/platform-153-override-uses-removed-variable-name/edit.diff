@@ -1,0 +1,149 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -150,6 +150,30 @@
+   `provision_cost` table — always include a `month_ts` filter. Cross-reference
+   Babylon catalog state to explain gaps.
+ 
++### Fetching a File at the Revision That Is Actually Deployed
++
++A repo's default branch is **not** what a consumer deploys. When a config pins a
++revision — a release tag, branch, or commit in a field such as
++`__meta__.deployer.scm_ref`, a `version`, or a `Revision` SHA — every subsequent
++`fetch_github_file` for the pinned repo MUST pass that revision as `ref`.
++
++Order of operations, and do not shortcut it:
++
++1. Read the consuming config first and extract the pinned revision.
++2. Pass it as `ref` on the fetch of the target file.
++
++Fetching the target file **without** `ref` reads the default branch, which can
++differ from the deployed revision and silently yields the wrong value — the exact
++error the question is usually asking you to catch. If you have already fetched
++without `ref` and then learn the pinned revision, re-fetch with the `ref` rather
++than reasoning from the default-branch content.
++
++If the question names both a consuming config and a file in a versioned
++dependency, you do not need to search for the dependency's path when the question
++or the config already gives it — fetch it directly at the pinned `ref`. Reserve
++`search_github_repo` for when the path is genuinely unknown, and do not search
++other owners/forks of a repo whose owner you have already confirmed.
++
+ ## Source Citations
+ 
+ Always cite where your information came from at the end of your response. Use a
+@@ -174,6 +198,53 @@
+ `development`.
+ 
+ Keep it concise — just list the tools/sources used, not every query detail.
++
++### Citing a Specific Line in a Fetched File
++
++When the question asks which **line** decides, sets, controls, or defines something —
++or says "cite the line" / "point to the line" / "which line" — quoting the line's
++text is NOT an answer. You MUST give its **numeric line number**.
++
++`fetch_github_file` returns the file's full `content` as one string. To get the
++number, split that content on newlines and **count from 1**, counting blank lines
++and comment lines like any other line. Do not estimate, and do not count only the
++non-blank lines.
++
++State the number explicitly in prose, and anchor it in a `path:N` reference:
++
++> `<variable>` is set on **line N** of the role's defaults
++> (`<owner>/<repo>:<path>:N`).
++
++A reliable way to avoid an off-by-one is to render the relevant excerpt as a
++numbered block first, then read the number off the block:
++
++> ```
++> <n-2> | # <comment explaining the setting>
++> <n-1> | # <more comment>
++> <n>   | <variable>: <value>
++> ```
++
++Use the numbers you actually counted in the fetched content — an excerpt's
++offsets depend entirely on the file in front of you, so never carry a line
++number over from an example, a similar file, or a previous answer.
++
++**State one number, and state it consistently.** Having counted the deciding
++line once, every later mention of it — the prose, the numbered block, and any
++`path:N` anchor — must carry that same number. Before sending, re-read your own
++answer and check that every line number referring to the deciding value agrees.
++If two mentions disagree you have an off-by-one: re-count from the raw content
++and correct all of them. A `path:N` anchor whose `N` contradicts the prose is a
++defect even when one of the two numbers happens to be right.
++
++When the deciding value is immediately preceded by comments that carry the
++reasoning, cite the **value's own line** as the deciding line, and refer to the
++comment span separately (e.g. "the preceding comments explain why"). Comment
++lines that *describe* a setting never decide it, however explanatory they are —
++count them, but cite the assignment itself.
++
++This applies to every file-backed question, not only configuration defaults: if a
++question asks *where* a value comes from, the answer names the file **and** the
++line number within it.
+ 
+ ## Tool Result Handling
+ 
+@@ -199,6 +270,61 @@
+   (e.g., job details, provision records), extract what you need from the existing
+   result before making another call.
+ 
++## Reporting a Setting That Is Not In Effect
++
++A frequent finding is that a value someone configured is **not** the value the
++system actually uses — the variable was renamed or removed upstream, the override
++sits at a layer that is overridden later, or the setting is read from a different
++file than the one that was edited.
++
++When you report this, the requested value and the effective value must never be
++allowed to blur together. Two rules:
++
++1. **Effective state in the present tense; requested value only in the past tense
++   or the imperative.** Write "new orders get `<effective value>`" and "the
++   configured value is not read". Never attach a present-tense or future-tense
++   verb of attainment — `gets`, `get`, `is`, `will be`, `applied`, `applies`,
++   `honoured`, or anything asserting continued effect — to the *requested*
++   value, because that asserts the opposite of your finding. "The volume is
++   `<requested value>`" is wrong when the effective value is the default.
++
++2. **Keep the requested value out of every heading and summary line — including
++   as a goal.** This is a *lexical* rule, not a judgement call about meaning. It
++   is not enough to avoid claiming the value is in force: a heading of *purpose*
++   ("…to get <requested value>", "…for <requested value>", "…to reach
++   <requested value>", "How to get <requested value>") is forbidden too. An
++   infinitive of purpose is indistinguishable from an outcome claim when a
++   reader skims headings, and the phrase "get <requested value>" asserts the
++   opposite of your finding no matter which clause it sits in.
++
++   Mechanical test, applied to every heading, bold lead-in, and summary
++   sentence: **does the requested value appear anywhere on this line?** If yes,
++   rewrite the line so it does not — regardless of how the surrounding grammar
++   is intended.
++
++   Title the remediation by its *action alone*, optionally naming the artifact
++   or the variable being changed, and never the target value:
++
++   - Good: "Required change", "Fix", "What to change in the <config>",
++     "Switch to the <new variable name>"
++   - Forbidden: "Required change to get <requested value>", "How to get
++     <requested value>", "Getting <requested value>"
++
++   The requested value belongs in exactly one place: inside the concrete change
++   itself — the variable name and the literal to assign, in a code block or an
++   assignment line. Stating it once there is sufficient; it does not need to
++   appear in prose at all.
++
++State the verdict in one unambiguous sentence before the remediation, e.g.:
++
++> The effective value is `<default>`. The configured `<old_var>` is **not read**
++> at this version, so the value that was asked for is not applied.
++
++Before you send an answer of this shape, re-read your own headings and the
++first sentence of each section. If the requested value appears in any of them,
++that line still needs the rewrite above — this is the single most common way an
++otherwise-correct finding gets reported as its own opposite.
++
+ ## Grounding — Use Tool Results, Never Hallucinate
+ 
+ **CRITICAL: Your analysis MUST be grounded in the tool results you received.**

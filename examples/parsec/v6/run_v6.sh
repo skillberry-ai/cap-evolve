@@ -25,7 +25,9 @@
 # whether it succeeded or not, so iterations can be chained without anyone watching.
 #
 # Optional env: V6_MAX_WORKERS (15), V6_WORKER_IDLE_EXIT (600), V6_MAX_ATTEMPTS (3),
-# V6_DRIVER_MEM (64G), CCC_LOGS (~/ccc_logs). The dashboard listens on the driver's
+# V6_DRIVER_MEM (64G), CCC_LOGS (~/ccc_logs), V6_QUEUE_ROOT (per-suite default), V6_SHARED_QUEUE (0),
+# V6_EXCLUSIVE (0; 1 = bsub -x, a node to itself).
+# The dashboard listens on the driver's
 # node at port 7878; reach it with  ssh -L 7878:<node>:7878 <login-node>.
 set -eo pipefail
 
@@ -82,14 +84,18 @@ if [[ "$SUBMIT" == true ]]; then
   [[ -n "$STALL" ]] && args+=(--stall "$STALL")
   dep=()
   [[ -n "$AFTER" ]] && dep=(-w "ended($AFTER)")
-  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 -J "v6d_${SUITE_ID}" "${dep[@]}" \
+  # V6_EXCLUSIVE=1 asks LSF for a node of its own (-x), so no other job shares it.
+  excl=()
+  [[ "${V6_EXCLUSIVE:-0}" == 1 ]] && excl=(-x)
+  bsub -q "${V6_LSF_QUEUE:-normal}" -M "${V6_DRIVER_MEM:-64G}" -n 1 "${excl[@]}" -J "v6d_${SUITE_ID}" "${dep[@]}" \
        -oo "$LOGS/%J.stdout" -eo "$LOGS/%J.stderr" bash "$0" "${args[@]}"
   exit $?
 fi
 
 PROJ_ABS="$PROJECT_ROOT/$PROJECT_DIR"
 export PARSEC_JOBS_SUITE="v6_${SUITE_ID}"
-export V6_QUEUE_ROOT="$TREE/_run/v6-queue/v6_${SUITE_ID}"
+# A caller running several drivers against one worker pool (v6_t2) sets V6_QUEUE_ROOT itself.
+export V6_QUEUE_ROOT="${V6_QUEUE_ROOT:-$TREE/_run/v6-queue/v6_${SUITE_ID}}"
 export V6_PUBLIC_TASKS="$PROJ_ABS/public_tasks.txt"
 export V6_SEALED_JOBS_ROOT="$PROJ_ABS.sealed/jobs"
 export PYTHONPATH="$PROJECT_ROOT/core:$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
@@ -134,8 +140,11 @@ set +e
 bash scripts/ccc/run_ccc_experiment.sh "${ARGS[@]}"
 RC=$?
 set -e
-# Workers exit by themselves once idle; ask them to stop now so none outlives the driver.
-"$(dirname "$CE_BIN")/python" -c "import sys; sys.path.insert(0, '$V6_DIR'); \
+# Workers exit by themselves once idle; ask them to stop now so none outlives the driver --
+# unless other drivers share this queue (V6_SHARED_QUEUE=1), whose work would then stall.
+if [[ "${V6_SHARED_QUEUE:-0}" != 1 ]]; then
+  "$(dirname "$CE_BIN")/python" -c "import sys; sys.path.insert(0, '$V6_DIR'); \
 from lane_queue import LaneQueue; LaneQueue('$V6_QUEUE_ROOT').request_stop()" || true
+fi
 echo "v6 driver finished rc=$RC end=$(date -Iseconds)"
 exit "$RC"
