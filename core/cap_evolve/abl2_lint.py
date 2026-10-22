@@ -122,8 +122,12 @@ def _is_lookup(fn, outs, loc, mod_assigns) -> bool:
                 continue
             for d in tabs:
                 if isinstance(d, ast.Dict):
+                    def _vals(v):
+                        if isinstance(v, ast.Name):
+                            return [z for n in loc.get(v.id, []) + mod_assigns.get(v.id, []) for z in _strings(n)]
+                        return list(_strings(v))
                     long_ = [v for v in d.values if v is not None
-                             and any(len(z) >= LOOKUP_MIN_LEN for z in _strings(v))]
+                             and any(len(z) >= LOOKUP_MIN_LEN for z in _vals(v))]
                     if len(long_) >= LOOKUP_MIN_VALUES:
                         return True
     return False
