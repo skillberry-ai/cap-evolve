@@ -149,7 +149,7 @@ code { font-family: var(--font-data); font-size: 13px; }
         <li>On test, comparing task by task: merge by order − Global = +0.009 ± 0.014, smart merge − Global = +0.004 ± 0.012. Both are within noise of Global.</li>
         <li>Dropping every contested hunk loses most of the gain. The value is in edits several tasks wanted, mostly shared rules.</li>
         <li>Global's validation gain over the Seed is not distinguishable from zero, yet its test gain is positive. The ungated merges did as well as Global on test.</li>
-        <li>Cost to build the deployable bundle, before test: about $320–335 for T (T-opt $319 plus a $0–14 merge) against $849 for Global (optimizer plus training screens and validation gates).</li>
+        <li>Cost to build the deployable bundle, before test: about $320–335 for T (T-opt $319 plus a $0–14 merge) against $811 for Global (optimizer, train screens and sweeps, validation gates and remeasurement; the shared Seed measurements excluded from both). Full breakdown in Table 2.</li>
       </ul>
     </section>
     <section>
