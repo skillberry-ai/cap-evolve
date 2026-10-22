@@ -38,13 +38,14 @@ v5's arms ran `train == val == test` with no holdout at all.
 | **T-opt** (`v6_t2_e1`) | task-wise: 34 independent per-task hill-climbs, each on a private copy of the bundle, train split only | **34/34** optimized tasks reach 1.0; train mean 0.830 → 0.937 when each task uses its own champion (fit, 34 bundles, not deployable) | [`summary.md`](v6_t2_e1/summary.md) · [`results.json`](v6_t2_e1/results.json) · [heatmap](../../ui/heatmap_v6_t2_e1.html) · [process](v6_t2_e1/source/process/) · [recipe](../../recipes/v6/v6_t2_e1/) · [champions](../../artifacts/v6/v6_t2_e1/best/) |
 | **T-mrg** (`v6_t4_e1`) | task-wise: the 34 T-opt edits merged blind into one bundle, three ways; scored on train and the sealed test, 5 trials | sealed test: merge by order **+0.046**, smart merge **+0.041**, non-conflicting +0.015 over Seed; **merge by order and smart merge equal Global (+0.037) within noise**, at about half Global's total cost | [`summary.md`](v6_t4_e1/summary.md) · [**core tables**](v6_t4_e1/RESULTS_FOR_PAPER.md) · [rendered](../../ui/v6_tables_main_table.html) · [per-task](v6_t4_e1/per_task/) · [bundles](../../artifacts/v6/v6_t4_e1/) |
 
-## T vs G: the three core tables
+## T vs G: the four core tables
 
-[`v6_t4_e1/RESULTS_FOR_PAPER.md`](v6_t4_e1/RESULTS_FOR_PAPER.md) holds the three tables that compare
+[`v6_t4_e1/RESULTS_FOR_PAPER.md`](v6_t4_e1/RESULTS_FOR_PAPER.md) holds the four tables that compare
 all arms (Seed, T-opt, the three T-mrg merges, Global): reward on train / validation / test; cost,
-tokens and compute time; and skill edits in words. Rendered:
+tokens and compute time; skill edits in words; and the Rule 4 running example (each arm's text,
+with upstream PARSEC PR #57). Rendered:
 [reward](../../ui/v6_tables_main_table.html) · [cost](../../ui/v6_tables_cost_table.html) ·
-[words](../../ui/v6_tables_size_table.html).
+[words](../../ui/v6_tables_size_table.html) · [Rule 4](../../ui/v6_tables_rule4_table.html).
 
 The headline reverses the hypothesis carried over from the v4 pilot: independently optimized
 English edits did compose. A score-blind merge of the 34 task-local edits matches the Global

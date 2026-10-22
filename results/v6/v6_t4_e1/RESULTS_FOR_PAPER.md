@@ -1,7 +1,7 @@
-# v6 core results for the paper: Tables 1–3 (Seed, T-opt, T-mrg, Global)
+ # v6 core results for the paper: Tables 1–4 (Seed, T-opt, T-mrg, Global)
 
 Prepared 2026-10-22 for the agent that edits the MLSys 2027 PARSEC paper. This file is
-self-contained: every number needed for the three main tables and their prose is here, with its
+self-contained: every number needed for the four main tables and their prose is here, with its
 definition and source. The v6 T-mrg experiment is now complete, so the paper's green
 `\missingresult{...}` placeholders can be replaced.
 
@@ -215,9 +215,158 @@ deployable bundle. The T-opt and Global numbers match the paper's existing §5.4
 
 ---
 
-## 5. Supporting results (text or supplement)
+## 5. Table 4 — Running example: AAP2 Rule 4 ("don't re-fetch job data")
 
-### 5.1 How much of T-opt's local gain survives integration (train)
+**The bug.** The Seed's AAP2 specialist says, in its Critical Rules:
+
+> 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job metadata or
+> events, extract what you need (steps, playbook events, errors) from the existing result. Do NOT
+> make a redundant second call to the same job.
+
+Its Investigation Flow, step 5, then requires a second call on the same failed job:
+"If the job failed, also call `get_job_events` + `failed_only=true`". The agent resolves the
+contradiction by skipping the events call, so it misses the failing task's `role`, which only the
+events carry. Training task `platform-004` exposes this: Seed 0.760 over 10 trials. The same fix
+was found on v4 and merged upstream as **rhpds/parsec PR #57** (2026-10-14), which shows what a
+reviewed human fix of this bug looks like.
+
+### Table 4a — word counts (main text)
+
+Rule 4 is the numbered item itself. "Job-read guidance" is any dedicated section that says which
+job action returns which field: "Choosing the job read", "`get_job_log` vs `get_job_events`",
+"What the log carries vs. what the events carry", and "`get_job` is the FIRST read". Words are
+whitespace tokens; added/removed come from a word-level diff against the Seed's Rule 4, as in
+Table 3.
+
+| Arm | Rule 4 | Rule 4 words (added / removed) | Contradictory Seed sentence still present? | Job-read guidance elsewhere (words) | platform-004, train |
+|---|---|--:|:-:|--:|--:|
+| Seed | original | 39 | yes | 0 | 0.760 (10) |
+| PR #57 (upstream, from v4 T-opt) | rewritten | 111 (+94 / −22) | no | 0 | — |
+| **Task-wise (T)** | | | | | |
+| T-opt (`platform-004` champion) | rewritten | 74 (+59 / −24) | no | 504 | 1.000 (5) |
+| T-mrg · merge by order | Seed text + appended exception | 102 (+63 / −0) | **yes** | 1,263 | 1.000 (5) |
+| T-mrg · smart merge | rewritten, 3 tasks' exceptions folded in | 232 (+219 / −26) | no | 1,682 | 1.000 (5) |
+| T-mrg · non-conflicting | **unchanged** | 39 (+0 / −0) | **yes** | 1,263 | 1.000 (5) |
+| **Global (G)** | | | | | |
+| Global (`cand_0005`) | **unchanged** | 39 (+0 / −0) | **yes** | 233 | 0.912 (4) |
+
+The last column is mean reward over valid trials (count in brackets). For Global it is its train
+incumbent sweeps. For T-opt it is the champion's own 5-trial evaluation, which selected it.
+
+### Table 4b — the texts (supplement)
+
+Verbatim; emphasis as in the source. Only the Rule 4 item is shown, plus a one-line pointer to
+where the arm's other job-read guidance sits.
+
+**Seed** (39 words):
+> 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job metadata or
+> events, extract what you need (steps, playbook events, errors) from the existing result. Do NOT
+> make a redundant second call to the same job.
+
+**PR #57, upstream** (111 words):
+> 4. **Don't re-fetch job data — but a different `action` is not a re-fetch.** If a prior
+> `query_aap2` call already returned what you need, read it from that result instead of asking
+> again. A call is redundant only when it repeats the **same `action` with the same arguments**.
+> Different actions on one job are complementary: `get_job_log` returns the log text,
+> `get_job_events` returns the structured failed-task rows (`role`, `play`, `task`, `host`,
+> `error_msg`), and neither response contains the other's data — so "I already queried this job"
+> is not a reason to skip a different action on it, including the `get_job_events` +
+> `failed_only=true` call required by step 5 of the Investigation Flow below.
+
+**T-opt, `platform-004` champion** (74 words):
+> 4. **Don't re-fetch job data.** If a prior `query_aap2` call returned a field, read it from that
+> result instead of calling again. This forbids repeating the **same `action`** on the same job —
+> it does NOT cover a *different* `action`. Different `query_aap2` actions return different
+> fields, so calling `get_job_events` after `get_job_log` on the same job is complementary, not
+> redundant. Never skip a different-action call on the grounds that you already have "the job
+> data".
+
+*Elsewhere:* a new "`get_job_log` vs `get_job_events`" section with a field table and a worked
+example (504 words), plus a required events call added to Step 1 of the job workflow.
+
+**T-mrg · merge by order** (102 words: the Seed sentence kept, another task's exception appended):
+> 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job metadata or
+> events, extract what you need (steps, playbook events, errors) from the existing result. Do NOT
+> make a redundant second call to the same job.
+> This applies only to a call that **returned data**. A call that timed out returned nothing to
+> extract, so re-issuing it is not a re-fetch — it is the first real attempt. **One** retry of a
+> timed-out call is within budget: a gap you could have closed with a single retry is not an
+> acceptable gap. Do not retry it a third time.
+
+*Elsewhere:* the "different action is not a re-fetch" idea survives only in separate job-read
+sections (1,263 words), including `platform-116`'s "Choosing the job read". Step 5 of the flow
+became conditional ("if the job failed and you expect a task-level error").
+*Why:* three tasks edited these lines: `platform-032` (replaced Rule 4 with a "two dead calls"
+rule; 20th in gain order), `platform-004` (the in-place rewrite; 25th), and `platform-158` (kept
+the Seed sentence and appended a timeout exception; 34th, the highest gain). Under `-X theirs`
+the last edit wins a contested region, so `platform-158`'s version stands, Seed sentence included.
+
+**T-mrg · smart merge** (232 words; renumbered as rule 7 in the merged list):
+> 7. **Don't re-fetch job data — but a different action, or a failed call, is not a re-fetch.**
+> If a prior `query_aap2` call returned a field, read it from that result instead of calling
+> again. This forbids repeating the **same `action`** on the same job after it **returned
+> data**. It does NOT cover:
+> - **A *different* `action`.** Different `query_aap2` actions return different fields, so
+>   calling `get_job_events` after `get_job_log` (or `get_job` alongside either) on the same job
+>   is complementary, not redundant. Never skip a different-action call on the grounds that you
+>   already have "the job data" — see "Choosing the job read".
+> - **A call that failed without returning data.** A tool call that returned an error, a
+>   timeout, or no payload at all returned nothing to extract, so re-issuing that exact call
+>   **once** is not a re-fetch — it is the first real attempt (see the transient-failure retry
+>   rule in the shared context). A gap you could have closed with a single retry is not an
+>   acceptable gap. Do not retry it a third time; after the retry also fails, say which call
+>   failed and which specific question you therefore could not answer. Never substitute a link
+>   for a value the user asked you to read: if the user asked what a file contains and the fetch
+>   failed, the retry is mandatory, because handing back a URL answers none of the question.
+
+*Elsewhere:* job-read guidance (1,682 words) and the required events call in Step 1, both
+cross-referenced from the rule. The three tasks folded in are `platform-004` (different action),
+`platform-158` (timed-out call, retry once) and `platform-152` (retry before reporting; never
+substitute a link).
+
+**T-mrg · non-conflicting hunks**: Rule 4 unchanged (the Seed text above). All three edits to it
+(`platform-032`, `platform-004`, `platform-158`) were contested, so all three were dropped. The uncontested job-read
+sections survive (1,263 words), so the bundle carries the prohibition and its exceptions in
+different places.
+
+**Global, `cand_0005`**: Rule 4 unchanged (the Seed text above).
+*Elsewhere:* step 4 of the Investigation Flow now points to a new "Choosing the job read" section
+(233 words), which opens: "`get_job`, `get_job_log`, and `get_job_events` return DIFFERENT data
+about the same job. Calling more than one of them is not a redundant re-fetch — pick by what the
+question needs, and issue them in parallel", and says of the events call: "**Call this for every
+failed job**".
+
+### What Table 4 shows (comments for the text)
+
+1. **Two ways to fix the same bug in English.** *Repair in place*: T-opt and PR #57 rewrite Rule
+   4 so the contradiction disappears. *Override elsewhere*: Global leaves the rule and adds a
+   later section that contradicts it. Both work on `platform-004` (1.000 vs 0.912). The in-place
+   fix is a 10-line change a reviewer can read and upstream as is: it is what PR #57 is.
+2. **Two ways to integrate several fixes.** The smart merge integrated by meaning: one rule
+   carrying all three tasks' exceptions, with no contradiction left. Merge by order integrated by
+   text position: the highest-gain edit to those lines won (`platform-158`), and it was written
+   against the Seed sentence, so the prohibition stayed and the "different action" exception landed in
+   another section. Non-conflicting hunks dropped all three contested edits.
+3. **The prompt no longer has to be consistent to score.** Three of the five arms (merge by
+   order, non-conflicting, Global) keep the contradictory Seed sentence, yet every arm's bundle
+   reaches 0.91–1.00 on `platform-004`. This is the paper's interpretability point made concrete: the
+   score cannot tell an in-place repair from an override, but a reviewer can.
+4. **Size.** The rule itself stays small (39–232 words) in every arm. The job-read guidance around
+   it ranges from 233 words (Global) to 1,682 (smart merge), which repeats Table 3's pattern at
+   the scale of one rule.
+5. **Upstream status.** PR #57 came from the v4 T-opt edit; the v6 T-opt edit is near-identical
+   in content. The paper may say that this repair was merged into the maintained PARSEC system
+   (already allowed by the handoff, `paper_notes.md` §3.5).
+
+The supplement's existing two-column Rule 4 table (T-opt vs Global) becomes Table 4b. The
+failed-event retrieval rates already in the paper (22% → 41% on test, 20% → 29% on validation)
+belong to Global only and stay as they are.
+
+---
+
+## 6. Supporting results (text or supplement)
+
+### 6.1 How much of T-opt's local gain survives integration (train)
 
 On the 34 optimized train tasks the Seed scores 0.788 and every T-opt champion 1.0 (+0.212).
 
@@ -232,7 +381,7 @@ The smart merge keeps almost all of the local gain but costs the most on tasks n
 for. Dropping contested hunks loses about half the gain. (Global's percentage is shown in brackets
 because Global did not start from the T-opt champions.)
 
-### 5.2 Per-task movement on test (release-gate question)
+### 6.2 Per-task movement on test (release-gate question)
 
 | | tasks up > 0.05 | tasks down > 0.05 | worst task (Δ) |
 |---|--:|--:|---|
@@ -246,7 +395,7 @@ point applies to both paths, not only to Global. The T merges move more tasks in
 Global's platform-131 regression is much milder under the smart merge (−0.04) and merge by order
 (−0.13).
 
-### 5.3 Routing-gap tasks (outside the editable surface)
+### 6.3 Routing-gap tasks (outside the editable surface)
 
 Nine test tasks are sent by the regex fast router to a specialist that lacks a required tool. Every
 arm is slightly negative on them and positive on the other 57:
@@ -260,26 +409,11 @@ arm is slightly negative on them and positive on the other 57:
 
 This supports the paper's existing claim that skill optimization cannot repair the router.
 
-### 5.4 Running example: AAP2 Rule 4 ("don't re-fetch job data")
-
-The Seed's rule 4 forbids a second call on a job, while the failed-event flow needs a different
-action on the same job.
-- **T-opt** (`platform-004`): rewrote the rule in place.
-- **Global**: kept rule 4 unchanged and added an overriding job-read section elsewhere, leaving
-  the contradiction in place.
-- **Smart merge**: rewrote rule 4 itself as "Don't re-fetch job data — but a different action, or a
-  failed call, is not a re-fetch". It folded in the exceptions from three other tasks: a
-  different action, a failed call retried once, and never substituting a link for a value.
-- **Merge by order**: kept the Seed's rule 4 sentence, appended another task's timeout exception
-  to it, and put the "different action" text in a separate section. This is git-style accumulation.
-
-platform-004 on train: Seed 0.76; Global 0.91; all three merges 1.00. This makes Rule 4 a
-three-way example: two English fixes of the same bug (in place vs override), and two ways of
-integrating them (by meaning vs by text position).
+The Rule 4 running example is Table 4 (§5).
 
 ---
 
-## 6. Caveats to carry into Limitations
+## 7. Caveats to carry into Limitations
 
 1. **The Seed was not re-measured for T-mrg.** T-mrg was evaluated on 2026-10-21. Its Seed
    reference is the Global run's Seed: train on 2026-10-16, validation on 2026-10-17, test on
@@ -305,7 +439,7 @@ integrating them (by meaning vs by text position).
 
 ---
 
-## 7. Paper locations that need to change (as of `main` at 4fef9ff)
+## 8. Paper locations that need to change (as of `main` at 4fef9ff)
 
 - **Title:** "…and the Integration Challenge" reads differently now; consider whether integration
   is still the "challenge" or now one of the findings.
@@ -321,17 +455,17 @@ integrating them (by meaning vs by text position).
   - The "Why the pending merge matters" paragraph: replace it with the T-mrg result.
   - §5.3 cost table (`tab:cost`): replace with Table 2 and update the compute-hour figures.
   - §5.4 skill size: add the merged bundles (Table 3).
-  - §5.5 running example: add the merge outcomes for Rule 4.
+  - §5.5 running example: use Table 4a in the main text and Table 4b in the supplement; Table 4b replaces the supplement's existing two-column Rule 4 table.
 - **§6 Discussion and Conclusion:**
   - The "four bounded conclusions": the fourth is now answered.
   - "Optimization scope should match deployment scope": still true. A static merge evaluated as
     one artifact is exactly that.
-  - Limitations: T-mrg is no longer unfinished; add the caveats in §6.
+  - Limitations: T-mrg is no longer unfinished; add the caveats in §7.
   - Conclusion paragraph.
 
 ---
 
-## 8. Sources
+## 9. Sources
 
 In `parsec-history` (this branch): `results/v6/v6_t4_e1/`, `artifacts/v6/v6_t4_e1/`, `results/v6/v6_t2_e1/`, `artifacts/v6/v6_t2_e1/`, `ui/v6_tables_*.html`. Code: `examples/parsec/v6_t4/`, `v6_t2/` on `main` (skillberry-ai/cap-evolve#904). The table below gives paths in the source `parsec-intake_v6-t2` worktree
 
@@ -345,6 +479,7 @@ In `parsec-history` (this branch): `results/v6/v6_t4_e1/`, `artifacts/v6/v6_t4_e
 | Table 1 analysis (deltas, CIs, subsets, head-to-head) | `examples/parsec/v6_t4/analyze_t4.py` → `results/v6_t4_e1/eval/analysis*.json` |
 | Table 2 | `examples/parsec/v6_t4/cost_table.py` → `results/v6_t4_e1/cost_table.json` |
 | Table 3 | `examples/parsec/v6_t4/size_table.py` → `results/v6_t4_e1/size_table.json` |
+| Table 4 | `examples/parsec/v6_t4/rule4_table.py` → `results/v6_t4_e1/rule4_table.json` (each arm's Rule 4 verbatim, word counts, platform-004 reward) |
 | Rendered tables (HTML) | `results/v6_t4_e1/{main_table,cost_table,size_table}.html` |
 | Narrative report | `results/v6_t4_e1/README.md` |
 | T-opt run (unchanged) | `results/v6_t2_e1/` |

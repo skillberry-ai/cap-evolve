@@ -162,8 +162,9 @@ platform-004 on F: Seed 0.76, G 0.91, m1/m3/m2 all 1.00.
 
 | Path | What |
 |---|---|
-| [`RESULTS_FOR_PAPER.md`](RESULTS_FOR_PAPER.md) | **the three core tables** (reward; cost/tokens/time; words) with definitions, comments and the paper edit map |
-| [`../../../ui/v6_tables_main_table.html`](../../../ui/v6_tables_main_table.html), [`cost_table`](../../../ui/v6_tables_cost_table.html), [`size_table`](../../../ui/v6_tables_size_table.html) | the same three tables, rendered |
+| [`RESULTS_FOR_PAPER.md`](RESULTS_FOR_PAPER.md) | **the four core tables** (reward; cost/tokens/time; words; the Rule 4 running example) with definitions, comments and the paper edit map |
+| [`rule4_table.json`](rule4_table.json), [`pr57_aap2_agent.diff`](pr57_aap2_agent.diff) | Table 4 as data (each arm's Rule 4 verbatim, counts, platform-004 reward); upstream PARSEC PR #57's diff |
+| [`../../../ui/v6_tables_main_table.html`](../../../ui/v6_tables_main_table.html), [`cost_table`](../../../ui/v6_tables_cost_table.html), [`size_table`](../../../ui/v6_tables_size_table.html), [`rule4_table`](../../../ui/v6_tables_rule4_table.html) | the four tables, rendered |
 | [`../../../artifacts/v6/v6_t4_e1/`](../../../artifacts/v6/v6_t4_e1/) | `m1_order/` (merge by order), `m3_smart/` (smart merge), `m2_nonconflict/` (non-conflicting hunks): frozen bundles + `MERGE_LOG.md`; `merge_inputs/` |
 | [`per_task/{m1,m3,m2}.json`](per_task/) | per task: all 5 trial rewards (seeds 0–2 and 3–4 listed separately), cost, tokens |
 | [`eval/`](eval/) | per-suite collector outputs: 3-trial (`v6t4_m*.json`), top-up (`v6t4_m*x.json`), pooled (`v6t4_m*_5t.json`); `analysis*.json`; runner log; host blocklist; the 7 re-run m3 tasks |
