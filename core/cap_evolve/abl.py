@@ -23,12 +23,13 @@ class AblConfig:
     history: str | None = None
     info: str | None = None
     gate: str | None = None
+    scope: str | None = None          # abl2_scope: tools | policy (ablation v2)
     feedback_ids: tuple = field(default_factory=tuple)
     gate_ids: tuple = field(default_factory=tuple)
 
     @property
     def active(self) -> bool:
-        return any((self.capability, self.history, self.info, self.gate))
+        return any((self.capability, self.history, self.info, self.gate, self.scope))
 
 
 def _ids(v, name):
@@ -57,6 +58,14 @@ def load(run_dir_or_spec) -> AblConfig:
         if not isinstance(v, str) or v not in allowed:
             raise ValueError(f"{key}={v!r} is invalid; expected one of {list(allowed)}")
         vals[name] = v
+    scope = spec.get("abl2_scope")
+    if scope is not None:
+        scope = scope.strip().lower() if isinstance(scope, str) else scope
+        if scope not in ("tools", "policy"):
+            raise ValueError(f"abl2_scope={scope!r} is invalid; expected one of ['tools', 'policy']")
+        if vals:
+            raise ValueError("abl2_scope cannot be combined with any abl_* factor, got: "
+                             + ", ".join(f"abl_{k}" for k in vals))
     if len(vals) > 1:
         raise ValueError("at most one abl_* factor may be set per run, got: "
                          + ", ".join(f"abl_{k}" for k in vals))
@@ -70,4 +79,6 @@ def load(run_dir_or_spec) -> AblConfig:
         raise ValueError("abl_feedback_ids/abl_gate_ids are only valid with abl_gate=disjoint")
     if vals.get("gate") == "disjoint" and str(spec.get("coverage_policy", "")).strip().lower() == "tipping":
         raise ValueError("abl_gate: disjoint is not supported with coverage_policy: tipping")
-    return AblConfig(feedback_ids=fb, gate_ids=gt, **vals)
+    if scope is not None and (fb or gt):
+        raise ValueError("abl_feedback_ids/abl_gate_ids cannot be combined with abl2_scope")
+    return AblConfig(feedback_ids=fb, gate_ids=gt, scope=scope, **vals)

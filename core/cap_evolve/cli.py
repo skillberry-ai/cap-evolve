@@ -765,7 +765,7 @@ def _cmd_run(argv):
         os.environ["CAPEVOLVE_HELPERS"] = "1"
     from . import abl_context as _abl_context
     from . import abl as _abl
-    _abl.load(spec)                 # every abl_* key is validated at start (ValueError on a typo / two factors)
+    _abl.load(spec)                 # every abl_* / abl2_scope key is validated at start (ValueError on a typo / two factors)
     _abl_context.export_env(spec)   # abl_history / abl_info: validates (ValueError on a typo) + exports
     from .optimizer_config import enabled as _ablation_enabled
     if not _ablation_enabled("history", spec):

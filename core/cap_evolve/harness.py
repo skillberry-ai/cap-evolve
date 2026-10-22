@@ -3564,13 +3564,17 @@ def _surface_streak_reset(run_dir: RunDir) -> None:
 def _surface_reject_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, arm: str,
                          detail: str, current_val: SplitResult, optimizer_seconds: float,
                          opt_cost_usd: float, opt_tokens: int, optimizer_error,
-                         rejected=None, memory_skill: str | None = None) -> dict:
+                         rejected=None, memory_skill: str | None = None,
+                         lint: str | None = None) -> dict:
     """A REJECTED step (not indecisive) for an edit outside the ablation arm's surface.
 
     No rollouts are paid. Filed in the rejected memory so the proposer is told why.
     """
     reason = f"SURFACE VIOLATION ({arm}): {detail}"
-    run_dir.log_event("surface_violation", candidate=cid, arm=arm, detail=detail)
+    if lint == "overfit":      # abl2_scope=policy anti-overfit lint (counted separately)
+        reason = f"OVERFIT LINT: {detail}"
+    run_dir.log_event("surface_violation", candidate=cid, arm=arm, detail=detail,
+                      **({"lint": lint} if lint else {}))
     if rejected is not None:
         rejected.add(cid, f"candidate {cid} (not scored: surface violation)", reason, None)
     (run_dir.root / _SURFACE_STREAK).write_text(
@@ -3589,7 +3593,7 @@ def _surface_reject_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
                      "indecisive": False},
         "candidate_val": None,
         "parent_val": current_val.to_dict(),
-        "surface_violation": {"arm": arm, "detail": detail},
+        "surface_violation": {"arm": arm, "detail": detail, **({"lint": lint} if lint else {})},
         "regressions": [],
         "broke": [],
         "fixed": [],
@@ -3761,6 +3765,16 @@ def run_step(
         if _viol:
             return _surface_reject_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
                                         arm=_abl.capability, detail=_viol,
+                                        current_val=current_val, optimizer_seconds=optimizer_seconds,
+                                        opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                                        optimizer_error=optimizer_error, rejected=rejected,
+                                        memory_skill=ctx.memory_skill)
+    if _abl is not None and _abl.scope:
+        from .abl2_lint import check as _abl2_check
+        _hit = _abl2_check(_abl.scope, parent_dir, workdir, run_dir)
+        if _hit:
+            return _surface_reject_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                                        arm=f"abl2:{_abl.scope}", detail=_hit[1], lint=_hit[0],
                                         current_val=current_val, optimizer_seconds=optimizer_seconds,
                                         opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
                                         optimizer_error=optimizer_error, rejected=rejected,
