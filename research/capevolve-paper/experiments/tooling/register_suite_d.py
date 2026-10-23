@@ -378,6 +378,7 @@ def main():
                          ("ABL_GATE-K2_s3_final_policy", CS / "runs/ABL/GATE-K2/s3/final/policy/policy.md", "GATE-K2 seed 3 champion policy.md"),
                          ("ABL_GATE-K2_s3_final_tools", CS / "runs/ABL/GATE-K2/s3/final/tools/tools.py", "GATE-K2 seed 3 champion tools.py"),
                          ("ABL_GATE-K2_s3_events", CS / "runs/ABL/GATE-K2/s3/.capevolve/run_main/events.jsonl", "GATE-K2 seed 3 search events (search-split; hash only)"),
+                         ("k2_search_labels.csv", Path("/home/dev/projects2/mlsys-k2-notes/paper/data/derived/k2_search_labels.csv"), "paper label to registered run ID mapping for the GATE-K2 searches, as released with the paper data (amendment 12 erratum 45)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
