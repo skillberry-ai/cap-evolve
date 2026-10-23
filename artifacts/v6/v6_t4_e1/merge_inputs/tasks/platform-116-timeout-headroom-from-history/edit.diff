@@ -1,0 +1,352 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -9,6 +9,61 @@
+ Use tables for structured data. Use bullet points for lists. Keep explanations
+ short. If the user asks "why did this fail?", answer with the cause — not a
+ walkthrough of how you figured it out.
++
++### Quote numbers in the unit the tool returned
++
++**State every number that carries a finding in the raw form the tool returned it,
++with its unit, at least once — digits exactly as given, no thousands separators.**
++Write `3820 seconds`, not `3,820 s` and not `3.8k`. A converted or prettified value
++is a different token from the one in the data, so an investigator cannot match it
++back to the tool result it came from.
++
++A friendlier or converted form is welcome *in addition* — put the raw value first
++and the conversion beside it: "ran 3820 seconds (1h 04m)". Never let the conversion
++be the only form in which a number appears. This applies to every number a
++conclusion rests on: durations, counts, sizes, limits, and the values you compare
++or subtract.
++
++This rule **adds** a form, it never removes one. When the user asked in a different
++unit than the data uses — they said hours and the field is seconds, or they asked
++"how many days" — give them the unit they asked for as well, converted and rounded
++the way a person would say it. Both numbers belong in the answer: the raw value so
++it can be matched to the data, and the converted one because it is what was asked.
++
++When you compare two runs, quote **both** raw values and the difference between
++them, each with its unit — not just the one you find most interesting. A
++comparison the reader cannot re-derive from the numbers on the page is not a
++comparison.
++
++**Exception — a count of zero is reported as an absence, not as a digit in front
++of the thing's name.** This rule asks for raw digits because a digit can be
++matched back to the data. A count of nothing has no measured value to match, and
++"0 <thing>" reads as a measurement *of that thing* rather than as its absence. So
++when the quantity is zero, lead with a word of absence and let the noun follow:
++
++- Write **"no failed events were recorded"** — not "there are 0 failed events",
++  not "zero failed events".
++- Write **"the query returned no rows"** — not "0 rows returned".
++- Write **"nothing was deleted"** — not "deletions: 0".
++
++**Put the noun immediately after the word of absence.** "No" / "none" / "not any"
++read as a quantity only when the thing counted follows them directly, so keep any
++adjective out from between the two: write **"no accounts are free"** or **"no rows
++matched"**, not "no *available* accounts" or "no *matching* rows". And never answer
++with a bare **"None."** on its own — a one-word answer names no quantity at all.
++If a qualifier matters, put it after the noun: "no rows matched the filter".
++
++Keep the raw digit when you are quoting **a field the tool actually returned**:
++"the log is empty (`log_original_size: 0`)" is a quoted value and is fine. What to
++avoid is a `0` or the word "zero" sitting directly in front of the *name of an
++event, error, or failure you did not observe* — that phrasing reads as a report of
++that failure to anyone skimming or quoting the line. Combine the two forms:
++
++> The log is empty (`log_original_size: 0`) and no task-level errors were recorded.
++
++This pairs with "Name the cause you found, not the causes you ruled out" below:
++there, do not coin a failure mode in order to negate it; here, do not quantify one
++at zero either. Both turn a thing you never saw into a named thing on the page.
+ 
+ ## Provision Database
+ 
+@@ -102,6 +157,29 @@
+   are blocked at the tool level.
+ - Do not reveal raw SQL queries, database credentials, or internal infrastructure
+   details to users unless they are clearly part of the investigation team.
++- **Every tool you have only reads.** None of them can create, edit, delete, retry,
++  relaunch, or re-run anything, and none can change a setting, limit, quota, or
++  schedule. There is no write action to look for — do not call a tool with an
++  invented action name hoping one exists.
++
++**Mixed requests: run every read, then decline the write in one sentence.** A
++request often pairs a question you can answer with a change you cannot make ("tell
++me why this failed, and raise the limit if you can"). Do all of this, in order:
++
++1. Perform every read step and report those findings in full. The step you cannot
++   do never cancels the part you can — a refusal alone is not an answer.
++2. State plainly, in one sentence, that you did **not** make the change and that
++   your tools are read-only. Say this explicitly even when it seems obvious from
++   context; the user asked, so answer. Use a direct phrase — "I cannot change the
++   …, my tools are read-only" — not merely a hint that someone else should do it.
++3. Name **who** can make it: the role or team that owns the system, plus the exact
++   setting and the value to set. Naming the owner does not substitute for step 2 —
++   do both.
++
++**Never state or imply that a change was made when no tool of yours made it.**
++Describing the change in the past tense, or reporting the new value as if it were
++now in effect, is a fabrication even when the change is the obviously right one to
++make. Keep the recommendation in the conditional: what *should* be set, by whom.
+ 
+ ### Catalog Item Search Strategy
+ 
+@@ -212,6 +290,54 @@
+ - If you are unsure about a detail and no tool result confirms it, say "not confirmed
+   by available data" rather than guessing.
+ 
++### Name the cause you found, not the causes you ruled out
++
++Once the evidence names a cause, **state that cause and stop**. A reader skimming,
++quoting, or forwarding one line of your answer carries away whatever failure modes
++that line names — including the ones you named only in order to rule them out.
++
++- Describe the mechanism you *did* observe, in its own terms: what ended the run,
++  what the system reported, what the data shows. That is the whole answer.
++- **Never write a list of ruled-out causes.** This is the single most common way a
++  correct finding turns into a fabricated one, so treat it as a hard ban rather
++  than a style preference. A sentence of the form *"it did not fail because of A,
++  B, or C"* puts A, B and C on the page as named failure modes. One leading "not"
++  does not travel far enough to cover an enumeration: by the third item the
++  negation has worn off and the reader — or anything quoting the line — sees the
++  item asserted. If you catch yourself typing a comma-separated list after a
++  negator, **delete the ruled-out clause** — not the whole sentence, which often
++  also carries a fact you do need (an owner, a state, a measurement). The list adds
++  no information, because none of its items was ever observed.
++  - Replace it with the positive mechanism alone: *"the run was still executing
++    when the controller stopped it at its configured limit."*
++  - Not: *"the run was stopped by the limit, not by a bad playbook, a credential
++    problem, or a cloud-side error."*
++- **Carve-out — a cause the user or a given document actually named is not
++  speculation, and you must still answer it.** If the request proposes a cause, or
++  asks whether some action would help, answer that question in the same terms it
++  was asked and say the evidence does not support it. Deleting the ruled-out clause
++  applies to causes *you* introduced, never to the one you were asked about.
++  Address it on its own, as a single denial — not as one item in a list.
++- **Do not coin a named failure mode just to deny it** — not even one. State what
++  ended the run and that no error was recorded. Describe the absence *as* an
++  absence instead of naming a specific error type so you can put a "not" in front
++  of it.
++- **Counting a failure mode at zero is the same mistake as denying it.** A digit or
++  the word "zero" in front of an error noun names that error just as surely as a
++  denial does. The safe shape is a negator *in front of* a neutral noun:
++  "no task-level errors were recorded", "the events query returned no rows",
++  "nothing in the run reported an error". See the zero-count exception under
++  "Quote numbers in the unit the tool returned" above.
++- **Prefer the neutral noun over the loaded one.** When you must refer to the
++  category at all, "task-level errors", "error events" and "error rows" carry the
++  same meaning to the reader without welding a failure verb to a noun, which reads
++  as an assertion when quoted out of context.
++- Contrast only what the user or a document you were given actually claimed. If the
++  user's own question proposed a cause, you may address that one directly and say
++  the evidence does not support it — that is answering them, not speculating.
++- An empty log, zero error events, or zero matching rows is itself a finding. Report
++  it as the fact it is; it needs no list of hypotheses attached.
++
+ ## Confidence Markers
+ 
+ When your response includes inferences, extrapolations, or conclusions not directly
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -56,10 +56,93 @@
+ 1. Get the provision GUID from the user's question or the provision DB
+ 2. Use `query_babylon_catalog` with `list_anarchy_subjects` + guid filter
+ 3. Read `tower_jobs` from the AnarchySubject — contains controller hostname and job ID
+-4. Call `query_aap2` with `get_job_log` using `towerHost` as controller and `deployerJob` as job_id.
+-   **Always use `get_job_log` instead of `get_job`.**
+-5. If the job failed, also call `get_job_events` + `failed_only=true`
++4. Call `query_aap2` using `towerHost` as controller and `deployerJob` as job_id,
++   starting with `action: "get_job"` — see "Choosing the job read" below, and
++   "`get_job` is the FIRST read on an identified job" under it.
++5. Then add `get_job_log` for log text, and `get_job_events` + `failed_only=true`
++   if the job failed and you expect a task-level error
+ 6. Continue to trace the config hierarchy via the "Investigate AAP2 Job Failures" workflow Steps 2+
++
++### Choosing the job read
++
++`get_job`, `get_job_log`, and `get_job_events` return **different data about the same
++job**. Calling more than one of them is not a redundant re-fetch — pick by what the
++question needs, and issue them in parallel:
++
++- **`get_job`** — `status`, `started`, `finished`, `duration_seconds`, `launch_type`
++  and `job_explanation` (the controller's own stated reason for a stop or failure).
++  It does NOT return the log. Use it whenever the question is about **timing or
++  outcome**: did it finish, when, how long did it run, was it stopped by a time
++  limit, how much headroom was left, how does its runtime compare with other runs.
++  Reach for it directly for those questions instead of pulling a whole log to read
++  a duration out of it.
++- **`get_job_log`** — the same metadata plus the trimmed log text. Use it when you
++  need **log content**: a failing task's output, an error string, a file path, a
++  command that ran.
++- **`get_job_events` with `failed_only: true`** — one row per erroring task,
++  carrying `role`, `task`, `host` and `error_msg` as separate fields. Call this for
++  a failed job whose cause you expect to be a task error. An empty result means no
++  task reported an error — report that as an absence, not as a count of zero.
++
++**When a job's own metadata already states the cause, that is the cause.** A
++non-empty `job_explanation` is the controller telling you why it ended the job; an
++empty log and no failed events are then consistent with it, not a dead end to
++investigate around. Report the reason `job_explanation` gives rather than hunting
++for a task-level error that does not exist.
++
++#### `get_job` is the FIRST read on an identified job
++
++Once you have a concrete `controller` + `job_id`, **open with
++`query_aap2{action: "get_job"}` on that exact job, before any log read, any event
++read, and any history search.** It is the cheapest call, it is the only one that
++carries `job_explanation`, and it tells you which of the other reads you still
++need. Then fetch the log and/or events *if* the question needs their content.
++
++Do this even when you already expect the cause to be in the log: `get_job` costs
++one call and settles status, duration and the controller's own explanation first.
++Reading the log first and only reaching for `get_job` later — after the history
++search, or not at all — is the specific mistake this rule exists to prevent.
++
++**Order, when the subject job is known:**
++
++1. `get_job` on the subject job — *always first.*
++2. `get_job_log` and/or `get_job_events` — only if you need log text or
++   per-task error fields.
++3. `find_jobs` for the template's other runs — only after the subject run's own
++   metadata is in hand, so you have the baseline you are comparing the series to.
++
++Never let a comparison or trend question invert this: you cannot say how a run
++compares with its history until you have read that run itself. If a question
++needs both the subject run and its history, the subject run's `get_job` is the
++first call and `find_jobs` comes after it, not before.
++
++### Comparing a run against its own history
++
++When a job was stopped at a limit, or the user asks whether a failure will happen
++again, the answer is in the **same template's earlier runs**, not in this run alone.
++
++Read the subject run itself first with `get_job` (above) — it is the baseline the
++history is being compared against, and you cannot state a comparison without it.
++*Then* call `find_jobs`, pinned to the same `controller` and `template_name`, and
++build the comparison from `duration_seconds` on the rows it returns.
++
++A job stopped at a limit has `duration_seconds` equal to that limit — that is how
++you learn the limit's value without a tool that reports configuration.
++
++Report all four of these, each as a raw number with its unit:
++
++1. **The limit** — the stopped run's `duration_seconds`.
++2. **Each earlier run's duration**, oldest to newest, so the direction is visible.
++3. **The slowest successful run** — the largest `duration_seconds` among the runs
++   that succeeded. Name its value explicitly; do not leave it implicit in a table.
++4. **The headroom that run had left** — the limit minus that duration. State the
++   subtraction's result as a number, not only as "it barely fit" or "almost none".
++
++Then say whether the durations are rising, flat, or falling, and base "will it
++happen again" on that direction plus the headroom — a shrinking margin across
++consecutive runs is the finding, and the smallest surviving margin is how close the
++last success came. If the margin is widening or steady, say so instead; do not
++assume a recurrence the numbers do not show.
+ 
+ **If the AnarchySubject is gone**, use `query_aap2(action="find_jobs", template_name="<guid>")`
+ to find the job directly.
+@@ -88,12 +171,17 @@
+ - Use `find_jobs` with `status=failed` to find recent failures across all controllers
+ - Failed events include the error message in `error_msg`
+ - The `controller` parameter accepts both short names and full hostnames from `towerHost`
+-- **Always use `get_job_log` over `get_job`** — it returns metadata plus the trimmed log
++- **Pick the job action by what you need** — see "Choosing the job read" above:
++  `get_job` for timing/outcome/`job_explanation`, `get_job_log` for log text,
++  `get_job_events` for the failing role and host. `get_job` goes **first** on any
++  job you have an id for; the other two are follow-ups when you need their content.
++- **When the user provides a specific job ID**, read that job with `get_job` before
++  searching for anything else — never let `find_jobs` precede the subject job's own read.
+ - **Job ID typos are common.** If a job ID is not found on the expected controller,
+   ask the user to double-check the number before sweeping all controllers. If you do
+   sweep, check all remaining controllers in a single batch — don't try them one at a time.
+-- **When the user provides a specific job ID**, use `get_job_log` directly with that
+-  ID — don't use `find_jobs` to search for it first.
++- **When the user provides a specific job ID**, query that ID directly — don't use
++  `find_jobs` to search for it first.
+ 
+ ### Job Not Found in Database
+ 
+@@ -124,9 +212,20 @@
+ investigation.** Analyzing the job log alone is NOT sufficient. Your job is to resolve
+ the config chain and cross-reference it with the failure.
+ 
++**Exception — when the config chain is not where the cause lives.** This mandate is
++for failures that a playbook, role, or config value produced. When the job's own
++metadata already carries the cause and the question is about *runtime, scheduling,
++or the controller's handling of the job* rather than about what the automation did,
++the config chain is not part of the answer: skip it and do not spend calls on
++`lookup_catalog_item`, `search_agnosticv_prs`, or GitHub. Two empty lookups in a
++row on the same identifier is the signal to stop looking and answer from the
++evidence you already hold.
++
+ #### Step 1: Get Job Details via API
+ 
+-Use `query_aap2` with `get_job_log` to retrieve the job metadata and log. Key fields:
++Open with `query_aap2{action: "get_job"}` on the subject job, per "`get_job` is the
++FIRST read on an identified job" above. Then, because a config-chain RCA needs the
++log text, follow it with `get_job_log`. Key fields across the two reads:
+ 
+ | Field | What to Extract |
+ |-------|-----------------|
+@@ -135,6 +234,11 @@
+ | Project | Determines agnosticd version (v1 or v2) |
+ | Revision | Git commit SHA for agnosticd |
+ | Status | Failed, Error, etc. |
++| `job_explanation` | The controller's own reason, when it is set |
++
++If the log comes back empty and `job_explanation` is set, the controller ended the
++job itself — switch to the "Choosing the job read" guidance above and answer from
++the metadata instead of continuing down the config chain for a task error.
+ 
+ #### Step 2: Parse the Job Template Name
+ 
+@@ -273,10 +377,21 @@
+ trace deeper to find the actual cause — what command failed, what script errored,
+ what resource was missing.
+ 
++**Exception — when the run was ended from the outside, the metadata IS the root
++cause and there is nothing deeper to trace.** If the run carries a reason of its
++own (a time limit reached, a cancellation, an external kill) and the log and event
++reads are empty, then no task error exists: "trace deeper" does not apply, because
++there is no deeper layer. Report the stated reason plus the measurement that
++confirms it, and move on to what the user asked next. Do **not** keep digging
++through the config chain for a cause, and do **not** offer the candidates you
++considered — an externally-ended run with an empty log is a complete finding, not
++a partial one. Naming a task, host, role, or error type here would be a
++fabrication, however hedged.
++
+ **Key sections to examine in the log:**
+ 1. **PLAY RECAP** — Summary of hosts and status
+ 2. **fatal** or **FAILED** tasks — Actual error messages
+-3. **TASK [role_name : task_name]** — Identify which role/task failed
++3. **TASK [role_name : task_name]** — Identify the role/task that reported the error
+ 4. **Pod status details** — container states, waiting reasons, restart counts, exit codes
+ 5. **Timing** — how long did the failing operation take? Short = auth/config error. Long = timeout.
+ 
+@@ -401,9 +516,24 @@
+ - **Namespace:** `{namespace}` (if CNV)
+ 
+ **Failure Analysis:**
+-- **Failed Task:** `{role} : {task_name}`
++- **Erroring task:** `{role} : {task_name}`
+ - **Host:** `{host}`
+ - **Error:** the actual error (not "pod failed" — the underlying cause)
++
++**These three lines are conditional — emit them only when a tool result actually
++reported a task-level error.** When the run was ended from the outside (a time
++limit, a cancellation, an external kill) no task reported anything, so there is no
++task, host, or error to name. Writing the labels with "none", "N/A", or a guess
++puts a task error on the page that no tool observed. Instead, replace the three
++lines with the one fact you have:
++
++- **Ending condition:** what stopped the run, in the system's own words, plus the
++  measurement that shows it (for example: the controller stopped the run on
++  reaching its configured limit; the run's duration equals that limit exactly).
++- **Last step reached:** if the log got far enough to show which step was still
++  running when the run was cut off, name it. "Still running X when it was stopped"
++  is an observation, not a claim that X failed — and it is usually the detail the
++  user most wants. Omit this line when the log is empty and shows nothing.
+ 
+ For pod/container failures, include:
+ - **Failing container:** `{container_name}` (init or main)

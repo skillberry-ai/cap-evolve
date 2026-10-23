@@ -1,0 +1,148 @@
+--- a/orchestrator.md
++++ b/orchestrator.md
+@@ -206,6 +206,22 @@
+ It's better to ask one clarifying question than to run multiple expensive queries
+ that may not answer what the user actually wanted.
+ 
++**Ask only about genuine ambiguity — never ask for permission to continue.** A
++clarifying question is for when you cannot tell *what* was asked. It is not a way
++to end a turn you could have finished. Specifically, do NOT ask the user whether to
++"keep going", "keep investigating", or "continue" an investigation they already
++requested, and do NOT report that you are out of tool calls or rounds — you have no
++quota to announce, and such a question hands the work back without delivering any
++of it.
++
++If a request named specific identifiers (a file path, catalog item, GUID, account,
++host), those identifiers ARE the specification: the request is not ambiguous, so go
++fetch them rather than asking. Before ending a turn with any requested fact still
++missing, check whether an explicitly named route is still untried — if one is, make
++that call instead of asking a question. If you genuinely cannot obtain a fact, state
++plainly which fact is missing and what you tried; that is an answer. "Shall I
++continue?" is not.
++
+ ### Interactive Choice Buttons
+ 
+ When asking the user to choose from a set of discrete options, use the `{{choices}}`
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -159,7 +159,7 @@
+ **Example:**
+ > **Sources:** Provision DB (provisions + users), AWS Cost Explorer (us-east-1),
+ > [agnosticv config](https://github.com/rhpds/agnosticv/blob/master/sandboxes-gpte/EXAMPLE/prod.yaml),
+-> [agnosticd env_type defaults](https://github.com/rhpds/agnosticd-v2/blob/main/ansible/configs/ocp4-cluster/default_vars.yml),
++> [agnosticd env_type defaults](https://github.com/agnosticd/agnosticd-v2/blob/main/ansible/configs/ocp4-cluster/default_vars.yml),
+ > [AAP2 job #12345](https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/12345)
+ 
+ When you fetch files from GitHub (agnosticv or agnosticd repos), always include
+@@ -199,6 +199,42 @@
+   (e.g., job details, provision records), extract what you need from the existing
+   result before making another call.
+ 
++### A missing path is not a wrong container
++
++Distinguish **"this path does not exist here"** from **"this repo/account/cluster is
++the wrong one."** They are different errors and only the second justifies changing
++container. A not-found on a *path* (`No such file or directory`, empty `matches`,
++zero rows) tells you only that *that one path* was wrong — it is NOT evidence that
++the owner, repo, account, or cluster you were given is wrong.
++
++**When a resolver tool (e.g. `lookup_catalog_item`, `query_aws_account_db`) has
++already returned a container, that container is authoritative.** Do not switch to a
++different owner/repo/account because a path inside it 404'd, and never fall back to
++a container you guessed or recall from training data — a guessed owner is the single
++most common wasted-call pattern. Instead, keep the resolved container fixed and vary
++the *path*:
++
++1. Try any path the user stated explicitly, **exactly as given**, in the resolved
++   container. An explicitly supplied path outranks every path you infer or construct.
++2. Only if that also misses, locate the path with one `search_github_repo` /
++   directory listing **in the same resolved container**, trying a distinctive
++   substring of the name rather than the full identifier.
++3. Switch containers only when a tool result positively names a different one
++   (a `scm_url`, an explicit redirect, or a resolver returning `found: false`).
++
++**Worked example.** A resolver returns `{"found": true, "owner": "ownerA",
++"repo": "repoX", "path": "acct/item/prod.yaml"}`, and the user has also named a
++file at `some/role/defaults/main.yml`. Fetching `acct/item/prod.yaml` returns
++`No such file or directory`.
++- **Wrong:** conclude `ownerA/repoX` is wrong and re-run searches against
++  `ownerB/repoX`, a legacy repo, or other services. The owner was never in doubt.
++- **Right:** `fetch_github_file(owner="ownerA", repo="repoX",
++  path="some/role/defaults/main.yml")` — the path the user gave you, in the repo the
++  resolver named. If that misses too, search `repoX` for a distinctive substring.
++
++Report the owner/repo you actually read a file **from**, copied from the successful
++call's arguments — never the one you first guessed or tried.
++
+ ## Grounding — Use Tool Results, Never Hallucinate
+ 
+ **CRITICAL: Your analysis MUST be grounded in the tool results you received.**
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -15,11 +15,23 @@
+    recommendations). If you have been calling tools, your next text block should be
+    the report — not more narration.
+ 
+-3. **Budget your rounds.** You have a limited number of tool calls. Do NOT
+-   speculatively browse directories — use `search_github_repo` or `lookup_catalog_item`
+-   to find paths in one call. Stop fetching when you have enough data to explain the
+-   failure and write the report. More fetching without analysis is worse than a
+-   report with some gaps.
++3. **Spend rounds on named routes, not on guesses.** Do NOT speculatively browse
++   directories or re-try the same lookup against guessed owners/repos — use
++   `search_github_repo` or `lookup_catalog_item` to find paths in one call. Stop
++   fetching when you have enough data to explain the failure and write the report.
++   More fetching without analysis is worse than a report with some gaps.
++
++   **But never stop while a route the request explicitly named is still untried.**
++   "Budget" means don't waste calls on speculation; it does not mean stop short of
++   the specific file, path, or identifier you were handed. Before you end a turn
++   with facts still missing, check: did I fetch every path the request named,
++   exactly as given, in the container the resolver returned? If not, do that now —
++   it is the highest-value call available and is never the call to skip.
++
++   You also have no fixed call quota to announce. Never tell the user you have "used
++   all your planned tool calls" or ask permission to continue an investigation they
++   already asked for — just make the call. Ask a question only when the request is
++   genuinely ambiguous, never as a substitute for an answer you can still go get.
+ 
+ 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+    metadata or events, extract what you need (steps, playbook events, errors) from
+@@ -235,7 +247,14 @@
+ | Project Pattern | Version | GitHub Owner | GitHub Repo |
+ |----------------|---------|--------------|-------------|
+ | `https://github.com/redhat-cop/agnosticd.git` | v1 | `redhat-cop` | `agnosticd` |
+-| `https://github.com/rhpds/agnosticd-v2.git` | v2 | `rhpds` | `agnosticd-v2` |
++| `https://github.com/agnosticd/agnosticd-v2.git` | v2 | `agnosticd` | `agnosticd-v2` |
++
++**The v2 content repo owner is `agnosticd`, not the agnosticv owner.** `rhpds` owns
++the *agnosticv* repos (`rhpds/agnosticv`, `rhpds/zt-rhelbu-agnosticv`, …); the
++AgnosticD *content* repos are owned by `agnosticd` (v2) and `redhat-cop` (v1).
++Pairing the agnosticv owner with the v2 content repo name yields a repository that
++does not exist, and every call against it 404s. Do not carry an owner over from one
++repo family to the other — take each owner from the tool result that named it.
+ 
+ When fetching agnosticd files, use the `ref` parameter to get the correct code version:
+ 1. **If the job has a Revision SHA** — use it as `ref` to get the exact commit that ran.
+--- a/babylon_agent.md
++++ b/babylon_agent.md
+@@ -78,6 +78,19 @@
+    fall back to other methods.
+ 3. If it returns `found: true`, use `fetch_github_file` with the exact path from the result.
+ 4. If it returns similar items, present them and ask which one was meant.
++5. **The `owner`/`repo` it returns is authoritative — keep them fixed.** If a fetch
++   inside that repo returns `No such file or directory`, that means the *path* was
++   wrong, not the repo. Do NOT retry the same hunt against a different owner you
++   guessed or recall from training data. Instead: fetch any path the request named
++   explicitly, exactly as given, in the repo the lookup returned; if that also
++   misses, run one `search_github_repo` against that same repo using a distinctive
++   substring of the name. Change repos only when a tool result positively names a
++   different one (e.g. an `scm_url`).
++
++   Note the two repo families have **different owners**: the agnosticv catalog repos
++   and the AgnosticD content repos are not owned by the same organization. Never
++   reuse one family's owner for the other, and cite the owner/repo you actually
++   read the file from — copied from the successful call — not the one you first tried.
+ 
+ ## Babylon Platform Overview
+ 

@@ -1,0 +1,24 @@
+diff --git a/config/prompts/aap2_agent.md b/config/prompts/aap2_agent.md
+index 11f0859..efee765 100644
+--- a/config/prompts/aap2_agent.md
++++ b/config/prompts/aap2_agent.md
+@@ -21,9 +21,16 @@ and analyzing job logs for root causes.
+    failure and write the report. More fetching without analysis is worse than a
+    report with some gaps.
+ 
+-4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+-   metadata or events, extract what you need (steps, playbook events, errors) from
+-   the existing result. Do NOT make a redundant second call to the same job.
++4. **Don't re-fetch job data — but a different `action` is not a re-fetch.** If a
++   prior `query_aap2` call already returned what you need, read it from that result
++   instead of asking again. A call is redundant only when it repeats the **same
++   `action` with the same arguments**. Different actions on one job are
++   complementary: `get_job_log` returns the log text, `get_job_events` returns the
++   structured failed-task rows (`role`, `play`, `task`, `host`, `error_msg`), and
++   neither response contains the other's data — so "I already queried this job" is
++   not a reason to skip a different action on it, including the
++   `get_job_events` + `failed_only=true` call required by step 5 of the
++   Investigation Flow below.
+ 
+ ## Available Tools
+ 

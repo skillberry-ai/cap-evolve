@@ -1,0 +1,1 @@
+The `ptp-phase-err` service on Icinga host `ptp-grandmaster-osl-2` shows as acknowledged, and I'm taking over the timing desk from the person who handled it. Tell me who put the acknowledgement on it, what reason they gave, and at what UTC date and time it stops holding. Also summarise anything anyone else has written on that alert.

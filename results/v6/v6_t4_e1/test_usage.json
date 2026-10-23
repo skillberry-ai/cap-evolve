@@ -1,0 +1,80 @@
+{
+ "rows": {
+  "Seed": {
+   "tasks": 66,
+   "trials": 648,
+   "per_trial": {
+    "usd": 0.14630616582491582,
+    "tokens": 44194.94385521886,
+    "seconds": 210.8914661570707,
+    "median_seconds": 72.640426
+   },
+   "per_sweep": {
+    "usd": 9.656206944444444,
+    "tokens": 2916866.2944444446,
+    "hours": 3.866343546212963
+   }
+  },
+  "T-mrg \u00b7 merge by order": {
+   "tasks": 66,
+   "trials": 330,
+   "per_trial": {
+    "usd": 0.2364490909090909,
+    "tokens": 73920.86666666667,
+    "seconds": 94.4973886939394,
+    "median_seconds": 70.151854
+   },
+   "per_sweep": {
+    "usd": 15.60564,
+    "tokens": 4878777.2,
+    "hours": 1.7324521260555557
+   }
+  },
+  "T-mrg \u00b7 smart merge": {
+   "tasks": 66,
+   "trials": 328,
+   "per_trial": {
+    "usd": 0.32765136363636366,
+    "tokens": 103869.68106060606,
+    "seconds": 100.40046113484848,
+    "median_seconds": 76.6518025
+   },
+   "per_sweep": {
+    "usd": 21.62499,
+    "tokens": 6855398.95,
+    "hours": 1.8406751208055556
+   }
+  },
+  "T-mrg \u00b7 non-conflicting hunks": {
+   "tasks": 66,
+   "trials": 327,
+   "per_trial": {
+    "usd": 0.20097181818181817,
+    "tokens": 62421.16060606061,
+    "seconds": 105.41990845151514,
+    "median_seconds": 80.850738
+   },
+   "per_sweep": {
+    "usd": 13.26414,
+    "tokens": 4119796.6,
+    "hours": 1.932698321611111
+   }
+  },
+  "Global": {
+   "tasks": 66,
+   "trials": 651,
+   "per_trial": {
+    "usd": 0.21086283369408368,
+    "tokens": 65536.44099927851,
+    "seconds": 213.0837798638047,
+    "median_seconds": 76.068957
+   },
+   "per_sweep": {
+    "usd": 13.916947023809524,
+    "tokens": 4325405.105952381,
+    "hours": 3.906535964169753
+   }
+  }
+ },
+ "definitions": "Serving usage on the sealed test split: what one trial of each deployable bundle costs.\n\nFor every arm, each test task's valid trials are averaged (cost_usd, tokens, agent seconds from\nthe rollout's parsec_usage_window), then:\n  per trial  = mean over the 66 tasks of those per-task means\n  per sweep  = sum over the 66 tasks (one trial of every test task)\nErrored trials are excluded (their recorded cost is 0). T-opt has no row: its 34 bundles are\nnot deployable and were never run on test.\nSources: Global and Seed, the v6_g2_e1 sealed test (tags FINAL, FINAL_seed; 10 trials/task);\nT-mrg, the 5-trial evaluations (seeds 0-4; eval projects tag the frozen bundle \"seed\").\n"
+}
