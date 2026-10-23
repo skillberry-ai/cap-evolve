@@ -150,6 +150,44 @@ cost $138.02 / 42.9M / 40.0 h. Measurement cost is what Table 3's bundle size pr
 trial, the largest bundle (smart merge) costs most and non-conflicting least, with Global close to
 merge by order.
 
+### Table 2c — serving usage: one trial on the sealed test split (for a "Test usage" column)
+
+Per-trial resource use of each deployable bundle, measured on the 66 sealed test tasks. For each
+task its valid trials are averaged, then averaged over the 66 tasks, so every task counts
+equally. "Per sweep" is one trial of every test task (the sum over tasks). Errored trials are
+excluded. T-opt has no row: its 34 bundles are not deployable and were never run on test.
+
+| Arm | Test trials | $ / trial | Tokens / trial | Agent time / trial (mean; median) | One sweep of 66 tasks: $ / tokens / h |
+|---|--:|--:|--:|--:|--:|
+| Seed (reference) | 648 | 0.146 | 44.2k | 211 s; 73 s | 9.66 / 2.92M / 3.87 |
+| T-mrg · merge by order | 330 | 0.236 | 73.9k | 94 s; 70 s | 15.61 / 4.88M / 1.73 |
+| T-mrg · smart merge | 328 | 0.328 | 103.9k | 100 s; 77 s | 21.62 / 6.86M / 1.84 |
+| T-mrg · non-conflicting | 327 | 0.201 | 62.4k | 105 s; 81 s | 13.26 / 4.12M / 1.93 |
+| T (avg. of the three merges) | — | 0.255 | 80.1k | 100 s; 76 s | — |
+| Global (`cand_0005`) | 651 | 0.211 | 65.5k | 213 s; 76 s | 13.92 / 4.33M / 3.91 |
+
+**Comments:**
+1. **Per-trial cost follows the loaded prompt, not total bundle size.** Relative to Global: merge
+   by order costs 1.12× per trial, smart merge 1.55×, non-conflicting 0.95×. The Seed costs 0.69×.
+   PARSEC loads the orchestrator, the shared context and one routed specialist per request.
+   Global put most of its additions into `shared_context.md`, which every specialist request
+   loads, so it is not the cheapest per trial despite being the smallest bundle.
+2. **Use dollars and tokens, not time, for this column.** Median agent time is 70–81 s for every
+   arm, but Global's and the Seed's means (211–213 s) are twice T-mrg's (94–105 s). The two were
+   measured together in the Global run (2026-10-18), and slow simulator calls stretched their
+   tail. T-mrg was measured on 2026-10-21 with no such tail. The mean time difference is
+   infrastructure, not the bundle. If time is shown, show the median.
+3. **Trial counts differ** (5 per task for T-mrg, 10 for Global and the Seed). Averaging per trial
+   removes that difference, which is the point of this column.
+4. **How this fits Table 6 (the paper's cost table):** Table 6 reports construction resources
+   (Table 2a). This column adds the recurring cost of using the result. Over enough requests the
+   serving difference matters: smart merge spends $0.117 more per trial than Global, so after
+   about 3,600 requests its extra serving cost would exceed the $424 it saved in building. Merge by
+   order ($0.025 more per trial, $439 saved) would take about 17,500. Treat these as illustrative: the
+   benchmark's request mix is not production traffic.
+
+Generator: `examples/parsec/v6_t4/test_usage.py` → `results/v6_t4_e1/test_usage.json`.
+
 **Definitions:**
 - **Eval** is the target agent running tasks; **Optim.** is the optimizer agent proposing edits,
   plus the smart merge's LLM merger. The other two merges are 10-second scripts with no LLM.
