@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -408,6 +408,10 @@ def main():
                          ("K02_spec_capevolve.yaml", CS / "runs/K02/.capevolve/project/capevolve.yaml", "K02 run spec (gate_k_se 0.2) as launched"),
                          ("K02_optimizer_INSTRUCTIONS.md", CS / "runs/K02/.capevolve/project/optimizer/INSTRUCTIONS.md", "K02 proposer instructions as launched (sha 14cca74c per the design file)"),
                          ("K02_optimizer_FACTS.md", CS / "runs/K02/.capevolve/project/optimizer/FACTS.md", "K02 benchmark-facts block written fresh by ablation-lead"),
+                         ("BRIDGE1_order", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "order_BRIDGE1.jsonl", "BRIDGE1 window order (1,000 jobs: NC-1SHOT x 200, GATE-K2-s0 x 200, seed x 400, seed-check x 200; paper repo commit c3b0ed4), registered before launch (amendment 12 erratum 61)"),
+                         ("BRIDGE1_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_BRIDGE1.json", "BRIDGE1 window artifact manifest"),
+                         ("BRIDGE1_champions", CS / "final_eval/champions_BRIDGE1.json", "BRIDGE1 window champions file (2 cells)"),
+                         ("bridge1_analysis.py", PAPER / "analysis/scripts/bridge1_analysis.py", "BRIDGE1 window analysis script (variant of k02_analysis.py), written and registered BEFORE the data exist (amendment 12 erratum 61)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
