@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -399,6 +399,7 @@ def main():
                          ("NC2_A1b_s0_final_tools_tools.py", CS / "runs/NC2/A1b/s0/final/tools/tools.py", "NC2 A1b seed 0 final/tools/tools.py"),
                          ("NC2_A1b_s0_host_counter.json", CS / "runs/NC2/A1b/s0/host/counter.json", "NC2 A1b seed 0 host/counter.json"),
                          ("merged_analysis.py", PAPER / "analysis/scripts/merged_analysis.py", "MERGED window analysis script, written and registered BEFORE the data exist (amendment 12 erratum 49)"),
+                         ("k02_analysis.py", PAPER / "analysis/scripts/k02_analysis.py", "K02 exploratory window analysis script, written and registered before the data exist (amendment 12 erratum 56)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
