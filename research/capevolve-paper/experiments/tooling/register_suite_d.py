@@ -400,6 +400,7 @@ def main():
                          ("NC2_A1b_s0_host_counter.json", CS / "runs/NC2/A1b/s0/host/counter.json", "NC2 A1b seed 0 host/counter.json"),
                          ("merged_analysis.py", PAPER / "analysis/scripts/merged_analysis.py", "MERGED window analysis script, written and registered BEFORE the data exist (amendment 12 erratum 49)"),
                          ("k02_analysis.py", PAPER / "analysis/scripts/k02_analysis.py", "K02 exploratory window analysis script, written and registered before the data exist (amendment 12 erratum 56)"),
+                         ("merged_holm_m10.json", PAPER / "analysis/out/unblind_20261014/merged/holm_m10.json", "K2 vs ten comparators with Holm recomputed for m = 10 (NC-LOOP removed from the paper's family), from the registered MERGED data (amendment 12 erratum 58)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
