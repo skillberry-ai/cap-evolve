@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -414,6 +414,11 @@ def main():
                          ("bridge1_analysis.py", PAPER / "analysis/scripts/bridge1_analysis.py", "BRIDGE1 window analysis script (variant of k02_analysis.py), written and registered BEFORE the data exist (amendment 12 erratum 61)"),
                          ("trainrs1_analysis.py", PAPER / "analysis/scripts/trainrs1_analysis.py", "TRAINRS1 transfer-ratio analysis script, written and registered BEFORE the data exist (amendment 12 addendum 18)"),
                          ("mw_fig_data.py", Path("/home/dev/projects2/mlsys-v2/paper/scripts/figs/mw_fig_data.py"), "paper figure loader holding pooled_ratio(), the estimator behind the paper's 0.28 (ratio of sums of MERGED gains over search re-score gains, 8 comparators); registered as the estimator reference for addendum 18"),
+                         ("TRAINRS1_order", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "order_TRAINRS1_traineval.jsonl", "TRAINRS1 window order (4,500 train-30 jobs, no test id; seed k = 10, seed-check k = 5), registered before launch (amendment 12 erratum 62); the earlier 4,800-job build b1a0b84e... is withdrawn by ablation-lead and not used"),
+                         ("TRAINRS1_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_TRAINRS1_traineval.json", "TRAINRS1 window artifact manifest"),
+                         ("TRAINRS1_champions", CS / "final_eval/champions_TRAINRS1.json", "TRAINRS1 champions file (8 published x 3 seeds, GATE-K2-search1/2/3)"),
+                         ("trainrs1_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/trainrs1_order.py"), "TRAINRS1 order builder (v3_order.py with three lines changed)"),
+                         ("trainrs1_gamma.py", PAPER / "analysis/scripts/trainrs1_gamma.py", "TRAINRS1 transfer-ratio script implementing the estimator of the paper's 0.28, written and registered BEFORE the data exist (amendment 12 erratum 62; supersedes trainrs1_analysis.py)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
