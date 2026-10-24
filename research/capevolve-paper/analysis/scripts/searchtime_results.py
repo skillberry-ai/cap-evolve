@@ -497,6 +497,10 @@ def run_record(r, arm_rows, role):
     excl = exclusions(suite, arm, s)
     info = analyse_candidates(crows, excl)
     sid = seed_id(info)
+    if arm == "ace" and sid is not None and sid not in ("seed", "base", "c0", "S0", "cand_0000"):
+        # ACE wrappers before ACE_FIX never scored the empty-playbook seed: the first root is epoch1_end (a trained playbook), not the seed.
+        rec["seed_note"] = "seed not measured (pre-ACE_FIX run: first candidate epoch1_end is a trained playbook, not the seed); seed_score/gain/returned_equals_seed left empty"
+        sid = None
     state = js(cap / "state.json") if cap else None
     rec["counted_rollouts"] = int(float(mrow["counted_rollouts"])) if mrow and mrow.get("counted_rollouts") else None
     rec["counted_source"] = mrow.get("counted_source") if mrow else None

@@ -412,6 +412,8 @@ def main():
                          ("BRIDGE1_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_BRIDGE1.json", "BRIDGE1 window artifact manifest"),
                          ("BRIDGE1_champions", CS / "final_eval/champions_BRIDGE1.json", "BRIDGE1 window champions file (2 cells)"),
                          ("bridge1_analysis.py", PAPER / "analysis/scripts/bridge1_analysis.py", "BRIDGE1 window analysis script (variant of k02_analysis.py), written and registered BEFORE the data exist (amendment 12 erratum 61)"),
+                         ("trainrs1_analysis.py", PAPER / "analysis/scripts/trainrs1_analysis.py", "TRAINRS1 transfer-ratio analysis script, written and registered BEFORE the data exist (amendment 12 addendum 18)"),
+                         ("mw_fig_data.py", Path("/home/dev/projects2/mlsys-v2/paper/scripts/figs/mw_fig_data.py"), "paper figure loader holding pooled_ratio(), the estimator behind the paper's 0.28 (ratio of sums of MERGED gains over search re-score gains, 8 comparators); registered as the estimator reference for addendum 18"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
