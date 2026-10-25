@@ -154,6 +154,26 @@ def snapshot(root: Path, patterns: Sequence[str]) -> dict:
             "files": _walk_protected(root, patterns)}
 
 
+def snapshot_files(root: Path, rels: Sequence[str]) -> dict:
+    """Hash an EXPLICIT list of files under ``root`` (the allow-list seal, see harness).
+
+    Unlike :func:`snapshot`, the sealed set is a fixed list rather than a glob, so
+    :func:`verify` reports only ``modified`` and ``removed`` for it. A file ADDED next to
+    the sealed ones is the optimizer's own scratch and is allowed: under an allow-list the
+    adapter reads only declared files, so an addition cannot change what is measured.
+    """
+    root = Path(root)
+    files: dict[str, str] = {}
+    for rel in sorted(set(rels)):
+        p = root / rel
+        if _rel(p, root) != rel or not (p.is_file() or p.is_symlink()):
+            continue
+        with contextlib.suppress(OSError):
+            files[rel] = _hash_file(p)
+    return {"version": VERSION, "root": str(root), "mode": "files", "patterns": [],
+            "files": files}
+
+
 def verify(manifest: dict, root: Path) -> TamperReport:
     """Recompute the manifest against ``root`` and diff.
 
@@ -163,7 +183,15 @@ def verify(manifest: dict, root: Path) -> TamperReport:
     root = Path(root)
     patterns = list(manifest.get("patterns") or ())
     expected = dict(manifest.get("files") or {})
-    actual = _walk_protected(root, patterns)
+    if manifest.get("mode") == "files":
+        actual = {}
+        for rel in expected:
+            p = root / rel
+            if p.is_file() or p.is_symlink():
+                with contextlib.suppress(OSError):
+                    actual[rel] = _hash_file(p)
+    else:
+        actual = _walk_protected(root, patterns)
 
     modified = sorted(r for r, h in actual.items() if r in expected and expected[r] != h)
     added = sorted(r for r in actual if r not in expected)

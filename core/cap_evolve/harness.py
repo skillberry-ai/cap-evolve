@@ -3524,6 +3524,7 @@ def run_step(
     ctx: "OptimizerContext | None" = None,
     protected_patterns=None,
     footprint_gate: bool = True,
+    editable_patterns=None,
 ) -> dict:
     """Materialize parent → optimize → evaluate on val → gate → accept/reject.
 
@@ -3540,6 +3541,12 @@ def run_step(
     untouched, best is unchanged) — the same discipline the coverage guard and the
     infra-error path already use, because the score would measure a compromised
     harness, not the edit.
+
+    ``editable_patterns`` (None = off) is the ALLOW-LIST form of the same seal: the
+    capability files the optimizer may edit. Every other file of the run's seed capability
+    (``sealed_capability_files``) is hashed after context injection and re-verified before
+    any rollout; a changed or deleted one makes the step indecisive exactly like a
+    ``protected_patterns`` tamper. The optimizer is told which files are which.
 
     ``footprint_gate`` (default on) restricts the paired delta vector to the val tasks the
     candidate's edit can causally reach, so tasks outside it stop contributing noise to the
@@ -3593,6 +3600,17 @@ def run_step(
         manifest = integrity.snapshot(workdir, protected_patterns)
         integrity.write_manifest(run_dir.root / "work" / f"{cid}.integrity.json", manifest)
         integrity.set_readonly(workdir, manifest)
+    sealed_manifest = None
+    if editable_patterns:
+        seed_layout = run_dir.candidate_dir("seed")
+        sealed = sealed_capability_files(seed_layout if seed_layout.is_dir() else parent_dir,
+                                         editable_patterns)
+        sealed_manifest = integrity.snapshot_files(workdir, sealed)
+        integrity.write_manifest(run_dir.root / "work" / f"{cid}.sealed.json", sealed_manifest)
+        integrity.set_readonly(workdir, sealed_manifest)
+        instructions = instructions.rstrip() + "\n" + _editable_note(editable_patterns, sealed)
+        run_dir.log_event("capability_sealed", candidate=cid, editable=list(editable_patterns),
+                          sealed=sorted(sealed_manifest["files"]))
 
     optimizer_error = None
     opt_report = None
@@ -3625,8 +3643,10 @@ def run_step(
 
     # Verify BEFORE evaluate_candidate: still before the gate, and it refuses to pay
     # for a rollout batch whose result is already void.
-    if manifest is not None:
-        report = integrity.verify(manifest, workdir)
+    for man in (manifest, sealed_manifest):
+        if man is None:
+            continue
+        report = integrity.verify(man, workdir)
         if not report.ok:
             return _tamper_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
                                 report=report, current_val=current_val,
@@ -5047,6 +5067,65 @@ def parse_protected_paths(value) -> tuple[str, ...] | None:
     return tuple(pats) or None
 
 
+def parse_editable_paths(value) -> tuple[str, ...] | None:
+    """Spec/CLI value → the capability's editable allow-list, or ``None`` (seal OFF).
+
+    Same input forms as :func:`parse_protected_paths` (comma string or list). There is no
+    ``default``: which files are the skill is a property of each capability, not of cap-evolve.
+    """
+    if not value:
+        return None
+    items = [v.strip() for v in value.split(",")] if isinstance(value, str) else [str(v).strip() for v in value]
+    return tuple(v for v in items if v) or None
+
+
+#: Files the optimizer writes into its own workdir as part of the iteration protocol. They
+#: are never part of the sealed capability, even when an earlier candidate carried them.
+_OPTIMIZER_WORKING_FILES = ("PROCESS.md", "INSTRUCTIONS.md", "DIAGNOSIS.json")
+
+
+def sealed_capability_files(layout_dir: Path, editable_patterns) -> list[str]:
+    """The files of ``layout_dir`` that an allow-listed run seals: every file NOT editable.
+
+    ``layout_dir`` is the run's SEED capability: the seed defines the capability's layout for
+    the whole run, so what the optimizer may change is fixed up front and cannot grow as later
+    candidates accumulate scratch. Framework/optimizer working files (``_SNAPSHOT_IGNORE``,
+    ``_OPTIMIZER_WORKING_FILES``) and caches are never sealed, and files the optimizer ADDS are
+    its own scratch (see ``integrity.snapshot_files``).
+    """
+    layout_dir = Path(layout_dir)
+    if not layout_dir.is_dir():
+        return []
+    skip_top = set(_SNAPSHOT_IGNORE) | set(_OPTIMIZER_WORKING_FILES)
+    out: list[str] = []
+    for p in sorted(layout_dir.rglob("*")):
+        if not (p.is_file() or p.is_symlink()):
+            continue
+        rel = p.relative_to(layout_dir).as_posix()
+        parts = rel.split("/")
+        if parts[0] in skip_top or "__pycache__" in parts or rel.endswith(".pyc"):
+            continue
+        if integrity._match(rel, editable_patterns):
+            continue
+        out.append(rel)
+    return out
+
+
+def _editable_note(editable_patterns, sealed: list[str]) -> str:
+    """The optimizer-facing statement of the allow-list, appended to its instructions."""
+    lines = ["", "## Editable files (allow-list — enforced)",
+             "You may change ONLY these capability files: "
+             + ", ".join(f"`{p}`" for p in editable_patterns) + "."]
+    if sealed:
+        lines.append("These capability files are SEALED (read-only): "
+                     + ", ".join(f"`{s}`" for s in sealed[:20])
+                     + (" …" if len(sealed) > 20 else "")
+                     + ". Read them to understand the fixed frame, but do not change or delete "
+                     "them: a changed or deleted sealed file voids this iteration (it is "
+                     "discarded unmeasured). Your own notes and scratch files are fine.")
+    return "\n".join(lines) + "\n"
+
+
 def _convergence_observations(steps) -> list:
     """Steps → ``convergence.Observation``s, in order.
 
@@ -5089,6 +5168,7 @@ def hill_climb_loop(
     protected_patterns=None,
     convergence: bool = False,
     ctx: "OptimizerContext | None" = None,
+    editable_patterns=None,
 ) -> dict:
     """The loop behind the ``hill-climb`` skill's three ``--focus`` schedules
     (all / cyclic / hardest-first).
@@ -5182,7 +5262,7 @@ def hill_climb_loop(
             optimizer=optimizer, instructions=instructions, current_val=current_val,
             n_trials=n_trials, gate_kwargs=gate_kwargs, no_regression=no_regression,
             rejected=rejected, history=history, store=store, ctx=ctx,
-            protected_patterns=protected_patterns,
+            protected_patterns=protected_patterns, editable_patterns=editable_patterns,
         )
         steps.append(step)
         if step.get("budget_unfunded"):
