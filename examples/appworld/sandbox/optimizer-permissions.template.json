@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(/@AW_EVAL@/root_opt/**)",
+      "Read(/@AW_EVAL@/root_full/**)",
+      "Read(/@AW_EVAL@/runs/final/**)",
+      "Read(/@AW_EVAL@/runs/altk/**)",
+      "Read(~/.claude/projects/**)"
+    ]
+  }
+}
