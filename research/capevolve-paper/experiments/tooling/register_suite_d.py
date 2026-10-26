@@ -462,6 +462,8 @@ def main():
                          ("K2GATE_launch_k2gate.sh", CS / "scripts/K02/launch_k2gate.sh", "launcher of the two K2-configuration gate-ablation runs"),
                          ("K2GATE_gate_override.py", Path("/home/dev/projects2/wt-k2gate/core/cap_evolve/gate_override.py"), "gate_override module of the switch commit 329399b13"),
                          ("K2GATE_K2s0_capevolve.yaml_recovered", Path("/tmp/k2g_x/runs/ABL/GATE-K2/s0/.capevolve/project/capevolve.yaml"), "K2 search 1 (ABL GATE-K2 s0) run spec recovered from the data-archive release by ablation-lead; the diff base of the two gate arms"),
+                         ("GATE_NAIVE_K2_driver.sh", CS / "runs/K2GATE/GATE-NAIVE-K2/s0/driver.sh", "GATE-NAIVE-K2 driver as launched 2026-10-26 11:07 UTC (amendment 12 erratum 77)"),
+                         ("GATE_NONE_K2_driver.sh", CS / "runs/K2GATE/GATE-NONE-K2/s0/driver.sh", "GATE-NONE-K2 driver as launched 2026-10-26 11:07 UTC (amendment 12 erratum 77)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
