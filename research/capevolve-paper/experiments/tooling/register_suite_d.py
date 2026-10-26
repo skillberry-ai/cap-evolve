@@ -447,6 +447,7 @@ def main():
                          ("GATE_NONE_env.sh", CS / "runs/K02R/GATE-NONE/env.sh", "GATE-NONE environment as launched 2026-10-26 09:41 UTC (amendment 12 erratum 74)"),
                          ("GATE_NONE_capevolve.yaml", CS / "runs/K02R/GATE-NONE/.capevolve/project/capevolve.yaml", "GATE-NONE run spec as launched 2026-10-26 09:41 UTC (amendment 12 erratum 74)"),
                          ("k02r_analysis.py", PAPER / "analysis/scripts/k02r_analysis.py", "K02R follow-up window analysis script, written and registered BEFORE the data exist (amendment 12 addendum 19 and erratum 74)"),
+                         ("gate2_analysis.py", PAPER / "analysis/scripts/gate2_analysis.py", "GATE2 window analysis script (two gate ablations on the K2 configuration), written and registered BEFORE the data exist (amendment 12 addendum 20 and erratum 75)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
