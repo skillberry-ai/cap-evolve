@@ -488,6 +488,8 @@ def main():
                          ("GATE_NONE_K2_ABORTED.txt", CS / "runs/K2GATE/GATE-NONE-K2/s0/ABORTED.txt", "GATE-NONE-K2 RITS run abort note"),
                          ("K2GATE_AWS_build_k2gate_aws.py", CS / "scripts/K02/build_k2gate_aws.py", "builder of the two aws-route gate-ablation runs"),
                          ("K2GATE_AWS_launch_k2gate_aws.sh", CS / "scripts/K02/launch_k2gate_aws.sh", "launcher of the two aws-route gate-ablation runs"),
+                         ("GATE_NAIVE_K2A_driver.sh", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/driver.sh", "GATE-NAIVE-K2A driver as written before launch (amendment 12 erratum 83); the launcher rewrites the same bytes at launch"),
+                         ("GATE_NONE_K2A_driver.sh", CS / "runs/K2GATE_AWS/GATE-NONE-K2A/s0/driver.sh", "GATE-NONE-K2A driver as written before launch (amendment 12 erratum 83); the launcher rewrites the same bytes at launch"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
