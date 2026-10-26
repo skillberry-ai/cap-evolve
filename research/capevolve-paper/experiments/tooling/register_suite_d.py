@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -419,6 +419,13 @@ def main():
                          ("TRAINRS1_champions", CS / "final_eval/champions_TRAINRS1.json", "TRAINRS1 champions file (8 published x 3 seeds, GATE-K2-search1/2/3)"),
                          ("trainrs1_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/trainrs1_order.py"), "TRAINRS1 order builder (v3_order.py with three lines changed)"),
                          ("trainrs1_gamma.py", PAPER / "analysis/scripts/trainrs1_gamma.py", "TRAINRS1 transfer-ratio script implementing the estimator of the paper's 0.28, written and registered BEFORE the data exist (amendment 12 erratum 62; supersedes trainrs1_analysis.py)"),
+                         ("K02WIN_order", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "order_K02WIN.jsonl", "K02 window order (1,000 test jobs: K02 champion cand_0011 x 200, GATE-K2-search1 x 200, seed x 400, seed-check x 200; agent, user and judge on RITS gpt-oss-120b-a100), registered before launch (amendment 12 erratum 72)"),
+                         ("K02WIN_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_K02WIN.json", "K02 window artifact manifest"),
+                         ("K02WIN_champions", CS / "final_eval/champions_K02WIN.json", "K02 window champions file (K02 cand_0011, GATE-K2-search1)"),
+                         ("k02win_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/k02win_order.py"), "K02 window order builder (v3_order.py with the model id line changed)"),
+                         ("K02_DESIGN_after_stop.md", CS / "runs/K02/DESIGN.md", "K02 DESIGN.md as amended after the early stop and the route change (the version registered at launch has sha c95f3bcd...)"),
+                         ("K02_final_policy.md", CS / "runs/K02/final/policy/policy.md", "K02 champion cand_0011 policy as frozen"),
+                         ("K02_final_tools.py", CS / "runs/K02/final/tools/tools.py", "K02 champion cand_0011 tools as frozen"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
