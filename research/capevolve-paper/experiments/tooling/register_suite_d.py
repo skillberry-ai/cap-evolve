@@ -464,6 +464,8 @@ def main():
                          ("K2GATE_K2s0_capevolve.yaml_recovered", Path("/tmp/k2g_x/runs/ABL/GATE-K2/s0/.capevolve/project/capevolve.yaml"), "K2 search 1 (ABL GATE-K2 s0) run spec recovered from the data-archive release by ablation-lead; the diff base of the two gate arms"),
                          ("GATE_NAIVE_K2_driver.sh", CS / "runs/K2GATE/GATE-NAIVE-K2/s0/driver.sh", "GATE-NAIVE-K2 driver as launched 2026-10-26 11:07 UTC (amendment 12 erratum 77)"),
                          ("GATE_NONE_K2_driver.sh", CS / "runs/K2GATE/GATE-NONE-K2/s0/driver.sh", "GATE-NONE-K2 driver as launched 2026-10-26 11:07 UTC (amendment 12 erratum 77)"),
+                         ("K2GATE_shim_sitecustomize.py", CS / "scripts/K02/k2gate_shim/sitecustomize.py", "transport-only shim lifting tau2 httpx max_connections from 10 to K2GATE_HTTPX_MAX_CONNECTIONS (amendment 12 erratum 78)"),
+                         ("K2GATE_tau2_llm_utils.py", CS / "bench/src/tau2-8ebb749/src/tau2/utils/llm_utils.py", "tau2 8ebb749 llm_utils.py holding the httpx_limits cap of 10 (lines 52 to 54) that the shim replaces"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
