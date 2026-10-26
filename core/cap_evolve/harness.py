@@ -30,6 +30,7 @@ from typing import Callable
 from . import convergence as convergence_mod
 from . import footprint as footprint_mod
 from . import gate as gate_mod
+from . import gate_override
 from . import graph as graph_mod
 from . import integrity
 from . import stats
@@ -3767,6 +3768,7 @@ def run_step(
                                         memory_skill=ctx.memory_skill)
     _surface_streak_reset(run_dir)
 
+    gate_override_shadow = None
     p2_out = None
     try:
         if p2 is not None:
@@ -3888,6 +3890,8 @@ def run_step(
                 decision.reason = (f"GATE-NONE: accepted without test; stock gate would have said "
                                    f"accept={bool(decision.accept)} ({decision.reason})")
                 decision.accept = True
+        _go = gate_override.mode(run_dir)          # experiment-only (K02R): None on the stock path
+        gate_override_shadow = gate_override.apply(decision, _go, cand_val.n_scored) if _go else None
 
         if (cov_info is not None and decision.accept
                 and (cov_info.get("tipping") or {}).get("flips")):
@@ -4029,6 +4033,8 @@ def run_step(
     _step_extra.update(gate_statistics(g_cur, g_cand, fp,
                                        se_floor=gate_kwargs.get("paired_se_floor", 0.0),
                                        planned=planned))
+    if gate_override_shadow is not None:
+        _step_extra["gate_override_shadow"] = gate_override_shadow
     if promo_rec is not None:
         _step_extra["promotion"] = promo_rec
     if cov_info is not None:
