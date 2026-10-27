@@ -505,6 +505,7 @@ def main():
                          ("aw_testall.csv", PAPER / "analysis/inputs/aw_testall.csv", "AppWorld one-session TEST_ALL per-arm table as transcribed by mlsys-lead"),
                          ("aw_v2_SOURCE.txt", PAPER / "analysis/inputs/aw_v2_SOURCE.txt", "source note of the AppWorld transcriptions"),
                          ("power_analysis_20261027.md", PAPER / "analysis/inputs/power_analysis_20261027.md", "mlsys-lead power analysis (planning document for addendum 21; not a registered analysis)"),
+                         ("k30_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/k30_order.py"), "K30 window order builder: v3_order.py with the trial-seed salt K30 (recorded in meta.seed_salt); seed-check at the cells' trial count (amendment 12 erratum 91)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
