@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -506,6 +506,9 @@ def main():
                          ("aw_v2_SOURCE.txt", PAPER / "analysis/inputs/aw_v2_SOURCE.txt", "source note of the AppWorld transcriptions"),
                          ("power_analysis_20261027.md", PAPER / "analysis/inputs/power_analysis_20261027.md", "mlsys-lead power analysis (planning document for addendum 21; not a registered analysis)"),
                          ("k30_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/k30_order.py"), "K30 window order builder: v3_order.py with the trial-seed salt K30 (recorded in meta.seed_salt); seed-check at the cells' trial count (amendment 12 erratum 91)"),
+                         ("K30_order", Path("/tmp/k30_final/order_K30.jsonl"), "K30 window order (7,200 test jobs, 12 cells x 600 at 30 trials; aws route; trial-seed salt K30), staged copy hashed before the manifests-directory copy; the copy must have this hash (amendment 12 erratum 92)"),
+                         ("K30_artifact_manifest", Path("/tmp/k30_final/artifacts_K30.json"), "K30 window artifact manifest (staged copy)"),
+                         ("K30_champions", CS / "final_eval/champions_K30.json", "K30 window champions file"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
