@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -490,6 +490,15 @@ def main():
                          ("K2GATE_AWS_launch_k2gate_aws.sh", CS / "scripts/K02/launch_k2gate_aws.sh", "launcher of the two aws-route gate-ablation runs"),
                          ("GATE_NAIVE_K2A_driver.sh", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/driver.sh", "GATE-NAIVE-K2A driver as written before launch (amendment 12 erratum 83); the launcher rewrites the same bytes at launch"),
                          ("GATE_NONE_K2A_driver.sh", CS / "runs/K2GATE_AWS/GATE-NONE-K2A/s0/driver.sh", "GATE-NONE-K2A driver as written before launch (amendment 12 erratum 83); the launcher rewrites the same bytes at launch"),
+                         ("K2GATEWIN_order", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "order_K2GATEWIN.jsonl", "K2GATEWIN window order (1,200 test jobs: GATE-NAIVE-K2 x 200, GATE-NONE-K2 x 200, GATE-K2-search1 x 200, seed x 400, seed-check x 200; aws route), registered before launch (amendment 12 erratum 86)"),
+                         ("K2GATEWIN_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_K2GATEWIN.json", "K2GATEWIN window artifact manifest"),
+                         ("K2GATEWIN_champions", CS / "final_eval/champions_K2GATEWIN.json", "K2GATEWIN window champions file"),
+                         ("v3_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/v3_order.py"), "v3_order.py as used unchanged to build the K2GATEWIN order (first registered by hash here, amendment 12 erratum 86; the TRAINRS1 and K02WIN builders are variants of it)"),
+                         ("GATE_NAIVE_K2A_final_policy.md", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/final/policy/policy.md", "GATE-NAIVE-K2 champion cand_0016 policy as frozen"),
+                         ("GATE_NAIVE_K2A_final_tools.py", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/final/tools/tools.py", "GATE-NAIVE-K2 champion cand_0016 tools as frozen"),
+                         ("GATE_NONE_K2A_final_policy.md", CS / "runs/K2GATE_AWS/GATE-NONE-K2A/s0/final/policy/policy.md", "GATE-NONE-K2 champion cand_0019 policy as frozen"),
+                         ("GATE_NONE_K2A_final_tools.py", CS / "runs/K2GATE_AWS/GATE-NONE-K2A/s0/final/tools/tools.py", "GATE-NONE-K2 champion cand_0019 tools as frozen"),
+                         ("k2gate_prewindow.py", CS / "scripts/K02/k2gate_prewindow.py", "pre-window audit script for the K2GATE runs"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
