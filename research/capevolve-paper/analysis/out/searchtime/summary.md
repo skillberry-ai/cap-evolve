@@ -1,6 +1,6 @@
 # Search-time results (latest run state)
 
-Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest gateway call 2026-10-12T19:21:47Z. Regenerate with `analysis/scripts/searchtime_results.py`.
+Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest gateway call 2026-10-13T06:13:20Z. Regenerate with `analysis/scripts/searchtime_results.py`.
 
 **Caveat.** Every number here is search-time, on the search/selection split of its own method, not held-out. Selection-split scores are optimistic and not comparable across methods: GEPA selects the best candidate on its selection split, Meta-Harness's proposer saw val aggregates, CapEvolve screens on its own split, and Suites B and C use different split sizes per method. No cross-method ranking may be drawn from these numbers. Final results exist only after the 2026-10-13 06:00 UTC cutoff.
 
@@ -8,9 +8,9 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 
 | suite | arm | seed | split | rollouts | seed score | champion (id) | gain | gen/scr/prom | returned=seed | opt tok (non-cache) | cache read | USD | wall h | status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A | hc | 0 | val-40 | 600 | 0.579 | 0.750 (cand_0003) | 0.171 | 4/3/1 | False | 206870 | 926172 | 0.8051 | 25.6 | native finish (budget) |
+| A | hc | 0 | val-40 | 600 | 0.579 | 0.750 (cand_0003) | 0.171 | 4/3/1 | False | 206870 | 926172 | 0.8051 | 25.6 | native finish (budget_cap) |
 | A | hc | 1 | val-40 | 600 | 0.590 | 0.692 (cand_0001) | 0.103 | 2/1/1 | False | 87560 | 399706 | 0.3373 | 21.2 | native finish (budget_cap) |
-| A | hc | 2 | val-40 | 600 | 0.568 | 0.568 (seed) | 0.000 | 14/12/0 | True | 649254 | 2724394 | 2.4718 | 27.7 | native finish (budget) |
+| A | hc | 2 | val-40 | 600 | 0.568 | 0.568 (seed) | 0.000 | 14/12/0 | True | 649254 | 2724394 | 2.4718 | 27.7 | native finish (budget_cap) |
 | A | ao | 0 | val-20 | 262 | 0.462 | 0.462 (seed) | 0.000 | 1/1/0 | True | 3958447 | 1715039 | 10.3835 | 21.4 | guard stop (token guard) |
 | A | ao | 1 | val-40 | 404 | 0.447 | 0.447 (seed) | 0.000 | 1/1/0 | True | 990763 | 1653780 | 2.9188 | 20.0 | native finish |
 | A | ao | 2 | val-20 | 380 | 0.684 | 0.684 (seed) | 0.000 | 1/1/0 | True | 1602367 | 1707744 | 4.4682 | 20.6 | native finish |
@@ -27,26 +27,26 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | A | evoskill | 1 | val-40 | 452 | 0.550 | 0.875 (iter-skill-14) | 0.325 | 9/9/7 | False | 785636 | 531669 | 2.331 | 18.4 | native finish |
 | A | evoskill | 2 | val-40 | 452 | 0.550 | 0.850 (iter-skill-9) | 0.300 | 9/9/5 | False | 744375 | 574377 | 2.2246 | 17.1 | native finish |
 | A | wikiskill | 0 | val-40 | 521 | 0.575 | 0.800 (it004) | 0.225 | 4/4/2 | False | 427282 | 351970 | 1.212 | 26.5 | native finish |
-| A | wikiskill | 1 | val-40 | 497 | 0.525 | 0.825 (it002) | 0.300 | 4/3/2 | False | 432291 | 429358 | 1.3069 | 30.3 | running |
-| A | wikiskill | 2 | val-40 | 430 | 0.500 | 0.700 (it003) | 0.200 | 3/3/2 | False | 352726 | 313505 | 1.0454 | 30.3 | running |
+| A | wikiskill | 1 | val-40 | 523 | 0.525 | 0.825 (it002) | 0.300 | 4/4/2 | False | 432291 | 429358 | 1.3069 | 30.9 | native finish |
+| A | wikiskill | 2 | val-40 | 524 | 0.500 | 0.725 (it004) | 0.225 | 4/4/3 | False | 476789 | 404509 | 1.4023 | 33.7 | native finish |
 | A | trace2skill | 0 | val-40 | 200 | 0.500 | 0.700 (error) | 0.200 | 2/2/1 | False | 2202310 | 0 | 6.8207 | 15.6 | native finish |
 | A | trace2skill | 1 | val-40 | 200 | 0.525 | 0.800 (combined) | 0.275 | 2/2/1 | False | 2225291 | 0 | 6.958 | 14.2 | native finish |
 | A | trace2skill | 2 | val-40 | 200 | 0.525 | 0.750 (combined) | 0.225 | 2/2/1 | False | 2085988 | 0 | 6.4927 | 16.1 | native finish |
 | A | ace | 0 | val-40 | 390 | 0.800 | 0.800 (epoch1_end) | 0.000 | 1/1/0 | True | 3902518 | 0 | 9.5622 | 15.1 | native finish |
-| A | ace | 1 | val-40 | 261 | 0.875 | 0.875 (epoch1_end) | 0.000 | 0/0/0 | True | 2268702 | 0 | 5.7565 | 18.4 | running |
-| A | ace | 2 | -- | 158 | -- | -- (--) | -- | 0/0/0 | None | 1459386 | 0 | 3.8583 | 18.4 | running |
-| A | mipro | 0 | val-40 | 247 | 0.575 | 0.775 (33aeb0cca75d) | 0.200 | 11/1/0 | False | 178651 | 0 | 0.5792 | 30.3 | running |
-| A | mipro | 1 | val-40 | 329 | 0.550 | 0.850 (cc2319ac81ff) | 0.300 | 18/1/0 | False | 181449 | 0 | 0.6009 | 30.3 | running |
-| A | mipro | 2 | val-40 | 249 | 0.600 | 0.650 (779ef0083958) | 0.050 | 10/1/0 | False | 178826 | 0 | 0.5906 | 30.3 | running |
-| B | hc | 0 | opt-49 | 637 | 0.531 | 0.531 (seed) | 0.000 | 3/2/0 | True | 348306 | 4071946 | 2.0054 | 30.7 | native finish (budget_cap) |
+| A | ace | 1 | val-40 | 409 | 0.875 | 0.875 (epoch1_end) | 0.000 | 1/0/0 | True | 3951431 | 0 | 9.6129 | 29.1 | crash |
+| A | ace | 2 | val-40 | 361 | 0.800 | 0.800 (epoch1_end) | 0.000 | 0/0/0 | True | 4018892 | 0 | 9.8014 | 27.1 | guard stop (token guard) |
+| A | mipro | 0 | val-40 | 468 | 0.575 | 0.800 (b46ff7bd0cef) | 0.225 | 25/2/0 | False | 178651 | 0 | 0.5792 | 41.0 | crash |
+| A | mipro | 1 | val-40 | 523 | 0.550 | 0.850 (cc2319ac81ff) | 0.300 | 28/2/0 | False | 181449 | 0 | 0.6009 | 41.0 | crash |
+| A | mipro | 2 | val-40 | 522 | 0.600 | 0.750 (c3dae4a5e7d3) | 0.150 | 22/3/1 | False | 178826 | 0 | 0.5906 | 40.7 | native finish |
+| B | hc | 0 | opt-49 | 662 | 0.531 | 0.531 (seed) | 0.000 | 3/2/0 | True | 348306 | 4071946 | 2.0054 | 33.0 | native finish (budget_cap) |
 | B | hc | 1 | opt-49 | 564 | 0.653 | 0.653 (seed) | 0.000 | 10/10/0 | True | 705711 | 6452540 | 3.5336 | 27.3 | native finish |
-| B | hc | 2 | opt-49 | 637 | 0.542 | 0.542 (seed) | 0.000 | 3/2/0 | True | 248637 | 3016017 | 1.4563 | 30.7 | native finish (budget_cap) |
+| B | hc | 2 | opt-49 | 662 | 0.542 | 0.542 (seed) | 0.000 | 3/2/0 | True | 248637 | 3016017 | 1.4563 | 32.9 | native finish (budget_cap) |
 | B | ao | 0 | opt-49 | 198 | 0.604 | 0.604 (seed) | 0.000 | 2/0/0 | True | 1018932 | 9478573 | 4.9191 | 11.6 | native finish |
 | B | ao | 1 | opt-49 | 197 | 0.612 | 0.612 (seed) | 0.000 | 1/0/0 | True | 842779 | 10229243 | 4.701 | 20.9 | native finish |
-| B | ao | 2 | opt-49 | 319 | 0.612 | 0.612 (seed) | 0.000 | 0/0/0 | True | 1618979 | 16231982 | 8.0685 | 30.7 | running |
-| B | gepa | 0 | sel-25 | 406 | 0.600 | 0.760 (cand_0022) | 0.160 | 23/8/8 | False | 664168 | 0 | 2.4262 | 30.7 | running |
-| B | gepa | 1 | sel-25 | 425 | 0.400 | 0.760 (cand_0018) | 0.360 | 26/9/9 | False | 662019 | 0 | 2.3944 | 30.7 | running |
-| B | gepa | 2 | sel-25 | 412 | 0.600 | 0.720 (cand_0015) | 0.120 | 27/7/7 | False | 647029 | 0 | 2.2217 | 30.7 | running |
+| B | ao | 2 | opt-49 | 932 | 0.612 | 0.612 (seed) | 0.000 | 0/0/0 | True | 2482851 | 16480829 | 10.3162 | 41.6 | native finish |
+| B | gepa | 0 | sel-25 | 613 | 0.600 | 0.760 (cand_0022) | 0.160 | 36/13/13 | False | 998171 | 0 | 3.6701 | 37.8 | native finish |
+| B | gepa | 1 | sel-25 | 603 | 0.400 | 0.760 (cand_0018) | 0.360 | 38/13/13 | False | 990402 | 0 | 3.6044 | 37.5 | native finish |
+| B | gepa | 2 | sel-25 | 607 | 0.600 | 0.760 (cand_0031) | 0.160 | 36/13/13 | False | 884196 | 0 | 3.0563 | 37.7 | native finish (budget_cap) |
 | B | harnesslens | 0 | -- | 176 | -- | -- (--) | -- | 0/0/0 | None | 6872567 | 2026740 | 19.2633 | 20.2 | guard stop (token guard) |
 | B | harnesslens | 1 | -- | 173 | -- | -- (--) | -- | 0/0/0 | None | 4879714 | 1964929 | 14.643 | 17.5 | guard stop (token guard) |
 | B | harnesslens | 2 | -- | 163 | -- | -- (--) | -- | 0/0/0 | None | 6796933 | 1697346 | 18.4037 | 18.5 | guard stop (token guard) |
@@ -56,15 +56,15 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | B | seed | 0 | opt/sel | 98 | opt 0.561 / sel 0.600 | -- (--) | -- | 0/0/0 | None | None | None | None | 6.5 | native finish |
 | B | seed | 1 | opt/sel | 98 | opt 0.602 / sel 0.580 | -- (--) | -- | 0/0/0 | None | None | None | None | 6.5 | native finish |
 | B | seed | 2 | opt/sel | 98 | opt 0.653 / sel 0.620 | -- (--) | -- | 0/0/0 | None | None | None | None | 6.8 | native finish |
-| C | hc | 0 | opt-20 | 400 | 0.450 | 0.600 (cand_0003) | 0.150 | 7/7/1 | False | 689428 | 5742247 | 3.3666 | 25.0 | running |
-| C | hc | 1 | opt-20 | 280 | 0.450 | 0.450 (seed) | 0.000 | 7/7/0 | True | 487588 | 3806203 | 2.2879 | 25.0 | running |
+| C | hc | 0 | opt-20 | 480 | 0.450 | 0.600 (cand_0003) | 0.150 | 10/10/1 | False | 793836 | 6062377 | 3.7229 | 27.3 | native finish |
+| C | hc | 1 | opt-20 | 600 | 0.450 | 0.684 (cand_0010) | 0.234 | 10/10/1 | False | 589979 | 4171748 | 2.6442 | 34.4 | native finish |
 | C | hc | 2 | opt-20 | 360 | 0.550 | 0.684 (cand_0005) | 0.134 | 10/10/1 | False | 657664 | 5425411 | 3.1332 | 23.6 | native finish |
 | C | ao | 0 | opt-20 | 110 | 0.550 | 0.550 (seed) | 0.000 | 0/0/0 | True | 554012 | 5514194 | 2.7512 | 11.3 | native finish |
 | C | ao | 1 | opt-20 | 110 | 0.550 | 0.550 (seed) | 0.000 | 0/0/0 | True | 564650 | 4051700 | 2.4403 | 7.7 | native finish |
 | C | ao | 2 | opt-20 | 71 | 0.450 | 0.450 (seed) | 0.000 | 1/0/0 | True | 523420 | 2466110 | 1.975 | 9.8 | native finish |
-| C | gepa | 0 | sel-10 | 254 | 0.800 | 1.000 (cand_0005) | 0.200 | 22/10/10 | False | 543724 | 0 | 2.257 | 25.0 | running |
-| C | gepa | 1 | sel-10 | 194 | 0.800 | 1.000 (cand_0013) | 0.200 | 18/7/7 | False | 474739 | 0 | 1.8759 | 25.0 | running |
-| C | gepa | 2 | sel-10 | 239 | 0.900 | 1.000 (cand_0001) | 0.100 | 24/6/6 | False | 622107 | 0 | 2.278 | 25.0 | running |
+| C | gepa | 0 | sel-10 | 476 | 0.800 | 1.000 (cand_0005) | 0.200 | 41/19/19 | False | 1192911 | 0 | 5.0091 | 35.7 | running |
+| C | gepa | 1 | sel-10 | 388 | 0.800 | 1.000 (cand_0013) | 0.200 | 34/14/14 | False | 1012954 | 0 | 3.987 | 35.7 | running |
+| C | gepa | 2 | sel-10 | 474 | 0.900 | 1.000 (cand_0001) | 0.100 | 46/13/13 | False | 1292215 | 0 | 4.8662 | 35.7 | running |
 | C | oneshot | 0 | opt-20 | 60 | 0.500 | 0.737 (cand_0001) | 0.237 | 1/1/1 | False | 93027 | 1279390 | 0.5998 | 5.7 | native finish |
 | C | oneshot | 1 | opt-20 | 50 | 0.550 | 0.550 (seed) | 0.000 | 1/1/0 | True | 107372 | 1500867 | 0.7143 | 3.2 | native finish |
 | C | oneshot | 2 | opt-20 | 50 | 0.526 | 0.526 (seed) | 0.000 | 1/1/0 | True | 125833 | 1796170 | 0.8116 | 3.0 | native finish |
@@ -104,18 +104,42 @@ Data: run artifacts under campaign-scratch/runs and analysis/out/metrics, newest
 | D-E26 | E26-NOHIST | 0 | opt-49 | 589 | 0.592 | 0.796 (cand_0009) | 0.204 | 10/10/2 | False | None | None | 4.912208399999999 | 4.6 | native finish |
 | D-E26 | E26-NOHIST | 1 | opt-49 | 589 | 0.633 | 0.771 (cand_0006) | 0.138 | 10/10/1 | False | None | None | 4.5320538 | 5.4 | native finish |
 | D-E26 | E26-NOHIST | 2 | opt-49 | 589 | 0.531 | 0.761 (cand_0007) | 0.230 | 10/10/2 | False | None | None | 4.6286165 | 5.7 | native finish |
-| E | E30-P | 0 | opt-20 | 80 | 0.400 | 0.400 (seed) | 0.000 | 4/4/0 | True | 269102 | 2275602 | 1.3348 | 0.6 | running |
-| E | E30-P | 1 | opt-20 | 80 | 0.300 | 0.600 (cand_0004) | 0.300 | 4/4/2 | False | 243084 | 2170027 | 1.2339 | 0.6 | running |
-| E | E30-P | 2 | opt-20 | 60 | 0.450 | 0.650 (cand_0002) | 0.200 | 3/3/1 | False | 264460 | 2364171 | 1.3571 | 0.6 | running |
-| E | E30-PT | 0 | opt-20 | 60 | 0.400 | 0.579 (cand_0001) | 0.179 | 2/2/1 | False | 277372 | 4141612 | 1.8134 | 0.6 | running |
-| E | E30-PT | 1 | opt-20 | 40 | 0.300 | 0.667 (cand_0001) | 0.367 | 2/2/1 | False | 236547 | 3054716 | 1.5108 | 0.6 | running |
-| E | E30-PT | 2 | opt-20 | 40 | 0.550 | 0.550 (seed) | 0.000 | 2/2/0 | True | 248511 | 5077431 | 2.0083 | 0.6 | running |
-| E | E30-T | 0 | opt-20 | 40 | 0.300 | 0.571 (cand_0002) | 0.271 | 2/2/1 | False | 145087 | 2002215 | 0.9225 | 0.6 | running |
-| E | E30-T | 1 | opt-20 | 40 | 0.250 | 0.588 (cand_0001) | 0.338 | 2/2/1 | False | 209979 | 3302815 | 1.4483 | 0.5 | running |
-| E | E30-T | 2 | opt-20 | 40 | 0.400 | 0.733 (cand_0001) | 0.333 | 1/1/1 | False | 194727 | 3026100 | 1.3198 | 0.5 | running |
-| E-E31 | E31-ruleP | 0 | opt-20 | 60 | 0.250 | 0.250 (seed) | 0.000 | 1/1/0 | True | None | None | 0.7952703999999999 | 0.5 | running |
-| E-E31 | E31-ruleP | 1 | opt-20 | 40 | 0.250 | 0.250 (seed) | 0.000 | 1/1/0 | True | None | None | 0.9282890000000001 | 0.3 | running |
-| E-E31 | E31-ruleP | 2 | opt-20 | 40 | 0.350 | 0.350 (seed) | 0.000 | 1/1/0 | True | None | None | 0.9935958000000003 | 0.3 | running |
+| E | E30-CTL | 0 | opt-20 | 50 | 0.350 | 0.350 (seed) | 0.000 | 1/1/0 | True | 113798 | 2149850 | 0.8592 | 0.4 | native finish |
+| E | E30-CTL | 1 | opt-20 | 60 | 0.300 | 0.588 (cand_0001) | 0.288 | 1/1/1 | False | 104730 | 1968041 | 0.7918 | 0.4 | native finish |
+| E | E30-CTL | 2 | opt-20 | 60 | 0.400 | 0.778 (cand_0001) | 0.378 | 1/1/1 | False | 108085 | 1389385 | 0.7141 | 0.4 | native finish |
+| E | E30-GEPA | 0 | sel-10 | 302 | 0.800 | 1.000 (cand_0021) | 0.200 | 26/12/12 | False | 703566 | 0 | 2.7075 | 2.6 | native finish |
+| E | E30-GEPA | 1 | sel-10 | 309 | 0.800 | 0.900 (cand_0001) | 0.100 | 31/11/11 | False | 807749 | 0 | 3.298 | 2.5 | native finish |
+| E | E30-GEPA | 2 | sel-10 | 310 | 0.700 | 0.900 (cand_0005) | 0.200 | 28/12/12 | False | 770060 | 0 | 2.9731 | 2.3 | native finish |
+| E | E30-P | 0 | opt-20 | 240 | 0.400 | 0.600 (cand_0008) | 0.200 | 10/10/1 | False | 475251 | 3796270 | 2.2725 | 1.6 | native finish |
+| E | E30-P | 1 | opt-20 | 240 | 0.300 | 0.700 (cand_0008) | 0.400 | 10/10/3 | False | 600232 | 4880269 | 2.9479 | 1.6 | native finish |
+| E | E30-P | 2 | opt-20 | 240 | 0.450 | 0.650 (cand_0002) | 0.200 | 10/10/1 | False | 565690 | 4513249 | 2.7399 | 1.7 | native finish |
+| E | E30-PT | 0 | opt-20 | 240 | 0.400 | 0.579 (cand_0001) | 0.179 | 10/10/1 | False | 547570 | 6887046 | 3.2774 | 2.7 | native finish |
+| E | E30-PT | 1 | opt-20 | 240 | 0.300 | 0.667 (cand_0001) | 0.367 | 10/10/1 | False | 811105 | 10585864 | 5.0061 | 2.6 | native finish |
+| E | E30-PT | 2 | opt-20 | 230 | 0.550 | 0.550 (seed) | 0.000 | 10/10/0 | True | 721468 | 10914615 | 4.8507 | 2.7 | native finish |
+| E | E30-T | 0 | opt-20 | 240 | 0.300 | 0.571 (cand_0002) | 0.271 | 10/10/1 | False | 462440 | 4797538 | 2.4985 | 2.7 | native finish |
+| E | E30-T | 1 | opt-20 | 240 | 0.250 | 0.588 (cand_0001) | 0.338 | 10/10/1 | False | 555882 | 7168108 | 3.3434 | 2.7 | native finish |
+| E | E30-T | 2 | opt-20 | 240 | 0.400 | 0.867 (cand_0009) | 0.467 | 10/10/2 | False | 457860 | 5397195 | 2.6748 | 3.0 | native finish |
+| E-E31 | E31-1S | 0 | opt-20 | 240 | 0.350 | 0.684 (cand_0002) | 0.334 | 10/10/1 | False | None | None | 3.0457625000000004 | 1.6 | native finish |
+| E-E31 | E31-1S | 1 | opt-20 | 230 | 0.500 | 0.500 (seed) | 0.000 | 10/10/0 | True | None | None | 2.8912399 | 1.8 | native finish |
+| E-E31 | E31-1S | 2 | opt-20 | 240 | 0.350 | 0.600 (cand_0002) | 0.250 | 10/10/1 | False | None | None | 2.8055577000000005 | 1.7 | native finish |
+| E-E31 | E31-ruleP | 0 | opt-20 | 320 | 0.250 | 0.600 (cand_0002) | 0.350 | 8/8/1 | False | None | None | 2.7537584999999996 | 2.2 | native finish |
+| E-E31 | E31-ruleP | 1 | opt-20 | 320 | 0.250 | 0.632 (cand_0008) | 0.382 | 8/8/1 | False | None | None | 2.1753494 | 2.6 | native finish |
+| E-E31 | E31-ruleP | 2 | opt-20 | 400 | 0.350 | 0.684 (cand_0003) | 0.334 | 6/6/1 | False | None | None | 2.8869009000000005 | 2.8 | native finish |
+| E-E36 | E36-NOHIST | 0 | opt-20 | 240 | 0.400 | 0.688 (cand_0003) | 0.287 | 10/10/1 | False | None | None | 4.4804808000000005 | 1.9 | native finish |
+| E-E36 | E36-NOHIST | 1 | opt-20 | 240 | 0.350 | 0.765 (cand_0002) | 0.415 | 10/10/1 | False | None | None | 4.1442617 | 2.2 | native finish |
+| E-E36 | E36-NOHIST | 2 | opt-20 | 240 | 0.350 | 0.750 (cand_0001) | 0.400 | 10/10/1 | False | None | None | 4.523780899999999 | 1.8 | native finish |
+| E-E32 | E32-ace | 0 | sel-10 | None | 0.900 | 1.000 (epoch4_end) | 0.100 | 4/4/1 | False | None | None | None | -- | native finish |
+| E-E32 | E32-ace | 1 | sel-10 | None | 0.800 | 0.900 (epoch3_end) | 0.100 | 4/4/1 | False | None | None | None | -- | native finish |
+| E-E32 | E32-ace | 2 | sel-10 | None | 0.800 | 0.900 (epoch2_end) | 0.100 | 4/4/1 | False | None | None | None | -- | native finish |
+| E-E32 | E32-mipro | 0 | sel-10 | None | 0.800 | 0.900 (911c4767f232) | 0.100 | 26/3/1 | False | None | None | None | -- | native finish |
+| E-E32 | E32-mipro | 1 | sel-10 | None | 0.500 | 0.800 (94c917ae6316) | 0.300 | 26/3/1 | False | None | None | None | -- | native finish |
+| E-E32 | E32-mipro | 2 | sel-10 | None | 0.900 | 0.900 (2ccdc0183e07) | 0.000 | 23/3/0 | True | None | None | None | -- | native finish |
+| E-E32 | E32-gepafull | 0 | sel-10 | None | 0.600 | 1.000 (cand_0012) | 0.400 | 28/10/10 | False | None | None | None | -- | native finish |
+| E-E32 | E32-gepafull | 1 | sel-10 | None | 0.700 | 1.000 (cand_0002) | 0.300 | 30/10/10 | False | None | None | None | -- | native finish |
+| E-E32 | E32-gepafull | 2 | sel-10 | None | 0.800 | 0.900 (cand_0010) | 0.100 | 29/11/11 | False | None | None | None | -- | native finish |
+| E-E32 | E32-ao | 0 | opt-20 | 30 | 0.300 | 0.300 (seed) | 0.000 | 0/0/0 | True | None | None | 1.305006 | 0.5 | native finish |
+| E-E32 | E32-ao | 1 | opt-20 | 40 | 0.450 | 0.450 (seed) | 0.000 | 0/0/0 | True | None | None | 2.1507959999999997 | 0.9 | running |
+| E-E32 | E32-ao | 2 | opt-20 | 30 | 0.300 | 0.300 (seed) | 0.000 | 0/0/0 | True | None | None | 1.4328570000000003 | 0.5 | native finish |
 
 Notes: champion = what the method itself would return (CapEvolve: state best_id/best_val; GEPA, MIPRO, others: last selected or argmax of full selection-split evaluations). ACE and HarnessLens have no candidate/selection step yet. Optimizer USD covers priced (Claude) calls only; unpriced tokens are in runs.csv.
 
@@ -135,8 +159,8 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | B | ao | 0 | 2 | 0 | 0 | 0 | 2 | 0 | 0  | 0 | 0 | 0 |
 | B | ao | 1 | 1 | 0 | 0 | 0 | 1 | 0 | 0  | 0 | 0 | 0 |
 | B | ao | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 | 0 |
-| C | hc | 0 | 7 | 7 | 2 | 1 | 6 | 0 | 0  | 0 | 0 | 0 |
-| C | hc | 1 | 7 | 7 | 1 | 0 | 4 | 3 | 4 coverage<0.95 (90%) x4 | 0 | 0 | 0 |
+| C | hc | 0 | 10 | 10 | 2 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| C | hc | 1 | 10 | 10 | 3 | 1 | 6 | 3 | 4 coverage<0.95 (90%) x4 | 0 | 0 | 0 |
 | C | hc | 2 | 10 | 10 | 1 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
 | C | ao | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 | 0 |
 | C | ao | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 | 0 |
@@ -168,18 +192,30 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | D-E26 | E26-NOHIST | 0 | 10 | 10 | 0 | 2 | 8 | 0 | 0  | 0 | 0 | 0 |
 | D-E26 | E26-NOHIST | 1 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
 | D-E26 | E26-NOHIST | 2 | 10 | 10 | 0 | 2 | 8 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-P | 0 | 4 | 4 | 0 | 0 | 4 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-P | 1 | 4 | 4 | 0 | 2 | 2 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-P | 2 | 3 | 3 | 0 | 1 | 2 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-PT | 0 | 2 | 2 | 0 | 1 | 1 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-PT | 1 | 2 | 2 | 0 | 1 | 1 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-PT | 2 | 2 | 2 | 0 | 0 | 2 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-T | 0 | 2 | 2 | 0 | 1 | 1 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-T | 1 | 2 | 2 | 0 | 1 | 1 | 0 | 0  | 0 | 0 | 0 |
-| E | E30-T | 2 | 1 | 1 | 0 | 1 | 0 | 0 | 0  | 0 | 0 | 0 |
-| E-E31 | E31-ruleP | 0 | 1 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (85%) x1 | 0 | 0 | 0 |
-| E-E31 | E31-ruleP | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (85%) x1 | 0 | 0 | 0 |
-| E-E31 | E31-ruleP | 2 | 1 | 1 | 0 | 0 | 0 | 1 | 1 coverage<0.95 (90%) x1 | 0 | 0 | 0 |
+| E | E30-CTL | 0 | 1 | 1 | 0 | 0 | 1 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-CTL | 1 | 1 | 1 | 0 | 1 | 0 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-CTL | 2 | 1 | 1 | 0 | 1 | 0 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-P | 0 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-P | 1 | 10 | 10 | 0 | 3 | 7 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-P | 2 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-PT | 0 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-PT | 1 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-PT | 2 | 10 | 10 | 0 | 0 | 10 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-T | 0 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-T | 1 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E | E30-T | 2 | 10 | 10 | 0 | 2 | 8 | 0 | 0  | 0 | 0 | 0 |
+| E-E31 | E31-1S | 0 | 10 | 10 | 0 | 1 | 9 | 0 | 8 coverage<0.95 (90%) x1; coverage<0.95 (85%) x5; coverage<0.95 (80%) x2 | 0 | 0 | 0 |
+| E-E31 | E31-1S | 1 | 10 | 10 | 0 | 0 | 10 | 0 | 8 coverage<0.95 (90%) x2; coverage<0.95 (80%) x3; coverage<0.95 (85%) x3 | 0 | 0 | 0 |
+| E-E31 | E31-1S | 2 | 10 | 10 | 0 | 1 | 9 | 0 | 2 coverage<0.95 (90%) x2 | 0 | 0 | 0 |
+| E-E31 | E31-ruleP | 0 | 8 | 8 | 1 | 1 | 6 | 1 | 1 coverage<0.95 (85%) x1 | 0 | 0 | 0 |
+| E-E31 | E31-ruleP | 1 | 8 | 8 | 1 | 1 | 0 | 7 | 7 coverage<0.95 (85%) x4; coverage<0.95 (80%) x1; coverage<0.95 (75%) x1; coverage<0.95 (90%) x1 | 0 | 0 | 0 |
+| E-E31 | E31-ruleP | 2 | 6 | 6 | 2 | 1 | 3 | 2 | 2 coverage<0.95 (90%) x1; coverage<0.95 (85%) x1 | 0 | 0 | 0 |
+| E-E36 | E36-NOHIST | 0 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E-E36 | E36-NOHIST | 1 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E-E36 | E36-NOHIST | 2 | 10 | 10 | 0 | 1 | 9 | 0 | 0  | 0 | 0 | 0 |
+| E-E32 | E32-ao | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 | 0 |
+| E-E32 | E32-ao | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 | 0 |
+| E-E32 | E32-ao | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0  | 0 | 0 | 0 |
 
 ## Edits by capability surface (candidates touching surface / changed lines)
 
@@ -190,18 +226,18 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | A | gepa | 48 | 43 / 3317 | 38 / 3205 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | A | hc | 16 | 16 / 298 | 16 / 34 | 0 / 0 | 0 / 0 | 0 / 0 | 16 / 6011 | 0 / 0 | 0 / 0 |
 | A | metaharness | 24 | 24 / 394 | 24 / 197 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| A | mipro | 39 | 39 / 4600 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| A | mipro | 75 | 75 / 9071 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | A | skillopt | 23 | 23 / 253 | 23 / 959 | 0 / 0 | 0 / 0 | 23 / 1212 | 0 / 0 | 0 / 0 | 0 / 0 |
 | A | trace2skill | 6 | 6 / 224 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| A | wikiskill | 11 | 11 / 575 | 0 / 0 | 0 / 0 | 0 / 0 | 11 / 520 | 0 / 0 | 0 / 0 | 0 / 0 |
+| A | wikiskill | 12 | 12 / 643 | 0 / 0 | 0 / 0 | 0 / 0 | 12 / 583 | 0 / 0 | 0 / 0 | 0 / 0 |
 | A-E12 | hcstock | 36 | 36 / 829 | 36 / 165 | 0 / 0 | 0 / 0 | 0 / 0 | 36 / 13163 | 0 / 0 | 0 / 0 |
 | B | ao | 3 | 3 / 35 | 0 / 0 | 3 / 306 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| B | gepa | 76 | 76 / 6741 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| B | gepa | 110 | 110 / 10453 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | B | hc | 14 | 9 / 110 | 0 / 0 | 14 / 607 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | B | oneshot | 3 | 3 / 53 | 0 / 0 | 3 / 217 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C | ao | 1 | 1 / 13 | 0 / 0 | 1 / 151 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| C | gepa | 64 | 64 / 6121 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| C | hc | 24 | 24 / 286 | 0 / 0 | 24 / 2842 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| C | gepa | 121 | 121 / 13782 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| C | hc | 30 | 30 / 371 | 0 / 0 | 30 / 3721 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C | oneshot | 3 | 3 / 40 | 0 / 0 | 3 / 489 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C-E12 | bestofk | 19 | 19 / 540 | 0 / 0 | 19 / 4687 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | C-E12 | hcstock | 30 | 29 / 407 | 0 / 0 | 30 / 3865 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
@@ -213,10 +249,17 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | D-E21 | E21-1S | 30 | 30 / 1163 | 0 / 0 | 30 / 2992 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | D-E21 | E21-ruleP | 10 | 10 / 286 | 0 / 0 | 10 / 866 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 | D-E26 | E26-NOHIST | 30 | 30 / 1096 | 0 / 0 | 30 / 2450 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| E | E30-P | 11 | 11 / 443 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| E | E30-PT | 6 | 6 / 204 | 0 / 0 | 6 / 1419 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| E | E30-T | 5 | 0 / 0 | 0 / 0 | 5 / 1055 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| E-E31 | E31-ruleP | 3 | 3 / 89 | 0 / 0 | 3 / 607 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E | E30-CTL | 3 | 3 / 81 | 0 / 0 | 3 / 412 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E | E30-GEPA | 85 | 85 / 9376 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E | E30-P | 30 | 30 / 1339 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E | E30-PT | 30 | 30 / 1067 | 0 / 0 | 30 / 6994 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E | E30-T | 30 | 0 / 0 | 0 / 0 | 30 / 6410 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E-E31 | E31-1S | 30 | 29 / 937 | 0 / 0 | 30 / 7270 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E-E31 | E31-ruleP | 22 | 22 / 781 | 0 / 0 | 22 / 4262 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E-E32 | E32-ace | 12 | 12 / 520 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E-E32 | E32-gepafull | 87 | 86 / 7919 | 0 / 0 | 76 / 14689 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E-E32 | E32-mipro | 75 | 75 / 5102 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| E-E36 | E36-NOHIST | 30 | 30 / 1118 | 0 / 0 | 30 / 6894 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 
 ## Infra and errors (uniform classifier, main + chaser rows)
 
@@ -226,22 +269,25 @@ Notes: champion = what the method itself would return (CapEvolve: state best_id/
 | A | skillopt | 1780 | 187 | 66 | 121 | 0 |
 | A | metaharness | 1800 | 90 | 90 | 0 | 0 |
 | A | evoskill | 1250 | 41 | 41 | 0 | 0 |
-| A | wikiskill | 1321 | 85 | 85 | 0 | 0 |
+| A | wikiskill | 1450 | 86 | 86 | 0 | 0 |
 | A | trace2skill | 602 | 51 | 49 | 2 | 0 |
-| A | ace | 835 | 36 | 36 | 0 | 0 |
-| A | mipro | 818 | 28 | 25 | 3 | 0 |
+| A | ace | 1197 | 53 | 53 | 0 | 0 |
+| A | mipro | 1509 | 37 | 31 | 6 | 0 |
 | A | hc | 2240 | 313 | 31 | 282 | 0 |
 | A | ao | 480 | 13 | 13 | 0 | 0 |
 | A-E12 | hcstock | 2360 | 15 | 15 | 0 | 0 |
 | B | seed | 444 | 0 | 0 | 0 | 0 |
 | B | oneshot | 394 | 8 | 8 | 0 | 0 |
-| B | gepa | 1209 | 0 | 0 | 0 | 0 |
-| B | hc | 1838 | 8 | 8 | 0 | 0 |
-| B | ao | 664 | 5 | 5 | 0 | 0 |
-| B-E12 | hcstock | 294 | 2 | 2 | 0 | 0 |
+| B | gepa | 1818 | 0 | 0 | 0 | 0 |
+| B | hc | 1888 | 8 | 8 | 0 | 0 |
+| B | ao | 1252 | 7 | 7 | 0 | 0 |
+| B-E12 | hcstock | 1983 | 22 | 22 | 0 | 0 |
 | C | seed | 180 | 0 | 0 | 0 | 0 |
 | C | oneshot | 160 | 3 | 3 | 0 | 0 |
-| C | gepa | 678 | 1 | 0 | 0 | 1 |
-| C | hc | 1040 | 19 | 19 | 0 | 0 |
+| C | gepa | 1322 | 4 | 2 | 0 | 2 |
+| C | hc | 1440 | 31 | 31 | 0 | 0 |
 | C | ao | 291 | 2 | 2 | 0 | 0 |
 | C-E12 | hcstock | 870 | 6 | 6 | 0 | 0 |
+| E | ace | 880 | 1 | 1 | 0 | 0 |
+| E | mipro | 647 | 0 | 0 | 0 | 0 |
+| E | ao | 90 | 0 | 0 | 0 | 0 |
