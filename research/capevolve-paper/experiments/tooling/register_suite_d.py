@@ -509,6 +509,7 @@ def main():
                          ("K30_order", Path("/tmp/k30_final/order_K30.jsonl"), "K30 window order (7,200 test jobs, 12 cells x 600 at 30 trials; aws route; trial-seed salt K30), staged copy hashed before the manifests-directory copy; the copy must have this hash (amendment 12 erratum 92)"),
                          ("K30_artifact_manifest", Path("/tmp/k30_final/artifacts_K30.json"), "K30 window artifact manifest (staged copy)"),
                          ("K30_champions", CS / "final_eval/champions_K30.json", "K30 window champions file"),
+                         ("k30_analysis_shiftfix.py", PAPER / "analysis/scripts/k30_analysis.py", "K30 analysis script AFTER the one-line fix of the session-shift key format (amendment 12 erratum 94); the version registered before the data has sha256 b4e3820e... and is superseded for the shift section only"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),

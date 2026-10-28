@@ -118,7 +118,7 @@ def main():
     L += ["", "Planning detectability (80% power, tau 0.15, within-variance 0.1236, tau_int 0.10, 20 tasks): about 0.133 between two single champions at 30 trials (m = 1), 0.149 at m = 2, 0.168 at m = 5; about 0.117 for the three-search mean against the seed. Differences below these are inconclusive."]
     if MROOT:
         _, _, MM = load(os.path.join(MROOT, "results_long.csv"))
-        pairs = [("seed", "seed/s0"), ("search 1", "GATE-K2-s0/s0"), ("search 2", "GATE-K2-s1/s0"), ("search 3", "GATE-K2-s3/s0")] + [(lab, f"{a}/s0") for lab, a in ABL]
+        pairs = [("seed", "seed"), ("search 1", "GATE-K2-s0"), ("search 2", "GATE-K2-s1"), ("search 3", "GATE-K2-s3")] + [(lab, a) for lab, a in ABL]
         key = {"seed": "seed", "search 1": S1, "search 2": S2, "search 3": S3}; key.update({lab: a for lab, a in ABL})
         L += ["", "## Session-shift check: K30 minus MERGED for the artifacts scored in both (task-paired; feeds no test, no pooled estimate)", "",
               "| artifact | K30 mean | MERGED mean | K30 minus MERGED [95% CI, CR1 t19] | raw p |", "|---|---|---|---|---|"]
