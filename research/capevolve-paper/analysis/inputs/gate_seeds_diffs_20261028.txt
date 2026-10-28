@@ -1,0 +1,166 @@
+##### GATE-NAIVE-K2A s1 vs s0 (yaml)
+IDENTICAL
+##### GATE-NAIVE-K2A s1: split_ids/adapter/seed_capability/INSTRUCTIONS vs s0
+IDENTICAL
+##### env.sh s0 vs s1
+3c3
+< export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/.capevolve/project/adapters
+---
+> export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s1/.capevolve/project/adapters
+5c5
+< export TAU_TAG_PREFIX=tag:GATE-NAIVE-K2A-s0
+---
+> export TAU_TAG_PREFIX=tag:GATE-NAIVE-K2A-s1
+8c8
+< export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/surface_violations.json
+---
+> export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s1/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s1/surface_violations.json
+11,12c11,12
+< export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/retries.jsonl V3_MAX_RETRIES=30
+< export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NAIVE-K2A-s0:optimizer
+---
+> export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s1/retries.jsonl V3_MAX_RETRIES=30
+> export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NAIVE-K2A-s1:optimizer
+14c14
+< export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0
+---
+> export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s1
+17c17
+< export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/claude_cfg
+---
+> export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s1/claude_cfg
+##### BUILD_RECORD s0 vs s1
+6c6
+<  "seed": 0,
+---
+>  "seed": 1,
+53c53
+<  "tag_prefix": "tag:GATE-NAIVE-K2A-s0",
+---
+>  "tag_prefix": "tag:GATE-NAIVE-K2A-s1",
+##### GATE-NAIVE-K2A s3 vs s0 (yaml)
+IDENTICAL
+##### GATE-NAIVE-K2A s3: split_ids/adapter/seed_capability/INSTRUCTIONS vs s0
+IDENTICAL
+##### env.sh s0 vs s3
+3c3
+< export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/.capevolve/project/adapters
+---
+> export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/.capevolve/project/adapters
+5c5
+< export TAU_TAG_PREFIX=tag:GATE-NAIVE-K2A-s0
+---
+> export TAU_TAG_PREFIX=tag:GATE-NAIVE-K2A-s3
+8c8
+< export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/surface_violations.json
+---
+> export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/surface_violations.json
+11,12c11,12
+< export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/retries.jsonl V3_MAX_RETRIES=30
+< export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NAIVE-K2A-s0:optimizer
+---
+> export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/retries.jsonl V3_MAX_RETRIES=30
+> export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NAIVE-K2A-s3:optimizer
+14c14
+< export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0
+---
+> export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s3
+17c17
+< export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/claude_cfg
+---
+> export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/claude_cfg
+##### BUILD_RECORD s0 vs s3
+6c6
+<  "seed": 0,
+---
+>  "seed": 3,
+53c53
+<  "tag_prefix": "tag:GATE-NAIVE-K2A-s0",
+---
+>  "tag_prefix": "tag:GATE-NAIVE-K2A-s3",
+##### GATE-NONE-K2A s1 vs s0 (yaml)
+IDENTICAL
+##### GATE-NONE-K2A s1: split_ids/adapter/seed_capability/INSTRUCTIONS vs s0
+IDENTICAL
+##### env.sh s0 vs s1
+3c3
+< export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/.capevolve/project/adapters
+---
+> export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s1/.capevolve/project/adapters
+5c5
+< export TAU_TAG_PREFIX=tag:GATE-NONE-K2A-s0
+---
+> export TAU_TAG_PREFIX=tag:GATE-NONE-K2A-s1
+8c8
+< export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/surface_violations.json
+---
+> export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s1/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s1/surface_violations.json
+11,12c11,12
+< export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/retries.jsonl V3_MAX_RETRIES=30
+< export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NONE-K2A-s0:optimizer
+---
+> export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s1/retries.jsonl V3_MAX_RETRIES=30
+> export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NONE-K2A-s1:optimizer
+14c14
+< export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0
+---
+> export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s1
+17c17
+< export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/claude_cfg
+---
+> export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s1/claude_cfg
+##### BUILD_RECORD s0 vs s1
+6c6
+<  "seed": 0,
+---
+>  "seed": 1,
+53c53
+<  "tag_prefix": "tag:GATE-NONE-K2A-s0",
+---
+>  "tag_prefix": "tag:GATE-NONE-K2A-s1",
+##### GATE-NONE-K2A s3 vs s0 (yaml)
+IDENTICAL
+##### GATE-NONE-K2A s3: split_ids/adapter/seed_capability/INSTRUCTIONS vs s0
+IDENTICAL
+##### env.sh s0 vs s3
+3c3
+< export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/.capevolve/project/adapters
+---
+> export PYTHONPATH=/home/dev/projects2/wt-k2gate/core:/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s3/.capevolve/project/adapters
+5c5
+< export TAU_TAG_PREFIX=tag:GATE-NONE-K2A-s0
+---
+> export TAU_TAG_PREFIX=tag:GATE-NONE-K2A-s3
+8c8
+< export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/surface_violations.json
+---
+> export TAU_SURFACES=policy,tools TAU_SEED_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s3/.capevolve/project/seed_capability TAU_VIOLATION_FILE=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s3/surface_violations.json
+11,12c11,12
+< export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/retries.jsonl V3_MAX_RETRIES=30
+< export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NONE-K2A-s0:optimizer
+---
+> export V3_RETRY_LOG=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s3/retries.jsonl V3_MAX_RETRIES=30
+> export ANTHROPIC_BASE_URL=http://127.0.0.1:4113 ANTHROPIC_API_KEY=tag:GATE-NONE-K2A-s3:optimizer
+14c14
+< export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0
+---
+> export E10B_W=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s3
+17c17
+< export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s0/claude_cfg
+---
+> export CLAUDE_CONFIG_DIR=/home/dev/projects2/campaign-scratch/runs/K2GATE_AWS/GATE-NONE-K2A/s3/claude_cfg
+##### BUILD_RECORD s0 vs s3
+6c6
+<  "seed": 0,
+---
+>  "seed": 3,
+53c53
+<  "tag_prefix": "tag:GATE-NONE-K2A-s0",
+---
+>  "tag_prefix": "tag:GATE-NONE-K2A-s3",
+
+##### SUMMARY (added by runner)
+- capevolve.yaml: all four new yamls are byte-identical to their arm's s0 yaml (no seed field exists in the yaml; split_seed stays 42). Differences vs K2 reference yaml: only the gate_override line (K2 ref yaml = /tmp/k2g_x/runs/ABL/GATE-K2/s0; real K2 s1/s3 yamls are not on disk, only env.sh; K2 s0 vs s1 env.sh differ only in run-dir paths and tag prefix, same mechanism).
+- split_ids.json, adapter, seed_capability, INSTRUCTIONS.md, optimizer/: identical to s0 (cmp / diff -r).
+- env.sh: only run-dir paths and tag prefix differ. BUILD_RECORD: only "seed" and "tag_prefix" differ.
+- Consequence: "seed" = run identity + metering tag only; the 30 search tasks are the same for every seed; search divergence comes from run-time stochasticity (optimizer sampling, rollout seeds), exactly as in K2 s1/s3.
