@@ -1,0 +1,59 @@
+{
+ "name": "R4E1E6",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "NOTE": "groups CE68, CE1000, CE1500, CE2000, CEfinal and the chain list are written by the registered incumbent script from the registered cost table; this file is the SCHEMA with the fixed primary and secondaries; the generated DESIGN.json is registered by hash before the order is built",
+ "groups": {
+  "CE68": "<generated: the incumbent of each K2 search at total cost <= the registered target>",
+  "CEfinal": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "SkillOpt": [
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2"
+  ]
+ },
+ "primary": [
+  [
+   "CE68",
+   "SkillOpt"
+  ]
+ ],
+ "primary_holm": false,
+ "secondary": [
+  [
+   "CEfinal",
+   "SkillOpt"
+  ],
+  [
+   "CE68",
+   "CEfinal"
+  ],
+  [
+   "CE68",
+   "seed"
+  ],
+  [
+   "SkillOpt",
+   "seed"
+  ]
+ ],
+ "sensitivity": [
+  [
+   "CE1000",
+   "SkillOpt"
+  ],
+  [
+   "CE1500",
+   "SkillOpt"
+  ],
+  [
+   "CE2000",
+   "SkillOpt"
+  ]
+ ],
+ "chains": "<generated: (accepted candidate, its parent) for every accepted candidate of K2 s0,s1,s3 and of the naive-gate searches>"
+}

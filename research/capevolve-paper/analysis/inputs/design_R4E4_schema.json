@@ -1,0 +1,46 @@
+{
+ "name": "R4E4",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "NOTE": "second agent model M2 fixed by the registered smoke rule BEFORE the order; user simulator and judge unchanged",
+ "groups": {
+  "CE": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "PROMPT": [
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2",
+   "trace2skill/s0",
+   "trace2skill/s1",
+   "trace2skill/s2"
+  ],
+  "MH": [
+   "metaharness/s0"
+  ]
+ },
+ "primary": [
+  [
+   "CE",
+   "PROMPT"
+  ]
+ ],
+ "primary_holm": false,
+ "secondary": [
+  [
+   "CE",
+   "seed"
+  ],
+  [
+   "PROMPT",
+   "seed"
+  ],
+  [
+   "CE",
+   "MH"
+  ]
+ ],
+ "sensitivity": []
+}
