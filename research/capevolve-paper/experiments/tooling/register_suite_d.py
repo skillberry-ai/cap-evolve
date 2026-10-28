@@ -568,6 +568,7 @@ def main():
                          ("e1_K2_s0_events.jsonl", CS / "e1_cands/runs/ABL/GATE-K2/s0/.capevolve/run_main/events.jsonl", "K2 search s0 candidate events recovered from the archived tarball (input of E1/E3a/E6; amendment 12 erratum 104)"),
                          ("e1_K2_s1_events.jsonl", CS / "e1_cands/runs/ABL/GATE-K2/s1/.capevolve/run_main/events.jsonl", "K2 search s1 candidate events recovered from the archived tarball (input of E1/E3a/E6; amendment 12 erratum 104)"),
                          ("e1_K2_s3_events.jsonl", CS / "e1_cands/runs/ABL/GATE-K2/s3/.capevolve/run_main/events.jsonl", "K2 search s3 candidate events recovered from the archived tarball (input of E1/E3a/E6; amendment 12 erratum 104)"),
+                         ("r4_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/r4_order.py"), "R4 window order builder: v3_order.py with the per-window trial-seed salt R4W or R4E (--seed-salt required) and meta.cell_map (amendment 12 erratum 107)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
