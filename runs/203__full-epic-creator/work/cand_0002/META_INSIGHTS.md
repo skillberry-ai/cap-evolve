@@ -1,0 +1,22 @@
+# META-INSIGHTS — about the optimization PROCESS itself (this run)
+
+Not about the capability — about HOW this run is searching for it: which strategies/edit classes/algorithms are helping vs stalling, and what to try next iteration. Update at the end of the run at minimum; sooner if a plateau or a clear strategy shift is worth recording now. Structure each addition as:
+
+    ## Iteration <id> (or 'run so far')
+    - Strategy tried, and whether it moved val (cite LEDGER rows):
+    - Plateau/stall signal, if any, and the lever switched to:
+    - What to try next iteration:
+
+## Iteration cand_0001 (first real edit round)
+- Strategy tried: diagnose every failing trial individually (per-trial rewards, not task means — the flaky tasks each failed for a DIFFERENT reason per trial), cross-read each failure against the benchmark's judge source (`epic-creator/eval/epic-decompose.yaml`) to learn the exact mechanically-decidable contract, then convert the four mechanical clusters into one bundled validator verified flag-for-flag against all 33 trial artifacts extracted from the trajectories. The two LLM-judgment clusters (redundant HLRs, soft AC) got worked-example prose at the decision point plus matching review-criterion checks. No val movement measurable yet (gate pending).
+- Plateau/stall signal: none yet.
+- What to try next iteration: the corpus-extraction + judge-parity verification loop is the reusable method — before shipping ANY validator/prose contract edit, run it against every trial's actual artifacts and require zero flags on passing trials. Also: per-trial reward decomposition (reward = (dq-1)/4 − 0.1·softgates) tells you exactly which judge each trial lost points to — cheaper than re-reading feedback prose.
+
+<!-- cap-evolve:meta-insights-append-below -->
+
+## Iteration cand_0002 (second edit round, on a 0.982 champion)
+- Strategy tried, and whether it moved val (cite LEDGER rows): with only 3 imperfect trials of 33 (each a different cluster, each failing in exactly 1 of 3 trials), the highest-value move was per-trial reward decomposition FIRST (one scripted pass over score.raw), then judge-source cross-read per cluster, then one STRUCTURAL + one KNOWLEDGE edit per cluster wired through the existing validator/review/revise loop. Gate result pending (cand_0001's row: ACCEPT 0.982).
+- Plateau/stall signal: the run is near ceiling (max headroom +0.018). The residual failures are per-trial LLM-grader variance on "one minor gap" — if this batch ACCEPTs but val lands ~0.99 rather than 1.0, the leftover is likely grader noise, and further prompt edits would chase unfixable variance. Signal to watch: a REJECTED batch whose per-task deltas are all sub-SE.
+- What to try next iteration: read the gate RESULT per task before anything else. If accepted at ~1.0, prefer STOPPING / minimal robustness edits over speculative breadth — every additional edit at ceiling carries regression risk with no recoverable score. If a specific trial still fails, the dq feedback names its "one minor gap" explicitly; diagnose THAT, not the previously-fixed patterns.
+- Process lesson: corpus blast-radius verification (run every new check/pattern over all 33 trials' extracted artifacts) remains the cheapest safety proof — this iteration's Rule-10 check flagged exactly the 1 failing trial and nothing else, which is what let a prompt+validator+review+revise 7-file edit ship with bounded-risk confidence. Also: read the BENCHMAARK's phase machine (pipeline_state.py) before designing review-side fixes — the unconditional-first-revise / re-review-passes-minors-die structure determines WHERE a check must fire, not just what it says.
+

@@ -1,0 +1,113 @@
+# PROCESS — what I did this iteration (explainability; REQUIRED)
+
+## Ranked issue list
+
+Diagnosed the champion cand_0002's trials from `./trajectories/` (33 trials, 11 val tasks). **Exactly 1 imperfect trial exists**: case-030-real-operator-structured-logging t0 (task mean 0.92; t1/t2 score 5/5). All 32 other trials score full. No ENVIRONMENT faults. Max recoverable ≈ +0.008 val (0.992 → 1.0).
+
+Context from the handover: SEVEN prior iterations (cand_0003/0005/0006/0007/0008/0009, plus the infra-failed cand_0004) targeted this same trial and were all threshold-REJECTED with `broke={}` — the edits never did measurable damage but never cleared the 0.3·SE noise bar either. This is iteration 10 of 10 (the last). Per the framework's repeated gate note ("keep the edits as your starting point; do not rewrite them") and cand_0009's own handover ("re-measure or stop, do NOT redesign"), this iteration ships a fresh-tag re-measure of the strongest prior design — cand_0008/cand_0009's shape-level batch, reconstructed from their PROCESS.md files (both diff.patch files truncate at DIAGNOSIS.json) — not a new design. Every edit is corpus-verified to be a no-op on all 32 passing trials, so the re-measure carries no regression risk while giving the fix one more chance to land under a fresh noise draw.
+
+| rank | cluster | task (trial) | shared root cause | tag | change class |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Review-driven work-type split of a shared-surface enforcement deliverable → unmanaged size overage + unrecorded bundling (dq 4/5) | case-030 (t0) | Internal review cycle 1 docked E001's size and issued an un-actionable split suggestion; the revise executed the old "Oversized epic: Split by sub-deliverable" playbook entry by carving the CI lint rule into standalone E004 ("CI lint rule enforcing structured reconciliation log fields", same component as E001/E002). E001 stayed over the ~2-week guideline — the external grader docked exactly that ("the size remains above guideline, which the embedded adversarial review also docked") — plus the HLR-7 P1-into-P0 bundling recorded only as scattered prose. Passing siblings t1/t2 keep 3 epics with the lint rule divided per binary and the bundling flagged in-row — shapes their 5/5 graders quote | BEHAVIORAL (churn instruction in the revise playbook) + KNOWLEDGE (recording contracts) | STRUCTURAL: validator check 6 (work-type-extracted enforcement deliverable → per-surface fold-back) wired at all three phases + generation rule + review classification + revise playbook replacement |
+
+## Changes made this iteration (one row per edit)
+
+All 9 edits target cluster 1 (the only failing cluster); the batch is cand_0008/0009's design re-derived against this iteration's traces.
+
+| # | edit class | file / tool | what & why it generalizes | protects passing? |
+| --- | --- | --- | --- | --- |
+| 1 | STRUCTURAL (bundled script) | `epic-decompose/scripts/validate_decomposition.py` — new check 6 | A general Implementation epic whose TITLE names an enforcement tool (lint rule / CI check / static-analysis / validation harness / enforcement) that shares its `component` with ≥1 other non-docs Implementation epic is a work-type extraction → VIOLATION with paste-ready fold-back FIX (divide per surface into consuming epics' Scope/ACs, delete the epic, update the summary). Exempt when the tool is the component's only implementation work (no sibling → no violation). Fires at decompose Step 8c, review Step 1.7, and revise Step 4 — including when the REVISE creates the epic, which is when t0's E004 appeared | Yes — corpus-verified: a title scan over all 33 trials' artifacts finds an enforcement-titled epic in EXACTLY one trial (case-030 t0's E004); no passing trial's epic set can trigger the check |
+| 2 | KNOWLEDGE + worked example | `prompts/decompose-agent.md` Step 5 Epic Boundary Rules, new sub-bullet | Shared-surface enforcement deliverables divide per surface into the consuming epics' Scope/ACs, never a standalone work-type epic; worked example (per-binary lint ownership + verification AC); exemption when the tool IS the component's only implementation work | Yes — fires only when a shared enforcement deliverable exists; t1/t2 already produce the mandated per-surface shape (t1's summary: "lint coverage per-binary") |
+| 3 | CONTRACT (recording) | `prompts/decompose-agent.md` Step 6.5, new "Epic size over the ~2-week guideline" subsection | An epic kept above the ~2-week guideline as one logical change records estimate + why-not-split rationale + concrete conditional re-split trigger in Health Warnings, with a compliant worked example; a bare size note named as the defect; heterogeneous bundling explicitly routed to a split instead | Yes — fires only when an overage is kept; passing size-flagged trials already write trigger-style conditionals (case-019 t1, case-020 t1, case-030 t1/t2) |
+| 4 | CONTRACT (recording) | `prompts/decompose-agent.md` Step 4, appended to the priority-split paragraph | A kept lower-into-higher-priority bundling is readable from the HLR Traceability Matrix row itself (`(bundled)` flag + inline rationale, worked example row) or a self-contained note; bare-pointer rows named as the defect | Yes — fires only in the bundling branch; passing bundling trials (case-016, 017-t1, 018-t2, 029, 030 t1/t2) already record in-row flags or self-contained notes |
+| 5 | CONTRACT (sync) | `prompts/decompose-agent.md` Step 8c | Validator description extended with check 6 and its fold-back fix path | Yes — additive description |
+| 6 | STRUCTURAL (review mapping) | `prompts/review-agent.md` Step 1.7 | Check-6 violation → MINOR Epic-Boundaries issue (the one validator violation that does NOT zero a criterion) with the named fold-back correction — minor severity reaches the unconditional first revise without failing a passing review | Yes — issues added only on violations; minor severity cannot fail a passing review |
+| 7 | KNOWLEDGE (review classification) | `prompts/review-agent.md` Criterion 3 | Size check CLASSIFIES before flagging: (a) heterogeneous monolith → major split demand (preserved — case-029 t0's shape); (b) one-logical-change overage with trigger → watch item, no dock; (c) trigger absent → minor "record the trigger"; (d) extracted enforcement epic → minor "divide per surface". Un-actionable "consider splitting" suggestions forbidden. New bundling-recording check: in-row flag or self-contained note = compliant (not priority collapse); scattered prose = minor | Yes — only case-030 t0's review ever docked for size; heterogeneous-monolith split demand preserved |
+| 8 | STRUCTURAL (revise playbook) | `prompts/revise-agent.md` | REPLACED "Oversized epic: Split by sub-deliverable" (the churn instruction that produced t0's E004) with the 3-shape classified fix; NEW mechanical entry for standalone-enforcement-deliverable violations (fold per surface, delete the epic, update summary); NEW minor-issue correction "bundling rationale not on the record" (add the row flag — never restructure) | Yes — revise only acts on review issues; case-029 t0's monolith split path preserved verbatim in branch (a) |
+| 9 | HYGIENE | `epic-decompose/SKILL.md` frontmatter | Description gains a "Use when" clause (skill-package authoring hygiene; runner invokes by exact name, no behavior change) | Yes — zero behavioral surface |
+
+## Verify-the-fix
+
+- **Validator check 6** — `--self-check` passes ("6 checks fire on bad fixture, clean on good"); new fixtures cover both polarities (standalone lint-rule epic with same-component siblings fires; a lone enforcement-tool epic — the component's only implementation work — passes). Simulated end-to-end on t0's reconstructed final shape (E001/E002 conversions + E004 "CI lint rule enforcing structured reconciliation log fields", all component "OpenShift AI Productization", plus the docs epic): exits 1 naming E004 with the paste-ready fold-back FIX. On t1's passing 3-epic shape (E004 removed): clean, exit 0.
+- **trace case-030 t0** (review cycle 1 splits the CI lint rule into E004; grader: "the size remains above guideline, which the embedded adversarial review also docked") → the chain is now broken at three points: (i) review Criterion 3's classification forbids the un-actionable split suggestion and demands the trigger/fold-back corrections; (ii) if a split is nevertheless attempted, revise Step 4's validator run exits 1 on the standalone lint epic and the new playbook entry folds it back per surface — the t1 5/5 shape; (iii) the kept-overage path records estimate + rationale + re-split trigger, the shape the t2 grader quoted at 5/5.
+- **trace case-030 t0** (grader: HLR-7 bundling recorded only in prose) → Step 4's row-flag contract + review Criterion 3's bundling-recording check + the revise's "record in matrix row" correction land the `(bundled)` flag — exactly the t1 row shape the t1 grader quoted at 5/5.
+- **Blast radius (all edits, BOUNDED)**: every edit fires only under a discriminator — enforcement-titled general epic with same-component non-docs Implementation siblings (corpus title scan: only t0's E004), kept overage (only t0 in the corpus), bundling recorded off-row (only t0). Passing tasks in the class: case-013/014/015/016/017/018/019/020/024/029 and case-030 t1/t2 — none produces a shape any new rule flags or demands changed.
+
+## Process & features used
+
+- Serial (no subagents/worktrees): a single failing cluster with one coherent mechanism across 4 files whose contents must stay mutually consistent.
+- Read: `guidance/skill-package/SKILL.md`, JOURNAL RESULT lines for all 9 prior iterations, LEDGER, rejected.jsonl, `prior_iterations/cand_0008/PROCESS.md` + `prior_iterations/cand_0009/PROCESS.md` (the design reconstructed — both diff.patch files truncate at DIAGNOSIS.json).
+- Improvement types applied: bundled-script enforcement (validator check 6), generation rule + worked example (Step 5 sub-bullet), output-contract recording rules (Step 4 / Step 6.5), review-to-revise issue mapping with severity calibration (Step 1.7 / Criterion 3), revise-playbook classified replacement (churn-instruction removal).
+
+## Good things to PRESERVE
+
+- The validator's checks 1–5 (judge parity) and their decompose-8c / review-1.7 / revise-4 wiring — unchanged.
+- Check 6's four-part discriminator (general type + enforcement TITLE + same-component sibling + not-the-only-implementation-work). Broadening it to body-text matching or dropping the sibling condition would risk false positives on passing trials.
+- The Criterion 3 heterogeneous-monolith split demand (case-029 t0 relies on it).
+
+## Deliberately skipped
+
+- Novel mechanisms beyond cand_0008/0009's design — seven threshold-rejections on this trial with `broke={}` say the honest read is measurement-limited-at-ceiling (headroom +0.008 vs a 0.3·SE bar that ranged 0.004–0.014); a new speculative design adds regression risk without power. This iteration is the prescribed fresh-tag re-measure.
+- Mandated-AC (Rules 24/25) validator prep — staged thresholdless; not REAL.
+- Dispatcher/fetch-agent changes — no failures in those phases.
+
+## Environment faults
+
+None. All 33 trials ran to completion; the single failure is a capability failure.
+
+## DIAGNOSIS.json — machine-readable diagnosis
+
+```json
+{
+  "candidate": "cand_0010",
+  "headline": "Final iteration: fresh-tag re-measure of cand_0008/0009's shape-level enforcement batch (reconstructed from their PROCESS.md files; both diff.patch files truncated) — validator check 6 for work-type-extracted enforcement deliverables + per-surface generation rule + review size-classification + revise churn-instruction replacement + the two grader-quoted recording contracts",
+  "clusters": [
+    {"id": "A", "name": "review-driven work-type split of a shared-surface enforcement deliverable -> unmanaged size overage + unrecorded bundling",
+     "detail": "Review cycle 1 docked E001's size; the revise executed the 'Oversized epic: Split by sub-deliverable' playbook entry and carved the CI lint rule into standalone E004. E001 stayed over the ~2-week guideline and the HLR-7 bundling stayed off the matrix row; the grader docked both. Passing siblings keep 3 epics with per-binary lint division and in-row bundling flags.",
+     "tasks": ["case-030-real-operator-structured-logging"], "scope": "BOUNDED", "latent": false,
+     "tag": "BEHAVIORAL"}
+  ],
+  "edits": [
+    {"id": "E1", "title": "Validator check 6: standalone enforcement deliverable (general epic, enforcement title, same-component sibling) -> fold-back FIX + self-check fixtures",
+     "files": ["epic-decompose/scripts/validate_decomposition.py"], "lever": "STRUCTURAL",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "--self-check passes; simulated on t0's reconstructed final shape -> exits 1 naming E004 with the fold-back FIX; t1's 3-epic shape -> clean; corpus title scan finds an enforcement-titled epic in exactly one trial (t0's E004)"},
+    {"id": "E2", "title": "Step 5 boundary rule: shared-surface enforcement deliverables divide per surface (worked example + only-implementation-work exemption)",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "KNOWLEDGE",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "t1's 5/5 summary documents exactly this shape ('lint coverage per-binary')"},
+    {"id": "E3", "title": "Step 6.5: kept overage records estimate + why-not-split rationale + concrete re-split trigger (worked example)",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "CONTRACT",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "the t2 grader quoted this exact shape at 5/5; only t0 keeps an overage without it"},
+    {"id": "E4", "title": "Step 4: kept bundling readable from the matrix row ((bundled) flag + inline rationale, worked example)",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "CONTRACT",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "t1's in-row flag is the row shape the t1 grader quoted at 5/5; t0 is the only trial with prose-only bundling"},
+    {"id": "E5", "title": "Step 8c: validator description extended to check 6",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "CONTRACT",
+     "clusters": ["A"], "blast_radius": "BOUNDED", "verified": "description matches the script's checks"},
+    {"id": "E6", "title": "Review Step 1.7: check-6 violation -> minor Epic-Boundaries issue with named fold-back correction (no criterion zeroing)",
+     "files": ["epic-decompose/prompts/review-agent.md"], "lever": "STRUCTURAL",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "minor severity reaches the unconditional first revise without failing a passing review"},
+    {"id": "E7", "title": "Review Criterion 3: 3-shape size classification + bundling-recording check + un-actionable split suggestions forbidden",
+     "files": ["epic-decompose/prompts/review-agent.md"], "lever": "KNOWLEDGE",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "the t0 churn chain started with the review's split suggestion; the heterogeneous-monolith split demand is preserved (case-029 t0)"},
+    {"id": "E8", "title": "Revise playbook: replaced 'Oversized epic: Split by sub-deliverable' with the 3-shape classified fix + check-6 fold-back entry + bundling row-flag correction",
+     "files": ["epic-decompose/prompts/revise-agent.md"], "lever": "STRUCTURAL",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "the replaced entry is the instruction that produced t0's E004; revise only acts on review issues"},
+    {"id": "E9", "title": "SKILL.md description 'Use when' clause",
+     "files": ["epic-decompose/SKILL.md"], "lever": "HYGIENE",
+     "clusters": ["A"], "blast_radius": "BOUNDED", "verified": "runner invokes by exact name; no behavior change"}
+  ],
+  "skipped": [
+    {"title": "novel mechanisms beyond cand_0008/0009's design", "reason": "seven threshold-rejections with broke={} on this trial -> measurement-limited-at-ceiling; this is the prescribed fresh-tag re-measure of the strongest prior edit set"},
+    {"title": "mandated-AC (Rules 24/25) validator checks", "reason": "staged thresholdless; not REAL"},
+    {"title": "dispatcher/fetch-agent changes", "reason": "no failures in those phases"}
+  ],
+  "techniques": ["bundled-script enforcement (shape-level, wired at all three phases)", "worked examples at both decision points", "review classification before flagging", "churn-instruction replacement in the revise playbook", "corpus blast-radius verification via epic-title scan", "reconstruction of truncated prior diffs from PROCESS.md"]
+}
+```

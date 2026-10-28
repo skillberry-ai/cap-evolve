@@ -1,0 +1,37 @@
+{
+  "best_id": "cand_0002",
+  "budget": {
+    "max_iterations": 10,
+    "max_metric_calls": 0,
+    "max_usd": 5000.0,
+    "stall": 0,
+    "max_optimizer_usd": 200.0,
+    "stop_at_reward": 0.0
+  },
+  "spent": {
+    "iterations": 10,
+    "metric_calls": 510,
+    "usd": 1962.519142,
+    "stall": 7,
+    "runner_tokens": 0,
+    "runner_seconds": 398816.4217283726,
+    "optimizer_seconds": 8325.837549686432,
+    "optimizer_usd": 51.67884599999999,
+    "optimizer_tokens": 47859158,
+    "intake_usd": 0.0,
+    "intake_tokens": 0,
+    "intake_seconds": 0.0,
+    "best_val": 0.9924242424242423,
+    "usersim_usd": 0.0
+  },
+  "screening_structurally_uneconomical": false,
+  "screening_economics": {
+    "tier1_fired": 6,
+    "full_val_rollouts": 33,
+    "breakeven_kill_rate": 0.1818,
+    "ceiling": 0.25,
+    "val_n": 11,
+    "n_trials": 3
+  },
+  "warnings_fired": []
+}

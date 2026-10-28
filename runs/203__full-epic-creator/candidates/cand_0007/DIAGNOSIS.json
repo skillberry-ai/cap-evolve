@@ -1,0 +1,108 @@
+{
+  "candidate": "cand_0007",
+  "headline": "Fix the last flaky trial (case-030 t0, dq 4) at the epic-SHAPE level: per-surface division of shared enforcement deliverables, 3-shape size-overage classification in review+revise, bundled-row recording contract \u2014 structurally different from the recording-mandate batches cand_0003/0005/0006",
+  "clusters": [
+    {
+      "id": "A",
+      "name": "review-driven work-type split of a shared-surface deliverable + unmanaged overage + bare-pointer bundling (dq 4)",
+      "detail": "t0's internal review docked Criterion 3 (E001 over the ~2-week guideline) and the revise executed 'Oversized epic: split by sub-deliverable' by carving the CI lint rule into standalone E004; E001 stayed over, stale text survived, external grader docked size + unrecorded HLR-7 bundling. Passing siblings t1/t2 keep 3 epics with the lint rule divided per binary and the bundling flagged in-row \u2014 shapes the grader quotes in its 5/5 rationales.",
+      "tasks": [
+        "case-030-real-operator-structured-logging"
+      ],
+      "scope": "BOUNDED",
+      "latent": false,
+      "tag": "KNOWLEDGE + STRUCTURE"
+    }
+  ],
+  "edits": [
+    {
+      "id": "E1",
+      "title": "Step 5 per-surface division rule + worked example",
+      "files": [
+        "epic-decompose/prompts/decompose-agent.md"
+      ],
+      "lever": "KNOWLEDGE + worked example",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "corpus scan: only case-030 has a shared-surface enforcement deliverable; t1/t2 already compliant"
+    },
+    {
+      "id": "E2",
+      "title": "Step 6.5 ordered 3-shape overage procedure (fold-back / sweep+trigger / seam split)",
+      "files": [
+        "epic-decompose/prompts/decompose-agent.md"
+      ],
+      "lever": "STRUCTURE (ordered procedure)",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "corpus scan: only case-030 t0 acknowledges an over-guideline epic"
+    },
+    {
+      "id": "E3",
+      "title": "Step 4 bundled-row recording contract (inline rationale, bare pointer = defect)",
+      "files": [
+        "epic-decompose/prompts/decompose-agent.md"
+      ],
+      "lever": "OUTPUT-CONTRACT",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "all 8 passing bundling trials already satisfy the contract"
+    },
+    {
+      "id": "E4",
+      "title": "Criterion 3 classify-before-flag size check (sweep-with-trigger no-dock; work-type extraction minor; monolith split preserved)",
+      "files": [
+        "epic-decompose/prompts/review-agent.md"
+      ],
+      "lever": "DECISION-RULE NARROWING",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "only over-guideline epics affected; case-029 monolith split preserved"
+    },
+    {
+      "id": "E5",
+      "title": "Revise playbook: replace 'Oversized epic: split by sub-deliverable' with 3-shape fix + per-surface fold-back correction",
+      "files": [
+        "epic-decompose/prompts/revise-agent.md"
+      ],
+      "lever": "STRUCTURE (playbook)",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "replaced entry's execution is the documented cause of the failing trial's shape"
+    },
+    {
+      "id": "E6",
+      "title": "Criterion 1 shared-surface bundling is not 'distinct and deferrable' (no split-back demand)",
+      "files": [
+        "epic-decompose/prompts/review-agent.md"
+      ],
+      "lever": "DECISION-RULE NARROWING",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "passing bundling trials record rationale in-row already"
+    },
+    {
+      "id": "E7",
+      "title": "SKILL.md description 'Use when' clause (hygiene)",
+      "files": [
+        "epic-decompose/SKILL.md"
+      ],
+      "lever": "HYGIENE",
+      "clusters": [],
+      "blast_radius": "none",
+      "verified": "runner invokes by exact name; clears validation warning from cand_0003's rejection record"
+    }
+  ]
+}

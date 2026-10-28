@@ -1,0 +1,11 @@
+component: capability
+name: skill-package
+summary: Optimize a WHOLE Agent Skill package — SKILL.md, references, and bundled scripts — under the skill-creator authoring rules.
+entry: scripts/run.py
+abstract: scripts/abstract.py
+check: scripts/check.py
+needs: []
+provides: [candidate]
+compatible_with:
+  optimizers: ["*"]
+  algorithms: ["*"]

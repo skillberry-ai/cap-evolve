@@ -1,0 +1,166 @@
+--- a/DIAGNOSIS.json
++++ b/DIAGNOSIS.json
+@@ -1,67 +1,23 @@
+ {
+-  "candidate": "cand_0001",
+-  "headline": "Bundled contract validator (judge-parity) as a structural gate in decompose/review/revise, plus targeted knowledge fixes for redundant-HLR consolidation, canonical component fallback, and soft-AC boundary",
++  "candidate": "cand_0006",
++  "headline": "Close the last flaky trial's dq-4 with mechanical enforcement of both grader-quoted recording shapes: validator checks 6 (re-split triggers) and 7 (bare-pointer bundling), review Criterion-3 scoring calibration, worked examples, and paste-ready fix templates",
+   "clusters": [
+     {
+       "id": "A",
+-      "name": "epic body missing required section",
+-      "detail": "Decompose agent renamed '## Scope' to '## Content Outline' on a docs-authoring epic; artifact_contract hard gate fails and reward drops to 0. Mechanically checkable, skipped by internal review and revise.",
++      "name": "acknowledged epic-size overage without a re-split trigger (dq 4)",
++      "detail": "case-030 t0 kept E001 (~1.25-1.5 sprints) above the ~2-week guideline as a bare 'flagged for planning awareness only' Health Warning; the internal review docked Criterion 3 to 1/2 and demanded an un-actionable split, whose execution left the overage unresolved and injected a DAG violation the re-review failed; the external grader docked exactly this ('the size remains above guideline, which the embedded adversarial review also docked'). Passing siblings record a trigger/watch item (t2: 're-split if the audit exceeds the 75% estimate') and score 5/5 with 14/14 internal reviews.",
+       "tasks": [
+-        "case-020-hardware-dependent-investigation"
++        "case-030-real-operator-structured-logging"
+       ],
+       "scope": "BOUNDED",
+       "latent": false,
+-      "tag": "BEHAVIORAL"
++      "tag": "KNOWLEDGE + BEHAVIORAL"
+     },
+     {
+       "id": "B",
+-      "name": "redundant HLRs split by priority label",
+-      "detail": "Two HLRs describing one comparison surface (side-by-side + diff view) split into two epics; agent saw the overlap and split anyway; review endorsed 14/14. Expected handling: one epic listing both HLRs.",
++      "name": "justified P1-into-P0 bundling recorded as a bare pointer off-matrix",
++      "detail": "HLR-7's bundling rationale lived in a bare-pointer sentence after the matrix ('bundled with P0 work per the tight-coupling rule above'); the graders' 5/5 rationales quote the on-the-record shapes (t1: matrix row 'E001 (bundled)' with inline rationale; t2: labeled Step-4 priority-split analysis). A self-contained off-matrix note is also compliant (case-018 t2, 5/5).",
+       "tasks": [
+-        "case-015-redundant-hlrs"
+-      ],
+-      "scope": "BOUNDED",
+-      "latent": false,
+-      "tag": "KNOWLEDGE"
+-    },
+-    {
+-      "id": "C",
+-      "name": "priority inheritance violation",
+-      "detail": "P1 epic directly blocks a P0 epic; rule exists but agent and reviewer both skip the mechanical enumeration of dependencies. Same latent defect in a currently-passing trial (case-018 t0).",
+-      "tasks": [
+-        "case-018-cross-strategy-dependency"
+-      ],
+-      "scope": "BOUNDED",
+-      "latent": true,
+-      "tag": "BEHAVIORAL"
+-    },
+-    {
+-      "id": "D",
+-      "name": "non-canonical component name",
+-      "detail": "component 'Model Serving Stack' invented for a cross-component epic; prompt's fallback example itself modeled inventing a non-canonical name.",
+-      "tasks": [
+-        "case-013-human-process-gates"
+-      ],
+-      "scope": "BOUNDED",
+-      "latent": false,
+-      "tag": "KNOWLEDGE"
+-    },
+-    {
+-      "id": "E",
+-      "name": "Rule 11 docs-last closure gap",
+-      "detail": "Branch-C docs-authoring epic's transitive dependencies missed one main-plan Implementation epic (E002).",
+-      "tasks": [
+-        "case-024-real-default-vector-store"
+-      ],
+-      "scope": "BOUNDED",
+-      "latent": false,
+-      "tag": "BEHAVIORAL"
+-    },
+-    {
+-      "id": "F",
+-      "name": "schedule-risk note as acceptance criterion",
+-      "detail": "E005's final AC restates an external schedule constraint instead of a testable condition on the epic's deliverable \u2014 the rubric's canonical soft-AC exemplar.",
+-      "tasks": [
+-        "case-013-human-process-gates"
++        "case-030-real-operator-structured-logging"
+       ],
+       "scope": "BOUNDED",
+@@ -73,69 +29,57 @@
+     {
+       "id": "E1",
+-      "title": "New bundled validator script (body sections, component vocabulary, Rule 11, priority inheritance) with judge-parity logic and --self-check",
++      "title": "Validator check 6: epic-size overage triggers (summary-side, negation-guarded, broadened acknowledgment patterns, paste-ready FIX)",
+       "files": [
+         "epic-decompose/scripts/validate_decomposition.py"
+       ],
+-      "lever": "STRUCTURAL",
++      "lever": "STRUCTURAL (bundled script)",
+       "clusters": [
+-        "A",
+-        "C",
+-        "D",
+-        "E"
++        "A"
+       ],
+       "blast_radius": "BOUNDED",
+-      "verified": "Run over artifacts of all 33 trials extracted from ./trajectories/: flags exactly the 4 mechanically-failing trials (+ case-018 t0's identical latent priority defect); exits 0 on all 28 others; --self-check passes"
++      "verified": "corpus run over all 33 cand_0002 trials: fires on exactly case-030 t0; --self-check passes (bare-note fires; triggered-overage, negation, self-contained-note fixtures clean); end-to-end fix simulation clears t0"
+     },
+     {
+       "id": "E2",
+-      "title": "Validator as precondition of decompose_complete in decompose Step 8c (+ triage path in Step 0)",
++      "title": "Validator check 7: bare-pointer bundling acknowledgment without an on-matrix record",
++      "files": [
++        "epic-decompose/scripts/validate_decomposition.py"
++      ],
++      "lever": "STRUCTURAL (bundled script)",
++      "clusters": [
++        "B"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "corpus run fires on exactly case-030 t0; first draft flagged passing case-018 t2 -> bare-pointer discriminator added (self-contained notes compliant) and re-verified clean on all 32 passing trials"
++    },
++    {
++      "id": "E3",
++      "title": "Decompose Step 6.5: kept overage must carry a re-split trigger (worked example of the compliant Health Warning)",
+       "files": [
+         "epic-decompose/prompts/decompose-agent.md"
+       ],
+-      "lever": "STRUCTURAL",
++      "lever": "KNOWLEDGE (missing rule + worked example)",
+       "clusters": [
+-        "A",
+-        "C",
+-        "D",
+-        "E"
++        "A"
+       ],
+       "blast_radius": "BOUNDED",
+-      "verified": "Sentinel ordering makes the run unavoidable; no-op on contract-clean decompositions (all passing trials)"
+-    },
+-    {
+-      "id": "E3",
+-      "title": "Review Step 1.7: run validator, map every VIOLATION to an issues-list entry + zeroed criterion",
+-      "files": [
+-        "epic-decompose/prompts/review-agent.md"
+-      ],
+-      "lever": "STRUCTURAL",
+-      "clusters": [
+-        "A",
+-        "C",
+-        "D",
+-        "E"
+-      ],
+-      "blast_radius": "BOUNDED",
+-      "verified": "Targets the exact reviewer misses observed in traces; issues added only on violations"
++      "verified": "corpus scan: only case-030 t0 wrote an overage warning; the worked example is t2's grader-quoted shape generalized to placeholders"
+     },
+     {
+       "id": "E4",
+-      "title": "Revise playbook for validator violations + re-run until OK in Step 4",
++      "title": "Decompose Step 4: bundling recorded as a `bundled` row flag + inline rationale (worked example row)",
+       "files": [
+-        "epic-decompose/prompts/revise-agent.md"
++        "epic-decompose/prompts/decompose-agent.md"
+       ],
+-      "lever": "STRUCTURAL",
++      "lever": "KNOWLEDGE (recording convention + worked example)",
+       "clusters": [
+-        "A",
+-        "C",
+-        "D",
+-        "E"
++      
+... (truncated)

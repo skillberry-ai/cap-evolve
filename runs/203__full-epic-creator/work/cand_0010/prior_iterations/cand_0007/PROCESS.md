@@ -1,0 +1,59 @@
+# PROCESS — iteration cand_0007
+
+## Diagnosis
+
+Per-trial reward decomposition over all 33 trajectories in `./trajectories/` (cand_0002 corpus): **exactly one imperfect trial remains** — case-030-real-operator-structured-logging t0 (reward 0.75: dq 4/5, no soft-gate failures). All 32 other trials score 1.0. No ENVIRONMENT faults. Max recoverable ≈ +0.0076 val (0.992 → ~1.0).
+
+### The cluster (single, multi-mechanism)
+
+**case-030 t0 — review-driven work-type split of a shared-surface deliverable + unmanaged overage + bare-pointer bundling (dq 4).**
+
+Grader's stated gaps ("Why 4, not 5"): (1) E001 is ~1.25–1.5 sprints, "above the ~2-week epic guideline **even after the lint-rule split**", and (2) the P1-into-P0 HLR-7 bundling is "not covered by a triage escape" / recorded without the on-the-record rationale.
+
+Trace mechanism (extracted artifacts from the rollout JSONs):
+- **t0 (fail, 4 epics)**: the internal review docked Criterion 3 (size) and demanded a split; the revise executed the playbook entry "**Oversized epic: Split by sub-deliverable**" by carving the CI lint rule out of E001 into a standalone epic E004 — a *work-type* split. E001 stayed above the guideline (the sweep itself was the size), the split left stale text ("all three epics"), and the size flag survived to the external grader.
+- **t1/t2 (pass, 3 epics, dq 5, review 14/14)**: the lint rule is **divided per surface** — "each implementation epic authors and verifies the lint coverage for its own binary's code paths … rather than by extracting the lint rule into a separate epic" (t1, grader-quoted); HLR-7 bundling is recorded in the matrix row as `(bundled)` with inline coupling rationale (t1) or as a self-contained Step-4 priority-split analysis (t2).
+
+This is structurally DIFFERENT from what cand_0003/0005/0006 tried (recording/validator enforcement of the overage and bundling notes): those accepted the 4-epic shape and tried to make its paperwork compliant. The grader text says the size itself is the gap — the fix must change the SHAPE decision, not the recording.
+
+## Edits (7, all in the allowed skill-package edit space)
+
+| # | file | lever | cluster mechanism | blast radius |
+|---|------|-------|-------------------|--------------|
+| 1 | `prompts/decompose-agent.md` Step 5, rule 2 | KNOWLEDGE + worked example | New rule: shared-surface enforcement deliverables (lint rule / CI check / validation harness over converted surfaces) divide per surface into the consuming epics' Scope/ACs, never a standalone work-type epic; division recorded in the DAG-justification non-edge rationale | BOUNDED — fires only when such a deliverable exists; corpus scan: only case-030 has one (t1/t2 already the compliant shape, t0 the failure) |
+| 2 | `prompts/decompose-agent.md` Step 6.5 | STRUCTURE (ordered 3-shape procedure) | Epic-size overage handling: (1) per-surface fold-back first, (2) one-logical-change sweep → keep + record estimate + concrete conditional re-split trigger in Health Warnings, (3) heterogeneous bundling → seam split; never split a sweep by work type | BOUNDED — fires only on over-guideline epics; corpus scan: only case-030 t0 acknowledges "above the ~2-week guideline" |
+| 3 | `prompts/decompose-agent.md` Step 4 | OUTPUT-CONTRACT | Kept P-lower-into-P-higher bundling must be readable from the matrix row (`(bundled)` + inline rationale) or a self-contained note; bare pointer named as the defect shape | BOUNDED — additive recording requirement in the bundling branch; the 8 passing bundling trials (016/017/018-t2/029-t2/030-t1/014/015) all already satisfy it |
+| 4 | `prompts/review-agent.md` Criterion 3 | DECISION-RULE NARROWING (classify-before-flag) | Size check split into 3 shapes: heterogeneous monolith → major + seam split (unchanged); one-logical-change sweep with trigger → NO dock, at most watch note; trigger absent → minor "record the trigger", never a split demand; work-type-extracted shared deliverable → minor "divide per surface"; un-actionable split demands forbidden | BOUNDED — changes behavior only for over-guideline epics; case-029's grader-endorsed monolith split (heterogeneous) preserved |
+| 5 | `prompts/revise-agent.md` Epic Boundary issues | STRUCTURE (playbook replacement) | "Oversized epic: split by sub-deliverable" (the churn entry that produced t0's E004) REPLACED by the 3-shape classified fix; NEW entry "work-type-extracted shared deliverable" → per-surface fold-back incl. deleting the extracted epic and updating the summary | BOUNDED — fires only on size/shared-deliverable review issues |
+| 6 | `prompts/review-agent.md` Criterion 1 | DECISION-RULE NARROWING | A lower-priority HLR sharing the implementation surface with P0 work is NOT "distinct and deferrable" → do not demand a split; check the bundling is recorded with rationale (bare pointer → minor) | BOUNDED — fires only in the tight-coupling bundling case; passing trials comply |
+| 7 | `epic-decompose/SKILL.md` frontmatter | HYGIENE | description gains a "Use when" clause (validation warning on cand_0003's rejection record); runner invokes by exact name → zero behavioral surface | none |
+
+Validator script and dispatcher (SKILL.md body) deliberately unchanged: no validator-decidable discriminator was needed beyond the shape rules above (the sweep/monolith classification is an LLM judgment), and no dispatcher-driven failure exists.
+
+## Verify-the-fix (evidence → behavior delta)
+
+- **Edit 1/2/5 vs trace case-030 t0**: the review's Criterion-3 size flag reached the revise, which executed "Oversized epic: Split by sub-deliverable" → standalone E004 lint epic, E001 still over, dq 4. With the edits: at DECOMPOSE time Step 5's per-surface rule produces the 3-epic t1/t2 shape (grader: "the lint rule … is explicitly divided per binary with reasoning" — the exact 5/5 shape); if a size flag still arises, Criterion 3 classifies the sweep (shape 2) and demands only a recorded re-split trigger, and the revise playbook's shape-(b) branch forbids the work-type split that produced E004. The HLR-7 matrix row carries `(bundled)` + inline rationale (edit 3) — the t1 5/5 shape the grader quotes verbatim ("is not silent priority collapse: the matrix flags it as 'bundled' with a concrete rationale").
+- **Edit 4 vs passing trials**: case-030 t1/t2 reviews scored 14/14 with no size dock — under the new classification their shapes (per-surface division, sweep with estimate-based within-guideline statement) remain non-issues; case-029 t0's monolith (heterogeneous) keeps its split demand. Corpus scans (word-boundary regex over all 33 summaries) show only case-030 t0 carries an over-guideline acknowledgment or a standalone lint epic, so no passing trial's review changes.
+- **Edit 6 vs passing trials**: the only P1-into-P0 bundlings in the corpus (case-030 all trials, case-016/017/018/029) are shared-surface couplings; the passing ones already record rationale in-row — the edit only blocks the split demand the t0 path could trigger and adds the minor bare-pointer correction.
+- **Edit 3 contract matches the scorer's expectations**: the grader's 5/5 rationales quote exactly the row-flag-with-rationale and self-contained-note shapes (INSIGHTS "compliant bundling-record set", corpus-verified cand_0002 trials); the edit mandates those shapes and names only the bare-pointer as defective — matching the enumerated compliant set, not inventing a stricter one.
+
+## Three tests
+
+- REAL: single failing cluster, evidenced above from this iteration's trajectories. No hypothetical edits shipped.
+- SAFE: every edit is conditioned on a discriminator (shared-surface deliverable present / epic over guideline / tight-coupling bundling kept) that corpus scans show holds only for case-030-t0-shaped decompositions among the 33 trials; the 10 passing tasks' traces already exhibit the mandated compliant shapes. No global rule loosened; no deletion of text any passing task depends on (the only replaced text is the revise "split by sub-deliverable" entry, whose execution is the documented cause of the one failing trial).
+- VERIFIED: per-edit lines above.
+
+## Prior-work relationship
+
+- Built on cand_0002 (champion) — its accepted edits are intact in my baseline.
+- cand_0003 (Δ−0.034), cand_0005 (Δ−0.091), cand_0006 (Δ−0.004): all REJECTED on threshold with `broke={}` — none refuted the cluster mechanism, but all three accepted the 4-epic shape and enforced/mandated the RECORDING (triggers, row flags, validator checks 6/7). This batch is structurally different: it changes the shape DECISION (generation rule + review classification + revise correction) so the overage and the extracted epic never exist. The two recording edits I kept (3, 6) state the contract at the decision point with the grader-quoted shapes, not a second repetition of an existing rule.
+- Not re-tried: cand_0003's review Criterion-1 bundling DEMAND mirror, revise split-wiring rule, stale-sweep rule (per its handover).
+- cand_0006's diff.patch contains only DIAGNOSIS.json (truncated on copy) — its capability edits were unrecoverable and were NOT re-applied; nothing here duplicates them mechanically.
+
+## Process & features used
+
+Serial (no subagents/worktrees): one imperfect trial → one coherent cluster; the 7 edits span 4 files that must stay mutually consistent (decompose rule ↔ review classification ↔ revise playbook), so parallel edit-subagents would have conflicted. Read in full: `guidance/skill-package/SKILL.md` (levers: worked example, ordered procedure, output contract, decision-rule narrowing, playbook correction), `guidance/diagnose/SKILL.md` (per-trial reward decomposition, flaky separation, blast-radius naming), JOURNAL/LEDGER/INSIGHTS/rejected.jsonl, prior_iterations/cand_0006.
+
+## Honest expectations
+
+Headroom is +0.0076 val — below the gate's 0.3·SE bar on a wide noise draw (cand_0005: SE=0.0456) but above it on a tight draw (cand_0006: 0.3·SE=0.0043). Three prior threshold-rejections on this trial mean the honest read if this is rejected with `broke={}` remains: measurement-limited-at-ceiling; do not redesign. If case-030 still dips, grep the NEW trial's summary for the per-binary lint division and the `(bundled)` row BEFORE redesigning — a missing artifact means the reader didn't apply the rule (a glm-5-3 execution gap, consider code enforcement), a present artifact with dq-4 means a new grader gap.

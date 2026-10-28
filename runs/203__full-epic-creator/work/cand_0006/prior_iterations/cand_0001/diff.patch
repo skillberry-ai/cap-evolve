@@ -1,0 +1,227 @@
+--- a/DIAGNOSIS.json
++++ b/DIAGNOSIS.json
+@@ -0,0 +1,237 @@
++{
++  "candidate": "cand_0001",
++  "headline": "Bundled contract validator (judge-parity) as a structural gate in decompose/review/revise, plus targeted knowledge fixes for redundant-HLR consolidation, canonical component fallback, and soft-AC boundary",
++  "clusters": [
++    {
++      "id": "A",
++      "name": "epic body missing required section",
++      "detail": "Decompose agent renamed '## Scope' to '## Content Outline' on a docs-authoring epic; artifact_contract hard gate fails and reward drops to 0. Mechanically checkable, skipped by internal review and revise.",
++      "tasks": [
++        "case-020-hardware-dependent-investigation"
++      ],
++      "scope": "BOUNDED",
++      "latent": false,
++      "tag": "BEHAVIORAL"
++    },
++    {
++      "id": "B",
++      "name": "redundant HLRs split by priority label",
++      "detail": "Two HLRs describing one comparison surface (side-by-side + diff view) split into two epics; agent saw the overlap and split anyway; review endorsed 14/14. Expected handling: one epic listing both HLRs.",
++      "tasks": [
++        "case-015-redundant-hlrs"
++      ],
++      "scope": "BOUNDED",
++      "latent": false,
++      "tag": "KNOWLEDGE"
++    },
++    {
++      "id": "C",
++      "name": "priority inheritance violation",
++      "detail": "P1 epic directly blocks a P0 epic; rule exists but agent and reviewer both skip the mechanical enumeration of dependencies. Same latent defect in a currently-passing trial (case-018 t0).",
++      "tasks": [
++        "case-018-cross-strategy-dependency"
++      ],
++      "scope": "BOUNDED",
++      "latent": true,
++      "tag": "BEHAVIORAL"
++    },
++    {
++      "id": "D",
++      "name": "non-canonical component name",
++      "detail": "component 'Model Serving Stack' invented for a cross-component epic; prompt's fallback example itself modeled inventing a non-canonical name.",
++      "tasks": [
++        "case-013-human-process-gates"
++      ],
++      "scope": "BOUNDED",
++      "latent": false,
++      "tag": "KNOWLEDGE"
++    },
++    {
++      "id": "E",
++      "name": "Rule 11 docs-last closure gap",
++      "detail": "Branch-C docs-authoring epic's transitive dependencies missed one main-plan Implementation epic (E002).",
++      "tasks": [
++        "case-024-real-default-vector-store"
++      ],
++      "scope": "BOUNDED",
++      "latent": false,
++      "tag": "BEHAVIORAL"
++    },
++    {
++      "id": "F",
++      "name": "schedule-risk note as acceptance criterion",
++      "detail": "E005's final AC restates an external schedule constraint instead of a testable condition on the epic's deliverable \u2014 the rubric's canonical soft-AC exemplar.",
++      "tasks": [
++        "case-013-human-process-gates"
++      ],
++      "scope": "BOUNDED",
++      "latent": false,
++      "tag": "KNOWLEDGE"
++    }
++  ],
++  "edits": [
++    {
++      "id": "E1",
++      "title": "New bundled validator script (body sections, component vocabulary, Rule 11, priority inheritance) with judge-parity logic and --self-check",
++      "files": [
++        "epic-decompose/scripts/validate_decomposition.py"
++      ],
++      "lever": "STRUCTURAL",
++      "clusters": [
++        "A",
++        "C",
++        "D",
++        "E"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "Run over artifacts of all 33 trials extracted from ./trajectories/: flags exactly the 4 mechanically-failing trials (+ case-018 t0's identical latent priority defect); exits 0 on all 28 others; --self-check passes"
++    },
++    {
++      "id": "E2",
++      "title": "Validator as precondition of decompose_complete in decompose Step 8c (+ triage path in Step 0)",
++      "files": [
++        "epic-decompose/prompts/decompose-agent.md"
++      ],
++      "lever": "STRUCTURAL",
++      "clusters": [
++        "A",
++        "C",
++        "D",
++        "E"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "Sentinel ordering makes the run unavoidable; no-op on contract-clean decompositions (all passing trials)"
++    },
++    {
++      "id": "E3",
++      "title": "Review Step 1.7: run validator, map every VIOLATION to an issues-list entry + zeroed criterion",
++      "files": [
++        "epic-decompose/prompts/review-agent.md"
++      ],
++      "lever": "STRUCTURAL",
++      "clusters": [
++        "A",
++        "C",
++        "D",
++        "E"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "Targets the exact reviewer misses observed in traces; issues added only on violations"
++    },
++    {
++      "id": "E4",
++      "title": "Revise playbook for validator violations + re-run until OK in Step 4",
++      "files": [
++        "epic-decompose/prompts/revise-agent.md"
++      ],
++      "lever": "STRUCTURAL",
++      "clusters": [
++        "A",
++        "C",
++        "D",
++        "E"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "Revise only acts on review issues; corrections are the grader-endorsed remedies"
++    },
++    {
++      "id": "E5",
++      "title": "Step 2 component constraint rewritten: verbatim-from-list only, never invent/combine",
++      "files": [
++        "epic-decompose/prompts/decompose-agent.md"
++      ],
++      "lever": "CONTRACT",
++      "clusters": [
++        "D"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "trace case-013 t2 E005 'Model Serving Stack'; all passing trials already verbatim-canonical"
++    },
++    {
++      "id": "E6",
++      "title": "Step 4 redundant-HLR consolidation rule with worked example",
++      "files": [
++        "epic-decompose/prompts/decompose-agent.md"
++      ],
++      "lever": "KNOWLEDGE",
++      "clusters": [
++        "B"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "trace case-015 t1/t2 Health Warning 'overlap resolved by splitting'; passing trial t0 already consolidates; no passing task splits presentation modes of one surface"
++    },
++    {
++      "id": "E7",
++      "title": "Review Criterion 3: presentation-mode split is scope duplication (major)",
++      "files": [
++        "epic-decompose/prompts/review-agent.md"
++      ],
++      "lever": "KNOWLEDGE",
++      "clusters": [
++        "B"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "case-015 t2 review endorsed the split 14/14 \u2014 the added check names the exact pattern"
++    },
++    {
++      "id": "E8",
++      "title": "Step 7 AC boundary: external schedule constraints are not ACs (worked example)",
++      "files": [
++        "epic-decompose/prompts/decompose-agent.md"
++      ],
++      "lever": "KNOWLEDGE",
++      "clusters": [
++        "F"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "trace case-013 t0 E005 final AC is verbatim the example; no passing trial has a schedule-note AC"
++    },
++    {
++      "id": "E9",
++      "title": "Review Criterion 6: soft-AC scan flags schedule-constraint ACs (minor, move to Risks)",
++      "files": [
++        "epic-decompose/prompts/review-agent.md"
++      ],
++      "lever": "KNOWLEDGE",
++      "clusters": [
++        "F"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "case-013 t0's internal review observed the soft AC but scored around it; the issue entry now feeds the unconditional revise pass"
++    },
++    {
++      "id": "E10",
++      "title": "Step 8b: four body-section headings are literal for every epic incl. docs-authoring",
++      "files": [
++        "epic-decompose/prompts/decompose-agent.md"
++      ],
++      "lever": "CONTRACT",
++      "clusters": [
++        "A"
++      ],
++      "blast_radius": "BOUNDED",
++      "verified": "surveyed all 33 trials' docs epics: only case-020 t1 deviated (Content Outline)"
++    }
++  ],
++  "skipped": [
++    {
++      "title": "ai-signal rationale scoping",
++      "reason": "named in case-013 t0 feedback but did not drive the dq-4 verdict \u2014 fails the REAL test"
++    },
++    {
++      "title": "draft-ID-in-body and signals-table-in-body validator checks",
++      "reason": "no val trial fails on them this i
+... (truncated)

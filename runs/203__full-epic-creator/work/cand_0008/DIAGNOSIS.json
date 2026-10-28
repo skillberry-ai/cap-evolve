@@ -1,0 +1,59 @@
+{
+  "candidate": "cand_0008",
+  "headline": "Break the case-030 t0 churn chain with MECHANICAL enforcement of the epic shape: new validator check 6 (work-type-extracted enforcement deliverable -> per-surface fold-back) + generation rule with worked example + review size-classification + revise playbook replacement + two recording contracts (re-split trigger, bundled matrix row)",
+  "clusters": [
+    {
+      "id": "A",
+      "name": "review-driven work-type split of a shared-surface enforcement deliverable -> unmanaged overage + unrecorded bundling (dq 4/5)",
+      "detail": "t0's internal review docked Criterion 3 (E001 over the ~2-week guideline); the revise executed the 'Oversized epic: split by sub-deliverable' playbook entry by carving the CI lint rule into standalone E004 (enforcement-titled, same component as E001/E002); E001 stayed over guideline and the HLR-7 bundling stayed prose-only. Grader dq-4 names exactly these two gaps. Passing siblings t1/t2 keep 3 epics with the lint rule divided per binary and the bundling flagged in-row — shapes their 5/5 rationales quote.",
+      "tasks": ["case-030-real-operator-structured-logging"],
+      "scope": "BOUNDED",
+      "latent": false,
+      "tag": "BEHAVIORAL + KNOWLEDGE"
+    }
+  ],
+  "edits": [
+    {"id": "E1", "title": "Validator check 6: standalone enforcement deliverable (title regex + same-component sibling) with paste-ready fold-back FIX + self-check fixtures",
+     "files": ["epic-decompose/scripts/validate_decomposition.py"], "lever": "STRUCTURAL",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "--self-check passes; simulated on t0's reconstructed final shape (frontmatter read from the trace): exits 1 naming E004 with the fold-back instruction; Epic-List title scan over all 33 trials finds an enforcement-titled epic in exactly case-030 t0; lone-enforcement-epic negative fixture exempt"},
+    {"id": "E2", "title": "Step 5 boundary rule: shared-surface enforcement deliverables divide per surface, with worked example and lone-tool exemption",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "KNOWLEDGE",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "t1's summary records the per-binary division as the resolved shape ('each implementation epic authors and verifies the lint'); no other trial has a shared enforcement deliverable"},
+    {"id": "E3", "title": "Step 6.5: kept overage records estimate + rationale + concrete conditional re-split trigger",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "CONTRACT",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "the t2 grader quotes the trigger shape at 5/5; only t0 keeps a bare size note; passing size-flagged trials already write trigger-style conditionals"},
+    {"id": "E4", "title": "Step 4: kept bundling readable from the matrix row ((bundled) flag + inline rationale) or a self-contained note",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "CONTRACT",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "t1's 'E001 (bundled)' row and t2's Step-4 analysis are the grader-quoted 5/5 shapes; t0 is the only prose-only recording (corpus grep)"},
+    {"id": "E5", "title": "Step 8c validator description includes check 6 + fix path",
+     "files": ["epic-decompose/prompts/decompose-agent.md"], "lever": "CONTRACT",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "description matches the extended script"},
+    {"id": "E6", "title": "Review Step 1.7: check-6 violation -> MINOR Epic-Boundaries issue (no criterion zeroing) with named correction",
+     "files": ["epic-decompose/prompts/review-agent.md"], "lever": "STRUCTURAL",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "minor severity cannot fail a passing review; reaches the unconditional first revise"},
+    {"id": "E7", "title": "Review Criterion 3: classify size before flagging (monolith split / trigger watch-item / fold-back); un-actionable split suggestions forbidden; bundling-recording check",
+     "files": ["epic-decompose/prompts/review-agent.md"], "lever": "KNOWLEDGE",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "only case-030 t0's review ever docked for size (journal-verified); heterogeneous-monolith demand preserved (case-029 t0)"},
+    {"id": "E8", "title": "Revise playbook: replace 'Oversized epic: split by sub-deliverable' with the 3-shape classified fix; new check-6 fold-back entry; 'record trigger' / 'record bundling row' minor corrections",
+     "files": ["epic-decompose/prompts/revise-agent.md"], "lever": "STRUCTURAL",
+     "clusters": ["A"], "blast_radius": "BOUNDED",
+     "verified": "the replaced entry is the instruction that produced t0's lint epic; corrections are the grader-endorsed remedies; revise Step 4 re-runs the validator so the fold-back is forced"},
+    {"id": "E9", "title": "SKILL.md description 'Use when' clause (hygiene)",
+     "files": ["epic-decompose/SKILL.md"], "lever": "HYGIENE",
+     "clusters": [], "blast_radius": "BOUNDED",
+     "verified": "runner invokes by exact name; zero behavioral surface"}
+  ],
+  "skipped": [
+    {"title": "dq 4-vs-5 grader variance beyond the two named gaps", "reason": "no prompt defect; recording/shape contracts are the strongest lever"},
+    {"title": "mandated-AC Rules 24/25 validator prep", "reason": "judge staged thresholdless; not REAL"},
+    {"title": "dispatcher / fetch-agent changes", "reason": "no failures in those phases"}
+  ],
+  "techniques": ["bundled-script enforcement of epic SHAPE (not just recording)", "Write/Edit replay corpus reconstruction + Read-result frontmatter recovery", "Epic-List title scan for blast-radius verification", "review size classification", "phase-machine wiring (check fires at decompose, review, AND revise)"]
+}

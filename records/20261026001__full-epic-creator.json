@@ -1,0 +1,40 @@
+{
+  "run_id": 203,
+  "bench": "epic-creator",
+  "tier": "full",
+  "event": "manual",
+  "source": "epic-intake-v1 finalized",
+  "branch": "main",
+  "sha": "latest",
+  "date": "2026-10-26T23:05:17Z",
+  "iterations": 10,
+  "trials": 3,
+  "agent_model": "GLM 5.3",
+  "optimizer_model": "GLM 5.3",
+  "algorithm": "hill-climb",
+  "conclusion": "success",
+  "reward_baseline": 0.7024,
+  "reward_opt": 0.9,
+  "delta": 0.198,
+  "has_ui": true,
+  "suite": {
+    "reward_base": 0.7024,
+    "reward_opt": 0.9,
+    "eval_usd": 1962.52,
+    "optimizer_usd": 51.68,
+    "eval_seconds": 398816.42,
+    "optimizer_seconds": 8325.84,
+    "n": 21,
+    "n_scored": 21
+  },
+  "tasks": [
+    { "task": "case-021-real-pqc-base-image-compliance", "reward_baseline": 1.0, "reward_opt": 0.9167 },
+    { "task": "case-022-real-kueue-scheduling-visibility-ui", "reward_baseline": 1.0, "reward_opt": 0.9167 },
+    { "task": "case-023-real-maas-xks-deployment", "reward_baseline": 0.25, "reward_opt": 0.75 },
+    { "task": "case-025-real-eval-job-progress-ui", "reward_baseline": 0.6667, "reward_opt": 1.0 },
+    { "task": "case-026-real-agent-operator-productization", "reward_baseline": 0.6667, "reward_opt": 0.8 },
+    { "task": "case-027-real-feature-store-admin-ui", "reward_baseline": 0.6667, "reward_opt": 1.0 },
+    { "task": "case-028-real-standalone-keda-autoscaling", "reward_baseline": 0.6667, "reward_opt": 0.9167 }
+  ],
+  "note": "10 iterations, best candidate cand_0002. Validation score improved from 0.918 to 0.992. Test improvement: +0.198 points (28% gain). Optimized for GLM 5.3. Per-task rewards are the mean over 3 trials of seed vs FINAL on the 7-case test split."
+}

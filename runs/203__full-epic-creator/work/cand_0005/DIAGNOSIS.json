@@ -1,0 +1,166 @@
+{
+  "candidate": "cand_0005",
+  "headline": "Close the last flaky trial's dq-4: epic-size overage triggers (validator check 6 + review Criterion 3 scoring calibration + decompose Step 6.5 + revise playbook) and the on-matrix bundling recording convention",
+  "clusters": [
+    {
+      "id": "A",
+      "name": "acknowledged epic-size overage without a re-split trigger (dq 4)",
+      "detail": "case-030 t0 kept E001 (~1.25-1.5 sprints) above the ~2-week guideline as a bare 'flagged for planning awareness only' Health Warning; the internal review docked Criterion 3 to 1/2 and demanded an un-actionable split, whose execution left the overage unresolved and injected a DAG violation the re-review failed; the external grader docked exactly this ('the size remains above guideline, which the embedded adversarial review also docked'). Passing siblings record a trigger/watch item (t2: 're-split if the audit exceeds the 75% estimate') and score 5/5 with 14/14 internal reviews.",
+      "tasks": [
+        "case-030-real-operator-structured-logging"
+      ],
+      "scope": "BOUNDED",
+      "latent": false,
+      "tag": "KNOWLEDGE + BEHAVIORAL"
+    },
+    {
+      "id": "B",
+      "name": "justified P1-into-P0 bundling recorded off-matrix (grader's second named half-gap)",
+      "detail": "HLR-7's bundling rationale lived in remote prose plus a bare-pointer sentence after the matrix; the graders' 5/5 rationales quote the on-the-record shapes (t1: matrix row 'E001 (bundled)' with inline rationale; t2: labeled Step-4 priority-split analysis).",
+      "tasks": [
+        "case-030-real-operator-structured-logging"
+      ],
+      "scope": "BOUNDED",
+      "latent": false,
+      "tag": "KNOWLEDGE"
+    }
+  ],
+  "edits": [
+    {
+      "id": "E1",
+      "title": "Review Criterion 3: demand a re-split trigger, not an un-actionable split; triggered overage may score 2",
+      "files": [
+        "epic-decompose/prompts/review-agent.md"
+      ],
+      "lever": "DECISION-RULE NARROWING",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "corpus scan: only case-030 t0's review docked for size; passing reviews already use trigger/watch-item (case-019 t1, case-020 t1, case-030 t1/t2); case-029 t0 monolith split demand preserved"
+    },
+    {
+      "id": "E2",
+      "title": "Decompose Step 6.5: kept overage must carry a re-split trigger in the Health Warning",
+      "files": [
+        "epic-decompose/prompts/decompose-agent.md"
+      ],
+      "lever": "KNOWLEDGE (missing rule)",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "corpus scan: only case-030 t0 wrote an overage warning; no other trial's behavior changes"
+    },
+    {
+      "id": "E3",
+      "title": "Validator check 6: epic-size overage triggers (summary-side, negation-guarded, judge parity)",
+      "files": [
+        "epic-decompose/scripts/validate_decomposition.py"
+      ],
+      "lever": "STRUCTURAL (bundled script)",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "end-to-end over all 33 reconstructed trials: fires on exactly case-030 t0, nothing else; --self-check passes (bare-note fixture fires; triggered-overage and negation fixtures clean)"
+    },
+    {
+      "id": "E4",
+      "title": "Step 8c: validator description includes the overage-trigger check; fix path names the summary",
+      "files": [
+        "epic-decompose/prompts/decompose-agent.md"
+      ],
+      "lever": "CONTRACT",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "description matches the extended script's checks"
+    },
+    {
+      "id": "E5",
+      "title": "Review Step 1.7: missing re-split trigger -> minor Epic-Boundaries issue (does not zero; reaches the unconditional revise)",
+      "files": [
+        "epic-decompose/prompts/review-agent.md"
+      ],
+      "lever": "STRUCTURAL (issue mapping)",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "phase machine re-verified in pipeline_state.py; minor severity cannot fail a passing review"
+    },
+    {
+      "id": "E6",
+      "title": "Revise playbook: oversized-but-one-logical-change -> add the trigger, do NOT split",
+      "files": [
+        "epic-decompose/prompts/revise-agent.md"
+      ],
+      "lever": "STRUCTURAL (revise playbook)",
+      "clusters": [
+        "A"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "targets the t0 revise's exact churn (split executed, overage remained, new edge failed re-review)"
+    },
+    {
+      "id": "E7",
+      "title": "Decompose Step 4: bundling recorded as a `bundled` flag + inline rationale in the matrix row",
+      "files": [
+        "epic-decompose/prompts/decompose-agent.md"
+      ],
+      "lever": "KNOWLEDGE (recording convention)",
+      "clusters": [
+        "B"
+      ],
+      "blast_radius": "BOUNDED",
+      "verified": "the flagged shape is the t1 row the grader quoted at 5/5; no judge consumes matrix cells mechanically; no review-side demand added (passing trials' heterogeneous shapes stay acceptable)"
+    },
+    {
+      "id": "E8",
+      "title": "SKILL.md description: add the 'Use when' clause (validation-warning hygiene)",
+      "files": [
+        "epic-decompose/SKILL.md"
+      ],
+      "lever": "CONTRACT (frontmatter)",
+      "clusters": [],
+      "blast_radius": "NONE",
+      "verified": "runner invokes the skill by exact name; description not consulted at runtime"
+    }
+  ],
+  "skipped": [
+    {
+      "title": "review-side bundling DEMAND (missing row flag as a review issue)",
+      "reason": "corpus scan: passing bundling trials (case-014/015/018/029) record analyses heterogeneously and score 5/5 \u2014 a demand would churn passing tasks"
+    },
+    {
+      "title": "mechanical matrix-row bundling check",
+      "reason": "draft implementations flagged 13 passing trials \u2014 fails SAFE calibration"
+    },
+    {
+      "title": "revise-time stale-sweep rule",
+      "reason": "grader called the stale text 'not structural'; part of cand_0003's rejected batch; no split happens under the new rules"
+    },
+    {
+      "title": "case-030 t0 review nits (lint wording, CI timing)",
+      "reason": "t1/t2 graders scored the same nits 5/5 as self-identified \u2014 fails REAL"
+    },
+    {
+      "title": "mandated-AC (Rules 24/25) validator checks",
+      "reason": "judge staged thresholdless (B9) \u2014 not REAL"
+    },
+    {
+      "title": "robustness edits on the 10 solid tasks",
+      "reason": "all 30 trials at 1.0 in this trajectory set \u2014 fails REAL; regression risk at ceiling"
+    }
+  ],
+  "techniques": [
+    "per-trial reward decomposition",
+    "artifact-diff of failing vs passing siblings (grader-quoted shapes)",
+    "phase-machine analysis of the review/revise loop",
+    "bundled-script enforcement (judge parity)",
+    "corpus blast-radius verification (33 reconstructed trials)",
+    "decision-rule narrowing via discriminating condition"
+  ]
+}
