@@ -1,0 +1,41 @@
+## yaml: K2 s0 -> E3B GATE-K1.65 s0 (s1,s2 identical)
+22c22
+< gate_k_se: 2.0
+---
+> gate_k_se: 1.65
+## yaml: K2 s0 -> A2b s2 (s3 identical)
+1c1
+< capabilities: [system-prompt, tools]
+---
+> capabilities: [system-prompt]
+29a30
+> abl2_scope: policy
+## env: K2GATE_AWS naive s0 (aws recipe, normalised) -> E3B s0
+10c10
+< export TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-48} TAU2_SIM_TIMEOUT=3600 MAX_TOKENS=8000
+---
+> export TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-16} TAU2_SIM_TIMEOUT=3600 MAX_TOKENS=8000
+## env: ABL2 A2b s1 (nearest on-disk A2b recipe; s0 env at ABL2/A2b/s0) -> A2b s2
+10c10
+< export TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-24} TAU2_SIM_TIMEOUT=3600 MAX_TOKENS=8000
+---
+> export TAU2_MAX_CONCURRENCY=${TAU2_MAX_CONCURRENCY:-16} TAU2_SIM_TIMEOUT=3600 MAX_TOKENS=8000
+## sha
+ "arm": "GATE-K1.65",
+ "code_sha": "329399b1370cc390149735a18eea723ba6741b0e",
+ "code_dirty": false,
+ "adapter_sha256": "9c797d8ac90425172fd5bc9c5e39d90cdaddb5eed938e90708c5de148869cbc9",
+ "spec_sha256": "11fd9912eb10471e5cb03de84cd419298217aecb145d9c724a2c2a3434cf0757",
+ "instructions_sha256": "4276176680f076a7c825faa285103b1131b49189a2e2be84f26042e515e8d0c2",
+ "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+ "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+ "shim_sha256": "3f9958fb4a3af4f78032519aca61fcb28a13433e592b29449cf0f079e6ba228a",
+ "arm": "A2b",
+ "code_sha": "e26b5ae909d2edc2257e861e55b7d4924fdac6fc",
+ "code_dirty": false,
+ "adapter_sha256": "9c797d8ac90425172fd5bc9c5e39d90cdaddb5eed938e90708c5de148869cbc9",
+ "spec_sha256": "4ca509d4ac1156c031f0ca2a27a3122dde739defcbcb8492309def5d6b3eb0c5",
+ "instructions_sha256": "ecb594b13bcc7cafb8739e329e25a9d578c971226d405b52bcd30206cf862953",
+ "seed_policy_sha256": "5dfecbf35de344dc6dc4b8a79c4e5327122b2737250403b04abf2060fbc3927f",
+ "seed_tools_sha256": "9fdc1955769dc12dbf32b901e3f32c30e1d0f5bb1b5d41e520c22384b28ab42c",
+ "shim_sha256": "27aab851eefa856c5faa4d21282bdfdc93bea7a2b7658cad9d6e644525f8a92c",
