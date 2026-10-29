@@ -617,6 +617,7 @@ def main():
                          ("R4E1E6_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_R4E1E6.json", "R4E1E6 window artifact manifest"),
                          ("R4E1E6_champions", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "champions_R4E1E6.json", "R4E1E6 window champions file (build version)"),
                          ("R4E1E6_cellmap", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "cellmap_R4E1E6.json", "R4E1E6 cell map (35 labels to 30 cells; five duplicate pairs named by the E6 label)"),
+                         ("expand_r4e1e6.py", PAPER / "analysis/scripts/expand_r4e1e6.py", "R4E1E6 results expansion by the order cell map and three aliases, written and registered BEFORE the window ends (amendment 12 erratum 122)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
