@@ -654,6 +654,7 @@ def main():
                          ("NC2_A1a_s3_env.sh", CS / "runs/NC2/A1a/s3/env.sh", "A1a s3 env.sh before launch (amendment 12 erratum 135)"),
                          ("NC2_A1a_s3_task_prompt.txt", CS / "runs/NC2/A1a/s3/task_prompt.txt", "A1a s3 task_prompt.txt before launch (amendment 12 erratum 135)"),
                          ("NC2_A1a_s3_train_ids.json", CS / "runs/NC2/A1a/s3/train_ids.json", "A1a s3 train_ids.json before launch (amendment 12 erratum 135)"),
+                         ("e5a_order_reordered_tier1_first.json", PAPER / "analysis/inputs/e5a_order_reordered_tier1_first.json", "E5a reordered cell sequence: Tier 1 (trial 0 of seed, cape_k02, trace2skill, gepa_full, skillopt), then ace and gepa trial 0, then trial 1 of all seven arms; a permutation of the registered 5,838 cells with idx and fields preserved (amendment 12 erratum 136)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
