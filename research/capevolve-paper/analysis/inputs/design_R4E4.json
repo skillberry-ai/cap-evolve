@@ -1,0 +1,81 @@
+{
+ "name": "R4E4",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "NOTE": "second agent model M2 fixed by the registered smoke rule BEFORE the order (addendum 24); user simulator and judge unchanged (aws gpt-oss-120b); 10 trials per task in champion cells, 20 in the seed",
+ "groups": {
+  "CE": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "PUB": [
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2",
+   "gepafull/s0",
+   "gepafull/s1",
+   "gepafull/s2",
+   "evoskill/s0",
+   "evoskill/s1",
+   "evoskill/s2",
+   "trace2skill/s0",
+   "trace2skill/s1",
+   "trace2skill/s2"
+  ],
+  "SKILLOPT": [
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2"
+  ],
+  "GEPAFULL": [
+   "gepafull/s0",
+   "gepafull/s1",
+   "gepafull/s2"
+  ],
+  "EVOSKILL": [
+   "evoskill/s0",
+   "evoskill/s1",
+   "evoskill/s2"
+  ],
+  "TRACE2SKILL": [
+   "trace2skill/s0",
+   "trace2skill/s1",
+   "trace2skill/s2"
+  ]
+ },
+ "primary": [
+  [
+   "CE",
+   "seed"
+  ]
+ ],
+ "primary_holm": false,
+ "secondary": [
+  [
+   "CE",
+   "PUB"
+  ],
+  [
+   "PUB",
+   "seed"
+  ],
+  [
+   "CE",
+   "SKILLOPT"
+  ],
+  [
+   "CE",
+   "GEPAFULL"
+  ],
+  [
+   "CE",
+   "EVOSKILL"
+  ],
+  [
+   "CE",
+   "TRACE2SKILL"
+  ]
+ ],
+ "sensitivity": []
+}
