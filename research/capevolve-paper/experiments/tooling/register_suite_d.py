@@ -628,6 +628,8 @@ def main():
                          ("e5a_prelaunch.sh", CS / "e5a/scripts/prelaunch.sh", "E5a launch-time re-hash script (arms, harness files, data root, order sha), amendment 12 erratum 125"),
                          ("e4_smoke_acked_result.json", CS / "runs/E4_SMOKE/smoke_qwen_acked.json", "E4 smoke result from the acked script 0cf91c0d, run once: Qwen3.6-35B-A3B, thinking off (amendment 12 erratum 126)"),
                          ("e4_smoke_acked_result.err", CS / "runs/E4_SMOKE/smoke_qwen_acked.err", "E4 smoke stderr"),
+                         ("appworld_data_CHANGELOG_020.md", PAPER / "analysis/inputs/appworld_data_CHANGELOG_020.md", "AppWorld data changelog as shipped in data 0.2.0 (amendment 12 erratum 127)"),
+                         ("e5a_prelaunch_out.txt", CS / "e5a/prelaunch_out.txt", "E5a launch-time re-hash output of aw-e5a-runner (arms, harness files, data tree hash, order sha)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
