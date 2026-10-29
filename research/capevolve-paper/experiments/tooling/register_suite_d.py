@@ -610,6 +610,7 @@ def main():
                          ("GATE_NAIVE_K2A_s3_candidates.jsonl", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/candidates.jsonl", "NAIVE s3 candidates log"),
                          ("GATE_NAIVE_K2A_s0_final_events.jsonl", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s0/.capevolve/run_main/events.jsonl", "NAIVE s0 events at its end"),
                          ("GATE_NAIVE_K2A_s3_final_events.jsonl", CS / "runs/K2GATE_AWS/GATE-NAIVE-K2A/s3/.capevolve/run_main/events.jsonl", "NAIVE s3 events at its end"),
+                         ("design_R4E1E6.json", PAPER / "analysis/inputs/design_R4E1E6.json", "E1/E6 analysis DESIGN.json generated from the registered v2 design (groups, 5 secondaries, 5 sensitivities, 30 chains), BEFORE the order is built (amendment 12 erratum 117)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
