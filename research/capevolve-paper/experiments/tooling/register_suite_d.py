@@ -689,6 +689,7 @@ def main():
                          ("order_E1X_jsonl", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests/order_E1X.jsonl"), "family 1 (E1X) order package, acked in erratum 145"),
                          ("artifacts_E1X_json", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests/artifacts_E1X.json"), "family 1 (E1X) order package, acked in erratum 145"),
                          ("champions_E1X_json", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests/champions_E1X.json"), "family 1 (E1X) order package, acked in erratum 145"),
+                         ("fam1_PLAN_v16", Path("/tmp/rr/paper/research_revision/exp1/PLAN_v16.md"), "family 1 PLAN v16 (2,000 jobs; erratum 146)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
