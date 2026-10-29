@@ -661,6 +661,7 @@ def main():
                          ("e5a_order_registered_copy.sha256", CS / "e5a/window/state/order_registered.sha256", "copy of the registered E5a order.sha256"),
                          ("NC2_A1a_s2_session_start.txt", CS / "runs/NC2/A1a/s2/session_start.txt", "A1a s2 session start (2026-10-29 04:56:56 UTC)"),
                          ("NC2_A1a_s3_session_start.txt", CS / "runs/NC2/A1a/s3/session_start.txt", "A1a s3 session start (2026-10-29 04:57:00 UTC)"),
+                         ("e5a_order_reordered_inflight_last.json", PAPER / "analysis/inputs/e5a_order_reordered_inflight_last.json", "E5a reordered sequence with the single cell in flight at the drain (idx 314) moved to the end; otherwise identical to the acked reordered file (amendment 12 erratum 138)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
