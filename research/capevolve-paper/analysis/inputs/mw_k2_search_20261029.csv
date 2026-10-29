@@ -1,0 +1,5 @@
+search,run_id,champion,champion_matches_champion_json,candidates_evaluated,n_candidates_evaluated_run_summary,iterations,accepted_steps,accepted_iterations,accepted_gate_delta_se,start_search_score,final_incumbent_search_score,search_gain,heldout_gain,gamma,optimizer_calls,wall_hours,rollouts_used,truncated_steps,truncated_candidates,other_optimizer_errors,champion_session_hit_turn_cap,list_optimizer_usd,list_agent_user_usd,list_total_usd,metered_optimizer_usd,metered_total_usd
+1,GATE-K2-s0,cand_0014,True,19,20,19,3,3 8 14,+0.147/0.060 +0.107/0.049 +0.107/0.033,0.5533,0.9133,0.36,0.13,0.361,1177,18.05,3000,0,,0,False,84.13,67.35,151.48,61.4298,128.5626
+2,GATE-K2-s1,cand_0013,True,19,20,19,3,2 5 13,+0.147/0.067 +0.120/0.057 +0.087/0.038,0.5733,0.9267,0.3533,0.145,0.41,1043,16.54,3000,0,,0,False,64.1,54.63,118.73,48.5634,103.0105
+3,GATE-K2-s3,cand_0011,True,19,20,19,2,2 11,+0.173/0.057 +0.100/0.042,0.5533,0.8267,0.2733,0.125,0.457,1167,16.64,3000,2,cand_0011 cand_0017,0,True,78.48,55.59,134.07,61.3942,116.6996
+mean,,,,19.0,,,2.6667,,,,,0.3289,0.1333,,1129.0,17.0767,3000.0,0.6667,,,,75.57,59.19,134.76,57.1291,116.0909
