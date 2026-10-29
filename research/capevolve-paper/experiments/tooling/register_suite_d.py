@@ -683,6 +683,8 @@ def main():
                          ("fam1_prose_seed_primitives_py", Path("/tmp/rr/paper/research_revision/exp1/prose/seed_primitives.py"), "family 1 (2x2 recipe vs prose) pre-registration input, addendum 28, registered before any arm exists"),
                          ("fam1_PLAN_md_sections1to14", Path("/tmp/rr/paper/research_revision/exp1/PLAN.md"), "family 1 PLAN, sections 1 to 14 (addendum 29)"),
                          ("exp1_order.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/exp1_order.py"), "family 1 order builder: r4_order.py plus the salt R4X (addendum 30)"),
+                         ("exp1_order_v2.py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/exp1_order.py"), "family 1 order builder v2 (drops the seed-check cell; addendum 31)"),
+                         ("fam1_PLAN_v15", Path("/tmp/rr/paper/research_revision/exp1/PLAN_v15.md"), "family 1 PLAN v15 (seed anchor, build_arms answer; addendum 31)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
