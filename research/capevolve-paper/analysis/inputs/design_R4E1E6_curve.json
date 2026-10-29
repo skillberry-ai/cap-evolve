@@ -1,0 +1,75 @@
+{
+ "name": "R4E1E6_curve",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "NOTE": "ADDED AFTER the registered primary was read (erratum 141): each budget-curve point and SkillOpt against the seed, descriptive, same method; the primary and the registered secondaries are in design_R4E1E6.json",
+ "groups": {
+  "CE1000": [
+   "E1-s0-0003/s0",
+   "E1-s1-0005/s0",
+   "E1-s3-0002/s0"
+  ],
+  "CE1500": [
+   "E1-s0-0008/s0",
+   "E1-s1-0005/s0",
+   "E1-s3-0002/s0"
+  ],
+  "CE68": [
+   "E1-s0-0008/s0",
+   "E1-s1-0005/s0",
+   "E1-s3-0002/s0"
+  ],
+  "CE2000": [
+   "E1-s0-0008/s0",
+   "E1-s1-0005/s0",
+   "E1-s3-0011/s0"
+  ],
+  "CEfinal": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "SkillOpt": [
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2"
+  ]
+ },
+ "primary": [],
+ "primary_holm": false,
+ "secondary": [
+  [
+   "CE1000",
+   "seed"
+  ],
+  [
+   "CE1500",
+   "seed"
+  ],
+  [
+   "CE68",
+   "seed"
+  ],
+  [
+   "CE2000",
+   "seed"
+  ],
+  [
+   "CEfinal",
+   "seed"
+  ],
+  [
+   "SkillOpt",
+   "seed"
+  ],
+  [
+   "CE1000",
+   "CEfinal"
+  ],
+  [
+   "CE2000",
+   "CEfinal"
+  ]
+ ],
+ "sensitivity": []
+}
