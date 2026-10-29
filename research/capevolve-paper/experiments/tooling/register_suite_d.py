@@ -729,6 +729,8 @@ def main():
                          ("rr5_e1_cost_matched_list_csv", Path("/tmp/rr/paper/research_revision/canonical/e1_cost_matched_list.csv"), "E1 cost-matched output on the pricing.json basis (erratum 157)"),
                          ("awx_pilot_order_json", Path("/home/dev/projects2/campaign-scratch/final_eval/AWX/pilot_order/order_AWX.json"), "AWX NON-SCORING pilot order (20 cells, dev tasks, SBASE 9500); never pooled (erratum 158)"),
                          ("awx_pilot_tasks_txt", Path("/tmp/rr/paper/research_revision/exp1/aw/pilot_tasks.txt"), "AWX pilot dev task ids (erratum 158)"),
+                         ("r4w_order_py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/r4w_order.py"), "R4WIN seed-slot builder: r4_order.py plus C.SEEDS = [0,1,2,3] (erratum 159)"),
+                         ("r4win_smoke_order", Path("/home/dev/projects2/campaign-scratch/final_eval/R4WIN_SMOKE/order_R4WINSMOKE.jsonl"), "R4WIN TRAIN-task NON-SCORING smoke order (80 jobs); never pooled (erratum 159)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
