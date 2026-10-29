@@ -1,0 +1,31 @@
+{
+ "tag": "ABL-GATE-K2-s0",
+ "roles": {
+  "user": {
+   "in": 15590802.0,
+   "cw": 0.0,
+   "cr": 0.0,
+   "out": 2854808.0,
+   "calls": 14520.0
+  },
+  "target": {
+   "in": 388011418.0,
+   "cw": 0.0,
+   "cr": 0.0,
+   "out": 8488450.0,
+   "calls": 26652.0
+  },
+  "optimizer": {
+   "in": 2346.0,
+   "cw": 4631059.0,
+   "cr": 158002721.0,
+   "out": 4094853.0,
+   "calls": 1177.0
+  }
+ },
+ "optimizer_usd_list": 63.94,
+ "agent_user_usd": 67.35,
+ "total_usd_list": 131.29,
+ "wall_h": 18.1,
+ "list_basis": "sonnet_1.52_7.60"
+}
