@@ -630,6 +630,8 @@ def main():
                          ("e4_smoke_acked_result.err", CS / "runs/E4_SMOKE/smoke_qwen_acked.err", "E4 smoke stderr"),
                          ("appworld_data_CHANGELOG_020.md", PAPER / "analysis/inputs/appworld_data_CHANGELOG_020.md", "AppWorld data changelog as shipped in data 0.2.0 (amendment 12 erratum 127)"),
                          ("e5a_prelaunch_out.txt", CS / "e5a/prelaunch_out.txt", "E5a launch-time re-hash output of aw-e5a-runner (arms, harness files, data tree hash, order sha)"),
+                         ("e5a_root020_basedbs_apidocs_manifest.json", PAPER / "analysis/inputs/e5a_root020_basedbs_apidocs_manifest.json", "sha256 of every file of root_020 data/base_dbs (13 files) and data/api_docs (55 files), computed by the reviewer after the E5a launch (amendment 12 erratum 128)"),
+                         ("e5a_notes_v2.md", Path("/tmp/review_story/r4_e5a.md"), "aw-e5a-runner notes after the data comparison"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
