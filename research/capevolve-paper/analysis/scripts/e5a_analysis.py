@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""E5a analysis: AppWorld test_challenge, frozen artifacts, 2 trials per task (amendment 12 addendum 25). Written BEFORE any episode exists. Exploratory.
+"""E5a analysis v2: AppWorld test_challenge, frozen artifacts, 2 trials per task (amendment 12 addendum 25 and erratum 134). Written BEFORE any outcome of the window was read. Exploratory.
+v2 adds PAIRWISE-COMPLETE mode for an INCOMPLETE window: each arm's TGC and SGC over its own completed (task, trial) cells, and each contrast between two arms over the cells where BOTH are complete (a paired scenario bootstrap on that common set); the all-arms-complete analysis of v1 is still printed first. When the window is complete the two coincide.
 
 Input: STATE_DIR/records/<idx>.json written by run_window.py (fields idx, arm, task_id, scenario, trial, success, error_kind, termination, n_steps, ...), STATE_DIR/order.sha256,
 and the registered window definition (arms, tasks, trials). One record per (arm, task, trial).
@@ -28,6 +29,33 @@ def holm(ps):
     for i, (k, p) in enumerate(items):
         run = max(run, min(1.0, (m - i) * p)); adj[k] = run
     return adj
+
+
+def pairwise_block(arms_all, byc, tasks, scen, trials, label):
+    """Pairwise-complete: for each contrast (A minus B) use (task, trial) cells where both A and B have a record; bootstrap scenarios."""
+    scenarios = sorted(set(scen.values())); sidx = {s: i for i, s in enumerate(scenarios)}; S = len(scenarios)
+    rng = np.random.default_rng(20261030); B = 10000
+    def pair(a, b):
+        cells = [(t, k) for t in tasks for k in range(trials) if (a, t, k) in byc and (b, t, k) in byc]
+        sa = np.zeros(S); sb = np.zeros(S); nn = np.zeros(S)
+        for (t, k) in cells:
+            s = sidx[scen[t]]; nn[s] += 1; sa[s] += float(bool(byc[(a, t, k)]["success"])); sb[s] += float(bool(byc[(b, t, k)]["success"]))
+        def st(ix):
+            w = nn[ix].sum(); return (sa[ix].sum() - sb[ix].sum()) / w if w else float("nan")
+        d0 = st(np.arange(S)); db = np.array([st(rng.integers(0, S, S)) for _ in range(B)]); db = db[~np.isnan(db)]
+        lo, hi = np.percentile(db, [2.5, 97.5]); p = max(2 * min((db <= 0).mean(), (db >= 0).mean()), 1 / (B + 1))
+        return d0, lo, hi, p, len(cells)
+    L = [f"## {label}", "", "| contrast | common cells | TGC diff [95% CI] | raw p |", "|---|---|---|---|"]
+    for a in arms_all:
+        if a == "seed": continue
+        d, lo, hi, p, n = pair(a, "seed"); L.append(f"| {a} minus seed | {n} | {sg(d * 100, 1)} [{f(lo * 100, 1)}, {f(hi * 100, 1)}] | {pf(p)} |")
+    if "cape_k02" in arms_all:
+        comps = [a for a in arms_all if a not in ("seed", "cape_k02")]; ps = {}; rows = []
+        for a in comps:
+            d, lo, hi, p, n = pair("cape_k02", a); ps[a] = p; rows.append((a, d, lo, hi, p, n))
+        ha = holm(ps)
+        for a, d, lo, hi, p, n in rows: L.append(f"| cape_k02 minus {a} | {n} | {sg(d * 100, 1)} [{f(lo * 100, 1)}, {f(hi * 100, 1)}] | {pf(p)} (Holm {pf(ha[a])}) |")
+    return L + [""]
 
 
 def main():
@@ -112,7 +140,8 @@ def main():
                 J[f"{label}|cape_k02 minus mean of comparators|TGC"] = dict(d=d * 100, lo=lo * 100, hi=hi * 100, p=p)
                 out += ["", f"POOLED: cape_k02 minus the equal-weight mean of the {len(comps)} comparators ({', '.join(comps)}): TGC {sg(d * 100, 1)} [{f(lo * 100, 1)}, {f(hi * 100, 1)}], raw p {pf(p)}; SGC {sg(ds * 100, 1)} [{f(los * 100, 1)}, {f(his * 100, 1)}]. This is a test against the AVERAGE comparator."]
         return out + [""]
-    L += [""] + analyse("PRIMARY (infra scored 0)", False) + analyse("SENSITIVITY (cells with an infra failure in any arm dropped for all arms)", True)
+    L += [""] + pairwise_block(arms, byc, tasks, scen, trials, "PAIRWISE-COMPLETE (infra scored 0): each contrast uses the (task, trial) cells where both arms have a record")
+    L += analyse("ALL-ARMS-COMPLETE (infra scored 0)", False) + analyse("SENSITIVITY, all-arms-complete (cells with an infra failure in any arm dropped for all arms)", True)
     L += ["Each AppWorld arm is ONE search (the frozen artifact of one optimization run); intervals are over scenarios of test_challenge for these artifacts and do not carry search-to-search variation. The harder-difficulty split is disjoint from train, dev and test_normal.",
           "Seed-relative SE planning (planning document, not re-derived): about 1.5 to 2.0 TGC points for a CapEvolve-vs-X contrast at 2 trials."]
     os.makedirs(OUT, exist_ok=True); open(os.path.join(OUT, "e5a.md"), "w").write("\n".join(L) + "\n"); json.dump(J, open(os.path.join(OUT, "e5a.json"), "w"), indent=1)
