@@ -760,6 +760,7 @@ def main():
                          ("r4mq_r4_md", PAPER / "analysis/out/unblind_20261029/r4mq/r4.md", "E4 (R4MQ) registered analysis output (erratum 165)"),
                          ("r4mq_r4_json", PAPER / "analysis/out/unblind_20261029/r4mq/r4.json", "E4 (R4MQ) registered analysis output json (erratum 165)"),
                          ("R4MQ_registered_md", Path("/tmp/rr/paper/research_revision/R4MQ_registered.md"), "E4 summary for team-lead (erratum 165)"),
+                         ("ncf_design_v1", Path("/tmp/rr/paper/research_revision/exp1/NCF_DESIGN.md"), "family 3 (NCF) design DRAFT v1 by ablation-lead; superseded where erratum 168 says so"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
