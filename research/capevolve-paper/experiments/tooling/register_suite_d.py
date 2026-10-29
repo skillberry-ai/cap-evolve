@@ -727,6 +727,8 @@ def main():
                          ("rr5_e1_cost_acceptance_sens_py", Path("/tmp/rr/paper/research_revision/canonical/e1_cost_acceptance_sensitivity.py"), "E1 acceptance-iteration cost sensitivity (erratum 157)"),
                          ("rr5_e1_cost_matched_list_py_v2", Path("/tmp/rr/paper/research_revision/canonical/e1_cost_matched_list.py"), "E1 cost-matched script after the loader fix (erratum 156)"),
                          ("rr5_e1_cost_matched_list_csv", Path("/tmp/rr/paper/research_revision/canonical/e1_cost_matched_list.csv"), "E1 cost-matched output on the pricing.json basis (erratum 157)"),
+                         ("awx_pilot_order_json", Path("/home/dev/projects2/campaign-scratch/final_eval/AWX/pilot_order/order_AWX.json"), "AWX NON-SCORING pilot order (20 cells, dev tasks, SBASE 9500); never pooled (erratum 158)"),
+                         ("awx_pilot_tasks_txt", Path("/tmp/rr/paper/research_revision/exp1/aw/pilot_tasks.txt"), "AWX pilot dev task ids (erratum 158)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
