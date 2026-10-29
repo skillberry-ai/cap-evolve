@@ -721,6 +721,8 @@ def main():
                          ("fam1_posthoc.py", PAPER / "analysis/scripts/fam1_posthoc.py", "family 1 post hoc code - prose script (erratum 152)"),
                          ("e1x_fam1_posthoc_md", PAPER / "analysis/out/unblind_20261029/e1x/fam1_posthoc.md", "family 1 post hoc output (erratum 152)"),
                          ("pricing_json", PAPER / "protocol/pricing.json", "first-party list price table, retrieved 2026-10-11 (erratum 152)"),
+                         ("rr3_search_cost_newbasis_py", Path("/tmp/rr/paper/research_revision/canonical/search_cost_newbasis.py"), "search cost on the pricing.json basis (erratum 153)"),
+                         ("rr3_search_cost_newbasis_csv", Path("/tmp/rr/paper/research_revision/canonical/search_cost_newbasis.csv"), "search cost on the pricing.json basis (erratum 153)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
