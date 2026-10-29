@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main", "R4E1E6/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main", "R4E1E6/main", "R4MQ/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -632,6 +632,9 @@ def main():
                          ("e5a_prelaunch_out.txt", CS / "e5a/prelaunch_out.txt", "E5a launch-time re-hash output of aw-e5a-runner (arms, harness files, data tree hash, order sha)"),
                          ("e5a_root020_basedbs_apidocs_manifest.json", PAPER / "analysis/inputs/e5a_root020_basedbs_apidocs_manifest.json", "sha256 of every file of root_020 data/base_dbs (13 files) and data/api_docs (55 files), computed by the reviewer after the E5a launch (amendment 12 erratum 128)"),
                          ("e5a_notes_v2.md", Path("/tmp/review_story/r4_e5a.md"), "aw-e5a-runner notes after the data comparison"),
+                         ("R4MQ_order", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "order_R4MQ.jsonl", "E4 cross-model window order (3,600 test jobs; agent Qwen3.6-35B-A3B thinking off on :4114; user and judge aws gpt-oss; salt R4M), registered before launch (amendment 12 erratum 129)"),
+                         ("R4MQ_artifact_manifest", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests") / "artifacts_R4MQ.json", "E4 window artifact manifest"),
+                         ("R4MQ_champions", CS / "final_eval/champions_R4M.json", "E4 window champions file"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
