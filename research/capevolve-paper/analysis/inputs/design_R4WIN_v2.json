@@ -1,0 +1,83 @@
+{
+ "name": "R4WIN",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "groups": {
+  "NAIVE": [
+   "GATE-NAIVE-K2/s0",
+   "GATE-NAIVE-K2/s1",
+   "GATE-NAIVE-K2/s3"
+  ],
+  "PO": [
+   "V2-A2b/s0",
+   "V2-A2b-s2/s0",
+   "V2-A2b-s3/s0"
+  ],
+  "K165": [
+   "K165-s0/s0",
+   "K165-s1/s0",
+   "K165-s2/s0"
+  ],
+  "K2": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "SkillOpt": [
+   "skillopt/s0",
+   "skillopt/s1",
+   "skillopt/s2"
+  ]
+ },
+ "primary": [
+  [
+   "NAIVE",
+   "K2"
+  ],
+  [
+   "PO",
+   "K2"
+  ],
+  [
+   "K165",
+   "K2"
+  ]
+ ],
+ "primary_holm": true,
+ "secondary": [
+  [
+   "PO",
+   "SkillOpt"
+  ],
+  [
+   "K165",
+   "NAIVE"
+  ],
+  [
+   "PO",
+   "K165"
+  ],
+  [
+   "NAIVE",
+   "seed"
+  ],
+  [
+   "PO",
+   "seed"
+  ],
+  [
+   "K165",
+   "seed"
+  ],
+  [
+   "K2",
+   "seed"
+  ],
+  [
+   "SkillOpt",
+   "seed"
+  ]
+ ],
+ "sensitivity": [],
+ "NOTE": "R4WIN design v2 (addendum 26): the registered gate/ablation family unchanged; cells V2-A1a (s0), V2-A1a-s2, V2-A1a-s3 added to the window for the separate Claude Code contrast, which has its OWN design file design_R4WIN_CC.json"
+}

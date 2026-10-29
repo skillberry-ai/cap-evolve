@@ -1,0 +1,70 @@
+{
+ "name": "R4WIN_CC",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "NOTE": "CapEvolve k=2 (three searches) against native Claude Code A1a (three searches); own family m = 1; one session with the R4WIN cells (addendum 26)",
+ "groups": {
+  "K2": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "A1a": [
+   "V2-A1a/s0",
+   "V2-A1a-s2/s0",
+   "V2-A1a-s3/s0"
+  ],
+  "A1a_s0": [
+   "V2-A1a/s0"
+  ],
+  "A1a_s2": [
+   "V2-A1a-s2/s0"
+  ],
+  "A1a_s3": [
+   "V2-A1a-s3/s0"
+  ]
+ },
+ "primary": [
+  [
+   "K2",
+   "A1a"
+  ]
+ ],
+ "primary_holm": false,
+ "secondary": [
+  [
+   "A1a",
+   "seed"
+  ],
+  [
+   "K2",
+   "seed"
+  ],
+  [
+   "A1a_s0",
+   "seed"
+  ],
+  [
+   "A1a_s2",
+   "seed"
+  ],
+  [
+   "A1a_s3",
+   "seed"
+  ]
+ ],
+ "sensitivity": [
+  [
+   "K2",
+   "A1a_s0"
+  ],
+  [
+   "K2",
+   "A1a_s2"
+  ],
+  [
+   "K2",
+   "A1a_s3"
+  ]
+ ]
+}
