@@ -625,6 +625,7 @@ def main():
                          ("e5a_smoke_tasks.txt", CS / "e5a/smoke/tasks.txt", "E5a smoke task ids (train)"),
                          ("e5a_smoke_order.sha256", CS / "e5a/smoke/state/order.sha256", "E5a smoke order hash"),
                          ("e5a_root020_data_manifest.json", PAPER / "analysis/inputs/e5a_root020_data_manifest.json", "sha256 of every file of root_020 data/datasets and data/tasks (14,861 files), computed by the reviewer (amendment 12 erratum 124)"),
+                         ("e5a_prelaunch.sh", CS / "e5a/scripts/prelaunch.sh", "E5a launch-time re-hash script (arms, harness files, data root, order sha), amendment 12 erratum 125"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
