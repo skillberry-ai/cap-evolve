@@ -589,6 +589,8 @@ def main():
                          ("e4_smoke_acked_run_start.txt", CS / "runs/E4_SMOKE/smoke_acked_start.txt", "start time of the E4 smoke from the acked script 0cf91c0d (2026-10-29 00:09:46 UTC)"),
                          ("e4_smoke_withdrawn_run_log.err", CS / "runs/E4_SMOKE/smoke_qwen_withdrawn_e6099429.err", "log of the e6099429 smoke run stopped after about 30 seconds, no result"),
                          ("posthoc_reanalysis9.py", PAPER / "analysis/scripts/posthoc_reanalysis9.py", "POST HOC re-analysis, nine-comparator version (HarnessLens dropped), registered BEFORE it is run (amendment 12 erratum 113)"),
+                         ("K165_s2_driver.sh", CS / "runs/E3B/GATE-K1.65/s2/driver.sh", "K165-s2 driver as launched 2026-10-29 00:10:12 UTC (amendment 12 erratum 114)"),
+                         ("K165_s1_driver.sh", CS / "runs/E3B/GATE-K1.65/s1/driver.sh", "K165-s1 driver as launched 2026-10-29 00:00:09 UTC (amendment 12 erratum 114)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
