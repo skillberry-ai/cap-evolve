@@ -1,0 +1,122 @@
+{
+ "seed": {
+  "rule": "S",
+  "hash": "85a0da9cec2206a7bc683c11d60b5cb0acac7328d43c6e9197324d1e45971f3c",
+  "files": {
+   "FREEZE.json": "ba0e279d3dc28884f45d0235060ca0b3629f6b04f1d8d9ac54abea13ccfcd1d1",
+   "capability.diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "policy/instructions.txt": "c41f7852217d46586047a38f68e88b827cb9dcbe624e9651f9db8301547a534b",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "cape_k02": {
+  "rule": "S",
+  "hash": "e0ec3d94752bd3a2f067dfa2522695767d4077888a5f62fa360991c3e04019fb",
+  "files": {
+   "FREEZE.json": "dc9c87ea24e8c87fac3bb1f2fe19af7c22f93ab4e3c54521cfe4b2e40c858a2c",
+   "policy/instructions.txt": "b3e5fa0023d17d786abf4bf65fc9c6113edebed5724e6b7ced849276f2ba5269",
+   "tools/api_notes.json": "7f9fd2e4b07d4533275f6594f998d2df5b4a94e1f5eaad8d7dd22e017d7dae6e",
+   "tools/helpers.py": "016422e7f42a44e0c66a65af2f67dcf794518beffc57a9a8caf3133066842442"
+  }
+ },
+ "trace2skill": {
+  "rule": "S",
+  "hash": "a6b03deb2a044ed4c74920d02d6589b2113530ffd9053a947854152a8e4e5b6f",
+  "files": {
+   "FREEZE.json": "69303d44c6925e8b82941e1a31da443afc2266e4a5f31c9ec6762764780c7459",
+   "capability.diff": "a59901161bac35416538c3f76346e91dfe1c09cc48ddeb85e3fe2bb5aae6f870",
+   "memory/playbook.md": "613dda282a0ab3e64b40ada7036d7bb5fb67adcc6d53c7577a06f2c6957454ed",
+   "policy/instructions.txt": "c41f7852217d46586047a38f68e88b827cb9dcbe624e9651f9db8301547a534b",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "gepa_full": {
+  "rule": "S",
+  "hash": "eb3d11d38bad1193cd20fc480f3d5de3ac04fc5e0bcf7002493bd7ae3187110e",
+  "files": {
+   "FREEZE.json": "8cc004f7ae5c7cf24bbb39c15c43b4badf431bcc6f537584b9c8b310177ca73f",
+   "capability.diff": "d6b4cd2c32fd63799a178c5e94cdd35fbdf6870633c306cc03c37c27958cb7e4",
+   "memory/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "policy/instructions.txt": "f5a079182e8bfde3ea0495f5c623f5dd23662cd7d0126dff8bd50fdc8bdf6c86",
+   "tools/api_notes.json": "88517f14a7422b6bbfe4089056f4395e1a2cb284756e5158fc42243f334fd91d",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "miprov2": {
+  "rule": "S",
+  "hash": "a4ff3a502879f5206e5b32161f244c939635eb7d5bd70be59a8f9af01db6314a",
+  "files": {
+   "FREEZE.json": "b086f549e88a91fb6ae487e0d28b2c28440aa414bd493ca908d76f234df06dfa",
+   "capability.diff": "80e92230591ffd2c3137321ba986b682f17fa166618d962026913167d6bec44d",
+   "policy/instructions.txt": "de0a8cae217b8862b90731648ecc0277199f2a714ab794148952157d47cd2ca9",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "skillopt": {
+  "rule": "F",
+  "hash": "8314b3340e1c0d8569f3785608186d9eb2cf65782f9be2bc17de0ca94319ca04",
+  "files": {
+   "FREEZE.json": "1e07017893964fab4b481ae801a157ce4dbbf1ea3a9076d6dc2f830118217215",
+   "memory/playbook.md": "0ebc92a3fe9577a66cf16a98ba6ba1d7b7a7b5bd4e502b88dea239f6bf6b1d3d",
+   "policy/instructions.txt": "c41f7852217d46586047a38f68e88b827cb9dcbe624e9651f9db8301547a534b",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "ace": {
+  "rule": "F",
+  "hash": "e92fbff4b652aaaa8cce0e46bd9556b4706141834f1486245d7b9edc919b117f",
+  "files": {
+   "memory/playbook.md": "1ca6b6fa9a81add0636db099c015db6dd685d099d7a6682b49ab3699a2f77919",
+   "policy/instructions.txt": "c41f7852217d46586047a38f68e88b827cb9dcbe624e9651f9db8301547a534b",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+ },
+ "gepa": {
+  "rule": "F",
+  "hash": "26403e2c5e50ed9243c750457cb9f317f28970271c00b799f1d9018a1cdeffc6",
+  "files": {
+   "FREEZE.json": "af82b47fb31e0481f478e17b0688afa53613ebb9a0cdc26577e9412789ce8cf1",
+   "memory/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "policy/instructions.txt": "8e9374c86a222a4483b390c29e14166b3694b7ffbcf4d05776b65dd3474f04cd",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "evoskill": {
+  "rule": "F",
+  "hash": "23f5f8f76cf504aee5eba4edbe4c209c160395f428bb39f11b36799ede22a804",
+  "files": {
+   "FREEZE.json": "47ab96e77aee271a781107b709d0f263f5171e04dc9906d158a5207a1e98a36c",
+   "memory/playbook.md": "d5ddd8b940804682e424f1ccd8bd9b8a39b47b81592d8ee4ebd464d2bf577fca",
+   "policy/instructions.txt": "c41f7852217d46586047a38f68e88b827cb9dcbe624e9651f9db8301547a534b",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "wikiskill": {
+  "rule": "F",
+  "hash": "3895752eb7b9759b4455aabf9ddde54b27442ad405245ec3272906cfa145b167",
+  "files": {
+   "FREEZE.json": "03b874f54c694b58d27aa28100a127bfc075ae345066426cade3617e294e5d53",
+   "memory/playbook.md": "b8050351e9e8474ebd33f5c3041508d9047b42cb436e70cc382302738a6bc08a",
+   "policy/instructions.txt": "c41f7852217d46586047a38f68e88b827cb9dcbe624e9651f9db8301547a534b",
+   "tools/api_notes.json": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+   "tools/helpers.py": "2bfd81ebbb2ac8a9e0813030ef4dd6fd8b058a6c2e36480f86f75f8afc1c52fb"
+  }
+ },
+ "metaharness": {
+  "rule": "F",
+  "hash": "ea0f2f68e37742b8b45fc2a257ad309fac85ebaf3ed00cf0cf60ee2a7cd0fe16",
+  "files": {
+   "FREEZE.json": "fd324c9131f55a4adbf331c8e719246c1553240ffdf8bd3af66724d62a100130",
+   "policy/instructions.txt": "6f3a71a05884498dec94abf2aae0622ea5c3a6443c9a12e79cf8baab953f26ed",
+   "tools/api_notes.json": "523add3478164d06d003e51c4fca3057532eb9d81462b578cb789386f5db2c95",
+   "tools/helpers.py": "47f3ff3496757ab8f23e58615ce5a5fdf85c6c5c68f461e1472f698b51f213f3"
+  }
+ }
+}
