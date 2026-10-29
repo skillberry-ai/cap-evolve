@@ -553,6 +553,65 @@
         </blockquote>
       </section>
 
+      <section class="reveal">
+        <h2 id="blackbox">Blackbox approach — τ²-bench airline, direct and blackbox</h2>
+
+        <p>
+          The same optimization run twice on vanilla τ²-bench, changing only how each candidate reaches
+          the model: <strong>direct</strong> (the runner loads the candidate's tool code) and
+          <strong>blackbox</strong> (the candidate is deployed to the Skillberry Store and the Skillberry
+          Proxy-Agent injects it into the agent's LLM calls, so the benchmark is never modified). See the
+          <a href="blackbox.html">Blackbox tab</a> for how it works, and
+          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_tau2_sierra_direct_blackbox.md">REPRODUCE_tau2_sierra_direct_blackbox.md</a>
+          to reproduce both runs.
+        </p>
+
+        <ul>
+          <li><strong>Capability:</strong> the airline agent's <strong>tools</strong>.</li>
+          <li><strong>Agent under test:</strong> <code>aws/claude-haiku-4-5</code>; user simulator <code>aws/claude-sonnet-5</code>.</li>
+          <li><strong>Optimizer:</strong> <code>claude-code</code> @ <code>claude-opus-5-5</code>, hill-climb, 3 iterations.</li>
+          <li><strong>Tasks / trials:</strong> <strong>7</strong> tasks (<code>train == val == test</code>) · <strong>5</strong> trials.</li>
+        </ul>
+
+        <table>
+          <thead>
+            <tr><th></th><th>direct</th><th>blackbox</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Baseline — val</td><td class="num">0.286</td><td class="num">0.286</td></tr>
+            <tr><td>Best (<code>cand_0003</code>) — val</td><td class="num"><strong>0.914</strong></td><td class="num"><strong>0.771</strong></td></tr>
+            <tr><td>Sealed test (fit metric)</td><td class="num"><strong>0.943</strong></td><td class="num"><strong>0.771</strong></td></tr>
+            <tr><td>Candidates accepted</td><td class="num">3 of 3</td><td class="num">3 of 3</td></tr>
+          </tbody>
+        </table>
+
+        <figure class="shot">
+          <img src="assets/blackbox-vs-direct-overview.png"
+               alt="Dashboard overview of the direct run (left, best val 91.4%, sealed test 94.3%) and the blackbox run (right, best val 77.1%, sealed test 77.1%): both accept three candidates and climb at every iteration">
+          <figcaption class="shot-cap">
+            Overview: direct (left) and blackbox (right). Both accept all three candidates, climb at every
+            iteration and pick <code>cand_0003</code>.
+          </figcaption>
+        </figure>
+
+        <figure class="shot">
+          <img src="assets/blackbox-vs-direct-tasks.png"
+               alt="Dashboard Tasks tab of the direct run (left) and the blackbox run (right): per-task heatmaps of the seed and three candidates, and the sealed test per task">
+          <figcaption class="shot-cap">
+            Tasks: the per-task heatmap of the seed and each candidate, and the sealed test per task.
+          </figcaption>
+        </figure>
+
+        <blockquote>
+          <p>
+            Honest reading: this is a no-holdout run (the same 7 tasks for train, val and test), so the
+            test number is a fit metric. The two deliveries agree on the shape of the climb; blackbox
+            ends lower, which the known proxy-side costs (tool results not carried across turns, quotes
+            stripped from tool output) account for.
+          </p>
+        </blockquote>
+      </section>
+
       <p style="text-align:center; margin-top:3rem; color:var(--sub); font-size:0.85rem;">
         <em>Last reviewed: 2026-07-24.</em>
       </p>
@@ -570,6 +629,7 @@
       <a href="#qwen-tools">τ²-bench — Qwen 14B</a>
       <a href="#qwen-all">Qwen 14B — all capabilities</a>
       <a href="#skillsbench">SkillsBench</a>
+      <a href="#blackbox">Blackbox approach</a>
     </nav>
   </div>
 
