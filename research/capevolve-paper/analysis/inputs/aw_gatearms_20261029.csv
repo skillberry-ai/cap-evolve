@@ -1,0 +1,4 @@
+arm,window,tgc,sgc,d_tgc_vs_ref,d_ref_lo,d_ref_hi,d_tgc_vs_seed,d_seed_lo,d_seed_hi,accepted,iterations,decisions_differing_from_k0.2,optimizer_usd,easy,medium,hard
+seed,first,36.3,14.3,,,,,,,,,,,57.9,29.2,22.2
+abl_ref,first,62.5,40.2,,,,26.2,19.3,33.0,,6,,,80.7,69.8,40.5
+abl_naivegate,gate,56.5,34.8,-6.0,-10.7,-1.2,20.2,13.4,27.7,5,6,0,48.04,80.7,58.3,33.3
