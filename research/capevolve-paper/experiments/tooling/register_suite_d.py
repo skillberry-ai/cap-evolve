@@ -773,6 +773,7 @@ def main():
                          ("rr7_latency_csv", Path("/tmp/rr/paper/research_revision/canonical/latency.csv"), "post hoc descriptive output (erratum 170)"),
                          ("rr7_latency_groups_csv", Path("/tmp/rr/paper/research_revision/canonical/latency_groups.csv"), "post hoc descriptive output (erratum 170)"),
                          ("rr7_breakeven_newbasis_csv", Path("/tmp/rr/paper/research_revision/canonical/breakeven_newbasis.csv"), "post hoc descriptive output (erratum 170)"),
+                         ("r4n_order_py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/r4n_order.py"), "NCF window order builder: r4w_order.py plus R4N in the salt assert and choices (erratum 172)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
