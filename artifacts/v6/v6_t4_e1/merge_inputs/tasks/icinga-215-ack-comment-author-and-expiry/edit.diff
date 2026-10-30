@@ -1,0 +1,146 @@
+--- a/icinga_agent.md
++++ b/icinga_agent.md
+@@ -34,6 +34,58 @@
+ **Service states:** 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN
+ 
+ **State types:** SOFT = intermittent failure (retries in progress), HARD = confirmed failure after max retries
++
++## Epoch Timestamps — Convert Them Correctly
++
++Icinga stores every time field as a Unix epoch integer in **UTC**: `entry_time`,
++`expire_time`, `last_check`, `last_state_change`, `last_check_result.execution_start`,
++`acknowledgement_expiry`, downtime `start_time` / `end_time`. The store holds only the
++integer — no human-readable form. When the user asks for a date or time, you MUST
++convert it and give the calendar date AND the clock time.
++
++Do NOT guess, and do NOT estimate the date by its distance from today — a wrong
++month or a wrong hour is a wrong answer even when the epoch you quote is right.
++Work the arithmetic through explicitly, using these exact anchors:
++
++| Jan 1, 00:00:00 UTC | epoch | year length |
++|---|---|---|
++| 2024 | 1704067200 | 366 (leap) |
++| 2025 | 1735689600 | 365 |
++| 2026 | 1767225600 | 365 |
++| 2027 | 1798761600 | 365 |
++| 2028 | 1830297600 | 366 (leap) |
++| 2029 | 1861920000 | 365 |
++| 2030 | 1893456000 | 365 |
++
++Days elapsed before the 1st of each month (add 1 to every month from Mar onward in a
++leap year): Jan 0, Feb 31, Mar 59, Apr 90, May 120, Jun 151, Jul 181, Aug 212,
++Sep 243, Oct 273, Nov 304, Dec 334.
++
++**Procedure** (1 day = 86400 s, 1 hour = 3600 s, 1 minute = 60 s):
++
++1. Pick the largest Jan-1 anchor that is **less than or equal to** the epoch. That is
++   the year. (If the anchor is larger, you picked the wrong year — go back one.)
++2. `rem = epoch − anchor`.
++3. `day_index = rem / 86400`, rounded **down**. `secs = rem − (day_index × 86400)`.
++4. Find the largest month offset in the table that is `<= day_index`. That is the
++   month; `day_of_month = day_index − month_offset + 1`.
++5. `hour = secs / 3600` rounded down; `minute = (secs − hour × 3600) / 60` rounded down.
++
++<example>
++`expire_time: 1741938300`
++1. Largest anchor ≤ 1741938300 is 2025 → 1735689600.
++2. rem = 1741938300 − 1735689600 = 6248700.
++3. day_index = 6248700 / 86400 = 72 (floor); secs = 6248700 − 72×86400 = 6248700 − 6220800 = 27900.
++4. 2025 is not a leap year. Largest offset ≤ 72 is Mar (59) → day_of_month = 72 − 59 + 1 = 14.
++5. hour = 27900 / 3600 = 7 (floor); minute = (27900 − 25200) / 60 = 45.
++→ **2025-03-14 07:45 UTC**
++</example>
++
++Sanity-check every result before you report it: re-add the pieces
++(`anchor + day_index×86400 + hour×3600 + minute×60`) and confirm you land back on the
++original epoch. State the time as `YYYY-MM-DD HH:MM UTC` and say "UTC" explicitly.
++Two epochs a few hours apart must land on the same date — if two converted times
++disagree about that, you made an arithmetic error; redo them.
+ 
+ ## Investigation Workflow
+ 
+@@ -64,6 +116,7 @@
+ 
+ Also check for related context:
+ - Use `action: "get_comments"` for the host/service to see if there are notes from other engineers.
++  See "Comments and Acknowledgements" below before attributing an acknowledgement.
+ - Use `action: "get_downtimes"` for the host/service to check for scheduled maintenance.
+   If the service is already in downtime, report this first — the issue may already be
+   addressed before proceeding with deeper investigation.
+@@ -180,6 +233,62 @@
+ 
+ 4. **Note config-level thresholds:** If warning/critical thresholds are defined in the YAML (rather than hardcoded in the script), report them — these are the values operators can tune without modifying scripts.
+ 
++### Comments and Acknowledgements
++
++`get_comments` returns comment objects whose `attrs.entry_type` says what each one
++**is**. Icinga2 CommentType: **1 = ordinary user comment**, **4 = acknowledgement**.
++The two are different objects with different meanings, and a host/service commonly
++carries both at once.
++
++- **Attribute an acknowledgement only to the author of an `entry_type` 4 comment.**
++  Never attribute it to the author of an `entry_type` 1 comment, and never to
++  whoever commented most recently — a later ordinary comment by someone else does
++  not transfer ownership of the acknowledgement. When asked who acknowledged
++  something, find the `entry_type` 4 row first and read `attrs.author` from that row.
++- An `entry_type` 1 comment is an observation only. Do not describe its author as
++  having acknowledged, suppressed, or silenced anything.
++- Match the comment's `attrs.service_name` to the service in question. An empty
++  `service_name` means the comment is **host-level**, not on the service.
++- Report the acknowledgement's reason from the `entry_type` 4 row's `attrs.text`,
++  not from another comment's text.
++
++**`expire_time` and `persistent` — do not conflate the two fields, or the two objects.**
++`expire_time` is an epoch; `expire_time: 0` means none was set. `persistent` is a
++separate boolean about whether the comment survives, and it does **not** mean the
++acknowledgement is permanent — an acknowledgement with a non-zero `expire_time`
++lapses at that time even when `persistent` is false.
++
++- If the acknowledgement's `expire_time` (or the service's `acknowledgement_expiry`)
++  is non-zero, the acknowledgement **lapses by itself** at that time and
++  notifications resume if the object is still in a problem state. Convert the epoch
++  and give the date and time ("Epoch Timestamps" above). Say it expires on its own —
++  do not say or imply that it is held until a human clears it.
++- Only when that field is `0` or absent is the acknowledgement open-ended.
++
++**Phrase expiry in positive terms, about the object you actually mean.** A reader
++scanning your answer attaches a phrase like "never expires", "no expiry", "held
++indefinitely", "until manually removed" or "sticky" to the **acknowledgement**, even
++when you wrote it about a different comment — which makes a correct answer read as a
++wrong one. So do not use those phrases at all. State the stored field instead:
++
++<example>
++Bad (the parenthetical reads as if the acknowledgement had no end time, and the
++second clause contradicts the stored expiry):
++      <other-author> left a note (persistent, with none of the expiry phrases above)
++      — and the acknowledgement is described as lasting until a human clears it.
++Good: The acknowledgement (entry_type 4, by <ack-author>) expires 2025-03-14 07:45 UTC
++      and lapses on its own; notifications resume then if the service is still
++      WARNING. <other-author> added an ordinary comment (entry_type 1) with
++      `expire_time` 0, so it stays on the service until an operator deletes it.
++</example>
++
++When you report an acknowledgement, state all four of: **who** set it
++(`entry_type` 4 author), **the reason** they gave, **when it expires** as a converted
++UTC date *and* clock time, and **what else** anyone has written on the object —
++attributed to the right author and labelled as an ordinary comment rather than an
++acknowledgement. Answer every part the user asked for; omitting the expiry time, or
++giving a date without the time, is an incomplete answer.
++
+ ### Step 1: Triage (Assessment)
+ 
+ - **Determine State:** OK, WARNING, CRITICAL, or UNKNOWN.
+@@ -233,6 +342,13 @@
+ **Summary:** One sentence summary.
+ **Acknowledged:** Yes/No | **In Downtime:** Yes/No
+ 
++If acknowledged, add: **Acknowledged by** (`entry_type` 4 author), **Reason** (that
++comment's text), and **Expires** (`expire_time` / `acknowledgement_expiry` converted to
++`YYYY-MM-DD HH:MM UTC`; only when that field is 0, write "`expire_time` is 0 —
++open-ended"). List any
++ordinary (`entry_type` 1) comments separately, with their authors, and do not present
++them as acknowledgements.
++
+ ### Diagnosis
+ - **Trigger:** Specific condition that failed.
+ - **Check Command:** The command and key arguments.

@@ -1,0 +1,193 @@
+<title>Parsec v6 cost table</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same sheet as Table 1; 2a build cost (cost / tokens / time groups), then 2b measurement cost at equal trials. */
+:root {
+  --bg: #f6f7f8;
+  --sheet: #ffffff;
+  --ink: #1b2430;
+  --muted: #5d6877;
+  --rule: #dde2e8;
+  --band: #eef1f5;
+  --total: #f3f6fa;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --sheet: #1a2028; --ink: #e6eaef; --muted: #9aa5b3; --rule: #2c3540;
+    --band: #212935; --total: #1f2630; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --sheet: #1a2028; --ink: #e6eaef; --muted: #9aa5b3; --rule: #2c3540;
+  --band: #212935; --total: #1f2630; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 var(--font-body);
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 1160px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; }
+section { display: grid; gap: 12px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+h1 { font: 600 clamp(26px, 4vw, 34px)/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h2 { font: 600 20px/1.3 var(--font-display); margin: 0; }
+.lede, .cap { margin: 0; max-width: 76ch; }
+.cap { color: var(--muted); font-size: 14px; }
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+table.wide { min-width: 1040px; }
+table.narrow { min-width: 640px; }
+th, td { padding: 11px 12px; text-align: right; vertical-align: top; border-bottom: 1px solid var(--rule); }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--band); }
+thead tr.groups th { text-align: center; }
+.gstart { border-left: 1px solid var(--rule); }
+tbody tr:last-child td { border-bottom: 0; }
+tr.group td { background: var(--band); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding-block: 7px; text-align: left; }
+.arm { font-weight: 600; min-width: 200px; }
+.arm .what { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+td.num { font-family: var(--font-data); white-space: nowrap; font-size: 14px; }
+td.tot { background: var(--total); font-weight: 500; }
+.inc { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.zero { color: var(--muted); }
+.notes { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.notes section { min-width: 0; }
+h3 { font: 600 18px/1.3 var(--font-display); margin: 0 0 8px; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+li { max-width: 64ch; }
+code { font-family: var(--font-data); font-size: 13px; }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Table 2 · Parsec v6 · cost, tokens and compute time</div>
+    <h1>The task-wise path built its bundle for 42–44% of Global's cost</h1>
+    <p class="lede">2a is what each arm spent to produce its deployable bundle, with no test split. 2b is what it costs to measure a frozen bundle, at 5 trials per task for every arm. The shared Seed measurements are in neither, since every arm reuses them.</p>
+  </header>
+
+  <section>
+    <h2>2a · Cost to build the deployable bundle</h2>
+    <div class="sheet">
+      <div class="scroll">
+        <table class="wide">
+          <thead>
+            <tr class="groups">
+              <th></th>
+              <th colspan="3" class="gstart">Cost (USD)</th>
+              <th colspan="3" class="gstart">Tokens (millions)</th>
+              <th colspan="3" class="gstart">Compute time (hours)</th>
+              <th class="gstart"></th>
+            </tr>
+            <tr>
+              <th>Arm</th>
+              <th class="gstart">Eval</th><th>Optim.</th><th>Total</th>
+              <th class="gstart">Eval</th><th>Optim.</th><th>Total</th>
+              <th class="gstart">Eval</th><th>Optim.</th><th>Total</th>
+              <th class="gstart">Eval trials</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="group"><td colspan="11">Task-wise (T)</td></tr>
+            <tr>
+              <td class="arm">T-opt<span class="what">34 per-task searches</span></td>
+              <td class="num gstart">$38</td><td class="num">$281</td><td class="num tot">$319</td>
+              <td class="num gstart">11.3</td><td class="num">283.4</td><td class="num tot">294.7</td>
+              <td class="num gstart">13.8</td><td class="num">19.4</td><td class="num tot">33.1</td>
+              <td class="num gstart">310</td>
+            </tr>
+            <tr>
+              <td class="arm">T-mrg · merge by order<span class="what">T-opt + 10 s script</span></td>
+              <td class="num gstart">$38</td><td class="num">$281<span class="inc">+$0</span></td><td class="num tot">$319</td>
+              <td class="num gstart">11.3</td><td class="num">283.4<span class="inc">+0</span></td><td class="num tot">294.7</td>
+              <td class="num gstart">13.8</td><td class="num">19.4<span class="inc">+10 s</span></td><td class="num tot">33.1</td>
+              <td class="num gstart">310</td>
+            </tr>
+            <tr>
+              <td class="arm">T-mrg · smart merge<span class="what">T-opt + LLM merger</span></td>
+              <td class="num gstart">$38</td><td class="num">$295<span class="inc">+$14</span></td><td class="num tot">$334</td>
+              <td class="num gstart">11.3</td><td class="num">293.6<span class="inc">+10.2</span></td><td class="num tot">304.9</td>
+              <td class="num gstart">13.8</td><td class="num">20.2<span class="inc">+0.8</span></td><td class="num tot">34.0</td>
+              <td class="num gstart">310</td>
+            </tr>
+            <tr>
+              <td class="arm">T-mrg · non-conflicting hunks<span class="what">T-opt + 10 s script</span></td>
+              <td class="num gstart">$38</td><td class="num">$281<span class="inc">+$0</span></td><td class="num tot">$319</td>
+              <td class="num gstart">11.3</td><td class="num">283.4<span class="inc">+0</span></td><td class="num tot">294.7</td>
+              <td class="num gstart">13.8</td><td class="num">19.4<span class="inc">+10 s</span></td><td class="num tot">33.1</td>
+              <td class="num gstart">310</td>
+            </tr>
+            <tr class="group"><td colspan="11">Global (G)</td></tr>
+            <tr>
+              <td class="arm">Global · <code>cand_0005</code><span class="what">train screens + validation gates, 6 iterations</span></td>
+              <td class="num gstart">$403</td><td class="num">$355</td><td class="num tot">$758</td>
+              <td class="num gstart">124.9</td><td class="num">155.0</td><td class="num tot">279.8</td>
+              <td class="num gstart">164.2</td><td class="num">8.9</td><td class="num tot">173.1</td>
+              <td class="num gstart">2,223</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="cap">Global's evaluation: train screens and incumbent sweeps $109 (585 trials), validation gates $294 (1,638 trials).</p>
+  </section>
+
+  <section>
+    <h2>2b · Cost to measure a frozen bundle, 5 trials per task</h2>
+    <div class="sheet">
+      <div class="scroll">
+        <table class="narrow">
+          <thead>
+            <tr class="groups">
+              <th></th>
+              <th colspan="3" class="gstart">Test, 66 tasks</th>
+              <th colspan="3" class="gstart">Train, 67 tasks</th>
+            </tr>
+            <tr>
+              <th>Arm</th>
+              <th class="gstart">$</th><th>Tokens</th><th>Hours</th>
+              <th class="gstart">$</th><th>Tokens</th><th>Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="arm">T-mrg · merge by order</td><td class="num gstart">$78</td><td class="num">24.4M</td><td class="num">8.7</td><td class="num gstart">$70</td><td class="num">22.1M</td><td class="num">7.8</td></tr>
+            <tr><td class="arm">T-mrg · smart merge</td><td class="num gstart">$108</td><td class="num">34.2M</td><td class="num">9.3</td><td class="num gstart">$93</td><td class="num">29.5M</td><td class="num">8.1</td></tr>
+            <tr><td class="arm">T-mrg · non-conflicting hunks</td><td class="num gstart">$66</td><td class="num">20.4M</td><td class="num">9.6</td><td class="num gstart">$55</td><td class="num">17.1M</td><td class="num">8.1</td></tr>
+            <tr><td class="arm">Global · <code>cand_0005</code><span class="what">first 5 of its 10 test trials</span></td><td class="num gstart">$70</td><td class="num">21.8M</td><td class="num">24.7</td><td class="num gstart zero" colspan="3">— train reward comes from its search sweeps</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="cap">At equal trials, measuring costs about the same in both arms; larger bundles cost more per trial (Table 3). Global's full 10-trial test cost $138.</p>
+  </section>
+
+  <div class="notes">
+    <section>
+      <h3>Reading the tables</h3>
+      <ul>
+        <li><strong>Build cost:</strong> $319–334 for T against $758 for Global, so T is 42–44% of Global. T spends 88% on the optimizer; Global spends 53% on evaluation, mostly validation gates.</li>
+        <li><strong>Tokens are not an effort measure.</strong> Totals look alike, but optimizer tokens are about 95% (T) and 97% (Global) cache reads: the optimizer re-reading its context every turn. Cache reads are billed at a tenth of input price yet counted at full weight. Evaluation tokens cost about $3.2 per million; optimizer tokens $0.99 (T) and $2.29 (Global). Compare effort in dollars.</li>
+        <li><strong>Compute time:</strong> Global's build is 5.2× T's. Global ran 7.2× the evaluation trials, and its trials ran longer on average (266 s vs 160 s), partly because of slow simulator calls during its run: 9% of trials logged in the Global run took over 10 minutes. Its 5-trial test took 24.7 h of compute against 8.7–9.6 h per merge, for similar dollars.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>Definitions</h3>
+      <ul>
+        <li><strong>Eval</strong> is the target agent running tasks; <strong>Optim.</strong> is the optimizer, plus the smart merge's LLM merger. The other two merges are 10-second scripts with no LLM.</li>
+        <li>Dollars and tokens are the per-trial records' own values, plus recorded optimizer spend. The smart merge's $14 is a list-price estimate from its measured tokens.</li>
+        <li>Compute time sums each trial's agent run and each optimizer call: effort, not wall clock. Global's run took 66 h of wall clock.</li>
+        <li><strong>Not counted:</strong> shared Seed measurements ($215); Global's post-run validation remeasurement of <code>cand_0002</code> ($53); a harness step that re-scored some T-mrg tasks a second time ($14–29 per method, unused).</li>
+      </ul>
+    </section>
+  </div>
+</main>

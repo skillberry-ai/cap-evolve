@@ -1,0 +1,208 @@
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -87,7 +87,10 @@
+ - Job name encodes catalog item and GUID: `RHPDS agd-v2.sovereign-cloud.prod-gm5ld-2-provision-...`
+ - Use `find_jobs` with `status=failed` to find recent failures across all controllers
+ - Failed events include the error message in `error_msg`
+-- The `controller` parameter accepts both short names and full hostnames from `towerHost`
++- `query_aap2`'s `controller` parameter accepts both short names and full hostnames from
++  `towerHost`. **Other tools are not so forgiving — `query_splunk`'s `search_aap2_logs`
++  requires the SHORT name and silently returns zero rows for an FQDN.** Resolve the
++  short name once (table above) and reuse that, not the hostname, across every tool.
+ - **Always use `get_job_log` over `get_job`** — it returns metadata plus the trimmed log
+ - **Job ID typos are common.** If a job ID is not found on the expected controller,
+   ask the user to double-check the number before sweeping all controllers. If you do
+@@ -123,6 +126,15 @@
+ **MANDATORY: You MUST call `fetch_github_file` during every AAP2 job failure
+ investigation.** Analyzing the job log alone is NOT sufficient. Your job is to resolve
+ the config chain and cross-reference it with the failure.
++
++This requirement is satisfied by fetching the item's **agnosticv config** — the stage
++YAML (`prod.yaml` / `dev.yaml` / `test.yaml`) and `common.yaml` at the path
++`lookup_catalog_item` returned. That config is what names the item's cloud settings and,
++critically, the **instance group / execution pool its jobs run on**. Read those
++pool/scope values even when the failure looks purely environmental — they tell you which
++platform-side scope to investigate (Step 7a). Fetching agnosticd **role source** is a
++separate, optional step and does NOT substitute for the config fetch; see "Tracing
++Failures to Source Code" for when to skip it.
+ 
+ #### Step 1: Get Job Details via API
+ 
+@@ -294,6 +306,68 @@
+ | `Vault password` | Missing vault credentials |
+ | `rc: 1` with short `delta` (< 10s) | Script failed fast — likely auth error, missing resource, or bad config |
+ 
++**Always read WHICH HOST the fatal is on.** An Ansible failure line names its host —
++`fatal: [<host>]` — and that host decides which layer owns the problem. Getting this
++wrong sends the whole investigation at the wrong system:
++
++- `fatal: [localhost]` (or the implicit controller host) means the task ran **inside the
++  job's own execution-environment container on an AAP execution node** — it is
++  *platform-side*. Paths like `/tmp/...` in such a failure are inside that container,
++  **not** on any host the job was building.
++- `fatal: [<a host from the provisioned environment>]` — e.g. a bastion, a node, a VM —
++  means the failure is *environment-side*, and the environment's own config is in scope.
++
++Cross-check this against the **PLAY RECAP**: it lists each host with its own
++`failed=` count. A provisioned host showing `failed=0`, or whose own disk/resource lines
++in the log look healthy, did **not** cause the failure, however plausible it sounds.
++Say which host the failure is on, explicitly, before naming any cause.
++
++#### Step 7a: Resource-exhaustion and capacity failures
++
++When the failing task reports exhaustion of a shared resource rather than a logic error
++— out of disk/space (`[Errno 28]`, `No space left on device`, `ENOSPC`), out of memory /
++OOM-killed, out of inodes, out of job capacity, a quota or connection-pool limit — the
++job log tells you *that* a limit was hit, almost never *why* it was hit or *who else* is
++affected. Those two things are platform state, so this pattern requires extra steps:
++
++1. **Place the error on the right host first** (rule above). If the fatal is on
++   `localhost`, the exhausted resource belongs to the AAP **execution node**, not to the
++   environment being provisioned.
++2. **Find where this item's jobs run.** For a platform-side exhaustion, the relevant
++   scope is the execution node pool. The catalog item's config (the stage YAML you
++   fetched in Steps 3–6) names the **instance group / node pool** the item's jobs are
++   pinned to. Report that name — it identifies which nodes are affected.
++3. **Read the controller's own Splunk logs for that scope** — `search_aap2_logs`, short
++   controller name, the pool/scope identifier as `search_terms`, wide time window (see
++   "Using Splunk Logs"). This is where the *specific* exhausted resource (which
++   filesystem/volume and its utilization), the **underlying cause** (a disabled cleanup
++   or prune timer, a maintenance change never reverted, a leaking retention policy), and
++   the **breadth** (a summary row counting how many jobs the condition has failed) live.
++   None of these are in the job log. Skipping this hop leaves the answer at "the node ran
++   out of space", which names a symptom, not a cause.
++4. **Report the specific resource, the cause, and the breadth count**, not just the
++   category. "The pool's `/var/lib/...` volume is at 100% because a cleanup timer has
++   been off since a maintenance, and it has failed N jobs" is an answer; "the disk filled
++   up" is not. Give the count of affected jobs when a summary row provides one.
++
++#### Step 7a-ii: Assessing a proposed or in-flight fix
++
++When the request describes a fix someone has already proposed, opened a change for, or
++is about to merge — or asks whether it would help — judge it explicitly against the
++layer you actually placed the failure in, and say so in those terms:
++
++- If the proposed change targets a **different layer or host** than the one that failed
++  (e.g. it resizes/reconfigures something in the provisioned environment when the fatal
++  was on `localhost`, i.e. platform-side), state plainly that it **will not help**, and
++  why — name the host/layer mismatch. Do not hedge it into "it may help somewhat".
++- Then name what would actually address the cause you found, at the layer that owns it.
++- A plausible-looking knob in the config (a volume size, a limit, an instance type) is
++  **not** evidence that knob is implicated. Only the host the failure landed on is.
++
++Treat the requester's stated diagnosis as a hypothesis to test, never as a premise. When
++your evidence refutes it, refute it directly and lead with that — a confirmation you did
++not verify, or a soft non-answer, is worse than a clear correction.
++
+ #### Step 7b: Deep Dive — Pod/Container Failures
+ 
+ **When the log shows a pod failing to start (CrashLoopBackOff, init container
+@@ -458,6 +532,22 @@
+ 
+ The `get_job_log` response includes `git_url` and `git_branch`.
+ 
++**Reading the failing role's source is optional, and it is a dead end for some failure
++classes — give up on it fast.** Two consecutive `search_github_repo` / `fetch_github_file`
++calls that return no results or 404 for a role path mean the source is not reachable from
++here. Stop; do not keep permuting owners, repo names, branches, and path spellings. That
++loop is the single largest waste of the call budget observed in failed investigations,
++and it crowds out hops that carry evidence the report actually needs.
++
++Ask what the role source would even tell you before spending calls on it. It helps when
++the question is *what the automation does* (a logic bug, a wrong default, a bad
++conditional). It tells you **nothing** when the failure is about *environment or platform
++state* — a resource exhausted, a credential expired, a quota hit, an endpoint
++unreachable. The role is behaving correctly and reporting a condition outside itself. For
++those, the budget belongs in platform-side logs (Step 7a) instead. It is always better to
++report "the role source was not reachable" alongside complete evidence from the sources
++that worked, than to exhaust the budget hunting source and leave the cause unnamed.
++
+ ### Getting AgnosticV Source Info from Babylon
+ 
+ The `get_component` action returns:
+@@ -495,27 +585,70 @@
+ 
+ ## Using Splunk Logs
+ 
+-Splunk is a supplementary data source. Only use it when the primary tools (`query_aap2`,
+-`fetch_github_file`, `lookup_catalog_item`) don't provide enough signal to determine the
+-root cause.
+-
+-When investigating job failures, Splunk logs provide the actual container/server logs
+-that complement the AAP2 API data:
+-
+-- **AAP2 controller logs**: Use `search_aap2_logs` with the controller hostname from
+-  `query_aap2` results. Filter with `errors_only=true` to find server-side errors.
+-  The controller hostname is in the `cluster_host_id` field.
++Splunk carries the platform-side logs — the controller's and execution nodes' own view
++of a job. The AAP2 job log only shows what the playbook saw from inside the job. When a
++failure's cause lives in the platform that *ran* the job rather than in the environment
++being built, Splunk is the only place it appears, so it is a required hop (see
++"Resource-exhaustion and capacity failures" below), not a last resort.
++
++- **AAP2 controller logs**: Use `search_aap2_logs`. Filter with `errors_only=true` to
++  find server-side errors.
+ 
+ - **OCP pod logs**: Use `search_by_guid` with the provision GUID to find all pod logs
+   from the Babylon cluster. This includes Anarchy runner pods, showroom pods, and
+   any workload pods. Filter with `errors_only=true` for failure investigation.
+ 
+-- **Time range**: Set `earliest` to match the job's creation time. Use `-2h` around
+-  the failure time to capture context. Don't search more than 24h unless needed —
+-  Splunk charges by data scanned.
++### How `search_aap2_logs` matching actually works
++
++Getting these three parameters wrong returns an empty or near-empty result, which reads
++like "no evidence exists" when the evidence is in fact there. Each rule below is about
++that failure mode.
++
++1. **`controller` must be the SHORT name** (`west`, `east`, `event0`, `partner0`) — the
++   same short name you pass to `query_aap2`. Passing a full hostname/FQDN here matches
++   **zero rows**: the filter is raw text compared against the stored log rows, and those
++   rows carry the short controller name, not the FQDN. (This differs from `query_aap2`,
++   whose `controller` accepts either form — do not carry the FQDN over from a job URL or
++   a `towerHost` field.)
++
++2. **`search_terms` is ANDed as raw text, so pass ONE short identifier — not an error
++   phrase.** Every string in `search_terms` must occur in the *same* stored row for that
++   row to match. So a long quoted error message, or several concepts strung together
++   (`"<pool-name> disk space tmp"`), matches almost nothing. Search by the **scope
++   identifier** you want all the rows about — an instance group / node pool name, a node
++   hostname, a GUID — and read the rows that come back. Omitting `search_terms` entirely
++   (just `action` + `controller`) is also fine and is better than an over-specific guess.
++   Boolean syntax (`OR`, quotes, wildcards) is **not** interpreted for this action; it is
++   matched literally. Use `action="search_raw"` if you genuinely need query operators.
++
++3. **Widen the time window when you are looking for a *cause*.** `earliest`/`latest`
++   bound which rows are returned. A condition that *caused* a failure — a disabled timer,
++   a config change, a maintenance window — is usually logged **hours or days before** the
++   failure it produced. Starting at the job's own start time silently cuts it out. Search
++   back at least several days (e.g. `earliest="-30d"`) when hunting a cause; narrow
++   windows are only right for reconstructing a timeline you already understand.
++
++**Worked example** — a job on controller `west` failed, and its catalog item config
++pins the item's jobs to instance group `build-pool-x`:
++
++```
++query_splunk(action="search_aap2_logs", controller="west",
++             search_terms="build-pool-x", errors_only=true, earliest="-30d")
++```
++
++One short scope identifier, short controller name, wide window. This returns every row
++about that pool — its capacity, its nodes, and any maintenance state — which is what
++lets you name the cause. Contrast the three common mistakes, each of which returns
++nothing useful: `controller="aap2-prod-....example.com"` (zero rows),
++`search_terms="<the full error message>"` (at most the one row that restates the error
++you already had), and `earliest=<the job's start time>` (drops the earlier cause rows).
+ 
+ **Investigation flow with Splunk:**
+-1. Get the GUID and controller from `query_aap2` or `query_babylon_catalog`
++1. Get the GUID and the **short** controller name from `query_aap2` or `query_babylon_catalog`
+ 2. Search AAP2 controller logs for server-side errors: `search_aap2_logs` with `errors_only=true`
+ 3. Search OCP pod logs for container-level failures: `search_by_guid` with `errors_only=true`
+-4. If needed, broaden the search by removing `errors_only` or extending the time range
++4. If a search comes back empty or returns only a row restating the error you already
++   had, that is a **query** problem, not an absence of evidence. Re-query: drop
++   `search_terms` to one scope identifier (or omit it), widen the time window, and
++   confirm `controller` is the short name. Do not conclude "the platform logs show
++   nothing" until a broad search on the short controller name has come back empty.

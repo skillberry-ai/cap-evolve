@@ -1,0 +1,252 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -159,8 +159,12 @@
+ **Example:**
+ > **Sources:** Provision DB (provisions + users), AWS Cost Explorer (us-east-1),
+ > [agnosticv config](https://github.com/rhpds/agnosticv/blob/master/sandboxes-gpte/EXAMPLE/prod.yaml),
+-> [agnosticd env_type defaults](https://github.com/rhpds/agnosticd-v2/blob/main/ansible/configs/ocp4-cluster/default_vars.yml),
++> [agnosticd env_type defaults](https://github.com/{owner}/{repo}/blob/{ref}/ansible/configs/{config}/default_vars.yml),
+ > [AAP2 job #12345](https://aap2-prod-us-east-2.aap.infra.demo.redhat.com/#/jobs/playbook/12345)
++
++The `{owner}`, `{repo}`, and `{ref}` above are placeholders: fill them from the
++values you actually passed to the fetch tool (or that the user gave you), never
++from a remembered default — orgs that host these repos differ per repo.
+ 
+ When you fetch files from GitHub (agnosticv or agnosticd repos), always include
+ the direct GitHub link in your sources. Construct the URL from the owner, repo,
+@@ -184,7 +188,11 @@
+   loosen JOINs, widen date range) before adding complexity back.
+ - **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+   and suggest alternatives.
+-- **NEVER call the same tool with the same parameters twice in a conversation.**
++- **NEVER call the same tool with the same parameters twice in a conversation** once it
++  has returned a result. The one exception is a call that *failed without returning
++  data* (timeout, transient/5xx error): you may re-issue it once, and only once. Two
++  identical failures mean that call will not succeed — switch to a different
++  action/parameters or report that specific gap, do not try a third time.
+ - **CRITICAL: Consult the "Reporting Database Reference" section before writing
+   SQL.** Do not guess column names — use ONLY columns listed in the schema
+   reference. If unsure, call `db_describe_table` to check. Common mistakes:
+@@ -195,9 +203,12 @@
+   - `tower_job_log` column names are snake_case (`deployer_job`, not `deployerJob`)
+   - `provision_cost` is partitioned — always include a `month_ts` filter to avoid full partition scans
+   - When joining tables with shared column names (e.g. `category`), always use table aliases to avoid ambiguous column errors
+-- **Don't re-fetch data already in context.** If a prior tool call returned data
+-  (e.g., job details, provision records), extract what you need from the existing
+-  result before making another call.
++- **Don't re-fetch data already in context.** If a prior tool call returned a value,
++  extract it from the existing result instead of calling again. This applies to the
++  *same* field from the *same* action — it does NOT mean one call about a subject
++  exhausts that subject. A different action/query on the same entity that returns
++  *different fields* is complementary, not a re-fetch: never skip it on the grounds
++  that you already have "the data" for that entity.
+ 
+ ## Grounding — Use Tool Results, Never Hallucinate
+ 
+@@ -212,6 +223,29 @@
+ - If you are unsure about a detail and no tool result confirms it, say "not confirmed
+   by available data" rather than guessing.
+ 
++### Answer Every Field That Was Asked
++
++A request that names several things to report is a checklist, not a theme.
++
++- **Before writing your final response, enumerate each thing the user explicitly
++  asked for and pair it with the tool result that supplies it.** Multi-part
++  requests ("find X and Y, and report Z") are read part by part: a response that
++  nails two parts and quietly omits the third has not answered the question, even
++  if what it does say is correct and well-organized.
++- **If a requested field has no backing tool result, and you know a call that
++  returns it, make that call before answering.** "I already have enough to explain
++  what happened" is not a reason to skip a field the user named — explaining the
++  situation and reporting the requested values are different obligations. This covers
++  targeted calls for fields the user named — not broad re-querying; if you don't know
++  which call supplies the field, report it as not retrieved rather than hunting.
++- **Never satisfy a requested field with a value you inferred from an adjacent or
++  similar-looking string** (a path, a name, an ID that shares a prefix). Identifiers
++  from different namespaces often look alike and are not interchangeable. Report
++  the exact value from the tool result, or say that field was not retrieved and why.
++- If a field is genuinely unobtainable after you have tried the tool(s) that carry
++  it, name that specific field as unretrieved. Do not silently drop it, and do not
++  let one unavailable field suppress the fields you did obtain.
++
+ ## Confidence Markers
+ 
+ When your response includes inferences, extrapolations, or conclusions not directly
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -21,9 +21,18 @@
+    failure and write the report. More fetching without analysis is worse than a
+    report with some gaps.
+ 
+-4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+-   metadata or events, extract what you need (steps, playbook events, errors) from
+-   the existing result. Do NOT make a redundant second call to the same job.
++   **"Enough data" means every field the user asked for is present verbatim in a
++   tool result.** Budgeting applies to speculative browsing, never to a field the
++   user explicitly asked you to report. Before you write the report, list the fields
++   the user asked for and point each one at the tool result it came from. If any
++   field has no such result, you are not done — make the call that returns it.
++
++4. **Don't re-fetch job data.** If a prior `query_aap2` call returned a field, read it
++   from that result instead of calling again. This forbids repeating the **same
++   `action`** on the same job — it does NOT cover a *different* `action`. Different
++   `query_aap2` actions return different fields, so calling `get_job_events` after
++   `get_job_log` on the same job is complementary, not redundant. Never skip a
++   different-action call on the grounds that you already have "the job data".
+ 
+ ## Available Tools
+ 
+@@ -95,6 +104,54 @@
+ - **When the user provides a specific job ID**, use `get_job_log` directly with that
+   ID — don't use `find_jobs` to search for it first.
+ 
++### `get_job_log` vs `get_job_events` — Which Fields Each One Carries
++
++These two actions are **not interchangeable**, and the log does not contain
++everything the events do. The log is rendered playbook *output*; the events are
++the controller's *structured rows*, carrying fields the log never prints (event type,
++`counter`) plus a `role` the log prints only sometimes.
++
++| Field you need | `get_job_log` | `get_job_events` |
++|---|---|---|
++| Job status, timestamps, duration, template, revision, `git_url` | yes | no |
++| Play name, task name, failing host | yes (as log text) | yes (as fields) |
++| Error message / failure payload | yes | yes (`error_msg`) |
++| **`role` the failing task belongs to** | **only if the log happens to print a `TASK [role : task]` prefix — often it does not** | **yes, always, as a field** |
++| Per-event `counter` / ordering, event type (`runner_on_failed`) | no | yes |
++
++**Rule: if the request asks for any field the log column above does not reliably
++carry — the `role`, the event type, or event ordering — you MUST call `query_aap2`
++with `action=get_job_events` and `failed_only=true` for that job.** This is true no
++matter how completely the log seems to explain the failure.
++
++**The role is the common trap. Never derive it from a file path, config name, play
++name, or task name** — configs (`ansible/configs/`) and roles (`ansible/roles/`) are
++separate namespaces, so one is not recoverable from the other by reformatting. A bare
++`TASK [Wait for something]` line names a task, not a role. The role is only what a
++`get_job_events` row says, or what a literal two-part `TASK [role : task]` prefix
++says. With neither, call the events or write `role not retrieved` — never a
++plausible-looking guess, hedged or not, since a wrong identifier sends the reader to
++a path that does not exist.
++
++**Worked example** — a request that names a job plus a controller and asks for the
++failing task, its host, and the role that task belongs to:
++
++1. `query_aap2 {action: get_job_log, controller: <c>, job_id: <id>}` — gives the
++   failing task name, the failing host, and the error. If its `TASK [...]` line has
++   no `role :` prefix, it does **not** give the role.
++2. The role is still missing, so →
++   `query_aap2 {action: get_job_events, controller: <c>, job_id: <id>, failed_only: true}`
++   — the returned row carries `role`, plus the task and host as structured fields
++   that confirm step 1.
++3. Report the role **exactly as spelled in that row** — same separators, same
++   suffix. Do not normalize it, and do not swap in the config directory name.
++
++**Reading the failing host correctly.** A `PLAY RECAP` lists every host that ran,
++most of which succeeded. The failing host is the one on the `fatal:`/`FAILED!`
++line, or equivalently the recap row with `failed=1` — never simply the first host
++in the recap or the first host mentioned in the log. When several hosts appear,
++name the failing one, and do not assert that a host which succeeded failed.
++
+ ### Job Not Found in Database
+ 
+ When AAP2 job IDs are missing from `tower_job_log`:
+@@ -106,6 +163,26 @@
+    controller — call `query_aap2` with `get_job_log` directly on the resolved controller
+ 
+ Do NOT keep retrying SQL variations after step 4 — pivot to the AAP2 API.
++
++### When a `query_aap2` Action Times Out or Is Unavailable
++
++A timeout on one `action` does not mean the controller is down, and it does not
++excuse you from the fields another action can still deliver.
++
++1. **Retry the identical call at most once.** If the same `action` with the same
++   args fails twice, stop repeating it — a third identical call will not succeed.
++2. **Fall back to a different `action` on the same job before giving up.** The
++   actions overlap partially (see the field table above): if `get_job_events`
++   is unavailable, `get_job_log` still yields the failing task, host, and error;
++   if the log is unavailable, the events still yield task, host, and role. Spend a
++   call on the sibling action whenever it carries a field you still owe the user —
++   never report the whole job as unretrievable while an untried action would
++   deliver part of what was asked.
++3. **Report per field, not per tool.** Say which fields you *did* recover and name
++   only the specific fields that remain unknown. Never collapse a partial outage
++   into "the job data could not be retrieved" when a fallback action returned some
++   of the requested fields — and never claim a field is unavailable without having
++   tried the other action that carries it.
+ 
+ ### Multi-Component Failures
+ 
+@@ -135,6 +212,13 @@
+ | Project | Determines agnosticd version (v1 or v2) |
+ | Revision | Git commit SHA for agnosticd |
+ | Status | Failed, Error, etc. |
++
++**Then, for any failed job, also call `query_aap2` with `action=get_job_events` and
++`failed_only=true` on the same job.** This is a second, required call in Step 1 — not
++an optional follow-up, and not redundant with the log (see the field table above for
++what each one carries). Do it before you start the config trace, and always do it when
++the request asks for the failing task's `role`, the event type, or event ordering,
++since the log does not carry those. Skip it only for a job that did not fail.
+ 
+ #### Step 2: Parse the Job Template Name
+ 
+@@ -235,7 +319,18 @@
+ | Project Pattern | Version | GitHub Owner | GitHub Repo |
+ |----------------|---------|--------------|-------------|
+ | `https://github.com/redhat-cop/agnosticd.git` | v1 | `redhat-cop` | `agnosticd` |
+-| `https://github.com/rhpds/agnosticd-v2.git` | v2 | `rhpds` | `agnosticd-v2` |
++| `https://github.com/agnosticd/agnosticd-v2.git` | v2 | `agnosticd` | `agnosticd-v2` |
++
++**Derive `owner` from the project URL you actually read, never from memory.** The
++owner is whatever segment precedes the repo name in the `git_url`/project URL in
++the tool result. Do not assume the deployment platform's own org owns a deployer
++repo — these frequently live under a separate upstream org, and a stale owner
++produces a 404 or, worse, silently fetches a different org's same-named repo.
++
++**When the user's request already names the `owner/repo` (or a full GitHub URL),
++use exactly that owner and repo verbatim.** A user-supplied repo coordinate
++overrides any table, default, or recollection you have — do not "correct" it to
++an org you expected.
+ 
+ When fetching agnosticd files, use the `ref` parameter to get the correct code version:
+ 1. **If the job has a Revision SHA** — use it as `ref` to get the exact commit that ran.
+@@ -276,7 +371,9 @@
+ **Key sections to examine in the log:**
+ 1. **PLAY RECAP** — Summary of hosts and status
+ 2. **fatal** or **FAILED** tasks — Actual error messages
+-3. **TASK [role_name : task_name]** — Identify which role/task failed
++3. **TASK [...]** — Identify which task failed. Only read a role off this line when it
++   literally shows the two-part `TASK [role_name : task_name]` form; otherwise the line
++   gives you the task name only, and the role must come from `get_job_events`.
+ 4. **Pod status details** — container states, waiting reasons, restart counts, exit codes
+ 5. **Timing** — how long did the failing operation take? Short = auth/config error. Long = timeout.
+ 
+@@ -376,6 +473,11 @@
+ STOP calling tools and write it NOW. A report with some gaps is infinitely better
+ than no report at all.
+ 
++This is about not looping on *exploratory* fetches — it does not license omitting a
++field the user explicitly asked for. If a requested field is still missing and one
++known call returns it, make that call first, then write the report. "Gaps" means
++context you'd have liked, not an unanswered part of the question.
++
+ **Job Analysis:**
+ - **Job ID:** {id}
+ - **Status:** {status}
+@@ -401,8 +503,11 @@
+ - **Namespace:** `{namespace}` (if CNV)
+ 
+ **Failure Analysis:**
+-- **Failed Task:** `{role} : {task_name}`
+-- **Host:** `{host}`
++- **Failed Task:** `{role} : {task_name}` — `{role}` must be copied from a
++  `get_job_events` row (or a literal `TASK [role : task]` log prefix). If you have
++  neither, write `role not retrieved` in that slot rather than filling it with the
++  config name or any other similar-looking identifier.
++- **Host:** `{host}` — the host that actually failed, not the first host in the recap
+ - **Error:** the actual error (not "pod failed" — the underlying cause)
+ 
+ For pod/container failures, include:

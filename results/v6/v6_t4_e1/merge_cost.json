@@ -1,0 +1,75 @@
+{
+ "note": "Cost of BUILDING each merged bundle (the merge step only). Evaluation cost is recorded separately, per method, when the bundles are scored. Methods 1 and 2 are deterministic scripts with no LLM call, so they have no token or dollar cost.",
+ "methods": {
+  "m1_order": {
+   "builder": "examples/parsec/v6_t4/build_merges.py (deterministic, no LLM)",
+   "wall_seconds": 9.99,
+   "wall_seconds_note": "one run of build_merges.py, which builds m1 and m2 together; re-run 2026-10-21 and reproduced both bundles byte-identical",
+   "llm_tokens": 0,
+   "llm_usd": 0.0
+  },
+  "m2_nonconflict": {
+   "builder": "examples/parsec/v6_t4/build_merges.py (deterministic, no LLM)",
+   "wall_seconds": 9.99,
+   "wall_seconds_note": "shared with m1_order: one script run builds both",
+   "llm_tokens": 0,
+   "llm_usd": 0.0
+  },
+  "m3_smart": {
+   "builder": "a fresh Claude Code subagent with no access to any score (merge_inputs/ only). It wrote orchestrator.md and shared_context.md itself and spawned 3 sub-agents: aap2; icinga; cost+babylon+security.",
+   "model": "claude-opus-5-5 (served as aws/claude-opus-5-5)",
+   "wall_seconds": 2975.6,
+   "wall_seconds_note": "top-level agent, first to last message (08:56:24 to 09:45:59 UTC); the 3 sub-agents ran inside that window, in parallel",
+   "tokens": {
+    "input": 36370,
+    "output": 443642,
+    "cache_read": 9003582,
+    "cache_write_5m": 668650,
+    "cache_write_1h": 0,
+    "total": 10152244,
+    "input_plus_output": 480012
+   },
+   "tokens_by_part": {
+    "merger": {
+     "input": 20853,
+     "output": 118679,
+     "cache_read": 4046775,
+     "cache_write_5m": 280315,
+     "usd": 4.67
+    },
+    "sub_cost_babylon_security": {
+     "input": 5187,
+     "output": 110912,
+     "cache_read": 2675252,
+     "cache_write_5m": 116314,
+     "usd": 3.36
+    },
+    "sub_aap2": {
+     "input": 5163,
+     "output": 138487,
+     "cache_read": 1184542,
+     "cache_write_5m": 154833,
+     "usd": 3.8
+    },
+    "sub_icinga": {
+     "input": 5167,
+     "output": 75564,
+     "cache_read": 1097013,
+     "cache_write_5m": 117188,
+     "usd": 2.34
+    }
+   },
+   "usd_estimate": 14.16,
+   "usd_by_type": {
+    "input": 0.15,
+    "output": 8.87,
+    "cache_read": 1.8,
+    "cache_write_5m": 3.34
+   },
+   "tool_calls": 43,
+   "per_message_usage": "m3_smart_usage.json",
+   "status": "done 2026-10-21",
+   "footnote": "Measured, then priced. Token counts are summed from the per-message usage records in the four agent transcripts (the merger and its three sub-agents; 89 API messages, all claude-opus-5-5), kept in m3_smart_usage.json. A message is logged once per content block with cumulative usage, so each message is counted once, at its last record. The subagent harness reported 189,023 tokens for the top-level merger alone; that figure excludes the sub-agents and does not separate cache reads, which is why it differs from the 10.15M total here. Dollars are an estimate: tokens x Anthropic list price for Claude Opus 5.5 ($4 input, $20 output, $0.20 cache read, $5 5-minute cache write per million tokens; no 1-hour writes occurred). The run went through the team gateway (served as aws/claude-opus-5-5), whose actual billed rate may differ from list price. 63% of the cost is output tokens."
+  }
+ }
+}

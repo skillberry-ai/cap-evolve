@@ -1,0 +1,4253 @@
+{
+ "cloud-025-gcp-project-status": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7499,
+  "tokens": 241667,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-026-gpu-abuse-triage": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.925,
+   0.925
+  ],
+  "cost_usd": 0.4316,
+  "tokens": 125296,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.925,
+     0.925
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-027-azure-pool-database-trap": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.1253,
+  "tokens": 365486,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-055-azure-subscription-not-found": {
+  "trial_rewards": [
+   0.766667,
+   0.766667,
+   0.766667,
+   0.766667,
+   0.766667
+  ],
+  "cost_usd": 0.7519,
+  "tokens": 242943,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.766667,
+     0.766667,
+     0.766667
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.766667,
+     0.766667
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-057-cloudtrail-select-only-refusal": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.644,
+  "tokens": 200295,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-058-malformed-account-id": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.6,
+   0.6
+  ],
+  "cost_usd": 0.48160000000000003,
+  "tokens": 156496,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.6,
+     0.6
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-074-assigned-account-still-billing": {
+  "trial_rewards": [
+   0.666667,
+   0.666667,
+   0.666667,
+   0.666667,
+   0.666667
+  ],
+  "cost_usd": 1.675,
+  "tokens": 533588,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.666667,
+     0.666667,
+     0.666667
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.666667,
+     0.666667
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-301-gcp-delete-counter-not-a-state": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.5105,
+  "tokens": 149790,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-302-cloudtrail-local-time-window": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6414,
+  "tokens": 200227,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-304-marketplace-active-past-end": {
+  "trial_rewards": [
+   0.228571,
+   0.228571,
+   0.228571,
+   0.228571,
+   0.228571
+  ],
+  "cost_usd": 1.2208999999999999,
+  "tokens": 388526,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.228571,
+     0.228571,
+     0.228571
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.228571,
+     0.228571
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-307-azure-two-project-tags": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.32380000000000003,
+  "tokens": 98095,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-308-azure-leftover-tag-on-free-sub": {
+  "trial_rewards": [
+   0.233333,
+   0.233333,
+   0.233333,
+   0.116667,
+   0.116667
+  ],
+  "cost_usd": 2.2883999999999998,
+  "tokens": 745962,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.233333,
+     0.233333,
+     0.233333
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.116667,
+     0.116667
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-310-stopped-lab-restarted-billing": {
+  "trial_rewards": [
+   0.783333,
+   0.783333,
+   0.783333,
+   0.783333,
+   0.783333
+  ],
+  "cost_usd": 2.1984000000000004,
+  "tokens": 691466,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.783333,
+     0.783333,
+     0.783333
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.783333,
+     0.783333
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-311-owner-handover-inventory": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.2959,
+  "tokens": 92027,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-313-azure-no-single-pool-fits": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.8,
+   1.0
+  ],
+  "cost_usd": 0.3163,
+  "tokens": 95981,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.8,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-315-min-cost-drops-unestimated": {
+  "trial_rewards": [
+   0.177778,
+   0.177778,
+   0.177778,
+   0.177778,
+   0.177778
+  ],
+  "cost_usd": 0.9986999999999999,
+  "tokens": 317753,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.177778,
+     0.177778,
+     0.177778
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.177778,
+     0.177778
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-316-cleaned-sandbox-live-iam-keys": {
+  "trial_rewards": [
+   0.36,
+   0.36,
+   0.36,
+   0.43,
+   0.43
+  ],
+  "cost_usd": 0.9422999999999999,
+  "tokens": 295754,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.36,
+     0.36,
+     0.36
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.43,
+     0.43
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-317-namesake-user-other-account": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6706,
+  "tokens": 204189,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cloud-319-billing-lab-unknown-to-babylon": {
+  "trial_rewards": [
+   0.5875,
+   0.5875,
+   0.5875,
+   0.5875,
+   0.5875
+  ],
+  "cost_usd": 2.4747,
+  "tokens": 779579,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.5875,
+     0.5875,
+     0.5875
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.5875,
+     0.5875
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-028-highest-spend-provider": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7944,
+  "tokens": 247588,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-029-no-cost-rows-for-guid": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.8,
+   0.8
+  ],
+  "cost_usd": 0.7693,
+  "tokens": 243222,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.8,
+     0.8
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-050-partial-account-coverage": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.825,
+   0.825
+  ],
+  "cost_usd": 0.7626,
+  "tokens": 243007,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.825,
+     0.825
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-051-gcp-net-of-credits": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7584,
+  "tokens": 242751,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-053-capacity-dropped-reservations": {
+  "trial_rewards": [
+   0.84,
+   0.84,
+   0.84,
+   0.84,
+   0.84
+  ],
+  "cost_usd": 1.1542,
+  "tokens": 369244,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.84,
+     0.84,
+     0.84
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.84,
+     0.84
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-064-reservation-release-active-job-check": {
+  "trial_rewards": [
+   0.76,
+   0.76,
+   0.76,
+   0.76,
+   0.76
+  ],
+  "cost_usd": 1.4367,
+  "tokens": 452044,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.76,
+     0.76,
+     0.76
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.76,
+     0.76
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-073-end-exclusive-alert-day": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7775000000000001,
+  "tokens": 245172,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-401-monitor-drilldown-wrong-month": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7679,
+  "tokens": 244373,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-402-unused-cost-preset-has-no-utilisation": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7804,
+  "tokens": 245452,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-406-gcp-daily-rows-is-not-day-coverage": {
+  "trial_rewards": [
+   0.86,
+   0.86,
+   0.86,
+   0.72,
+   0.72
+  ],
+  "cost_usd": 1.412,
+  "tokens": 444033,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.86,
+     0.86,
+     0.86
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.72,
+     0.72
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-407-aws-historical-query-came-back-org-wide": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.45899999999999996,
+  "tokens": 146154,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [],
+    "errored_trials": 2
+   }
+  ]
+ },
+ "cost-408-three-cloud-total-gcp-query-failed": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7979,
+  "tokens": 248403,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-409-top-spender-chain-to-instance-type": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.9805,
+  "tokens": 628521,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-410-released-sandbox-still-spending": {
+  "trial_rewards": [
+   0.48,
+   0.48,
+   0.48,
+   0.76,
+   0.76
+  ],
+  "cost_usd": 1.3900000000000001,
+  "tokens": 429452,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.48,
+     0.48,
+     0.48
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.76,
+     0.76
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-411-org-week-linked-account-league": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.8065,
+  "tokens": 251959,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-413-gcp-unknown-project-bucket": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7669,
+  "tokens": 243470,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-414-az-id-is-not-a-zone-name": {
+  "trial_rewards": [
+   0.885714,
+   0.885714,
+   0.885714,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7934,
+  "tokens": 246675,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.885714,
+     0.885714,
+     0.885714
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-416-peak-day-is-a-cross-service-sum": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7978,
+  "tokens": 248220,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-418-capacity-window-starts-mid-review": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.8647,
+  "tokens": 254937,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "cost-419-chargeback-predates-current-tenant": {
+  "trial_rewards": [
+   0.660714,
+   0.660714,
+   0.660714,
+   0.660714,
+   0.660714
+  ],
+  "cost_usd": 1.8755,
+  "tokens": 591944,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.660714,
+     0.660714,
+     0.660714
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.660714,
+     0.660714
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-010-stuck-anarchysubjects": {
+  "trial_rewards": [
+   0.215,
+   0.495,
+   0.495,
+   0.495,
+   0.495
+  ],
+  "cost_usd": 2.791,
+  "tokens": 883875,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.215,
+     0.495,
+     0.495
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.495,
+     0.495
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-012-nodes-ready-threshold": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7709999999999999,
+  "tokens": 241466,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-013-acknowledged-not-an-issue": {
+  "trial_rewards": [
+   0.48,
+   0.48,
+   0.48,
+   0.48,
+   0.48
+  ],
+  "cost_usd": 0.36039999999999994,
+  "tokens": 112732,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.48,
+     0.48,
+     0.48
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.48,
+     0.48
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-015-problems-by-severity": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.8540000000000001,
+  "tokens": 268166,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-045-hosts-search-filter": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7337,
+  "tokens": 237620,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-046-services-search-cross-host": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7374,
+  "tokens": 238317,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-047-downtime-similar-host-names": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.8593,
+  "tokens": 262662,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-072-alert-output-not-decoy-metrics": {
+  "trial_rewards": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "cost_usd": 1.701,
+  "tokens": 525131,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.0,
+     0.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-201-soft-critical-not-yet-hard": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7676000000000001,
+  "tokens": 241949,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-202-flapping-recovery-is-not-resolution": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.8058,
+  "tokens": 245740,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-203-perfdata-headroom-to-critical": {
+  "trial_rewards": [
+   0.8,
+   0.8,
+   0.8,
+   0.64,
+   0.64
+  ],
+  "cost_usd": 0.7877000000000001,
+  "tokens": 242095,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.8,
+     0.8,
+     0.8
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.64,
+     0.64
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-204-downtime-window-expired": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.7,
+   0.7
+  ],
+  "cost_usd": 0.8004,
+  "tokens": 242913,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.7,
+     0.7
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-205-notifications-disabled-nobody-paged": {
+  "trial_rewards": [
+   0.866667,
+   0.866667,
+   0.866667,
+   0.733333,
+   0.733333
+  ],
+  "cost_usd": 0.9823,
+  "tokens": 294151,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.866667,
+     0.866667,
+     0.866667
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.733333,
+     0.733333
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-206-stale-ok-check": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7847,
+  "tokens": 242126,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-207-host-down-masks-service-alerts": {
+  "trial_rewards": [
+   0.916667,
+   0.916667,
+   0.916667,
+   0.916667,
+   0.916667
+  ],
+  "cost_usd": 0.792,
+  "tokens": 244988,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.916667,
+     0.916667,
+     0.916667
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.916667,
+     0.916667
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-210-command-vars-override-script-default": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.8442000000000001,
+  "tokens": 250920,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-212-fix-on-main-not-on-pinned-ref": {
+  "trial_rewards": [
+   0.9,
+   0.9,
+   0.9,
+   0.8,
+   0.8
+  ],
+  "cost_usd": 1.9096,
+  "tokens": 562967,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.9,
+     0.9,
+     0.9
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.8,
+     0.8
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-214-hostgroup-membership-rollup": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.885714,
+   0.885714
+  ],
+  "cost_usd": 0.7605,
+  "tokens": 242230,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.885714,
+     0.885714
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-215-ack-comment-author-and-expiry": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.885714,
+   0.885714
+  ],
+  "cost_usd": 0.8091999999999999,
+  "tokens": 243983,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.885714,
+     0.885714
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-216-flexible-downtime-duration": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7983,
+  "tokens": 242142,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-219-host-down-pings-old-address": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.085,
+  "tokens": 339036,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-221-crc-counter-never-resets": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.2465000000000002,
+  "tokens": 375752,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-222-lag-check-runs-on-satellite": {
+  "trial_rewards": [
+   0.666667,
+   0.666667,
+   0.666667,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.8466,
+  "tokens": 556631,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.666667,
+     0.666667,
+     0.666667
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-224-dead-first-replica-eats-timeout": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 3.5827999999999998,
+  "tokens": 1097250,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "icinga-225-monitor-outlived-its-namespace": {
+  "trial_rewards": [
+   0.557143,
+   0.557143,
+   0.557143,
+   0.442857,
+   0.442857
+  ],
+  "cost_usd": 2.9908,
+  "tokens": 926471,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.557143,
+     0.557143,
+     0.557143
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.442857,
+     0.442857
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-001-ee-entrypoint-rca": {
+  "trial_rewards": [
+   0.8,
+   0.625,
+   0.625,
+   0.9,
+   0.9
+  ],
+  "cost_usd": 0.3862,
+  "tokens": 112087,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.8,
+     0.625,
+     0.625
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.9,
+     0.9
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-003-tojson-dict-literal-rca": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.7,
+   0.7
+  ],
+  "cost_usd": 0.401,
+  "tokens": 115092,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.7,
+     0.7
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-004-events-then-config": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.45320000000000005,
+  "tokens": 139447,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-005-wrong-owner-trap": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.29,
+   0.29
+  ],
+  "cost_usd": 2.8639,
+  "tokens": 926034,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.29,
+     0.29
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-006-version-tag-not-a-ref": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.35729999999999995,
+  "tokens": 105824,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-007-directory-path-fetch": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.325,
+   0.325
+  ],
+  "cost_usd": 0.603,
+  "tokens": 190786,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.325,
+     0.325
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-008-log-does-not-say": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.6,
+   0.6
+  ],
+  "cost_usd": 0.3718,
+  "tokens": 117434,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.6,
+     0.6
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-018-find-jobs-window": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.191,
+  "tokens": 386981,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-020-ocpv-vm-inventory": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.796,
+  "tokens": 246802,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-021-babylon-missing-cluster-trap": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6955,
+  "tokens": 224814,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-022-job-on-no-controller": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   0.825,
+   0.65,
+   1.0
+  ],
+  "cost_usd": 0.3227,
+  "tokens": 97221,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     0.825
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.65,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-032-shared-secret-not-a-registry-outage": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.575,
+   1.0
+  ],
+  "cost_usd": 2.5874,
+  "tokens": 814594,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.575,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-033-schema-change-not-the-oom": {
+  "trial_rewards": [
+   0.892857,
+   0.892857,
+   0.892857,
+   0.892857,
+   0.892857
+  ],
+  "cost_usd": 1.2674,
+  "tokens": 396564,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.892857,
+     0.892857,
+     0.892857
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.892857,
+     0.892857
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-036-secret-redacted-not-absent": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.0484,
+  "tokens": 338316,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-037-ocpv-healthy-vm-degraded-machineset": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.1126,
+  "tokens": 341745,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-038-anarchy-subject-guid-cross-cluster": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.0594000000000001,
+  "tokens": 341541,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-041-resource-pool-unfiltered-list": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6998,
+  "tokens": 226479,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-044-search-catalog-env-type": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6889,
+  "tokens": 224127,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-062-provisioning-job-trace": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 3.551,
+  "tokens": 1149948,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-065-other-guid-job-not-the-failure": {
+  "trial_rewards": [
+   0.72,
+   0.72,
+   0.72,
+   0.72,
+   0.72
+  ],
+  "cost_usd": 0.7288,
+  "tokens": 227768,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.72,
+     0.72,
+     0.72
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.72,
+     0.72
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-067-branch-name-not-the-cause": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.1976,
+  "tokens": 377462,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-070-invented-fix-variables": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.4939,
+  "tokens": 470695,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-071-unmonitored-proxy-not-esxi-alert": {
+  "trial_rewards": [
+   0.383333,
+   0.383333,
+   0.383333,
+   0.383333,
+   0.383333
+  ],
+  "cost_usd": 1.1277,
+  "tokens": 353752,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.383333,
+     0.383333,
+     0.383333
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.383333,
+     0.383333
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-101-vcpu-quota-from-catalog-sizing": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.9,
+   0.9
+  ],
+  "cost_usd": 1.5217999999999998,
+  "tokens": 472660,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.9,
+     0.9
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-102-no-proxy-misses-api-domain": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.4442,
+  "tokens": 126954,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-103-olm-channel-not-in-catalog": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 3.0393,
+  "tokens": 986867,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-104-cfn-dependency-and-what-changed": {
+  "trial_rewards": [
+   0.9,
+   0.9,
+   0.9,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.42919999999999997,
+  "tokens": 124661,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.9,
+     0.9,
+     0.9
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-105-failed-revision-not-main": {
+  "trial_rewards": [
+   0.71,
+   0.71,
+   0.71,
+   0.71,
+   0.71
+  ],
+  "cost_usd": 0.5031,
+  "tokens": 142737,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.71,
+     0.71,
+     0.71
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.71,
+     0.71
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-108-duplicate-guid-concurrent-run": {
+  "trial_rewards": [
+   0.783333,
+   0.783333,
+   0.783333,
+   0.8,
+   0.8
+  ],
+  "cost_usd": 0.5647,
+  "tokens": 165642,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.783333,
+     0.783333,
+     0.783333
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.8,
+     0.8
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-109-quoted-false-is-truthy": {
+  "trial_rewards": [
+   0.65,
+   0.65,
+   0.65,
+   0.825,
+   0.825
+  ],
+  "cost_usd": 2.9052,
+  "tokens": 921004,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.65,
+     0.65,
+     0.65
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.825,
+     0.825
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-110-renamed-catalog-item": {
+  "trial_rewards": [
+   1.0,
+   0.875,
+   0.875,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.3654,
+  "tokens": 105479,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     0.875,
+     0.875
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-112-exec-pool-disk-not-the-bastion": {
+  "trial_rewards": [
+   0.925,
+   0.925,
+   0.925,
+   0.8375,
+   0.925
+  ],
+  "cost_usd": 0.4678,
+  "tokens": 133182,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.925,
+     0.925,
+     0.925
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.8375,
+     0.925
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-114-ee-nightly-float-not-a-commit": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.214286,
+   0.642857
+  ],
+  "cost_usd": 0.4124,
+  "tokens": 115414,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.214286,
+     0.642857
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-116-timeout-headroom-from-history": {
+  "trial_rewards": [
+   0.9125,
+   0.9125,
+   0.9125,
+   0.9125,
+   0.9125
+  ],
+  "cost_usd": 0.6167,
+  "tokens": 183063,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.9125,
+     0.9125,
+     0.9125
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.9125,
+     0.9125
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-117-dependency-project-sync-failed": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.8,
+   0.8
+  ],
+  "cost_usd": 0.3889,
+  "tokens": 117656,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.8,
+     0.8
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-118-pending-pvcs-wait-for-first-consumer": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.86,
+   0.86
+  ],
+  "cost_usd": 0.41479999999999995,
+  "tokens": 120433,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.86,
+     0.86
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-119-pvc-storage-class-not-on-cluster": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6679,
+  "tokens": 199669,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-121-near-miss-pick-partner-repo": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.0547,
+  "tokens": 340639,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-124-event-accounts-not-returned": {
+  "trial_rewards": [
+   0.9,
+   0.9,
+   0.9,
+   0.9,
+   1.0
+  ],
+  "cost_usd": 0.7229,
+  "tokens": 205716,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.9,
+     0.9,
+     0.9
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.9,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-126-stop-job-from-tower-jobs": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.0522,
+  "tokens": 340648,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-128-failed-action-census-by-kind": {
+  "trial_rewards": [
+   0.885714,
+   0.885714,
+   0.885714,
+   0.885714,
+   0.885714
+  ],
+  "cost_usd": 0.9443999999999999,
+  "tokens": 284466,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.885714,
+     0.885714,
+     0.885714
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.885714,
+     0.885714
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-129-destroyed-subject-hidden-without-guid": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7197,
+  "tokens": 227814,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-131-deployment-first-resource-blind-spot": {
+  "trial_rewards": [
+   0.85,
+   0.85,
+   0.85,
+   0.86,
+   0.86
+  ],
+  "cost_usd": 0.7259,
+  "tokens": 228604,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.85,
+     0.85,
+     0.85
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.86,
+     0.86
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-132-event-seat-math-standalone-workshop": {
+  "trial_rewards": [
+   0.57,
+   0.57,
+   0.57,
+   0.71,
+   0.71
+  ],
+  "cost_usd": 1.0829,
+  "tokens": 346168,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.57,
+     0.57,
+     0.57
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.71,
+     0.71
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-133-component-sub-components-hop": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.0509,
+  "tokens": 339878,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-134-pool-search-canary-two-clusters": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7050000000000001,
+  "tokens": 226967,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-135-catalog-component-drift-fanout": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 2.6388,
+  "tokens": 840346,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-136-provision-key-mode-too-open": {
+  "trial_rewards": [
+   0.29,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.5151,
+  "tokens": 477470,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.29,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-137-generated-password-forbidden-chars": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.42010000000000003,
+  "tokens": 125157,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-138-project-prefix-not-a-dns-label": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.1465999999999998,
+  "tokens": 366098,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-139-ami-id-pinned-to-one-region": {
+  "trial_rewards": [
+   0.9,
+   0.9,
+   0.9,
+   0.883333,
+   0.883333
+  ],
+  "cost_usd": 2.1833,
+  "tokens": 685797,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.9,
+     0.9,
+     0.9
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.883333,
+     0.883333
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-141-nested-loop-item-collision": {
+  "trial_rewards": [
+   0.566667,
+   0.566667,
+   0.566667,
+   0.683333,
+   0.683333
+  ],
+  "cost_usd": 2.6417,
+  "tokens": 831120,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.566667,
+     0.566667,
+     0.566667
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.683333,
+     0.683333
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-142-duplicate-yaml-key-last-wins": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.766667,
+   0.766667
+  ],
+  "cost_usd": 1.7313999999999998,
+  "tokens": 545344,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.766667,
+     0.766667
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-144-version-compared-as-string": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.9787999999999997,
+  "tokens": 612823,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-145-prod-stage-deploys-from-fork": {
+  "trial_rewards": [
+   0.65,
+   0.65,
+   0.65,
+   0.341667,
+   0.341667
+  ],
+  "cost_usd": 2.3348,
+  "tokens": 742965,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.65,
+     0.65,
+     0.65
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.341667,
+     0.341667
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-148-precheck-caches-nxdomain": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 2.8876,
+  "tokens": 903040,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-149-alphabetised-workloads-before-operator": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6184000000000001,
+  "tokens": 174850,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-151-backup-schedule-is-commented-out": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.3365,
+  "tokens": 100831,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-152-path-search-cannot-find-variable-uses": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.4639,
+  "tokens": 132179,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-153-override-uses-removed-variable-name": {
+  "trial_rewards": [
+   0.844444,
+   0.844444,
+   0.844444,
+   0.844444,
+   0.844444
+  ],
+  "cost_usd": 2.4172000000000002,
+  "tokens": 771707,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.844444,
+     0.844444,
+     0.844444
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.844444,
+     0.844444
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-155-order-time-was-queue-wait": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.4833,
+  "tokens": 142868,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-157-drain-blocked-by-node-local-disk": {
+  "trial_rewards": [
+   0.836364,
+   0.836364,
+   0.836364,
+   0.836364,
+   0.581818
+  ],
+  "cost_usd": 1.4038,
+  "tokens": 419463,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.836364,
+     0.836364,
+     0.836364
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.836364,
+     0.581818
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-158-lab-instances-outside-default-region": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6377999999999999,
+  "tokens": 190080,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-159-renewal-run-never-saw-host": {
+  "trial_rewards": [
+   0.809524,
+   0.809524,
+   0.809524,
+   0.809524,
+   0.809524
+  ],
+  "cost_usd": 2.4164,
+  "tokens": 784041,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     0.809524,
+     0.809524,
+     0.809524
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.809524,
+     0.809524
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-160-event-attendee-codes-any-cluster": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.7029,
+  "tokens": 226444,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-162-shared-session-needs-multiuser-item": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 0.6998,
+  "tokens": 225422,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-164-workshop-item-replaced-by-v2": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.5024000000000002,
+  "tokens": 475693,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-165-renamed-item-same-asset-uuid": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   0.86,
+   0.86
+  ],
+  "cost_usd": 1.3302,
+  "tokens": 420501,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     0.86,
+     0.86
+    ],
+    "errored_trials": 0
+   }
+  ]
+ },
+ "platform-167-ordered-workers-override-default": {
+  "trial_rewards": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "cost_usd": 1.0899,
+  "tokens": 347222,
+  "runs": [
+   {
+    "suite": "v6t4_m1",
+    "seeds": "0-2",
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   },
+   {
+    "suite": "v6t4_m1x",
+    "seeds": "3-4",
+    "trial_rewards": [
+     1.0,
+     1.0
+    ],
+    "errored_trials": 0
+   }
+  ]
+ }
+}
