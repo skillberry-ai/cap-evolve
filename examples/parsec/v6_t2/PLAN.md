@@ -6,7 +6,7 @@ decided after these finish.
 
 
 **Status: complete (2026-10-21).** All 34 optimized tasks reached 1.0. Results, incidents and the
-67-task report are in [`results/v6_t2_e1/`](../../../results/v6_t2_e1/README.md). The sections
+67-task report are on the `parsec-history` branch under `results/v6/v6_t2_e1/` (summary in `summary.md`). The sections
 below are the plan as run; "Cost and time" is the pre-run estimate, kept for comparison.
 
 ## Tasks: batch 1 (10)

@@ -47,13 +47,13 @@ with the Seed's existing 10-trial F and test numbers (v6_g2_e1), paired by task.
 
 About 400 trials per method (~$100 at ~$0.25/trial), so ~$300 for all three.
 
-**Executed (2026-10-21):** 5 trials per task (3 + a 2-trial top-up at fresh seeds), not 3; results in `results/v6_t4_e1/README.md`.
+**Executed (2026-10-21):** 5 trials per task (3 + a 2-trial top-up at fresh seeds), not 3; results on the `parsec-history` branch under `results/v6/v6_t4_e1/` (`summary.md`, `RESULTS_FOR_PAPER.md`).
 
 **Execution:** one LSF job per task, on its own node (the h4 pattern, `examples/parsec/RUN_H4.md`),
 at most 20 concurrent. No shared lane queue.
 
 ## Files
 
-- `results/v6_t4_e1/merge_inputs/`: `seed/` (8 files) and `tasks/<task>/{edit.diff, instruction.md,
+- `artifacts/v6/v6_t4_e1/merge_inputs/` (on `parsec-history`): `seed/` (8 files) and `tasks/<task>/{edit.diff, instruction.md,
   PROCESS.md}`. PROCESS.md has every score, reward, trial count and percentage removed.
-- `results/v6_t4_e1/m3_smart/`, `m1_order/`, `m2_nonconflict/`: each merged bundle plus its merge log.
+- `artifacts/v6/v6_t4_e1/m3_smart/`, `m1_order/`, `m2_nonconflict/` (on `parsec-history`): each merged bundle plus its merge log.
