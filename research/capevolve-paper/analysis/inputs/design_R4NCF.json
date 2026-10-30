@@ -1,0 +1,83 @@
+{
+ "name": "R4NCF",
+ "seed": "seed/s0",
+ "seed_check": "seed-check/s0",
+ "NOTE": "family 3 (NCF, budget-forced native Claude Code) held-out window, salt R4N, 11 cells x 600 at 30 trials; K2 = the three registered searches (MERGED trees, re-scored here, never pooled with R4WIN); A1a = the R4WIN trees re-scored here; NCF cell keys NCF-s0/s0 NCF-s1/s0 NCF-s2/s0 (addendum 33, erratum 168); designed before any NCF outcome exists",
+ "groups": {
+  "K2": [
+   "GATE-K2-s0/s0",
+   "GATE-K2-s1/s0",
+   "GATE-K2-s3/s0"
+  ],
+  "NCF": [
+   "NCF-s0/s0",
+   "NCF-s1/s0",
+   "NCF-s2/s0"
+  ],
+  "A1a": [
+   "V2-A1a/s0",
+   "V2-A1a-s2/s0",
+   "V2-A1a-s3/s0"
+  ],
+  "NCF_s0": [
+   "NCF-s0/s0"
+  ],
+  "NCF_s1": [
+   "NCF-s1/s0"
+  ],
+  "NCF_s2": [
+   "NCF-s2/s0"
+  ]
+ },
+ "primary": [
+  [
+   "K2",
+   "NCF"
+  ]
+ ],
+ "primary_holm": false,
+ "secondary": [
+  [
+   "NCF",
+   "A1a"
+  ],
+  [
+   "NCF",
+   "seed"
+  ],
+  [
+   "K2",
+   "seed"
+  ],
+  [
+   "A1a",
+   "seed"
+  ],
+  [
+   "NCF_s0",
+   "seed"
+  ],
+  [
+   "NCF_s1",
+   "seed"
+  ],
+  [
+   "NCF_s2",
+   "seed"
+  ]
+ ],
+ "sensitivity": [
+  [
+   "K2",
+   "NCF_s0"
+  ],
+  [
+   "K2",
+   "NCF_s1"
+  ],
+  [
+   "K2",
+   "NCF_s2"
+  ]
+ ]
+}
