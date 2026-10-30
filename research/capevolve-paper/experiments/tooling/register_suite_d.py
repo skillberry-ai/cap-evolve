@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main", "R4E1E6/main", "R4MQ/main", "E1X/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main", "R4E1E6/main", "R4MQ/main", "E1X/main", "R4WIN/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -761,6 +761,11 @@ def main():
                          ("r4mq_r4_json", PAPER / "analysis/out/unblind_20261029/r4mq/r4.json", "E4 (R4MQ) registered analysis output json (erratum 165)"),
                          ("R4MQ_registered_md", Path("/tmp/rr/paper/research_revision/R4MQ_registered.md"), "E4 summary for team-lead (erratum 165)"),
                          ("ncf_design_v1", Path("/tmp/rr/paper/research_revision/exp1/NCF_DESIGN.md"), "family 3 (NCF) design DRAFT v1 by ablation-lead; superseded where erratum 168 says so"),
+                         ("r4win_r4_md", PAPER / "analysis/out/unblind_20261030/r4win/r4.md", "R4WIN registered analysis output (erratum 169)"),
+                         ("r4win_r4_json", PAPER / "analysis/out/unblind_20261030/r4win/r4.json", "R4WIN registered analysis output (erratum 169)"),
+                         ("r4win_cc_r4_md", PAPER / "analysis/out/unblind_20261030/r4win_cc/r4.md", "R4WIN registered analysis output (erratum 169)"),
+                         ("r4win_cc_r4_json", PAPER / "analysis/out/unblind_20261030/r4win_cc/r4.json", "R4WIN registered analysis output (erratum 169)"),
+                         ("R4WIN_registered_md", Path("/tmp/rr/paper/research_revision/R4WIN_registered.md"), "R4WIN results summary (erratum 169)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
