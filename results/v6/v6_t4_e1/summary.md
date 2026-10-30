@@ -169,6 +169,7 @@ platform-004 on F: Seed 0.76, G 0.91, m1/m3/m2 all 1.00.
 | [`../../../artifacts/v6/v6_t4_e1/`](../../../artifacts/v6/v6_t4_e1/) | `m1_order/` (merge by order), `m3_smart/` (smart merge), `m2_nonconflict/` (non-conflicting hunks): frozen bundles + `MERGE_LOG.md`; `merge_inputs/` |
 | [`per_task/{m1,m3,m2}.json`](per_task/) | per task: all 5 trial rewards (seeds 0–2 and 3–4 listed separately), cost, tokens |
 | [`eval/`](eval/) | per-suite collector outputs: 3-trial (`v6t4_m*.json`), top-up (`v6t4_m*x.json`), pooled (`v6t4_m*_5t.json`); `analysis*.json`; runner log; host blocklist; the 7 re-run m3 tasks |
+| [`AUDITS.md`](AUDITS.md) | read-only audits of the Global run: the low Seed-control batch and the gate replay, `platform-131`, and infrastructure errors in the sealed test (scripts: `examples/parsec/v6_t4/audits/` on `main`) |
 | [`cost_table.json`](cost_table.json), [`size_table.json`](size_table.json) | Tables 2 and 3 as data (size includes per-file counts) |
 | [`merge_cost.json`](merge_cost.json), [`m3_smart_usage.json`](m3_smart_usage.json) | merge time/tokens/cost; smart merge's per-message token record |
 
