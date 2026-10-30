@@ -220,7 +220,7 @@ def main():
                     "results_long_end_infra_missing.csv", "results_long_end_first_attempt_infra_zero.csv", "results_trials.csv", "results_trials_end.csv",
                     "per_arm_report.json", "per_artifact_infra_rates.json", "infra_diagnostic.json", "rollout_log.csv", "raw/rollouts.jsonl",
                     "interruptions.jsonl", "canary.jsonl"]
-    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main", "R4E1E6/main", "R4MQ/main", "E1X/main", "R4WIN/main"):   # add V2/D and V2/A only after their windows have ended
+    for win in ("A", "B", "C", "D", "E", "V2/E", "V2/D", "V2/A", "V21/D", "V21/A", "V3B1/main", "V3B1/traineval", "V3B1LATE/main", "V3B1CHAIN/main", "V3B1REJ/main", "V4B1S2/main", "ABLW1/main", "ABLW2/main", "MERGED/main", "BRIDGE1/main", "TRAINRS1/main", "K02WIN/main", "K2GATEWIN/main", "K30/main", "R4E1E6/main", "R4MQ/main", "E1X/main", "R4WIN/main", "F4/main"):   # add V2/D and V2/A only after their windows have ended
         for rn in RESULT_NAMES:
             fp = FE / win / rn
             if fp.exists():
@@ -822,6 +822,9 @@ def main():
                          ("design_R4NCF_json", PAPER / "analysis/inputs/design_R4NCF.json", "family 3 (NCF) analysis design, written before any NCF outcome (erratum 178)"),
                          ("ncf_design_v2", Path("/tmp/rr/paper/research_revision/exp1/NCF_DESIGN_v2.md"), "family 3 (NCF) design v2 by ablation-lead (erratum 178)"),
                          ("ncf_champion_py", Path("/home/dev/projects2/campaign-scratch/scripts/NC2/ncf_champion.py"), "NCF champion-rule and import-check script, registered before it is run (erratum 178)"),
+                         ("f4_fam4_md", PAPER / "analysis/out/unblind_20261030/f4/fam4.md", "family 4 registered analysis output (erratum 181)"),
+                         ("f4_fam4_json", PAPER / "analysis/out/unblind_20261030/f4/fam4.json", "family 4 registered analysis output json (erratum 181)"),
+                         ("f4_RESULTS_md", Path("/tmp/rr/paper/research_revision/exp1/f4/RESULTS_F4_registered.md"), "family 4 results summary (erratum 181)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
