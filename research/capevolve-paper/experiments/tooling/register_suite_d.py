@@ -818,6 +818,7 @@ def main():
                          ("f4b_artifacts_F4_json", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/manifests/artifacts_F4.json"), "family 4 (F4) order package item, acked in erratum 175"),
                          ("f4b_exp1_order_f4_py", Path("/home/dev/projects2/mlsys2027-cap-evolve-paper/experiments/final/exp1_order_f4.py"), "family 4 (F4) order package item, acked in erratum 175"),
                          ("f4b_champions_F4_json", Path("/home/dev/projects2/campaign-scratch/final_eval/champions_F4.json"), "family 4 (F4) order package item, acked in erratum 175"),
+                         ("fam4_analysis_py", PAPER / "analysis/scripts/fam4_analysis.py", "family 4 analysis script, tested on a synthetic stand-in only; registered before any F4 outcome (erratum 176)"),
                          ("unblind_analysis.py", PAPER / "analysis/scripts/unblind_analysis.py", "analysis script run once under the erratum 36 unblinding (registered after the first run; see erratum 37)"),
                          ("unblind_results.json", PAPER / "analysis/out/unblind_20261014/unblind_results.json", "machine-readable output of unblind_analysis.py, erratum 37"),
                          ("unblind_SUMMARY.md", PAPER / "analysis/out/unblind_20261014/SUMMARY.md", "summary tables of the unblinded analysis, erratum 37"),
