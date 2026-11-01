@@ -42,6 +42,12 @@
 #   3  lane built but VERIFICATION FAILED — do not run a sweep on it
 set -eo pipefail
 
+# The tree: $PARSEC_V5N, or $PARSEC_V6N under PARSEC_BENCH=v6 -- v6 lanes are built
+# exactly like v5 ones, from the v6 tree's own parsec-live and skills.
+if [[ "${PARSEC_BENCH:-v5}" == "v6" ]]; then
+  : "${PARSEC_V6N:?PARSEC_V6N environment variable is required when PARSEC_BENCH=v6 (see parsec_paths.py)}"
+  PARSEC_V5N="$PARSEC_V6N"
+fi
 : "${PARSEC_V5N:?PARSEC_V5N environment variable is required (see parsec_paths.py)}"
 
 SHARED="$PARSEC_V5N/_run/parsec-live"

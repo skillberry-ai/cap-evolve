@@ -45,6 +45,9 @@ if [[ -z "${PROJECT_ROOT:-}" ]]; then
   PROJECT_ROOT="$(cd "$H4_DIR/../../.." && pwd)"
 fi
 CCC_DIR="$PROJECT_ROOT/scripts/ccc"
+# The parsec stack scripts live with the example; scripts/ccc keeps only the
+# benchmark-agnostic ones (setup_podman.sh, run_ccc_experiment.sh).
+PARSEC_CCC_DIR="$PROJECT_ROOT/examples/parsec/ccc"
 
 SUITE_ID=""
 TASK_ID_ARG=""
@@ -182,12 +185,12 @@ banner "Bringing up the parsec stack (lane $LANE)"
 STACK_UP=false
 teardown_stack() {
   [[ "$STACK_UP" == true ]] || return 0
-  bash "$CCC_DIR/parsec_stack.sh" down || true
+  bash "$PARSEC_CCC_DIR/parsec_stack.sh" down || true
 }
 trap teardown_stack EXIT
 STACK_UP=true
 set +e
-bash "$CCC_DIR/parsec_stack.sh" up
+bash "$PARSEC_CCC_DIR/parsec_stack.sh" up
 UP_RC=$?
 set -e
 if (( UP_RC == 2 )); then
@@ -199,7 +202,7 @@ if (( UP_RC != 0 )); then
 fi
 # Not a bare port check: an unactivated harness accepts connections and answers
 # /healthz while serving no tools, so `status` polls for simulation `ready`.
-bash "$CCC_DIR/parsec_stack.sh" status
+bash "$PARSEC_CCC_DIR/parsec_stack.sh" status
 
 # ---------------------------------------------------------------------------
 # Evaluate. The shared adapter is symlinked into every project and takes no

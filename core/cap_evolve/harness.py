@@ -204,7 +204,9 @@ def ensure_splits(adapter, run_dir: RunDir, *, seed: int = 0, ratios=(0.5, 0.25,
     """
     if run_dir.splits_path.exists():
         return run_dir.read_splits()
-    if split_ids:
+    if split_ids and ("feedback" in split_ids or "confirm" in split_ids):
+        splits = _explicit_pool_splits(run_dir, split_ids, seed=seed)
+    elif split_ids:
         splits = Splits(train=[str(t) for t in split_ids.get("train", [])],
                         val=[str(t) for t in split_ids.get("val", [])],
                         test=[str(t) for t in split_ids.get("test", [])], seed=seed)
@@ -219,6 +221,28 @@ def ensure_splits(adapter, run_dir: RunDir, *, seed: int = 0, ratios=(0.5, 0.25,
     run_dir.log_event("splits", train=len(splits.train), val=len(splits.val),
                       test=len(splits.test), seed=seed)
     return splits
+
+
+def _explicit_pool_splits(run_dir: RunDir, split_ids: dict, *, seed: int) -> Splits:
+    """A split file that names F and C itself (``feedback``/``confirm`` + ``test``).
+
+    Only meaningful under ``split_mode: pooled``: in the legacy loop the proposer reads val, so C would
+    be shown to it — refused rather than silently defeating the point of naming it."""
+    if gatecfg.GateConfig.for_run(run_dir).split_mode != "pooled":
+        raise ValueError("split_ids with feedback/confirm needs split_mode: pooled — in the legacy loop "
+                         "the proposer reads val, so the confirm ids would be shown to it")
+    if "train" in split_ids or "val" in split_ids:
+        raise ValueError("split_ids: give either train/val or feedback/confirm, not both")
+    fb = [str(t) for t in split_ids.get("feedback") or []]
+    cf = [str(t) for t in split_ids.get("confirm") or []]
+    te = [str(t) for t in split_ids.get("test") or []]
+    if not fb or not cf:
+        raise ValueError("split_ids: feedback and confirm must both be non-empty")
+    for a, b, what in ((fb, cf, "feedback and confirm"), (fb, te, "feedback and test"),
+                       (cf, te, "confirm and test")):
+        if set(a) & set(b):
+            raise ValueError(f"split_ids: {what} overlap")
+    return Splits(train=fb, val=cf, test=te, seed=seed, explicit_pool=True)
 
 
 def _seed_pass_rates(run_dir: RunDir) -> dict:
@@ -250,12 +274,17 @@ def ensure_pooled(run_dir: RunDir, *, confirm_fraction: float | None = None,
     cfg = gatecfg.GateConfig.for_run(run_dir)
     frac = cfg.confirm_fraction if confirm_fraction is None else float(confirm_fraction)
     pool = list(dict.fromkeys([*splits.train, *splits.val]))
-    rates = pass_rates if pass_rates is not None else _seed_pass_rates(run_dir)
-    fb, cf = make_pooled_partition(pool, seed=splits.seed, confirm_fraction=frac, pass_rates=rates)
+    if splits.explicit_pool:
+        fb, cf, rates = list(splits.train), list(splits.val), {}
+        frac = len(cf) / len(pool)
+    else:
+        rates = pass_rates if pass_rates is not None else _seed_pass_rates(run_dir)
+        fb, cf = make_pooled_partition(pool, seed=splits.seed, confirm_fraction=frac, pass_rates=rates)
     splits.pooled, splits.feedback, splits.confirm, splits.pool_seed = True, fb, cf, splits.seed
     run_dir.write_splits(splits)
     run_dir.log_event("pooled_split", n_pool=len(pool), n_feedback=len(fb), n_confirm=len(cf),
-                      confirm_fraction=frac, stratified=bool(rates), seed=splits.seed)
+                      confirm_fraction=frac, stratified=bool(rates), seed=splits.seed,
+                      explicit=splits.explicit_pool)
     return splits
 
 

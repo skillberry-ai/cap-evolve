@@ -36,6 +36,9 @@ class Splits:
     feedback: list = field(default_factory=list)
     confirm: list = field(default_factory=list)
     pool_seed: int = 0
+    # The split file named F and C itself (``feedback``/``confirm`` keys): train holds F and val holds C
+    # until ``ensure_pooled`` adopts them as the partition instead of drawing one.
+    explicit_pool: bool = False
 
     def ids(self, split: str) -> list:
         split = split.lower()
@@ -90,6 +93,8 @@ class Splits:
         if self.pooled:         # legacy files stay byte-identical
             d.update(pooled=True, feedback=list(self.feedback), confirm=list(self.confirm),
                      pool_seed=self.pool_seed)
+        if self.explicit_pool:
+            d["explicit_pool"] = True
         return d
 
     @classmethod
@@ -104,6 +109,7 @@ class Splits:
             feedback=list(d.get("feedback") or []),
             confirm=list(d.get("confirm") or []),
             pool_seed=int(d.get("pool_seed") or 0),
+            explicit_pool=bool(d.get("explicit_pool") or False),
         )
 
 

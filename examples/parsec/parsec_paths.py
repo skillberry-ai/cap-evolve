@@ -90,3 +90,25 @@ def resolve_v5n() -> Path:
     if v5n is None:
         raise RuntimeError(f"{V5N_REQUIRED_MSG} Set it before running this script.")
     return v5n
+
+
+#: One source of truth for the "you forgot to set PARSEC_V6N" wording.
+V6N_REQUIRED_MSG = (
+    "PARSEC_V6N environment variable is required — it must point at "
+    "the root of a parsec v6 checkout (e.g. "
+    ".../rhdp-parsec/v6_2026-10-16, the directory containing _run/)."
+)
+
+
+def resolve_v6n_or_none() -> Path | None:
+    """The parsec v6 checkout root, from $PARSEC_V6N, or None if unset/blank."""
+    raw = os.environ.get("PARSEC_V6N", "").strip()
+    return Path(raw) if raw else None
+
+
+def resolve_v6n() -> Path:
+    """Like resolve_v6n_or_none(), but raises when PARSEC_V6N is unset."""
+    v6n = resolve_v6n_or_none()
+    if v6n is None:
+        raise RuntimeError(f"{V6N_REQUIRED_MSG} Set it before running this script.")
+    return v6n

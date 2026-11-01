@@ -35,6 +35,12 @@
 #   *  parsec_stack.sh's or run_ccc_experiment.sh's own exit code
 set -eo pipefail
 
+# PARSEC_BENCH=v6 points the same machinery at the v6 tree ($PARSEC_V6N, bench-v6-* tasks), the way
+# make_lane.sh already does. v5 stays the default.
+if [[ "${PARSEC_BENCH:-v5}" == "v6" ]]; then
+  : "${PARSEC_V6N:?PARSEC_V6N environment variable is required when PARSEC_BENCH=v6}"
+  PARSEC_V5N="$PARSEC_V6N"
+fi
 : "${PARSEC_V5N:?PARSEC_V5N environment variable is required (see parsec_paths.py)}"
 : "${LLM_API_KEY:?LLM_API_KEY environment variable is required by parsec_stack.sh up (the simulators LLM credentials)}"
 : "${LLM_API_BASE:?LLM_API_BASE environment variable is required by parsec_stack.sh up}"
@@ -45,6 +51,9 @@ if [[ -z "${PROJECT_ROOT:-}" ]]; then
   PROJECT_ROOT="$(cd "$V5_DIR/../../.." && pwd)"
 fi
 CCC_DIR="$PROJECT_ROOT/scripts/ccc"
+# The parsec stack scripts live with the example; scripts/ccc keeps only the
+# benchmark-agnostic ones (setup_podman.sh, run_ccc_experiment.sh).
+PARSEC_CCC_DIR="$PROJECT_ROOT/examples/parsec/ccc"
 
 SUITE_ID=""
 TASK_ID_ARG=""
@@ -123,6 +132,10 @@ bash "$V5_DIR/make_lane.sh" "$LANE" || exit 3
 # and to the Harbor container (which reads the trajectory back out of it), and
 # PARSEC_LIVE_LOG must name the file parsec_stack.sh actually writes or the
 # cost-attribution window silently sums zero.
+# The shared adapter serves v4 by default; select the v5 tree, and give each
+# suite its own trial-data namespace so concurrent arms never share one.
+export PARSEC_BENCH="${PARSEC_BENCH:-v5}"
+export PARSEC_JOBS_SUITE="${PARSEC_JOBS_SUITE:-${PARSEC_BENCH}_$SUITE_ID}"
 export PARSEC_LIVE_ROOT="$LANE_DIR"
 export PARSEC_LIVE_PROMPTS_DIR="$LANE_DIR/config/prompts"
 export PARSEC_SKILLS_DIR="$LANE_DIR/_v5/skills"
@@ -182,12 +195,12 @@ banner "Bringing up the parsec stack (lane $LANE)"
 STACK_UP=false
 teardown_stack() {
   [[ "$STACK_UP" == true ]] || return 0
-  bash "$CCC_DIR/parsec_stack.sh" down || true
+  bash "$PARSEC_CCC_DIR/parsec_stack.sh" down || true
 }
 trap teardown_stack EXIT
 STACK_UP=true
 set +e
-bash "$CCC_DIR/parsec_stack.sh" up
+bash "$PARSEC_CCC_DIR/parsec_stack.sh" up
 UP_RC=$?
 set -e
 if (( UP_RC == 2 )); then
@@ -199,7 +212,7 @@ if (( UP_RC != 0 )); then
 fi
 # Not a bare port check: an unactivated harness accepts connections and answers
 # /healthz while serving no tools, so `status` polls for simulation `ready`.
-bash "$CCC_DIR/parsec_stack.sh" status
+bash "$PARSEC_CCC_DIR/parsec_stack.sh" status
 
 # ---------------------------------------------------------------------------
 # Evaluate. The shared adapter is symlinked into every project and takes no
