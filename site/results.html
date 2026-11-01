@@ -557,13 +557,20 @@
         <h2 id="blackbox">Blackbox approach — τ²-bench airline, direct and blackbox</h2>
 
         <p>
+          Artifacts:
+          <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_sierra_airline/direct/run"><code>examples/tau2_sierra_airline/direct/run/</code></a>
+          and
+          <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/examples/tau2_sierra_airline/blackbox/run"><code>examples/tau2_sierra_airline/blackbox/run/</code></a>
+          (<code>final.json</code>, static dashboard under <code>ui/</code>).
+          Reproduce: <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_tau2_sierra_direct_blackbox.md">REPRODUCE_tau2_sierra_direct_blackbox.md</a>.
+        </p>
+
+        <p>
           The same optimization run twice on vanilla τ²-bench, changing only how each candidate reaches
           the model: <strong>direct</strong> (the runner loads the candidate's tool code) and
           <strong>blackbox</strong> (the candidate is deployed to the Skillberry Store and the Skillberry
           Proxy-Agent injects it into the agent's LLM calls, so the benchmark is never modified). See the
-          <a href="blackbox.html">Blackbox tab</a> for how it works, and
-          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/REPRODUCE_tau2_sierra_direct_blackbox.md">REPRODUCE_tau2_sierra_direct_blackbox.md</a>
-          to reproduce both runs.
+          <a href="blackbox.html">Blackbox tab</a> for how it works.
         </p>
 
         <ul>
@@ -604,10 +611,8 @@
 
         <blockquote>
           <p>
-            Honest reading: this is a no-holdout run (the same 7 tasks for train, val and test), so the
-            test number is a fit metric. The two deliveries agree on the shape of the climb; blackbox
-            ends lower, which the known proxy-side costs (tool results not carried across turns, quotes
-            stripped from tool output) account for.
+            Honest reading: this is a no-holdout run (the same 7 tasks for train, val and test), so the test number
+            is a fit metric and the two deliveries agree on the shape of the climb.
           </p>
         </blockquote>
       </section>

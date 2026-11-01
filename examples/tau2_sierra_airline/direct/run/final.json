@@ -1,0 +1,1038 @@
+{
+ "test": {
+  "split": "test",
+  "reward": 0.9428571428571428,
+  "stderr": 0.067005939426049,
+  "pass_k": {
+   "1": 0.9428571428571428,
+   "2": 0.9
+  },
+  "pass_at_k": {
+   "1": 0.9428571428571428,
+   "2": 0.9857142857142858
+  },
+  "per_task": [
+   {
+    "task_id": "8",
+    "reward": 1.0,
+    "feedback": "reward=1.00\nsearch_direct_flight (read): the required call was never made.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "10",
+    "reward": 1.0,
+    "feedback": "reward=1.00\nall checks passed.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "20",
+    "reward": 1.0,
+    "feedback": "reward=1.00\nall checks passed.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "23",
+    "reward": 1.0,
+    "feedback": "reward=1.00\ncancel_reservation (write): call did not match the required action.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "35",
+    "reward": 1.0,
+    "feedback": "reward=1.00\nall checks passed.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "42",
+    "reward": 1.0,
+    "feedback": "reward=1.00\nget_user_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\ncancel_reservation (write): reservation_id='HSR97W' is not what the task required\ncancel_reservation (write): reservation_id='FDZ0T5' is not what the task required",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "44",
+    "reward": 0.6,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     1.0,
+     0.0,
+     1.0,
+     1.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   }
+  ],
+  "cost_usd": 0.0,
+  "tokens": 0,
+  "seconds": 365.46447706222534,
+  "cost_source": {},
+  "n_tasks": 7,
+  "n_scored": 7
+ },
+ "best_id": "cand_0003",
+ "test_baseline": {
+  "split": "test",
+  "reward": 0.34285714285714286,
+  "stderr": 0.13997084244475302,
+  "pass_k": {
+   "1": 0.34285714285714286,
+   "2": 0.17142857142857143
+  },
+  "pass_at_k": {
+   "1": 0.34285714285714286,
+   "2": 0.5142857142857143
+  },
+  "per_task": [
+   {
+    "task_id": "8",
+    "reward": 0.6,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): total_baggages=2 is not what the task required",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     0.0,
+     1.0,
+     1.0,
+     1.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "10",
+    "reward": 0.6,
+    "feedback": "reward=1.00\nall checks passed.",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "20",
+    "reward": 0.6,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): payment_methods=[{\"amount\": 100, \"payment_id\": \"certificate_4856383\"}, {\"amount\": 155, \"payment_id\": \"certificate_7504069\"}] is not what the task required; available on the user's profile=['certificate_4856383', 'certificate_7504069', 'credit_card_1955700', 'credit_card_4421486']",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     1.0,
+     0.0,
+     1.0,
+     1.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "23",
+    "reward": 0.0,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\ncancel_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\ncommunicate: a required piece of information (check #3) was not stated to the user.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "35",
+    "reward": 0.0,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "42",
+    "reward": 0.6,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "44",
+    "reward": 0.0,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   }
+  ],
+  "cost_usd": 0.0,
+  "tokens": 0,
+  "seconds": 331.72585892677307,
+  "cost_source": {},
+  "n_tasks": 7,
+  "n_scored": 7
+ },
+ "baseline_id": "seed",
+ "test_delta": 0.6,
+ "best": {
+  "train": {
+   "status": "skipped: train ids are identical to val — see the val entry"
+  },
+  "val": {
+   "split": "val",
+   "reward": 0.9142857142857144,
+   "stderr": 0.09258200997725514,
+   "pass_k": {
+    "1": 0.9142857142857144,
+    "2": 0.8714285714285713
+   },
+   "pass_at_k": {
+    "1": 0.9142857142857144,
+    "2": 0.9571428571428572
+   },
+   "per_task": [
+    {
+     "task_id": "10",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 1.0,
+     "feedback": "reward=1.00\ncancel_reservation (write): call did not match the required action.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nget_user_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\ncancel_reservation (write): reservation_id='HSR97W' is not what the task required\ncancel_reservation (write): reservation_id='FDZ0T5' is not what the task required",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.4,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "8",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 0.0,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  },
+  "test": {
+   "split": "test",
+   "reward": 0.9428571428571428,
+   "stderr": 0.067005939426049,
+   "pass_k": {
+    "1": 0.9428571428571428,
+    "2": 0.9
+   },
+   "pass_at_k": {
+    "1": 0.9428571428571428,
+    "2": 0.9857142857142858
+   },
+   "per_task": [
+    {
+     "task_id": "8",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nsearch_direct_flight (read): the required call was never made.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "10",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 1.0,
+     "feedback": "reward=1.00\ncancel_reservation (write): call did not match the required action.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nget_user_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\nget_reservation_details (read): the required call was never made.\ncancel_reservation (write): reservation_id='HSR97W' is not what the task required\ncancel_reservation (write): reservation_id='FDZ0T5' is not what the task required",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 365.46447706222534,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  }
+ },
+ "seed": {
+  "train": {
+   "status": "skipped: train ids are identical to val — see the val entry"
+  },
+  "val": {
+   "split": "val",
+   "reward": 0.2857142857142857,
+   "stderr": 0.15822140691272524,
+   "pass_k": {
+    "1": 0.2857142857142857,
+    "2": 0.19999999999999998
+   },
+   "pass_at_k": {
+    "1": 0.2857142857142857,
+    "2": 0.37142857142857144
+   },
+   "per_task": [
+    {
+     "task_id": "10",
+     "reward": 1.0,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 0.4,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): the required call was never made.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\ncancel_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\ncommunicate: a required piece of information (check #3) was not stated to the user.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): payment_methods=[{\"amount\": 290, \"payment_id\": \"credit_card_4959530\"}] is not what the task required; available on the user's profile=['certificate_9645872', 'credit_card_4959530', 'credit_card_9074831']; total_baggages=3 is not what the task required\nbook_reservation (write): total_baggages=3 is not what the task required",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "8",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): total_baggages=2 is not what the task required",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 0.0,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  },
+  "test": {
+   "split": "test",
+   "reward": 0.34285714285714286,
+   "stderr": 0.13997084244475302,
+   "pass_k": {
+    "1": 0.34285714285714286,
+    "2": 0.17142857142857143
+   },
+   "pass_at_k": {
+    "1": 0.34285714285714286,
+    "2": 0.5142857142857143
+   },
+   "per_task": [
+    {
+     "task_id": "8",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): total_baggages=2 is not what the task required",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "10",
+     "reward": 0.6,
+     "feedback": "reward=1.00\nall checks passed.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nbook_reservation (write): payment_methods=[{\"amount\": 100, \"payment_id\": \"certificate_4856383\"}, {\"amount\": 155, \"payment_id\": \"certificate_7504069\"}] is not what the task required; available on the user's profile=['certificate_4856383', 'certificate_7504069', 'credit_card_1955700', 'credit_card_4421486']",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\ncancel_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\nbook_reservation (write): the required call was never made.\ncommunicate: a required piece of information (check #3) was not stated to the user.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state (a write was missing, extra, or had a wrong argument).\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nsearch_direct_flight (read): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.\nupdate_reservation_flights (write): the required call was never made.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 331.72585892677307,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  }
+ },
+ "train_equals_val": true
+}

@@ -1,0 +1,1 @@
+{"path":"work/cand_0001.integrity.json","binary":false,"size":232,"truncated":false,"text":"{\n  \"files\": {\n    \"reference/data_model.py\": \"«redacted»\"\n  },\n  \"patterns\": [\n    \"reference/*\"\n  ],\n  \"root\": \".capevolve/run_20261013_094928/work/cand_0001\",\n  \"version\": 1\n}"}

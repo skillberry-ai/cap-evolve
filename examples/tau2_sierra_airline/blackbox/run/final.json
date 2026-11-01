@@ -1,0 +1,1038 @@
+{
+ "test": {
+  "split": "test",
+  "reward": 0.7714285714285715,
+  "stderr": 0.10690449676496976,
+  "pass_k": {
+   "1": 0.7714285714285715,
+   "2": 0.6
+  },
+  "pass_at_k": {
+   "1": 0.7714285714285715,
+   "2": 0.9428571428571428
+  },
+  "per_task": [
+   {
+    "task_id": "8",
+    "reward": 1.0,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "10",
+    "reward": 0.8,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.2,
+    "trial_rewards": [
+     0.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "20",
+    "reward": 0.8,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.2,
+    "trial_rewards": [
+     1.0,
+     0.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "23",
+    "reward": 0.4,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "35",
+    "reward": 0.8,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.2,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     0.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "42",
+    "reward": 1.0,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "44",
+    "reward": 0.6,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nupdate_reservation_flights: argument reservation_id=\"NM1VX1\" is wrong.\nupdate_reservation_flights: argument flights=[{\"date\": \"2024-05-25\", \"flight_number\": \"HAT300\"}, {\"date\": \"2024-05-27\", \"flight_number\": \"HAT208\"}] is wrong.",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   }
+  ],
+  "cost_usd": 0.0,
+  "tokens": 0,
+  "seconds": 706.832367181778,
+  "cost_source": {},
+  "n_tasks": 7,
+  "n_scored": 7
+ },
+ "best_id": "cand_0003",
+ "test_baseline": {
+  "split": "test",
+  "reward": 0.37142857142857144,
+  "stderr": 0.13948398586549343,
+  "pass_k": {
+   "1": 0.37142857142857144,
+   "2": 0.18571428571428572
+  },
+  "pass_at_k": {
+   "1": 0.37142857142857144,
+   "2": 0.5571428571428572
+  },
+  "per_task": [
+   {
+    "task_id": "8",
+    "reward": 0.6,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nbook_reservation: argument passengers=[{\"first_name\": \"Sophia\", \"last_name\": \"Silva\", \"dob\": \"1995-08-22\"}, {\"first_name\": \"Kevin\", \"last_name\": \"Smith\", \"dob\": \"2001-04-12\"}] is wrong.",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     1.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "10",
+    "reward": 0.6,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     0.0,
+     0.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "20",
+    "reward": 0.8,
+    "feedback": "pass: all reward checks met",
+    "n": 5,
+    "stderr": 0.2,
+    "trial_rewards": [
+     1.0,
+     1.0,
+     0.0,
+     1.0,
+     1.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "23",
+    "reward": 0.0,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nbook_reservation: argument passengers=[{\"first_name\": \"Mohamed\", \"last_name\": \"Silva\", \"dob\": \"1985-03-15\"}, {\"first_name\": \"Raj\", \"last_name\": \"Sanchez\", \"dob\": \"1990-07-22\"}, {\"first_name\": \"Liam\", \"last_name\": \"Wilson\", \"dob\": \"1988-11-08\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"payment_id\": \"certificate_7815826\", \"amount\": 500}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 198}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 129}, {\"payment_id\": \"credit_card_7815826\", \"amount\": 1786}] is wrong (['certificate_7815826', 'gift_card_7815826', 'gift_card_7815826', 'credit_card_7815826'] not on the user's profile; available=['certificate_2765295', 'certificate_3765853', 'certificate_9984806', 'credit_card_2198526', 'credit_card_5843230', 'gift_card_6136092', 'gift_card_8020792']).\nbook_reservation: argument total_baggages=12 is wrong.\nbook_reservation: argument passengers=[{\"first_name\": \"Mohamed\", \"last_name\": \"Silva\", \"dob\": \"1985-03-15\"}, {\"first_name\": \"Raj\", \"last_name\": \"Sanchez\", \"dob\": \"1990-07-22\"}, {\"first_name\": \"Liam\", \"last_name\": \"Wilson\", \"dob\": \"1988-11-08\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"payment_id\": \"certificate_7815826\", \"amount\": 500}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 198}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 129}, {\"payment_id\": \"credit_card_7815826\", \"amount\": 1786}] is wrong (['certificate_7815826', 'gift_card_7815826', 'gift_card_7815826', 'credit_card_7815826'] not on the user's profile; available=['certificate_2765295', 'certificate_3765853', 'certificate_9984806', 'credit_card_2198526', 'credit_card_5843230', 'gift_card_6136092', 'gift_card_8020792']).\nbook_reservation: argument total_baggages=12 is wrong.\nbook_reservation: argument passengers=[{\"first_name\": \"Mohamed\", \"last_name\": \"Silva\", \"dob\": \"1985-03-15\"}, {\"first_name\": \"Raj\", \"last_name\": \"Sanchez\", \"dob\": \"1990-07-22\"}, {\"first_name\": \"Liam\", \"last_name\": \"Wilson\", \"dob\": \"1988-11-08\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"payment_id\": \"certificate_7815826\", \"amount\": 500}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 198}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 129}, {\"payment_id\": \"credit_card_7815826\", \"amount\": 1786}] is wrong (['certificate_7815826', 'gift_card_7815826', 'gift_card_7815826', 'credit_card_7815826'] not on the user's profile; available=['certificate_2765295', 'certificate_3765853', 'certificate_9984806', 'credit_card_2198526', 'credit_card_5843230', 'gift_card_6136092', 'gift_card_8020792']).\nbook_reservation: argument total_baggages=12 is wrong.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "35",
+    "reward": 0.2,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.",
+    "n": 5,
+    "stderr": 0.2,
+    "trial_rewards": [
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "42",
+    "reward": 0.4,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\ncancel_reservation: expected call was never made by the agent.\ncancel_reservation: expected call was never made by the agent.",
+    "n": 5,
+    "stderr": 0.24494897427831783,
+    "trial_rewards": [
+     0.0,
+     1.0,
+     0.0,
+     1.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   },
+   {
+    "task_id": "44",
+    "reward": 0.0,
+    "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.",
+    "n": 5,
+    "stderr": 0.0,
+    "trial_rewards": [
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "raw": {
+     "errored": false,
+     "errored_trials": 0,
+     "valid_trials": 5,
+     "n_trials": 5,
+     "cost_usd": 0.0
+    },
+    "metrics": []
+   }
+  ],
+  "cost_usd": 0.0,
+  "tokens": 0,
+  "seconds": 1076.1834709644318,
+  "cost_source": {},
+  "n_tasks": 7,
+  "n_scored": 7
+ },
+ "baseline_id": "seed",
+ "test_delta": 0.4,
+ "best": {
+  "train": {
+   "status": "skipped: train ids are identical to val — see the val entry"
+  },
+  "val": {
+   "split": "val",
+   "reward": 0.7714285714285715,
+   "stderr": 0.13751932455422525,
+   "pass_k": {
+    "1": 0.7714285714285715,
+    "2": 0.6714285714285715
+   },
+   "pass_at_k": {
+    "1": 0.7714285714285715,
+    "2": 0.8714285714285713
+   },
+   "per_task": [
+    {
+     "task_id": "10",
+     "reward": 1.0,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 0.8,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 0.4,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      0.0,
+      0.0,
+      0.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 1.0,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 1.0,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.2,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nupdate_reservation_flights: argument reservation_id=\"H8Q05L\" is wrong.\nupdate_reservation_flights: argument flights=[{\"flight_number\": \"HAT268\", \"date\": \"2024-05-24\"}] is wrong.",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "8",
+     "reward": 1.0,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 0.0,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  },
+  "test": {
+   "split": "test",
+   "reward": 0.7714285714285715,
+   "stderr": 0.10690449676496976,
+   "pass_k": {
+    "1": 0.7714285714285715,
+    "2": 0.6
+   },
+   "pass_at_k": {
+    "1": 0.7714285714285715,
+    "2": 0.9428571428571428
+   },
+   "per_task": [
+    {
+     "task_id": "8",
+     "reward": 1.0,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "10",
+     "reward": 0.8,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 0.8,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      1.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 0.4,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 0.8,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 1.0,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nupdate_reservation_flights: argument reservation_id=\"NM1VX1\" is wrong.\nupdate_reservation_flights: argument flights=[{\"date\": \"2024-05-25\", \"flight_number\": \"HAT300\"}, {\"date\": \"2024-05-27\", \"flight_number\": \"HAT208\"}] is wrong.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 706.832367181778,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  }
+ },
+ "seed": {
+  "train": {
+   "status": "skipped: train ids are identical to val — see the val entry"
+  },
+  "val": {
+   "split": "val",
+   "reward": 0.2857142857142857,
+   "stderr": 0.12670604472047686,
+   "pass_k": {
+    "1": 0.2857142857142857,
+    "2": 0.1142857142857143
+   },
+   "pass_at_k": {
+    "1": 0.2857142857142857,
+    "2": 0.4571428571428572
+   },
+   "per_task": [
+    {
+     "task_id": "10",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 0.4,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nbook_reservation: argument flights=[{\"date\": \"2024-05-20\", \"flight_number\": \"HAT083\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"amount\": 100, \"payment_id\": \"certificate_7504069\"}] is wrong.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\ncancel_reservation: expected call was never made by the agent.\nbook_reservation: argument passengers=[{\"dob\": \"1960-11-26\", \"first_name\": \"Mohamed\", \"last_name\": \"Silva\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"amount\": 500, \"payment_id\": \"certificate_3765853\"}, {\"amount\": 198, \"payment_id\": \"gift_card_8020792\"}, {\"amount\": 129, \"payment_id\": \"gift_card_6136092\"}, {\"amount\": 44, \"payment_id\": \"credit_card_2198526\"}] is wrong.\nbook_reservation: argument passengers=[{\"dob\": \"1960-11-26\", \"first_name\": \"Mohamed\", \"last_name\": \"Silva\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"amount\": 500, \"payment_id\": \"certificate_3765853\"}, {\"amount\": 198, \"payment_id\": \"gift_card_8020792\"}, {\"amount\": 129, \"payment_id\": \"gift_card_6136092\"}, {\"amount\": 44, \"payment_id\": \"credit_card_2198526\"}] is wrong.\n1 required piece(s) of information were not communicated to the user; the agent computed ['1000.0', '-456.0'] with calculate but never stated it.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 0.6,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "8",
+     "reward": 0.4,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nbook_reservation: argument passengers=[{\"first_name\": \"Sophia\", \"last_name\": \"Silva\", \"dob\": \"1995-03-22\"}, {\"first_name\": \"Kevin\", \"last_name\": \"Smith\", \"dob\": \"2001-04-12\"}] is wrong.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      0.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "n_trials": 5,
+      "valid_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 0.0,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  },
+  "test": {
+   "split": "test",
+   "reward": 0.37142857142857144,
+   "stderr": 0.13948398586549343,
+   "pass_k": {
+    "1": 0.37142857142857144,
+    "2": 0.18571428571428572
+   },
+   "pass_at_k": {
+    "1": 0.37142857142857144,
+    "2": 0.5571428571428572
+   },
+   "per_task": [
+    {
+     "task_id": "8",
+     "reward": 0.6,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nbook_reservation: argument passengers=[{\"first_name\": \"Sophia\", \"last_name\": \"Silva\", \"dob\": \"1995-08-22\"}, {\"first_name\": \"Kevin\", \"last_name\": \"Smith\", \"dob\": \"2001-04-12\"}] is wrong.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      1.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "10",
+     "reward": 0.6,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      1.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "20",
+     "reward": 0.8,
+     "feedback": "pass: all reward checks met",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      1.0,
+      1.0,
+      0.0,
+      1.0,
+      1.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "23",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nbook_reservation: argument passengers=[{\"first_name\": \"Mohamed\", \"last_name\": \"Silva\", \"dob\": \"1985-03-15\"}, {\"first_name\": \"Raj\", \"last_name\": \"Sanchez\", \"dob\": \"1990-07-22\"}, {\"first_name\": \"Liam\", \"last_name\": \"Wilson\", \"dob\": \"1988-11-08\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"payment_id\": \"certificate_7815826\", \"amount\": 500}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 198}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 129}, {\"payment_id\": \"credit_card_7815826\", \"amount\": 1786}] is wrong (['certificate_7815826', 'gift_card_7815826', 'gift_card_7815826', 'credit_card_7815826'] not on the user's profile; available=['certificate_2765295', 'certificate_3765853', 'certificate_9984806', 'credit_card_2198526', 'credit_card_5843230', 'gift_card_6136092', 'gift_card_8020792']).\nbook_reservation: argument total_baggages=12 is wrong.\nbook_reservation: argument passengers=[{\"first_name\": \"Mohamed\", \"last_name\": \"Silva\", \"dob\": \"1985-03-15\"}, {\"first_name\": \"Raj\", \"last_name\": \"Sanchez\", \"dob\": \"1990-07-22\"}, {\"first_name\": \"Liam\", \"last_name\": \"Wilson\", \"dob\": \"1988-11-08\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"payment_id\": \"certificate_7815826\", \"amount\": 500}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 198}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 129}, {\"payment_id\": \"credit_card_7815826\", \"amount\": 1786}] is wrong (['certificate_7815826', 'gift_card_7815826', 'gift_card_7815826', 'credit_card_7815826'] not on the user's profile; available=['certificate_2765295', 'certificate_3765853', 'certificate_9984806', 'credit_card_2198526', 'credit_card_5843230', 'gift_card_6136092', 'gift_card_8020792']).\nbook_reservation: argument total_baggages=12 is wrong.\nbook_reservation: argument passengers=[{\"first_name\": \"Mohamed\", \"last_name\": \"Silva\", \"dob\": \"1985-03-15\"}, {\"first_name\": \"Raj\", \"last_name\": \"Sanchez\", \"dob\": \"1990-07-22\"}, {\"first_name\": \"Liam\", \"last_name\": \"Wilson\", \"dob\": \"1988-11-08\"}] is wrong.\nbook_reservation: argument payment_methods=[{\"payment_id\": \"certificate_7815826\", \"amount\": 500}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 198}, {\"payment_id\": \"gift_card_7815826\", \"amount\": 129}, {\"payment_id\": \"credit_card_7815826\", \"amount\": 1786}] is wrong (['certificate_7815826', 'gift_card_7815826', 'gift_card_7815826', 'credit_card_7815826'] not on the user's profile; available=['certificate_2765295', 'certificate_3765853', 'certificate_9984806', 'credit_card_2198526', 'credit_card_5843230', 'gift_card_6136092', 'gift_card_8020792']).\nbook_reservation: argument total_baggages=12 is wrong.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "35",
+     "reward": 0.2,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.",
+     "n": 5,
+     "stderr": 0.2,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "42",
+     "reward": 0.4,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\ncancel_reservation: expected call was never made by the agent.\ncancel_reservation: expected call was never made by the agent.",
+     "n": 5,
+     "stderr": 0.24494897427831783,
+     "trial_rewards": [
+      0.0,
+      1.0,
+      0.0,
+      1.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    },
+    {
+     "task_id": "44",
+     "reward": 0.0,
+     "feedback": "reward=0.00\nDB check FAILED: the final database differs from the expected end state.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nsearch_direct_flight: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.\nupdate_reservation_flights: expected call was never made by the agent.",
+     "n": 5,
+     "stderr": 0.0,
+     "trial_rewards": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+     ],
+     "raw": {
+      "errored": false,
+      "errored_trials": 0,
+      "valid_trials": 5,
+      "n_trials": 5,
+      "cost_usd": 0.0
+     },
+     "metrics": []
+    }
+   ],
+   "cost_usd": 0.0,
+   "tokens": 0,
+   "seconds": 1076.1834709644318,
+   "cost_source": {},
+   "n_tasks": 7,
+   "n_scored": 7
+  }
+ },
+ "train_equals_val": true
+}
