@@ -83,7 +83,8 @@ Reference: [`core/cap_evolve/intervention.py`](../core/cap_evolve/intervention.p
 A coding agent onboards a benchmark for the blackbox approach by following the prompt below and
 answering `blackbox` when it asks which approach to use. It installs the benchmark unmodified, seeds
 the capability from the benchmark's own source, and adds the tailoring the approach needs from
-outside the benchmark. It then runs the `cap-evolve check` gate and the optimize, gate, sealed-test
-and report loop.
+outside the benchmark. It then passes the `cap-evolve check` gate and runs the optimization loop: it
+proposes edits, keeps only those that clear the significance gate, scores the sealed test once, and
+writes a report.
 
 Reference: [`examples/tau2_sierra_airline/PROMPT.md`](../examples/tau2_sierra_airline/PROMPT.md)
