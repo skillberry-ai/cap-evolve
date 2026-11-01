@@ -12,8 +12,8 @@ the `site/` directory is shipped verbatim. Dark-first, with a light-mode toggle.
 - `index.html` — home. Hero + quickstart + how-it-works + before→after + real
   dashboard screenshots + why + results + doc tiles.
 - `getting-started.html` — first-run walkthrough, zero-API `toy_calc` (from `docs/GETTING_STARTED.md`).
-- `blackbox.html` — step-by-step optimization through the blackbox arm (Skillberry Store +
-  Proxy-Agent), τ²-bench airline (from `docs/blackbox/`).
+- `blackbox.html` — optimizing with the blackbox approach (Skillberry Store + Proxy-Agent)
+  (from `docs/BLACKBOX.md`).
 - `run-end-to-end.html` — step-by-step run on a real benchmark, τ²-bench airline
   (from `docs/REPRODUCE_tau2.md` + `examples/tau2_airline/DEMO.md`).
 - `results.html` — full benchmark detail (from `docs/RESULTS.md`); includes an inline SVG dumbbell chart.
