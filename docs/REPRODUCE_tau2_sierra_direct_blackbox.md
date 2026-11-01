@@ -1,14 +1,14 @@
 # Reproducing the τ²-bench airline runs: direct and blackbox
 
 This reproduces the two runs of [`examples/tau2_sierra_airline`](../examples/tau2_sierra_airline), one
-per delivery:
+per approach:
 
 - **direct**: the runner loads each candidate's tool code into its own process;
 - **blackbox**: each candidate is deployed to the Skillberry Store, and the Skillberry Proxy-Agent
   injects it into the agent's LLM calls (see the [Blackbox tab](https://skillberry-ai.github.io/cap-evolve/blackbox.html)).
 
 Both run the same optimization against vanilla τ²-bench, which is never edited, on the same tasks,
-trials, models and budget. Only the delivery differs. The goal is that the two climb the same way.
+trials, models and budget. Only the approach differs. The goal is that the two climb the same way.
 
 ## Results of the recorded runs
 
@@ -29,7 +29,7 @@ trials, models and budget. Only the delivery differs. The goal is that the two c
 Metric: the mean τ²-bench task reward in `[0, 1]`, with its standard error over the 7 tasks.
 
 **This is a no-holdout run** (train = val = test, the same 7 tasks), so the "test" number is a **fit
-metric**, not a held-out result. The run records say so (`train_equals_val`). The two deliveries are
+metric**, not a held-out result. The run records say so (`train_equals_val`). The two approaches are
 compared on the same footing, which is what these runs are for.
 
 The two runs agree on the shape: both accept all three candidates, rise at every iteration, and pick
@@ -70,10 +70,11 @@ Each task is run 5 times per evaluation (`num_trials: 5`). A full evaluation is 
 The two specs are the committed
 [`direct/capevolve.yaml`](../examples/tau2_sierra_airline/direct/capevolve.yaml) and
 [`blackbox/capevolve.yaml`](../examples/tau2_sierra_airline/blackbox/capevolve.yaml). They are
-identical except for the delivery keys and the protected paths.
+identical except for the keys that select the approach (`intervention`, `skill_name`) and the
+protected paths. The spec below is the blackbox one.
 
 ```yaml
-# --- delivery (blackbox only) ---------------------------------------------------
+# --- approach (blackbox only) ---------------------------------------------------
 intervention: blackbox                   # direct: omitted (the default)
 skill_name: my_skill                     # the one skill the Proxy-Agent serves
 
@@ -82,7 +83,7 @@ capabilities: [tools]                    # the agent's tool surface only, not th
 capability_path: seed_capability
 actions: [edit]
 capability_sources: [seed_capability/reference/data_model.py]
-protected_paths: ["reference/*"]         # blackbox: ["primitive_tools/*", "my_skill/SKILL.md", "reference/*"]
+protected_paths: ["primitive_tools/*", "my_skill/SKILL.md", "reference/*"]
 
 # --- who proposes edits ---------------------------------------------------------
 optimizer_skill: claude-code
@@ -128,9 +129,8 @@ TAU2_USER_MODEL=aws/claude-sonnet-5      # the user simulator
 
 The optimizer needs a logged-in Claude Code session, or `ANTHROPIC_API_KEY`.
 
-With blackbox delivery the adapter restarts the Proxy-Agent for each candidate with
+With the blackbox approach the adapter restarts the Proxy-Agent for each candidate with
 `SPA_MODEL_NAME` set to `TAU2_AGENT_MODEL`, so the Proxy-Agent always answers with the agent model.
-`SPA_MODEL_NAME` is only the fallback when `TAU2_AGENT_MODEL` is unset.
 
 ## Reproduce
 
