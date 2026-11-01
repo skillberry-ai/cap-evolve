@@ -18,10 +18,13 @@ The app uses hash routing, so it works from any subpath; drop the `ui/` folder o
 
 ```
 ui/
-  index.html   # the dashboard SPA (relative asset paths, hash router)
+  index.html   # the dashboard SPA* (relative asset paths, hash router)
   assets/      # the built JS + CSS bundle (VITE_STATIC=1)
   data/        # pre-generated API responses, one JSON per endpoint
 ```
+
+\* **SPA** here means **Single-Page Application**: the dashboard is one web page that
+redraws itself in the browser.
 
 ## What the export leaves out
 
