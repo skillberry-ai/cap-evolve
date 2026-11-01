@@ -58,24 +58,32 @@ The optimized capabilities can be used in two ways:
 The diagram above shows the flow between the benchmark agent and the real model it reaches. The agent
 receives an optimized response without being modified.
 
-These pages walk through optimizing a benchmark with the blackbox approach, step by step. The worked
-example is τ²-bench airline on vanilla upstream tau2:
-[`examples/tau2_sierra_airline/blackbox`](../../examples/tau2_sierra_airline/blackbox/).
+## Building blocks
 
-Read them in order:
+### The intervention skill
 
-1. [Concepts](01-concepts.md): intervention vs capability, direct vs blackbox, and what a
-   benchmark must provide.
-2. [Architecture](02-architecture.md): the services, ports and headers, and one trial's
-   session.
-3. [Quickstart](03-quickstart.md): setup, smoke run, full run, stop.
-4. [The candidate](04-the-candidate.md): what the optimizer edits and the delivery rules.
-5. [Reading the results](05-results.md): dashboard, run directory, the blackbox checks.
-6. [Troubleshooting](06-troubleshooting.md): symptom → cause → fix.
+The blackbox approach is delivered by an intervention skill that owns the whole Skillberry stack:
+it provisions the Store and the Proxy-Agent, starts and stops them, and deploys each candidate as
+the one skill the Proxy-Agent serves. A run selects it with `intervention: blackbox` and
+`skill_name:` in `capevolve.yaml`.
 
-**Primary sources:**
-- [`skills/interventions/llm-proxies/blackbox/SKILL.md`](../../skills/interventions/llm-proxies/blackbox/SKILL.md):
-  the intervention;
-- [`core/cap_evolve/intervention.py`](../../core/cap_evolve/intervention.py): the preflight;
-- [`examples/tau2_sierra_airline/PROMPT.md`](../../examples/tau2_sierra_airline/PROMPT.md): the
-  onboarding prompt that produced the example.
+Reference: [`skills/interventions/llm-proxies/blackbox/SKILL.md`](../skills/interventions/llm-proxies/blackbox/SKILL.md)
+
+### The preflight
+
+Before any budget is spent, cap-evolve validates the declared intervention and checks that the
+Store and the Proxy-Agent are actually up. A misspelled intervention or a stack that is not running
+stops the run with a message naming the problem, instead of a run that errors every rollout and
+measures nothing.
+
+Reference: [`core/cap_evolve/intervention.py`](../core/cap_evolve/intervention.py)
+
+## An onboarding example (τ²-bench)
+
+A coding agent onboards a benchmark for the blackbox approach by following the prompt below and
+answering `blackbox` when it asks which approach to use. It installs the benchmark unmodified, seeds
+the capability from the benchmark's own source, and adds the tailoring the approach needs from
+outside the benchmark. It then runs the `cap-evolve check` gate and the optimize, gate, sealed-test
+and report loop.
+
+Reference: [`examples/tau2_sierra_airline/PROMPT.md`](../examples/tau2_sierra_airline/PROMPT.md)
