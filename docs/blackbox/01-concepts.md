@@ -10,7 +10,7 @@ cap-evolve separates two things:
 | **Intervention** | *How* the edited candidate reaches the model under test | `intervention:` (`direct`, the default, or `blackbox`) |
 
 They are independent: the same capability can be delivered either way. In the worked example
-both arms optimize the same thing, the airline agent's tools (`capabilities: [tools]`). They
+both approaches optimize the same thing, the airline agent's tools (`capabilities: [tools]`). They
 differ only in delivery.
 
 ## Direct vs blackbox
@@ -56,6 +56,6 @@ the tau2 clone itself is never edited.
    - `apply()` never raises: a failed deploy marks the candidate's rollouts as errored, so it is
      excluded rather than scored 0.
 
-A benchmark that lacks these cannot be optimized on the blackbox arm. Declaring
+A benchmark that lacks these cannot be optimized with the blackbox approach. Declaring
 `intervention: blackbox` is not enough: see
 [Troubleshooting](06-troubleshooting.md#services-already-running-from-an-earlier-run).

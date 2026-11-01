@@ -1,15 +1,30 @@
-# The blackbox arm
+# The blackbox approach
 
-An **arm** is how a candidate reaches the model under test.
+In the **blackbox approach** the optimizer process never touches the benchmark.
+
+Some clients, such as enterprises, cannot share their agent's code, sources or behaviour with an
+external optimization process. For them the optimization runs indirectly, without inspecting or
+directly modifying their agents.
+
+An **approach** is how a candidate reaches the model under test:
 
 - **Direct** (the default): the benchmark's runner loads the candidate's files in its own process.
-- **Blackbox** (`intervention: blackbox`): the candidate is deployed to the **Skillberry Store**,
-  and the **Skillberry Proxy-Agent** (SPA) injects it into the agent's LLM calls.
+- **Blackbox** (`intervention: blackbox`): the candidate is deployed to the
+  [**Skillberry Store**](https://github.com/skillberry-ai/skillberry-store), and the
+  [**Skillberry Proxy-Agent**](https://github.com/skillberry-ai/skillberry-agent) (SPA) injects it
+  into the agent's LLM calls.
 
-  The benchmark never sees a skill file, a mounted directory, or an edited prompt. That is the
-  shape in which Skillberry ships capabilities to a real agent.
+  The benchmark never sees a skill file, a mounted directory, or an edited prompt: the agent is
+  left unchanged and receives the optimized response from Skillberry.
 
-These pages walk through optimizing a benchmark on the blackbox arm, step by step. The worked
+The optimized capabilities can be used in two ways:
+
+1. **Through the Skillberry service** (a paid service): the client never changes its benchmark.
+   The benchmark is optimized through the responses the Skillberry Proxy-Agent returns.
+2. **By exporting the optimized capabilities** from the Skillberry Store and patching them back
+   into the client's benchmark.
+
+These pages walk through optimizing a benchmark with the blackbox approach, step by step. The worked
 example is τ²-bench airline on vanilla upstream tau2:
 [`examples/tau2_sierra_airline/blackbox`](../../examples/tau2_sierra_airline/blackbox/).
 
