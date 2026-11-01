@@ -1,21 +1,25 @@
-# The blackbox approach
+# Optimizing using the blackbox approach
 
 In the **blackbox approach** the optimizer process never touches the benchmark.
+
+## Introduction
 
 Some clients, such as enterprises, cannot share their agent's code, sources or behaviour with an
 external optimization process. For them the optimization runs indirectly, without inspecting or
 directly modifying their agents.
 
-An **approach** is how a candidate reaches the model under test:
+The approach introduces two additional services:
 
-- **Direct** (the default): the benchmark's runner loads the candidate's files in its own process.
-- **Blackbox** (`intervention: blackbox`): the candidate is deployed to the
-  [**Skillberry Store**](https://github.com/skillberry-ai/skillberry-store), and the
-  [**Skillberry Proxy-Agent**](https://github.com/skillberry-ai/skillberry-agent) (SPA) injects it
-  into the agent's LLM calls.
+- [**Skillberry Store**](https://github.com/skillberry-ai/skillberry-store): a smart repository of
+  tools and skills for agentic workflows.
+- [**Skillberry Proxy-Agent**](https://github.com/skillberry-ai/skillberry-agent): a proxy that sits
+  between the client agent and the LLM provider, uses the optimized skills and tools, and returns an
+  optimized response to the agent.
 
-  The benchmark never sees a skill file, a mounted directory, or an edited prompt: the agent is
-  left unchanged and receives the optimized response from Skillberry.
+In the blackbox approach, cap-evolve deploys the capabilities to optimize (system prompts, tools,
+skills) into the Skillberry Store, and the Skillberry Proxy-Agent reads them and injects them into the
+agent's LLM calls. The benchmark agent is left unchanged; it receives the optimized response from
+Skillberry.
 
 The optimized capabilities can be used in two ways:
 
@@ -23,6 +27,36 @@ The optimized capabilities can be used in two ways:
    The benchmark is optimized through the responses the Skillberry Proxy-Agent returns.
 2. **By exporting the optimized capabilities** from the Skillberry Store and patching them back
    into the client's benchmark.
+
+## How it works
+
+```
+                      sentinel + headers                     upstream call
+ ┌──────────────────┐                  ┌──────────────────┐                  ┌──────────────────┐
+ │ agent under test │─────────────────►│Proxy-Agent :7000 │─────────────────►│  the real model  │
+ │                  │◄─ ─ ─ ─ ─ ─ ─ ─ ─│ serves my_skill  │◄─ ─ ─ ─ ─ ─ ─ ─ ─│ routes requests  │
+ └──────────────────┘                  └──────────────────┘                  │    to the LLM    │
+                      optimized response     │      ▲         model reply    └──────────────────┘
+                                   tool call │      ┆ tool result
+                                             ▼      ┆
+                                       ┌──────────────────┐  env_<tool>(…)   ┌──────────────────┐
+                                       │   Store :8000    │─────────────────►│remote env service│
+                                       │the skill's tools │                  │      :8004       │
+                                       │     run here     │◄─ ─ ─ ─ ─ ─ ─ ─ ─│ hosts benchmark  │
+                                       └──────────────────┘   env result     │  tool execution  │
+                                                                             └──────────────────┘
+
+                      the gateway directly
+ ┌──────────────────┐
+ │  user simulator  │───────────────────────────────────────────────────────────────────────────►
+ └──────────────────┘◄─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
+                      reply
+
+ ───►  request        ◄─ ─ ─  response
+```
+
+The diagram above shows the flow between the benchmark agent and the real model it reaches. The agent
+receives an optimized response without being modified.
 
 These pages walk through optimizing a benchmark with the blackbox approach, step by step. The worked
 example is τ²-bench airline on vanilla upstream tau2:
