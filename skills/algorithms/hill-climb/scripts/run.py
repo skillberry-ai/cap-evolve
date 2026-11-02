@@ -75,6 +75,11 @@ def main(argv=None) -> int:
                    help="comma-separated globs sealing the eval surface (scorer/gold/tasks/"
                         "tests). 'default' expands to the built-in set. Empty = off. A "
                         "candidate that edits one is INDECISIVE, not scored 0.0.")
+    p.add_argument("--editable-paths", default="",
+                   help="comma-separated globs: the ONLY capability files the optimizer may edit "
+                        "(allow-list). Every other file of the seed capability is sealed; a "
+                        "candidate that changes or deletes one is INDECISIVE. Empty = off. "
+                        "Not applied on the --hc2 path.")
     p.add_argument("--hc2", default=None,
                    help="OPT-IN HC-2 (cap_evolve.hc2): JSON of the spec keys hc2, hc2_*, p2_*, "
                         "promotion_rule, split_mode. K parallel proposals per round on the shared "
@@ -157,6 +162,7 @@ def main(argv=None) -> int:
         ctx=ctx,
         protected_patterns=harness.parse_protected_paths(args.protected_paths),
         convergence=args.convergence,
+        editable_patterns=harness.parse_editable_paths(args.editable_paths),
     )
     run_dir.close_observers()
 
