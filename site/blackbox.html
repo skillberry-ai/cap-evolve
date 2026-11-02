@@ -74,7 +74,7 @@
   </p>
   <p class="lead">The optimized capabilities can be used in two ways:</p>
   <ol class="lead">
-    <li><strong>Through the Skillberry service</strong> (a paid service): the client never changes its benchmark.
+    <li><strong>Through the Skillberry service</strong>: the client never changes its benchmark.
       The benchmark is optimized through the responses the Skillberry Proxy-Agent returns.</li>
     <li><strong>By exporting the optimized capabilities</strong> from the Skillberry Store and patching them back into
       the client's benchmark.</li>
@@ -164,40 +164,74 @@
       </section>
 
       <section class="reveal">
+        <h2 id="setup">Setup</h2>
+        <p>
+          Assumes cap-evolve is already installed (<a href="getting-started.html">getting started</a>)
+          and your benchmark's adapter is in <code>.capevolve/project/adapters/</code>.
+        </p>
+<pre><code># 1. Provision the Skillberry Store and Proxy-Agent (clones, venvs, installs)
+python -c "import sys; sys.path.insert(0, 'skills/interventions/llm-proxies/blackbox/scripts'); \
+import blackbox_env; blackbox_env.provision()"
+
+# 2. Check the stack is ready
+python skills/interventions/llm-proxies/blackbox/scripts/run.py</code></pre>
+        <p>
+          This clones both services under <code>vendor/</code> and reports, for each one, whether it is
+          provisioned, running and healthy. A run never provisions anything itself: its preflight stops
+          if the stack is not up.
+        </p>
+        <p><strong>What your benchmark must provide.</strong> The blackbox approach checks these, but does
+          not supply them:</p>
+        <ul>
+          <li><strong>The agent's LLM calls go to the Proxy-Agent</strong>. Other calls (user simulator, judges, verifiers) go straight to the model.</li>
+          <li><strong>The benchmark's environment is reachable over HTTP</strong>, because the skill's tools
+            run in the Store, not where the benchmark's state lives.</li>
+          <li><strong>The adapter deploys each candidate in <code>apply()</code></strong>: it makes the
+            candidate the one skill in the Store, then restarts the Proxy-Agent on it.</li>
+        </ul>
+      </section>
+
+      <section class="reveal">
         <h2 id="what">Configure and run</h2>
-        <p>
-          A <em>capability</em> is <em>what</em> gets edited (<code>capabilities:</code>). An
-          <em>intervention</em> is <em>how</em> the edited candidate reaches the model under test
-          (<code>intervention:</code>).
-        </p>
-        <p>
-          Below is a worked example, which uses the blackbox approach to optimize Tau2 airline
-          customer-service agent's tools (<code>capabilities: [tools]</code>).
-        </p>
-        <p>Environment variables, in the repo-root <code>.env</code>:</p>
-<pre><code># the model of the agent under test
-TAU2_AGENT_MODEL=&lt;agent model&gt;
-# the user simulator's model
-TAU2_USER_MODEL=&lt;user model&gt;</code></pre>
-        <p>
-          The run spec, <code>capevolve.yaml</code>: the keys that select the blackbox approach and the tools
-          capability, as in the smoke spec
-          (<a href="https://github.com/skillberry-ai/cap-evolve/blob/main/examples/tau2_sierra_airline/blackbox/capevolve.smoke.yaml"><code>capevolve.smoke.yaml</code></a>):
-        </p>
-<pre><code># delivery
+<pre><code># What the blackbox approach runs
+SPA_MODEL_NAME=&lt;model&gt;              # the model the Proxy-Agent calls on the agent's behalf
+SPA_REMOTE_ENV_URL=&lt;url&gt;            # where your benchmark's environment service listens
+SKILLBERRY_STORE_PORT=8000          # the Store's port
+SKILLBERRY_AGENT_PORT=7000          # the Proxy-Agent's port</code></pre>
+<pre><code># capevolve.yaml — the keys that select the approach
 intervention: blackbox
-skill_name: my_skill              # required: the one skill the Proxy-Agent serves
+skill_name: &lt;skill&gt;                 # required: the one skill the Proxy-Agent serves
 
 # what to optimize
-capabilities: [tools]             # the agent's tool surface only
-capability_path: seed_capability  # the seed; a copy is optimized
-capability_sources: [seed_capability/reference/data_model.py]
+capabilities: [tools]               # or [system-prompt], [skill-package], ...
+capability_path: seed_capability    # the seed; a copy is optimized each iteration</code></pre>
+<pre><code># Run the optimization
+cap-evolve run --spec .capevolve/project/capevolve.yaml</code></pre>
+        <p>
+          Each iteration, cap-evolve deploys the current candidate to the Skillberry Store, and the
+          Proxy-Agent injects it into the agent's LLM calls.<br>
+          cap-evolve then collects the rewards, gates the edit and repeats. The benchmark itself is never modified.<br>
+          Output lands in <code>.capevolve/run_&lt;timestamp&gt;/</code>, with <code>report.md</code>,
+          <code>dashboard.html</code> and the optimized candidates.<br>
+          The run's <strong>Config</strong> tab shows <code>intervention: blackbox</code> under
+          <strong>Delivery</strong>.
+        </p>
+      </section>
 
-# smoke: task 9, one trial, one iteration, mock optimizer
-optimizer_skill: mock
-split_ids_file: split_ids_smoke.json
-num_trials: 1
-max_iterations: 1</code></pre>
+      <section class="reveal">
+        <h2 id="onboarding">An onboarding example (τ²-bench)</h2>
+        <p>
+          A coding agent onboards a benchmark for the blackbox approach by following the prompt below and
+          answering <code>blackbox</code> when it asks which approach to use. It installs the benchmark
+          unmodified, seeds the capability from the benchmark's own source, and adds the tailoring the
+          approach needs from outside the benchmark. It then passes the <code>cap-evolve check</code> gate
+          and runs the optimization loop: it proposes edits, keeps only those that clear the significance
+          gate, scores the sealed test once, and writes a report.
+        </p>
+        <p>
+          Reference:
+          <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/examples/tau2_sierra_airline/PROMPT.md"><code>examples/tau2_sierra_airline/PROMPT.md</code></a>
+        </p>
       </section>
 
 
