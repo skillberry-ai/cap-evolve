@@ -1,0 +1,23 @@
+WARMUP {"n": 10, "wall_s": 5.4, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [5.4, 5.4, 5.4, 5.4, 5.4, 5.4, 5.4, 5.4, 5.4, 5.4]}
+host=cccxc516 job=1952283 arm=gepa seed=0 R=2160 conc=10 max_iters= start=2026-10-22T06:39:38Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+gepa_arm_sha256=1364638f8ad47a6952e6f46e1a0bfb4412704357d35d21cd4fd9d642bdd18592 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+gepa=0.1.4 helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+GEPA_RC=1
+end=2026-10-24T02:42:01Z
+WARMUP {"n": 10, "wall_s": 38.3, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [2.7, 2.7, 5.2, 5.6, 6.3, 7.1, 7.1, 7.1, 7.9, 38.3]}
+resume=1
+host=cccxc502 job=184553 arm=gepa seed=0 R=2160 conc=10 max_iters= start=2026-10-24T06:51:08Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+gepa_arm_sha256=3dff54db8747edd3dd57ed8fa928e0a7cb5e6d7b76de5da33ffbcaa48ba20b94 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+gepa=0.1.4 helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+GEPA_RC=1
+end=2026-10-25T05:22:20Z
+WARMUP {"n": 10, "wall_s": 33.5, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [3.3, 5.2, 5.4, 5.9, 5.9, 8.3, 10.3, 10.3, 11.3, 33.4]}
+resume=1 key_slot=6
+host=cccxc577 job=343227 arm=gepa seed=0 R=2160 conc=10 max_iters= start=2026-10-25T13:16:56Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+gepa_arm_sha256=a69b3dcb1652fcb806a058e860f3b279a17e89d232d46ba9e181dbaa9f0da261 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+gepa=0.1.4 helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+GEPA_RC=0
+end=2026-10-28T22:34:59Z

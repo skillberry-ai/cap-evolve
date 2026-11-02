@@ -1,0 +1,8 @@
+WARMUP {"n": 10, "wall_s": 4.9, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [4.8, 4.8, 4.8, 4.8, 4.8, 4.9, 4.9, 4.9, 4.9, 4.9]}
+host=cccxc715 job=1952296 arm=evoskill seed=1 R=2160 conc=10 max_iters=12 start=2026-10-22T06:38:25Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+evoskill_pin=36f6f04952293d7054145550c2b9f0b0411bff1c evoskill_dirty=0
+port_sha256=4a37cf624e31b40910d3b696fe4d1e2b777a3907420bbbd06ddc2a26cfd29721 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+claude_agent_sdk=0.1.44 helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+EVOSKILL_RC=0
+end=2026-10-26T18:43:38Z

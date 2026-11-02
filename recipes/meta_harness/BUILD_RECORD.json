@@ -1,0 +1,82 @@
+{
+ "arm": "meta_harness",
+ "issue": "skillberry-ai/cap-evolve#895 §7.6",
+ "written": "2026-10-21",
+ "upstream": {
+  "repo": "stanford-iris-lab/meta-harness",
+  "commit": "8123ccabe2b19fa1123090b2e5f1bacc20963ce8",
+  "clean_worktree": true,
+  "files_used_byte_identical": {
+   "reference_examples/terminal_bench_2/claude_wrapper.py": "5ff005d6c1d2f8500b643f71432a9649fc425503f7fee2183df858a95b33de3e",
+   "reference_examples/text_classification/claude_wrapper.py": "5ff005d6c1d2f8500b643f71432a9649fc425503f7fee2183df858a95b33de3e"
+  },
+  "files_adapted_not_imported": {
+   "reference_examples/text_classification/meta_harness.py (loop)": "47d89e7fc48499a2d574491bcc84e35342a6c07ff29f7a25cc13dbd0a6ed853c",
+   "reference_examples/terminal_bench_2/meta_harness.py (propose/render/frontier)": "9b03eae7dfc8723c2aa06b24be5a0b85ede1c4f00c728ee80a2842488ccd10aa",
+   "reference_examples/terminal_bench_2/.claude/skills/meta-harness-terminal-bench-2/SKILL.md (skill base)": "37d148f046ac0694589cd7afe7717ea8c1d526ce2c3448f8b4843cc1ef91e519"
+  },
+  "files_changed": []
+ },
+ "port_files": {
+  "budget_probe.py": "bc03fa11eb37bb4b1786d464114e504cf8357f09018cce0245e2798514050bbc",
+  "check_candidate.py": "d56670542598154c50229f616f309f8625e98db94f961f0b90e47809a5fc6dca",
+  "deviations_meta_harness.json": "b42bb1fc0bbb1a480bd9a6500fe7093c04d9f51306b9a45298ae832b606db76b",
+  "isolation_scan.py": "6848c20fe634b405b3d5fb1417a42ced4dac26738ebb452a8d7e377d488a10ed",
+  "lsf_meta_harness_search.sh": "8ec5a3dab007e5c0b0c70424e2311c1e800c2e0690d046be642836de8bdb1cfc",
+  "meta_harness_arm.py": "881be39c223e56546249337b831fd5edb21c4f8720d0a3a29508eb594775403d",
+  "SKILL.md.in": "7361a683dcd5bde88b0dd9869eb18c5ad1eeff0967bc9060464fe37372b4127d",
+  "smoke_train2.txt": "0c44f9f7a7958c801f9aec026d3f27ff4f468413fbf0c74bf720dad0e462b72b",
+  "smoke_val1.txt": "40655430323672f00a88dd1c2694a2a8046e729c0f3a0b858b70b4d41a7cbc3c"
+ },
+ "common_layer": {
+  "rollout.py": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da",
+  "SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2 (sha256 of prompt.md, task_template.md, SKILL.md checked at start against exp895/BUILD_RECORD.json)",
+ "packages_installed": [],
+ "proposer": {
+  "cli": "exp895/tools/sandbox/claude -> tools/claude-pinned/claude-2.1.304 in bwrap",
+  "model": "rits/zai-org/glm-5-3 (GLM-5.3, gateway :4115, tag exp895-meta_harness-s<seed>:optimizer)",
+  "claude_wrapper_args": {
+   "allowed_tools": [
+    "Read",
+    "Glob",
+    "Grep",
+    "Agent",
+    "Write",
+    "Edit",
+    "Bash"
+   ],
+   "effort": "max",
+   "timeout_seconds": 2400,
+   "skills": [
+    ".claude/skills/meta-harness-spreadsheetbench"
+   ]
+  }
+ },
+ "data": {
+  "optimizer_sees": "official train 80: full per-trial transcripts (system message omitted), rewards, gold-safe scorer feedback and candidate errors, for the seed on all 80 and for each later candidate on its rotating 20-task batch (work/traces/). Val: ONE aggregate avg_val per candidate (work/logs/evolution_summary.jsonl, frontier_val.json). No val task id, instruction or per-task val score is ever written under work/.",
+  "selects_on": "official val 40: highest k=3 val mean (val_private/<cand>.json, outside the sandbox)",
+  "test": "never loaded; the launcher asserts zero overlap with the official test list and the post-run isolation scan counts test-id hits in everything under work/"
+ },
+ "settings": {
+  "k": 3,
+  "candidates_per_iteration": 2,
+  "train_batch": 20,
+  "seed_traced_on": "all train",
+  "selection": "max val mean (not Pareto)",
+  "rollouts_per_candidate": "(20+40)*3=180",
+  "rollouts_seed": "(80+40)*3=360",
+  "optimizer_token_cap": 20000000
+ },
+ "deviations": "deviations_meta_harness.json",
+ "smoke": {
+  "run_dir": "runs/meta_harness/smoke_s0",
+  "lsf_job": "1925026 (cccxc578; script finished META_HARNESS_SEARCH_DONE, then bkill by exact id for the post-run RUN hang)",
+  "config": "SEED=0 R=60 train={10452,118-50} val={12864} (1 official val task, so selection has data) k=3 CONC=6 ITERS=1",
+  "result": "rollouts_used 27/60; 27 rows, 3 per (candidate, split, task), 0 infra; 2 candidates proposed + evaluated (example_first_interpretation_check: prompt.md; verify_and_finish_helper: prompt.md + SKILL.md + scripts/verify_output.py), both passed the common helper gate; champion=seed (all three val 100%, ties keep incumbent)",
+  "glm": "38 optimizer calls, all 200, prompt_total 391,735, completion 14,071, cached 112,128 (calls_glm.jsonl)",
+  "budget_probe": "BudgetStop raised for 36 > remaining 33, state and rollouts unchanged (budget_probe.json)",
+  "isolation_scan": "gold 0, secrets 0, ~/.claude 0, test ids 0/280, val ids in sessions 0, val_private not under work/; control train ids 204 token hits (isolation_scan.json)"
+ }
+}

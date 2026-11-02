@@ -1,0 +1,49 @@
+{
+ "arm": "evoskill",
+ "seed": 2,
+ "R": 2160,
+ "k": 3,
+ "pass_threshold": "mean >= 2/3",
+ "max_iterations": 12,
+ "pools": {
+  "Cell-Level Manipulation": 53,
+  "Sheet-Level Manipulation": 27
+ },
+ "val": 40,
+ "train_samples_per_iter": 4,
+ "per_iter_worst_rollouts": 132,
+ "concurrency_tasks": 3,
+ "upstream_pin": "36f6f04952293d7054145550c2b9f0b0411bff1c",
+ "stop_reason": "max_iterations",
+ "frontier": [
+  [
+   "iter-skill-9",
+   0.925
+  ],
+  [
+   "iter-skill-5",
+   0.9210526315789473
+  ],
+  [
+   "iter-skill-1",
+   0.8717948717948718
+  ]
+ ],
+ "best_program": "iter-skill-9",
+ "champion_candidate": "iter-skill-9_873de178302e",
+ "iterations_completed": 12,
+ "programs": [
+  "base",
+  "iter-skill-1",
+  "iter-skill-2",
+  "iter-skill-4",
+  "iter-skill-5",
+  "iter-skill-8",
+  "iter-skill-9"
+ ],
+ "budget": {
+  "spent": 1291,
+  "eval_calls": 448,
+  "R": 2160
+ }
+}

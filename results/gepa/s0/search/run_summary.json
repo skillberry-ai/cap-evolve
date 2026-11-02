@@ -1,0 +1,128 @@
+{
+ "arm": "gepa",
+ "seed": 0,
+ "R": 2160,
+ "rollouts_used": 2077,
+ "binding_on_R": true,
+ "stop_reason": "BudgetStop: gepa: evaluation of 40x3=120 would exceed R (2077/2160)",
+ "champion": "cand_b6ea5cca60e1",
+ "champion_idx": 10,
+ "champion_val_score": 0.8833333333333334,
+ "candidates": [
+  {
+   "idx": 0,
+   "dir": "seed",
+   "val": 0.7333333333333333,
+   "parents": [
+    null
+   ]
+  },
+  {
+   "idx": 1,
+   "dir": "cand_a0f8e5fb217d",
+   "val": 0.8,
+   "parents": [
+    0
+   ]
+  },
+  {
+   "idx": 2,
+   "dir": "cand_683dca96027c",
+   "val": 0.75,
+   "parents": [
+    1
+   ]
+  },
+  {
+   "idx": 3,
+   "dir": "cand_315f87c20df4",
+   "val": 0.7,
+   "parents": [
+    2
+   ]
+  },
+  {
+   "idx": 4,
+   "dir": "cand_2afbab3e991c",
+   "val": 0.8166666666666667,
+   "parents": [
+    0
+   ]
+  },
+  {
+   "idx": 5,
+   "dir": "cand_8eaf2bb4f3f5",
+   "val": 0.8166666666666667,
+   "parents": [
+    4
+   ]
+  },
+  {
+   "idx": 6,
+   "dir": "cand_a89937962e31",
+   "val": 0.8583333333333334,
+   "parents": [
+    5
+   ]
+  },
+  {
+   "idx": 7,
+   "dir": "cand_cacadb87633b",
+   "val": 0.7916666666666667,
+   "parents": [
+    4
+   ]
+  },
+  {
+   "idx": 8,
+   "dir": "cand_d72dfc5385cb",
+   "val": 0.8166666666666667,
+   "parents": [
+    3
+   ]
+  },
+  {
+   "idx": 9,
+   "dir": "cand_f298e5d8a5b8",
+   "val": 0.8333333333333334,
+   "parents": [
+    6
+   ]
+  },
+  {
+   "idx": 10,
+   "dir": "cand_b6ea5cca60e1",
+   "val": 0.8833333333333334,
+   "parents": [
+    9
+   ]
+  }
+ ],
+ "n_candidates_in_pool": 11,
+ "n_candidates_evaluated": 26,
+ "iterations": 34,
+ "accepted": 10,
+ "rejected": 14,
+ "train_ids_n": 80,
+ "val_ids_n": 40,
+ "wall_s": 292576.4,
+ "settings": {
+  "reflection_minibatch_size": 3,
+  "candidate_selection_strategy": "pareto",
+  "module_selector": "round_robin",
+  "use_merge": false,
+  "cache_evaluation": false,
+  "skip_perfect_score": true,
+  "perfect_score": 1.0,
+  "max_metric_calls": 1000000000000,
+  "raise_on_exception": false,
+  "k": 3,
+  "components": [
+   "prompt.md",
+   "skills/spreadsheet-helpers/SKILL.md"
+  ],
+  "reflection_lm": "gepa.lm.LM(openai/rits/zai-org/glm-5-3, max_tokens=16000)"
+ },
+ "gepa_version": "0.1.4",
+ "iterations_skipped_infra": 1
+}

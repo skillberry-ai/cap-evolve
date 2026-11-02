@@ -1,0 +1,117 @@
+{
+ "arm": "miprov2",
+ "seed": 1,
+ "R": 2160,
+ "rollouts_used": 2107,
+ "binding_on_R": true,
+ "stop_reason": "BudgetStop: Evaluate of cand_a121daf72fed on 40 tasks needs 21x3=63 new rollouts; R has 53 left (2107/2160)",
+ "champion": "cand_da199d28cd01",
+ "champion_val_score": 0.8416666666666666,
+ "full_val_candidates": [
+  {
+   "candidate": "seed",
+   "score": 0.7333333333333333,
+   "t": 1792704195.2691824,
+   "source": "seed_prescore"
+  },
+  {
+   "candidate": "cand_5ddf605e6864",
+   "score": 0.7916666666666667,
+   "t": 1792737269.1710045,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_c4281e79c387",
+   "score": 0.825,
+   "t": 1792771087.2471426,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_f44cff546968",
+   "score": 0.8083333333333333,
+   "t": 1792817347.6184921,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_cc89fb4988d8",
+   "score": 0.8333333333333334,
+   "t": 1792857627.9817197,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_2750909e2ea5",
+   "score": 0.8083333333333333,
+   "t": 1792902695.8687224,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_f8f63cc035f7",
+   "score": 0.8,
+   "t": 1792951725.9818068,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_f6f8cc427912",
+   "score": 0.7458333333333333,
+   "t": 1792988220.403192,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_da199d28cd01",
+   "score": 0.8416666666666666,
+   "t": 1793043657.3505375,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_bb7271639fb0",
+   "score": 0.825,
+   "t": 1793055398.5552673,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_ee65e7a1eb5c",
+   "score": 0.7916666666666667,
+   "t": 1793089400.0392659,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_977bd0fcd290",
+   "score": 0.8333333333333334,
+   "t": 1793097488.439751,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_84f6b3c7052b",
+   "score": 0.825,
+   "t": 1793114329.9105577,
+   "source": "mipro_evaluate"
+  }
+ ],
+ "n_candidates_rendered": 26,
+ "n_candidates_evaluated": 26,
+ "n_dspy_evaluates": 101,
+ "bootstrap_rollouts": 18,
+ "bootstrap_cap": 432,
+ "prompt_lm_calls": 28,
+ "prompt_lm_errors": 0,
+ "mipro_best_program_returned": false,
+ "train_ids_n": 80,
+ "val_ids_n": 40,
+ "wall_s": 425045.7,
+ "settings": {
+  "auto": null,
+  "num_candidates": 3,
+  "max_bootstrapped_demos": 2,
+  "max_labeled_demos": 0,
+  "metric_threshold": 1.0,
+  "minibatch": true,
+  "minibatch_size": 8,
+  "minibatch_full_eval_steps": 4,
+  "num_trials": 1000000,
+  "num_threads": 3,
+  "k": 3,
+  "prompt_model": "dspy.LM(openai/rits/zai-org/glm-5-3, max_tokens=16000)",
+  "task_model": "NoTaskLM (never called)"
+ },
+ "dspy_version": "3.4.0"
+}

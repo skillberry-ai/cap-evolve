@@ -1,0 +1,1 @@
+BUDGET_PROBE {"verdict": "BudgetStop raised: miprov2: evaluation of 7x3=21 would exceed R (2142/2160)", "requested_rollouts": 21, "state_unchanged": true, "rollout_rows_unchanged": true, "budget_state": {"spent": 2142, "eval_calls": 685, "R": 2160}}

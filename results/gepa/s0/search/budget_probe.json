@@ -1,0 +1,1 @@
+BUDGET_PROBE {"verdict": "BudgetStop raised: gepa: evaluation of 28x3=84 would exceed R (2077/2160)", "requested_rollouts": 84, "state_unchanged": true, "rollout_rows_unchanged": true, "budget_state": {"spent": 2077, "eval_calls": 88, "R": 2160}}

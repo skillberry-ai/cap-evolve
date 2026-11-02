@@ -1,0 +1,79 @@
+{
+ "arm": "evoskill",
+ "issue": "skillberry-ai/cap-evolve#895 §7.4 (EvoSkill)",
+ "upstream": "sentient-agi/EvoSkill @ 36f6f04952293d7054145550c2b9f0b0411bff1c (main, cloned 2026-10-21; competitors/evoskill, `git status --porcelain` empty; the launcher records the pin and the dirty count in run_meta.txt)",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D1-rollout",
+   "what": "The base agent is replaced by CapEvolveBaseAgent (evoskill_port.py). run(question) parses TASK::<id>, materialises the CURRENT program (the checked-out EvoSkill git branch) as a v2-seed candidate dir, and calls CommonRollout.evaluate(candidate_dir, [task_id], k=3) (arms/common/rollout.py). It returns AgentResponse(final_answer='pass' if the mean over measured trials >= 2/3 else 'fail'). The scorer passed to SelfImprovingLoop maps pass->1, fail->0. EvoSkill's own scorer (multi-tolerance string match) and its Claude-Code base agent are not used.",
+   "reason": "Issue §7 general rule + §7.4: 'CapEvolveBaseAgent.run() performs the common rollout k=3 times and returns pass when the mean is >= 2/3, else fail. Record the threshold.' Threshold: mean >= 2/3 (2 or 3 of 3 trials pass)."
+  },
+  {
+   "id": "D2-k-inside-run",
+   "what": "k=3 is inside run() (one CommonRollout.evaluate call of 1 task x 3 trials). EvoSkill's RunCache stays ON (cache_dir = runs/evoskill/<NAME>/evoskill_cache, outside the project so the optimizer never reads it). It is keyed by question + hash(.claude/skills/**, base_agent/prompt.txt). Because prompt.md lives at .claude/skills/prompt.md (D4), a prompt edit invalidates the cache too.",
+   "reason": "Issue §7.4: 'Its run cache stays on, so the k repeats must stay inside run().' Upstream behaviour, not changed: only the val evaluation (_evaluate -> evaluate_agent_parallel) consults the cache. The per-iteration training samples call base.run() directly, uncached, so they always cost 3 rollouts per task (seen in the smoke: runs/evoskill/smoke_s0b/rollouts.jsonl, split=train rows for a task already scored on val under the same program)."
+  },
+  {
+   "id": "D3-optimizer-transport",
+   "what": "The skill proposer and skill generator are EvoSkill's own Agent wrappers with EvoSkill's own profile options (get_skill_proposer_options / get_skill_generator_options: system prompt, JSON-schema output, tool list, setting_sources, permission_mode=acceptEdits). Each options-factory call adds only: cli_path = exp895/tools/sandbox/claude (bwrap sandbox shim: pinned Claude Code 2.1.304, no network except the GLM gateway bridge, only the project dir writable, private HOME/CLAUDE_CONFIG_DIR), max_turns = 30, a stderr log callback, and a can_use_tool approver (D5). Model = rits/zai-org/glm-5-3 (the served id of GLM-5.3; the shim sets every ANTHROPIC_*_MODEL to it).",
+   "reason": "Issue §7.4: 'The proposer and generator are Claude Code on GLM-5.3 (§2.2), with max_turns 30' and 'Run the proposer in the sandbox (§4)'. Same shim as the CapEvolve arm (decisions.md 2026-10-21 'Optimizer sandbox verified')."
+  },
+  {
+   "id": "D4-surfaces",
+   "what": "Surfaces: skills/<name>/SKILL.md + scripts/*.py = EvoSkill's native .claude/skills/<name>/ (every skill dir except EvoSkill's own optimizer meta-skills brainstorming and skill-creator is exported to the candidate). prompt.md = the file .claude/skills/prompt.md, which the generator may edit. In upstream terms this file has no SKILL.md, so EvoSkill's _get_active_skills ignores it. It is still committed per program branch and hashed by RunCache. task_template.md = the v2 seed bytes, never edited. The project starts with the v2 seed's skills/spreadsheet-helpers/ (SKILL.md + empty scripts/) and prompt.md, byte-identical (sha256-checked against exp895/BUILD_RECORD.json), plus upstream's .claude/skills/{brainstorming,skill-creator} copied unmodified (the proposer's system prompt requires brainstorming/SKILL.md).",
+   "reason": "Issue §7 general rule and §7.4: 'skills written as real skills into skills/<name>/SKILL.md and skills/<name>/scripts/ ... The proposer may also edit prompt.md. It does not edit task_template.md (skill mode); record that.' Upstream skill_only mode has no prompt-editing path. Exposing prompt.md as a file in the skills tree is the closest native form: the generator already has Write/Edit there. Strictly, the GENERATOR edits prompt.md, on the proposer's instruction."
+  },
+  {
+   "id": "D5-permission-approver",
+   "what": "A can_use_tool callback (claude_agent_sdk control protocol) answers Claude Code's permission prompts. It allows a tool only if it is in EvoSkill's own allowed_tools list for that role. Write/Edit/MultiEdit/NotebookEdit are allowed only for paths inside the project dir and outside .git. Every decision is logged to optimizer_permissions.jsonl.",
+   "reason": "Claude Code 2.1.304 treats .claude/skills/ as a protected path, and writes there need explicit approval even under acceptEdits. Measured: runs/evoskill/_permtest/{accept1,scoped1}/claude_out.json, both Write calls in permission_denials, no file written. EvoSkill was written for an older CLI that allowed these writes. Without an approver its generator cannot write any skill. The approver is no wider than EvoSkill's own tool list. The bwrap sandbox still bounds the filesystem and network."
+  },
+  {
+   "id": "D6-surface-contract",
+   "what": "exp895/arms/common/SURFACE_CONTRACT.md verbatim (including its last paragraph 'Prefer deterministic helpers for procedural failures'), followed by a short arm note mapping the surfaces onto EvoSkill's layout (.claude/skills/<name>/, .claude/skills/prompt.md; task_template.md not editable; brainstorming/skill-creator are not given to the agent). The proposer receives it through EvoSkill's native task_constraints argument (rendered as '## Task Constraints' in build_proposer_query). The generator receives the same block appended to its query under the same heading.",
+   "reason": "Issue §4.1: every competitor's proposer/reflector gets the same contract and 'prefer deterministic helpers' note. The generator writes the files, so it needs the helper rules too."
+  },
+  {
+   "id": "D7-failure-trace-content",
+   "what": "What the proposer sees per failure (EvoSkill's build_proposer_query, unchanged): trace.summarize() of the AgentTrace that CapEvolveBaseAgent returns. Output = per-trial rewards, the k-trial mean, the verdict and the scorer's gold-safe per-trial feedback. Result = the lowest-scoring trial's agent transcript, system message dropped, capped at 20,000 chars (head 6,000 + tail). 'Agent Answer' = fail. 'Ground Truth' = pass (the label the loop scores against), never a gold value.",
+   "reason": "Upstream passes the base agent's whole trace plus ground truth. In SpreadsheetBench the ground truth is a gold workbook (§0.2, §4.1 isolation). The 20k cap matches the GEPA arm's reflective record."
+  },
+  {
+   "id": "D8-eval-timeout-lifted",
+   "what": "src.evaluation.evaluate wraps each eval in `asyncio.timeout(1020)` (17 min). The port replaces that module's global name `asyncio` with a proxy whose timeout() has no deadline. No file is edited. The Agent wrapper's own 20-min timeout covers only the optimizer agents, which never run longer than 30 turns.",
+   "reason": "Issue §7.4: 'Lift the 17-minute asyncio eval timeout.' One run() = 3 rollouts of up to 30 turns each, and a rollout can take > 17 min (P1 max episode wall 1,170 s, decisions.md)."
+  },
+  {
+   "id": "D9-val-mean-infra",
+   "what": "SelfImprovingLoop._evaluate is overridden (subclass) only to drop a task with no measured trial (still infra after CommonRollout's retries) from the val mean. Upstream's own logic is otherwise unchanged: tasks scored with the scorer, mean over tasks. A train sample with no measured trial is scored as 'not a failure', so it is never handed to the proposer.",
+   "reason": "Issue §0.3: infra errors are never scored as 0."
+  },
+  {
+   "id": "D10-iteration-guard",
+   "what": "_select_parent (subclass) raises BudgetExhausted (a BaseException, so EvoSkill's except-Exception cannot swallow it) before iteration i >= 1 if the worst case for that iteration does not fit in R. Worst case = (train samples per iteration + |val|) x 3. CapEvolveBaseAgent also turns any CommonRollout BudgetStop into BudgetExhausted. On stop, the champion = the best frontier program.",
+   "reason": "Issue §7.4: 'An iteration guard checks that the next iteration fits in R.' Issue §5: R is the hard counter."
+  },
+  {
+   "id": "D11-data",
+   "what": "Train pools = official train 80 grouped by instruction_type (2 pools: Cell-Level 53, Sheet-Level 27), shuffled with random.Random(search_seed) within each pool (upstream stratified_split shuffles with fixed random_state=42). val_data = official val 40. question = 'TASK::<id>\\nInstruction: <instruction>\\nRange: <answer_position>'. EvoSkill's CSV loader and stratified_split are not used.",
+   "reason": "Issue §7.4 Data. A per-seed shuffle makes the 3 search seeds differ in which train tasks they sample. Upstream would make them identical."
+  },
+  {
+   "id": "D12-settings",
+   "what": "LoopConfig: max_iterations 12, frontier_size 3, no_improvement_limit 10**9 (disabled), selection_strategy best, evolution_mode skill_only, failure_sample_count 3, categories_per_batch 3, samples_per_category 2, cache on, reset_feedback on. 'Failure sampling 3/3/2' is read as upstream's (failure_samples=3 -> categories_per_batch=3, samples_per_category=2). SpreadsheetBench has only 2 instruction_type pools, so each iteration samples 2 per pool = 4 train tasks (x3 trials = up to 12 rollouts, fewer on cache hits). concurrency (tasks in flight) = SPREADSHEETBENCH_CONCURRENCY // 3, so at most CONC rollouts run at once.",
+   "reason": "Issue §7.4 settings table. min(categories_per_batch, n_categories) is upstream's own cap."
+  },
+  {
+   "id": "D13-optimizer-auth-env",
+   "what": "The launcher exports ANTHROPIC_API_KEY=tag-not-a-secret and CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 in the host process only. EvoSkill's executor calls ensure_provider_api_key('anthropic') before every query. The shim --clearenv's the variable, so the real CLI sees only the gateway tag.",
+   "reason": "No credential is read or passed. The gateway injects the real one (§2)."
+  },
+  {
+   "id": "D14-no-separate-uid",
+   "what": "The optimizer runs under the same uid as the job, inside the bwrap sandbox: a fresh empty HOME, a private CLAUDE_CONFIG_DIR, no /u or /dccstor except its own project dir, no network namespace. There is no separate OS uid.",
+   "reason": "Issue §7.4 asks for 'a separate uid with an empty $HOME'. Creating uids on CCC nodes is not possible for us. The bwrap sandbox gives the same isolation the uid was meant to provide, and is the same one used for CapEvolve and Meta-Harness (decisions.md 2026-10-21)."
+  }
+ ],
+ "unused_upstream_parts": "prompt_proposer / prompt_generator (prompt_only mode), EvoSkill's CLI/TOML config, harbor/remote/daytona, opencode/codex/goose/openhands harnesses, its scorers"
+}

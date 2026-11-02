@@ -1,0 +1,20 @@
+{
+ "arm": "meta_harness",
+ "search_seed": 0,
+ "inert_champion": false,
+ "champion_test_mean": 0.6821983273596177,
+ "seed_test_mean": 0.6392857142857142,
+ "paired_delta": 0.040621266427718045,
+ "paired_se_cr1": 0.016962791832718583,
+ "ci95": [
+  0.007238492100927876,
+  0.07400404075450821
+ ],
+ "n_tasks_paired": 279,
+ "missing_tasks": {
+  "champion": 1,
+  "seed": 0
+ },
+ "infra_missing_trials": 31,
+ "candidate_error_trials": 0
+}

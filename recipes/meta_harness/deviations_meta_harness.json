@@ -1,0 +1,81 @@
+{
+ "arm": "meta_harness",
+ "issue": "skillberry-ai/cap-evolve#895 §7.6",
+ "upstream": "stanford-iris-lab/meta-harness @ 8123ccabe2b19fa1123090b2e5f1bacc20963ce8 (clone: exp895/competitors/meta-harness)",
+ "upstream_files_modified": [],
+ "upstream_files_used_byte_identical": [
+  "reference_examples/terminal_bench_2/claude_wrapper.py (== reference_examples/text_classification/claude_wrapper.py; sha256 checked at start and end of every run, copied into the proposer's cwd where upstream keeps it)"
+ ],
+ "deviations": [
+  {
+   "id": "D1-rollout",
+   "what": "Benchmarking (upstream benchmark.py / harbor_run) is replaced by arms/common/rollout.py CommonRollout.evaluate(candidate_dir, task_ids, k=3, split=train|val). Upstream's per-run loop structure is kept in meta_harness_arm.py: Phase 0 baseline -> per iteration propose -> read pending_eval.json -> validate -> benchmark -> update frontier_val.json + evolution_summary.jsonl.",
+   "reason": "Issue §7 general rule: replace only the agent rollout with the common rollout (same agent, scorer, R counter, infra retries, helper gate)."
+  },
+  {
+   "id": "D2-outer-loop-reimplemented",
+   "what": "The outer loop is a port of upstream text_classification/meta_harness.py + terminal_bench_2/meta_harness.py (run_evolve, propose_claude, render_task_prompt, update_frontier, update_evolution_summary), not an import of them. Both upstream files import their benchmark at module load (text_classification: `from benchmark import ...` which reads its config.yaml and datasets; TB2: harbor) and hard-code EVOLVE_DIR to the repo dir, so they cannot run unmodified against SpreadsheetBench. propose_claude is upstream's code with only the skill path, model and cwd changed; render_task_prompt keeps upstream's TB2 structure ('Run iteration N...', '## Eval split', '## Run directories', the same file list) with SpreadsheetBench wording.",
+   "reason": "Issue §7.6: 'the loop follows the official text-classification example'. The loop logic is small and is reproduced line for line where it is benchmark-agnostic."
+  },
+  {
+   "id": "D3-proposer-model",
+   "what": "claude_wrapper.run(model='rits/zai-org/glm-5-3') instead of model='opus'; `claude` resolves to exp895/tools/sandbox/claude (bwrap, cwd-only writes, private HOME/CLAUDE_CONFIG_DIR, network only to the GLM gateway via the unix-socket bridge). effort='max', PROPOSER_ALLOWED_TOOLS, timeout 2400 s, --setting-sources '', --disable-slash-commands, --strict-mcp-config, empty plugin dir are upstream's own defaults, unchanged. The gateway disables GLM thinking on /v1/messages (common to every Claude-Code arm).",
+   "reason": "Issue §2.2 / §7.6: proposer = Claude Code on GLM-5.3 inside the sandbox; credentials injected by the gateway."
+  },
+  {
+   "id": "D4-skill",
+   "what": "New proposer skill .claude/skills/meta-harness-spreadsheetbench/SKILL.md (template arms/meta_harness/skill/meta-harness-spreadsheetbench/SKILL.md.in), adapted from upstream reference_examples/terminal_bench_2/.claude/skills/meta-harness-terminal-bench-2/SKILL.md: same sections (CRITICAL CONSTRAINTS, anti-overfitting, CONTEXT, CANDIDATE DESIGN, WORKFLOW Step 1 analyze with one subagent / Step 2 implement / Step 3 pending_eval.json, IMPORTANT NOTES). TB2-specific content (AgentHarness class, Terminus2 methods, harbor) replaced by the SpreadsheetBench harness description, the candidate directory layout, the placeholder contract and the helper-script rules. '1 new agent variant' -> '2 new candidates' (§7.6 k=2), so Step 2 launches one implementation subagent per candidate. exp895/arms/common/SURFACE_CONTRACT.md is inserted VERBATIM (incl. its last paragraph 'Prefer deterministic helpers for procedural failures').",
+   "reason": "Issue §7.6: 'Write a SKILL.md for SpreadsheetBench, adapted from the upstream terminal_bench_2 skill'; §4.1: every proposer gets the same surface contract and helper note."
+  },
+  {
+   "id": "D5-candidate",
+   "what": "A candidate is a directory candidates/<name>/{prompt.md, task_template.md, skills/<skill>/{SKILL.md, scripts/*.py}} (v2 seed layout), not a Python agent file. The seed is the v2 seed, byte-identical (sha256 checked against exp895/BUILD_RECORD.json). Right after the proposal, ONLY those three surfaces are copied to RUN/frozen/<name> (outside the sandbox) and that frozen copy is what is evaluated and what later becomes the champion.",
+   "reason": "Issue §7 table row 7 and §7.6: candidate = {prompt.md, task_template.md, skills/}. Freezing prevents a later proposer session from changing bytes that were already scored."
+  },
+  {
+   "id": "D6-validation",
+   "what": "Upstream's import check (`python -c 'from agents.<name> import *'`) and TB2 smoke_test are replaced by (a) proposer side: check_candidate.py (stdlib, placeholder contract, SKILL.md frontmatter, each helper compiles+imports) which the skill tells the proposer to run, and (b) loop side: the adapter's _task_template_error (placeholder contract), helpers.skills_tree_problems, and the common helper gate _helper_gate_error (cap-evolve lint_candidate + run_smoke). A candidate failing (b) is NOT skipped as upstream would: it is still evaluated through CommonRollout, where every rollout fails the same gate before any LLM call, scores 0 and is debited (the common rule, decisions.md 2026-10-21). Upstream skips invalid candidates for free.",
+   "reason": "Issue §7.6 'Replace the import check with the placeholder-contract check, the helper lint and the smoke test'; §4.1 'still counted as an evaluated candidate'; Boaz decision: debited identically for every arm."
+  },
+  {
+   "id": "D7-data-visibility",
+   "what": "The proposer's cwd (RUN/work) holds only: candidates/, traces/<cand>/<task>.json (TRAIN tasks only: instruction, answer_position, per-trial reward, gold-safe scorer feedback, candidate errors, full transcript without the system message), logs/evolution_summary.jsonl + frontier_val.json (val = ONE aggregate avg_val per candidate), reports/, claude_sessions/, claude_wrapper.py, check_candidate.py and the skill. Per-task val scores go to RUN/val_private/ outside the sandbox. Upstream exposes per-dataset val accuracy and (TB2) per-task pass rates in frontier_val.json / evolution_summary.jsonl.",
+   "reason": "Issue §7.6: 'The proposer sees train traces only. Val 40 x 3 is exposed only as an aggregate score.'"
+  },
+  {
+   "id": "D8-selection",
+   "what": "frontier_val.json `_best` = the candidate with the highest val mean (k=3 mean per task, averaged over measured val tasks; ties keep the incumbent). Upstream text_classification keeps a Pareto frontier over (accuracy, context length); TB2 keeps per-task best + `_best` by avg pass rate.",
+   "reason": "Issue §7.6: 'Selection takes the highest val mean, not the Pareto frontier. Record that.' (TB2's `_best` rule is the one used.)"
+  },
+  {
+   "id": "D9-trace-batches",
+   "what": "Seed traced on ALL train tasks (80; smoke: 2) and scored on all val tasks. Each later candidate is traced on a rotating 20-task train batch (a seeded permutation of train, advanced by 20 per iteration, wrapping) and scored on all val tasks. Upstream evaluates every candidate on the full eval set.",
+   "reason": "Issue §7.6 verbatim. Costs per candidate: (20 + 40) x 3 = 180 counted rollouts; seed: (80 + 40) x 3 = 360."
+  },
+  {
+   "id": "D10-candidates-per-iteration",
+   "what": "Exactly 2 candidates per iteration are evaluated (extra entries in pending_eval.json are dropped and logged). Candidates whose name is invalid/reused, whose dir is missing, or that contain a symlink are skipped (logged, not evaluated, not charged). A candidate is not started unless its full train batch + val evaluation fits in the remaining R.",
+   "reason": "Issue §7.6 k=2; upstream TB2 produces 1, text_classification 3. Symlink refusal: freezing runs outside the sandbox."
+  },
+  {
+   "id": "D11-tamper-restore",
+   "what": "After each proposer session, every earlier candidate under work/candidates/ is compared to its frozen copy and restored if edited (logged as an event). Upstream relies on the skill's 'CANNOT modify any existing agent file' instruction only.",
+   "reason": "Keeps traces/scores consistent with the candidate files the proposer reads."
+  },
+  {
+   "id": "D12-stop",
+   "what": "Stop when R cannot fit one more candidate evaluation (BudgetStop is the hard guard), when the gateway ledger shows >= 20M non-cache-read optimizer tokens for the arm's optimizer tag, or after --iterations. A proposer session that fails or writes no pending_eval.json costs no rollouts (upstream: `continue`).",
+   "reason": "Issue §5 R and the 20M runaway guard."
+  },
+  {
+   "id": "D13-reports-step",
+   "what": "Upstream text_classification's 'Step 0: post-eval reports' is not in the TB2 skill we adapted; the reports/ dir is still provided and listed in the task prompt, as in TB2's render_task_prompt.",
+   "reason": "Follows the TB2 skill the issue names as the base."
+  },
+  {
+   "id": "D14-trial-seeds",
+   "what": "Trial seeds are CommonRollout's: 1_000_000*seed + 1000*eval_call + 100*attempt + trial.",
+   "reason": "decisions.md 2026-10-21 (Opus re-verification): the §5 formula collides; common to every competitor arm."
+  }
+ ]
+}

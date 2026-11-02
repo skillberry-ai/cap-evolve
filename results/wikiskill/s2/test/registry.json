@@ -1,0 +1,31 @@
+{
+ "arm": "wikiskill",
+ "search_seed": 2,
+ "champion_src": "/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/runs/wikiskill/search_s2/champion",
+ "champion_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/PURPOSE.md": "b237536c03b9e14b18716c86f584f1b270f9211403f70b1bf7bf510f7a3c0f21",
+  "skills/spreadsheet-helpers/SKILL.md": "73389a8b45975ac0e692215c7b072c628bf020b6c66ecd749e7b6304d6755078",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "skills/spreadsheet-helpers/scripts/iolib.py": "0604cb7861036affcf17dac0568b98cbc8c6276ae1e83570b19489fa2f063609",
+  "skills/typed_edit_rules/PURPOSE.md": "cf561f888ab3b1ae3d6d0f86cbdc6c3ef2ef492c318840eeb3bd6d6a5b2a31d3",
+  "skills/typed_edit_rules/SKILL.md": "6c2cb451d063a5889f5bf331cd1b022b7b4329125673ba5160c04fa5204cb191",
+  "skills/typed_edit_rules/scripts/typelib.py": "f12b33947058b264dbbc9cda2295f4d0ff6535194825099215fd521d5b921b90",
+  "skills/wikiskill-wiki/SKILL.md": "d23eda6098eea0479e81c116b102cfece439f5f16daebaf3b71bdbe0624595dc",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "seed_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "inert_champion": false,
+ "order_sha256": "efc04d8049da73eb7a2c8684c4879c218ea42276c048ce70166aa408b549669c",
+ "n_episodes": 1680,
+ "k": 3,
+ "anchor_trials": 3,
+ "champion_first": true,
+ "registered_at": 1793304834.2246962,
+ "analysis": "headline = mean over 280 test tasks of (champion per-task mean - same-window seed per-task mean); CR1 SE clustered by task; t interval on 279 df. Infra-missing trials are dropped, never scored 0."
+}

@@ -1,0 +1,68 @@
+{
+ "arm": "skillopt",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.3 (SkillOpt)",
+ "upstream": "microsoft/SkillOpt @ 79124b37e9a6371e13b753f8bcd7adb1e493ade1 (competitors/skillopt; launcher records `git status --porcelain --untracked-files=no` line count = skillopt_dirty, must be 0)",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D1-rollout",
+   "what": "SpreadsheetBenchAdapter.rollout() is replaced (subclass Exp895SkillOptAdapter in arms/skillopt/skillopt_exp895.py). It unpacks the skill document into a candidate dir and calls CommonRollout.evaluate(cand, ids, k=3, split=train|val). SkillOpt's codegen agent, executor and evaluator (skillopt/envs/spreadsheetbench/{rollout,codegen_agent,executor,evaluator}.py) are never called. Everything else is upstream code: scripts/train.py parse_args+load_config, ReflACTTrainer.train() (rollout -> minibatch reflect -> merge -> rank/select with the cosine edit budget -> apply -> selection gate, slow update and meta skill at epoch ends, sel_cache), SplitDataLoader, skillopt.gradient.reflect, the openai_compatible optimizer backend.",
+   "reason": "Issue \u00a77.3: 'Replace only rollout() with the common rollout. SkillOpt's own codegen agent and evaluator are not used.'"
+  },
+  {
+   "id": "D2-packed-artifact",
+   "what": "The skill document SkillOpt optimizes is ONE text = pack(task_template.md, skills/**/SKILL.md + scripts/*.py, prompt.md) with `=== FILE: <path> ===` marker lines (arms/skillopt/skillopt_pack.py). prompt.md is packed LAST so SkillOpt's tail-appending ops (`append` edits, the <!-- SLOW_UPDATE --> block) land in the system prompt. A document whose markers are damaged (text before the first marker, a missing prompt.md/task_template.md block, a duplicate / malformed / mid-line marker, a path outside the editable surfaces, an unbalanced protected block) is materialized as a stub whose task_template.md has no placeholders: the common adapter refuses it as error_kind=candidate before any model call, every trial scores 0 and the full evaluation is debited from R. The v2 seed round-trips byte-identically (self-check run by the launcher before every search).",
+   "reason": "Issue \u00a77.3: 'The artifact is ONE text, pack(prompt.md, task_template.md, skills/**) with === FILE: \u2026 === markers. A document with damaged markers scores 0 without a model call.'"
+  },
+  {
+   "id": "D3-analyst-prompts",
+   "what": "SkillOpt's spreadsheetbench analyst prompts are kept (the subclass lives outside skillopt/envs/, so `_env_name` is forced to 'spreadsheetbench'; otherwise the generic prompts would load). get_error_minibatch_prompt / get_success_minibatch_prompt return the upstream prompt followed by arms/common/SURFACE_CONTRACT.md verbatim (incl. its 'Prefer deterministic helpers for procedural failures' paragraph) and a short PACK_NOTE explaining the marker format and how to add a helper script with a `replace` edit on the `=== FILE: prompt.md ===` line. The merge / ranking / slow-update / meta-skill prompts are upstream, unchanged.",
+   "reason": "Issue \u00a77.3 'Keep SkillOpt's spreadsheetbench analyst prompts (force _env_name)'; \u00a74.1 every competitor's proposer gets the same surface contract + helper note; the pack note is needed so the optimizer can produce the scripts surface at all (\u00a77: never silently drop a surface)."
+  },
+  {
+   "id": "D4-gold-free-feedback",
+   "what": "`use_eval_feedback=True` (passed by the trainer to the train rollout) is ignored, and SkillOpt's _auto_verify_output (which prints expected-cell information) is not used. The reflect stage reads, per trial, predictions/<rid>/conversation.json = the agent's own transcript after the first user message (each message head+tail capped at 6,000 chars, whole conversation kept under 20,000 chars by dropping middle turns) plus one [POST-EXECUTION VERIFICATION] message = the common scorer's gold-safe feedback and any candidate-caused error; target_system_prompt.txt and target_user_prompt.txt = what the agent was sent (the user prompt includes answer_position, which the agent itself sees, as in every arm).",
+   "reason": "Issue \u00a77.3 'Feedback is gold-free. Ignore use_eval_feedback, since its gold-guided retry would leak.' The 20k cap is the same bound as GEPA's reflective records (\u00a77.1); upstream sends untruncated trajectories, which at our 30-turn traces (P1 mean 117k prompt tokens/episode) would overflow GLM's context with minibatch_size=8."
+  },
+  {
+   "id": "D5-k3-rows",
+   "what": "Each task in a rollout call is scored k=3 times inside one CommonRollout.evaluate call, and returned to SkillOpt as 3 result rows `<id>`, `<id>__t1`, `<id>__t2` (each with its own predictions/<rid>/ dir). compute_score (and so the selection gate) takes the pooled mean over the rows. Trials still infra-errored after the common retries are dropped (missing, never 0). Upstream scores each item once. SkillOpt's slow-update / meta-skill longitudinal pairs (upstream build_comparison_pairs) are keyed by the task id, so each pair uses the `<id>` row (trial 0) and its trajectory; the pooled prev/curr hard scores it prints use all 3 rows. Upstream code, unchanged; a consequence of the row naming the issue prescribes.",
+   "reason": "Issue \u00a77.3 'k=3: one result row per trial (<id>, <id>__t1, <id>__t2); the gate takes the pooled mean'; \u00a70.3 infra is missing, not 0."
+  },
+  {
+   "id": "D6-config",
+   "what": "configs/spreadsheetbench/default.yaml (minibatch_size=8, learning_rate=4 with cosine to min 2, use_slow_update + use_meta_skill with slow_update_samples=20, gate_metric=hard [upstream default], sel_cache) with CLI overrides: num_epochs=100, batch_size=6, eval_test=false, sel_env_num=0 (full val), train_size=<split size>, seed=<search seed>, split_mode=split_dir (our split), skill_init=<packed v2 seed>, backends openai_compatible, optimizer_model rits/zai-org/glm-5-3. Optimizer env: OPTIMIZER_OPENAI_COMPATIBLE_TEMPERATURE=0.7, _MAX_TOKENS=16000, base URL = GLM gateway tag exp895-skillopt-s<seed>:optimizer, client timeout 1800 s (above the gateway's own retry window). env.workers / mode / max_turns / exec_timeout of the yaml are unused (they only drive SkillOpt's replaced rollout); agent concurrency is SPREADSHEETBENCH_CONCURRENCY, identical to the other arms.",
+   "reason": "Issue \u00a77.3 settings. Upstream's default batch_size=40 is replaced by 6 per the issue; epochs=100 so R binds. reasoning_effort=medium in the yaml is a no-op in the openai_compatible backend (upstream code); the gateway sets reasoning_effort=low for GLM chat calls, the same for every arm."
+  },
+  {
+   "id": "D7-split",
+   "what": "SkillOpt split_dir built by arms/skillopt/make_split.py from SkillOpt's own data/spreadsheetbench_id_split/{train,val}/items.json, asserted equal to the official train 80 / val 40. train = official train 80 (SkillOpt's reflect + slow-update + meta-skill samples), val = official val 40 (SkillOpt's selection gate). test = a 1-item STUB that is a TRAIN id (eval_test=false: never rolled out; the loader only needs the dir). SkillOpt's own test/items.json is never opened; the official test list is read only to assert zero overlap (counts printed, never ids). Smoke only: train = val = the TRAIN_IDS subset.",
+   "reason": "Issue \u00a77 table: SkillOpt selects on val 40; \u00a70.2 no test id anywhere in search; \u00a77.3 eval_test=false with a 1-item test stub."
+  },
+  {
+   "id": "D8-budget-guards",
+   "what": "R is enforced on the shared CommonRollout counter (BudgetStop before any evaluation that would overshoot). The port adds two look-ahead guards, raising BudgetStop: (a) a training step starts only if its train rollout (batch x 3) AND its selection eval (val x 3) both fit, so no train rollout is spent on a step whose candidate can never be scored; (b) a slow-update / meta-skill longitudinal pair (prev + curr rollout on 20 train items) starts only if both rollouts fit. BudgetStop propagates out of ReflACTTrainer.train(); the champion is SkillOpt's best_skill.md at that point (the best gate-accepted document on val; the seed if none was accepted). \u00a75 optimizer-token cap (20M non-cache-read GLM tokens, from the gateway ledger) is checked at every rollout call and raises BudgetStop if exceeded.",
+   "reason": "Issue \u00a75 hard counter; \u00a77 'Enforce R on the shared counter'; runaway guard."
+  },
+  {
+   "id": "D9-transcript-hook",
+   "what": "skillopt.model.openai_compatible_backend._chat_messages_impl is wrapped (monkeypatch) to append every optimizer call attempt's messages, reply, usage and error to optimizer_transcript.jsonl. Successful calls are unchanged. The wrapper also implements D12.",
+   "reason": "Issue \u00a74.1: after each search, grep all optimizer transcripts for gold paths and test ids. The SkillOpt optimizer is a plain chat model with no tools or file access, so its transcript is everything it ever saw."
+  },
+  {
+   "id": "D10-no-sandbox",
+   "what": "No bwrap sandbox for this arm's optimizer.",
+   "reason": "It is a tool-less chat-completions client (openai_compatible): it cannot read files or run code, so the only channel is the prompts SkillOpt builds, which the isolation scan covers. Same reasoning as the GEPA arms."
+  },
+  {
+   "id": "D11-split-label",
+   "what": "rollouts.jsonl `split` is 'val' for every SkillOpt directory named selection_eval* (step gate, baseline, gated slow update, final selection) and 'train' otherwise (train rollout, slow-update / meta-skill pairs). Port-side labelling only; no effect on what is rolled out or scored.",
+   "reason": "First smoke attempt (runs/skillopt/smoke_s0, job 1919093, killed after its first candidate evaluation so that the smoke would run on the current common rollout.py) labelled only steps/*/selection_eval and the baseline as val; a gated slow update would have been mislabelled 'train'."
+  },
+  {
+   "id": "D12-optimizer-infra-wait",
+   "what": "When an optimizer call fails with an INFRA error (openai client: Request timed out / Connection error / HTTP 429 or 5xx, which includes the gateway's 502 after its own 8 attempts) after upstream's own retries, the wrapper waits 120 s and re-issues the whole upstream call, for up to 12 h per call; then upstream behaviour resumes (the exception propagates to upstream's handlers). Non-infra errors (e.g. HTTP 400) propagate immediately, as upstream.",
+   "reason": "Upstream reflect/merge catch ANY exception and return None, so during a GLM outage a step becomes 'skip_no_patches' although its train rollout (batch x 3) was already debited from R. Seen live: GLM (Curve Bender) returned no 200 to any exp895 run from 2026-10-21T20:00:11Z on (all calls ReadTimeout at the gateway; runs/*/*/calls_glm.jsonl), which hit smoke_s0c (job 1923193, killed by exact id). Issue \u00a70.3: infra errors are retried, never scored."
+  }
+ ]
+}

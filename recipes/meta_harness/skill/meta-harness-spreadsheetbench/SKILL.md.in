@@ -1,0 +1,130 @@
+---
+name: meta-harness-spreadsheetbench
+description: Run one iteration of agent-harness evolution for SpreadsheetBench (prompt.md, task_template.md, skills/).
+---
+
+# Meta-Harness (SpreadsheetBench)
+
+Run ONE iteration of agent harness evolution.
+
+**You do NOT run benchmarks.** You analyze results + failed trajectories, propose harness variants, and implement them. The outer loop (`meta_harness_arm.py`) handles benchmarking.
+
+## CRITICAL CONSTRAINTS
+
+- You MUST produce 2 new candidate harnesses every iteration
+- Do NOT write "the frontier is optimal" or "stop iterating", or abort early.
+
+### Anti-overfitting rules
+
+- **No task-specific hints.** Do not hardcode knowledge about specific tasks. Harnesses must be general-purpose.
+- **Never mention task ids or task contents** in prompts, templates, skills or helper code. No references like "if the sheet is called 'Sales'" or "for the VLOOKUP task." If your improvement only helps one task, it's too specific.
+- **General guidance is OK.** Rules like "re-open the saved workbook and print the target range before finishing" are fine -- they happen to help specific tasks but apply broadly. The test: would this advice be useful to a human analyst working on MANY unfamiliar spreadsheets?
+- **If in doubt, make it more general.** "Check which row holds the headers before indexing columns" > "The header of the inventory sheet is on row 3."
+
+## CONTEXT
+
+You are evolving the **harness** of a SpreadsheetBench agent. The agent model is fixed (Gemma-4-31B-it, temperature 0). It solves one spreadsheet manipulation task per episode in a multi-turn CodeAct loop: each turn it writes ONE Python code block, the code runs in a Jupyter kernel, and the output is fed back. Its only tool is code execution. It must write the modified workbook to the output path it is given. A task is scored by comparing the cell values in `answer_position` of the saved workbook (after a LibreOffice recalculation) with the expected result, on the task's test cases; the score is 1 only if every case matches.
+
+**The search space is the harness: three surfaces, as text and Python files.** A candidate is a directory:
+
+```
+candidates/<name>/prompt.md                           # the agent's system prompt
+candidates/<name>/task_template.md                    # the per-task first user message (keep its placeholders)
+candidates/<name>/skills/<skill>/SKILL.md             # appended to the system prompt
+candidates/<name>/skills/<skill>/scripts/<script>.py  # helpers, importable in the kernel as skills.<skill>.<script>
+```
+
+**Evaluation (done by the outer loop, not by you):** every candidate is run 3 times on each task of a 20-task TRAIN batch (the batch rotates each iteration), and 3 times on each task of a held-out SELECTION set. You get the full train trajectories. The selection set is shown to you ONLY as one aggregate number per candidate (`avg_val`, percent of tasks solved, averaged over trials). The candidate with the highest `avg_val` is the frontier.
+
+**Key files to read** (paths relative to your working directory; the task prompt gives the absolute ones):
+
+- `candidates/seed/` - the starting harness. Read all of it.
+- `candidates/<name>/` - every earlier candidate (never edit these; copy one as a starting point).
+- `traces/<candidate>/<task_id>.json` - full train trajectories: the instruction, the answer position, and for each trial the reward, the scorer's feedback, any candidate-caused error, and the full transcript (the system message is omitted: it is that candidate's prompt.md + SKILL.md).
+- `traces/<candidate>/_summary.json` - per-task train scores of that candidate.
+- `logs/evolution_summary.jsonl` - what's been tried, what worked/didn't (one row per candidate, with `avg_val`).
+- `logs/frontier_val.json` - the current best candidate and its `avg_val`.
+- `check_candidate.py` - validator for a candidate directory (see Step 2).
+
+<!-- SURFACE_CONTRACT -->
+
+## CANDIDATE DESIGN
+
+Each candidate is a **directory** `candidates/<snake_case_name>/` holding `prompt.md`, `task_template.md` and `skills/`. Only those three surfaces are evaluated; any other file you put there is ignored.
+
+### What you can and cannot modify
+
+- **CAN**: create a new `candidates/<name>/` directory and edit its files freely.
+- **CAN**: add, rewrite or delete skills and helper scripts inside your new candidate.
+- **CANNOT**: modify any existing candidate directory, anything under `traces/` or `logs/` (except writing `pending_eval.json` and reports), `meta_harness_arm.py`, `claude_wrapper.py` or `check_candidate.py`.
+
+### Design principles
+
+- Your primary goal is to improve the agent's score on unseen SpreadsheetBench tasks.
+- One mechanism per candidate. Each candidate tests exactly one hypothesis. If you're tempted to add "and also..." -- that's a second candidate.
+- Mechanism-first. Identify a specific failure mode or hypothesis from trajectories, then design changes that target it. Never add changes speculatively.
+
+## WORKFLOW
+
+### Step 1: Analyze (1 subagent)
+
+Launch ONE Agent subagent (subagent_type: "general-purpose"). It should:
+
+1. Read state files:
+   - `logs/frontier_val.json` - current best candidate (path given in task prompt)
+   - `logs/evolution_summary.jsonl` - what's been tried, what worked/didn't (path given in task prompt)
+2. **Deep-read failed AND successful trajectories.** Most important step.
+   Use `traces/` as the primary source of truth. Compare the same task across candidates where it was run by more than one.
+3. Read the candidate harnesses in `candidates/*/`
+4. Return:
+
+```
+STATE: <5-line summary: current scores, what's been tried, typical failure modes, avg turns>
+
+HYPOTHESIS 1: "<falsifiable claim about what will improve scores>"
+CANDIDATE 1: name=<snake_case>, base=<candidate>, changes="<specific changes>", prediction="<expected score impact AND expected turn impact>"
+
+HYPOTHESIS 2: "<a different mechanism>"
+CANDIDATE 2: name=<snake_case>, base=<candidate>, changes="<specific changes>", prediction="<...>"
+```
+
+### Step 2: Implement (1 subagent per candidate)
+
+Launch **1 Agent subagent per candidate** (subagent_type: "general-purpose"). The prompt must include the candidate name, its base candidate, the specific changes from Step 1, and the working directory.
+
+Each subagent should:
+
+1. Copy one of the candidates in `candidates/` as a starting point: `cp -r candidates/<base> candidates/<snake_case_name>`.
+2. Make targeted changes according to the candidate instructions. A new helper script must be general, offline and deterministic; exercise it on a small workbook you build with openpyxl before relying on it.
+3. **Smoke test**: validate the candidate (`python3 check_candidate.py candidates/<name>`). It must print `CHECK_OK`. It checks the placeholder contract, the SKILL.md frontmatter, and that every helper compiles and imports. The outer loop then runs the authoritative helper lint and smoke test; a candidate that fails them scores 0 and still uses its full evaluation budget.
+4. Return: directory path, validation status
+
+### Step 3: Write pending_eval.json
+
+Write `pending_eval.json` to the path specified in the task prompt:
+
+```json
+{
+  "iteration": <N>,
+  "candidates": [
+    {
+      "name": "<name>",
+      "dir": "candidates/<name>",
+      "base": "<base candidate>",
+      "hypothesis": "<falsifiable claim>",
+      "changes": "<what was changed>",
+      "expected_efficiency": "<expected turn impact>"
+    }
+  ]
+}
+```
+
+Output: `CANDIDATES: <name1>, <name2>`
+
+## IMPORTANT NOTES
+
+- `task_template.md` is filled per task with Python `str.format`. It must keep exactly the placeholders `{instruction}`, `{spreadsheet_path}`, `{spreadsheet_content}`, `{instruction_type}`, `{answer_position}`, `{output_path}`; `{max_turns}` is optional; no other single-brace field is allowed (write a literal brace as `{{` or `}}`). Its leading `<!-- ... -->` comment is stripped before the agent sees it.
+- `{skills_root}` in `prompt.md` or `task_template.md` is replaced by `skills` (the import root) before the agent sees it.
+- Each `SKILL.md` needs YAML frontmatter with `name:` and `description:`; its body is appended to the system prompt (capped at 6000 characters per skill).
+- A helper in `skills/<skill>/scripts/<script>.py` is imported as `skills.<skill_with_underscores>.<script>`. It runs inside the agent's kernel, where the task's input files are under `/mnt/data` (read-only). It cannot be run as a script (`__main__`).
+- The agent has a budget of 30 turns per episode; every turn costs time. Helpers that collapse several turns of exploration into one call are valuable.

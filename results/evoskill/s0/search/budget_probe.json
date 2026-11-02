@@ -1,0 +1,1 @@
+BUDGET_PROBE {"verdict": "BudgetStop raised: evoskill: evaluation of 233x3=699 would exceed R (1464/2160)", "requested_rollouts": 699, "state_unchanged": true, "rollout_rows_unchanged": true, "budget_state": {"spent": 1464, "eval_calls": 488, "R": 2160}}

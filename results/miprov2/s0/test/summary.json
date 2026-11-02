@@ -1,0 +1,20 @@
+{
+ "arm": "miprov2",
+ "search_seed": 0,
+ "inert_champion": false,
+ "champion_test_mean": 0.7357142857142858,
+ "seed_test_mean": 0.6428571428571429,
+ "paired_delta": 0.09285714285714286,
+ "paired_se_cr1": 0.01989444998055416,
+ "ci95": [
+  0.053704865295412275,
+  0.13200942041887345
+ ],
+ "n_tasks_paired": 280,
+ "missing_tasks": {
+  "champion": 0,
+  "seed": 0
+ },
+ "infra_missing_trials": 0,
+ "candidate_error_trials": 0
+}

@@ -1,0 +1,14 @@
+# FRAMEWORK-IMPROVEMENTS — suggestions for cap-evolve itself (cross-run)
+
+NOT about this capability or this run's result — about what cap-evolve the FRAMEWORK should change so FUTURE runs (any capability, any project) go better: a confusing prompt section, a missing tool, a file you wished existed, a gate that felt wrong. Optional most iterations; add an entry whenever something about the framework itself (not the task) got in your way or surprised you.
+
+- The scorer feedback distinguishes "NO output file" from value mismatches, but the root cause for 12 no-file tasks was reply-FORMAT failure (raw tool-call text, nothing executed) — visible only by reading trajectories. A cheap harness-side signal ("N consecutive rounds with no python code block found") in the feedback line would let future iterations spot this class without trace reading, and a harness-side retry injection would recover episodes outright.
+- Local environment could not import openpyxl (no network), so bundled scripts using openpyxl could only be compile-checked, not run. Pre-installing the agent's actual dependency set in the optimizer workdir would make the CHECK step stronger.
+
+- cand_0003: rejected candidates would be far more reusable if the rejection record said WHY a candidate scored 0.000 (lint failure vs smoke failure vs all-tasks-failed) — cand_0001's fatal element is still unknown, forcing conservative redesign of every edit in its batch. A one-line validator log in the RESULT stamp would remove this ambiguity.
+
+- cand_0004: a rejected-candidate record that says only val=0.000 gives no way to distinguish "lint/smoke failure" from "all tasks failed on behavior" — cand_0001 and cand_0003 both present as identical 0.000 rows in LEDGER, yet the former's fatal element is still unknown after two redesigns. A `validation_error` field (lint log, smoke traceback) in the RESULT stamp or rejected.jsonl would have saved two full iterations. Related: the optimizer workdir cannot import the agent runtime's packages (openpyxl), so bundled xlsx scripts cannot even be smoke-tested locally before shipping — pre-installing the agent's dependency set, or exposing the lint env's package list, would make the code lever usable at all.
+
+- Expose the lint/smoke environment's package list (or the lint failure message) to the optimizer. Two full iterations died at 0.000 on a suspected unimportable dependency, and the optimizer can only guess — a one-line lint report would have saved both iterations and unlocked the code surface for the whole run.
+- Expose remaining rollout budget implications: when an iteration would consume the last full-budget slot, say so in the task header (I had to infer it from "1800/2160 used").
+- LLM APITimeoutError infra failures (56427 t1/t2) are counted into per-task flakiness; retrying or excluding them would make the flaky signal cleaner for the optimizer.

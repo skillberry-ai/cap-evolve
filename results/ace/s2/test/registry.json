@@ -1,0 +1,25 @@
+{
+ "arm": "ace",
+ "search_seed": 2,
+ "champion_src": "/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/runs/ace/search_s2/champion",
+ "champion_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "seed_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "inert_champion": true,
+ "order_sha256": "9b718fc0a1cb250ff2902df141cca90938f02218ef376058d5ad8ee5fb77de87",
+ "n_episodes": 1680,
+ "k": 3,
+ "anchor_trials": 3,
+ "champion_first": true,
+ "registered_at": 1793341160.9358966,
+ "analysis": "headline = mean over 280 test tasks of (champion per-task mean - same-window seed per-task mean); CR1 SE clustered by task; t interval on 279 df. Infra-missing trials are dropped, never scored 0."
+}

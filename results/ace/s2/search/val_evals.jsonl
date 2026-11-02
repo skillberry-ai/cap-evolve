@@ -1,0 +1,3 @@
+{"t": 1793339401.881298, "candidate": "pb_e245245dcdc2", "accuracy": 0.0, "n_scored": 40, "n_samples": 40, "spent": 708, "playbook_sha256": "d346554016b991b5ee6b75e5d7a797d4294931b493f6075a299787c7af3ef514"}
+{"t": 1793340399.641795, "candidate": "pb_396f1926e4b1", "accuracy": 0.0, "n_scored": 40, "n_samples": 40, "spent": 1548, "playbook_sha256": "37017744e1f11a0ddc98ed2cdd4ccba6be4540e4875f185af0332a05f2366595"}
+{"t": 1793340852.4686906, "candidate": "pb_a10254fe8e7f", "accuracy": 0.0, "n_scored": 40, "n_samples": 40, "spent": 2136, "playbook_sha256": "0e52acbbd281165b7562b87b7c23df1deb2a264c08048b8dff6f8b7f162bce32"}

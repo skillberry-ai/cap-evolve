@@ -1,0 +1,20 @@
+{
+ "arm": "evoskill",
+ "search_seed": 2,
+ "inert_champion": false,
+ "champion_test_mean": 0.7755716004813478,
+ "seed_test_mean": 0.6458333333333334,
+ "paired_delta": 0.12274368231046931,
+ "paired_se_cr1": 0.025400757625689708,
+ "ci95": [
+  0.07275499130311197,
+  0.17273237331782665
+ ],
+ "n_tasks_paired": 277,
+ "missing_tasks": {
+  "champion": 3,
+  "seed": 0
+ },
+ "infra_missing_trials": 48,
+ "candidate_error_trials": 0
+}

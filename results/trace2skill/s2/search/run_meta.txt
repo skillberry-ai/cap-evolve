@@ -1,0 +1,8 @@
+WARMUP {"n": 10, "wall_s": 876.4, "status": ["HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError"], "latency_s": [835.8, 838.5, 846.9, 854.2, 858.3, 858.9, 869.8, 871.9, 875.1, 876.4]}
+host=cccxc716 job=1952302 arm=trace2skill seed=2 R=2160 conc=10 workers=8 parallel_candidates=0 start=2026-10-22T06:59:36Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+trace2skill_pin=3d0b52a140f002a512930252b613c49048f7d5ac upstream_dirty=0
+arm_sha256=9781395e415a22f671234078447cd2199e864bcda3a5825e8f92b39c6a1d547c rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+TRACE2SKILL_RC=0
+end=2026-10-22T18:20:52Z

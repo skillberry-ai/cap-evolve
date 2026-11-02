@@ -1,0 +1,103 @@
+{
+ "arm": "ace",
+ "seed": 1,
+ "R": 2160,
+ "rollouts_used": 2076,
+ "stop_reason": "StopTraining: next batch (<= 36) + final val (120) would exceed R (2076/2160)",
+ "binding_on_R": true,
+ "champion": "pb_d60484505a3b",
+ "champion_val_score": 0.7333350000000001,
+ "val_evaluations": [
+  {
+   "t": 1793358710.39593,
+   "candidate": "pb_8fe9415af8f7",
+   "accuracy": 0.6749975,
+   "n_scored": 40,
+   "n_samples": 40,
+   "spent": 696,
+   "playbook_sha256": "684d06ece0fb0c83330f28ec981102748dbda8bcdb1b036381fa9913ccaccecb"
+  },
+  {
+   "t": 1793400420.130357,
+   "candidate": "pb_14bf8deaf1f9",
+   "accuracy": 0.7,
+   "n_scored": 40,
+   "n_samples": 40,
+   "spent": 1386,
+   "playbook_sha256": "40d2b660d97f5305ad5df6981fa784be3cd27593b19b9a51139a0d7b7fb7ac2b"
+  },
+  {
+   "t": 1793431078.840419,
+   "candidate": "pb_d60484505a3b",
+   "accuracy": 0.7333350000000001,
+   "n_scored": 40,
+   "n_samples": 40,
+   "spent": 2076,
+   "playbook_sha256": "a304648b45081b69680b08ae0023b515409d46212097dc5d52c191bc1218dd47"
+  }
+ ],
+ "n_candidates_evaluated": 153,
+ "n_playbook_candidates_evaluated": 61,
+ "batches_run": 60,
+ "generate_calls": 692,
+ "final_playbook": {
+  "bullets": 157,
+  "skill_bullets": 6,
+  "scripts": [
+   "load_xlsx_safe",
+   "normalize_date",
+   "read_sheet_xml",
+   "verify_output",
+   "verify_values"
+  ],
+  "unparsed_script_bullets": []
+ },
+ "train_ids_n": 80,
+ "val_ids_n": 40,
+ "wall_s": 138912.4,
+ "settings": {
+  "batch_size": 4,
+  "curator_num_groups": 2,
+  "playbook_token_budget": 80000,
+  "curator_frequency": 1,
+  "max_num_rounds": 1,
+  "use_bulletpoint_analyzer": false,
+  "json_mode": false,
+  "no_ground_truth": true,
+  "augmented_shuffling": true,
+  "task_name": "spreadsheetbench",
+  "k": 3,
+  "max_tokens": 8000,
+  "max_epochs": 1000,
+  "eval_steps": 80,
+  "test_workers": 5,
+  "skill_bullets": true
+ },
+ "prompt_patch": {
+  "GENERATOR_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "REFLECTOR_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "REFLECTOR_PROMPT_NO_GT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "CURATOR_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "CURATOR_PROMPT_NO_GT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "CURATOR_OPERATIONS_AGGREGATION_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  }
+ },
+ "upstream": "ace-agent/ace@82709de050e1db6e6ef2f07bcb0393560b94992a (ace.ace_batch.ACEBatch, offline)"
+}

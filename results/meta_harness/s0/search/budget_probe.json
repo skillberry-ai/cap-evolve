@@ -1,0 +1,1 @@
+BUDGET_PROBE {"verdict": "BudgetStop raised: meta_harness: evaluation of 8x3=24 would exceed R (2139/2160)", "requested_rollouts": 24, "state_unchanged": true, "rollout_rows_unchanged": true, "budget_state": {"spent": 2139, "eval_calls": 27, "R": 2160}}

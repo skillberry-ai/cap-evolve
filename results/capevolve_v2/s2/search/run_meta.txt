@@ -1,0 +1,7 @@
+HEALTHZ_GEMMA {"ok":true,"upstream":"gemma","cap":64,"dead_until":0.0,"key_slot":"5"}
+WARMUP {"n": 10, "wall_s": 39.3, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [4.0, 4.0, 4.0, 4.4, 6.3, 7.2, 8.0, 9.2, 10.6, 39.2]}
+host=cccxc530 job=343063 arm=capevolve_v2 seed=2 R=2160 key_slot=5 start=2026-10-25T13:16:54Z
+code_sha=0d791eeb78cf11449b30c464e43344997e15bb74 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+spec_sha256=b292005c220df4d440ed5c784161d40ce92f34d3d0fc2d52a0f8432c1727f876
+CAPEVOLVE_RC=0
+end=2026-10-26T23:27:00Z

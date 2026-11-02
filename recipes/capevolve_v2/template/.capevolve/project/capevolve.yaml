@@ -1,0 +1,222 @@
+# cap-evolve run spec. The intake skill fills this by interviewing you; the
+# orchestrate skill (or `cap-evolve run --spec`) reads it to sequence the pipeline.
+# Values reference skills from the installed library (skills/_registry/manifest.json).
+# Kept flat (no inline maps) so the zero-dependency reader can parse it.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [system-prompt, skill-package]            # list of capability skills to optimize jointly
+#   (e.g. [system-prompt, tools] to optimize a prompt AND tools together)
+capability_path: seed_capability_v2         # the artifact dir (a copy is optimized)
+actions: [edit]                          # allowed edits (capability-specific)
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code                    # optimizer NAME (resolved by run-optimizer via optimizers/registry.yaml)
+optimizer_model: rits/zai-org/glm-5-3                      # backend-specific (e.g. a claude model id)
+optimizer_max_turns: 80                   # 0 = off; per-iteration WORK cap passed to the agent CLI
+#   (claude-code → --max-turns N), bounding the cost/work of each optimization step
+optimizer_usd_per_iter: 0              # 0 = off; per-iteration DOLLAR cap passed to the agent CLI
+#   (claude-code → --max-budget-usd N, enforced by the CLI itself). Optimizers without a
+#   native $ cap (e.g. ibm-bob) ignore it — bound those via optimizer_max_turns / max_optimizer_usd.
+# Optional per-decision-role model override (cap_evolve.model_routing.resolve_model).
+# Absent/omitted = every role falls back to optimizer_model above, unchanged. Only set
+# the roles you want to route differently (e.g. a cheap model for mechanical steps):
+# model_routing:
+#   plan: ""
+#   root_cause: ""
+#   propose: ""
+#   implement: ""
+#   evaluation_analysis: ""
+#   merge: ""
+#   synthesis: ""
+
+# --- consuming (runtime) LLM the capabilities are optimized FOR --------------
+# The model the AGENT UNDER TEST reads these capabilities with at runtime — DISTINCT
+# from optimizer_model (which PROPOSES edits). May be a concrete model id (resolved to a
+# capability tier via the built-in profile registry) OR a tier keyword directly:
+# frontier | strong | mid | weak. Empty = profile-agnostic (today's behavior). When set,
+# the optimizer prompt + capability guidance adapt edits to that reader (a weaker reader
+# gets more explicit rules, worked examples, and code enforcement; a frontier reader gets
+# leaner prose).
+target_model: google/gemma-4-31B-it
+# Optional project-local brief (raw text/markdown) that OVERRIDES the resolved tier's
+# built-in brief. Resolved project-relative. Leave empty to use the built-in brief.
+target_profile_file: ""
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb              # algorithms/<skill>: hill-climb | gepa | skillopt | agent-optimize (REQUIRES orchestration_mode: agent). evograph is deprecated -- use agent-optimize.
+algorithm_focus: all                     # hill-climb schedule: all | cyclic | hardest-first
+orchestration_mode: deterministic        # deterministic (cap-evolve sequences the loop) | agent (the coding agent drives the loop via cap-evolve primitives, sealing with the finalize phase script)
+memory_skill: md-files                   # cross-iteration memory: md-files (LEDGER/JOURNAL/PROCESS/INSIGHTS, default) | wiki (weakness-graph format, skills/memory/wiki/SKILL.md)
+
+# --- what context the optimizer gets (hill-climb | gepa | skillopt) ---------
+# The per-iteration optimizer prompt is RENDERED from this template (intake authors it,
+# customized per benchmark). Defaults to the scaffolded optimizer/INSTRUCTIONS.md.
+optimizer_instructions_file: /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/arms/capevolve_v2/template/.capevolve/project/optimizer/INSTRUCTIONS.md
+# Optional: path to the benchmark/runner source, surfaced to the optimizer as read-only
+# context (so it can consult tools/scoring/task structure). Resolved project-relative.
+runner_repo_path: ""
+# Optional: supporting source files (e.g. the data model / types module the tools
+# import) copied VERBATIM into the optimizer's ./guidance/sources/ so it can write
+# correct tool code. List of paths, resolved project-relative; missing files tolerated.
+capability_sources: []
+# (The full trajectories of each eval are always copied verbatim into the optimizer's
+#  working dir as ./trajectories/ — via your adapter's trajectories(split) hook, else
+#  cap-evolve's own per-rollout JSON. No config needed.)
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter              # file/dir, or "adapter" to use tasks()
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+# Optional: pin the split explicitly instead of ratios. JSON file with
+# {"train":[ids], "val":[ids], "test":[ids]}. Use to lock a benchmark's official
+# split, or to fit on the whole set (train==val==test==all ids — no holdout).
+split_ids_file: split_ids.json
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 3
+
+# --- metrics (display) ------------------------------------------------------
+# The GATE always uses the PRIMARY metric only (= the scalar reward). Secondaries
+# are shown in the dashboard/results but never affect accept/reject.
+metrics_display: [hard_restriction, soft_restriction]          # names to show, e.g. [accuracy, latency_ms]; empty = just the primary reward
+metric_primary: hard_restriction           # which name gates accept/reject (defaults to the reward if blank)
+metric_directions: [higher, higher]        # parallel to metrics_display: higher | lower for each
+
+# --- integrations / stop ----------------------------------------------------
+github_integration: false    # mirror-only: mirror the algorithm's work items as issues + ship winner as PR (Closes #n); WHAT is mirrored is algorithm-specific (evo-graph=weaknesses)
+stop_condition: ""           # agent-mode free-text halt rule, re-read each round (e.g. "stop when val acc >= 0.9 or 5 rounds")
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired                        # paired (recommended: per-task paired SE, same tasks both sides — banks real 1-task gains) | significant (unpaired fallback) | strict | threshold | pareto (multi-objective, native in round.py's own --mode; hill-climb natively per-iteration) | epsilon_constraint (maximize reward subject to a hard ceiling on another metric, native in round.py's own --mode)
+gate_k_se: 0.2
+# Optional measurement switches (hill-climb, skillopt, gepa). Every key is OFF by default and
+# an absent key leaves behaviour exactly as before. See docs/audit notes #755 / #758 / #759.
+# gate_footprint: false         # true/absent = mask the paired delta vector to the edit's footprint (gepa never masks)
+# gate_min_coverage: 0.6        # gate.decide min_coverage; 0 disables the guard
+# gate_coverage: joint          # joint = tasks valid on BOTH sides / planned tasks (default: candidate-only)
+# errored_trial_policy: fail    # fail = trials the adapter marks Rollout.metadata.error_kind=candidate score 0.0 (default: drop)
+# gate_no_regression: true      # reject a candidate that resolvably breaks a parent-passed val task
+# gate_max_broke: 0             # reject if it breaks more than N val tasks
+# confirm_fresh_only: true      # agent-optimize finalize: confirm on the fresh trials only
+# promotion_rule: P             # shared rule P (hill-climb/skillopt/gepa/agent-optimize): unmasked paired screen, then fresh-trial confirmation
+# promotion_k_se: 1.0           #   screen bar (mean > k*SE)
+# promotion_n_conf: 10          #   fresh trials per task for the confirmation
+# promotion_dmin: 0.02          #   minimum confirmed mean delta
+# promotion_z_conf: 2.0         #   minimum confirmed z (mean / paired SE)
+# promotion_rule: P2            # rule P2 (SH-C): K-candidate rounds, kill-only rungs on the feedback stratum F, one fresh
+#                               #   confirmation on the hidden stratum C against a concurrently re-measured incumbent.
+#                               #   Needs split_mode: pooled. Keys: p2_k (8), p2_rung_sizes ([12, 36]), p2_conf_n (147),
+#                               #   p2_ctrl_m (4), p2_z_conf (1.7), p2_dmin (0.02), p2_max_survivors (2), p2_chunk (20)
+# ao_engine: conductor          # agent-optimize (orchestration_mode: agent): a code-driven conductor runs the loop; the LLM only does bounded
+#                               #   one-shot jobs (propose, merge-resolve). Single objective only (multi-objective specs are refused).
+#                               #   Keys: ao_slots, ao_k_prop (parallel proposers), ao_chunk (20), ao_tick_s (5), ao_rungs, ao_merge, ao_job_token_cap,
+#                               #   ao_max_tokens, ao_plateau_n, ao_plateau_floor (0.4), ao_finalize_reserve, ao_final_estimate_trials (4; 0 = off); wall: deadline_utc.
+#                               #   Stopping is structured (rollouts, tokens, wall, stop_at_reward, plateau); stop_condition prose is ignored.
+# split_mode: pooled            # pool = train + val, partitioned ONCE (seeded, stratified, persisted) into F and C
+# confirm_fraction: 0.48        #   share of the pool held as C; the proposer sees F, and only the accept/reject bit for C
+# budget_reserve: true          # reserve rollouts before every evaluation; a confirmation that does not fit is `unconfirmed`
+# coverage_policy: tipping      # retry + quarantine the incumbent's missing cells; floor min_joint_coverage (0.75) + tipping-point check
+# min_joint_coverage: 0.75      #   hard floor of joint coverage on the evaluable set (instead of the gate_min_coverage veto)
+# missing_impute: -0.5          #   delta imputed for each missing pair by the tipping-point check
+# missing_retries: 2            #   attempts to re-run a missing cell
+# fault_attribution: true      # tag exceptions raised by the candidate's own code (innermost non-stdlib frame under its dir) as error_kind=candidate
+# ledger_noise_guard: true      # LEDGER.md: no causal broke/fixed below ledger_min_trials (3) trials per task
+# merge_verify: true            # agent-optimize: `act.py verify-merge` (parent + both branches + merge on the same fresh block,
+#                               #   interaction estimate, bounded delta-debugging on a loss); `promote` of a merge needs a pass
+# screen_accounting: true       # agent-optimize screen.py: affected + sentinels + random exploration with recorded inclusion
+#                               #   probabilities; score = scheduling signal only. Ablation arm: screen.py --screen-control random_subset
+# Optional, pareto gate_mode only (cap_evolve.gate.decide / cap_evolve.pareto_archive): the
+# objectives to balance. Omit for the default (reward maximize + cost minimize, with a
+# cost->latency->tokens fallback). round.py persists a bounded non-dominated frontier
+# (cap_evolve.pareto_archive.ParetoArchive) across rounds in $RUN_DIR/pareto_archive.json;
+# an accept is "the archive actually gave this candidate a slot", not a one-shot comparison.
+# hill-climb's only resolvable non-reward objective today is "cost" (per-task cost_usd);
+# agent-optimize sources metrics itself per gate_check.py --metrics-candidate/--metrics-current.
+# objectives:
+#   - {name: reward, direction: maximize}
+#   - {name: cost, direction: minimize}
+# Optional, epsilon_constraint gate_mode only (Haimes et al. 1971): maximize reward subject
+# to each named metric staying under its ceiling. A simpler, one-point alternative to a full
+# Pareto frontier — honest about its limits (one point per ceiling value, not a frontier).
+# constraints:
+#   - {name: cost, max: 1.0}
+
+# --- budget -----------------------------------------------------------------
+# Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a
+# $ range before spending. All caps below are hard stops; 0 = unlimited/off.
+max_iterations: 1000          # optimizer iterations (dominant cost knob)
+stall: 0                    # stop after N consecutive rejects
+max_metric_calls: 2160         # 0 = unlimited; else stop after N runner evals
+max_usd: 0.0                # 0 = unlimited; total $ cap (runner + optimizer + intake)
+max_optimizer_usd: 0.0      # 0 = off; separate cap on optimizer spend alone
+stop_at_reward: 0.0         # 0 = off; stop as soon as the best val reward reaches this (still finalizes
+                            # on test). Off by default: with num_trials=1, best_val's stderr is 0
+                            # without being statistically meaningful — raise num_trials first.
+
+# --- anti-reward-hacking: seal the evaluation surface (optional, OFF by default)
+# Globs, relative to the candidate dir, that the optimizer may NOT change. They are
+# content-hashed before the optimizer runs and re-verified BEFORE any rollout is paid
+# for, so the seal holds for EVERY optimizer CLI (not just the ones with a Claude-Code
+# PreToolUse hook). A candidate that edits one is INDECISIVE — never scored 0.0: the
+# measurement is void, so the stall counter and the best candidate are untouched.
+# The literal `default` expands to the built-in set (*gold*, tasks/*, data/*, tests/*,
+# conftest.py, scorer.py, adapter.py, splits.json, ...). Absent/empty = off.
+# protected_paths: [default]
+# protected_paths: ["*gold*", "tasks/*", "scorer.py"]
+
+# --- convergence: escalate on a plateau instead of only stopping (hill-climb, OFF)
+# Variance-aware plateau detection: warn -> require a paradigm shift -> stop. The
+# advice is appended to the optimizer prompt so budget stays productive instead of
+# spending the remaining iterations on more of what already failed. Absent = off.
+# convergence: true
+
+# --- iteration store (how each iteration is versioned for an inspectable process)
+store: copy                               # git (default) | copy | command
+# store_commit_cmd: "npx skills publish {dir} -m {msg}"   # for store: command (e.g. a skills store)
+
+# --- run display name (optional, for MLflow/telemetry) ----------------------
+# run_name: my-experiment-v1       # custom name shown in MLflow UI
+#   (auto-generated from algorithm + optimizer + capabilities if omitted)
+
+# --- observability (optional, requires capevolve-telemetry) ------------------
+# Observers receive every RunDir event and forward to external systems.
+# Install: pip install capevolve-telemetry[all]   (or [mlflow] / [otel])
+# Requires PyYAML (pulled in by mlflow).
+#
+# MLflow metrics + OTel traces routed to MLflow's Traces tab:
+# observers:
+#   - backend: mlflow
+#     tracking_uri: http://localhost:5000
+#     experiment_name: cap-evolve
+#   - backend: otel
+#     mlflow_tracking_uri: http://localhost:5000
+#     experiment_name: cap-evolve
+#     service_name: cap-evolve-engine
+#
+# OTel traces to a standalone collector (Jaeger, Grafana Tempo):
+# observers:
+#   - backend: otel
+#     endpoint: http://localhost:4318/v1/traces
+#     service_name: cap-evolve-engine
+
+# --- exp895 capevolve_v2 settings (issue skillberry-ai/cap-evolve#895); everything above keeps the main template default
+# gate_k_se stays at the template default (0.2); gate_footprint is deliberately ABSENT (main default = masking on).
+errored_trial_policy: fail               # candidate-attributed errors score 0; infra errors stay missing (retryable)
+budget_reserve: true                     # hard counter: refuse an eval that would overshoot R
+finalize: false                          # the test split is scored only in the common final window
+
+# --- helper scripts: same block as the capevolve arm, paths re-pointed to v2
+surface:
+  executable_dirs: ["skills/*/scripts"]
+helpers:
+  enabled: true
+  lint: true
+  smoke: true
+  suffixes: [".py"]
+  max_file_bytes: 65536
+  max_total_bytes: 262144
+  smoke_timeout: 20
+  ids_file: /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/arms/capevolve_v2/template/.capevolve/project/all_task_ids.txt
+  deny_roots: [/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/data, /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/sbv400-k02/third_party/spreadsheetbench/evaluation]

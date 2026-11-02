@@ -1,0 +1,110 @@
+{
+ "arm": "ace",
+ "seed": 0,
+ "R": 2160,
+ "rollouts_used": 2125,
+ "stop_reason": "StopTraining: next batch (<= 36) + final val (120) would exceed R (2005/2160)",
+ "binding_on_R": true,
+ "champion": "pb_bb5581e14fe2",
+ "champion_val_score": 0.8000025,
+ "val_evaluations": [
+  {
+   "t": 1792890982.361976,
+   "candidate": "pb_372d1ed4f963",
+   "accuracy": 0.7606871794871795,
+   "n_scored": 39,
+   "n_samples": 40,
+   "spent": 653,
+   "playbook_sha256": "70a9043c57c97be746e8046c8bef19e611acfbc71bce6b379e3e05516a33cc82"
+  },
+  {
+   "t": 1793147296.7528758,
+   "candidate": "pb_dd7514434fdb",
+   "accuracy": 0.7916675,
+   "n_scored": 40,
+   "n_samples": 40,
+   "spent": 1310,
+   "playbook_sha256": "26e13e2811caeef44ee65d23ee9b1898bfb6fd9101b676892a1d23042b847d22"
+  },
+  {
+   "t": 1793197054.2576232,
+   "candidate": "pb_6b9b3c0751f1",
+   "accuracy": 0.75,
+   "n_scored": 40,
+   "n_samples": 40,
+   "spent": 1981,
+   "playbook_sha256": "c34395aea967ee17a186f252ceeb13a9fb8017d8251318a5e4ef4c2cef4db32e"
+  },
+  {
+   "t": 1793199524.4259124,
+   "candidate": "pb_bb5581e14fe2",
+   "accuracy": 0.8000025,
+   "n_scored": 40,
+   "n_samples": 40,
+   "spent": 2125,
+   "playbook_sha256": "ab3b69a8c44c4819c73dfcaa550f6d4e50b898fad618e3ae0a41fba1bbef04fa"
+  }
+ ],
+ "n_candidates_evaluated": 134,
+ "n_playbook_candidates_evaluated": 62,
+ "batches_run": 61,
+ "generate_calls": 718,
+ "final_playbook": {
+  "bullets": 168,
+  "skill_bullets": 0,
+  "scripts": [
+   "find_header",
+   "robust_load",
+   "validate_formula"
+  ],
+  "unparsed_script_bullets": []
+ },
+ "train_ids_n": 80,
+ "val_ids_n": 40,
+ "wall_s": 543545.7,
+ "settings": {
+  "batch_size": 4,
+  "curator_num_groups": 2,
+  "playbook_token_budget": 80000,
+  "curator_frequency": 1,
+  "max_num_rounds": 1,
+  "use_bulletpoint_analyzer": false,
+  "json_mode": false,
+  "no_ground_truth": true,
+  "augmented_shuffling": true,
+  "task_name": "spreadsheetbench",
+  "k": 3,
+  "max_tokens": 8000,
+  "max_epochs": 1000,
+  "eval_steps": 80,
+  "test_workers": 3,
+  "skill_bullets": true
+ },
+ "prompt_patch": {
+  "GENERATOR_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "REFLECTOR_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "REFLECTOR_PROMPT_NO_GT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "CURATOR_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "CURATOR_PROMPT_NO_GT": {
+   "changed": true,
+   "filter_phrase_left": false
+  },
+  "CURATOR_OPERATIONS_AGGREGATION_PROMPT": {
+   "changed": true,
+   "filter_phrase_left": false
+  }
+ },
+ "upstream": "ace-agent/ace@82709de050e1db6e6ef2f07bcb0393560b94992a (ace.ace_batch.ACEBatch, offline)"
+}

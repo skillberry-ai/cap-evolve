@@ -1,0 +1,8 @@
+WARMUP {"n": 10, "wall_s": 35.0, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [4.8, 4.8, 5.0, 5.3, 7.4, 8.7, 17.4, 25.8, 25.8, 35.0]}
+host=cccxc590 job=184587 arm=gepa_full seed=0 R=2160 conc=10 max_iters= first_component= start=2026-10-24T06:52:23Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+port_sha256=9100e41b425cbf64f42073243def5cbc30ec070d608a573c86d75011875568f1 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+gepa=0.1.4 litellm=1.82.6 GW_GLM_TIMEOUT=900
+GEPA_FULL_RC=0
+ISOLATION_SCAN {"exp895_data_dir": 0, "golden_xlsx": 0, "answer_xlsx": 0, "scorer_dir": 0, "secrets": 0, "test_id_hits": 0, "positive_control_own_id_hits": 601, "scanned_files": ["reflection_log.jsonl", "gepa/run_log.txt", "gepa/run_log_stderr.txt"], "scanned_chars": 3680957}
+end=2026-10-31T01:44:50Z

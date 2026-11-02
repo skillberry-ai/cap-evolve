@@ -1,0 +1,81 @@
+{
+ "arm": "wikiskill",
+ "seed": 2,
+ "R": 2160,
+ "rollouts_used": 2041,
+ "binding_on_R": true,
+ "stop_reason": "budget_R",
+ "budget_stop_detail": "iteration guard: train 30x3 + val 40x3 does not fit (2041/2160)",
+ "champion": "it003_ba9d0a98eca4",
+ "champion_val_score": 0.85,
+ "baseline_val_score": 0.7166666666666667,
+ "iterations": 8,
+ "n_candidates_evaluated": 8,
+ "accepted": 2,
+ "rejected": 6,
+ "no_action": 0,
+ "gates": [
+  {
+   "iteration": 1,
+   "verdict": "ACCEPT",
+   "incumbent_score": 0.7166666666666667,
+   "candidate_score": 0.8416666666666667,
+   "skill_sha256": "126ccd327857a830a9dce44c4ec90841adc426e29c4c88cf4e8512be47be359a"
+  },
+  {
+   "iteration": 2,
+   "verdict": "REJECT",
+   "incumbent_score": 0.8416666666666667,
+   "candidate_score": 0.0,
+   "skill_sha256": "024903e6df0036d9bd43d5debcba32c8ddd0bcf6c16e1405186d2e9cef3b6709"
+  },
+  {
+   "iteration": 3,
+   "verdict": "ACCEPT",
+   "incumbent_score": 0.8416666666666667,
+   "candidate_score": 0.85,
+   "skill_sha256": "ba9d0a98eca430ecd36c0408b375d6450f0269d1c233970dc1f2f27aecd88634"
+  },
+  {
+   "iteration": 4,
+   "verdict": "REJECT",
+   "incumbent_score": 0.85,
+   "candidate_score": 0.0,
+   "skill_sha256": "87202799293a6bae93866f93ea8abc814d3e291420a7f157b39fe46040462f7d"
+  },
+  {
+   "iteration": 5,
+   "verdict": "REJECT",
+   "incumbent_score": 0.85,
+   "candidate_score": 0.0,
+   "skill_sha256": "17e28aa92fda80ad5f514c1d8f76d62e5e45b4cd52b5fd330509d87267c5db2d"
+  },
+  {
+   "iteration": 6,
+   "verdict": "REJECT",
+   "incumbent_score": 0.85,
+   "candidate_score": 0.0,
+   "skill_sha256": "1338d7e007f30a9fe5a38820b676c0f7b063a20e5e25e071b48b925178e4f7bd"
+  },
+  {
+   "iteration": 7,
+   "verdict": "REJECT",
+   "incumbent_score": 0.85,
+   "candidate_score": 0.0,
+   "skill_sha256": "c50ef14354a0640e81a5a2e2fa6fad3627a079dbaa898ac99566188155bd5340"
+  },
+  {
+   "iteration": 8,
+   "verdict": "REJECT",
+   "incumbent_score": 0.85,
+   "candidate_score": 0.0,
+   "skill_sha256": "caa7465b5ed51d6dcfccd629a0d2f800f6ffbca233c2bc2194f8e78a3c3b2797"
+  }
+ ],
+ "engine_errors": [],
+ "role_calls_glm": 57,
+ "train_ids_n": 30,
+ "val_ids_n": 40,
+ "k": 3,
+ "wall_s": 13802.9
+}

@@ -1,0 +1,90 @@
+{
+ "arm": "trace2skill",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.5",
+ "written": "2026-10-21",
+ "upstream": {
+  "repo": "Qwen-Applications/Trace2Skill",
+  "commit": "3d0b52a140f002a512930252b613c49048f7d5ac",
+  "clone": "exp895/competitors/trace2skill (git status --porcelain empty; every run_meta.txt records trace2skill_pin and upstream_dirty)",
+  "files_changed": [],
+  "used_unmodified": [
+   "analysis/run_error_analysis_llm.py + error_analysis_{system,user}_llm.txt (main(); find_logs_repeat replaced at runtime, D9)",
+   "analysis/run_success_analysis_llm.py + success_analysis_{system,user}_llm.txt (main(); find_logs_repeat replaced at runtime, D9)",
+   "analysis/report_parsing.py (parsed_*_records.json)",
+   "skill_evolver/run_parallel_skill_evolution.py (error-skill)",
+   "skill_evolver/run_parallel_combined_skill_evolution.py (combined)",
+   "skill_evolver/parallel_evolving_agent.py, parallel_success_evolving_agent.py, skill_evolving_agent.py, success_evolving_agent.py, prompt_loader.py, prompts/ (system prompts get the surface-contract section at runtime, D4)"
+  ],
+  "not_used": "run_spreadsheetbench.py, spreadsheet_agent/, evaluate_with_official.py (agent + scorer replaced by the common rollout, D1); analysis/run_error_analysis.py + error_analysis_agent.py (gold-reading ReAct analyst, D2); released_skills/ (never loaded)"
+ },
+ "port_files": {
+  "trace2skill_arm.py": "one search: pool -> analyse -> evolve -> export -> select; R probe; cost summary",
+  "t2s_analyse.py": "runs an upstream analyst CLI with the D9 sort-key fix",
+  "t2s_evolve.py": "runs an upstream evolver CLI with the D4 surface-contract injection; dumps the final proposer prompts",
+  "skill-creator/scripts/quick_validate.py": "D3 stand-in (upstream calls it, does not ship it)",
+  "isolation_scan.py": "\u00a74.1 gold/test-id scan over every optimizer prompt/reply on disk (counts only)",
+  "lsf_trace2skill_search.sh": "launcher: SEED, R, NAME [CONC WORKERS TRAIN_IDS VAL_IDS PARALLEL_CANDIDATES]",
+  "sha256": "see sha256_at_smoke"
+ },
+ "sha256_at_smoke": {
+  "note": "smoke_s0b (job 1919008) ran arm_sha256=ce90e519... (concat of trace2skill_arm.py,t2s_evolve.py,t2s_analyse.py,quick_validate.py, run_meta.txt). trace2skill_arm.py was edited at 15:12 EDT while the job ran (Python had already compiled the 14:52 version). Only export() differs (bytecode diff, checked): the SKILL.md link rewrite now replaces the backticked `references/script_<m>.md` first, so it no longer leaves double backticks. Re-running the CURRENT export() offline on smoke_s0b's evolved folders gave identical scripts/ for both candidates and a clean SKILL.md link; error_skill tree sha unchanged (9e1f4efe...), combined changed only in SKILL.md (cfc0ebf4... -> 6e8c3190...).",
+  "current": {
+   "trace2skill_arm.py": "fd0e343dc6cbcc153136ace57eb4a69a5db1852d5ee1a327a659feb91062f628",
+   "t2s_analyse.py": "eb5a2fe74768323b528bf19ed3dba18f04b5e3d3b370e71b33292adc36a68550",
+   "t2s_evolve.py": "cadec94525192d00082e9d68cc0ea2d1d72c56c6ebffdbdccc3a9a470a789bbd",
+   "isolation_scan.py": "10d83568eaecd4c4e86b28c44679460a6ddee0bc0e698bf7c0c1da093535cbae",
+   "lsf_trace2skill_search.sh": "fb783650c10ca003158331c1bef1fd2bcedc0f418280cf076f9b4a8dd1b3303b",
+   "skill-creator/scripts/quick_validate.py": "02689d0c4aa855fabeffb70469969e1d87f49c86e65df733f0de9d7a4722f90b"
+  }
+ },
+ "common_layer_at_smoke": {
+  "rollout.py_at_smoke": "a8db0df464d39366380c1a598b1ffe4a2cf3c46d4ce28953105bf86cda5d2d62 (run_meta.txt)",
+  "rollout.py_now": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da (decisions.md 2026-10-21 Opus re-verification: infra-missing mean + trial-seed formula). Same TaskResult fields (infra, traces) and evaluate(split=) the arm uses; the arm's clean_mean already excluded infra trials, so its numbers do not change. The smoke's trial seeds follow the OLD formula (0,1,2 / 100.. / 200.. / 300..); real searches use the new one.",
+  "adapter_sha256": "c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a",
+  "code_sha": "73103f429fb833883a5c915cd87fe5c5c68fc423",
+  "helpers_spec_sha256": "2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2, checked at start against exp895/BUILD_RECORD.json seed_v2.files_sha256 (check_seed)",
+ "packages_installed": [],
+ "packages_used_from_venv": "openai 3.35.1, diskcache 5.6.3, PyYAML 6.0.3 (already in exp895/venv; nothing installed for this arm)",
+ "data": {
+  "optimizer_sees": "train 80 (official split train) ONLY: the seed's k=3 transcripts on each train task (240 pool logs), each labelled SUCCEED/FAILED from the common scorer's hard reward. The analysts see one transcript at a time (no gold, no scorer, no files); the editors see the analysts' parsed records + the current skill folder.",
+  "selects_on": "val 40 (official split val): k=3 mean of seed, error-skill and combined; champion only on a strict improvement over the seed.",
+  "val_feedback_to_optimizer": "none (one pass; selection happens after the optimizer is finished)",
+  "test": "never loaded by the port; the launcher asserts zero overlap of train/val with the official test list and prints counts only"
+ },
+ "budget": {
+  "planned_full_split": "240 (pool, train 80 x 3) + 120 (seed on val 40 x 3) + 120 per non-seed-identical candidate (<= 2) = 360..600 rollouts",
+  "R": "passed as --R; the method cannot use more than ~600 (issue \u00a77.5); actual = run_summary.json rollouts_used"
+ },
+ "settings": {
+  "k": 3,
+  "glm_model": "rits/zai-org/glm-5-3 (served id of GLM-5.3), gateway :4115 tag exp895-trace2skill-s<seed>:optimizer",
+  "temperature": 0.6,
+  "max_tokens": 16000,
+  "batch_size": 1,
+  "merge_batch_size": 5,
+  "patch_pipeline": "json",
+  "max_workers": "$WORKERS (default 8 = caps.json glm)",
+  "error_prompt": "generic",
+  "agent": "openai/google/gemma-4-31B-it via gateway :4113 tag exp895-trace2skill-s<seed>:target, SPREADSHEETBENCH_CONCURRENCY=$CONC"
+ },
+ "deviations": "deviations_trace2skill.json",
+ "smoke": {
+  "run_dir": "exp895/runs/trace2skill/smoke_s0b",
+  "job": "1919008 on cccxc566 (log shows TRACE2SKILL_SEARCH_DONE, TRACE2SKILL_RC=0; then bkill by exact id -> EXIT)",
+  "config": "SEED=0 R=60 train=val={10452,118-50} k=3 CONC=6 WORKERS=8 PARALLEL_CANDIDATES=1",
+  "earlier_failed_smoke": "runs/trace2skill/smoke_s0 (job 1917534): the upstream analysts raised TypeError in find_logs_repeat (os.DirEntry sort), so there were 0 GLM calls and candidates identical to the seed -> deviation D9 fix",
+  "evidence": {
+   "k3_rows": "rollouts.jsonl 24 rows: 3 per (candidate, task) for seed@train, seed@val, error_skill@val, combined@val; 0 infra",
+   "R_counter": "budget_state.json {spent:24, eval_calls:4, R:60}; budget_probe: 13x3=39 > remaining raised BudgetStop, state and rollout rows unchanged",
+   "glm": "calls_glm.jsonl 21 calls, all 200, tag exp895-trace2skill-s0:optimizer, prompt_total 132,247, completion 28,601, 0 calls without usage",
+   "isolation": "isolation_scan.json: 71 files / 19 optimizer prompt files / 1,164,330 chars; gold 0 on every pattern; test ids 0 token / 0 path (280 checked); control train ids 198 token / 606 path hits",
+   "candidates": "error_skill (scripts/write_range.py, helper gate passed): val 0.5; combined (scripts/cellrange.py + write_range.py): helper gate FAILED (lint false positive, see known_issues) -> 0.0; seed val 0.5 -> champion seed (strict rule)",
+   "wall_s": 3029.3
+  }
+ },
+ "known_issues": [
+  "Common helper lint false positive: DEFAULT_PROTECTED pattern (^|[/\\._-])answer(s)?([._/\\-]|$) in sbv400-main/core/cap_evolve/helpers.py matches any string literal containing 'answer_position' (the task template's own placeholder name), e.g. an error message \"answer_position must look like 'Sheet1'!C2:D5000\". It sank the combined candidate in the smoke. It is identical for every arm, but this one-pass arm cannot retry after a gate failure. Reported as a common change; not edited here."
+ ]
+}

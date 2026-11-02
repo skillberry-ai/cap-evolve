@@ -1,0 +1,20 @@
+{
+ "arm": "capevolve",
+ "search_seed": 1,
+ "inert_champion": false,
+ "champion_test_mean": 0.7150537634408602,
+ "seed_test_mean": 0.6470238095238094,
+ "paired_delta": 0.06571087216248506,
+ "paired_se_cr1": 0.017017642509098947,
+ "ci95": [
+  0.03222015170457833,
+  0.09920159262039178
+ ],
+ "n_tasks_paired": 279,
+ "missing_tasks": {
+  "champion": 1,
+  "seed": 0
+ },
+ "infra_missing_trials": 17,
+ "candidate_error_trials": 0
+}

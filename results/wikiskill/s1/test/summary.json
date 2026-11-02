@@ -1,0 +1,20 @@
+{
+ "arm": "wikiskill",
+ "search_seed": 1,
+ "inert_champion": false,
+ "champion_test_mean": 0.6797619047619048,
+ "seed_test_mean": 0.594047619047619,
+ "paired_delta": 0.08571428571428572,
+ "paired_se_cr1": 0.023476074325129395,
+ "ci95": [
+  0.03951337144243107,
+  0.13191519998614037
+ ],
+ "n_tasks_paired": 280,
+ "missing_tasks": {
+  "champion": 0,
+  "seed": 0
+ },
+ "infra_missing_trials": 0,
+ "candidate_error_trials": 0
+}

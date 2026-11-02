@@ -1,0 +1,48 @@
+{
+ "arm": "gepa",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.1",
+ "written": "2026-10-21",
+ "upstream": {
+  "package": "gepa==0.1.4 (PyPI, in exp895/venv)",
+  "repo": "gepa-ai/gepa",
+  "tag": "v0.1.4",
+  "commit": "8b0ce6cd99a234f6b74daf37558a2ac0ce18f975",
+  "check": "sha256 of all .py under the installed gepa/ == the same under competitors/gepa/src/gepa (checked 2026-10-21)",
+  "files_changed": []
+ },
+ "port_files": {
+  "budget_probe.py": "734f8d6ba9e7f6e089f830a345a2257a5cc601859914081b22d80e3419376f03",
+  "gepa_arm.py": "1364638f8ad47a6952e6f46e1a0bfb4412704357d35d21cd4fd9d642bdd18592",
+  "isolation_scan.py": "2b90cd25e1867011920dbe1bcccf81269e819f81d76b21aafc80b0f92115fa60",
+  "lsf_gepa_search.sh": "e9957b26546777eeb1dcd8f9dcee1205559a062530336abfea21c0fdbde0aff3"
+ },
+ "common_layer": {
+  "rollout.py": "7a24afec3d1895a6b624fddd528d24ac83d08ca1df3edbe024ccc5535a6b4d40",
+  "SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2 (sha256 checked at start against exp895/BUILD_RECORD.json)",
+ "packages_installed": [],
+ "data": {
+  "optimizer_sees": "train 80 (official split train): reflective minibatches of 3 train tasks; per task the worst trial's transcript, k-trial scores and gold-safe scorer feedback",
+  "selects_on": "val 40 (official split val): GEPA's Pareto frontier and best-candidate selection use full val evaluations (k=3 mean per task)",
+  "aggregate_feedback_to_optimizer_from_val": "none directly (val scores drive Pareto parent selection only)",
+  "test": "never loaded by the port; the launcher asserts zero overlap with the official test list"
+ },
+ "settings": {
+  "reflection_minibatch_size": 3,
+  "candidate_selection_strategy": "pareto",
+  "module_selector": "round_robin",
+  "use_merge": false,
+  "cache_evaluation": false,
+  "skip_perfect_score": true,
+  "perfect_score": 1.0,
+  "max_metric_calls": "10**12 (R binds on CommonRollout)",
+  "k": 3,
+  "components": [
+   "prompt.md",
+   "skills/spreadsheet-helpers/SKILL.md"
+  ],
+  "reflection_lm": "gepa.lm.LM('openai/rits/zai-org/glm-5-3', api_base=gateway :4115 tag exp895-gepa-s<seed>:optimizer, max_tokens=16000, temperature unset)"
+ },
+ "deviations": "deviations_gepa.json"
+}

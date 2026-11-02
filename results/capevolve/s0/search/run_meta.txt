@@ -1,0 +1,6 @@
+WARMUP {"n": 10, "wall_s": 3.6, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5, 3.5]}
+host=cccxc550 job=1913879 seed=0 R=2160 start=2026-10-21T15:37:07Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+spec_sha256=14b65e2db6ce1bcb0def93592894b4c3964c70635d4e4efe6d79c70d7cf9b165
+CAPEVOLVE_RC=0
+end=2026-10-22T22:25:48Z

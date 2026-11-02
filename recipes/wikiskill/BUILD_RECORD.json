@@ -1,0 +1,73 @@
+{
+ "arm": "wikiskill",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.7",
+ "written": "2026-10-21",
+ "upstream": {
+  "repo": "Stahl-G/wikiskill (community port; NO official WikiSkill code exists)",
+  "commit": "da6984caca09d5f81b2336cf3067b59c0c18bb1e",
+  "clone": "exp895/competitors/wikiskill (git status --porcelain empty; every run_meta.txt records wikiskill_pin and upstream_dirty)",
+  "imported_from": "competitors/wikiskill/src on PYTHONPATH (not pip-installed; RESOURCES resolve inside the clone)",
+  "files_changed": [],
+  "used_unmodified": [
+   "wikiskill/engine.py: initialize(), evolve() (baseline, iteration loop, batch(), Eq. 4 gate, events.jsonl, skill-impact sync); state() is wrapped at runtime for D7 only",
+   "wikiskill/paper_alignment/agents.py: PaperAgents (maintainer_factory, proposer_factory), paper_prompts(), handoff()",
+   "wikiskill/paper_alignment/contracts.py: wiki_update(), proposal(), validate_skill(), skill_text()",
+   "wikiskill/paper_alignment/evidence.py: sample() (<=5 failed + <=3 passed TRAIN traces, seed+iteration), visible_trace() (15k cap)",
+   "wikiskill/isolated/tools_server.py: RoleTools, specs() (read_file + finish), safe()",
+   "wikiskill/officeqa/loop.py: eq4_accepted, mean_accuracy (called by the engine)",
+   "wikiskill/resources/paper_alignment/prompts/{maintainer,proposer}.paper.md, resources/spreadsheet/wiki (scaffold)"
+  ],
+  "not_used": "isolated/runtime.py (Codex CLI + macOS sandbox-exec transport, D2), spreadsheet/{rollout,loop,study}.py and benchmarks/spreadsheet.py (Codex executor + its scorer, D1), officeqa/wiki_agents.py (legacy Codex roles), product*/mcp_server/native_agents (product mode), resources/research (historical results, never loaded)"
+ },
+ "port_files": {
+  "wikiskill_arm.py": "domain_loader (CommonRollout k=3 per phase, case = <task>__t<j>), GLMRoleTransport (GLM tool loop over upstream RoleTools), candidate materialisation (skills/<name>/SKILL.md+PURPOSE.md+scripts, prompt.md, wiki SKILL.md), early-stop neutraliser, budget guard, resume loop, run_summary.json",
+  "lsf_wikiskill_search.sh": "launcher: SEED, R, NAME [CONC MAX_ITERS SUBSET TRAIN_IDS VAL_IDS]; gateways, warm-up, node_env, run_meta.txt, refuse-overwrite, test-id guard, budget probe, isolation scan",
+  "budget_probe.py": "post-run: one evaluation of remaining+1 rollouts must raise BudgetStop and change nothing",
+  "isolation_scan.py": "\u00a74.1 scan over every role input/output on disk (counts only) + read_file confinement check",
+  "offline_check.py": "pure-Python wiring test (fake rollout + fake role transport driving upstream RoleTools); no model calls",
+  "smoke_train2.txt / smoke_val2.txt": "smoke ids: train 10452, 118-50 (task-specified); val = first 2 sorted official val ids (the engine refuses train/val overlap, so the smoke cannot reuse train ids as val)"
+ },
+ "sha256_at_smoke": {
+  "wikiskill_arm.py": "f81697462669444ea4b525b9ed492194504fa16a845ba23bd3896e886d5af926",
+  "common/rollout.py": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da",
+  "common/SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651",
+  "helpers_spec.yaml": "2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea",
+  "adapter.py": "c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a",
+  "source": "runs/wikiskill/smoke_s0/run_meta.txt (job 1924953, cccxc706)"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2, checked at start against exp895/BUILD_RECORD.json seed_v2.files_sha256 (check_seed); the seed candidate is a byte copy",
+ "packages_installed": [],
+ "packages_used_from_venv": "openai 3.35.1 (role tool loop), pydantic 2.14.1 and PyYAML 6.0.3 (upstream contracts), already in exp895/venv; nothing installed for this arm",
+ "data": {
+  "optimizer_sees": "TRAIN ONLY: a fixed seeded 30-of-80 subset of the official train 80 per search seed (train_subset.txt). Maintainer: <=5 failed + <=3 passed of those (task, trial) traces per iteration (evidence.sample); Proposer: all of them, read on demand. Each trace = the task message, the agent's replies + execution outputs, its last reply, plus the common scorer's gold-safe feedback string and the 0/1 trial score. Also the Wiki, skill-impact.md (every gate's verdict, diff and val SCORE: upstream behaviour), skills.json, and (Proposer) the incumbent prompt.md + seed SKILL.md.",
+  "selects_on": "official val 40: k=3 mean per candidate vs r_best (Eq. 4: strict improvement, ties rejected); the baseline r_best is the seed's val mean.",
+  "val_feedback_to_optimizer": "aggregate val means only, via upstream skill-impact.md (incumbent r_best, candidate accuracy, verdict). No val trace, task id or per-task score reaches a role (PaperAgents._rows rejects non-train rows).",
+  "test": "never loaded by the port; the launcher asserts zero overlap of train/val with the official test list and prints counts only"
+ },
+ "budget": {
+  "per_iteration": "train 30 x 3 = 90 (incumbent) + val 40 x 3 = 120 (only if the proposer did not return no_action) = 210",
+  "baseline": "val 40 x 3 = 120",
+  "R_2160": "120 + floor((2160-120)/210) = 9 full iterations (9 x 210 = 1890; 2010 used, 150 left < 210 so the guard stops); an iteration with no_action costs only 90, so more iterations are possible",
+  "guard": "before each iteration's train phase: train+val must fit, else stop_reason=budget_R"
+ },
+ "settings": {
+  "k": 3,
+  "glm_model": "rits/zai-org/glm-5-3 (served id of GLM-5.3), gateway :4115 tag exp895-wikiskill-s<seed>:optimizer, chat/completions with tools",
+  "glm_max_tokens": 16000,
+  "glm_reasoning_effort": "low (issue \u00a72.2)",
+  "temperature": "unset",
+  "role_max_turns": 40,
+  "role_read_budget_chars": 360000,
+  "task_desc": "spreadsheet manipulation tasks with Python code execution",
+  "agent": "openai/google/gemma-4-31B-it via gateway :4113 tag exp895-wikiskill-s<seed>:target, SPREADSHEETBENCH_CONCURRENCY=$CONC"
+ },
+ "deviations": "deviations_wikiskill.json",
+ "smoke": {
+  "run": "runs/wikiskill/smoke_s0",
+  "job": "1924953 (killed by exact id after WIKISKILL_SEARCH_DONE; LSF EXIT)",
+  "result": "rollouts 18/60, 3 eval calls x (2 tasks x 3); baseline val 1.0; train 0.5; candidate it001_6ef00fd779c0 failed the common helper gate (checks.py imports sibling 'xlio' by bare name) -> 0.0, debited, REJECT; champion = seed",
+  "glm": "9 calls, all 200, prompt_total 89,424, completion 4,926 (calls_glm.jsonl)",
+  "isolation": "isolation_scan.json: gold 0/0/0/0/0, test ids 0 token / 0 path, control 221/515, role read_file 17 calls, 0 outside workspace",
+  "budget_probe": "BudgetStop raised for 43 > 42 remaining, state and rows unchanged"
+ }
+}

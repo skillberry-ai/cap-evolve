@@ -1,0 +1,44 @@
+{
+ "arm": "miprov2",
+ "issue": "skillberry-ai/cap-evolve#895 §7.2",
+ "written": "2026-10-21",
+ "upstream": {
+  "package": "dspy==3.4.0 (PyPI, in exp895/venv), with optuna==5.0.0 and litellm==1.82.6 (exp895/venv.freeze.txt)",
+  "check": "every installed .py of dspy (249), optuna (220) and litellm (1707) matches its wheel RECORD sha256, 0 mismatches (checked 2026-10-21)",
+  "entry_point": "dspy.MIPROv2(...).compile(...) (dspy/teleprompt/mipro_optimizer_v2.py), called unmodified",
+  "files_changed": []
+ },
+ "port_files": "sha256 of each file is filled in by the final step below (see port_files_sha256)",
+ "common_layer": {
+  "rollout.py": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da",
+  "SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651"
+ },
+ "cap_evolve_code_sha": "73103f429fb833883a5c915cd87fe5c5c68fc423 (sbv400-main, branch exp/sbv400-895)",
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2 (prompt.md, task_template.md, SKILL.md sha256 checked at start against exp895/BUILD_RECORD.json; the seed program renders to these exact bytes)",
+ "packages_installed": [],
+ "data": {
+  "optimizer_sees": "train 80 (official split train): MIPRO's dataset summary and instruction proposer see train Examples (task_id, instruction, instruction_type, answer_position; no gold) and bootstrapped demos (a train task passed 3/3 + the agent's own final solution code). The prompt model never sees a score.",
+  "bootstraps_on": "train 80, at most 20% of R rollouts",
+  "selects_on": "val 40 (official split val): optuna's Bayesian search scores minibatches of 8 val tasks and full val every 4 trials; the champion is the best full-val candidate (k=3 mean per task), the seed wins ties",
+  "test": "never loaded by the port; the launcher asserts zero overlap with the official test list"
+ },
+ "settings": {
+  "auto": null,
+  "num_candidates": 3,
+  "max_bootstrapped_demos": 2,
+  "max_labeled_demos": 0,
+  "metric_threshold": 1.0,
+  "minibatch": true,
+  "minibatch_size": 8,
+  "minibatch_full_eval_steps": 4,
+  "num_trials": "10**6 (effectively unbounded; R binds)",
+  "num_threads": "CONC // 3 (k=3 trials of each task run inside CommonRollout)",
+  "k": 3,
+  "bootstrap_budget": "20% of R",
+  "prompt_model": "dspy.LM('openai/rits/zai-org/glm-5-3', api_base=gateway :4115 tag exp895-miprov2-s<seed>:optimizer, max_tokens=16000, timeout=3600)",
+  "task_model": "NoTaskLM sentinel (never called; forward() scores via CommonRollout)",
+  "seed": "MIPROv2(seed=<search seed>)"
+ },
+ "deviations": "deviations_miprov2.json",
+ "offline_test": "test_miprov2_arm.py: the real MIPROv2/Evaluate/optuna against a fake CommonRollout and a scripted prompt LM (exceptions swallowed upstream vs ArmStop propagated, infra trial dropped, demos only from 3/3, R not overshot, seed reused)"
+}

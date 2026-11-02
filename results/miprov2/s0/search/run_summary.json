@@ -1,0 +1,123 @@
+{
+ "arm": "miprov2",
+ "seed": 0,
+ "R": 2160,
+ "rollouts_used": 2159,
+ "binding_on_R": true,
+ "stop_reason": "BudgetStop: search already stopped: MiproBudgetStop: Evaluate of cand_5d015c958472 on 8 tasks needs 6x3=18 new rollouts; R has 1 left (2159/2160)",
+ "champion": "cand_6fbb4ff94209",
+ "champion_val_score": 0.7916666666666667,
+ "full_val_candidates": [
+  {
+   "candidate": "seed",
+   "score": 0.6666666666666667,
+   "t": 1792702515.078812,
+   "source": "seed_prescore"
+  },
+  {
+   "candidate": "cand_60f4a2afc0a8",
+   "score": 0.7833333333333333,
+   "t": 1792749407.0644293,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_29ce9f594b99",
+   "score": 0.7625,
+   "t": 1792854923.150759,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_d8aa2c843cc9",
+   "score": 0.7583333333333333,
+   "t": 1792897808.1145608,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_599dc5bab19d",
+   "score": 0.7875,
+   "t": 1792994897.3561077,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_89b9d5f40796",
+   "score": 0.7416666666666667,
+   "t": 1793296476.4041417,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_1ffd1a4ab5e7",
+   "score": 0.75,
+   "t": 1793307050.0914476,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_4c036185a2da",
+   "score": 0.7083333333333333,
+   "t": 1793317572.2776933,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_377e96e486ac",
+   "score": 0.7333333333333333,
+   "t": 1793332349.1666589,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_910b61a4f54c",
+   "score": 0.7666666666666667,
+   "t": 1793345161.416371,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_8b2b37179f55",
+   "score": 0.725,
+   "t": 1793350134.877991,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_6fbb4ff94209",
+   "score": 0.7916666666666667,
+   "t": 1793359150.8353238,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_4a36042ef42e",
+   "score": 0.7583333333333333,
+   "t": 1793364547.014539,
+   "source": "mipro_evaluate"
+  },
+  {
+   "candidate": "cand_6efac1c67a78",
+   "score": 0.775,
+   "t": 1793375274.030887,
+   "source": "mipro_evaluate"
+  }
+ ],
+ "n_candidates_rendered": 26,
+ "n_candidates_evaluated": 26,
+ "n_dspy_evaluates": 84,
+ "bootstrap_rollouts": 15,
+ "bootstrap_cap": 432,
+ "prompt_lm_calls": 28,
+ "prompt_lm_errors": 0,
+ "mipro_best_program_returned": false,
+ "train_ids_n": 80,
+ "val_ids_n": 40,
+ "wall_s": 679209.7,
+ "settings": {
+  "auto": null,
+  "num_candidates": 3,
+  "max_bootstrapped_demos": 2,
+  "max_labeled_demos": 0,
+  "metric_threshold": 1.0,
+  "minibatch": true,
+  "minibatch_size": 8,
+  "minibatch_full_eval_steps": 4,
+  "num_trials": 1000000,
+  "num_threads": 3,
+  "k": 3,
+  "prompt_model": "dspy.LM(openai/rits/zai-org/glm-5-3, max_tokens=16000)",
+  "task_model": "NoTaskLM (never called)"
+ },
+ "dspy_version": "3.4.0"
+}

@@ -1,0 +1,57 @@
+{
+ "arm": "gepa_full",
+ "issue": "skillberry-ai/cap-evolve#895 §7.1 (GEPA-full variant)",
+ "upstream": "gepa==0.1.4 (PyPI; = gepa-ai/gepa tag v0.1.4, 8b0ce6cd). gepa.optimize is called unmodified; no file of the gepa package is patched.",
+ "deviations": [
+  {
+   "id": "D1",
+   "what": "Agent rollout replaced by the exp895 common rollout (arms/common/rollout.py) inside a custom GEPAAdapter.evaluate().",
+   "reason": "Issue §7 general rule: replace only the rollout. k=3 runs inside one evaluate() call; the per-example score is the mean of the 3 trials; the shared R counter raises BudgetStop before an overshooting evaluation; infra errors are retried with fresh seeds by the common layer."
+  },
+  {
+   "id": "D2",
+   "what": "Helper-script components are 3 pre-declared slots, skills/spreadsheet-helpers/scripts/helpers_{1,2,3}.py, each EMPTY in the seed (an empty slot = the file does not exist, so the seed directory stays byte-identical to seed_capability_v2).",
+   "reason": "GEPA fixes its component list at the seed candidate (state.list_of_named_predictors = seed keys) and the v2 seed has no scripts. 'Each helper script as its own component' (§7.1) is therefore only possible with slots declared up front. The slot count (3) is a design choice of this port; the reflector may fill any slot with a whole module."
+  },
+  {
+   "id": "D3",
+   "what": "When a candidate has non-empty script slots, the harness appends a deterministic 'Helper API' index (import line, public signatures, first docstring line, derived with ast) to the materialized SKILL.md.",
+   "reason": "With round_robin one component changes per proposal, so a new script would be invisible to the agent until a later SKILL.md proposal documents it, and GEPA would evaluate an unusable helper. The index is computed from the candidate's own script text, adds no information the candidate does not contain, and is regenerated each time (never fed back into the SKILL.md component)."
+  },
+  {
+   "id": "D4",
+   "what": "Custom reflection prompts (GEPA's per-component reflection_prompt_template dict): task_template.md gets a placeholder-contract prompt; each script slot gets a general/offline/deterministic helper prompt naming the lint rules; prompt.md and SKILL.md use GEPA's default InstructionProposalSignature prompt plus a closing line asking for the whole file. EVERY template appends exp895/arms/common/SURFACE_CONTRACT.md verbatim, including its last paragraph ('Prefer deterministic helpers for procedural failures').",
+   "reason": "Issue §7.1 (custom prompts for the template and scripts) and §4.1 (same surface contract and helper note for every arm). The script prompt spells out the lint's concrete rules (e.g. it scans docstrings for 'answer'/'gold'/'evaluation', and treats `row_idx == 1` as a task-identity branch) because otherwise most generated helpers fail the lint for words, not behaviour."
+  },
+  {
+   "id": "D5",
+   "what": "Reflective dataset: one row per task with the instruction, instruction_type and answer_position (the range, not its values), the lowest-scoring trial's transcript (system message dropped, <= 20,000 chars, head+tail), the mean and per-trial scores, and the scorer's gold-safe feedback. The first row also carries the candidate's other files as read-only context.",
+   "reason": "Issue §7.1 reflective-dataset spec. The system message is dropped because it is the candidate's own prompt.md+SKILL.md (already shown). The read-only context lets a component reflector stay consistent with the rest of the candidate."
+  },
+  {
+   "id": "D6",
+   "what": "Settings: reflection_minibatch_size=3, candidate_selection_strategy=pareto, module_selector=round_robin, use_merge=False, cache_evaluation=False, skip_perfect_score=True, perfect_score=1.0, max_metric_calls=10**9 (R enforced by the common counter), raise_on_exception=False, seed=search seed. Extra stop conditions (upstream StopperProtocol): R cannot fit the smallest evaluation (3 tasks x 3), a BudgetStop was raised, the optimizer token guard (20M in+out, issue §5) binds, or 5 consecutive iteration errors.",
+   "reason": "Issue §7.1 settings table. raise_on_exception=False so a BudgetStop raised mid-iteration ends the run cleanly via the R stopper instead of discarding the GEPA state; the consecutive-error stopper prevents an unbounded spin under that setting."
+  },
+  {
+   "id": "D7",
+   "what": "Reflection LM: gepa.lm.LM('openai/rits/zai-org/glm-5-3', api_base=http://127.0.0.1:4115/t/exp895-gepa_full-s<seed>:optimizer/v1, api_key='tag-not-a-secret', max_tokens=16000, timeout=3600); temperature unset. The gateway adds reasoning_effort='low' (same setting as every arm). The launcher raises the GLM gateway's non-stream read timeout to 900 s (GW_GLM_TIMEOUT env, read by the unmodified gateway).",
+   "reason": "Issue §7.1 names the model 'openai/hosted_vllm/zai-org/GLM-5.3'; Curve Bender serves it as rits/zai-org/glm-5-3 (decisions.md). GEPA's LM makes NON-streamed calls with up to 16k output tokens; at the ~33 output tok/s per call measured in P1 (2k tokens ~ 60 s) a 16k reply can take > 180 s, which the default 180 s total-latency timeout would cut and retry forever. Streaming optimizers are unaffected by that timeout, so this does not change GLM behaviour, only lets long replies finish."
+  },
+  {
+   "id": "D8",
+   "what": "Duplicate ids in a minibatch: GEPA's EpochShuffledBatchSampler pads the last minibatch with repeated ids when |train| is not a multiple of 3 (80 = 26x3+2). evaluate() runs each distinct id once (k=3) and returns its score at every position; num_metric_calls = distinct ids x 3.",
+   "reason": "Never run the same id twice in one call (issue §7: 'don't duplicate task ids'); R counts the rollouts actually run."
+  },
+  {
+   "id": "D9",
+   "what": "Trials that are STILL infra after the common layer's 3 retries are excluded from the task mean (the common layer already refunds them from R); a task with no clean trial scores 0.0 for GEPA and is counted in run_summary.infra_missing_trials.",
+   "reason": "Issue §0.3: infra is never scored as 0. GEPA requires a float per example, so the all-infra case cannot be 'missing' inside GEPA; it is reported instead. Detected via the adapter's 'Rollout failed:' feedback because TaskResult does not expose error_kind (see common_changes_needed)."
+  },
+  {
+   "id": "D10",
+   "what": "Selection data: GEPA reflects on minibatches of the official train 80 and selects (Pareto front, best = highest val mean) on the official val 40; the champion is GEPA's best_idx (seed = index 0 wins ties, since max() returns the first maximum).",
+   "reason": "Issue §3 (GEPA uses val 40) and §7.1."
+  }
+ ]
+}

@@ -1,0 +1,231 @@
+--- upstream:GENERATOR_PROMPT
++++ exp895:GENERATOR_PROMPT
+@@ -9,7 +9,7 @@
+ - Double-check your calculations and logic before providing the final answer
+ 
+ Your output should be a json object, which contains the following fields:
+-- reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
++- reasoning: detailed analysis and calculations
+ - bullet_ids: each line in the playbook has a bullet_id. all bulletpoints in the playbook that's relevant, helpful for you to answer this question, you should include their bullet_id in this list
+ - final_answer: your concise final answer
+ 
+@@ -28,7 +28,7 @@
+ 
+ **Answer in this exact JSON format:**
+ {{
+-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations]",  
++  "reasoning": "[Detailed analysis and calculations]",  
+   "bullet_ids": ["calc-00001", "fin-00002"],  
+   "final_answer": "[Your concise final answer here]"
+ }}
+--- upstream:REFLECTOR_PROMPT
++++ exp895:REFLECTOR_PROMPT
+@@ -11,7 +11,7 @@
+ - You need to analyze these bulletpoints, and give the tag for each bulletpoint, tag can be ['helpful', 'harmful', 'neutral'] (for the generator to generate the correct answer)
+ 
+ Your output should be a json object, which contains the following fields
+-  - reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
++  - reasoning: detailed analysis and calculations
+   - error_identification: what specifically went wrong in the reasoning?
+   - root_cause_analysis: why did this error occur? What concept was misunderstood?
+   - correct_approach: what should the model have done instead?
+@@ -41,7 +41,7 @@
+ 
+ **Answer in this exact JSON format:**
+ {{
+-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations]",
++  "reasoning": "[Detailed analysis and calculations]",
+   "error_identification": "[What specifically went wrong in the reasoning?]",
+   "root_cause_analysis": "[Why did this error occur? What concept was misunderstood?]",
+   "correct_approach": "[What should the model have done instead?]",
+--- upstream:REFLECTOR_PROMPT_NO_GT
++++ exp895:REFLECTOR_PROMPT_NO_GT
+@@ -11,7 +11,7 @@
+ - You need to analyze these bulletpoints, and give the tag for each bulletpoint, tag can be ['helpful', 'harmful', 'neutral'] (for the generator to generate the correct answer)
+ 
+ Your output should be a json object, which contains the following fields
+-  - reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
++  - reasoning: detailed analysis and calculations
+   - error_identification: what specifically went wrong in the reasoning?
+   - root_cause_analysis: why did this error occur? What concept was misunderstood?
+   - correct_approach: what should the model have done instead?
+@@ -20,6 +20,40 @@
+ 
+ 
+ 
++
++**This experiment (SpreadsheetBench):**
++- The "model" is a spreadsheet agent that solves each task by writing Python in a Jupyter kernel. The reasoning trace below is its transcript from the lowest-scoring of 3 trials of the same task (its system prompt is omitted: that is the playbook being trained), followed by the last code it ran.
++- The predicted answer is a one-line score summary (the mean hard score over the 3 trials). The environment feedback is the scorer's gold-safe message: it says which cells or ranges mismatched and how, never the expected values.
++- A Curator turns your insights into playbook bullets (and, where enabled, SKILL.md notes and deterministic helper scripts). The surface they land on:
++
++## Surface contract (identical for every arm in this experiment)
++
++You may edit **three surfaces**, and nothing else.
++
++- `prompt.md`: the system prompt.
++- `task_template.md`: the per-task user message.
++  - Keep every placeholder it contains, exactly as written.
++  - A candidate that breaks a placeholder scores 0 without running.
++- `skills/<name>/SKILL.md` and `skills/<name>/scripts/*.py`: skills and their helper scripts.
++  - Each `SKILL.md` is appended to the agent's system prompt.
++  - Each script is importable inside the agent's kernel as `skills.<name>.<script>`. A hyphen in `<name>` becomes `_`, so `skills/spreadsheet-helpers/scripts/x.py` is imported as `skills.spreadsheet_helpers.x`.
++  - Scripts cannot be run as a CLI: there is no `__main__`.
++
++What the agent has:
++
++- The agent's only tool is **Python code execution** in a Jupyter kernel.
++- The task's input files are under `/mnt/data`, read-only.
++- The answer must be written to the output workbook path given in the task message.
++
++Rules for helper scripts:
++
++- A helper must be **general, offline, deterministic and fast**.
++- It must hold no task ids, no answer values and no task-specific branches.
++- It must not use the network.
++- It must never read gold files or the scorer.
++- A lint and a smoke test enforce these rules before any rollout. A candidate that fails either scores 0 for that candidate and spends no agent rollouts.
++
++**Prefer deterministic helpers for procedural failures.** When a recurring failure is a *procedure* the model gets wrong, move it into a helper and tell the agent when to call it. Examples are finding the header row, parsing dates or numbers, writing to the exact target range, and re-opening and checking the saved workbook. Do this rather than adding more prose. Keep prompt text for *judgment* calls.
+ 
+ **Question:**
+ {}
+@@ -38,7 +72,7 @@
+ 
+ **Answer in this exact JSON format:**
+ {{
+-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations]",
++  "reasoning": "[Detailed analysis and calculations]",
+   "error_identification": "[What specifically went wrong in the reasoning?]",
+   "root_cause_analysis": "[Why did this error occur? What concept was misunderstood?]",
+   "correct_approach": "[What should the model have done instead?]",
+--- upstream:CURATOR_PROMPT
++++ exp895:CURATOR_PROMPT
+@@ -35,7 +35,7 @@
+ 
+ **Your Task:**
+ Output ONLY a valid JSON object with these exact fields:
+-- reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
++- reasoning: detailed analysis and calculations
+ - operations: a list of operations to be performed on the playbook
+   - type: the type of operation to be performed
+   - section: the section to add the bullet to
+@@ -48,7 +48,7 @@
+ 
+ **RESPONSE FORMAT - Output ONLY this JSON structure (no markdown, no code blocks):**
+ {{
+-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations here]",
++  "reasoning": "[Detailed analysis and calculations here]",
+   "operations": [
+     {{
+       "type": "ADD", 
+--- upstream:CURATOR_PROMPT_NO_GT
++++ exp895:CURATOR_PROMPT_NO_GT
+@@ -17,6 +17,42 @@
+ - Be concise and specific - each addition should be actionable
+ 
+ 
++**This experiment (SpreadsheetBench): where your bullets go**
++- An ordinary bullet is appended to the agent's system prompt (`prompt.md`) under "## Playbook (ACE)".
++- A bullet whose content starts with `[skill]` is written into `skills/ace-playbook/SKILL.md`, which is also appended to the agent's system prompt. Use it for when and how to call a helper script.
++- A bullet whose content starts with `[script]` becomes a helper script. Its content must be: a first line `[script] <file_name>.py: <one line saying when to call it and what it returns>`, then a newline, then the complete Python source of the module (as a normal JSON string). The file name uses lowercase letters, digits and underscores. It is saved as `skills/ace-playbook/scripts/<file_name>.py` and is importable in the agent's kernel as `skills.ace_playbook.<file_name>`.
++- Operations are ADD-only. To fix or replace a script, ADD a new `[script]` bullet with the same file name: the newest one wins.
++- The surface contract the agent and its helpers live under:
++
++## Surface contract (identical for every arm in this experiment)
++
++You may edit **three surfaces**, and nothing else.
++
++- `prompt.md`: the system prompt.
++- `task_template.md`: the per-task user message.
++  - Keep every placeholder it contains, exactly as written.
++  - A candidate that breaks a placeholder scores 0 without running.
++- `skills/<name>/SKILL.md` and `skills/<name>/scripts/*.py`: skills and their helper scripts.
++  - Each `SKILL.md` is appended to the agent's system prompt.
++  - Each script is importable inside the agent's kernel as `skills.<name>.<script>`. A hyphen in `<name>` becomes `_`, so `skills/spreadsheet-helpers/scripts/x.py` is imported as `skills.spreadsheet_helpers.x`.
++  - Scripts cannot be run as a CLI: there is no `__main__`.
++
++What the agent has:
++
++- The agent's only tool is **Python code execution** in a Jupyter kernel.
++- The task's input files are under `/mnt/data`, read-only.
++- The answer must be written to the output workbook path given in the task message.
++
++Rules for helper scripts:
++
++- A helper must be **general, offline, deterministic and fast**.
++- It must hold no task ids, no answer values and no task-specific branches.
++- It must not use the network.
++- It must never read gold files or the scorer.
++- A lint and a smoke test enforce these rules before any rollout. A candidate that fails either scores 0 for that candidate and spends no agent rollouts.
++
++**Prefer deterministic helpers for procedural failures.** When a recurring failure is a *procedure* the model gets wrong, move it into a helper and tell the agent when to call it. Examples are finding the header row, parsing dates or numbers, writing to the exact target range, and re-opening and checking the saved workbook. Do this rather than adding more prose. Keep prompt text for *judgment* calls.
++
+ **Training Context:**
+ - Total token budget: {token_budget} tokens
+ - Training progress: Sample {current_step} out of {total_samples}
+@@ -35,7 +71,7 @@
+ 
+ **Your Task:**
+ Output ONLY a valid JSON object with these exact fields:
+-- reasoning: your chain of thought / reasoning / thinking process, detailed analysis and calculations
++- reasoning: detailed analysis and calculations
+ - operations: a list of operations to be performed on the playbook
+   - type: the type of operation to be performed
+   - section: the section to add the bullet to
+@@ -48,7 +84,7 @@
+ 
+ **RESPONSE FORMAT - Output ONLY this JSON structure (no markdown, no code blocks):**
+ {{
+-  "reasoning": "[Your chain of thought / reasoning / thinking process, detailed analysis and calculations here]",
++  "reasoning": "[Detailed analysis and calculations here]",
+   "operations": [
+     {{
+       "type": "ADD", 
+--- upstream:CURATOR_OPERATIONS_AGGREGATION_PROMPT
++++ exp895:CURATOR_OPERATIONS_AGGREGATION_PROMPT
+@@ -15,6 +15,44 @@
+ - Preserve complementary insights as separate ADD operations when they teach genuinely different behavior.
+ - Keep each operation concise, actionable, and suitable for future tasks.
+ - If no new content should be added, return an empty operations list.
++
++**This experiment (SpreadsheetBench): where your bullets go**
++- An ordinary bullet is appended to the agent's system prompt (`prompt.md`) under "## Playbook (ACE)".
++- A bullet whose content starts with `[skill]` is written into `skills/ace-playbook/SKILL.md`, which is also appended to the agent's system prompt. Use it for when and how to call a helper script.
++- A bullet whose content starts with `[script]` becomes a helper script. Its content must be: a first line `[script] <file_name>.py: <one line saying when to call it and what it returns>`, then a newline, then the complete Python source of the module (as a normal JSON string). The file name uses lowercase letters, digits and underscores. It is saved as `skills/ace-playbook/scripts/<file_name>.py` and is importable in the agent's kernel as `skills.ace_playbook.<file_name>`.
++- Operations are ADD-only. To fix or replace a script, ADD a new `[script]` bullet with the same file name: the newest one wins.
++- The surface contract the agent and its helpers live under:
++
++- When you keep a `[script]` proposal, copy its Python source exactly; do not shorten or paraphrase code.
++
++## Surface contract (identical for every arm in this experiment)
++
++You may edit **three surfaces**, and nothing else.
++
++- `prompt.md`: the system prompt.
++- `task_template.md`: the per-task user message.
++  - Keep every placeholder it contains, exactly as written.
++  - A candidate that breaks a placeholder scores 0 without running.
++- `skills/<name>/SKILL.md` and `skills/<name>/scripts/*.py`: skills and their helper scripts.
++  - Each `SKILL.md` is appended to the agent's system prompt.
++  - Each script is importable inside the agent's kernel as `skills.<name>.<script>`. A hyphen in `<name>` becomes `_`, so `skills/spreadsheet-helpers/scripts/x.py` is imported as `skills.spreadsheet_helpers.x`.
++  - Scripts cannot be run as a CLI: there is no `__main__`.
++
++What the agent has:
++
++- The agent's only tool is **Python code execution** in a Jupyter kernel.
++- The task's input files are under `/mnt/data`, read-only.
++- The answer must be written to the output workbook path given in the task message.
++
++Rules for helper scripts:
++
++- A helper must be **general, offline, deterministic and fast**.
++- It must hold no task ids, no answer values and no task-specific branches.
++- It must not use the network.
++- It must never read gold files or the scorer.
++- A lint and a smoke test enforce these rules before any rollout. A candidate that fails either scores 0 for that candidate and spends no agent rollouts.
++
++**Prefer deterministic helpers for procedural failures.** When a recurring failure is a *procedure* the model gets wrong, move it into a helper and tell the agent when to call it. Examples are finding the header row, parsing dates or numbers, writing to the exact target range, and re-opening and checking the saved workbook. Do this rather than adding more prose. Keep prompt text for *judgment* calls.
+ 
+ **Training Context:**
+ - Total token budget: {token_budget} tokens

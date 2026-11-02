@@ -1,0 +1,7 @@
+WARMUP {"n": 10, "wall_s": 58.0, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [2.7, 2.7, 2.7, 2.8, 7.0, 7.0, 8.4, 12.1, 17.9, 58.0]}
+host=cccxc553 job=1986371 arm=miprov2 seed=2 R=2160 conc=10 minibatch=8 max_trials= start=2026-10-22T19:05:36Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+miprov2_arm_sha256=c6ccb4fd6dedacc5bc332e8459e344fee78cbb3ed5fdb26efd154150d6e4a8cc miprov2_program_sha256=a493ad1043eff210dcc4cb13da685d49573040fcd40d475cfa10b3828e8eea40 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+dspy=3.4.0 optuna 5.0.0 litellm 1.82.6 helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+MIPROV2_RC=0
+end=2026-10-28T23:20:56Z

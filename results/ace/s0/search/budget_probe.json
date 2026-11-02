@@ -1,0 +1,1 @@
+BUDGET_PROBE {"verdict": "BudgetStop raised: ace: evaluation of 12x3=36 would exceed R (2125/2160)", "requested_rollouts": 36, "state_unchanged": true, "rollout_rows_unchanged": true, "budget_state": {"spent": 2125, "eval_calls": 724, "R": 2160}}

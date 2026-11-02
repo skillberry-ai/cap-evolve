@@ -1,0 +1,10 @@
+split ok: {'train': 80, 'val': 40, 'test': 1} test ids written: 0
+WARMUP {"n": 10, "wall_s": 6.0, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0]}
+host=cccxc593 job=1952290 arm=skillopt seed=0 R=2160 conc=10 start=2026-10-22T06:40:51Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+skillopt_sha=79124b37e9a6371e13b753f8bcd7adb1e493ade1 skillopt_dirty=0
+port_sha256=0619e456979b122d8b1e7f7abfc493ca193d5ad91839ebb62d61fb4ddf88abdb rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+seed_packed_sha256=073c297221e7050937c6d43e55d07dc10074b385dc047ef98fe1a810502dd31f helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+SKILLOPT_RC=0
+SKILLOPT_SUMMARY {"rollouts_used": 2040, "R": 2160, "stop_reason": "BudgetStop: step guard: train 6x3 + selection 40x3 does not fit (2040/2160)", "iterations": 14, "accepted": 5, "rejected": 9, "n_candidates_evaluated": 14}
+end=2026-10-23T15:57:39Z

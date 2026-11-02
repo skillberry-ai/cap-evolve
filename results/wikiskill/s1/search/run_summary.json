@@ -1,0 +1,92 @@
+{
+ "arm": "wikiskill",
+ "seed": 1,
+ "R": 2160,
+ "rollouts_used": 2007,
+ "binding_on_R": true,
+ "stop_reason": "budget_R",
+ "budget_stop_detail": "iteration guard: train 30x3 + val 40x3 does not fit (2007/2160)",
+ "champion": "it008_a1a576e16394",
+ "champion_val_score": 0.8333333333333334,
+ "baseline_val_score": 0.675,
+ "iterations": 8,
+ "n_candidates_evaluated": 8,
+ "accepted": 3,
+ "rejected": 5,
+ "no_action": 0,
+ "gates": [
+  {
+   "iteration": 1,
+   "verdict": "ACCEPT",
+   "incumbent_score": 0.675,
+   "candidate_score": 0.6833333333333333,
+   "skill_sha256": "4a2d3065232fc1a2a617a4b1a517648ae225b840da5d676c228fd4b09ccbea04"
+  },
+  {
+   "iteration": 2,
+   "verdict": "ACCEPT",
+   "incumbent_score": 0.6833333333333333,
+   "candidate_score": 0.7666666666666667,
+   "skill_sha256": "69d69ebca450d3d91e14c20aaaf763d09f2746238ad1277665dc4ffd58264c74"
+  },
+  {
+   "iteration": 3,
+   "verdict": "REJECT",
+   "incumbent_score": 0.7666666666666667,
+   "candidate_score": 0.725,
+   "skill_sha256": "984a913b49662a3f7c07bb2506bd791d94f2a68448a4a9cdc3de43a5e322b85f"
+  },
+  {
+   "iteration": 4,
+   "verdict": "REJECT",
+   "incumbent_score": 0.7666666666666667,
+   "candidate_score": 0.7,
+   "skill_sha256": "1a2aae4d241f224bb758c76acf5988f7e18e231a6034d6e033f7e906cd933d88"
+  },
+  {
+   "iteration": 5,
+   "verdict": "REJECT",
+   "incumbent_score": 0.7666666666666667,
+   "candidate_score": 0.75,
+   "skill_sha256": "6447392f4b8afb46af884010e6d48ecada5ddcae2d62c3c5b489b918b000e17e"
+  },
+  {
+   "iteration": 6,
+   "verdict": "REJECT",
+   "incumbent_score": 0.7666666666666667,
+   "candidate_score": 0.7583333333333333,
+   "skill_sha256": "53d384c2b5b5fc5f68ec0ae2ee7e3f1e47135de83acfe87e24ba8045bdb876e4"
+  },
+  {
+   "iteration": 7,
+   "verdict": "REJECT",
+   "incumbent_score": 0.7666666666666667,
+   "candidate_score": 0.725,
+   "skill_sha256": "cc5d41ce16bc839f32df8f3337c8bf9d8a7fb062541fc58b62af5c0850233310"
+  },
+  {
+   "iteration": 8,
+   "verdict": "ACCEPT",
+   "incumbent_score": 0.7666666666666667,
+   "candidate_score": 0.8333333333333334,
+   "skill_sha256": "a1a576e16394e606f9210776f1b96a0f5cf5edea06ac1fd08642980149f77b57"
+  }
+ ],
+ "engine_errors": [
+  {
+   "t": 1793030671.5888512,
+   "iteration": 3,
+   "error": "RuntimeError: 1 tasks need attention. Resolve infrastructure and resume; completed tasks are retained."
+  },
+  {
+   "t": 1793292528.4591146,
+   "iteration": 3,
+   "error": "RuntimeError: 1 tasks need attention. Resolve infrastructure and resume; completed tasks are retained."
+  }
+ ],
+ "role_calls_glm": 84,
+ "train_ids_n": 30,
+ "val_ids_n": 40,
+ "k": 3,
+ "wall_s": 361758.3
+}

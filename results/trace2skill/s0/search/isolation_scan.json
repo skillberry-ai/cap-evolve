@@ -1,0 +1,1 @@
+ISOLATION_SCAN {"n_files_scanned": 1598, "n_optimizer_prompt_files": 664, "chars_scanned": 30499969, "gold": {"exp895/data": 0, "_golden.xlsx": 0, "_answer.xlsx": 0, "spreadsheetbench/evaluation": 0, "secrets": 0}, "test_ids": {"token_hits": 1, "path_hits": 0, "n_ids_checked": 280}, "control_train_ids": {"ids": ["10452", "105-24"], "token_hits": 32, "path_hits": 132}}

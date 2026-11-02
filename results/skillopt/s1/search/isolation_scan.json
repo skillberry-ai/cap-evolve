@@ -1,0 +1,31 @@
+{
+ "optimizer_transcript": {
+  "gold_data_dir": 0,
+  "golden_xlsx": 0,
+  "answer_xlsx": 0,
+  "scorer_dir": 0,
+  "secrets": 0,
+  "claude_cfg": 0,
+  "test_id_hits": 1,
+  "test_id_in_id_context": 0,
+  "control_split_id_hits": 2172,
+  "control_split_id_in_id_context": 1535,
+  "bytes": 8835935,
+  "files": 1
+ },
+ "optimizer_transcript_calls": 78,
+ "skillopt_out_tree": {
+  "gold_data_dir": 0,
+  "golden_xlsx": 0,
+  "answer_xlsx": 0,
+  "scorer_dir": 0,
+  "secrets": 0,
+  "claude_cfg": 0,
+  "test_id_hits": 153,
+  "test_id_in_id_context": 0,
+  "control_split_id_hits": 12589,
+  "control_split_id_in_id_context": 12508,
+  "bytes": 53633182,
+  "files": 6683
+ }
+}

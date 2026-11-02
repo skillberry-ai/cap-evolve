@@ -1,0 +1,11 @@
+{
+ "arm": "wikiskill",
+ "search_seed": 2,
+ "inert_champion": false,
+ "phase": "champion_only (seed not yet run)",
+ "champion_test_mean": 0.7479091995221027,
+ "n_tasks_with_data": 279,
+ "missing_tasks": 1,
+ "infra_missing_trials": 6,
+ "candidate_error_trials": 0
+}

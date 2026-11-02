@@ -1,0 +1,4 @@
+{"t": 1792890982.361976, "candidate": "pb_372d1ed4f963", "accuracy": 0.7606871794871795, "n_scored": 39, "n_samples": 40, "spent": 653, "playbook_sha256": "70a9043c57c97be746e8046c8bef19e611acfbc71bce6b379e3e05516a33cc82"}
+{"t": 1793147296.7528758, "candidate": "pb_dd7514434fdb", "accuracy": 0.7916675, "n_scored": 40, "n_samples": 40, "spent": 1310, "playbook_sha256": "26e13e2811caeef44ee65d23ee9b1898bfb6fd9101b676892a1d23042b847d22"}
+{"t": 1793197054.2576232, "candidate": "pb_6b9b3c0751f1", "accuracy": 0.75, "n_scored": 40, "n_samples": 40, "spent": 1981, "playbook_sha256": "c34395aea967ee17a186f252ceeb13a9fb8017d8251318a5e4ef4c2cef4db32e"}
+{"t": 1793199524.4259124, "candidate": "pb_bb5581e14fe2", "accuracy": 0.8000025, "n_scored": 40, "n_samples": 40, "spent": 2125, "playbook_sha256": "ab3b69a8c44c4819c73dfcaa550f6d4e50b898fad618e3ae0a41fba1bbef04fa"}

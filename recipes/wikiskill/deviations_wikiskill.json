@@ -1,0 +1,83 @@
+{
+ "arm": "wikiskill",
+ "issue": "skillberry-ai/cap-evolve#895 §7.7 (WikiSkill, community port)",
+ "upstream": "Stahl-G/wikiskill @ da6984caca09d5f81b2336cf3067b59c0c18bb1e (competitors/wikiskill; launcher records upstream_dirty in run_meta.txt). There is NO official WikiSkill code (arXiv 2608.27454 releases none); this is a community port, recorded per §7.7.",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D0-no-official-code",
+   "what": "The arm runs the community port Stahl-G/wikiskill, not code from the paper's authors.",
+   "reason": "Issue §7.7: 'Record that there is no official code.' The port's own docs/paper-conformance.md lists where it already departs from the paper (e.g. the 4-trace-read minimum is the port's check, not a paper number)."
+  },
+  {
+   "id": "D1-rollout",
+   "what": "The executor rollout is the common exp895 rollout (arms/common/rollout.py CommonRollout.evaluate, k=3 inside the call, split tagged). The port's own Codex-CLI spreadsheet rollout (wikiskill/spreadsheet/rollout.py, isolated/runtime.execute in 'spreadsheet' mode, scorer benchmarks/spreadsheet.score_workbook) is not used. A custom domain_loader (the engine's documented callback) returns one engine case per (task, trial), uid '<task>__t<j>'; the FIRST case of a phase triggers ONE CommonRollout.evaluate(all phase tasks, k=3) and every case returns its own trial's row (score = that trial's hard reward, 0/1). The engine's per-phase mean over these rows = the mean over tasks of the k=3 means.",
+   "reason": "Issue §7 general rule and §7.7: 'Each (task, trial) is an engine case <task>__t<j>'; k stays inside one evaluation call, no task id duplicated."
+  },
+  {
+   "id": "D2-role-transport",
+   "what": "The Maintainer and Proposer transport (upstream isolated/runtime.execute: Codex CLI 'codex exec' with gpt-5.6-luna/high under macOS sandbox-exec, tools served by tools_server.py over MCP) is replaced by wikiskill_arm.GLMRoleTransport: an OpenAI chat/completions tool loop on GLM-5.3 (served id rits/zai-org/glm-5-3) via the gateway :4115, tag exp895-wikiskill-s<seed>:optimizer, max_tokens 16000, reasoning_effort 'low' (the issue §2.2 setting the gateway also applies), temperature unset. The tools are upstream RoleTools(mode) UNCHANGED (read_file + finish; tools_server.specs schemas passed as OpenAI function tools); every call is executed by RoleTools on a freshly staged per-session workspace and receipted in tool-events.jsonl in tools_server.main's format. The archive PaperAgents reads (submission.json written by RoleTools.finish, final.txt, tool-events.jsonl) has the same layout. Transport-level additions with no Codex equivalent: up to 3 'no tool was called' nudges per session; a 'only 3 turns remain' reminder; a hard cap of 40 model turns; a ~360k-character budget for read_file results per session (Codex would compact its context); a session that ends without an accepted finish() raises (the engine then resumes that step, D7).",
+   "reason": "Issue §7.7: 'The roles' Codex CLI transport is replaced by a GLM-5.3 tool loop through the gateway. Roles see staged files only.' The Codex backend is macOS-only and pinned to a model we do not use."
+  },
+  {
+   "id": "D3-transport-sentence",
+   "what": "Every role's system prompt = the paper appendix prompt (resources/paper_alignment/prompts/<role>.paper.md with {task_desc}='spreadsheet manipulation tasks with Python code execution', via upstream paper_prompts) + upstream's own one-line transport sentence copied verbatim from wikiskill/spreadsheet/study.py::_learn ('Submission transport: read_file reads staged files; finish(proposal) submits the exact paper JSON. No extra computation or network tool is available.'). study.py's longer ROLE_STATE block is NOT added (it is specific to that study's single-round, empty-skill, training-reference setup).",
+   "reason": "The Maintainer appendix prompt never names the finish tool; with Codex the MCP tool description carried it. Upstream's own spreadsheet study adds exactly this sentence for the same reason."
+  },
+  {
+   "id": "D4-surface-contract",
+   "what": "The Proposer's system prompt additionally gets exp895/arms/common/SURFACE_CONTRACT.md VERBATIM (incl. its last paragraph 'Prefer deterministic helpers for procedural failures') plus a short mapping note: a proposed skill becomes skills/<name>/SKILL.md (+PURPOSE.md); a '### Script: <m>.py' heading followed by one ```python block inside skill_md becomes skills/<name>/scripts/<m>.py and is removed from the SKILL.md text; a skill named 'system_prompt' replaces prompt.md with the text under its '## Instructions' heading (staged read-only at surface/prompt.md); a skill named 'spreadsheet_helpers' replaces the seed skill skills/spreadsheet-helpers/ (staged at surface/spreadsheet-helpers.SKILL.md); the Wiki is shown to the agent (D5). The Maintainer gets no contract (it never edits a surface).",
+   "reason": "Issue §4.1/§7: the same surface contract and 'prefer deterministic helpers' note for every arm's proposer; §7.7: skills written as real skills (SKILL.md plus scripts); §7 table: WikiSkill edits skills/<name>/ + prompt.md. The upstream proposal contract (contracts.proposal / validate_skill) only knows skill_md + purpose_md, so scripts and prompt.md are carried INSIDE skill_md, which passes that contract unchanged."
+  },
+  {
+   "id": "D5-wiki-into-skill",
+   "what": "The Wiki index and pattern pages are materialised into every NON-SEED candidate as one more skill, skills/wikiskill-wiki/SKILL.md: index.md first, then pattern pages in filename order, cut at a page boundary to fit the adapter's 6,000-character SKILL.md body cap. The candidate's Wiki is frozen when the candidate is created (right after that iteration's Maintainer). The seed (empty skill set) stays byte-identical to the v2 seed. This overrides the upstream handoff fact executor_visibility.wiki=false and the paper's 'inference agent has no Wiki access'; the Proposer is told so in its note (D4).",
+   "reason": "Issue §7.7: 'The wiki and index text go into SKILL.md.' Recorded because it departs from the paper's three-layer visibility rule."
+  },
+  {
+   "id": "D6-train-subset",
+   "what": "The engine's train split = a fixed, seeded 30-of-80 subset of the official train 80 per search seed (random.Random('exp895-wikiskill-train-subset-seed<seed>').sample over the sorted ids; written to train_subset.txt). The engine runs this whole subset (x3 trials) every iteration with the incumbent skill. Val = the official val 40. Smoke runs pass a 2-id pool, so the subset is that pool.",
+   "reason": "Issue §7.7: 'The engine runs the whole train split every iteration, so give it a fixed, seeded 30-of-80 train subset per search seed, to fit R.'"
+  },
+  {
+   "id": "D7-early-stop-neutralized",
+   "what": "engine.state is wrapped at runtime (module attribute rebinding; engine.py unedited): status 'early_stop_validation_ceiling' (r_best == 1) is mapped back to 'evolving' (or 'evolution_complete' past the manifest's iteration count). The Eq. 4 gate (eq4_accepted: strict improvement over r_best, ties rejected) is unchanged: val vs best.",
+   "reason": "Issue §7.7: 'Neutralize the early stop at 1.0. The gate is val vs best.'"
+  },
+  {
+   "id": "D8-budget",
+   "what": "R is enforced by the shared counter: CommonRollout raises BudgetStop BEFORE an evaluation that would overshoot. In addition, before each iteration's train phase the arm checks that train (30x3) + one val (40x3) still fit, and stops the search otherwise (so an iteration is never cut between its train rollouts and its gate). Manifest iterations = 10,000 (R binds) unless --max-iters is given (smoke: 1). On BudgetStop the engine's exception propagates out of engine.evolve; the arm records stop_reason=budget_R and takes the champion from engine.state (the last accepted skill).",
+   "reason": "Issue §5/§7: same R for every arm, enforced on the shared counter."
+  },
+  {
+   "id": "D9-infra-and-resume",
+   "what": "A trial that is still infra-errored after CommonRollout's own retries (TaskResult.infra) is returned to the engine with fail_reason='exec_failed', one of the engine's own INFRA reasons, so engine.batch refuses it (never scored 0), keeps the completed rows, and raises. The arm then calls engine.evolve again (upstream's documented resume); on resume the arm re-evaluates ONLY the missing trials (grouped by count, one CommonRollout call per group) and fills them in. Role-session failures (no accepted finish) and other engine exceptions are resumed the same way; after 3 consecutive failed resumes at the same iteration the search stops with stop_reason=engine_error.",
+   "reason": "Issue §0.3: infra errors are retried, never scored as 0; this uses the engine's own resume semantics instead of editing engine.batch."
+  },
+  {
+   "id": "D10-training-feedback",
+   "what": "PaperAgents(training_feedback=...) is given a function that appends the common scorer's gold-SAFE feedback string (adapter._build_feedback: cases passed, checked range, coverage/type/mismatch-class notes, never a gold value) and the trial score to each staged TRAIN trace. Upstream's spreadsheet study instead stages the gold reference workbook's cell values for TRAIN tasks (study.py::_feedback); that is NOT done.",
+   "reason": "Issue §0.2 / §4.1: the optimizer must never read gold workbooks or answer values. This WEAKENS the baseline relative to the port's own spreadsheet study, and is recorded as such."
+  },
+  {
+   "id": "D11-trace-format",
+   "what": "evidence.visible_trace (upstream, unchanged; 15,000-char cap) renders each case's archive runtime/tool-events.jsonl. The arm writes the common rollout's transcript there as receipts: 'task_message' (the first user message), one 'agent_turn' per assistant reply with the following execution output as its result, and 'environment' for anything else. The system message is omitted (it is the candidate). 'predicted' = the agent's last reply.",
+   "reason": "The upstream renderer expects Codex tool receipts; the common rollout's agent loop is CodeAct (reply -> code execution output), which maps one-to-one onto receipt/result pairs."
+  },
+  {
+   "id": "D12-no-bwrap",
+   "what": "The roles are not run under the bwrap Claude-Code sandbox (tools/sandbox/claude). They are plain chat completions from the arm process whose only actions are RoleTools.read_file (tools_server.safe refuses any path outside the role's staged workspace) and finish. The staged workspace holds only: the Wiki (prompts excluded by upstream), skills.json, TRAIN traces + trace-summary.json, and for the Proposer surface/prompt.md and surface/spreadsheet-helpers.SKILL.md. isolation_scan.py checks every read_file argument resolves inside its workspace and greps all role inputs/outputs for gold paths and test ids.",
+   "reason": "Same reasoning as the GEPA arm: a model with no shell and no file tool beyond a confined reader cannot reach gold, the scorer or secrets."
+  },
+  {
+   "id": "D13-task-template-fixed",
+   "what": "task_template.md is not edited by this arm (seed bytes in every candidate).",
+   "reason": "Issue §7 table: WikiSkill edits skills/<name>/ (SKILL.md + scripts) + prompt.md; WikiSkill has no template-editing role. Recorded so the surface reduction is not silent."
+  },
+  {
+   "id": "D14-engine-config",
+   "what": "engine.initialize is called with wiki_template='spreadsheet' (the port's empty Wiki scaffold: index, logs, skill-impact, prompts) and agent_prompts=paper_prompts(task_desc) (the appendix prompts). Manifest: domain 'exp895-spreadsheetbench-v400', model 'google/gemma-4-31B-it', workers 8 (engine thread pool; the real concurrency is SPREADSHEETBENCH_CONCURRENCY inside CommonRollout), timeout 1800 (unused by the common rollout), optimizer_model GLM, optimizer_effort 'low'. PaperAgents seed = the search seed (evidence.sample uses seed+iteration).",
+   "reason": "Engine API as documented in the port's README (Python integrations)."
+  }
+ ]
+}

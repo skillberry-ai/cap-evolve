@@ -1,0 +1,43 @@
+{
+ "arm": "gepa_full",
+ "issue": "skillberry-ai/cap-evolve#895 §7.1 (GEPA-full)",
+ "written": "2026-10-21",
+ "upstream": {
+  "package": "gepa==0.1.4 (PyPI), installed in exp895/venv",
+  "tag_commit": "v0.1.4 = 8b0ce6cd99a234f6b74daf37558a2ac0ce18f975 (exp895/competitors/gepa HEAD, same commit)",
+  "unmodified_check": "all 92 gepa/ files in venv match gepa-0.1.4.dist-info/RECORD sha256 (0 modified), checked 2026-10-21",
+  "entry_point": "gepa.optimize(...) called as-is; custom GEPAAdapter + reflection_prompt_template dict + stop_callbacks + callbacks are all upstream extension points",
+  "litellm": "1.82.6 (venv pin, used by gepa.lm.LM)"
+ },
+ "files_changed_upstream": [],
+ "port_files": {
+  "gepa_full_port.py": "GEPAAdapter (evaluate = common rollout k=3; reflective dataset), component <-> candidate-dir mapping, reflection prompts, stoppers, callbacks, run_summary.json",
+  "lsf_gepa_full_search.sh": "LSF launcher: node_env, gateways (Gemma :4113, GLM :4115), warm-up, test-id guard, refuse-overwrite, helper-gate spec, run_meta.txt, isolation scan",
+  "isolation_scan.py": "post-search scan of the reflection prompts/replies for gold paths, secrets names and test ids (counts only)",
+  "smoke_train2.txt": "the 2 smoke train ids"
+ },
+ "common_layer_used": {
+  "arms/common/rollout.py": "7a24afec3d1895a6b624fddd528d24ac83d08ca1df3edbe024ccc5535a6b4d40",
+  "arms/common/SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651 (given verbatim to every reflection prompt)",
+  "helper_gate_spec": "surface+helpers blocks of arms/capevolve/template/.capevolve/project/capevolve.yaml, copied per run into runs/gepa_full/<NAME>/helpers_spec.yaml and exported as CAPEVOLVE_HELPERS_SPEC"
+ },
+ "seed": "seed_capability_v2, byte-identical: the port asserts the materialized seed dir's file sha256s equal exp895/BUILD_RECORD.json seed_v2.files_sha256 before starting",
+ "components": [
+  "prompt.md",
+  "task_template.md",
+  "skills/spreadsheet-helpers/SKILL.md",
+  "skills/spreadsheet-helpers/scripts/helpers_1.py",
+  "skills/spreadsheet-helpers/scripts/helpers_2.py",
+  "skills/spreadsheet-helpers/scripts/helpers_3.py"
+ ],
+ "selection_data": {
+  "optimizer_sees": "official train 80 (split_ids.json 'train'): reflection minibatches of 3 tasks; per task the lowest-scoring of 3 trials' transcript, per-trial scores and the scorer's gold-safe feedback",
+  "selects_on": "official val 40 (split_ids.json 'val'): GEPA valset, Pareto front per val task; champion = highest val mean (GEPA best_idx)",
+  "never": "the 280 test ids: the launcher refuses a run whose train/val holds one, and the port asserts the same before any rollout"
+ },
+ "venv_installs_for_this_arm": "none (gepa 0.1.4, litellm 1.82.6, pyyaml 6.0.3 were already in exp895/venv)",
+ "run_env_differences_vs_capevolve_launcher": [
+  "GW_GLM_TIMEOUT=900 for the GLM gateway (GEPA's reflection calls are non-streamed, up to 16k output tokens); see deviations D7",
+  "no sandbox shim / unix-socket bridge: GEPA's optimizer is a tool-less LM call, it cannot read files"
+ ]
+}

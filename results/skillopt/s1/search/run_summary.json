@@ -1,0 +1,30 @@
+{
+  "arm": "skillopt",
+  "seed": 1,
+  "R": 2160,
+  "rollouts_used": 2135,
+  "binding_on_R": true,
+  "stop_reason": "BudgetStop: step guard: train 6x3 + selection 40x3 does not fit (2135/2160)",
+  "error": null,
+  "champion": {
+    "dir": "/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/runs/skillopt/search_s1/champion",
+    "skill_hash": "0a72da16ca736b01",
+    "unpack_error": null,
+    "identical_to_seed": false,
+    "files": {
+      "prompt.md": "a87bb125216146f7709043963bfe5f4cc61d4b3064c077c2ac060f6b20622da3",
+      "skills/spreadsheet-helpers/SKILL.md": "754e53d4501e8be3275d23fc2011306957afb38f0bf4483a36ea0a10a0f3b352",
+      "skills/spreadsheet-helpers/scripts/crossfill.py": "c4e6f70cbeebe22e6f5ddb24c2148748c93f3e49dc8376be897423746c22a57a",
+      "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+    }
+  },
+  "n_candidates_evaluated": 15,
+  "n_eval_calls": 31,
+  "iterations": 15,
+  "accepted": 3,
+  "rejected": 12,
+  "skipped": 0,
+  "pack_damaged_candidates": 0,
+  "optimizer_tokens_non_cache_read": 2113907,
+  "wall_s": 308584.9
+}

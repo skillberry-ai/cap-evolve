@@ -1,0 +1,1 @@
+BUDGET_PROBE {"verdict": "BudgetStop raised: wikiskill: evaluation of 1x154=154 would exceed R (2007/2160)", "requested_rollouts": 154, "state_unchanged": true, "rollout_rows_unchanged": true, "budget_state": {"spent": 2007, "eval_calls": 31, "R": 2160}}

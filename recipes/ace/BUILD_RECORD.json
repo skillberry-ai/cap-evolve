@@ -1,0 +1,93 @@
+{
+ "arm": "ace",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.8",
+ "written": "2026-10-21",
+ "upstream": {
+  "repo": "ace-agent/ace",
+  "commit": "82709de050e1db6e6ef2f07bcb0393560b94992a",
+  "clone": "exp895/competitors/ace (imported from the clone via sys.path; not pip-installed)",
+  "entry": "ace.ace_batch.ACEBatch.run(mode='offline') - the official batched (ComBEE) flow",
+  "files_changed": [],
+  "check": "git -C competitors/ace status --porcelain is empty before and after each run (run_meta.txt ace_clean / ace_clean_after); PYTHONDONTWRITEBYTECODE=1 so no .pyc is written into the clone",
+  "runtime_rebinding_in_memory": [
+   "ace.ace_batch.initialize_clients -> GLM-gateway OpenAI client (D6)",
+   "ace.ace_batch.is_api_error -> defined (undefined upstream at the pin) (D7)",
+   "ace.ace_batch.apply_curator_operations -> upstream function on newline-escaped [skill]/[script] ops (D3)",
+   "ace.ace_batch.evaluate_test_set -> upstream function + a val_evals.jsonl record (champion bookkeeping)",
+   "ace.prompts.{generator,reflector,curator} and ace.core.{generator,reflector,curator} prompt constants -> ace_prompts_patch.patched() (D4, prompt_patch.diff)",
+   "ACEBatch.generator -> RolloutGenerator (D1); ExpACEBatch subclasses ACEBatch overriding only _train_batch with the R guard (D9)"
+  ]
+ },
+ "port_files": {
+  "ace_arm.py": "see sha256 in each run's run_meta.txt (ace_arm_sha256)",
+  "ace_prompts_patch.py": "see run_meta.txt (prompts_patch_sha256)",
+  "prompt_patch.diff": "the full prompt diff (also copied into every run dir)",
+  "filter_probe.py": "GLM content-filter re-check, upstream vs patched prompts",
+  "budget_probe.py": "post-run R-counter probe",
+  "isolation_scan.py": "\u00a74.1 scan of ACE's detailed_llm_logs + generator responses + playbooks",
+  "lsf_ace_search.sh": "launcher (SEED, R, NAME)",
+  "smoke_job.sh": "smoke wrapper (2 train tasks, k=3, R=60, 1 epoch, FILTER_PROBE=1)",
+  "tiktoken_cache/9b5ad71b2ce5302211f9c61530b329a4922fc6a4": "cl100k_base, copied from venv litellm bundle, sha256 223921b76ee99bde995b7ff738513eef100fb51d18c93597a113bcffe865b2a7"
+ },
+ "common_layer": {
+  "rollout.py": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da (at smoke time)",
+  "SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2 (sha256 checked at start against exp895/BUILD_RECORD.json); empty playbook = the seed, byte-identical",
+ "packages_installed": [],
+ "packages_used_from_venv": [
+  "openai==3.35.1",
+  "tiktoken==0.14.0",
+  "python-dotenv==1.2.4",
+  "numpy==2.5.4"
+ ],
+ "packages_not_installed": "faiss-cpu, sentence-transformers, together, sambanova (ACE pyproject deps): only the bulletpoint analyzer (off, \u00a77.8) and the hard-coded providers (replaced, D6) need them; ace.core prints a warning that dedup is unavailable",
+ "data": {
+  "optimizer_sees": "train 80 (official split train), in mini-batches of K=4: for each task the Reflector sees the instruction, the lowest-scoring of 3 trials' transcript (<= 20k chars) and final code, the k-trial scores and the scorer's gold-safe feedback; the Curator sees the Reflector outputs + task contexts (task_id, instruction_type, answer_position, instruction). Never gold values, never test ids.",
+  "selects_on": "val 40 (official split val): val 40 x 3 at each epoch end (and one final one when R stops training); champion = upstream's best-val-accuracy rule (strict >, starting at 0.0)",
+  "aggregate_feedback_to_optimizer_from_val": "none (val scores only select the checkpoint)",
+  "test": "never loaded (test_samples=None); the launcher asserts zero overlap of train/val ids with the official test list"
+ },
+ "settings": {
+  "flow": "ACEBatch offline, batch_size K=4, curator_num_groups=floor(sqrt(4))=2, augmented_shuffling factor 2",
+  "playbook_token_budget": 80000,
+  "curator_frequency": 1,
+  "max_num_rounds": 1,
+  "use_bulletpoint_analyzer": false,
+  "reflector_curator_max_tokens": 8000,
+  "temperature": "0.0 (hard-coded in ACE llm.py)",
+  "no_ground_truth": true,
+  "json_mode": false,
+  "k": 3,
+  "num_epochs": "1000 (R binds); smoke 1",
+  "eval_steps": "len(train) = one val evaluation per epoch end",
+  "optimizer_lm": "openai.OpenAI -> http://127.0.0.1:4115/t/exp895-ace-s<seed>:optimizer/v1, model rits/zai-org/glm-5-3",
+  "skill_bullets": "on ([skill]/[script] -> skills/ace-playbook/); SKILL_BULLETS=0 is the text-only ablation"
+ },
+ "deviations": "deviations_ace.json",
+ "port_files_sha256_final": {
+  "ace_arm.py": "28dd875841f0977e7b9b69a3be988812136eeb84b611f9a9cd73681da9eb25d8",
+  "ace_prompts_patch.py": "5c58498844cc0c5e38d4ccd34a5712ec10d3c68305008e9d6e670f035d3e8894",
+  "prompt_patch.diff": "49d4858a5f9adddcf05bff3bf1547d5578332c47463c158be09398e97b68cf82",
+  "filter_probe.py": "f4a9e7b19738eeaf8e136df5cc539f280887ed658f69dbf523ab335eef3b6bbc",
+  "budget_probe.py": "288d87dd83fbaebf16cdb8a7a62212a1f9fe3a082a5c7ce6847d487ef5b6deba",
+  "isolation_scan.py": "547c820dbacfe482e31911d059f51e228e6e9c5f0ff48acf7a671bca3e40c930",
+  "lsf_ace_search.sh": "736951dedd7315f8886b79823a5fdce7b806a9949e3f5b8b655d9516a65283d7",
+  "smoke_job.sh": "3c8ba2079f5bc617d9c94dd3a0bf5cc18fe83588525248d910de1b21c79e4ca1"
+ },
+ "post_smoke_edits": [
+  "lsf_ace_search.sh: + export PYTHONUNBUFFERED=1 (arm.log was block-buffered during the smoke; no behaviour change)",
+  "isolation_scan.py: scan only optimizer-visible text of generator_calls.jsonl (each record's `response`); the first scan counted 1 'test id' token hit that was a trial_seed metadata value (4-digit number in trial_seeds), never shown to an LLM. Raw first scan kept at runs/ace/smoke_s0/isolation_scan.v1_raw.json; rescan = isolation_scan.json"
+ ],
+ "filter_probe_glm53": {
+  "file": "runs/ace/smoke_s0/filter_probe.json",
+  "result": "upstream prompts (GENERATOR, REFLECTOR_NO_GT, CURATOR_NO_GT, 2 reps each): 6/6 finish_reason=stop, 0 content_filter, 0 empty, 6/6 JSON ok; patched: same",
+  "conclusion": "GLM-5.3 on Curve Bender does NOT need the content-filter fix; it is applied anyway (issue \u00a77.8) so all ACE searches use one prompt set"
+ },
+ "smoke": {
+  "run_dir": "runs/ace/smoke_s0",
+  "lsf_job": 1926782,
+  "host": "cccxc715",
+  "rc": 0
+ }
+}

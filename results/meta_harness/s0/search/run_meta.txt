@@ -1,0 +1,8 @@
+WARMUP {"n": 10, "wall_s": 875.8, "status": ["HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError", "HTTPError"], "latency_s": [836.9, 837.9, 849.6, 855.6, 867.6, 868.0, 870.0, 872.1, 874.0, 875.8]}
+host=cccxc508 job=1952303 arm=meta_harness seed=0 R=2160 conc=10 iters= propose_timeout=2400 start=2026-10-22T07:01:20Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+arm_sha256=625963bc13f05cf34915c3596f65df10199f6240c5d96376809883dc6dc3e9d4 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+upstream=8123ccabe2b19fa1123090b2e5f1bacc20963ce8 claude_wrapper_sha256=5ff005d6c1d2f8500b643f71432a9649fc425503f7fee2183df858a95b33de3e
+helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea skill_in_sha256=7361a683dcd5bde88b0dd9869eb18c5ad1eeff0967bc9060464fe37372b4127d
+META_HARNESS_RC=0
+end=2026-10-25T03:35:41Z

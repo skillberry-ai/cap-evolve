@@ -1,0 +1,58 @@
+{
+ "arm": "trace2skill",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.5 (Trace2Skill)",
+ "upstream": "Qwen-Applications/Trace2Skill @ 3d0b52a140f002a512930252b613c49048f7d5ac (competitors/trace2skill, git status clean; launcher records upstream_dirty in run_meta.txt)",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D1-rollout",
+   "what": "The agent rollout is the common exp895 rollout (arms/common/rollout.py CommonRollout.evaluate, k=3 inside the call, split tagged). Upstream's own agent runner (run_spreadsheetbench.py / spreadsheet_agent/) and its evaluator are not used. Each common-rollout trial transcript is written as an upstream-format markdown agent log (pool_logs/seed_t<j>/exp895_common_rollout_<id>_<SUCCEED|FAILED>.md: '# Chat History' header, '## [i] ROLE' turns, '## RESULT' trailer) so upstream's strip_log_metadata() and analyst prompts apply unchanged. Execution results (user turns after the task) are wrapped as 'Observation:' fenced blocks, as upstream's logger writes them.",
+   "reason": "Issue \u00a77 general rule: replace only the agent rollout; same agent, scorer, R counter and helper gate for every arm."
+  },
+  {
+   "id": "D2-analyst-llm-only",
+   "what": "Analyst = upstream's LLM-only, gold-free variant (analysis/run_error_analysis_llm.py, analysis/run_success_analysis_llm.py; one chat completion per log, no tools, no files), NOT the paper's ground-truth ReAct analyst (analysis/run_error_analysis.py / error_analysis_agent.py), which reads the gold workbook.",
+   "reason": "Issue \u00a77.5 and \u00a70.2: the ReAct analyst reads gold. This WEAKENS the baseline relative to the paper and is reported as such."
+  },
+  {
+   "id": "D3-quick-validate-standin",
+   "what": "arms/trace2skill/skill-creator/scripts/quick_validate.py: a minimal stand-in for skills/skill-creator/scripts/quick_validate.py, which upstream calls (skill_evolving_agent.py QUICK_VALIDATE_SCRIPT, resolved against the CWD) but does not ship. It implements exactly the 'Valid Skill Format' rules from upstream's own verification_system_prompt.txt. It is copied into <run>/work/skills/skill-creator/scripts/ and the evolver CLIs run with CWD=<run>/work.",
+   "reason": "Issue \u00a77.5: 'Add a minimal quick_validate.py stand-in if the repo still lacks it.' It does at this pin."
+  },
+  {
+   "id": "D4-surface-contract",
+   "what": "t2s_evolve.py runs the upstream evolver CLIs (skill_evolver.run_parallel_skill_evolution / run_parallel_combined_skill_evolution) unmodified, but after each ParallelSkillEvolver / CombinedParallelSkillEvolver __init__ it inserts one section into its MAP, MAP-from-patterns and MERGE system prompts, just before '## Output Format': exp895/arms/common/SURFACE_CONTRACT.md verbatim (incl. its last paragraph 'Prefer deterministic helpers for procedural failures') plus a short note mapping the skill folder onto the surfaces (SKILL.md -> system prompt, 6,000-char cap, references/script_<m>.md -> scripts/<m>.py). The final prompts are dumped per run to evolve_*/proposer_system_prompts.json.",
+   "reason": "Issue \u00a74.1/\u00a76: every arm's proposer gets the same surface contract and the 'prefer deterministic helpers' note. Upstream's native skill format has only SKILL.md + references/*.md, so the note tells it how to produce a helper script in that native form (issue \u00a77: 'closest native form')."
+  },
+  {
+   "id": "D5-export",
+   "what": "Evolved folder -> candidate dir (export() in trace2skill_arm.py): references/script_<m>.md with a ```python block -> skills/spreadsheet-helpers/scripts/<m>.py (the SKILL.md link is rewritten to the import name); every other references/*.md is inlined at the end of SKILL.md under '## Reference: references/<name>'. prompt.md and task_template.md are the seed bytes. The link rewrite replaces the backticked form `references/<f>` before the bare form, so the result has no double backticks (fixed 2026-10-21 15:12 after smoke_s0b exported with doubled backticks; scripts were unaffected; verified offline on smoke_s0b's evolved folders).",
+   "reason": "Issue \u00a77.5: 'references inlined into SKILL.md and any code into scripts/'; the adapter only loads SKILL.md + scripts/*.py, so un-inlined references would never reach the agent."
+  },
+  {
+   "id": "D6-prompt-md-not-edited",
+   "what": "prompt.md is not edited by this arm (frozen at the seed); task_template.md unchanged.",
+   "reason": "Upstream's evolver edits only the skill folder (SKILL.md + references/); it has no prompt-editing role. Issue \u00a77.5 says prompt.md 'may also be patched' (optional). The system-prompt surface is still reachable, because SKILL.md is appended to the agent's system prompt. Recorded so the surface reduction is not silent."
+  },
+  {
+   "id": "D7-models-and-settings",
+   "what": "All GLM roles (error analyst, success analyst, MAP/MERGE/translation/verification editors) use GLM-5.3 served id rits/zai-org/glm-5-3 via the gateway's OpenAI path (http://127.0.0.1:4115/t/exp895-trace2skill-s<seed>:optimizer/v1), temperature 0.6, max_tokens 16000, seed=<search seed> in the generation config; CLI: --batch-size 1, --merge-batch-size 5, --patch-pipeline json, --max-workers $WORKERS (default 8, the arm's GLM cap in caps.json). Error-skill uses --prompt generic.",
+   "reason": "Issue \u00a77.5 settings; the served id differs in spelling from the issue's hosted_vllm/zai-org/GLM-5.3 (decisions.md 2026-10-20, same model)."
+  },
+  {
+   "id": "D8-selection-and-budget",
+   "what": "One pass: pool = seed on train x k=3 (official train 80 -> 240 rollouts); seed, error-skill, combined each on val x 3 (official val 40 -> 120 each, 360 total). A candidate whose exported tree is byte-identical to the seed is not re-evaluated (it IS the seed, already scored). Champion = best non-seed by val mean only if STRICTLY greater than the seed's val mean; ties keep the seed. The seed-on-val evaluation runs concurrently with analysis/evolution (it cannot influence them; the optimizer never sees val). Trials still infra-errored after the common retries (TaskResult.infra) are excluded from the means and from the pool (missing, not 0). After selection, a probe evaluation sized one task past the remaining budget must raise BudgetStop and leave budget_state.json and rollouts.jsonl unchanged (budget_probe in run_summary.json).",
+   "reason": "Issue \u00a77.5 one-pass method; \u00a70.3 infra handling. The method cannot use more than ~600 of R; actual use is reported as rollouts_used."
+  },
+  {
+   "id": "D9-analyst-sortkey-fix",
+   "what": "t2s_analyse.py runs upstream's run_error_analysis_llm.main() / run_success_analysis_llm.main() unmodified except that find_logs_repeat() is replaced at runtime by a copy whose only change is the sort key: sorted(os.scandir(logs_dir), key=lambda e: e.name) instead of sorted(os.scandir(logs_dir)).",
+   "reason": "Upstream bug: os.DirEntry has no ordering, so sorted() raises TypeError as soon as logs_dir holds >= 2 entries, i.e. --repeat k (k>1, the multi-trial pool) can never run. Observed in smoke 1 (runs/trace2skill/smoke_s0/analysis_error.log, analysis_success.log: TypeError at run_*_analysis_llm.py:141/143), which therefore made 0 GLM calls and produced seed-identical candidates. Name order is the order upstream evidently intends (it then sorts filenames)."
+  },
+  {
+   "id": "D10-pool-log-dirs",
+   "what": "Pool trial directories are named seed_t0, seed_t1, seed_t2 (trial index), so upstream's composite ids are <task>_seed_t<j>. The upstream README layout is one dir per run seed (seed_<N>).",
+   "reason": "k=3 trials inside one common evaluation call (issue \u00a77) instead of 3 separate upstream runs; upstream's --repeat discovery only requires the 'seed_' prefix."
+  }
+ ]
+}

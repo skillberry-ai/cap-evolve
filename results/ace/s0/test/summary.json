@@ -1,0 +1,20 @@
+{
+ "arm": "ace",
+ "search_seed": 0,
+ "inert_champion": false,
+ "champion_test_mean": 0.6214285714285714,
+ "seed_test_mean": 0.6059523809523809,
+ "paired_delta": 0.015476190476190478,
+ "paired_se_cr1": 0.022890502871483115,
+ "ci95": [
+  -0.02957231917488829,
+  0.060524700127269244
+ ],
+ "n_tasks_paired": 280,
+ "missing_tasks": {
+  "champion": 0,
+  "seed": 0
+ },
+ "infra_missing_trials": 0,
+ "candidate_error_trials": 0
+}

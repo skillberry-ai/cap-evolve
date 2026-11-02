@@ -1,0 +1,20 @@
+{
+ "arm": "skillopt",
+ "search_seed": 0,
+ "inert_champion": false,
+ "champion_test_mean": 0.7451690821256038,
+ "seed_test_mean": 0.6461352657004831,
+ "paired_delta": 0.0982905982905983,
+ "paired_se_cr1": 0.023129102454593403,
+ "ci95": [
+  0.052772524659958485,
+  0.1438086719212381
+ ],
+ "n_tasks_paired": 273,
+ "missing_tasks": {
+  "champion": 4,
+  "seed": 4
+ },
+ "infra_missing_trials": 64,
+ "candidate_error_trials": 0
+}

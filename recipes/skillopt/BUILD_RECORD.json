@@ -1,0 +1,106 @@
+{
+ "arm": "skillopt",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.3",
+ "written": "2026-10-21",
+ "upstream": {
+  "repo": "microsoft/SkillOpt",
+  "commit": "79124b37e9a6371e13b753f8bcd7adb1e493ade1",
+  "clone": "exp895/competitors/skillopt (imported from the clone via sys.path; not pip-installed)",
+  "files_changed": [],
+  "check": "launcher writes skillopt_sha and skillopt_dirty (= `git status --porcelain --untracked-files=no | wc -l`) into run_meta.txt; smoke run_meta.txt: skillopt_sha=79124b37e9a6371e13b753f8bcd7adb1e493ade1 skillopt_dirty=0",
+  "runtime_monkeypatches": [
+   "skillopt.model.openai_compatible_backend._chat_messages_impl wrapped: logs every optimizer call to optimizer_transcript.jsonl (D9) and waits out optimizer infra outages (D12); successful calls unchanged"
+  ],
+  "subclassed": "skillopt.envs.spreadsheetbench.adapter.SpreadsheetBenchAdapter -> Exp895SkillOptAdapter: rollout() replaced; _env_name forced to 'spreadsheetbench'; get_error/success_minibatch_prompt = upstream + SURFACE_CONTRACT.md + pack note"
+ },
+ "port_files": {
+  "skillopt_exp895.py": "the port: config via upstream scripts/train.py, ReflACTTrainer(cfg, Exp895SkillOptAdapter).train(), champion + run_summary.json",
+  "skillopt_pack.py": "pack/unpack of the candidate dir <-> one text with === FILE: <path> === markers; damaged doc -> stub refused by the common adapter (0, no model call, debited); self-check run by the launcher",
+  "make_split.py": "SkillOpt split_dir (train 80 / val 40 official; test = 1 train-id stub) + test-id guard (counts only)",
+  "scan_isolation.py": "\u00a74.1 scan of optimizer_transcript.jsonl and skillopt_out/** for gold paths and TEST ids (counts only) with a positive control",
+  "lsf_skillopt_search.sh": "launcher: SEED, R, NAME [, CONC, TRAIN_IDS]; node_env, gateways, warm-up, run_meta.txt, refuse-overwrite, test-id guard, isolation scan",
+  "deviations_skillopt.json": "every difference from upstream, with reasons"
+ },
+ "common_layer": {
+  "rollout.py": "arms/common/rollout.py (sha256 recorded per run in run_meta.txt as rollout_sha256)",
+  "SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651",
+  "uses": "CommonRollout.evaluate(cand, ids, k=3, candidate_id=..., split='train'|'val'); TaskResult.trials/.trial_seeds/.feedback/.errors/.infra/.traces"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2, packed into seed_packed.md; the launcher's pack self-check asserts the unpacked tree is byte-identical to the seed (tree_digest)",
+ "packages_installed": [],
+ "packages_note": "SkillOpt's runtime deps already in exp895/venv: openai 3.35.1, pyyaml 6.0.3, numpy 2.5.4, openpyxl 3.1.5, json_repair 0.64.1, tiktoken 0.14.0, httpx 0.28.1. azure-identity/azure-core (pyproject deps) are NOT installed: they are imported lazily only on the azure_openai backend path, which this arm never takes.",
+ "data": {
+  "optimizer_sees": "train only (official train 80): per step a batch of 6 train tasks x 3 trials -> up to 18 trajectories in SkillOpt minibatches of 8 (agent transcript capped at 20k chars + gold-safe scorer feedback + target system/user prompts); end of epoch >=2: slow-update and meta-skill longitudinal pairs on 20 sampled train tasks (prev vs current skill). Also the step buffer: failure patterns and rejected edits with gate score before/after (a val aggregate).",
+  "selects_on": "val 40 (official val): SkillOpt's selection gate (gate_metric=hard, pooled mean over the 3 trial rows per task, sel_cache keyed by skill hash); champion = best_skill.md",
+  "aggregate_feedback_to_optimizer_from_val": "the gate scores of rejected steps appear in the step buffer (upstream behaviour); no val trajectories",
+  "test": "never loaded: SkillOpt's own test/items.json is not opened; the split's test dir is a 1-item TRAIN-id stub; eval_test=false; the official test list is read only to assert zero overlap"
+ },
+ "settings": {
+  "config": "configs/spreadsheetbench/default.yaml (_base_: configs/_base_/default.yaml)",
+  "overrides": {
+   "num_epochs": 100,
+   "batch_size": 6,
+   "eval_test": false,
+   "sel_env_num": 0,
+   "gate_metric": "hard",
+   "model.backend": "openai_compatible",
+   "optimizer_backend": "openai_compatible",
+   "target_backend": "openai_compatible (never called)",
+   "optimizer_model": "rits/zai-org/glm-5-3",
+   "split_mode": "split_dir",
+   "skill_init": "<run>/seed_packed.md",
+   "seed": "<search seed>"
+  },
+  "from_yaml": {
+   "minibatch_size": 8,
+   "learning_rate(edit_budget)": 4,
+   "min_learning_rate": 2,
+   "lr_scheduler": "cosine",
+   "use_slow_update": true,
+   "slow_update_samples": 20,
+   "use_meta_skill": true,
+   "skill_update_mode": "patch",
+   "use_gate": true,
+   "accumulation": 1,
+   "merge_batch_size": 8
+  },
+  "optimizer_env": {
+   "OPTIMIZER_OPENAI_COMPATIBLE_TEMPERATURE": "0.7",
+   "OPTIMIZER_OPENAI_COMPATIBLE_MAX_TOKENS": "16000",
+   "OPTIMIZER_OPENAI_COMPATIBLE_BASE_URL": "http://127.0.0.1:4115/t/exp895-skillopt-s<seed>:optimizer/v1",
+   "OPTIMIZER_OPENAI_COMPATIBLE_TIMEOUT_SECONDS": "1800"
+  },
+  "k": 3,
+  "R": "shared CommonRollout counter; look-ahead step / longitudinal-pair guards (deviations D8)"
+ },
+ "deviations": "deviations_skillopt.json",
+ "smoke_history": [
+  {
+   "run": "runs/skillopt/smoke_s0",
+   "job": 1919093,
+   "host": "cccxc585",
+   "rollout_sha256": "a8db0df464d39366380c1a598b1ffe4a2cf3c46d4ce28953105bf86cda5d2d62 (OLD rollout.py, before the infra-mean / trial-seed fixes)",
+   "result": "partial, killed by exact id after step 1: baseline + 1 train rollout + 1 candidate selection eval (spent 24/60), 3 GLM calls, gate reject (0.5 vs 0.5). Superseded by smoke_s0c on the current rollout.py."
+  },
+  {
+   "run": "runs/skillopt/smoke_s0c",
+   "job": 1923193,
+   "host": "cccxc585",
+   "rollout_sha256": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da",
+   "result": "killed by exact id at 21:2xZ during step-1 reflect: GLM outage (no GLM 200 for any exp895 run since 20:00:11Z); port lacked D12, so the step would have become skip_no_patches with its 6 train rollouts already charged. spent 12/60 at kill."
+  },
+  {
+   "run": "runs/skillopt/smoke_s0d",
+   "job": 1926179,
+   "host": "cccxc585",
+   "rollout_sha256": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da",
+   "port_sha256": "0619e456979b122d8b1e7f7abfc493ca193d5ad91839ebb62d61fb4ddf88abdb",
+   "result": "PASSED. RC=0, wall 11,965 s. 9 CommonRollout evals x (2 tasks x k=3) = 54 rows, all error_kind=none, 0 retries; budget_state spent 54/60, stop = BudgetStop at the slow-update guard of epoch 3 (54+12>60). 3 optimizer steps, 3 candidates gated on val (all rejected 0.5 vs 0.5; champion = seed, byte-identical). Helper gate passed 3 trees incl. a new skills/spreadsheet-helpers/scripts/excel_refs.py. 12 GLM calls (all 200, prompt_total 138,131, completion 11,965). Epoch-2 slow update + meta skill ran (meta skill reused the slow-update pairs, no extra rollouts). Isolation scan: transcript 0 gold / 0 test ids (control 152); skillopt_out 0 gold, 2 bare-number test-id hits = trial_seed value 3002 in steps/step_0002/rollout/results.jsonl (0 in id context)."
+  }
+ ],
+ "budget_shape_estimate": {
+  "note": "ESTIMATE from the D8 guards and upstream's epoch plan, not measured: seed baseline 40x3=120; epoch 1 = ceil(80/6)=14 steps (13 x (6+40)x3 + (2+40)x3); slow update / meta skill are a placeholder / skip in epoch 1",
+  "R2160": "14 steps = 14 candidates gated on val, 2,040 spent; epoch-2 step 1 needs 138 > 120 left -> BudgetStop. Slow update and meta skill never run with content at R=2160 (upstream runs them only from epoch 2).",
+  "R1080": "6 steps, BudgetStop before step 7 at 948 spent"
+ }
+}

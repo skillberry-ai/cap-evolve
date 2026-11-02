@@ -1,0 +1,33 @@
+{
+ "arm": "trace2skill",
+ "search_seed": 1,
+ "champion_src": "/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/runs/trace2skill/search_s1/champion",
+ "champion_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "b56e3879f3cd0e4f748a70fbce88ec8f2873117784d4d4c1df7c9662246a8745",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "skills/spreadsheet-helpers/scripts/cellvalues.py": "5e8ea9c3708a9a7b97ffb42c093a75b77edd5d99d7f04d344a67182ad57f7d9a",
+  "skills/spreadsheet-helpers/scripts/count_by_key.py": "8669e97e82aed41c8b8a69a80cc2163672ca6408da05570981662ed4512aabd1",
+  "skills/spreadsheet-helpers/scripts/date_window.py": "cfdce1269beba74d123133d2535b6a7ebf4afcad36c3b67b9a3db75fbc73fb23",
+  "skills/spreadsheet-helpers/scripts/inspect_sheet.py": "ce7809c1a58b642912f5ecc4c0273ffd4ebe3b2b0d343c1759d144eec5046f93",
+  "skills/spreadsheet-helpers/scripts/range_tools.py": "31d5ac4bf1a32b25a8dadb3844fe00f5689eb07ee26805ee37ab76072a224103",
+  "skills/spreadsheet-helpers/scripts/subsetsum.py": "244c8bc721e210bd87a4baf9c10d9ab1c684dfec77b572fcb36c9c2912655c21",
+  "skills/spreadsheet-helpers/scripts/sum_dedupe.py": "480f8170d72f11202422d6fb93422e12945981f3a91ab7536d9f8c75da4e7a54",
+  "skills/spreadsheet-helpers/scripts/time_extract.py": "fd9ace0f40fda1b2c40564ec354190e4ecf0a92f2569383c669341fba686ab3d",
+  "skills/spreadsheet-helpers/scripts/verify_output.py": "94b71952d3d2ad37a9471768ea0164ff267c89712742b54d451885c3f98dc612",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "seed_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "inert_champion": false,
+ "order_sha256": "c5d8ed3da4d137789ebdaaa06e0148f45459ede04adf60609955042a9a72bcba",
+ "n_episodes": 1680,
+ "k": 3,
+ "anchor_trials": 3,
+ "registered_at": 1792731494.4777756,
+ "analysis": "headline = mean over 280 test tasks of (champion per-task mean - same-window seed per-task mean); CR1 SE clustered by task; t interval on 279 df. Infra-missing trials are dropped, never scored 0."
+}

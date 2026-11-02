@@ -1,0 +1,11 @@
+{
+ "arm": "ace",
+ "search_seed": 1,
+ "inert_champion": false,
+ "phase": "champion_only (seed not yet run)",
+ "champion_test_mean": 0.7071428571428572,
+ "n_tasks_with_data": 280,
+ "missing_tasks": 0,
+ "infra_missing_trials": 0,
+ "candidate_error_trials": 0
+}

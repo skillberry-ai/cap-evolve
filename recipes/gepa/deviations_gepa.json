@@ -1,0 +1,58 @@
+{
+ "arm": "gepa",
+ "issue": "skillberry-ai/cap-evolve#895 §7.1 (GEPA, text-only variant)",
+ "upstream": "PyPI gepa==0.1.4 (= gepa-ai/gepa v0.1.4 @ 8b0ce6cd99a234f6b74daf37558a2ac0ce18f975; the installed package's .py sources hash-match the pinned clone's src/gepa)",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D1-rollout",
+   "what": "The agent rollout is the common exp895 rollout (arms/common/rollout.py CommonRollout.evaluate, k=3 inside the call), wrapped in a custom GEPAAdapter. GEPA's own DefaultAdapter / task LM is not used.",
+   "reason": "Issue §7 general rule and §7.1: replace only the rollout; same agent, scorer, R counter and helper gate for every arm."
+  },
+  {
+   "id": "D2-components",
+   "what": "Optimised components: prompt.md and skills/spreadsheet-helpers/SKILL.md (two GEPA text components, round_robin). task_template.md and skills/*/scripts/ are frozen at the v2 seed bytes.",
+   "reason": "Issue §7.1 table: GEPA = prompt.md + SKILL.md text, no scripts (text-only reflection). Scripts and task_template.md are the GEPA-full arm's surface. This is a deliberate, issue-specified surface reduction for this arm, not a silent drop."
+  },
+  {
+   "id": "D3-reflection-prompt",
+   "what": "reflection_prompt_template (an upstream optimize() parameter) = GEPA's own InstructionProposalSignature.default_prompt_template byte-identical, followed by exp895/arms/common/SURFACE_CONTRACT.md verbatim (incl. its last paragraph 'Prefer deterministic helpers for procedural failures') and a two-sentence note naming the file being edited, saying scripts cannot be added in this arm, and asking to keep SKILL.md's YAML frontmatter.",
+   "reason": "Issue §4.1/§6: every arm's proposer gets the same surface contract and 'prefer deterministic helpers' note. The file note prevents the text-only optimizer from referencing helper scripts that cannot exist in this arm."
+  },
+  {
+   "id": "D4-reflective-dataset",
+   "what": "make_reflective_dataset: one record per task (padded minibatch repeats collapsed) = Inputs {instruction, instruction_type, answer_position}; Generated Outputs = the lowest-scoring trial's transcript, system message dropped (it is the candidate), capped at 20,000 chars (head 6,000 + tail); Feedback = k-trial mean, per-trial scores, the scorer's gold-safe feedback for that trial, and any candidate-caused error.",
+   "reason": "Issue §7.1 verbatim. The scorer's feedback is the adapter's _build_feedback (counts/types/ranges, never gold values)."
+  },
+  {
+   "id": "D5-budget",
+   "what": "max_metric_calls = 10**12 (effectively unbounded). R is enforced on the shared counter: CommonRollout raises BudgetStop before any evaluation that would overshoot; GEPA re-raises it (raise_on_exception=True, the upstream default) and the arm reloads GEPA's last saved state (gepa_state.bin) to report the champion. An extra stop_callback stops cleanly when fewer than k=3 rollouts remain. EvaluationBatch.num_metric_calls = the counted rollouts (tasks x 3), so GEPA's own counter is in rollouts, the issue's unit.",
+   "reason": "Issue §7.1: 'Pass max_metric_calls as a very large number, and enforce R on the real counter'."
+  },
+  {
+   "id": "D6-infra-missing",
+   "what": "A task whose every trial stays infra-errored after CommonRollout's own retries is re-evaluated (up to 2 more calls, each refunded if still infra); if it is still missing the evaluation raises rather than scoring 0. Trials still infra while others are clean are dropped from that task's mean.",
+   "reason": "Issue §0.3: infra errors are never scored as 0."
+  },
+  {
+   "id": "D7-candidate-dir",
+   "what": "Each GEPA candidate dict is materialised as a directory = byte copy of seed_capability_v2 with the two component files overwritten (content-hashed name cand_<sha12>; the seed itself is 'seed'). index.jsonl records each component's sha256.",
+   "reason": "CommonRollout evaluates candidate directories (the v2 layout)."
+  },
+  {
+   "id": "D8-glm-id",
+   "what": "Reflection LM = gepa.lm.LM('openai/rits/zai-org/glm-5-3', api_base=http://127.0.0.1:4115/t/exp895-gepa-s<seed>:optimizer/v1, max_tokens=16000, timeout=3600), temperature unset. The gateway sets reasoning_effort=low on chat/completions.",
+   "reason": "Issue §7.1 spells openai/hosted_vllm/zai-org/GLM-5.3; Curve Bender serves it as rits/zai-org/glm-5-3 (decisions.md 2026-10-20). timeout=3600 so litellm's 600 s default cannot cut a call the gateway is still retrying (gateway: 8 attempts, 180 s read timeout)."
+  },
+  {
+   "id": "D9-no-sandbox",
+   "what": "No bwrap sandbox for this arm's optimizer.",
+   "reason": "GEPA's reflection LM is a plain chat completion with no tools: it cannot read files or run commands. Everything it sees is the reflection prompt, which is logged in full (reflection_log.jsonl) and scanned for gold paths and test ids after each search (isolation_scan.py)."
+  },
+  {
+   "id": "D10-seed-param",
+   "what": "gepa.optimize(seed=<search seed>) (0/1/2), which seeds GEPA's minibatch shuffling and Pareto sampling.",
+   "reason": "Per-search-seed variation, matching the 3-seed design."
+  }
+ ]
+}

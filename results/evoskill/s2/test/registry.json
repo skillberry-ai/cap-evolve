@@ -1,0 +1,28 @@
+{
+ "arm": "evoskill",
+ "search_seed": 2,
+ "champion_src": "/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/runs/evoskill/search_s2/champion",
+ "champion_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "e41ace28de8de2aac381994eb4999288616533fbc8c3c08f16ed8e14dbb3545a",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "skills/spreadsheet-helpers/scripts/excel_lookup.py": "4059348bbe23a46ea38acb623d10bb0cbae4f7f60633d78078b96c17995e6311",
+  "skills/spreadsheet-helpers/scripts/inspect_region.py": "173220d55bad03dd492840539b0387824196360284828f3f52db1a1c9297d5db",
+  "skills/spreadsheet-helpers/scripts/verify_range.py": "4b1329cd40ea0467068b52d226e7f90065314ef7df0a43c10f5a2ebe0ae8035a",
+  "skills/spreadsheet-helpers/scripts/write_range.py": "4613639e16b0fceb2857a4c511d8a6f8a60abbf77569014b667fe7209ab2d944",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "seed_tree_sha256": {
+  "prompt.md": "efa493dd57aee05d5563e4f709d5c9e2fde1fb9fc9f71a3b5a3472a40b723c72",
+  "skills/spreadsheet-helpers/SKILL.md": "6679c3f28a9fa25ca376d7d143e32a9d8783bd41e2f6b1829de756b3893dae1f",
+  "skills/spreadsheet-helpers/scripts/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "task_template.md": "841967412770441da3ba2785e37194524133aca50a49b489bb57f8e22bb84295"
+ },
+ "inert_champion": false,
+ "order_sha256": "87fb2bee96f33eb4f6d9e9f65ee1df968faa2d0c371bb08017ba4b82e8dfd2e4",
+ "n_episodes": 1680,
+ "k": 3,
+ "anchor_trials": 3,
+ "registered_at": 1792910195.989543,
+ "analysis": "headline = mean over 280 test tasks of (champion per-task mean - same-window seed per-task mean); CR1 SE clustered by task; t interval on 279 df. Infra-missing trials are dropped, never scored 0."
+}

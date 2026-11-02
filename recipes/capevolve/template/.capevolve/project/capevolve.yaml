@@ -1,0 +1,60 @@
+# exp895 — CapEvolve arm (issue skillberry-ai/cap-evolve#895, §6). Hill-climb, stock paired gate, k_se = 0.5.
+# Every key below was checked against cap-evolve @ 520ecbe8b (+ #903); see exp895/decisions.md "Spec-key audit".
+# Kept flat where possible so the zero-dependency reader can parse it.
+
+# --- what to optimize: prompt.md + task_template.md + skills/ (§4.1) --------------------------------------
+capabilities: [system-prompt, skill-package]
+capability_path: seed_capability_v2      # byte-identical copy of templates/adapters/spreadsheetbench/seed_capability_v2
+actions: [edit]                          # documentation only: not read by this SHA
+
+# --- who proposes edits: Claude Code on GLM-5.3, inside the exp895 bwrap sandbox ---------------------------
+optimizer_skill: claude-code             # `claude` resolves to exp895/tools/sandbox/claude (first on PATH)
+optimizer_model: rits/zai-org/glm-5-3    # the id Curve Bender serves (issue spells it hosted_vllm/zai-org/GLM-5.3)
+optimizer_max_turns: 80
+optimizer_usd_per_iter: 0                # off: the 20M-token runaway guard lives in the gateway
+optimizer_instructions_file: /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/arms/capevolve/template/.capevolve/project/optimizer/INSTRUCTIONS.md
+memory_skill: md-files
+
+# --- the agent under test ------------------------------------------------------------------------------------
+# target_model only sets the optimizer's reader brief. The agent model itself is MODEL (env) in the adapter;
+# the launcher checks the two agree.
+target_model: google/gemma-4-31B-it
+
+# --- data and splits (§3): train = val = the official train ∪ val (120 ids), no test -----------------------
+dataset_source: adapter
+split_ids_file: split_ids.json           # {"train": 120, "val": same 120, "test": []}; never holds a test id
+split_seed: 0                            # overridden per search seed by the launcher
+num_trials: 3
+errored_trial_policy: fail               # candidate-attributed errors score 0; infra errors stay missing (retryable)
+
+# --- search: V3 hill-climb with the stock paired gate ----------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+store: copy
+gate_mode: paired
+gate_k_se: 0.5
+gate_footprint: false                    # the stock gate on the raw per-task vector (default footprint gating zeroes Δ off-footprint)
+
+# --- budget (§5): R counted rollouts, enforced BEFORE dispatch -------------------------------------------
+max_iterations: 1000
+stall: 0
+max_metric_calls: 2160                   # = R; overridden for smoke runs
+budget_reserve: true                     # hard counter: refuse an eval that would overshoot R (default only checks between iterations)
+finalize: false                          # the test split is scored only in the common final window (§9)
+
+# --- helper scripts (§4.1) -----------------------------------------------------------------------------------
+# helpers.enabled exports CAPEVOLVE_HELPERS=1, which the adapter reads. Hill-climb does not run the lint/smoke
+# itself; the common pre-rollout gate in the shared rollout layer does, for every arm (decisions.md).
+surface:
+  executable_dirs: ["skills/*/scripts"]
+helpers:
+  enabled: true
+  lint: true
+  smoke: true
+  suffixes: [".py"]
+  max_file_bytes: 65536
+  max_total_bytes: 262144
+  smoke_timeout: 20
+  ids_file: /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/arms/capevolve/template/.capevolve/project/all_task_ids.txt
+  deny_roots: [/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/exp895/data, /dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-spread-worktrees/sbv400-main/third_party/spreadsheetbench/evaluation]

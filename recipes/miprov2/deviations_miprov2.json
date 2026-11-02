@@ -1,0 +1,83 @@
+{
+ "arm": "miprov2",
+ "issue": "skillberry-ai/cap-evolve#895 §7.2 (MIPROv2, DSPy)",
+ "upstream": "PyPI dspy==3.4.0 (optuna 5.0.0, litellm 1.82.6), in exp895/venv; every installed .py of the three packages matches its wheel RECORD sha256 (checked 2026-10-21: dspy 249 files, optuna 220, litellm 1707, 0 mismatches)",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D1-rollout",
+   "what": "The program's forward() never calls a DSPy LM. It renders the program (both modules' instructions + the agent module's demos) into a v2-seed candidate directory and scores the one task through arms/common/rollout.py CommonRollout.evaluate(candidate_dir, [task_id], k=3, split=...), returning the k-trial mean. The DSPy task LM is a sentinel (NoTaskLM) that stops the search if anything ever calls it.",
+   "reason": "Issue §7 general rule and §7.2: replace only the rollout; same agent, scorer, R counter and helper gate for every arm."
+  },
+  {
+   "id": "D2-components",
+   "what": "Two instruction modules: `agent` (instructions = prompt.md; its demos are appended to prompt.md under '## Worked examples') and `skill` (instructions = skills/spreadsheet-helpers/SKILL.md). task_template.md and skills/*/scripts/ stay byte-identical to the v2 seed. Unchanged instructions render as the seed's exact bytes (the seed program == the v2 seed, sha256-checked).",
+   "reason": "Issue §7.2 table: 'instruction + demos into prompt.md; SKILL.md as a second instruction module'; 'task_template.md and the scripts are not optimized (MIPRO optimizes instructions and demos only; record it)'. Recorded here as the issue asks: this arm has no native way to produce scripts or edit the template."
+  },
+  {
+   "id": "D3-demos",
+   "what": "A bootstrapped demo = the task's instruction, instruction_type and answer_position + the final solution code of the first measured trial (the last assistant code block that saves a workbook, recovered from TaskResult.traces), with its container paths replaced by the placeholders SPREADSHEET_PATH / OUTPUT_PATH and capped at 8,000 characters. Only the `agent` module's demos are rendered (into prompt.md); the `skill` module's demos are not rendered anywhere (SKILL.md is an instruction-only module).",
+   "reason": "§7.2: demos are 'task + final solution code'. The paths of another task's files would point the agent at the wrong workbook; the cap bounds the system prompt. A demo carries no gold: it is the agent's own code on a task it passed 3/3."
+  },
+  {
+   "id": "D4-metric",
+   "what": "metric(example, pred, trace) = the k=3 mean hard score (pred.score). With a trace (BootstrapFewShot), it returns 1.0 only when all 3 trials were measured and passed, else 0.0; with metric_threshold=1.0 a demo is admitted only on a 3/3 pass. During bootstrapping forward() appends (agent predictor, inputs, Prediction(solution_code)) to dspy.settings.trace, since it never calls a Predict.",
+   "reason": "§7.2 'Admit a demo only if all 3 trials pass (metric_threshold = 1.0)'. DSPy builds demos from the trace of predictor calls, which this forward() does not make."
+  },
+  {
+   "id": "D5-budget",
+   "what": "R is enforced on the shared CommonRollout counter. Before every DSPy Evaluate a callback computes the new rollouts it needs (uncached tasks x 3); if they do not fit, every forward() of that Evaluate raises MiproBudgetStop before any rollout (all-or-nothing, so a partial minibatch is never scored). CommonRollout's own BudgetStop is converted to MiproBudgetStop. num_trials = 10**6 (effectively unbounded), so R stops the search. Bootstrapping may spend at most 20% of R: past the cap a bootstrap forward returns an unscored 'skipped' prediction (no rollout, no demo). The champion is chosen from the arm's own record of full-val evaluations (MIPRO's compile() does not return when stopped).",
+   "reason": "§7.2: 'num_trials effectively unbounded; R stops it, through a hard stop in the wrapper'; 'Limit bootstrapping to 20% of R'; §5 'Raise BudgetStop before an evaluation that would overshoot'."
+  },
+  {
+   "id": "D6-infra-not-swallowed",
+   "what": "DSPy's Evaluate/ParallelExecutor, eval_candidate_program, BootstrapFewShot and optuna's _run_trial all catch `Exception` (Evaluate scores it failure_score=0.0; eval_candidate_program returns score 0.0). So every stop (budget, persistent infra outage, wrapper bug, task-LM call) is raised as a BaseException subclass (ArmStop), which none of them catch: it propagates out of MIPROv2.compile and ends the search. Infra handling: CommonRollout retries each infra trial up to 3x with fresh seeds and refunds what stays infra; a trial still infra is dropped from the task mean (TaskResult.valid); a task whose every trial stays infra is re-evaluated twice more, then after waits of 300/600/900 s; if still missing the search stops with InfraOutage. No infra-missing task is ever scored 0. Verified offline by test_miprov2_arm.py with the real MIPROv2/Evaluate/optuna code.",
+   "reason": "§7.2 'DSPy's Evaluate swallows exceptions, so check that infra errors are raised and retried, not scored'; §0.3."
+  },
+  {
+   "id": "D7-seed-first-and-cache",
+   "what": "The seed is scored on the full val set before compile(). Task scores are cached per (candidate content hash, task, split) with in-flight de-duplication, so MIPRO's default-program evaluation reuses the seed score (0 new rollouts) and re-evaluating identical text on the same task (a repeated minibatch, a full eval of an already minibatch-scored task, DSPy's straggler re-submission) spends no rollouts. The champion is the best full-val candidate; the seed (first record) wins ties (strict >, as in MIPRO).",
+   "reason": "§7.2 'Score the seed first, and reuse that score for the default-program evaluation'; 'The champion is the best full-val candidate; the seed wins ties'. The cache is the analogue of DSPy's own LM response cache (on by default upstream) for a forward() that makes no LM call; k=3 stays inside each evaluation."
+  },
+  {
+   "id": "D8-surface-contract",
+   "what": "The program class docstring contains exp895/arms/common/SURFACE_CONTRACT.md verbatim (asserted at start-up), including its last paragraph 'Prefer deterministic helpers for procedural failures', plus a short description of the two modules and a note that only prompt.md and SKILL.md are proposed in this arm and no helper scripts exist. MIPRO's program-aware proposer (GroundedProposer, program_aware_proposer=True, the upstream default) reads this source via get_dspy_source_code and passes it to DescribeProgram, DescribeModule and GenerateSingleModuleInstruction as program_code. No DSPy prompt template is changed.",
+   "reason": "Issue §4.1/§6: every arm's proposer gets the same surface contract and 'prefer deterministic helpers' note. Program source is MIPRO's native channel for program context."
+  },
+  {
+   "id": "D9-proposer-inputs",
+   "what": "MIPRO's dataset summary and the proposer's view of examples see the trainset Examples, whose fields are task_id, instruction, instruction_type and answer_position only (no gold, no answer values, no file paths). Bootstrapped demos add the agent's own solution code.",
+   "reason": "The proposer must never see gold (§4.1)."
+  },
+  {
+   "id": "D10-glm-id",
+   "what": "Prompt/instruction LM = dspy.LM('openai/rits/zai-org/glm-5-3', api_base=http://127.0.0.1:4115/t/exp895-miprov2-s<seed>:optimizer/v1, api_key='tag-not-a-secret', max_tokens=16000, timeout=3600). Temperature is MIPRO's own (init_temperature=1.0 for proposals, 1.0 for the dataset summarizer); the gateway sets reasoning_effort=low on chat/completions. DSPy's response cache lives in the run dir (DSPY_CACHEDIR=<run>/dspy_cache). A one-call preflight checks the GLM route before the search, because DSPy's proposer silently drops the dataset summary and program description when their LM calls fail.",
+   "reason": "Issue §7.2 spells openai/hosted_vllm/zai-org/GLM-5.3; Curve Bender serves it as rits/zai-org/glm-5-3 (decisions.md 2026-10-20). max_tokens=16000 as in the GEPA arm; timeout=3600 so litellm's default cannot cut a call the gateway is still retrying."
+  },
+  {
+   "id": "D11-num-threads",
+   "what": "num_threads = CONC // 3 (2 at the smoke's CONC=6), so DSPy runs CONC/3 tasks at once and each task's 3 trials run in CommonRollout's pool (SPREADSHEETBENCH_CONCURRENCY=CONC).",
+   "reason": "Issue §7.2: num_threads from §10; this keeps the number of live agent containers at CONC, the same per-arm concurrency as the other arms."
+  },
+  {
+   "id": "D12-no-sandbox",
+   "what": "No bwrap sandbox for this arm's optimizer.",
+   "reason": "MIPRO's prompt model is a plain chat completion with no tools; it cannot read files or run commands. Everything it sees and says is logged (prompt_lm_log.jsonl, via a DSPy callback) and scanned for gold paths and test ids after each search (isolation_scan.py)."
+  },
+  {
+   "id": "D13-seed-param",
+   "what": "MIPROv2(seed=<search seed>) (0/1/2): seeds MIPRO's rng (demo-set shuffling, minibatch sampling, tip choice, rollout ids) and optuna's TPESampler.",
+   "reason": "Per-search-seed variation, matching the 3-seed design."
+  },
+  {
+   "id": "D14-stops",
+   "what": "Additional stops, all ArmStop: SearchConverged after 300 consecutive DSPy Evaluates that need no new rollout (optuna only re-sampling already-scored candidates; reachable only when R does not bind); ArmFatal when CommonRollout's eval_call would reach 1000 (rollout.py's trial-seed formula is unique only below that; this arm makes one evaluation call per (candidate, task), so R=2160 needs at most 720).",
+   "reason": "Prevent an infinite loop and trial-seed collisions; neither changes MIPRO's search."
+  },
+  {
+   "id": "D15-smoke-only",
+   "what": "Smoke run only: train = val = {10452, 118-50}, minibatch_size = 2 (the issue's 8 exceeds a 2-task valset, which MIPRO refuses), R = 30.",
+   "reason": "The task's smoke spec (2 train tasks, k=3, smallest R that allows one optimizer step + one candidate evaluation). Full searches use official train 80 / val 40 and minibatch_size 8."
+  }
+ ]
+}

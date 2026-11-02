@@ -1,0 +1,20 @@
+{
+ "arm": "gepa",
+ "search_seed": 0,
+ "inert_champion": false,
+ "champion_test_mean": 0.7702380952380952,
+ "seed_test_mean": 0.5916666666666667,
+ "paired_delta": 0.17857142857142858,
+ "paired_se_cr1": 0.02311453683472062,
+ "ci95": [
+  0.1330820200806984,
+  0.22406083706215876
+ ],
+ "n_tasks_paired": 280,
+ "missing_tasks": {
+  "champion": 0,
+  "seed": 0
+ },
+ "infra_missing_trials": 0,
+ "candidate_error_trials": 0
+}

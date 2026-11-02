@@ -1,0 +1,106 @@
+{
+ "arm": "trace2skill",
+ "seed": 1,
+ "R": 2160,
+ "k": 3,
+ "n_train": 80,
+ "n_val": 40,
+ "seed_tree_sha256": "43259084c6f01aa5d5a63e7cb15882c10f7039785fe5932f3d40801699d6c6ac",
+ "iterations": 1,
+ "stop_reason": "completed",
+ "pool": {
+  "SUCCEED": 164,
+  "FAILED": 76,
+  "missing_infra": 0
+ },
+ "records": {
+  "error": 76,
+  "success": 164
+ },
+ "candidates": {
+  "error_skill": {
+   "scripts": [
+    "cell_context.py",
+    "cell_values.py",
+    "cellio.py",
+    "check_written.py",
+    "extract_time.py",
+    "inspect.py",
+    "inspect_helpers.py",
+    "lookup_fill.py",
+    "profile_columns.py",
+    "range_edit.py",
+    "robust_read.py",
+    "write_cells.py"
+   ],
+   "inlined_references": [],
+   "script_refs_without_code": [],
+   "tree_sha256": "d757a8a0e68159e5c8f618c4d2e5d3697bfcb85e14785d0962d285c3b086e39c",
+   "identical_to_seed": false
+  },
+  "combined": {
+   "scripts": [
+    "cellvalues.py",
+    "count_by_key.py",
+    "date_window.py",
+    "inspect_sheet.py",
+    "range_tools.py",
+    "subsetsum.py",
+    "sum_dedupe.py",
+    "time_extract.py",
+    "verify_output.py"
+   ],
+   "inlined_references": [],
+   "script_refs_without_code": [],
+   "tree_sha256": "0e7a4114ee4ac1cd6dd18bddc19c30bcb244023b54fa35d4cdd0dc79127f55c1",
+   "identical_to_seed": false
+  }
+ },
+ "budget_probe": {
+  "verdict": "BudgetStop raised: trace2skill: evaluation of 521x3=1563 would exceed R (600/2160)",
+  "requested_rollouts": 1563,
+  "state_unchanged": true,
+  "rollout_rows_unchanged": true
+ },
+ "rollouts_used": 600,
+ "eval_calls": 4,
+ "binding_on_R": false,
+ "champion": "combined",
+ "champion_tree_sha256": "0e7a4114ee4ac1cd6dd18bddc19c30bcb244023b54fa35d4cdd0dc79127f55c1",
+ "n_candidates_evaluated": 2,
+ "rejected": 1,
+ "accepted": 1,
+ "selection": {
+  "selection_set": "val",
+  "seed_val_mean": 0.7166666666666667,
+  "candidate_val_means": {
+   "error_skill": 0.0,
+   "combined": 0.7333333333333333
+  },
+  "rule": "champion = best non-seed candidate only if its val mean > seed val mean (strict); ties keep seed",
+  "champion": "combined",
+  "champion_val_mean": 0.7333333333333333
+ },
+ "wall_s": 36509.2,
+ "cost": {
+  "optimizer": {
+   "calls": 709,
+   "ok": 709,
+   "retries": 1,
+   "prompt_total": 4214670,
+   "cached_tokens": 1490944,
+   "completion_tokens": 1010615,
+   "calls_without_usage": 0
+  },
+  "target": {
+   "calls": 5034,
+   "ok": 5015,
+   "retries": 1396,
+   "prompt_total": 42355325,
+   "cached_tokens": 0,
+   "completion_tokens": 2575304,
+   "calls_without_usage": 19
+  },
+  "note": "token counts from the gateway ledgers; $ is recomputed offline from pricing (issue \u00a72.3)"
+ }
+}

@@ -1,0 +1,78 @@
+{
+ "arm": "ace",
+ "issue": "skillberry-ai/cap-evolve#895 \u00a77.8 (ACE)",
+ "upstream": "ace-agent/ace @ 82709de050e1db6e6ef2f07bcb0393560b94992a, run from exp895/competitors/ace; no upstream file is edited (the launcher records `git status --porcelain` line count before and after: ace_clean / ace_clean_after in run_meta.txt)",
+ "upstream_files_modified": [],
+ "deviations": [
+  {
+   "id": "D1-generator",
+   "what": "ACE's Generator (one LLM call answering a question with the playbook in its prompt) is replaced by RolloutGenerator (ace_arm.py). generate(question, playbook, context, reflection) materialises the playbook as a v2-seed candidate directory and scores it ONLY through CommonRollout.evaluate(candidate_dir, [task_id], k=3, split=train|val). It makes no LLM call of its own. Its 'response' is: the k-trial scores and mean, the scorer's gold-safe feedback on the lowest-scoring trial, any candidate-caused error, that trial's final code and its transcript (system prompt dropped, <= 20,000 chars, head 6,000 + tail), ending with Finish[mean_hard_score=...; trials=...]. bullet_ids = every playbook id the agent cited (ACE's own [xxx-00000] regex) in any measured trial.",
+   "reason": "Issue \u00a77 general rule and \u00a77.8: 'The generator is replaced by the common rollout.' The response carries what \u00a77.8 says the Reflector/Curator see: gold-safe feedback, the final code, the lowest-scoring trial's transcript."
+  },
+  {
+   "id": "D2-playbook-surface",
+   "what": "The playbook is appended to the seed prompt.md under '## Playbook (ACE)', preceded by one instruction to apply relevant bullets and cite their [id]. task_template.md is never changed. Empty playbook (ACE's initial section headers only, no bullet) = the seed candidate, byte-identical (dir 'seed').",
+   "reason": "Issue \u00a77.8: 'The playbook is appended to prompt.md under \"## Playbook (ACE)\", with an instruction to cite [id] bullets.' ACE natively edits only the context, so task_template.md is not an ACE surface; recorded here rather than silently dropped."
+  },
+  {
+   "id": "D3-skill-script-bullets",
+   "what": "Skills surface (deviation, \u00a77.8): the Curator may ADD bullets whose content starts with '[skill]' or '[script]'. '[skill] <text>' bullets become the Notes list of skills/ace-playbook/SKILL.md (frontmatter name ace-playbook). '[script] <file>.py: <when to call it>\\n<python source>' bullets become skills/ace-playbook/scripts/<file>.py (importable as skills.ace_playbook.<file>) and a line in SKILL.md's Scripts list; for the same file name the newest bullet wins (ACE is ADD-only). These bullets are removed from the prompt.md playbook text (they reach the agent through SKILL.md, which the adapter appends to the system prompt). The seed's skills/spreadsheet-helpers/ is kept byte-identical. Every such candidate passes the same common helper lint + smoke gate (adapter._helper_gate_error via CAPEVOLVE_HELPERS_SPEC) before any rollout; a failing candidate scores 0 on every trial without an LLM call and is still debited. To keep ACE's one-bullet-per-line playbook invariant (parse_playbook_line, '##' section headers), the content of [skill]/[script] bullets is stored newline-escaped; this is done by wrapping ace_batch.apply_curator_operations (the upstream function is called unchanged on the escaped operations). A [script] bullet whose content does not match the format is ignored (listed in run_summary.final_playbook.unparsed_script_bullets). SKILL_BULLETS=0 runs the text-only ablation (no [skill]/[script] surface, Curator told bullets are text only).",
+   "reason": "Issue \u00a77.8: 'ACE has no native skill or code output, so the skills surface is a deviation. Let the Curator also emit bullets tagged [skill] or [script], materialized into skills/ace-playbook/SKILL.md and scripts/, which then pass the same lint and smoke test. Record it, and report results with and without that deviation if time allows.'"
+  },
+  {
+   "id": "D4-prompt-patch",
+   "what": "Prompt text, applied in memory by ace_prompts_patch.py (rebinding the constants in ace.prompts.* and ace.core.*; upstream files untouched), full diff in prompt_patch.diff (and a per-run copy runs/ace/<NAME>/prompt_patch.diff): (a) the content-filter fix in ALL six ACE prompts: 'your chain of thought / reasoning / thinking process, detailed analysis and calculations' -> 'detailed analysis and calculations' (capitalised form likewise); (b) REFLECTOR_PROMPT_NO_GT gets a short 'This experiment (SpreadsheetBench)' note (what the trace, predicted answer and feedback are) plus exp895/arms/common/SURFACE_CONTRACT.md verbatim (including its last paragraph 'Prefer deterministic helpers for procedural failures'); (c) CURATOR_PROMPT_NO_GT and CURATOR_OPERATIONS_AGGREGATION_PROMPT get a note on where bullets go ([skill]/[script] format, ADD-only, newest script wins; the reducer is also told to copy script source exactly) plus SURFACE_CONTRACT.md verbatim. Nothing else in any prompt changes. Re-check on GLM-5.3 (runs/ace/smoke_s0/filter_probe.json): the upstream phrase did NOT trigger a content filter (0/6 calls; 6/6 finish_reason=stop with valid JSON), so the fix is not needed on GLM-5.3; it is kept for consistency with \u00a77.8.",
+   "reason": "Issue \u00a77.8 prompt fix (keep the diff in ace/prompt_patch.diff), and \u00a74.1/\u00a76: every arm's proposer/reflector gets the same surface contract and 'prefer deterministic helpers' note. The [skill]/[script] format note is what makes D3 possible. Whether GLM-5.3 still needs (a) is measured by filter_probe.py (runs/ace/<NAME>/filter_probe.json); the fix is applied either way so every search uses the same prompts."
+  },
+  {
+   "id": "D5-no-gt-processor",
+   "what": "ACE's data_processor = SpreadsheetProcessor: target is always '' (no ground truth anywhere, use_ground_truth=False / no_ground_truth=True). answer_is_correct(answer) = the k-trial mean hard score is 1.0 (every measured trial passed). evaluate_accuracy = mean over tasks of the k-trial mean hard score (so val accuracy is the same per-task-mean metric every arm reports). The Reflector's environment_feedback strings are upstream's ('Predicted answer does not match/matches ground truth'); the actual gold-safe scorer feedback is inside the reasoning trace (D1).",
+   "reason": "Issue \u00a77.8 'Mode: no-GT (use_ground_truth=False).' ACE's processor contract (answer_is_correct / evaluate_accuracy) is the only place a task-specific metric goes; the SpreadsheetBench grader is the common scorer."
+  },
+  {
+   "id": "D6-llm-clients",
+   "what": "ace_batch.initialize_clients is replaced by one returning an openai.OpenAI client on the GLM gateway (base_url http://127.0.0.1:4115/t/exp895-ace-s<seed>:optimizer/v1, api_key 'tag-not-a-secret', timeout 3600 s) for reflector and curator. Model 'rits/zai-org/glm-5-3' (the served id of hosted_vllm/zai-org/GLM-5.3, decisions.md). ACE's own timed_llm_call is unchanged: temperature 0.0 (the official value), max_tokens=8000 (\u00a77.8), its own retry loop. The gateway adds reasoning_effort=low on chat/completions (decisions.md, every arm).",
+   "reason": "ACE hard-codes four providers (sambanova/together/openai/commonstack) and reads keys from .env; issue \u00a72.2 routes every arm's GLM calls through the metering gateway, which injects credentials."
+  },
+  {
+   "id": "D7-is-api-error",
+   "what": "ace_batch.py calls is_api_error(e) in Phase 1 and Phase 3, but the pinned repo defines it nowhere (any exception there would become a NameError). The port provides it in the ace_batch module namespace: True for openai.APIError (a GLM failure that outlived llm.py's own retries and the gateway's 8 attempts) and for InfraMissing (a task whose every trial stayed infra-errored after CommonRollout's retries plus 2 re-evaluations). Upstream then handles it as designed: Phase 1 excludes that sample from curation; Phase 3 rolls the playbook back. Every other exception (incl. BudgetStop) re-raises, as upstream's default continue_on_llm_error=False does.",
+   "reason": "Upstream bug at the pin (undefined name). The definition follows the variable's evident intent; \u00a70.3: infra errors are never scored, so an infra-missing task is excluded rather than marked wrong."
+  },
+  {
+   "id": "D8-infra-missing",
+   "what": "Inside one evaluation call, trials still infra-errored after CommonRollout's retries are dropped from the task's mean (TaskResult.infra). A task with NO measured trial is re-evaluated up to 2 more times (each refunded if still infra); if still missing, generate() raises InfraMissing (D7). In a val evaluation, upstream evaluate_test_set skips an erroring sample (so a missing task drops out of the mean rather than counting 0).",
+   "reason": "Issue \u00a70.3."
+  },
+  {
+   "id": "D9-budget",
+   "what": "R is the shared counter (CommonRollout raises BudgetStop before any evaluation that would overshoot). Every Generator call is one task x k=3 = 3 counted rollouts: Phase 1 generation, each reflection-round regeneration (max_num_rounds=1, only for tasks not fully solved), Phase 3 post-curate generation, and every val task at each epoch end. ExpACEBatch overrides only _train_batch to add a guard: the batch's worst case (n_tasks x 3 x (2 + max_num_rounds)) plus one full val evaluation (n_val x 3) must fit in R, else StopTraining is raised before the batch; the arm then runs one final val evaluation of the current playbook (if it differs from the last one evaluated) and stops. num_epochs = 1000 (R binds) unless MAX_EPOCHS is set (smoke: 1).",
+   "reason": "Issue \u00a77.8: 'Val 40 x 3 is evaluated at each epoch end and counted. Training stops while one final val evaluation still fits in R.' Issue \u00a75: hard R counter for every arm."
+  },
+  {
+   "id": "D10-eval-schedule",
+   "what": "eval_steps = len(train) (one val evaluation per epoch end; ace_batch evaluates when last_step % eval_steps == 0) and save_steps = K=4 (an intermediate playbook per batch). test_samples=None (ACE's optional initial/final test is not run; the test split is never loaded). Champion = upstream's rule: the playbook of the first val evaluation with strictly higher accuracy than the best so far, starting from best_accuracy=0.0 with the initial (empty = seed) playbook; recomputed from val_evals so the extra final val evaluation (D9) is included. Note: the seed itself is not scored on val (upstream starts best_accuracy at 0.0), so a playbook that scores > 0 on val becomes champion even if the seed would score higher. Recorded, not changed.",
+   "reason": "Issue \u00a77.8 'Val 40 x 3 is evaluated at each epoch end'; upstream checkpoint-selection rule kept."
+  },
+  {
+   "id": "D11-batch-settings",
+   "what": "Official batched flow ACEBatch (ace_batch.py) with batch_size K=4, curator_num_groups=floor(sqrt(4))=2, augmented_shuffling on (upstream CLI default, factor 2; seeded with random.seed(search_seed)), json_mode off (upstream CLI default), playbook_token_budget=80000, curator_frequency=1, max_num_rounds=1, bulletpoint analyzer off, Reflector/Curator max_tokens=8000, temperature 0.0. Train order = the official train 80 shuffled with random.Random(1000+seed) (upstream uses file order; one fixed order would make the 3 seeds identical up to LLM noise). Val evaluation runs test_workers = CONC/3 tasks in parallel (each with k=3 trials) so at most CONC rollouts run at once. Concurrency: CommonRollout runs each call's k=3 trials in parallel, and ACE's Phase 1 / Phase 3 run the K=4 batch tasks in parallel threads, so a training batch can have up to 4 x 3 = 12 rollouts in flight (val: test_workers x 3). This is inherent to K=4 with k=3 inside the call; the common layer has no global cap across calls.",
+   "reason": "Issue \u00a77.8 settings table and 'Use the official ace_batch.py flow with K=4 and ComBEE curator groups = floor(sqrt(K))'."
+  },
+  {
+   "id": "D12-reflection-candidate",
+   "what": "In the reflection round ACE regenerates with the Reflector's diagnosis passed as 'reflection'. Upstream puts it into the Generator's prompt; here it is appended to the candidate's prompt.md under '## Reflection (ACE)' for that one regeneration only (candidate dir refl_<hash>). These regenerations are counted rollouts on train tasks; they never become a champion (only playbooks evaluated on val can).",
+   "reason": "The Generator is the common rollout, whose only text inputs are the candidate files; the reflection must reach the agent through the system prompt."
+  },
+  {
+   "id": "D13-tiktoken",
+   "what": "ACE's utils.py builds a tiktoken cl100k_base encoder at import (playbook token counts). TIKTOKEN_CACHE_DIR points at arms/ace/tiktoken_cache, holding cl100k_base copied from the venv's litellm bundle (sha256 223921b7..., the hash tiktoken itself checks), so no network fetch is needed on a compute node.",
+   "reason": "Compute nodes may not reach openaipublic.blob.core.windows.net; the count is only used for ACE's playbook stats / logging."
+  },
+  {
+   "id": "D14-no-sandbox",
+   "what": "No bwrap sandbox for ACE's Reflector/Curator.",
+   "reason": "They are plain chat completions with no tools: they cannot read files or run commands. Everything they see is their prompt, which ACE's own logger writes in full (ace/ace_run_*/detailed_llm_logs/*.json); isolation_scan.py greps those plus generator_calls.jsonl, playbooks and the arm log for gold paths and test ids after each search."
+  }
+ ]
+}

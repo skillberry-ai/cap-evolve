@@ -1,0 +1,9 @@
+WARMUP {"n": 16, "wall_s": 9.8, "status": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "latency_s": [4.1, 4.1, 4.2, 4.3, 4.3, 4.3, 4.3, 4.3, 9.6, 9.6, 9.7, 9.7, 9.7, 9.7, 9.8, 9.8]}
+host=cccxc451 job=943906 arm=ace seed=2 R=2160 conc=16 test_workers=5 max_epochs= skill_bullets=1 start=2026-10-29T16:43:32Z
+code_sha=73103f429fb833883a5c915cd87fe5c5c68fc423 adapter_sha256=c035c75e14bdaa07c88df1321515992b9331f7ee0f07c8163c8031d3f473945a
+ace_pin=82709de050e1db6e6ef2f07bcb0393560b94992a ace_clean=0
+ace_arm_sha256=28dd875841f0977e7b9b69a3be988812136eeb84b611f9a9cd73681da9eb25d8 prompts_patch_sha256=5c58498844cc0c5e38d4ccd34a5712ec10d3c68305008e9d6e670f035d3e8894 rollout_sha256=4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da
+helpers_spec_sha256=2c134a8ed0b7ae18dd752f30b18f496c4c457702f1cbe9246175993474253eea
+ACE_RC=0
+ace_clean_after=0
+end=2026-10-30T06:21:38Z

@@ -1,0 +1,92 @@
+{
+ "arm": "trace2skill",
+ "seed": 0,
+ "R": 2160,
+ "k": 3,
+ "n_train": 80,
+ "n_val": 40,
+ "seed_tree_sha256": "43259084c6f01aa5d5a63e7cb15882c10f7039785fe5932f3d40801699d6c6ac",
+ "iterations": 1,
+ "stop_reason": "completed",
+ "pool": {
+  "SUCCEED": 144,
+  "FAILED": 96,
+  "missing_infra": 0
+ },
+ "records": {
+  "error": 96,
+  "success": 144
+ },
+ "candidates": {
+  "error_skill": {
+   "scripts": [
+    "answer_range.py",
+    "cellwriter.py",
+    "find_header_row.py",
+    "inspect_cells.py",
+    "lookup_check.py",
+    "merge_keys.py",
+    "read_sheet_fallback.py",
+    "verify_output.py"
+   ],
+   "inlined_references": [],
+   "script_refs_without_code": [],
+   "tree_sha256": "4c71b6911eebe6471d2fef081ef1c9d04dfefd2f83825ac0634d810d6ffb4856",
+   "identical_to_seed": false
+  },
+  "combined": {
+   "scripts": [],
+   "inlined_references": [],
+   "script_refs_without_code": [],
+   "tree_sha256": "43259084c6f01aa5d5a63e7cb15882c10f7039785fe5932f3d40801699d6c6ac",
+   "identical_to_seed": true
+  }
+ },
+ "budget_probe": {
+  "verdict": "BudgetStop raised: trace2skill: evaluation of 561x3=1683 would exceed R (480/2160)",
+  "requested_rollouts": 1683,
+  "state_unchanged": true,
+  "rollout_rows_unchanged": true
+ },
+ "rollouts_used": 480,
+ "eval_calls": 3,
+ "binding_on_R": false,
+ "champion": "seed",
+ "champion_tree_sha256": "43259084c6f01aa5d5a63e7cb15882c10f7039785fe5932f3d40801699d6c6ac",
+ "n_candidates_evaluated": 1,
+ "rejected": 1,
+ "accepted": 0,
+ "selection": {
+  "selection_set": "val",
+  "seed_val_mean": 0.6583333333333333,
+  "candidate_val_means": {
+   "error_skill": 0.0,
+   "combined": null
+  },
+  "rule": "champion = best non-seed candidate only if its val mean > seed val mean (strict); ties keep seed",
+  "champion": "seed",
+  "champion_val_mean": 0.6583333333333333
+ },
+ "wall_s": 17759.9,
+ "cost": {
+  "optimizer": {
+   "calls": 733,
+   "ok": 733,
+   "retries": 0,
+   "prompt_total": 3997430,
+   "cached_tokens": 1244160,
+   "completion_tokens": 1015164,
+   "calls_without_usage": 0
+  },
+  "target": {
+   "calls": 3625,
+   "ok": 3623,
+   "retries": 624,
+   "prompt_total": 28429137,
+   "cached_tokens": 0,
+   "completion_tokens": 1833636,
+   "calls_without_usage": 2
+  },
+  "note": "token counts from the gateway ledgers; $ is recomputed offline from pricing (issue \u00a72.3)"
+ }
+}

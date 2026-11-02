@@ -1,0 +1,20 @@
+{
+ "arm": "trace2skill",
+ "search_seed": 0,
+ "inert_champion": true,
+ "champion_test_mean": 0.6363095238095238,
+ "seed_test_mean": 0.6363095238095238,
+ "paired_delta": 5.947623346206196e-19,
+ "paired_se_cr1": 0.013545420232863243,
+ "ci95": [
+  -0.026657387018274862,
+  0.026657387018274862
+ ],
+ "n_tasks_paired": 280,
+ "missing_tasks": {
+  "champion": 0,
+  "seed": 0
+ },
+ "infra_missing_trials": 26,
+ "candidate_error_trials": 0
+}

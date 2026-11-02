@@ -1,0 +1,59 @@
+{
+ "arm": "evoskill",
+ "issue": "skillberry-ai/cap-evolve#895 §7.4",
+ "written": "2026-10-21",
+ "upstream": {
+  "repo": "sentient-agi/EvoSkill",
+  "commit": "36f6f04952293d7054145550c2b9f0b0411bff1c (main, committed 2026-07-06; cloned 2026-10-21; exp895/competitors/PINS.txt)",
+  "location": "exp895/competitors/evoskill, imported in place (sys.path), `git status --porcelain` = 0 lines",
+  "files_changed": [],
+  "upstream_code_used": ["src/loop/runner.py SelfImprovingLoop (subclassed: _select_parent guard, _evaluate infra-missing)",
+                         "src/loop/helpers.py (proposer query, feedback history)", "src/loop/config.py LoopConfig",
+                         "src/registry/manager.py ProgramManager (git branches/frontier tags)", "src/cache/run_cache.py RunCache",
+                         "src/evaluation/evaluate.py evaluate_agent_parallel (17-min timeout lifted at run time)",
+                         "src/harness/agent.py Agent + claude/executor.py + claude/options.py",
+                         "src/agent_profiles/skill_proposer + skill_generator (prompts, tools, schemas)",
+                         ".claude/skills/brainstorming, .claude/skills/skill-creator (copied unmodified into each project)"]
+ },
+ "port_files_sha256": {
+  "evoskill_port.py": "4a37cf624e31b40910d3b696fe4d1e2b777a3907420bbbd06ddc2a26cfd29721 (== port_sha256 in runs/evoskill/smoke_s0b/run_meta.txt)",
+  "lsf_evoskill_search.sh": "15a17304a07a41206f8f6405fc1770a95d9819c0e508224dd17e55a60383eb20 (adds PYTHONUNBUFFERED=1 after the smoke; otherwise identical to the smoke's launcher)",
+  "budget_probe.py": "4c851334553144517f8195d259c8cff4585639bcb14b85b885cb5d03aabcf422",
+  "isolation_scan.py": "2bf97bfc975952521f9947345ad496c59d159094992d7fdd572dc2e4309cec3a"
+ },
+ "smoke": {
+  "run_dir": "runs/evoskill/smoke_s0b (job 1926394, cccxc594, seed 0, R=60, MAX_ITERS=2, CONC=3, train=val={10452,118-50})",
+  "result": "EVOSKILL_RC=0; 2 iterations; 2 candidates produced and evaluated (iter-skill-1, iter-skill-2: SKILL.md rewritten + scripts verify_output.py, write_output.py), both passed the common helper gate; val 0.5 for seed and both children (10452 3/3, 118-50 0/3); frontier [iter-skill-2, iter-skill-1, base] all 0.5; champion iter-skill-2 (upstream tie-break: later frontier index)",
+  "evidence": "rollouts.jsonl 30 rows = 10 eval calls x 1 task x 3 trials, 0 infra; budget_state spent 30/60; budget_probe BudgetStop raised, state unchanged; calls_glm.jsonl 18 x 200, prompt_total sum 327,885; isolation_scan gold 0, test ids 0, control 19/53",
+  "failed_attempts": "runs/evoskill/smoke_s0 (job 1926244): LSF TERM_MEMLIMIT at -M 24G during the first-time podman load of the 13.7 GB executor image on cccxc594; resubmitted at -M 64G. Earlier job 1925166 was killed before start (needed 6 slots on a full host; resubmitted with -n 1)."
+ },
+ "budget_note": "With max_iterations=12 (issue §7.4) and the full split, one iteration costs at most (4 train + 40 val) x 3 = 132 rollouts; seed val = 120. Worst case 120 + 12 x 132 = 1,704 < R=2,160, so max_iterations (not R) normally ends an EvoSkill search; iterations whose 4 train samples all pass skip the val eval (12 rollouts). The iteration guard only binds if R < 1,704. Reported, not changed.",
+ "helper_and_probe_files": {
+  "test_wiring.py": "offline wiring test: fake CommonRollout + fake optimizer, real EvoSkill loop/git/cache (runs/evoskill/_wiring/w1)",
+  "lsf_evoskill_permtest.sh": "earlier probe: bare `claude -p` cannot write .claude/skills under acceptEdits (runs/evoskill/_permtest)",
+  "lsf_evoskill_sdkprobe.sh + sdk_permprobe.py": "probe: EvoSkill's skill-generator Agent through the shim + approver writes .claude/skills (runs/evoskill/_sdkprobe)",
+  "smoke_train2.txt / smoke_val2.txt": "smoke ids 10452, 118-50 (official train)"
+ },
+ "common_layer": {
+  "rollout.py": "4f955d9f3f21f74035a7793c85154072346a6cee2d7ed3e4922f00885d59d3da (at writing; run_meta.txt records it per run)",
+  "SURFACE_CONTRACT.md": "fe14c93fbd5348634166af6274b1329410fa3b482fc9fe6fa324dfb5f7f04651"
+ },
+ "seed": "sbv400-main/templates/adapters/spreadsheetbench/seed_capability_v2: prompt.md, skills/spreadsheet-helpers/{SKILL.md,scripts/.gitkeep} copied into the project; task_template.md used byte-identical; sha256 checked at start against exp895/BUILD_RECORD.json; the first materialised candidate is asserted to be named 'seed' (byte-identical tree hash)",
+ "packages_installed": [],
+ "packages_used_already_in_venv": {"claude-agent-sdk": "0.1.44", "pydantic": "2.14.1", "pyyaml": "6.0.3", "tqdm": "4.70.1", "pandas": "3.0.6"},
+ "packages_note": "EvoSkill's pyproject also lists opencode-ai, openai-codex-sdk, openhands-*, harbor, daytona, pydantic-settings, questionary, rich, tomli-w. None of them is imported on the claude-SDK skill_only path this port uses (import check: src.loop, src.registry, src.cache, src.evaluation, src.agent_profiles.skill_* all import in the venv). So nothing was installed.",
+ "data": {
+  "optimizer_sees": "train 80 (official split train), pooled by instruction_type (Cell-Level 53, Sheet-Level 27); per iteration 2 tasks per pool are sampled round-robin. For each sampled task that FAILS (k=3 mean < 2/3) the proposer sees the per-trial rewards, the scorer's gold-safe feedback and the lowest-scoring trial's transcript (<= 20k chars). Plus EvoSkill's feedback history: per child, the proposal, justification, outcome and the VAL score vs the parent's VAL score.",
+  "selects_on": "val 40 (official split val): every child program is scored on all of val (k=3 per task, pass/fail at mean >= 2/3, mean over tasks); frontier (size 3) membership and best-parent selection use that val score",
+  "aggregate_feedback_to_optimizer_from_val": "yes: the val score of each child and its parent is written into feedback_history.md (upstream behaviour)",
+  "test": "never loaded by the port; the launcher asserts zero overlap with the official test list; CapEvolveBaseAgent refuses any task id outside this search's train/val list"
+ },
+ "settings": {
+  "max_iterations": 12, "no_improvement_limit": "disabled (10**9)", "frontier_size": 3, "selection_strategy": "best",
+  "evolution_mode": "skill_only", "failure_sample_count": 3, "categories_per_batch": 3, "samples_per_category": 2,
+  "k": 3, "pass_threshold": "mean of measured trials >= 2/3", "cache": "on (runs/<NAME>/evoskill_cache)",
+  "optimizer": "Claude Code 2.1.304 (exp895 bwrap shim) via claude_agent_sdk 0.1.44, model rits/zai-org/glm-5-3, max_turns 30, permission_mode acceptEdits (upstream) + scoped can_use_tool approver",
+  "agent": "Gemma-4-31B-it via the common rollout; concurrency = SPREADSHEETBENCH_CONCURRENCY rollouts (CONC//3 tasks x 3 trials)",
+  "R": "launcher arg; iteration guard = (train samples/iter + |val|) x 3 must fit"
+ }
+}
