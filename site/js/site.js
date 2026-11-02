@@ -90,4 +90,60 @@
     }, { rootMargin: "-15% 0px -70% 0px", threshold: 0 });
     targets.forEach(function (t) { spy.observe(t); });
   }
+
+  /* ── click-to-enlarge screenshots ── */
+  var shots = document.querySelectorAll(".shot img, .hero-screenshot img");
+  if (shots.length) {
+    var box = document.createElement("div");
+    box.className = "lightbox";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-modal", "true");
+    box.setAttribute("aria-label", "Enlarged image");
+    box.hidden = true;
+    var big = document.createElement("img");
+    var close = document.createElement("button");
+    close.className = "lightbox-close";
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    close.textContent = "×";
+    box.appendChild(big);
+    box.appendChild(close);
+    document.body.appendChild(box);
+    var opener = null;
+    var hide = function () {
+      box.hidden = true;
+      box.classList.remove("full");
+      document.body.classList.remove("lightbox-open");
+      if (opener) opener.focus();
+    };
+    var show = function (img) {
+      opener = img;
+      big.src = img.currentSrc || img.src;
+      big.alt = img.alt;
+      box.hidden = false;
+      document.body.classList.add("lightbox-open");
+      close.focus();
+    };
+    Array.prototype.forEach.call(shots, function (img) {
+      img.classList.add("zoomable");
+      img.tabIndex = 0;
+      img.setAttribute("role", "button");
+      img.setAttribute("aria-label", "Enlarge: " + (img.alt || "image"));
+      img.addEventListener("click", function () { show(img); });
+      img.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(img); }
+      });
+    });
+    // First click fits the image to the screen; clicking it again shows it at full size
+    // (scroll to pan). A click outside the image, the × or Escape closes.
+    big.addEventListener("click", function (e) {
+      e.stopPropagation();
+      box.classList.toggle("full");
+    });
+    close.addEventListener("click", function (e) { e.stopPropagation(); hide(); });
+    box.addEventListener("click", hide);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !box.hidden) hide();
+    });
+  }
 })();
