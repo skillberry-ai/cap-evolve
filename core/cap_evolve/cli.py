@@ -763,6 +763,10 @@ def _cmd_run(argv):
     if _helpers.enabled(spec):
         # adapters (a subprocess) read the v2 helper switch from the environment they inherit
         os.environ["CAPEVOLVE_HELPERS"] = "1"
+    from . import abl_context as _abl_context
+    from . import abl as _abl
+    _abl.load(spec)                 # every abl_* key is validated at start (ValueError on a typo / two factors)
+    _abl_context.export_env(spec)   # abl_history / abl_info: validates (ValueError on a typo) + exports
     from .optimizer_config import enabled as _ablation_enabled
     if not _ablation_enabled("history", spec):
         # the harness (a subprocess) reads the switch from the environment it inherits
