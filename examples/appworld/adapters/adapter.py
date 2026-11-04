@@ -176,8 +176,10 @@ class Adapter(CapabilityAdapter):
                 proc = subprocess.run([sys.executable, str(HERE / "aw_agent.py"), str(spec_path), str(out_path)],
                                       env=env, capture_output=True, text=True, timeout=EPISODE_TIMEOUT_S,
                                       cwd=str(workdir))
+                # stderr is never passed on: a crash during evaluate could print gold values.
+                exc = aw_agent.redact_stderr(proc.stderr)
                 rec = json.loads(out_path.read_text()) if out_path.is_file() else {
-                    "infra_error": f"worker exited {proc.returncode} without output: {proc.stderr[-800:]}"}
+                    "infra_error": f"worker exited {proc.returncode} without output" + (f" ({exc})" if exc else "")}
             except subprocess.TimeoutExpired:
                 rec = {"infra_error": f"episode wall cap {EPISODE_TIMEOUT_S}s exceeded"}
             finally:

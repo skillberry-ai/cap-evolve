@@ -277,8 +277,62 @@ def evaluation_fields(ev: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# Which part of the episode is running, for ``redact_error``. Exceptions from ``evaluate`` may carry
+# gold values in their message (AppWorld compares against ground truth there), so only their type
+# and frames are reported.
+PHASES = ("setup", "episode", "evaluate")
+_phase = {"name": "setup"}
+ERROR_MESSAGE_MAX = 300
+_EXC_LINE_RE = re.compile(r"^([A-Za-z_][\w.]*(?:Error|Exception|Exit|Interrupt|Warning))\b")
+
+
+def set_phase(name: str) -> None:
+    assert name in PHASES, name
+    _phase["name"] = name
+
+
+def redact_text(text: str, replacements: dict[str, str]) -> str:
+    for needle, label in sorted(replacements.items(), key=lambda kv: -len(kv[0])):
+        if needle:
+            text = text.replace(needle, label)
+    return text
+
+
+def redact_error(exc: BaseException, phase: str, replacements: dict[str, str] | None = None) -> str:
+    """A gold-free one-line report of ``exc``: type, phase, frames (``file:line in func``) and,
+    outside ``evaluate``, the message with paths and secret values replaced, capped at 300 chars.
+    No source lines and no locals."""
+    frames = traceback.extract_tb(exc.__traceback__)[-6:]
+    where = "; ".join(f"{Path(f.filename).name}:{f.lineno} in {f.name}" for f in frames)
+    head = f"{type(exc).__name__} during {phase}"
+    if phase != "evaluate":
+        msg = redact_text(str(exc), replacements or {})[:ERROR_MESSAGE_MAX]
+        if msg:
+            head += f": {msg}"
+    return head + (f" [{where}]" if where else "")
+
+
+def redact_stderr(stderr: str) -> str:
+    """The exception type from a crashed worker's stderr, never its message or paths."""
+    for line in reversed((stderr or "").strip().splitlines()):
+        m = _EXC_LINE_RE.match(line.strip())
+        if m:
+            return m.group(1)
+    return ""
+
+
+def _replacements(spec: dict[str, Any]) -> dict[str, str]:
+    out = {str(spec.get("appworld_root") or ""): "<root>", str(spec.get("secrets_file") or ""): "<secrets>",
+           str(spec.get("candidate_dir") or ""): "<candidate>"}
+    for k in SECRET_KEYS:
+        if os.environ.get(k):
+            out[os.environ[k]] = "<secret>"
+    return out
+
+
 def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
     t_start = time.time()
+    set_phase("setup")
     os.environ["APPWORLD_ROOT"] = spec["appworld_root"]
     load_secrets(spec.get("secrets_file"))
     os.environ.setdefault("MODEL_SERVER_URL", os.environ.get("RITS_URL", ""))
@@ -320,6 +374,7 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
     with AppWorld.initializer(update_defaults=True, experiment_name=spec["experiment_name"],
                               random_seed=int(spec["random_seed"]), raise_on_extra_parameters=True):
         with AppWorld(task_id=task_id, experiment_name=spec["experiment_name"]) as world:
+            set_phase("episode")
             agent.usage_tracker.reset(task_id)
             agent.initialize(world)
             first_messages = [dict(m) for m in agent.messages]
@@ -365,8 +420,10 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
                     termination = "token_cap"
                     break
             completed = bool(world.task_completed())
+            set_phase("evaluate")
             tracker = world.evaluate()
             ev = tracker.to_dict(stats_only=False)
+    set_phase("setup")  # record assembly below handles no gold-bearing exception text
 
     all_code = "\n".join(s["code"] for s in steps)
     record.update(evaluation_fields(ev))
@@ -393,13 +450,27 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
 def main(argv: list[str]) -> int:
     spec = json.loads(Path(argv[1]).read_text())
     out = Path(argv[2])
+    replacements = _replacements(spec)
     try:
         rec = run_episode(spec)
     except Exception as e:  # noqa: BLE001 — reported to the adapter as infrastructure
-        rec = {"task_id": spec.get("task_id"), "infra_error": f"{type(e).__name__}: {e}",
-               "traceback": traceback.format_exc()[-4000:]}
+        # Gold-free: no raw traceback, no message from the evaluate phase (README: Harness).
+        rec = {"task_id": spec.get("task_id"), "infra_error": redact_error(e, _phase["name"], replacements)}
+        _keep_traceback(spec)
     out.write_text(json.dumps(rec))
     return 0
+
+
+def _keep_traceback(spec: dict[str, Any]) -> None:
+    """With AW_KEEP_OUTPUTS=1, keep the full traceback next to AppWorld's own (gold-bearing) outputs."""
+    if os.environ.get("AW_KEEP_OUTPUTS") != "1" or not spec.get("appworld_root"):
+        return
+    d = Path(spec["appworld_root"]) / "experiments" / "outputs" / str(spec.get("experiment_name", ""))
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "infra_traceback.txt").write_text(traceback.format_exc())
+    except OSError:
+        pass
 
 
 if __name__ == "__main__":

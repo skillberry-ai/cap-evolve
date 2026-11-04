@@ -70,6 +70,9 @@ Applied to every arm, because AppWorld `42b5bcf` does not:
 - **Gold-free records.** AppWorld's failure `trace` holds gold values; only requirement texts, the
   collateral-damage flag and counters are kept. AppWorld's native per-episode output dir (with the
   evaluation report) is deleted after each episode.
+  An episode that raises is reported by exception type, phase and frames only. Its message is kept
+  (paths and the key replaced, 300 chars) only outside the evaluate phase. A crashed worker's stderr
+  is reduced to the exception type.
 
 ## Lints
 
