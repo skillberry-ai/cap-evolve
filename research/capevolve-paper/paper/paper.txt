@@ -1,0 +1,92 @@
+                                               CapEvolve: A Measurement-First Comparison of Agent Capability Optimizers
+
+495                             70
+                                                Reported (as-saved scorer)
+      Gain over seed (points)
+
+496                             60
+                                                Recalculated scorer                      Reproduced                                                   31
+497                                                            +49.1
+                                50
+498
+499                             40
+                                     +33.0                                           Contradicted           2
+500
+                                30
+501
+                                20             +18.7
+502
+503                                                                          +9.9         No artifact             7
+                                10
+504
+                                 0
+505
+                                     Gemma-4-31B                      GPT-5.5                           0             10          20             30
+506
+                                                                                                        Historical claims recomputed (of 40)
+507
+508
+509
+      Figure 3. Recalculation removes most of the historical gain. Left: reported and recalculated gains of the two SpreadsheetBench headline
+510
+      runs. Right: outcome of recomputing every historical claim from archived artifacts (audit/recomputed_numbers.csv).
+511
+512
+513   didates (Zehle et al., 2025), BudgetAPO sizes evaluation                           before, score only. We exclude 55 ids by family prefix.
+514   slices from measured noise (Liu et al., 2026), SAGE runs a                         Suite C’s test split is development-exposed, and we cannot
+515   one-sided paired test on shared items (Wang et al., 2026a),                        see off-repository use of the retail test split.
+516   and PACE controls false commits under repeated testing                         •   Native-design differences. The stock C AP E VOLVE arms
+517   with an anytime-valid e-process (Shawn, 2026). Rule P                              see 40 validation tasks and competitors 120. Competitors
+518   (Section 3.3) is simpler: a paired screen, then confirmation                       keep their native gates. On Suite B, agent-optimize runs
+519   on fresh trials, tuned by simulation.                                              its evaluator inside its shell and can read gold actions of its
+520                                                                                      own 74 optimization and selection tasks, never the sealed
+521   Evaluation hygiene is the oldest problem here. Reusing a
+                                                                                         test 40, so its selection-time comparisons are flagged.
+522   holdout set adaptively turns it into a training set (Dwork
+                                                                                     •   Matched checkpoint. Capacity bound the search, so B ?
+523   et al., 2015). Agent optimizers inherit the problem. Harness
+                                                                                         falls below 600 and results say little about larger budgets.
+524   evolution on Terminal-Bench 2.1 does not beat simple test-
+                                                                                     •   Scorer and judge. LibreOffice 25.8 fails 19 of 400 official
+525   time scaling under matched feedback and inference budgets,
+                                                                                         gold files as outputs, so some tasks are unwinnable on the
+526   and earlier work searched on the tasks it reported (Wang
+                                                                                         recalculated scale. GPT-5.5 judges the τ 2 assertions; a
+      et al., 2026b). Meta-Harness states that it searches and
+527                                                                                      stored verdict sample will test judge sensitivity. 414
+528   scores on the same 89 TerminalBench-2 tasks (Lee et al.,
+                                                                                     •   Coverage. One optimizer model, two target models, a
+529   2026). Removing held-out selection from a recursive self-
+                                                                                         community port in place of official WikiSkill, and five
+530   evolving agent gives a perfect in-sample score and a 33-
+                                                                                         methods stopped at one seed. RITS token counts have no
+531   point drop on test (Nguyen et al., 2026). Single-lineage
+                                                                                         prices.
+532   prompt optimization is reported to match or beat GEPA with
+533   fewer rollouts (Chang & Chen, 2026), and one analysis pass
+534   of a coding agent over stored trajectories to beat SkillOpt on                 9        E THICAL C ONSIDERATIONS
+535   all four benchmarks tried (Singh et al., 2026). These reports
+                                                                                     An artifact optimized against a reward can score well for
+536   motivate our seed and one-shot controls. Our protocol adds
+                                                                                     the wrong reasons and needs human review and a rollback
+537   a scorer audit, gold files hidden from the optimizer, fresh
+                                                                                     path before deployment.
+538   final sets and matched budgets.
+539
+540   8                         L IMITATIONS                                         10        C ONCLUSION
+541                                                                                  A reported gain is a measurement before it is a capability.
+542   • Power. Three search seeds give two degrees of freedom
+                                                                                     Scorer compliance, split reuse and gold access explained
+543     for pipeline-level claims, and the artifact-level minimum
+                                                                                     much of an earlier gain; our protocol removes each, and
+544     detectable effect is 0.16 on Suite B and 0.22 on Suite
+                                                                                     we compare C AP E VOLVE with nine methods under it. 415
+545     C. We claim at the artifact level and call smaller gaps
+546     undetected.                                                                      14
+                                                                                         EVIDENCE NEEDED: Judge sensitivity result.
+                                                                                         15
+547   • Exposure. The Suite A final set samples an older 912-                            EVIDENCE NEEDED: Headline outcome per suite, includ-
+        question release whose ids were scored at most twice                         ing whether a control is competitive.
+548
+549
+

@@ -271,3 +271,149 @@ Ranking uses: expected change in promotions or search-time gain from the cited r
 - The A hc `events.jsonl` shows an `evaluate_error` ("agent view dir ... not empty") on s2 cand_0002-0004 (3 steps lost, 5 h gap); that is a setup defect covered in `R/audit/silent_env_failures.md:14`, not a gate effect.
 - `analysis_plan.md` section 8 freezes rule P as run; each change above is a new rule or a framework-defect fix and must be named as such in the paper, not applied silently to the reported arms.
 - Power simulation assumes independent Bernoulli noise calibrated from 9 B-seed draws; actual tau2 noise has user-simulator correlation (some tasks flip together). Real power is probably a little lower than the table.
+
+
+---
+
+## 8. Deterministic helper code in the editable surface
+
+Request: whenever the surface allows it, the proposer should add scripts and snippets (helper modules, verified recipes, validators, I/O wrappers) so that a fix keeps working instead of depending on the target model regenerating it. Must be benchmark-agnostic. `AD` = `/home/dev/projects2/cap-evolve-campaign/templates/adapters/spreadsheetbench/adapter.py`; `SP` = `/home/dev/projects2/cap-evolve-campaign/skills/capabilities/skill-package/scripts/abstract.py`.
+
+### 8.1 What the runs did (measured)
+
+**Code versus prose.** Source: `A/st/edits_by_candidate.csv` joined with the hc step records (`/tmp/hcdiag/steps.csv`). "Code" means any changed line in tool code.
+
+| arm | surface | non-seed candidates | with code | accepted (code / prose-only) | mean Δ vs parent (code / prose-only) |
+|---|---|---|---|---|---|
+| A hc rule P, A hc stock | `[system-prompt]` | 16, 36 | **0 of 52** | 2, 7 (all prose) | +0.161, +0.016 |
+| B hc | `[system-prompt, tools]` | 14 | 14 | 0 | -0.008 |
+| C hc, C stock | `[system-prompt, tools]` | 24, 30 | 24, 30 | 2, 3 | +0.067, -0.068 |
+| D E20-P (policy only) | prose | 30 | 0 | 5 | -0.053 |
+| D E20-T (tools only) | code | 29 (+1 prose) | 29 | 2 | -0.006 |
+| D E20-PT (both) | prose + code | 30 | 30 | 5 | +0.007 |
+| D E21 rule P / 1S / NOHIST | prose + code | 10 / 30 / 30 | all | 4 / 6 / 5 | +0.075 / +0.023 / -0.005 |
+
+So the A hill-climb proposer never wrote a file other than `prompt.md` / `task_template.md`: the surface is prose-only (`capabilities: [system-prompt]`, `S/runs/E10/hill-climb/s1/project/capevolve.yaml`) and the A adapter ignores any other file (8.4). In B/C/D, where tool code is editable, hc always touched code. Search-time gains on D (3 seeds each, selection-biased): P 0.186, PT 0.214, T 0.101 (`A/st/runs.csv`). With n=3 and noise of 0.05-0.08 per draw this does not show that code beats prose; it shows code-only (T) did not lose to prose-only.
+
+**Which fixes stuck** (accepted candidates, diffs of `candidates/<parent>` vs `candidates/<cid>`):
+
+| kind of fix | example | stuck? |
+|---|---|---|
+| Computed field in a tool result replacing model arithmetic | D E21 rule P s2 cand_0002: `get_product_details` now returns `summary` with `available_variants`, cheapest and priciest AVAILABLE item and price; C s0 cand_0003: `_flown_segments`, `agent_notes.cancel_facts` | Promoted (confirmed +0.109 / +0.100); fixed tasks robust in 2 of 3 trials (6 fixed / 0 broke on D s2 cand_0002) |
+| Corrective error text that lists the valid values | D s0 cand_0006 and C s2 cand_0005: "Payment method X not found ... valid ids are [...]" | Promoted (+0.122, +0.133) |
+| Guard that enforces a rule in code | C s2: at most 1 certificate / 1 card / 3 gift cards per reservation; B s1: same-item exchange guard, country `USA` guard | Mixed: C promoted; B guards were screen-rejected under noise, but their effect was never separated from the policy rules that came with them |
+| Prose checklist | D s0 cand_0006 policy.md block; A reply-format block | Promoted, and gave the largest A gain (the format fix), but on A the same format fix had to be re-learned by every sampled response (next paragraph) |
+
+**Variance across trials of the same task, seed versus champion** (3 fresh trials each, from `__confbase` vs `__conf` rollouts of promoted or confirmed candidates; script inline in `/tmp/hcdiag`). `var` = mean over tasks of the within-task population variance of reward; `flaky` = fraction of tasks with at least one differing trial.
+
+| run, candidate | parent var / flaky | child var / flaky |
+|---|---|---|
+| A s0 cand_0003 | 0.067 / 0.30 | 0.044 / 0.20 |
+| A s1 cand_0001 | 0.100 / 0.45 | 0.078 / 0.35 |
+| C s0 cand_0003, C s2 cand_0005 | 0.078 / 0.35 | 0.067 / 0.30 |
+| D rule P s0 cand_0006 | 0.086 / 0.39 | 0.068 / 0.31 |
+| D rule P s1 cand_0002 | 0.113 / 0.51 | 0.082 / 0.37 |
+| D rule P s2 cand_0002 | 0.100 / 0.45 | 0.100 / 0.45 |
+| B s0 cand_0002 | 0.104 / 0.47 | 0.063 / 0.29 |
+
+Champions are modestly less variable (variance down 0-40%) but 20-45% of tasks remain flaky. **Output-level variance is near total on A**: the solution code the agent finally wrote (`Rollout.output = solution_code`, `AD:1680`) is identical across all 3 trials for only 7-10% of tasks in the seed and **0%** in the champions (mean distinct codes per task 2.75 vs 3.00; A s0 cand_0003, A s1 cand_0001). That is the quantity helper code would collapse: the agent regenerates the procedure each time, so a fix expressed only as prose is re-implemented, sometimes wrongly, every trial.
+
+### 8.2 Proposer guidance and edit taxonomy
+
+Add to the optimizer instructions (the shared template that already holds the cluster/edit tables, rendered by `ctx.instructions`, `harness.py:4636`; edit table in `work/cand_*/PROCESS.md`). Benchmark-agnostic taxonomy, in order of preference when a surface allows it:
+
+| class | what it is | use when | stays deterministic because |
+|---|---|---|---|
+| C1 helper function / module | a small pure function the agent calls (parse, locate, normalise, compute) | the same procedure appears in at least 2 failure traces, or a success trace re-derives it by hand | the call is the same bytes every trial; only the call site is stochastic |
+| C2 verified recipe | a script that performs a whole multi-step transform end to end, with a `--self-check` on a synthetic fixture | a repeated multi-step procedure (the skill-package "skipped step becomes a bundled script" lever, `skills/capabilities/skill-package/SKILL.md:32-43`) | one call replaces N agent-chosen steps |
+| C3 validator | a post-hoc check the agent calls before finishing (output shape, types, untouched regions) that returns a precise message | failures are "looked done, was wrong" | converts silent failure into a deterministic retry signal |
+| C4 I/O wrapper | open/save/serialize in one call that preserves format and layout | failures come from lossy I/O (e.g. a library call that drops formatting) | removes a failure class by construction |
+| C5 computed field / enriched error (tool surfaces) | return derived facts and valid-value lists from the tool | failures are arithmetic or guessing ids | the tool computes it (observed to stick, 8.1) |
+| C6 prose rule | only when no behaviour can be codified (judgement, tone, policy) | last resort | not deterministic |
+
+Rule text for the proposer: "If a procedure appears in at least 2 failing traces, or in 1 failing and 1 passing trace where the passing one derives it by hand, write it as C1-C5 code, add a `--self-check` that runs on a synthetic fixture you build yourself, and change the prose to one line telling the agent to call it. Do not encode any value, id, string or expected answer taken from a specific task. Do not read or write anything outside the working directory or the task's own input and output paths." Evidence for the 2-trace threshold: in B s1 the same three guards were rediscovered 8 times because the evidence loop never changed; a recurrence rule plus pooled multi-draw failures (Rank 3) makes recurrence countable. **[UNVERIFIED]** that this raises gain; no run has had a code-capable A surface.
+
+Framework support for the threshold: `DIAGNOSIS.json` `clusters[].tasks` (schema in the PROCESS.md template, validated by `_validate_diagnosis_json`, `harness.py:~3200-3260`) already records the task ids per cluster; a cluster with at least 2 task ids and an edit with class C1-C5 is the codify-recurring-procedure signal; a cluster with at least 2 tasks and a C6-only edit can be flagged as a warning.
+
+### 8.3 Surface manifest: how a surface declares executable files
+
+What exists:
+
+- Capability set per run is a spec key: `capabilities: [system-prompt]` for A, `[system-prompt, tools]` for B/C/D (`capevolve.yaml`; read at `harness.py:4401`; briefs at `harness.py:3575-3590`).
+- Per-capability action policy is `<capability_dir>/policy.json`: `skill-package` has `DEFAULT_POLICY = {"allow": ["frontmatter","body","reference","script","asset","add","remove"]}` (`SP:77-85`) and `apply()` refuses edits outside the allow set or escaping the dir (`SP:234-296`); `tools` uses the same shape (`core/cap_evolve/tool_surface.py:36-44, 58-100`). "A run that must not gain new executable code drops script and add" is stated at `SP:77-80`.
+- `system-prompt` has no script kind: it manages `prompt.txt` / `policy.md` / `SYSTEM.md` (`skills/capabilities/system-prompt/scripts/abstract.py:24`).
+- The SpreadsheetBench A adapter reads only `prompt.md` (`AD:1129-1146`) and `task_template.md` (`AD:1066-1126`), so for A there is no executable surface today: the A skill package, once declared as `capabilities: [system-prompt, skill-package]`, would validate and diff, but the adapter would ignore `skills/<name>/`.
+
+Proposed manifest (one optional file in the capability root, `surface.json`; absent means prose-only, today's behaviour):
+
+```
+{"executable": {"allowed": true,
+                "roots": ["skills/*/scripts"],          # where code may live, relative to the capability dir
+                "suffixes": [".py"],
+                "entry_contract": "importable-module",   # or "cli", "tool-code"
+                "runtime": "target-sandbox",             # where it executes, adapter-defined
+                "max_files": 12, "max_total_lines": 800},
+ "readonly_at_runtime": true}
+```
+
+The adapter owns the runtime half (how roots reach the target); the framework owns the static half (lints, self-check, size caps) and reads the manifest in `_capability_validate` (`harness.py:4017-4082`) so non-conforming files fail before any rollout. Implementation sites: new `load_surface()` beside `load_policy` (`SP:82-85`, `tool_surface.py:36`); enforce `roots`/`suffixes`/size in `SP:_validate_scripts` (`SP:500-541`); expose to the adapter via a small helper `capability_executables(ctx)` in `core/cap_evolve/adapter.py` so each adapter lists the files it should load.
+
+### 8.4 The A adapter: can the target's Python import or run files from the capability dir?
+
+**No, as shipped.** Chain of evidence:
+
+1. The project adapter in `S/runs/E10/hill-climb/s1/project/adapters/adapter.py` is a socket shim (`:1-3` "Holds no gold, no credentials, no scorer"); `run_target` sends only `{"op":"run","task":...,"cand_dir": str(ctx),"seed":...}` (`:41`).
+2. The daemon forwards that host path to the real adapter (`S/runs/E10/_tools/eval_daemon.py:117-121`, `_run_with_watchdog` `:68`), which is `templates/adapters/spreadsheetbench/adapter.py` (`start_daemon.sh:10`).
+3. The real adapter's `run_target` (`AD:1489-1700`) uses `ctx` for exactly two reads: `_read_task_template(ctx)` (`AD:1066`, called `:1534`) and `_read_system_prompt(ctx)` (`AD:1129`, called `:1553`). Nothing else under `ctx` is read, mounted or copied.
+4. The target's Python runs in a Jupyter container (`third_party/spreadsheetbench/code_exec_docker/jupyter.py:298-306`) whose only bind mount is `volumes_path` -> `/mnt/data` with mode `rw` (`:303`); `volumes_path` is the gold-free agent view (`AD:590-605`, `_data_dir` `AD:433-448`). The candidate dir is on the host and is not mounted, so `import helpers` fails in the kernel with `ModuleNotFoundError`, which `exec_code` returns as traceback text to the model (it is not a harness error).
+5. Network: the container is started with the default Docker network (no `network_disabled` / `network_mode`, `jupyter.py:298-306`), so egress is possible unless the campaign sandbox blocks it (`S/baselines/EGRESS_SWITCH.txt`, not read in detail) **[UNVERIFIED]**.
+
+**What it takes to make it work read-only and gold-free** (all in `AD`, no mount change needed):
+
+- **Preferred: inject as text into the kernel, not through the filesystem.** After `client = sandbox.client_for(conv_id)` (`AD:1545-1546`), read `ctx/skills/*/scripts/*.py` (the manifest's roots), concatenate in sorted order (cap total bytes), and run once via `vendor["exec_code"](client, bootstrap_src)` where `bootstrap_src` defines the helpers in the kernel namespace (or writes them under `sys.modules` with `types.ModuleType` so `import helpers` works). It is read-only by construction because the target only receives text; it cannot modify the host or other rollouts' files. The kernel keeps state across rounds (the CodeAct loop already relies on it) and the replay onto test cases 2 and 3 uses the same `client` (`AD:1674`), so the helpers persist there too.
+- **System prompt gets the index.** Extend `_read_system_prompt` (`AD:1129`) to append each `skills/<name>/SKILL.md` body, so the agent knows which functions exist.
+- **No gold.** The text comes from the candidate dir; the optimizer cannot see gold (shim docstring). The mount allowlist still holds: `_check_mount_is_gold_free` scans only `mount/spreadsheet` (`AD:386-403`) and the input regex admits no `.py` (`AD:290`), so do NOT put helper files under `spreadsheet/<id>/`; the injection approach never touches the mount. The remaining leak path is helper code with task answers inside: lint (8.5).
+- **Alternative if files are required** (e.g. the helper must be executed as a CLI): write them to the per-rollout dir `outputs/<run_tag>/_helpers` (`AD:1517-1523`, `host_out_dir`, rw leaf) and `chmod a-w`; or add a second `ro` bind in the vendored `jupyter.py:303` (a vendor change; `third_party` is pinned). Rejected as default: the shared `/mnt/data` mount is `rw` and one rollout could tamper with files seen by later ones.
+- **Failure attribution.** If the bootstrap itself raises (syntax error, import of a missing module), return `Rollout(error=..., metadata={"error_kind": "candidate"})` exactly like the template check (`AD:1499-1504`), so `errored_trial_policy: fail` scores it as a measured failure (`harness.py:495-500`) rather than dropping it as missing.
+
+### 8.5 Safety: pre-evaluation checks, task-specific-answer lint, crash attribution
+
+Existing pre-eval hook: `_capability_validate` runs at `harness.py:3198`, before the gate and before any rollout; problems make the step indecisive via `_tamper_step` (`harness.py:3207-3213`); problems present in the parent are subtracted (`harness.py:4040-4075`). For a skill-package capability `_validate_scripts` already (a) parses every `scripts/**/*.py` (`SP:508-520`), (b) warns on stubs, (c) warns on risky imports (`RISKY_IMPORTS`, `SP:71-73`; `_risky`, `SP:482-497`), (d) runs a declared `--self-check` with a 30 s timeout, scrubbed env and blanked proxies (`SP:432-468`) and turns a failing self-check into a problem (`SP:536-538`).
+
+Gaps to close:
+
+| gap | evidence | change |
+|---|---|---|
+| Risky imports and `eval`/`exec` are warnings only | `SP:525-528` appends to `warnings` | In a surface with `readonly_at_runtime`, make `subprocess, socket, urllib, http, requests, httpx, ctypes, os.system, open(..., 'w')` outside the allowed output path a problem. Keep `eval/exec/compile/__import__` a problem unless whitelisted in the manifest |
+| Self-check does not block the network or the home dir | it passes `PATH`, `HOME`, `PYTHONPATH` and sets `NO_NETWORK=1`, a hint (`SP:447-451`) | run it under a network-denied wrapper (`unshare -n` or equivalent, **[UNVERIFIED]** available on the host) with `HOME` set to a temp dir and cwd a temp copy of the package, so a script cannot read gold, `.capevolve` or other candidates |
+| No smoke test on a task-shaped fixture, only `--self-check` | `SP:442-443` skips scripts without the flag | Require the manifest `entry_contract` and run each exported function on a synthetic fixture the script declares (`--self-check` builds its own data); never on task data: no gold, no val or test files are passed |
+| No task-specific-answer lint | no such check exists (grep `core`, `skills`) | New `lint_task_specific(tree, source, known_ids, known_literals)` in `SP`: AST walk flags (i) string/int constants equal to any known task id (`run_dir.read_splits()` ids) or to an instruction substring from `trajectories/`, (ii) `if task_id ==` / `in {...}` dispatch, (iii) large literal tables (more than N distinct constants or lines of data), (iv) literal expected answers that appear in a failing rollout's score feedback. Problems are fatal in the validate hook (`harness.py:3198`); pass `known_ids` through `_capability_validate` (add a keyword) |
+| Candidate crashes are scored as infra on tool suites | D: 107 of 6,323 non-seed rollouts end `INFRASTRUCTURE_ERROR`, 0 of 1,406 for the seed (`R/audit/silent_env_failures.md:101-106`); every hc `errored_trial_policy` event reports `reclassified_trials: 0` | Adapters must set `metadata.error_kind="candidate"` when the exception originates in capability code (traceback frame in the candidate dir or kernel bootstrap). The harness already honours it (`harness.py:313-315, 495-500`) |
+
+Hardcoded-id lint worked example for the A surface: a helper `if sid == "50768": ...` is flagged by (ii); a lookup table of 40 `(task_id, answer_position)` pairs is flagged by (iii); a helper that opens `/mnt/data/spreadsheet/*/` globs is allowed only through the manifest's declared input accessor. Because the proposer sees val traces (2.3), (i) must include val ids, which is why Rank 5's train-trace change is also a safety measure.
+
+### 8.6 Determinism metric
+
+Per task `i` with `T >= 3` repeated trials of the same capability (the rule-P confirmation already produces 3 fresh trials of both parent and child, so the metric costs zero extra rollouts):
+
+- `reward_var_i` = population variance of the trial rewards; report `mean_i reward_var_i` and `flaky_frac` = share of tasks with differing outcomes (numbers in 8.1).
+- `output_agreement_i` = 1 if the normalised final artifact is identical across trials, else the modal share; for A the normalised `Rollout.output` (whitespace-collapsed solution code) and, more robustly, the hash of the saved workbook's answer-range values; for tool suites the hash of the sequence of write-tool calls with arguments. 8.1 gives the baseline: identical solution code on 7-10% of A tasks for the seed, 0% for the champion.
+- `helper_use_rate` = share of solution codes that call a bundled helper, and `helper_pass_rate` = success rate of trials that did versus did not.
+- Report seed versus champion (and parent versus child at each promotion), with a paired bootstrap over tasks for the difference. A good helper change should lower `mean reward_var` and raise `output_agreement` without lowering the mean reward; a change that lowers variance by lowering reward (a degenerate constant answer) is caught by the reward test.
+
+Where: compute in `harness.py:1210-1230` (`gate_statistics`, already returns per-step stats), store in the `promotion` record from `promotion_rec` (`harness.py:3340`) and in `final.json` at `finalize` (`harness.py:4733`), then surface in `analysis/scripts/searchtime_results.py`. Needs `T >= 3` so it is available only under confirmation or multi-trial finalize.
+
+### 8.7 Where each change goes (summary)
+
+| change | file:line |
+|---|---|
+| Surface manifest, `load_surface()` | `skills/capabilities/skill-package/scripts/abstract.py:82-85` (beside `load_policy`); `core/cap_evolve/tool_surface.py:36-44` |
+| Static lints incl. hardcoded-id lint, risky-import promotion to problems | `skills/capabilities/skill-package/scripts/abstract.py:482-541` |
+| Network-denied, temp-HOME self-check | `skills/capabilities/skill-package/scripts/abstract.py:432-468` |
+| Pass split ids to validate | `core/cap_evolve/harness.py:3198` and `:4017-4082` |
+| Adapter loads helpers into the kernel, appends SKILL.md to the system prompt, attributes bootstrap failure to the candidate | `templates/adapters/spreadsheetbench/adapter.py:1129-1146, 1499-1504, 1545-1553, 1674` |
+| Proposer taxonomy and recurrence rule | optimizer instruction template rendered at `core/cap_evolve/harness.py:4636`; PROCESS.md/DIAGNOSIS.json schema in the same template |
+| Determinism metric | `core/cap_evolve/harness.py:1210-1230, 3340`; finalize `:4733` |
+| Spec for A v2: `capabilities: [system-prompt, skill-package]` plus manifest | `S/runs/E10/hill-climb/s1/project/capevolve.yaml` (copy for v2) |
+
+Caveats: no run has used a code-capable A surface, so every expected effect in 8.2 and 8.6 is a hypothesis. The strongest in-data evidence is indirect: tool-side computed fields and enriched errors were the edit class that promoted most reliably on C and D (8.1), and A's agent regenerates its solution code differently on 90-100% of tasks every trial.
