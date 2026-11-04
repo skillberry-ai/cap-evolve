@@ -1,4 +1,4 @@
-"""PR 874 review finding 6: the namespace shim binds exactly the optimizer's working directory.
+"""PR 874 review finding 6: the namespace mode binds exactly the optimizer's working directory.
 
 With cwd == $AW_EVAL the prefix strip did not match and the bind landed under $AW/$AW. With a
 symlinked AW_EVAL every working dir failed the guard. The shim is run for real (unprivileged user
@@ -50,10 +50,13 @@ class SandboxShimTests(unittest.TestCase):
                              'cat "$AW_EVAL_CHECK/reference/doc.md" 2>/dev/null; echo\n'
                              'echo hello > ./written.txt && echo write=ok\n')
         self.fake.chmod(0o755)
+        self.settings = self.tmp / "optimizer-permissions.json"
+        self.settings.write_text('{"permissions": {"deny": []}}')
 
     def _run(self, cwd: Path, aw_eval: Path) -> subprocess.CompletedProcess:
         env = {"PATH": os.environ["PATH"], "HOME": str(self.tmp / "home"), "AW_EVAL": str(aw_eval),
                "AW_EVAL_CHECK": str(aw_eval), "AW_REAL_CLAUDE": str(self.fake),
+               "AW_ISOLATION": "namespace", "AW_CLAUDE_SETTINGS": str(self.settings),
                "AW_NS_HIDE_FILES": "", "AW_NS_LOG": str(self.tmp / "guard.log"),
                "AW_NS_TRANSCRIPTS": str(self.tmp / "transcripts")}
         return subprocess.run(["bash", str(SHIM)], cwd=cwd, env=env, capture_output=True, text=True, timeout=60)

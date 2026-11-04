@@ -25,7 +25,8 @@ sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_LINT_CACHE}|$LINT_CACHE
 sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/capevolve.yaml" > "$PROJECT/capevolve.yaml"
 mkdir -p "$PROJECT/sandbox"
 for t in optimizer-permissions optimizer-sandbox; do
-  sed "s|@AW_EVAL@|$AW_EVAL|g" "$EX/sandbox/$t.template.json" > "$PROJECT/sandbox/$t.json"
+  sed -e "s|@AW_EVAL@|$AW_EVAL|g" -e "s|@AW_SECRETS_FILE@|${AW_SECRETS_FILE:-$REPO/.env}|g" \
+      "$EX/sandbox/$t.template.json" > "$PROJECT/sandbox/$t.json"
 done
 cat > "$PROJECT/PROJECT.md" <<MD
 # cape-hc: AppWorld (official splits), gpt-oss-120b on RITS, hill-climb --focus all

@@ -24,7 +24,7 @@ adapters/lints.py       candidate lints, also run by the optimizer before it sto
 seed_capability/        policy/instructions.txt (stock prompt, byte copy), tools/, memory/
 optimizer/              intake-customized INSTRUCTIONS template for the optimizer
 patches/                18-line AppWorld patch: header auth for the agent model, never logged
-sandbox/                optimizer isolation: the `claude` namespace wrapper + settings templates
+sandbox/                optimizer isolation: the `claude` shim, the namespace fallback, settings templates
 altk/                   the ALTK-Evolve arm: convert, mine, render, select the dose on dev
 scripts/                data roots, splits, acceptance checks, launch, final window, analysis, scan
 tests/                  offline tests (no AppWorld, no model)
@@ -115,23 +115,30 @@ gateway rejects the forced `tool_choice` litellm uses to emulate it.
 
 The claude-code optimizer has `Bash`, so by default it can read the whole host, including the gold
 files the grader needs. In a first run its subagents did exactly that to "verify" helper code.
-`sandbox/claude` closes this: put `sandbox/` first on the run's `PATH`
-(`scripts/launch_cape_hc.sh` does) and every optimizer call runs the real CLI in a private mount
-namespace where `$AW_EVAL` is an empty tmpfs except for a read-only allowlist (the venv, AppWorld's
-`src/` and `experiments/`, the reference docs, the lint cache) and the optimizer's own working dir.
-**Not** the whole AppWorld clone: `generate/` holds the task generators, i.e. the solution and
-evaluation logic of every train/dev scenario. In one run an optimizer subagent read it. Other sessions' transcripts,
-the claude temp dir and the secrets file are covered too. The call runs in a nested user namespace as
-a normal user, so it cannot unmount any of it, and `/proc/<pid>/root` of outside processes is refused.
-It needs Linux with unprivileged user namespaces; no root.
+Every optimizer call therefore goes through `sandbox/claude` (put first on the run's `PATH` by
+`scripts/launch_cape_hc.sh`), which runs the real CLI isolated in one of two ways (`AW_ISOLATION`):
 
-Claude Code's built-in sandbox (bubblewrap) is the alternative where it can start; in containers whose
-`/dev/null` is bound from the host it cannot (every shell command fails). Either way:
+- **`sandbox` (default): Claude Code's built-in sandbox** (bubblewrap), with
+  `optimizer-sandbox.json`: `failIfUnavailable`, no unsandboxed retries, no network, and reads
+  denied on both data roots, the final-window and ALTK outputs, AppWorld's `generate/` (the task
+  generators, i.e. the solution and evaluation logic of every train/dev scenario; in one run an
+  optimizer subagent read it), the secrets file and other sessions' transcripts.
+- **`namespace`: the fallback** for hosts where bubblewrap cannot start (containers whose
+  `/dev/null` is bound from the host; every shell command then fails). `sandbox/ns_exec.sh` runs the
+  call in a private mount namespace where `$AW_EVAL` is an empty tmpfs except for a read-only
+  allowlist (the venv, AppWorld's `src/` and `experiments/`, the reference docs, the lint cache) and
+  the optimizer's own working dir. The same places are covered. The call runs in a nested user
+  namespace as a normal user, so it cannot unmount any of it. It needs Linux with unprivileged user
+  namespaces; no root.
 
-- `bash scripts/check_optimizer_isolation.sh namespace|sandbox` plants a random secret where the
-  answers live and asks a real optimizer call to dig it out (cat, Read, Grep, `find /`, copying a data
-  root, an unsandboxed retry). It passes only if no secret reaches the transcript and normal work
-  (writing files, the lint) still runs. **Run it before a search.**
+Either way the shim fails closed (no settings file, no call), and:
+
+- `bash scripts/check_optimizer_isolation.sh sandbox|namespace` plants a random secret where the
+  answers live and asks a real optimizer call, through the same shim, to dig it out (cat, Read, Grep,
+  `find /`, copying a data root, an unsandboxed retry). It passes only if no secret reaches the
+  transcript and normal work (writing files, the lint) still runs. `launch_cape_hc.sh` refuses to
+  start without a passing check for its mode that is newer than the rendered settings
+  (`scripts/isolation_gate.py`).
 - `scripts/scan_isolation.py` greps every optimizer transcript and workdir afterwards for test ids and
   gold-file names. AppWorld uses one canary string for all tasks, so only test ids count as evidence of
   test access.
@@ -147,7 +154,7 @@ bootstrap CI.
 ## Running
 
 ```
-bash scripts/check_optimizer_isolation.sh namespace          # must PASS
+bash scripts/check_optimizer_isolation.sh sandbox            # must PASS (or namespace, with AW_ISOLATION=namespace)
 bash scripts/launch_cape_hc.sh $AW_EVAL/runs/cape_hc_s0       # cape-hc search (~5 h)
 bash altk/run_altk.sh                                         # starts after the cape-hc baseline
 python scripts/scan_isolation.py

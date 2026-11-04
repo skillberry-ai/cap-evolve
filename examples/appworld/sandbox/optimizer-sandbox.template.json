@@ -5,6 +5,8 @@
       "Read(/@AW_EVAL@/root_full/**)",
       "Read(/@AW_EVAL@/runs/final/**)",
       "Read(/@AW_EVAL@/runs/altk/**)",
+      "Read(/@AW_EVAL@/appworld/generate/**)",
+      "Read(/@AW_SECRETS_FILE@)",
       "Read(~/.claude/projects/**)"
     ]
   },
@@ -18,6 +20,8 @@
         "@AW_EVAL@/root_full",
         "@AW_EVAL@/runs/final",
         "@AW_EVAL@/runs/altk",
+        "@AW_EVAL@/appworld/generate",
+        "@AW_SECRETS_FILE@",
         "~/.claude/projects"
       ]
     },
