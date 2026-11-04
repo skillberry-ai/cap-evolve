@@ -27,17 +27,31 @@ patches/                18-line AppWorld patch: header auth for the agent model,
 sandbox/                optimizer isolation: the `claude` shim, the namespace fallback, settings templates
 altk/                   the ALTK-Evolve arm: convert, mine, render, select the dose on dev
 scripts/                data roots, splits, acceptance checks, launch, final window, analysis, scan
-tests/                  offline tests (no AppWorld, no model)
+tests/                  offline tests, one file per module under test (no AppWorld, no model)
 ```
 
 ## Setup
 
 Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
 
-1. AppWorld core + agents **from source** at `42b5bcf`, in a Python 3.11 venv `$AW_EVAL/venv-aw`
-   with `pydantic>=2.12,<2.13` and `-e core`; apply `patches/appworld-extra-headers.patch`; run
-   `appworld install --repo` and `appworld download data --root $AW_EVAL/root_full`. (The PyPI
-   release `0.1.3.post1` has no simplified ReAct agent, and the head agents need pydantic 2.)
+1. AppWorld + its agents **from source** at `42b5bcf`, in a Python 3.11 venv `$AW_EVAL/venv-aw`,
+   with cap-evolve itself (`launch_cape_hc.sh` runs `$AW_EVAL/venv-aw/bin/cap-evolve`):
+
+   ```
+   git clone https://github.com/StonyBrookNLP/appworld $AW_EVAL/appworld
+   cd $AW_EVAL/appworld && git checkout 42b5bcf && git lfs pull
+   git apply <repo>/examples/appworld/patches/appworld-extra-headers.patch
+   uv venv --python 3.11 $AW_EVAL/venv-aw
+   uv pip install --python $AW_EVAL/venv-aw/bin/python -e . -e "experiments[simplified]" \
+       "pydantic>=2.12,<2.13" "fastapi==0.135.0" "starlette>=0.48" -e <repo>/core
+   $AW_EVAL/venv-aw/bin/appworld install --repo
+   $AW_EVAL/venv-aw/bin/appworld download data --root $AW_EVAL/root_full
+   ```
+
+   The PyPI release `0.1.3.post1` has no simplified ReAct agent, and the head agents need pydantic 2.
+   `42b5bcf` leaves fastapi and starlette unpinned. It breaks with fastapi ≥ 0.155
+   (`Path(embed=...)`) and with starlette < 0.48 (`HTTP_422_UNPROCESSABLE_CONTENT`). The pins above
+   were checked with `scripts/check_injection.py`.
 2. `python scripts/make_roots.py` builds `$AW_EVAL/root_opt` (train + dev tasks only; it greps that no
    test id is present) and the lint cache `$AW_EVAL/lint_cache.json` built from it. `python scripts/make_reference.py $AW_EVAL/reference` writes the optimizer's
    read-only docs (API index from the public API docs, how the agent runs).

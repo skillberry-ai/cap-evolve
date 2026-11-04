@@ -1,8 +1,4 @@
-"""PR 874 review finding 7: the final-window CI uses cap_evolve.stats.bootstrap_ci.
-
-``analyze.py`` had its own percentile bootstrap. With equal-size scenarios, the scenario-clustered
-paired bootstrap of ΔTGC/ΔSGC is a bootstrap of the mean of per-scenario differences.
-"""
+"""scripts/analyze.py: TGC/SGC and the scenario-clustered paired CI via cap_evolve.stats.bootstrap_ci."""
 
 from __future__ import annotations
 
@@ -12,8 +8,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import aw_testlib  # noqa: E402, F401
+# The modules under test live in ../adapters (and ../scripts, ../altk). `cap_evolve` normally comes
+# from the installed package; core/ is a fallback so that
+#     python3 examples/appworld/tests/test_analyze.py -v
+# works from a clean shell, as in examples/parsec/tests. Appended, not prepended: a second copy of
+# cap_evolve ahead of the installed one would be worse than an awkward invocation.
+EX = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(EX / "scripts"))
+sys.path.append(str(Path(__file__).resolve().parents[3] / "core"))
 
 import analyze  # noqa: E402
 from cap_evolve import stats  # noqa: E402
@@ -32,7 +34,7 @@ def synthetic(n_scen=6, per=3, seed=1):
     return cells, scen
 
 
-class AnalyzeBootstrapTests(unittest.TestCase):
+class TestPairedBootstrap(unittest.TestCase):
     def test_scenario_diffs_average_to_the_headline_differences(self):
         cells, scen = synthetic()
         ids = [t for ts in scen.values() for t in ts]
