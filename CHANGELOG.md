@@ -16,6 +16,16 @@ All notable changes to cap-evolve are documented here. The format follows
 - Kept from #880: the diversity gate compares ADDED lines, a P2 job gets one in-thread retry, tau2 native-sim result files are named by
   process, thread and a random suffix.
 ### Fixed
+- Under `promotion_rule: P2` the proposer now reads the CURRENT champion's own feedback-split (F) trials. Before, it
+  read the seed's F trajectories in every iteration: P2 tags a candidate's F trials `<round>__<cid>__<stage>`,
+  and the trajectory copier only looked for the bare `<cid>` tag, so it fell back to the seed. The same lookup
+  also made the next iteration's failure list empty after an accept ("0 solid / 0 flaky / 0 failing of 0
+  tasks"). On an accept, the new champion is topped up to `p2_champion_trials` F trials per task (default 2,
+  pooled with its rung trials, fresh seeds; `0` turns it off). That measurement becomes the next iteration's
+  traces and failure list. A resumed pooled run pools the champion's F trials over every P2 round.
+- `prior_iterations/<cid>/` now holds that candidate's own `trajectories/` on the split the proposer may read
+  (F when pooled, else val), next to `PROCESS.md` and `diff.patch`. A rejected candidate's traces show how
+  the agent behaved under the failed edit. Confirm and test trials are never copied.
 - AO-2 no longer ends a search on hypothesis paperwork: the proposer prompt lists the valid `cluster_ids` (with
   labels); an unknown or empty `cluster_ids`, out-of-cluster `predicted_tasks`, or a missing/unreadable
   `hypothesis.json` is repaired with a warning and the candidate is evaluated (`act.py propose
