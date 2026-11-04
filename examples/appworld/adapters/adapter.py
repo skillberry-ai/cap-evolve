@@ -50,7 +50,12 @@ def _appworld_root() -> Path:
 
 
 def _wait_readable(path: Path, timeout_s: float = 60.0) -> None:
-    """The cape-hc run locks root_opt while its optimizer runs (README: Isolation); wait it out."""
+    """Tolerate an operator who locks a data root (``chmod 000``) between phases: wait it out.
+
+    Nothing in this example locks root_opt any more (the optimizer is isolated by the namespace
+    wrapper, README: Isolation). Every root read goes through here, so an external lock never
+    becomes a transient read error.
+    """
     t0 = time.time()
     while not os.access(path, os.R_OK | os.X_OK) and time.time() - t0 < timeout_s:
         time.sleep(1)
@@ -120,6 +125,7 @@ class Adapter(CapabilityAdapter):
             return []
         if split not in ("train", "val", "all"):
             raise ValueError(f"unknown split {split!r}")
+        # Always root_opt, even in the final window (AW_APPWORLD_ROOT = root_full): search tasks only.
         return [_task_cached(t, str(ROOT_OPT)) for t in _search_ids()]
 
     def runner_model(self) -> str | None:
@@ -196,14 +202,15 @@ class Adapter(CapabilityAdapter):
         cdir = Path(ctx).resolve()  # workers run with cwd = a scratch dir
         tasks = list(tasks)
         self._check_seal([t.id for t in tasks])
+        root = _appworld_root()
+        _wait_readable(root)
+        # The lint reads its cache (or root_opt, never ``root``); it runs after the wait like every root read.
         violations = lints.lint_candidate(cdir)
         if violations:
             # Rejected before any rollout: no episode runs, every task scores 0 with the reason.
             meta = {"lint_reject": violations, "success": False, "cost_source": "unpriced"}
             return {t.id: [Rollout(task_id=t.id, output="lint_reject", trace=[], metadata=dict(meta))
                            for _ in range(n_trials)] for t in tasks}
-        root = _appworld_root()
-        _wait_readable(root)
         workers = int(os.environ.get("AW_WORKERS", "24"))
         scratch = Path(os.environ.get("AW_SCRATCH", str(EVAL / "scratch")))
         scratch.mkdir(parents=True, exist_ok=True)
