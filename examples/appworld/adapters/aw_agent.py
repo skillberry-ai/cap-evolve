@@ -62,16 +62,58 @@ MAX_STEPS = 50
 MAX_OUTPUT_LENGTH = 60000
 MAX_OUTPUT_TOKENS_PER_TASK = 100000
 
+# What the episode worker reads from the secrets file: the key (popped once the client is built)
+# and the endpoint URL (not a secret). Any other line in the file is ignored.
+SECRET_KEYS = (KEY_ENV,)
+URL_KEYS = ("RITS_URL", "MODEL_SERVER_URL")
 
-def load_secrets(path: str | None) -> None:
-    """Read KEY=VALUE lines into os.environ (the RITS key). Nothing is exported by the caller."""
+# The episode worker's environment is built from this allowlist, never inherited whole: the
+# `cap-evolve run` process also holds the optimizer's credentials (README: Harness).
+WORKER_ENV_NAMES = frozenset({
+    "PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LANGUAGE", "TZ", "TERM", "TMPDIR",
+    "PYTHONPATH", "PYTHONHASHSEED", "PYTHONUNBUFFERED", "VIRTUAL_ENV",
+    "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
+    "SSL_CERT_FILE", "SSL_CERT_DIR", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE",
+    "LITELLM_LOG", "OPENAI_API_KEY", *URL_KEYS,
+    "AW_EVAL", "AW_MODEL_NAME", "AW_MODEL_URL", "AW_KEY_HEADER", "AW_KEY_ENV",
+})
+WORKER_ENV_PREFIXES = ("LC_", "APPWORLD_")
+
+
+def worker_env(environ: dict[str, str], appworld_root: str) -> dict[str, str]:
+    """The episode subprocess's environment: the allowlist above, minus every secret name."""
+    env = {k: v for k, v in environ.items()
+           if k in WORKER_ENV_NAMES or k.startswith(WORKER_ENV_PREFIXES)}
+    for k in SECRET_KEYS:
+        env.pop(k, None)
+    env["APPWORLD_ROOT"] = appworld_root
+    return env
+
+
+def load_secrets(path: str | None, keys: tuple[str, ...] = SECRET_KEYS + URL_KEYS) -> set[str]:
+    """Set only ``keys`` from a KEY=VALUE file into os.environ; return the names that were set.
+
+    Nothing is exported by the caller. Lines naming other variables are ignored, so a second
+    credential in the same file never reaches the episode.
+    """
+    loaded: set[str] = set()
     if not path or not Path(path).is_file():
-        return
+        return loaded
     for line in Path(path).read_text().splitlines():
         line = line.strip()
         if line and not line.startswith("#") and "=" in line:
             k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+            k = k.strip()
+            if k in keys and k not in os.environ:
+                os.environ[k] = v.strip().strip('"').strip("'")
+                loaded.add(k)
+    return loaded
+
+
+def drop_secrets() -> None:
+    """Remove every secret name from os.environ (the client has read the header value by now)."""
+    for k in SECRET_KEYS:
+        os.environ.pop(k, None)
 
 
 def read_candidate(candidate_dir: Path) -> dict[str, Any]:
@@ -264,7 +306,7 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
         log_lm_calls=bool(spec.get("log_lm_calls", False)),
     )
     # The header value was read at init; drop the secret so agent code (os.environ) cannot see it.
-    os.environ.pop(KEY_ENV, None)
+    drop_secrets()
 
     task_id = spec["task_id"]
     steps: list[dict[str, Any]] = []

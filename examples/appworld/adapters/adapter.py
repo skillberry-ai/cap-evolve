@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cap_evolve import CapabilityAdapter, Rollout, Score, Task
 
+import aw_agent  # noqa: E402  (stdlib-only at import; AppWorld is imported inside run_episode)
 import lints  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -169,8 +170,7 @@ class Adapter(CapabilityAdapter):
             }
             spec_path, out_path = workdir / f"{ep}.spec.json", workdir / f"{ep}.out.json"
             spec_path.write_text(json.dumps(spec))
-            env = {k: v for k, v in os.environ.items() if k != os.environ.get("AW_KEY_ENV", "RITS_API_KEY")}
-            env["APPWORLD_ROOT"] = str(root)
+            env = aw_agent.worker_env(dict(os.environ), str(root))
             t0 = time.time()
             try:
                 proc = subprocess.run([sys.executable, str(HERE / "aw_agent.py"), str(spec_path), str(out_path)],

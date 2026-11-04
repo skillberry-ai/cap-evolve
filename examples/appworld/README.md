@@ -44,7 +44,8 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
 3. ALTK-Evolve needs Python ≥ 3.12: install `altk-evolve==1.3.0` in the repo's `.venv` (or set
    `AW_ALTK_PYTHON`).
 4. Put the agent-model key in a KEY=VALUE file (`AW_SECRETS_FILE`, default `<repo>/.env`). It is never
-   exported: each episode worker reads it. Model endpoint: `AW_MODEL_NAME`, `AW_MODEL_URL`,
+   exported: each episode worker reads only the key named by `AW_KEY_ENV` and the endpoint URL
+   (`RITS_URL`/`MODEL_SERVER_URL`) from it and ignores every other line. Model endpoint: `AW_MODEL_NAME`, `AW_MODEL_URL`,
    `AW_KEY_HEADER`, `AW_KEY_ENV` (see `adapters/aw_agent.py`).
 5. `bash scripts/setup_project.sh $AW_EVAL/runs/cape_hc_s0` scaffolds the cap-evolve project
    (intake), writes `split_ids.json` (train = val = train ∪ dev, test = []), renders the spec and
@@ -62,7 +63,8 @@ Applied to every arm, because AppWorld `42b5bcf` does not:
 - **REPL hardening.** `os`, `pathlib`, `io`, `shutil`, `glob` are removed from AppWorld's import
   allowlist: with them, agent code could list and read files (`pathlib.Path.read_text` passes the
   read-only `open`) and read `os.environ`. The model key is dropped from the environment after the
-  client is built. Each episode records `fs_probe` if its code names a gold path.
+  client is built. The episode worker's environment is an allowlist (`aw_agent.WORKER_ENV_NAMES`),
+  so the optimizer's credentials in the `cap-evolve run` environment never reach it. Each episode records `fs_probe` if its code names a gold path.
 - **Token cap.** `UsageTracker.exceeded()` never checks `max_output_tokens_per_task`; the episode
   loop enforces 100,000 completion tokens itself.
 - **Gold-free records.** AppWorld's failure `trace` holds gold values; only requirement texts, the
