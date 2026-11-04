@@ -72,12 +72,14 @@ notes to the API-doc lookups. With no helpers or notes the first request is **by
 Applied to both arms, because AppWorld `42b5bcf` does not:
 - **REPL hardening.** `os`, `pathlib`, `io`, `shutil`, `glob` are removed from AppWorld's import
   allowlist: with them, agent code could list and read files (`pathlib.Path.read_text` passes the
-  read-only `open`) and read `os.environ`. The model key is dropped from the environment after the
+  read-only `open`) and read `os.environ`. `pydoc` and `unittest` go too, because they import any
+  module by its name (`pydoc.locate("os")`). The model key is dropped from the environment after the
   client is built. The episode worker's environment is an allowlist (`aw_agent.WORKER_ENV_NAMES`),
   so the optimizer's credentials in the `cap-evolve run` environment never reach it. Each episode records `fs_probe` if its code names a gold path.
 - **Attribute guard.** AppWorld checks literal imports only, and allowed modules hand out blocked
-  ones as attributes (`uuid.os`, `contextlib.os`). A second check (`aw_agent.code_guard_violations`)
-  runs after AppWorld's and refuses `.os`/`.sys`/… attributes, dunder and frame walks,
+  ones as attributes (`uuid.os`, `contextlib.os`, `random._os`). A second check
+  (`aw_agent.code_guard_violations`) runs after AppWorld's and refuses `.os`/`.sys`/… attributes,
+  every private (`_x`) attribute, dunder and frame walks,
   `getattr` on a module, `eval`/`exec`/`globals`/`vars`, and IPython `!`/`%` lines. Each episode
   records `guard_blocked` (refused steps) and `guard_probe`; `analyze.py` reports both per arm.
   This is defence in depth, not a sandbox: in-process Python can still reach memory (including the

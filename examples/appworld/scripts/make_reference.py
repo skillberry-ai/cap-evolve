@@ -35,8 +35,8 @@ NOTES = """# How the agent under test runs a candidate (AppWorld simplified ReAc
   (and the answer, if one is required) with the task's hidden requirements. Changing state
   the task did not ask for fails the "no collateral damage" checks.
 - REPL restrictions: imports outside the AppWorld allowlist fail; in this harness `os`,
-  `pathlib`, `io`, `shutil` and `glob` are also blocked; `open`, `subprocess`, `sys`,
-  `socket` are blocked. Only the app APIs may be used to read or change app state.
+  `pathlib`, `io`, `shutil`, `glob`, `pydoc` and `unittest` are also blocked, and so are private
+  (`_x`) and double-underscore attributes; `open`, `subprocess`, `sys`, `socket` are blocked. Only the app APIs may be used to read or change app state.
 - `tools/helpers.py` is executed once in the REPL before step 1, so its functions are
   callable from the agent's code. The prompt then gets one line listing them. Helpers must
   take `apis` and app/API names as parameters (no hardcoded `apis.<app>.` chains, no app or

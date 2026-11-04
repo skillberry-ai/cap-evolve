@@ -17,6 +17,7 @@ holds gold values and is dropped here, before anything is written.
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
@@ -37,7 +38,11 @@ GUARD_PROBE_RE = re.compile(r"\.\s*(?:os|sys|subprocess|builtins)\b|__(?:class|s
 CONTEXT_RE = re.compile(r"context length|context_length|ContextWindowExceeded|maximum context|max_model_len|too many tokens|input tokens", re.I)
 # Removed from AppWorld's import allowlist (README: Harness): with them the
 # agent's REPL code can list and read files (pathlib.Path.read_text goes through the read-only open).
-EXTRA_BLOCKED_MODULES = {"os", "pathlib", "io", "shutil", "glob"}
+EXTRA_BLOCKED_MODULES = {"os", "pathlib", "io", "shutil", "glob",
+                         # import any module by its dotted name: pydoc.locate("os"), mock.patch("os…")
+                         "pydoc", "pydoc_data", "unittest",
+                         # builds any Python object from a tag: yaml.load("!!python/name:os.environ")
+                         "yaml"}
 
 # The agent under test. Defaults: gpt-oss-120b on IBM RITS (vLLM, OpenAI-compatible), authenticated by
 # a `RITS_API_KEY: <key>` header. Override the model, URL, header and the env var that holds the key:
@@ -291,7 +296,12 @@ def build_agent_class():
 # walks reach anything in the process. This check runs after AppWorld's and rejects those spellings.
 # It is defence in depth, not a sandbox (README: Harness): the real controls are that the worker
 # holds no other secret (``worker_env``) and that a blocked attempt is counted (``guard_blocked``).
-BLOCKED_ATTRS = EXTRA_BLOCKED_MODULES | {"sys", "subprocess", "builtins", "importlib", "socket", "ctypes"}
+# Allowed modules also hold blocked ones under other names: `random._os`, `collections._sys`,
+# `enum.bltns`, `fnmatch.posixpath`. Every private attribute (leading `_`) is refused below, and
+# the public aliases are listed here. Neither the seed prompt's code nor any AppWorld API name
+# starts with `_`.
+BLOCKED_ATTRS = EXTRA_BLOCKED_MODULES | {"sys", "subprocess", "builtins", "importlib", "socket", "ctypes",
+                                         "posix", "posixpath", "ntpath", "genericpath", "bltns"}
 FRAME_ATTRS = {"currentframe", "stack", "trace", "getouterframes", "getinnerframes", "_getframe",
                "f_back", "f_globals", "f_locals", "f_builtins", "f_code", "gi_frame", "cr_frame",
                "ag_frame", "tb_frame", "tb_next"}
@@ -299,11 +309,20 @@ DUNDER_OK = {"__name__", "__qualname__", "__doc__", "__module__", "__init__"}
 BLOCKED_NAMES = {"__builtins__", "__import__", "__loader__", "__spec__", "eval", "exec", "compile",
                  "globals", "locals", "vars", "breakpoint"}
 ATTR_FUNCS = {"getattr", "setattr", "delattr", "hasattr"}
+# Walk attributes from a STRING the AST check cannot see into: operator.attrgetter("_os.environ"),
+# "{0._os}".format(m). Refused by name; a plain "{}".format(x) is still allowed (see below).
+STRING_ATTR_WALKERS = {"attrgetter", "methodcaller"}
+_FORMAT_FIELD_RE = re.compile(r"\{[^{}!:]*[.\[][^{}]*\}")
 GUARD_MESSAGE = "Usage of the following is not allowed: "
 
 
 def _is_dunder(name: str) -> bool:
     return name.startswith("__") and name.endswith("__") and len(name) > 4
+
+
+def _call_name(node) -> str:
+    f = node.func
+    return f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else ""
 
 
 def code_guard_violations(code: str, module_names: frozenset[str] | set[str] = frozenset()) -> list[str]:
@@ -330,13 +349,26 @@ def code_guard_violations(code: str, module_names: frozenset[str] | set[str] = f
                 bad.append(f"frame access .{a}")
             elif _is_dunder(a) and a not in DUNDER_OK:
                 bad.append(f"attribute .{a}")
+            elif a.startswith("_") and not _is_dunder(a):
+                bad.append(f"private attribute .{a}")
         elif isinstance(node, ast.Name) and node.id in BLOCKED_NAMES:
             bad.append(f"name {node.id}")
+        elif isinstance(node, ast.Call) and _call_name(node) in STRING_ATTR_WALKERS:
+            bad.append(f"{_call_name(node)}()")
+        elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+              and node.func.attr in ("format", "format_map")):
+            # A field like {0.attr} or {0[key]} walks attributes from the format string itself.
+            fmt = node.func.value
+            if not (isinstance(fmt, ast.Constant) and isinstance(fmt.value, str)):
+                bad.append(f"non-literal format string .{node.func.attr}()")
+            elif _FORMAT_FIELD_RE.search(fmt.value):
+                bad.append(f"attribute/index field in a .{node.func.attr}() string")
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ATTR_FUNCS:
             args = node.args
             name = args[1] if len(args) > 1 else None
             if isinstance(name, ast.Constant) and isinstance(name.value, str):
-                if name.value in BLOCKED_ATTRS | FRAME_ATTRS or (_is_dunder(name.value) and name.value not in DUNDER_OK):
+                if (name.value in BLOCKED_ATTRS | FRAME_ATTRS or (_is_dunder(name.value) and name.value not in DUNDER_OK)
+                        or (name.value.startswith("_") and not _is_dunder(name.value))):
                     bad.append(f"{node.func.id}(…, {name.value!r})")
             elif args and isinstance(args[0], ast.Name) and args[0].id in module_names:
                 bad.append(f"{node.func.id}() on module {args[0].id}")

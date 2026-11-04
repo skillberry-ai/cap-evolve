@@ -79,6 +79,19 @@ BYPASSES = {
     "vars": "vars()",
     "ipython shell escape": "!cat /etc/passwd",
     "ipython magic": "%env",
+    # blocked modules held by allowed ones under other names (found in AppWorld's real REPL)
+    "random._os": "import random\nrandom._os.environ['RITS_API_KEY']",
+    "collections._sys": "import collections\ncollections._sys.modules",
+    "enum.bltns": "import enum\nenum.bltns.open",
+    "fnmatch.posixpath": "import fnmatch\nfnmatch.posixpath.expanduser('~')",
+    "getattr private constant": "import random\ngetattr(random, '_os')",
+    # attribute walks driven by a string (found in AppWorld's real REPL)
+    "operator.attrgetter": "import operator, random\noperator.attrgetter('_os.environ')(random)",
+    "methodcaller": "from operator import methodcaller\nmethodcaller('x')",
+    "format attribute field": "import random\n'{0._os.environ[K]}'.format(random)",
+    "format index field": "'{0[k]}'.format(d)",
+    "format_map": "'{a.b}'.format_map(m)",
+    "non-literal format string": "fmt = input_str\nfmt.format(x)",
 }
 
 
@@ -90,6 +103,9 @@ LEGIT = {
     "class with init": "class A:\n    def __init__(self):\n        super().__init__()",
     "plain syntax error": "print(",
     "complete task": "apis.supervisor.complete_task(answer=None)",
+    "plain format": "print('{} of {}: {:.2f}'.format(1, 2, 3.0))",
+    "named format": "print('{name} has {n:d}'.format(name='a', n=2))",
+    "f-string": "x = 1\nprint(f'{x} items')",
 }
 
 
@@ -142,6 +158,8 @@ class TestHardenGuard(unittest.TestCase):
             aw_agent.harden_guard()
             aw_agent.harden_guard()  # idempotent
         self.assertNotIn("os", sg.ALLOWED_MODULE_NAMES)
+        for importer in ("pydoc", "unittest"):  # they import any module by name
+            self.assertIn(importer, aw_agent.EXTRA_BLOCKED_MODULES)
         g = sg.SafetyGuard()
         ok, msg = g.is_syntax_safe("import uuid\nuuid.os.environ")
         self.assertFalse(ok)
