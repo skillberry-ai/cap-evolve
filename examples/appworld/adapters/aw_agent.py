@@ -216,6 +216,43 @@ apis.api_docs.show_api_descriptions = _cap_show_api_descriptions
     return "\n".join(parts).strip()
 
 
+class AgentConstructionError(RuntimeError):
+    """The upstream agent rejected our constructor arguments (its signature drifted)."""
+
+
+def agent_kwargs(spec: dict[str, Any], model_config: dict[str, Any]) -> dict[str, Any]:
+    """Constructor arguments for AppWorld's SimplifiedReActCodeAgent (and its ``Agent`` base) at 42b5bcf."""
+    return {
+        "prompt_file_path": str(Path(spec["candidate_dir"]) / "policy" / "instructions.txt"),
+        "model_config": model_config,
+        "appworld_config": {"random_seed": int(spec["random_seed"]), "raise_on_extra_parameters": True},
+        "logger_config": {"color": False, "verbose": False},
+        "usage_tracker_config": {"max_cost_per_task": 10, "max_output_tokens_per_task": MAX_OUTPUT_TOKENS_PER_TASK},
+        "ignore_multiple_calls": True,
+        "max_prompt_length": None,
+        "max_output_length": MAX_OUTPUT_LENGTH,
+        "max_steps": MAX_STEPS,
+        "log_lm_calls": bool(spec.get("log_lm_calls", False)),
+    }
+
+
+def unaccepted_kwargs(cls: type, kwargs: dict[str, Any]) -> list[str]:
+    """Names in ``kwargs`` that no ``__init__`` along ``cls``'s MRO accepts by name.
+
+    Walks the chain while each ``__init__`` forwards ``**kwargs``; stops at the first that does not.
+    """
+    import inspect
+    accepted: set[str] = set()
+    for klass in cls.__mro__:
+        if klass is object or "__init__" not in vars(klass):
+            continue
+        params = inspect.signature(vars(klass)["__init__"]).parameters.values()
+        accepted |= {p.name for p in params if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)}
+        if not any(p.kind is p.VAR_KEYWORD for p in params):
+            break
+    return sorted(set(kwargs) - accepted)
+
+
 def build_agent_class():
     from appworld_agents.code.simplified.react_code_agent import SimplifiedReActCodeAgent
 
@@ -420,20 +457,14 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
     model_config = dict(MODEL_CONFIG)
     model_config["extra_headers_env"] = dict(MODEL_CONFIG["extra_headers_env"])
     CapReActAgent = build_agent_class()
-    agent = CapReActAgent(
-        candidate=candidate,
-        memory_block=spec.get("memory_block", ""),
-        prompt_file_path=str(Path(spec["candidate_dir"]) / "policy" / "instructions.txt"),
-        model_config=model_config,
-        appworld_config={"random_seed": int(spec["random_seed"]), "raise_on_extra_parameters": True},
-        logger_config={"color": False, "verbose": False},
-        usage_tracker_config={"max_cost_per_task": 10, "max_output_tokens_per_task": MAX_OUTPUT_TOKENS_PER_TASK},
-        ignore_multiple_calls=True,
-        max_prompt_length=None,
-        max_output_length=MAX_OUTPUT_LENGTH,
-        max_steps=MAX_STEPS,
-        log_lm_calls=bool(spec.get("log_lm_calls", False)),
-    )
+    kwargs = agent_kwargs(spec, model_config)
+    unknown = unaccepted_kwargs(CapReActAgent, kwargs)
+    if unknown:
+        raise AgentConstructionError(f"upstream agent does not accept {unknown} (AppWorld pin changed?)")
+    try:
+        agent = CapReActAgent(candidate=candidate, memory_block=spec.get("memory_block", ""), **kwargs)
+    except TypeError as e:
+        raise AgentConstructionError(f"agent construction failed: {type(e).__name__}") from e
     # The header value was read at init; drop the secret so agent code (os.environ) cannot see it.
     drop_secrets()
 

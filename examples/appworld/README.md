@@ -57,7 +57,7 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
 candidate, an optional memory block goes right before the final `My name is: … Task:` block, and a
 setup snippet defines `tools/helpers.py` in the REPL and adds `tools/api_notes.json` notes to the
 API-doc lookups. With no memory, helpers or notes the first request is **byte-identical to stock**
-(`scripts/check_injection.py`). The same harness, model client and limits serve all three arms.
+(`scripts/check_injection.py`, which also checks that AppWorld's agent accepts every constructor argument we pass; re-run it after changing the AppWorld pin). The same harness, model client and limits serve all three arms.
 
 Applied to every arm, because AppWorld `42b5bcf` does not:
 - **REPL hardening.** `os`, `pathlib`, `io`, `shutil`, `glob` are removed from AppWorld's import

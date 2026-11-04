@@ -1,4 +1,5 @@
-"""Acceptance A4 (no model call): seed prompt == stock prompt; memory block placement; helpers + notes setup.
+"""Acceptance A4 (no model call): constructor arguments accepted upstream; seed prompt == stock prompt;
+memory block placement; helpers + notes setup. Re-run it after changing the AppWorld pin.
 
 Usage: APPWORLD_ROOT=/tmp/aw_eval/root_opt python check_injection.py SEED_CAPABILITY_DIR
 """
@@ -48,6 +49,13 @@ def main(argv: list[str]) -> int:
     seed = Path(argv[1])
     tid = load_task_ids("dev")[0]
     Cap = aw_agent.build_agent_class()
+    spec = {"candidate_dir": str(seed), "random_seed": 100}
+    unknown = aw_agent.unaccepted_kwargs(Cap, aw_agent.agent_kwargs(spec, dict(aw_agent.MODEL_CONFIG)))
+    print(f"A4.0 every constructor argument the episode passes is accepted upstream: {not unknown}"
+          + (f" (rejected: {unknown})" if unknown else ""))
+    if unknown:
+        print("A4 FAIL")
+        return 1
     stock = SimplifiedReActCodeAgent(**agent_kwargs(str(STOCK)))
     m_stock, _ = first_messages(stock, tid, "probes/a4_stock")
     cap = Cap(candidate=aw_agent.read_candidate(seed), **agent_kwargs(str(seed / "policy/instructions.txt")))
