@@ -151,6 +151,21 @@ scores 168 tasks × 2 arms × 2 trials in one shuffled order (48 workers, seeds 
 `scripts/analyze.py` gives TGC, SGC, by difficulty, and paired differences with a scenario-clustered
 bootstrap CI.
 
+## Integration test
+
+`bash scripts/itest.sh` is this example's one-task regression run, like
+`examples/tau2_airline/itest.sh`: train task `82e2fac_1` (difficulty 1), 1 trial, 1 iteration
+(`capevolve.itest.yaml`, `itest_split.json`). It scaffolds the project with `setup_project.sh`,
+runs a fresh isolation check, and runs through `launch_cape_hc.sh`, so it takes the real launch
+path. `scripts/assert_itest.py` then gates the run dir. It requires that the run completed
+(`baseline.json`, `final.json`, `report.md`), that one iteration ran, and that the final test reward
+is not below the baseline val reward. It also requires that no rollout is an infrastructure error or
+a lint reject (a broken key scores 0.0 like a failed task), and that no record is gold-bearing. With
+one iteration the gate usually rejects the edit; that is a pass.
+
+`bash scripts/itest.sh --dry-run` runs everything up to the first model call: preflight, project,
+`cap-evolve check`, and `cap-evolve run --dry-run`.
+
 ## Running
 
 ```
