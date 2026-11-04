@@ -14,7 +14,8 @@
 set -euo pipefail
 
 REAL_CLAUDE="${AW_REAL_CLAUDE:-/usr/local/bin/claude}"
-AW="${AW_EVAL:-/tmp/aw_eval}"
+# Both resolved, so a symlinked AW_EVAL compares equal to the working dir's physical path.
+AW="$(readlink -f "${AW_EVAL:-/tmp/aw_eval}")"
 WORK="$(pwd -P)"
 # Read-only allowlist inside $AW (relative paths). Only AppWorld's src/ and experiments/ are needed by
 # the venv's editable installs; NOT the whole clone: appworld/generate holds the task generators,
@@ -29,7 +30,10 @@ TRANSCRIPTS="${AW_NS_TRANSCRIPTS:-$AW/runs/optimizer_transcripts}"
 LOG="${AW_NS_LOG:-$AW/progress/optimizer_guard.log}"
 UID_="$(id -u)"; GID_="$(id -g)"
 
-case "$WORK/" in
+# The working dir is bound read-write: it must be a proper subdirectory of $AW, never $AW itself
+# (that would bind root_opt and every other run back in).
+case "$WORK" in
+  "$AW") echo "claude shim: working dir is $AW itself; refusing to bind all of it read-write" >&2; exit 97 ;;
   "$AW"/*) ;;
   *) echo "claude shim: working dir $WORK is outside $AW; refusing to run unisolated" >&2; exit 97 ;;
 esac
@@ -52,6 +56,7 @@ for item in $ALLOW_RO; do
   mount -o remount,bind,ro "$AW/$item"
 done
 rel="${WORK#"$AW"/}"
+case "$rel" in ""|/*) echo "claude shim: bad working dir $WORK under $AW" >&2; exit 97 ;; esac
 mkdir -p "$AW/$rel"
 mount --bind "$STAGE/$rel" "$AW/$rel"
 # the transcript dir may live under $AW, which is covered now: bind it from the staged view
