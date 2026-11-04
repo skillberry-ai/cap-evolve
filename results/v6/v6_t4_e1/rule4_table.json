@@ -1,0 +1,112 @@
+{
+ "rows": {
+  "Seed": {
+   "rule4_text": "4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job\n   metadata or events, extract what you need (steps, playbook events, errors) from\n   the existing result. Do NOT make a redundant second call to the same job.",
+   "rule4_words": 39,
+   "rule4_added": 0,
+   "rule4_removed": 0,
+   "rule4_unchanged": true,
+   "job_read_sections": {},
+   "job_read_words": 0,
+   "aap2_file_added": 0,
+   "aap2_file_removed": 0,
+   "platform004_train": 0.76,
+   "platform004_trials": 10
+  },
+  "T-opt": {
+   "rule4_text": "4. **Don't re-fetch job data.** If a prior `query_aap2` call returned a field, read it\n   from that result instead of calling again. This forbids repeating the **same\n   `action`** on the same job \u2014 it does NOT cover a *different* `action`. Different\n   `query_aap2` actions return different fields, so calling `get_job_events` after\n   `get_job_log` on the same job is complementary, not redundant. Never skip a\n   different-action call on the grounds that you already have \"the job data\".",
+   "rule4_words": 74,
+   "rule4_added": 59,
+   "rule4_removed": 24,
+   "rule4_unchanged": false,
+   "job_read_sections": {
+    "get_job_log` vs `get_job_events": 504
+   },
+   "job_read_words": 504,
+   "aap2_file_added": 1195,
+   "aap2_file_removed": 31,
+   "platform004_train": 1.0,
+   "platform004_trials": 5
+  },
+  "m1": {
+   "rule4_text": "4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job\n   metadata or events, extract what you need (steps, playbook events, errors) from\n   the existing result. Do NOT make a redundant second call to the same job.\n   This applies only to a call that **returned data**. A call that timed out\n   returned nothing to extract, so re-issuing it is not a re-fetch \u2014 it is the\n   first real attempt. **One** retry of a timed-out call is within budget: a\n   gap you could have closed with a single retry is not an acceptable gap.\n   Do not retry it a third time.",
+   "rule4_words": 102,
+   "rule4_added": 63,
+   "rule4_removed": 0,
+   "rule4_unchanged": false,
+   "job_read_sections": {
+    "Choosing the job read": 516,
+    "get_job_log` vs `get_job_events": 504,
+    "get_job` is the FIRST read": 243
+   },
+   "job_read_words": 1263,
+   "aap2_file_added": 9975,
+   "aap2_file_removed": 176,
+   "platform004_train": 1.0,
+   "platform004_trials": 5
+  },
+  "m3": {
+   "rule4_text": "7. **Don't re-fetch job data \u2014 but a different action, or a failed call, is not a\n   re-fetch.** If a prior `query_aap2` call returned a field, read it from that\n   result instead of calling again. This forbids repeating the **same `action`** on\n   the same job after it **returned data**. It does NOT cover:\n   - **A *different* `action`.** Different `query_aap2` actions return different\n     fields, so calling `get_job_events` after `get_job_log` (or `get_job` alongside\n     either) on the same job is complementary, not redundant. Never skip a\n     different-action call on the grounds that you already have \"the job data\" \u2014\n     see \"Choosing the job read\".\n   - **A call that failed without returning data.** A tool call that returned an\n     error, a timeout, or no payload at all returned nothing to extract, so\n     re-issuing that exact call **once** is not a re-fetch \u2014 it is the first real\n     attempt (see the transient-failure retry rule in the shared context). A gap you\n     could have closed with a single retry is not an acceptable gap. Do not retry it\n     a third time; after the retry also fails, say which call failed and which\n     specific question you therefore could not answer. Never substitute a link for a\n     value the user asked you to read: if the user asked what a file contains and the\n     fetch failed, the retry is mandatory, because handing back a URL answers none of\n     the question.",
+   "rule4_words": 232,
+   "rule4_added": 219,
+   "rule4_removed": 26,
+   "rule4_unchanged": false,
+   "job_read_sections": {
+    "Choosing the job read": 992,
+    "What the log carries vs. what the events carry": 471,
+    "get_job` is the FIRST read": 219
+   },
+   "job_read_words": 1682,
+   "aap2_file_added": 13647,
+   "aap2_file_removed": 198,
+   "platform004_train": 1.0,
+   "platform004_trials": 5
+  },
+  "m2": {
+   "rule4_text": "4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job\n   metadata or events, extract what you need (steps, playbook events, errors) from\n   the existing result. Do NOT make a redundant second call to the same job.",
+   "rule4_words": 39,
+   "rule4_added": 0,
+   "rule4_removed": 0,
+   "rule4_unchanged": true,
+   "job_read_sections": {
+    "Choosing the job read": 516,
+    "get_job_log` vs `get_job_events": 504,
+    "get_job` is the FIRST read": 243
+   },
+   "job_read_words": 1263,
+   "aap2_file_added": 8350,
+   "aap2_file_removed": 88,
+   "platform004_train": 1.0,
+   "platform004_trials": 5
+  },
+  "Global": {
+   "rule4_text": "4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job\n   metadata or events, extract what you need (steps, playbook events, errors) from\n   the existing result. Do NOT make a redundant second call to the same job.",
+   "rule4_words": 39,
+   "rule4_added": 0,
+   "rule4_removed": 0,
+   "rule4_unchanged": true,
+   "job_read_sections": {
+    "Choosing the job read": 233
+   },
+   "job_read_words": 233,
+   "aap2_file_added": 1055,
+   "aap2_file_removed": 140,
+   "platform004_train": 0.912,
+   "platform004_trials": 4
+  },
+  "PR #57": {
+   "rule4_text": "4. **Don't re-fetch job data \u2014 but a different `action` is not a re-fetch.** If a\n   prior `query_aap2` call already returned what you need, read it from that result\n   instead of asking again. A call is redundant only when it repeats the **same\n   `action` with the same arguments**. Different actions on one job are\n   complementary: `get_job_log` returns the log text, `get_job_events` returns the\n   structured failed-task rows (`role`, `play`, `task`, `host`, `error_msg`), and\n   neither response contains the other's data \u2014 so \"I already queried this job\" is\n   not a reason to skip a different action on it, including the\n   `get_job_events` + `failed_only=true` call required by step 5 of the\n   Investigation Flow below.",
+   "rule4_words": 111,
+   "rule4_added": 94,
+   "rule4_removed": 22,
+   "rule4_unchanged": false,
+   "job_read_sections": {},
+   "job_read_words": 0,
+   "aap2_file_added": 94,
+   "aap2_file_removed": 22,
+   "platform004_train": null,
+   "platform004_trials": null
+  }
+ },
+ "definitions": "Table 4: the AAP2 Rule 4 running example (\"don't re-fetch job data\") across all arms.\n\nFor each arm's aap2_agent.md: the Rule 4 text verbatim, its word diff against the Seed's Rule 4,\nthe size of the arm's dedicated job-read guidance (sections that say which job action carries\nwhich field), and the arm's train reward on platform-004 (the task whose failure exposed the\nrule). Also the upstream fix, rhpds/parsec PR #57 (from v4 T-opt), for reference; its diff is\nvendored as results/v6_t4_e1/pr57_aap2_agent.diff (from `gh pr diff 57 --repo rhpds/parsec`).\n\nRule 4 = from the numbered \"**Don't re-fetch job data\" item to the next numbered item or heading.\nWords = whitespace tokens; added/removed from a word-level difflib diff, as in Table 3.\n"
+}

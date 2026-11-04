@@ -1,0 +1,250 @@
+--- a/orchestrator.md
++++ b/orchestrator.md
+@@ -136,6 +136,19 @@
+ - For questions spanning multiple domains (e.g., "investigate sandbox5358 costs
+   AND check for abuse"), call multiple agents and synthesize their results
+ - The user's question may need both cost analysis AND security investigation
++- **Two questions about the SAME job are one domain, not two.** A request that
++  asks both why a job failed *and* what that job created/changed/left behind is
++  entirely `investigate_aap2_job`: both answers come from that job's own log and
++  its execution events. Send it to that one agent and let it answer both parts.
++  Do NOT add a parallel `investigate_security` or cost dispatch for the
++  "what was created" half.
++- Route to `investigate_security` only when the question is about activity
++  **beyond one known job** — who touched an account, API calls by principal,
++  IAM keys, drift with no job to point at. CloudTrail and account inspection
++  need an account id the job alone does not give you, so dispatching them for a
++  single job's changes returns nothing and appends a dead end to the answer.
++  When a job id or job URL is the subject, the job's events are the source of
++  record for what it changed.
+ 
+ **MultiWorkshop and Babylon resource identifiers:**
+ - MultiWorkshops and Workshops are Babylon K8s resources — they do NOT exist in
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -175,6 +175,77 @@
+ 
+ Keep it concise — just list the tools/sources used, not every query detail.
+ 
++### Citing a specific line
++
++When the user asks you to cite a line — or whenever you blame one line of a file
++you fetched — give it in exactly the form the user asked for, defaulting to:
++
++```
++owner/repo:path:line
++```
++
++Rules that make the citation usable:
++
++- **Use the real `owner` from the tool call that returned the content**, not the
++  org you expect to own a repo of that name. A citation with the wrong owner
++  points at a different file, or at nothing.
++- **Put the line number immediately after the path**, in the same breath — not in
++  a later sentence. `owner/repo:path/to/file.ext:38` is right; "see
++  `owner/repo:path/to/file.ext`, around line 38 or so" is not.
++- **Cite ONE line.** If you have narrowed it to a block, cite the line the block
++  starts on. Offering a range or several candidate numbers ("lines 33-38", "line
++  34 or 39") says you did not determine it.
++- **Count lines from the content you actually fetched** — the raw string the tool
++  returned, not a reflowed or excerpted view of it.
++
++#### Deriving the line number (do this in writing — never by eye)
++
++A fetched file arrives as **one string with no line numbers**, so the line number
++is something you must *work out*, not something you can read off. Estimating by
++eye fails in one direction: it comes out **too low**, because blank lines and
++short delimiter lines get skipped silently. So do not state a line number until
++you have completed both routes below and they agree.
++
++1. **Line boundaries are the `\n`s.** Each `\n` ends a line. Line 1 is the text
++   before the first `\n`. `\n\n` means an **empty line sits between them, and it
++   consumes a number of its own**. A trailing `\n` at the very end does not add a
++   line. A long line that wraps on screen is still one line.
++2. **Route A — transcribe it numbered.** In your working notes, write out every
++   line from line 1 through the target, one per row, as `N| text`. Write an empty
++   line as `N|` with nothing after the bar. Give `---`, comment lines, and
++   template/control lines (`{% ... %}`, `{{ ... }}`) their own rows. Never merge,
++   skip, or summarize a row — a skipped row is exactly the error this prevents.
++3. **Route B — count the separators.** Independently, count the `\n`s that occur
++   before the target line's first character. The line number is that count **+ 1**.
++4. **Agreement gate.** Cite the number only if Route A and Route B match. If they
++   differ, redo both. Never average them, never cite a range, never write "around".
++5. **Content check.** The text on the row you are citing must be the construct you
++   named in your prose. If it is not, your count is wrong, not your prose.
++
++Routes A and B are scratch work: keep them **out** of the final answer, which
++carries only the citation itself (and at most the one cited line, quoted).
++
++*Worked example.* The tool returns `{"content": "a: 1\n\n{% if x %}\n  b: 2"}`.
++Route A gives `1| a: 1`, `2|`, `3| {% if x %}`, `4|   b: 2`. Route B: there are 3
++`\n`s before `b`, and 3 + 1 = 4. They agree, so cite `...:4`. Had the blank line
++and the control line been skipped, the answer would have been 2 — an undercount of
++exactly the kind the two routes catch.
++
++### Literal values in your answer must be plain text
++
++Resource names, identifiers, counts, and the phrase that names a root cause are
++the substance of your answer. Keep each literal **contiguous and unbroken**: do
++not split a value or a key phrase across markdown emphasis, and never put `**` or
++a backtick *inside* one.
++
++- Write the identifier whole — `some-resource-name-abc123` — never
++  `some-resource-`**`name`**`-abc123`.
++- For counts, keep the number next to its noun: "3 tasks changed something".
++- For a cause, keep the phrase intact: "the reference sits outside the guard" —
++  not "sits **outside** the `{% if %}` guard", which breaks the phrase in two.
++
++Emphasis around a whole phrase is fine; emphasis *inside* a name or phrase is not.
++
+ ## Tool Result Handling
+ 
+ - **Truncated results** (`"truncated": true`): The query hit the limit. Narrow
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -59,6 +59,11 @@
+ 4. Call `query_aap2` with `get_job_log` using `towerHost` as controller and `deployerJob` as job_id.
+    **Always use `get_job_log` instead of `get_job`.**
+ 5. If the job failed, also call `get_job_events` + `failed_only=true`
++5b. **If the user asks what the run created, changed, or what needs cleaning up —
++   or if the log is trimmed — you MUST also call `get_job_events` with
++   `changed_only=true`.** See "What the Run Already Changed" below. `failed_only`
++   and `changed_only` answer different questions; one does not substitute for the
++   other, so when both are asked, make both calls.
+ 6. Continue to trace the config hierarchy via the "Investigate AAP2 Job Failures" workflow Steps 2+
+ 
+ **If the AnarchySubject is gone**, use `query_aap2(action="find_jobs", template_name="<guid>")`
+@@ -232,10 +237,26 @@
+ 
+ #### Step 6: Determine AgnosticD Version and Fetch Config
+ 
+-| Project Pattern | Version | GitHub Owner | GitHub Repo |
+-|----------------|---------|--------------|-------------|
+-| `https://github.com/redhat-cop/agnosticd.git` | v1 | `redhat-cop` | `agnosticd` |
+-| `https://github.com/rhpds/agnosticd-v2.git` | v2 | `rhpds` | `agnosticd-v2` |
++**Always take `owner`/`repo` from the job's OWN `git_url`, never from a table.**
++`get_job_log` returns `git_url` (and `project`). Parse it literally:
++`https://github.com/{owner}/{repo}.git` → that exact `owner` and `repo`, with the
++`.git` suffix stripped. The agnosticd fork in use varies by org and changes over
++time, so a memorized owner is the single most common cause of a failed fetch.
++
++Worked example — the job log says `git_url: https://github.com/EXAMPLE-ORG/some-repo.git`:
++`fetch_github_file(owner="EXAMPLE-ORG", repo="some-repo", path="<path from the log>")`
++— NOT whichever owner you have seen most often for a repo of that name.
++
++| Project Pattern | Version | GitHub Owner / Repo |
++|----------------|---------|---------------------|
++| `.../agnosticd.git` | v1 | parse from `git_url` (commonly `redhat-cop/agnosticd`) |
++| `.../agnosticd-v2.git` | v2 | parse from `git_url` (the owner VARIES — read it) |
++
++**Do not try other owners when a fetch comes back empty.** Sweeping `rhpds`,
++`redhat-cop`, `agnosticd`, … for the same path burns your whole round budget and
++was never the problem. If the path from `git_url`'s owner returns nothing, re-read
++the log for the real path and retry **once** with `ref` omitted (the default branch);
++then write the report with what you have.
+ 
+ When fetching agnosticd files, use the `ref` parameter to get the correct code version:
+ 1. **If the job has a Revision SHA** — use it as `ref` to get the exact commit that ran.
+@@ -246,6 +267,20 @@
+ Fetch:
+ - `ansible/configs/{env_type}/default_vars.yml`
+ - `ansible/roles/{role_name}/tasks/main.yml` (when tracing failures)
++
++**When the log already names a file, fetch THAT path — do not search for it.**
++Ansible prints the real repo-relative path of every file it reads or renders:
++`src:`/`dest:` on a template or copy task, and `task path:` on each task header.
++Strip the runner prefix (e.g. `/runner/project/`) and the remainder is the exact
++`path` argument for `fetch_github_file`.
++
++Worked example — the log line
++`changed: [localhost] => {"dest": "/tmp/x/out.yaml", "src": "/runner/project/ansible/configs/EXAMPLE/files/some_template.j2"}`
++means the one correct call is
++`fetch_github_file(owner=<from git_url>, repo=<from git_url>, path="ansible/configs/EXAMPLE/files/some_template.j2")`.
++`search_github_repo` is for when you have NO path. Using it on a path the log
++already gave you is a wasted round, and in several investigations it has returned
++nothing and sent the whole analysis down a dead end.
+ 
+ **AgnosticD Structure:**
+ ```
+@@ -293,6 +328,81 @@
+ | `timeout` | Resource provisioning timeout |
+ | `Vault password` | Missing vault credentials |
+ | `rc: 1` with short `delta` (< 10s) | Script failed fast — likely auth error, missing resource, or bad config |
++| cloud API rejects a rendered template as referencing an undefined name | A templated block is conditional, its reference is not (Step 7d) |
++
++#### Step 7d: Rendered-Template Failures (a name the template references does not exist)
++
++When a cloud API rejects a **rendered** template because some name it references
++is not defined (CloudFormation `Unresolved resource dependencies [X]` /
++`Template format error`, a Kubernetes manifest referencing an absent object, a
++Terraform undefined reference), the bug is almost never the referencing line in
++isolation. The pattern is: **the definition of `X` sits inside a conditional or
++loop, and something that references `X` sits outside it**, so for the variable
++values this run used, the reference was emitted and the definition was not.
++
++Diagnose it this way:
++
++1. Note from the log the variable values this run actually used (a "print the
++   layout"-style task, or `extra_vars`). They decide which branches rendered.
++2. Fetch the template source and find **both** places: where `X` is defined, and
++   every place `X` is referenced.
++3. Compare their guards. Report the asymmetry explicitly — which reference is
++   outside the conditional that guards the definition.
++
++**State the asymmetry in plain words, and cite the referencing line.** Two things
++are graded separately and you must supply both:
++
++- **The mechanism, in prose.** Say that the reference is *outside the guard* /
++  *outside the conditional* that the definition sits inside — i.e. the definition
++  is conditional and the reference is not. Write that phrase as plain text; do not
++  let backticks or bold interrupt it. Write **"outside the guard"**, not
++  "outside** the **`{% if %}`** guard". The same applies to "outside the
++  conditional", "not guarded", and "not wrapped".
++- **The line number of the REFERENCING construct**, not the definition and not the
++  `{% endif %}`. Cite the line where the block that references the missing name
++  *begins* — the resource/object key, not the inner property line. Cite one line,
++  as `owner/repo:path:line`, with the number immediately after the path.
++
++  Getting the right construct is not enough: the **number** is graded. In this
++  failure shape the referencing block sits *after* a closing control line and
++  usually after a blank line too, and those are precisely the rows an
++  eyeball count drops — so the number comes out a few too low even when the
++  diagnosis is perfect. Derive it with the numbered-transcription + separator-count
++  procedure in your shared context ("Deriving the line number"), and do not state a
++  number until the two routes agree.
++
++**The fix to recommend:** move the referencing block inside the same conditional
++as the definition (or give the reference its own equivalent guard).
++
++#### Step 7e: What the Run Already Changed (partial-failure cleanup)
++
++A failed provision usually completed some tasks before it died, and those are the
++real cleanup list. **The trimmed log cannot answer this.** `get_job_log` returns
++only a retained tail (compare `log_trimmed_size` against `log_original_size`), so
++every task that changed something earlier in the run is simply absent from the
++text you can see. Only `get_job_events(changed_only=true)` enumerates them.
++
++So when the user asks what was created/changed, or what to clean up first:
++
++1. Call `get_job_events` with `changed_only=true`.
++2. **Name each changed resource with the concrete identifier from the event** —
++   the actual key name, bucket name, namespace, volume id. A generic row
++   ("created an SSH key pair") is not an answer the user can act on; the
++   identifier is the answer. Take it from the event payload, not from the log tail.
++3. Give the **count of tasks that changed something**, stated as a number next to
++   the word "tasks" or "changed" (e.g. "3 tasks changed something"). The event
++   count and the log's `changed=N` in PLAY RECAP should agree; if they do, say the
++   number plainly.
++4. Separate **what actually exists** from what was only attempted.
++
++**Only report as created what the events show as changed.** If the failure was a
++validation/API rejection of a *submitted* request — the cloud provider refused the
++template or manifest before accepting it — then **nothing** that request described
++was created, and none of it belongs on the cleanup list. Do not infer the
++existence of resources from the template's contents: a template declaring a
++network, subnet or instance is not evidence any of them exist. Say explicitly that
++the stack/deployment was never created, and list for cleanup only the
++independently-created resources the changed events actually name.
+ 
+ #### Step 7b: Deep Dive — Pod/Container Failures
+ 

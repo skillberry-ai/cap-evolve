@@ -1,0 +1,230 @@
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -20,6 +20,12 @@
+    to find paths in one call. Stop fetching when you have enough data to explain the
+    failure and write the report. More fetching without analysis is worse than a
+    report with some gaps.
++
++   Budget **rounds**, not calls: independent calls belong in one parallel batch, so
++   adding a path-finding `search_github_repo` alongside the fetches it informs costs
++   you nothing. "Enough data" means every value your explanation asserts came from a
++   result you actually received — a number you inferred from a file you did not read
++   is a gap you cannot see.
+ 
+ 4. **Don't re-fetch job data.** If a prior `query_aap2` call already returned job
+    metadata or events, extract what you need (steps, playbook events, errors) from
+@@ -123,6 +129,22 @@
+ **MANDATORY: You MUST call `fetch_github_file` during every AAP2 job failure
+ investigation.** Analyzing the job log alone is NOT sufficient. Your job is to resolve
+ the config chain and cross-reference it with the failure.
++
++**Enumerate a role's files in the same batch as your first fetch of them.** When the
++log implicates a role — the `task path:` line of a failing task gives you the role name
++and one file path — include `search_github_repo(owner, repo, search="{role_name}")` in
++the same parallel batch as those fetches. It costs no extra round, and it returns the
++role's actual file list so you can tell what you have not read yet.
++
++Do this even when you think convention already gives you the paths. One path from the
++log plus the standard role layout is a guess: a role may keep its variables in
++`vars/main.yml` rather than `defaults/main.yml`, split them over several files, include
++task files the log never names, or sit under a non-standard role directory. A guessed
++path that is wrong returns an error and costs you a round anyway — and a guess that
++*silently* misses a file is worse, because you will go on to explain a loop's
++`retries`/`delay`, or a flag's default, from a file that never held those values.
++If the search comes back with files you have not fetched and your explanation depends
++on a value that would live in one of them, fetch it before you write the report.
+ 
+ #### Step 1: Get Job Details via API
+ 
+@@ -264,6 +286,11 @@
+ **IMPORTANT:** Config names may differ between v1 and v2 — e.g., `ocp4-cluster` in v1
+ is `openshift-cluster` in v2. Use `search_github_repo` to confirm the correct name.
+ 
++Note that the directory layout above is the common case, not a rule: repositories vary
++(`roles/`, `roles_infra/`, and other role trees all occur), so take role paths from the
++log's `task path:` lines and from `search_github_repo` rather than assembling them from
++this template. See the enumerate-the-role rule under "Investigate AAP2 Job Failures".
++
+ #### Step 7: Analyze the Failure
+ 
+ **CHECKPOINT:** Verify you have completed Steps 3-6 before analyzing.
+@@ -272,6 +299,30 @@
+ "container CrashLoopBackOff", that is the SYMPTOM, not the root cause. You MUST
+ trace deeper to find the actual cause — what command failed, what script errored,
+ what resource was missing.
++
++**The loud error names the symptom's subject, not the culprit.** A task that fails
++while talking to a remote service reads as a fault in that service, and an earlier
++task that *succeeded* reads as irrelevant. Both readings are traps. Before you settle
++on a cause outside the automation, read the role's tasks **in order** and ask what the
++earlier ones did to the state the failing one observes — a step that succeeded can
++still be what set up the failure.
++
++**Weigh the candidate causes by what the tool results actually show.** An explanation
++built from steps you can point to in the role and lines you can point to in the log is
++worth more than one that needs an extra environmental condition — a broken
++association, an unroutable address, an outage, a missing permission — that no tool
++result mentions. Such conditions are real and sometimes are the answer, but only assert
++one when the data shows it; if the evidence is consistent with it but does not
++establish it, say so with a confidence marker rather than presenting it as the cause.
++Ask in particular whether your candidate cause explains the **timing**: a standing
++misconfiguration predicts the same result at every step, so if an identical operation
++behaved differently before and after some step in the role, something the role did is
++the better explanation.
++
++**Route by failure shape before writing the report:**
++- A wait/retry loop exhausted its retries while the write it was waiting on had
++  already been confirmed → **Step 7a**.
++- A pod or container failed to start → Step 7b.
+ 
+ **Key sections to examine in the log:**
+ 1. **PLAY RECAP** — Summary of hosts and status
+@@ -288,11 +339,103 @@
+ | `fatal: [host]: UNREACHABLE!` | SSH/connectivity issues |
+ | `CrashLoopBackOff` / init container failed | Container startup failure — trace the container (Step 7b) |
+ | `ERROR! No inventory` | Inventory generation failed |
+-| `Unable to resolve DNS` | DNS or network issues |
++| `Unable to resolve DNS` / `NXDOMAIN` / `SERVFAIL` | Do NOT stop at "DNS or network issue" — go to Step 7a |
+ | `cloud_provider error` | Cloud API quota/limits/credentials |
+-| `timeout` | Resource provisioning timeout |
++| `timeout` after a retry loop | The polled state did not change during the wait — go to Step 7a |
+ | `Vault password` | Missing vault credentials |
+ | `rc: 1` with short `delta` (< 10s) | Script failed fast — likely auth error, missing resource, or bad config |
++
++#### Step 7a: Deep Dive — A Wait/Retry Loop Timed Out While the Write Succeeded
++
++**Trigger:** the role writes or changes something, the writing API reports success
++(`INSYNC`, `ACTIVE`, `Ready`, `200`, `committed`), and a LATER task that polls for the
++effect of that change exhausts its retries and fails. The user will usually blame the
++remote service for not having applied the change yet.
++
++Whether that is right depends on **what the write confirmation actually promises**, so
++check the confirmation itself before you accept or reject the theory. Some confirm only
++that the request was accepted for processing, and the remote side really does converge
++afterwards — then a genuine convergence delay is the cause. Others confirm that the
++change is live on every authoritative replica. When the confirmation is of that second
++kind, the authoritative side was already serving the new state before the wait began,
++so a stale answer has to be coming from something between it and the poller — and the
++layer that is usually between them, and is usually ignored, is a **cache**.
++
++Work these three questions in order. The log answers (1) and (2); (3) needs the role's
++defaults, so fetch them if you have not already.
++
++1. **Did an EARLIER task in the same role read the same key through the same
++   read path, before the write?** Existence checks, "is this name/ID free",
++   idempotence guards and "fail if already present" safety checks all do this.
++   Such a check *succeeds* and looks harmless, so it is easy to skip past — but if
++   the read path caches, that pre-write read is what stored the stale answer, and
++   the automation poisoned its own cache. Scan every task above the failing one for a
++   read of the same key, and check whether it targets the **same** endpoint/resolver/
++   client that the failing wait polls. Same key + same read path + ran before the
++   write = this is your root cause, and that earlier pre-check is the thing in the
++   role that causes it.
++
++   **This also settles the competing misreading.** A failing lookup invites a
++   reachability or topology story — wrong endpoint, a zone or network not associated
++   with the client, split horizon, an unroutable address, a client that "cannot see"
++   this class of record. Before you adopt any of those, note that the role's own
++   earlier read went through the **same** endpoint and came back *normally* (that is
++   how the pre-check reached its verdict). A read path that returns well-formed
++   answers both before and during the wait is reaching a working server, so it cannot
++   also be the wrong or unreachable endpoint. Topology stories require the client to
++   have been misconfigured all along; the cache story explains why the identical query
++   behaved differently before and after the write, which is what the log actually
++   shows. Prefer the explanation that accounts for the change over time.
++
++2. **How long is the stale answer allowed to live?** Caching read paths state this in
++   the failed lookup's own output — a TTL, an SOA/authority line, an `Expires`/
++   `Cache-Control` header, a lease or a refresh interval. It is often an **unlabelled
++   number** sitting in a quoted protocol line, so read those lines field by field
++   rather than skimming them. For a DNS `NXDOMAIN`, the reply's AUTHORITY SOA line
++   carries the negative-caching window: it is the lesser of that SOA record's own TTL
++   and the SOA `minimum` field, and it governs how long the resolver keeps answering
++   `NXDOMAIN` after the record exists. Note that this is a *different* number from the
++   TTL the role sets on the record it creates — the record's TTL does not shorten an
++   already-cached negative answer.
++
++3. **How long did the wait actually allow?** Compute it from the role's variables:
++   `retries × delay`. The loop body usually only *names* the variables, so resolve
++   their values from the role's defaults/vars file. State the product in seconds and
++   compare it with the staleness window from (2). A wait budget shorter than that
++   window fails deterministically, every run, no matter how healthy the remote service
++   is — and that comparison, not the remote service, is the explanation.
++
++**When you report this**, include all four of these:
++
++- **The mechanism, in those words:** say the layer *cached* the old or negative answer
++  and kept serving it from cache after the change was live. "The name did not resolve"
++  only restates the symptom; the word that carries the finding is the caching.
++- **Both numbers:** the staleness window and the wait budget, in seconds, side by side,
++  with the point that the second is shorter than the first.
++- **The earlier read that populated the cache**, named as the task it is.
++- **A direct verdict on the user's theory**, written so it is unambiguously a denial.
++
++For that last point, write the denial in the affirmative — state what the evidence
++shows, then deny the theory in a single clause that keeps "not" next to the thing being
++negated. These are safe shapes:
++
++> The record was live before the wait started. Your theory that the service is slow to
++> apply new records is not what happened here.
++
++> The resolver answered every query — from its negative cache. It was not down and not
++> misconfigured.
++
++Two drafting rules, because a sloppy denial reads as the opposite of what you mean:
++
++- **Never restate the user's hypothesis as your own sentence, a heading, or a table
++  cell**, and do not quote their wording back. "Propagation delay caused this" inside a
++  sentence that goes on to reject it, or a heading like "Slow propagation?", reads as an
++  assertion of the thing. Attach the theory to the user explicitly and inside the same
++  clause — "your theory that X is wrong" — or do not name it at all.
++- **Describe the polled endpoint only by what it did**, e.g. "answered every query from
++  its cache". Do not reach for "down", "broken", "failed", "unreachable" or "outage" to
++  say it was *not* those things; a reader skimming, and any automated check, sees the
++  words and not the negation. The endpoint worked, so describe it working.
+ 
+ #### Step 7b: Deep Dive — Pod/Container Failures
+ 
+@@ -416,6 +559,27 @@
+ 3. **Evidence:** how you determined this (timing analysis, error message, script trace)
+ 4. **Fix suggestions:** actionable next steps with specific commands or file paths
+ 
++**If the user stated a theory or named an action they are about to take**, give it an
++explicit verdict rather than only describing a different cause and leaving the theory
++unaddressed. A reader who arrived with a hypothesis and an escalation queued up needs
++to be told whether the evidence supports it; an implicit refutation reads as agreement.
++Where the evidence refutes the theory, say so and say the escalation is not the next
++step. Where the evidence genuinely cannot settle it, say that instead of asserting
++either way.
++
++Write the denial as a claim of your own, in the affirmative, and keep the negation
++inside the clause that names the theory — "your theory that X is wrong", "the evidence
++shows Y, not X". Do not restate the user's hypothesis as a standalone sentence, a
++heading or a table cell, and do not quote their wording: a reader skimming your report
++sees the assertion and misses that you went on to reject it.
++
++**Answer every question the user actually asked, each one explicitly.** When a request
++enumerates several questions, work through them one at a time and give each a stated
++answer carrying the specific value it asks for — a duration in seconds, a count, a
++named file or variable. Quoting a log line or config block that contains the number is
++not answering; extract the number, compute the product where the value is a
++`retries × delay` budget, and write it out.
++
+ **Relevant Files to Review:**
+ - AgnosticV config: `{path_to_common.yaml}`
+ - Component config (if used): `{component_item}/common.yaml`, `{component_item}/{stage}.yaml`
+@@ -438,10 +602,12 @@
+ 
+ | Error Type | Common Fix |
+ |------------|------------|
+-| DNS resolution | Check VPC/subnet configuration |
++| DNS resolution — no reply at all (timeout/refused) | Check VPC/subnet configuration, resolver address, zone association |
++| DNS resolution — a well-formed `NXDOMAIN`/`NODATA` reply | The resolver works; the name is absent **or cached as absent**. Step 7a |
+ | Cloud quota | Request quota increase or use different region |
+ | SSH unreachable | Check security groups, bastion access |
+-| Timeout | Increase timeout in deployer settings or reduce scope |
++| Timeout — the operation never completed | Increase timeout in deployer settings or reduce scope |
++| Timeout — a poll loop never saw an already-committed change | A stale cache outliving the wait budget. Step 7a |
+ | Vault errors | Verify vault credentials are available |
+ | Package install | Check repo configuration, satellite access |
+ | PVC not found (CNV) | Check `infra-openshift-cnv-resources` role's `create_instance.yaml` for PVC validation logic |

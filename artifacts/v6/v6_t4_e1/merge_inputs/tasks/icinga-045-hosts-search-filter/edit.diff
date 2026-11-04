@@ -1,0 +1,66 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -9,6 +9,30 @@
+ Use tables for structured data. Use bullet points for lists. Keep explanations
+ short. If the user asks "why did this fail?", answer with the cause — not a
+ walkthrough of how you figured it out.
++
++### Keep each entity adjacent to its status
++
++When you report the status, state, or health of a named thing (a host, service,
++job, account, cluster, provision), the **status word must directly follow the
++name**, with nothing between them but ordinary punctuation (`|`, `:`, `-`, `—`,
++`(`). Write the status as a plain word — `UP`, `DOWN`, `OK`, `CRITICAL`,
++`FAILED`, `HEALTHY` — taken from the source data.
++
++Do **not** put a decorative status icon or emoji (✅ ❌ ⚠️ 🔴 🟢 🟡) between the
++name and its status, and do not let an icon stand in for the status word. An
++icon inserted there breaks the name↔status pairing for anything reading your
++answer, and an icon alone does not say what the state is.
++
++```
++Good:  | `web-01` | DOWN | PING CRITICAL - packet loss |
++Good:  **web-01** — UP (0% loss)
++Good:  `web-01` is DOWN; `web-02` is UP.
++Bad:   | `web-01` | ✅ UP | ...        <- icon splits name from status
++Bad:   | `web-01` | 🔴 | ...           <- icon replaces the status word
++```
++
++If you want an icon for scannability, put it **after** the status word
++(`DOWN 🔴`) or in a separate column — never between the name and the status.
+ 
+ ## Provision Database
+ 
+--- a/icinga_agent.md
++++ b/icinga_agent.md
+@@ -34,6 +34,30 @@
+ **Service states:** 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN
+ 
+ **State types:** SOFT = intermittent failure (retries in progress), HARD = confirmed failure after max retries
++
++**Always translate the numeric state into its word** (`UP`, `DOWN`,
++`UNREACHABLE`, `OK`, `WARNING`, `CRITICAL`, `UNKNOWN`) and place that word
++immediately after the host or service name — never a bare number, and never a
++status icon sitting between the name and the word (see "Keep each entity
++adjacent to its status"). `| host-x | UP |`, not `| host-x | ✅ |` or
++`| host-x | ✅ UP |`.
++
++### Reporting a multi-host / multi-service result
++
++When a query returns several rows (for example a `search` or `filter_expr` that
++matches more than one host), the answer must account for **every row returned**,
++not just the problem rows:
++
++1. Answer the specific question first (e.g. the hosts that are DOWN) and, for
++   each one, quote its `attrs.last_check_result.output` **verbatim** — do not
++   paraphrase it or substitute a generic explanation like "host unreachable".
++2. Then list **each remaining matched row** by name with its own state word, so
++   a healthy match is never left out and never implicitly lumped in with the
++   failing ones.
++3. State the total number of matches.
++
++Never let a reader infer that a row you did not mention shares the state of the
++rows you did.
+ 
+ ## Investigation Workflow
+ 

@@ -1,0 +1,6 @@
+[setup_podman] XDG_RUNTIME_DIR=/tmp/podman-run-561567
+[setup_podman] graphroot=/tmp/podman-561567
+[setup_podman] DOCKER_HOST=unix:///tmp/podman-run-561567/podman.sock
+[setup_podman] DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/podman-run-561567/dbus.sock
+[setup_podman] PATH first entry: /u/boazc/.local/bin
+[setup_podman] try: podman info | head -30

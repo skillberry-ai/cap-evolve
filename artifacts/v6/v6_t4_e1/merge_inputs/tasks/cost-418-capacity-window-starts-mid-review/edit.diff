@@ -1,0 +1,168 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -185,6 +185,15 @@
+ - **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+   and suggest alternatives.
+ - **NEVER call the same tool with the same parameters twice in a conversation.**
++  *One exception:* a call that **timed out or reported the service unavailable
++  returned no result at all**, so repeating it is a first attempt, not a
++  duplicate. When a call the user explicitly asked for fails that way and the
++  figure it would have produced is part of what they requested, **retry it
++  exactly once** before concluding the data is unavailable. A timeout is often
++  transient; a required figure abandoned after a single failed attempt is a
++  gap you could have closed. If the retry also fails, say which specific
++  requested figure is missing and why — do not silently drop it from the
++  answer, and do not substitute it from another source's roll-up field.
+ - **CRITICAL: Consult the "Reporting Database Reference" section before writing
+   SQL.** Do not guess column names — use ONLY columns listed in the schema
+   reference. If unsure, call `db_describe_table` to check. Common mistakes:
+@@ -211,6 +220,14 @@
+   details bleed into the current analysis. Always use the most recent tool results.
+ - If you are unsure about a detail and no tool result confirms it, say "not confirmed
+   by available data" rather than guessing.
++- **Result metadata is data too — read it, don't recompute it.** Fields that
++  describe the *scope* of a result (the period/date range covered, row counts,
++  `truncated`, freshness/last-refresh, which filters were applied) must be taken
++  from the result itself. Never substitute a value you derived from the
++  parameters you *sent*: when the scope you requested and the scope you got
++  disagree, the returned value is the true one and the disagreement is itself a
++  finding worth stating. Deriving "the data therefore covers X" from your own
++  request while the result says otherwise is a hallucination, not a convenience.
+ 
+ ## Confidence Markers
+ 
+@@ -235,3 +252,32 @@
+ - When tools you didn't call weren't relevant to the question
+ 
+ Include at most one marker per response. Place it near the end, before the Sources footer.
++
++**A marker is not a licence to invent the number.** A confidence marker
++downgrades a *conclusion you are entitled to draw*; it does not authorise you
++to supply a specific figure the data cannot support. When the user asked for a
++specific quantity and your data does not cover what the quantity is defined
++over — different time period, different scope, different population, a
++different entity than the one asked about — the honest answer is to **report
++the figures you do have, each labelled with what it actually covers, and state
++that the requested quantity cannot be given and why.** Do not fill the gap by
++extrapolating, annualizing, pro-rating, assuming the uncovered part resembles
++the covered part, or substituting a near-miss figure and marking it medium
++confidence. A number in a table gets copied into the user's document; the
++caveat next to it does not travel with it.
++
++Mark-and-estimate is right when the gap is in *interpretation* (who owned a
++sandbox, which change caused a spike) and you reason from data that genuinely
++bears on it. It is wrong when the gap is in *coverage* of the requested
++measurement itself — then decline the figure and say what source would
++supply it.
++
++**When you decline a figure, leave it out — do not state it in order to warn
++against it.** Having decided a number is not supportable, writing it down
++anyway behind a disclaimer ("the unsupported value would be `<X>`", "naively
++this comes to `<X>`", "for reference, `<X>` — but don't use it") puts the
++exact figure you just rejected into the user's hands. Readers extract
++numbers and leave prose behind, so a disclaimed number is simply a number.
++The decline must be *silent about the value*: name the gap, name what would
++close it, and never compute the rejected quantity in your answer. This holds
++for percentages, totals, counts, durations, and projections alike.
+--- a/cost_agent.md
++++ b/cost_agent.md
+@@ -54,6 +54,16 @@
+ - `inventory` — List persistent ODCRs (24+ hours active) with utilization and
+   cost per reservation.
+ 
++**Preset roll-up fields are only populated by the preset that computes them.**
++A metric preset returns the roll-up fields for *its own* metric and may return
++`0` for roll-ups belonging to another preset — that `0` is an unpopulated
++placeholder, not a measurement of zero. Take each headline figure from the
++preset that actually computes it (e.g. overall utilization from the
++`utilization` preset, not from a `unused_cost` roll-up that came back `0`),
++and never report a `0` roll-up as a finding. If a roll-up you need is `0` but
++the per-dimension rows carry the underlying values, sum the rows and say that
++is what you did.
++
+ **ODCR waste report workflow:** ODCR data is too detailed for chat. When a user
+ asks about ODCR waste:
+ 1. Call `utilization` (grouped by account-id) — worst accounts by waste
+@@ -63,6 +73,82 @@
+ 5. Return a structured summary with your findings
+ 
+ ## Date Handling for Cloud Cost APIs
++
++### The window you ASKED for is not the window you GOT
++
++Cost and capacity tools may silently return a **narrower or shifted period**
++than the lookback/date range you requested — because of data retention, an
++API cap, or backend ingestion lag. The requested range is a request; the
++returned `period` (or `start_date`/`end_date`/`month`) is the fact.
++
++**Rules — these are not optional:**
++
++1. **Read the returned period off every result; never compute it.** Do not
++   derive the covered span by subtracting your requested lookback from the
++   current time. Quote the returned `period.start` / `period.end` values
++   verbatim (ISO dates) in your answer whenever they differ from what the user
++   asked for. Stating a start date you calculated rather than read is a
++   factual error even when the arithmetic is right.
++2. **Say explicitly which part of the user's span is not covered.** If the
++   user named a review period and the returned period misses part of it,
++   or runs past it, name both: the returned window and what it leaves out.
++3. **Label every figure with the window it actually came from**, not the
++   window the user asked about.
++
++### Never compute a ratio across two different windows
++
++When a user asks for one figure **as a percentage / share / ratio of**
++another, both inputs must cover the **same period**. Before dividing, compare
++the two returned periods.
++
++**If the periods differ, do not state the percentage — and do not
++extrapolate, annualize, pro-rate, or scale a short window up to manufacture
++one.** Report both figures with their own windows, state plainly that the
++share cannot be computed because the two cover different periods, and say
++what would be needed to get it (a source holding the full period). A
++run-rate projected from a partial window is a guess; presenting it as the
++requested share is worse than declining, because the user will put it in a
++document as a measured number. A confidence marker does **not** make an
++extrapolated ratio acceptable here.
++
++**Declining means the number does not appear at all — not even to dismiss
++it.** Once you have decided the ratio is not comparable, do not perform the
++division and show the result. Do not write "dividing A by B would give ~N%,
++but that is meaningless", "the naive figure would be N%", "for reference
++that works out to N%", or a struck-through / parenthesised / footnoted N%.
++Naming the number defeats the entire point of declining: a reader skimming
++for the percentage lifts `N%` straight into the document and the caveat
++around it does not travel with it. The caveat protects your sentence; it does
++not protect the number. State the mismatch and what is missing, and stop
++there — the arithmetic stays unwritten. The only figures in your answer are
++the ones you are entitled to report, each labelled with its own window.
++
++**Worked example.** The user asks: "give me idle reservation cost as a
++percentage of compute spend for Q1." The capacity tool returns
++`period: {start: <mid-February>, end: <early April>}`; the cost monitor
++returns the three full Q1 monthly rows.
++
++- WRONG: divide idle cost by Q1 spend (mismatched windows → an
++  understated number the user will cite).
++- WRONG: scale the partial idle figure to a 3-month run-rate and quote
++  that percentage, even flagged `[confidence: medium]`.
++- WRONG — and the easiest mistake to make, because it feels rigorous:
++  decline the ratio *and still compute it in the same breath* — "dividing
++  the idle cost by Q1 spend would give roughly `<N>`%, but that would be
++  misleading". The refusal is correct and the number is still on the page,
++  so the reader gets the forbidden figure anyway. Declining and disclosing
++  are not the same act.
++- RIGHT: report the idle cost labelled with its real
++  `<mid-February>–<early April>` window, report the Q1 spend rows, then say:
++  "I can't state idle cost as a percentage of Q1 compute spend — the
++  capacity figures cover `<mid-February>` to `<early April>`, not Q1, so the
++  two aren't comparable and the ratio would be misleading. The percentage
++  needs capacity data for the full Q1 window."
++
++This applies to any cross-source comparison, not just percentages: totals,
++deltas, and "X vs Y" statements all require matching periods.
++
++### Per-provider date semantics
+ 
+ - **AWS Cost Explorer**: end_date is EXCLUSIVE. The tool auto-adjusts if start == end.
+   Today's data may have up to 24h delay.

@@ -1,0 +1,173 @@
+<title>Parsec v6 Rule 4</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same sheet as Tables 1-3; 4a counts table, then 4b as one card per arm with the rule verbatim. */
+:root {
+  --bg: #f6f7f8;
+  --sheet: #ffffff;
+  --ink: #1b2430;
+  --muted: #5d6877;
+  --rule: #dde2e8;
+  --band: #eef1f5;
+  --quote: #f5f7fa;
+  --bad: #a3342b;
+  --bad-bg: #fbe9e7;
+  --good: #17714a;
+  --good-bg: #e3f3ea;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --sheet: #1a2028; --ink: #e6eaef; --muted: #9aa5b3; --rule: #2c3540;
+    --band: #212935; --quote: #1f2630; --bad: #f08a80; --bad-bg: #3a2220; --good: #5fd39a; --good-bg: #17362a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --sheet: #1a2028; --ink: #e6eaef; --muted: #9aa5b3; --rule: #2c3540;
+  --band: #212935; --quote: #1f2630; --bad: #f08a80; --bad-bg: #3a2220; --good: #5fd39a; --good-bg: #17362a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 var(--font-body);
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 1040px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+h1 { font: 600 clamp(26px, 4vw, 34px)/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h2 { font: 600 20px/1.3 var(--font-display); margin: 0; }
+h3 { font: 600 16px/1.3 var(--font-body); margin: 0; }
+.lede { margin: 0; max-width: 72ch; }
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 900px; font-variant-numeric: tabular-nums; }
+th, td { padding: 11px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+thead th { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--band); }
+tbody tr:last-child td { border-bottom: 0; }
+tr.group td { background: var(--band); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding-block: 7px; }
+td.num { font-family: var(--font-data); white-space: nowrap; text-align: right; }
+th.r { text-align: right; }
+.arm { font-weight: 600; }
+.arm .what { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+.pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 3px; font-weight: 500; white-space: nowrap; }
+.yes { color: var(--bad); background: var(--bad-bg); }
+.no { color: var(--good); background: var(--good-bg); }
+.sub { display: block; color: var(--muted); font-size: 12px; }
+.cards { display: grid; gap: 16px; }
+.card { padding: 18px 20px; display: grid; gap: 10px; }
+.card .meta { color: var(--muted); font-size: 13px; }
+blockquote { margin: 0; padding: 12px 16px; background: var(--quote); border-left: 3px solid var(--rule); font-size: 14px; line-height: 1.6; }
+blockquote.same { color: var(--muted); font-style: italic; }
+.card p { margin: 0; max-width: 78ch; }
+code { font-family: var(--font-data); font-size: 13px; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+li { max-width: 72ch; }
+.problem { padding: 18px 20px; display: grid; gap: 10px; }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Table 4 · Parsec v6 · running example</div>
+    <h1>One contradictory rule, fixed and merged six different ways</h1>
+    <p class="lede">The Seed's AAP2 rule 4 forbids a second call on a job, while step 5 of its investigation flow requires one on every failed job. The agent skips the events call and misses the failing task's role. Below: what each arm did to that rule, in counts (4a) and verbatim (4b). The upstream fix, PARSEC PR #57, is included for reference.</p>
+  </header>
+
+  <div class="sheet problem">
+    <h3>The Seed rule (39 words)</h3>
+    <blockquote>4. <strong>Don't re-fetch job data.</strong> If a prior <code>query_aap2</code> call already returned job metadata or events, extract what you need (steps, playbook events, errors) from the existing result. Do NOT make a redundant second call to the same job.</blockquote>
+    <p>It conflicts with Investigation Flow step 5: “If the job failed, also call <code>get_job_events</code> + <code>failed_only=true</code>.” Training task <code>platform-004</code> exposes it: Seed 0.760 over 10 trials.</p>
+  </div>
+
+  <section style="display:grid; gap:12px">
+    <h2>4a · Word counts</h2>
+    <div class="sheet">
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Arm</th>
+              <th>What happened to rule 4</th>
+              <th class="r">Rule 4 words<span class="sub">added / removed</span></th>
+              <th>Contradiction left?</th>
+              <th class="r">Job-read guidance elsewhere<span class="sub">words</span></th>
+              <th class="r">platform-004<span class="sub">train reward</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="arm">Seed</td><td>original</td><td class="num">39</td><td><span class="pill yes">yes</span></td><td class="num">0</td><td class="num">0.760 <span class="sub">10 trials</span></td></tr>
+            <tr><td class="arm">PARSEC PR #57<span class="what">upstream, from v4 T-opt</span></td><td>rewritten in place</td><td class="num">111<span class="sub">+94 / −22</span></td><td><span class="pill no">no</span></td><td class="num">0</td><td class="num">—</td></tr>
+            <tr class="group"><td colspan="6">Task-wise (T)</td></tr>
+            <tr><td class="arm">T-opt<span class="what"><code>platform-004</code> champion</span></td><td>rewritten in place</td><td class="num">74<span class="sub">+59 / −24</span></td><td><span class="pill no">no</span></td><td class="num">504</td><td class="num">1.000 <span class="sub">5 trials</span></td></tr>
+            <tr><td class="arm">T-mrg · merge by order</td><td>Seed text kept, another task's exception appended</td><td class="num">102<span class="sub">+63 / −0</span></td><td><span class="pill yes">yes</span></td><td class="num">1,263</td><td class="num">1.000 <span class="sub">5 trials</span></td></tr>
+            <tr><td class="arm">T-mrg · smart merge</td><td>rewritten; three tasks' exceptions folded in</td><td class="num">232<span class="sub">+219 / −26</span></td><td><span class="pill no">no</span></td><td class="num">1,682</td><td class="num">1.000 <span class="sub">5 trials</span></td></tr>
+            <tr><td class="arm">T-mrg · non-conflicting hunks</td><td>unchanged (all three edits were contested)</td><td class="num">39<span class="sub">+0 / −0</span></td><td><span class="pill yes">yes</span></td><td class="num">1,263</td><td class="num">1.000 <span class="sub">5 trials</span></td></tr>
+            <tr class="group"><td colspan="6">Global (G)</td></tr>
+            <tr><td class="arm">Global · <code>cand_0005</code></td><td>unchanged; an overriding section added elsewhere</td><td class="num">39<span class="sub">+0 / −0</span></td><td><span class="pill yes">yes</span></td><td class="num">233</td><td class="num">0.912 <span class="sub">4 trials</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid; gap:12px">
+    <h2>4b · The texts</h2>
+    <div class="cards">
+      <div class="sheet card">
+        <h3>PARSEC PR #57 · upstream fix <span class="meta">· 111 words · merged 2026-10-14</span></h3>
+        <blockquote>4. <strong>Don't re-fetch job data — but a different <code>action</code> is not a re-fetch.</strong> If a prior <code>query_aap2</code> call already returned what you need, read it from that result instead of asking again. A call is redundant only when it repeats the <strong>same <code>action</code> with the same arguments</strong>. Different actions on one job are complementary: <code>get_job_log</code> returns the log text, <code>get_job_events</code> returns the structured failed-task rows (<code>role</code>, <code>play</code>, <code>task</code>, <code>host</code>, <code>error_msg</code>), and neither response contains the other's data — so "I already queried this job" is not a reason to skip a different action on it, including the <code>get_job_events</code> + <code>failed_only=true</code> call required by step 5 of the Investigation Flow below.</blockquote>
+      </div>
+
+      <div class="sheet card">
+        <h3>T-opt · <code>platform-004</code> champion <span class="meta">· 74 words</span></h3>
+        <blockquote>4. <strong>Don't re-fetch job data.</strong> If a prior <code>query_aap2</code> call returned a field, read it from that result instead of calling again. This forbids repeating the <strong>same <code>action</code></strong> on the same job — it does NOT cover a <em>different</em> <code>action</code>. Different <code>query_aap2</code> actions return different fields, so calling <code>get_job_events</code> after <code>get_job_log</code> on the same job is complementary, not redundant. Never skip a different-action call on the grounds that you already have "the job data".</blockquote>
+        <p class="meta">Elsewhere: a new “<code>get_job_log</code> vs <code>get_job_events</code>” section with a field table and a worked example (504 words), and a required events call added to Step 1 of the job workflow.</p>
+      </div>
+
+      <div class="sheet card">
+        <h3>T-mrg · merge by order <span class="meta">· 102 words</span></h3>
+        <blockquote>4. <strong>Don't re-fetch job data.</strong> If a prior <code>query_aap2</code> call already returned job metadata or events, extract what you need (steps, playbook events, errors) from the existing result. Do NOT make a redundant second call to the same job. This applies only to a call that <strong>returned data</strong>. A call that timed out returned nothing to extract, so re-issuing it is not a re-fetch — it is the first real attempt. <strong>One</strong> retry of a timed-out call is within budget: a gap you could have closed with a single retry is not an acceptable gap. Do not retry it a third time.</blockquote>
+        <p class="meta">Three tasks edited these lines: <code>platform-032</code> (20th in gain order), <code>platform-004</code> (25th) and <code>platform-158</code> (34th, last). The last edit wins a contested region, and <code>platform-158</code> had kept the Seed sentence and appended a timeout exception. The “different action” idea survives only in separate job-read sections (1,263 words). Step 5 of the flow became conditional.</p>
+      </div>
+
+      <div class="sheet card">
+        <h3>T-mrg · smart merge <span class="meta">· 232 words · renumbered rule 7</span></h3>
+        <blockquote>7. <strong>Don't re-fetch job data — but a different action, or a failed call, is not a re-fetch.</strong> If a prior <code>query_aap2</code> call returned a field, read it from that result instead of calling again. This forbids repeating the <strong>same <code>action</code></strong> on the same job after it <strong>returned data</strong>. It does NOT cover:<br>
+        – <strong>A <em>different</em> <code>action</code>.</strong> Different <code>query_aap2</code> actions return different fields, so calling <code>get_job_events</code> after <code>get_job_log</code> (or <code>get_job</code> alongside either) on the same job is complementary, not redundant. Never skip a different-action call on the grounds that you already have "the job data" — see "Choosing the job read".<br>
+        – <strong>A call that failed without returning data.</strong> A tool call that returned an error, a timeout, or no payload at all returned nothing to extract, so re-issuing that exact call <strong>once</strong> is not a re-fetch — it is the first real attempt (see the transient-failure retry rule in the shared context). A gap you could have closed with a single retry is not an acceptable gap. Do not retry it a third time; after the retry also fails, say which call failed and which specific question you therefore could not answer. Never substitute a link for a value the user asked you to read: if the user asked what a file contains and the fetch failed, the retry is mandatory, because handing back a URL answers none of the question.</blockquote>
+        <p class="meta">Folds in <code>platform-004</code> (different action), <code>platform-158</code> (timed-out call, retry once) and <code>platform-152</code> (retry before reporting; never substitute a link). Elsewhere: job-read guidance (1,682 words) and the required events call in Step 1, both cross-referenced from the rule.</p>
+      </div>
+
+      <div class="sheet card">
+        <h3>T-mrg · non-conflicting hunks <span class="meta">· 39 words, unchanged</span></h3>
+        <blockquote class="same">Identical to the Seed rule above.</blockquote>
+        <p class="meta">All three edits to rule 4 were contested, so all three were dropped. The uncontested job-read sections survive (1,263 words), so the prohibition and its exceptions sit in different places.</p>
+      </div>
+
+      <div class="sheet card">
+        <h3>Global · <code>cand_0005</code> <span class="meta">· 39 words, unchanged</span></h3>
+        <blockquote class="same">Identical to the Seed rule above.</blockquote>
+        <p class="meta">Elsewhere: step 4 of the flow now points to a new “Choosing the job read” section (233 words), which opens: “<code>get_job</code>, <code>get_job_log</code>, and <code>get_job_events</code> return DIFFERENT data about the same job. Calling more than one of them is not a redundant re-fetch — pick by what the question needs, and issue them in parallel”, and says of the events call: “<strong>Call this for every failed job</strong>”.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sheet card">
+    <h3>What it shows</h3>
+    <ul>
+      <li><strong>Two ways to fix the bug.</strong> T-opt and PR #57 repair the rule in place, so the contradiction disappears. Global leaves the rule and overrides it in a later section. Both work on <code>platform-004</code>.</li>
+      <li><strong>Two ways to integrate several fixes.</strong> The smart merge integrated by meaning: one rule with all three tasks' exceptions and no contradiction. Merge by order integrated by text position: the last edit to those lines won, and it had kept the Seed sentence.</li>
+      <li><strong>The score cannot see the difference.</strong> Three of the five arms (merge by order, non-conflicting, Global) keep the contradictory sentence, yet every arm scores 0.91–1.00 on <code>platform-004</code>. A reviewer reading the text can see the difference.</li>
+      <li><strong>Size.</strong> The rule itself stays at 39–232 words in every arm; the guidance around it ranges from 233 words (Global) to 1,682 (smart merge), the same pattern as Table 3.</li>
+    </ul>
+  </div>
+</main>

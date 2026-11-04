@@ -37,15 +37,17 @@ bundle) — each with its own ledger and heatmap, plus a cross-arm comparison; s
 
 v6 unifies v4's 34 tasks and v5's held-out 166 into one 200-task set, and is the first arm family
 in this branch to run with a genuine hidden split: feedback (visible to the optimizer), confirm
-(hidden, gates accept/reject), and test (sealed, scored once). Its one arm so far (`v6_g2_e1`) is
-the first in this branch with a positive, completed, held-out test-split result; see
+(hidden, gates accept/reject), and test (sealed, scored once). Its Global arm (`v6_g2_e1`) is
+the first in this branch with a positive, completed, held-out test-split result. Its task-wise
+arms, T-opt (`v6_t2_e1`) and T-mrg (`v6_t4_e1`), add the T-vs-G comparison: a score-blind merge
+of 34 task-local edits matches the Global bundle on the sealed test. See
 [`results/v6/README.md`](results/v6/README.md).
 
 ## Layout
 
 | directory | what's in it |
 |---|---|
-| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape); `v5/` is a from-scratch 136-task rebuild with its own per-arm ledgers: the baseline arm `v5_b1_e1/` and the G2-arm reuse `v5_g2_e1/` (v4's accepted G2 candidate, no v5-specific optimization); `v6/` is the unified 200-task set with its own hill-climb arm `v6_g2_e1/` — its `results.json` has a different shape from v4/v5's (test-split-only `task_ledger`, plus a separate per-iteration `iterations_detail` — see its own `summary.md` for why there's no per-task F/C ledger) |
+| [`results/`](results/) | the numbers — `results.json` (the generated ledger v1/v2 read from), plus per-experiment `summary.md`, `tasks.json`, `per_task_scores.json`, and the raw `runs/` directories; `v4/` holds two arms (`v4_t_e1/`, `v4_g_e1/`), each with its own separate `results.json` + `summary.md`, plus a v4-level `README.md`/`comparison.md`, deliberately not folded into the shared v1/v2 ledger (different task set, different shape); `v5/` is a from-scratch 136-task rebuild with its own per-arm ledgers: the baseline arm `v5_b1_e1/` and the G2-arm reuse `v5_g2_e1/` (v4's accepted G2 candidate, no v5-specific optimization); `v6/` is the unified 200-task set with its Global hill-climb arm `v6_g2_e1/`, the task-wise arms `v6_t2_e1/` (T-opt) and `v6_t4_e1/` (T-mrg, with the three core T-vs-G tables in `RESULTS_FOR_PAPER.md`) — its `results.json` has a different shape from v4/v5's (test-split-only `task_ledger`, plus a separate per-iteration `iterations_detail` — see its own `summary.md` for why there's no per-task F/C ledger) |
 | [`recipes/`](recipes/) | the cap-evolve configs a rerun needs, copied verbatim — and, critically, where each recipe disagrees with what its run actually did; v6's recipe includes `split_ids.json`, the full published feedback/confirm/test partition (see `recipes/v6/v6_g2_e1/README.md`) |
 | [`artifacts/`](artifacts/) | the skill packages themselves: seed, champion, rejected, and (for v2) discarded candidates |
 | [`reports/`](reports/) | one file per task — what changed, what worked, what didn't; auto-generated header, hand-written narrative below it; v6's reports are test-split only, for the same reason its `results.json` is |
@@ -55,6 +57,7 @@ the first in this branch with a positive, completed, held-out test-split result;
 | [`ui/heatmap_v4_t.html`](ui/heatmap_v4_t.html), [`ui/heatmap_v4_g_e1.html`](ui/heatmap_v4_g_e1.html) | the same, one per v4 arm — separate pages, not a shared one, matching `results/v4/`'s per-arm ledgers |
 | [`ui/heatmap_v5_b1_e1.html`](ui/heatmap_v5_b1_e1.html), [`ui/trials_v5_b1_e1.html`](ui/trials_v5_b1_e1.html) | v5's baseline arm: the same sortable heatmap, plus a per-trial view that draws every individual trial — 56% of v5's tasks vary across identical trials, which a page of means would hide |
 | [`ui/heatmap_v5_g2_e1.html`](ui/heatmap_v5_g2_e1.html), [`ui/trials_v5_g2_e1.html`](ui/trials_v5_g2_e1.html) | v5's G2-arm reuse: `cand_0004` vs. the baseline, same column shape with a `v5_b1`/`Δ vs b1` pair in place of the baseline's `v4 T1`/`Δ vs v4` pair |
+| [`ui/heatmap_v6_t2_e1.html`](ui/heatmap_v6_t2_e1.html), [`ui/v6_tables_main_table.html`](ui/v6_tables_main_table.html) (+ `cost_table`, `size_table`) | v6's T-opt arm per train task (class, Seed, champion, steps); the three rendered T-vs-G core tables |
 | [`ui/heatmap_v6_g2_e1.html`](ui/heatmap_v6_g2_e1.html) | v6's hill-climb arm, sealed test split only (seed vs. final champion) — no per-candidate columns, since only two capabilities were ever scored on this split |
 | [`presentations/management_review_presentation/`](presentations/management_review_presentation/) | hand-authored, not generated: the general cap-evolve pitch/roadmap deck (Reveal.js, vendored) — Parsec is one roadmap thread in it, not its subject |
 | [`presentations/parsec_optimization_presentation/`](presentations/parsec_optimization_presentation/) | hand-authored, not generated: the Parsec v1+v2 PoC deck (Reveal.js, vendored) for an IBM/Red Hat audience |

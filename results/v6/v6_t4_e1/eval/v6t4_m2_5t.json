@@ -1,0 +1,37 @@
+{
+ "suite": "v6t4_m2_5t",
+ "pooled_from": [
+  "v6t4_m2",
+  "v6t4_m2x"
+ ],
+ "cost": {
+  "eval_usd": 120.82259999999995,
+  "eval_tokens": 37523416,
+  "serial_seconds": 64293.97586131096
+ },
+ "reward": {
+  "feedback": {
+   "n_tasks": 67,
+   "trials_per_task": [
+    2,
+    5
+   ],
+   "mean": 0.8798155343283582,
+   "seed_mean_same_tasks": 0.8300111671641791,
+   "paired_delta": 0.0498043671641791,
+   "delta_se": 0.01509859813734825
+  },
+  "test": {
+   "n_tasks": 66,
+   "trials_per_task": [
+    2,
+    5
+   ],
+   "mean": 0.8276693393939394,
+   "seed_mean_same_tasks": 0.8126484841329966,
+   "paired_delta": 0.015020855260942762,
+   "delta_se": 0.017627167176880912
+  }
+ },
+ "note": "Trials pooled per task across the listed suites (same bundle, disjoint seeds). Seed = v6_g2_e1's 10-trial Seed measurement on the same tasks (paired). Errored trials are absent, never scored as 0."
+}

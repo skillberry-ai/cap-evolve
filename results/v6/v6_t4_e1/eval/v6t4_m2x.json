@@ -1,0 +1,29 @@
+{
+ "suite": "v6t4_m2x",
+ "n_results": 133,
+ "errored_tasks": 0,
+ "cost": {
+  "eval_usd": 48.4612,
+  "eval_tokens": 15047049,
+  "serial_seconds": 24278.724786281586,
+  "wall_seconds": 4997.676224470139,
+  "unmetered_tasks": 1
+ },
+ "reward": {
+  "feedback": {
+   "n_tasks": 67,
+   "mean": 0.8743620895522388,
+   "seed_mean_same_tasks": 0.8300111671641791,
+   "paired_delta": 0.0443509223880597,
+   "delta_se": 0.01709973004904815
+  },
+  "test": {
+   "n_tasks": 66,
+   "mean": 0.8337608106060606,
+   "seed_mean_same_tasks": 0.8126484841329966,
+   "paired_delta": 0.02111232647306398,
+   "delta_se": 0.019723079586766282
+  }
+ },
+ "note": "3 trials per task. Seed = v6_g2_e1's 10-trial Seed measurement on the same tasks (paired). delta_se is the standard error of the per-task paired delta."
+}

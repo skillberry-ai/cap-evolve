@@ -1,0 +1,157 @@
+<title>Parsec v6 skill size</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same sheet as Tables 1 and 2; one row per arm, edit columns then resulting size. */
+:root {
+  --bg: #f6f7f8;
+  --sheet: #ffffff;
+  --ink: #1b2430;
+  --muted: #5d6877;
+  --rule: #dde2e8;
+  --band: #eef1f5;
+  --total: #f3f6fa;
+  --add: #17714a;
+  --del: #a3342b;
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161c; --sheet: #1a2028; --ink: #e6eaef; --muted: #9aa5b3; --rule: #2c3540;
+    --band: #212935; --total: #1f2630; --add: #5fd39a; --del: #f08a80; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161c; --sheet: #1a2028; --ink: #e6eaef; --muted: #9aa5b3; --rule: #2c3540;
+  --band: #212935; --total: #1f2630; --add: #5fd39a; --del: #f08a80; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.55 var(--font-body);
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 1040px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+h1 { font: 600 clamp(26px, 4vw, 34px)/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 72ch; }
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 860px; font-variant-numeric: tabular-nums; }
+th, td { padding: 11px 14px; text-align: right; vertical-align: top; border-bottom: 1px solid var(--rule); }
+th:first-child, td:first-child { text-align: left; }
+thead th { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--band); }
+thead tr.groups th { text-align: center; }
+.gstart { border-left: 1px solid var(--rule); }
+tbody tr:last-child td { border-bottom: 0; }
+tr.group td { background: var(--band); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding-block: 7px; text-align: left; }
+.arm { font-weight: 600; min-width: 220px; }
+.arm .what { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+td.num { font-family: var(--font-data); white-space: nowrap; font-size: 14px; }
+td.tot { background: var(--total); font-weight: 500; }
+.add { color: var(--add); }
+.del { color: var(--del); }
+.sub { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.zero { color: var(--muted); }
+.notes { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.notes section { min-width: 0; }
+h2 { font: 600 18px/1.3 var(--font-display); margin: 0 0 8px; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+li { max-width: 64ch; }
+code { font-family: var(--font-data); font-size: 13px; }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Table 3 · Parsec v6 · skill-bundle edits in words, against the Seed</div>
+    <h1>The merged task-wise bundles are 1.3–2.4× the size of Global's</h1>
+    <p class="lede">Each row diffs the arm's eight skill files against the Seed, word by word, and sums over files. Every arm mostly adds text; deletions are under 1,000 words everywhere. T-opt has no single bundle, so its row sums its 34 diffs and also shows a typical champion.</p>
+  </header>
+
+  <div class="sheet">
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr class="groups">
+            <th></th>
+            <th colspan="4" class="gstart">Edit against the Seed (words)</th>
+            <th colspan="3" class="gstart">Resulting bundle</th>
+          </tr>
+          <tr>
+            <th>Arm</th>
+            <th class="gstart">Added</th><th>Removed</th><th>Net</th><th>Files changed</th>
+            <th class="gstart">Words</th><th>vs Seed</th><th>vs Global</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="arm">Seed<span class="what">original skill bundle, 8 files</span></td>
+            <td class="num gstart zero">—</td><td class="num zero">—</td><td class="num zero">—</td><td class="num zero">—</td>
+            <td class="num gstart tot">14,753</td><td class="num zero">—</td><td class="num">0.59×</td>
+          </tr>
+
+          <tr class="group"><td colspan="8">Task-wise (T)</td></tr>
+          <tr>
+            <td class="arm">T-opt<span class="what">34 private champions; not one bundle</span></td>
+            <td class="num gstart add">+47,288<span class="sub">median +1,239 per champion (404–3,424)</span></td>
+            <td class="num del">−460<span class="sub">median −3 (0–95)</span></td>
+            <td class="num">+46,828</td>
+            <td class="num">7 of 8<span class="sub">median 2 per champion (1–4)</span></td>
+            <td class="num gstart tot">—<span class="sub">median champion 15,977</span></td>
+            <td class="num zero">—</td><td class="num zero">—</td>
+          </tr>
+          <tr>
+            <td class="arm">T-mrg · merge by order<span class="what">diffs in gain order, later wins</span></td>
+            <td class="num gstart add">+26,855</td><td class="num del">−327</td><td class="num">+26,528</td><td class="num">7 of 8</td>
+            <td class="num gstart tot">41,281</td><td class="num">+180%</td><td class="num">1.65×</td>
+          </tr>
+          <tr>
+            <td class="arm">T-mrg · smart merge<span class="what">LLM merged by meaning, no scores</span></td>
+            <td class="num gstart add">+45,511</td><td class="num del">−412</td><td class="num">+45,099</td><td class="num">7 of 8</td>
+            <td class="num gstart tot">59,852</td><td class="num">+306%</td><td class="num">2.39×</td>
+          </tr>
+          <tr>
+            <td class="arm">T-mrg · non-conflicting hunks<span class="what">uncontested hunks only (91 of 188)</span></td>
+            <td class="num gstart add">+18,595</td><td class="num del">−221</td><td class="num">+18,374</td><td class="num">7 of 8</td>
+            <td class="num gstart tot">33,127</td><td class="num">+125%</td><td class="num">1.32×</td>
+          </tr>
+
+          <tr class="group"><td colspan="8">Global (G)</td></tr>
+          <tr>
+            <td class="arm">Global · <code>cand_0005</code><span class="what">one shared bundle, 6 iterations</span></td>
+            <td class="num gstart add">+11,125</td><td class="num del">−818</td><td class="num">+10,307</td><td class="num">7 of 8</td>
+            <td class="num gstart tot">25,060</td><td class="num">+70%</td><td class="num">1.00×</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>Reading the table</h2>
+      <ul>
+        <li>One task's fix is small: a median champion adds about 1,200 words to a single task's bundle. Integrating all 34 still produces a bundle larger than Global's.</li>
+        <li>The smart merge kept almost everything: 45.5k of the 47.3k words the 34 champions added (96%). It reconciled conflicts but did not compress. Merge by order kept 57% of them, because a later task's hunk replaces any earlier hunk it overlaps.</li>
+        <li>Global deletes the most (818 words) and adds the least. It is the only arm that rewrites Seed text to a noticeable extent.</li>
+        <li>The untouched file is <code>ocpv_agent.md</code> in every arm. Size has a running cost: per-trial agent tokens on train were 37k for the Seed, 52–88k for T-mrg and 60k for Global.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Definitions</h2>
+      <ul>
+        <li>Words are whitespace-separated tokens in the eight skill files. Merge logs and optimizer notes are excluded.</li>
+        <li>Added and removed come from a word-level diff of each file against the Seed, summed over the eight files. A rewritten word counts once as removed and once as added.</li>
+        <li>Net = added − removed, so Seed + net = resulting words.</li>
+        <li>T-opt's 47,288 is the sum of 34 separate diffs, each counted once. It is not the size of any deployable bundle; it is what T-mrg had to integrate.</li>
+      </ul>
+    </section>
+  </div>
+</main>

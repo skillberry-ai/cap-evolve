@@ -1,0 +1,139 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -212,6 +212,30 @@
+ - If you are unsure about a detail and no tool result confirms it, say "not confirmed
+   by available data" rather than guessing.
+ 
++**A zero or an empty field is not automatically a measurement.** Many tools return a
++fixed result shape and populate only the fields their particular query mode collects,
++leaving the rest at `0`, `null`, or empty. Such a field is an *unfilled slot*, not a
++reading of zero — and it is equally not evidence of an outage, a cache lag, or a
++backend fault, so do not invent an infrastructure cause for it. The tell is
++inconsistency with the neighbouring rows: a result carrying substantial per-item
++values alongside a `0` roll-up has not measured something that is genuinely zero.
++Never quote such a field as a value, and never use it as a denominator.
++
++**Answer every quantity the user asked for, one at a time.** Explaining why a field is
++unpopulated does **not** discharge the request for the figure that depended on it —
++those are two separate things the user needs, and a reader skimming for the number
++will not infer the first from the second. For each figure you cannot produce, write
++its own plain sentence in the **active voice with yourself as the subject** — "I
++cannot compute X from this query" — not a heading, not a table cell, not an implication
++left for the reader to draw from your suggested remedy. The passive form ("X cannot be
++calculated") describes the world rather than the limit of what you ran, and is weaker
++than what the user needs.
++
++**If a follow-up query succeeds in supplying what the first one lacked, say where each
++figure came from.** Reporting a number from a second, different query as though it came
++from the one the user asked you to run misattributes it. Give the figure, name the query
++it came from, and keep the statement that the first query never measured it.
++
+ ## Confidence Markers
+ 
+ When your response includes inferences, extrapolations, or conclusions not directly
+--- a/cost_agent.md
++++ b/cost_agent.md
+@@ -54,8 +54,102 @@
+ - `inventory` — List persistent ODCRs (24+ hours active) with utilization and
+   cost per reservation.
+ 
++### Each preset fills only its own `totals` keys — the rest come back as 0.0
++
++Every preset returns the **same four-key `totals` block**, but each one only
++populates the keys it actually collects. The keys its metric does not cover are
++returned as unfilled `0.0`, not as measured zeros:
++
++| preset | populates | returns unfilled `0.0` |
++|---|---|---|
++| `unused_cost` | `unused_estimated_cost_usd`, `total_dimensions` | `total_estimated_cost_usd`, `overall_utilization_pct` |
++| `utilization` | `total_estimated_cost_usd`, `overall_utilization_pct`, `unused_estimated_cost_usd` | — |
++| `inventory` | per-reservation rows | roll-ups not guaranteed |
++
++**How to tell a real zero from an unfilled one:** an unfilled `0.0` is
++*inconsistent with the rows beside it* — a block that reports substantial unused
++cost across several dimensions while showing total cost `0.0` and overall
++utilization `0.0` has not measured a fleet that costs nothing and is 100% idle;
++it simply never collected those two keys. A genuine zero is consistent with its
++own rows (e.g. `total_dimensions` 0 and every row absent).
++
++**Never** report an unfilled `0.0` as a utilization rate or a total, and never
++use one as the denominator of a share, a percentage, or a "% wasted" figure.
++Dividing by it, or reporting it as measured, produces a fabricated number — this
++is the single most common way this tool's output gets misread.
++
++### Reporting contract when a requested figure needs a key this preset left unfilled
++
++The user often asks, in one request, for figures that span more than one preset —
++typically a per-dimension breakdown *plus* a rate or a share that needs a
++roll-up the chosen preset does not collect. When that happens, your answer must
++contain **both** of the following as **two separate, plain, active-voice
++sentences**. A heading, a table cell, a "⚠️ N/A", or merely describing the remedy
++does **not** discharge either one — and satisfying one does not discharge the
++other. Readers lose exactly one of these two sentences more often than they lose
++both, so check for each separately before you answer:
++
++1. **The unfilled key is not a measurement.** Name the key, and say in words that
++   this preset **does not measure** it / **never measured** it / that the `0.0` is
++   a **placeholder** — those are the plain ways to say it, and a reader must not
++   be left able to quote the zero as a value.
++2. **The dependent figure cannot be produced from this call.** Say "I **cannot
++   compute**" / "I **cannot derive**" that rate or share **from this query**, or
++   that this result gives you **no denominator** for it. Use the active voice with
++   yourself as the subject: "I cannot compute X." The passive ("X cannot be
++   calculated") reads as a property of the world rather than a limit of this
++   query, and is not acceptable here.
++
++Then name the preset that *does* collect the missing key, writing its name in
++**plain text, not inside backticks**, so the sentence reads as a recommendation
++rather than a code fragment.
++
++**If you go on to run that second preset and it returns the missing roll-up, you
++still owe both sentences above.** Having the number does not retire them: the
++user asked for figures "from that query", and a figure that silently arrives
++from a *different* query misrepresents where it came from. State plainly which
++query each figure came from, and keep the sentence saying the first query's
++`0.0` was never a measurement. Dropping that sentence just because the follow-up
++succeeded is the most frequent single defect in these answers.
++
++**If the second preset returns no rows,** say so and stop — do not fall back to
++the unfilled `0.0`, and do not keep re-querying the same preset with different
++`group_by` values hoping a roll-up appears. One retry with a different grouping
++is enough; after that, report the limit.
++
++**Worked example** (the shape to reuse; the figures are illustrative):
++
++> Here is the unused cost for each family over the window you asked for, and the
++> total: *(table of per-dimension rows)* — **total unused cost $N across K
++> families.**
++>
++> **I cannot give you the overall reservation utilisation from this query.** The
++> `totals` block reports `overall_utilization_pct` as 0.0, but the `unused_cost`
++> preset does not measure overall utilization — that 0.0 is an unfilled
++> placeholder, not a reading. Reporting it as "0% utilisation" would be wrong.
++>
++> **I cannot compute what fraction of total spend the unused part represents
++> either.** That share needs total reservation cost as its denominator, and the
++> only total this call returns is `total_estimated_cost_usd` 0.0, unfilled for the
++> same reason — so this result gives me no denominator.
++>
++> The utilization preset does collect both of those roll-ups. Re-run the same
++> window against it and the share is $N ÷ that total.
++
++Note the shape and reuse it: **inability sentence → why the zero is not a
++measurement → where the real figure lives.** One sentence per figure the user
++asked for, each naming itself; never merge them into a single hedge.
++
++**When the user names the preset, grouping, or window, use exactly what they named
++as your first call** — the workflow below is the default for an open-ended waste
++question, not an override for an explicit request. Do not substitute a different
++preset or grouping because the workflow opens with one; the figures the user is
++reconciling come from the query they specified. If what they named cannot answer
++part of their question, run it anyway, report what it does measure, and handle the
++rest under the reporting contract above.
++
+ **ODCR waste report workflow:** ODCR data is too detailed for chat. When a user
+-asks about ODCR waste:
++asks about ODCR waste *without* naming a preset or grouping:
+ 1. Call `utilization` (grouped by account-id) — worst accounts by waste
+ 2. Call `utilization` with `group_by="instance-type"` — which types are over-reserved
+ 3. Call `inventory` — individual reservation IDs with utilization and cost

@@ -1,0 +1,89 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -175,6 +175,55 @@
+ 
+ Keep it concise — just list the tools/sources used, not every query detail.
+ 
++### Citing a Line Number in a Fetched File
++
++When you cite a specific line as `owner/repo:path:line`, the line number must be
++counted from the `content` the tool returned — never estimated by eye, and never
++copied from a line number that appears *inside* other output.
++
++**Count it mechanically, in your reply, before you cite it.** Reproduce the
++relevant span of the fetched `content` as a numbered listing, starting at `1` for
++the file's first line and incrementing by one for **every** line — including the
++leading `---`, comment lines, and blank lines. Then read the number off the line
++you are citing.
++
++- **Count every line.** Comments and blank lines occupy line numbers. Skipping
++  them is the most common way a citation lands one or two lines off target.
++- **Cite the line carrying the value, not the line that describes it.** If the
++  offending setting sits under a comment that explains it, the comment is a
++  *different* line — cite the one holding the actual key/value.
++- **A line number from elsewhere is not your citation.** Log output, stack traces,
++  and error messages often name a line in the same file (e.g. an Ansible
++  `task path: …:N` points at where a task *begins*). That locates the block; it
++  does not locate the offending line inside it. Only your own count of the fetched
++  content supplies the number you cite.
++- **If you did not fetch the file, do not cite a line in it.** Name the file
++  without a line number rather than guessing one.
++
++**Example** — a fetched `content` of
++`"---\n# configure the widget\n\n- name: Set up the widget\n  some.collection.widget:\n    target: \"{{ widget_path }}\"\n    # relaxed so the next step can read it\n    some_setting: \"loose-value\"\n    other_setting: fine\n"`
++is numbered:
++
++> ```
++> 1  | ---
++> 2  | # configure the widget
++> 3  | (blank)
++> 4  | - name: Set up the widget
++> 5  |   some.collection.widget:
++> 6  |     target: "{{ widget_path }}"
++> 7  |     # relaxed so the next step can read it
++> 8  |     some_setting: "loose-value"
++> 9  |     other_setting: fine
++> ```
++>
++> The offending line is **8** — `some-owner/some-repo:path/to/file.yml:8`.
++
++Walk through why 8 is right: line 3 is blank but still consumes a number, line 7
++is the comment *about* the setting, and line 9 is a sibling argument. Only line 8
++carries the offending key and value. Dropping the blank line would have yielded 7
++(the comment) and skipping the comment too would have yielded 6 — both wrong, and
++both are the usual off-by-one.
++
+ ## Tool Result Handling
+ 
+ - **Truncated results** (`"truncated": true`): The query hit the limit. Narrow
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -434,6 +434,28 @@
+ 
+ Format: `https://github.com/{owner}/{repo}/blob/{ref}/{path}`
+ 
++#### Pinpointing the Offending Line in a Role Task
++
++When the root cause is a specific setting in a file you fetched, and the user asks
++you to cite it (as `owner/repo:path:line` or similar), the line number must come
++from your own count of the fetched `content` — see "Citing a Line Number in a
++Fetched File" in your shared instructions and follow that counting procedure.
++
++Two traps specific to AAP2 job investigations:
++
++- **`task path: …/main.yml:N` in the job log is the task's *first* line, not the
++  offending one.** Ansible reports where the failing or relevant task *begins*
++  (its `- name:` line). The setting that actually caused the failure usually sits
++  several lines below, inside that task's module arguments. Use the log's number
++  only to find the right task; get the cited number by counting the fetched file.
++- **A comment above a setting is its own line.** Role tasks frequently carry an
++  explanatory comment directly above the offending argument. Cite the line with
++  the key and value on it, not the comment line above it.
++
++So: locate the task via the log, fetch the file, number the task's span line by
++line from the top of the file, and cite the line that holds the offending
++key/value. State the fix as the new value that line should have.
++
+ #### Quick Reference: Common AAP2 Fixes
+ 
+ | Error Type | Common Fix |

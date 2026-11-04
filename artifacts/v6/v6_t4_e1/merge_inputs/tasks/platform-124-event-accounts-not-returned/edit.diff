@@ -1,0 +1,80 @@
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -94,6 +94,59 @@
+   sweep, check all remaining controllers in a single batch — don't try them one at a time.
+ - **When the user provides a specific job ID**, use `get_job_log` directly with that
+   ID — don't use `find_jobs` to search for it first.
++
++### No Job Exists for a GUID — "Never Launched" Is the Finding
++
++`find_jobs` returning `total: 0` for a GUID is a **complete, positive finding**, not a
++dead end and not a search problem. It means no job with that GUID exists on any
++controller — so **nothing ever ran**, and there is **no failure to diagnose**.
++
++Once you have swept all controllers (one batched `find_jobs` per GUID with no `status`
++filter) and still get `total: 0`, stop searching and report. Do not keep widening date
++windows, guessing template names, or pivoting to Splunk/Babylon to "find the real job" —
++absence is the answer the user needs.
++
++**Report it in these exact terms — the distinction between "ran and failed" and "never
++ran" drives a completely different remedy, so state which one it is in plain words:**
++
++1. **State the absence literally:** "`find_jobs` for GUID `<guid>` returns no jobs
++   (`total: 0`) on any controller, so **no destroy job exists** for it."
++2. **Say the action was never launched** — use the word **launched**: "its destroy was
++   **never launched**." Do not soften this to "may not have been triggered", "was likely
++   dropped", or "is orphaned" — you verified it, so assert it.
++3. **Give the remedy as launching the missing run, not fixing a failed one:**
++   "to get it back, **launch the destroy** for `<guid>`" — and, where a lifecycle
++   front-end exists, "**check its order** in Babylon to see why no job was created."
++   Never recommend "re-trigger", "re-run", or "retry" for an entity that has no job:
++   there is nothing to re-run.
++
++**NEVER attribute a failure, outcome, status, or job to a GUID with zero jobs.** Phrases
++like "`<guid>`'s destroy failed", "the `<guid>` destroy job", or "cleanup failed for
++`<guid>`" are fabrications — no such job exists. This is the single most common error in
++this situation: do not let a *sibling* entity's real failure bleed onto this one.
++
++**Keep sibling entities strictly separate.** When one entity in a batch failed and
++another has no job at all, they have different causes and different remedies. You may
++note that the sibling's known failure mode *could* affect a future run, but mark it as
++forward-looking (`[confidence: medium | ...]`) and never present it as this entity's
++cause or as something that already happened to it.
++
++**Worked example** — two pool resources from one batch are still not released:
++
++> Two of the three are still unavailable, for different reasons.
++>
++> `resource-A` (GUID `aaaaa`): its cleanup ran and **failed**. `find_jobs` for `aaaaa`
++> returns the provision (successful) and destroy job `1234567` on `<controller>`, which
++> failed at `<timestamp>`. The log shows the failing task `<role> : <task>` erroring with
++> **`<VerbatimErrorCode>`** on `<the resource id from the account record>`; `<leftover
++> items>` were never removed. Fix: remove those leftovers, then **re-run the destroy**
++> for `aaaaa` — there is a failed job to retry.
++>
++> `resource-B` (GUID `bbbbb`): **no cleanup job exists**. `find_jobs` for `bbbbb` returns
++> nothing (`total: 0`) across every controller, so **nothing has tried to clean it up**
++> and its destroy was **never launched**. There is no failure to diagnose. To get it
++> back, **check its order** in Babylon to see why no job was created, then **launch the
++> destroy** for `bbbbb`.
+ 
+ ### Job Not Found in Database
+ 
+@@ -405,6 +458,17 @@
+ - **Host:** `{host}`
+ - **Error:** the actual error (not "pod failed" — the underlying cause)
+ 
++**Quote error identifiers verbatim.** Reproduce the exact error code, exception name, or
++API error string from the log — `HostedZoneNotEmpty`, `AccessDenied`,
++`CrashLoopBackOff`, `QuotaExceeded` — spelled exactly as the log spells it. A paraphrase
++of what the code *means* ("the zone still had records", "permissions problem") is not a
++substitute: the literal token is what the reader greps for and matches against runbooks.
++State the code first, then explain it in prose.
++
++**Name the affected resource by its identifier**, and cross-reference it to the record
++the user started from (e.g. the id in the failing task equals the `hosted_zone_id` on the
++account row) so the link between the failure and their resource is explicit.
++
+ For pod/container failures, include:
+ - **Failing container:** `{container_name}` (init or main)
+ - **Container state:** `{state}` (CrashLoopBackOff, exit code, restart count)

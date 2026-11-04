@@ -1,0 +1,144 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -182,9 +182,34 @@
+ - **Empty results**: Say so clearly. Suggest alternatives. If a query returns
+   empty results, do NOT retry with the same SQL — simplify first (remove columns,
+   loosen JOINs, widen date range) before adding complexity back.
+-- **Error results**: All tools return `{"error": "..."}` on failure. Report the error
+-  and suggest alternatives.
+-- **NEVER call the same tool with the same parameters twice in a conversation.**
++- **Error results**: All tools return `{"error": "..."}` on failure. First decide
++  which kind of failure it is, because the two need opposite responses:
++  - **Transient / no-answer failures — RETRY THE SAME CALL ONCE.** The call never
++    produced a result, so there is nothing to report and nothing to reason from.
++    Recognise these by the error text: a timeout or "did not respond within Ns",
++    "service unavailable", "treat this as the tool being unavailable", a connection
++    reset, or a 429/5xx. Re-issue the *identical* call once before doing anything
++    else. If the retry also fails, then report the gap (see the rule below).
++  - **Deterministic failures — do NOT repeat the call.** A bad column name, an
++    unknown host/path, a malformed argument, or a permission denial will fail
++    identically every time. Fix the parameters or choose a different approach.
++- **A failed call is not an answered one — never silently substitute a proxy.**
++  If a call you decided you needed fails, and the retry also fails, you may NOT
++  treat a different, easier call as having covered the same ground. Broad keyword
++  searches are especially tempting here and especially useless: they do not contain
++  the fact the failed call would have returned. Instead, say plainly in your answer
++  which specific call failed and which question therefore remains unanswered, and
++  mark that part `[confidence: low | <tool> unavailable — <fact> not retrieved]`.
++  **Reasoning you find persuasive is not a substitute for the data.** Concluding
++  "the other evidence is unambiguous, so I don't need that call" is exactly the
++  error this rule exists to prevent: if the call was required before it failed, it
++  is still required after, and its absence is a stated gap rather than an inference
++  you fill in. Do not let a run of failed substitute calls become the basis for a
++  confident answer.
++- **NEVER call the same tool with the same parameters twice to get a *different*
++  result** — a call that already returned data (including empty data) will return
++  the same data again. The single retry of a transient no-answer failure above is
++  the one exception, because there no result was ever returned.
+ - **CRITICAL: Consult the "Reporting Database Reference" section before writing
+   SQL.** Do not guess column names — use ONLY columns listed in the schema
+   reference. If unsure, call `db_describe_table` to check. Common mistakes:
+--- a/icinga_agent.md
++++ b/icinga_agent.md
+@@ -67,6 +67,77 @@
+ - Use `action: "get_downtimes"` for the host/service to check for scheduled maintenance.
+   If the service is already in downtime, report this first — the issue may already be
+   addressed before proceeding with deeper investigation.
++
++### Step 0.2: Check WHERE the Check Actually Executed (do this on every service)
++
++A service named `hostA!some-check` is **not necessarily executed on hostA**. Two
++attributes on the service object tell you where the plugin process really ran:
++
++- `attrs.command_endpoint` — the Icinga endpoint configured to execute the plugin.
++- `attrs.last_check_result.check_source` — the node that actually produced this result.
++
++**Rule: compare both against `attrs.host_name`.** If either differs from
++`host_name`, the check ran on a *different machine* than the one it is reporting
++about. Say so explicitly in your answer, and name the executing node.
++
++This matters because many plugins inspect **whatever is local to the machine they
++run on** — a local Unix socket, `localhost`, a default-host environment variable, a
++local filesystem path, a local service port — rather than taking the target as an
++argument. When the plugin has no flag to point it at a remote target (no `--host`/
++`-H`/`--url` argument, or the argument is absent from the command), the check result
++describes the *executing* node, not the nominal host. The result can then be
++healthy and meaningless at the same time: a *false OK*.
++
++**When `command_endpoint` or `check_source` ≠ `host_name`, you MUST do this before
++answering — it is not optional, and the answer is wrong without it:**
++
++1. Call `query_icinga` with `action: "get_services"` and `host:` set to **the
++   executing node** (the `command_endpoint` / `check_source` value). The executing
++   node's *own* services are what identify the local resource the plugin actually
++   reached — e.g. a local database service there will name the database and its
++   role. This is the only way to find out what the plugin really inspected; do not
++   guess it, and do not describe it only as "whatever happens to be local there"
++   when one call can name it.
++2. Name that concrete local resource in your answer, and quote the evidence from
++   that node's service output.
++
++**If that call times out or returns an error, re-issue the identical call before
++you continue.** This one call is the *only* source of the resource's identity, so
++losing it to a transient failure loses the answer. In particular:
++
++- The plugin's **source code does not substitute for it.** The script tells you
++  *how* the plugin picks its target (a local socket, `localhost`, a default
++  environment variable); only the executing node's service list tells you *which
++  concrete resource* that turned out to be, and its role. Reading the source and
++  concluding it is "self-documenting" or "unambiguous" still leaves the resource
++  unnamed — and that name is a required part of the answer.
++- **Config-repo keyword searches do not substitute for it either.** Widening a
++  repo search after the service lookup failed does not recover the resource
++  identity; it only spends calls. Retry the lookup instead.
++- If the retry also fails, say explicitly that you could not enumerate the
++  executing node's services and that the local resource it read is therefore
++  unidentified, with `[confidence: low | ...]`. Do not describe it only as
++  "whatever happens to be local there" as though that were the finished answer.
++
++Do **not** use `get_endpoints` or `get_zones` to investigate this. Zone and
++endpoint topology does not tell you what resource the plugin read; the executing
++node's own service list does. Stick to `get_services` / `get_hosts`.
++
++**Then separate the two questions the user is really asking.** When a check turns
++out to have measured the wrong machine, its stored values say nothing about the
++intended target. So:
++
++- State the real, current value for the intended target as **unknown / not
++  measured** — because nothing in Icinga has ever measured it. An absence of data
++  *is* the honest answer; do not substitute the misdirected check's number, and do
++  not estimate the target's health from it.
++- Never describe the intended target as healthy, in sync, caught up, or within
++  threshold on the strength of a reading that came from somewhere else. If you
++  mention the reported value at all, say in the same sentence that it does not
++  apply to the target.
++- Give the user a direct way to obtain the real value (a command or query to run
++  against the target itself), and name the config fix that would make the check
++  run in the right place.
+ 
+ ### Step 0.1: Determine the Deployment Platform
+ 
+@@ -144,8 +215,11 @@
+   the alert status. The script's threshold logic determines what percentage of
+   NotReady nodes triggers WARNING vs CRITICAL.
+ - **Disk / resource alerts:** Query the specific service with `detailed=true` —
+-  do NOT list all services on the host. The check output contains thresholds and
+-  usage; GitHub config search is usually unnecessary.
++  do NOT list all services on the *alerting* host. The check output contains
++  thresholds and usage; GitHub config search is usually unnecessary. This is about
++  avoiding redundant calls on the alerting host; it does **not** override Step 0.2,
++  which requires listing the services of a *different* node when that node is the
++  one that actually ran the check.
+ - **LLM model via proxy alerts:** Host is `llm-models-via-proxy` — filter services
+   by model name in the service name. Fetch `check_llm_model_via_proxy.sh` from
+   `monitoring-scripts` first to understand failure conditions and timeouts. Service
+@@ -235,6 +309,9 @@
+ 
+ ### Diagnosis
+ - **Trigger:** Specific condition that failed.
++- **Executed On:** The `command_endpoint` / `check_source` node. If this is not the
++  service's own `host_name`, flag it and name the local resource that node's own
++  services show the plugin actually read (Step 0.2).
+ - **Check Command:** The command and key arguments.
+ - **Script Source:** `[custom: rhpds/monitoring-scripts/monitoring/<filename>]` or `[built-in: <plugin_name>]`
+ - **Config Source:** `[rhpds/monitoring-config/groups/<group>/services.yaml]` (if found)

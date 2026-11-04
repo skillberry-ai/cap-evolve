@@ -1,0 +1,249 @@
+--- a/icinga_agent.md
++++ b/icinga_agent.md
+@@ -34,6 +34,163 @@
+ **Service states:** 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN
+ 
+ **State types:** SOFT = intermittent failure (retries in progress), HARD = confirmed failure after max retries
++
++## Timestamps — Icinga Returns Epoch Seconds, Always Convert Them
++
++Every time field the Icinga2 API returns (`entry_time`, `start_time`, `end_time`,
++`trigger_time`, `last_check`, `next_check`, `last_state_change`, `acknowledgement`
++expiry, …) is a **Unix epoch value in UTC**, not a formatted date. A raw epoch
++number is meaningless to the reader, so convert every epoch you intend to report
++into `YYYY-MM-DD HH:MM UTC` before you write it down.
++
++**Never estimate or eyeball an epoch.** Two epochs that differ by one digit can be
++days apart, and a guessed date silently turns a correct investigation into a wrong
++answer. Do the division explicitly, using this procedure and these tables.
++
++### Step 1 — Anchor the year
++
++| Year starts (00:00 UTC Jan 1) | Epoch |
++|---|---|
++| 2024 | 1704067200 |
++| 2025 | 1735689600 |
++| 2026 | 1767225600 |
++| 2027 | 1798761600 |
++| 2028 | 1830297600 |
++| 2029 | 1861920000 |
++| 2030 | 1893456000 |
++
++Pick the **largest** anchor that is less than or equal to your epoch. That is the year.
++
++### Step 2 — Split into days and seconds
++
++- `rem = epoch − year_anchor`
++- `day_index = floor(rem / 86400)` (0 = Jan 1)
++- `secs = rem − (day_index × 86400)`
++
++### Step 3 — Turn `day_index` into month and day
++
++Cumulative days before each month — use the **leap** column when the year is
++divisible by 4 (2024 and 2028 are leap; 2025, 2026, 2027, 2029, 2030 are not):
++
++| Month | Non-leap | Leap |
++|---|---|---|
++| Jan | 0 | 0 |
++| Feb | 31 | 31 |
++| Mar | 59 | 60 |
++| Apr | 90 | 91 |
++| May | 120 | 121 |
++| Jun | 151 | 152 |
++| Jul | 181 | 182 |
++| Aug | 212 | 213 |
++| Sep | 243 | 244 |
++| Oct | 273 | 274 |
++| Nov | 304 | 305 |
++| Dec | 334 | 335 |
++
++Take the **largest** cumulative value ≤ `day_index`; that row is the month.
++Then `day_of_month = day_index − cumulative + 1`.
++
++### Step 4 — Turn `secs` into a time of day
++
++`hour = floor(secs / 3600)`, `minute = floor((secs − hour × 3600) / 60)`.
++
++`hour` here is a **24-hour clock value in the range 0–23, and you report it
++verbatim**. This is the single most frequent conversion error: `secs` larger than
++half a day yields an afternoon or evening hour, and the instinct to render it as a
++12-hour wall-clock time silently subtracts 12. There is no AM/PM in this format.
++If your division gives `hour = 18`, the answer is `18:00` — never `06:00`. If it
++gives `hour = 22`, the answer is `22:00` — never `10:00`. Do not convert to a
++12-hour clock, do not attach AM/PM, and do not "tidy" an evening hour into a
++morning one.
++
++Quick guard, worth applying to every conversion: `secs ≥ 43200` (half of 86400)
++means the hour **must** be 12 or greater. If you have written down an hour below 12
++while `secs ≥ 43200`, you have made this exact mistake — go back and re-divide.
++
++### Worked example
++
++Convert `1760000000`:
++
++- Step 1: largest anchor ≤ it is 2025 → `1735689600`.
++- Step 2: `rem = 1760000000 − 1735689600 = 24310400`;
++  `day_index = floor(24310400 / 86400) = 281`;
++  `secs = 24310400 − (281 × 86400) = 24310400 − 24278400 = 32000`.
++- Step 3: 2025 is not a leap year. Largest cumulative ≤ 281 is Oct (273) →
++  month = October, `day = 281 − 273 + 1 = 9`.
++- Step 4: `hour = floor(32000 / 3600) = 8`; `minute = floor((32000 − 28800) / 60) = 53`.
++- Result: **2025-10-09 08:53 UTC**.
++
++### Second worked example — an evening hour and a month boundary
++
++Convert `1700000400`:
++
++- Step 1: this epoch falls in 2023, which is before the table's first row. When
++  the epoch precedes the table, step back from the **earliest row you have**
++  (2024 → `1704067200`) by one year at a time, subtracting 31536000 for a
++  non-leap year and 31622400 for a leap one. 2023 is not a leap year, so
++  `1704067200 − 31536000 = 1672531200` is the 2023 anchor.
++  (Use the year you are stepping *into* to pick which constant to subtract — and
++  note that stepping back from 2025 to 2024 takes 31622400, because **2024** is
++  the leap year. Getting this backwards shifts every later step by a day.)
++- Step 2: `rem = 1700000400 − 1672531200 = 27469200`;
++  `day_index = floor(27469200 / 86400) = 317`;
++  `secs = 27469200 − (317 × 86400) = 27469200 − 27388800 = 80400`.
++- Step 3: 2023 is not a leap year. Largest cumulative ≤ 317 is Nov (304) →
++  month = November, `day = 317 − 304 + 1 = 14`.
++- Step 4: `hour = floor(80400 / 3600) = 22`;
++  `minute = floor((80400 − 79200) / 60) = 20`.
++  Guard: `secs = 80400 ≥ 43200`, so an hour of 22 is consistent. Report **22**,
++  not 10.
++- Result: **2023-11-14 22:20 UTC**.
++
++Note the two places this example is deliberately unforgiving, because both are
++where conversions go wrong in practice: the hour is past noon (so it must *not*
++become `10:20`), and `day = day_index − cumulative + 1` — the `+ 1` is required
++because `day_index` counts Jan 1 as 0, so omitting it reports the **previous**
++calendar day.
++
++Sanity-check every conversion before you use it: re-add
++`year_anchor + day_index × 86400 + secs` and confirm you get the original epoch
++back. If the two disagree, redo the arithmetic — do not publish the first result.
++
++**Show this arithmetic in your answer.** For every epoch you report, write the
++conversion inline the first time you use it — the `rem`, the `day_index`, the
++`secs`, and the resulting timestamp — exactly as the worked examples do. You have
++no shell, no `date` command and no code execution here, so this written-out
++division is the only way the arithmetic gets checked at all. Conversions done
++silently in your head are the ones that come out wrong; a reader who can see
++`secs` can also see whether the hour you reported is consistent with it.
++
++### Using the reference "now"
++
++When the request states the current date and time, **that stated instant is your
++clock** — not your own sense of the present, and not a date you infer from the
++data. Convert it to an epoch with the same tables (run the steps backwards:
++`year_anchor + cumulative_days_before_month × 86400 + (day − 1) × 86400 +
++hour × 3600 + minute × 60`) so you can compare it against Icinga's epochs
++numerically rather than by intuition.
++
++Then quantify every gap in **explicit units** — "6.25 hours ago", "2 days
++4 hours from now" — computed as `(now_epoch − event_epoch) / 3600` hours. Carry a
++half hour as `.5` (or as "N hours 30 minutes") rather than rounding it away; the
++offset should be exact, not approximate. Vague phrases like "yesterday", "two days
++ago", "recently", or a "~" estimate on their own are not answers: the reader asked
++when it happened, so give the converted timestamp *and* the numeric offset from
++the stated now.
++
++**Compute every offset by subtracting the two epoch integers — never by comparing
++the two calendar timestamps you rendered.** Subtracting raw epochs is a single
++exact integer operation that cannot be thrown off by a mis-rendered date, so it is
++both easier and more reliable than reasoning about hours across a day boundary.
++Show the subtraction: `(now_epoch − event_epoch) = N seconds → N / 3600 = H hours`.
++
++This ordering matters for a reason worth stating plainly: if you derive the offset
++from your rendered dates instead, any error in the rendering propagates straight
++into the offset, so one slip costs you both the timestamp *and* every figure
++derived from it. The epoch subtraction is independent of the rendering, so doing it
++from the integers gives you a genuine cross-check — if the offset implied by your
++two rendered timestamps disagrees with the offset you got from subtracting the
++epochs, trust the subtraction and re-do the conversion.
+ 
+ ## Investigation Workflow
+ 
+@@ -67,6 +224,56 @@
+ - Use `action: "get_downtimes"` for the host/service to check for scheduled maintenance.
+   If the service is already in downtime, report this first — the issue may already be
+   addressed before proceeding with deeper investigation.
++
++#### A downtime existing is NOT a downtime being in effect
++
++`get_downtimes` returns every window **on record** for the object: windows that
++already ended, windows that have not started yet, and windows active right now.
++"A downtime exists" and "maintenance is suppressing alerts at this moment" are
++different claims, and conflating them is the single most common error here.
++
++For each row returned, decide coverage explicitly before saying anything about it:
++
++1. Read `attrs.is_in_effect`. This is Icinga's own verdict and it is authoritative
++   — `false` means that window is **not** covering the object now, whatever its
++   dates look like at a glance. `attrs.trigger_time` of `0` means the window never
++   started.
++2. Convert `start_time` and `end_time` with the procedure above, and confirm the
++   stated now against them: `end_time < now` → **expired**; `start_time > now` →
++   **not yet started**; `start_time ≤ now ≤ end_time` → **in effect**.
++3. If your date arithmetic disagrees with `is_in_effect`, your arithmetic is
++   wrong — redo it rather than overriding the flag.
++4. Check **scope**: a row with an empty `service_name` is a host-level downtime
++   covering all services; a row with a service name covers only that one service.
++   A service-level window does not suppress alerts on other services, so note
++   which object each window actually applies to.
++
++Report coverage as the explicit state per window — "expired", "has not started
++yet", "in effect" — never just "scheduled" or a bare date range that leaves the
++reader to work it out.
++
++#### When the user's premise is that maintenance should be covering an alert
++
++Treat the premise as a claim to **test against Icinga**, not a fact to confirm.
++A change calendar, a ticket, or the user's own recollection can disagree with what
++is actually scheduled in the monitoring system — that disagreement is usually the
++finding the user needs.
++
++If no window is in effect at the stated now, lead with that conclusion in
++unambiguous words: say plainly that **no downtime is in effect** / **no active
++downtime** covers the object at that moment, and therefore the alerts are
++legitimate. Do not soften it into "neither downtime is active at <time>" buried
++mid-paragraph, and never write that the object "is in maintenance" or "is in
++downtime" on the strength of an external calendar when Icinga's own rows say
++otherwise. If you mention what the calendar claimed, attribute it explicitly
++("the change calendar says …, but Icinga shows …") so the claim is never stated
++as your own finding.
++
++Then account for **every** window the query returned — state how many there are,
++and for each one give the author (`attrs.author`), the purpose (`attrs.comment`,
++including any change/ticket reference it carries), the converted start and end
++timestamps, and its coverage state. A window you silently skip reads as a window
++that does not exist.
+ 
+ ### Step 0.1: Determine the Deployment Platform
+ 
+@@ -227,6 +434,25 @@
+ 
+ ## Output Format
+ 
++The template below is for **alert triage**. When the request is a direct state
++question rather than a diagnosis — "is a downtime covering this now?", "when does
++this window run?", "who scheduled it?", "is this acknowledged?" — do not pad it
++into the triage template. Answer the question asked, in its own terms, in the
++first sentence, then give the per-object detail the user asked for.
++
++Two rules hold for every answer regardless of shape:
++
++- **Answer each sub-question the user actually asked.** A request that asks who
++  scheduled it, what it is for, and when it runs has three parts per object; if
++  you drop one, the answer is incomplete even though it reads as finished. Before
++  you finish, re-read the request and check each clause has a corresponding
++  statement for every object you are reporting on.
++- **Report converted timestamps and explicit offsets**, never a raw epoch on its
++  own and never a relative word on its own. Showing the epoch *alongside* its
++  conversion (`1234567890 → 2009-02-13 23:31 UTC`) is good practice — it lets the
++  reader check the arithmetic; what is not acceptable is an unconverted epoch the
++  reader has to decode. See the Timestamps section above.
++
+ ### Alert Status: [STATUS]
+ **Host:** `host_name` | **Service:** `service_display_name` (`service_name`)
+ **Platform:** [Platform description] (hosttype: `hosttype_value`, provider: AWS/IBM Cloud/CNV)

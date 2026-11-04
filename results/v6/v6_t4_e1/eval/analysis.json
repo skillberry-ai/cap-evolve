@@ -1,0 +1,440 @@
+{
+ "G": {
+  "F": {
+   "n": 67,
+   "delta": 0.053453934825870644,
+   "se": 0.017219603457565485,
+   "up": 18,
+   "down": 5
+  },
+  "F_opt34": {
+   "n": 34,
+   "delta": 0.12433639852941178,
+   "se": 0.026208942337781545,
+   "up": 17,
+   "down": 1
+  },
+  "F_other33": {
+   "n": 33,
+   "delta": -0.019576482323232332,
+   "se": 0.013541675814850523,
+   "up": 1,
+   "down": 4
+  },
+  "test": {
+   "n": 66,
+   "delta": 0.036911878493266,
+   "se": 0.013464341084093908,
+   "up": 11,
+   "down": 4
+  },
+  "F_trials": {
+   "4": 65,
+   "3": 2
+  },
+  "T_trials": {
+   "10": 61,
+   "8": 2,
+   "9": 2,
+   "7": 1
+  },
+  "test_worst": [
+   [
+    "platform-131-deployment-first-resource-blind-spot",
+    -0.395
+   ],
+   [
+    "platform-135-catalog-component-drift-fanout",
+    -0.129
+   ],
+   [
+    "cloud-316-cleaned-sandbox-live-iam-keys",
+    -0.126
+   ],
+   [
+    "icinga-225-monitor-outlived-its-namespace",
+    -0.103
+   ],
+   [
+    "cost-064-reservation-release-active-job-check",
+    -0.07
+   ]
+  ],
+  "test_best": [
+   [
+    "cost-401-monitor-drilldown-wrong-month",
+    0.169
+   ],
+   [
+    "platform-142-duplicate-yaml-key-last-wins",
+    0.173
+   ],
+   [
+    "icinga-205-notifications-disabled-nobody-paged",
+    0.173
+   ],
+   [
+    "platform-020-ocpv-vm-inventory",
+    0.21
+   ],
+   [
+    "platform-145-prod-stage-deploys-from-fork",
+    0.572
+   ]
+  ]
+ },
+ "m1": {
+  "F": {
+   "n": 67,
+   "delta": 0.07196512537313433,
+   "se": 0.01771882984457626,
+   "up": 20,
+   "down": 2
+  },
+  "F_opt34": {
+   "n": 34,
+   "delta": 0.15409048823529414,
+   "se": 0.027595509643706776,
+   "up": 20,
+   "down": 1
+  },
+  "F_other33": {
+   "n": 33,
+   "delta": -0.012648884848484856,
+   "se": 0.008043492243076647,
+   "up": 0,
+   "down": 1
+  },
+  "test": {
+   "n": 66,
+   "delta": 0.04554347344276094,
+   "se": 0.01481162069336283,
+   "up": 19,
+   "down": 7
+  },
+  "F_trials": {
+   "5": 66,
+   "3": 1
+  },
+  "T_trials": {
+   "5": 66
+  },
+  "F_vs_G": {
+   "n": 67,
+   "delta": 0.018511190547263686,
+   "se": 0.011483087063805101
+  },
+  "test_vs_G": {
+   "n": 66,
+   "delta": 0.008631594949494942,
+   "se": 0.014419502062362343
+  },
+  "test_worst": [
+   [
+    "platform-141-nested-loop-item-collision",
+    -0.27
+   ],
+   [
+    "icinga-225-monitor-outlived-its-namespace",
+    -0.24
+   ],
+   [
+    "platform-114-ee-nightly-float-not-a-commit",
+    -0.218
+   ],
+   [
+    "platform-008-log-does-not-say",
+    -0.16
+   ],
+   [
+    "platform-131-deployment-first-resource-blind-spot",
+    -0.131
+   ]
+  ],
+  "test_best": [
+   [
+    "cost-401-monitor-drilldown-wrong-month",
+    0.225
+   ],
+   [
+    "platform-142-duplicate-yaml-key-last-wins",
+    0.23
+   ],
+   [
+    "platform-003-tojson-dict-literal-rca",
+    0.259
+   ],
+   [
+    "platform-022-job-on-no-controller",
+    0.265
+   ],
+   [
+    "platform-102-no-proxy-misses-api-domain",
+    0.442
+   ]
+  ],
+  "short": {
+   "F": [
+    [
+     "cost-407-aws-historical-query-came-back-org-wide",
+     3
+    ]
+   ],
+   "test": []
+  },
+  "F_first3_vs_last2": [
+   0.0807,
+   0.0464,
+   66
+  ],
+  "test_first3_vs_last2": [
+   0.0591,
+   0.0252,
+   66
+  ]
+ },
+ "m3": {
+  "F": {
+   "n": 67,
+   "delta": 0.07789796417910448,
+   "se": 0.021375590125228838,
+   "up": 25,
+   "down": 6
+  },
+  "F_opt34": {
+   "n": 34,
+   "delta": 0.1986248,
+   "se": 0.02320168514455642,
+   "up": 25,
+   "down": 0
+  },
+  "F_other33": {
+   "n": 33,
+   "delta": -0.046487260606060614,
+   "se": 0.019713246650726646,
+   "up": 0,
+   "down": 6
+  },
+  "test": {
+   "n": 66,
+   "delta": 0.04105957571548822,
+   "se": 0.01584538204018723,
+   "up": 17,
+   "down": 5
+  },
+  "F_trials": {
+   "5": 67
+  },
+  "T_trials": {
+   "5": 64,
+   "4": 2
+  },
+  "F_vs_G": {
+   "n": 67,
+   "delta": 0.02444402935323383,
+   "se": 0.014512388405055901
+  },
+  "test_vs_G": {
+   "n": 66,
+   "delta": 0.004147697222222215,
+   "se": 0.012315304333930641
+  },
+  "test_worst": [
+   [
+    "platform-135-catalog-component-drift-fanout",
+    -0.371
+   ],
+   [
+    "cloud-026-gpu-abuse-triage",
+    -0.19
+   ],
+   [
+    "cost-050-partial-account-coverage",
+    -0.18
+   ],
+   [
+    "platform-144-version-compared-as-string",
+    -0.15
+   ],
+   [
+    "icinga-225-monitor-outlived-its-namespace",
+    -0.126
+   ]
+  ],
+  "test_best": [
+   [
+    "cost-401-monitor-drilldown-wrong-month",
+    0.225
+   ],
+   [
+    "icinga-205-notifications-disabled-nobody-paged",
+    0.24
+   ],
+   [
+    "platform-102-no-proxy-misses-api-domain",
+    0.33
+   ],
+   [
+    "platform-022-job-on-no-controller",
+    0.335
+   ],
+   [
+    "platform-145-prod-stage-deploys-from-fork",
+    0.426
+   ]
+  ],
+  "short": {
+   "F": [],
+   "test": [
+    [
+     "cloud-026-gpu-abuse-triage",
+     4
+    ],
+    [
+     "platform-114-ee-nightly-float-not-a-commit",
+     4
+    ]
+   ]
+  },
+  "F_first3_vs_last2": [
+   0.0864,
+   0.0651,
+   67
+  ],
+  "test_first3_vs_last2": [
+   0.0408,
+   0.0555,
+   64
+  ]
+ },
+ "m2": {
+  "F": {
+   "n": 67,
+   "delta": 0.0498043671641791,
+   "se": 0.01509859813734825,
+   "up": 12,
+   "down": 3
+  },
+  "F_opt34": {
+   "n": 34,
+   "delta": 0.11357482941176472,
+   "se": 0.023690837654459496,
+   "up": 12,
+   "down": 1
+  },
+  "F_other33": {
+   "n": 33,
+   "delta": -0.015898533333333336,
+   "se": 0.009614759028867778,
+   "up": 0,
+   "down": 2
+  },
+  "test": {
+   "n": 66,
+   "delta": 0.015020855260942762,
+   "se": 0.017627167176880912,
+   "up": 12,
+   "down": 7
+  },
+  "F_trials": {
+   "5": 65,
+   "2": 2
+  },
+  "T_trials": {
+   "5": 65,
+   "2": 1
+  },
+  "F_vs_G": {
+   "n": 67,
+   "delta": -0.003649567661691536,
+   "se": 0.015033235162119784
+  },
+  "test_vs_G": {
+   "n": 66,
+   "delta": -0.021891023232323233,
+   "se": 0.01475668122200809
+  },
+  "test_worst": [
+   [
+    "platform-141-nested-loop-item-collision",
+    -0.62
+   ],
+   [
+    "platform-131-deployment-first-resource-blind-spot",
+    -0.265
+   ],
+   [
+    "platform-135-catalog-component-drift-fanout",
+    -0.218
+   ],
+   [
+    "icinga-047-downtime-similar-host-names",
+    -0.2
+   ],
+   [
+    "platform-008-log-does-not-say",
+    -0.12
+   ]
+  ],
+  "test_best": [
+   [
+    "platform-020-ocpv-vm-inventory",
+    0.21
+   ],
+   [
+    "cost-401-monitor-drilldown-wrong-month",
+    0.225
+   ],
+   [
+    "platform-022-job-on-no-controller",
+    0.265
+   ],
+   [
+    "platform-102-no-proxy-misses-api-domain",
+    0.302
+   ],
+   [
+    "platform-145-prod-stage-deploys-from-fork",
+    0.456
+   ]
+  ],
+  "short": {
+   "F": [
+    [
+     "cloud-057-cloudtrail-select-only-refusal",
+     2
+    ],
+    [
+     "cloud-074-assigned-account-still-billing",
+     2
+    ]
+   ],
+   "test": [
+    [
+     "cloud-027-azure-pool-database-trap",
+     2
+    ]
+   ]
+  },
+  "F_first3_vs_last2": [
+   0.0498,
+   0.0404,
+   65
+  ],
+  "test_first3_vs_last2": [
+   0.0111,
+   0.0214,
+   65
+  ]
+ },
+ "m1_vs_m3_F": {
+  "n": 67,
+  "delta": -0.005932838805970144,
+  "se": 0.011701815611973651
+ },
+ "m1_vs_m3_test": {
+  "n": 66,
+  "delta": 0.004483897727272726,
+  "se": 0.013718436217364245
+ }
+}

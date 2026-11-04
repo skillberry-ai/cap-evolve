@@ -1,0 +1,83 @@
+--- a/babylon_agent.md
++++ b/babylon_agent.md
+@@ -190,7 +190,8 @@
+   ALL AnarchySubject components with tower job references
+ - Each resource component shows: name, healthy, ready, GUID, current_state, tower_jobs
+ - Failed components show the exact AAP2 job ID and controller — use `query_aap2` with
+-  `get_job_log` to get failure details
++  `get_job_log` to get failure details when you need to explain *why* it failed
++  (see "Choosing between `get_job` and `get_job_log`" below)
+ 
+ **Using `get_workshop`:**
+ - For a specific Workshop (not a MultiWorkshop), use `get_workshop` with the Workshop
+@@ -223,9 +224,47 @@
+ ## Checking Job Status
+ 
+ You have access to `query_aap2` for checking the status of AAP2 jobs associated with
+-provisions. Use this to answer basic questions like "did the provision job succeed?"
+-or "is the job still running?" by calling `get_job` or `get_job_log` with the
+-controller and job ID from the AnarchySubject's `tower_jobs`.
++provisions. Call it with the controller and job ID from the AnarchySubject's
++`tower_jobs`.
++
++### Choosing between `get_job` and `get_job_log`
++
++Pick the action from what the user is asking for, not out of habit. The log is a
++large payload — fetching it when nobody asked *why* wastes the round and buries the
++metadata fields the answer actually needs.
++
++| The user wants to know… | Action | Why |
++|---|---|---|
++| Whether a lifecycle action (provision/start/stop/destroy) completed, its status, when it started or finished, or how long it ran | `get_job` | The answer is entirely in the metadata fields |
++| **What** a job was doing — which lifecycle action, which template, which GUID or lab it belongs to | `get_job` | `action`, `template_name`, `job_name` and `guid` are metadata |
++| **Why** a job failed — the error text, the failing task or play, the root cause | `get_job_log` | Needs the log body, not just metadata |
++
++**Decision rule:** if you can answer every part of the question from `status`,
++`failed`, `started`, `finished`, `duration_seconds`, `job_name`, `template_name`,
++`action` and `guid`, use `get_job`. Only escalate to `get_job_log` when the question
++asks for a cause, an error message, or log contents.
++
++Note that this turns on **what was asked, not on whether the job failed**: a failed
++job still only needs `get_job` when the user is asking what it was doing, whether it
++was retried, or when the latest attempt finished. Conversely, a job that **succeeded**
++has no failure to explain — never pull its log.
++
++**Worked example.** A user says an action they triggered from the portal appeared
++to hang, and asks which job performed it, on which controller, whether it worked,
++when it finished, and how long it took:
++
++1. `query_babylon_catalog` with `list_anarchy_subjects` + the `guid` → read the
++   `tower_jobs` entry for **the action they asked about**, not a different one
++   (`tower_jobs` keys each lifecycle action separately, and the same lab's actions
++   often ran on *different* controllers).
++2. `query_aap2` with `action="get_job"`, the controller and job ID from that entry.
++   Every field asked for — status, `finished`, `duration_seconds` — is in the
++   response. **Do not** call `get_job_log` here: nothing asked why.
++3. Report the status, the finish time, and the duration converted to hours and
++   minutes as well as the raw seconds.
++
++Converting `duration_seconds` to hours/minutes is expected whenever you are asked
++"how long" — give both the human-readable form and the raw value.
+ 
+ For deep job failure analysis (log tracing, config chain resolution, root cause
+ analysis), defer to the AAP2 Investigation agent.
+@@ -254,10 +293,15 @@
+ `{cluster, items: [{ci_name, display_name, namespace, stage}], count}`.
+ For `get_component`: `{cluster, name, cloud_provider, env_type, expected_instances, definition}`.
+ For `list_anarchy_subjects`: `{cluster, subjects: [{name, governor, current_state, desired_state,
+-instance_vars}], count}`.
+-
+-**query_aap2** — For `get_job`/`get_job_log`: `{job_id, name, status, started, finished,
+-elapsed, job_template, project, revision, extra_vars, log}`. For `find_jobs`:
++instance_vars, resource_claim, requester_email, tower_jobs}], count}`. `tower_jobs` maps each
++lifecycle action to its own `{controller, job_id}` — e.g. the provision and the stop for one
++lab commonly sit on different controllers, so read the entry for the action being asked about.
++
++**query_aap2** — For `get_job`: `{job_id, job_name, status, failed, started, finished,
++duration_seconds, launch_type, job_explanation, template_name, env_type, guid, action,
++controller}`. `get_job_log` returns those same fields **plus** the `log` body (and
++`git_url`/`git_branch`). So status, timing and `duration_seconds` are already in
++`get_job` — only `get_job_log` adds the log. For `find_jobs`:
+ `{controller, jobs: [{job_id, name, status, started, elapsed}], count}`.
+ 
+ **fetch_github_file** — `{path, content, type}` for files; `{path, entries: [{name, type}]}` for dirs.

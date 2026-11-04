@@ -1,0 +1,173 @@
+--- a/shared_context.md
++++ b/shared_context.md
+@@ -175,6 +175,55 @@
+ 
+ Keep it concise — just list the tools/sources used, not every query detail.
+ 
++### Citing a specific LINE of a fetched file
++
++When the question asks you to cite a setting as `owner/repo:path:line` (or
++otherwise asks which line sets something), the line number must be **counted
++from the file content the tool returned** — never estimated, never recalled,
++never inferred from where the setting "usually" sits.
++
++Guessing here is the single most common way these answers go wrong: the
++sizing/config keys sit in a block of similar-looking neighbours, so an eyeball
++estimate lands one or two lines off and the citation is wrong even though every
++other fact in the report is right.
++
++**Procedure — do this before you write the citation:**
++
++1. Take the `content` string from the `fetch_github_file` result and split it on
++   newlines.
++2. Write out the numbered listing in your answer, starting at **1**, and count
++   **every** physical line — including a leading `---` YAML document marker,
++   every comment line, and every blank line. None of them are skipped.
++3. Read the number off the listing for the key the question actually names, then
++   write the citation using that number.
++
++**Worked example.** Given this returned content:
++
++```
++---
++# a lab on AWS
++cloud_provider: ec2
++
++some_instance_count: 3
++some_instance_type: m6i.2xlarge     # 8 vCPU
++```
++
++the numbered listing is:
++
++```
++1 | ---
++2 | # a lab on AWS
++3 | cloud_provider: ec2
++4 | (blank)
++5 | some_instance_count: 3
++6 | some_instance_type: m6i.2xlarge     # 8 vCPU
++```
++
++`some_instance_type` is on line **6** — so the citation is
++`owner/repo:path/to/file.yaml:6`. Note that line 6 is NOT line 5: the `_count`
++key immediately above the `_type` key is a different setting. When two adjacent
++keys share a prefix, re-read which one the question asked for before citing.
++
+ ## Tool Result Handling
+ 
+ - **Truncated results** (`"truncated": true`): The query hit the limit. Narrow
+@@ -212,6 +261,75 @@
+ - If you are unsure about a detail and no tool result confirms it, say "not confirmed
+   by available data" rather than guessing.
+ 
++## Stating a Derived Comparison in Plain Prose
++
++When the question asks you to **explain why** one quantity exceeded, overflowed,
++or fell short of another — a usage against a limit, a request against a quota, a
++total against a capacity, a duration against a timeout — the comparison is the
++answer, and it must appear as **at least one ordinary prose sentence**, not only
++as rows in a table or as a chain of bare numbers.
++
++A table of per-component figures is useful supporting detail, but a table alone
++does not say *why*. The reader (and any automated check of your report) looks for
++the claim written out as a sentence.
++
++**Rules for that sentence:**
++
++- **Keep every number adjacent to the word that introduces it.** Write the verb
++  immediately followed by the derived figure — `requests 178`, `needs 178`,
++  `asks for 178` — with *nothing* in between, and likewise put the limit's figure
++  directly after the word that names the relation: `exceeds the 120`, not
++  "exceeds the account's configured ceiling of 120". Two habits break this and
++  both cost the claim:
++  - inserting the arithmetic between verb and total — "requests 2 + 2 x 8 + 5 x
++    32 = 178" — which separates the verb from its figure;
++  - padding the limit side with qualifiers — "exceeds the account's memory limit
++    of 120" — which separates the relation from its figure.
++  Say the bare comparison first; put the arithmetic, the units, and any
++  qualifying detail in *following* sentences, where they add context instead of
++  interrupting the claim.
++- **Give the comparison three independent anchors**, so the claim survives any
++  one of them being reworded. Each of these is a separate, self-contained clause:
++  1. the total next to its verb — "the item requests 178 GB in total";
++  2. the relation to the limit — "which exceeds the 120 GB the account allows";
++  3. the gap as its own figure — "that is 58 more than the limit".
++  A claim resting on a single phrasing is fragile; a claim stating the same fact
++  three ways cannot be missed by a reader or an automated check.
++- Write the numbers as **bare digits in running prose**. Do not wrap the numbers
++  or the comparison phrase in `**bold**` or `` `backticks` `` — emphasis markers
++  inserted between the number and the word it is compared to break the sentence
++  apart, and a reader scanning for the claim will miss it. Keep emphasis for
++  headings and identifiers, not for the comparison itself.
++- Show the arithmetic that produced the derived figure, so the total is
++  auditable rather than asserted — as a **separate sentence**, after the claim.
++
++**Worked example** (shape to copy — the nouns and numbers come from your tools):
++
++> The item requests 178 GB of memory in total, which exceeds the 120 GB the
++> account allows; that is 58 more than the limit. The total is
++> 2 + 2 x 8 + 5 x 32 = 178. The stack failed partway through creating the largest
++> instances, because that is where the running total crossed the limit.
++
++Note the ordering: `requests 178` comes first with the verb and figure touching,
++`exceeds the 120` states the relation, and `58 more` states the gap — three
++anchors in plain words and bare digits — and only *then* does the arithmetic
++appear, in a sentence of its own. The numbers here are illustrative only — always
++compute yours from your own tool results.
++
++Two shapes to avoid. The first carries the same facts but states the comparison
++nowhere:
++
++> | Total | **178 GB** |
++> | Limit | **120 GB** |
++
++The second buries the total inside its own arithmetic, so no clause ever says
++plainly how much was requested:
++
++> The item requests 2 + 2 x 8 + 5 x 32 = 178 GB, over the **120 GB** allowed.
++
++Never stop at the table, and never let the arithmetic stand in for the claim. If
++you built a table or a sum, follow it with the prose sentence.
++
+ ## Confidence Markers
+ 
+ When your response includes inferences, extrapolations, or conclusions not directly
+--- a/aap2_agent.md
++++ b/aap2_agent.md
+@@ -46,6 +46,36 @@
+ 4. If it returns `found: false` **but the item is referenced in a running/failed job**,
+    use `search_agnosticv_prs` to check open PRs — the catalog item may exist only on
+    an unmerged PR branch. If found, use `fetch_github_file` with the PR's branch as `ref`.
++
++**Search by the IDENTIFIER, not by the user's words.** Users describe an
++environment in English ("our data warehouse demo", "the GPU workshop"). That
++prose is a label, not the catalog item's name, and searching it usually returns
++`found: false`. The machine identifier is already in the job data you fetched —
++so if you have ALREADY called `get_job_log`, take the search term from its
++result, not from the question:
++
++- `display_name` — frequently the catalog item directory name verbatim. Try it first.
++- `template_name` / `job_name` — parse per Step 2; the second dot-separated
++  segment (`{account}.{catalog-item}.{stage}`) is the catalog item name.
++
++Only fall back to the user's phrasing if those identifier fields are absent.
++
++**Budget rule — when the lookup keeps missing.** Two consecutive `found: false`
++results from `lookup_catalog_item` mean your *search term* is wrong, not that the
++item is missing. At that point:
++
++1. Re-read the job result and retry ONCE with the exact dot-separated catalog
++   item segment parsed from `template_name` (if you have not already tried it).
++2. If that still misses, **stop searching and write the report** with what you
++   already have.
++
++Do NOT begin a wide hunt across other tools (`search_github_repo` over guessed
++repo names, `query_babylon_catalog`, the provisions DB, fetching bare directory
++paths) to locate a config you could not name. That spiral consumes the whole
++tool budget and ends with no report at all — which scores far worse than a
++report that states every fact from the job log plus an explicit note of which
++config file could not be located. A partial report always beats an unfinished
++investigation; see "AAP2 Output Format".
+ 
+ ## AAP2 Job Investigation
+ 

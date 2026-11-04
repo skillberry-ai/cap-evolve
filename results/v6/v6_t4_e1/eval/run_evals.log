@@ -1,0 +1,1265 @@
+[10-21 05:28:01] start on cccxc417 job=1899184 suites=v6t4_m1 v6t4_m2 max=20
+[10-21 05:28:01] v6t4_m1: started
+[10-21 05:28:02] v6t4_m2: started
+[10-21 05:39:14] start on cccxc417 job=1899497 suites=v6t4_m1 max=20
+[10-21 05:39:15] v6t4_m1: started
+[10-21 05:47:29] start on cccxc615 job=1899754 suites=v6t4_m3 v6t4_m2 max=20
+[10-21 05:47:30] v6t4_m3: started
+[10-21 05:47:31] v6t4_m2: started
+[10-21 07:20:02] start on cccxc435 job=1903231 suites=v6t4_m1 v6t4_m3 v6t4_m2 max=20
+[10-21 07:20:03] v6t4_m1: started
+[10-21 07:20:21] v6t4_m1: submitted 14 (pending 119, live 6, all-suite live 6)
+[10-21 07:20:22] v6t4_m3: started
+[10-21 07:20:23] v6t4_m2: started
+[10-21 07:23:27] reaped finished job 1903236 (v6t4_m1 cost-053-capacity-dropped-reservations)
+[10-21 07:23:28] reaped finished job 1903247 (v6t4_m1 cost-411-org-week-linked-account-league)
+[10-21 07:23:28] reaped finished job 1903240 (v6t4_m1 cost-402-unused-cost-preset-has-no-utilisation)
+[10-21 07:23:28] reaped finished job 1903242 (v6t4_m1 cost-407-aws-historical-query-came-back-org-wide)
+[10-21 07:23:28] reaped finished job 1903233 (v6t4_m1 cost-029-no-cost-rows-for-guid)
+[10-21 07:25:01] reaped finished job 1903239 (v6t4_m1 cost-401-monitor-drilldown-wrong-month)
+[10-21 07:25:01] reaped finished job 1903235 (v6t4_m1 cost-051-gcp-net-of-credits)
+[10-21 07:25:01] reaped finished job 1903237 (v6t4_m1 cost-064-reservation-release-active-job-check)
+[10-21 07:25:01] reaped finished job 1903238 (v6t4_m1 cost-073-end-exclusive-alert-day)
+[10-21 07:25:02] reaped finished job 1903234 (v6t4_m1 cost-050-partial-account-coverage)
+[10-21 07:25:02] reaped finished job 1903246 (v6t4_m1 cost-410-released-sandbox-still-spending)
+[10-21 07:25:02] reaped finished job 1903241 (v6t4_m1 cost-406-gcp-daily-rows-is-not-day-coverage)
+[10-21 07:25:10] v6t4_m1: submitted 5 (pending 107, live 15, all-suite live 15)
+[10-21 07:26:42] reaped finished job 1903243 (v6t4_m1 cost-408-three-cloud-total-gcp-query-failed)
+[10-21 07:26:42] reaped finished job 1903245 (v6t4_m1 cost-409-top-spender-chain-to-instance-type)
+[10-21 07:26:53] v6t4_m1: submitted 7 (pending 105, live 13, all-suite live 13)
+[10-21 07:28:25] reaped finished job 1903330 (v6t4_m1 cost-414-az-id-is-not-a-zone-name)
+[10-21 07:28:30] v6t4_m1: submitted 2 (pending 104, live 18, all-suite live 18)
+[10-21 07:30:01] reaped finished job 1903332 (v6t4_m1 cost-418-capacity-window-starts-mid-review)
+[10-21 07:30:01] reaped finished job 1903329 (v6t4_m1 cost-413-gcp-unknown-project-bucket)
+[10-21 07:30:02] reaped finished job 1903362 (v6t4_m1 icinga-012-nodes-ready-threshold)
+[10-21 07:30:02] reaped finished job 1903388 (v6t4_m1 icinga-015-problems-by-severity)
+[10-21 07:30:05] v6t4_m1: submitted 1 (pending 100, live 19, all-suite live 19)
+[10-21 07:31:38] reaped finished job 1903415 (v6t4_m1 icinga-045-hosts-search-filter)
+[10-21 07:31:38] reaped finished job 1903333 (v6t4_m1 cost-419-chargeback-predates-current-tenant)
+[10-21 07:31:46] v6t4_m1: submitted 4 (pending 98, live 16, all-suite live 16)
+[10-21 07:33:17] reaped finished job 1903416 (v6t4_m1 icinga-046-services-search-cross-host)
+[10-21 07:33:17] reaped finished job 1903439 (v6t4_m1 icinga-201-soft-critical-not-yet-hard)
+[10-21 07:33:18] reaped finished job 1903452 (v6t4_m1 icinga-202-flapping-recovery-is-not-resolution)
+[10-21 07:33:22] v6t4_m1: submitted 2 (pending 95, live 18, all-suite live 18)
+[10-21 07:34:54] reaped finished job 1903463 (v6t4_m1 icinga-203-perfdata-headroom-to-critical)
+[10-21 07:35:00] v6t4_m1: submitted 3 (pending 94, live 17, all-suite live 17)
+[10-21 07:36:32] reaped finished job 1903548 (v6t4_m1 icinga-210-command-vars-override-script-default)
+[10-21 07:36:32] reaped finished job 1903465 (v6t4_m1 icinga-205-notifications-disabled-nobody-paged)
+[10-21 07:36:32] reaped finished job 1903417 (v6t4_m1 icinga-047-downtime-similar-host-names)
+[10-21 07:36:35] v6t4_m1: submitted 1 (pending 91, live 19, all-suite live 19)
+[10-21 07:38:07] reaped finished job 1903547 (v6t4_m1 icinga-207-host-down-masks-service-alerts)
+[10-21 07:38:13] v6t4_m1: submitted 3 (pending 90, live 17, all-suite live 17)
+[10-21 07:39:46] reaped finished job 1903880 (v6t4_m1 icinga-214-hostgroup-membership-rollup)
+[10-21 07:39:47] reaped finished job 1903904 (v6t4_m1 icinga-215-ack-comment-author-and-expiry)
+[10-21 07:39:47] reaped finished job 1903935 (v6t4_m1 icinga-216-flexible-downtime-duration)
+[10-21 07:39:51] v6t4_m1: submitted 1 (pending 87, live 19, all-suite live 19)
+[10-21 07:41:24] reaped finished job 1903854 (v6t4_m1 icinga-212-fix-on-main-not-on-pinned-ref)
+[10-21 07:41:32] v6t4_m1: submitted 3 (pending 86, live 17, all-suite live 17)
+[10-21 07:43:05] reaped finished job 1903999 (v6t4_m1 icinga-219-host-down-pings-old-address)
+[10-21 07:43:05] reaped finished job 1904000 (v6t4_m1 icinga-221-crc-counter-never-resets)
+[10-21 07:43:05] reaped finished job 1904001 (v6t4_m1 icinga-222-lag-check-runs-on-satellite)
+[10-21 07:43:09] v6t4_m1: submitted 1 (pending 83, live 19, all-suite live 19)
+[10-21 07:44:48] v6t4_m1: submitted 3 (pending 83, live 17, all-suite live 17)
+[10-21 07:47:55] reaped finished job 1904191 (v6t4_m1 platform-007-directory-path-fetch)
+[10-21 07:47:55] reaped finished job 1904190 (v6t4_m1 platform-006-version-tag-not-a-ref)
+[10-21 07:49:28] reaped finished job 1904147 (v6t4_m1 platform-004-events-then-config)
+[10-21 07:49:29] reaped finished job 1904073 (v6t4_m1 icinga-225-monitor-outlived-its-namespace)
+[10-21 07:49:34] v6t4_m1: submitted 2 (pending 79, live 18, all-suite live 18)
+[10-21 07:51:07] reaped finished job 1904061 (v6t4_m1 icinga-224-dead-first-replica-eats-timeout)
+[10-21 07:51:12] v6t4_m1: submitted 2 (pending 78, live 18, all-suite live 18)
+[10-21 07:52:46] reaped finished job 1904330 (v6t4_m1 platform-018-find-jobs-window)
+[10-21 07:52:50] v6t4_m1: submitted 1 (pending 77, live 19, all-suite live 19)
+[10-21 07:54:23] reaped finished job 1904366 (v6t4_m1 platform-021-babylon-missing-cluster-trap)
+[10-21 07:54:27] v6t4_m1: submitted 1 (pending 76, live 19, all-suite live 19)
+[10-21 07:55:59] reaped finished job 1904329 (v6t4_m1 platform-008-log-does-not-say)
+[10-21 07:56:00] reaped finished job 1904365 (v6t4_m1 platform-020-ocpv-vm-inventory)
+[10-21 07:56:04] v6t4_m1: submitted 1 (pending 74, live 19, all-suite live 19)
+[10-21 07:57:43] v6t4_m1: submitted 2 (pending 74, live 18, all-suite live 18)
+[10-21 08:00:50] reaped finished job 1904569 (v6t4_m1 platform-033-schema-change-not-the-oom)
+[10-21 08:02:25] reaped finished job 1904544 (v6t4_m1 platform-032-shared-secret-not-a-registry-outage)
+[10-21 08:02:26] reaped finished job 1904582 (v6t4_m1 platform-036-secret-redacted-not-absent)
+[10-21 08:02:30] v6t4_m1: submitted 1 (pending 71, live 19, all-suite live 19)
+[10-21 08:04:09] v6t4_m1: submitted 2 (pending 71, live 18, all-suite live 18)
+[10-21 08:05:40] reaped finished job 1905048 (v6t4_m1 platform-038-anarchy-subject-guid-cross-cluster)
+[10-21 08:07:14] reaped finished job 1905060 (v6t4_m1 platform-041-resource-pool-unfiltered-list)
+[10-21 08:07:17] v6t4_m1: submitted 1 (pending 69, live 19, all-suite live 19)
+[10-21 08:08:50] reaped finished job 1905061 (v6t4_m1 platform-044-search-catalog-env-type)
+[10-21 08:08:55] v6t4_m1: submitted 1 (pending 68, live 19, all-suite live 19)
+[10-21 08:10:32] v6t4_m1: submitted 1 (pending 68, live 19, all-suite live 19)
+[10-21 08:12:05] reaped finished job 1905211 (v6t4_m1 platform-065-other-guid-job-not-the-failure)
+[10-21 08:13:42] v6t4_m1: submitted 1 (pending 67, live 19, all-suite live 19)
+[10-21 08:15:16] reaped finished job 1905172 (v6t4_m1 platform-062-provisioning-job-trace)
+[10-21 08:16:54] v6t4_m1: submitted 1 (pending 66, live 19, all-suite live 19)
+[10-21 08:20:02] reaped finished job 1905310 (v6t4_m1 platform-070-invented-fix-variables)
+[10-21 08:21:37] reaped finished job 1905457 (v6t4_m1 platform-071-unmonitored-proxy-not-esxi-alert)
+[10-21 08:21:41] v6t4_m1: submitted 1 (pending 64, live 19, all-suite live 19)
+[10-21 08:23:19] v6t4_m1: submitted 1 (pending 64, live 19, all-suite live 19)
+[10-21 08:28:00] reaped finished job 1905558 (v6t4_m1 platform-101-vcpu-quota-from-catalog-sizing)
+[10-21 08:29:33] reaped finished job 1905579 (v6t4_m1 platform-102-no-proxy-misses-api-domain)
+[10-21 08:29:38] v6t4_m1: submitted 1 (pending 62, live 19, all-suite live 19)
+[10-21 08:31:17] v6t4_m1: submitted 1 (pending 62, live 19, all-suite live 19)
+[10-21 08:34:24] reaped finished job 1905654 (v6t4_m1 platform-103-olm-channel-not-in-catalog)
+[10-21 08:35:58] reaped finished job 1905693 (v6t4_m1 platform-104-cfn-dependency-and-what-changed)
+[10-21 08:36:02] v6t4_m1: submitted 1 (pending 60, live 19, all-suite live 19)
+[10-21 08:37:40] v6t4_m1: submitted 1 (pending 60, live 19, all-suite live 19)
+[10-21 08:43:56] reaped finished job 1905937 (v6t4_m1 platform-108-duplicate-guid-concurrent-run)
+[10-21 08:45:30] reaped finished job 1905744 (v6t4_m1 platform-105-failed-revision-not-main)
+[10-21 08:45:34] v6t4_m1: submitted 1 (pending 58, live 19, all-suite live 19)
+[10-21 08:47:11] v6t4_m1: submitted 1 (pending 58, live 19, all-suite live 19)
+[10-21 08:51:51] reaped finished job 1906313 (v6t4_m1 platform-110-renamed-catalog-item)
+[10-21 08:53:30] v6t4_m1: submitted 1 (pending 57, live 19, all-suite live 19)
+[10-21 08:56:38] reaped finished job 1906259 (v6t4_m1 platform-109-quoted-false-is-truthy)
+[10-21 08:58:16] v6t4_m1: submitted 1 (pending 56, live 19, all-suite live 19)
+[10-21 08:59:48] reaped finished job 1906401 (v6t4_m1 platform-112-exec-pool-disk-not-the-bastion)
+[10-21 09:01:25] v6t4_m1: submitted 1 (pending 55, live 19, all-suite live 19)
+[10-21 09:07:41] reaped finished job 1906974 (v6t4_m1 platform-116-timeout-headroom-from-history)
+[10-21 09:09:15] reaped finished job 1906633 (v6t4_m1 platform-114-ee-nightly-float-not-a-commit)
+[10-21 09:09:20] v6t4_m1: submitted 1 (pending 53, live 19, all-suite live 19)
+[10-21 09:10:56] v6t4_m1: submitted 1 (pending 53, live 19, all-suite live 19)
+[10-21 09:15:37] reaped finished job 1907486 (v6t4_m1 platform-117-dependency-project-sync-failed)
+[10-21 09:17:12] reaped finished job 1907503 (v6t4_m1 platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 09:17:16] v6t4_m1: submitted 1 (pending 51, live 19, all-suite live 19)
+[10-21 09:18:53] v6t4_m1: submitted 1 (pending 51, live 19, all-suite live 19)
+[10-21 09:20:26] reaped finished job 1907754 (v6t4_m1 platform-119-pvc-storage-class-not-on-cluster)
+[10-21 09:22:04] v6t4_m1: submitted 1 (pending 50, live 19, all-suite live 19)
+[10-21 09:23:38] reaped finished job 1907912 (v6t4_m1 platform-121-near-miss-pick-partner-repo)
+[10-21 09:25:15] v6t4_m1: submitted 1 (pending 49, live 19, all-suite live 19)
+[10-21 09:29:54] reaped finished job 1908161 (v6t4_m1 platform-126-stop-job-from-tower-jobs)
+[10-21 09:31:35] v6t4_m1: submitted 1 (pending 48, live 19, all-suite live 19)
+[10-21 09:33:09] reaped finished job 1907967 (v6t4_m1 platform-124-event-accounts-not-returned)
+[10-21 09:34:47] v6t4_m1: submitted 1 (pending 47, live 19, all-suite live 19)
+[10-21 09:36:20] reaped finished job 1908388 (v6t4_m1 platform-128-failed-action-census-by-kind)
+[10-21 09:37:58] v6t4_m1: submitted 1 (pending 46, live 19, all-suite live 19)
+[10-21 09:39:31] reaped finished job 1908429 (v6t4_m1 platform-129-destroyed-subject-hidden-without-guid)
+[10-21 09:41:05] reaped finished job 1908570 (v6t4_m1 platform-131-deployment-first-resource-blind-spot)
+[10-21 09:41:10] v6t4_m1: submitted 1 (pending 44, live 19, all-suite live 19)
+[10-21 09:42:46] v6t4_m1: submitted 1 (pending 44, live 19, all-suite live 19)
+[10-21 09:45:53] reaped finished job 1908662 (v6t4_m1 platform-132-event-seat-math-standalone-workshop)
+[10-21 09:47:28] reaped finished job 1908716 (v6t4_m1 platform-133-component-sub-components-hop)
+[10-21 09:47:31] v6t4_m1: submitted 1 (pending 42, live 19, all-suite live 19)
+[10-21 09:49:08] v6t4_m1: submitted 1 (pending 42, live 19, all-suite live 19)
+[10-21 09:50:41] reaped finished job 1908843 (v6t4_m1 platform-134-pool-search-canary-two-clusters)
+[10-21 09:52:19] v6t4_m1: submitted 1 (pending 41, live 19, all-suite live 19)
+[10-21 09:57:03] reaped finished job 1909081 (v6t4_m1 platform-135-catalog-component-drift-fanout)
+[10-21 09:58:41] v6t4_m1: submitted 1 (pending 40, live 19, all-suite live 19)
+[10-21 10:03:24] reaped finished job 1909141 (v6t4_m1 platform-136-provision-key-mode-too-open)
+[10-21 10:03:24] reaped finished job 1909270 (v6t4_m1 platform-137-generated-password-forbidden-chars)
+[10-21 10:05:03] v6t4_m1: submitted 2 (pending 38, live 18, all-suite live 18)
+[10-21 10:11:16] reaped finished job 1909427 (v6t4_m1 platform-138-project-prefix-not-a-dns-label)
+[10-21 10:12:53] v6t4_m1: submitted 1 (pending 37, live 19, all-suite live 19)
+[10-21 10:14:25] reaped finished job 1909428 (v6t4_m1 platform-139-ami-id-pinned-to-one-region)
+[10-21 10:16:04] v6t4_m1: submitted 1 (pending 36, live 19, all-suite live 19)
+[10-21 10:19:12] reaped finished job 1910614 (v6t4_m1 platform-141-nested-loop-item-collision)
+[10-21 10:20:49] v6t4_m1: submitted 1 (pending 35, live 19, all-suite live 19)
+[10-21 10:23:56] reaped finished job 1911063 (v6t4_m1 platform-142-duplicate-yaml-key-last-wins)
+[10-21 10:25:30] reaped finished job 1911162 (v6t4_m1 platform-144-version-compared-as-string)
+[10-21 10:25:34] v6t4_m1: submitted 1 (pending 33, live 19, all-suite live 19)
+[10-21 10:27:10] v6t4_m1: submitted 1 (pending 33, live 19, all-suite live 19)
+[10-21 10:31:52] reaped finished job 1911258 (v6t4_m1 platform-145-prod-stage-deploys-from-fork)
+[10-21 10:33:28] reaped finished job 1911501 (v6t4_m1 platform-148-precheck-caches-nxdomain)
+[10-21 10:33:33] v6t4_m1: submitted 1 (pending 31, live 19, all-suite live 19)
+[10-21 10:35:14] v6t4_m1: submitted 1 (pending 31, live 19, all-suite live 19)
+[10-21 10:38:23] reaped finished job 1911682 (v6t4_m1 platform-151-backup-schedule-is-commented-out)
+[10-21 10:40:02] v6t4_m1: submitted 1 (pending 30, live 19, all-suite live 19)
+[10-21 10:41:36] reaped finished job 1911650 (v6t4_m1 platform-149-alphabetised-workloads-before-operator)
+[10-21 10:43:14] v6t4_m1: submitted 1 (pending 29, live 19, all-suite live 19)
+[10-21 10:44:47] reaped finished job 1912178 (v6t4_m1 platform-152-path-search-cannot-find-variable-uses)
+[10-21 10:46:26] v6t4_m1: submitted 1 (pending 28, live 19, all-suite live 19)
+[10-21 10:51:07] reaped finished job 1912566 (v6t4_m1 platform-155-order-time-was-queue-wait)
+[10-21 10:51:08] reaped finished job 1912299 (v6t4_m1 platform-153-override-uses-removed-variable-name)
+[10-21 10:52:46] v6t4_m1: submitted 2 (pending 26, live 18, all-suite live 18)
+[10-21 10:57:28] reaped finished job 1912772 (v6t4_m1 platform-157-drain-blocked-by-node-local-disk)
+[10-21 10:59:03] reaped finished job 1912773 (v6t4_m1 platform-158-lab-instances-outside-default-region)
+[10-21 10:59:07] v6t4_m1: submitted 1 (pending 24, live 19, all-suite live 19)
+[10-21 11:00:44] v6t4_m1: submitted 1 (pending 24, live 19, all-suite live 19)
+[10-21 11:03:50] reaped finished job 1912977 (v6t4_m1 platform-159-renewal-run-never-saw-host)
+[10-21 11:03:50] reaped finished job 1913019 (v6t4_m1 platform-160-event-attendee-codes-any-cluster)
+[10-21 11:05:28] v6t4_m1: submitted 2 (pending 22, live 18, all-suite live 18)
+[10-21 11:08:34] reaped finished job 1913162 (v6t4_m1 platform-162-shared-session-needs-multiuser-item)
+[10-21 11:10:11] v6t4_m1: submitted 1 (pending 21, live 19, all-suite live 19)
+[10-21 11:11:43] reaped finished job 1913163 (v6t4_m1 platform-164-workshop-item-replaced-by-v2)
+[10-21 11:13:21] v6t4_m1: submitted 1 (pending 20, live 19, all-suite live 19)
+[10-21 11:18:02] reaped finished job 1913350 (v6t4_m1 platform-167-ordered-workers-override-default)
+[10-21 11:19:37] reaped finished job 1913262 (v6t4_m1 platform-165-renamed-item-same-asset-uuid)
+[10-21 11:19:42] v6t4_m3: submitted 1 (pending 133, live 0, all-suite live 19)
+[10-21 11:21:19] v6t4_m3: submitted 1 (pending 133, live 1, all-suite live 19)
+[10-21 11:24:27] reaped finished job 1913554 (v6t4_m3 cloud-025-gcp-project-status)
+[10-21 11:26:06] v6t4_m3: submitted 1 (pending 132, live 1, all-suite live 19)
+[10-21 11:27:37] reaped finished job 1913627 (v6t4_m3 cloud-026-gpu-abuse-triage)
+[10-21 11:29:16] v6t4_m3: submitted 1 (pending 131, live 1, all-suite live 19)
+[10-21 11:30:48] reaped finished job 1913754 (v6t4_m3 cloud-027-azure-pool-database-trap)
+[10-21 11:32:28] v6t4_m3: submitted 1 (pending 130, live 1, all-suite live 19)
+[10-21 11:32:31] start on cccxc435 job=1914011 suites=v6t4_m1 v6t4_m3 v6t4_m2 max=30
+[10-21 11:32:32] killed failed-setup job 1903438 on cccxc421 (v6t4_m1 icinga-072-alert-output-not-decoy-metrics); host blocked
+[10-21 11:32:32] killed failed-setup job 1903363 on cccxc505 (v6t4_m1 icinga-013-acknowledged-not-an-issue); host blocked
+[10-21 11:32:32] reaped finished job 1913894 (v6t4_m3 cloud-055-azure-subscription-not-found)
+[10-21 11:32:32] killed failed-setup job 1903331 on cccxc430 (v6t4_m1 cost-416-peak-day-is-a-cross-service-sum); host blocked
+[10-21 11:32:33] killed failed-setup job 1904583 on cccxc436 (v6t4_m1 platform-037-ocpv-healthy-vm-degraded-machineset); host blocked
+[10-21 11:32:33] killed failed-setup job 1904377 on cccxc451 (v6t4_m1 platform-022-job-on-no-controller); host blocked
+[10-21 11:32:33] killed failed-setup job 1903466 on cccxc442 (v6t4_m1 icinga-206-stale-ok-check); host blocked
+[10-21 11:32:34] killed failed-setup job 1899025 on cccxc443 (v6t4_m1 cloud-301-gcp-delete-counter-not-a-state); host blocked
+[10-21 11:32:34] killed failed-setup job 1903361 on cccxc417 (v6t4_m1 icinga-010-stuck-anarchysubjects); host blocked
+[10-21 11:32:34] killed failed-setup job 1904189 on cccxc418 (v6t4_m1 platform-005-wrong-owner-trap); host blocked
+[10-21 11:32:34] killed failed-setup job 1904075 on cccxc431 (v6t4_m1 platform-003-tojson-dict-literal-rca); host blocked
+[10-21 11:32:34] killed failed-setup job 1899019 on cccxc425 (v6t4_m1 cloud-027-azure-pool-database-trap); host blocked
+[10-21 11:32:35] killed failed-setup job 1903464 on cccxc432 (v6t4_m1 icinga-204-downtime-window-expired); host blocked
+[10-21 11:32:35] killed failed-setup job 1899020 on cccxc426 (v6t4_m1 cloud-055-azure-subscription-not-found); host blocked
+[10-21 11:32:35] killed failed-setup job 1899009 on cccxc422 (v6t4_m1 cloud-026-gpu-abuse-triage); host blocked
+[10-21 11:32:35] killed failed-setup job 1899026 on cccxc444 (v6t4_m1 cloud-302-cloudtrail-local-time-window); host blocked
+[10-21 11:32:35] killed failed-setup job 1904074 on cccxc419 (v6t4_m1 platform-001-ee-entrypoint-rca); host blocked
+[10-21 11:32:35] killed failed-setup job 1905243 on cccxc450 (v6t4_m1 platform-067-branch-name-not-the-cause); host blocked
+[10-21 11:32:36] killed failed-setup job 1899027 on cccxc445 (v6t4_m1 cloud-304-marketplace-active-past-end); host blocked
+[10-21 11:32:37] v6t4_m1: started
+[10-21 11:32:55] v6t4_m1: submitted 12 (pending 18, live 6, all-suite live 8)
+[10-21 11:32:57] v6t4_m3: started
+[10-21 11:33:19] v6t4_m3: submitted 16 (pending 129, live 2, all-suite live 14)
+[10-21 11:33:20] v6t4_m2: started
+[10-21 11:33:23] v6t4_m2: submitted 1 (pending 133, live 0, all-suite live 29)
+[10-21 11:34:55] reaped finished job 1914056 (v6t4_m3 cloud-307-azure-two-project-tags)
+[10-21 11:36:29] reaped finished job 1914070 (v6t4_m3 cost-029-no-cost-rows-for-guid)
+[10-21 11:36:30] reaped finished job 1914063 (v6t4_m3 cloud-315-min-cost-drops-unestimated)
+[10-21 11:36:30] reaped finished job 1914008 (v6t4_m3 cloud-057-cloudtrail-select-only-refusal)
+[10-21 11:36:30] reaped finished job 1914038 (v6t4_m1 icinga-013-acknowledged-not-an-issue)
+[10-21 11:36:30] reaped finished job 1914032 (v6t4_m1 cost-416-peak-day-is-a-cross-service-sum)
+[10-21 11:36:31] reaped finished job 1914054 (v6t4_m3 cloud-302-cloudtrail-local-time-window)
+[10-21 11:36:31] reaped finished job 1914047 (v6t4_m3 cloud-058-malformed-account-id)
+[10-21 11:36:35] v6t4_m1: submitted 1 (pending 16, live 12, all-suite live 29)
+[10-21 11:38:08] reaped finished job 1914072 (v6t4_m2 cloud-025-gcp-project-status)
+[10-21 11:38:08] reaped finished job 1914061 (v6t4_m3 cloud-313-azure-no-single-pool-fits)
+[10-21 11:38:08] reaped finished job 1914050 (v6t4_m3 cloud-074-assigned-account-still-billing)
+[10-21 11:38:09] reaped finished job 1914069 (v6t4_m3 cost-028-highest-spend-provider)
+[10-21 11:38:09] reaped finished job 1914067 (v6t4_m3 cloud-317-namesake-user-other-account)
+[10-21 11:38:09] reaped finished job 1914055 (v6t4_m3 cloud-304-marketplace-active-past-end)
+[10-21 11:38:09] reaped finished job 1914059 (v6t4_m3 cloud-311-owner-handover-inventory)
+[10-21 11:38:10] reaped finished job 1914041 (v6t4_m1 icinga-206-stale-ok-check)
+[10-21 11:38:10] reaped finished job 1914014 (v6t4_m1 cloud-027-azure-pool-database-trap)
+[10-21 11:38:10] reaped finished job 1914052 (v6t4_m3 cloud-301-gcp-delete-counter-not-a-state)
+[10-21 11:38:10] reaped finished job 1914027 (v6t4_m1 cloud-301-gcp-delete-counter-not-a-state)
+[10-21 11:38:10] killed failed-setup job 1914139 on cccxc411 (v6t4_m1 cloud-026-gpu-abuse-triage); host blocked
+[10-21 11:38:10] reaped finished job 1914040 (v6t4_m1 icinga-204-downtime-window-expired)
+[10-21 11:38:19] v6t4_m1: submitted 5 (pending 12, live 11, all-suite live 23)
+[10-21 11:38:25] v6t4_m3: submitted 2 (pending 116, live 11, all-suite live 28)
+[10-21 11:38:29] v6t4_m2: submitted 2 (pending 132, live 1, all-suite live 28)
+[10-21 11:40:00] reaped finished job 1914065 (v6t4_m3 cloud-316-cleaned-sandbox-live-iam-keys)
+[10-21 11:40:00] reaped finished job 1914057 (v6t4_m3 cloud-308-azure-leftover-tag-on-free-sub)
+[10-21 11:40:00] reaped finished job 1914244 (v6t4_m2 cloud-027-azure-pool-database-trap)
+[10-21 11:40:01] reaped finished job 1914042 (v6t4_m1 platform-003-tojson-dict-literal-rca)
+[10-21 11:40:01] reaped finished job 1914046 (v6t4_m1 platform-037-ocpv-healthy-vm-degraded-machineset)
+[10-21 11:40:01] reaped finished job 1914045 (v6t4_m1 platform-022-job-on-no-controller)
+[10-21 11:40:01] reaped finished job 1914058 (v6t4_m3 cloud-310-stopped-lab-restarted-billing)
+[10-21 11:40:20] v6t4_m3: submitted 11 (pending 113, live 6, all-suite live 19)
+[10-21 11:40:27] v6t4_m2: submitted 2 (pending 131, live 1, all-suite live 28)
+[10-21 11:41:58] reaped finished job 1914068 (v6t4_m3 cloud-319-billing-lab-unknown-to-babylon)
+[10-21 11:41:58] reaped finished job 1914219 (v6t4_m1 cloud-302-cloudtrail-local-time-window)
+[10-21 11:41:58] reaped finished job 1914222 (v6t4_m1 cloud-304-marketplace-active-past-end)
+[10-21 11:41:58] reaped finished job 1914240 (v6t4_m3 cost-050-partial-account-coverage)
+[10-21 11:41:58] reaped finished job 1914044 (v6t4_m1 platform-005-wrong-owner-trap)
+[10-21 11:41:59] reaped finished job 1914039 (v6t4_m1 icinga-072-alert-output-not-decoy-metrics)
+[10-21 11:41:59] reaped finished job 1914289 (v6t4_m2 cloud-057-cloudtrail-select-only-refusal)
+[10-21 11:41:59] reaped finished job 1914218 (v6t4_m1 cloud-055-azure-subscription-not-found)
+[10-21 11:42:10] v6t4_m3: submitted 5 (pending 111, live 14, all-suite live 25)
+[10-21 11:42:16] v6t4_m2: submitted 2 (pending 130, live 3, all-suite live 28)
+[10-21 11:43:47] reaped finished job 1914277 (v6t4_m3 cost-402-unused-cost-preset-has-no-utilisation)
+[10-21 11:43:47] reaped finished job 1914286 (v6t4_m3 cost-411-org-week-linked-account-league)
+[10-21 11:43:47] reaped finished job 1914280 (v6t4_m3 cost-407-aws-historical-query-came-back-org-wide)
+[10-21 11:43:48] reaped finished job 1914281 (v6t4_m3 cost-408-three-cloud-total-gcp-query-failed)
+[10-21 11:43:48] reaped finished job 1914243 (v6t4_m2 cloud-026-gpu-abuse-triage)
+[10-21 11:43:48] reaped finished job 1914275 (v6t4_m3 cost-073-end-exclusive-alert-day)
+[10-21 11:43:48] reaped finished job 1914276 (v6t4_m3 cost-401-monitor-drilldown-wrong-month)
+[10-21 11:43:48] reaped finished job 1914327 (v6t4_m2 cloud-074-assigned-account-still-billing)
+[10-21 11:43:48] reaped finished job 1914241 (v6t4_m3 cost-051-gcp-net-of-credits)
+[10-21 11:43:49] reaped finished job 1914287 (v6t4_m2 cloud-055-azure-subscription-not-found)
+[10-21 11:43:49] reaped finished job 1914239 (v6t4_m1 platform-067-branch-name-not-the-cause)
+[10-21 11:43:49] reaped finished job 1914237 (v6t4_m1 platform-001-ee-entrypoint-rca)
+[10-21 11:44:00] v6t4_m3: submitted 6 (pending 104, live 17, all-suite live 24)
+[10-21 11:44:06] v6t4_m2: submitted 2 (pending 127, live 4, all-suite live 28)
+[10-21 11:45:37] reaped finished job 1914320 (v6t4_m3 cost-413-gcp-unknown-project-bucket)
+[10-21 11:45:37] reaped finished job 1914285 (v6t4_m3 cost-410-released-sandbox-still-spending)
+[10-21 11:45:37] reaped finished job 1914273 (v6t4_m3 cost-053-capacity-dropped-reservations)
+[10-21 11:45:37] reaped finished job 1914282 (v6t4_m3 cost-409-top-spender-chain-to-instance-type)
+[10-21 11:45:37] reaped finished job 1914321 (v6t4_m3 cost-414-az-id-is-not-a-zone-name)
+[10-21 11:45:38] reaped finished job 1914274 (v6t4_m3 cost-064-reservation-release-active-job-check)
+[10-21 11:45:38] reaped finished job 1914278 (v6t4_m3 cost-406-gcp-daily-rows-is-not-day-coverage)
+[10-21 11:45:38] reaped finished job 1914326 (v6t4_m2 cloud-058-malformed-account-id)
+[10-21 11:45:39] reaped finished job 1914322 (v6t4_m3 cost-416-peak-day-is-a-cross-service-sum)
+[10-21 11:45:39] reaped finished job 1914323 (v6t4_m3 cost-418-capacity-window-starts-mid-review)
+[10-21 11:45:43] v6t4_m1: submitted 1 (pending 2, live 1, all-suite live 20)
+[10-21 11:45:58] v6t4_m3: submitted 9 (pending 95, live 16, all-suite live 21)
+[10-21 11:46:05] v6t4_m2: submitted 3 (pending 126, live 3, all-suite live 27)
+[10-21 11:47:35] reaped finished job 1914404 (v6t4_m3 icinga-045-hosts-search-filter)
+[10-21 11:47:36] reaped finished job 1914405 (v6t4_m3 icinga-046-services-search-cross-host)
+[10-21 11:47:36] reaped finished job 1914400 (v6t4_m3 icinga-012-nodes-ready-threshold)
+[10-21 11:47:36] reaped finished job 1914402 (v6t4_m3 icinga-013-acknowledged-not-an-issue)
+[10-21 11:47:37] reaped finished job 1914324 (v6t4_m3 cost-419-chargeback-predates-current-tenant)
+[10-21 11:47:37] reaped finished job 1914403 (v6t4_m3 icinga-015-problems-by-severity)
+[10-21 11:47:50] v6t4_m3: submitted 7 (pending 89, live 16, all-suite live 23)
+[10-21 11:47:55] v6t4_m2: submitted 1 (pending 126, live 5, all-suite live 29)
+[10-21 11:49:25] reaped finished job 1914448 (v6t4_m2 cloud-304-marketplace-active-past-end)
+[10-21 11:49:25] reaped finished job 1914437 (v6t4_m3 icinga-072-alert-output-not-decoy-metrics)
+[10-21 11:49:26] reaped finished job 1914409 (v6t4_m2 cloud-302-cloudtrail-local-time-window)
+[10-21 11:49:26] reaped finished job 1914438 (v6t4_m3 icinga-201-soft-critical-not-yet-hard)
+[10-21 11:49:26] reaped finished job 1914037 (v6t4_m1 icinga-010-stuck-anarchysubjects)
+[10-21 11:49:26] reaped finished job 1914439 (v6t4_m3 icinga-202-flapping-recovery-is-not-resolution)
+[10-21 11:49:27] reaped finished job 1914482 (v6t4_m3 icinga-221-crc-counter-never-resets)
+[10-21 11:49:39] v6t4_m3: submitted 5 (pending 84, live 17, all-suite live 25)
+[10-21 11:51:10] reaped finished job 1914475 (v6t4_m3 icinga-210-command-vars-override-script-default)
+[10-21 11:51:11] reaped finished job 1914399 (v6t4_m3 icinga-010-stuck-anarchysubjects)
+[10-21 11:51:12] reaped finished job 1914443 (v6t4_m3 icinga-205-notifications-disabled-nobody-paged)
+[10-21 11:51:12] reaped finished job 1914480 (v6t4_m3 icinga-216-flexible-downtime-duration)
+[10-21 11:51:12] reaped finished job 1914442 (v6t4_m3 icinga-204-downtime-window-expired)
+[10-21 11:51:12] reaped finished job 1914446 (v6t4_m3 icinga-207-host-down-masks-service-alerts)
+[10-21 11:51:12] reaped finished job 1914481 (v6t4_m3 icinga-219-host-down-pings-old-address)
+[10-21 11:51:12] reaped finished job 1914407 (v6t4_m2 cloud-301-gcp-delete-counter-not-a-state)
+[10-21 11:51:13] reaped finished job 1914477 (v6t4_m3 icinga-214-hostgroup-membership-rollup)
+[10-21 11:51:26] v6t4_m3: submitted 7 (pending 77, live 18, all-suite live 23)
+[10-21 11:52:58] reaped finished job 1914450 (v6t4_m2 cloud-307-azure-two-project-tags)
+[10-21 11:52:59] reaped finished job 1914451 (v6t4_m2 cloud-308-azure-leftover-tag-on-free-sub)
+[10-21 11:52:59] reaped finished job 1914440 (v6t4_m3 icinga-203-perfdata-headroom-to-critical)
+[10-21 11:52:59] reaped finished job 1914479 (v6t4_m3 icinga-215-ack-comment-author-and-expiry)
+[10-21 11:52:59] reaped finished job 1914476 (v6t4_m3 icinga-212-fix-on-main-not-on-pinned-ref)
+[10-21 11:52:59] reaped finished job 1914433 (v6t4_m1 cloud-026-gpu-abuse-triage)
+[10-21 11:53:15] v6t4_m3: submitted 9 (pending 74, live 17, all-suite live 21)
+[10-21 11:53:19] v6t4_m2: submitted 1 (pending 121, live 2, all-suite live 29)
+[10-21 11:54:50] reaped finished job 1914550 (v6t4_m3 icinga-222-lag-check-runs-on-satellite)
+[10-21 11:54:50] reaped finished job 1914589 (v6t4_m3 platform-018-find-jobs-window)
+{
+ "suite": "v6t4_m1",
+ "eval_usd": 90.7388,
+ "eval_tokens": 28389035,
+ "serial_seconds": 31948.75657439232,
+ "wall_seconds": 23199.437293052673,
+ "unmetered_tasks": 0,
+ "F": {
+  "n_tasks": 67,
+  "mean": 0.9155075721393034,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.08549640497512438,
+  "delta_se": 0.01861137365832088
+ },
+ "test": {
+  "n_tasks": 66,
+  "mean": 0.8717396414141414,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.059091157281144786,
+  "delta_se": 0.016365360716739944
+ }
+}
+[10-21 11:54:58] v6t4_m1: all tasks scored; cost/time recorded
+[10-21 11:55:07] v6t4_m3: submitted 5 (pending 71, live 23, all-suite live 25)
+[10-21 11:56:39] reaped finished job 1914584 (v6t4_m3 platform-005-wrong-owner-trap)
+[10-21 11:56:39] reaped finished job 1914623 (v6t4_m3 platform-021-babylon-missing-cluster-trap)
+[10-21 11:56:39] reaped finished job 1914590 (v6t4_m3 platform-020-ocpv-vm-inventory)
+[10-21 11:56:39] reaped finished job 1914635 (v6t4_m2 cloud-311-owner-handover-inventory)
+[10-21 11:56:39] reaped finished job 1914552 (v6t4_m3 icinga-224-dead-first-replica-eats-timeout)
+[10-21 11:56:39] reaped finished job 1914445 (v6t4_m3 icinga-206-stale-ok-check)
+[10-21 11:56:39] reaped finished job 1914587 (v6t4_m3 platform-007-directory-path-fetch)
+[10-21 11:56:40] reaped finished job 1914588 (v6t4_m3 platform-008-log-does-not-say)
+[10-21 11:56:40] reaped finished job 1914630 (v6t4_m3 platform-041-resource-pool-unfiltered-list)
+[10-21 11:56:40] reaped finished job 1914484 (v6t4_m2 cloud-310-stopped-lab-restarted-billing)
+[10-21 11:56:40] reaped finished job 1914729 (v6t4_m3 platform-067-branch-name-not-the-cause)
+[10-21 11:56:40] reaped finished job 1914628 (v6t4_m3 platform-037-ocpv-healthy-vm-degraded-machineset)
+[10-21 11:56:40] reaped finished job 1914633 (v6t4_m3 platform-044-search-catalog-env-type)
+[10-21 11:56:40] reaped finished job 1914583 (v6t4_m3 platform-004-events-then-config)
+[10-21 11:56:47] v6t4_m3: submitted 2 (pending 60, live 26, all-suite live 28)
+[10-21 11:58:18] reaped finished job 1914586 (v6t4_m3 platform-006-version-tag-not-a-ref)
+[10-21 11:58:18] reaped finished job 1914558 (v6t4_m3 platform-003-tojson-dict-literal-rca)
+[10-21 11:58:18] reaped finished job 1914627 (v6t4_m3 platform-036-secret-redacted-not-absent)
+[10-21 11:58:19] reaped finished job 1914625 (v6t4_m3 platform-032-shared-secret-not-a-registry-outage)
+[10-21 11:58:19] reaped finished job 1914629 (v6t4_m3 platform-038-anarchy-subject-guid-cross-cluster)
+[10-21 11:58:40] v6t4_m3: submitted 14 (pending 55, live 16, all-suite live 16)
+[10-21 11:58:46] v6t4_m2: submitted 2 (pending 119, live 0, all-suite live 28)
+[10-21 12:00:17] reaped finished job 1914731 (v6t4_m3 platform-071-unmonitored-proxy-not-esxi-alert)
+[10-21 12:00:17] reaped finished job 1914730 (v6t4_m3 platform-070-invented-fix-variables)
+[10-21 12:00:18] reaped finished job 1914624 (v6t4_m3 platform-022-job-on-no-controller)
+[10-21 12:00:18] reaped finished job 1914555 (v6t4_m3 platform-001-ee-entrypoint-rca)
+[10-21 12:00:18] reaped finished job 1914803 (v6t4_m3 platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 12:00:19] reaped finished job 1914728 (v6t4_m3 platform-065-other-guid-job-not-the-failure)
+[10-21 12:00:19] reaped finished job 1914553 (v6t4_m3 icinga-225-monitor-outlived-its-namespace)
+[10-21 12:00:19] reaped finished job 1914626 (v6t4_m3 platform-033-schema-change-not-the-oom)
+[10-21 12:00:27] v6t4_m3: submitted 3 (pending 47, live 25, all-suite live 27)
+[10-21 12:01:59] reaped finished job 1914727 (v6t4_m3 platform-062-provisioning-job-trace)
+[10-21 12:01:59] reaped finished job 1914761 (v6t4_m3 platform-101-vcpu-quota-from-catalog-sizing)
+[10-21 12:02:00] reaped finished job 1914805 (v6t4_m3 platform-119-pvc-storage-class-not-on-cluster)
+[10-21 12:02:00] reaped finished job 1914812 (v6t4_m2 cloud-315-min-cost-drops-unestimated)
+[10-21 12:02:00] reaped finished job 1914809 (v6t4_m2 cloud-313-azure-no-single-pool-fits)
+[10-21 12:02:13] v6t4_m3: submitted 8 (pending 44, live 20, all-suite live 22)
+[10-21 12:03:44] reaped finished job 1914789 (v6t4_m3 platform-103-olm-channel-not-in-catalog)
+[10-21 12:03:44] reaped finished job 1914806 (v6t4_m3 platform-121-near-miss-pick-partner-repo)
+[10-21 12:03:44] reaped finished job 1914790 (v6t4_m3 platform-104-cfn-dependency-and-what-changed)
+[10-21 12:03:45] reaped finished job 1914794 (v6t4_m3 platform-109-quoted-false-is-truthy)
+[10-21 12:03:45] reaped finished job 1914911 (v6t4_m3 platform-136-provision-key-mode-too-open)
+[10-21 12:03:46] reaped finished job 1914879 (v6t4_m3 platform-129-destroyed-subject-hidden-without-guid)
+[10-21 12:03:46] reaped finished job 1914435 (v6t4_m3 icinga-047-downtime-similar-host-names)
+[10-21 12:03:55] v6t4_m3: submitted 5 (pending 37, live 25, all-suite live 25)
+[10-21 12:05:26] reaped finished job 1914796 (v6t4_m3 platform-112-exec-pool-disk-not-the-bastion)
+[10-21 12:05:26] reaped finished job 1914762 (v6t4_m3 platform-102-no-proxy-misses-api-domain)
+[10-21 12:05:27] reaped finished job 1914878 (v6t4_m3 platform-128-failed-action-census-by-kind)
+[10-21 12:05:27] reaped finished job 1914795 (v6t4_m3 platform-110-renamed-catalog-item)
+[10-21 12:05:27] reaped finished job 1914800 (v6t4_m3 platform-116-timeout-headroom-from-history)
+[10-21 12:05:43] v6t4_m3: submitted 7 (pending 31, live 23, all-suite live 23)
+[10-21 12:05:47] v6t4_m2: submitted 1 (pending 117, live 0, all-suite live 29)
+[10-21 12:07:18] reaped finished job 1914914 (v6t4_m3 platform-138-project-prefix-not-a-dns-label)
+[10-21 12:07:18] reaped finished job 1914792 (v6t4_m3 platform-108-duplicate-guid-concurrent-run)
+[10-21 12:07:19] reaped finished job 1915004 (v6t4_m3 platform-153-override-uses-removed-variable-name)
+[10-21 12:07:19] reaped finished job 1914909 (v6t4_m3 platform-134-pool-search-canary-two-clusters)
+[10-21 12:07:19] reaped finished job 1914912 (v6t4_m3 platform-137-generated-password-forbidden-chars)
+[10-21 12:07:20] reaped finished job 1914877 (v6t4_m3 platform-126-stop-job-from-tower-jobs)
+[10-21 12:07:20] reaped finished job 1914908 (v6t4_m3 platform-133-component-sub-components-hop)
+[10-21 12:07:31] v6t4_m2: submitted 4 (pending 117, live 1, all-suite live 26)
+[10-21 12:09:02] reaped finished job 1914901 (v6t4_m3 platform-131-deployment-first-resource-blind-spot)
+[10-21 12:09:02] reaped finished job 1914791 (v6t4_m3 platform-105-failed-revision-not-main)
+[10-21 12:09:02] reaped finished job 1914937 (v6t4_m3 platform-144-version-compared-as-string)
+[10-21 12:09:03] reaped finished job 1914903 (v6t4_m3 platform-132-event-seat-math-standalone-workshop)
+[10-21 12:09:18] v6t4_m3: submitted 7 (pending 21, live 18, all-suite live 23)
+[10-21 12:10:49] reaped finished job 1915007 (v6t4_m3 platform-157-drain-blocked-by-node-local-disk)
+[10-21 12:10:50] reaped finished job 1914802 (v6t4_m3 platform-117-dependency-project-sync-failed)
+[10-21 12:10:50] reaped finished job 1915002 (v6t4_m3 platform-151-backup-schedule-is-commented-out)
+[10-21 12:10:50] reaped finished job 1915005 (v6t4_m3 platform-155-order-time-was-queue-wait)
+[10-21 12:10:51] reaped finished job 1915003 (v6t4_m3 platform-152-path-search-cannot-find-variable-uses)
+[10-21 12:10:51] reaped finished job 1914807 (v6t4_m3 platform-124-event-accounts-not-returned)
+[10-21 12:11:05] v6t4_m2: submitted 4 (pending 117, live 5, all-suite live 26)
+[10-21 12:12:35] reaped finished job 1915042 (v6t4_m2 cloud-317-namesake-user-other-account)
+[10-21 12:12:36] reaped finished job 1914935 (v6t4_m3 platform-142-duplicate-yaml-key-last-wins)
+[10-21 12:12:36] reaped finished job 1915278 (v6t4_m3 platform-160-event-attendee-codes-any-cluster)
+[10-21 12:12:37] reaped finished job 1915044 (v6t4_m2 cost-028-highest-spend-provider)
+[10-21 12:12:37] reaped finished job 1914938 (v6t4_m3 platform-145-prod-stage-deploys-from-fork)
+[10-21 12:12:37] reaped finished job 1915045 (v6t4_m2 cost-029-no-cost-rows-for-guid)
+[10-21 12:12:37] reaped finished job 1914910 (v6t4_m3 platform-135-catalog-component-drift-fanout)
+[10-21 12:12:37] reaped finished job 1914932 (v6t4_m3 platform-139-ami-id-pinned-to-one-region)
+[10-21 12:12:37] reaped finished job 1915009 (v6t4_m2 cloud-316-cleaned-sandbox-live-iam-keys)
+[10-21 12:12:51] v6t4_m2: submitted 6 (pending 113, live 9, all-suite live 24)
+[10-21 12:14:21] reaped finished job 1914999 (v6t4_m3 platform-148-precheck-caches-nxdomain)
+[10-21 12:14:21] reaped finished job 1915353 (v6t4_m2 cost-051-gcp-net-of-credits)
+[10-21 12:14:22] reaped finished job 1915312 (v6t4_m3 platform-164-workshop-item-replaced-by-v2)
+[10-21 12:14:22] reaped finished job 1915332 (v6t4_m3 platform-167-ordered-workers-override-default)
+[10-21 12:14:23] reaped finished job 1915242 (v6t4_m3 platform-159-renewal-run-never-saw-host)
+[10-21 12:14:40] v6t4_m2: submitted 9 (pending 112, live 11, all-suite live 21)
+[10-21 12:16:11] reaped finished job 1915354 (v6t4_m2 cost-053-capacity-dropped-reservations)
+[10-21 12:16:11] reaped finished job 1915330 (v6t4_m3 platform-165-renamed-item-same-asset-uuid)
+[10-21 12:16:12] reaped finished job 1915222 (v6t4_m3 platform-158-lab-instances-outside-default-region)
+[10-21 12:16:12] reaped finished job 1915043 (v6t4_m2 cloud-319-billing-lab-unknown-to-babylon)
+[10-21 12:16:12] reaped finished job 1915001 (v6t4_m3 platform-149-alphabetised-workloads-before-operator)
+[10-21 12:16:12] reaped finished job 1915382 (v6t4_m2 cost-407-aws-historical-query-came-back-org-wide)
+[10-21 12:16:13] reaped finished job 1914934 (v6t4_m3 platform-141-nested-loop-item-collision)
+[10-21 12:16:25] v6t4_m2: submitted 5 (pending 109, live 19, all-suite live 25)
+[10-21 12:17:55] reaped finished job 1915378 (v6t4_m2 cost-401-monitor-drilldown-wrong-month)
+[10-21 12:17:55] reaped finished job 1915352 (v6t4_m2 cost-050-partial-account-coverage)
+[10-21 12:17:55] reaped finished job 1915435 (v6t4_m2 cost-411-org-week-linked-account-league)
+[10-21 12:17:55] reaped finished job 1915355 (v6t4_m2 cost-064-reservation-release-active-job-check)
+[10-21 12:17:55] reaped finished job 1915383 (v6t4_m2 cost-408-three-cloud-total-gcp-query-failed)
+[10-21 12:17:56] reaped finished job 1915379 (v6t4_m2 cost-402-unused-cost-preset-has-no-utilisation)
+[10-21 12:17:56] reaped finished job 1915437 (v6t4_m2 cost-413-gcp-unknown-project-bucket)
+[10-21 12:17:56] reaped finished job 1915440 (v6t4_m2 cost-416-peak-day-is-a-cross-service-sum)
+[10-21 12:17:56] reaped finished job 1915381 (v6t4_m2 cost-406-gcp-daily-rows-is-not-day-coverage)
+[10-21 12:18:13] v6t4_m2: submitted 7 (pending 100, live 21, all-suite live 23)
+[10-21 12:19:43] reaped finished job 1915464 (v6t4_m2 icinga-013-acknowledged-not-an-issue)
+[10-21 12:19:43] reaped finished job 1915377 (v6t4_m2 cost-073-end-exclusive-alert-day)
+[10-21 12:19:44] reaped finished job 1915438 (v6t4_m2 cost-414-az-id-is-not-a-zone-name)
+[10-21 12:19:44] reaped finished job 1914797 (v6t4_m3 platform-114-ee-nightly-float-not-a-commit)
+[10-21 12:19:44] reaped finished job 1915441 (v6t4_m2 cost-418-capacity-window-starts-mid-review)
+[10-21 12:19:44] reaped finished job 1915467 (v6t4_m2 icinga-046-services-search-cross-host)
+[10-21 12:19:44] reaped finished job 1915434 (v6t4_m2 cost-410-released-sandbox-still-spending)
+[10-21 12:19:45] reaped finished job 1915466 (v6t4_m2 icinga-045-hosts-search-filter)
+[10-21 12:20:04] v6t4_m2: submitted 9 (pending 93, live 19, all-suite live 21)
+[10-21 12:21:34] reaped finished job 1915491 (v6t4_m2 icinga-201-soft-critical-not-yet-hard)
+[10-21 12:21:34] reaped finished job 1915489 (v6t4_m2 icinga-047-downtime-similar-host-names)
+[10-21 12:21:35] reaped finished job 1915493 (v6t4_m2 icinga-203-perfdata-headroom-to-critical)
+[10-21 12:21:35] reaped finished job 1915494 (v6t4_m2 icinga-204-downtime-window-expired)
+[10-21 12:21:35] reaped finished job 1915465 (v6t4_m2 icinga-015-problems-by-severity)
+[10-21 12:21:36] reaped finished job 1915443 (v6t4_m2 cost-419-chargeback-predates-current-tenant)
+[10-21 12:21:36] reaped finished job 1915433 (v6t4_m2 cost-409-top-spender-chain-to-instance-type)
+[10-21 12:21:36] reaped finished job 1915463 (v6t4_m2 icinga-012-nodes-ready-threshold)
+[10-21 12:21:36] reaped finished job 1915490 (v6t4_m2 icinga-072-alert-output-not-decoy-metrics)
+[10-21 12:21:51] v6t4_m2: submitted 8 (pending 84, live 21, all-suite live 22)
+[10-21 12:23:22] reaped finished job 1915495 (v6t4_m2 icinga-205-notifications-disabled-nobody-paged)
+[10-21 12:23:22] reaped finished job 1915535 (v6t4_m2 icinga-207-host-down-masks-service-alerts)
+[10-21 12:23:22] reaped finished job 1915539 (v6t4_m2 icinga-215-ack-comment-author-and-expiry)
+[10-21 12:23:23] reaped finished job 1915492 (v6t4_m2 icinga-202-flapping-recovery-is-not-resolution)
+[10-21 12:23:23] reaped finished job 1915444 (v6t4_m2 icinga-010-stuck-anarchysubjects)
+[10-21 12:23:40] v6t4_m2: submitted 9 (pending 79, live 20, all-suite live 21)
+[10-21 12:25:10] reaped finished job 1915534 (v6t4_m2 icinga-206-stale-ok-check)
+[10-21 12:25:10] reaped finished job 1915536 (v6t4_m2 icinga-210-command-vars-override-script-default)
+[10-21 12:25:11] reaped finished job 1915542 (v6t4_m2 icinga-221-crc-counter-never-resets)
+[10-21 12:25:11] killed failed-setup job 1915606 on cccxc530 (v6t4_m2 platform-032-shared-secret-not-a-registry-outage); host blocked
+[10-21 12:25:11] reaped finished job 1915538 (v6t4_m2 icinga-214-hostgroup-membership-rollup)
+[10-21 12:25:12] reaped finished job 1915540 (v6t4_m2 icinga-216-flexible-downtime-duration)
+[10-21 12:25:12] reaped finished job 1915298 (v6t4_m3 platform-162-shared-session-needs-multiuser-item)
+[10-21 12:25:25] v6t4_m2: submitted 5 (pending 73, live 24, all-suite live 25)
+[10-21 12:26:55] reaped finished job 1915602 (v6t4_m2 platform-020-ocpv-vm-inventory)
+[10-21 12:26:55] reaped finished job 1915537 (v6t4_m2 icinga-212-fix-on-main-not-on-pinned-ref)
+[10-21 12:26:56] reaped finished job 1915541 (v6t4_m2 icinga-219-host-down-pings-old-address)
+[10-21 12:26:56] reaped finished job 1915579 (v6t4_m2 platform-005-wrong-owner-trap)
+[10-21 12:26:56] reaped finished job 1915598 (v6t4_m2 platform-007-directory-path-fetch)
+[10-21 12:26:57] reaped finished job 1915603 (v6t4_m2 platform-021-babylon-missing-cluster-trap)
+[10-21 12:26:57] reaped finished job 1915600 (v6t4_m2 platform-018-find-jobs-window)
+{
+ "suite": "v6t4_m3",
+ "eval_usd": 116.2747,
+ "eval_tokens": 36893913,
+ "serial_seconds": 34939.81039190292,
+ "wall_seconds": 3824.348121404648,
+ "unmetered_tasks": 8,
+ "F": {
+  "n_tasks": 62,
+  "mean": 0.9111846989247312,
+  "seed_mean_same_tasks": 0.8203902096774194,
+  "paired_delta": 0.09079448924731183,
+  "delta_se": 0.02363216186500969
+ },
+ "test": {
+  "n_tasks": 64,
+  "mean": 0.849728015625,
+  "seed_mean_same_tasks": 0.8077572914496528,
+  "paired_delta": 0.041970724175347224,
+  "delta_se": 0.020029752292484673
+ }
+}
+[10-21 12:27:01] v6t4_m3: all tasks scored; cost/time recorded
+[10-21 12:27:15] v6t4_m2: submitted 7 (pending 67, live 23, all-suite live 23)
+[10-21 12:28:45] reaped finished job 1915574 (v6t4_m2 icinga-224-dead-first-replica-eats-timeout)
+[10-21 12:28:46] reaped finished job 1915605 (v6t4_m2 platform-022-job-on-no-controller)
+[10-21 12:28:46] reaped finished job 1915636 (v6t4_m2 platform-038-anarchy-subject-guid-cross-cluster)
+[10-21 12:28:46] reaped finished job 1915637 (v6t4_m2 platform-041-resource-pool-unfiltered-list)
+[10-21 12:28:47] reaped finished job 1915580 (v6t4_m2 platform-006-version-tag-not-a-ref)
+[10-21 12:28:47] reaped finished job 1915578 (v6t4_m2 platform-004-events-then-config)
+[10-21 12:28:47] reaped finished job 1915638 (v6t4_m2 platform-044-search-catalog-env-type)
+[10-21 12:28:47] reaped finished job 1915610 (v6t4_m2 platform-036-secret-redacted-not-absent)
+[10-21 12:28:47] reaped finished job 1915573 (v6t4_m2 icinga-222-lag-check-runs-on-satellite)
+[10-21 12:29:04] v6t4_m2: submitted 7 (pending 58, live 23, all-suite live 23)
+[10-21 12:30:35] reaped finished job 1915575 (v6t4_m2 icinga-225-monitor-outlived-its-namespace)
+[10-21 12:30:35] reaped finished job 1915599 (v6t4_m2 platform-008-log-does-not-say)
+[10-21 12:30:35] reaped finished job 1915634 (v6t4_m2 platform-037-ocpv-healthy-vm-degraded-machineset)
+[10-21 12:30:53] v6t4_m2: submitted 9 (pending 55, live 21, all-suite live 21)
+[10-21 12:32:23] reaped finished job 1915576 (v6t4_m2 platform-001-ee-entrypoint-rca)
+[10-21 12:32:23] reaped finished job 1915672 (v6t4_m2 platform-101-vcpu-quota-from-catalog-sizing)
+[10-21 12:32:24] reaped finished job 1915577 (v6t4_m2 platform-003-tojson-dict-literal-rca)
+[10-21 12:32:24] reaped finished job 1915608 (v6t4_m2 platform-033-schema-change-not-the-oom)
+[10-21 12:32:25] reaped finished job 1915667 (v6t4_m2 platform-065-other-guid-job-not-the-failure)
+[10-21 12:32:25] reaped finished job 1915668 (v6t4_m2 platform-067-branch-name-not-the-cause)
+[10-21 12:32:34] v6t4_m2: submitted 3 (pending 49, live 27, all-suite live 27)
+[10-21 12:34:04] reaped finished job 1915639 (v6t4_m2 platform-062-provisioning-job-trace)
+[10-21 12:34:05] reaped finished job 1915669 (v6t4_m2 platform-070-invented-fix-variables)
+[10-21 12:34:05] reaped finished job 1915706 (v6t4_m2 platform-119-pvc-storage-class-not-on-cluster)
+[10-21 12:34:05] reaped finished job 1915671 (v6t4_m2 platform-071-unmonitored-proxy-not-esxi-alert)
+[10-21 12:34:19] v6t4_m2: submitted 6 (pending 44, live 24, all-suite live 24)
+[10-21 12:35:50] reaped finished job 1915685 (v6t4_m2 platform-104-cfn-dependency-and-what-changed)
+[10-21 12:35:50] reaped finished job 1915746 (v6t4_m2 platform-129-destroyed-subject-hidden-without-guid)
+[10-21 12:35:51] reaped finished job 1915710 (v6t4_m2 platform-126-stop-job-from-tower-jobs)
+[10-21 12:35:51] reaped finished job 1915711 (v6t4_m2 platform-128-failed-action-census-by-kind)
+[10-21 12:35:51] reaped finished job 1915684 (v6t4_m2 platform-103-olm-channel-not-in-catalog)
+[10-21 12:35:51] reaped finished job 1915688 (v6t4_m2 platform-109-quoted-false-is-truthy)
+[10-21 12:35:51] reaped finished job 1915686 (v6t4_m2 platform-105-failed-revision-not-main)
+[10-21 12:36:01] v6t4_m2: submitted 4 (pending 38, live 26, all-suite live 26)
+[10-21 12:37:31] reaped finished job 1915687 (v6t4_m2 platform-108-duplicate-guid-concurrent-run)
+[10-21 12:37:31] reaped finished job 1915690 (v6t4_m2 platform-112-exec-pool-disk-not-the-bastion)
+[10-21 12:37:32] reaped finished job 1915673 (v6t4_m2 platform-102-no-proxy-misses-api-domain)
+[10-21 12:37:45] v6t4_m3: submitted 7 (pending 7, live 0, all-suite live 23)
+[10-21 12:37:59] start on cccxc434 job=1915821 suites=v6t4_m2 v6t4_m3 max=30
+[10-21 12:38:00] reaped finished job 1915703 (v6t4_m2 platform-116-timeout-headroom-from-history)
+[10-21 12:38:00] reaped finished job 1915673 (v6t4_m2 platform-102-no-proxy-misses-api-domain)
+[10-21 12:38:02] v6t4_m2: started
+[10-21 12:38:08] v6t4_m2: submitted 3 (pending 34, live 20, all-suite live 27)
+[10-21 12:38:10] v6t4_m3: started
+[10-21 12:39:41] reaped finished job 1915770 (v6t4_m2 platform-134-pool-search-canary-two-clusters)
+[10-21 12:39:41] reaped finished job 1915769 (v6t4_m2 platform-133-component-sub-components-hop)
+[10-21 12:39:41] reaped finished job 1915748 (v6t4_m2 platform-132-event-seat-math-standalone-workshop)
+[10-21 12:39:41] reaped finished job 1915705 (v6t4_m2 platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 12:39:42] reaped finished job 1915664 (v6t4_m2 platform-032-shared-secret-not-a-registry-outage)
+[10-21 12:39:42] reaped finished job 1915708 (v6t4_m2 platform-121-near-miss-pick-partner-repo)
+[10-21 12:39:42] reaped finished job 1915777 (v6t4_m2 platform-138-project-prefix-not-a-dns-label)
+[10-21 12:39:47] v6t4_m2: submitted 1 (pending 27, live 22, all-suite live 29)
+[10-21 12:41:18] reaped finished job 1915798 (v6t4_m2 platform-142-duplicate-yaml-key-last-wins)
+[10-21 12:41:19] reaped finished job 1915774 (v6t4_m2 platform-136-provision-key-mode-too-open)
+[10-21 12:41:19] reaped finished job 1915800 (v6t4_m2 platform-144-version-compared-as-string)
+[10-21 12:41:19] reaped finished job 1915820 (v6t4_m3 platform-153-override-uses-removed-variable-name)
+[10-21 12:41:32] v6t4_m2: submitted 7 (pending 24, live 16, all-suite live 23)
+[10-21 12:43:04] reaped finished job 1915815 (v6t4_m3 icinga-047-downtime-similar-host-names)
+[10-21 12:43:04] reaped finished job 1915814 (v6t4_m3 cloud-307-azure-two-project-tags)
+[10-21 12:43:04] reaped finished job 1915816 (v6t4_m3 icinga-221-crc-counter-never-resets)
+[10-21 12:43:05] reaped finished job 1915704 (v6t4_m2 platform-117-dependency-project-sync-failed)
+[10-21 12:43:05] reaped finished job 1915795 (v6t4_m2 platform-139-ami-id-pinned-to-one-region)
+[10-21 12:43:05] reaped finished job 1915818 (v6t4_m3 platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 12:43:05] reaped finished job 1915817 (v6t4_m3 platform-067-branch-name-not-the-cause)
+[10-21 12:43:14] v6t4_m2: submitted 4 (pending 22, live 20, all-suite live 26)
+[10-21 12:44:45] reaped finished job 1915823 (v6t4_m2 platform-148-precheck-caches-nxdomain)
+[10-21 12:44:45] reaped finished job 1915747 (v6t4_m2 platform-131-deployment-first-resource-blind-spot)
+[10-21 12:44:46] reaped finished job 1915834 (v6t4_m2 platform-151-backup-schedule-is-commented-out)
+[10-21 12:44:46] reaped finished job 1915819 (v6t4_m3 platform-136-provision-key-mode-too-open)
+[10-21 12:44:46] reaped finished job 1915771 (v6t4_m2 platform-135-catalog-component-drift-fanout)
+[10-21 12:44:46] reaped finished job 1915776 (v6t4_m2 platform-137-generated-password-forbidden-chars)
+[10-21 12:46:18] reaped finished job 1915856 (v6t4_m2 platform-152-path-search-cannot-find-variable-uses)
+[10-21 12:46:18] reaped finished job 1915689 (v6t4_m2 platform-110-renamed-catalog-item)
+[10-21 12:46:18] reaped finished job 1915857 (v6t4_m2 platform-153-override-uses-removed-variable-name)
+[10-21 12:46:19] reaped finished job 1915797 (v6t4_m2 platform-141-nested-loop-item-collision)
+[10-21 12:46:19] reaped finished job 1915894 (v6t4_m2 platform-162-shared-session-needs-multiuser-item)
+[10-21 12:46:19] reaped finished job 1915861 (v6t4_m2 platform-159-renewal-run-never-saw-host)
+[10-21 12:46:19] reaped finished job 1915862 (v6t4_m2 platform-160-event-attendee-codes-any-cluster)
+{
+ "suite": "v6t4_m3",
+ "eval_usd": 121.4708,
+ "eval_tokens": 38516443,
+ "serial_seconds": 35531.86638736725,
+ "wall_seconds": 4935.731024026871,
+ "unmetered_tasks": 1,
+ "F": {
+  "n_tasks": 67,
+  "mean": 0.9164196716417911,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.08640850447761193,
+  "delta_se": 0.022059402143150372
+ },
+ "test": {
+  "n_tasks": 66,
+  "mean": 0.8525140303030303,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.039865546170033676,
+  "delta_se": 0.019483269034005674
+ }
+}
+[10-21 12:46:30] v6t4_m3: all tasks scored; cost/time recorded
+[10-21 12:48:00] reaped finished job 1915896 (v6t4_m2 platform-165-renamed-item-same-asset-uuid)
+[10-21 12:48:00] reaped finished job 1915822 (v6t4_m2 platform-145-prod-stage-deploys-from-fork)
+[10-21 12:48:01] reaped finished job 1915859 (v6t4_m2 platform-157-drain-blocked-by-node-local-disk)
+[10-21 12:48:01] reaped finished job 1915897 (v6t4_m2 platform-167-ordered-workers-override-default)
+[10-21 12:48:01] reaped finished job 1915895 (v6t4_m2 platform-164-workshop-item-replaced-by-v2)
+[10-21 12:49:33] reaped finished job 1915860 (v6t4_m2 platform-158-lab-instances-outside-default-region)
+[10-21 12:51:06] reaped finished job 1915824 (v6t4_m2 platform-149-alphabetised-workloads-before-operator)
+[10-21 12:51:06] reaped finished job 1915858 (v6t4_m2 platform-155-order-time-was-queue-wait)
+[10-21 12:52:39] reaped finished job 1915702 (v6t4_m2 platform-114-ee-nightly-float-not-a-commit)
+[10-21 12:54:12] reaped finished job 1915709 (v6t4_m2 platform-124-event-accounts-not-returned)
+{
+ "suite": "v6t4_m2",
+ "eval_usd": 72.3614,
+ "eval_tokens": 22476367,
+ "serial_seconds": 40015.25107502937,
+ "wall_seconds": 4820.960651874542,
+ "unmetered_tasks": 3,
+ "F": {
+  "n_tasks": 65,
+  "mean": 0.8880701692307692,
+  "seed_mean_same_tasks": 0.8383191984615385,
+  "paired_delta": 0.049750970769230775,
+  "delta_se": 0.016319627092909586
+ },
+ "test": {
+  "n_tasks": 65,
+  "mean": 0.820894641025641,
+  "seed_mean_same_tasks": 0.809766153119658,
+  "paired_delta": 0.011128487905982915,
+  "delta_se": 0.019696605421175767
+ }
+}
+[10-21 12:55:46] v6t4_m2: all tasks scored; cost/time recorded
+[10-21 12:55:47] all suites scored
+[10-21 13:33:48] start on cccxc450 job=1917278 suites=v6t4_m1x v6t4_m3x v6t4_m2x max=30
+[10-21 13:33:49] v6t4_m1x: started
+[10-21 13:34:22] v6t4_m1x: submitted 30 (pending 133, live 0, all-suite live 0)
+[10-21 13:34:23] v6t4_m3x: started
+[10-21 13:34:23] v6t4_m2x: started
+[10-21 13:37:25] reaped finished job 1917311 (v6t4_m1x cost-401-monitor-drilldown-wrong-month)
+[10-21 13:37:25] reaped finished job 1917309 (v6t4_m1x cost-064-reservation-release-active-job-check)
+[10-21 13:37:25] reaped finished job 1917305 (v6t4_m1x cost-029-no-cost-rows-for-guid)
+[10-21 13:37:25] reaped finished job 1917281 (v6t4_m1x cloud-027-azure-pool-database-trap)
+[10-21 13:37:25] reaped finished job 1917283 (v6t4_m1x cloud-057-cloudtrail-select-only-refusal)
+[10-21 13:37:26] reaped finished job 1917308 (v6t4_m1x cost-053-capacity-dropped-reservations)
+[10-21 13:37:26] reaped finished job 1917314 (v6t4_m1x cost-407-aws-historical-query-came-back-org-wide)
+[10-21 13:37:26] reaped finished job 1917284 (v6t4_m1x cloud-058-malformed-account-id)
+[10-21 13:37:26] reaped finished job 1917304 (v6t4_m1x cost-028-highest-spend-provider)
+[10-21 13:37:26] reaped finished job 1917282 (v6t4_m1x cloud-055-azure-subscription-not-found)
+[10-21 13:37:26] reaped finished job 1917300 (v6t4_m1x cloud-316-cleaned-sandbox-live-iam-keys)
+[10-21 13:37:26] reaped finished job 1917286 (v6t4_m1x cloud-301-gcp-delete-counter-not-a-state)
+[10-21 13:37:26] reaped finished job 1917287 (v6t4_m1x cloud-302-cloudtrail-local-time-window)
+[10-21 13:37:26] reaped finished job 1917296 (v6t4_m1x cloud-311-owner-handover-inventory)
+[10-21 13:37:26] reaped finished job 1917289 (v6t4_m1x cloud-304-marketplace-active-past-end)
+[10-21 13:37:26] reaped finished job 1917279 (v6t4_m1x cloud-025-gcp-project-status)
+[10-21 13:37:26] reaped finished job 1917297 (v6t4_m1x cloud-313-azure-no-single-pool-fits)
+[10-21 13:37:26] reaped finished job 1917307 (v6t4_m1x cost-051-gcp-net-of-credits)
+[10-21 13:38:57] reaped finished job 1917306 (v6t4_m1x cost-050-partial-account-coverage)
+[10-21 13:38:57] reaped finished job 1917312 (v6t4_m1x cost-402-unused-cost-preset-has-no-utilisation)
+[10-21 13:38:57] reaped finished job 1917285 (v6t4_m1x cloud-074-assigned-account-still-billing)
+[10-21 13:38:58] reaped finished job 1917310 (v6t4_m1x cost-073-end-exclusive-alert-day)
+[10-21 13:38:58] reaped finished job 1917294 (v6t4_m1x cloud-308-azure-leftover-tag-on-free-sub)
+[10-21 13:38:58] reaped finished job 1917291 (v6t4_m1x cloud-307-azure-two-project-tags)
+[10-21 13:38:58] reaped finished job 1917299 (v6t4_m1x cloud-315-min-cost-drops-unestimated)
+[10-21 13:38:58] reaped finished job 1917301 (v6t4_m1x cloud-317-namesake-user-other-account)
+[10-21 13:39:18] v6t4_m1x: submitted 18 (pending 107, live 12, all-suite live 12)
+[10-21 13:39:21] v6t4_m3x: submitted 2 (pending 133, live 0, all-suite live 28)
+[10-21 13:39:25] v6t4_m2x: submitted 3 (pending 133, live 0, all-suite live 27)
+[10-21 13:40:56] reaped finished job 1917313 (v6t4_m1x cost-406-gcp-daily-rows-is-not-day-coverage)
+[10-21 13:40:56] reaped finished job 1917295 (v6t4_m1x cloud-310-stopped-lab-restarted-billing)
+[10-21 13:40:57] reaped finished job 1917302 (v6t4_m1x cloud-319-billing-lab-unknown-to-babylon)
+[10-21 13:40:57] reaped finished job 1917280 (v6t4_m1x cloud-026-gpu-abuse-triage)
+[10-21 13:40:57] reaped finished job 1917375 (v6t4_m1x icinga-013-acknowledged-not-an-issue)
+[10-21 13:41:01] v6t4_m1x: submitted 3 (pending 102, live 22, all-suite live 27)
+[10-21 13:42:32] reaped finished job 1917380 (v6t4_m1x icinga-047-downtime-similar-host-names)
+[10-21 13:42:32] reaped finished job 1917364 (v6t4_m1x cost-411-org-week-linked-account-league)
+[10-21 13:42:32] reaped finished job 1917381 (v6t4_m1x icinga-072-alert-output-not-decoy-metrics)
+[10-21 13:42:32] reaped finished job 1917369 (v6t4_m1x cost-416-peak-day-is-a-cross-service-sum)
+[10-21 13:42:32] reaped finished job 1917379 (v6t4_m1x icinga-046-services-search-cross-host)
+[10-21 13:42:32] reaped finished job 1917365 (v6t4_m1x cost-413-gcp-unknown-project-bucket)
+[10-21 13:42:32] reaped finished job 1917371 (v6t4_m1x cost-418-capacity-window-starts-mid-review)
+[10-21 13:42:32] reaped finished job 1917399 (v6t4_m3x cloud-025-gcp-project-status)
+[10-21 13:42:32] reaped finished job 1917377 (v6t4_m1x icinga-045-hosts-search-filter)
+[10-21 13:42:32] reaped finished job 1917374 (v6t4_m1x icinga-012-nodes-ready-threshold)
+[10-21 13:42:32] reaped finished job 1917408 (v6t4_m2x cloud-025-gcp-project-status)
+[10-21 13:42:32] reaped finished job 1917409 (v6t4_m2x cloud-026-gpu-abuse-triage)
+[10-21 13:42:32] reaped finished job 1917360 (v6t4_m1x cost-408-three-cloud-total-gcp-query-failed)
+[10-21 13:42:32] reaped finished job 1917382 (v6t4_m1x icinga-201-soft-critical-not-yet-hard)
+[10-21 13:42:38] v6t4_m1x: submitted 5 (pending 91, live 20, all-suite live 25)
+[10-21 13:44:09] reaped finished job 1917410 (v6t4_m2x cloud-027-azure-pool-database-trap)
+[10-21 13:44:10] reaped finished job 1917407 (v6t4_m3x cloud-026-gpu-abuse-triage)
+[10-21 13:44:10] reaped finished job 1917420 (v6t4_m1x icinga-202-flapping-recovery-is-not-resolution)
+[10-21 13:44:10] reaped finished job 1917367 (v6t4_m1x cost-414-az-id-is-not-a-zone-name)
+[10-21 13:44:10] reaped finished job 1917362 (v6t4_m1x cost-409-top-spender-chain-to-instance-type)
+[10-21 13:44:10] reaped finished job 1917423 (v6t4_m1x icinga-204-downtime-window-expired)
+[10-21 13:44:10] reaped finished job 1917376 (v6t4_m1x icinga-015-problems-by-severity)
+[10-21 13:44:10] reaped finished job 1917421 (v6t4_m1x icinga-203-perfdata-headroom-to-critical)
+[10-21 13:44:10] reaped finished job 1917372 (v6t4_m1x cost-419-chargeback-predates-current-tenant)
+[10-21 13:44:10] killed failed-setup job 1917461 on cccxc453 (v6t4_m1x icinga-207-host-down-masks-service-alerts); host blocked
+[10-21 13:44:10] reaped finished job 1917363 (v6t4_m1x cost-410-released-sandbox-still-spending)
+[10-21 13:44:26] v6t4_m1x: submitted 14 (pending 83, live 14, all-suite live 16)
+[10-21 13:44:29] v6t4_m3x: submitted 2 (pending 131, live 0, all-suite live 28)
+[10-21 13:46:00] reaped finished job 1917460 (v6t4_m1x icinga-206-stale-ok-check)
+[10-21 13:46:00] reaped finished job 1917462 (v6t4_m1x icinga-210-command-vars-override-script-default)
+[10-21 13:46:01] reaped finished job 1917373 (v6t4_m1x icinga-010-stuck-anarchysubjects)
+[10-21 13:46:12] v6t4_m1x: submitted 9 (pending 80, live 19, all-suite live 21)
+[10-21 13:47:43] reaped finished job 1917492 (v6t4_m3x cloud-027-azure-pool-database-trap)
+[10-21 13:47:43] reaped finished job 1917474 (v6t4_m1x icinga-215-ack-comment-author-and-expiry)
+[10-21 13:47:43] reaped finished job 1917491 (v6t4_m1x platform-007-directory-path-fetch)
+[10-21 13:47:43] reaped finished job 1917493 (v6t4_m3x cloud-055-azure-subscription-not-found)
+[10-21 13:47:43] reaped finished job 1917459 (v6t4_m1x icinga-205-notifications-disabled-nobody-paged)
+[10-21 13:47:43] reaped finished job 1917490 (v6t4_m1x platform-006-version-tag-not-a-ref)
+[10-21 13:47:43] reaped finished job 1917480 (v6t4_m1x icinga-219-host-down-pings-old-address)
+[10-21 13:47:43] reaped finished job 1917476 (v6t4_m1x icinga-216-flexible-downtime-duration)
+[10-21 13:47:43] reaped finished job 1917488 (v6t4_m1x platform-004-events-then-config)
+[10-21 13:47:43] reaped finished job 1917486 (v6t4_m1x platform-001-ee-entrypoint-rca)
+[10-21 13:47:43] reaped finished job 1917472 (v6t4_m1x icinga-214-hostgroup-membership-rollup)
+[10-21 13:47:43] reaped finished job 1917463 (v6t4_m1x icinga-212-fix-on-main-not-on-pinned-ref)
+[10-21 13:47:47] v6t4_m1x: submitted 3 (pending 70, live 25, all-suite live 27)
+[10-21 13:49:18] reaped finished job 1917513 (v6t4_m1x platform-020-ocpv-vm-inventory)
+[10-21 13:49:18] reaped finished job 1917481 (v6t4_m1x icinga-221-crc-counter-never-resets)
+[10-21 13:49:18] reaped finished job 1917514 (v6t4_m1x platform-021-babylon-missing-cluster-trap)
+[10-21 13:49:18] reaped finished job 1917483 (v6t4_m1x icinga-224-dead-first-replica-eats-timeout)
+[10-21 13:49:18] reaped finished job 1917485 (v6t4_m1x icinga-225-monitor-outlived-its-namespace)
+[10-21 13:49:18] reaped finished job 1917510 (v6t4_m1x icinga-207-host-down-masks-service-alerts)
+[10-21 13:49:32] v6t4_m1x: submitted 12 (pending 64, live 18, all-suite live 18)
+[10-21 13:49:34] v6t4_m3x: submitted 1 (pending 129, live 0, all-suite live 29)
+[10-21 13:51:05] reaped finished job 1917518 (v6t4_m1x platform-036-secret-redacted-not-absent)
+[10-21 13:51:05] reaped finished job 1917512 (v6t4_m1x platform-018-find-jobs-window)
+[10-21 13:51:05] reaped finished job 1917517 (v6t4_m1x platform-033-schema-change-not-the-oom)
+[10-21 13:51:05] reaped finished job 1917541 (v6t4_m1x platform-041-resource-pool-unfiltered-list)
+[10-21 13:51:05] reaped finished job 1917540 (v6t4_m1x platform-038-anarchy-subject-guid-cross-cluster)
+[10-21 13:51:05] reaped finished job 1917487 (v6t4_m1x platform-003-tojson-dict-literal-rca)
+[10-21 13:51:12] v6t4_m1x: submitted 5 (pending 58, live 24, all-suite live 25)
+[10-21 13:52:43] reaped finished job 1917567 (v6t4_m1x platform-065-other-guid-job-not-the-failure)
+[10-21 13:52:44] reaped finished job 1917539 (v6t4_m1x platform-037-ocpv-healthy-vm-degraded-machineset)
+[10-21 13:52:44] reaped finished job 1917489 (v6t4_m1x platform-005-wrong-owner-trap)
+[10-21 13:52:44] reaped finished job 1917568 (v6t4_m1x platform-067-branch-name-not-the-cause)
+[10-21 13:52:44] reaped finished job 1917482 (v6t4_m1x icinga-222-lag-check-runs-on-satellite)
+[10-21 13:52:44] reaped finished job 1917515 (v6t4_m1x platform-022-job-on-no-controller)
+[10-21 13:52:44] reaped finished job 1917549 (v6t4_m1x platform-044-search-catalog-env-type)
+[10-21 13:52:44] reaped finished job 1917570 (v6t4_m1x platform-071-unmonitored-proxy-not-esxi-alert)
+[10-21 13:52:44] reaped finished job 1917582 (v6t4_m3x cloud-057-cloudtrail-select-only-refusal)
+[10-21 13:52:51] v6t4_m1x: submitted 6 (pending 50, live 23, all-suite live 24)
+[10-21 13:54:22] reaped finished job 1917573 (v6t4_m1x platform-103-olm-channel-not-in-catalog)
+[10-21 13:54:22] reaped finished job 1917511 (v6t4_m1x platform-008-log-does-not-say)
+[10-21 13:54:22] reaped finished job 1917566 (v6t4_m1x platform-062-provisioning-job-trace)
+[10-21 13:54:22] reaped finished job 1917576 (v6t4_m1x platform-104-cfn-dependency-and-what-changed)
+[10-21 13:54:22] reaped finished job 1917569 (v6t4_m1x platform-070-invented-fix-variables)
+[10-21 13:54:23] reaped finished job 1917571 (v6t4_m1x platform-101-vcpu-quota-from-catalog-sizing)
+[10-21 13:54:34] v6t4_m1x: submitted 9 (pending 44, live 21, all-suite live 21)
+[10-21 13:56:05] reaped finished job 1917592 (v6t4_m1x platform-109-quoted-false-is-truthy)
+[10-21 13:56:05] reaped finished job 1917593 (v6t4_m1x platform-110-renamed-catalog-item)
+[10-21 13:56:05] reaped finished job 1917631 (v6t4_m1x platform-119-pvc-storage-class-not-on-cluster)
+[10-21 13:56:05] reaped finished job 1917572 (v6t4_m1x platform-102-no-proxy-misses-api-domain)
+[10-21 13:56:06] reaped finished job 1917634 (v6t4_m1x platform-126-stop-job-from-tower-jobs)
+[10-21 13:56:13] v6t4_m1x: submitted 6 (pending 39, live 24, all-suite live 24)
+[10-21 13:57:44] reaped finished job 1917664 (v6t4_m1x platform-129-destroyed-subject-hidden-without-guid)
+[10-21 13:57:44] reaped finished job 1917580 (v6t4_m1x platform-108-duplicate-guid-concurrent-run)
+[10-21 13:57:44] reaped finished job 1917665 (v6t4_m1x platform-131-deployment-first-resource-blind-spot)
+[10-21 13:57:44] reaped finished job 1917667 (v6t4_m1x platform-133-component-sub-components-hop)
+[10-21 13:57:45] reaped finished job 1917666 (v6t4_m1x platform-132-event-seat-math-standalone-workshop)
+[10-21 13:57:45] reaped finished job 1917594 (v6t4_m1x platform-112-exec-pool-disk-not-the-bastion)
+[10-21 13:57:45] reaped finished job 1917596 (v6t4_m1x platform-116-timeout-headroom-from-history)
+[10-21 13:57:45] reaped finished job 1917632 (v6t4_m1x platform-121-near-miss-pick-partner-repo)
+[10-21 13:57:45] reaped finished job 1917630 (v6t4_m1x platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 13:57:51] v6t4_m1x: submitted 5 (pending 30, live 25, all-suite live 25)
+[10-21 13:59:22] reaped finished job 1917683 (v6t4_m1x platform-138-project-prefix-not-a-dns-label)
+[10-21 13:59:22] reaped finished job 1917516 (v6t4_m1x platform-032-shared-secret-not-a-registry-outage)
+[10-21 13:59:22] reaped finished job 1917672 (v6t4_m1x platform-137-generated-password-forbidden-chars)
+[10-21 13:59:22] reaped finished job 1917668 (v6t4_m1x platform-134-pool-search-canary-two-clusters)
+[10-21 13:59:33] v6t4_m1x: submitted 9 (pending 26, live 21, all-suite live 21)
+[10-21 14:01:04] reaped finished job 1917629 (v6t4_m1x platform-117-dependency-project-sync-failed)
+[10-21 14:01:04] reaped finished job 1917684 (v6t4_m1x platform-139-ami-id-pinned-to-one-region)
+[10-21 14:01:04] reaped finished job 1917687 (v6t4_m1x platform-144-version-compared-as-string)
+[10-21 14:01:04] killed failed-setup job 1917721 on cccxc508 (v6t4_m1x platform-157-drain-blocked-by-node-local-disk); host blocked
+[10-21 14:01:04] reaped finished job 1917595 (v6t4_m1x platform-114-ee-nightly-float-not-a-commit)
+[10-21 14:01:04] reaped finished job 1917686 (v6t4_m1x platform-142-duplicate-yaml-key-last-wins)
+[10-21 14:01:04] reaped finished job 1917663 (v6t4_m1x platform-128-failed-action-census-by-kind)
+[10-21 14:01:04] reaped finished job 1917669 (v6t4_m1x platform-135-catalog-component-drift-fanout)
+[10-21 14:01:10] v6t4_m3x: submitted 4 (pending 128, live 0, all-suite live 26)
+[10-21 14:02:41] reaped finished job 1917578 (v6t4_m1x platform-105-failed-revision-not-main)
+[10-21 14:02:41] reaped finished job 1917633 (v6t4_m1x platform-124-event-accounts-not-returned)
+[10-21 14:02:41] reaped finished job 1917725 (v6t4_m1x platform-162-shared-session-needs-multiuser-item)
+[10-21 14:02:41] reaped finished job 1917724 (v6t4_m1x platform-160-event-attendee-codes-any-cluster)
+[10-21 14:02:41] reaped finished job 1917706 (v6t4_m1x platform-151-backup-schedule-is-commented-out)
+[10-21 14:02:41] reaped finished job 1917727 (v6t4_m1x platform-165-renamed-item-same-asset-uuid)
+[10-21 14:02:41] reaped finished job 1917709 (v6t4_m1x platform-153-override-uses-removed-variable-name)
+[10-21 14:02:51] v6t4_m3x: submitted 8 (pending 128, live 4, all-suite live 22)
+[10-21 14:04:22] reaped finished job 1917688 (v6t4_m1x platform-145-prod-stage-deploys-from-fork)
+[10-21 14:04:22] reaped finished job 1917703 (v6t4_m1x platform-148-precheck-caches-nxdomain)
+[10-21 14:04:22] reaped finished job 1917670 (v6t4_m1x platform-136-provision-key-mode-too-open)
+[10-21 14:04:22] reaped finished job 1917722 (v6t4_m1x platform-158-lab-instances-outside-default-region)
+[10-21 14:04:22] reaped finished job 1917728 (v6t4_m1x platform-167-ordered-workers-override-default)
+[10-21 14:04:22] reaped finished job 1917726 (v6t4_m1x platform-164-workshop-item-replaced-by-v2)
+[10-21 14:04:22] reaped finished job 1917685 (v6t4_m1x platform-141-nested-loop-item-collision)
+[10-21 14:04:22] reaped finished job 1917707 (v6t4_m1x platform-152-path-search-cannot-find-variable-uses)
+[10-21 14:04:22] reaped finished job 1917723 (v6t4_m1x platform-159-renewal-run-never-saw-host)
+[10-21 14:04:22] reaped finished job 1917747 (v6t4_m3x cloud-058-malformed-account-id)
+[10-21 14:04:22] reaped finished job 1917750 (v6t4_m3x cloud-302-cloudtrail-local-time-window)
+[10-21 14:04:31] v6t4_m3x: submitted 7 (pending 126, live 12, all-suite live 23)
+[10-21 14:06:02] reaped finished job 1917720 (v6t4_m1x platform-155-order-time-was-queue-wait)
+[10-21 14:06:02] reaped finished job 1917761 (v6t4_m3x cloud-315-min-cost-drops-unestimated)
+[10-21 14:06:02] reaped finished job 1917760 (v6t4_m3x cloud-313-azure-no-single-pool-fits)
+[10-21 14:06:02] reaped finished job 1917748 (v6t4_m3x cloud-074-assigned-account-still-billing)
+[10-21 14:06:02] reaped finished job 1917755 (v6t4_m3x cloud-304-marketplace-active-past-end)
+[10-21 14:06:02] reaped finished job 1917759 (v6t4_m3x cloud-311-owner-handover-inventory)
+[10-21 14:06:16] v6t4_m3x: submitted 11 (pending 121, live 17, all-suite live 19)
+[10-21 14:07:46] reaped finished job 1917998 (v6t4_m3x cloud-317-namesake-user-other-account)
+[10-21 14:07:47] reaped finished job 1917749 (v6t4_m3x cloud-301-gcp-delete-counter-not-a-state)
+[10-21 14:07:47] reaped finished job 1917756 (v6t4_m3x cloud-307-azure-two-project-tags)
+[10-21 14:07:47] reaped finished job 1917762 (v6t4_m3x cloud-316-cleaned-sandbox-live-iam-keys)
+[10-21 14:07:47] reaped finished job 1917757 (v6t4_m3x cloud-308-azure-leftover-tag-on-free-sub)
+[10-21 14:07:47] reaped finished job 1918003 (v6t4_m3x cost-051-gcp-net-of-credits)
+[10-21 14:07:47] reaped finished job 1918000 (v6t4_m3x cost-028-highest-spend-provider)
+[10-21 14:07:47] reaped finished job 1918001 (v6t4_m3x cost-029-no-cost-rows-for-guid)
+[10-21 14:07:47] reaped finished job 1918002 (v6t4_m3x cost-050-partial-account-coverage)
+[10-21 14:07:47] reaped finished job 1918004 (v6t4_m3x cost-053-capacity-dropped-reservations)
+[10-21 14:07:50] v6t4_m1x: submitted 1 (pending 2, live 1, all-suite live 24)
+[10-21 14:07:56] v6t4_m3x: submitted 5 (pending 111, live 23, all-suite live 25)
+[10-21 14:09:26] reaped finished job 1918028 (v6t4_m3x cost-411-org-week-linked-account-league)
+[10-21 14:09:26] reaped finished job 1917705 (v6t4_m1x platform-149-alphabetised-workloads-before-operator)
+[10-21 14:09:26] reaped finished job 1917999 (v6t4_m3x cloud-319-billing-lab-unknown-to-babylon)
+[10-21 14:09:26] reaped finished job 1918017 (v6t4_m3x cost-073-end-exclusive-alert-day)
+[10-21 14:09:26] reaped finished job 1918019 (v6t4_m3x cost-402-unused-cost-preset-has-no-utilisation)
+[10-21 14:09:26] reaped finished job 1918023 (v6t4_m3x cost-408-three-cloud-total-gcp-query-failed)
+[10-21 14:09:26] reaped finished job 1918021 (v6t4_m3x cost-407-aws-historical-query-came-back-org-wide)
+[10-21 14:09:26] reaped finished job 1918018 (v6t4_m3x cost-401-monitor-drilldown-wrong-month)
+[10-21 14:09:27] reaped finished job 1918020 (v6t4_m3x cost-406-gcp-daily-rows-is-not-day-coverage)
+[10-21 14:09:27] reaped finished job 1918029 (v6t4_m3x cost-413-gcp-unknown-project-bucket)
+[10-21 14:09:39] v6t4_m3x: submitted 10 (pending 102, live 18, all-suite live 20)
+[10-21 14:11:10] reaped finished job 1918016 (v6t4_m3x cost-064-reservation-release-active-job-check)
+[10-21 14:11:10] reaped finished job 1918042 (v6t4_m3x cost-416-peak-day-is-a-cross-service-sum)
+[10-21 14:11:10] reaped finished job 1918025 (v6t4_m3x cost-409-top-spender-chain-to-instance-type)
+[10-21 14:11:10] reaped finished job 1917758 (v6t4_m3x cloud-310-stopped-lab-restarted-billing)
+[10-21 14:11:10] reaped finished job 1918026 (v6t4_m3x cost-410-released-sandbox-still-spending)
+[10-21 14:11:22] v6t4_m3x: submitted 10 (pending 97, live 19, all-suite live 20)
+[10-21 14:12:53] reaped finished job 1918065 (v6t4_m3x icinga-012-nodes-ready-threshold)
+[10-21 14:12:53] reaped finished job 1918066 (v6t4_m3x icinga-013-acknowledged-not-an-issue)
+[10-21 14:12:53] reaped finished job 1918067 (v6t4_m3x icinga-015-problems-by-severity)
+[10-21 14:12:53] reaped finished job 1918072 (v6t4_m3x icinga-072-alert-output-not-decoy-metrics)
+[10-21 14:12:53] reaped finished job 1918068 (v6t4_m3x icinga-045-hosts-search-filter)
+[10-21 14:12:53] reaped finished job 1918069 (v6t4_m3x icinga-046-services-search-cross-host)
+[10-21 14:12:53] reaped finished job 1918045 (v6t4_m3x icinga-010-stuck-anarchysubjects)
+[10-21 14:12:53] reaped finished job 1918070 (v6t4_m3x icinga-047-downtime-similar-host-names)
+[10-21 14:12:53] reaped finished job 1918073 (v6t4_m3x icinga-201-soft-critical-not-yet-hard)
+[10-21 14:12:53] reaped finished job 1918040 (v6t4_m1x platform-157-drain-blocked-by-node-local-disk)
+[10-21 14:12:53] reaped finished job 1918041 (v6t4_m3x cost-414-az-id-is-not-a-zone-name)
+[10-21 14:12:53] reaped finished job 1918043 (v6t4_m3x cost-418-capacity-window-starts-mid-review)
+[10-21 14:13:00] v6t4_m3x: submitted 5 (pending 86, live 24, all-suite live 25)
+[10-21 14:14:31] reaped finished job 1918098 (v6t4_m3x icinga-216-flexible-downtime-duration)
+[10-21 14:14:31] reaped finished job 1918074 (v6t4_m3x icinga-202-flapping-recovery-is-not-resolution)
+[10-21 14:14:31] reaped finished job 1918087 (v6t4_m3x icinga-204-downtime-window-expired)
+[10-21 14:14:31] reaped finished job 1918090 (v6t4_m3x icinga-207-host-down-masks-service-alerts)
+[10-21 14:14:31] reaped finished job 1918091 (v6t4_m3x icinga-210-command-vars-override-script-default)
+[10-21 14:14:32] reaped finished job 1918096 (v6t4_m3x icinga-215-ack-comment-author-and-expiry)
+[10-21 14:14:32] reaped finished job 1918044 (v6t4_m3x cost-419-chargeback-predates-current-tenant)
+[10-21 14:14:32] reaped finished job 1918089 (v6t4_m3x icinga-206-stale-ok-check)
+[10-21 14:14:32] reaped finished job 1918100 (v6t4_m3x icinga-219-host-down-pings-old-address)
+{
+ "suite": "v6t4_m1x",
+ "eval_usd": 57.735,
+ "eval_tokens": 18087314,
+ "serial_seconds": 27641.270392656326,
+ "wall_seconds": 2248.133716583252,
+ "unmetered_tasks": 2,
+ "F": {
+  "n_tasks": 66,
+  "mean": 0.8798866363636364,
+  "seed_mean_same_tasks": 0.8334961848484849,
+  "paired_delta": 0.04639045151515152,
+  "delta_se": 0.021528472613075684
+ },
+ "test": {
+  "n_tasks": 66,
+  "mean": 0.8378704318181818,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.025221947685185188,
+  "delta_se": 0.01693213992138206
+ }
+}
+[10-21 14:14:34] v6t4_m1x: all tasks scored; cost/time recorded
+{
+ "suite": "v6t4_m1_5t",
+ "eval_usd": 148.47380000000007,
+ "eval_tokens": 46476349,
+ "serial_seconds": 59590.026967048645,
+ "F": {
+  "n_tasks": 67,
+  "trials_per_task": [
+   3,
+   5
+  ],
+  "mean": 0.9019762925373135,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.07196512537313433,
+  "delta_se": 0.01771882984457626
+ },
+ "test": {
+  "n_tasks": 66,
+  "trials_per_task": [
+   5
+  ],
+  "mean": 0.8581919575757575,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.04554347344276094,
+  "delta_se": 0.01481162069336283
+ }
+}
+[10-21 14:14:36] v6t4_m1_5t: pooled v6t4_m1 + v6t4_m1x
+[10-21 14:14:51] v6t4_m3x: submitted 12 (pending 77, live 18, all-suite live 18)
+[10-21 14:16:21] reaped finished job 1918075 (v6t4_m3x icinga-203-perfdata-headroom-to-critical)
+[10-21 14:16:22] reaped finished job 1918088 (v6t4_m3x icinga-205-notifications-disabled-nobody-paged)
+[10-21 14:16:22] reaped finished job 1918093 (v6t4_m3x icinga-214-hostgroup-membership-rollup)
+[10-21 14:16:34] v6t4_m3x: submitted 9 (pending 74, live 21, all-suite live 21)
+[10-21 14:16:36] v6t4_m2x: submitted 1 (pending 130, live 0, all-suite live 29)
+[10-21 14:18:07] reaped finished job 1918115 (v6t4_m3x icinga-221-crc-counter-never-resets)
+[10-21 14:18:07] reaped finished job 1918117 (v6t4_m3x icinga-224-dead-first-replica-eats-timeout)
+[10-21 14:18:07] reaped finished job 1918138 (v6t4_m3x platform-006-version-tag-not-a-ref)
+[10-21 14:18:07] reaped finished job 1918143 (v6t4_m3x platform-021-babylon-missing-cluster-trap)
+[10-21 14:18:07] reaped finished job 1918142 (v6t4_m3x platform-020-ocpv-vm-inventory)
+[10-21 14:18:07] reaped finished job 1918092 (v6t4_m3x icinga-212-fix-on-main-not-on-pinned-ref)
+[10-21 14:18:11] v6t4_m3x: submitted 2 (pending 68, live 27, all-suite live 28)
+[10-21 14:19:42] reaped finished job 1918157 (v6t4_m3x platform-036-secret-redacted-not-absent)
+[10-21 14:19:42] reaped finished job 1918116 (v6t4_m3x icinga-222-lag-check-runs-on-satellite)
+[10-21 14:19:42] reaped finished job 1918146 (v6t4_m3x platform-033-schema-change-not-the-oom)
+[10-21 14:19:42] reaped finished job 1918136 (v6t4_m3x platform-004-events-then-config)
+[10-21 14:19:42] reaped finished job 1918119 (v6t4_m3x platform-001-ee-entrypoint-rca)
+[10-21 14:19:42] reaped finished job 1918141 (v6t4_m3x platform-018-find-jobs-window)
+[10-21 14:19:42] reaped finished job 1918160 (v6t4_m3x platform-041-resource-pool-unfiltered-list)
+[10-21 14:19:42] reaped finished job 1918144 (v6t4_m3x platform-022-job-on-no-controller)
+[10-21 14:19:42] reaped finished job 1918145 (v6t4_m3x platform-032-shared-secret-not-a-registry-outage)
+[10-21 14:19:42] reaped finished job 1918118 (v6t4_m3x icinga-225-monitor-outlived-its-namespace)
+[10-21 14:19:42] reaped finished job 1918161 (v6t4_m3x platform-044-search-catalog-env-type)
+[10-21 14:19:42] reaped finished job 1918163 (v6t4_m3x platform-065-other-guid-job-not-the-failure)
+[10-21 14:19:42] reaped finished job 1918135 (v6t4_m3x platform-003-tojson-dict-literal-rca)
+[10-21 14:19:50] v6t4_m3x: submitted 6 (pending 55, live 23, all-suite live 24)
+[10-21 14:21:21] reaped finished job 1918166 (v6t4_m3x platform-070-invented-fix-variables)
+[10-21 14:21:21] reaped finished job 1918171 (v6t4_m2x cloud-055-azure-subscription-not-found)
+[10-21 14:21:21] reaped finished job 1918164 (v6t4_m3x platform-067-branch-name-not-the-cause)
+[10-21 14:21:21] reaped finished job 1918158 (v6t4_m3x platform-037-ocpv-healthy-vm-degraded-machineset)
+[10-21 14:21:21] reaped finished job 1918139 (v6t4_m3x platform-007-directory-path-fetch)
+[10-21 14:21:21] reaped finished job 1918184 (v6t4_m3x platform-071-unmonitored-proxy-not-esxi-alert)
+[10-21 14:21:21] reaped finished job 1918159 (v6t4_m3x platform-038-anarchy-subject-guid-cross-cluster)
+[10-21 14:21:21] reaped finished job 1918137 (v6t4_m3x platform-005-wrong-owner-trap)
+[10-21 14:21:37] v6t4_m3x: submitted 13 (pending 48, live 16, all-suite live 17)
+[10-21 14:23:08] reaped finished job 1918206 (v6t4_m3x platform-103-olm-channel-not-in-catalog)
+[10-21 14:23:08] reaped finished job 1918140 (v6t4_m3x platform-008-log-does-not-say)
+[10-21 14:23:08] reaped finished job 1918162 (v6t4_m3x platform-062-provisioning-job-trace)
+[10-21 14:23:08] reaped finished job 1918185 (v6t4_m3x platform-101-vcpu-quota-from-catalog-sizing)
+[10-21 14:23:19] v6t4_m3x: submitted 8 (pending 44, live 22, all-suite live 22)
+[10-21 14:24:50] reaped finished job 1918228 (v6t4_m3x platform-126-stop-job-from-tower-jobs)
+[10-21 14:24:50] reaped finished job 1918207 (v6t4_m3x platform-104-cfn-dependency-and-what-changed)
+[10-21 14:24:50] reaped finished job 1918226 (v6t4_m3x platform-121-near-miss-pick-partner-repo)
+[10-21 14:24:50] reaped finished job 1918230 (v6t4_m3x platform-128-failed-action-census-by-kind)
+[10-21 14:24:50] reaped finished job 1918225 (v6t4_m3x platform-119-pvc-storage-class-not-on-cluster)
+[10-21 14:24:50] reaped finished job 1918210 (v6t4_m3x platform-109-quoted-false-is-truthy)
+[10-21 14:24:50] reaped finished job 1918231 (v6t4_m3x platform-129-destroyed-subject-hidden-without-guid)
+[10-21 14:24:50] reaped finished job 1918219 (v6t4_m3x platform-110-renamed-catalog-item)
+[10-21 14:24:50] reaped finished job 1918209 (v6t4_m3x platform-108-duplicate-guid-concurrent-run)
+[10-21 14:24:56] v6t4_m3x: submitted 4 (pending 35, live 26, all-suite live 26)
+[10-21 14:26:27] reaped finished job 1918205 (v6t4_m3x platform-102-no-proxy-misses-api-domain)
+[10-21 14:26:27] reaped finished job 1918247 (v6t4_m3x platform-132-event-seat-math-standalone-workshop)
+[10-21 14:26:27] reaped finished job 1918249 (v6t4_m3x platform-134-pool-search-canary-two-clusters)
+[10-21 14:26:27] reaped finished job 1918232 (v6t4_m3x platform-131-deployment-first-resource-blind-spot)
+[10-21 14:26:27] reaped finished job 1918248 (v6t4_m3x platform-133-component-sub-components-hop)
+[10-21 14:26:27] reaped finished job 1918208 (v6t4_m3x platform-105-failed-revision-not-main)
+[10-21 14:26:38] v6t4_m3x: submitted 9 (pending 29, live 21, all-suite live 21)
+[10-21 14:28:09] reaped finished job 1918253 (v6t4_m3x platform-138-project-prefix-not-a-dns-label)
+[10-21 14:28:09] reaped finished job 1918254 (v6t4_m3x platform-139-ami-id-pinned-to-one-region)
+[10-21 14:28:09] reaped finished job 1918224 (v6t4_m3x platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 14:28:09] reaped finished job 1918251 (v6t4_m3x platform-136-provision-key-mode-too-open)
+[10-21 14:28:20] v6t4_m3x: submitted 5 (pending 25, live 24, all-suite live 24)
+[10-21 14:28:23] v6t4_m2x: submitted 1 (pending 129, live 0, all-suite live 29)
+[10-21 14:29:54] reaped finished job 1918220 (v6t4_m3x platform-112-exec-pool-disk-not-the-bastion)
+[10-21 14:29:54] reaped finished job 1918265 (v6t4_m3x platform-142-duplicate-yaml-key-last-wins)
+[10-21 14:29:54] reaped finished job 1918223 (v6t4_m3x platform-117-dependency-project-sync-failed)
+[10-21 14:29:54] reaped finished job 1918264 (v6t4_m3x platform-141-nested-loop-item-collision)
+[10-21 14:29:55] reaped finished job 1918505 (v6t4_m3x platform-151-backup-schedule-is-commented-out)
+[10-21 14:29:55] reaped finished job 1918266 (v6t4_m3x platform-144-version-compared-as-string)
+[10-21 14:29:55] reaped finished job 1918252 (v6t4_m3x platform-137-generated-password-forbidden-chars)
+[10-21 14:29:55] reaped finished job 1918506 (v6t4_m3x platform-152-path-search-cannot-find-variable-uses)
+[10-21 14:29:55] reaped finished job 1918509 (v6t4_m3x platform-155-order-time-was-queue-wait)
+[10-21 14:29:55] reaped finished job 1918512 (v6t4_m3x platform-159-renewal-run-never-saw-host)
+[10-21 14:30:06] v6t4_m2x: submitted 4 (pending 129, live 1, all-suite live 26)
+[10-21 14:31:36] reaped finished job 1918525 (v6t4_m2x cloud-057-cloudtrail-select-only-refusal)
+[10-21 14:31:36] reaped finished job 1918520 (v6t4_m3x platform-160-event-attendee-codes-any-cluster)
+[10-21 14:31:37] reaped finished job 1918523 (v6t4_m3x platform-165-renamed-item-same-asset-uuid)
+[10-21 14:31:37] reaped finished job 1918250 (v6t4_m3x platform-135-catalog-component-drift-fanout)
+[10-21 14:31:37] reaped finished job 1918510 (v6t4_m3x platform-157-drain-blocked-by-node-local-disk)
+[10-21 14:31:37] reaped finished job 1918503 (v6t4_m3x platform-148-precheck-caches-nxdomain)
+[10-21 14:31:37] reaped finished job 1918511 (v6t4_m3x platform-158-lab-instances-outside-default-region)
+[10-21 14:31:37] reaped finished job 1918522 (v6t4_m3x platform-164-workshop-item-replaced-by-v2)
+[10-21 14:31:53] v6t4_m2x: submitted 10 (pending 128, live 5, all-suite live 20)
+[10-21 14:33:23] reaped finished job 1918521 (v6t4_m3x platform-162-shared-session-needs-multiuser-item)
+[10-21 14:33:24] reaped finished job 1918222 (v6t4_m3x platform-116-timeout-headroom-from-history)
+[10-21 14:33:24] reaped finished job 1918537 (v6t4_m2x cloud-302-cloudtrail-local-time-window)
+[10-21 14:33:24] reaped finished job 1918507 (v6t4_m3x platform-153-override-uses-removed-variable-name)
+[10-21 14:33:24] reaped finished job 1918533 (v6t4_m2x cloud-074-assigned-account-still-billing)
+[10-21 14:33:24] reaped finished job 1918227 (v6t4_m3x platform-124-event-accounts-not-returned)
+[10-21 14:33:25] reaped finished job 1918267 (v6t4_m3x platform-145-prod-stage-deploys-from-fork)
+[10-21 14:33:25] reaped finished job 1918532 (v6t4_m2x cloud-058-malformed-account-id)
+[10-21 14:33:25] reaped finished job 1918524 (v6t4_m3x platform-167-ordered-workers-override-default)
+[10-21 14:33:25] reaped finished job 1918221 (v6t4_m3x platform-114-ee-nightly-float-not-a-commit)
+[10-21 14:33:41] v6t4_m2x: submitted 8 (pending 125, live 14, all-suite live 22)
+[10-21 14:35:11] reaped finished job 1918535 (v6t4_m2x cloud-301-gcp-delete-counter-not-a-state)
+[10-21 14:35:11] reaped finished job 1918549 (v6t4_m2x cloud-304-marketplace-active-past-end)
+[10-21 14:35:11] reaped finished job 1918504 (v6t4_m3x platform-149-alphabetised-workloads-before-operator)
+[10-21 14:35:12] reaped finished job 1918554 (v6t4_m2x cloud-313-azure-no-single-pool-fits)
+[10-21 14:35:12] reaped finished job 1918553 (v6t4_m2x cloud-311-owner-handover-inventory)
+[10-21 14:35:12] reaped finished job 1918555 (v6t4_m2x cloud-315-min-cost-drops-unestimated)
+[10-21 14:35:12] reaped finished job 1918556 (v6t4_m2x cloud-316-cleaned-sandbox-live-iam-keys)
+[10-21 14:35:12] reaped finished job 1918557 (v6t4_m2x cloud-317-namesake-user-other-account)
+[10-21 14:35:32] v6t4_m2x: submitted 10 (pending 118, live 19, all-suite live 20)
+[10-21 14:37:02] reaped finished job 1918550 (v6t4_m2x cloud-307-azure-two-project-tags)
+[10-21 14:37:02] reaped finished job 1918552 (v6t4_m2x cloud-310-stopped-lab-restarted-billing)
+[10-21 14:37:03] reaped finished job 1918576 (v6t4_m2x cost-029-no-cost-rows-for-guid)
+[10-21 14:37:03] reaped finished job 1918578 (v6t4_m2x cost-051-gcp-net-of-credits)
+[10-21 14:37:03] reaped finished job 1918580 (v6t4_m2x cost-053-capacity-dropped-reservations)
+[10-21 14:37:03] reaped finished job 1918583 (v6t4_m2x cost-401-monitor-drilldown-wrong-month)
+[10-21 14:37:04] reaped finished job 1918581 (v6t4_m2x cost-064-reservation-release-active-job-check)
+[10-21 14:37:04] reaped finished job 1918558 (v6t4_m2x cloud-319-billing-lab-unknown-to-babylon)
+[10-21 14:37:04] reaped finished job 1918575 (v6t4_m2x cost-028-highest-spend-provider)
+[10-21 14:37:04] reaped finished job 1918582 (v6t4_m2x cost-073-end-exclusive-alert-day)
+[10-21 14:37:04] reaped finished job 1918577 (v6t4_m2x cost-050-partial-account-coverage)
+{
+ "suite": "v6t4_m3x",
+ "eval_usd": 79.4553,
+ "eval_tokens": 25197023,
+ "serial_seconds": 27351.2229950428,
+ "wall_seconds": 3246.656939268112,
+ "unmetered_tasks": 3,
+ "F": {
+  "n_tasks": 67,
+  "mean": 0.8951433208955224,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.06513215373134328,
+  "delta_se": 0.02343474703979872
+ },
+ "test": {
+  "n_tasks": 64,
+  "mean": 0.8637694375,
+  "seed_mean_same_tasks": 0.8083106762152777,
+  "paired_delta": 0.05545876128472223,
+  "delta_se": 0.015339080616188059
+ }
+}
+[10-21 14:37:07] v6t4_m3x: all tasks scored; cost/time recorded
+{
+ "suite": "v6t4_m3_5t",
+ "eval_usd": 200.92609999999993,
+ "eval_tokens": 63713466,
+ "serial_seconds": 62883.08938241005,
+ "F": {
+  "n_tasks": 67,
+  "trials_per_task": [
+   5
+  ],
+  "mean": 0.9079091313432835,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.07789796417910448,
+  "delta_se": 0.021375590125228838
+ },
+ "test": {
+  "n_tasks": 66,
+  "trials_per_task": [
+   4,
+   5
+  ],
+  "mean": 0.8537080598484847,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.04105957571548822,
+  "delta_se": 0.01584538204018723
+ }
+}
+[10-21 14:37:10] v6t4_m3_5t: pooled v6t4_m3 + v6t4_m3x
+[10-21 14:37:25] v6t4_m2x: submitted 8 (pending 107, live 22, all-suite live 22)
+[10-21 14:38:55] reaped finished job 1918551 (v6t4_m2x cloud-308-azure-leftover-tag-on-free-sub)
+[10-21 14:38:55] reaped finished job 1918593 (v6t4_m2x cost-406-gcp-daily-rows-is-not-day-coverage)
+[10-21 14:38:55] reaped finished job 1918596 (v6t4_m2x cost-407-aws-historical-query-came-back-org-wide)
+[10-21 14:38:55] reaped finished job 1918603 (v6t4_m2x cost-416-peak-day-is-a-cross-service-sum)
+[10-21 14:38:56] reaped finished job 1918601 (v6t4_m2x cost-413-gcp-unknown-project-bucket)
+[10-21 14:38:56] reaped finished job 1918598 (v6t4_m2x cost-409-top-spender-chain-to-instance-type)
+[10-21 14:38:56] reaped finished job 1918602 (v6t4_m2x cost-414-az-id-is-not-a-zone-name)
+[10-21 14:38:57] reaped finished job 1918619 (v6t4_m2x icinga-013-acknowledged-not-an-issue)
+[10-21 14:38:57] reaped finished job 1918600 (v6t4_m2x cost-411-org-week-linked-account-league)
+[10-21 14:38:58] reaped finished job 1918597 (v6t4_m2x cost-408-three-cloud-total-gcp-query-failed)
+[10-21 14:38:58] reaped finished job 1918599 (v6t4_m2x cost-410-released-sandbox-still-spending)
+[10-21 14:38:58] reaped finished job 1918591 (v6t4_m2x cost-402-unused-cost-preset-has-no-utilisation)
+[10-21 14:39:18] v6t4_m2x: submitted 11 (pending 95, live 19, all-suite live 19)
+[10-21 14:40:48] reaped finished job 1918621 (v6t4_m2x icinga-045-hosts-search-filter)
+[10-21 14:40:48] reaped finished job 1918614 (v6t4_m2x cost-418-capacity-window-starts-mid-review)
+[10-21 14:40:49] reaped finished job 1918615 (v6t4_m2x cost-419-chargeback-predates-current-tenant)
+[10-21 14:40:49] reaped finished job 1918618 (v6t4_m2x icinga-012-nodes-ready-threshold)
+[10-21 14:40:49] reaped finished job 1918620 (v6t4_m2x icinga-015-problems-by-severity)
+[10-21 14:40:50] reaped finished job 1918624 (v6t4_m2x icinga-046-services-search-cross-host)
+[10-21 14:41:12] v6t4_m2x: submitted 13 (pending 89, live 17, all-suite live 17)
+[10-21 14:42:42] reaped finished job 1918630 (v6t4_m2x icinga-047-downtime-similar-host-names)
+[10-21 14:42:42] reaped finished job 1918655 (v6t4_m2x icinga-214-hostgroup-membership-rollup)
+[10-21 14:42:42] reaped finished job 1918633 (v6t4_m2x icinga-202-flapping-recovery-is-not-resolution)
+[10-21 14:42:43] reaped finished job 1918631 (v6t4_m2x icinga-072-alert-output-not-decoy-metrics)
+[10-21 14:42:43] reaped finished job 1918617 (v6t4_m2x icinga-010-stuck-anarchysubjects)
+[10-21 14:42:43] reaped finished job 1918634 (v6t4_m2x icinga-203-perfdata-headroom-to-critical)
+[10-21 14:42:44] reaped finished job 1918635 (v6t4_m2x icinga-204-downtime-window-expired)
+[10-21 14:42:44] reaped finished job 1918639 (v6t4_m2x icinga-210-command-vars-override-script-default)
+[10-21 14:42:44] reaped finished job 1918640 (v6t4_m2x icinga-212-fix-on-main-not-on-pinned-ref)
+[10-21 14:42:44] reaped finished job 1918636 (v6t4_m2x icinga-205-notifications-disabled-nobody-paged)
+[10-21 14:42:45] reaped finished job 1918638 (v6t4_m2x icinga-207-host-down-masks-service-alerts)
+[10-21 14:42:45] reaped finished job 1918637 (v6t4_m2x icinga-206-stale-ok-check)
+[10-21 14:42:45] reaped finished job 1918632 (v6t4_m2x icinga-201-soft-critical-not-yet-hard)
+[10-21 14:42:57] v6t4_m2x: submitted 6 (pending 76, live 24, all-suite live 24)
+[10-21 14:44:27] reaped finished job 1918656 (v6t4_m2x icinga-215-ack-comment-author-and-expiry)
+[10-21 14:44:28] reaped finished job 1918657 (v6t4_m2x icinga-216-flexible-downtime-duration)
+[10-21 14:44:28] reaped finished job 1918667 (v6t4_m2x platform-005-wrong-owner-trap)
+[10-21 14:44:28] reaped finished job 1918659 (v6t4_m2x icinga-221-crc-counter-never-resets)
+[10-21 14:44:28] reaped finished job 1918666 (v6t4_m2x platform-004-events-then-config)
+[10-21 14:44:28] reaped finished job 1918660 (v6t4_m2x icinga-222-lag-check-runs-on-satellite)
+[10-21 14:44:29] reaped finished job 1918658 (v6t4_m2x icinga-219-host-down-pings-old-address)
+[10-21 14:44:49] v6t4_m2x: submitted 12 (pending 69, live 18, all-suite live 18)
+[10-21 14:46:19] reaped finished job 1918668 (v6t4_m2x platform-006-version-tag-not-a-ref)
+[10-21 14:46:19] reaped finished job 1918665 (v6t4_m2x platform-003-tojson-dict-literal-rca)
+[10-21 14:46:20] reaped finished job 1918679 (v6t4_m2x platform-020-ocpv-vm-inventory)
+[10-21 14:46:20] reaped finished job 1918680 (v6t4_m2x platform-021-babylon-missing-cluster-trap)
+[10-21 14:46:22] reaped finished job 1918678 (v6t4_m2x platform-018-find-jobs-window)
+[10-21 14:46:22] reaped finished job 1918681 (v6t4_m2x platform-022-job-on-no-controller)
+[10-21 14:46:22] reaped finished job 1918676 (v6t4_m2x platform-007-directory-path-fetch)
+[10-21 14:46:23] reaped finished job 1918661 (v6t4_m2x icinga-224-dead-first-replica-eats-timeout)
+[10-21 14:46:33] v6t4_m2x: submitted 7 (pending 61, live 23, all-suite live 23)
+[10-21 14:48:04] reaped finished job 1918704 (v6t4_m2x platform-071-unmonitored-proxy-not-esxi-alert)
+[10-21 14:48:04] reaped finished job 1918692 (v6t4_m2x platform-036-secret-redacted-not-absent)
+[10-21 14:48:04] reaped finished job 1918697 (v6t4_m2x platform-038-anarchy-subject-guid-cross-cluster)
+[10-21 14:48:05] reaped finished job 1918694 (v6t4_m2x platform-037-ocpv-healthy-vm-degraded-machineset)
+[10-21 14:48:05] reaped finished job 1918703 (v6t4_m2x platform-070-invented-fix-variables)
+[10-21 14:48:05] reaped finished job 1918662 (v6t4_m2x icinga-225-monitor-outlived-its-namespace)
+[10-21 14:48:05] reaped finished job 1918698 (v6t4_m2x platform-041-resource-pool-unfiltered-list)
+[10-21 14:48:06] reaped finished job 1918702 (v6t4_m2x platform-067-branch-name-not-the-cause)
+[10-21 14:48:06] reaped finished job 1918699 (v6t4_m2x platform-044-search-catalog-env-type)
+[10-21 14:48:19] v6t4_m2x: submitted 8 (pending 52, live 22, all-suite live 22)
+[10-21 14:49:49] reaped finished job 1918677 (v6t4_m2x platform-008-log-does-not-say)
+[10-21 14:49:49] reaped finished job 1918664 (v6t4_m2x platform-001-ee-entrypoint-rca)
+[10-21 14:49:49] reaped finished job 1918717 (v6t4_m2x platform-104-cfn-dependency-and-what-changed)
+[10-21 14:49:50] reaped finished job 1918701 (v6t4_m2x platform-065-other-guid-job-not-the-failure)
+[10-21 14:49:50] reaped finished job 1918700 (v6t4_m2x platform-062-provisioning-job-trace)
+[10-21 14:49:50] reaped finished job 1918690 (v6t4_m2x platform-033-schema-change-not-the-oom)
+[10-21 14:50:06] v6t4_m2x: submitted 9 (pending 46, live 21, all-suite live 21)
+[10-21 14:51:36] reaped finished job 1918689 (v6t4_m2x platform-032-shared-secret-not-a-registry-outage)
+[10-21 14:51:36] reaped finished job 1918714 (v6t4_m2x platform-101-vcpu-quota-from-catalog-sizing)
+[10-21 14:51:37] reaped finished job 1918964 (v6t4_m2x platform-119-pvc-storage-class-not-on-cluster)
+[10-21 14:51:37] reaped finished job 1918720 (v6t4_m2x platform-109-quoted-false-is-truthy)
+[10-21 14:51:50] v6t4_m2x: submitted 6 (pending 42, live 24, all-suite live 24)
+[10-21 14:53:21] reaped finished job 1918965 (v6t4_m2x platform-121-near-miss-pick-partner-repo)
+[10-21 14:53:21] reaped finished job 1918715 (v6t4_m2x platform-102-no-proxy-misses-api-domain)
+[10-21 14:53:21] reaped finished job 1918976 (v6t4_m2x platform-128-failed-action-census-by-kind)
+[10-21 14:53:21] reaped finished job 1918975 (v6t4_m2x platform-126-stop-job-from-tower-jobs)
+[10-21 14:53:21] reaped finished job 1918961 (v6t4_m2x platform-116-timeout-headroom-from-history)
+[10-21 14:53:21] reaped finished job 1918959 (v6t4_m2x platform-112-exec-pool-disk-not-the-bastion)
+[10-21 14:53:21] reaped finished job 1918981 (v6t4_m2x platform-134-pool-search-canary-two-clusters)
+[10-21 14:53:21] reaped finished job 1918719 (v6t4_m2x platform-108-duplicate-guid-concurrent-run)
+[10-21 14:53:21] reaped finished job 1918977 (v6t4_m2x platform-129-destroyed-subject-hidden-without-guid)
+[10-21 14:53:21] reaped finished job 1918978 (v6t4_m2x platform-131-deployment-first-resource-blind-spot)
+[10-21 14:53:21] reaped finished job 1918963 (v6t4_m2x platform-118-pending-pvcs-wait-for-first-consumer)
+[10-21 14:53:22] reaped finished job 1918980 (v6t4_m2x platform-133-component-sub-components-hop)
+[10-21 14:53:22] reaped finished job 1918716 (v6t4_m2x platform-103-olm-channel-not-in-catalog)
+[10-21 14:53:22] reaped finished job 1918958 (v6t4_m2x platform-110-renamed-catalog-item)
+[10-21 14:53:22] reaped finished job 1918979 (v6t4_m2x platform-132-event-seat-math-standalone-workshop)
+[10-21 14:53:22] reaped finished job 1918962 (v6t4_m2x platform-117-dependency-project-sync-failed)
+[10-21 14:54:57] reaped finished job 1918718 (v6t4_m2x platform-105-failed-revision-not-main)
+[10-21 14:54:58] reaped finished job 1918995 (v6t4_m2x platform-139-ami-id-pinned-to-one-region)
+[10-21 14:54:58] reaped finished job 1918991 (v6t4_m2x platform-136-provision-key-mode-too-open)
+[10-21 14:55:23] v6t4_m2x: submitted 16 (pending 23, live 10, all-suite live 10)
+[10-21 14:56:54] reaped finished job 1919000 (v6t4_m2x platform-142-duplicate-yaml-key-last-wins)
+[10-21 14:56:54] reaped finished job 1918993 (v6t4_m2x platform-138-project-prefix-not-a-dns-label)
+[10-21 14:58:28] reaped finished job 1918983 (v6t4_m2x platform-135-catalog-component-drift-fanout)
+[10-21 14:58:28] reaped finished job 1918974 (v6t4_m2x platform-124-event-accounts-not-returned)
+[10-21 14:58:28] reaped finished job 1919019 (v6t4_m2x platform-144-version-compared-as-string)
+[10-21 14:58:28] reaped finished job 1919032 (v6t4_m2x platform-162-shared-session-needs-multiuser-item)
+[10-21 14:58:29] reaped finished job 1919025 (v6t4_m2x platform-152-path-search-cannot-find-variable-uses)
+[10-21 14:58:29] reaped finished job 1918997 (v6t4_m2x platform-141-nested-loop-item-collision)
+[10-21 14:58:29] reaped finished job 1919033 (v6t4_m2x platform-164-workshop-item-replaced-by-v2)
+[10-21 14:58:29] reaped finished job 1919028 (v6t4_m2x platform-157-drain-blocked-by-node-local-disk)
+[10-21 14:58:29] reaped finished job 1919030 (v6t4_m2x platform-159-renewal-run-never-saw-host)
+[10-21 14:58:29] reaped finished job 1919035 (v6t4_m2x platform-167-ordered-workers-override-default)
+[10-21 14:58:29] reaped finished job 1919031 (v6t4_m2x platform-160-event-attendee-codes-any-cluster)
+[10-21 14:58:30] reaped finished job 1919027 (v6t4_m2x platform-155-order-time-was-queue-wait)
+[10-21 14:58:30] reaped finished job 1919024 (v6t4_m2x platform-151-backup-schedule-is-commented-out)
+[10-21 15:00:02] reaped finished job 1919022 (v6t4_m2x platform-148-precheck-caches-nxdomain)
+[10-21 15:00:03] reaped finished job 1918960 (v6t4_m2x platform-114-ee-nightly-float-not-a-commit)
+[10-21 15:00:03] reaped finished job 1918992 (v6t4_m2x platform-137-generated-password-forbidden-chars)
+[10-21 15:00:03] reaped finished job 1919026 (v6t4_m2x platform-153-override-uses-removed-variable-name)
+[10-21 15:00:03] reaped finished job 1919029 (v6t4_m2x platform-158-lab-instances-outside-default-region)
+[10-21 15:01:38] reaped finished job 1919034 (v6t4_m2x platform-165-renamed-item-same-asset-uuid)
+[10-21 15:01:38] reaped finished job 1919023 (v6t4_m2x platform-149-alphabetised-workloads-before-operator)
+[10-21 15:03:10] reaped finished job 1919020 (v6t4_m2x platform-145-prod-stage-deploys-from-fork)
+{
+ "suite": "v6t4_m2x",
+ "eval_usd": 48.4612,
+ "eval_tokens": 15047049,
+ "serial_seconds": 24278.724786281586,
+ "wall_seconds": 4997.676224470139,
+ "unmetered_tasks": 1,
+ "F": {
+  "n_tasks": 67,
+  "mean": 0.8743620895522388,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.0443509223880597,
+  "delta_se": 0.01709973004904815
+ },
+ "test": {
+  "n_tasks": 66,
+  "mean": 0.8337608106060606,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.02111232647306398,
+  "delta_se": 0.019723079586766282
+ }
+}
+[10-21 15:04:50] v6t4_m2x: all tasks scored; cost/time recorded
+{
+ "suite": "v6t4_m2_5t",
+ "eval_usd": 120.82259999999995,
+ "eval_tokens": 37523416,
+ "serial_seconds": 64293.97586131096,
+ "F": {
+  "n_tasks": 67,
+  "trials_per_task": [
+   2,
+   5
+  ],
+  "mean": 0.8798155343283582,
+  "seed_mean_same_tasks": 0.8300111671641791,
+  "paired_delta": 0.0498043671641791,
+  "delta_se": 0.01509859813734825
+ },
+ "test": {
+  "n_tasks": 66,
+  "trials_per_task": [
+   2,
+   5
+  ],
+  "mean": 0.8276693393939394,
+  "seed_mean_same_tasks": 0.8126484841329966,
+  "paired_delta": 0.015020855260942762,
+  "delta_se": 0.017627167176880912
+ }
+}
+[10-21 15:04:53] v6t4_m2_5t: pooled v6t4_m2 + v6t4_m2x
+[10-21 15:04:53] all suites scored
