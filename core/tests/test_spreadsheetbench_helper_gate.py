@@ -10,6 +10,7 @@ debited by the harness.
 import importlib.util
 import sys
 import textwrap
+import types
 from pathlib import Path
 
 import pytest
@@ -114,9 +115,10 @@ def test_run_target_returns_a_candidate_fault_without_an_llm_call(gate, tmp_path
     cand = _cand(tmp_path, "leaky2", 'ID = "105-24"\n')
     (cand / "prompt.md").write_text("system")
     monkeypatch.setattr(gate, "_task_template_error", lambda ctx: None)
-    import litellm  # noqa: F401 — imported so the patch below is what a call would hit
-
-    monkeypatch.setattr("litellm.completion", lambda *a, **k: pytest.fail("no LLM call may be made"))
+    # a fake litellm (CI does not install it): any completion call fails the test
+    fake = types.ModuleType("litellm")
+    fake.completion = lambda *a, **k: pytest.fail("no LLM call may be made")
+    monkeypatch.setitem(sys.modules, "litellm", fake)
     task = gate.Task(id="10452", input={"instruction": "", "spreadsheet_path": "", "instruction_type": "",
                                         "answer_position": "A1"})
     r = gate.Adapter().run_target(task, cand, seed=0)
