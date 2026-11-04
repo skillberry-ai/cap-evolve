@@ -5,20 +5,22 @@
 TGC = mean over tasks of the mean over trials of success; SGC = a scenario passes in trial k iff
 all its tasks pass in trial k, averaged over k and scenarios. Paired differences use a
 scenario-clustered paired bootstrap (56 clusters, 10,000 resamples), 95% percentile CI, no
-multiplicity correction. A cell that is still infra-errored is scored 0 (primary) and dropped in
+multiplicity correction. With equal-size scenarios (3 tasks each, asserted) both differences are the
+mean over scenarios of a per-scenario paired difference, so the CI is cap_evolve.stats.bootstrap_ci
+over those 56 values. A cell that is still infra-errored is scored 0 (primary) and dropped in
 the sensitivity analysis. Only rewards and counters are read; no test trajectory is opened.
 """
 
 from __future__ import annotations
 
 import json
-import random
 import statistics
 import sys
 from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cap_evolve.stats import bootstrap_ci  # noqa: E402
 from awpaths import CAPE_RUN, FINAL, MANIFEST, ROOT_FULL, RUNS, read_split  # noqa: E402
 
 ARMS = ("seed", "cape-hc", "altk")
@@ -73,20 +75,27 @@ def sgc(cells, arm, scen_tasks: dict, drop_missing=False):
     return sum(vals) / len(vals) if vals else float("nan")
 
 
-def bootstrap(cells, a, b, scen_tasks, rng):
-    scens = sorted(scen_tasks)
-    d_t, d_s = [], []
-    for _ in range(B):
-        pick = [rng.choice(scens) for _ in scens]
-        tasks = [t for s in pick for t in scen_tasks[s]]
-        st = {f"{s}#{i}": scen_tasks[s] for i, s in enumerate(pick)}
-        d_t.append(tgc(cells, a, tasks) - tgc(cells, b, tasks))
-        d_s.append(sgc(cells, a, st) - sgc(cells, b, st))
+def scenario_diffs(cells, a, b, scen_tasks) -> tuple[list[float], list[float]]:
+    """Per-scenario paired differences (arm a - arm b) of TGC and SGC, missing cells scored 0.
 
-    def ci(xs):
-        xs = sorted(xs)
-        return [xs[int(0.025 * B)], xs[int(0.975 * B) - 1]]
-    return ci(d_t), ci(d_s)
+    Their means are tgc(a) - tgc(b) and sgc(a) - sgc(b) when every scenario has the same number
+    of tasks, so resampling scenarios is a bootstrap of these means.
+    """
+    d_t, d_s = [], []
+    for s in sorted(scen_tasks):
+        ts = scen_tasks[s]
+        d_t.append(tgc(cells, a, ts) - tgc(cells, b, ts))
+        d_s.append(sgc(cells, a, {s: ts}) - sgc(cells, b, {s: ts}))
+    return d_t, d_s
+
+
+def paired_cis(cells, a, b, scen_tasks) -> tuple[list[float], list[float]]:
+    sizes = {len(ts) for ts in scen_tasks.values()}
+    if len(sizes) != 1:
+        raise ValueError(f"scenario-clustered bootstrap needs equal-size scenarios, got sizes {sorted(sizes)}")
+    d_t, d_s = scenario_diffs(cells, a, b, scen_tasks)
+    return (list(bootstrap_ci(d_t, confidence=0.95, resamples=B, seed=0)),
+            list(bootstrap_ci(d_s, confidence=0.95, resamples=B, seed=0)))
 
 
 def pct(x):
@@ -118,7 +127,6 @@ def main() -> int:
     for t in ids:
         scen[t.split("_")[0]].append(t)
     cells, missing = load_cells(ids)
-    rng = random.Random(0)
     res: dict = {"n_tasks": len(ids), "n_scenarios": len(scen), "trials": TRIALS, "arms": {}, "pairs": {},
                  "missing_cells": {f"{a}|{t}|{k}": v.get("infra_error") for (a, t, k), v in missing.items()}}
     for arm in ARMS:
@@ -148,7 +156,7 @@ def main() -> int:
             "max_prompt_tokens": max((int(r.get("max_prompt_tokens") or 0) for r in recs), default=0),
         }
     for a, b in PAIRS:
-        ci_t, ci_s = bootstrap(cells, a, b, scen, rng)
+        ci_t, ci_s = paired_cis(cells, a, b, scen)
         res["pairs"][f"{a} - {b}"] = {"d_tgc": res["arms"][a]["tgc"] - res["arms"][b]["tgc"], "ci_tgc": ci_t,
                                       "d_sgc": res["arms"][a]["sgc"] - res["arms"][b]["sgc"], "ci_sgc": ci_s}
     res["optimizer_usage"] = optimizer_usage()
