@@ -143,6 +143,8 @@ def main() -> int:
             "complete_task_not_called": sum(1 for r in recs if not r.get("complete_task_called")),
             "collateral_damage": sum(1 for r in recs if r.get("collateral_damage")),
             "fs_probe": sum(1 for r in recs if r.get("fs_probe")),
+            "guard_probe": sum(1 for r in recs if r.get("guard_probe")),
+            "guard_blocked_steps": sum(int(r.get("guard_blocked") or 0) for r in recs),
             "max_prompt_tokens": max((int(r.get("max_prompt_tokens") or 0) for r in recs), default=0),
         }
     for a, b in PAIRS:

@@ -137,7 +137,8 @@ def run() -> int:
                **{key: m.get(key) for key in ("success", "num_tests", "pass_count", "n_steps", "prompt_tokens",
                                               "completion_tokens", "max_prompt_tokens", "termination",
                                               "collateral_damage", "complete_task_called", "api_errors",
-                                              "trimmed_steps", "fs_probe", "episode_seconds", "attempt")}}
+                                              "trimmed_steps", "fs_probe", "guard_blocked", "guard_probe",
+                                              "episode_seconds", "attempt")}}
         with lock:
             with open(RESULTS, "a") as f:
                 f.write(json.dumps(rec) + "\n")

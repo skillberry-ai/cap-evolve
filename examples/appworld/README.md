@@ -65,6 +65,15 @@ Applied to every arm, because AppWorld `42b5bcf` does not:
   read-only `open`) and read `os.environ`. The model key is dropped from the environment after the
   client is built. The episode worker's environment is an allowlist (`aw_agent.WORKER_ENV_NAMES`),
   so the optimizer's credentials in the `cap-evolve run` environment never reach it. Each episode records `fs_probe` if its code names a gold path.
+- **Attribute guard.** AppWorld checks literal imports only, and allowed modules hand out blocked
+  ones as attributes (`uuid.os`, `contextlib.os`). A second check (`aw_agent.code_guard_violations`)
+  runs after AppWorld's and refuses `.os`/`.sys`/… attributes, dunder and frame walks,
+  `getattr` on a module, `eval`/`exec`/`globals`/`vars`, and IPython `!`/`%` lines. Each episode
+  records `guard_blocked` (refused steps) and `guard_probe`; `analyze.py` reports both per arm.
+  This is defence in depth, not a sandbox: in-process Python can still reach memory (including the
+  key held by the model client) and any file the worker may read. What protects the run is that the
+  worker holds no other credential, that answers are absent from `root_opt` during search, and that
+  probes are counted. Keeping the key out of the worker (a local header-adding proxy) is follow-up work.
 - **Token cap.** `UsageTracker.exceeded()` never checks `max_output_tokens_per_task`; the episode
   loop enforces 100,000 completion tokens itself.
 - **Gold-free records.** AppWorld's failure `trace` holds gold values; only requirement texts, the
