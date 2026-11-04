@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from awpaths import CAPE_RUN as RUN, PROGRESS, RUNS  # noqa: E402
+from awpaths import CAPE_RUN as RUN, PROGRESS  # noqa: E402
 
 
 def last_line(p: Path) -> str:
@@ -46,24 +46,6 @@ def cape_row() -> list[str]:
             f"${spent.get('optimizer_usd', 0):.2f}, {spent.get('optimizer_tokens', 0):,} tok", f"best val {best}"]
 
 
-def altk_row() -> list[str]:
-    a = RUNS / "altk"
-    mined = json.loads((a / "mined.json").read_text()) if (a / "mined.json").is_file() else {}
-    sel = json.loads((a / "dose_selection.json").read_text()) if (a / "dose_selection.json").is_file() else None
-    usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0}
-    if (a / "optimizer_usage.jsonl").is_file():
-        for l in (a / "optimizer_usage.jsonl").read_text().splitlines():
-            r = json.loads(l)
-            usage["calls"] += 1
-            usage["prompt_tokens"] += int(r.get("prompt_tokens") or 0)
-            usage["completion_tokens"] += int(r.get("completion_tokens") or 0)
-    phase = "done" if sel else ("dose selection" if (a / "cand_ret_dev").is_dir() else
-                                ("mining" if mined else "waiting for cape-hc baseline"))
-    pct = 100 if sel else round(60 * len(mined) / 90)
-    rollouts = 90 + (114 if sel else 0)
-    return ["altk", phase, f"{pct}%", last_line(PROGRESS / "altk.log").split(" | ")[-1], str(rollouts),
-            f"{usage['calls']} calls, {usage['prompt_tokens']:,}/{usage['completion_tokens']:,} in/out tok",
-            f"chosen {sel['chosen']}" if sel else ""]
 
 
 def final_row() -> list[str]:
@@ -78,7 +60,7 @@ def final_row() -> list[str]:
 
 def render() -> str:
     head = ["trial", "phase", "% done", "last event", "rollouts used", "optimizer usage", "note"]
-    rows = [cape_row(), altk_row(), final_row()]
+    rows = [cape_row(), final_row()]
     out = [f"# AppWorld smoke test progress — {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}", "",
            "| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     out += ["| " + " | ".join(c.replace("|", "/") for c in r) + " |" for r in rows]

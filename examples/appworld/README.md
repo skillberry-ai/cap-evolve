@@ -1,18 +1,17 @@
-# appworld: cap-evolve vs ALTK-Evolve on AppWorld
+# appworld: cap-evolve on AppWorld
 
-Runs a controlled comparison on [AppWorld](https://github.com/StonyBrookNLP/appworld): everyday tasks
-in simulated apps (music, payments, email, phone, files…), solved by an agent that writes Python
-against the apps' APIs and is graded on the final app state. Three arms share one harness:
+Optimizes an agent on [AppWorld](https://github.com/StonyBrookNLP/appworld): everyday tasks in
+simulated apps (music, payments, email, phone, files…), solved by an agent that writes Python
+against the apps' APIs and graded on the final app state. Two arms share one harness:
 
 | arm | what it is | what it learns |
 |---|---|---|
 | `seed` | AppWorld's official simplified ReAct code agent, stock prompt | nothing |
 | `cape-hc` | cap-evolve, `hill-climb --focus all`, capabilities `[system-prompt, tools]` | the prompt, REPL helper functions, API notes |
-| `altk` | [ALTK-Evolve](https://github.com/AgentToolkit/altk-evolve) v1.3.0 | "lessons learned" guidelines in a memory slot |
 
 Search uses only AppWorld's official `train` (90) and `dev` (57) splits; results come from
-`test_normal` (168), scored for all three arms in one interleaved window. `test_challenge` is not
-used. Defaults: agent `openai/gpt-oss-120b` on IBM RITS, optimizer `aws/claude-sonnet-5-5`, both
+`test_normal` (168), scored for both arms in one interleaved window. `test_challenge` is not used.
+Defaults: agent `openai/gpt-oss-120b` on IBM RITS, optimizer `aws/claude-sonnet-5-5`, both
 configurable.
 
 ## Layout
@@ -21,11 +20,10 @@ configurable.
 adapters/adapter.py     cap-evolve adapter: tasks, run_trials (one subprocess per episode), score
 adapters/aw_agent.py    CapReActAgent + the one-episode worker (the harness)
 adapters/lints.py       candidate lints, also run by the optimizer before it stops
-seed_capability/        policy/instructions.txt (stock prompt, byte copy), tools/, memory/
+seed_capability/        policy/instructions.txt (stock prompt, byte copy), tools/
 optimizer/              intake-customized INSTRUCTIONS template for the optimizer
 patches/                18-line AppWorld patch: header auth for the agent model, never logged
 sandbox/                optimizer isolation: the `claude` shim, the namespace fallback, settings templates
-altk/                   the ALTK-Evolve arm: convert, mine, render, select the dose on dev
 scripts/                data roots, splits, acceptance checks, launch, final window, analysis, scan
 tests/                  offline tests, one file per module under test (no AppWorld, no model)
 ```
@@ -55,25 +53,23 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
 2. `python scripts/make_roots.py` builds `$AW_EVAL/root_opt` (train + dev tasks only; it greps that no
    test id is present) and the lint cache `$AW_EVAL/lint_cache.json` built from it. `python scripts/make_reference.py $AW_EVAL/reference` writes the optimizer's
    read-only docs (API index from the public API docs, how the agent runs).
-3. ALTK-Evolve needs Python ≥ 3.12: install `altk-evolve==1.3.0` in the repo's `.venv` (or set
-   `AW_ALTK_PYTHON`).
-4. Put the agent-model key in a KEY=VALUE file (`AW_SECRETS_FILE`, default `<repo>/.env`). It is never
+3. Put the agent-model key in a KEY=VALUE file (`AW_SECRETS_FILE`, default `<repo>/.env`). It is never
    exported: each episode worker reads only the key named by `AW_KEY_ENV` and the endpoint URL
    (`RITS_URL`/`MODEL_SERVER_URL`) from it and ignores every other line. Model endpoint: `AW_MODEL_NAME`, `AW_MODEL_URL`,
    `AW_KEY_HEADER`, `AW_KEY_ENV` (see `adapters/aw_agent.py`).
-5. `bash scripts/setup_project.sh $AW_EVAL/runs/cape_hc_s0` scaffolds the cap-evolve project
+4. `bash scripts/setup_project.sh $AW_EVAL/runs/cape_hc_s0` scaffolds the cap-evolve project
    (intake), writes `split_ids.json` (train = val = train ∪ dev, test = []), renders the spec and
    settings, and runs `cap-evolve check`.
 
 ## Harness
 
 `CapReActAgent` overrides only `initialize()` of AppWorld's agent: the prompt comes from the
-candidate, an optional memory block goes right before the final `My name is: … Task:` block, and a
-setup snippet defines `tools/helpers.py` in the REPL and adds `tools/api_notes.json` notes to the
-API-doc lookups. With no memory, helpers or notes the first request is **byte-identical to stock**
-(`scripts/check_injection.py`, which also checks that AppWorld's agent accepts every constructor argument we pass; re-run it after changing the AppWorld pin). The same harness, model client and limits serve all three arms.
+candidate, a one-line notice naming the helpers goes right before the final `My name is: … Task:`
+block, and a setup snippet defines `tools/helpers.py` in the REPL and adds `tools/api_notes.json`
+notes to the API-doc lookups. With no helpers or notes the first request is **byte-identical to stock**
+(`scripts/check_injection.py`, which also checks that AppWorld's agent accepts every constructor argument we pass; re-run it after changing the AppWorld pin). The same harness, model client and limits serve both arms.
 
-Applied to every arm, because AppWorld `42b5bcf` does not:
+Applied to both arms, because AppWorld `42b5bcf` does not:
 - **REPL hardening.** `os`, `pathlib`, `io`, `shutil`, `glob` are removed from AppWorld's import
   allowlist: with them, agent code could list and read files (`pathlib.Path.read_text` passes the
   read-only `open`) and read `os.environ`. The model key is dropped from the environment after the
@@ -115,16 +111,6 @@ and `root_opt` is unreadable, the lint prints `"ok": false` with "lint data unav
 1,050, optimizer `claude-code`. Because train = val, its search score is a **fit metric**; only the
 final window is held out.
 
-## ALTK-Evolve arm
-
-`altk/run_altk.sh`: reuse the seed's 90 train rollouts from the cap-evolve baseline, convert them to
-OpenAI messages (instruction first, no outcome label), `save_trajectory` each (library defaults),
-consolidate losslessly, render two doses (full playbook; core + top-10 retrieval per task), pick the
-dose on dev. A dose that fails the 30,000-character memory lint is infeasible. Two gateway shims live
-in `altk/altk_common.py`, in our process only: base URL/token/headers on every `litellm.completion`
-(with per-call token logging), and "no response-schema support" for the optimizer model, because the
-gateway rejects the forced `tool_choice` litellm uses to emulate it.
-
 ## Isolation
 
 The claude-code optimizer has `Bash`, so by default it can read the whole host, including the gold
@@ -134,7 +120,7 @@ Every optimizer call therefore goes through `sandbox/claude` (put first on the r
 
 - **`sandbox` (default): Claude Code's built-in sandbox** (bubblewrap), with
   `optimizer-sandbox.json`: `failIfUnavailable`, no unsandboxed retries, no network, and reads
-  denied on both data roots, the final-window and ALTK outputs, AppWorld's `generate/` (the task
+  denied on both data roots, the final-window outputs, AppWorld's `generate/` (the task
   generators, i.e. the solution and evaluation logic of every train/dev scenario; in one run an
   optimizer subagent read it), the secrets file and other sessions' transcripts.
 - **`namespace`: the fallback** for hosts where bubblewrap cannot start (containers whose
@@ -159,8 +145,8 @@ Either way the shim fails closed (no settings file, no call), and:
 
 ## Final window
 
-`scripts/final_window.py freeze` copies the three champions and hashes them; `run` scores 168 tasks ×
-3 arms × 2 trials in one shuffled order (48 workers, seeds 5000 + trial, up to 3 infra retries, resumable,
+`scripts/final_window.py freeze` copies the seed and the cape-hc champion and hashes them; `run`
+scores 168 tasks × 2 arms × 2 trials in one shuffled order (48 workers, seeds 5000 + trial, up to 3 infra retries, resumable,
 `touch runs/final/PAUSE` to pause). Only rewards and counters are written; no test trajectory is kept.
 `scripts/analyze.py` gives TGC, SGC, by difficulty, and paired differences with a scenario-clustered
 bootstrap CI.
@@ -170,7 +156,6 @@ bootstrap CI.
 ```
 bash scripts/check_optimizer_isolation.sh sandbox            # must PASS (or namespace, with AW_ISOLATION=namespace)
 bash scripts/launch_cape_hc.sh $AW_EVAL/runs/cape_hc_s0       # cape-hc search (~5 h)
-bash altk/run_altk.sh                                         # starts after the cape-hc baseline
 python scripts/scan_isolation.py
 python scripts/final_window.py freeze && python scripts/final_window.py run
 python scripts/analyze.py

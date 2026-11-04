@@ -1,5 +1,5 @@
 """Acceptance A4 (no model call): constructor arguments accepted upstream; seed prompt == stock prompt;
-memory block placement; helpers + notes setup. Re-run it after changing the AppWorld pin.
+helpers + notes setup. Re-run it after changing the AppWorld pin.
 
 Usage: APPWORLD_ROOT=/tmp/aw_eval/root_opt python check_injection.py SEED_CAPABILITY_DIR
 """
@@ -65,14 +65,6 @@ def main(argv: list[str]) -> int:
     print(f"A4.1 seed first request byte-identical to stock: {same} ({len(m_seed)} messages)")
     ok &= same and cap.setup_output is None
 
-    cap_m = Cap(candidate=aw_agent.read_candidate(seed), memory_block="- ALWAYS-TEST-GUIDELINE",
-                **agent_kwargs(str(seed / "policy/instructions.txt")))
-    m_mem, _ = first_messages(cap_m, tid, "probes/a4_mem")
-    last = m_mem[-1]["content"]
-    placed = (len(m_mem) == len(m_stock) and m_mem[:-1] == m_stock[:-1]
-              and last.index(aw_agent.MEMORY_HEADING) < last.index("My name is:") < last.index("Task:"))
-    print(f"A4.2 memory block in final USER message, before 'My name is:': {placed}")
-    ok &= placed
 
     tmp = Path(tempfile.mkdtemp())
     shutil.copytree(seed, tmp / "cand")

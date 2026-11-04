@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-# The modules under test live in ../adapters (and ../scripts, ../altk). `cap_evolve` normally comes
+# The modules under test live in ../adapters (and ../scripts). `cap_evolve` normally comes
 # from the installed package; core/ is a fallback so that
 #     python3 examples/appworld/tests/test_adapter.py -v
 # works from a clean shell, as in examples/parsec/tests. Appended, not prepended: a second copy of

@@ -1,17 +1,16 @@
 """One AppWorld episode with a cap-evolve candidate live: the injection layer (README: Harness).
 
 ``CapReActAgent`` subclasses AppWorld's official simplified ReAct code agent and overrides only
-``initialize``: the prompt template comes from the candidate's ``policy/instructions.txt``, an
-optional memory block is inserted before the final ``My name is: … Task: …`` block, and a setup
-snippet defines ``tools/helpers.py`` in the REPL and appends ``tools/api_notes.json`` notes to the
-API-doc lookups. With an empty memory, helpers and notes the prompt is byte-identical to stock.
+``initialize``: the prompt template comes from the candidate's ``policy/instructions.txt``, a
+one-line notice naming the helpers is inserted before the final ``My name is: … Task: …`` block,
+and a setup snippet defines ``tools/helpers.py`` in the REPL and appends ``tools/api_notes.json``
+notes to the API-doc lookups. With no helpers and no notes the prompt is byte-identical to stock.
 
 Run as a script, one episode per process (AppWorld allows one live world per process)::
 
     python aw_agent.py SPEC_JSON OUT_JSON
 
-SPEC_JSON holds task_id, experiment_name, candidate_dir, appworld_root, random_seed, and
-optionally memory_block. OUT_JSON gets the gold-free episode record (``episode_record``).
+SPEC_JSON holds task_id, experiment_name, candidate_dir, appworld_root and random_seed. OUT_JSON gets the gold-free episode record (``episode_record``).
 Ground-truth evaluation details are reduced to requirement texts: AppWorld's failure ``trace``
 holds gold values and is dropped here, before anything is written.
 """
@@ -29,7 +28,6 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 
-MEMORY_HEADING = "Guidelines learned from past task attempts:"
 TRUNC_OUTPUT = 2000
 TRUNC_REASONING = 1500
 # Paths that only matter to someone looking for gold data. Agent code that names one is flagged.
@@ -37,7 +35,7 @@ FS_PROBE_RE = re.compile(r"ground_truth|answer\.json|/data/tasks|APPWORLD_ROOT|r
 # Spellings that only matter to code trying to get around the import guard (counted, never blocking).
 GUARD_PROBE_RE = re.compile(r"\.\s*(?:os|sys|subprocess|builtins)\b|__(?:class|subclasses|globals|builtins|import|dict|code|base|mro)__|\bopen\s*\(")
 CONTEXT_RE = re.compile(r"context length|context_length|ContextWindowExceeded|maximum context|max_model_len|too many tokens|input tokens", re.I)
-# Removed from AppWorld's import allowlist for every arm (README: Harness): with them the
+# Removed from AppWorld's import allowlist (README: Harness): with them the
 # agent's REPL code can list and read files (pathlib.Path.read_text goes through the read-only open).
 EXTRA_BLOCKED_MODULES = {"os", "pathlib", "io", "shutil", "glob"}
 
@@ -257,32 +255,24 @@ def build_agent_class():
     from appworld_agents.code.simplified.react_code_agent import SimplifiedReActCodeAgent
 
     class CapReActAgent(SimplifiedReActCodeAgent):  # type: ignore[misc, valid-type]
-        def __init__(self, candidate: dict[str, Any], memory_block: str = "", **kwargs: Any):
+        def __init__(self, candidate: dict[str, Any], **kwargs: Any):
             self.candidate = candidate
-            self.memory_block = memory_block or ""
             self.setup_output: str | None = None
             super().__init__(**kwargs)
             self.prompt_template = candidate["template"]
 
         def initialize(self, world) -> None:  # noqa: ANN001
             super().initialize(world)
-            extra = []
-            block = self.memory_block.strip()
-            if block:
-                # ALTK's format_selection already starts with this heading; add it only when missing.
-                extra.append(block if block.startswith(MEMORY_HEADING.rstrip(":")) else MEMORY_HEADING + "\n" + block)
             notice = helper_notice(self.candidate["helpers"])
             if notice:
-                extra.append(notice)
-            if extra:
-                # Re-render with the block in the final USER message, then re-split exactly as stock does.
+                # Re-render with the notice in the final USER message, then re-split exactly as stock does.
                 from jinja2 import Template
                 app_descriptions = json.dumps(
                     [{"name": k, "description": v} for (k, v) in world.task.app_descriptions.items()], indent=1)
                 rendered = Template(self.prompt_template).render({
                     "instruction": world.task.instruction, "main_user": world.task.supervisor,
                     "app_descriptions": app_descriptions})
-                rendered = insert_before_final_block(rendered, "\n\n".join(extra))
+                rendered = insert_before_final_block(rendered, notice)
                 rendered = self.truncate_input(rendered) + "\n\n"
                 self.messages = self.text_to_messages(rendered)
                 self.num_instruction_messages = len(self.messages)
@@ -462,7 +452,7 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
     if unknown:
         raise AgentConstructionError(f"upstream agent does not accept {unknown} (AppWorld pin changed?)")
     try:
-        agent = CapReActAgent(candidate=candidate, memory_block=spec.get("memory_block", ""), **kwargs)
+        agent = CapReActAgent(candidate=candidate, **kwargs)
     except TypeError as e:
         raise AgentConstructionError(f"agent construction failed: {type(e).__name__}") from e
     # The header value was read at init; drop the secret so agent code (os.environ) cannot see it.

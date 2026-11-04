@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-# The modules under test live in ../adapters (and ../scripts, ../altk). `cap_evolve` normally comes
+# The modules under test live in ../adapters (and ../scripts). `cap_evolve` normally comes
 # from the installed package; core/ is a fallback so that
 #     python3 examples/appworld/tests/test_aw_agent.py -v
 # works from a clean shell, as in examples/parsec/tests. Appended, not prepended: a second copy of
@@ -276,7 +276,7 @@ class SimplifiedReActCodeAgent(Agent):  # ...react_code_agent @ 42b5bcf
 
 
 class CapLike(SimplifiedReActCodeAgent):  # same shape as aw_agent.build_agent_class()
-    def __init__(self, candidate, memory_block: str = "", **kwargs: Any):
+    def __init__(self, candidate, **kwargs: Any):
         super().__init__(**kwargs)
 
 
@@ -287,7 +287,7 @@ class DriftedAgent(Agent):  # upstream renamed max_output_length
 
 
 class CapOnDrifted(DriftedAgent):
-    def __init__(self, candidate, memory_block: str = "", **kwargs: Any):
+    def __init__(self, candidate, **kwargs: Any):
         super().__init__(**kwargs)
 
 

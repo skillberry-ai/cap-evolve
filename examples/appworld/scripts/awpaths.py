@@ -22,8 +22,6 @@ OPT_TRANSCRIPTS = RUNS / "optimizer_transcripts"
 FINAL = RUNS / os.environ.get("AW_FINAL", "final")
 EXAMPLE = Path(__file__).resolve().parents[1]
 REPO = EXAMPLE.parents[1]
-# ALTK-Evolve needs Python >= 3.12, so it lives in its own venv (README: Setup).
-ALTK_PYTHON = os.environ.get("AW_ALTK_PYTHON", str(REPO / ".venv" / "bin" / "python"))
 # KEY=VALUE file with the agent-model key (never exported; each episode worker reads it).
 SECRETS_FILE = os.environ.get("AW_SECRETS_FILE", str(REPO / ".env"))
 

@@ -3,7 +3,7 @@
     python scan_isolation.py      # writes runs/isolation_scan.json
 
 Greps the cape-hc run dir (optimizer workdirs, candidates, journals, rollouts), the claude-code
-session transcripts of the optimizer (~/.claude/projects/*cape-hc*), and the ALTK store for:
+session transcripts of the optimizer (~/.claude/projects/*cape-hc*) for:
 test ids (test_normal + test_challenge), their canary strings, and the strings ``test_normal``,
 ``root_full``, ``answer.json``, ``ground_truth``. Counts are reported per pattern and location.
 """
@@ -34,7 +34,6 @@ def main() -> int:
         "cape-hc run dir": CAPE_RUN,
         # optimizer transcripts written inside the namespace wrapper (README: Isolation)
         "optimizer transcripts (wrapper)": OPT_TRANSCRIPTS / CAPE_NAME,
-        "altk store + outputs": RUNS / "altk",
     }
     claude_proj = Path.home() / ".claude/projects"
     tag = CAPE_NAME.replace("_", "-")

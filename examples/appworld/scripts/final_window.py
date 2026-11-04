@@ -1,4 +1,4 @@
-"""The common final window (README: Final window): 168 test_normal tasks x 3 arms x 2 trials.
+"""The final window (README: Final window): 168 test_normal tasks x 2 arms (seed, cape-hc) x 2 trials.
 
     python final_window.py freeze     # copy the three frozen artifacts into runs/final/artifacts/, hash them
     python final_window.py run        # run the window (resumable; touch runs/final/PAUSE to pause)
@@ -15,7 +15,6 @@ import json
 import os
 import random
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
@@ -26,16 +25,14 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "adapters"))
-from awpaths import ALTK_PYTHON, CAPE_RUN, EVAL, FINAL, PROGRESS, ROOT_FULL, RUNS, SECRETS_FILE, read_split, sha256_tree, update_manifest  # noqa: E402
+from awpaths import CAPE_RUN, EVAL, FINAL, PROGRESS, ROOT_FULL, SECRETS_FILE, read_split, sha256_tree, update_manifest  # noqa: E402
 
 ART = FINAL / "artifacts"
 RESULTS = FINAL / "results.jsonl"
 ORDER_SEED = 20261013
 TRIALS = 2
-ARMS = ("seed", "cape-hc", "altk")
+ARMS = ("seed", "cape-hc")
 SEED_CAP = HERE.parent / "seed_capability"
-ALTK = RUNS / "altk"
-VALTK = ALTK_PYTHON
 
 
 def log(detail: str) -> None:
@@ -48,38 +45,18 @@ def freeze() -> int:
         print(f"{ART} exists; artifacts are frozen once", file=sys.stderr)
         return 1
     ART.mkdir(parents=True)
-    state = json.loads((CAPE_RUN / "state.json").read_text())
-    best = state["best_id"]
-    reuse = os.environ.get("AW_REUSE_ARTIFACTS")   # e.g. runs/final/artifacts: keep seed + altk byte-identical
+    best = json.loads((CAPE_RUN / "state.json").read_text())["best_id"]
+    reuse = os.environ.get("AW_REUSE_ARTIFACTS")   # e.g. runs/final/artifacts: keep the seed byte-identical
     if reuse:
-        for arm in ("seed", "altk"):
-            shutil.copytree(Path(reuse) / arm, ART / arm)
-        shutil.copytree(CAPE_RUN / "candidates" / best, ART / "cape-hc",
-                        ignore=shutil.ignore_patterns(".git", "PROCESS.md", "JOURNAL.md", "DIAGNOSIS.json", "INSTRUCTIONS.md"))
-        hashes = {arm: sha256_tree(ART / arm) for arm in ARMS}
-        update_manifest(**{f"{FINAL.name}_artifacts": {"cape-hc_best_id": best, "reused_from": reuse,
-                                                       "inert_cape_hc": best == "seed", "sha256_tree": hashes}})
-        log(f"frozen: cape-hc={best}; seed and altk reused from {reuse}; hashes {hashes}")
-        print(json.dumps(hashes, indent=1))
-        return 0
-    shutil.copytree(SEED_CAP, ART / "seed")
+        shutil.copytree(Path(reuse) / "seed", ART / "seed")
+    else:
+        shutil.copytree(SEED_CAP, ART / "seed")
     shutil.copytree(CAPE_RUN / "candidates" / best, ART / "cape-hc",
                     ignore=shutil.ignore_patterns(".git", "PROCESS.md", "JOURNAL.md", "DIAGNOSIS.json", "INSTRUCTIONS.md"))
-    sel = json.loads((ALTK / "dose_selection.json").read_text())
-    if sel["chosen"] == "altk-full":
-        shutil.copytree(ALTK / "cand_full", ART / "altk")
-    else:
-        # per-task blocks for test_normal, retrieved from the instruction text only
-        r = subprocess.run([VALTK, str(HERE.parent / "altk/altk_render.py"), "ret", str(ART / "altk"),
-                            str(ROOT_FULL / "data/datasets/test_normal.txt"), "--root", str(ROOT_FULL)],
-                           capture_output=True, text=True, env=dict(os.environ, LITELLM_LOG="ERROR"))
-        if r.returncode != 0:
-            print(r.stdout[-2000:], r.stderr[-2000:], file=sys.stderr)
-            return 1
     hashes = {arm: sha256_tree(ART / arm) for arm in ARMS}
-    update_manifest(final_artifacts={"cape-hc_best_id": best, "altk_dose": sel["chosen"],
-                                     "inert_cape_hc": best == "seed", "sha256_tree": hashes})
-    log(f"frozen: cape-hc={best}, altk={sel['chosen']}, hashes {hashes}")
+    update_manifest(**{f"{FINAL.name}_artifacts": {"cape-hc_best_id": best, "reused_from": reuse,
+                                                   "inert_cape_hc": best == "seed", "sha256_tree": hashes}})
+    log(f"frozen: cape-hc={best}" + (f"; seed reused from {reuse}" if reuse else "") + f"; hashes {hashes}")
     print(json.dumps(hashes, indent=1))
     return 0
 

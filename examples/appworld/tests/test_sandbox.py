@@ -15,7 +15,7 @@ import time
 import unittest
 from pathlib import Path
 
-# The modules under test live in ../adapters (and ../scripts, ../altk). `cap_evolve` normally comes
+# The modules under test live in ../adapters (and ../scripts). `cap_evolve` normally comes
 # from the installed package; core/ is a fallback so that
 #     python3 examples/appworld/tests/test_sandbox.py -v
 # works from a clean shell, as in examples/parsec/tests. Appended, not prepended: a second copy of
@@ -151,7 +151,7 @@ class TestSettingsTemplates(unittest.TestCase):
         perm = json.loads((EX / "sandbox" / "optimizer-permissions.template.json").read_text())
         self.assertEqual(sb["permissions"]["deny"], perm["permissions"]["deny"])
         deny_read = " ".join(sb["sandbox"]["filesystem"]["denyRead"])
-        for p in ("root_opt", "root_full", "runs/final", "runs/altk", "appworld/generate", "@AW_SECRETS_FILE@"):
+        for p in ("root_opt", "root_full", "runs/final", "appworld/generate", "@AW_SECRETS_FILE@"):
             self.assertIn(p, deny_read)
         self.assertFalse(sb["sandbox"]["allowUnsandboxedCommands"])
         self.assertTrue(sb["sandbox"]["failIfUnavailable"])

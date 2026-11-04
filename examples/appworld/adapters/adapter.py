@@ -143,15 +143,6 @@ class Adapter(CapabilityAdapter):
             raise PermissionError(f"{len(outside)} task id(s) outside train ∪ dev are sealed; "
                                   f"only the final window may run them (AW_ALLOW_SEALED={SEAL_VALUE})")
 
-    def _memory_block(self, cdir: Path, tid: str) -> str:
-        pb = cdir / "memory" / "playbook.md"
-        if pb.is_file() and pb.read_text(encoding="utf-8").strip():
-            return pb.read_text(encoding="utf-8")
-        rj = cdir / "memory" / "retrieval.json"
-        if rj.is_file():
-            return json.loads(rj.read_text(encoding="utf-8")).get(tid, "")
-        return ""
-
     def _episode(self, task: Task, cdir: Path, seed: int, root: Path, workdir: Path,
                  random_seed: int | None = None) -> Rollout:
         retries = int(os.environ.get("AW_INFRA_RETRIES", "1"))
@@ -164,7 +155,6 @@ class Adapter(CapabilityAdapter):
                 "candidate_dir": str(cdir),
                 "appworld_root": str(root),
                 "random_seed": int(random_seed) if random_seed is not None else 100 + int(seed),
-                "memory_block": self._memory_block(cdir, task.id),
                 "secrets_file": os.environ.get("AW_SECRETS_FILE", ""),
                 "log_lm_calls": os.environ.get("AW_LOG_LM_CALLS") == "1",
             }

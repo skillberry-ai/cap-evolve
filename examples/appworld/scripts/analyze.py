@@ -21,14 +21,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cap_evolve.stats import bootstrap_ci  # noqa: E402
-from awpaths import CAPE_RUN, FINAL, MANIFEST, ROOT_FULL, RUNS, read_split  # noqa: E402
+from awpaths import CAPE_RUN, FINAL, MANIFEST, ROOT_FULL, read_split  # noqa: E402
 
-ARMS = ("seed", "cape-hc", "altk")
+ARMS = ("seed", "cape-hc")
 TRIALS = 2
 DIFF = {1: "Easy", 2: "Medium", 3: "Hard"}
 B = 10000
-PAIRS = (("cape-hc", "seed"), ("altk", "seed"), ("cape-hc", "altk"))
-COLLEAGUES = {"no memory": (39.9, 21.4), "ALTK-Evolve": (56.0, 37.5)}
+PAIRS = (("cape-hc", "seed"),)
 
 
 def load_cells(ids: list[str]) -> tuple[dict, dict]:
@@ -110,12 +109,6 @@ def optimizer_usage() -> dict:
         out["cape-hc"] = {"usd": sp.get("optimizer_usd"), "tokens": sp.get("optimizer_tokens"),
                           "iterations": sp.get("iterations"), "metric_calls": sp.get("metric_calls"),
                           "best_val": sp.get("best_val")}
-    u = RUNS / "altk/optimizer_usage.jsonl"
-    if u.is_file():
-        rows = [json.loads(l) for l in u.read_text().splitlines()]
-        out["altk"] = {"calls": len(rows), "errors": sum(bool(r.get("error")) for r in rows),
-                       "prompt_tokens": sum(int(r.get("prompt_tokens") or 0) for r in rows),
-                       "completion_tokens": sum(int(r.get("completion_tokens") or 0) for r in rows)}
     return out
 
 
@@ -160,10 +153,6 @@ def main() -> int:
         res["pairs"][f"{a} - {b}"] = {"d_tgc": res["arms"][a]["tgc"] - res["arms"][b]["tgc"], "ci_tgc": ci_t,
                                       "d_sgc": res["arms"][a]["sgc"] - res["arms"][b]["sgc"], "ci_sgc": ci_s}
     res["optimizer_usage"] = optimizer_usage()
-    sel = RUNS / "altk/dose_selection.json"
-    res["altk_dose_selection"] = json.loads(sel.read_text()) if sel.is_file() else None
-    ms = RUNS / "altk/mining_summary.json"
-    res["altk_mining"] = json.loads(ms.read_text()) if ms.is_file() else None
     res["manifest"] = {k: v for k, v in json.loads(MANIFEST.read_text()).items() if not k.endswith("freeze")}
     (FINAL / "results.json").write_text(json.dumps(res, indent=1))
 
@@ -174,9 +163,6 @@ def main() -> int:
         dt = f"{pct(p['d_tgc'])} [{pct(p['ci_tgc'][0])}, {pct(p['ci_tgc'][1])}]" if p else "—"
         ds = f"{pct(p['d_sgc'])} [{pct(p['ci_sgc'][0])}, {pct(p['ci_sgc'][1])}]" if p else "—"
         L.append(f"| {arm} | {pct(r['tgc'])} | {pct(r['sgc'])} | {dt} | {ds} | {r['missing']} |")
-    p = res["pairs"]["cape-hc - altk"]
-    L += ["", f"cape-hc − altk: Δ TGC {pct(p['d_tgc'])} [{pct(p['ci_tgc'][0])}, {pct(p['ci_tgc'][1])}], "
-              f"Δ SGC {pct(p['d_sgc'])} [{pct(p['ci_sgc'][0])}, {pct(p['ci_sgc'][1])}]."]
     D = ["| arm | " + " | ".join(f"{n} (n={res['arms']['seed']['by_difficulty'][n]['n']})" for n in DIFF.values()) + " |",
          "|---|---|---|---|"]
     for arm in ARMS:

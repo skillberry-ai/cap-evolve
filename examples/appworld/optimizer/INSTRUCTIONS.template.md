@@ -89,7 +89,6 @@ The candidate is three files; nothing else is read by the agent under test:
   characters) is appended as a `note` field to what `apis.api_docs.show_api_doc` /
   `show_api_descriptions` return. Use it for API facts the docs leave implicit (pagination,
   formats, which API returns what). The original doc text cannot be changed.
-- `memory/` is NOT part of this run: do not create or edit files there.
 Prompt edits, helper code and API notes must be GENERAL: no 8-gram copied from any task
 instruction, no supervisor name/email/phone, no task-specific value (the lint rejects these).
 AppWorld permits generic hints, not task-specific ones.

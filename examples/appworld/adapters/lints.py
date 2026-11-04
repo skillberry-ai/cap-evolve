@@ -26,7 +26,6 @@ PROMPT_MAX_TOKENS = 8000
 NOTE_MAX_CHARS = 400
 NOTES_MAX_TOKENS = 20000
 HELPERS_MAX_LINES = 400
-MEMORY_MAX_CHARS = 30000
 NGRAM = 8
 TEMPLATE_VARS = {"instruction", "main_user", "app_descriptions"}
 REQUIRED_VARS = {"instruction", "main_user"}
@@ -218,12 +217,6 @@ def lint_notes(raw: str) -> list[str]:
     return out + _leaks(" \n ".join(notes.values()), what)
 
 
-def lint_memory(text: str, what: str = "memory") -> list[str]:
-    if len(text) > MEMORY_MAX_CHARS:
-        return [f"{what}: {len(text)} chars > {MEMORY_MAX_CHARS}"]
-    return []
-
-
 def lint_candidate(cdir: Path) -> list[str]:
     cdir = Path(cdir)
     out = []
@@ -235,13 +228,6 @@ def lint_candidate(cdir: Path) -> list[str]:
     n = cdir / "tools" / "api_notes.json"
     if n.is_file():
         out += lint_notes(n.read_text(encoding="utf-8"))
-    pb = cdir / "memory" / "playbook.md"
-    if pb.is_file():
-        out += lint_memory(pb.read_text(encoding="utf-8"), "memory/playbook.md")
-    rj = cdir / "memory" / "retrieval.json"
-    if rj.is_file():
-        for tid, block in json.loads(rj.read_text(encoding="utf-8")).items():
-            out += lint_memory(block, f"memory/retrieval.json[{tid}]")
     return out
 
 
