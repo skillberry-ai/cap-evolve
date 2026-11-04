@@ -39,7 +39,7 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
    `appworld install --repo` and `appworld download data --root $AW_EVAL/root_full`. (The PyPI
    release `0.1.3.post1` has no simplified ReAct agent, and the head agents need pydantic 2.)
 2. `python scripts/make_roots.py` builds `$AW_EVAL/root_opt` (train + dev tasks only; it greps that no
-   test id is present). `python scripts/make_reference.py $AW_EVAL/reference` writes the optimizer's
+   test id is present) and the lint cache `$AW_EVAL/lint_cache.json` built from it. `python scripts/make_reference.py $AW_EVAL/reference` writes the optimizer's
    read-only docs (API index from the public API docs, how the agent runs).
 3. ALTK-Evolve needs Python ≥ 3.12: install `altk-evolve==1.3.0` in the repo's `.venv` (or set
    `AW_ALTK_PYTHON`).
@@ -76,6 +76,10 @@ feedback): the prompt must keep its three Jinja variables and `USER:`/`ASSISTANT
 under 8,000 tokens; helpers may not hardcode app/API names or `apis.<app>.` chains, import outside a
 small allowlist, or make top-level calls; nothing may contain an 8-gram of a train/dev instruction or a
 supervisor's contact. This is AppWorld's rule against task-specific hints, made executable.
+The lint data comes from the cache that `make_roots.py` writes (built from `root_opt`, never from the
+episode root). The optimizer cannot see `root_opt`, so it lints from that cache. If the cache is missing
+and `root_opt` is unreadable, the lint prints `"ok": false` with "lint data unavailable" and exits 2.
+`setup_project.sh`, `launch_cape_hc.sh` and `check_optimizer_isolation.sh` refuse to start without it.
 
 ## cap-evolve arm
 

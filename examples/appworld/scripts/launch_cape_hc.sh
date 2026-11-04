@@ -9,10 +9,13 @@ AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 RUN_DIR="${1:?run dir}"; shift
 P="$RUN_DIR/.capevolve/project"
 TS="${AW_RUN_TS:-$(basename "$RUN_DIR")}"
+# the optimizer lints from this cache: root_opt is hidden from it (README: Isolation)
+[ -f "$AW_EVAL/lint_cache.json" ] || { echo "missing $AW_EVAL/lint_cache.json: run scripts/make_roots.py" >&2; exit 1; }
 mkdir -p "$AW_EVAL/progress"
 cd "$P"
 export PYTHONPATH="$P/adapters" CAPEVOLVE_SKILLS_DIR="$REPO/skills"
 export AW_SECRETS_FILE="${AW_SECRETS_FILE:-$REPO/.env}" AW_EXPERIMENT="$TS" AW_WORKERS="${AW_WORKERS:-24}"
+export AW_EVAL AW_LINT_CACHE="$AW_EVAL/lint_cache.json"
 export AW_PROGRESS_LOG="$AW_EVAL/progress/$TS.log" AW_TRIAL=cape-hc AW_PHASE=eval
 unset "${AW_KEY_ENV:-RITS_API_KEY}"
 # every optimizer call runs through the namespace wrapper, with the deny rules added

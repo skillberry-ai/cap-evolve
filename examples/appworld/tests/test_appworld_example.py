@@ -14,41 +14,19 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-EX = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(EX / "adapters"))
-sys.path.insert(0, str(EX / "altk"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from aw_testlib import EX, TRAIN_INSTRUCTION, make_root  # noqa: E402
 
 import aw_agent  # noqa: E402
 import lints  # noqa: E402
-
-TRAIN_INSTRUCTION = "Move all songs from my workout playlist to a new playlist called cardio mix please"
-
-
-def make_root(tmp: Path) -> Path:
-    """A tiny fake APPWORLD_ROOT: one train and one dev task, two apps of API docs."""
-    data = tmp / "data"
-    (data / "datasets").mkdir(parents=True)
-    (data / "datasets" / "train.txt").write_text("aaa1111_1\n")
-    (data / "datasets" / "dev.txt").write_text("bbb2222_1\n")
-    for tid, instr, email in (("aaa1111_1", TRAIN_INSTRUCTION, "jane.roe@example.com"),
-                              ("bbb2222_1", "How many alarms do I have set on my phone today", "joe@example.com")):
-        (data / "tasks" / tid).mkdir(parents=True)
-        (data / "tasks" / tid / "specs.json").write_text(json.dumps({
-            "instruction": instr,
-            "supervisor": {"first_name": "Jane", "last_name": "Roe", "email": email, "phone_number": "5550001111"}}))
-    (data / "api_docs" / "standard").mkdir(parents=True)
-    (data / "api_docs" / "standard" / "spotify.json").write_text(json.dumps({"login": {}, "show_playlist": {}}))
-    (data / "api_docs" / "standard" / "phone.json").write_text(json.dumps({"show_alarms": {}}))
-    return tmp
 
 
 class LintTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         root = make_root(self.tmp)
-        self.env = patch.dict(os.environ, {"APPWORLD_ROOT": str(root), "AW_LINT_CACHE": str(self.tmp / "none.json")})
+        self.env = patch.dict(os.environ, {"AW_LINT_ROOT": str(root), "AW_LINT_CACHE": str(self.tmp / "none.json")})
         self.env.start()
-        lints.CACHE = Path(os.environ["AW_LINT_CACHE"])
         lints.lint_data.cache_clear()
 
     def tearDown(self):
@@ -92,7 +70,7 @@ class LintTests(unittest.TestCase):
         self.assertTrue(any("chars >" in x for x in v))
 
     def test_cache_round_trip(self):
-        lints.CACHE = self.tmp / "cache.json"
+        os.environ["AW_LINT_CACHE"] = str(self.tmp / "cache.json")
         lints.write_cache()
         lints.lint_data.cache_clear()
         self.assertIn(("move", "all", "songs", "from", "my", "workout", "playlist", "to"), lints.lint_data()["grams"])

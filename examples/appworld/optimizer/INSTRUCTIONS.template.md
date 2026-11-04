@@ -105,7 +105,7 @@ Do NOT try to find gold answers, solutions or test data anywhere on disk, and do
 AppWorld episodes yourself (you have no model access for the agent; the harness re-scores you).
 
 LINT BEFORE YOU STOP — a failing candidate is rejected without being run:
-`APPWORLD_ROOT={AW_ROOT_OPT} {AW_PY} {AW_LINTS} .` must print `"ok": true`.
+`AW_LINT_CACHE={AW_LINT_CACHE} {AW_PY} {AW_LINTS} .` must print `"ok": true`.
 You may test helper code offline with plain Python on fake `apis` objects.
 
 ## Read these first (everything is in this working directory)

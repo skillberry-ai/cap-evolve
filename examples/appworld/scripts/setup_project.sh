@@ -9,6 +9,8 @@ PY="$AW_EVAL/venv-aw/bin/python"
 RUN_DIR="${1:?run dir}"
 OPT_MODEL="${OPT_MODEL:-aws/claude-sonnet-5-5}"
 PROJECT="$RUN_DIR/.capevolve/project"
+LINT_CACHE="$AW_EVAL/lint_cache.json"
+[ -f "$LINT_CACHE" ] || { echo "missing $LINT_CACHE: run scripts/make_roots.py first" >&2; exit 1; }
 
 "$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$RUN_DIR/.capevolve" --workdir "$EX" --force >/dev/null
 mkdir -p "$PROJECT/adapters" "$PROJECT/optimizer" "$PROJECT/reference"
@@ -17,7 +19,7 @@ rm -rf "$PROJECT/seed_capability"; cp -R "$EX/seed_capability" "$PROJECT/seed_ca
 cp "$AW_EVAL/reference/api_index.md" "$AW_EVAL/reference/react_agent_notes.md" "$PROJECT/reference/"
 "$PY" "$EX/scripts/make_splits.py" "$PROJECT/split_ids.json"
 INSTR="$PROJECT/optimizer/INSTRUCTIONS.md"
-sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_ROOT_OPT}|$AW_EVAL/root_opt|g" \
+sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_LINT_CACHE}|$LINT_CACHE|g" \
     -e "s|{AW_PY}|$PY|g" -e "s|{AW_LINTS}|$EX/adapters/lints.py|g" \
     "$EX/optimizer/INSTRUCTIONS.template.md" > "$INSTR"
 sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/capevolve.yaml" > "$PROJECT/capevolve.yaml"

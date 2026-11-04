@@ -1,9 +1,15 @@
 """Candidate lints (README: Lints). A violating candidate is rejected before any rollout.
 
-    python lints.py CANDIDATE_DIR      # prints {"ok": bool, "violations": [...]}, exit 1 on violation
+    python lints.py CANDIDATE_DIR      # prints {"ok": bool, "violations": [...]}; exit 1 on violation,
+                                       # exit 2 when the lint data is unavailable
+    python lints.py --write-cache      # build the cache from root_opt (scripts/make_roots.py does this)
 
-The lint data (train ∪ dev instructions and supervisor contacts, app and API names) is built
-from ``APPWORLD_ROOT`` (root_opt at search time) on first use and cached next to the run files.
+The lint data (train ∪ dev instructions and supervisor contacts, app and API names) comes from the
+cache ``AW_LINT_CACHE`` (default ``$AW_EVAL/lint_cache.json``). Without a cache it is built from
+``AW_LINT_ROOT`` (default ``$AW_EVAL/root_opt``). It never follows the episode root
+(``AW_APPWORLD_ROOT`` / ``APPWORLD_ROOT``): in the final window that is root_full, and lint data built
+from it would hold test instructions. The optimizer cannot see root_opt (README: Isolation), so it
+lints from the cache only.
 """
 
 from __future__ import annotations
@@ -28,8 +34,21 @@ HELPER_IMPORTS = {"re", "json", "math", "datetime", "itertools", "collections", 
 BANNED_CALLS = {"open", "exec", "eval", "compile", "__import__", "input", "breakpoint", "globals", "locals", "vars"}
 
 
+class LintDataUnavailable(RuntimeError):
+    """Neither the cache nor root_opt can be read: the lint cannot judge a candidate."""
+
+
+def _eval_dir() -> Path:
+    return Path(os.environ.get("AW_EVAL", "/tmp/aw_eval"))
+
+
 def _root() -> Path:
-    return Path(os.environ.get("APPWORLD_ROOT", "/tmp/aw_eval/root_opt"))
+    """Where lint data is built from: root_opt, never the episode root (module docstring)."""
+    return Path(os.environ.get("AW_LINT_ROOT") or _eval_dir() / "root_opt")
+
+
+def cache_path() -> Path:
+    return Path(os.environ.get("AW_LINT_CACHE") or _eval_dir() / "lint_cache.json")
 
 
 def _words(text: str) -> list[str]:
@@ -40,27 +59,32 @@ def _ngrams(words: list[str], n: int = NGRAM) -> set[tuple[str, ...]]:
     return {tuple(words[i:i + n]) for i in range(len(words) - n + 1)}
 
 
-CACHE = Path(os.environ.get("AW_LINT_CACHE", "/tmp/aw_eval/lint_cache.json"))
-
-
 @lru_cache(maxsize=1)
 def lint_data() -> dict:
-    # The cache lets the lint run while root_opt is locked (README: Isolation).
-    if CACHE.is_file():
-        d = json.loads(CACHE.read_text())
+    # The cache lets the lint run where root_opt is not visible (the optimizer's namespace).
+    cache = cache_path()
+    if cache.is_file():
+        d = json.loads(cache.read_text())
         return {"grams": {tuple(g.split(" ")) for g in d["grams"]}, "contacts": set(d["contacts"]),
                 "apps": set(d["apps"]), "api_names": set(d["api_names"])}
-    return _build_lint_data()
+    try:
+        return _build_lint_data(_root())
+    except OSError as e:
+        raise LintDataUnavailable(f"lint data unavailable: no lint cache at {cache} "
+                                  f"({type(e).__name__}); build it with scripts/make_roots.py") from None
 
 
-def write_cache() -> None:
-    d = _build_lint_data()
-    CACHE.write_text(json.dumps({"grams": sorted(" ".join(g) for g in d["grams"]), "contacts": sorted(d["contacts"]),
+def write_cache(root: Path | None = None, cache: Path | None = None) -> Path:
+    """Build the lint data from ``root`` (default: root_opt) and write it to ``cache``."""
+    d = _build_lint_data(Path(root) if root else _root())
+    cache = Path(cache) if cache else cache_path()
+    cache.write_text(json.dumps({"grams": sorted(" ".join(g) for g in d["grams"]), "contacts": sorted(d["contacts"]),
                                  "apps": sorted(d["apps"]), "api_names": sorted(d["api_names"])}))
+    return cache
 
 
-def _build_lint_data() -> dict:
-    root = _root() / "data"
+def _build_lint_data(appworld_root: Path) -> dict:
+    root = appworld_root / "data"
     ids: list[str] = []
     for s in ("train", "dev"):
         ids += (root / "datasets" / f"{s}.txt").read_text().split()
@@ -225,6 +249,10 @@ if __name__ == "__main__":
     if sys.argv[1:] == ["--write-cache"]:
         write_cache()
         raise SystemExit(0)
-    v = lint_candidate(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+    try:
+        v = lint_candidate(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+    except LintDataUnavailable as e:
+        print(json.dumps({"ok": False, "violations": [str(e)]}, indent=1))
+        raise SystemExit(2)
     print(json.dumps({"ok": not v, "violations": v}, indent=1))
     raise SystemExit(1 if v else 0)
