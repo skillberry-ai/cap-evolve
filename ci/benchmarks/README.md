@@ -2,7 +2,7 @@
 
 Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
 spreadsheetbench · rfe-creator**, plus the two tau2-airline **delivery arms**
-(**tau2_sierra · tau2_sierra_blackbox**),
+(**tau2_sierra · tau2_sierra_blackbox**) and an **appworld** integration tier,
 built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
 set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
 baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
@@ -119,6 +119,29 @@ also optimizes `policy.md`, and installs an unpinned checkout of the same public
 Cheapest way to exercise an arm: **Integration tests** → Run workflow → `bench` =
 `tau2_sierra_blackbox`. One task, 1 iteration, 1 trial.
 
+## AppWorld (integration tier only)
+
+`appworld` runs [`examples/appworld/`](../../examples/appworld/): AppWorld's official simplified
+ReAct code agent, with its prompt, REPL helpers and API notes optimized. It has only an
+`integration` tier, train task `82e2fac_1` (the example's own `scripts/itest.sh` task), and runs
+only from **Integration tests** → Run workflow → `bench` = `appworld`. It is not in
+`benchmarks.yml`'s `BENCHES`.
+
+- **Setup on the runner:** `ci_setup.sh appworld` does the example's README Setup steps 1–2 in
+  `$CAPEVOLVE_CI_CACHE/appworld` (= `AW_EVAL`). It clones AppWorld at `42b5bcf`, applies the
+  example's header patch, installs into a Python 3.11 venv of its own, downloads the data, builds
+  `root_opt` with the lint cache, and writes the reference docs. Each step is skipped when its
+  output is already cached. It then runs the A4 injection check, which makes no model call. The
+  runner needs `git-lfs` and `uv`.
+- **Agent:** `gpt-oss-120b-a100` on RITS (the workflow sets it for this leg), reached through
+  lite-rits with its bearer key. The key goes into a mode-600 file in the job's work dir that each
+  episode worker reads and drops, never into the environment of the optimizer.
+- **Optimizer isolation:** as in a local run, every optimizer call goes through the example's
+  `sandbox/claude` shim, with the built-in sandbox by default (`AW_ISOLATION=namespace` for the
+  fallback).
+- **Gate:** `assert_run.py`, then the example's `scripts/assert_itest.py`, which also fails on an
+  infra-errored or lint-rejected rollout and on a gold-bearing record.
+
 ## Trigger the suite
 
 Runs come in several **tiers** (a first-class dimension in the workflow, same workflow + history page):
@@ -226,7 +249,7 @@ against an agent-optimize one as though they were the same run type.
   (The tau2 pipeline regression is the **`integration-test`** label / **Integration tests**
   workflow — the same `run_suite.sh` path as above, scoped to a single-task `integration`
   tier: `ci/benchmarks/<bench>/integration/tasks.json`. The label always runs `tau2`; to run an
-  arm's integration tier, dispatch that workflow with `bench` set.)
+  arm's or `appworld`'s integration tier, dispatch that workflow with `bench` set.)
 
 ### Populate the `full` tier
 

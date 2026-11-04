@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|tau2_sierra|tau2_sierra_blackbox)}"
+BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|tau2_sierra|tau2_sierra_blackbox|appworld)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 
@@ -312,6 +312,54 @@ MAX_TOKENS=8000
 TEMPERATURE=0.0
 ENV
     export TAU2_MAX_CONCURRENCY=10
+    ;;
+  appworld)
+    # AppWorld (examples/appworld): AppWorld's official simplified ReAct code agent, prompt +
+    # REPL helpers + API notes optimized. Adapter, seed and optimizer instructions come from the
+    # example, like the tau2_sierra arms, so CI runs exactly what a reviewer reads there.
+    # ci_setup.sh built $AW_EVAL (AppWorld, root_opt, lint cache, reference) in the runner cache.
+    AW_EX="$REPO/examples/appworld"
+    : "${AW_EVAL:?AW_EVAL unset: run ci/benchmarks/lib/ci_setup.sh appworld first}"
+    [ -f "$AW_EVAL/lint_cache.json" ] || { echo "::error:: $AW_EVAL/lint_cache.json missing (ci_setup.sh appworld)"; exit 1; }
+    cp "$AW_EX/adapters/adapter.py" "$AW_EX/adapters/aw_agent.py" "$AW_EX/adapters/lints.py" "$PROJ/adapters/"
+    cp -R "$AW_EX/seed_capability" "$PROJ/seed_capability"
+    # The example's optimizer instructions, rendered the way setup_project.sh renders them,
+    # pinned ABSOLUTE (#252).
+    mkdir -p "$PROJ/optimizer"
+    sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_LINT_CACHE}|$AW_EVAL/lint_cache.json|g" \
+        -e "s|{AW_PY}|$PY|g" -e "s|{AW_LINTS}|$AW_EX/adapters/lints.py|g" \
+        "$AW_EX/optimizer/INSTRUCTIONS.template.md" > "$PROJ/optimizer/INSTRUCTIONS.md"
+    OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
+    CAPS="[system-prompt, tools]"
+    EXTRA_YAML="actions: [edit]
+capability_sources: [reference/api_index.md, reference/react_agent_notes.md]
+runner_repo_path: \"$AW_EVAL/reference\"
+orchestration_mode: deterministic
+memory_skill: md-files
+protected_paths: [default]"
+    # The agent reaches AGENT_MODEL through its provider's LiteLLM gateway (lite-rits for an
+    # ibm-rits model), OpenAI-compatible, keyed with the gateway's bearer key. The key is never
+    # exported: like a local run, each episode worker reads it from AW_SECRETS_FILE and drops it.
+    AW_SECRETS="$WORK/aw_secrets.env"
+    ( umask 077; printf 'AW_AGENT_KEY=%s\n' "$AGENT_API_KEY" > "$AW_SECRETS" )
+    export AW_SECRETS_FILE="$AW_SECRETS" AW_KEY_ENV=AW_AGENT_KEY AW_KEY_HEADER=bearer
+    export AW_MODEL_NAME="litellm_proxy/$AGENT_MODEL_WIRE" AW_MODEL_URL="$AGENT_API_BASE"
+    export AW_WORKERS="${AW_WORKERS:-8}" AW_SCRATCH="$WORK/aw_scratch"
+    # Isolation as in a local run (README: Isolation): every optimizer call goes through the
+    # example's claude shim, with the rendered settings. The runner's own sandbox is the default.
+    export AW_ISOLATION="${AW_ISOLATION:-sandbox}"
+    mkdir -p "$PROJ/sandbox"
+    for t in optimizer-sandbox optimizer-permissions; do
+      sed -e "s|@AW_EVAL@|$AW_EVAL|g" -e "s|@AW_SECRETS_FILE@|$AW_SECRETS|g" \
+          "$AW_EX/sandbox/$t.template.json" > "$PROJ/sandbox/$t.json"
+    done
+    case "$AW_ISOLATION" in
+      sandbox)   export AW_CLAUDE_SETTINGS="$PROJ/sandbox/optimizer-sandbox.json" ;;
+      namespace) export AW_CLAUDE_SETTINGS="$PROJ/sandbox/optimizer-permissions.json" ;;
+      *) echo "::error:: AW_ISOLATION must be sandbox or namespace" >&2; exit 2 ;;
+    esac
+    export PATH="$AW_EX/sandbox:$PATH"
+    : > "$WORK/.env"
     ;;
   tau2_sierra|tau2_sierra_blackbox)
     # The two DELIVERY ARMS of examples/tau2_sierra_airline, on vanilla sierra-research tau2

@@ -262,6 +262,34 @@ class TestWorkerEnv(unittest.TestCase):
             self.assertEqual(env[k], self.PARENT[k])
 
 
+
+class TestModelAuth(unittest.TestCase):
+    """AW_KEY_HEADER picks how the key reaches the model: a named header (RITS) or a bearer key
+    (a LiteLLM gateway, as the CI leg uses). Either way the config names an env var, never the key."""
+
+    def _config(self, **env):
+        import importlib
+        with patch.dict(os.environ, env):
+            return importlib.reload(aw_agent).MODEL_CONFIG
+
+    def tearDown(self):
+        import importlib
+        importlib.reload(aw_agent)
+
+    def test_default_is_the_rits_header(self):
+        os.environ.pop("AW_KEY_HEADER", None)
+        cfg = self._config(AW_KEY_ENV="RITS_API_KEY")
+        self.assertEqual(cfg["extra_headers_env"], {"RITS_API_KEY": "RITS_API_KEY"})
+        self.assertEqual(cfg["api_key"], "unused")
+        self.assertNotIn("api_key_env_name", cfg)
+
+    def test_bearer_reads_the_key_from_the_named_env_var(self):
+        cfg = self._config(AW_KEY_HEADER="bearer", AW_KEY_ENV="AW_AGENT_KEY")
+        self.assertEqual(cfg["api_key_env_name"], "AW_AGENT_KEY")
+        self.assertNotIn("extra_headers_env", cfg)
+        self.assertNotIn("api_key", cfg)
+        self.assertEqual(aw_agent.SECRET_KEYS, ("AW_AGENT_KEY",))
+
 class Agent:  # appworld_agents.code.simplified.agent.Agent @ 42b5bcf
     def __init__(self, model_config: dict[str, Any], appworld_config: dict[str, Any] | None = None,
                  logger_config: dict[str, Any] | None = None, usage_tracker_config: dict[str, Any] | None = None,

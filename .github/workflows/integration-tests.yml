@@ -1,5 +1,5 @@
 # ============================================================================
-# Integration test — tau2 airline task 9, end-to-end optimization regression.
+# Integration test — tau2 airline task 9 (or AppWorld task 82e2fac_1), end-to-end optimization regression.
 # ============================================================================
 #
 # The general pipeline regression on a real benchmark: agent aws/gpt-oss-120b,
@@ -34,10 +34,10 @@ on:
   workflow_dispatch:
     inputs:
       bench:
-        description: "Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). tau2_sierra / tau2_sierra_blackbox = the two DELIVERY ARMS from examples/tau2_sierra_airline, on vanilla tau2 pinned at its TAU2_REFERENCE_SHA — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
+        description: "Which leg to run on its one integration task (appworld = examples/appworld on train task 82e2fac_1, agent gpt-oss-120b on RITS). Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). tau2_sierra / tau2_sierra_blackbox = the two DELIVERY ARMS from examples/tau2_sierra_airline, on vanilla tau2 pinned at its TAU2_REFERENCE_SHA — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
         type: choice
         default: tau2
-        options: [tau2, tau2_sierra, tau2_sierra_blackbox]
+        options: [tau2, tau2_sierra, tau2_sierra_blackbox, appworld]
   pull_request:
     types: [labeled]
 
@@ -45,7 +45,7 @@ jobs:
   tau2:
     # Resolves to the literal "tau2 (task 9)" for a PR-label run and for a default dispatch, so
     # the check name only changes when an arm is deliberately selected.
-    name: ${{ github.event.inputs.bench || 'tau2' }} (task 9)
+    name: ${{ github.event.inputs.bench || 'tau2' }} (${{ (github.event.inputs.bench || 'tau2') == 'appworld' && 'task 82e2fac_1' || 'task 9' }})
     runs-on: [self-hosted, ibm-vpc]
     # Trust guard: run PR code from ANY repo (same-repo or a fork) on the self-hosted
     # runner only when the PR author is a known collaborator — never for outside/
@@ -68,6 +68,11 @@ jobs:
       # A PR-label run has no inputs, so it keeps running tau2 exactly as before. Only a
       # deliberate dispatch selects an arm.
       BENCH: ${{ github.event.inputs.bench || 'tau2' }}
+      # appworld's agent is the example's own gpt-oss-120b on RITS (model_catalog.txt keeps it
+      # apart from ibm-ete-int's aws/gpt-oss-120b). Set here, not in a tier overrides.env, because
+      # ci_setup.sh's provider preflight reads AGENT_MODEL and does not load overrides. Every other
+      # leg keeps run_suite.sh's default.
+      AGENT_MODEL: ${{ (github.event.inputs.bench || 'tau2') == 'appworld' && 'gpt-oss-120b-a100' || '' }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup runner env
@@ -83,6 +88,10 @@ jobs:
           echo "$out"
           run_dir="$(printf '%s' "$out" | sed -n 's/^RUN_DIR=//p' | tail -1)"
           "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" --min-iterations 1
+          # appworld's own gate on top: no infra error or lint reject in any rollout, no gold-bearing record.
+          if [ "$BENCH" = appworld ]; then
+            "${CAPEVOLVE_PY:-python3}" examples/appworld/scripts/assert_itest.py "$run_dir"
+          fi
       - name: Upload run artifacts
         if: always()
         uses: actions/upload-artifact@v4

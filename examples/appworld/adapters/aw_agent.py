@@ -42,13 +42,16 @@ EXTRA_BLOCKED_MODULES = {"os", "pathlib", "io", "shutil", "glob"}
 # The agent under test. Defaults: gpt-oss-120b on IBM RITS (vLLM, OpenAI-compatible), authenticated by
 # a `RITS_API_KEY: <key>` header. Override the model, URL, header and the env var that holds the key:
 #   AW_MODEL_NAME, AW_MODEL_URL (may use {{MODEL_SERVER_URL}}), AW_KEY_HEADER, AW_KEY_ENV.
+# AW_KEY_HEADER=bearer sends the key as the standard `Authorization: Bearer` API key instead, which
+# is how a LiteLLM gateway (CI's lite-rits or ete-litellm) authenticates.
 KEY_ENV = os.environ.get("AW_KEY_ENV", "RITS_API_KEY")
+KEY_HEADER = os.environ.get("AW_KEY_HEADER", "RITS_API_KEY")
 MODEL_CONFIG: dict[str, Any] = {
     "client_name": "litellm",
     "name": os.environ.get("AW_MODEL_NAME", "hosted_vllm/openai/gpt-oss-120b-a100"),
     "base_url": os.environ.get("AW_MODEL_URL", "{{MODEL_SERVER_URL}}/gpt-oss-120b-a100/v1"),
-    "api_key": "unused",
-    "extra_headers_env": {os.environ.get("AW_KEY_HEADER", "RITS_API_KEY"): KEY_ENV},
+    **({"api_key_env_name": KEY_ENV} if KEY_HEADER.lower() == "bearer"
+       else {"api_key": "unused", "extra_headers_env": {KEY_HEADER: KEY_ENV}}),
     "reasoning_effort": "medium",
     "temperature": 0,
     "max_completion_tokens": 6000,
@@ -445,7 +448,8 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
 
     candidate = read_candidate(Path(spec["candidate_dir"]))
     model_config = dict(MODEL_CONFIG)
-    model_config["extra_headers_env"] = dict(MODEL_CONFIG["extra_headers_env"])
+    if "extra_headers_env" in MODEL_CONFIG:
+        model_config["extra_headers_env"] = dict(MODEL_CONFIG["extra_headers_env"])
     CapReActAgent = build_agent_class()
     kwargs = agent_kwargs(spec, model_config)
     unknown = unaccepted_kwargs(CapReActAgent, kwargs)
