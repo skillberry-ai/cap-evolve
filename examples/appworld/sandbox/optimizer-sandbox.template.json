@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(/@AW_EVAL@/root_opt/**)",
+      "Read(/@AW_EVAL@/root_full/**)",
+      "Read(/@AW_EVAL@/runs/final/**)",
+      "Read(/@AW_EVAL@/appworld/generate/**)",
+      "Read(/@AW_SECRETS_FILE@)",
+      "Read(~/.claude/projects/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": [
+        "@AW_EVAL@/root_opt",
+        "@AW_EVAL@/root_full",
+        "@AW_EVAL@/runs/final",
+        "@AW_EVAL@/appworld/generate",
+        "@AW_SECRETS_FILE@",
+        "~/.claude/projects"
+      ]
+    },
+    "network": {
+      "allowedDomains": []
+    }
+  }
+}

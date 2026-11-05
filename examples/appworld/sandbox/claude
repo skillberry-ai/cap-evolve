@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# claude shim for the cap-evolve optimizer (README: Isolation).
+#
+# Put this directory first on the PATH of `cap-evolve run` only (scripts/launch_cape_hc.sh does).
+# Every optimizer call then runs the real claude CLI isolated, one of two ways:
+#   AW_ISOLATION=sandbox    (default) Claude Code's built-in sandbox (bubblewrap), with the settings
+#                           in AW_CLAUDE_SETTINGS (rendered optimizer-sandbox.template.json).
+#   AW_ISOLATION=namespace  sandbox/ns_exec.sh: a private mount namespace, for hosts where bubblewrap
+#                           cannot start. AW_CLAUDE_SETTINGS holds the permission deny rules.
+# Either way it fails closed: no settings, no call. scripts/check_optimizer_isolation.sh tests both.
+set -euo pipefail
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+MODE="${AW_ISOLATION:-sandbox}"
+SETTINGS="${AW_CLAUDE_SETTINGS:-}"
+
+real_claude() {   # the claude on PATH that is not this shim
+  [ -n "${AW_REAL_CLAUDE:-}" ] && { echo "$AW_REAL_CLAUDE"; return; }
+  local d
+  local IFS=:
+  for d in $PATH; do
+    [ "$(readlink -f "$d" 2>/dev/null)" = "$HERE" ] && continue
+    [ -x "$d/claude" ] && { echo "$d/claude"; return; }
+  done
+  echo "claude shim: no claude CLI on PATH besides this shim (set AW_REAL_CLAUDE)" >&2; exit 98
+}
+REAL="$(real_claude)"
+[ -f "$SETTINGS" ] || { echo "claude shim: AW_CLAUDE_SETTINGS is not a file (${SETTINGS:-unset}); refusing to run unisolated" >&2; exit 97; }
+
+case "$MODE" in
+  sandbox)
+    grep -q '"failIfUnavailable": *true' "$SETTINGS" \
+      || { echo "claude shim: $SETTINGS does not set sandbox.failIfUnavailable; refusing" >&2; exit 97; }
+    # Pass the settings inline: the file itself may sit in a path the call cannot read.
+    exec "$REAL" --settings "$(cat "$SETTINGS")" "$@" ;;
+  namespace)
+    exec bash "$HERE/ns_exec.sh" "$REAL" "$@" ;;
+  *) echo "claude shim: AW_ISOLATION must be sandbox or namespace, not $MODE" >&2; exit 97 ;;
+esac

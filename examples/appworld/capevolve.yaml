@@ -1,0 +1,45 @@
+# cap-evolve spec for the AppWorld example (README: cap-evolve arm).
+# scripts/setup_project.sh renders @OPT_MODEL@, @INSTRUCTIONS@ and @AW_EVAL@ and copies this into the project.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [system-prompt, tools]     # the ReAct prompt + REPL helpers / API notes
+capability_path: seed_capability
+actions: [edit]
+capability_sources: [reference/api_index.md, reference/react_agent_notes.md]
+runner_repo_path: @AW_EVAL@/reference
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: @OPT_MODEL@
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 15.0
+optimizer_instructions_file: @INSTRUCTIONS@
+target_model: openai/gpt-oss-120b-a100
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+memory_skill: md-files
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_ids_file: split_ids.json           # train = val = official train ∪ dev (147), test = [] (rule S2)
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 1
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 1.0
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 6
+stall: 0
+max_metric_calls: 1050                   # 147 baseline (scored once, train = val) + 6 x 147
+max_optimizer_usd: 120.0
+
+# --- iteration store --------------------------------------------------------
+protected_paths: [default]
+store: git

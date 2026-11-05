@@ -15,6 +15,9 @@ CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}"
 # Same package name, two commits.
 case "$BENCH" in
   tau2_sierra|tau2_sierra_blackbox) VENV="$CACHE/venv-tau2-sierra" ;;
+  # AppWorld 42b5bcf is verified on Python 3.11 (examples/appworld/README.md, Setup), so it gets
+  # its own venv, inside its own $AW_EVAL so the example's scripts find it where they expect it.
+  appworld)                         VENV="$CACHE/appworld/venv-aw" ;;
   *)                                VENV="$CACHE/venv" ;;
 esac
 CAPEVOLVE_PY="$VENV/bin/python"
@@ -22,7 +25,8 @@ IDX="--index-url https://pypi.org/simple"
 mkdir -p "$CACHE"
 
 command -v uv >/dev/null || { echo "::error:: uv is required on the runner"; exit 1; }
-[ -x "$CAPEVOLVE_PY" ] || uv venv --python 3.12 "$VENV"
+VENV_PY_VERSION=3.12; [ "$BENCH" = appworld ] && VENV_PY_VERSION=3.11
+[ -x "$CAPEVOLVE_PY" ] || uv venv --python "$VENV_PY_VERSION" "$VENV"
 
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
@@ -149,6 +153,43 @@ case "$BENCH" in
       echo "reaped $(printf '%s' "$hb_orphans" | wc -w | tr -d ' ') orphaned harbor container(s)"
     fi
     ;;
+  appworld)
+    # examples/appworld/README.md "Setup", steps 1-2, into the cache ($AW_EVAL), which survives
+    # between jobs: AppWorld at its pin with the example's header patch, its data, root_opt with
+    # the lint cache, and the optimizer's reference docs. Each step is skipped when its output is
+    # already there, so a warm runner pays only the checks.
+    AW_EVAL="$CACHE/appworld"; export AW_EVAL
+    AW_EX="$REPO/examples/appworld"
+    AW_PIN=42b5bcf
+    command -v git-lfs >/dev/null || { echo "::error:: git-lfs is required on the runner (AppWorld ships LFS bundles)"; exit 1; }
+    if [ ! -d "$AW_EVAL/appworld/.git" ]; then
+      git clone -q https://github.com/StonyBrookNLP/appworld "$AW_EVAL/appworld" || { echo "::error:: could not clone AppWorld"; exit 1; }
+    fi
+    (
+      cd "$AW_EVAL/appworld"
+      [ "$(git rev-parse --short=7 HEAD)" = "$AW_PIN" ] || git checkout -q "$AW_PIN"
+      git lfs pull
+      # The patch is idempotent here: applied once, skipped when already in the tree.
+      if ! git apply --reverse --check "$AW_EX/patches/appworld-extra-headers.patch" 2>/dev/null; then
+        git apply "$AW_EX/patches/appworld-extra-headers.patch"
+      fi
+    ) || { echo "::error:: AppWorld checkout/patch failed"; exit 1; }
+    uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$AW_EVAL/appworld" -e "$AW_EVAL/appworld/experiments[simplified]" \
+      "pydantic>=2.12,<2.13" "fastapi==0.135.0" "starlette>=0.48" -e "$REPO/core" \
+      || { echo "::error:: pip install AppWorld failed"; exit 1; }
+    # The unpacked apps mark a finished install (generate/tasks is tracked in git, so it is not).
+    # It resolves the bundles relative to the cwd, so it runs from the checkout.
+    [ -d "$AW_EVAL/appworld/src/appworld/apps/admin" ] \
+      || (cd "$AW_EVAL/appworld" && "$VENV/bin/appworld" install --repo >/dev/null) \
+      || { echo "::error:: appworld install --repo failed"; exit 1; }
+    [ -f "$AW_EVAL/root_full/data/datasets/test_normal.txt" ] \
+      || "$VENV/bin/appworld" download data --root "$AW_EVAL/root_full" >/dev/null
+    [ -f "$AW_EVAL/lint_cache.json" ] || "$CAPEVOLVE_PY" "$AW_EX/scripts/make_roots.py"
+    [ -f "$AW_EVAL/reference/api_index.md" ] || "$CAPEVOLVE_PY" "$AW_EX/scripts/make_reference.py" "$AW_EVAL/reference"
+    # No model call: the agent is built and its first request compared with stock (A4).
+    APPWORLD_ROOT="$AW_EVAL/root_opt" "$CAPEVOLVE_PY" "$AW_EX/scripts/check_injection.py" "$AW_EX/seed_capability" \
+      | tail -1 | grep -q "A4 PASS" || { echo "::error:: AppWorld injection check (A4) failed"; exit 1; }
+    echo "appworld ready at $AW_EVAL" ;;
   tau2)
     [ -d "$CACHE/tau2-bench/.git" ] || git clone --depth 1 https://github.com/sierra-research/tau2-bench "$CACHE/tau2-bench"
     uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench" ;;
@@ -596,6 +637,7 @@ if [ -n "${GITHUB_ENV:-}" ]; then
     if [ -n "${HARBOR_NPM_CACHE:-}" ]; then echo "HARBOR_NPM_CACHE=$HARBOR_NPM_CACHE"; fi
     if [ -n "${SPREADSHEETBENCH_DATA_DIR:-}" ]; then echo "SPREADSHEETBENCH_DATA_DIR=$SPREADSHEETBENCH_DATA_DIR"; fi
     if [ -n "${RFE_CREATOR_SRC:-}" ]; then echo "RFE_CREATOR_SRC=$RFE_CREATOR_SRC"; fi
+    if [ -n "${AW_EVAL:-}" ]; then echo "AW_EVAL=$AW_EVAL"; fi
     # The provider the preflight chose. run_suite.sh and the runmeta step prefer these over the
     # dispatch's own AGENT_MODEL/OPTIMIZER_MODEL, which may be a plain catalog name.
     if [ -n "${AGENT_MODEL_RESOLVED:-}" ]; then
