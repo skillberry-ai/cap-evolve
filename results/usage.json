@@ -1,0 +1,827 @@
+{
+ "capevolve|0": {
+  "search_agent": {
+   "calls": 19216,
+   "ok": 19084,
+   "prompt": 261344510,
+   "completion": 11640432,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 720,
+   "ok": 710,
+   "prompt": 26410627,
+   "completion": 369452,
+   "cached": 13002240
+  },
+  "search_wall_h": 30.81,
+  "test_agent": {
+   "calls": 30603,
+   "ok": 28649,
+   "prompt": 375717313,
+   "completion": 17092910,
+   "cached": 0
+  },
+  "test_wall_h": 118.27
+ },
+ "capevolve|1": {
+  "search_agent": {
+   "calls": 9251,
+   "ok": 9226,
+   "prompt": 81429592,
+   "completion": 5004143,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 277,
+   "ok": 267,
+   "prompt": 13070443,
+   "completion": 162516,
+   "cached": 8005120
+  },
+  "search_wall_h": 12.94,
+  "test_agent": {
+   "calls": 15404,
+   "ok": 14815,
+   "prompt": 125764325,
+   "completion": 8035626,
+   "cached": 0
+  },
+  "test_wall_h": 47.58
+ },
+ "capevolve|2": {
+  "search_agent": {
+   "calls": 10430,
+   "ok": 10385,
+   "prompt": 78903250,
+   "completion": 5513076,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 411,
+   "ok": 400,
+   "prompt": 14417634,
+   "completion": 235262,
+   "cached": 6480384
+  },
+  "search_wall_h": 14.32,
+  "test_agent": {
+   "calls": 12467,
+   "ok": 11953,
+   "prompt": 85069065,
+   "completion": 6127664,
+   "cached": 0
+  },
+  "test_wall_h": 38.23
+ },
+ "capevolve_v2|0": {
+  "search_agent": {
+   "calls": 6736,
+   "ok": 6015,
+   "prompt": 39271078,
+   "completion": 2940903,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 306,
+   "ok": 306,
+   "prompt": 11307891,
+   "completion": 187783,
+   "cached": 10363392
+  },
+  "search_wall_h": 32.48,
+  "test_agent": {
+   "calls": 13072,
+   "ok": 13067,
+   "prompt": 97920809,
+   "completion": 7235942,
+   "cached": 0
+  },
+  "test_wall_h": 23.56
+ },
+ "capevolve_v2|1": {
+  "search_agent": {
+   "calls": 10700,
+   "ok": 10098,
+   "prompt": 94905449,
+   "completion": 5378480,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 284,
+   "ok": 284,
+   "prompt": 14132627,
+   "completion": 180754,
+   "cached": 13357056
+  },
+  "search_wall_h": 39.93,
+  "test_agent": {
+   "calls": 16919,
+   "ok": 16917,
+   "prompt": 154398617,
+   "completion": 9486328,
+   "cached": 0
+  },
+  "test_wall_h": 23.01
+ },
+ "capevolve_v2|2": {
+  "search_agent": {
+   "calls": 7745,
+   "ok": 7071,
+   "prompt": 56054773,
+   "completion": 3483518,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 384,
+   "ok": 384,
+   "prompt": 16240787,
+   "completion": 234504,
+   "cached": 14760960
+  },
+  "search_wall_h": 34.17,
+  "test_agent": {
+   "calls": 16032,
+   "ok": 16026,
+   "prompt": 164180801,
+   "completion": 9109953,
+   "cached": 0
+  },
+  "test_wall_h": 26.83
+ },
+ "skillopt|0": {
+  "search_agent": {
+   "calls": 8375,
+   "ok": 8181,
+   "prompt": 58198048,
+   "completion": 4111556,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 73,
+   "ok": 73,
+   "prompt": 1852637,
+   "completion": 76814,
+   "cached": 125440
+  },
+  "search_wall_h": 33.28,
+  "test_agent": {
+   "calls": 13134,
+   "ok": 11589,
+   "prompt": 82308737,
+   "completion": 5383840,
+   "cached": 0
+  },
+  "test_wall_h": 60.21
+ },
+ "skillopt|1": {
+  "search_agent": {
+   "calls": 18462,
+   "ok": 17291,
+   "prompt": 162785845,
+   "completion": 8695893,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 78,
+   "ok": 78,
+   "prompt": 2138019,
+   "completion": 74704,
+   "cached": 98816
+  },
+  "search_wall_h": 85.74,
+  "test_agent": {
+   "calls": 16507,
+   "ok": 15704,
+   "prompt": 135624976,
+   "completion": 7944681,
+   "cached": 0
+  },
+  "test_wall_h": 50.72
+ },
+ "skillopt|2": {
+  "search_agent": {
+   "calls": 18676,
+   "ok": 17655,
+   "prompt": 171166600,
+   "completion": 9000763,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 74,
+   "ok": 74,
+   "prompt": 2186522,
+   "completion": 78293,
+   "cached": 145920
+  },
+  "search_wall_h": 81.31,
+  "test_agent": {
+   "calls": 14437,
+   "ok": 13556,
+   "prompt": 114699455,
+   "completion": 6843298,
+   "cached": 0
+  },
+  "test_wall_h": 48.3
+ },
+ "trace2skill|0": {
+  "search_agent": {
+   "calls": 3635,
+   "ok": 3633,
+   "prompt": 28442667,
+   "completion": 1834276,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 733,
+   "ok": 733,
+   "prompt": 3997430,
+   "completion": 1015164,
+   "cached": 1244160
+  },
+  "search_wall_h": 5.23,
+  "test_agent": {
+   "calls": 17363,
+   "ok": 16679,
+   "prompt": 124094898,
+   "completion": 8110392,
+   "cached": 0
+  },
+  "test_wall_h": 49.48
+ },
+ "trace2skill|1": {
+  "search_agent": {
+   "calls": 5044,
+   "ok": 5025,
+   "prompt": 42368855,
+   "completion": 2575944,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 709,
+   "ok": 709,
+   "prompt": 4214670,
+   "completion": 1010615,
+   "cached": 1490944
+  },
+  "search_wall_h": 10.37,
+  "test_agent": {
+   "calls": 21721,
+   "ok": 20139,
+   "prompt": 177134306,
+   "completion": 10137782,
+   "cached": 0
+  },
+  "test_wall_h": 84.79
+ },
+ "trace2skill|2": {
+  "search_agent": {
+   "calls": 5560,
+   "ok": 5456,
+   "prompt": 51332218,
+   "completion": 2899988,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 723,
+   "ok": 723,
+   "prompt": 4299228,
+   "completion": 1041188,
+   "cached": 1419776
+  },
+  "search_wall_h": 11.35,
+  "test_agent": {
+   "calls": 23761,
+   "ok": 22131,
+   "prompt": 219310962,
+   "completion": 11551840,
+   "cached": 0
+  },
+  "test_wall_h": 93.35
+ },
+ "meta_harness|0": {
+  "search_agent": {
+   "calls": 16242,
+   "ok": 15450,
+   "prompt": 145257766,
+   "completion": 8013617,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 258,
+   "ok": 258,
+   "prompt": 3962202,
+   "completion": 120245,
+   "cached": 1504256
+  },
+  "search_wall_h": 68.57,
+  "test_agent": {
+   "calls": 20084,
+   "ok": 19092,
+   "prompt": 152694660,
+   "completion": 9502384,
+   "cached": 0
+  },
+  "test_wall_h": 64.8
+ },
+ "meta_harness|1": {
+  "search_agent": {
+   "calls": 11555,
+   "ok": 11307,
+   "prompt": 95033365,
+   "completion": 5771413,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 204,
+   "ok": 204,
+   "prompt": 2520582,
+   "completion": 85527,
+   "cached": 868864
+  },
+  "search_wall_h": 34.45,
+  "test_agent": {
+   "calls": 13936,
+   "ok": 12665,
+   "prompt": 81428528,
+   "completion": 5846187,
+   "cached": 0
+  },
+  "test_wall_h": 58.28
+ },
+ "meta_harness|2": {
+  "search_agent": {
+   "calls": 17677,
+   "ok": 15427,
+   "prompt": 158637830,
+   "completion": 8549173,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 231,
+   "ok": 231,
+   "prompt": 3357063,
+   "completion": 99936,
+   "cached": 1484800
+  },
+  "search_wall_h": 115.64,
+  "test_agent": {
+   "calls": 12187,
+   "ok": 12178,
+   "prompt": 99602541,
+   "completion": 7050066,
+   "cached": 0
+  },
+  "test_wall_h": 24.21
+ },
+ "evoskill|0": {
+  "search_agent": {
+   "calls": 2710,
+   "ok": 2702,
+   "prompt": 21243615,
+   "completion": 1411700,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 129,
+   "ok": 129,
+   "prompt": 2657975,
+   "completion": 75043,
+   "cached": 1101824
+  },
+  "search_wall_h": 11.19,
+  "test_agent": {
+   "calls": 17769,
+   "ok": 16796,
+   "prompt": 124702563,
+   "completion": 8191496,
+   "cached": 0
+  },
+  "test_wall_h": 61.61
+ },
+ "evoskill|1": {
+  "search_agent": {
+   "calls": 18310,
+   "ok": 17347,
+   "prompt": 185840297,
+   "completion": 9307948,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 124,
+   "ok": 84,
+   "prompt": 1757115,
+   "completion": 47233,
+   "cached": 542720
+  },
+  "search_wall_h": 108.09,
+  "test_agent": {
+   "calls": 20999,
+   "ok": 20998,
+   "prompt": 224549599,
+   "completion": 11897139,
+   "cached": 0
+  },
+  "test_wall_h": 34.87
+ },
+ "evoskill|2": {
+  "search_agent": {
+   "calls": 8794,
+   "ok": 7843,
+   "prompt": 59041245,
+   "completion": 2844895,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 168,
+   "ok": 168,
+   "prompt": 3842041,
+   "completion": 84937,
+   "cached": 1712128
+  },
+  "search_wall_h": 61.28,
+  "test_agent": {
+   "calls": 15246,
+   "ok": 13968,
+   "prompt": 127032692,
+   "completion": 6685109,
+   "cached": 0
+  },
+  "test_wall_h": 58.14
+ },
+ "gepa|0": {
+  "search_agent": {
+   "calls": 18378,
+   "ok": 17063,
+   "prompt": 147902451,
+   "completion": 8598286,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 25,
+   "ok": 25,
+   "prompt": 344522,
+   "completion": 44700,
+   "cached": 0
+  },
+  "search_wall_h": 147.86,
+  "test_agent": {
+   "calls": 15089,
+   "ok": 15089,
+   "prompt": 138379715,
+   "completion": 7907080,
+   "cached": 0
+  },
+  "test_wall_h": 8.08
+ },
+ "gepa|1": {
+  "search_agent": {
+   "calls": 13698,
+   "ok": 12724,
+   "prompt": 79523344,
+   "completion": 5870307,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 23,
+   "ok": 23,
+   "prompt": 287023,
+   "completion": 37999,
+   "cached": 512
+  },
+  "search_wall_h": 83.96,
+  "test_agent": {
+   "calls": 12145,
+   "ok": 12133,
+   "prompt": 88307723,
+   "completion": 6242187,
+   "cached": 0
+  },
+  "test_wall_h": 25.84
+ },
+ "gepa|2": {
+  "search_agent": {
+   "calls": 25298,
+   "ok": 24110,
+   "prompt": 286396258,
+   "completion": 15075336,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 29,
+   "ok": 29,
+   "prompt": 430587,
+   "completion": 41135,
+   "cached": 512
+  },
+  "search_wall_h": null,
+  "test_agent": {
+   "calls": 18936,
+   "ok": 18936,
+   "prompt": 217874312,
+   "completion": 11831787,
+   "cached": 0
+  },
+  "test_wall_h": 11.68
+ },
+ "gepa_full|0": {
+  "search_agent": {
+   "calls": 19085,
+   "ok": 18099,
+   "prompt": 176639526,
+   "completion": 10679990,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 39,
+   "ok": 39,
+   "prompt": 637291,
+   "completion": 98900,
+   "cached": 7680
+  },
+  "search_wall_h": 162.87,
+  "test_agent": {
+   "calls": 13316,
+   "ok": 13316,
+   "prompt": 105136903,
+   "completion": 7294551,
+   "cached": 0
+  },
+  "test_wall_h": 8.24
+ },
+ "gepa_full|1": {
+  "search_agent": {
+   "calls": 18824,
+   "ok": 17499,
+   "prompt": 150511877,
+   "completion": 9327779,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 31,
+   "ok": 31,
+   "prompt": 467292,
+   "completion": 77690,
+   "cached": 1536
+  },
+  "search_wall_h": 153.14,
+  "test_agent": {
+   "calls": 15086,
+   "ok": 15083,
+   "prompt": 146857062,
+   "completion": 8833795,
+   "cached": 0
+  },
+  "test_wall_h": 10.94
+ },
+ "gepa_full|2": {
+  "search_agent": {
+   "calls": 15723,
+   "ok": 14165,
+   "prompt": 116783669,
+   "completion": 6991606,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 34,
+   "ok": 34,
+   "prompt": 582961,
+   "completion": 89205,
+   "cached": 4096
+  },
+  "search_wall_h": 123.7,
+  "test_agent": {
+   "calls": 12295,
+   "ok": 12287,
+   "prompt": 120147845,
+   "completion": 5867454,
+   "cached": 0
+  },
+  "test_wall_h": 11.46
+ },
+ "miprov2|0": {
+  "search_agent": {
+   "calls": 23163,
+   "ok": 22142,
+   "prompt": 191499856,
+   "completion": 11972543,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 28,
+   "ok": 28,
+   "prompt": 75688,
+   "completion": 9552,
+   "cached": 30208
+  },
+  "search_wall_h": 188.69,
+  "test_agent": {
+   "calls": 13044,
+   "ok": 13044,
+   "prompt": 109131427,
+   "completion": 7421019,
+   "cached": 0
+  },
+  "test_wall_h": 7.5
+ },
+ "miprov2|1": {
+  "search_agent": {
+   "calls": 15756,
+   "ok": 14819,
+   "prompt": 104937699,
+   "completion": 7189844,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 28,
+   "ok": 28,
+   "prompt": 70606,
+   "completion": 8381,
+   "cached": 16384
+  },
+  "search_wall_h": 118.09,
+  "test_agent": {
+   "calls": 12297,
+   "ok": 12297,
+   "prompt": 95652632,
+   "completion": 6583211,
+   "cached": 0
+  },
+  "test_wall_h": 10.23
+ },
+ "miprov2|2": {
+  "search_agent": {
+   "calls": 18235,
+   "ok": 17376,
+   "prompt": 138929286,
+   "completion": 8835118,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 28,
+   "ok": 28,
+   "prompt": 74650,
+   "completion": 9337,
+   "cached": 16384
+  },
+  "search_wall_h": 148.26,
+  "test_agent": {
+   "calls": 16899,
+   "ok": 16899,
+   "prompt": 167790648,
+   "completion": 9833061,
+   "cached": 0
+  },
+  "test_wall_h": 8.77
+ },
+ "wikiskill|0": {
+  "search_agent": {
+   "calls": 16654,
+   "ok": 14891,
+   "prompt": 161242999,
+   "completion": 7245072,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 107,
+   "ok": 107,
+   "prompt": 3463518,
+   "completion": 141523,
+   "cached": 2540544
+  },
+  "search_wall_h": 128.88,
+  "test_agent": {
+   "calls": 12989,
+   "ok": 12989,
+   "prompt": 124533644,
+   "completion": 6795889,
+   "cached": 0
+  },
+  "test_wall_h": 10.55
+ },
+ "wikiskill|1": {
+  "search_agent": {
+   "calls": 16487,
+   "ok": 14842,
+   "prompt": 170307305,
+   "completion": 11047166,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 109,
+   "ok": 109,
+   "prompt": 3150836,
+   "completion": 116002,
+   "cached": 2307584
+  },
+  "search_wall_h": 203.08,
+  "test_agent": {
+   "calls": 15309,
+   "ok": 15309,
+   "prompt": 170618990,
+   "completion": 9474355,
+   "cached": 0
+  },
+  "test_wall_h": 11.21
+ },
+ "wikiskill|2": {
+  "search_agent": {
+   "calls": 10479,
+   "ok": 9207,
+   "prompt": 92046112,
+   "completion": 4736736,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 97,
+   "ok": 97,
+   "prompt": 2279300,
+   "completion": 96541,
+   "cached": 1561600
+  },
+  "search_wall_h": 74.98,
+  "test_agent": {
+   "calls": 13603,
+   "ok": 13571,
+   "prompt": 135047012,
+   "completion": 7241825,
+   "cached": 0
+  },
+  "test_wall_h": 13.13
+ },
+ "ace|0": {
+  "search_agent": {
+   "calls": 13682,
+   "ok": 12434,
+   "prompt": 238522420,
+   "completion": 6512054,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 581,
+   "ok": 424,
+   "prompt": 4094016,
+   "completion": 289142,
+   "cached": 30208
+  },
+  "search_wall_h": 151.22,
+  "test_agent": {
+   "calls": 11671,
+   "ok": 11671,
+   "prompt": 159363472,
+   "completion": 5965817,
+   "cached": 0
+  },
+  "test_wall_h": 8.54
+ },
+ "ace|1": {
+  "search_agent": {
+   "calls": 11778,
+   "ok": 11751,
+   "prompt": 245669797,
+   "completion": 6349243,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 420,
+   "ok": 420,
+   "prompt": 4325543,
+   "completion": 297360,
+   "cached": 7680
+  },
+  "search_wall_h": 38.81,
+  "test_agent": {
+   "calls": 12742,
+   "ok": 12739,
+   "prompt": 195239122,
+   "completion": 6522155,
+   "cached": 0
+  },
+  "test_wall_h": 9.23
+ },
+ "ace|2": {
+  "search_agent": {
+   "calls": 3004,
+   "ok": 3003,
+   "prompt": 39548743,
+   "completion": 1580892,
+   "cached": 0
+  },
+  "search_optimizer": {
+   "calls": 365,
+   "ok": 365,
+   "prompt": 2623678,
+   "completion": 241751,
+   "cached": 49152
+  },
+  "search_wall_h": 13.63,
+  "test_agent": {
+   "calls": 16351,
+   "ok": 16351,
+   "prompt": 128956714,
+   "completion": 8650175,
+   "cached": 0
+  },
+  "test_wall_h": 9.6
+ }
+}

@@ -70,6 +70,7 @@ pre-rollout helper gate rejects, so all three of its validation evaluations scor
 | [`scripts/`](scripts/) | the test-window runner, the metering gateway, the automatic test launcher, the LSF wrappers, the table builder, and the script that staged this branch |
 | [`docs/decisions.md`](docs/decisions.md) | the append-only decision log of the whole experiment, including every incident and relaunch |
 | [`reports/`](reports/) | the final tables |
+| [`ui/results.html`](ui/results.html) | a self-contained, sortable results page: one row per system, every seed, and a cost and time table (tokens and wall time from the gateway ledgers in [`results/usage.json`](results/usage.json)); built by `scripts/build_results_page.py` |
 
 Every headline number can be re-derived from this branch alone: each `summary.json` gain equals the mean over tasks of
 champion − seed in the matching `per_task_test_scores.json`.
