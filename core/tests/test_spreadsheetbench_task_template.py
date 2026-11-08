@@ -31,12 +31,12 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 SEED = ADAPTER_DIR / "seed_capability"
 
 
 def _adapter():
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     spec = importlib.util.spec_from_file_location("_sb_tmpl", ADAPTER_DIR / "adapter.py")
@@ -206,7 +206,7 @@ def test_the_optimizer_is_told_both_files_are_editable():
     assert "appended" not in arm.lower() or True
     # …and it must be APPENDED to the copied file, not to the shared template in templates/.
     assert '>> "$PROJ/optimizer/INSTRUCTIONS.md"' in arm
-    shared = (REPO / "templates" / "project" / "optimizer" / "INSTRUCTIONS.prompt-only.md").read_text(encoding="utf-8")
+    shared = (REPO / "benchmarks" / "_scaffold" / "project" / "optimizer" / "INSTRUCTIONS.prompt-only.md").read_text(encoding="utf-8")
     assert "task_template.md" not in shared, "the shared template must stay benchmark-neutral"
 
 

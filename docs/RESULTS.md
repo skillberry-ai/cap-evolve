@@ -79,13 +79,13 @@ Per-task: 24 improved, 2 regressed, 93 unchanged.
 | Optimized (`mock` adds `[CALC]`) | — | **1.0** | gate-accepted, test sealed |
 
 Deterministic, no model call. Asserted by `core/tests/test_e2e_slice.py` and reproduced
-by `bash examples/toy_calc/run.sh`.
+by `bash benchmarks/toy/examples/calc/run.sh`.
 
 ---
 
 ## τ²-Bench airline — no-holdout fit-metric run (reproducible, committed)
 
-Artifact: [`examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)
+Artifact: [`benchmarks/tau2/examples/airline/run_full/`](../benchmarks/tau2/examples/airline/run_full/)
 (`final.json`, static dashboard under `ui/`). Reproduce: [`REPRODUCE_tau2.md`](REPRODUCE_tau2.md).
 
 - **Capability:** airline **policy + tools** optimized jointly (`[system-prompt, tools]`).
@@ -110,7 +110,7 @@ iter 6 `+0.014` (→0.684), iter 7 `+0.028` (→0.712). **5 of 10** iterations a
 What changed: deep in-code tool edits (`tools.py` 593 → 832 lines; policy 166 → 233
 lines), not just prompt tweaks — five trajectory-verified before→after edits in
 [`OPTIMIZATION_EXAMPLES.md`](OPTIMIZATION_EXAMPLES.md); curated walkthrough in
-[`examples/tau2_airline/DEMO.md`](../examples/tau2_airline/DEMO.md).
+[`benchmarks/tau2/examples/airline/DEMO.md`](../benchmarks/tau2/examples/airline/DEMO.md).
 
 ---
 
@@ -234,7 +234,7 @@ rule would have vetoed the only accepted edit this benchmark has produced in age
 queues rather than serves: per-call latency went ~20 s → ~200 s and **292 of 300 rollouts ended
 `TerminationReason.TIMEOUT` with a median trace of six messages**, so val "measured" **0.0067**
 and nothing objected. TIMEOUT now routes into the same path as `INFRASTRUCTURE_ERROR` in the run
-adapter *and* `templates/adapters/tau2_bench/adapter.py`, so the gate returns *"INDECISIVE: only
+adapter *and* `benchmarks/tau2/template/adapter.py`, so the gate returns *"INDECISIVE: only
 2% of val tasks produced a valid score (< 60% required). The evaluation measured the
 infrastructure, not the edit."* Pinned by `check_timeout_honesty.py`. It fired for real later in
 the run when a candidate's environment failed to build.
@@ -326,7 +326,7 @@ substantive spec field** — `num_trials: 1 → 5` — leaving `gate_mode: paire
 gate.** What v4 adds is the measurement that says *why*, and this time the cause is a
 different one from v3's.
 
-- **Spec:** [`examples/tau2_airline/capevolve.agentopt.v4.gptoss.yaml`](../examples/tau2_airline/capevolve.agentopt.v4.gptoss.yaml)
+- **Spec:** [`benchmarks/tau2/examples/airline/capevolve.agentopt.v4.gptoss.yaml`](../benchmarks/tau2/examples/airline/capevolve.agentopt.v4.gptoss.yaml)
   — a copy of `capevolve.agentopt.gptoss.yaml` with `num_trials: 5`, `max_metric_calls: 600`
   and a rollout-denominated `stop_condition` (the proxy does not meter dollars).
 - **Agent + user simulator:** `aws/gpt-oss-120b` via the IBM litellm proxy. **Optimizer:**
@@ -338,7 +338,7 @@ different one from v3's.
   (`usd: 0.0` is missing data; `spend.py` reports `runner_spend_metered: false`), so the
   budget unit is rollout counts.
 - Artifacts, including `events.jsonl`, the five per-candidate gate verdicts, and the two
-  analysis scripts, in [`run_agentopt_v4/`](../examples/tau2_airline/run_agentopt_v4/).
+  analysis scripts, in [`run_agentopt_v4/`](../benchmarks/tau2/examples/airline/run_agentopt_v4/).
 
 ### The result table
 
@@ -376,7 +376,7 @@ each, so treat the ratio as approximate). Pooling all four evals gives the run's
 estimate of the seed's val score, **0.5292 ± 0.1100 over 20 trials/task**.
 
 The significance half of the gate is now sound and its SE is *predictable*:
-[`noise_power.py`](../examples/tau2_airline/run_agentopt_v4/noise_power.py) derives, from
+[`noise_power.py`](../benchmarks/tau2/examples/airline/run_agentopt_v4/noise_power.py) derives, from
 the baseline's own measured per-task rates, that a null Δ̄ should have SD **0.0632** at 5
 trials — and the five gates measured SE 0.0628 / 0.0702 / 0.0696 / 0.0672 / 0.0796. The same
 formula gives 0.1414 at 1 trial, against v3's observed 0.1423. The model of the noise is
@@ -520,7 +520,7 @@ time the run establishes *why* with a control the two earlier runs never ran: a
 **null-edit candidate — a byte-identical copy of the seed capability — was evaluated on
 full val and put through the honest gate, and the gate REJECTED it.**
 
-- **Spec:** [`examples/tau2_airline/capevolve.agentopt.gptoss.yaml`](../examples/tau2_airline/capevolve.agentopt.gptoss.yaml),
+- **Spec:** [`benchmarks/tau2/examples/airline/capevolve.agentopt.gptoss.yaml`](../benchmarks/tau2/examples/airline/capevolve.agentopt.gptoss.yaml),
   `orchestration_mode: agent`, `algorithm_skill: agent-optimize`, capabilities
   `[system-prompt, tools]`. Same file as the v2 run except `stall: 3 → 5` and the prose
   `stop_condition`'s "3 rejects in a row" → "5" (the prose ceiling, not the spec field,
@@ -534,7 +534,7 @@ full val and put through the honest gate, and the gate REJECTED it.**
   (`usd: 0.0` is missing data, not a free run — `spend.py` reports
   `runner_spend_metered: false`), so the budget unit here is rollout counts.
 - Artifacts, including `events.jsonl`, in
-  [`run_agentopt_v3/`](../examples/tau2_airline/run_agentopt_v3/).
+  [`run_agentopt_v3/`](../benchmarks/tau2/examples/airline/run_agentopt_v3/).
 
 ### The result table
 
@@ -744,7 +744,7 @@ out of the transcripts rather than inferred from means, and the run cost 68 roll
 instead of 110.
 
 - **Spec:** `.capevolve/project/capevolve.agentopt.yaml` (derived from
-  [`examples/tau2_airline/capevolve.agentopt.yaml`](../examples/tau2_airline/capevolve.agentopt.yaml)),
+  [`benchmarks/tau2/examples/airline/capevolve.agentopt.yaml`](../benchmarks/tau2/examples/airline/capevolve.agentopt.yaml)),
   `orchestration_mode: agent`, `algorithm_skill: agent-optimize`, capabilities
   `[system-prompt, tools]`.
 - **Agent + user simulator:** `aws/gpt-oss-120b` via the IBM litellm proxy. **Optimizer:**
@@ -770,7 +770,7 @@ instead of 110.
 
 Every `0.0` is **by construction** — `best_id == seed`, so `finalize` scored one
 capability on both sides. `measure.py` emits that warning itself. Artifacts, including
-`events.jsonl`, in [`run_agentopt_v2/`](../examples/tau2_airline/run_agentopt_v2/).
+`events.jsonl`, in [`run_agentopt_v2/`](../benchmarks/tau2/examples/airline/run_agentopt_v2/).
 
 **The requested target — train mean ≥ 0.90 — was not reached, and was never approached.**
 Train stayed at its baseline 0.5385 because no edit was ever accepted. Nothing here
@@ -908,7 +908,7 @@ The run that exercised subset screening and prose-constraint parsing for the fir
 **Nothing cleared the gate.** Recorded because a null result with a diagnosed cause is
 evidence, and because two integrity findings came out of it.
 
-- **Spec:** `examples/tau2_airline/capevolve.agentopt.yaml`, `orchestration_mode: agent`,
+- **Spec:** `benchmarks/tau2/examples/airline/capevolve.agentopt.yaml`, `orchestration_mode: agent`,
   `algorithm_skill: agent-optimize`, capabilities `[system-prompt, tools]`.
 - **Agent + user simulator:** `claude-haiku-4-5` via the IBM Anthropic-compatible gateway.
 - **Split:** disjoint **26 train / 12 val / 12 test**, `num_trials: 1`, `paired`, `k_se 0.2`.
@@ -934,7 +934,7 @@ scored the same capability on both sides. `measure.py` emits that warning itself
 | `cand_r3` | 0.4167 | −0.4167 | 0.0297 | 0.1486 | 12 | `12 16 20 24 36` | — |
 
 Re-derived from the persisted rollouts in
-[`run_agentopt/val_per_task.json`](../examples/tau2_airline/run_agentopt/val_per_task.json);
+[`run_agentopt/val_per_task.json`](../benchmarks/tau2/examples/airline/run_agentopt/val_per_task.json);
 the seed fails exactly two tasks, `8` and `44`.
 
 `cand_tools` is **churn**: mean identical to the seed, different tasks passing (fixed 8, broke
@@ -1149,7 +1149,7 @@ to `xlsx`/`pptx` had real cross-task effect.
 
 ## SkillsBench — skill-package optimization (held-out, committed)
 
-Artifact: [`examples/skillsbench/run_full/`](../examples/skillsbench/run_full/)
+Artifact: [`benchmarks/skillsbench/examples/shared_skills/run_full/`](../benchmarks/skillsbench/examples/shared_skills/run_full/)
 (`report.md`, `final.json`). Reproduce: [`REPRODUCE_skillsbench.md`](REPRODUCE_skillsbench.md).
 
 - **Capability:** the four shared office-document **skill packages** (`docx`/`pptx`/`xlsx`/`pdf`).

@@ -3,7 +3,7 @@
 Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
 spreadsheetbench · rfe-creator**, plus the two tau2-airline **delivery arms**
 (**tau2_sierra · tau2_sierra_blackbox**) and an **appworld** integration tier,
-built on the [adapter templates](../../templates/adapters/). Each benchmark runs a curated
+built on the [adapter templates](../../benchmarks/). Each benchmark runs a curated
 set of **representative** tasks (calibrated for headroom — nonzero but not saturated at
 baseline) and reports **reward / latency / cost** base→opt from a single run, plus the
 optimizer's capability diffs — a reproducible end-to-end pipeline + metrics regression,
@@ -86,7 +86,7 @@ repo → Settings → Actions → Runners with the `ibm-vpc` label.
 
 `tau2_sierra` and `tau2_sierra_blackbox` are one benchmark measured twice, not two benchmarks.
 Both run the **same** airline task ids with the **same** tools-only capability surface, sourced
-from [`examples/tau2_sierra_airline/`](../../examples/tau2_sierra_airline/). The only difference
+from [`benchmarks/tau2/examples/sierra_airline/`](../../benchmarks/tau2/examples/sierra_airline/). The only difference
 is how a candidate reaches the agent:
 
 | | `tau2_sierra` (direct) | `tau2_sierra_blackbox` |
@@ -99,7 +99,7 @@ is how a candidate reaches the agent:
 Both arms run **vanilla `sierra-research/tau2-bench`**, never edited, checked out at the
 example's **`TAU2_REFERENCE_SHA`**: the commit the arms' adapters and `tau2_tailoring.py` were
 created from when the benchmark was onboarded with
-[`PROMPT.md`](../../examples/tau2_sierra_airline/PROMPT.md).
+[`PROMPT.md`](../../benchmarks/tau2/examples/sierra_airline/PROMPT.md).
 - `ci_setup.sh` reads that SHA from the arms' `setup.sh`, so CI keeps no copy of its own and has
   no override.
 - It fails the job if the two arms disagree, or if the checkout is not at that commit.
@@ -121,7 +121,7 @@ Cheapest way to exercise an arm: **Integration tests** → Run workflow → `ben
 
 ## AppWorld (integration tier only)
 
-`appworld` runs [`examples/appworld/`](../../examples/appworld/): AppWorld's official simplified
+`appworld` runs [`benchmarks/appworld/examples/react_agent/`](../../benchmarks/appworld/examples/react_agent/): AppWorld's official simplified
 ReAct code agent, with its prompt, REPL helpers and API notes optimized. It has only an
 `integration` tier, train task `82e2fac_1` (the example's own `scripts/itest.sh` task), and runs
 only from **Integration tests** → Run workflow → `bench` = `appworld`. It is not in

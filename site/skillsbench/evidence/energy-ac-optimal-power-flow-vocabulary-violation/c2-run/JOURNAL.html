@@ -103,7 +103,7 @@
     diffs / form fills) don't hit it, so passing office tasks don't regress. No hardcoded
     filenames/values/answers; the <code>PO-\d+</code> regex is explicitly labelled illustrative.</li>
 <li>Building on prior RESULTS: cand_0001 (ACCEPTED, ACOPF losses/precision) — kept its ACOPF
-  skills fully intact. From the reference office-skills run (examples/skillsbench/run_full)
+  skills fully intact. From the reference office-skills run (benchmarks/skillsbench/examples/shared_skills/run_full)
   rejected.jsonl: cand_0007 shipped a full deterministic invoice-fraud helper SCRIPT and was
   REJECTED (Δ=+0.000, saturated 0.714 baseline) → I did NOT re-try a task-specific end-to-end
   fraud script; encoded the fix as general reconciliation prose in the fuzzy-match skill.</li>

@@ -2,15 +2,15 @@
 
 Onboarding a benchmark into cap-evolve should be **config, not code**. Writing an
 adapter from scratch every time is a bottleneck for automated pipelines, so
-`templates/adapters/` ships ready-to-use adapters plus a provider-agnostic
+`benchmarks/_shared/` ships ready-to-use adapters plus a provider-agnostic
 model-wiring helper. For the common cases you set env vars and run; you only
 write code when task loading or scoring is genuinely custom.
 
 Every template is copy-and-run:
 
 ```bash
-cp -r templates/adapters/<template>/*  .capevolve/project/adapters/
-cp    templates/adapters/model_config.py  .capevolve/project/adapters/
+cp -r benchmarks/_shared/<template>/*  .capevolve/project/adapters/
+cp    benchmarks/_shared/model_config.py  .capevolve/project/adapters/
 # move the seed prompt where the spec expects it
 mv    .capevolve/project/adapters/seed_capability  .capevolve/project/seed_capability
 # set MODEL + credentials in a repo-root .env, then:
@@ -21,20 +21,20 @@ cap-evolve check && cap-evolve run
 
 | Template | Best for | What it optimizes | Task source | Extra deps |
 |---|---|---|---|---|
-| [`jsonl_litellm/`](../templates/adapters/jsonl_litellm/) | **The common case** — start here | A system prompt | local `tasks.jsonl` | `litellm` |
-| [`huggingface_litellm/`](../templates/adapters/huggingface_litellm/) | Any HuggingFace eval dataset | A system prompt | `datasets.load_dataset(...)` | `litellm`, `datasets` |
-| [`tau2_bench/`](../templates/adapters/tau2_bench/) | tau2-bench airline | System-prompt policy **+ tool code** | tau2's runner | tau2-bench |
-| [`skillsbench/`](../templates/adapters/skillsbench/) | SkillsBench | Shared Agent Skills | BenchFlow `bench eval run` | `bench` CLI, Docker |
-| [`swe_bench/`](../templates/adapters/swe_bench/) | SWE-bench / Lite | Coding-agent prompt | HuggingFace + Docker harness | `swebench`, `datasets`, Docker |
-| [`spreadsheetbench/`](../templates/adapters/spreadsheetbench/) | SpreadsheetBench | Spreadsheet-agent system prompt | fetched dataset + Docker/Jupyter harness | `pandas`, `openpyxl`, `docker`, `tornado`, `requests`; LibreOffice (optional) |
-| [`rfe_creator/`](../templates/adapters/rfe_creator/) | RFE-Creator | 7 Claude Code skills (RFE pipeline) | fetched dataset + agent-eval-harness | `pyyaml`, `agent-eval-harness`, `claude` CLI |
+| [`jsonl_litellm/`](../benchmarks/generic/jsonl_litellm/template/) | **The common case** — start here | A system prompt | local `tasks.jsonl` | `litellm` |
+| [`huggingface_litellm/`](../benchmarks/generic/huggingface_litellm/template/) | Any HuggingFace eval dataset | A system prompt | `datasets.load_dataset(...)` | `litellm`, `datasets` |
+| [`tau2_bench/`](../benchmarks/tau2/template/) | tau2-bench airline | System-prompt policy **+ tool code** | tau2's runner | tau2-bench |
+| [`skillsbench/`](../benchmarks/skillsbench/template/) | SkillsBench | Shared Agent Skills | BenchFlow `bench eval run` | `bench` CLI, Docker |
+| [`swe_bench/`](../benchmarks/swe_bench/template/) | SWE-bench / Lite | Coding-agent prompt | HuggingFace + Docker harness | `swebench`, `datasets`, Docker |
+| [`spreadsheetbench/`](../benchmarks/spreadsheetbench/template/) | SpreadsheetBench | Spreadsheet-agent system prompt | fetched dataset + Docker/Jupyter harness | `pandas`, `openpyxl`, `docker`, `tornado`, `requests`; LibreOffice (optional) |
+| [`rfe_creator/`](../benchmarks/rfe_creator/template/) | RFE-Creator | 7 Claude Code skills (RFE pipeline) | fetched dataset + agent-eval-harness | `pyyaml`, `agent-eval-harness`, `claude` CLI |
 
 The first two are **generic** — point them at your data with env vars, no code
 edits. The last four are **worked benchmark adapters** you copy and run.
 
 ## Providers — one line to switch
 
-All templates wire the model through [`model_config.py`](../templates/adapters/model_config.py),
+All templates wire the model through [`model_config.py`](../benchmarks/_shared/model_config.py),
 which resolves credentials from env vars based on the `MODEL` prefix (the same
 routing litellm does). Switching providers is a one-line `MODEL=` change — **no
 adapter code edits** — and it is **lazy**: no network at import, so `cap-evolve
@@ -86,7 +86,7 @@ Optimizes the tau2-bench airline agent's **system-prompt policy and tool
 implementations** via tau2's own batch runner and reward. tau2 is stochastic, so
 the config uses `num_trials: 5`.
 
-- **Prerequisites:** `git clone https://github.com/sierra-research/tau2-bench && pip install -e tau2-bench`; the seed policy/tools come from the benchmark (see [`examples/tau2_airline/`](../examples/tau2_airline/)).
+- **Prerequisites:** `git clone https://github.com/sierra-research/tau2-bench && pip install -e tau2-bench`; the seed policy/tools come from the benchmark (see [`benchmarks/tau2/examples/airline/`](../benchmarks/tau2/examples/airline/)).
 - **Key env vars:** `MODEL` + credentials; `TAU2_MAX_CONCURRENCY` (default 100).
 
 ## `skillsbench` — shared Agent Skills
@@ -148,7 +148,7 @@ instruction's 3 test cases whose output workbook matches the expected cells
 ## Writing your own adapter
 
 If none fit, start from the stub at
-[`templates/project/adapters/adapter.py`](../templates/project/adapters/adapter.py)
+[`benchmarks/_scaffold/project/adapters/adapter.py`](../benchmarks/_scaffold/project/adapters/adapter.py)
 and implement the three required methods; the full contract (including `materialize`
 / `live` and the per-trial `seed`) is in [ADAPTER_CONTRACT.md](ADAPTER_CONTRACT.md):
 

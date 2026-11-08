@@ -16,7 +16,7 @@ import types
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER = REPO / "templates" / "adapters" / "spreadsheetbench" / "adapter.py"
+ADAPTER = REPO / "benchmarks" / "spreadsheetbench" / "template" / "adapter.py"
 VENDOR_JUPYTER = REPO / "third_party" / "spreadsheetbench" / "code_exec_docker" / "jupyter.py"
 
 

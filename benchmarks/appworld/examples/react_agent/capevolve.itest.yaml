@@ -1,0 +1,41 @@
+# INTEGRATION-TEST spec — AppWorld regression on ONE task (82e2fac_1, a difficulty-1 train task).
+# General end-to-end regression for the optimization pipeline on this example, like
+# benchmarks/tau2/examples/airline/capevolve.itest.yaml: the stock seed, agent gpt-oss-120b (RITS by default,
+# see adapters/aw_agent.py), optimizer claude-code through the isolation shim. Cheap: 1 task,
+# 1 trial, 1 iteration. Only search-time data is used: the task is in train, never test_normal.
+# scripts/itest.sh renders @OPT_MODEL@ / @INSTRUCTIONS@ / @AW_EVAL@ as setup_project.sh does.
+capabilities: [system-prompt, tools]
+capability_path: seed_capability
+actions: [edit]
+capability_sources: [reference/api_index.md, reference/react_agent_notes.md]
+runner_repo_path: @AW_EVAL@/reference
+
+optimizer_skill: claude-code
+optimizer_model: @OPT_MODEL@
+optimizer_max_turns: 40
+optimizer_usd_per_iter: 3.0
+optimizer_instructions_file: @INSTRUCTIONS@
+target_model: openai/gpt-oss-120b-a100
+
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+memory_skill: md-files
+
+dataset_source: adapter
+split_seed: 0
+split_ids_file: itest_split.json
+
+num_trials: 1
+
+gate_mode: paired
+gate_k_se: 1.0
+
+max_iterations: 1
+stall: 0
+max_metric_calls: 0
+max_usd: 12.0
+max_optimizer_usd: 8.0
+
+protected_paths: [default]
+store: git

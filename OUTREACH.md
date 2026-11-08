@@ -55,7 +55,7 @@ provably rises without calling any model):
 
   git clone https://github.com/skillberry-ai/cap-evolve.git
   cd cap-evolve && python3 -m venv .venv && source .venv/bin/activate
-  pip install ./core && bash examples/toy_calc/run.sh
+  pip install ./core && bash benchmarks/toy/examples/calc/run.sh
 
 It's beta (0.x). Happy to answer questions about the honesty gate, how the trace
 diagnosis works, bringing your own optimizer, or where it falls over.

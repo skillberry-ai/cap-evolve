@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-EXAMPLE = REPO / "examples" / "toy_calc"
+EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
 sys.path.insert(0, str(REPO / "core"))
 sys.path.insert(0, str(EXAMPLE))
 

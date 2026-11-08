@@ -23,7 +23,7 @@ and the music add emphasis, never information.
   ~87 columns of content sat hard left with 39 % of the frame dead on the right. See
   STORYBOARD.md shot 4 for the before/after measurements and why the text cannot be bigger.
 - The dashboard segment is Playwright driving real Chromium against the **running**
-  dashboard, over the committed run dir `examples/tau2_airline/run_agentopt_v4` — the most
+  dashboard, over the committed run dir `benchmarks/tau2/examples/airline/run_agentopt_v4` — the most
   rigorous τ²-bench run here (`num_trials: 5`, 26/12/12 split, five candidates, five
   committed gate JSONs) and the one that ships with its own `events.jsonl`, so the shot is
   reproducible from a clean checkout. That run is a **null result**: `best_id = seed`, val
@@ -74,7 +74,7 @@ vhs scripts/demo-video/replay.tape                                 # -> /tmp/vid
 # the dashboard needs a server; the shipped cut films run_agentopt_v4.
 # Kill strays first — a leftover on the fixed port has caused false failures.
 pkill -f "cap-evolve dashboard"
-.venv/bin/cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open &
+.venv/bin/cap-evolve dashboard --base benchmarks/tau2/examples/airline --port 8791 --no-open &
 /tmp/vidvenv/bin/python scripts/demo-video/dash.py \
     --live http://127.0.0.1:8791 --run run_agentopt_v4       # -> /tmp/video/dashboard.mp4
 ```

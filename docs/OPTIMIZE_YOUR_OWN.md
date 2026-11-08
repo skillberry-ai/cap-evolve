@@ -31,7 +31,7 @@ Open the coding agent you already use at the repo root and tell it to follow
 [`../RUN.md`](../RUN.md). It loads the `intake` skill, asks for anything missing (never
 fabricating a NEEDED input), writes the adapter, runs `cap-evolve check`, then the full
 loop. A complete worked brief is
-[`../examples/tau2_airline/PROMPT.md`](../examples/tau2_airline/PROMPT.md).
+[`../benchmarks/tau2/examples/airline/PROMPT.md`](../benchmarks/tau2/examples/airline/PROMPT.md).
 
 Fill this in and paste it to your coding agent with *"follow RUN.md"* — intake asks for
 anything you omit and never fabricates a needed input:
@@ -141,9 +141,9 @@ Start from the closest example and edit its `adapter.py`:
 
 | You want to optimize… | Copy | `capabilities:` |
 |---|---|---|
-| a **prompt** (zero-API proof) | [`../examples/toy_calc`](../examples/toy_calc) | `[system-prompt]` |
-| a **system prompt + tools** (real agent) | [`../examples/tau2_airline`](../examples/tau2_airline) | `[system-prompt, tools]` |
-| a **skill package** | [`../examples/skillsbench`](../examples/skillsbench) | `[skill-package]` |
+| a **prompt** (zero-API proof) | [`../benchmarks/toy/examples/calc`](../benchmarks/toy/examples/calc) | `[system-prompt]` |
+| a **system prompt + tools** (real agent) | [`../benchmarks/tau2/examples/airline`](../benchmarks/tau2/examples/airline) | `[system-prompt, tools]` |
+| a **skill package** | [`../benchmarks/skillsbench/examples/shared_skills`](../benchmarks/skillsbench/examples/shared_skills) | `[skill-package]` |
 
 **Swapping the optimizer is one word** in `capevolve.yaml` — one runner (`run-optimizer`)
 resolves the name via `skills/optimizers/registry.yaml`:

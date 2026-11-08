@@ -1,12 +1,12 @@
 """tau2's own trajectories, at ONE path format shared by every tau2 adapter in this repo.
 
-Two problems, one fix. First, ``examples/tau2_airline`` never wrote them: both ``run_tasks``
+Two problems, one fix. First, ``benchmarks/tau2/examples/airline`` never wrote them: both ``run_tasks``
 call sites passed ``save_path=None``, so tau2 built ``SimulationResults`` in memory,
 ``_sim_to_rollout`` converted each sim, and the native object was dropped. A user saw only
 cap-evolve's per-rollout JSON — complete traces, but in cap-evolve's schema, which
 `tau2 view` cannot read, while tau2 unconditionally closed every run by recommending it.
 
-Second, the adapters that DID write them disagreed on where: ``examples/tau2_airline`` used
+Second, the adapters that DID write them disagreed on where: ``benchmarks/tau2/examples/airline`` used
 ``native_sims/<tag>/results.json`` (tag only, plus a ``-2``/``-3`` suffix walk), while the
 skillberry_benchmarks arms used ``trajectories/<split>/results_<ts>_<pid>.json`` (split
 only). Same benchmark, two layouts — so `tau2 view --dir` took a different shape depending
@@ -43,7 +43,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
+ADAPTER = REPO / "benchmarks" / "tau2" / "template" / "adapter.py"
 
 #: Every tau2 adapter that must agree on the path format. The duplication is deliberate —
 #: each ships as ONE self-contained file copied into a project's ``adapters/`` — so the
@@ -53,8 +53,8 @@ ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
 #: given checkout does not have. ``_MIN_ADAPTERS`` is what stops "skip the missing ones" from
 #: degenerating into "compare nothing and pass".
 TAU2_ADAPTERS = (
-    REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py",
-    REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py",
+    REPO / "benchmarks" / "tau2" / "template" / "adapter.py",
+    REPO / "benchmarks" / "tau2" / "examples" / "airline" / "adapters" / "adapter.py",
 )
 
 #: Below this many present adapters the alignment check is not checking alignment.
@@ -63,7 +63,7 @@ _MIN_ADAPTERS = 2
 
 def _load_adapter_module():
     """Import the tau2 adapter with `tau2` stubbed (CI has no tau2-bench install)."""
-    for p in (REPO / "core", ADAPTER.parent, ADAPTER.parent.parent):
+    for p in (REPO / "core", ADAPTER.parent, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
 

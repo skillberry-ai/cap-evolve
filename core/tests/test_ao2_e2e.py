@@ -17,7 +17,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
-EXAMPLE = REPO / "examples" / "toy_calc"
+EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
 CONDUCTOR = REPO / "skills" / "algorithms" / "agent-optimize" / "scripts" / "conductor.py"
 sys.path.insert(0, str(CORE))
 
@@ -38,7 +38,7 @@ def _project(tmp_path: Path, extra: str = "") -> Path:
     (project / "adapters").mkdir(parents=True)
     shutil.copy(EXAMPLE / "adapter.py", project / "adapters" / "adapter.py")
     shutil.copytree(EXAMPLE / "capability", tmp_path / "seed_capability")
-    text = (REPO / "templates" / "project" / "capevolve.yaml").read_text(encoding="utf-8")
+    text = (REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml").read_text(encoding="utf-8")
     for a, b in (("algorithm_skill: hill-climb", "algorithm_skill: agent-optimize"),
                  ("orchestration_mode: deterministic", "orchestration_mode: agent")):
         assert a in text

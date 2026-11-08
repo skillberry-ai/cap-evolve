@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-04
 **Status:** IMPLEMENTED — two changes, `A1` (name the graded copies) + `B` (structural preview).
-**Scope:** `templates/adapters/spreadsheetbench/adapter.py`, its seed `task_template.md`, and
+**Scope:** `benchmarks/spreadsheetbench/template/adapter.py`, its seed `task_template.md`, and
 `core/pyproject.toml` dev extras. No `core/` runtime changes.
 
 ## The two changes
@@ -142,7 +142,7 @@ Two deliberate choices:
 
 ### 3. Structure
 
-All in `templates/adapters/spreadsheetbench/adapter.py`:
+All in `benchmarks/spreadsheetbench/template/adapter.py`:
 
 - **`_target_facts(answer_position) -> str`** — new. Pure function, zero I/O, no
   dependencies beyond `_range_cells`. Independently unit-testable.

@@ -622,7 +622,7 @@ project that never touches the block gets the pre-#665 behavior exactly.
 
 ## Prioritizing clusters, and code over prose — ported from the deterministic optimizer's briefing
 
-`templates/project/optimizer/INSTRUCTIONS.md` — the briefing the deterministic
+`benchmarks/_scaffold/project/optimizer/INSTRUCTIONS.md` — the briefing the deterministic
 loops (hill-climb/gepa/skillopt) hand their per-iteration optimizer subprocess — carries three
 disciplines agent-optimize's own instructions lacked, adapted here (this loop has no optimizer
 subprocess, so they land on you, the driving agent, directly):

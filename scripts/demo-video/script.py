@@ -55,7 +55,7 @@ FOOTAGE = {
         # and --run (the run id) below, re-record, rebuild. Nothing else in the
         # build is coupled to which run is filmed — the shot has no burned-in
         # caption naming it, and every figure on screen is the dashboard's own.
-        "recipe": ("cap-evolve dashboard --base examples/tau2_airline "
+        "recipe": ("cap-evolve dashboard --base benchmarks/tau2/examples/airline "
                    "--port 8791 --no-open   +   "
                    "dash.py --live http://127.0.0.1:8791 --run run_agentopt_v4"),
         "blocked_on": None,          # recorded against the rebuilt dashboard
@@ -73,9 +73,9 @@ MUSIC_FADE_OUT = 3.5
 
 # ── the real committed diff we put on screen (shot: diff) ─────────────────
 # Source artifact, read directly:
-#   examples/tau2_airline/run_full/ui/data/runs_run_full_diff_cand_0006.json
+#   benchmarks/tau2/examples/airline/run_full/ui/data/runs_run_full_diff_cand_0006.json
 # Narrative + trajectory evidence: docs/OPTIMIZATION_EXAMPLES.md §1
-DIFF_ARTIFACT = ("examples/tau2_airline/run_full/ui/data/"
+DIFF_ARTIFACT = ("benchmarks/tau2/examples/airline/run_full/ui/data/"
                  "runs_run_full_diff_cand_0006.json")
 
 DIFF_PROSE = [
@@ -191,7 +191,7 @@ SHOTS = [
         # Δ 0.000", "VERDICTS 5 candidates · 0 accept · 5 reject · 0
         # indecisive", and the Gate tab's five reject rows with their paired
         # arithmetic. Verified on the extracted frames, not assumed.
-        src_note="live dashboard over examples/tau2_airline/run_agentopt_v4, "
+        src_note="live dashboard over benchmarks/tau2/examples/airline/run_agentopt_v4, "
                  "committed WITH its events.jsonl so the shot is reproducible "
                  "from the repo. It is the most rigorous τ²-bench run here — "
                  "num_trials 5, 26/12/12 split, five candidates, five gate "
@@ -289,7 +289,7 @@ SHOTS = [
             cmds=[
                 "git clone .../cap-evolve && cd cap-evolve",
                 "pip install ./core",
-                "bash examples/toy_calc/run.sh",
+                "bash benchmarks/toy/examples/calc/run.sh",
             ],
             out="baseline_val 0.0  →  test_reward 1.0   (gate-accepted, test sealed)",
             url="github.com/skillberry-ai/cap-evolve",

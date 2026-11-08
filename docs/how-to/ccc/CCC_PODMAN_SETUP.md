@@ -476,7 +476,7 @@ bench eval run --sandbox-user '' ...   # NOTE the empty string
 > **⚠ Not yet wired for the cap-evolve path.** This works when you call
 > `bench` directly — which is why `run_ccc_smoke.sh` passes
 > `--sandbox-user ''` and passes. It does **not** yet work through
-> cap-evolve: `examples/skillsbench/adapters/adapter.py` never passes
+> cap-evolve: `benchmarks/skillsbench/examples/shared_skills/adapters/adapter.py` never passes
 > `--sandbox-user`, and nothing in the repo reads
 > `SKILLSBENCH_SANDBOX_USER`. So the smoke succeeds while a real
 > `run_ccc_experiment.sh` run hits exactly the failure in the
@@ -564,7 +564,7 @@ layers:
    | cloud    | `parsec-sim-cloud`   | 8090 → 8086 |
 
    The published port numbers are not arbitrary — they are the single source
-   of truth in `examples/parsec/parsec_paths.py`'s `MCP_PORTS`, and
+   of truth in `benchmarks/parsec/examples/rca_prompts/parsec_paths.py`'s `MCP_PORTS`, and
    every trial's `harbor run` invocation gets them injected as
    `PLATFORM_MCP_URL`/`GITHUB_MCP_URL`/`ICINGA_MCP_URL`/`COST_MCP_URL`/
    `CLOUD_MCP_URL` (see `adapter.py`'s `run_target()`).
@@ -599,7 +599,7 @@ layers:
    `logging.destination_folder`. Nothing in this repo reads them: the
    containers get their configuration from the environment variables above,
    and the only mention of these files left here is a provenance comment on
-   `parsec_paths.py`'s port table. `examples/parsec/ccc/parsec_bootstrap.sh`
+   `parsec_paths.py`'s port table. `benchmarks/parsec/examples/rca_prompts/ccc/parsec_bootstrap.sh`
    therefore deliberately does **not** repair them, and says so: its
    `--check` verdict is scoped to the `.claude/skills/*` symlinks and the
    parsec-live venv, which are the two things a Mac→CCC tree copy actually
@@ -666,11 +666,11 @@ export PARSEC_V4N=/dccstor/<project>/<user>/workarea/python/rhdp-parsec/v4_2026-
 # environment only — never from a file in the tree:
 export LLM_API_KEY=...  LLM_API_BASE=https://your-gateway
 export HARNESS_LLM_SIMULATION_MODEL=azure/gpt-5.4
-bash examples/parsec/ccc/parsec_stack.sh up       # 5 containers + parsec-live, then activate
-bash examples/parsec/ccc/parsec_stack.sh status   # all 6 ports open AND all 5 sims `ready`
+bash benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh up       # 5 containers + parsec-live, then activate
+bash benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh status   # all 6 ports open AND all 5 sims `ready`
 ```
 
-See `examples/parsec/ccc/parsec_stack.sh --help` for `down`/`status`/`reap`. `up` is a
+See `benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh --help` for `down`/`status`/`reap`. `up` is a
 thin wrapper over the five `podman run`s the README's compose file describes,
 their activation POSTs, and one `uv run uvicorn` for `parsec-live`; the script
 exists so a CCC job doesn't need an interactive shell per service, and so the
@@ -772,7 +772,7 @@ above have the detail and the reproduction commands.
 | 12 | Postinst creates system users (`_dbus`, `messagebus`) | wrap `useradd`/`groupadd`/`usermod`/`groupmod`/`adduser`/`addgroup` | patched base v4 |
 | 13 | `dpkg-statoverride` `fchown()` → hard dpkg error, cascading through libpam-systemd/gnumeric/libgtk/libgoffice/libreoffice | wrap `dpkg-statoverride` | patched base v5 |
 | 14 | `podman machine inspect podman-machine-default` fails with "no such machine" | You're running parsec's Harbor-container docker-host resolution on Linux. `adapter.py`'s `_resolve_docker_host()` now prefers `$DOCKER_HOST` (already exported by `setup_podman.sh`) — confirm it's exported in your shell before invoking `cap-evolve run`/`harbor run` directly. | parsec `adapter.py` |
-| 15 | A parsec trial scores 0.0 on every task, but the stack "looks" healthy | The 5 MCP simulators **are** containers (`parsec-sim-*`), so `podman ps` is a fair first check — but a running container proves nothing: an unactivated harness accepts TCP and answers `/healthz` while serving no tools. `parsec-live` is the one host process (port 8000), invisible to `podman ps`. Use `examples/parsec/ccc/parsec_stack.sh status`, which polls each sim's `GET /api/v1/simulation` for `status: ready` (plus a TCP check for `parsec-live`, which has no equivalent ready endpoint). | parsec `adapter.py` / `parsec_stack.sh` |
+| 15 | A parsec trial scores 0.0 on every task, but the stack "looks" healthy | The 5 MCP simulators **are** containers (`parsec-sim-*`), so `podman ps` is a fair first check — but a running container proves nothing: an unactivated harness accepts TCP and answers `/healthz` while serving no tools. `parsec-live` is the one host process (port 8000), invisible to `podman ps`. Use `benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh status`, which polls each sim's `GET /api/v1/simulation` for `status: ready` (plus a TCP check for `parsec-live`, which has no equivalent ready endpoint). | parsec `adapter.py` / `parsec_stack.sh` |
 
 Removing any one of these puts the smoke back to failing. ⚠ Layer 8 is
 **not** wired for the cap-evolve path — see §C.
@@ -793,7 +793,7 @@ it is in `$HOME` or host-local `/tmp`; nothing needs root.
 | `/tmp/podman-<UID>/`, `/tmp/podman-run-<UID>/` | image store, sockets, dbus, pidfiles | `setup_podman.sh`, per host |
 | `docker.io/library/ubuntu:24.04` | **replaced** with the patched base | `setup_podman.sh` — see the blast-radius section |
 | benchflow's `site-packages` | `docker-compose-base.yaml` (§A), `docker.py` (§B) | you, by hand; originals kept as `.orig` |
-| `$PARSEC_V4N/_run/logs/` | Service stdout/stderr (`logs/sims/*.log`), host-scoped pid files (`logs/pids/<host>/`) and the redirect trace (`logs/parsec-trace/trace.jsonl`) `adapter.py` reads for cost attribution. Grows unboundedly across runs — not cleaned up by anything in this repo. | `examples/parsec/ccc/parsec_stack.sh` |
+| `$PARSEC_V4N/_run/logs/` | Service stdout/stderr (`logs/sims/*.log`), host-scoped pid files (`logs/pids/<host>/`) and the redirect trace (`logs/parsec-trace/trace.jsonl`) `adapter.py` reads for cost attribution. Grows unboundedly across runs — not cleaned up by anything in this repo. | `benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh` |
 | `$PARSEC_V4N/_run/jobs/v4_t2_e1/` | Per-trial Harbor job output, one directory per task/seed/timestamp. Grows unboundedly across runs — not cleaned up by anything in this repo. | `adapter.py` (`JOBS_ROOT`, `run_target()`) |
 
 The benchflow edits are wiped by `uv tool install --force benchflow`; re-apply

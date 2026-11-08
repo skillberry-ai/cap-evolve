@@ -28,8 +28,8 @@ PY="${PYTHON:-$REPO/.venv/bin/python}"
 export CAPEVOLVE_CORE="$REPO/core"
 export PYTHONPATH="$REPO/core"
 export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
-export CAPEVOLVE_TOY_DATA="$REPO/examples/toy_calc"
-export CAPEVOLVE_MOCK_SCRIPT="$REPO/examples/toy_calc/mock_script.json"
+export CAPEVOLVE_TOY_DATA="$REPO/benchmarks/toy/examples/calc"
+export CAPEVOLVE_MOCK_SCRIPT="$REPO/benchmarks/toy/examples/calc/mock_script.json"
 
 DETERMINISTIC="hill-climb gepa skillopt"
 AGENT_MODE="evograph agent-optimize"
@@ -40,9 +40,9 @@ fail=0
 scaffold() {
   local alg="$1" mode="$2" d="$OUT/$alg"
   rm -rf "$d"; mkdir -p "$d/.capevolve/project/adapters"
-  cp    "$REPO/examples/toy_calc/adapter.py"    "$d/.capevolve/project/adapters/"
-  cp -R "$REPO/examples/toy_calc/capability"    "$d/seed_capability"
-  cp    "$REPO/templates/project/capevolve.yaml" "$d/.capevolve/project/capevolve.yaml"
+  cp    "$REPO/benchmarks/toy/examples/calc/adapter.py"    "$d/.capevolve/project/adapters/"
+  cp -R "$REPO/benchmarks/toy/examples/calc/capability"    "$d/seed_capability"
+  cp    "$REPO/benchmarks/_scaffold/project/capevolve.yaml" "$d/.capevolve/project/capevolve.yaml"
   # Flat key rewrite only - the zero-dependency spec reader does not parse inline maps.
   "$PY" - "$d/.capevolve/project/capevolve.yaml" "$alg" "$mode" <<'PYEOF'
 import re, sys

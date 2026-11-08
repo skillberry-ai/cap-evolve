@@ -1,6 +1,6 @@
 """orchestration_mode routes cap-evolve run; deterministic path is unchanged.
 
-Builds a real runnable toy_calc project (mirroring examples/toy_calc/run.sh) and
+Builds a real runnable toy_calc project (mirroring benchmarks/toy/examples/calc/run.sh) and
 drives it through the actual `cap_evolve.cli` `run` command in-process:
 
   * agent mode  -> check + baseline, then a handoff JSON; algorithm + finalize skipped
@@ -17,8 +17,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
-EXAMPLE = REPO / "examples" / "toy_calc"
-TEMPLATE_SPEC = REPO / "templates" / "project" / "capevolve.yaml"
+EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
+TEMPLATE_SPEC = REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml"
 
 sys.path.insert(0, str(CORE))
 
@@ -36,7 +36,7 @@ def _env():
 
 
 def _build_project(tmp_path: Path, orchestration_mode: str) -> tuple[Path, Path]:
-    """Scaffold a runnable project exactly like examples/toy_calc/run.sh does.
+    """Scaffold a runnable project exactly like benchmarks/toy/examples/calc/run.sh does.
 
     Returns (project_dir, spec_path). The workdir is tmp_path (the dir that holds
     .capevolve/), so `run_dir` printed by the run resolves under tmp_path.

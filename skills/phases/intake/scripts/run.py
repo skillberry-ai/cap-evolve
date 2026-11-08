@@ -5,7 +5,7 @@ What the SCRIPT does (this file):
      reuse (task files, an existing capability/prompt/tools surface, an existing
      adapter, a benchmark runtime) so the agent doesn't re-author what already
      exists. The findings are reported under ``discovered``.
-  2. **scaffold** — copy ``templates/project`` into ``.capevolve/project`` (adapter
+  2. **scaffold** — copy ``benchmarks/_scaffold/project`` into ``.capevolve/project`` (adapter
      stub, inputs/, capevolve.yaml, PROJECT.md).
 
 What the OPTIMIZER AGENT does (driven by SKILL.md, not this script): decide the
@@ -32,10 +32,10 @@ _CAP_HINTS = ("prompt.txt", "policy.md", "tools.json", "SKILL.md", "system_promp
 def find_templates() -> Path:
     here = Path(__file__).resolve()
     for parent in here.parents:
-        t = parent / "templates" / "project"
+        t = parent / "benchmarks" / "_scaffold" / "project"
         if t.is_dir():
             return t
-    raise FileNotFoundError("templates/project not found; run from the repo or set --templates")
+    raise FileNotFoundError("benchmarks/_scaffold/project not found; run from the repo or set --templates")
 
 
 def mine_artifacts(workdir: Path) -> dict:

@@ -750,7 +750,7 @@ def _rollout_progress(run_dir, ev: dict, now: float) -> dict | None:
       2. ``native_sims/<tag>/<split>/results_*.json`` — tau2's own checkpoint file,
          appended to after every simulation even while ``run_batch``/``run_trials``
          is still one open Python call (every tau2 adapter in this repo writes it;
-         see ``templates/adapters/tau2_bench/adapter.py:_sim_save_path``).
+         see ``benchmarks/tau2/template/adapter.py:_sim_save_path``).
 
     Returns ``None`` when neither source has anything yet.
 

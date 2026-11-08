@@ -35,7 +35,7 @@ class Adapter(CapabilityAdapter):
   `reward` (the scalar the gate uses); every other entry is display-only and **never
   affects accept/reject**. Secondaries flow through the rollout/results JSON for the
   dashboard. Example (tau2 airline): primary `reward` plus shown-only `db_match`
-  (higher) and `cost_usd` (lower). See `examples/tau2_airline/adapters/adapter.py`
+  (higher) and `cost_usd` (lower). See `benchmarks/tau2/examples/airline/adapters/adapter.py`
   `_shown_metrics()`. Leave `metrics` empty to keep the plain scalar-reward behavior.
 
 ## Optional hooks (working defaults provided)

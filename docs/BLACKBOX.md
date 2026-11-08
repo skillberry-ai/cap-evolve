@@ -87,4 +87,4 @@ outside the benchmark. It then passes the `cap-evolve check` gate and runs the o
 proposes edits, keeps only those that clear the significance gate, scores the sealed test once, and
 writes a report.
 
-Reference: [`examples/tau2_sierra_airline/PROMPT.md`](../examples/tau2_sierra_airline/PROMPT.md)
+Reference: [`benchmarks/tau2/examples/sierra_airline/PROMPT.md`](../benchmarks/tau2/examples/sierra_airline/PROMPT.md)

@@ -169,7 +169,7 @@ def test_no_shipped_template_pairs_stop_at_reward_with_num_trials_1():
     from cap_evolve.specfile import read_yaml
 
     repo = Path(__file__).resolve().parents[2]
-    templates = sorted((repo / "templates").rglob("capevolve.yaml"))
+    templates = sorted((repo / "benchmarks").rglob("capevolve.yaml"))
     assert templates, "no shipped templates found — path drifted?"
 
     offenders = []

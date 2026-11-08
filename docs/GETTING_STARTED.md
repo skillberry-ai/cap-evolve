@@ -29,7 +29,7 @@ prompt contains a `[CALC]` marker. The `mock` optimizer adds the marker, so the 
 provably rises — **no model is called**.
 
 ```bash
-bash examples/toy_calc/run.sh
+bash benchmarks/toy/examples/calc/run.sh
 ```
 
 Expected output — the seed prompt scores `0.0` on val; the optimized prompt is

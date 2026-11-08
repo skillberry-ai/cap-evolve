@@ -63,8 +63,8 @@
   </p>
 
   <section class="reveal">
-<pre><code>cp -r templates/adapters/&lt;template&gt;/*  .capevolve/project/adapters/
-cp    templates/adapters/model_config.py  .capevolve/project/adapters/
+<pre><code>cp -r benchmarks/_shared/&lt;template&gt;/*  .capevolve/project/adapters/
+cp    benchmarks/_shared/model_config.py  .capevolve/project/adapters/
 mv    .capevolve/project/adapters/seed_capability  .capevolve/project/seed_capability
 # set MODEL + credentials in a repo-root .env, then:
 cap-evolve check &amp;&amp; cap-evolve run</code></pre>
@@ -155,7 +155,7 @@ OPENAI_API_KEY=sk-…</code></pre>
     “write your own” guide are in
     <a href="https://github.com/skillberry-ai/cap-evolve/blob/main/docs/ADAPTER_TEMPLATES.md">docs/ADAPTER_TEMPLATES.md</a>;
     the templates themselves are in
-    <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/templates/adapters">templates/adapters/</a>.
+    <a href="https://github.com/skillberry-ai/cap-evolve/tree/main/benchmarks">benchmarks/</a>.
     Next: <a href="optimize-your-own.html">optimize your own capability</a> or see a
     <a href="run-end-to-end.html">full run end-to-end</a>.
   </p>

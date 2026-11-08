@@ -7,7 +7,7 @@ core. Adding a capability, algorithm, or optimizer is the same three steps.
 
 1. **Clone the template.**
    ```bash
-   cp -R templates/skill skills/<component>/<your-skill>
+   cp -R benchmarks/_scaffold/skill skills/<component>/<your-skill>
    ```
    `<component>` is one of `phases`, `capabilities`, `algorithms`, `optimizers`,
    `orchestrate`, `interventions`.

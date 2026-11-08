@@ -11,7 +11,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 INPUTS_MD = REPO / "skills" / "phases" / "intake" / "inputs" / "INPUTS.md"
-TEMPLATE_SPEC = REPO / "templates" / "project" / "capevolve.yaml"
+TEMPLATE_SPEC = REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml"
 
 
 def test_default_objectives_constant_is_reward_maximize_cost_minimize():

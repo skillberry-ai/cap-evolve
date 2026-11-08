@@ -12,7 +12,7 @@ python skills/_registry/build_manifest.py skills   # rebuild the registry
 ```
 
 ## Add a capability / algorithm / optimizer (the 3-step pattern)
-1. `cp -R templates/skill skills/<component>/<your-skill>` where `<component>` is
+1. `cp -R benchmarks/_scaffold/skill skills/<component>/<your-skill>` where `<component>` is
    `capabilities`, `algorithms`, `optimizers`, or `phases`.
 2. Fill `SKILL.md` (frontmatter: `name` ≤64 chars `[a-z0-9-]`, a "Use when…"
    `description` ≤1024 chars, `component`, `needs`/`provides`, `sources`), and `scripts/{abstract,check,run}.py`. Add `references/*.md`,

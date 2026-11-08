@@ -3,7 +3,7 @@
 **The default for every real run is the ``paired`` gate.** The optimization loop
 builds the aligned per-task delta vector and selects ``paired`` unless the caller
 pinned a mode (``harness.py:1524-1526``, ``gepa.py:741-743``), and the shipped
-config says so (``templates/project/capevolve.yaml``: ``gate_mode: paired``).
+config says so (``benchmarks/_scaffold/project/capevolve.yaml``: ``gate_mode: paired``).
 ``decide``'s own ``mode=`` parameter defaults to ``significant`` only as the
 fallback for a bare caller that has no per-task data.
 

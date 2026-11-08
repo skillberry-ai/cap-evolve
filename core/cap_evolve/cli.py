@@ -1679,7 +1679,7 @@ def _cmd_doctor(argv) -> int:
 
 
 def _cmd_init(argv) -> int:
-    """Scaffold ``.capevolve/project`` from ``templates/project`` and write the spec.
+    """Scaffold ``.capevolve/project`` from ``benchmarks/_scaffold/project`` and write the spec.
 
     Deliberately NOT a re-implementation of the ``intake`` skill: that one interviews
     you about the capability and implements the adapter. This writes the files that
@@ -1702,8 +1702,8 @@ def _cmd_init(argv) -> int:
     args = p.parse_args(argv)
 
     here = Path(__file__).resolve()
-    template = next((q / "templates" / "project" for q in here.parents
-                     if (q / "templates" / "project").is_dir()), None)
+    template = next((q / "benchmarks" / "_scaffold" / "project" for q in here.parents
+                     if (q / "benchmarks" / "_scaffold" / "project").is_dir()), None)
     project = Path(args.project)
     spec_path = project / "capevolve.yaml"
     color = _wants_color(argv=argv)
@@ -1716,8 +1716,8 @@ def _cmd_init(argv) -> int:
                  "  → cap-evolve init --force  start from the template again"])
         return 1
     if template is None:
-        _screen(["  could not find templates/project next to this install.",
-                 "  → clone the repo, or copy templates/project/ by hand"])
+        _screen(["  could not find benchmarks/_scaffold/project next to this install.",
+                 "  → clone the repo, or copy benchmarks/_scaffold/project/ by hand"])
         return 1
 
     def ask(prompt: str, default: str, choices=()) -> str:

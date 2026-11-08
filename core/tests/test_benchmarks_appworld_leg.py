@@ -18,7 +18,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 LIB = REPO / "ci" / "benchmarks" / "lib"
-EX = REPO / "examples" / "appworld"
+EX = REPO / "benchmarks" / "appworld" / "examples" / "react_agent"
 WORKFLOW = REPO / ".github" / "workflows" / "integration-tests.yml"
 
 STUB = """#!/usr/bin/env bash
@@ -123,7 +123,7 @@ def test_missing_lint_cache_fails_loudly(tmp_path):
 
 def test_ci_setup_provisions_appworld_like_the_readme():
     src = (LIB / "ci_setup.sh").read_text()
-    block = src[src.index("  appworld)\n    # examples/appworld/README.md"):src.index("  tau2)\n")]
+    block = src[src.index("  appworld)\n    # benchmarks/appworld/examples/react_agent/README.md"):src.index("  tau2)\n")]
     for needle in ("42b5bcf", "git lfs pull", "appworld-extra-headers.patch", "fastapi==0.135.0",
                    "starlette>=0.48", "pydantic>=2.12,<2.13", "appworld\" install --repo", "src/appworld/apps/admin",
                    "download data --root", "make_roots.py", "make_reference.py", "check_injection.py"):
@@ -136,7 +136,7 @@ def test_ci_setup_provisions_appworld_like_the_readme():
 def test_integration_workflow_offers_appworld():
     wf = WORKFLOW.read_text()
     assert "options: [tau2, tau2_sierra, tau2_sierra_blackbox, appworld]" in wf
-    assert "examples/appworld/scripts/assert_itest.py \"$run_dir\"" in wf
+    assert "benchmarks/appworld/examples/react_agent/scripts/assert_itest.py \"$run_dir\"" in wf
     assert "(github.event.inputs.bench || 'tau2') == 'appworld' && 'gpt-oss-120b-a100'" in wf
 
 

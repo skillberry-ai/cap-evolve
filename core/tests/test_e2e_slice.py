@@ -16,7 +16,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
-EXAMPLE = REPO / "examples" / "toy_calc"
+EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
 MOCK_RUN = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.py"
 
 sys.path.insert(0, str(CORE))

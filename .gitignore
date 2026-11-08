@@ -43,13 +43,13 @@ venv/
 vendor/
 .bench_cwd/
 .bench_runs/
-examples/skillsbench/run/
+benchmarks/skillsbench/examples/shared_skills/run/
 .cache/
 
 # skillsbench seed skills are Anthropic-licensed — extracted from the SkillsBench clone
 # by setup.sh at onboarding time, NOT vendored here (only the README is tracked).
-examples/skillsbench/seed_capability/*
-!examples/skillsbench/seed_capability/README.md
+benchmarks/skillsbench/examples/shared_skills/seed_capability/*
+!benchmarks/skillsbench/examples/shared_skills/seed_capability/README.md
 
 # CI benchmark scratch (per-task work dirs)
 ci/benchmarks/.work/
@@ -62,7 +62,7 @@ site/dashboard-ui/
 # Credentials-adjacent: never commit.
 /results/
 
-# examples/parsec/h4 experiment shims — a tree of symlinks into an absolute,
+# benchmarks/parsec/examples/rca_prompts/h4 experiment shims — a tree of symlinks into an absolute,
 # machine-local path outside the repo (e.g. /dccstor/.../rhdp-parsec/...), built
 # by hand per experiment. Not portable, same category as .capevolve/.
 /.h4_shims/

@@ -249,7 +249,7 @@ def test_smoke_and_replay_are_live_on_real_tau2_toolkit(tmp_path):
     ro.write_text(json.dumps({"trace": [{"role": "assistant", "tool_calls": [
         {"id": "1", "name": "get_user_details", "arguments": {"user_id": "mohamed_silva_9265"}},
         {"id": "2", "name": "get_reservation_details", "arguments": {"reservation_id": "K1NW8N"}}]}]}))
-    adapter = REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py"
+    adapter = REPO / "benchmarks" / "tau2" / "examples" / "airline" / "adapters" / "adapter.py"
 
     def go(trace):
         p = subprocess.run([py, str(REPO / "skills/algorithms/agent-optimize/scripts/pregate.py"),

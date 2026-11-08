@@ -1,6 +1,6 @@
 # Reproducing the tau2-bench airline run (one-command onboarding)
 
-This reproduces the bundled [`examples/tau2_airline`](../examples/tau2_airline) end to
+This reproduces the bundled [`benchmarks/tau2/examples/airline`](../benchmarks/tau2/examples/airline) end to
 end: onboard **tau2-bench airline as a brand-new benchmark** (intake clones + installs
 it), wire the ETE gateway, build the adapter, pass the `cap-evolve check` hard gate, then run
 the full **optimize → significance-gate → sealed-test → report** loop with a live
@@ -29,11 +29,11 @@ trajectory-verified before→after examples in
 [`docs/OPTIMIZATION_EXAMPLES.md`](OPTIMIZATION_EXAMPLES.md)). You can
 **see the result before reproducing**: open the committed full interactive dashboard
 (all 10 iterations, no backend needed) — the static UI export at
-[`examples/tau2_airline/run_full/ui/`](../examples/tau2_airline/run_full/ui/) — by running
-`cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000` (then
+[`benchmarks/tau2/examples/airline/run_full/ui/`](../benchmarks/tau2/examples/airline/run_full/ui/) — by running
+`cd benchmarks/tau2/examples/airline/run_full/ui && python3 -m http.server 8000` (then
 http://localhost:8000), or host it on GitHub Pages / any static host; read the curated story in
-[`examples/tau2_airline/DEMO.md`](../examples/tau2_airline/DEMO.md), or the raw numbers in
-[`run_full/final.json`](../examples/tau2_airline/run_full/final.json).
+[`benchmarks/tau2/examples/airline/DEMO.md`](../benchmarks/tau2/examples/airline/DEMO.md), or the raw numbers in
+[`run_full/final.json`](../benchmarks/tau2/examples/airline/run_full/final.json).
 
 ---
 
@@ -54,7 +54,7 @@ Everything else — cap-evolve, tau2-bench, the dashboard server — is installe
 
 ## 2. The prompt (what a coding agent is given)
 
-The onboarding is driven by [`examples/tau2_airline/PROMPT.md`](../examples/tau2_airline/PROMPT.md):
+The onboarding is driven by [`benchmarks/tau2/examples/airline/PROMPT.md`](../benchmarks/tau2/examples/airline/PROMPT.md):
 paste it to Claude Code at the repo root and say **"follow RUN.md."** It is the exact
 intake input — capability `[system-prompt, tools]`, benchmark tau2-bench airline
 (`https://github.com/sierra-research/tau2-bench`, installed via `pip install -e`), runner
@@ -72,8 +72,8 @@ the same steps a coding agent following the prompt performs.
 git clone <repo> cap-evolve && cd cap-evolve
 # put gateway creds in ./.env (OPENAI_BASE_URL, OPENAI_API_KEY); be logged into Claude Code
 
-bash examples/tau2_airline/setup.sh    # intake onboarding (see step 4)
-bash examples/tau2_airline/run.sh      # full run + live capybara dashboard (see step 5)
+bash benchmarks/tau2/examples/airline/setup.sh    # intake onboarding (see step 4)
+bash benchmarks/tau2/examples/airline/run.sh      # full run + live capybara dashboard (see step 5)
 ```
 
 ## 4. What `setup.sh` does (intake / implement-and-check)
@@ -84,7 +84,7 @@ bash examples/tau2_airline/run.sh      # full run + live capybara dashboard (see
    `--dashboard` / `--no-dashboard`.
 2. **Onboard the benchmark** — clone tau2-bench (latest `main`) into
    `vendor/tau2-bench`, `pip install -e vendor/tau2-bench`, and **record the resolved commit** to
-   `examples/tau2_airline/run_full/TAU2_COMMIT.txt`.
+   `benchmarks/tau2/examples/airline/run_full/TAU2_COMMIT.txt`.
 3. **Scaffold + wire (the full integration)** — run the `intake` scaffold into
    `.capevolve/project`, then copy in the authored integration: the adapter
    (`adapters/adapter.py` — `tasks` + `run_batch` → tau2's runner, the batched
@@ -136,7 +136,7 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
   the cumulative-best stair, the tasks × iterations heatmap, the diff per iteration, the
   lineage tree, and the gate decisions.
 
-Run config (from `examples/tau2_airline/capevolve.yaml`): `hill-climb --focus all`,
+Run config (from `benchmarks/tau2/examples/airline/capevolve.yaml`): `hill-climb --focus all`,
 `max_iterations 10`, `num_trials 10`, `split_ids_file split_ids.json` (no-holdout fit),
 `gate_mode significant` `gate_k_se 0.2`, `store git`, `max_usd 400`,
 `optimizer_usd_per_iter 40`, `TAU2_MAX_CONCURRENCY 125`.
@@ -151,11 +151,11 @@ open "$RD/dashboard.html"       # KPIs, cumulative-best stair, heatmap, lineage,
 cat "$RD/rejected.jsonl"        # what the honest gate rejected (optimizer memory)
 ```
 
-Saved artifacts also land in [`../examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)
+Saved artifacts also land in [`../benchmarks/tau2/examples/airline/run_full/`](../benchmarks/tau2/examples/airline/run_full/)
 (`demo.cast`, the full interactive dashboard under `ui/` — all 10 iterations, no backend
 needed; serve with `python3 -m http.server 8000` in that dir or host on GitHub Pages /
 any static host — `report.md`, `events.jsonl`, `TAU2_COMMIT.txt`). See
-[`examples/tau2_airline/DEMO.md`](../examples/tau2_airline/DEMO.md) for the narrated walkthrough.
+[`benchmarks/tau2/examples/airline/DEMO.md`](../benchmarks/tau2/examples/airline/DEMO.md) for the narrated walkthrough.
 
 ## 7. Notes on honest results
 
@@ -177,7 +177,7 @@ This uses the generic litellm-proxy model wiring (`adapters/model_config.py`), n
 gateway wiring, so it works with any `aws/gpt-oss-120b`-behind-a-proxy endpoint.
 
 Project: a litellm-proxy-wired tau2 project (the local `e2e/tau2/.capevolve/project` harness — the
-same adapter as `examples/tau2_airline` but importing `model_config.py` instead of `gateway.py`; set it
+same adapter as `benchmarks/tau2/examples/airline` but importing `model_config.py` instead of `gateway.py`; set it
 up once alongside your proxy creds). Split: `inputs/split_ids.json` pins **30 train == 30 val**
 and a disjoint **20 test** (held out). Model: `aws/gpt-oss-120b` (agent + user simulator) via the
 proxy; the optimizer is the conversational agent itself (`optimizer_skill: mock`, never invoked).

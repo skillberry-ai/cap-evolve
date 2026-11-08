@@ -362,7 +362,7 @@ def test_gepa_full_val_gate_logs_the_same_statistics(tmp_path):
 
 
 def test_spreadsheetbench_tags_candidate_vs_infra_errors():
-    src = (REPO / "templates" / "adapters" / "spreadsheetbench" / "adapter.py").read_text()
+    src = (REPO / "benchmarks" / "spreadsheetbench" / "template" / "adapter.py").read_text()
     # the candidate's own unusable template is the candidate error ...
     i = src.index("return Rollout(task_id=task.id, error=tmpl_error")
     assert '"error_kind": "candidate"' in src[i:i + 200]

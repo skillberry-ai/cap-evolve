@@ -62,7 +62,7 @@
 
   <h2>How it works</h2>
   <p>cap-evolve optimizes; Harbor evaluates. The <strong>Harbor adapter</strong>
-  (<code>templates/adapters/harbor/adapter.py</code>) is the bridge — its
+  (<code>benchmarks/generic/harbor/template/adapter.py</code>) is the bridge — its
   <code>run_batch()</code> calls <code>harbor run</code> as a subprocess each
   time cap-evolve needs an evaluation. You never call <code>harbor run</code>
   directly; cap-evolve does it for you.</p>
@@ -90,7 +90,7 @@ uv tool install harbor              # CLI (v0.20+)
 pip install ./capevolve_harbor
 
 # 2. Copy the Harbor adapter into your project
-cp -r templates/adapters/harbor/* .capevolve/project/adapters/</code></pre>
+cp -r benchmarks/generic/harbor/template/* .capevolve/project/adapters/</code></pre>
 
   <p>This places <code>adapter.py</code> (the Harbor bridge) and a seed
   <code>SKILL.md</code> into your project. The adapter reads all Harbor config
@@ -140,7 +140,7 @@ RUN apt-get update -qq &amp;&amp; apt-get install -y -qq curl &amp;&amp; \
     apt-get remove -y curl &amp;&amp; rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir "harbor&gt;=0.20.0"
 COPY capevolve_harbor/ /app/capevolve_harbor/
-COPY templates/adapters/harbor/ /app/templates/adapters/harbor/</code></pre>
+COPY benchmarks/generic/harbor/template/ /app/benchmarks/generic/harbor/template/</code></pre>
 <pre><code>podman build --platform linux/amd64 -t quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest .
 podman push quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest</code></pre>
 
@@ -184,7 +184,7 @@ podman push quay.io/&lt;your-org&gt;/cap-evolve-harbor-runner:latest</code></pre
     <li><a href="https://www.harborframework.com/docs">Harbor documentation</a></li>
     <li><a href="https://www.harborframework.com/docs/agents#running-a-custom-agent">Harbor agents</a></li>
     <li><a href="https://hub.harborframework.com/datasets">Harbor datasets</a></li>
-    <li><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/templates/adapters/harbor/adapter.py">Harbor adapter source</a></li>
+    <li><a href="https://github.com/skillberry-ai/cap-evolve/blob/main/benchmarks/generic/harbor/template/adapter.py">Harbor adapter source</a></li>
     <li><a href="harbor-openshift.html">OpenShift guide</a> — vLLM, RBAC, credentials, Job manifest</li>
     <li><a href="https://github.com/opendatahub-io/agent-eval-harness/blob/main/docs/harbor-workflow.md">agent-eval-harness Harbor workflow</a></li>
     <li><a href="https://github.com/redhat-et/coding_agent_bench">coding_agent_bench</a> — SWE-bench on OpenShift</li>

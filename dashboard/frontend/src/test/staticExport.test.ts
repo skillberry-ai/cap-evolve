@@ -1,5 +1,5 @@
 /**
- * The committed static export (`examples/tau2_airline/run_full/ui`) is a real run dir
+ * The committed static export (`benchmarks/tau2/examples/airline/run_full/ui`) is a real run dir
  * with NO events.jsonl and a summary written before `capabilities` / `baseline_stderr`
  * existed. Every assertion here is about that lossy shape: the UI must fall back to the
  * data it does have instead of printing a blank tab or a false cause.

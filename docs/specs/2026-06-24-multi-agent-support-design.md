@@ -83,7 +83,7 @@ Every place that lists the optimizer set (found via grep):
   + install/hosts prose.
 - `install.sh` — `--host` detection: add `antigravity`, `droid`/`factory`,
   `copilot`, `kimi`, `pi` skills-dir cases (`cursor` already present).
-- `templates/project/capevolve.yaml`, `templates/project/PROJECT.md` — optimizer
+- `benchmarks/_scaffold/project/capevolve.yaml`, `benchmarks/_scaffold/project/PROJECT.md` — optimizer
   enumeration comments.
 - `skills/phases/intake/inputs/INPUTS.md` — optimizer enumeration.
 - `RUN.md`, `llms.txt` — optimizer enumerations.

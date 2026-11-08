@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-MODEL_CONFIG = REPO / "templates" / "adapters" / "model_config.py"
+MODEL_CONFIG = REPO / "benchmarks" / "_shared" / "model_config.py"
 ASSERT_RUN = REPO / "ci" / "benchmarks" / "lib" / "assert_run.py"
 
 

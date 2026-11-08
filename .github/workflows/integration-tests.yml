@@ -9,7 +9,7 @@
 #
 # The `bench` dispatch input picks WHICH tau2 leg: the adapter template (`tau2`, the default
 # and what the PR label runs), or one of the two delivery arms from
-# examples/tau2_sierra_airline (`tau2_sierra` /
+# benchmarks/tau2/examples/sierra_airline (`tau2_sierra` /
 # `tau2_sierra_blackbox`). `integration` is not a tier benchmarks.yml can dispatch — its tier
 # picker offers smoke/pilot/full — so this workflow is the only way to reach it, and it is the
 # cheap one-task check to run on an arm before spending a curated tier on it.
@@ -34,7 +34,7 @@ on:
   workflow_dispatch:
     inputs:
       bench:
-        description: "Which leg to run on its one integration task (appworld = examples/appworld on train task 82e2fac_1, agent gpt-oss-120b on RITS). Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). tau2_sierra / tau2_sierra_blackbox = the two DELIVERY ARMS from examples/tau2_sierra_airline, on vanilla tau2 pinned at its TAU2_REFERENCE_SHA — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
+        description: "Which leg to run on its one integration task (appworld = benchmarks/appworld/examples/react_agent on train task 82e2fac_1, agent gpt-oss-120b on RITS). Which tau2 leg to run on task 9. tau2 = the adapter template (in-process, policy+tools). tau2_sierra / tau2_sierra_blackbox = the two DELIVERY ARMS from benchmarks/tau2/examples/sierra_airline, on vanilla tau2 pinned at its TAU2_REFERENCE_SHA — same task, tools-only surface, delivered in-process vs through the Skillberry Store + Proxy-Agent. This is the cheap single-task check for an arm; benchmarks.yml runs the curated tiers."
         type: choice
         default: tau2
         options: [tau2, tau2_sierra, tau2_sierra_blackbox, appworld]
@@ -90,7 +90,7 @@ jobs:
           "${CAPEVOLVE_PY:-python3}" ci/benchmarks/lib/assert_run.py "$run_dir" --min-iterations 1
           # appworld's own gate on top: no infra error or lint reject in any rollout, no gold-bearing record.
           if [ "$BENCH" = appworld ]; then
-            "${CAPEVOLVE_PY:-python3}" examples/appworld/scripts/assert_itest.py "$run_dir"
+            "${CAPEVOLVE_PY:-python3}" benchmarks/appworld/examples/react_agent/scripts/assert_itest.py "$run_dir"
           fi
       - name: Upload run artifacts
         if: always()

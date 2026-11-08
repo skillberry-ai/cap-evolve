@@ -115,7 +115,7 @@ the gap has moved and this section is what needs re-deriving.
   list (`:420`) matches seven `.md` **basenames** while `run_step` injects a whole
   read-context — `guidance/`, `trajectories/`, `prior_iterations/*/diff.patch` — that
   `_SNAPSHOT_IGNORE` keeps *out* of the parent snapshot, so every injected file reads
-  as an applied edit. Measured zero-API on `examples/toy_calc` at `L=4`: a step whose
+  as an applied edit. Measured zero-API on `benchmarks/toy/examples/calc` at `L=4`: a step whose
   optimizer edited exactly one file logged `applied_changes: 10` (9 injected + 1
   real), and the next step logged `10` again with the capability file **byte-identical
   to its parent**. The metric has no zero, so it cannot detect the one thing it exists

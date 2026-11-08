@@ -1,6 +1,6 @@
 # Reproducing the τ²-bench airline runs: direct and blackbox
 
-This reproduces the two runs of [`examples/tau2_sierra_airline`](../examples/tau2_sierra_airline), one
+This reproduces the two runs of [`benchmarks/tau2/examples/sierra_airline`](../benchmarks/tau2/examples/sierra_airline), one
 per approach:
 
 - **direct**: the runner loads each candidate's tool code into its own process;
@@ -41,7 +41,7 @@ The two runs agree on the shape: both accept all three candidates, rise at every
 |---|---|
 | τ²-bench | `sierra-research/tau2-bench` at `4ce7c0397c1eb65c9bbe59aeacfe1ca44a1cd699` (`TAU2_REFERENCE_SHA` in each `setup.sh`, direct and blackbox) |
 | Domain | airline |
-| cap-evolve | this repository, `examples/tau2_sierra_airline/{direct,blackbox}` |
+| cap-evolve | this repository, `benchmarks/tau2/examples/sierra_airline/{direct,blackbox}` |
 
 ## Models
 
@@ -68,8 +68,8 @@ Each task is run 5 times per evaluation (`num_trials: 5`). A full evaluation is 
 ## The run specs
 
 The two specs are the committed
-[`direct/capevolve.yaml`](../examples/tau2_sierra_airline/direct/capevolve.yaml) and
-[`blackbox/capevolve.yaml`](../examples/tau2_sierra_airline/blackbox/capevolve.yaml). They are
+[`direct/capevolve.yaml`](../benchmarks/tau2/examples/sierra_airline/direct/capevolve.yaml) and
+[`blackbox/capevolve.yaml`](../benchmarks/tau2/examples/sierra_airline/blackbox/capevolve.yaml). They are
 identical except for the keys that select the approach (`intervention`, `skill_name`) and the
 protected paths. The spec below is the blackbox one.
 
@@ -139,12 +139,12 @@ installs everything. The blackbox `setup.sh` also provisions the Skillberry Stor
 
 ```bash
 # direct
-bash examples/tau2_sierra_airline/direct/setup.sh
-bash examples/tau2_sierra_airline/direct/run.sh
+bash benchmarks/tau2/examples/sierra_airline/direct/setup.sh
+bash benchmarks/tau2/examples/sierra_airline/direct/run.sh
 
 # blackbox
-bash examples/tau2_sierra_airline/blackbox/setup.sh
-bash examples/tau2_sierra_airline/blackbox/run.sh
+bash benchmarks/tau2/examples/sierra_airline/blackbox/setup.sh
+bash benchmarks/tau2/examples/sierra_airline/blackbox/run.sh
 ```
 
 Both `run.sh` scripts take `--smoke` for a one-task, one-trial check with a mock optimizer and no spend

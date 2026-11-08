@@ -391,7 +391,7 @@ read as a way-station, not a destination.
 
 ## Related
 
-- `templates/adapters/harbor/` — the adapter. `HARBOR_LOCAL_ASIS=1` (the opt-in
+- `benchmarks/generic/harbor/template/` — the adapter. `HARBOR_LOCAL_ASIS=1` (the opt-in
   that lets Harbor use a hand-authored task dir verbatim) is added there
   separately; `run_suite.sh`'s `parsec)` case exports it.
 - `ci/benchmarks/README.md` — the suite-wide runner/tier/dispatch documentation.

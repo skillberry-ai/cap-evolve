@@ -80,7 +80,7 @@ after each accept, which is why later rounds keep failing.
 | Scoring | **`SB_SCORING=hard`** (`full_verified/overrides.env`). On this dataset hard **==** soft: the verified release grades ONE case per task, so this is a native hard score. |
 | Agent turn budget | `SPREADSHEETBENCH_MAX_TURNS=30` (tier default, `run_suite.sh`) |
 | Container concurrency | `SPREADSHEETBENCH_CONCURRENCY=8` (tier default) |
-| Seed capability | **pristine** (`warm_seed: false`) — `templates/adapters/spreadsheetbench/seed_capability/` at the commit above |
+| Seed capability | **pristine** (`warm_seed: false`) — `benchmarks/spreadsheetbench/template/seed_capability/` at the commit above |
 | Rollout seeding | `SPLIT_SEED` from repo var `BENCH_SPLIT_SEED` (unset → `0`). The partition is fixed by the committed file, so this varies only per-trial rollout seeding. |
 
 ---
@@ -144,7 +144,7 @@ unverified. Treat this as one draw from the pipeline distribution.
 
 `champion/` is a complete capability directory. To start a new run from it instead of the
 pristine seed, install it as a warm seed — the mechanism already exists and is used by the
-`pilot` tier (`SB_WARM_SEED=1` + `templates/adapters/spreadsheetbench/seed_capability_warm/`,
+`pilot` tier (`SB_WARM_SEED=1` + `benchmarks/spreadsheetbench/template/seed_capability_warm/`,
 which carries a `PROVENANCE.md` naming its origin run).
 
 Doing so makes the run's `base→opt` delta **not** a from-scratch number, exactly as

@@ -109,7 +109,7 @@ cap-evolve run \
 
 ### Agent model
 
-The agent model is configured via the [`model_config.py` convention](../templates/adapters/model_config.py).
+The agent model is configured via the [`model_config.py` convention](../benchmarks/_shared/model_config.py).
 Set these env vars in the runner manifest:
 
 | Variable | Example | Description |

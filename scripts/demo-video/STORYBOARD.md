@@ -27,7 +27,7 @@ Chosen over the alternatives, and it is the thread the whole video follows.
 Shot `diff` renders rows read out of
 
 ```
-examples/tau2_airline/run_full/ui/data/runs_run_full_diff_cand_0006.json
+benchmarks/tau2/examples/airline/run_full/ui/data/runs_run_full_diff_cand_0006.json
 ```
 
 which is the actual git diff the run produced for `cand_0005 → cand_0006`:
@@ -162,12 +162,12 @@ below are the built values. **10 shots, 88.78 s total** (was 10 shots / 84.73 s 
   from `docs/OPTIMIZATION_EXAMPLES.md` §1.
 
 ### 6 · `dashboard` — 8.3 s — footage · **re-filmed against `run_agentopt_v4`**
-- **Recipe:** `cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open`,
+- **Recipe:** `cap-evolve dashboard --base benchmarks/tau2/examples/airline --port 8791 --no-open`,
   then `dash.py --live http://127.0.0.1:8791 --run run_agentopt_v4`, window from
   `DASH_SEEK=1.6` s. Kill stray dashboards first (`pkill -f "cap-evolve dashboard"`) —
   leftovers on the fixed port have caused false failures.
 - **On screen:** Chromium driving the *running* dashboard over
-  `examples/tau2_airline/run_agentopt_v4`. Opens the run — `run_agentopt_v4 · ⊘ completed ·
+  `benchmarks/tau2/examples/airline/run_agentopt_v4`. Opens the run — `run_agentopt_v4 · ⊘ completed ·
   agent-optimize · 🔒 test sealed`, the split-discipline line (`splits · train 26 · val 12 ·
   test 12 · seed 0 | val decides selection; test is scored exactly once and never optimized
   against.`), then the tile grid — `BASELINE VAL 56.7% ±0.118 n=12` · `BEST VAL 56.7%
@@ -206,7 +206,7 @@ below are the built values. **10 shots, 88.78 s total** (was 10 shots / 84.73 s 
 defined — and it ships **with its `events.jsonl`**, so the shot is reproducible from a
 clean checkout. It replaces the older `run_agentopt` (also a null result, but 1 trial and
 four candidates). It is *not* `run_full`: that 50-task win only exists as a static export
-at `examples/tau2_airline/run_full/ui`, whose `summary` carries no `status` and no
+at `benchmarks/tau2/examples/airline/run_full/ui`, whose `summary` carries no `status` and no
 `algorithm`, so the rebuilt dashboard stamps a red **`⊗ failed`** badge and
 `algorithm not recorded` on a run that finished, and its Cost tab reads "No spend recorded"
 because the export ships no `events.jsonl`. A false "failed" badge is a worse integrity
@@ -285,7 +285,7 @@ and only `--run` plus the VO in `script.py` need changing.
 
 ### 9 · `start` — 4.5 s — card
 - **On screen:** eyebrow `TRY IT`; head **"Two minutes. No API key."**; a terminal panel —
-  `$ pip install ./core` / `$ bash examples/toy_calc/run.sh`; then in green
+  `$ pip install ./core` / `$ bash benchmarks/toy/examples/calc/run.sh`; then in green
   `baseline_val 0.0  →  test_reward 1.0   (gate-accepted, test sealed)`; then
   `github.com/skillberry-ai/cap-evolve` in cyan. No footer line.
 - **VO:** "Start in two minutes, with no API key."
@@ -369,7 +369,7 @@ infrastructure sub-lines with the marks — that is supported entirely by `docs/
 
 ## Known issues to watch
 
-- **`ws-dash`:** `examples/tau2_airline/run_full/ui` renders a red `⊗ failed` badge and
+- **`ws-dash`:** `benchmarks/tau2/examples/airline/run_full/ui` renders a red `⊗ failed` badge and
   `algorithm not recorded`, and its Cost tab says "No spend recorded". See shot 6 above.
   Fixed: the `pass^k NaN%` the previous cut flagged is now correctly *omitted*.
 - The `parallel` footage shot and the `speedup` card are **removed from the cut** (they
