@@ -66,3 +66,7 @@ site/dashboard-ui/
 # machine-local path outside the repo (e.g. /dccstor/.../rhdp-parsec/...), built
 # by hand per experiment. Not portable, same category as .capevolve/.
 /.h4_shims/
+
+# review-cycles skill worktrees (scripts/offload-review.sh) — machine-local,
+# never committed.
+/.claude/worktrees/

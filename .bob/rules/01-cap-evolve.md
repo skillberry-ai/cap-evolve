@@ -2,6 +2,9 @@
 
 Bob Shell reads this file on every run in this repository, including the
 `fix-with-bob` issue automation. Read `CONTRIBUTING.md` too: its house rules apply.
+The repo's own agent-development process — testing tiers, review rounds, PR
+checklist — is in `.claude/skills/{open-pr,testing,review-cycles,dashboard-change,
+docs-change}`; follow those for anything beyond this file's build/test commands.
 
 ## Repository layout
 

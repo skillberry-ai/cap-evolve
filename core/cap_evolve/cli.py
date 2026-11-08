@@ -53,13 +53,17 @@ from .check import run_check
 
 
 def _find_skills_dir() -> Path | None:
+    # A candidate must have a built registry, not just exist — a host's own
+    # .claude/skills/ (or ~/.claude/skills/) can hold unrelated, non-cap-evolve
+    # skills (editor/agent UX skills with no _registry/manifest.json), and an
+    # is_dir()-only check would wrongly pick that over the real skills tree.
     for cand in [
         os.environ.get("CAPEVOLVE_SKILLS_DIR"),
         "./.claude/skills",
         os.path.expanduser("~/.claude/skills"),
         os.path.expanduser("~/.capevolve/skills"),
     ]:
-        if cand and Path(cand).is_dir():
+        if cand and (Path(cand) / "_registry" / "manifest.json").is_file():
             return Path(cand)
     # fall back to the repo's own skills/ if running from source
     here = Path(__file__).resolve()
