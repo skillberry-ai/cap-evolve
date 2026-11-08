@@ -27,9 +27,7 @@ lychee --offline --no-progress --include-fragments \
   "README.md" "docs/**/*.md" "benchmarks/**/*.md" "*.md"
 ```
 
-(Pre-#959 path layout: `--exclude-path examples/tau2_airline/run_full --exclude-path
-examples/skillsbench/run_full` and `"examples/**/*.md"` instead of
-`"benchmarks/**/*.md"` — check `ci.yml`'s current args if unsure.)
+Check `ci.yml`'s `docs-links` job for the current args if this skill's copy drifts.
 
 Zero errors required. A relative link that moved (renamed file, moved directory)
 is the most common failure — fix the link, don't exclude the path.

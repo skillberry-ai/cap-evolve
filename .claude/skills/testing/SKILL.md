@@ -44,7 +44,7 @@ CLI (`cap-evolve run`/`init`/`check`), or CI's benchmark dispatch
 ### Zero-API, always free — run this first
 
 ```bash
-bash benchmarks/toy/examples/calc/run.sh      # or examples/toy_calc/run.sh pre-PR#959
+bash benchmarks/toy/examples/calc/run.sh
 cap-evolve init -y && cap-evolve check .capevolve/project
 bash ci/e2e_all_algorithms.sh                 # all 5 algorithms, deterministic + agent-mode handoff
 ```
