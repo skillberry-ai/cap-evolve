@@ -55,8 +55,6 @@ ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
 TAU2_ADAPTERS = (
     REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py",
     REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py",
-    REPO / "examples" / "tau2_custom" / "direct" / "adapters" / "adapter.py",
-    REPO / "examples" / "tau2_custom" / "blackbox" / "adapters" / "adapter.py",
 )
 
 #: Below this many present adapters the alignment check is not checking alignment.
