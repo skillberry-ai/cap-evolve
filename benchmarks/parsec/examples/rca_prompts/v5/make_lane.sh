@@ -32,9 +32,9 @@
 #
 # Usage:
 #   export PARSEC_V5N=/path/to/rhdp-parsec/v5_2026-10-10
-#   bash examples/parsec/v5/make_lane.sh <lane-id>            # create or verify
-#   bash examples/parsec/v5/make_lane.sh <lane-id> --force     # rebuild config/+data/
-#   bash examples/parsec/v5/make_lane.sh --verify-only <lane-id>
+#   bash benchmarks/parsec/examples/rca_prompts/v5/make_lane.sh <lane-id>            # create or verify
+#   bash benchmarks/parsec/examples/rca_prompts/v5/make_lane.sh <lane-id> --force     # rebuild config/+data/
+#   bash benchmarks/parsec/examples/rca_prompts/v5/make_lane.sh --verify-only <lane-id>
 #
 # Exit codes:
 #   0  lane present and verified

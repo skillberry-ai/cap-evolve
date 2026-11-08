@@ -33,7 +33,7 @@ def test_block_sequence_of_multiline_mappings():
 
 
 def test_block_sequence_of_flow_mappings():
-    """The templates/project/capevolve.yaml documented example's `objectives:` shape."""
+    """The benchmarks/_scaffold/project/capevolve.yaml documented example's `objectives:` shape."""
     y = (
         "objectives:\n"
         "  - {name: reward, direction: maximize}\n"

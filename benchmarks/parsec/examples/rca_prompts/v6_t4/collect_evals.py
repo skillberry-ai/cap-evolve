@@ -2,14 +2,14 @@
 """Record one v6_t4 eval suite's time, cost and tokens, plus its reward on F and on the test split.
 
 Reads the per-task results the v5 evaluator writes (results/v5_<suite>/<task>/run/baseline.json,
-via examples/parsec/v5/collect.py's own reader) and writes results/v6_t4_e1/eval/<suite>.json:
+via benchmarks/parsec/examples/rca_prompts/v5/collect.py's own reader) and writes results/v6_t4_e1/eval/<suite>.json:
 
   cost   total eval $ / tokens / serial seconds over all tasks, plus wall-clock span (first job
          start to last result) from the result files' times
   reward per split (F, test): mean, task count, plus the paired delta against the Seed's v6_g2_e1
          10-trial measurement on the same tasks
 
-Usage:  python3 examples/parsec/v6_t4/collect_evals.py --suite v6t4_m1
+Usage:  python3 benchmarks/parsec/examples/rca_prompts/v6_t4/collect_evals.py --suite v6t4_m1
 """
 from __future__ import annotations
 

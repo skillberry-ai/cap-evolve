@@ -4,7 +4,7 @@ SpreadsheetBench ships in two incompatible on-disk layouts, and the adapter was 
 against only the first:
 
   original 912 (v0.1)   3 graded cases per task, `{idx}_{sid}_input.xlsx` / `_answer.xlsx`
-  verified 400          1 graded case  per task, `1_{sid}_init.xlsx`   / `_golden.xlsx`
+  verified 400          1 graded case  per task, `1_{sid}_init.xlsx`  / `_golden.xlsx`
                         …except 5 tasks (13284, 32023, 32789, 56274, 58109) which ship
                         bare `initial.xlsx` / `golden.xlsx` with no index or id prefix.
 
@@ -30,12 +30,12 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 
 
 def _load_adapter_module():
     """Import the adapter template for its pure helpers (see test_spreadsheetbench_mount_perms)."""
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     spec = importlib.util.spec_from_file_location("_sb_adapter_cases", ADAPTER_DIR / "adapter.py")

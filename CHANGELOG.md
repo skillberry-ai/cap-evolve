@@ -1604,10 +1604,10 @@ Keep a Changelog dates the *release*.
   real 50-task × 10-trial run, val **0.536 → 0.712** (best candidate `cand_0007`,
   +0.176 / +32.8% relative; *fit metric*, `train == val == test`, so the test number
   0.694 pass@1 is not held out). Baseline val, best val and the delta come from
-  [`examples/tau2_airline/run_full/ui/data/runs_run_full.json`](examples/tau2_airline/run_full/ui/data/runs_run_full.json)
+  [`benchmarks/tau2/examples/airline/run_full/ui/data/runs_run_full.json`](benchmarks/tau2/examples/airline/run_full/ui/data/runs_run_full.json)
   (`summary.baseline_val = 0.536`, `summary.best_val = 0.712`, `best_id = cand_0007`,
   `delta_abs = 0.176`, `delta_pct = 32.8`); the sealed-test `0.694` comes from
-  [`examples/tau2_airline/run_full/final.json`](examples/tau2_airline/run_full/final.json)
+  [`benchmarks/tau2/examples/airline/run_full/final.json`](benchmarks/tau2/examples/airline/run_full/final.json)
   (`test.reward` / `test.pass_at_k.1`). Canonical prose:
   [`docs/RESULTS.md`](docs/RESULTS.md).
 - **`cap-evolve run --resume`** — continue an interrupted run (pod eviction, crash,

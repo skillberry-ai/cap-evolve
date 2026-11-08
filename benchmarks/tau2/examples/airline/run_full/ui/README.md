@@ -27,7 +27,7 @@ Overview and the lineage tree at the top of Candidates.)
 Any static server works. The simplest:
 
 ```bash
-cd examples/tau2_airline/run_full/ui
+cd benchmarks/tau2/examples/airline/run_full/ui
 python3 -m http.server 8000
 # then open http://localhost:8000
 ```
@@ -59,9 +59,9 @@ iterations), `runs_run_full_git_log.json`, `runs_run_full_diff_cand_0007.json`,
    dir and copy `index.html` + `assets/` in, so `data/` and the icons survive:
    ```bash
    cd dashboard/frontend && VITE_STATIC=1 npx vite build --outDir /tmp/capui
-   cd - && cp /tmp/capui/index.html examples/tau2_airline/run_full/ui/
-   rm -f examples/tau2_airline/run_full/ui/assets/index-*
-   cp /tmp/capui/assets/* examples/tau2_airline/run_full/ui/assets/
+   cd - && cp /tmp/capui/index.html benchmarks/tau2/examples/airline/run_full/ui/
+   rm -f benchmarks/tau2/examples/airline/run_full/ui/assets/index-*
+   cp /tmp/capui/assets/* benchmarks/tau2/examples/airline/run_full/ui/assets/
    ```
    **Rebuild this bundle whenever the frontend changes.** It is a committed build
    artifact, so it goes stale silently: it once shipped a chart in which a

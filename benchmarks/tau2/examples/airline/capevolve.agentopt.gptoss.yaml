@@ -1,8 +1,8 @@
 # AGENT-OPTIMIZE spec — tau2-bench airline on gpt-oss-120b (the run in docs/RESULTS.md,
 # section "agent-optimize on gpt-oss-120b, disjoint 26/12/12"). Reproduce with:
 #
-#   cp examples/tau2_airline/capevolve.agentopt.gptoss.yaml .capevolve/project/
-#   cp examples/tau2_airline/agentopt_split.json .capevolve/project/
+#   cp benchmarks/tau2/examples/airline/capevolve.agentopt.gptoss.yaml .capevolve/project/
+#   cp benchmarks/tau2/examples/airline/agentopt_split.json .capevolve/project/
 #   export TAU2_AGENT_MODEL=aws/gpt-oss-120b TAU2_USER_MODEL=aws/gpt-oss-120b
 #   export CAPEVOLVE_SKILLS_DIR="$PWD/skills" PYTHONPATH="$PWD/.capevolve/project/adapters"
 #   .venv-tau2/bin/cap-evolve run --spec .capevolve/project/capevolve.agentopt.gptoss.yaml \

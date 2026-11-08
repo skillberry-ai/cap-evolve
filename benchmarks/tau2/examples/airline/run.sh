@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Full cap-evolve run on tau2-bench airline via the ETE gateway, with a live dashboard.
-# Prereq: bash examples/tau2_airline/setup.sh  (installs deps + scaffolds + checks).
+# Prereq: bash benchmarks/tau2/examples/airline/setup.sh  (installs deps + scaffolds + checks).
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 PROJECT="$REPO/.capevolve/project"
 
 export PYTHONPATH="$PROJECT/adapters"

@@ -4,16 +4,16 @@
 # cap-evolve hill-climb on its own single-task project (scaffold_projects.py), all dispatching
 # their evaluations to ONE shared lane queue and ONE worker pool of at most 15 workers.
 #
-# Each driver is examples/parsec/v6/run_v6.sh, unchanged in what it runs; this script only sets
+# Each driver is benchmarks/parsec/examples/rca_prompts/v6/run_v6.sh, unchanged in what it runs; this script only sets
 # the shared-queue environment and the v6_t2 optimizer registry, then submits it per task.
 #
 # Usage:
 #   source ~/.v5_g2e1_env.sh        # LLM_API_KEY/BASE, HARNESS_LLM_SIMULATION_MODEL, CE_BIN
 #   export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
-#   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --max-iterations 3 [--only TASK ...]
-#   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --max-iterations 3 --resume [--only TASK ...]
-#   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --max-iterations 5 --resume --only TASK --after JOBID
-#   bash examples/parsec/v6_t2/run_t2.sh --suite-id e1 --dry-run     # print, submit nothing
+#   bash benchmarks/parsec/examples/rca_prompts/v6_t2/run_t2.sh --suite-id e1 --max-iterations 3 [--only TASK ...]
+#   bash benchmarks/parsec/examples/rca_prompts/v6_t2/run_t2.sh --suite-id e1 --max-iterations 3 --resume [--only TASK ...]
+#   bash benchmarks/parsec/examples/rca_prompts/v6_t2/run_t2.sh --suite-id e1 --max-iterations 5 --resume --only TASK --after JOBID
+#   bash benchmarks/parsec/examples/rca_prompts/v6_t2/run_t2.sh --suite-id e1 --dry-run     # print, submit nothing
 #
 # Without --only, every task scaffolded under .capevolve/v6_t2_<suite>_*/ is submitted.
 # --resume reuses each task's run name (the task id), so a resubmission continues its run.
@@ -76,9 +76,9 @@ for task in "${ONLY[@]}"; do
   [[ "$RESUME" == true ]] && args+=(--resume)
   [[ -n "$AFTER" ]] && args+=(--after "$AFTER")
   if [[ "$DRY_RUN" == true ]]; then
-    echo "  would run: bash examples/parsec/v6/run_v6.sh ${args[*]}"
+    echo "  would run: bash benchmarks/parsec/examples/rca_prompts/v6/run_v6.sh ${args[*]}"
   else
-    echo "  $task: $(bash "$PROJECT_ROOT/examples/parsec/v6/run_v6.sh" "${args[@]}")"
+    echo "  $task: $(bash "$PROJECT_ROOT/benchmarks/parsec/examples/rca_prompts/v6/run_v6.sh" "${args[@]}")"
     # LSF can place several drivers on one node, and run_ccc_experiment.sh's Phase 1
     # (setup_podman.sh) restarts the user's podman service and dbus there: drivers that start
     # on the same node at the same moment kill each other's setup ("Terminated" in Phase 1).

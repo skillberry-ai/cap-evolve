@@ -27,7 +27,7 @@ pytest.importorskip("numpy")
 pytest.importorskip("tqdm")
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 HARNESS = REPO / "third_party" / "spreadsheetbench"
 GOLD_RE = re.compile(r"(_answer|_golden|^golden|^answer)", re.I)
 
@@ -37,7 +37,7 @@ _ENV = ("SPREADSHEETBENCH_AGENT_VIEW", "SPREADSHEETBENCH_ALLOW_GOLD_IN_MOUNT", "
 
 
 def _load():
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     spec = importlib.util.spec_from_file_location("_sb_adapter_goldiso", ADAPTER_DIR / "adapter.py")

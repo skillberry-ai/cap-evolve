@@ -5,17 +5,17 @@ score on these tasks". One task per LSF job, one dedicated compute node per
 job, N jobs at a time.
 
 The optimization counterparts live elsewhere and are unchanged —
-`examples/parsec/v4_t2_e1/` (one task at a time, single lane) and
-`examples/parsec/ccc/run_ccc_parsec_g2.sh` (all 34 tasks jointly in one process).
+`benchmarks/parsec/examples/rca_prompts/v4_t2_e1/` (one task at a time, single lane) and
+`benchmarks/parsec/examples/rca_prompts/ccc/run_ccc_parsec_g2.sh` (all 34 tasks jointly in one process).
 h4 adds only the thing neither could do: run many tasks **concurrently**.
 
 | script | what it does |
 |---|---|
-| `examples/parsec/h4/scaffold_eval_projects.py` | one cap-evolve project per task, seeded with the artifact under test |
-| `examples/parsec/h4/make_lane.sh` | build + **verify** one lane (isolated parsec-live root) |
-| `examples/parsec/h4/run_one_eval.sh` | the payload of one `bsub` job: lane, stack up, eval, stack down |
-| `examples/parsec/h4/fan_out.sh` | submit one job per task, each pinned to its own node |
-| `examples/parsec/h4/collect.py` | merge every task's `baseline.json` into `results.json` + `summary.md` |
+| `benchmarks/parsec/examples/rca_prompts/h4/scaffold_eval_projects.py` | one cap-evolve project per task, seeded with the artifact under test |
+| `benchmarks/parsec/examples/rca_prompts/h4/make_lane.sh` | build + **verify** one lane (isolated parsec-live root) |
+| `benchmarks/parsec/examples/rca_prompts/h4/run_one_eval.sh` | the payload of one `bsub` job: lane, stack up, eval, stack down |
+| `benchmarks/parsec/examples/rca_prompts/h4/fan_out.sh` | submit one job per task, each pinned to its own node |
+| `benchmarks/parsec/examples/rca_prompts/h4/collect.py` | merge every task's `baseline.json` into `results.json` + `summary.md` |
 
 ---
 
@@ -101,11 +101,11 @@ a candidate it is that candidate's dir under a completed run, e.g.
 
 ```bash
 # the baseline, all 34 tasks
-python3 examples/parsec/h4/scaffold_eval_projects.py \
+python3 benchmarks/parsec/examples/rca_prompts/h4/scaffold_eval_projects.py \
     --suite-id base01 --artifact "$PARSEC_V4N/_run/parsec-live/config/prompts"
 
 # a candidate, only the 21 that scored sub-1.0
-python3 examples/parsec/h4/scaffold_eval_projects.py \
+python3 benchmarks/parsec/examples/rca_prompts/h4/scaffold_eval_projects.py \
     --suite-id cand4 --tasks targets \
     --artifact /path/to/run_optimize_fix_20260925_082813/candidates/cand_0004
 ```
@@ -118,8 +118,8 @@ whatever the lane already served.
 ### 2. Fan out
 
 ```bash
-bash examples/parsec/h4/fan_out.sh --suite-id base01 --max-concurrent 10 --dry-run
-bash examples/parsec/h4/fan_out.sh --suite-id base01 --max-concurrent 10
+bash benchmarks/parsec/examples/rca_prompts/h4/fan_out.sh --suite-id base01 --max-concurrent 10 --dry-run
+bash benchmarks/parsec/examples/rca_prompts/h4/fan_out.sh --suite-id base01 --max-concurrent 10
 ```
 
 It picks `bhosts` status-`ok` nodes, drops any already running your jobs, drops
@@ -162,7 +162,7 @@ exact id. Never `bkill 0` or `bkill -u boazc` — sibling sessions share this UI
 ### 4. Collect
 
 ```bash
-python3 examples/parsec/h4/collect.py --suite-id base01
+python3 benchmarks/parsec/examples/rca_prompts/h4/collect.py --suite-id base01
 # -> results/h4_base01/results.json, results/h4_base01/summary.md
 ```
 

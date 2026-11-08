@@ -69,7 +69,7 @@ cd cap-evolve
 python3 -m venv .venv && source .venv/bin/activate
 pip install ./core                 # package: cap-evolve-core · CLI: cap-evolve · zero runtime deps
 
-bash examples/toy_calc/run.sh
+bash benchmarks/toy/examples/calc/run.sh
 ```
 
 Expected — the seed prompt scores `0.0` on val; the optimized prompt is gate-accepted and
@@ -266,7 +266,7 @@ dashboard — is provided by the core. Two ways to get there:
 Both are walked through in **[docs/OPTIMIZE_YOUR_OWN.md](docs/OPTIMIZE_YOUR_OWN.md)**;
 the contract is in [docs/ADAPTER_CONTRACT.md](docs/ADAPTER_CONTRACT.md). For common
 cases, **don't write an adapter from scratch** — copy a ready-made
-[adapter template](templates/adapters/) (JSONL, HuggingFace, tau2-bench, SWE-bench,
+[adapter template](benchmarks/) (JSONL, HuggingFace, tau2-bench, SWE-bench,
 SkillsBench) and switch providers with a one-line env change:
 [docs/ADAPTER_TEMPLATES.md](docs/ADAPTER_TEMPLATES.md).
 
@@ -274,13 +274,13 @@ SkillsBench) and switch providers with a one-line env change:
 
 | Example | What it shows | Needs | Run |
 |---|---|---|---|
-| [`toy_calc`](examples/toy_calc) | The full loop, deterministically | nothing | `bash examples/toy_calc/run.sh` |
-| [`tau2_airline`](examples/tau2_airline) | Onboard a real benchmark from one prompt; optimize policy **+ tool code** | gateway creds, Claude Code | `bash examples/tau2_airline/setup.sh && bash examples/tau2_airline/run.sh` |
-| [`skillsbench`](examples/skillsbench) | Optimize a **skill package**; agent runs in Docker | Docker, `uv`, Claude creds | `bash examples/skillsbench/setup.sh && bash examples/skillsbench/run.sh` |
+| [`toy_calc`](benchmarks/toy/examples/calc) | The full loop, deterministically | nothing | `bash benchmarks/toy/examples/calc/run.sh` |
+| [`tau2_airline`](benchmarks/tau2/examples/airline) | Onboard a real benchmark from one prompt; optimize policy **+ tool code** | gateway creds, Claude Code | `bash benchmarks/tau2/examples/airline/setup.sh && bash benchmarks/tau2/examples/airline/run.sh` |
+| [`skillsbench`](benchmarks/skillsbench/examples/shared_skills) | Optimize a **skill package**; agent runs in Docker | Docker, `uv`, Claude creds | `bash benchmarks/skillsbench/examples/shared_skills/setup.sh && bash benchmarks/skillsbench/examples/shared_skills/run.sh` |
 
 Each example's paste-to-agent brief is its `PROMPT.md`, its narrative is `DEMO.md`, and its
 committed run is under `run_full/`. See the full interactive dashboard for the tau2 run with
-no backend: `cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000`. Reproduce
+no backend: `cd benchmarks/tau2/examples/airline/run_full/ui && python3 -m http.server 8000`. Reproduce
 from zero: [tau2](docs/REPRODUCE_tau2.md) · [SkillsBench](docs/REPRODUCE_skillsbench.md).
 
 ## Documentation

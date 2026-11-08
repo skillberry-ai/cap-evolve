@@ -15,7 +15,7 @@
 # Usage:
 #   export PARSEC_V5N=/path/to/rhdp-parsec/v5_2026-10-10
 #   export LLM_API_KEY=...  LLM_API_BASE=...  HARNESS_LLM_SIMULATION_MODEL=...
-#   bash examples/parsec/v5/fan_out.sh --suite-id base01 [--max-concurrent 10]
+#   bash benchmarks/parsec/examples/rca_prompts/v5/fan_out.sh --suite-id base01 [--max-concurrent 10]
 #
 #   --suite-id ID        the suite scaffold_eval_projects.py created (required)
 #   --tasks a,b,c        override the suite's task manifest
@@ -95,7 +95,7 @@ elif [[ -f "$MANIFEST" ]]; then
 else
   echo "ERROR: no task manifest at $MANIFEST and no --tasks given." >&2
   echo "       Scaffold the suite first:" >&2
-  echo "       python3 examples/parsec/v5/scaffold_eval_projects.py --suite-id $SUITE_ID --artifact <dir>" >&2
+  echo "       python3 benchmarks/parsec/examples/rca_prompts/v5/scaffold_eval_projects.py --suite-id $SUITE_ID --artifact <dir>" >&2
   exit 1
 fi
 
@@ -139,7 +139,7 @@ fi
 echo "suite $SUITE_ID: ${#ALL_TASKS[@]} task(s) total, ${#DONE[@]} already done, ${#PENDING[@]} pending"
 if (( ${#PENDING[@]} == 0 )); then
   echo "nothing to submit. Collect with:"
-  echo "  python3 examples/parsec/v5/collect.py --suite-id $SUITE_ID"
+  echo "  python3 benchmarks/parsec/examples/rca_prompts/v5/collect.py --suite-id $SUITE_ID"
   exit 0
 fi
 
@@ -261,5 +261,5 @@ cat <<EOF
 monitor:   bjobs -w
 zombies:   for j in \$(bjobs -o 'jobid' -noheader 2>/dev/null); do lout \$j | grep -q "Exit:     0" && echo "\$j finished — bkill \$j"; done
 per-task:  tail -f $RESULTS_ROOT/<task>/cap-evolve.log
-collect:   python3 examples/parsec/v5/collect.py --suite-id $SUITE_ID
+collect:   python3 benchmarks/parsec/examples/rca_prompts/v5/collect.py --suite-id $SUITE_ID
 EOF

@@ -69,7 +69,7 @@ The interview settles the capability skill (*what* is optimized), the optimizer 
 coding agent proposes edits), the algorithm (*the search loop*), dataset, splits, budget.
 1. **Scaffold** `.capevolve/project/` via `scripts/run.py`: adapter stub, `inputs/`,
    `capevolve.yaml`, `PROJECT.md`, and `optimizer/INSTRUCTIONS.md`. The whole
-   `templates/project/` tree is copytree'd verbatim — confirm the files landed.
+   `benchmarks/_scaffold/project/` tree is copytree'd verbatim — confirm the files landed.
 2. **Resolve inputs** per `inputs/INPUTS.md`, honoring the ask-never-fabricate rule.
 3. **Record** the resolved trajectories path and the scoring source in `PROJECT.md`, so
    `implement-and-check` wires `trajectories()` and `score()` against real inputs rather
@@ -120,7 +120,7 @@ ask-if-missing loop — is yours. Then implement `adapters/adapter.py`, fill
 *full integration* (scaffold → the 3 required adapter methods → `cap-evolve check` green)
 and no budget is spent until that gate passes.
 
-> **Onboarding transcript (one example):** `examples/tau2_airline/setup.sh` clones and
+> **Onboarding transcript (one example):** `benchmarks/tau2/examples/airline/setup.sh` clones and
 > installs a benchmark and wires the adapter until `cap-evolve check` is green, and its
 > `run.sh` runs the optimization. Read it only when onboarding a benchmark you have not
 > integrated before.

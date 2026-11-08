@@ -398,7 +398,7 @@ jobs:
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
           TIERS = ["smoke", "pilot", "full", "full_verified"]
-          # tau2_sierra / tau2_sierra_blackbox are the DELIVERY ARMS of examples/tau2_sierra_airline
+          # tau2_sierra / tau2_sierra_blackbox are the DELIVERY ARMS of benchmarks/tau2/examples/sierra_airline
           # (vanilla tau2 pinned at its TAU2_REFERENCE_SHA): same tasks and tiers, candidate
           # delivered in-process versus through the Skillberry Store + Proxy-Agent. They stay
           # separate legs so each keeps its own tier task lists, its own history row and its own

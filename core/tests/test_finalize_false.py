@@ -15,8 +15,8 @@ from cap_evolve import gatecfg, helpers  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
-EXAMPLE = REPO / "examples" / "toy_calc"
-TEMPLATE_SPEC = REPO / "templates" / "project" / "capevolve.yaml"
+EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
+TEMPLATE_SPEC = REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml"
 
 
 @pytest.fixture

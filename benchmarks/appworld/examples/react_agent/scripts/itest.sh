@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # AppWorld regression test on ONE task (82e2fac_1). A real end-to-end optimization run used as an
-# on-demand regression check for this example, like examples/tau2_airline/itest.sh. Cheap: 1 task,
+# on-demand regression check for this example, like benchmarks/tau2/examples/airline/itest.sh. Cheap: 1 task,
 # 1 trial, 1 iteration (baseline, one optimizer pass, gate, sealed final, report).
 #
 #   - agent      : gpt-oss-120b, RITS by default (AW_MODEL_NAME / AW_MODEL_URL / AW_KEY_* override,
@@ -14,7 +14,7 @@
 #                                     # cap-evolve check, isolation gate, cost estimate
 set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO="$(cd "$EX/../.." && pwd)"
+REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 PY="$AW_EVAL/venv-aw/bin/python"
 CAPE="$AW_EVAL/venv-aw/bin/cap-evolve"

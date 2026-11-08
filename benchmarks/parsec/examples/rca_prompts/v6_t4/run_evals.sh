@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Score v6_t4's merged bundles on F + the sealed test split: one LSF job per task, each on its own
-# node (examples/parsec/v5/fan_out.sh with PARSEC_BENCH=v6), never more than MAX_CONCURRENT of this
+# node (benchmarks/parsec/examples/rca_prompts/v5/fan_out.sh with PARSEC_BENCH=v6), never more than MAX_CONCURRENT of this
 # user's eval jobs at once across every suite listed. Meant to run as its own LSF job on a compute
 # node; it only submits and waits, so it needs one slot and little memory.
 #
@@ -10,7 +10,7 @@
 #
 # Usage (from the worktree root):
 #   bsub -q normal -n 1 -M 4G -J v6t4_evals -oo ~/ccc_logs/%J.stdout -eo ~/ccc_logs/%J.stderr \
-#        bash examples/parsec/v6_t4/run_evals.sh v6t4_m1 v6t4_m2 [v6t4_m3]
+#        bash benchmarks/parsec/examples/rca_prompts/v6_t4/run_evals.sh v6t4_m1 v6t4_m2 [v6t4_m3]
 set -uo pipefail
 
 T4_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -88,7 +88,7 @@ while true; do
     total="$(bjobs -u "$USER" -noheader -o "stat job_name" 2>/dev/null | awk '($1=="RUN"||$1=="PEND") && $2 ~ /^v5_v6t4_/' | wc -l)"
     room=$((MAX_CONCURRENT - total))
     if (( room > 0 && p > live )); then
-      out="$(bash examples/parsec/v5/fan_out.sh --suite-id "$s" --max-concurrent "$room" 2>&1 | grep -c ' job [0-9]')"
+      out="$(bash benchmarks/parsec/examples/rca_prompts/v5/fan_out.sh --suite-id "$s" --max-concurrent "$room" 2>&1 | grep -c ' job [0-9]')"
       (( out > 0 )) && log "$s: submitted $out (pending $p, live $live, all-suite live $total)"
     fi
   done

@@ -5,8 +5,8 @@ Serves the committed static export (or points at a live dashboard), enumerates t
 tabs the UI actually renders — the tab set is the dashboard's business, not this
 script's — and writes one PNG per tab at 1920x1080, deviceScaleFactor 2, dark.
 
-    /tmp/vidvenv/bin/python scripts/tools/shoot_dashboard.py
-    /tmp/vidvenv/bin/python scripts/tools/shoot_dashboard.py --live http://127.0.0.1:7878 --run run_x
+  /tmp/vidvenv/bin/python scripts/tools/shoot_dashboard.py
+  /tmp/vidvenv/bin/python scripts/tools/shoot_dashboard.py --live http://127.0.0.1:7878 --run run_x
 
 Every tab is captured even when it is empty: an empty tab is a finding, and
 silently skipping it is how an empty tab stays unnoticed. The page is measured
@@ -27,7 +27,7 @@ import threading
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-STATIC = REPO / "examples/tau2_airline/run_full/ui"
+STATIC = REPO / "benchmarks/tau2/examples/airline/run_full/ui"
 OUT = REPO / "docs/assets/screenshots"
 W, H = 1920, 1080
 # Full-page captures grow to the content; this ceiling only exists so a runaway page

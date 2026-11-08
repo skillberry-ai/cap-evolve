@@ -38,7 +38,7 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
    ```
    git clone https://github.com/StonyBrookNLP/appworld $AW_EVAL/appworld
    cd $AW_EVAL/appworld && git checkout 42b5bcf && git lfs pull
-   git apply <repo>/examples/appworld/patches/appworld-extra-headers.patch
+   git apply <repo>/benchmarks/appworld/examples/react_agent/patches/appworld-extra-headers.patch
    uv venv --python 3.11 $AW_EVAL/venv-aw
    uv pip install --python $AW_EVAL/venv-aw/bin/python -e . -e "experiments[simplified]" \
        "pydantic>=2.12,<2.13" "fastapi==0.135.0" "starlette>=0.48" -e <repo>/core
@@ -156,7 +156,7 @@ bootstrap CI.
 ## Integration test
 
 `bash scripts/itest.sh` is this example's one-task regression run, like
-`examples/tau2_airline/itest.sh`: train task `82e2fac_1` (difficulty 1), 1 trial, 1 iteration
+`benchmarks/tau2/examples/airline/itest.sh`: train task `82e2fac_1` (difficulty 1), 1 trial, 1 iteration
 (`capevolve.itest.yaml`, `itest_split.json`). It scaffolds the project with `setup_project.sh`,
 runs a fresh isolation check, and runs through `launch_cape_hc.sh`, so it takes the real launch
 path. `scripts/assert_itest.py` then gates the run dir. It requires that the run completed
@@ -179,4 +179,4 @@ python scripts/analyze.py
 ```
 
 `python scripts/status.py --every 300` keeps `$AW_EVAL/progress/PROGRESS.md` current. Offline tests:
-`python -m pytest examples/appworld/tests`.
+`python -m pytest benchmarks/appworld/examples/react_agent/tests`.

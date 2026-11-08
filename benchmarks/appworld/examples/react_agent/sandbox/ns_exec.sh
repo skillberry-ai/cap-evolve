@@ -20,7 +20,7 @@ WORK="$(pwd -P)"
 # the venv's editable installs; NOT the whole clone: appworld/generate holds the task generators,
 # i.e. the solution and evaluation logic of every train/dev scenario (README: Isolation).
 ALLOW_RO="${AW_NS_ALLOW_RO:-venv-aw appworld/src appworld/experiments reference lint_cache.json}"
-REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../.." && pwd)"
+REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../../../.." && pwd)"
 HIDE="${AW_NS_HIDE:-}"                                                     # extra dirs to cover (space-separated)
 HIDE_FILES="${AW_NS_HIDE_FILES:-${AW_SECRETS_FILE:-$REPO/.env}}"          # covered with an empty file
 # Claude Code permission rules (deny Read/Grep on the answer paths), added to every call when set.

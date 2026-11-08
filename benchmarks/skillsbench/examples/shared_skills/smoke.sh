@@ -2,10 +2,10 @@
 # Cheap 1-task autonomy smoke (1 val task, 1 trial, 1 iteration) — proves the whole
 # loop (check → baseline → optimize → gate → finalize → report) end to end, with a
 # real sonnet agent in Docker and a verifier reward coming back.
-# Prereq: bash examples/skillsbench/setup.sh
+# Prereq: bash benchmarks/skillsbench/examples/shared_skills/setup.sh
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 PROJECT="$REPO/.capevolve/project"
 
 export PATH="$HOME/.local/bin:$PATH"

@@ -1,13 +1,13 @@
 # cap-evolve dashboard — static export (τ²-bench airline, blackbox)
 
 A self-contained, static snapshot of the cap-evolve dashboard for the blackbox run
-`run_20261013_121303` of [`examples/tau2_sierra_airline`](../../../). It runs with no backend and no Python,
+`run_20261013_121303` of [`benchmarks/tau2/examples/sierra_airline`](../../../). It runs with no backend and no Python,
 from any static file server.
 
 ## View it
 
 ```bash
-cd examples/tau2_sierra_airline/blackbox/run/ui
+cd benchmarks/tau2/examples/sierra_airline/blackbox/run/ui
 python3 -m http.server 8000
 # then open http://localhost:8000/#/runs/run_20261013_121303
 ```
@@ -42,5 +42,5 @@ python -m capevolve_dashboard.export_static --base .capevolve-blackbox --run-id 
 ```
 
 then the omissions above were applied to `data/`. See
-[`docs/REPRODUCE_tau2_sierra_direct_blackbox.md`](../../../../../docs/REPRODUCE_tau2_sierra_direct_blackbox.md)
+[`docs/REPRODUCE_tau2_sierra_direct_blackbox.md`](../../../../../../../docs/REPRODUCE_tau2_sierra_direct_blackbox.md)
 for the run's parameters and how to reproduce it.

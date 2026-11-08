@@ -13,7 +13,7 @@
 set -euo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 TAU2_DIR="$REPO/vendor/tau2-bench"
 # tau2-bench requires python >=3.12,<3.14. Override the interpreter used to CREATE
 # the venv (and/or the venv path) when the default `python3` is outside that range:

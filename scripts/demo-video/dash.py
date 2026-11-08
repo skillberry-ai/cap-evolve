@@ -8,12 +8,12 @@ frames — so scroll and hover are genuinely animated.
 Two targets:
 
   --live URL  (what the shipped cut uses) the running dashboard:
-             cap-evolve dashboard --base examples/tau2_airline --port 8791 --no-open
-             /tmp/vidvenv/bin/python dash.py --live http://127.0.0.1:8791 \
+             cap-evolve dashboard --base benchmarks/tau2/examples/airline --port 8791 --no-open
+  /tmp/vidvenv/bin/python dash.py --live http://127.0.0.1:8791 \
                  --run run_agentopt_v4
 
   --static   (default) the committed static export under
-             examples/tau2_airline/run_full/ui, served on a throwaway port.
+             benchmarks/tau2/examples/airline/run_full/ui, served on a throwaway port.
              KNOWN DEFECT, do not ship: that export's summary carries no
              `status` or `algorithm`, so the rebuilt dashboard renders a red
              "failed" badge over a run that finished, and its Cost tab reads
@@ -37,7 +37,7 @@ import threading
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-STATIC = REPO / "examples/tau2_airline/run_full/ui"
+STATIC = REPO / "benchmarks/tau2/examples/airline/run_full/ui"
 OUT = Path("/tmp/video")
 W, H, SECONDS = 2560, 1440, 14
 ZOOM = 1.9          # page zoom, so a 1440p viewport is not a wall of tiny UI

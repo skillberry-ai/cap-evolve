@@ -27,7 +27,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
 LOADER = REPO / "ci" / "benchmarks" / "lib" / "load_overrides.sh"
 WORKFLOW = REPO / ".github" / "workflows" / "benchmarks.yml"
@@ -35,7 +35,7 @@ WORKFLOW = REPO / ".github" / "workflows" / "benchmarks.yml"
 
 def _load(scoring: str | None = None):
     """Import the adapter with SPREADSHEETBENCH_SCORING set, since it is read at import."""
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     prev = os.environ.get("SPREADSHEETBENCH_SCORING")

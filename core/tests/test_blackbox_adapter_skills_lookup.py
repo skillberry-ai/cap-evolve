@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ARM = REPO / "examples/tau2_sierra_airline/blackbox/adapters"
+ARM = REPO / "benchmarks/tau2/examples/sierra_airline/blackbox/adapters"
 SKILL_REL = Path("skills/interventions/llm-proxies/blackbox/scripts")
 
 

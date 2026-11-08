@@ -42,8 +42,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
-ADAPTER = REPO / "templates" / "adapters" / "spreadsheetbench" / "adapter.py"
-SEED = REPO / "templates" / "adapters" / "spreadsheetbench" / "seed_capability"
+ADAPTER = REPO / "benchmarks" / "spreadsheetbench" / "template" / "adapter.py"
+SEED = REPO / "benchmarks" / "spreadsheetbench" / "template" / "seed_capability"
 
 
 def _empty_seed_block() -> str:

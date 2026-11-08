@@ -12,9 +12,9 @@
 # Usage:
 #   source ~/.v5_g2e1_env.sh        # LLM_API_KEY/BASE, HARNESS_LLM_SIMULATION_MODEL, CE_BIN
 #   export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
-#   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 1 --submit
-#   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 2 --run-ts <ts> --resume --submit
-#   bash examples/parsec/v6/run_v6.sh --suite-id g2_e1 --max-iterations 3 --run-ts <ts> --resume \
+#   bash benchmarks/parsec/examples/rca_prompts/v6/run_v6.sh --suite-id g2_e1 --max-iterations 1 --submit
+#   bash benchmarks/parsec/examples/rca_prompts/v6/run_v6.sh --suite-id g2_e1 --max-iterations 2 --run-ts <ts> --resume --submit
+#   bash benchmarks/parsec/examples/rca_prompts/v6/run_v6.sh --suite-id g2_e1 --max-iterations 3 --run-ts <ts> --resume \
 #        --stall 0 --submit --after <driver-jobid>
 #
 # --max-iterations is the run's cumulative budget on --resume (cap-evolve's own

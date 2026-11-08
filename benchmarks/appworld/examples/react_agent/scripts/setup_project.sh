@@ -3,7 +3,7 @@
 #   bash setup_project.sh RUN_DIR     e.g. /tmp/aw_eval/runs/cape_hc_s0
 set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO="$(cd "$EX/../.." && pwd)"
+REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 PY="$AW_EVAL/venv-aw/bin/python"
 RUN_DIR="${1:?run dir}"
@@ -31,7 +31,7 @@ done
 cat > "$PROJECT/PROJECT.md" <<MD
 # cape-hc: AppWorld (official splits), gpt-oss-120b on RITS, hill-climb --focus all
 
-Example: examples/appworld/README.md (repo $REPO). Resolved inputs:
+Example: benchmarks/appworld/examples/react_agent/README.md (repo $REPO). Resolved inputs:
 - capability: system-prompt + tools (seed: stock AppWorld ReAct prompt @ 42b5bcf, empty helpers, no notes)
 - target: openai/gpt-oss-120b-a100 on RITS, reasoning medium, temperature 0 (adapters/aw_agent.py MODEL_CONFIG)
 - optimizer: claude-code, $OPT_MODEL; instructions: $INSTR

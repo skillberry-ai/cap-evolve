@@ -53,10 +53,10 @@ separate `$PARSEC_V5N` checkout instead:
 
 ```bash
 export PARSEC_V5N=.../rhdp-parsec/v5_2026-10-10
-python3 examples/parsec/v5/scaffold_eval_projects.py \
+python3 benchmarks/parsec/examples/rca_prompts/v5/scaffold_eval_projects.py \
     --suite-id t1_e1 --artifact <dir-of-8-md-files>
-bash examples/parsec/v5/fan_out.sh --suite-id t1_e1
-python3 examples/parsec/v5/collect.py --suite-id t1_e1
+bash benchmarks/parsec/examples/rca_prompts/v5/fan_out.sh --suite-id t1_e1
+python3 benchmarks/parsec/examples/rca_prompts/v5/collect.py --suite-id t1_e1
 ```
 
 v5 has no `--tasks targets` subset (unlike h4) — every v5 sweep so far has run

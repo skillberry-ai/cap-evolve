@@ -1,7 +1,7 @@
 """Reducer fixes for AGENT-DRIVEN runs (agent-optimize / evograph).
 
 Every case here failed on the one real ``agent-optimize`` run in the repo
-(``examples/tau2_airline/run_agentopt``) before these fixes, and each failure looked
+(``benchmarks/tau2/examples/airline/run_agentopt``) before these fixes, and each failure looked
 like an empty or mislabelled dashboard rather than an error:
 
 * the run was labelled "algorithm not recorded" — its only distinguishing event is
@@ -291,7 +291,7 @@ def test_the_unmetered_tau2_run_is_not_reported_as_free(tmp_path):
     """
     from pathlib import Path
     from cap_evolve import RunDir, dashboard
-    base = Path(__file__).resolve().parents[2] / "examples" / "tau2_airline"
+    base = Path(__file__).resolve().parents[2] / "benchmarks" / "tau2" / "examples" / "airline"
     if not (base / "run_agentopt_v2" / "events.jsonl").exists():
         import pytest
         pytest.skip("curated tau2 artifacts not present")
@@ -319,7 +319,7 @@ def test_a_rejected_candidate_does_not_raise_the_running_best():
     """
     from pathlib import Path
     from cap_evolve import RunDir, dashboard
-    base = Path(__file__).resolve().parents[2] / "examples" / "tau2_airline" / "run_agentopt_v4"
+    base = Path(__file__).resolve().parents[2] / "benchmarks" / "tau2" / "examples" / "airline" / "run_agentopt_v4"
     if not (base / "events.jsonl").exists():
         import pytest
         pytest.skip("curated v4 artifacts not present")

@@ -13,7 +13,7 @@ conflicts in both cases). The merge order uses only the per-task gains T2 alread
 is measured here.
 
 Usage (from the worktree root):
-    python3 examples/parsec/v6_t4/build_merges.py --suite-id e1 --out results/v6_t4_e1
+    python3 benchmarks/parsec/examples/rca_prompts/v6_t4/build_merges.py --suite-id e1 --out results/v6_t4_e1
 """
 from __future__ import annotations
 

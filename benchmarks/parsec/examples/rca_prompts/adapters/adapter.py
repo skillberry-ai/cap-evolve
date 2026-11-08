@@ -13,7 +13,7 @@ Multi-task: tasks() enumerates every ``bench-<tree>-*`` directory under
 contract — it only ever calls ``adapter.tasks("all")`` (both in
 ``ensure_splits`` and in ``_tasks_for``), then filters the result down to
 whichever real train/val/test split it needs using the ids frozen in
-``split_ids.json`` — and mirrors templates/adapters/skillsbench/adapter.py's
+``split_ids.json`` — and mirrors benchmarks/skillsbench/template/adapter.py's
 own ``tasks()`` (split-agnostic, fixed id list). So one project's
 ``split_ids.json`` can list any subset of tasks (or all 34) for
 train/val/test, and this adapter needs no per-task construction argument;
@@ -71,7 +71,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 # This file is reached through a chain of symlinks (project/adapters ->
-# parsec_common/adapters -> examples/parsec/adapters). .resolve()
+# parsec_common/adapters -> benchmarks/parsec/examples/rca_prompts/adapters). .resolve()
 # fully follows every hop, landing on the real physical path regardless —
 # so this always finds the actual repo root, not wherever the caller's
 # --project happened to point.

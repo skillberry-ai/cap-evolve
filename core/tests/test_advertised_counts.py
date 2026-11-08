@@ -86,7 +86,7 @@ CLAIMS = [
 # first three are what a user COPIES into capevolve.yaml, where an omission
 # silently costs them a working config.
 ALGORITHM_LISTS = [
-    ("templates/project/capevolve.yaml", "algorithm_skill:"),
+    ("benchmarks/_scaffold/project/capevolve.yaml", "algorithm_skill:"),
     ("docs/OPTIMIZE_YOUR_OWN.md", "algorithm_skill:"),
     ("site/optimize-your-own.html", "algorithm_skill:"),
     ("docs/ARCHITECTURE.md", "| algorithms |"),

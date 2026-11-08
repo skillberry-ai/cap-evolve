@@ -8,7 +8,7 @@ left is ``--extra-instruction-path``, and ``_write_candidate_instruction`` puts 
 but the text of ``prompt.md``/``SKILL.md``.
 
 The harbor template's own declared default is ``capabilities: [skill-package]``
-(templates/adapters/harbor/capevolve.yaml), so the two features compose into a silent bug: a
+(benchmarks/generic/harbor/template/capevolve.yaml), so the two features compose into a silent bug: a
 skill-package candidate under ASIS loses its bundled ``scripts/``/``references/`` while the
 run completes, the gate runs and the numbers get published — every edit outside the SKILL.md
 body was never delivered, and nothing says so. ``_assert_asis_can_deliver`` turns that into a
@@ -23,13 +23,13 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "harbor"
+ADAPTER_DIR = REPO / "benchmarks" / "generic" / "harbor" / "template"
 ADAPTER_PY = ADAPTER_DIR / "adapter.py"
 
 
 def _load(asis: str | None = None):
     """Import the harbor adapter with HARBOR_LOCAL_ASIS set, since it is read at import."""
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     prev = os.environ.get("HARBOR_LOCAL_ASIS")

@@ -12,7 +12,7 @@
 # Usage (normally via the dispatcher, not by hand):
 #   export PARSEC_V6N=... LLM_API_KEY=... LLM_API_BASE=... HARNESS_LLM_SIMULATION_MODEL=...
 #   export CE_BIN=/path/to/.venv/bin/cap-evolve     # its python runs the worker
-#   bash examples/parsec/v6/lane_worker.sh --queue <queue-root> [--idle-exit SEC]
+#   bash benchmarks/parsec/examples/rca_prompts/v6/lane_worker.sh --queue <queue-root> [--idle-exit SEC]
 #
 # Exit codes: 0 queue drained/stopped, 2 bad usage, 3 lane failed verification or
 # proved broken, otherwise parsec_stack.sh's own code.
@@ -32,9 +32,9 @@ esac
 
 V6_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$V6_DIR/../../.." && pwd)}"
-V5_DIR="$PROJECT_ROOT/examples/parsec/v5"
+V5_DIR="$PROJECT_ROOT/benchmarks/parsec/examples/rca_prompts/v5"
 CCC_DIR="$PROJECT_ROOT/scripts/ccc"
-PARSEC_CCC_DIR="$PROJECT_ROOT/examples/parsec/ccc"
+PARSEC_CCC_DIR="$PROJECT_ROOT/benchmarks/parsec/examples/rca_prompts/ccc"
 PYTHON="$(dirname "$CE_BIN")/python"
 
 QUEUE=""

@@ -14,7 +14,7 @@ classify_fast's patterns are executed against each task's instruction.md, and th
 specialist's tool list (from tool_definitions.py) is checked against the task's expected calls.
 
 Usage (from the worktree root):
-    python3 examples/parsec/v6_t2/build_report.py --suite-id e1 --g2-run <v6_g2_e1 run dir> --out results/v6_t2_e1
+    python3 benchmarks/parsec/examples/rca_prompts/v6_t2/build_report.py --suite-id e1 --g2-run <v6_g2_e1 run dir> --out results/v6_t2_e1
 """
 from __future__ import annotations
 

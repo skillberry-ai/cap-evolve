@@ -5,13 +5,13 @@
 # phase for this example, driven by PROMPT.md: a coding agent following RUN.md does
 # exactly these steps. Run it directly to reproduce in one command:
 #
-#   bash examples/tau2_airline/setup.sh   # install cap-evolve + onboard tau2 + check
-#   bash examples/tau2_airline/run.sh     # full run + live dashboard
+#   bash benchmarks/tau2/examples/airline/setup.sh   # install cap-evolve + onboard tau2 + check
+#   bash benchmarks/tau2/examples/airline/run.sh     # full run + live dashboard
 #
 set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 TAU2_DIR="$REPO/vendor/tau2-bench"
 # tau2-bench requires python >=3.12,<3.14. Override the interpreter used to CREATE
 # the venv (and/or the venv path) when the default `python3` is outside that range:

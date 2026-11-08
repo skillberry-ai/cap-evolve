@@ -143,12 +143,12 @@ Each of these came from a failure observed in these runs, not from taste.
   `screen.py` ran before that candidate's full-val eval; `dashboard.py`'s `reduce_run` surfaces
   it under `algo_extra["compliance"]` as its own distinct entry.
 - The user-simulator `###STOP###` + leaked-continuation-reasoning bug (row 7 above) is now
-  detected from the message trace in the adapter (`examples/tau2_airline/adapters/adapter.py`
-  and the shared `templates/adapters/tau2_bench/adapter.py`) and the affected rollout is marked
+  detected from the message trace in the adapter (`benchmarks/tau2/examples/airline/adapters/adapter.py`
+  and the shared `benchmarks/tau2/template/adapter.py`) and the affected rollout is marked
   as infra noise rather than scored as an agent failure — tau2-bench itself is an external,
   unvendored package, so the fix lives on the cap-evolve side of that boundary.
 - **Real end-to-end validation:** the implementation sandbox had no network egress, but a
-  network-connected run against real `aws/gpt-oss-120b` rollouts (via `examples/tau2_airline`,
+  network-connected run against real `aws/gpt-oss-120b` rollouts (via `benchmarks/tau2/examples/airline`,
   a 2-task/1-trial smoke spec) confirmed the `resolvable_effect_size` annotation above is
   produced by an actual gate decision, not just exercised by a unit test — the run's
   `rejected.jsonl` recorded a paired-mode verdict correctly annotated with `2·SE`. The

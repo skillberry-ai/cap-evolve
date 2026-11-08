@@ -1,8 +1,8 @@
-"""The production tau2_airline adapter (examples/tau2_airline/adapters/adapter.py — the one
+"""The production tau2_airline adapter (benchmarks/tau2/examples/airline/adapters/adapter.py — the one
 actually run by capevolve.yaml with the RITS/proxy-routed ``aws/gpt-oss-120b`` target model
 and ``run_trials``) hardcoded ``cost_usd=agent_cost + user_cost`` and ``tokens=0``, so every
 evaluate/optimization/intake event reported $0.00 despite real token counts and real elapsed
-time — exactly the bug already fixed in ``templates/adapters/tau2_bench/adapter.py`` (see
+time — exactly the bug already fixed in ``benchmarks/tau2/template/adapter.py`` (see
 ``test_tau2_eval_cost.py``) but never ported to the example that production runs actually use.
 
 This mirrors that fix's tests against the production adapter to prove the port landed.
@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER = REPO / "examples" / "tau2_airline" / "adapters" / "adapter.py"
+ADAPTER = REPO / "benchmarks" / "tau2" / "examples" / "airline" / "adapters" / "adapter.py"
 
 
 def _load_adapter_module():

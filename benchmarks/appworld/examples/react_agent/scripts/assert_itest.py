@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regression gate for the AppWorld one-task integration test (scripts/itest.sh).
 
-Given a finished cap-evolve run dir, assert what examples/tau2_airline/assert_itest.py asserts:
+Given a finished cap-evolve run dir, assert what benchmarks/tau2/examples/airline/assert_itest.py asserts:
   1. the pipeline COMPLETED   — baseline.json + final.json + report.md exist;
   2. ONE iteration ran        — state.json spent.iterations >= 1;
   3. NON-REGRESSION           — final test reward >= baseline val reward;

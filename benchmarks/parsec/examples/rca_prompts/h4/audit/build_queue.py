@@ -18,7 +18,7 @@ are parameterized here instead -- PREFIX below, and TASK_IDS is now the
 literal 30-id list (confirmed via `ls h4_2026_10_06/bench-v4-*`), since no
 scaffold_projects.py for the h4 held-out set exists anywhere to import from.
 
-    python3 examples/parsec/h4/audit/build_queue.py > /tmp/queue.txt
+    python3 benchmarks/parsec/examples/rca_prompts/h4/audit/build_queue.py > /tmp/queue.txt
 """
 from __future__ import annotations
 import glob, json, os, sys

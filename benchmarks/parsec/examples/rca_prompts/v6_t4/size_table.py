@@ -10,7 +10,7 @@ import difflib, json, statistics as st, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "examples/parsec/v6_t2"))
+sys.path.insert(0, str(ROOT / "benchmarks/parsec/examples/rca_prompts/v6_t2"))
 import scaffold_projects as S  # noqa: E402
 
 FILES = ["orchestrator.md", "shared_context.md", "aap2_agent.md", "babylon_agent.md",

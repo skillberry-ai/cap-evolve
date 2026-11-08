@@ -15,10 +15,10 @@
 #
 # Usage:
 #   export PARSEC_V4N=/path/to/rhdp-parsec/v4_2026-09-16
-#   bash examples/parsec/ccc/parsec_stack.sh up       # start all 6, then activate the 5 sims
-#   bash examples/parsec/ccc/parsec_stack.sh status   # read-only: TCP + simulation `ready`
-#   bash examples/parsec/ccc/parsec_stack.sh down     # stop+remove containers, stop parsec-live
-#   bash examples/parsec/ccc/parsec_stack.sh reap     # force-remove/kill anything on our ports
+#   bash benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh up       # start all 6, then activate the 5 sims
+#   bash benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh status   # read-only: TCP + simulation `ready`
+#   bash benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh down     # stop+remove containers, stop parsec-live
+#   bash benchmarks/parsec/examples/rca_prompts/ccc/parsec_stack.sh reap     # force-remove/kill anything on our ports
 #
 # Exits non-zero if $PARSEC_V4N is unset, if any of `up`'s preconditions are
 # unmet, if a sim's activation POST never returns 2xx/409, or (for `status`) if
@@ -56,7 +56,7 @@ fi
 # a false "already running" that silently skips starting parsec-live.
 PID_DIR="$PARSEC_TREE/_run/logs/pids/$(hostname -s)"
 
-# The four overrides below exist for parallel eval lanes (examples/parsec/h4):
+# The four overrides below exist for parallel eval lanes (benchmarks/parsec/examples/rca_prompts/h4):
 # $PARSEC_TREE is one shared GPFS tree, so N concurrent lanes pointed at the
 # defaults would collide on the live clone's prompts, the skills store, and the
 # log dir the cost-attribution window is read from. Defaults are unchanged, so
@@ -86,7 +86,7 @@ SKILLS_DIR="${PARSEC_SKILLS_DIR:-$PARSEC_TREE/_run/skills}"
 PARSEC_SIM_TRACE="${PARSEC_SIM_TRACE:-$PARSEC_TREE/_run/logs/parsec-trace/trace.jsonl}"
 
 # name:published_port:kind. The port numbers are the single source of truth in
-# examples/parsec/parsec_paths.py's MCP_PORTS — change them there.
+# benchmarks/parsec/examples/rca_prompts/parsec_paths.py's MCP_PORTS — change them there.
 SERVICES=(
   "platform:8086:sim"
   "github:8087:sim"

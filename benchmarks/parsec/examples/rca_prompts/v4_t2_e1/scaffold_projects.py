@@ -6,8 +6,8 @@ the original design doc):
 
     .capevolve/
       v4_t2_e1_common/
-        adapters  -> ../../examples/parsec/adapters   (symlink)
-        optimizer -> ../../examples/parsec/v4_t2_e1/common/optimizer  (symlink)
+        adapters  -> ../../benchmarks/parsec/examples/rca_prompts/adapters   (symlink)
+        optimizer -> ../../benchmarks/parsec/examples/rca_prompts/v4_t2_e1/common/optimizer  (symlink)
       v4_t2_e1_<task-id>/
         project/
           seed_capability/*.md   (8 files, real copies — a frozen snapshot)

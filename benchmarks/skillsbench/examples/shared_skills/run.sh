@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Full cap-evolve run on SkillsBench: optimize the four shared office skills, with a
 # claude-sonnet-4-6 agent in Docker and a live dashboard.
-# Prereq: bash examples/skillsbench/setup.sh  (installs deps + scaffolds + checks).
+# Prereq: bash benchmarks/skillsbench/examples/shared_skills/setup.sh  (installs deps + scaffolds + checks).
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 PROJECT="$REPO/.capevolve/project"
 
 export PATH="$HOME/.local/bin:$PATH"

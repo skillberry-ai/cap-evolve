@@ -3,7 +3,7 @@
 # run dir into examples/, so the numbers in docs/RESULTS.md are traceable and the
 # dashboard UI is reproducible from the repo alone.
 #
-#   bash examples/tau2_airline/export_run_artifacts.sh <run_dir> <dest_dir>
+#   bash benchmarks/tau2/examples/airline/export_run_artifacts.sh <run_dir> <dest_dir>
 #
 # `.gitignore` globs `.capevolve*/`, so run dirs are never committable by accident —
 # this is the only path by which a run's evidence reaches the repo.

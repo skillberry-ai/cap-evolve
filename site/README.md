@@ -15,7 +15,7 @@ the `site/` directory is shipped verbatim. Dark-first, with a light-mode toggle.
 - `blackbox.html` — optimizing with the blackbox approach (Skillberry Store + Proxy-Agent)
   (from `docs/BLACKBOX.md`).
 - `run-end-to-end.html` — step-by-step run on a real benchmark, τ²-bench airline
-  (from `docs/REPRODUCE_tau2.md` + `examples/tau2_airline/DEMO.md`).
+  (from `docs/REPRODUCE_tau2.md` + `benchmarks/tau2/examples/airline/DEMO.md`).
 - `results.html` — full benchmark detail (from `docs/RESULTS.md`); includes an inline SVG dumbbell chart.
 - `benchmarks.html` — live CI benchmark-run history; rendered by `benchmarks.js` from a JSON feed.
 - `architecture.html` — pipeline + optimizer context (from `docs/ARCHITECTURE.md`); includes an inline SVG pipeline diagram.

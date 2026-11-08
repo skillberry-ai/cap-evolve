@@ -21,13 +21,13 @@ script, not just SKILL.md prose.
 ```bash
 REPO=$PWD                       # cap-evolve repo root
 export CAPEVOLVE_CORE=$REPO/core PYTHONPATH=$REPO/core CAPEVOLVE_SKILLS_DIR=$REPO/skills
-export CAPEVOLVE_TOY_DATA=$REPO/examples/toy_skill
-export CAPEVOLVE_MOCK_SCRIPT=$REPO/examples/toy_skill/mock_script.json
+export CAPEVOLVE_TOY_DATA=$REPO/benchmarks/toy/examples/skill
+export CAPEVOLVE_MOCK_SCRIPT=$REPO/benchmarks/toy/examples/skill/mock_script.json
 
 D=/tmp/toyskill; mkdir -p $D/.capevolve/project/adapters
-cp $REPO/examples/toy_skill/adapter.py $D/.capevolve/project/adapters/
-cp -R $REPO/examples/toy_skill/seed_capability $D/seed_capability
-cp $REPO/examples/toy_skill/capevolve.yaml $D/.capevolve/project/capevolve.yaml
+cp $REPO/benchmarks/toy/examples/skill/adapter.py $D/.capevolve/project/adapters/
+cp -R $REPO/benchmarks/toy/examples/skill/seed_capability $D/seed_capability
+cp $REPO/benchmarks/toy/examples/skill/capevolve.yaml $D/.capevolve/project/capevolve.yaml
 
 python3 -m cap_evolve.cli run --spec $D/.capevolve/project/capevolve.yaml \
     --project $D/.capevolve/project --run-ts demo

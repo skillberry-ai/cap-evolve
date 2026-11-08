@@ -1,6 +1,6 @@
 import json, statistics as st, collections, sys
 from pathlib import Path
-sys.path.insert(0, "examples/parsec/v5"); import collect as v5c
+sys.path.insert(0, "benchmarks/parsec/examples/rca_prompts/v5"); import collect as v5c
 G = Path("/dccstor/knewedge2/boazc/workarea/python/skillberry_ai/cap-evolve-ps-worktrees/parsec-intake_v6/.capevolve/v6_g2_e1/run_g2_e1")
 splits = json.loads((G/"splits.json").read_text())
 def g_scores(split, pred):

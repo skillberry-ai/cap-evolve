@@ -1,6 +1,6 @@
 """scripts/itest.sh, scripts/assert_itest.py and capevolve.itest.yaml: the one-task regression test.
 
-Modelled on examples/tau2_airline/{itest.sh, assert_itest.py, capevolve.itest.yaml}. The asserter
+Modelled on benchmarks/tau2/examples/airline/{itest.sh, assert_itest.py, capevolve.itest.yaml}. The asserter
 is run against synthetic run dirs laid out like cap-evolve's (baseline.json, final.json,
 report.md, state.json, rollouts/<split>/*.json).
 """
@@ -17,11 +17,11 @@ from pathlib import Path
 
 # The modules under test live in ../scripts. `cap_evolve` normally comes from the installed
 # package; core/ is a fallback so that
-#     python3 examples/appworld/tests/test_itest.py -v
-# works from a clean shell, as in examples/parsec/tests.
+#     python3 benchmarks/appworld/examples/react_agent/tests/test_itest.py -v
+# works from a clean shell, as in benchmarks/parsec/examples/rca_prompts/tests.
 EX = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(EX / "scripts"))
-sys.path.append(str(Path(__file__).resolve().parents[3] / "core"))
+sys.path.append(str(Path(__file__).resolve().parents[5] / "core"))
 
 import assert_itest  # noqa: E402
 

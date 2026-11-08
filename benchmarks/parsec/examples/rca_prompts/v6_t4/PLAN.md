@@ -49,7 +49,7 @@ About 400 trials per method (~$100 at ~$0.25/trial), so ~$300 for all three.
 
 **Executed (2026-10-21):** 5 trials per task (3 + a 2-trial top-up at fresh seeds), not 3; results on the `parsec-history` branch under `results/v6/v6_t4_e1/` (`summary.md`, `RESULTS_FOR_PAPER.md`).
 
-**Execution:** one LSF job per task, on its own node (the h4 pattern, `examples/parsec/RUN_H4.md`),
+**Execution:** one LSF job per task, on its own node (the h4 pattern, `benchmarks/parsec/examples/rca_prompts/RUN_H4.md`),
 at most 20 concurrent. No shared lane queue.
 
 ## Files

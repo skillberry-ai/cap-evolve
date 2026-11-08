@@ -4,8 +4,8 @@
 # capevolve.agentopt.gptoss.yaml in EXACTLY ONE substantive field: num_trials 1 -> 5.
 # Reproduce with:
 #
-#   cp examples/tau2_airline/capevolve.agentopt.v4.gptoss.yaml .capevolve/project/
-#   cp examples/tau2_airline/agentopt_split.json .capevolve/project/
+#   cp benchmarks/tau2/examples/airline/capevolve.agentopt.v4.gptoss.yaml .capevolve/project/
+#   cp benchmarks/tau2/examples/airline/agentopt_split.json .capevolve/project/
 #   export TAU2_AGENT_MODEL=aws/gpt-oss-120b TAU2_USER_MODEL=aws/gpt-oss-120b
 #   export CAPEVOLVE_SKILLS_DIR="$PWD/skills" PYTHONPATH="$PWD/.capevolve/project/adapters"
 #   .venv-tau2/bin/cap-evolve run --spec .capevolve/project/capevolve.agentopt.v4.gptoss.yaml \

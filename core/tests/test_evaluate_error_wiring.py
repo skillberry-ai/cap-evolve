@@ -22,7 +22,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
-EXAMPLE = REPO / "examples" / "toy_skill"
+EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "skill"
 
 sys.path.insert(0, str(CORE))
 

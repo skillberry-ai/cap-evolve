@@ -9,12 +9,12 @@ the next invocation (run by hand, or from a trivial external loop) picks up
 exactly where this one left off, via resolve_next_task_id().
 
 Usage:
-    python3 examples/parsec/v4_t2_e1/run_one_task.py               # next pending task
-    python3 examples/parsec/v4_t2_e1/run_one_task.py --task-id X   # a specific task
-    python3 examples/parsec/v4_t2_e1/run_one_task.py --follow      # + --follow to cap-evolve run
+    python3 benchmarks/parsec/examples/rca_prompts/v4_t2_e1/run_one_task.py               # next pending task
+    python3 benchmarks/parsec/examples/rca_prompts/v4_t2_e1/run_one_task.py --task-id X   # a specific task
+    python3 benchmarks/parsec/examples/rca_prompts/v4_t2_e1/run_one_task.py --follow      # + --follow to cap-evolve run
 
 External repetition (run from the repo root):
-    while python3 examples/parsec/v4_t2_e1/run_one_task.py; do :; done
+    while python3 benchmarks/parsec/examples/rca_prompts/v4_t2_e1/run_one_task.py; do :; done
 
 INVARIANT that recipe depends on: run_task() returns 0 only when the run it
 launched actually wrote final.json (`cap-evolve run`'s finalize does this, and
@@ -35,7 +35,7 @@ Or, to survive the terminal closing / the machine sleeping less easily:
     caffeinate -i python3 -c '
     import subprocess, sys
     while True:
-        rc = subprocess.call(["python3", "examples/parsec/v4_t2_e1/run_one_task.py"])
+        rc = subprocess.call(["python3", "benchmarks/parsec/examples/rca_prompts/v4_t2_e1/run_one_task.py"])
         if rc != 0:
             sys.exit(rc)
     '

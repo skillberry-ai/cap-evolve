@@ -21,7 +21,7 @@ OPT_TRANSCRIPTS = RUNS / "optimizer_transcripts"
 # The final window's dir (runs/<AW_FINAL>); a re-run uses a new one so an earlier window stays intact.
 FINAL = RUNS / os.environ.get("AW_FINAL", "final")
 EXAMPLE = Path(__file__).resolve().parents[1]
-REPO = EXAMPLE.parents[1]
+REPO = EXAMPLE.parents[3]
 # KEY=VALUE file with the agent-model key (never exported; each episode worker reads it).
 SECRETS_FILE = os.environ.get("AW_SECRETS_FILE", str(REPO / ".env"))
 

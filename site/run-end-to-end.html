@@ -136,7 +136,7 @@
         <div class="steps">
           <div class="step">
             <h3>Setup — onboard the benchmark and pass the hard gate</h3>
-<pre><code>bash examples/tau2_airline/setup.sh</code></pre>
+<pre><code>bash benchmarks/tau2/examples/airline/setup.sh</code></pre>
             <p>The intake / implement-and-check transcript. In order it:</p>
             <ul>
               <li>creates <code>.venv</code> and <code>pip install -e ./core</code> (the <code>cap-evolve</code> CLI), plus the optional dashboard server;</li>
@@ -162,7 +162,7 @@
 
           <div class="step">
             <h3>Run — optimize → gate → seal → report</h3>
-<pre><code>bash examples/tau2_airline/run.sh</code></pre>
+<pre><code>bash benchmarks/tau2/examples/airline/run.sh</code></pre>
             <p>Which runs, with the live dashboard:</p>
 <pre><code>cap-evolve run --spec .capevolve/project/capevolve.yaml \
   --project .capevolve/project --run-ts full --dashboard auto</code></pre>
@@ -207,7 +207,7 @@ cat "$RD/rejected.jsonl"        # what the honest gate rejected = optimizer memo
               The full interactive dashboard — all 10 iterations — is checked in as a static
               export. No Node, no backend, no re-run needed to see the result:
             </p>
-<pre><code>cd examples/tau2_airline/run_full/ui &amp;&amp; python3 -m http.server 8000
+<pre><code>cd benchmarks/tau2/examples/airline/run_full/ui &amp;&amp; python3 -m http.server 8000
 # then open http://localhost:8000</code></pre>
             <p>Serve it locally like this, or host it on GitHub Pages / any static host.</p>
           </div>

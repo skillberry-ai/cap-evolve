@@ -92,7 +92,7 @@ explicitly allowed to "rewrite or CREATE" a script.</p>
 documentation alone isn't proof it was <em>used</em>. Two concrete runs confirm it was.</p>
 <hr />
 <h2 id="2-example-a-tau2_airline-capability-system-prompt-tools">2. Example A — <code>tau2_airline</code> (capability: <code>system-prompt</code> + <code>tools</code>)</h2>
-<p><code>examples/tau2_airline</code> optimizes a tau2-bench airline agent's system prompt <strong>and</strong>
+<p><code>benchmarks/tau2/examples/airline</code> optimizes a tau2-bench airline agent's system prompt <strong>and</strong>
 its own tool implementations jointly. Results are recorded in <code>docs/RESULTS.md</code>:
 <strong>val +90.5%, sealed test +125%</strong> when <code>[skill-package, system-prompt, tools]</code> are
 optimized together versus the seed.</p>
@@ -144,7 +144,7 @@ the code changes directly, not a prose reword.</p>
 <hr />
 <h2 id="4-how-the-evolved-code-actually-runs-inside-the-sandboxed-container">4. How the evolved code actually runs inside the sandboxed container</h2>
 <p>Using SkillsBench (the benchmark <code>exam-block-sequencing</code> and similar tasks run under)
-as the concrete pipeline, from <code>examples/skillsbench/adapters/adapter.py</code>:</p>
+as the concrete pipeline, from <code>benchmarks/skillsbench/examples/shared_skills/adapters/adapter.py</code>:</p>
 <p><strong>Step 1 — materialize.</strong> The optimizer's edits are written as plain files into the
 candidate's <code>seed_capability/&lt;sub-skill&gt;/</code> directory on the host/pod filesystem. No
 container yet.</p>

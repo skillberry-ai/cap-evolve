@@ -1,7 +1,7 @@
 """The two tau2_sierra DELIVERY ARMS as CI benchmark legs.
 
 `tau2_sierra` (direct) and `tau2_sierra_blackbox` run the SAME 50 tau2 airline tasks, from
-examples/tau2_sierra_airline on vanilla tau2 pinned at the example's TAU2_REFERENCE_SHA, by two
+benchmarks/tau2/examples/sierra_airline on vanilla tau2 pinned at the example's TAU2_REFERENCE_SHA, by two
 different delivery routes: in the runner's own process, and through the Skillberry Store +
 Proxy-Agent. What makes them worth having in CI is that the two numbers are comparable to each
 other — so the things worth pinning are the ones that would silently break that comparison, or
@@ -24,7 +24,7 @@ RUN_SUITE = REPO / "ci/benchmarks/lib/run_suite.sh"
 CI_SETUP = REPO / "ci/benchmarks/lib/ci_setup.sh"
 ARMS = ("tau2_sierra", "tau2_sierra_blackbox")
 ARM_OF_LEG = {"tau2_sierra": "direct", "tau2_sierra_blackbox": "blackbox"}
-EXAMPLE = REPO / "examples/tau2_sierra_airline"
+EXAMPLE = REPO / "benchmarks/tau2/examples/sierra_airline"
 
 
 def tier_dir(arm: str, tier: str) -> Path:
@@ -126,16 +126,16 @@ def test_the_recorded_agent_is_a_gateway_model_not_the_SPA_sentinel(arm):
 
 # ---- run_suite.sh wiring ---------------------------------------------------------
 
-def test_the_adapter_is_sourced_from_the_example_not_duplicated_into_templates():
-    """The example is the single source of truth: a copy under templates/adapters/ would be free
-    to drift from the code a reviewer actually reads."""
+def test_the_adapter_is_sourced_from_the_example_not_duplicated_into_the_template():
+    """The example is the single source of truth: a copy under benchmarks/tau2/template/ would be
+    free to drift from the code a reviewer actually reads."""
     case = _arm_case()
-    assert "examples/tau2_sierra_airline/$ARM" in case
-    assert "$TPL/" not in case, "the arms must not source an adapter from templates/adapters/"
-    for tpl in (REPO / "templates/adapters").iterdir():
+    assert "benchmarks/tau2/examples/sierra_airline/$ARM" in case
+    assert "$TPL/" not in case, "the arms must not source an adapter from benchmarks/tau2/template/"
+    for tpl in (REPO / "benchmarks" / "tau2" / "template").iterdir():
         assert "skillberry" not in tpl.name.lower(), (
-            f"{tpl.name} duplicates an arm's adapter into templates/ — source it from "
-            "examples/tau2_sierra_airline/<arm>/ instead")
+            f"{tpl.name} duplicates an arm's adapter into benchmarks/tau2/template/ — source it "
+            "from benchmarks/tau2/examples/sierra_airline/<arm>/ instead")
 
 
 def test_the_leg_copies_the_tailoring_module_and_not_the_old_gateway():
@@ -156,7 +156,7 @@ def test_the_arm_dir_the_leg_derives_actually_exists(arm):
     assert m, f"run_suite.sh maps no ARM for the {arm} leg"
     assert m.group(1) == ARM_OF_LEG[arm]
     assert (EXAMPLE / m.group(1)).is_dir(), (
-        f"examples/tau2_sierra_airline/{m.group(1)} missing — the leg would fail with 'no such arm'")
+        f"benchmarks/tau2/examples/sierra_airline/{m.group(1)} missing — the leg would fail with 'no such arm'")
 
 
 def test_both_arms_land_their_own_optimizer_instructions():
@@ -409,7 +409,7 @@ def test_the_ci_pin_is_read_from_the_example_and_never_hard_coded():
     pins = _example_pins()
     assert pins["direct"] == pins["blackbox"], f"the arms pin different commits: {pins}"
     case = _setup_case()
-    assert 'EX="$REPO/examples/tau2_sierra_airline"' in case
+    assert 'EX="$REPO/benchmarks/tau2/examples/sierra_airline"' in case
     assert "$EX/$1/setup.sh" in case, "the pin must be read from each arm's setup.sh"
     assert "ref_of direct" in case and "ref_of blackbox" in case
     assert '[ "$REF_DIRECT" = "$REF_BLACKBOX" ]' in case, "a disagreement must fail the job"

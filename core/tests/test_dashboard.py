@@ -456,7 +456,7 @@ def test_config_groups_objectives_and_pareto_gate_mode():
     """#676: a multi-objective run's `objectives`/`gate_mode: pareto` must land in
     'Metrics & display' / 'Budget & gate' (not fall through to 'Other') so the
     dashboard's Config tab can surface them plainly. Uses the block-sequence
-    `objectives:` shape templates/project/capevolve.yaml documents (a real run's
+    `objectives:` shape benchmarks/_scaffold/project/capevolve.yaml documents (a real run's
     project yaml, not a flat list) — this format used to be unparseable by the
     tolerant YAML fallback (see test_specfile.py)."""
     from cap_evolve import dashboard
@@ -613,7 +613,7 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
         REPO / "dashboard" / "frontend" / "src",
         REPO / "dashboard" / "frontend" / "index.html",
         REPO / "dashboard" / "frontend" / "dist",
-        REPO / "examples" / "tau2_airline" / "run_full" / "ui",
+        REPO / "benchmarks" / "tau2" / "examples" / "airline" / "run_full" / "ui",
     ]
     targets = sorted(set(bundles) | set(required))
     # Anything absolute in a subresource position: @import, url(), href=, src=, import from.

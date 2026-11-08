@@ -9,7 +9,7 @@
 # The run's preflight starts the proxy (it needs `skill_name`). Services are left running.
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../../.." && pwd)"
 
 load_dotenv(){
   local f="$1" line key val

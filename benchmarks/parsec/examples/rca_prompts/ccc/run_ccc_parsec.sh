@@ -7,7 +7,7 @@
 #
 # Usage:
 #   export PARSEC_V4N=/path/to/rhdp-parsec/v4_2026-09-16
-#   bash examples/parsec/ccc/run_ccc_parsec.sh --task-id icinga-011-aap2-job-status-alert
+#   bash benchmarks/parsec/examples/rca_prompts/ccc/run_ccc_parsec.sh --task-id icinga-011-aap2-job-status-alert
 #
 # Output layout under the project (all under $PROJECT_ROOT/results/parsec/):
 #   results/parsec/<task-id>/<run-id>/

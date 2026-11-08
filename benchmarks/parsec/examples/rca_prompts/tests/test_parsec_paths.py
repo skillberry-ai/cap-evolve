@@ -1,4 +1,4 @@
-# examples/parsec/v4_t2_e1/tests/test_parsec_paths.py
+# benchmarks/parsec/examples/rca_prompts/v4_t2_e1/tests/test_parsec_paths.py
 from __future__ import annotations
 
 import os

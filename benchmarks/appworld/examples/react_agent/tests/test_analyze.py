@@ -10,12 +10,12 @@ from unittest.mock import patch
 
 # The modules under test live in ../adapters (and ../scripts). `cap_evolve` normally comes
 # from the installed package; core/ is a fallback so that
-#     python3 examples/appworld/tests/test_analyze.py -v
-# works from a clean shell, as in examples/parsec/tests. Appended, not prepended: a second copy of
+#     python3 benchmarks/appworld/examples/react_agent/tests/test_analyze.py -v
+# works from a clean shell, as in benchmarks/parsec/examples/rca_prompts/tests. Appended, not prepended: a second copy of
 # cap_evolve ahead of the installed one would be worse than an awkward invocation.
 EX = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(EX / "scripts"))
-sys.path.append(str(Path(__file__).resolve().parents[3] / "core"))
+sys.path.append(str(Path(__file__).resolve().parents[5] / "core"))
 
 import analyze  # noqa: E402
 from cap_evolve import stats  # noqa: E402

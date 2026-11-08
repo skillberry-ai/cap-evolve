@@ -143,7 +143,7 @@ exists). Here is everything intake needs:
     .env (copy them there from ~/.claude/settings.json's env block — base URL
     https://ete-litellm.ai-models.vpc-int.res.ibm.com, model id claude-sonnet-4-6) and
     PROPAGATE them into the sandboxed agent with --agent-env (above). Use the same .env
-    loader pattern as examples/tau2_airline/adapters/gateway.py (load_env walks parents,
+    loader pattern as benchmarks/tau2/examples/airline/adapters/gateway.py (load_env walks parents,
     setdefault, no python-dotenv dep); read ANTHROPIC_* rather than that module's OPENAI_*.
     Never hardcode the token.
 - INTEGRATION RISK to validate during implement-and-check (resolve empirically, fix as a
@@ -260,7 +260,7 @@ exists). Here is everything intake needs:
 - note:             Docker rollouts are slow; run the full optimization in the background.
 ```
 
-> The bundled `examples/skillsbench/` is the **result** of following this prompt: the
+> The bundled `benchmarks/skillsbench/examples/shared_skills/` is the **result** of following this prompt: the
 > adapter (`adapters/adapter.py`), the Anthropic-gateway env shim, the seed skills
 > (`seed_capability/{docx,pptx,xlsx,pdf}/`), and the optimizer instructions
 > (`.capevolve/project/optimizer/INSTRUCTIONS.md`) are what the intake /

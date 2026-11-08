@@ -21,12 +21,12 @@ from pathlib import Path
 
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 ADAPTER = ADAPTER_DIR / "adapter.py"
 
 
 def _load():
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     spec = importlib.util.spec_from_file_location("_sb_recalc", ADAPTER)
@@ -126,7 +126,7 @@ def test_the_serialized_vendored_helper_is_not_called():
     tree = ast.parse(ADAPTER.read_text(encoding="utf-8"))
     used = set()
     for node in ast.walk(tree):
-        # vendor["just_open_libreoffice"](...)  /  _open_spreadsheet.just_open_libreoffice
+        # vendor["just_open_libreoffice"](...) /  _open_spreadsheet.just_open_libreoffice
         if isinstance(node, ast.Constant) and node.value == "just_open_libreoffice":
             used.add("subscript")
         if isinstance(node, ast.Attribute) and node.attr == "just_open_libreoffice":

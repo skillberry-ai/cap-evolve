@@ -19,7 +19,7 @@
 #   export PARSEC_V5N=/path/to/rhdp-parsec/v5_2026-10-10
 #   export LLM_API_KEY=...  LLM_API_BASE=https://your-gateway
 #   export HARNESS_LLM_SIMULATION_MODEL=azure/gpt-5.4
-#   bash examples/parsec/v5/run_one_eval.sh --suite-id base01 --task-id <task>
+#   bash benchmarks/parsec/examples/rca_prompts/v5/run_one_eval.sh --suite-id base01 --task-id <task>
 #
 # Optional env:
 #   V5_LANE             lane id (default: $LSB_JOBID, else short hostname)
@@ -53,7 +53,7 @@ fi
 CCC_DIR="$PROJECT_ROOT/scripts/ccc"
 # The parsec stack scripts live with the example; scripts/ccc keeps only the
 # benchmark-agnostic ones (setup_podman.sh, run_ccc_experiment.sh).
-PARSEC_CCC_DIR="$PROJECT_ROOT/examples/parsec/ccc"
+PARSEC_CCC_DIR="$PROJECT_ROOT/benchmarks/parsec/examples/rca_prompts/ccc"
 
 SUITE_ID=""
 TASK_ID_ARG=""
@@ -80,7 +80,7 @@ PROJECT_DIR=".capevolve/v5_${SUITE_ID}_${TASK_ID_ARG}/project"
 SPEC="$PROJECT_DIR/capevolve.yaml"
 if [[ ! -f "$PROJECT_ROOT/$SPEC" ]]; then
   echo "ERROR: $PROJECT_ROOT/$SPEC not found — scaffold it first:" >&2
-  echo "  python3 examples/parsec/v5/scaffold_eval_projects.py --suite-id $SUITE_ID --artifact <dir>" >&2
+  echo "  python3 benchmarks/parsec/examples/rca_prompts/v5/scaffold_eval_projects.py --suite-id $SUITE_ID --artifact <dir>" >&2
   exit 2
 fi
 

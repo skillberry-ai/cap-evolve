@@ -31,7 +31,7 @@ per-trial rollout JSON files directly instead of audit_trials.py's "scan
 every run under a prefix" shape).
 
 Usage:
-    python3 examples/parsec/v5/audit/pool_valid_trials.py \
+    python3 benchmarks/parsec/examples/rca_prompts/v5/audit/pool_valid_trials.py \
         --capevolve-dir .capevolve --prefix v5_g2_e1 --n 5 \
         platform-034-rate-limit-not-an-outage platform-111-recycled-sandbox-swallowed-teardown
 """

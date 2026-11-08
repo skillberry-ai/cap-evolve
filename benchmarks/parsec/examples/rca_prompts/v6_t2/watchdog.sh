@@ -12,7 +12,7 @@
 #
 # Usage (from the worktree root):
 #   bsub -q normal -n 1 -M 4G -J v6t2_watchdog -oo ~/ccc_logs/%J.stdout -eo ~/ccc_logs/%J.stderr \
-#        bash examples/parsec/v6_t2/watchdog.sh --suite-id e1
+#        bash benchmarks/parsec/examples/rca_prompts/v6_t2/watchdog.sh --suite-id e1
 set -uo pipefail
 
 T2_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -75,7 +75,7 @@ done
 
 python3 - "$SUITE" "$STATUS" <<'PY'
 import json, os, sys, time
-sys.path.insert(0, "examples/parsec/v6_t2"); import scaffold_projects as S
+sys.path.insert(0, "benchmarks/parsec/examples/rca_prompts/v6_t2"); import scaffold_projects as S
 suite, status = sys.argv[1], sys.argv[2]
 rows = []
 for t in S.TASK_IDS:

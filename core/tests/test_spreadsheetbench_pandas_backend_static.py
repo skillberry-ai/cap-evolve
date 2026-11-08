@@ -15,7 +15,7 @@ import ast
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER = REPO / "templates" / "adapters" / "spreadsheetbench" / "adapter.py"
+ADAPTER = REPO / "benchmarks" / "spreadsheetbench" / "template" / "adapter.py"
 
 
 def _tree():

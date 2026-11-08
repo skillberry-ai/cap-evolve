@@ -318,12 +318,12 @@ def _toy_project(tmp_path: Path):
     """The zero-API toy_calc project (mock optimizer) + its env."""
     import os
     import shutil
-    example = REPO / "examples" / "toy_calc"
+    example = REPO / "benchmarks" / "toy" / "examples" / "calc"
     proj = tmp_path / ".capevolve" / "project"
     (proj / "adapters").mkdir(parents=True)
     shutil.copy(example / "adapter.py", proj / "adapters" / "adapter.py")
     shutil.copytree(example / "capability", tmp_path / "seed_capability")
-    shutil.copy(REPO / "templates" / "project" / "capevolve.yaml", proj / "capevolve.yaml")
+    shutil.copy(REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml", proj / "capevolve.yaml")
     env = dict(os.environ)
     env.update(PYTHONPATH=str(CORE), CAPEVOLVE_CORE=str(CORE),
                CAPEVOLVE_SKILLS_DIR=str(REPO / "skills"),
@@ -404,12 +404,12 @@ def test_check_flags_a_real_project_as_passing(tmp_path):
     """The gate must actually pass on a valid adapter (the regression above made every
     invocation look broken, which would have masked a real contract failure)."""
     proj = _project(tmp_path, ".capevolve", "deterministic")
-    src = REPO / "examples" / "toy_calc" / "adapter.py"
+    src = REPO / "benchmarks" / "toy" / "examples" / "calc" / "adapter.py"
     (proj / "adapters").mkdir(parents=True, exist_ok=True)
     (proj / "adapters" / "adapter.py").write_text(src.read_text(encoding="utf-8"),
                                                   encoding="utf-8")
     import os
-    os.environ["CAPEVOLVE_TOY_DATA"] = str(REPO / "examples" / "toy_calc")
+    os.environ["CAPEVOLVE_TOY_DATA"] = str(REPO / "benchmarks" / "toy" / "examples" / "calc")
     rc, out, _ = _run("check", "--project", str(proj))
     assert json.loads(out)["ok"] is True, out
     assert rc == 0

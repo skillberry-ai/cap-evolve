@@ -18,12 +18,12 @@ def _toy_project(tmp_path: Path) -> tuple[Path, dict]:
     """Scaffold the zero-API toy_calc project (mock optimizer) + its env. Shared by the
     real end-to-end `cap-evolve run --follow` tests."""
     repo = Path(__file__).resolve().parents[2]
-    example = repo / "examples" / "toy_calc"
+    example = repo / "benchmarks" / "toy" / "examples" / "calc"
     proj = tmp_path / ".capevolve" / "project"
     (proj / "adapters").mkdir(parents=True)
     shutil.copy(example / "adapter.py", proj / "adapters" / "adapter.py")
     shutil.copytree(example / "capability", tmp_path / "seed_capability")
-    shutil.copy(repo / "templates" / "project" / "capevolve.yaml", proj / "capevolve.yaml")
+    shutil.copy(repo / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml", proj / "capevolve.yaml")
     env = dict(os.environ)
     env.update(PYTHONPATH=str(repo / "core"), CAPEVOLVE_CORE=str(repo / "core"),
                CAPEVOLVE_SKILLS_DIR=str(repo / "skills"), CAPEVOLVE_TOY_DATA=str(example),

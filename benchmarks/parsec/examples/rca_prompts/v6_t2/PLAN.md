@@ -67,11 +67,11 @@ reused, because v6 revised the shared verifier.
 
 ## What has to be built
 
-1. `examples/parsec/v6_t2/scaffold_projects.py`: one project per task under
+1. `benchmarks/parsec/examples/rca_prompts/v6_t2/scaffold_projects.py`: one project per task under
    `.capevolve/v6_t2_e1_<task>/project/` (seed copy, byte-verified; `capevolve.yaml`;
    `split_ids.json` with train = val = test = [task]; `public_tasks.txt` = [task]; adapters →
-   `examples/parsec/v6/adapters`; optimizer → `examples/parsec/v6_t2/optimizer`).
-2. `examples/parsec/v6_t2/optimizer/INSTRUCTIONS.md`: the single-task brief.
+   `benchmarks/parsec/examples/rca_prompts/v6/adapters`; optimizer → `benchmarks/parsec/examples/rca_prompts/v6_t2/optimizer`).
+2. `benchmarks/parsec/examples/rca_prompts/v6_t2/optimizer/INSTRUCTIONS.md`: the single-task brief.
 3. Seed-trace reuse. Built: the scaffold writes `.capevolve/v6_t2_<suite>_<task>/prior/`, a
    minimal prior run holding v6_g2_e1's 10 Seed feedback trials of the task as
    `rollouts/val/<task>__seed__t0..9.json`. Its `baseline.json` is computed by cap-evolve's own
@@ -87,7 +87,7 @@ reused, because v6 revised the shared verifier.
      executable; run_t2.sh points CAPEVOLVE_OPTIMIZER_REGISTRY at it. The row keeps its name, so
      the harness gives the optimizer the same native skills, CLAUDE.md and parallel note as v6_g2.
      No framework change.
-5. `examples/parsec/v6_t2/run_t2.sh`. Built: one LSF driver per task, all on ONE shared lane
+5. `benchmarks/parsec/examples/rca_prompts/v6_t2/run_t2.sh`. Built: one LSF driver per task, all on ONE shared lane
    queue (`_run/v6-queue/v6_t2_<suite>`) and ONE worker pool capped at **15 workers**. A worker
    runs parsec and all five simulators on fixed ports, so it needs a node to itself (RUN_H4.md:
    "one node per job"); the cap is the number of nodes occupied. Drivers run only the optimizer

@@ -147,7 +147,7 @@ jobs:
       - name: Run toy_calc and assert honest improvement
         run: |
           set -euo pipefail
-          out="$(bash examples/toy_calc/run.sh)"
+          out="$(bash benchmarks/toy/examples/calc/run.sh)"
           echo "$out"
           echo "$out" | grep -q '"baseline_val": 0.0' \
             && echo "$out" | grep -q '"test_reward": 1.0' \
@@ -196,15 +196,15 @@ jobs:
           set -euo pipefail
           R="$PWD"; D="$(mktemp -d)"
           mkdir -p "$D/.capevolve/project/adapters"
-          cp    "$R/examples/toy_calc/adapter.py"     "$D/.capevolve/project/adapters/"
-          cp -R "$R/examples/toy_calc/capability"     "$D/seed_capability"
-          cp    "$R/templates/project/capevolve.yaml" "$D/.capevolve/project/capevolve.yaml"
+          cp    "$R/benchmarks/toy/examples/calc/adapter.py"     "$D/.capevolve/project/adapters/"
+          cp -R "$R/benchmarks/toy/examples/calc/capability"     "$D/seed_capability"
+          cp    "$R/benchmarks/_scaffold/project/capevolve.yaml" "$D/.capevolve/project/capevolve.yaml"
           # OUTSIDE the repo: run.py's parent-walk would otherwise find the checkout's
           # optimizers/registry.yaml and this assertion would prove nothing.
           cd "$D"
           export CAPEVOLVE_SKILLS_DIR="$HOME/.claude/skills"
-          export CAPEVOLVE_TOY_DATA="$R/examples/toy_calc"
-          export CAPEVOLVE_MOCK_SCRIPT="$R/examples/toy_calc/mock_script.json"
+          export CAPEVOLVE_TOY_DATA="$R/benchmarks/toy/examples/calc"
+          export CAPEVOLVE_MOCK_SCRIPT="$R/benchmarks/toy/examples/calc/mock_script.json"
           out="$(cap-evolve run --spec "$D/.capevolve/project/capevolve.yaml" \
                                 --project "$D/.capevolve/project" --run-ts ci)"
           echo "$out"
@@ -226,9 +226,9 @@ jobs:
         with:
           args: >-
             --offline --no-progress --include-fragments
-            --exclude-path examples/tau2_airline/run_full
-            --exclude-path examples/skillsbench/run_full
-            "README.md" "docs/**/*.md" "examples/**/*.md" "*.md"
+            --exclude-path benchmarks/tau2/examples/airline/run_full
+            --exclude-path benchmarks/skillsbench/examples/shared_skills/run_full
+            "README.md" "docs/**/*.md" "benchmarks/**/*.md" "*.md"
           fail: true
 
       # Docs/skills/code must not instruct agents to run a `cap-evolve <sub>` that does

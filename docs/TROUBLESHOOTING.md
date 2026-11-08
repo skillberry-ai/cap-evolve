@@ -17,7 +17,7 @@ so nothing else is fetched).
 
 ## Toy example
 
-**`bash examples/toy_calc/run.sh` doesn't print `test_reward 1.0`** — re-run from the
+**`bash benchmarks/toy/examples/calc/run.sh` doesn't print `test_reward 1.0`** — re-run from the
 **repo root** (the script resolves paths relative to itself but expects the repo layout).
 It prints its working directory; the `dashboard.html` and `report.md` are written there.
 The same result is asserted by `python -m pytest core/tests/test_e2e_slice.py -q`.
@@ -30,7 +30,7 @@ stub), empty/unstable `tasks(split)`, or a non-deterministic `score()`. Fix the 
 re-run `cap-evolve check .capevolve/project`. Don't proceed until it prints `{"ok": true}`.
 See [`ADAPTER_CONTRACT.md`](ADAPTER_CONTRACT.md).
 
-**`examples/tau2_airline/run.sh` (or `skillsbench/run.sh`) fails immediately** — they call
+**`benchmarks/tau2/examples/airline/run.sh` (or `skillsbench/run.sh`) fails immediately** — they call
 `$REPO/.venv/bin/cap-evolve` and assume `setup.sh` already created that venv and installed
 core. Run the example's `setup.sh` **first**.
 
@@ -51,7 +51,7 @@ the spec's `target_model` — a narrow credential, not a wrong config.
 
 **SkillsBench: Docker / benchflow errors** — Docker must be running; install the CLI with
 `uv tool install benchflow` and provide gateway creds (`ANTHROPIC_BASE_URL`,
-`ANTHROPIC_AUTH_TOKEN`). Start with `bash examples/skillsbench/smoke.sh` (1 task).
+`ANTHROPIC_AUTH_TOKEN`). Start with `bash benchmarks/skillsbench/examples/shared_skills/smoke.sh` (1 task).
 
 **`TestSealError` / "test already scored"** — the sealed test split is scored exactly once
 per run, by design. Start a fresh run dir to finalize again. See [`HONEST_EVAL.md`](HONEST_EVAL.md).
@@ -76,4 +76,4 @@ gains it cannot distinguish from noise.
 **Dashboard won't launch** — install it: `pip install ./dashboard/backend`, then
 `cap-evolve dashboard --base .capevolve --port 7878`. No backend? Open the static
 `dashboard.html` written into any run dir, or serve a committed export:
-`cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000`.
+`cd benchmarks/tau2/examples/airline/run_full/ui && python3 -m http.server 8000`.

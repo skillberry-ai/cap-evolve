@@ -144,13 +144,13 @@ trajectory analysis or state-passing (those worked) but four fixable issues:
 
 ## Reproduce
 ```bash
-bash examples/skillsbench/setup.sh   # install + onboard + GREEN cap-evolve check
-bash examples/skillsbench/smoke.sh   # 1 val task — sonnet in Docker → real verifier reward
-bash examples/skillsbench/run.sh     # full run (7 iters · 3 trials) + dashboard on :7878
+bash benchmarks/skillsbench/examples/shared_skills/setup.sh   # install + onboard + GREEN cap-evolve check
+bash benchmarks/skillsbench/examples/shared_skills/smoke.sh   # 1 val task — sonnet in Docker → real verifier reward
+bash benchmarks/skillsbench/examples/shared_skills/run.sh     # full run (7 iters · 3 trials) + dashboard on :7878
 ```
 Prereqs: Docker, `uv`, a logged-in Claude Code session, and the Anthropic gateway creds in
 repo-root `.env` (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`). Step-by-step:
-[`docs/REPRODUCE_skillsbench.md`](../../docs/REPRODUCE_skillsbench.md).
+[`docs/REPRODUCE_skillsbench.md`](../../../../docs/REPRODUCE_skillsbench.md).
 
 ## The key mechanism — skill injection
 `run_batch` calls `bench eval run … --skill-mode with-skill --skills-dir <candidate>`.

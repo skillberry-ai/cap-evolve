@@ -15,7 +15,7 @@ CACHE="${CAPEVOLVE_CI_CACHE:-$HOME/.cache/capevolve-ci}"
 # Same package name, two commits.
 case "$BENCH" in
   tau2_sierra|tau2_sierra_blackbox) VENV="$CACHE/venv-tau2-sierra" ;;
-  # AppWorld 42b5bcf is verified on Python 3.11 (examples/appworld/README.md, Setup), so it gets
+  # AppWorld 42b5bcf is verified on Python 3.11 (benchmarks/appworld/examples/react_agent/README.md, Setup), so it gets
   # its own venv, inside its own $AW_EVAL so the example's scripts find it where they expect it.
   appworld)                         VENV="$CACHE/appworld/venv-aw" ;;
   *)                                VENV="$CACHE/venv" ;;
@@ -154,12 +154,12 @@ case "$BENCH" in
     fi
     ;;
   appworld)
-    # examples/appworld/README.md "Setup", steps 1-2, into the cache ($AW_EVAL), which survives
+    # benchmarks/appworld/examples/react_agent/README.md "Setup", steps 1-2, into the cache ($AW_EVAL), which survives
     # between jobs: AppWorld at its pin with the example's header patch, its data, root_opt with
     # the lint cache, and the optimizer's reference docs. Each step is skipped when its output is
     # already there, so a warm runner pays only the checks.
     AW_EVAL="$CACHE/appworld"; export AW_EVAL
-    AW_EX="$REPO/examples/appworld"
+    AW_EX="$REPO/benchmarks/appworld/examples/react_agent"
     AW_PIN=42b5bcf
     command -v git-lfs >/dev/null || { echo "::error:: git-lfs is required on the runner (AppWorld ships LFS bundles)"; exit 1; }
     if [ ! -d "$AW_EVAL/appworld/.git" ]; then
@@ -194,13 +194,13 @@ case "$BENCH" in
     [ -d "$CACHE/tau2-bench/.git" ] || git clone --depth 1 https://github.com/sierra-research/tau2-bench "$CACHE/tau2-bench"
     uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench" ;;
   tau2_sierra|tau2_sierra_blackbox)
-    # The two DELIVERY ARMS (direct / blackbox) of examples/tau2_sierra_airline, on vanilla
+    # The two DELIVERY ARMS (direct / blackbox) of benchmarks/tau2/examples/sierra_airline, on vanilla
     # sierra-research tau2 — a DIFFERENT checkout from the unpinned `tau2` leg above. The commit is
     # the one the example's adapters and tailoring were created from (TAU2_REFERENCE_SHA in each
     # arm's setup.sh): CI reads it from there, keeps no copy of its own and has no override, so
-    # a CI number and a local `bash examples/tau2_sierra_airline/<arm>/run.sh` number run the
+    # a CI number and a local `bash benchmarks/tau2/examples/sierra_airline/<arm>/run.sh` number run the
     # same benchmark code. ONE checkout for both arms keeps direct-vs-blackbox comparable.
-    EX="$REPO/examples/tau2_sierra_airline"
+    EX="$REPO/benchmarks/tau2/examples/sierra_airline"
     ref_of() { sed -n 's/^TAU2_REFERENCE_SHA="\([0-9a-f]\{40\}\)"$/\1/p' "$EX/$1/setup.sh"; }
     REF_DIRECT="$(ref_of direct)"; REF_BLACKBOX="$(ref_of blackbox)"
     [ -n "$REF_DIRECT" ] || { echo "::error:: no 40-hex TAU2_REFERENCE_SHA in $EX/direct/setup.sh"; exit 1; }

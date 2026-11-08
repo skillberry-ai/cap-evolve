@@ -3,7 +3,7 @@
 The agent under test (BenchFlow's ``claude`` agent = Claude Code via ACP) runs in
 a Docker container and must reach the IBM-internal Anthropic-compatible LiteLLM
 gateway. We never hardcode the token: it is read from the repo-root ``.env`` (same
-loader pattern as ``examples/tau2_airline/adapters/rits.py`` — walk parents,
+loader pattern as ``benchmarks/tau2/examples/airline/adapters/rits.py`` — walk parents,
 ``setdefault``, no python-dotenv dep) and PROPAGATED into the sandbox with
 BenchFlow's ``--agent-env KEY=VALUE`` flags.
 

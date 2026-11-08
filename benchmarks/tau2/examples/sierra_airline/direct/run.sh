@@ -7,7 +7,7 @@
 #   bash run.sh            # capevolve.yaml: tasks 8 10 20 23 35 42 44, 5 trials, claude-code
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../../.." && pwd)"
 
 load_dotenv(){
   local f="$1" line key val

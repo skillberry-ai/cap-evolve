@@ -469,7 +469,7 @@ def test_cli_forwards_workers_to_baseline_and_algorithm(tmp_path, monkeypatch):
     algorithm both report 3."""
     import shutil
     from cap_evolve import cli
-    ex = REPO / "examples" / "toy_calc"
+    ex = REPO / "benchmarks" / "toy" / "examples" / "calc"
     monkeypatch.setenv("CAPEVOLVE_CORE", str(REPO / "core"))
     monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(REPO / "skills"))
     monkeypatch.setenv("CAPEVOLVE_TOY_DATA", str(ex))
@@ -480,7 +480,7 @@ def test_cli_forwards_workers_to_baseline_and_algorithm(tmp_path, monkeypatch):
     shutil.copy(ex / "adapter.py", project / "adapters" / "adapter.py")
     shutil.copytree(ex / "capability", tmp_path / "seed_capability")
     spec = project / "capevolve.yaml"
-    spec.write_text((REPO / "templates/project/capevolve.yaml").read_text() + "\nworkers: 3\n")
+    spec.write_text((REPO / "benchmarks/_scaffold/project/capevolve.yaml").read_text() + "\nworkers: 3\n")
     assert cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
                      "--run-ts", "w3"]) == 0
     ev = [json.loads(l) for l in (tmp_path / ".capevolve/run_w3/events.jsonl").read_text().splitlines()]

@@ -22,7 +22,7 @@ import types
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER = REPO / "templates" / "adapters" / "tau2_bench" / "adapter.py"
+ADAPTER = REPO / "benchmarks" / "tau2" / "template" / "adapter.py"
 
 
 def _load_adapter_module():
@@ -31,7 +31,7 @@ def _load_adapter_module():
     tau2-bench is a heavy external install that CI does not have; the cost helper only
     touches `tau2.utils.llm_utils.get_token_usage`, so that one function is stubbed.
     """
-    for p in (REPO / "core", ADAPTER.parent, ADAPTER.parent.parent):
+    for p in (REPO / "core", ADAPTER.parent, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
 

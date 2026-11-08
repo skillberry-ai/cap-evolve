@@ -28,7 +28,7 @@ Everything the demo shows is checked in under
 | [`run_full/TAU2_COMMIT.txt`](run_full/TAU2_COMMIT.txt) | The resolved tau2-bench commit (`8ebb749…`) for reproducibility. |
 
 ```bash
-cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000
+cd benchmarks/tau2/examples/airline/run_full/ui && python3 -m http.server 8000
 # then open http://localhost:8000 — the full interactive dashboard (all 10 iterations,
 # no backend needed). Also hostable on GitHub Pages / any static host.
 ```
@@ -91,7 +91,7 @@ lift is real code, not prompt wording.
 
 > **Five concrete before→after edits, each verified in the trajectories** (what the
 > agent did on a failing rollout vs the passing one), are written up in
-> [`docs/OPTIMIZATION_EXAMPLES.md`](../../docs/OPTIMIZATION_EXAMPLES.md) — the
+> [`docs/OPTIMIZATION_EXAMPLES.md`](../../../../docs/OPTIMIZATION_EXAMPLES.md) — the
 > certificate guard, the budget-cap validation, the enumeration loop tool, the
 > "don't ask for data you can look up" knowledge rule, and the exact-figure output
 > contract.
@@ -165,21 +165,21 @@ Tie it together (mirrors the asciinema cast and `docs/REPRODUCE_tau2.md`):
 # 0. clone the repo; put gateway creds in repo-root .env (OPENAI_BASE_URL, OPENAI_API_KEY);
 #    be logged into Claude Code (or export ANTHROPIC_API_KEY) for the optimizer.
 
-bash examples/tau2_airline/setup.sh    # intake onboarding: install cap-evolve, clone/install
+bash benchmarks/tau2/examples/airline/setup.sh    # intake onboarding: install cap-evolve, clone/install
                                        # tau2-bench, scaffold + wire adapter/gateway/seed, then
                                        # cap-evolve check (the hard gate)
-bash examples/tau2_airline/run.sh      # full run: 50 tasks · 10 trials · live dashboard
+bash benchmarks/tau2/examples/airline/run.sh      # full run: 50 tasks · 10 trials · live dashboard
 ```
 
 These two commands are simply the executable transcript of pasting
-[`PROMPT.md`](PROMPT.md) to a coding agent and saying *"follow [`RUN.md`](../../RUN.md)."*
-Reproduce from zero: [`docs/REPRODUCE_tau2.md`](../../docs/REPRODUCE_tau2.md).
+[`PROMPT.md`](PROMPT.md) to a coding agent and saying *"follow [`RUN.md`](../../../../RUN.md)."*
+Reproduce from zero: [`docs/REPRODUCE_tau2.md`](../../../../docs/REPRODUCE_tau2.md).
 
 ## Replay the recording
 
 ```bash
-asciinema play examples/tau2_airline/run_full/demo.cast    # replay in a terminal
-agg examples/tau2_airline/run_full/demo.cast demo.gif      # render to GIF for the video
+asciinema play benchmarks/tau2/examples/airline/run_full/demo.cast    # replay in a terminal
+agg benchmarks/tau2/examples/airline/run_full/demo.cast demo.gif      # render to GIF for the video
 ```
 
 ## Honest-results footnotes (say these on camera)

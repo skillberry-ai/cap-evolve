@@ -750,7 +750,7 @@ def _rollout_progress(run_dir, ev: dict, now: float) -> dict | None:
       2. ``native_sims/<tag>/<split>/results_*.json`` — tau2's own checkpoint file,
          appended to after every simulation even while ``run_batch``/``run_trials``
          is still one open Python call (every tau2 adapter in this repo writes it;
-         see ``templates/adapters/tau2_bench/adapter.py:_sim_save_path``).
+         see ``benchmarks/tau2/template/adapter.py:_sim_save_path``).
 
     Returns ``None`` when neither source has anything yet.
 
@@ -3465,8 +3465,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     kp('baseline',fmt(S.baseline_val)),
     kp('Δ vs baseline',dpct,(S.delta_abs>0?'ok':'')),
     kp('held-out test',fmt(S.test_reward),'',
-       // The raw sealed score alone is not the result — the DELTA against the seed's own test
-       // score is, and both were already in final.json. A run can lift val and lose test.
+  // The raw sealed score alone is not the result — the DELTA against the seed's own test
+  // score is, and both were already in final.json. A run can lift val and lose test.
        (S.test_delta!=null||S.test_baseline_reward!=null)
          ?((S.test_delta!=null?(S.test_delta>0?'+':'')+S.test_delta.toFixed(3)+' vs seed ':'')+
            (S.test_baseline_reward!=null?fmt(S.test_baseline_reward):'')+
@@ -3477,9 +3477,9 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
     kp('frontier',S.frontier,'','gated leaves with no accepted child'),
     kp('wall clock',`${S.wall_clock_seconds}s`,'',`opt ${S.optimizer_seconds}s · run ${S.runner_seconds}s`),
     kp('cost',`$${cost.total_usd.toFixed(4)}`,'',`opt $${cost.optimizer_usd.toFixed(4)} · run $${cost.runner_usd.toFixed(4)}`),
-    // Token count without its split reads as implausible next to the dollar figure (a real run:
-    // 206M tokens for $4.80). The split explains it: nearly all of them are RUNNER tokens on a
-    // self-hosted endpoint that bills $0, and the dollars are the optimizer's.
+  // Token count without its split reads as implausible next to the dollar figure (a real run:
+  // 206M tokens for $4.80). The split explains it: nearly all of them are RUNNER tokens on a
+  // self-hosted endpoint that bills $0, and the dollars are the optimizer's.
     kp('tokens',S.tokens.toLocaleString(),'',S.tokens_by_role?
        `run ${S.tokens_by_role.runner.toLocaleString()} · opt ${S.tokens_by_role.optimizer.toLocaleString()}`:''),
     kp('unattributed $',
@@ -3711,9 +3711,9 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
       stroke:spine.has(n.id)?'var(--champion)':'var(--bg)','stroke-width':spine.has(n.id)?2:1});
     c.addEventListener('mousemove',e=>showTip(e,`${n.id}\n${n.status}  val=${fmt(n.val)}\n${n.reason||''}`));
     c.addEventListener('mouseleave',hideTip); el.append(c);
-    // A node with outgoing edges (the seed, above all) has a connector leaving at exactly
-    // y=p.y, so a label on the baseline right of the node is drawn UNDER that line and reads
-    // as struck through. Lift those labels clear of the connector.
+  // A node with outgoing edges (the seed, above all) has a connector leaving at exactly
+  // y=p.y, so a label on the baseline right of the node is drawn UNDER that line and reads
+  // as struck through. Lift those labels clear of the connector.
     const outgoing=(n.children||[]).some(c2=>pos[c2]);
     txt(el,{x:p.x+12,y:outgoing?p.y-8:p.y+4,fill:'var(--muted)','font-size':10},n.id);
   });
@@ -3942,7 +3942,7 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
                   text:gist(r)}));
       list.append(row);
       const det=$('div',{class:'logdet'});
-      // textContent only: this text is model/subprocess-authored and must never be parsed as markup.
+  // textContent only: this text is model/subprocess-authored and must never be parsed as markup.
       det.textContent=(r.text?r.text+'\n\n':'')+
         Object.entries(r.detail||{}).map(([k,v])=>k+' = '+(typeof v==='object'&&v!==null?JSON.stringify(v):String(v))).join('\n');
       det.style.display=open.has(r.seq)?'block':'none';
@@ -4010,8 +4010,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   (NAR.files||[]).forEach(f=>{
     const box=$('div',{class:'narrative-box',style:'margin-bottom:14px'});
     box.append($('h3',{style:'margin:0 0 8px',text:f.title}));
-    // The file is still byte-for-byte the seed instructional template — no real entry
-    // was ever appended. Flagged rather than rendered as if it were populated narrative.
+  // The file is still byte-for-byte the seed instructional template — no real entry
+  // was ever appended. Flagged rather than rendered as if it were populated narrative.
     if(f.template_only)box.append($('div',{class:'banner',style:'margin-bottom:10px',
       text:'⚠ template only — no real entries yet'}));
     box.append($('div',{class:'md',html:mdToHtml(f.text)}));
@@ -4262,15 +4262,15 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   hdr.push($('th',{text:'reason'}));
   t.append($('tr',{},...hdr));
   G.nodes.slice().sort((a,b)=>(b.val||-1)-(a.val||-1)).forEach(n=>{
-    // parent_val is only recorded when the algorithm's round table carried it; when it did
-    // not, the parent's OWN val is sitting right there in the same graph, so fall back to it
-    // rather than printing "—" for a delta both halves of which are known.
+  // parent_val is only recorded when the algorithm's round table carried it; when it did
+  // not, the parent's OWN val is sitting right there in the same graph, so fall back to it
+  // rather than printing "—" for a delta both halves of which are known.
     const pv=n.parent_val!=null?n.parent_val:(n.parent&&byId[n.parent]?byId[n.parent].val:null);
     const dlt=pv!=null&&n.val!=null?(n.val-pv):null;
     const idCell=$('td',{},n.id===S.best_id?'★ '+n.id:n.id);
-    // screen+gate bypass (PR #557): a compliance WARNING (never measured), distinct from
-    // the accepted/rejected OUTCOME ring the status badge already shows — a different
-    // color (b-bypass) so it never reads as a second verdict.
+  // screen+gate bypass (PR #557): a compliance WARNING (never measured), distinct from
+  // the accepted/rejected OUTCOME ring the status badge already shows — a different
+  // color (b-bypass) so it never reads as a second verdict.
     if(n.bypassed_screen_and_gate){
       const bad=$('span',{class:'badge b-bypass',style:'margin-left:6px',text:'⚠ bypass'});
       bad.addEventListener('mousemove',e=>showTip(e,

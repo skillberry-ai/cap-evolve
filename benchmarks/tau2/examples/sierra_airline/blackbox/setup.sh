@@ -6,15 +6,15 @@
 # a coding agent following ../PROMPT.md alone. This script replays the setup steps that agent
 # ran, in the prompt's R1 order, and then installs THOSE files instead of regenerating them:
 #
-#   bash examples/tau2_sierra_airline/blackbox/setup.sh
-#   bash examples/tau2_sierra_airline/blackbox/run.sh --smoke     # then:  bash examples/tau2_sierra_airline/blackbox/run.sh
+#   bash benchmarks/tau2/examples/sierra_airline/blackbox/setup.sh
+#   bash benchmarks/tau2/examples/sierra_airline/blackbox/run.sh --smoke     # then:  bash benchmarks/tau2/examples/sierra_airline/blackbox/run.sh
 #
 # The clone is NEVER edited: everything the blackbox arm needs from tau2 is supplied from
 # outside by adapters/tau2_tailoring.py.
 set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../../.." && pwd)"
 TAU2_REPO="https://github.com/sierra-research/tau2-bench"
 TAU2_DIR="$REPO/vendor/tau2-bench"
 # The tau2 commit this arm's adapters/ (adapter.py and tau2_tailoring.py) were created from,

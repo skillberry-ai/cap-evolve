@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-05
 **Status:** IMPLEMENTED — three changes, all in `_range_cells` / `_localize_failure`.
-**Scope:** `templates/adapters/spreadsheetbench/adapter.py` and its two test modules. **No seed
+**Scope:** `benchmarks/spreadsheetbench/template/adapter.py` and its two test modules. **No seed
 capability edits** — the rules stay the optimizer's to write (#276), and no `core/` runtime change.
 
 ## How this was measured

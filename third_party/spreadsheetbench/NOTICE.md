@@ -3,7 +3,7 @@
 This directory is a filtered `git subtree` of
 [RUCKBReasoning/SpreadsheetBench](https://github.com/RUCKBReasoning/SpreadsheetBench),
 containing only the harness code (`code_exec_docker/`, `evaluation/`, `inference/`)
-used by `templates/adapters/spreadsheetbench/adapter.py` to run and score tasks.
+used by `benchmarks/spreadsheetbench/template/adapter.py` to run and score tasks.
 
 The upstream `data/` and `images/` directories (~136MB of dataset archives and
 diagrams) were deliberately excluded via `git filter-repo` before subtree-adding,

@@ -26,7 +26,7 @@ mkdir -p "$WORK"
 
 PLACES=("$AW/root_opt/data" "$AW/root_full/data" "$AW/runs/final" "$HOME/.claude/projects/-aw-probe"
         "$AW/appworld/generate/tasks/task_generators")
-REPO="$(cd "$EX/../.." && pwd)"
+REPO="$(cd "$EX/../../../.." && pwd)"
 SECRETS="${AW_SECRETS_FILE:-$REPO/.env}"
 render() { sed -e "s|@AW_EVAL@|$AW|g" -e "s|@AW_SECRETS_FILE@|$SECRETS|g" "$EX/sandbox/$1.template.json" > "$OUT/$1.json"; echo "$OUT/$1.json"; }
 TOKENS=()

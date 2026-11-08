@@ -11,7 +11,7 @@ real measurement after that returns as an error, which the gate drops rather
 than scoring. The loop, gate, budgets and dashboard are cap-evolve's own.
 
 Each trial itself runs inside a lane through the shared parsec adapter
-(``examples/parsec/adapters/adapter.py``, ``PARSEC_BENCH=v6``), whose v6 profile has v5's
+(``benchmarks/parsec/examples/rca_prompts/adapters/adapter.py``, ``PARSEC_BENCH=v6``), whose v6 profile has v5's
 runtime and timeouts, so a v6 trial is measured exactly as a v5 one was.
 
 Transcripts of tasks the optimizer may not see (the hidden stratum C, and test)

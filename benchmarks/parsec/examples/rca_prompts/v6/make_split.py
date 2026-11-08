@@ -18,7 +18,7 @@ Writes ``split_ids.json`` ({"feedback", "confirm", "test"}, read by cap-evolve u
 
 Usage:
     export PARSEC_V6N=/path/to/rhdp-parsec/v6_2026-10-16
-    python3 examples/parsec/v6/make_split.py --out <dir> \\
+    python3 benchmarks/parsec/examples/rca_prompts/v6/make_split.py --out <dir> \\
         --drop 10-12=<task_set_10-12.txt> [--drop jb-3=<file>] [--exclude <file>] [--seed 6]
 """
 from __future__ import annotations

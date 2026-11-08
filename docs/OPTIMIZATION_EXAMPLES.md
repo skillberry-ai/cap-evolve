@@ -1,7 +1,7 @@
 # What the optimizer actually changed — verified in the trajectories
 
 These are **real edits** from the committed tau2-bench airline run
-([`examples/tau2_airline/run_full/`](../examples/tau2_airline/run_full/)), each
+([`benchmarks/tau2/examples/airline/run_full/`](../benchmarks/tau2/examples/airline/run_full/)), each
 paired with the **trajectory evidence** that it helped: the agent's behavior on a
 *failing* rollout (the seed or the parent candidate) versus the *passing* rollout
 under the champion `cand_0007`. Rollouts live at
@@ -156,4 +156,4 @@ failed attempt into a lesson the run builds on.
 
 > Open the full interactive dashboard for all of this offline — accepted/rejected
 > lineage, per-task heatmap, and the **git diff** of every iteration:
-> `cd examples/tau2_airline/run_full/ui && python3 -m http.server 8000`.
+> `cd benchmarks/tau2/examples/airline/run_full/ui && python3 -m http.server 8000`.

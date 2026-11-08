@@ -6,7 +6,7 @@
 # refuses to start without a passing report for that mode newer than the rendered settings.
 set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO="$(cd "$EX/../.." && pwd)"
+REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 RUN_DIR="${1:?run dir}"; shift
 P="$RUN_DIR/.capevolve/project"

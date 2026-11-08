@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Cheap 2-task autonomy smoke (1 trial, 1 iteration) — proves the whole loop
 # (check → baseline → optimize → gate → finalize → report → dashboard) end to end.
-# Prereq: bash examples/tau2_airline/setup.sh
+# Prereq: bash benchmarks/tau2/examples/airline/setup.sh
 set -uo pipefail
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 PROJECT="$REPO/.capevolve/project"
 
 export PYTHONPATH="$PROJECT/adapters"

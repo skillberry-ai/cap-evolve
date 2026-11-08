@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":80,"rows":24},"timestamp":1782027251,"command":"bash /tmp/nm_capevolve/cap-evolve/examples/tau2_airline/run.sh","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":80,"rows":24},"timestamp":1782027251,"command":"bash /tmp/nm_capevolve/cap-evolve/benchmarks/tau2/examples/airline/run.sh","env":{"SHELL":"/bin/zsh"}}
 [0.027, "o", "tau2-bench commit: 5ebebbe827b455b3ed04fcb9294235c6ef4e5fd6\r\n"]
 [0.000, "o", "optimizer: claude-code @ claude-opus-4-6 | 10 iters · 50 tasks · 10 trials · concurrency 125\r\n"]
 [0.000, "o", "------ pre-run cost preview (spends nothing) ------\r\n"]

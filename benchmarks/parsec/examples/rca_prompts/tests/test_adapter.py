@@ -1,4 +1,4 @@
-# examples/parsec/v4_t2_e1/tests/test_adapter.py
+# benchmarks/parsec/examples/rca_prompts/v4_t2_e1/tests/test_adapter.py
 from __future__ import annotations
 
 import json
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "adapters"))
 # adapter.py: a second copy of cap_evolve ahead of the installed one inside a
 # real `cap-evolve run` process would be a far worse bug than an awkward test
 # invocation. This is what makes
-#     python3 examples/parsec/v4_t2_e1/tests/test_adapter.py -v
+#     python3 benchmarks/parsec/examples/rca_prompts/v4_t2_e1/tests/test_adapter.py -v
 # work from a clean shell with no PYTHONPATH set.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "core"))
 

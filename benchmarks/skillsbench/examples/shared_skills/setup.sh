@@ -5,13 +5,13 @@
 # this example, driven by PROMPT.md: a coding agent following RUN.md does exactly
 # these steps. Run it directly to reproduce in one command:
 #
-#   bash examples/skillsbench/setup.sh   # install cap-evolve + onboard SkillsBench + check
-#   bash examples/skillsbench/smoke.sh   # 1-task autonomy smoke (cheap, Docker)
-#   bash examples/skillsbench/run.sh     # full run (7 iters) + live dashboard
+#   bash benchmarks/skillsbench/examples/shared_skills/setup.sh   # install cap-evolve + onboard SkillsBench + check
+#   bash benchmarks/skillsbench/examples/shared_skills/smoke.sh   # 1-task autonomy smoke (cheap, Docker)
+#   bash benchmarks/skillsbench/examples/shared_skills/run.sh     # full run (7 iters) + live dashboard
 set -uo pipefail
 
 EX_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$EX_DIR/../.." && pwd)"
+REPO="$(cd "$EX_DIR/../../../.." && pwd)"
 VENV="$REPO/.venv"
 PY="$VENV/bin/python"
 SB_DIR="$REPO/vendor/skillsbench"

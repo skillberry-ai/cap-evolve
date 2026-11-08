@@ -2,7 +2,7 @@
 ``orchestration_mode: agent`` runs too, not only deterministic ones — forensic
 analysis of a real agent-optimize run found it dark for the whole 3-hour run because
 every documented repro command passed ``--dashboard off`` explicitly (fixed in
-docs/REPRODUCE_tau2.md + examples/tau2_airline/capevolve.agentopt*.yaml). This locks in
+docs/REPRODUCE_tau2.md + benchmarks/tau2/examples/airline/capevolve.agentopt*.yaml). This locks in
 the CODE side: `cap-evolve run` with NO ``--dashboard`` flag and
 ``orchestration_mode: agent`` must still try to launch (mode resolves to "auto" and
 the launch call is unconditional on orchestration_mode — see cli.py's run()).
@@ -28,12 +28,12 @@ def _agent_mode_toy_project(tmp_path: Path):
     algorithm_skill: agent-optimize (optimizer_skill stays 'mock' — agent mode never
     invokes it; `cap-evolve run` does intake+check+baseline then hands off and
     returns, since no --agent-driver is passed, so this stays fast)."""
-    example = REPO / "examples" / "toy_calc"
+    example = REPO / "benchmarks" / "toy" / "examples" / "calc"
     proj = tmp_path / ".capevolve" / "project"
     (proj / "adapters").mkdir(parents=True)
     shutil.copy(example / "adapter.py", proj / "adapters" / "adapter.py")
     shutil.copytree(example / "capability", tmp_path / "seed_capability")
-    spec_text = (REPO / "templates" / "project" / "capevolve.yaml").read_text(encoding="utf-8")
+    spec_text = (REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml").read_text(encoding="utf-8")
     spec_text = spec_text.replace("algorithm_skill: hill-climb", "algorithm_skill: agent-optimize")
     spec_text = spec_text.replace("orchestration_mode: deterministic", "orchestration_mode: agent")
     (proj / "capevolve.yaml").write_text(spec_text, encoding="utf-8")

@@ -1,6 +1,6 @@
 """Project adapter — AppWorld (official simplified ReAct code agent, gpt-oss-120b on RITS).
 
-Wires cap-evolve to AppWorld for the example in examples/appworld/README.md:
+Wires cap-evolve to AppWorld for the example in benchmarks/appworld/examples/react_agent/README.md:
 
   * ``tasks``      -> train and val are BOTH the union of the official ``train`` and ``dev`` ids
                       (147, rule S2), read from AppWorld's split files; ``test`` is ``[]``.

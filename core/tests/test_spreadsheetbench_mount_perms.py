@@ -30,15 +30,15 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 FETCH_SH = REPO / "ci" / "benchmarks" / "spreadsheetbench" / "fetch_data.sh"
 RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
-TPL_DIR = REPO / "templates" / "project" / "optimizer"
+TPL_DIR = REPO / "benchmarks" / "_scaffold" / "project" / "optimizer"
 
 
 def _load_adapter_module():
     """Import the adapter template for its pure helpers (see test_spreadsheetbench_recalc_perms)."""
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     spec = importlib.util.spec_from_file_location("_sb_adapter_mount", ADAPTER_DIR / "adapter.py")

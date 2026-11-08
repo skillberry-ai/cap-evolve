@@ -185,7 +185,7 @@ exists). Here is everything intake needs:
 - store:            git          (every iteration committed for an inspectable process)
 ```
 
-> The bundled `examples/tau2_airline/` is the **result** of following this prompt:
+> The bundled `benchmarks/tau2/examples/airline/` is the **result** of following this prompt:
 > the adapter (`adapters/adapter.py`), the gateway shim (`adapters/gateway.py`), the seed
 > capability (`seed_capability/`), and the optimizer instructions
 > (`.capevolve/project/optimizer/INSTRUCTIONS.md`) are what the intake/implement-and-check

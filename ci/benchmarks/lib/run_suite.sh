@@ -214,8 +214,8 @@ OPTIMIZER_MODEL_WIRE="$RESOLVED_MODEL"; OPTIMIZER_API_BASE="$RESOLVED_API_BASE";
 # provider/model instead of AGENT_MODEL's. Those two arms instead pass the agent's own
 # credentials (AGENT_API_BASE/AGENT_API_KEY) through dedicated, adapter-specific vars
 # (SKILLSBENCH_AGENT_*/RFE_AGENT_*) that their adapters check BEFORE falling back to
-# ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN — see templates/adapters/skillsbench/adapter.py's
-# _gateway_env() and templates/adapters/rfe_creator/adapter.py's _harness_env().
+# ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN — see benchmarks/skillsbench/template/adapter.py's
+# _gateway_env() and benchmarks/rfe_creator/template/adapter.py's _harness_env().
 export ANTHROPIC_BASE_URL="$OPTIMIZER_API_BASE"
 export ANTHROPIC_AUTH_TOKEN="$OPTIMIZER_API_KEY"
 # An ibm-rits OPTIMIZER cannot use lite-rits for this: the claude CLI needs /v1/messages, and
@@ -279,13 +279,13 @@ echo ">>> $BENCH/$TIER — optimizing ${#IDS[@]} tasks together (agent=$AGENT_MO
 WORK="$REPO/ci/benchmarks/.work/suite_${TIER}_${BENCH}_proj"
 rm -rf "$WORK"; mkdir -p "$WORK/.capevolve/project/adapters" "$WORK/.capevolve/project/inputs"
 PROJ="$WORK/.capevolve/project"
-TPL="$REPO/templates/adapters"
-cp "$TPL/model_config.py" "$PROJ/adapters/" 2>/dev/null || true
+TPL="$REPO/benchmarks"
+cp "$TPL/_shared/model_config.py" "$PROJ/adapters/" 2>/dev/null || true
 
 case "$BENCH" in
   tau2)
-    cp "$TPL/tau2_bench/adapter.py" "$PROJ/adapters/"
-    cp -R "$REPO/examples/tau2_airline/seed_capability" "$PROJ/seed_capability"
+    cp "$TPL/tau2/template/adapter.py" "$PROJ/adapters/"
+    cp -R "$REPO/benchmarks/tau2/examples/airline/seed_capability" "$PROJ/seed_capability"
     # tau2's FULL editable surface, for every tier (smoke/full/integration all reach here):
     # policy/policy.md (the agent's system prompt) AND tools/tools.py + reference/data_model.py
     # (the tool code it calls). Both capability skills are declared so both sets of rules
@@ -314,11 +314,11 @@ ENV
     export TAU2_MAX_CONCURRENCY=10
     ;;
   appworld)
-    # AppWorld (examples/appworld): AppWorld's official simplified ReAct code agent, prompt +
+    # AppWorld (benchmarks/appworld/examples/react_agent): AppWorld's official simplified ReAct code agent, prompt +
     # REPL helpers + API notes optimized. Adapter, seed and optimizer instructions come from the
     # example, like the tau2_sierra arms, so CI runs exactly what a reviewer reads there.
     # ci_setup.sh built $AW_EVAL (AppWorld, root_opt, lint cache, reference) in the runner cache.
-    AW_EX="$REPO/examples/appworld"
+    AW_EX="$REPO/benchmarks/appworld/examples/react_agent"
     : "${AW_EVAL:?AW_EVAL unset: run ci/benchmarks/lib/ci_setup.sh appworld first}"
     [ -f "$AW_EVAL/lint_cache.json" ] || { echo "::error:: $AW_EVAL/lint_cache.json missing (ci_setup.sh appworld)"; exit 1; }
     cp "$AW_EX/adapters/adapter.py" "$AW_EX/adapters/aw_agent.py" "$AW_EX/adapters/lints.py" "$PROJ/adapters/"
@@ -362,7 +362,7 @@ protected_paths: [default]"
     : > "$WORK/.env"
     ;;
   tau2_sierra|tau2_sierra_blackbox)
-    # The two DELIVERY ARMS of examples/tau2_sierra_airline, on vanilla sierra-research tau2
+    # The two DELIVERY ARMS of benchmarks/tau2/examples/sierra_airline, on vanilla sierra-research tau2
     # pinned at the example's TAU2_REFERENCE_SHA. Same 50 airline tasks as the `tau2` leg above,
     # same tier ids, but a different question: `tau2` asks "can the optimizer improve the agent's
     # prompt+tools", these ask "does the candidate still land when it is delivered THIS way" — in
@@ -370,14 +370,15 @@ protected_paths: [default]"
     # direct-vs-blackbox is the comparison; neither is comparable to the `tau2` leg, whose
     # capability surface includes policy.md and whose tau2 checkout is unpinned.
     #
-    # Everything comes from examples/, not templates/adapters/: the example is the single source
-    # of truth, and a copy under templates/ would be free to drift from the code a reviewer reads.
+    # Everything comes from benchmarks/tau2/examples/sierra_airline/, not benchmarks/tau2/template/:
+    # the example is the single source of truth, and a copy under template/ would be free to drift
+    # from the code a reviewer reads.
     # tau2 itself is never edited — tau2_tailoring.py supplies what each arm needs from outside.
     case "$BENCH" in
       tau2_sierra)          ARM=direct ;;
       tau2_sierra_blackbox) ARM=blackbox ;;
     esac
-    ARM_DIR="$REPO/examples/tau2_sierra_airline/$ARM"
+    ARM_DIR="$REPO/benchmarks/tau2/examples/sierra_airline/$ARM"
     [ -d "$ARM_DIR" ] || { echo "::error:: no such arm: $ARM_DIR"; exit 2; }
     cp "$ARM_DIR/adapters/adapter.py" "$ARM_DIR/adapters/tau2_tailoring.py" "$PROJ/adapters/"
     rm -rf "$PROJ/seed_capability"; cp -R "$ARM_DIR/seed_capability" "$PROJ/seed_capability"
@@ -556,8 +557,8 @@ runner_repo_path: \"$TAU2_DIR\""
     # curated tiers are Verified-only (46 of full's 250 had it). Harbor's agent explores the
     # repo itself, so no oracle is required.
     # Harbor adapter reads os.environ (not .env/dotenv), so we export directly.
-    cp "$TPL/harbor/adapter.py" "$PROJ/adapters/"
-    cp -R "$TPL/harbor/seed_capability" "$PROJ/seed_capability"
+    cp "$TPL/generic/harbor/template/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/generic/harbor/template/seed_capability" "$PROJ/seed_capability"
     CAPS="[skill-package]"
     export HARBOR_DATASET=swe-bench/swe-bench-verified
     export HARBOR_AGENT=claude-code
@@ -639,8 +640,8 @@ runner_repo_path: \"$TAU2_DIR\""
     # simulators (github.ibm.com/kaegis/simulation-harness) exist outside
     # IBM/RH, so a GitHub-hosted or public run could only ever fail. See
     # ci/benchmarks/parsec/README.md.
-    cp "$TPL/harbor/adapter.py" "$PROJ/adapters/"
-    cp -R "$TPL/harbor/seed_capability" "$PROJ/seed_capability"
+    cp "$TPL/generic/harbor/template/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/generic/harbor/template/seed_capability" "$PROJ/seed_capability"
     CAPS="[system-prompt]"
     # HARBOR_DATASET is a per-TIER shadow of the RH task tree, regenerated
     # locally by the matching utils/patch-harbor-tasks*.sh — never committed
@@ -697,7 +698,7 @@ runner_repo_path: \"$TAU2_DIR\""
     : > "$WORK/.env"
     ;;
   skillsbench)
-    cp "$TPL/skillsbench/adapter.py" "$PROJ/adapters/"
+    cp "$TPL/skillsbench/template/adapter.py" "$PROJ/adapters/"
     SB_SRC="${SKILLSBENCH_SRC:-$REPO/e2e/skillsbench-src}"
     [ -d "$SB_SRC/tasks" ] || { echo "::error:: skillsbench clone not found at $SB_SRC (set SKILLSBENCH_SRC)"; exit 1; }
     SEED="$PROJ/seed_capability"; mkdir -p "$SEED"
@@ -724,8 +725,8 @@ ENV
     export SKILLSBENCH_AGENT_API_KEY="$AGENT_API_KEY"
     ;;
   spreadsheetbench)
-    cp "$TPL/spreadsheetbench/adapter.py" "$PROJ/adapters/"
-    cp -R "$TPL/spreadsheetbench/seed_capability" "$PROJ/seed_capability"
+    cp "$TPL/spreadsheetbench/template/adapter.py" "$PROJ/adapters/"
+    cp -R "$TPL/spreadsheetbench/template/seed_capability" "$PROJ/seed_capability"
     # NO-SKILL CONTROL. Comparisons against published skill-optimization results (e.g.
     # SkillOpt, arXiv 2605.23904) report a "no skill" baseline: the same model with no skill
     # document at all. Our committed seed_capability/prompt.md is already a short expert
@@ -773,7 +774,7 @@ ENV
     # the baseline is already optimized, so the absolute score is higher and the measured gain
     # smaller. Hence opt-in only, and disclosed in runmeta.json as "warm_seed".
     if [ "${SB_WARM_SEED:-0}" = "1" ]; then
-      WARM="$TPL/spreadsheetbench/seed_capability_warm"
+      WARM="$TPL/spreadsheetbench/template/seed_capability_warm"
       if [ ! -f "$WARM/prompt.md" ] || [ ! -f "$WARM/task_template.md" ]; then
         echo "::error:: SB_WARM_SEED=1 but $WARM is missing prompt.md/task_template.md" >&2
         exit 1
@@ -800,7 +801,7 @@ ENV
       fi
     fi
     # Prompt-only optimizer instructions. The default template shipped in
-    # templates/project/optimizer/INSTRUCTIONS.md is written for a capability that
+    # benchmarks/_scaffold/project/optimizer/INSTRUCTIONS.md is written for a capability that
     # includes TOOL CODE: it tells the optimizer to prefer in-body guards, names
     # `tools.py` and tau2's `get_*_details`, and its self-check demands "edits across BOTH
     # policy.md AND tools.py". This capability is `[system-prompt]` — one prompt.md, no
@@ -810,7 +811,7 @@ ENV
     # absolute path so it cannot silently fall back to the generic template (#252). No
     # core change is needed either way.
     mkdir -p "$PROJ/optimizer"
-    cp "$REPO/templates/project/optimizer/INSTRUCTIONS.prompt-only.md" \
+    cp "$REPO/benchmarks/_scaffold/project/optimizer/INSTRUCTIONS.prompt-only.md" \
        "$PROJ/optimizer/INSTRUCTIONS.md"
     # NAME THE ARTIFACTS. The shared template speaks of "the prompt" in the singular and the
     # rendered instructions mention no filename at all, so an optimizer handed TWO editable
@@ -959,7 +960,7 @@ ENV
       echo "::error:: rfe-creator data not found at $RFE_SRC (run ci/benchmarks/rfe-creator/utils/fetch_data.sh first, or set RFE_CREATOR_SRC)"
       exit 1
     fi
-    cp "$TPL/rfe_creator/adapter.py" "$PROJ/adapters/"
+    cp "$TPL/rfe_creator/template/adapter.py" "$PROJ/adapters/"
     SEED="$PROJ/seed_capability"; mkdir -p "$SEED"
     for skill in rfe.speedrun rfe.create rfe.auto-fix rfe.review rfe-feasibility-review rfe.split rfe.submit; do
       cp -R "$RFE_SRC/rfe-creator/.claude/skills/$skill" "$SEED/$skill"

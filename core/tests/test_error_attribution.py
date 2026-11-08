@@ -109,9 +109,10 @@ def test_candidate_scope_is_reentrant_and_cleans_up(tmp_path):
 
 def test_tau2_adapter_hook_classifies_errors():
     import importlib.util as iu
-    root = Path(__file__).resolve().parents[2] / "templates" / "adapters" / "tau2_bench"
+    root = Path(__file__).resolve().parents[2] / "benchmarks" / "tau2" / "template"
+    shared = root.parents[1] / "_shared"
     import sys
-    sys.path.insert(0, str(root.parent))        # model_config.py
+    sys.path.insert(0, str(shared))             # model_config.py
     sys.path.insert(0, str(root))
     try:
         spec = iu.spec_from_file_location("tau2_adapter_for_test", root / "adapter.py")
@@ -119,7 +120,7 @@ def test_tau2_adapter_hook_classifies_errors():
         spec.loader.exec_module(mod)
     finally:
         sys.path.remove(str(root))
-        sys.path.remove(str(root.parent))
+        sys.path.remove(str(shared))
     assert mod.Adapter.supports_error_kind is True
     assert mod.classify_error_kind("TerminationReason.UNEXPECTED_ERROR", "KeyError in tools.py line 4") == "candidate"
     assert mod.classify_error_kind("TerminationReason.UNEXPECTED_ERROR", "connection reset") == "infra"

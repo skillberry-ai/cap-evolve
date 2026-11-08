@@ -1,6 +1,6 @@
 # Reproducing the SkillsBench skill-package run (one-prompt onboarding)
 
-This reproduces the bundled [`examples/skillsbench`](../examples/skillsbench) end to end:
+This reproduces the bundled [`benchmarks/skillsbench/examples/shared_skills`](../benchmarks/skillsbench/examples/shared_skills) end to end:
 onboard **SkillsBench as a brand-new benchmark** (intake clones it + installs the BenchFlow
 CLI), wire a `claude-sonnet-4-6` agent in a **Docker** sandbox, build the adapter, pass the
 `cap-evolve check` hard gate, then run the full **optimize → significance-gate → sealed-test
@@ -23,9 +23,9 @@ Metric = SkillsBench verifier pass rate (binary per task). Four iterations accep
 the paired gate (`+0.048, +0.190, +0.048, +0.095`); the last three rejected once the two
 remaining failures were diagnosed as broken/hardcoded oracles (ceiling). The optimizer edited
 all four skill bodies AND added executable scripts (`pptx/scripts/recalc.py`, `xlsx/scripts/`).
-Raw numbers: [`examples/skillsbench/run_full/final.json`](../examples/skillsbench/run_full/final.json);
-narrated story: [`examples/skillsbench/DEMO.md`](../examples/skillsbench/DEMO.md);
-per-iteration handover: [`run_full/JOURNAL.md`](../examples/skillsbench/run_full/JOURNAL.md).
+Raw numbers: [`benchmarks/skillsbench/examples/shared_skills/run_full/final.json`](../benchmarks/skillsbench/examples/shared_skills/run_full/final.json);
+narrated story: [`benchmarks/skillsbench/examples/shared_skills/DEMO.md`](../benchmarks/skillsbench/examples/shared_skills/DEMO.md);
+per-iteration handover: [`run_full/JOURNAL.md`](../benchmarks/skillsbench/examples/shared_skills/run_full/JOURNAL.md).
 
 ---
 
@@ -48,7 +48,7 @@ installed by `setup.sh`.
 
 ## 2. The prompt (what a coding agent is given)
 
-The onboarding is driven by [`examples/skillsbench/PROMPT.md`](../examples/skillsbench/PROMPT.md):
+The onboarding is driven by [`benchmarks/skillsbench/examples/shared_skills/PROMPT.md`](../benchmarks/skillsbench/examples/shared_skills/PROMPT.md):
 paste it to Claude Code at the repo root and say **"follow RUN.md."** It is the exact intake
 input — capability `[skill-package]` (the four shared office skills), benchmark SkillsBench
 (`https://github.com/benchflow-ai/skillsbench`, run via the `bench` CLI in `--sandbox docker`),
@@ -64,9 +64,9 @@ train==val (7) / test (3 sealed), `num_trials 3`, a per-iteration `$40` optimize
 git clone <repo> cap-evolve && cd cap-evolve
 # put gateway creds in ./.env (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN); be logged into Claude Code
 
-bash examples/skillsbench/setup.sh    # intake onboarding (step 4) → GREEN cap-evolve check
-bash examples/skillsbench/smoke.sh    # 1 val task in Docker → a real verifier reward
-bash examples/skillsbench/run.sh      # full run (7 iters · 3 trials) + dashboard (step 5)
+bash benchmarks/skillsbench/examples/shared_skills/setup.sh    # intake onboarding (step 4) → GREEN cap-evolve check
+bash benchmarks/skillsbench/examples/shared_skills/smoke.sh    # 1 val task in Docker → a real verifier reward
+bash benchmarks/skillsbench/examples/shared_skills/run.sh      # full run (7 iters · 3 trials) + dashboard (step 5)
 ```
 
 ## 4. What `setup.sh` does (intake / implement-and-check)
@@ -74,14 +74,14 @@ bash examples/skillsbench/run.sh      # full run (7 iters · 3 trials) + dashboa
 1. **Install cap-evolve** — create `.venv`, `pip install -e ./core` (CLI: `cap-evolve`), and
    the dashboard server `./dashboard/backend` (built frontend is committed; no Node needed).
 2. **Onboard the benchmark** — `uv tool install benchflow` (the `bench` CLI), clone SkillsBench,
-   and **record the resolved commit** to `examples/skillsbench/run_full/SKILLSBENCH_COMMIT.txt`.
+   and **record the resolved commit** to `benchmarks/skillsbench/examples/shared_skills/run_full/SKILLSBENCH_COMMIT.txt`.
 3. **Scaffold + wire (the full integration)** — `intake` scaffold into `.capevolve/project`,
    then the authored integration: the adapter (`adapters/adapter.py` — `tasks`, `run_batch`
    issuing ONE `bench eval run --concurrency` over all the split's tasks with the candidate
    skills injected at `/skills`, gold-safe CTRF `score()`, multi-skill `materialize`), the
    gateway env shim (`adapters/anthropic_env.py`), the editable seed — the four shared skills
    (`docx`/`pptx`/`xlsx`/`pdf`) **extracted from the SkillsBench clone** (Anthropic-licensed,
-   not vendored here; see `examples/skillsbench/seed_capability/README.md`), the
+   not vendored here; see `benchmarks/skillsbench/examples/shared_skills/seed_capability/README.md`), the
    skill-package-scoped `optimizer/INSTRUCTIONS.md`, and the spec (`capevolve.yaml`).
 4. **Hard gate** — `cap-evolve check .capevolve/project` (adapter contract + deterministic
    `score()`). The run refuses to proceed until this is `{"ok": true}`.
@@ -109,7 +109,7 @@ cap-evolve run --spec .../capevolve.yaml --project ... --run-ts full --dashboard
   sealed test split (seal-on-success), so the headline is the honest held-out improvement.
 - **Report** — `report.md` (baseline-vs-optimized on test) + a self-contained `dashboard.html`.
 
-Run config (`examples/skillsbench/capevolve.yaml`): `hill-climb --focus all`, `max_iterations 7`,
+Run config (`benchmarks/skillsbench/examples/shared_skills/capevolve.yaml`): `hill-climb --focus all`, `max_iterations 7`,
 `num_trials 3`, `split_ids_file split_ids.json` (train==val 7 / test 3), `gate_mode paired`
 `gate_k_se 0.2`, `store git`, `optimizer_skill claude-code`, `optimizer_model claude-opus-4-8`,
 `optimizer_usd_per_iter 40`. Concurrency knob: `SKILLSBENCH_CONCURRENCY` (default 7).
@@ -130,7 +130,7 @@ open "$RD/dashboard.html"       # KPIs, cumulative-best stair, heatmap, lineage,
 ```
 
 Saved artifacts are committed under
-[`examples/skillsbench/run_full/`](../examples/skillsbench/run_full/).
+[`benchmarks/skillsbench/examples/shared_skills/run_full/`](../benchmarks/skillsbench/examples/shared_skills/run_full/).
 
 ## 7. Notes on honest results
 

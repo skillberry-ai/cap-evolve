@@ -20,7 +20,7 @@ baseline, algorithm, finalize, report) is run by `.venv/bin/cap-evolve run` (#6)
 
 SOURCES YOU MAY READ — and nothing else:
   RUN.md; core/; skills/ (the core skills + skills/interventions/llm-proxies/blackbox/);
-  templates/project/ (the generic project scaffold); docs/ADAPTER_CONTRACT.md (ignore its pointers
+  benchmarks/_scaffold/project/ (the generic project scaffold); docs/ADAPTER_CONTRACT.md (ignore its pointers
   into examples/); this prompt;
   vendor/tau2-bench (the clone from #2); [blackbox] vendor/skillberry-store and
   vendor/skillberry-agent once the intervention skill has provisioned them (#2b).
@@ -225,7 +225,7 @@ Here is everything intake needs:
                 CHECK: `.venv/bin/python -c "from tau2.domains.airline.environment import
                 get_tasks; print(len(get_tasks('base')))"` → EXPECTED: 50
 - scaffold:     `.venv/bin/python skills/phases/intake/scripts/run.py --base .capevolve --workdir .`
-                creates .capevolve/project/ from templates/project/. IGNORE the `discovered` list
+                creates .capevolve/project/ from benchmarks/_scaffold/project/. IGNORE the `discovered` list
                 it prints (it scans files SOURCES forbids). Intake's interview is PRE-ANSWERED by
                 this prompt — do NOT ask its numbered question batch and do NOT run its
                 `gh auth status` step; ignore its pointer to an example's setup.sh. Its ONE

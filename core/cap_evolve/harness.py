@@ -4292,7 +4292,7 @@ def _passing_block(solid, *, max_ids: int = 60) -> str:
 # substituting the per-iteration dynamic blocks below; nothing benchmark-specific lives
 # here. ``{{...}}`` placeholders: FOCUS_SUMMARY, FAILURES, PASSING, CAP_BRIEF, ALGO_BRIEF, BENCH_REPO.
 _DEFAULT_INSTRUCTIONS_TEMPLATE = (
-    Path(__file__).resolve().parents[2] / "templates" / "project" / "optimizer" / "INSTRUCTIONS.md"
+    Path(__file__).resolve().parents[2] / "benchmarks" / "_scaffold" / "project" / "optimizer" / "INSTRUCTIONS.md"
 )
 # Big read-context the harness injects into the workdir that must NOT be stored as part
 # of the candidate snapshot (it would bloat candidates/ and pollute diffs). NOTE we keep

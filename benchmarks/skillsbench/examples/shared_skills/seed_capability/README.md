@@ -15,7 +15,7 @@ onboarding time, taking the most complete variant of each:
 | `xlsx` | `tasks/exceltable-in-ppt/environment/skills/xlsx` |
 | `pdf`  | `tasks/pdf-excel-diff/environment/skills/pdf` |
 
-So after `bash examples/skillsbench/setup.sh`, the live, editable seed lives at
+So after `bash benchmarks/skillsbench/examples/shared_skills/setup.sh`, the live, editable seed lives at
 `.capevolve/project/seed_capability/{docx,pptx,xlsx,pdf}/` (gitignored) — that copy is what
 the optimizer edits and what gets deployed to every task.
 
