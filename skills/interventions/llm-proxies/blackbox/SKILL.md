@@ -143,7 +143,7 @@ infrastructure noise and not a verdict on the capability.
 
 ## Pinned versions
 
-`scripts/blackbox_env.py` holds the pins (store commit `8603e33` on the aviweit fork, agent
+`scripts/blackbox_env.py` holds the pins (store commit `c39d472` on the aviweit fork, agent
 commit `e359494`), each
 env-overridable (`SKILLBERRY_STORE_REF`, `SKILLBERRY_AGENT_REF`) for a bisect. Both
 services need their own Python 3.11 venv, created with `uv`.

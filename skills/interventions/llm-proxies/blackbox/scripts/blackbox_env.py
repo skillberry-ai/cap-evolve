@@ -55,10 +55,13 @@ from typing import Optional, Sequence
 # the store under a run whenever that branch moves, and two runs days apart would not be
 # comparable. Moving this forward is deliberate — bump the SHA, re-run, then commit.
 STORE_REPO = "https://github.com/aviweit/skillberry-store.git"
-# fix/vmcp-rich-tool-schema @ 8603e33: derives a tool's published MCP inputSchema from its
-# Python annotations (Literal -> enum, Pydantic model -> nested fields), which is what lets a
-# store-delivered tool advertise the same surface the benchmark's in-process tools do.
-STORE_REF = "8603e332fbc837d46eb0db20ffbd2837940c45ff"   # a commit: clone + checkout
+# fix/vmcp-rich-schema-and-quotes @ c39d472, on top of the 0.2.1 tag:
+# * derives a tool's published MCP inputSchema from its Python annotations (Literal -> enum,
+#   Pydantic model -> nested fields), which is what lets a store-delivered tool advertise the
+#   same surface the benchmark's in-process tools do;
+# * keeps the quotes in a tool's return value. The vMCP server stripped every `"`, so a tool
+#   returning a dict or list handed the agent JSON that no longer parsed.
+STORE_REF = "c39d472e8d138a854fd75a42ab6ae410ea8feaa1"   # a commit: clone + checkout
 AGENT_REPO = "https://github.com/skillberry-ai/skillberry-agent.git"
 AGENT_REF = "e359494f18267e339f9561acbd7a930e3b51189e"   # a commit: clone + checkout
 
