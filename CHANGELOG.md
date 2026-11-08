@@ -8,6 +8,10 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Removed
+- `examples/tau2_custom` (the direct and blackbox approaches on the Skillberry tau2 fork). It is superseded by
+  `examples/tau2_sierra_airline`, the same two approaches on vanilla tau2 pinned at `TAU2_REFERENCE_SHA`, which the
+  `tau2_sierra` / `tau2_sierra_blackbox` CI legs already run (#937).
 ### Reverted (V4 hill-climb changes, #880)
 - Removed the cost-aware acceptance (`cost_lambda`, `cost_accept`, `costaware.py`), the compress operators (`hc_compress_every`,
   `hc2_compress_every`, `ao_compress_every`), the budget-driven iteration cap (`max_iterations` omitted), the shrunk direct final HC-2 round,
