@@ -1202,6 +1202,15 @@ def _read_task_template(ctx) -> str:
 
 _HELPER_GATE_CACHE: dict[str, str | None] = {}
 _HELPER_GATE_LOCK = threading.Lock()
+_HELPER_GATE_CONFIGS: dict[tuple[str, float], tuple[dict, Path | None] | None] = {}
+
+
+class HelperGateConfigError(RuntimeError):
+    """The run's helper config (CAPEVOLVE_HELPERS_SPEC) is unusable. The run's fault, not a candidate's.
+
+    It is raised when the Adapter is created (so `cap-evolve check`, the harness and any other caller fail before
+    the first rollout) and from `live()`. `run_target` never raises it: a raise there is turned into a per-trial
+    error by every caller, so it returns an infrastructure error instead (retried, never scored 0)."""
 
 
 def _helper_gate_config() -> tuple[dict, Path | None] | None:
@@ -1215,64 +1224,74 @@ def _helper_gate_config() -> tuple[dict, Path | None] | None:
 
     The seed dir is the spec's `capability_path`: absolute, or relative to the project folder (the spec's
     own directory, as the agent-optimize host does) or to the project's grandparent (as `cap-evolve check`
-    does), whichever exists. It is the baseline for lint and smoke, so a helper the SEED already ships is
-    not blamed on a candidate that did not touch it. None when it cannot be found.
+    does), whichever exists. None when it cannot be found.
+
+    Parsed once per (spec path, modification time) and reused. Raises HelperGateConfigError when the spec
+    cannot be read or its `helpers:` table is invalid.
     """
     spec_path = os.environ.get("CAPEVOLVE_HELPERS_SPEC", "")
     if not spec_path:
         return None
-    from cap_evolve.specfile import read_yaml
+    try:
+        key = (spec_path, Path(spec_path).stat().st_mtime)
+        with _HELPER_GATE_LOCK:
+            if key in _HELPER_GATE_CONFIGS:
+                return _HELPER_GATE_CONFIGS[key]
+        from cap_evolve.specfile import read_yaml
 
-    spec = read_yaml(Path(spec_path).read_text(encoding="utf-8"))
-    cfg = _helpers.resolve(spec)
-    if not cfg["enabled"] or not (cfg["lint"] or cfg["smoke"]):
-        return None
-    cap = str((spec or {}).get("capability_path") or "")
-    seed = None
-    if cap:
-        proj = Path(spec_path).resolve().parent
-        for p in ([Path(cap)] if Path(cap).is_absolute() else [proj / cap, proj.parent.parent / cap]):
-            if p.is_dir():
-                seed = p
-                break
-    return cfg, seed
+        spec = read_yaml(Path(spec_path).read_text(encoding="utf-8"))
+        cfg = _helpers.resolve(spec)
+    except Exception as e:  # noqa: BLE001 — a broken config is the run's fault: fail loudly, not per candidate
+        raise HelperGateConfigError(f"helper gate: could not load CAPEVOLVE_HELPERS_SPEC={spec_path}: {e}") from e
+    got = None
+    if cfg["enabled"] and (cfg["lint"] or cfg["smoke"]):
+        cap = str((spec or {}).get("capability_path") or "")
+        seed = None
+        if cap:
+            proj = Path(spec_path).resolve().parent
+            for p in ([Path(cap)] if Path(cap).is_absolute() else [proj / cap, proj.parent.parent / cap]):
+                if p.is_dir():
+                    seed = p
+                    break
+        got = (cfg, seed)
+    with _HELPER_GATE_LOCK:
+        _HELPER_GATE_CONFIGS[key] = got
+    return got
 
 
-def _helper_tree_key(ctx) -> str:
-    """Content hash of the candidate's helper files: one gate verdict per distinct tree, reused across rollouts."""
+def _helper_tree_key(ctx, cfg: dict, seed: Path | None, spec_path: str) -> str:
+    """Cache key for one gate verdict: every helper file the gate would check (the same files lint and smoke
+    see, via `executable_files`), plus the spec and the seed. The verdict depends on all three: the same
+    candidate is judged differently against a different seed or a different `helpers:` table."""
     import hashlib
 
     h = hashlib.sha256()
-    for f in sorted((Path(ctx) / "skills").glob("*/scripts/*.py")) if (Path(ctx) / "skills").is_dir() else []:
+    h.update(f"spec={Path(spec_path).resolve()}\0seed={seed.resolve() if seed else ''}\0".encode())
+    for f in _helpers.executable_files(Path(ctx), cfg):
         h.update(f.relative_to(ctx).as_posix().encode() + b"\0" + f.read_bytes() + b"\0")
     return h.hexdigest()
-
-
-class HelperGateConfigError(RuntimeError):
-    """The run's helper config (CAPEVOLVE_HELPERS_SPEC) is unusable. The run's fault, not a candidate's: it
-    must stop the run, never be scored as a candidate failure. `run_target` re-raises it past its catch-all."""
 
 
 def _helper_gate_error(ctx) -> str | None:
     """Why this candidate's helper scripts fail the common pre-rollout gate, or None.
 
-    Hill-climb never calls the helper lint or smoke test (only agent-optimize's pregate does), so for
-    exp895 they run here, in the shared rollout layer, identically for every arm. It uses cap-evolve's own
+    Hill-climb never calls the helper lint or smoke test (only agent-optimize's pregate does), so they run
+    here, in the shared rollout layer, identically for every caller. It uses cap-evolve's own
     `lint_candidate` (task ids, answer literals, task-identity branches, network use) and `run_smoke`
-    (each changed script imports cleanly in a subprocess that cannot read deny_roots), both given the seed
-    as the parent so only helper files the candidate added or changed are checked, as in the
-    agent-optimize pregate. A failing candidate scores 0 on every rollout without an LLM call; the harness
-    still debits its full evaluation from the budget. A candidate's fault is returned as a message;
-    an unusable CAPEVOLVE_HELPERS_SPEC raises HelperGateConfigError.
+    (each script imports cleanly in a subprocess that cannot read deny_roots), both given the seed as the
+    parent, as the agent-optimize pregate does: only helper files the candidate added or changed are checked.
+    So a helper the seed already ships is never blamed on a candidate that left it byte-identical, and is
+    also not smoke-tested here: a seed helper that does not import fails at rollout, not at this gate.
+
+    A failing candidate scores 0 on every rollout without an LLM call; the harness still debits its full
+    evaluation from the budget. A candidate's fault is returned as a message; an unusable
+    CAPEVOLVE_HELPERS_SPEC raises HelperGateConfigError.
     """
-    try:
-        got = _helper_gate_config()
-    except Exception as e:  # noqa: BLE001 — a broken config is the run's fault: fail loudly, not per candidate
-        raise HelperGateConfigError(f"helper gate: could not load CAPEVOLVE_HELPERS_SPEC: {e}") from e
-    if got is None or not (Path(ctx) / "skills").is_dir():
+    got = _helper_gate_config()
+    if got is None:
         return None
     cfg, seed = got
-    key = _helper_tree_key(ctx)
+    key = _helper_tree_key(ctx, cfg, seed, os.environ["CAPEVOLVE_HELPERS_SPEC"])
     with _HELPER_GATE_LOCK:
         if key in _HELPER_GATE_CACHE:
             return _HELPER_GATE_CACHE[key]
@@ -1652,6 +1671,11 @@ def _replay_code(solution_code: str, input_name: str, case_input_name: str,
 
 class Adapter(CapabilityAdapter):
 
+    def __init__(self) -> None:
+        # A broken CAPEVOLVE_HELPERS_SPEC must stop the run before its first rollout, whoever drives this adapter:
+        # every caller turns an exception from run_target into a per-trial error, so the check runs here.
+        _helper_gate_config()
+
     # ---- tasks -------------------------------------------------------------
 
     def tasks(self, split: str) -> list[Task]:
@@ -1694,19 +1718,16 @@ class Adapter(CapabilityAdapter):
         into a per-rollout error, which costs the candidate its score and nothing else.
 
         The one thing that does raise is HelperGateConfigError, an unusable CAPEVOLVE_HELPERS_SPEC: that is the
-        RUN's fault. run_step catches an exception from live() per candidate but stops the run after
-        _MAX_CONSECUTIVE_EVAL_ERRORS of them in a row, which is exactly the loud failure wanted here.
+        RUN's fault. It is normally caught earlier, when the Adapter is created; this re-check covers a spec that
+        broke later. Where it lands depends on the caller: the seed baseline and confirm evaluations do not catch
+        it (the run stops), and run_step stops the run after _MAX_CONSECUTIVE_EVAL_ERRORS of them in a row.
         """
         err = _task_template_error(candidate_dir)
         if err:
             print(f"spreadsheetbench: candidate rejected — {err}", file=sys.stderr)
-        # The one exception to "do not raise": an unusable CAPEVOLVE_HELPERS_SPEC is the RUN's fault, not the
-        # candidate's, and run_trials_pool would turn a raise from run_target into a per-rollout error. Raising
-        # here, once per evaluation, is what actually stops the run.
-        try:
-            _helper_gate_config()
-        except Exception as e:  # noqa: BLE001
-            raise HelperGateConfigError(f"helper gate: could not load CAPEVOLVE_HELPERS_SPEC: {e}") from e
+        # The one exception to "do not raise": an unusable CAPEVOLVE_HELPERS_SPEC is the RUN's fault (for example the
+        # file was removed after the adapter was created). It raises HelperGateConfigError.
+        _helper_gate_config()
         yield candidate_dir
 
     def run_target(self, task: Task, ctx, *, seed: int = 0) -> Rollout:
@@ -1974,8 +1995,8 @@ class Adapter(CapabilityAdapter):
             )
         except HelperGateConfigError as e:
             # The run's config is broken, not the candidate: report it as infrastructure (no error_kind, so it is
-            # retried and never scored 0). The pool turns any raise from here into a per-trial error anyway, so the
-            # run-stopping check is live() (below), which the harness's consecutive-error stop acts on.
+            # retried and never scored 0). Raising would not help: every caller turns a raise from here into a
+            # per-trial error. The checks that stop the run are Adapter() and live(), above.
             return Rollout(task_id=task.id, error=f"HELPER_GATE_CONFIG_ERROR: {e}", metadata={"helper_gate": "config_error"})
         except Exception as e:  # noqa: BLE001
             return Rollout(task_id=task.id, error=f"run_target failed: {e}")

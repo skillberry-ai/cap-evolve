@@ -132,6 +132,7 @@ _LEAKY = 'ID = "105-24"\n'
 
 
 def _write_spec(tmp_path, *, enabled=True, capability_path=None):
+    tmp_path.mkdir(parents=True, exist_ok=True)
     ids = tmp_path / "ids.txt"
     ids.write_text("10452\n105-24\n")
     proj = tmp_path / "proj"
@@ -185,20 +186,45 @@ def test_a_missing_spec_file_raises_the_config_error(tmp_path, monkeypatch):
         mod._helper_gate_error(_cand(tmp_path, "c", "x = 1\n"))
 
 
-def test_live_raises_the_config_error_so_the_run_can_stop(tmp_path, monkeypatch):
+def test_creating_the_adapter_with_a_broken_spec_raises(tmp_path, monkeypatch):
+    # the check that stops every caller (harness, cap-evolve check, or any other rollout layer) before a rollout
     mod = _load_adapter_module()
     monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    with pytest.raises(mod.HelperGateConfigError):
+        mod.Adapter()
+
+
+def test_an_invalid_helpers_table_raises_at_creation_too(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    spec = tmp_path / "capevolve.yaml"
+    spec.write_text("helpers:\n  enabled: true\n  no_such_key: 1\n")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(spec))
+    with pytest.raises(mod.HelperGateConfigError, match="no_such_key"):
+        mod.Adapter()
+
+
+def test_live_raises_the_config_error_when_the_spec_breaks_later(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    spec = _write_spec(tmp_path)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(spec))
+    adapter = mod.Adapter()
+    spec.unlink()
     cand = _cand(tmp_path, "c", "x = 1\n")
     monkeypatch.setattr(mod, "_task_template_error", lambda ctx: None)
     with pytest.raises(mod.HelperGateConfigError):
-        with mod.Adapter().live(cand):
+        with adapter.live(cand):
             pass
 
 
 def test_run_target_reports_a_broken_config_as_infra_not_as_a_candidate_fault(tmp_path, monkeypatch):
-    # never scored 0: no error_kind=candidate, and the message names the config
+    # the spec breaks after the adapter was created: never scored 0, no error_kind=candidate
     mod = _load_adapter_module()
-    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    spec = _write_spec(tmp_path)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(spec))
+    adapter = mod.Adapter()
+    spec.unlink()
     mod._HELPER_GATE_CACHE.clear()
     cand = _cand(tmp_path, "c", "x = 1\n")
     (cand / "prompt.md").write_text("system")
@@ -208,7 +234,7 @@ def test_run_target_reports_a_broken_config_as_infra_not_as_a_candidate_fault(tm
     monkeypatch.setitem(sys.modules, "litellm", fake)
     task = mod.Task(id="10452", input={"instruction": "", "spreadsheet_path": "", "instruction_type": "",
                                        "answer_position": "A1"})
-    r = mod.Adapter().run_target(task, cand, seed=0)
+    r = adapter.run_target(task, cand, seed=0)
     assert r.error and r.error.startswith("HELPER_GATE_CONFIG_ERROR")
     assert r.metadata.get("error_kind") != "candidate" and r.metadata["helper_gate"] == "config_error"
 
@@ -239,3 +265,50 @@ def test_the_seed_dir_is_found_relative_to_the_project_folder(tmp_path, monkeypa
     monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path, capability_path="seed_x")))
     cfg, seed = mod._helper_gate_config()
     assert seed == (tmp_path / "proj" / "seed_x") and cfg["lint"]
+
+
+def test_the_verdict_cache_is_keyed_by_the_seed_too(tmp_path, monkeypatch):
+    # the same candidate tree is refused against no seed and accepted against a seed that ships the same file;
+    # one process, cache kept, so a key without the seed would reuse the first verdict
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    cand = _cand(tmp_path, "c", _LEAKY)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path / "a")))
+    mod._HELPER_GATE_CACHE.clear()
+    assert mod._helper_gate_error(cand)
+    seed = tmp_path / "b" / "seed_capability" / "skills" / "spreadsheet-helpers" / "scripts"
+    seed.mkdir(parents=True)
+    (seed / "h.py").write_text(_LEAKY)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path / "b", capability_path="../seed_capability")))
+    assert mod._helper_gate_error(cand) is None
+
+
+def test_the_cache_key_covers_nested_helper_files(tmp_path, monkeypatch):
+    # lint and smoke scan executable_dirs recursively; two trees that differ only in a nested helper must not share
+    # a verdict
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path)))
+    mod._HELPER_GATE_CACHE.clear()
+    clean = _cand(tmp_path, "clean", "x = 1\n")
+    nested = _cand(tmp_path, "nested", "x = 1\n")
+    sub = nested / "skills" / "spreadsheet-helpers" / "scripts" / "lib"
+    sub.mkdir()
+    (sub / "inner.py").write_text(_LEAKY)
+    assert mod._helper_gate_error(clean) is None
+    assert mod._helper_gate_error(nested), "a leaky nested helper must not reuse the clean tree's verdict"
+
+
+def test_the_spec_is_parsed_once_not_per_rollout(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path)))
+    mod._HELPER_GATE_CONFIGS.clear()
+    reads = []
+    import cap_evolve.specfile as sf
+    real = sf.read_yaml
+    monkeypatch.setattr(sf, "read_yaml", lambda *a, **k: reads.append(1) or real(*a, **k))
+    cand = _cand(tmp_path, "c", "x = 1\n")
+    for _ in range(5):
+        mod._helper_gate_error(cand)
+    assert len(reads) == 1
