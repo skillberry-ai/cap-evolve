@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Render the skillsbench-history branch onto the Pages site.
+"""Render the skillberry-runs/skillsbench repo onto the Pages site.
 
-Walks a checkout of the skillsbench-history branch (--src), converts every
+Walks a checkout of the skillberry-runs/skillsbench repo (--src), converts every
 markdown file to a chrome-wrapped HTML page, rewrites relative .md links to
 .html, redirects anything under artifacts/ to GitHub (that 27MB tree is not
-folded into the site), copies the branch's own pre-existing HTML pages
+folded into the site), copies the repo's own pre-existing HTML pages
 verbatim with the same link rewrite, copies every other file byte-for-byte,
 and generates two level-2 heatmaps the source branch does not have yet
 (transfer-eval-8fold, runnable-subset-43).
 
+The content used to live on cap-evolve's `skillsbench-history` orphan branch; it
+was migrated (full history) to its own repo in the skillberry-runs org on 2026-11-09.
+
 Usage:
-    python3 scripts/build_skillsbench_site.py --src <skillsbench-history checkout> --out site/skillsbench
+    python3 scripts/build_skillsbench_site.py --src <skillberry-runs/skillsbench checkout> --out site/skillsbench
     python3 scripts/build_skillsbench_site.py --src <checkout> --out <dir> --check
 """
 import argparse
@@ -23,9 +26,13 @@ from pathlib import Path
 
 import markdown as md_lib
 
-REPO = "skillberry-ai/cap-evolve"
-BRANCH = "skillsbench-history"
-SKIP_TOP = {"artifacts", ".git"}
+# Where the rendered content lives (source links point here) vs. the code repo
+# (footer link). They used to be the same repo, on different branches.
+SOURCE_REPO = "skillberry-runs/skillsbench"
+SOURCE_REF = "main"
+CODE_REPO = "skillberry-ai/cap-evolve"
+# .github/.gitignore are source-repo housekeeping, not site content.
+SKIP_TOP = {"artifacts", ".git", ".github", ".gitignore"}
 MD_EXTENSIONS = ["tables", "fenced_code", "toc", "attr_list", "sane_lists"]
 
 NAV_ITEMS = [
@@ -42,7 +49,7 @@ NAV_ITEMS = [
 DEFERRED_ARTIFACTS_NOTE = (
     '<div class="callout callout-warn">'
     '<div class="callout-title">Level 3 material is partial here</div>'
-    "<p>This page is rendered on-site from the <code>skillsbench-history</code> branch, "
+    "<p>This page is rendered on-site from the <code>skillberry-runs/skillsbench</code> repo, "
     "but the underlying skill packages it discusses (<code>seed/</code>, <code>best/</code>, "
     "<code>PROCESS.md</code> under <code>artifacts/</code>) are not folded into the site yet "
     '— follow the <a class="ext-link" href="{artifacts_url}">GitHub ↗</a> links below to see them.</p>'
@@ -52,7 +59,7 @@ DEFERRED_ARTIFACTS_NOTE = (
 
 def artifacts_tree_url(rel_path: str, is_dir: bool) -> str:
     kind = "tree" if is_dir else "blob"
-    return f"https://github.com/{REPO}/{kind}/{BRANCH}/{rel_path}"
+    return f"https://github.com/{SOURCE_REPO}/{kind}/{SOURCE_REF}/{rel_path}"
 
 
 def rewrite_links(html: str, src_root: Path, cur_rel_dir: str) -> tuple[str, bool]:
@@ -108,7 +115,7 @@ def render_chrome(title: str, description: str, body_html: str, rel_path: str, s
     nav_links = "\n".join(
         f'      <a href="{site_root}/{href}">{label}</a>' for href, label in NAV_ITEMS
     )
-    source_url = f"https://github.com/{REPO}/blob/{BRANCH}/{source_rel}"
+    source_url = f"https://github.com/{SOURCE_REPO}/blob/{SOURCE_REF}/{source_rel}"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,7 +166,7 @@ def render_chrome(title: str, description: str, body_html: str, rel_path: str, s
       Apache-2.0 · beta (0.x) · <em>Optimize agentic capabilities — with agents</em>
     </div>
     <div>
-      <a href="https://github.com/{REPO}">github.com/{REPO}</a>
+      <a href="https://github.com/{CODE_REPO}">github.com/{CODE_REPO}</a>
     </div>
   </div>
 </footer>
@@ -185,7 +192,7 @@ def convert_markdown(src_file: Path, src_root: Path, out_root: Path) -> bool:
     title = rel.rsplit("/", 1)[-1][: -len(".html")]
     page = render_chrome(
         title=f"{title} — SkillsBench",
-        description=f"Rendered from {rel} on the skillsbench-history branch.",
+        description=f"Rendered from {rel} in the {SOURCE_REPO} repo.",
         body_html=body,
         rel_path=out_rel,
         source_rel=rel,
@@ -361,7 +368,7 @@ def build_runnable43_heatmap(src_root: Path, out_root: Path) -> None:
 
 def build(src: Path, out: Path) -> None:
     # site/skillsbench/index.html is a hand-authored hub page, committed on `main`
-    # alongside this script — not part of the skillsbench-history branch content.
+    # alongside this script — not part of the skillberry-runs/skillsbench content.
     # Preserve it across the rebuild instead of deleting it with everything else.
     hub_file = out / "index.html"
     hub_backup = hub_file.read_bytes() if hub_file.exists() else None
@@ -426,7 +433,7 @@ def check(src: Path, out: Path) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--src", required=True, type=Path, help="skillsbench-history checkout")
+    ap.add_argument("--src", required=True, type=Path, help="skillberry-runs/skillsbench checkout")
     ap.add_argument("--out", required=True, type=Path, help="output dir (e.g. site/skillsbench)")
     ap.add_argument("--check", action="store_true", help="exit non-zero if --out is stale")
     args = ap.parse_args()
