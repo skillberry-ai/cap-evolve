@@ -16,11 +16,11 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
-ADAPTER_DIR = REPO / "templates" / "adapters" / "spreadsheetbench"
+ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
 
 
 def _load_adapter_module():
-    for p in (REPO / "core", ADAPTER_DIR, ADAPTER_DIR.parent):
+    for p in (REPO / "core", ADAPTER_DIR, REPO / "benchmarks" / "_shared"):
         if str(p) not in sys.path:
             sys.path.insert(0, str(p))
     spec = importlib.util.spec_from_file_location("_sb_adapter_helper_gate", ADAPTER_DIR / "adapter.py")
@@ -124,3 +124,118 @@ def test_run_target_returns_a_candidate_fault_without_an_llm_call(gate, tmp_path
     r = gate.Adapter().run_target(task, cand, seed=0)
     assert r.error and r.error.startswith("CANDIDATE_HELPER_GATE")
     assert r.metadata["error_kind"] == "candidate" and r.metadata["helper_gate"] == "failed"
+
+
+# ---- review of #954: the spec alone enables the gate; a broken config is loud; the seed is the parent ----
+
+_LEAKY = 'ID = "105-24"\n'
+
+
+def _write_spec(tmp_path, *, enabled=True, capability_path=None):
+    ids = tmp_path / "ids.txt"
+    ids.write_text("10452\n105-24\n")
+    proj = tmp_path / "proj"
+    proj.mkdir(exist_ok=True)
+    cap = f"capability_path: {capability_path}\n" if capability_path else ""
+    spec = proj / "capevolve.yaml"
+    spec.write_text(cap + textwrap.dedent(f"""\
+        surface:
+          executable_dirs: ["skills/*/scripts"]
+        helpers:
+          enabled: {str(enabled).lower()}
+          lint: true
+          smoke: false
+          suffixes: [".py"]
+          ids_file: {ids}
+        """))
+    return spec
+
+
+def test_the_spec_alone_turns_the_gate_on(tmp_path, monkeypatch):
+    # helpers.enabled in the spec is enough: CAPEVOLVE_HELPERS is not also needed
+    mod = _load_adapter_module()
+    monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path, enabled=True)))
+    mod._HELPER_GATE_CACHE.clear()
+    err = mod._helper_gate_error(_cand(tmp_path, "leaky", _LEAKY))
+    assert err and err.startswith("CANDIDATE_HELPER_GATE")
+
+
+def test_a_spec_with_helpers_disabled_keeps_the_gate_off(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path, enabled=False)))
+    mod._HELPER_GATE_CACHE.clear()
+    assert mod._helper_gate_error(_cand(tmp_path, "leaky", _LEAKY)) is None
+
+
+def test_the_env_switch_still_overrides_the_spec(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "0")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path, enabled=True)))
+    mod._HELPER_GATE_CACHE.clear()
+    assert mod._helper_gate_error(_cand(tmp_path, "leaky", _LEAKY)) is None
+
+
+def test_a_missing_spec_file_raises_the_config_error(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    mod._HELPER_GATE_CACHE.clear()
+    with pytest.raises(mod.HelperGateConfigError):
+        mod._helper_gate_error(_cand(tmp_path, "c", "x = 1\n"))
+
+
+def test_live_raises_the_config_error_so_the_run_can_stop(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    cand = _cand(tmp_path, "c", "x = 1\n")
+    monkeypatch.setattr(mod, "_task_template_error", lambda ctx: None)
+    with pytest.raises(mod.HelperGateConfigError):
+        with mod.Adapter().live(cand):
+            pass
+
+
+def test_run_target_reports_a_broken_config_as_infra_not_as_a_candidate_fault(tmp_path, monkeypatch):
+    # never scored 0: no error_kind=candidate, and the message names the config
+    mod = _load_adapter_module()
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    mod._HELPER_GATE_CACHE.clear()
+    cand = _cand(tmp_path, "c", "x = 1\n")
+    (cand / "prompt.md").write_text("system")
+    monkeypatch.setattr(mod, "_task_template_error", lambda ctx: None)
+    fake = types.ModuleType("litellm")
+    fake.completion = lambda *a, **k: pytest.fail("no LLM call may be made")
+    monkeypatch.setitem(sys.modules, "litellm", fake)
+    task = mod.Task(id="10452", input={"instruction": "", "spreadsheet_path": "", "instruction_type": "",
+                                       "answer_position": "A1"})
+    r = mod.Adapter().run_target(task, cand, seed=0)
+    assert r.error and r.error.startswith("HELPER_GATE_CONFIG_ERROR")
+    assert r.metadata.get("error_kind") != "candidate" and r.metadata["helper_gate"] == "config_error"
+
+
+def test_a_helper_the_seed_already_ships_is_not_blamed_on_the_candidate(tmp_path, monkeypatch):
+    # the seed ships a helper that fails the lint; a candidate that leaves it byte-identical is not refused,
+    # while one that changes it into a (still failing) different file is
+    mod = _load_adapter_module()
+    seed = tmp_path / "seed_capability"
+    sh = seed / "skills" / "spreadsheet-helpers" / "scripts"
+    sh.mkdir(parents=True)
+    (sh / "h.py").write_text(_LEAKY)
+    spec = _write_spec(tmp_path, capability_path="../seed_capability")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(spec))
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    mod._HELPER_GATE_CACHE.clear()
+    same = _cand(tmp_path, "same", _LEAKY)
+    assert mod._helper_gate_error(same) is None
+    changed = _cand(tmp_path, "changed", 'ID = "10452"\n')
+    err = mod._helper_gate_error(changed)
+    assert err and err.startswith("CANDIDATE_HELPER_GATE")
+
+
+def test_the_seed_dir_is_found_relative_to_the_project_folder(tmp_path, monkeypatch):
+    mod = _load_adapter_module()
+    (tmp_path / "proj" / "seed_x").mkdir(parents=True)
+    monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(_write_spec(tmp_path, capability_path="seed_x")))
+    cfg, seed = mod._helper_gate_config()
+    assert seed == (tmp_path / "proj" / "seed_x") and cfg["lint"]
