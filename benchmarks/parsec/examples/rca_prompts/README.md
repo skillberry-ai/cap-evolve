@@ -62,9 +62,9 @@ python3 benchmarks/parsec/examples/rca_prompts/v5/collect.py --suite-id t1_e1
 v5 has no `--tasks targets` subset (unlike h4) — every v5 sweep so far has run
 against the full task set, `--tasks all` (default).
 
-The prompt bundles and all results live on the **`parsec-history`** branch
-(`artifacts/`, `reports/`), which is an orphan branch holding no code. So a run
-wants both branches checked out. Start from
+The prompt bundles and all results live in the **[`skillberry-runs/parsec`](https://github.com/skillberry-runs/parsec)** repo
+(`artifacts/`, `reports/`), which holds no code; it was this repo's `parsec-history` orphan
+branch until 2026-11-10. So a run wants both repos checked out. Start from
 `reports/v4/h4/handoff-t1-vs-g2.md` there.
 
 ## `h4/audit/` — read this before trusting a score
@@ -98,5 +98,5 @@ pooled. Move the short run aside to `run_<task>.dead-<timestamp>/` before
 resubmitting (never delete or overwrite it in place) and this script finds
 every clean trial across all of them, samples N at random, and reports the
 mean — rather than requiring N-in-one-run or declaring the task a failure.
-First used for `v5_g2_e1` (`results/v5/v5_g2_e1/summary.md` on
-`parsec-history`); applies to any arm whose runs live under `.capevolve/`.
+First used for `v5_g2_e1` (`results/v5/v5_g2_e1/summary.md` in
+`skillberry-runs/parsec`); applies to any arm whose runs live under `.capevolve/`.
