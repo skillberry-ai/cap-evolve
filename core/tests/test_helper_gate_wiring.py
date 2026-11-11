@@ -241,11 +241,12 @@ def test_a_spec_that_cannot_be_parsed_is_warned_about_once(tmp_path, monkeypatch
     assert capsys.readouterr().err.count("cannot be read or parsed") == 1
 
 
-def test_an_empty_spec_is_not_warned_about(tmp_path, monkeypatch):
+@pytest.mark.parametrize("text", ["\n", "# only a comment\n\n  # and another\n"])
+def test_an_empty_spec_is_not_warned_about(tmp_path, monkeypatch, text):
     from cap_evolve import harness
     monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
     adapter = _toy_adapter()
-    rd, base = _fresh_run(tmp_path, adapter, spec_text="\n")
+    rd, base = _fresh_run(tmp_path, adapter, spec_text=text)
     harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=_with_helper(CLEAN),
                      instructions="x", current_val=base, gate_kwargs=GATE)
     assert _events(rd, "helper_gate_spec_unreadable") == []

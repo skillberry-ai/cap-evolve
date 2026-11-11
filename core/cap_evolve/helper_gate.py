@@ -157,7 +157,9 @@ def _warn_if_spec_unreadable(run_dir, project) -> None:
         return
     path = resolve_spec_path(run_dir, project)
     try:
-        has_text = path is not None and bool(path.read_text(encoding="utf-8").strip())
+        # content = any line that is not blank and not a YAML comment: a spec of comments only parses to {} too
+        has_text = path is not None and any(ln.strip() and not ln.lstrip().startswith("#")
+                                            for ln in path.read_text(encoding="utf-8").splitlines())
     except OSError:
         has_text = True
     if has_text:
