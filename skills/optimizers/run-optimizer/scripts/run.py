@@ -488,11 +488,13 @@ def main(argv=None) -> int:
     prompt_text = prompt_path.read_text(encoding="utf-8")
 
     # A ``prompt_stdin`` row reads the prompt from stdin, so its size is unbounded; every
-    # other row that inlines {prompt_text} is bounded by the per-argument exec limit.
+    # other row that inlines {prompt_text} is bounded by the per-argument exec limit. Test the
+    # EXPANDED template: the generic/openclaw rows carry their command in an env var
+    # (``${CAPEVOLVE_OPTIMIZER_CMD}``), and that may inline {prompt_text} too.
     template = str(row.get("command_template", ""))
     prompt_stdin = str(row.get("prompt_stdin", "")).lower() == "true"
     argv_prompt_text = prompt_text
-    if not prompt_stdin and "{prompt_text}" in template:
+    if not prompt_stdin and "{prompt_text}" in os.path.expandvars(template):
         argv_prompt_text, replaced = inline_prompt_text(prompt_text, str(prompt_path))
         if replaced:
             print(f"warning: run-optimizer: the {len(prompt_text.encode('utf-8'))}-byte prompt is "

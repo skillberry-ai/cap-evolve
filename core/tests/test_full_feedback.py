@@ -6,6 +6,7 @@ prompt builder below once sliced it to a few hundred characters; this pins that 
 does.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -93,3 +94,48 @@ def test_failure_index_lists_every_flaky_task_worst_first():
     block = harness._failures_block([], flaky, [])
     assert all(f"- t{i} " in block for i in range(25))
     assert block.index("- t0 ") < block.index("- t24 ")
+
+
+def test_trials_are_ordered_numerically_not_as_text():
+    out = harness._join_trial_feedback([(10, 0.1, "late"), (2, 0.9, "early")])
+    assert out.index("[trial 2 ") < out.index("[trial 10 ")
+
+
+def test_pooled_tags_name_the_tag_in_each_trial_label(tmp_path):
+    """Pooled control replicates each number their trials from 0; the label must still be unique."""
+    from cap_evolve import RunDir
+    from cap_evolve.splits import Splits
+
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t")
+    rd.write_splits(Splits(train=["t0"], val=["t0"], test=["t0"], seed=0))
+    vdir = rd.rollout_dir("val")
+    vdir.mkdir(parents=True, exist_ok=True)
+    for tag, r in (("c", 0.25), ("c_rep1", 0.75)):
+        (vdir / f"t0__{tag}__t0.json").write_text(json.dumps(
+            {"score": {"task_id": "t0", "reward": r, "feedback": f"judge on {tag}"}}), encoding="utf-8")
+    fb = harness.split_result_from_rollouts(rd, ["c", "c_rep1"], "val").per_task[0]["feedback"]
+    assert "[c trial 0 reward 0.250]" in fb and "[c_rep1 trial 0 reward 0.750]" in fb
+
+
+def test_pooling_two_results_keeps_both_sides_feedback_once():
+    from cap_evolve.loop import pool_split_results
+
+    def res(fb):
+        return SplitResult(split="val", reward=0.5, stderr=0.0, n_tasks=1, n_scored=1,
+                           per_task=[{"task_id": "t0", "reward": 0.5, "trial_rewards": [0.5],
+                                      "feedback": fb}])
+    pooled = pool_split_results(res("run A: " + LONG), res("run B: " + TAIL))
+    fb = pooled.per_task[0]["feedback"]
+    assert fb.count(LONG) == 1 and fb.count("run B: " + TAIL) == 1
+    assert pool_split_results(res("same"), res("same")).per_task[0]["feedback"] == "same"
+
+
+def test_skillopt_clusters_ignore_the_multi_trial_labels():
+    """The label carries per-trial rewards; it must not split one failure into two clusters."""
+    p = "Wrong tool: called cancel_reservation before the user confirmed the change"
+    x = harness._join_trial_feedback([(0, 0.0, p + " (a)"), (1, 0.0, p + " (b)")])
+    y = harness._join_trial_feedback([(0, 1.0, p + " (c)"), (1, 0.0, p + " (d)")])
+    pats = skillopt._failure_patterns([{"task_id": "x", "reward": 0.0, "feedback": x},
+                                       {"task_id": "y", "reward": 0.5, "feedback": y}])
+    assert len(pats) == 1 and pats[0]["n"] == 2, pats
+    assert not pats[0]["pattern"].startswith("[")

@@ -345,12 +345,21 @@ def _live(adapter, candidate_dir: Path):
 def _join_trial_feedback(trials: list) -> str:
     """One task's feedback from ALL its trials, each labelled with that trial's reward.
 
-    ``trials`` is ``[(trial_index, reward_or_None, feedback)]``. A single trial (or every
+    ``trials`` is ``[(trial_label, reward_or_None, feedback)]``; the label is the trial index, or
+    ``"<tag> <index>"`` when several tags' rollouts are pooled. A single trial (or every
     trial saying the same thing) gives its text unchanged; otherwise each distinct text is
     kept once, under the trials that produced it — an LLM judge's verdict varies between
     trials, and the last one alone may praise a task whose mean is low. Never shortened.
     """
-    rows = [(int(k), r, str(fb or "").strip()) for k, r, fb in sorted(trials, key=lambda t: t[0])]
+    def order(t):   # by tag, then numerically by trial index
+        tag, _, k = str(t[0]).rpartition(" ")
+        return tag, int(k)
+
+    def name(k) -> str:
+        tag, _, i = str(k).rpartition(" ")
+        return f"{tag} trial {i}" if tag else f"trial {i}"
+
+    rows = [(k, r, str(fb or "").strip()) for k, r, fb in sorted(trials, key=order)]
     texts = [fb for _, _, fb in rows if fb]
     if len(set(texts)) <= 1:
         return texts[0] if texts else ""
@@ -360,7 +369,7 @@ def _join_trial_feedback(trials: list) -> str:
             by_text.setdefault(fb, []).append((k, r))
     out = []
     for fb, ks in by_text.items():
-        head = ", ".join(f"trial {k}" + ("" if r is None else f" reward {float(r):.3f}") for k, r in ks)
+        head = ", ".join(name(k) + ("" if r is None else f" reward {float(r):.3f}") for k, r in ks)
         out.append(f"[{head}]\n{fb}")
     return "\n\n".join(out)
 
@@ -940,6 +949,8 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
             trial_k = int(f.stem.rsplit("__t", 1)[1])
+            # Pooled tags each number their trials from 0: name the tag so labels stay unique.
+            trial_label = trial_k if len(tags) == 1 else f"{f.stem.rsplit('__', 2)[1]} {trial_k}"
             cost_by_task.setdefault(tid, []).append(
                 float((rec.get("rollout") or {}).get("cost_usd") or 0.0))
             # carry the structured infra flag + trial counts forward across resume.
@@ -965,7 +976,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             r0["n_trials"] = int(r0.get("n_trials", 0)) + 1
             by_task.setdefault(tid, [])
             feedback.setdefault(tid, []).append(
-                (trial_k, None if errored else float(sc.get("reward", 0.0)), sc.get("feedback") or ""))
+                (trial_label, None if errored else float(sc.get("reward", 0.0)), sc.get("feedback") or ""))
             if errored:
                 r0["errored"] = True
                 r0["errored_trials"] = int(r0.get("errored_trials", 0)) + 1
@@ -4272,8 +4283,9 @@ def _classify(per):
     Uses the AGGREGATE reward (mean over trials), so a task that passes only some
     of the time is 'flaky' (0 < reward < 1) — a sometimes-good behavior to make
     CONSISTENT — distinct from an always-failing task (reward ~ 0) whose root cause
-    must be fixed. (Per-task feedback is from the last trial and can disagree with a
-    graded mean; the reward is the honest signal, so we classify by it.)
+    must be fixed. (Per-task feedback carries every trial's text, each under its own
+    reward, and judges disagree between trials; the mean reward is the honest signal, so
+    we classify by it.)
 
     The infra-IGNORE bucket is reserved for TRULY uncontrollable tasks
     (``_is_infra_ignore``: most trials errored AND mean ≈ 0). A task that merely had
@@ -4372,7 +4384,8 @@ def _fill_slots(text: str, repl: dict) -> str:
     instead of a second copy of the block — the default template's "The `{{FAILURES}}`
     block below…" line used to inline the whole failure index there too, doubling a
     460 KB prompt. One pass, so a filled value (judge feedback quoting
-    ``{{X}}`` text, say) is never itself re-expanded. Unknown slots are left as-is.
+    ``{{X}}`` text, say) is never itself re-expanded. An unquoted unknown slot is left as-is;
+    any backtick-quoted ```{{NAME}}``` renders as ```NAME```, known or not.
     """
     def sub(m: re.Match) -> str:
         lq, slot, rq = m.groups()

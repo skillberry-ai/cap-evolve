@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import math
 import random
+import re
 from pathlib import Path
 
 from . import harness
@@ -58,6 +59,8 @@ from .rundir import RunDir
 _MAX_FAILURES_PER_STEP = 10      # failure-pattern clusters carried per step
 _MAX_TASK_IDS_PER_PATTERN = 3    # task ids shown per cluster
 _MAX_BUFFER_STEPS = 12           # most recent steps kept in the per-epoch buffer
+# A multi-trial feedback label line, as harness._join_trial_feedback writes it.
+_TRIAL_LABEL_RE = re.compile(r"^\[(?:\S+ )?trial \d+[^\]\n]*\]$", re.MULTILINE)
 
 
 # ---- failure-pattern clustering -------------------------------------------
@@ -81,7 +84,10 @@ def _failure_patterns(per_task: list, focus_ids=None) -> list[dict]:
             continue
         if (pt.get("raw") or {}).get("errored"):
             continue  # infra noise, not an actionable failure pattern
-        fb = str(pt.get("feedback", "") or "").strip()
+        # The multi-trial "[trial k reward r]" labels (harness._join_trial_feedback) are
+        # dropped first: they carry per-trial rewards, so two tasks with the same failure
+        # would otherwise key apart, and the label would crowd out the failure's own words.
+        fb = _TRIAL_LABEL_RE.sub("", str(pt.get("feedback", "") or "")).strip()
         # Normalized signature: first ~8 words, lowercased — a cheap, deterministic
         # clustering key (same idea as diagnose's default signature fn).
         sig = " ".join(fb.lower().split()[:8]) or "(no feedback)"

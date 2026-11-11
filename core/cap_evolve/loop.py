@@ -195,8 +195,11 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
             raw = pt.get("raw") or {}
             trials = pt.get("trial_rewards") or []
             by_task.setdefault(tid, []).extend(float(x) for x in trials)
-            if pt.get("feedback"):
-                feedback[tid] = pt["feedback"]
+            # Both sides' feedback, each distinct text once: a pooled result must not
+            # drop one run's judge rationales (each side is already its trials' join).
+            fb = str(pt.get("feedback") or "").strip()
+            if fb and fb not in feedback.get(tid, ""):
+                feedback[tid] = f"{feedback[tid]}\n\n{fb}" if feedback.get(tid) else fb
             errored[tid] = errored.get(tid, False) or bool(raw.get("errored"))
             errored_trials[tid] = errored_trials.get(tid, 0) + int(raw.get("errored_trials") or 0)
     from .stats import mean, stderr

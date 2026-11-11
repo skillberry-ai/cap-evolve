@@ -85,6 +85,11 @@ python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project
   (`harness.py:49-57`); scoring stays serial so the numbers match a serial run.
   Keep it at 1 if `run_target` is not thread-safe (shared scratch dir, one live
   container, module-global client) — `harness.py:225-227`.
+- Per-task `feedback` carries **every** trial's scorer feedback, untruncated: each
+  distinct text once, under a `[trial k reward r]` label when trials disagree. The
+  optimizer's failure index lists every always-failing and flaky task;
+  `CAPEVOLVE_MAX_LISTED_FAILURES=N` caps that list for a benchmark with hundreds of
+  identical failures (unset or 0: no cap). The full rollouts stay in `./trajectories/`.
 - A subset/triage eval (`ids=`) is **never** gateable: its `n_tasks` is the subset,
   so `coverage` reads 1.0 (`harness.py:229-237`).
 

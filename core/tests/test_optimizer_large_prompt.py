@@ -82,6 +82,16 @@ def test_an_inlining_row_gets_a_pointer_instead_of_an_exec_failure(tmp_path):
     assert "argv limit" in r["stderr"], "the substitution must be announced, not silent"
 
 
+def test_an_env_var_template_that_inlines_the_prompt_gets_the_pointer_too(tmp_path, monkeypatch):
+    """The generic row's command lives in CAPEVOLVE_OPTIMIZER_CMD; the guard must see through it."""
+    cli = tmp_path / "fakecli.py"
+    monkeypatch.setenv("CAPEVOLVE_OPTIMIZER_CMD", f"{sys.executable} {cli} -p {{prompt_text}}")
+    r = _run(tmp_path, ['  command_template: "${CAPEVOLVE_OPTIMIZER_CMD}"'])
+    argv = r["seen"]["argv"]
+    assert all(len(a.encode("utf-8")) < ARG_LIMIT for a in argv), "an over-limit argv string"
+    assert any(str(r["prompt"]) in a for a in argv), f"no pointer to the prompt file: {argv}"
+
+
 def test_a_small_inlined_prompt_is_unchanged():
     sys.path.insert(0, str(RUN_OPT.parent))
     import run as run_optimizer  # noqa: E402
