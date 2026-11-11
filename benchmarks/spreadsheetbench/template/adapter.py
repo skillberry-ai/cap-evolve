@@ -1307,6 +1307,9 @@ def _external_gate_error(ctx) -> str | None:
         key = h.hexdigest()
     except OSError as e:
         return f"CANDIDATE_HELPER_GATE: a helper file cannot be read, so the candidate was not run: {e}"
+    # Fast path without a lock: a verdict is written once and never changed, and a dict read is atomic in
+    # CPython, so a hit here is final. A miss takes the tree's own lock and checks again. Both dicts hold one
+    # small entry per distinct tree, so they stay small even in a long run.
     if key in _EXT_GATE_VERDICTS:
         return _EXT_GATE_VERDICTS[key]
     with _EXT_GATE_LOCK:

@@ -224,6 +224,33 @@ def test_a_run_without_helpers_never_resolves_its_helpers_table(tmp_path, monkey
     assert _events(rd, "helper_gate") == [] and _events(rd, "helper_gate_off") == []
 
 
+def test_a_spec_that_cannot_be_parsed_is_warned_about_once(tmp_path, monkeypatch, capsys):
+    # spec_for_run reads an unparseable spec as {} ("helpers off"): a gate that spec turned on must not go off
+    # silently
+    from cap_evolve import harness, specfile
+    monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
+    adapter = _toy_adapter()
+    rd, base = _fresh_run(tmp_path, adapter, spec_text="helpers:\n  enabled: true\n")
+    monkeypatch.setattr(specfile, "read_yaml", lambda text: (_ for _ in ()).throw(ValueError("bad yaml")))
+    for _ in range(2):
+        step = harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"),
+                                optimizer=_with_helper(CLEAN), instructions="x", current_val=base,
+                                gate_kwargs=GATE)
+    assert step["candidate_val"] is not None
+    assert len(_events(rd, "helper_gate_spec_unreadable")) == 1
+    assert capsys.readouterr().err.count("cannot be read or parsed") == 1
+
+
+def test_an_empty_spec_is_not_warned_about(tmp_path, monkeypatch):
+    from cap_evolve import harness
+    monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
+    adapter = _toy_adapter()
+    rd, base = _fresh_run(tmp_path, adapter, spec_text="\n")
+    harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=_with_helper(CLEAN),
+                     instructions="x", current_val=base, gate_kwargs=GATE)
+    assert _events(rd, "helper_gate_spec_unreadable") == []
+
+
 def test_a_gate_that_cannot_run_stops_run_step(tmp_path):
     from cap_evolve import harness, helper_gate
     adapter = _toy_adapter()
@@ -250,6 +277,56 @@ def test_gepa_refuses_a_bad_helper_before_the_child_minibatch(tmp_path, script):
     gated = {e["candidate"] for e in _events(rd, "gepa_local_gate")}
     assert not (refused & gated)
     assert not (refused & set(adapter.dirs)), "a refused child's own dir was rolled out"
+
+
+def test_gepa_refuses_a_bad_merge_before_its_minibatch(tmp_path, monkeypatch):
+    # the merge child is a new tree (parts of two lineages over their ancestor): it is gated too. The gate
+    # is made to refuse every merge, so the test proves the merge path asks it, before any rollout
+    from test_gepa import _two_file_echo_adapter
+    from cap_evolve import Budget, RunDir, gepa, harness, helper_gate
+    adapter = CountingAdapter(_two_file_echo_adapter(n=24))
+    seed = tmp_path / "seed_merge"
+    seed.mkdir()
+    (seed / "compA.txt").write_text("base\n", encoding="utf-8")
+    (seed / "compB.txt").write_text("base\n", encoding="utf-8")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="merge", budget=Budget(max_iterations=30, max_metric_calls=4000))
+    harness.ensure_splits(adapter, rd, seed=3, ratios=(0.34, 0.5, 0.16))
+    base = harness.baseline(adapter, seed, run_dir=rd)
+    asked, real = [], helper_gate.check_candidate
+
+    def check(run_dir, cand, **kw):
+        asked.append(Path(cand).name)
+        if Path(cand).name.startswith("merge_"):
+            return helper_gate.Refusal({"ok": False, "checks": [], "failure": "[helper_smoke] merged helpers clash"})
+        return real(run_dir, cand, **kw)
+
+    monkeypatch.setattr(helper_gate, "check_candidate", check)
+
+    def opt(workdir, instructions):  # the two complementary lineages of test_gepa's merge test
+        foc = (workdir / "FOCUS.md").read_text(encoding="utf-8") if (workdir / "FOCUS.md").exists() else ""
+        head = foc.split("All components")[0]
+        a, b = workdir / "compA.txt", workdir / "compB.txt"
+        fa, fb = "[A]" in a.read_text(encoding="utf-8"), "[B]" in b.read_text(encoding="utf-8")
+        if "compA.txt" in head and not fa:
+            a.write_text(a.read_text(encoding="utf-8") + "[A]\n", encoding="utf-8")
+        elif "compB.txt" in head and not fb:
+            b.write_text(b.read_text(encoding="utf-8") + "[B]\n", encoding="utf-8")
+        elif not fa:
+            a.write_text(a.read_text(encoding="utf-8") + "[A]\n", encoding="utf-8")
+        elif not fb:
+            b.write_text(b.read_text(encoding="utf-8") + "[B]\n", encoding="utf-8")
+
+    res = gepa.gepa_loop(adapter, run_dir=rd, optimizer=opt, seed_val=base, max_iterations=12, minibatch_size=4,
+                         component_selector="round_robin", max_merges=3, merge_cadence=1, seed=0,
+                         gate_kwargs={"mode": "paired"})
+    merges = [s for s in res["steps"] if "merge_of" in s]
+    assert merges, "the scenario must reach a merge"
+    assert all(s["helper_gate"] and s["accepted"] is False for s in merges)
+    refused = [e for e in _events(rd, "helper_gate_refused") if e.get("merge_of")]
+    assert {e["candidate"] for e in refused} == {s["candidate_id"] for s in merges}
+    assert not [d for d in adapter.dirs if d.startswith("merge_")], "a refused merge was rolled out"
+    assert _events(rd, "gepa_merge_local") == []
+    assert all(m in asked for m in (s["candidate_id"] for s in merges))
 
 
 # ---- HC-2: its proposal rounds ------------------------------------------------------------------------

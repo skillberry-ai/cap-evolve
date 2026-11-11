@@ -886,6 +886,23 @@ def _try_merge(
         shutil.rmtree(workdir, ignore_errors=True)
         return None
 
+    # The helper gate (cap_evolve.helper_gate), before the merge's first rollout. Each parent passed it, but the
+    # merge is a new tree: it is checked against the shared ancestor, so every change either side made is checked
+    # together (two helpers may now import each other). Refused like a merge that fails its local gate.
+    from . import helper_gate
+    refusal = helper_gate.check_candidate(run_dir, workdir, parent_dir=anc_dir, parent_id=anc,
+                                          project=(ctx.project_dir if ctx else None))
+    if refusal is not None:
+        run_dir.log_event("helper_gate_refused", candidate=mid, parent=anc, merge_of=[a["id"], b["id"]],
+                          report=refusal.to_dict(), reason=refusal.reason)
+        rejected.add(mid, f"merge {a['id']}+{b['id']}", refusal.reason)
+        if store is not None:
+            store.commit(f"merge {mid}: reject(helper_gate)", accepted=False)
+        shutil.rmtree(workdir, ignore_errors=True)
+        return {"candidate_id": mid, "merge_of": [a["id"], b["id"]], "ancestor": anc,
+                "origin": report["origin"], "local_gate": False, "accepted": False,
+                "candidate_val": None, "helper_gate": refusal.to_dict()}
+
     mb = _sample_minibatch(train_ids, mb_size, rng)
     merged_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir, cache=cache,
                                 tag=f"mb_merge_{idx:04d}", seed=seed)

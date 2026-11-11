@@ -148,6 +148,25 @@ def requested(spec: dict | None) -> bool:
     return bool(tbl.get("enabled")) if isinstance(tbl, dict) else False
 
 
+def _warn_if_spec_unreadable(run_dir, project) -> None:
+    """``spec_for_run`` returns ``{}`` for a spec it cannot parse, which reads as "helpers off". When the run's spec
+    file exists and has content, say so once: a gate that the spec turned on must not go off without a trace."""
+    from .specfile import resolve_spec_path
+    key = f"{run_dir.root}:spec"
+    if key in _WARNED:
+        return
+    path = resolve_spec_path(run_dir, project)
+    try:
+        has_text = path is not None and bool(path.read_text(encoding="utf-8").strip())
+    except OSError:
+        has_text = True
+    if has_text:
+        _WARNED.add(key)
+        run_dir.log_event("helper_gate_spec_unreadable", spec=str(path))
+        print(f"cap-evolve: WARNING: the run's spec {str(path)!r} cannot be read or parsed; the helper gate treats "
+              "this run as having no helpers (set CAPEVOLVE_HELPERS to decide it explicitly)", file=sys.stderr)
+
+
 def for_run(run_dir, project: Path | None = None) -> dict | None:
     """The run's resolved helper config when the gate is active, else None.
 
@@ -157,6 +176,8 @@ def for_run(run_dir, project: Path | None = None) -> dict | None:
     gate cannot run, and ``ValueError`` on an invalid ``helpers:`` table (``helpers.resolve``)."""
     from .specfile import spec_for_run
     spec = spec_for_run(run_dir, project)
+    if not isinstance(spec, dict) or not spec:
+        _warn_if_spec_unreadable(run_dir, project)
     if not requested(spec):
         return None
     cfg = helpers.resolve(spec)
