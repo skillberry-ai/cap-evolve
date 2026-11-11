@@ -17,6 +17,8 @@ so v1 runs are unchanged. Spec::
       enabled: true
       lint: true                # block task ids / answer literals / task-identity branches / network
       smoke: true               # helper_smoke stage in the pregate (0 rollouts charged on failure)
+      gate: true                # the helper gate (cap_evolve.helper_gate): ON by default whenever helpers are
+                                # on; only `gate: false` or CAPEVOLVE_HELPER_GATE=0 turns it off
       suffixes: [".py"]         # what counts as a helper file under executable_dirs
       max_file_bytes: 65536
       max_total_bytes: 262144
@@ -42,7 +44,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 DEFAULTS: dict = {
-    "enabled": False, "lint": True, "smoke": True,
+    "enabled": False, "lint": True, "smoke": True, "gate": True,
     "suffixes": [".py"], "max_file_bytes": 65536, "max_total_bytes": 262144, "smoke_timeout": 20.0,
     "task_ids": [], "ids_file": None, "forbidden_literals": [], "protected_patterns": None,
     "deny_roots": [], "fixtures": None, "fixture_splits": ["feedback", "train"],
