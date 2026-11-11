@@ -1200,6 +1200,135 @@ def _read_task_template(ctx) -> str:
     return _helpers.render_skills_root(text, _SKILLS_IMPORT_ROOT) if _helpers.enabled() else text
 
 
+# ---- the helper gate for optimizers that call run_target directly -------------------------------------
+#
+# cap-evolve's own algorithms run the helper gate (cap_evolve.helper_gate) in the loop, before any rollout of a
+# candidate is paid for. An EXTERNAL optimizer that calls this adapter's run_target itself has no such loop, so it
+# opts in here: CAPEVOLVE_HELPERS_SPEC names the run's capevolve.yaml and CAPEVOLVE_HELPERS_SEED the seed
+# capability dir. The rules are the shared gate's (one copy); only the caching and the error reporting live here.
+# A refused candidate scores 0 on each rollout (error_kind=candidate): the external caller pays for those
+# rollouts, because its budget is counted outside cap-evolve.
+
+_EXT_GATE_LOCK = threading.Lock()           # guards the two dicts below; never held during a check
+_EXT_GATE_TREE_LOCKS: dict[str, threading.Lock] = {}
+_EXT_GATE_VERDICTS: dict[str, str | None] = {}
+_EXT_GATE_CONFIGS: dict[tuple, tuple | None] = {}
+
+
+class HelperGateConfigError(RuntimeError):
+    """CAPEVOLVE_HELPERS_SPEC is set but the helper gate cannot run. The run's fault, not a candidate's.
+
+    Raised when the Adapter is created and from live(), so a caller fails before its first rollout; run_target
+    returns it as an infrastructure error (retried, never scored 0), because every caller turns a raise from
+    run_target into a per-trial error."""
+
+
+def _external_gate_config() -> tuple | None:
+    """``(cfg, seed, fingerprint)`` for the external gate, or None when it is off.
+
+    Off unless CAPEVOLVE_HELPERS_SPEC is set and the shared gate is active for that spec. The cached entry is
+    keyed on everything that can change it: the spec file (path + mtime), CAPEVOLVE_HELPERS,
+    CAPEVOLVE_HELPER_GATE and CAPEVOLVE_HELPERS_SEED. ``fingerprint`` hashes what a verdict depends on beyond the
+    candidate's own files (the resolved config and the seed path), so changing either resets the cached verdicts.
+    The ids_file is not in it: it can change without the spec changing, so ``_external_gate_error`` hashes its
+    bytes on every call."""
+    import hashlib
+
+    from cap_evolve import helper_gate
+
+    spec_path = os.environ.get("CAPEVOLVE_HELPERS_SPEC", "")
+    if not spec_path:
+        return None
+    seed_env = os.environ.get("CAPEVOLVE_HELPERS_SEED", "")
+    try:
+        key = (spec_path, Path(spec_path).stat().st_mtime_ns, os.environ.get("CAPEVOLVE_HELPERS", ""),
+               os.environ.get(helper_gate.ENV, ""), seed_env)
+        with _EXT_GATE_LOCK:
+            if key in _EXT_GATE_CONFIGS:
+                return _EXT_GATE_CONFIGS[key]
+        from cap_evolve.specfile import read_yaml
+
+        cfg = _helpers.resolve(read_yaml(Path(spec_path).read_text(encoding="utf-8")))
+        got = None
+        if helper_gate.active(cfg):
+            # The gate must judge exactly the helpers the agent will load: run_target loads them only when
+            # CAPEVOLVE_HELPERS says so (it does not read the spec), so the two must agree.
+            if cfg["enabled"] != _helpers.enabled():
+                raise HelperGateConfigError(
+                    "helpers.enabled is true in CAPEVOLVE_HELPERS_SPEC but CAPEVOLVE_HELPERS is not set: the "
+                    "agent would not load the helpers the gate checks. Set CAPEVOLVE_HELPERS=1.")
+            if not seed_env:
+                raise HelperGateConfigError("CAPEVOLVE_HELPERS_SEED is not set: the gate compares each candidate "
+                                            "with the seed capability dir and does not guess where it is")
+            seed = Path(seed_env)
+            helper_gate.check_config(cfg, seed=seed)
+            h = hashlib.sha256(json.dumps(cfg, sort_keys=True, default=str).encode())
+            h.update(str(seed.resolve()).encode())
+            got = (cfg, seed, h.hexdigest())
+        elif helper_gate.off_reason(cfg):
+            print(f"spreadsheetbench: WARNING: helpers are on but the helper gate is off "
+                  f"({helper_gate.off_reason(cfg)}); candidates' helper scripts are not checked", file=sys.stderr)
+    except HelperGateConfigError:
+        raise
+    except Exception as e:  # noqa: BLE001 — unreadable spec, invalid helpers table, GateConfigError: the run's fault
+        raise HelperGateConfigError(f"helper gate: CAPEVOLVE_HELPERS_SPEC={spec_path!r}: {e}") from e
+    with _EXT_GATE_LOCK:
+        _EXT_GATE_CONFIGS[key] = got
+    return got
+
+
+def _external_gate_error(ctx) -> str | None:
+    """Why the shared helper gate refuses this candidate, or None. External callers only (see above).
+
+    One check per distinct tree: the verdict is cached by a hash of every file in the candidate plus the config
+    fingerprint and the ids_file bytes, and computed under a per-tree lock, so concurrent rollouts of the same candidate wait for
+    one check while other candidates are not blocked. A helper file that cannot be read is the candidate's own
+    fault and is reported as such (scored 0), never as a retried infra error."""
+    import hashlib
+
+    from cap_evolve import helper_gate
+
+    got = _external_gate_config()
+    if got is None:
+        return None
+    cfg, seed, fingerprint = got
+    h = hashlib.sha256(fingerprint.encode())
+    if cfg.get("ids_file"):
+        try:
+            h.update(Path(cfg["ids_file"]).read_bytes())
+        except OSError as e:
+            raise HelperGateConfigError(f"helpers.ids_file={cfg['ids_file']!r} cannot be read: {e}") from e
+    try:
+        # every file, not only the helpers: the surface check also looks at executables outside the declared
+        # dirs, symlinks and sizes, so two trees that differ anywhere must not share a verdict
+        for f in _helpers._real_files(Path(ctx)):
+            body = os.readlink(f).encode() if f.is_symlink() else f.read_bytes()
+            h.update(f.relative_to(ctx).as_posix().encode() + (b"\0L" if f.is_symlink() else b"\0F") + body + b"\0")
+        key = h.hexdigest()
+    except OSError as e:
+        return f"CANDIDATE_HELPER_GATE: a helper file cannot be read, so the candidate was not run: {e}"
+    if key in _EXT_GATE_VERDICTS:
+        return _EXT_GATE_VERDICTS[key]
+    with _EXT_GATE_LOCK:
+        lock = _EXT_GATE_TREE_LOCKS.setdefault(key, threading.Lock())
+    with lock:
+        if key in _EXT_GATE_VERDICTS:
+            return _EXT_GATE_VERDICTS[key]
+        try:
+            # An external caller does not say which candidate this one was edited from: the seed stands in
+            # as the parent, so a helper the seed already ships byte-identical is not blamed on the candidate.
+            res = helper_gate.gate(Path(ctx), cfg, parent=seed, seed=seed)
+        except Exception as e:  # noqa: BLE001 — the gate could not run: the run's fault
+            raise HelperGateConfigError(f"helper gate could not run: {type(e).__name__}: {e}") from e
+        verdict = None if res["ok"] else (
+            "CANDIDATE_HELPER_GATE: the helper scripts failed the pre-rollout check, so this candidate was not "
+            "run. Fix these and it can be scored: " + res["failure"][:1500])
+        print(f"spreadsheetbench: helper gate {'FAILED' if verdict else 'passed'} for tree {key[:12]}",
+              file=sys.stderr)
+        _EXT_GATE_VERDICTS[key] = verdict
+        return verdict
+
+
 def _task_template_error(ctx) -> str | None:
     """Why this candidate's template is unusable, or None if it is fine.
 
@@ -1555,6 +1684,11 @@ def _replay_code(solution_code: str, input_name: str, case_input_name: str,
 
 class Adapter(CapabilityAdapter):
 
+    def __init__(self) -> None:
+        # An external caller's helper gate config is checked here, before its first rollout: every caller turns a
+        # raise from run_target into a per-trial error, so this is where a broken config can stop the run.
+        _external_gate_config()
+
     # ---- tasks -------------------------------------------------------------
 
     def tasks(self, split: str) -> list[Task]:
@@ -1598,6 +1732,9 @@ class Adapter(CapabilityAdapter):
         the same message into a per-rollout error, which costs the candidate its score and
         nothing else.
         """
+        # The one exception: an external helper gate whose config is broken (CAPEVOLVE_HELPERS_SPEC set; see
+        # _external_gate_config) raises, because that is the run's fault and every rollout would fail on it.
+        _external_gate_config()
         err = _task_template_error(candidate_dir)
         if err:
             print(f"spreadsheetbench: candidate rejected — {err}", file=sys.stderr)
@@ -1619,6 +1756,17 @@ class Adapter(CapabilityAdapter):
                 # failure under errored_trial_policy=fail, not missing data.
                 return Rollout(task_id=task.id, error=tmpl_error,
                                metadata={"error_kind": "candidate"})
+
+            # The helper gate for optimizers that call run_target directly (off unless CAPEVOLVE_HELPERS_SPEC is
+            # set; cap-evolve's own loops gate before any rollout). A broken gate config is the run's fault.
+            try:
+                gate_error = _external_gate_error(ctx)
+            except HelperGateConfigError as e:
+                return Rollout(task_id=task.id, error=f"HELPER_GATE_CONFIG_ERROR: {e}",
+                               metadata={"error_kind": "infra", "helper_gate": "config_error"})
+            if gate_error:
+                return Rollout(task_id=task.id, error=gate_error,
+                               metadata={"error_kind": "candidate", "helper_gate": "failed"})
 
             # v2 helpers (off unless helpers.enabled): the candidate's skills/*/scripts are defined once in
             # the rollout's own kernel (text only: no mount, nothing under the data view, and only THIS

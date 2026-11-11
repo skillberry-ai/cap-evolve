@@ -3765,6 +3765,21 @@ def run_step(
                                 event="capability_invalid", detail_key="validation",
                                 rejected=rejected, memory_skill=ctx.memory_skill)
 
+    # The helper gate (cap_evolve.helper_gate), still before any rollout is paid for: a candidate whose helper
+    # scripts hard-code task ids, read gold paths or do not even import is not measured. Same INDECISIVE
+    # discipline as the tamper and validation paths above, and the reason is filed for the next proposer.
+    from . import helper_gate
+    refusal = helper_gate.check_candidate(run_dir, workdir, parent_dir=parent_dir, parent_id=parent_id,
+                                          project=ctx.project_dir)
+    if refusal is not None:
+        return _tamper_step(run_dir, cid=cid, parent_id=parent_id, workdir=workdir,
+                            report=refusal, current_val=current_val,
+                            optimizer_seconds=optimizer_seconds,
+                            opt_cost_usd=opt_cost_usd, opt_tokens=opt_tokens,
+                            optimizer_error=optimizer_error, kind="helper_gate",
+                            event="helper_gate_refused", detail_key="helper_gate",
+                            rejected=rejected, memory_skill=ctx.memory_skill)
+
     p2_out = None
     try:
         if p2 is not None:

@@ -656,6 +656,27 @@ def gepa_loop(
                 _save()
                 continue
 
+        # The helper gate (cap_evolve.helper_gate), before the child's first rollout: refused helper scripts are
+        # INDECISIVE like a tampered child (no reward, never in the pool), with the reason in the event log.
+        from . import helper_gate
+        refusal = helper_gate.check_candidate(run_dir, workdir, parent_dir=parent_dir, parent_id=parent["id"],
+                                              project=ctx.project_dir)
+        if refusal is not None:
+            run_dir.log_event("helper_gate_refused", candidate=cid, parent=parent["id"],
+                              report=refusal.to_dict(), reason=refusal.reason)
+            _reason = "indecisive (helper_gate): " + refusal.reason
+            record_iteration(run_dir, workdir, cid, parent_id=parent["id"],
+                             accepted=False, reason=_reason, indecisive=True,
+                             memory_skill=ctx.memory_skill)
+            run_dir.log_event("step_indecisive", candidate=cid, reason=_reason)
+            steps.append({"candidate_id": cid, "parent_id": parent["id"], "minibatch": mb,
+                          "accepted": False, "candidate_val": None,
+                          "helper_gate": refusal.to_dict(), "optimizer_error": opt_error,
+                          "focus": focus_label, "workdir": str(workdir)})
+            run_dir.record_spend_warnings()
+            _save()
+            continue
+
         # 6. eval child on the SAME minibatch; cheap LOCAL gate sum(child)>sum(parent).
         child_mb = _eval_minibatch(adapter, workdir, mb, run_dir=run_dir,
                                    cache=cache, tag=f"mb_c_{n:04d}", seed=seed)

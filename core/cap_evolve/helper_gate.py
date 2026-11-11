@@ -27,6 +27,7 @@ fail open, because failing open would run the experiment with the check silently
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from . import helper_smoke, helpers
@@ -124,3 +125,81 @@ def gate(cand: Path, cfg: dict | None, *, parent: Path | None = None, seed: Path
     failed = [c for c in checks if not c["ok"]]
     return {"ok": not failed, "checks": checks,
             "failure": "; ".join(f"[{c['name']}] {c['detail']}" for c in failed)}
+
+
+# ---- the gate inside a run ---------------------------------------------------------------------------
+
+_WARNED: set[str] = set()
+
+
+def requested(spec: dict | None) -> bool:
+    """True when this run asks for helpers: ``CAPEVOLVE_HELPERS`` if set, else ``helpers.enabled`` in the spec.
+
+    Checked before anything else, so a run without helpers (the default, and every run before the gate existed)
+    is untouched: no ``helpers.resolve``, no event, nothing that can raise, even when its spec carries a disabled
+    ``helpers:`` table that ``resolve`` would refuse. ``helpers.resolve`` makes the same decision for ``enabled``;
+    an unparseable ``CAPEVOLVE_HELPERS`` is left to it, which raises (someone meant to set it)."""
+    raw = os.environ.get("CAPEVOLVE_HELPERS", "").strip().lower()
+    if raw in helpers._FALSE:
+        return False
+    if raw:
+        return True
+    tbl = spec.get("helpers") if isinstance(spec, dict) else None
+    return bool(tbl.get("enabled")) if isinstance(tbl, dict) else False
+
+
+def for_run(run_dir, project: Path | None = None) -> dict | None:
+    """The run's resolved helper config when the gate is active, else None.
+
+    The config comes from the spec THIS run was started with (``specfile.spec_for_run``), so every algorithm
+    reads the same one. When helpers are on but the gate is off, a ``helper_gate_off`` event is logged and a
+    warning printed, once per run, so the results show the run had no gate. Raises ``GateConfigError`` when the
+    gate cannot run, and ``ValueError`` on an invalid ``helpers:`` table (``helpers.resolve``)."""
+    from .specfile import spec_for_run
+    spec = spec_for_run(run_dir, project)
+    if not requested(spec):
+        return None
+    cfg = helpers.resolve(spec)
+    why = off_reason(cfg)
+    if why and str(run_dir.root) not in _WARNED:
+        _WARNED.add(str(run_dir.root))
+        run_dir.log_event("helper_gate_off", reason=why)
+        print(f"cap-evolve: WARNING: helpers are on but the helper gate is off ({why}); "
+              "candidates' helper scripts are not checked in this run", file=sys.stderr)
+    if not active(cfg):
+        return None
+    check_config(cfg)
+    return cfg
+
+
+class Refusal:
+    """A candidate the gate refused, in the report shape the loop's indecisive-step path records."""
+
+    def __init__(self, result: dict):
+        self.result = result
+
+    @property
+    def reason(self) -> str:
+        return "the helper gate refused the candidate's helper scripts: " + self.result["failure"]
+
+    def to_dict(self) -> dict:
+        return dict(self.result)
+
+
+def check_candidate(run_dir, cand: Path, *, parent_dir: Path | None = None, parent_id: str | None = None,
+                    project: Path | None = None) -> Refusal | None:
+    """Run the gate on one proposed candidate before any rollout of it is paid for; a ``Refusal``, or None.
+
+    ``parent_dir``/``parent_id``: the bytes the candidate was edited from. The seed is the run's own seed
+    snapshot. Smoke fixtures come from the parent's rollouts in the feedback splits only
+    (``helpers.fixture_splits``). Each verdict is logged as a ``helper_gate`` event. Raises
+    ``GateConfigError`` when the gate cannot run."""
+    cfg = for_run(run_dir, project)
+    if cfg is None:
+        return None
+    traces = (helper_smoke.fixture_traces(run_dir.rollouts, parent_id or "seed", cfg["fixture_splits"])
+              if cfg.get("smoke", True) else [])
+    res = gate(cand, cfg, parent=parent_dir, seed=run_dir.candidate_dir("seed"), traces=traces)
+    run_dir.log_event("helper_gate", candidate=Path(cand).name, parent=parent_id, ok=res["ok"],
+                      checks={c["name"]: c["ok"] for c in res["checks"]}, failure=res["failure"][:500])
+    return None if res["ok"] else Refusal(res)
