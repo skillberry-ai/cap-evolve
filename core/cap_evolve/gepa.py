@@ -269,7 +269,7 @@ def _write_reflection(workdir: Path, parent_mb: SplitResult) -> str:
         ]
         if raw.get("trace"):
             lines.append(f"- Trajectory: {str(raw.get('trace'))[:800]}")
-        lines.append(f"- Feedback: {str(pt.get('feedback', ''))[:800]}")
+        lines.append(f"- Feedback: {str(pt.get('feedback', ''))}")
         lines.append("")
     if not actionable:
         lines.append("- (no actionable failures sampled; pursue robustness/generalization)")

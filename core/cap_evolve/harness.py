@@ -342,6 +342,29 @@ def _live(adapter, candidate_dir: Path):
 
 # ---- evaluation -----------------------------------------------------------
 
+def _join_trial_feedback(trials: list) -> str:
+    """One task's feedback from ALL its trials, each labelled with that trial's reward.
+
+    ``trials`` is ``[(trial_index, reward_or_None, feedback)]``. A single trial (or every
+    trial saying the same thing) gives its text unchanged; otherwise each distinct text is
+    kept once, under the trials that produced it — an LLM judge's verdict varies between
+    trials, and the last one alone may praise a task whose mean is low. Never shortened.
+    """
+    rows = [(int(k), r, str(fb or "").strip()) for k, r, fb in sorted(trials, key=lambda t: t[0])]
+    texts = [fb for _, _, fb in rows if fb]
+    if len(set(texts)) <= 1:
+        return texts[0] if texts else ""
+    by_text: dict[str, list] = {}
+    for k, r, fb in rows:
+        if fb:
+            by_text.setdefault(fb, []).append((k, r))
+    out = []
+    for fb, ks in by_text.items():
+        head = ", ".join(f"trial {k}" + ("" if r is None else f" reward {float(r):.3f}") for k, r in ks)
+        out.append(f"[{head}]\n{fb}")
+    return "\n\n".join(out)
+
+
 def _aggregate_metrics(per_trial_metrics: list, reduced_reward: float) -> list:
     """Reduce per-trial metric catalogs into one display catalog for the reduced Score.
 
@@ -614,7 +637,7 @@ def _evaluate_candidate(
 
     # collect per-task trial rewards (+ last rollout/score) across trials
     per_task_trials: dict[str, list[float]] = {t.id: [] for t in tasks}
-    per_task_feedback: dict[str, str] = {t.id: "" for t in tasks}
+    per_task_feedback: dict[str, list] = {t.id: [] for t in tasks}  # [(trial, reward, text)]
     per_task_metrics: dict[str, list] = {t.id: [] for t in tasks}  # per-trial metric catalogs
     per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
     per_task_errored_trials: dict[str, int] = {t.id: 0 for t in tasks}  # how many trials errored
@@ -721,7 +744,8 @@ def _evaluate_candidate(
             if not errored:
                 per_task_trials[tid].append(0.0 if cand_fail else sc.reward)
                 per_task_metrics[tid].append([] if cand_fail else sc.metrics)
-            per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
+            per_task_feedback[tid].append((trial_offset + k, None if errored else (0.0 if cand_fail else sc.reward),
+                                           sc.feedback or ""))
             # #589: per-task/per-trial detail, opt-in via CAPEVOLVE_LOG_LEVEL=DEBUG
             # (see cap_evolve/__init__.py) — a no-op call when logging isn't enabled.
             logger.debug("split=%s tag=%s task=%s trial=%s reward=%s errored=%s",
@@ -830,7 +854,7 @@ def _evaluate_candidate(
         # task produced no measurement at all and must be excluded from the split
         # mean and from paired deltas rather than counted as a 0.0.
         scores.append(Score(
-            task_id=tid, reward=mean(tr), feedback=per_task_feedback[tid],
+            task_id=tid, reward=mean(tr), feedback=_join_trial_feedback(per_task_feedback[tid]),
             n=n_trials, stderr=stderr(tr), trial_rewards=tr,
             raw={"errored": per_task_errored[tid],
                  "errored_trials": per_task_errored_trials[tid],
@@ -904,7 +928,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
     vdir = run_dir.rollout_dir(split)
     by_task: dict[str, list[float]] = {}
-    feedback: dict[str, str] = {}
+    feedback: dict[str, list] = {}   # tid -> [(trial, reward, text)]
     raw: dict[str, dict] = {}
     metrics_by_task: dict[str, list] = {}
     cost_by_task: dict[str, list[float]] = {}  # #676: per-task cost, every trial counts
@@ -915,7 +939,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             rec = _json.loads(f.read_text(encoding="utf-8"))
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
-            feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
+            trial_k = int(f.stem.rsplit("__t", 1)[1])
             cost_by_task.setdefault(tid, []).append(
                 float((rec.get("rollout") or {}).get("cost_usd") or 0.0))
             # carry the structured infra flag + trial counts forward across resume.
@@ -940,6 +964,8 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             r0 = raw.setdefault(tid, {})
             r0["n_trials"] = int(r0.get("n_trials", 0)) + 1
             by_task.setdefault(tid, [])
+            feedback.setdefault(tid, []).append(
+                (trial_k, None if errored else float(sc.get("reward", 0.0)), sc.get("feedback") or ""))
             if errored:
                 r0["errored"] = True
                 r0["errored_trials"] = int(r0.get("errored_trials", 0)) + 1
@@ -951,7 +977,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     for tid, r0 in raw.items():
         r0["valid_trials"] = len(by_task.get(tid, []))
         r0["cost_usd"] = mean(cost_by_task[tid]) if cost_by_task.get(tid) else None
-    scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
+    scores = [Score(task_id=t, reward=mean(r), feedback=_join_trial_feedback(feedback.get(t, [])),
                     n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}),
                     metrics=_aggregate_metrics(metrics_by_task.get(t, []), mean(r)))
               for t, r in by_task.items()]
@@ -4265,7 +4291,7 @@ def _classify(per):
 
 def _fmt(pt) -> str:
     return f"- {pt.get('task_id')} (reward {float(pt.get('reward', 0) or 0):.2f}): " \
-           f"{str(pt.get('feedback', '')).strip()[:400]}"
+           f"{str(pt.get('feedback', '')).strip()}"
 
 
 def _passing_block(solid, *, max_ids: int = 60) -> str:
@@ -4322,20 +4348,54 @@ _SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
                     "CLAUDE.md", "AGENTS.md", "GEMINI.md")
 
 
+#: Optional cap on how many always-failing / flaky tasks the failure index lists inline
+#: (``CAPEVOLVE_MAX_LISTED_FAILURES``); unset or 0 lists every one. The full rollouts are in
+#: ./trajectories/ either way — the cap only bounds the prompt, for a benchmark whose
+#: hundreds of identical binary failures would add length and no information.
+def _cap_listed(rows: list) -> list:
+    try:
+        n = int(os.environ.get("CAPEVOLVE_MAX_LISTED_FAILURES") or 0)
+    except ValueError:
+        n = 0
+    return rows[:n] if n > 0 else list(rows)
+
+
+#: A template slot: ``{{NAME}}``. Optionally inside backticks, which marks a MENTION of the
+#: slot in prose ("the `{{FAILURES}}` block below"), not a place to fill.
+_SLOT_RE = re.compile(r"(`?)(\{\{[A-Z0-9_]+\}\})(`?)")
+
+
+def _fill_slots(text: str, repl: dict) -> str:
+    """Fill a template's ``{{NAME}}`` slots from ``repl`` in ONE pass.
+
+    A backtick-quoted ```{{NAME}}``` is prose naming the slot, so it renders as ```NAME```
+    instead of a second copy of the block — the default template's "The `{{FAILURES}}`
+    block below…" line used to inline the whole failure index there too, doubling a
+    460 KB prompt. One pass, so a filled value (judge feedback quoting
+    ``{{X}}`` text, say) is never itself re-expanded. Unknown slots are left as-is.
+    """
+    def sub(m: re.Match) -> str:
+        lq, slot, rq = m.groups()
+        if lq and rq:
+            return f"`{slot[2:-2]}`"
+        return lq + (repl[slot] if slot in repl else slot) + rq
+    return _SLOT_RE.sub(sub, text)
+
+
 def _failures_block(always_fail, flaky, errored) -> str:
     """The per-iteration (a)/(b)/errored failure index for the prompt."""
     lines: list[str] = []
     if always_fail:
         lines.append(f"## (a) {len(always_fail)} ALWAYS-failing task(s) — fix the shared "
                      "root cause (full traces in ./trajectories/):")
-        lines += [_fmt(pt) for pt in always_fail[:10]]
+        lines += [_fmt(pt) for pt in _cap_listed(always_fail)]
         lines.append("")
     if flaky:
         lines.append(f"## (b) {len(flaky)} FLAKY task(s) — pass sometimes; make the good "
                      "behavior consistent (full traces in ./trajectories/):")
-        lines.append("(reward is the mean over trials — the honest signal; the feedback line is "
-                     "from the LAST trial and may say 'passed' even when the mean is below 1.)")
-        lines += [_fmt(pt) for pt in flaky[:8]]
+        lines.append("(reward is the mean over trials — the honest signal; listed lowest reward "
+                     "first. With several trials, each trial's feedback is shown under its own reward.)")
+        lines += [_fmt(pt) for pt in _cap_listed(sorted(flaky, key=lambda pt: float(pt.get("reward", 0) or 0)))]
         lines.append("")
     if not always_fail and not flaky:
         lines.append("## No actionable failures in focus — seek a robustness/generalization gain "
@@ -4850,9 +4910,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     except OSError as e:
         why = f"could not be read ({e})"
     if tmpl and "{{FOCUS_SUMMARY}}" in tmpl:
-        for k, v in repl.items():
-            tmpl = tmpl.replace(k, v)
-        return tmpl
+        return _fill_slots(tmpl, repl)
     if tmpl:
         why = "has no {{FOCUS_SUMMARY}} placeholder, so it cannot be rendered"
     # Falling back is a fact worth stating: the optimizer is about to read cap-evolve's
@@ -5098,8 +5156,7 @@ class OptimizerContext:
             "{{PASSING}}": "",
             "{{ALGO_BRIEF}}": "",
         }
-        for k, v in repl.items():
-            text = text.replace(k, v)
+        text = _fill_slots(text, repl)
         # Any slot the template carries that this method does not know about would otherwise
         # reach the reader as literal braces. Drop them rather than ship a broken document.
         return re.sub(r"\{\{[A-Z0-9_]+\}\}", "", text)

@@ -547,7 +547,7 @@ def _pooled_split_result(traces, tasks):
         ts = by.get(tid, [])
         if ts:
             rows.append({"task_id": tid, "reward": sum(t.reward for t in ts) / len(ts),
-                         "feedback": next((t.signature for t in ts if t.reward < 1.0), "")[:500]})
+                         "feedback": next((t.signature for t in ts if t.reward < 1.0), "")})
     mean = sum(r["reward"] for r in rows) / len(rows) if rows else 0.0
     return SplitResult(split="feedback", reward=mean, stderr=0.0, per_task=rows,
                        n_tasks=len(rows), n_scored=len(rows))

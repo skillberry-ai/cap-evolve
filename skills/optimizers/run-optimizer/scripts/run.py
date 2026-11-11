@@ -4,7 +4,9 @@ The optimize loop calls this with ``--name <optimizer> --workdir <candidate copy
 --prompt <INSTRUCTIONS.md>``. This script reads ``optimizers/registry.yaml``,
 resolves the named row, builds the command from its ``command_template`` (with
 ``{workdir}`` / ``{prompt}`` / ``{prompt_text}`` / ``{model}`` placeholders), and
-runs it with cwd = the workdir so the agent edits files in place. One runner +
+runs it with cwd = the workdir so the agent edits files in place. A row with
+``prompt_stdin: "true"`` gets the prompt on stdin instead of in argv, so its size
+is not bounded by the kernel's per-argument limit. One runner +
 one YAML row per optimizer replaces the eight near-identical wrapper skills.
 
 Backward-compat: a spec that still names an old optimizer skill (``claude-code``,
@@ -295,7 +297,8 @@ def write_transcript(path: str, stdout: str, stderr: str, *, extra_keys=()) -> d
 
 
 def _run_and_stream(cmd: list[str], *, cwd: str, env: dict,
-                    transcript_path: str | None, extra_keys=()) -> tuple[int, str, str]:
+                    transcript_path: str | None, extra_keys=(),
+                    stdin_text: str | None = None) -> tuple[int, str, str]:
     """Run ``cmd``, TEEING each stdout line to ``transcript_path`` (redacted, append mode)
     AS IT ARRIVES, instead of buffering the whole run in memory and writing once at exit.
 
@@ -309,9 +312,32 @@ def _run_and_stream(cmd: list[str], *, cwd: str, env: dict,
     stderr is drained on a background thread while stdout is read on the main thread —
     reading one pipe to completion before touching the other risks the classic two-pipe
     deadlock if the child fills the other pipe's buffer while blocked on this one.
+
+    ``stdin_text`` (a ``prompt_stdin`` row's prompt) is written on its own thread for the
+    same reason: a child that starts printing before it has read all of a large prompt
+    would otherwise block on a full stdout pipe while we block on its full stdin pipe.
+    ``None`` leaves stdin unconnected, as before.
     """
     proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True, bufsize=1)
+                            stderr=subprocess.PIPE, text=True, bufsize=1,
+                            stdin=subprocess.PIPE if stdin_text is not None else None)
+
+    stdin_thread = None
+    if stdin_text is not None:
+        def _feed_stdin() -> None:
+            assert proc.stdin is not None
+            try:
+                proc.stdin.write(stdin_text)
+            except (BrokenPipeError, OSError):
+                pass  # the child exited early; its own exit code/stderr say why
+            finally:
+                try:
+                    proc.stdin.close()
+                except OSError:
+                    pass
+
+        stdin_thread = threading.Thread(target=_feed_stdin, daemon=True)
+        stdin_thread.start()
 
     stderr_chunks: list[str] = []
 
@@ -345,7 +371,32 @@ def _run_and_stream(cmd: list[str], *, cwd: str, env: dict,
     proc.stdout.close()
     proc.wait()
     stderr_thread.join()
+    if stdin_thread is not None:
+        stdin_thread.join()
     return proc.returncode, "".join(stdout_chunks), "".join(stderr_chunks)
+
+
+#: Largest prompt inlined into argv via ``{prompt_text}``. Linux caps ONE argument at
+#: MAX_ARG_STRLEN = 128 KiB (and all of argv+env at ARG_MAX), so a bigger prompt fails the
+#: exec with E2BIG before the CLI even starts — a 460 KB prompt (every LLM judge's full
+#: rationale, 3 trials x 12 tasks) crashed an optimizer iteration that way. Kept
+#: well under the cap to leave room for multi-byte UTF-8 and the rest of the command.
+MAX_INLINE_PROMPT_BYTES = 96 * 1024
+
+
+def inline_prompt_text(prompt_text: str, prompt_path: str) -> tuple[str, bool]:
+    """The ``{prompt_text}`` value for a row that inlines the prompt into argv.
+
+    Returns ``(text, replaced)``. Within ``MAX_INLINE_PROMPT_BYTES`` the prompt is inlined
+    unchanged; above it, a short pointer to the prompt FILE (which the agent can read in
+    full, in its cwd) replaces it, since exec would otherwise fail outright. Rows that set
+    ``prompt_stdin`` never come through here: they get the whole prompt on stdin.
+    """
+    if len(prompt_text.encode("utf-8")) <= MAX_INLINE_PROMPT_BYTES:
+        return prompt_text, False
+    return (f"Your full instructions are in {prompt_path} (also ./INSTRUCTIONS.md in your "
+            "working directory) — too large to pass on the command line. Read that file IN "
+            "FULL, every section, before doing anything else, then follow it exactly."), True
 
 
 def build_command(template: str, *, workdir: str, prompt: str, prompt_text: str,
@@ -436,8 +487,20 @@ def main(argv=None) -> int:
         return 2
     prompt_text = prompt_path.read_text(encoding="utf-8")
 
-    cmd = build_command(str(row.get("command_template", "")), workdir=workdir,
-                        prompt=str(prompt_path), prompt_text=prompt_text,
+    # A ``prompt_stdin`` row reads the prompt from stdin, so its size is unbounded; every
+    # other row that inlines {prompt_text} is bounded by the per-argument exec limit.
+    template = str(row.get("command_template", ""))
+    prompt_stdin = str(row.get("prompt_stdin", "")).lower() == "true"
+    argv_prompt_text = prompt_text
+    if not prompt_stdin and "{prompt_text}" in template:
+        argv_prompt_text, replaced = inline_prompt_text(prompt_text, str(prompt_path))
+        if replaced:
+            print(f"warning: run-optimizer: the {len(prompt_text.encode('utf-8'))}-byte prompt is "
+                  f"over the {MAX_INLINE_PROMPT_BYTES}-byte argv limit for {name!r}; passing a "
+                  f"pointer to {prompt_path} instead (set prompt_stdin in its registry row if "
+                  "the CLI reads the prompt from stdin)", file=sys.stderr, flush=True)
+    cmd = build_command(template, workdir=workdir,
+                        prompt=str(prompt_path), prompt_text=argv_prompt_text,
                         model=args.model, self_dir=_self_dir())
 
     # Optional headless structured output: append the row's json_flag so the CLI
@@ -496,7 +559,8 @@ def main(argv=None) -> int:
     # mid-session previously lost the entire transcript). Still returns the full stdout/
     # stderr text, so everything below is byte-identical to the prior non-streaming behavior.
     returncode, stdout, stderr = _run_and_stream(
-        cmd, cwd=workdir, env=env, transcript_path=args.transcript, extra_keys=extra_keys)
+        cmd, cwd=workdir, env=env, transcript_path=args.transcript, extra_keys=extra_keys,
+        stdin_text=prompt_text if prompt_stdin else None)
     # Relay the agent CLI's stderr to OUR stderr, on success as well as failure: a CLI
     # that prints a real diagnostic (rate limit, model fallback, auth warning) and then
     # exits 0 must not look silently successful. stdout stays exactly one JSON object

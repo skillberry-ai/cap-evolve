@@ -9,7 +9,13 @@
 #                      {prompt} is the path to INSTRUCTIONS.md; {prompt_text} is
 #                      its CONTENTS (use when the CLI takes the prompt inline).
 #                      {model} expands to the resolved model, or is dropped (with
-#                      its preceding token) when no model is set.
+#                      its preceding token) when no model is set. An inlined
+#                      {prompt_text} over run.py's MAX_INLINE_PROMPT_BYTES (the kernel
+#                      caps one argv string at 128 KiB) is replaced by a pointer to
+#                      the {prompt} file, with a warning.
+#   prompt_stdin     : OPTIONAL. "true" when the CLI reads its prompt from stdin; the
+#                      runner then pipes INSTRUCTIONS.md in whole and the template
+#                      carries no {prompt_text}, so prompt size is unbounded.
 #   env_keys         : comma-separated env vars the CLI reads for auth (doc only;
 #                      the runner reports which are present).
 #   install_url      : where to get the CLI (printed when it is not on PATH).
@@ -89,7 +95,10 @@ claude-code:
   # staying off an allowlist nobody wrote to protect this. --disallowedTools always takes
   # precedence over --allowedTools in Claude Code's own permission resolution, so listing
   # Monitor here makes the denial unconditional instead of an accident of what else is allowed.
-  command_template: "claude -p {prompt_text} --permission-mode acceptEdits --allowedTools Bash --disallowedTools Monitor --model {model}"
+  # The prompt goes on STDIN (prompt_stdin below), not argv: with full judge feedback it
+  # reaches hundreds of KB, over the kernel's 128 KiB per-argument limit (E2BIG).
+  command_template: "claude -p --permission-mode acceptEdits --allowedTools Bash --disallowedTools Monitor --model {model}"
+  prompt_stdin: "true"
   env_keys: "ANTHROPIC_API_KEY"
   install_url: "https://docs.claude.com/claude-code"
   auth_notes: "Logged-in Claude Code session or ANTHROPIC_API_KEY."

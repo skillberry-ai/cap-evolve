@@ -152,12 +152,12 @@ def _slow_update_instructions(epoch: int, categories: dict[str, list[dict]]) -> 
         f"## REGRESSED — passed at epoch start, now failing ({len(regressed)})",
     ]
     for pt in regressed[:_MAX_FAILURES_PER_STEP]:
-        lines.append(f"- {pt.get('task_id')}: {str(pt.get('feedback', ''))[:300]}")
+        lines.append(f"- {pt.get('task_id')}: {str(pt.get('feedback', ''))}")
     if not regressed:
         lines.append("- (none — good; do not destabilize current passes)")
     lines += ["", f"## PERSISTENT failures — failing both epochs ({len(persistent)})"]
     for pt in persistent[:_MAX_FAILURES_PER_STEP]:
-        lines.append(f"- {pt.get('task_id')}: {str(pt.get('feedback', ''))[:300]}")
+        lines.append(f"- {pt.get('task_id')}: {str(pt.get('feedback', ''))}")
     if not persistent:
         lines.append("- (none)")
     lines += ["", f"## STABLE SUCCESS — passing both epochs, DO NOT BREAK ({len(stable)})",
