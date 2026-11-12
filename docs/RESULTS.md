@@ -5,10 +5,11 @@ run artifact (`examples/*/run_full/*.json`) or, where noted, from a held-out run
 artifact is committed separately. The README's Results section is a short snapshot of
 this page.
 
-**SkillsBench results live on their own branch.** The full per-task sweeps, the evolved
-skill packages, and the analysis write-ups are on
-[`skillsbench-history`](https://github.com/skillberry-ai/cap-evolve/tree/skillsbench-history)
-— that branch is the source of truth for SkillsBench optimization output. See
+**SkillsBench results live in their own repo.** The full per-task sweeps, the evolved
+skill packages, and the analysis write-ups are in
+[`skillberry-runs/skillsbench`](https://github.com/skillberry-runs/skillsbench)
+(private; rendered publicly at [the site's SkillsBench section](https://skillberry-ai.github.io/cap-evolve/skillsbench/))
+— that repo is the source of truth for SkillsBench optimization output. See
 [SkillsBench sweeps](#skillsbench-sweeps-the-full-result-set) below for what is there and
 which numbers to quote.
 
@@ -1051,9 +1052,10 @@ structured methodology in SKILL.md.
 
 The sections below are the SkillsBench runs whose artifacts are committed on `main`. They
 are **not** the whole picture: the large per-task sweeps, their evolved skill packages, and
-the analysis write-ups live on the
-[`skillsbench-history`](https://github.com/skillberry-ai/cap-evolve/tree/skillsbench-history)
-orphan branch, which is the source of truth for SkillsBench optimization output.
+the analysis write-ups live in the
+[`skillberry-runs/skillsbench`](https://github.com/skillberry-runs/skillsbench) repo
+(migrated from this repo's former `skillsbench-history` branch), which is the source of
+truth for SkillsBench optimization output.
 
 Why a separate branch: those artifacts are *SkillsBench output*, where cap-evolve is merely
 the tool — not contributions to the library, which is what this tree holds. They don't
