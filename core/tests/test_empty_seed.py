@@ -322,3 +322,24 @@ def test_hill_climb_with_empty_seed(tmp_path):
         algorithm="hill-climb",
     )
     assert result["iterations"] == 1
+
+
+def test_skill_package_skills_root_next_to_other_files_is_not_empty(tmp_path, monkeypatch):
+    """A ``skills/`` + ``types/`` seed (rfe-creator's layout) is a real capability with helpers off."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "sk_abstract",
+        Path(__file__).resolve().parents[2] / "skills" / "capabilities" / "skill-package" / "scripts" / "abstract.py",
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
+    (tmp_path / "skills" / "a").mkdir(parents=True)
+    (tmp_path / "skills" / "a" / "SKILL.md").write_text(
+        "---\nname: a\ndescription: Does a thing. Use when asked to do it.\n---\n# a\n", encoding="utf-8")
+    (tmp_path / "types" / "rfe" / "prompts").mkdir(parents=True)
+    (tmp_path / "types" / "rfe" / "prompts" / "create.md").write_text("rules\n", encoding="utf-8")
+    assert mod.is_empty(tmp_path) is False
+    result = mod.validate(tmp_path)
+    assert result["ok"] is True
+    assert result.get("empty") is not True
