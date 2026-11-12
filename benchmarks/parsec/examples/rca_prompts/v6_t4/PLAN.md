@@ -47,13 +47,13 @@ with the Seed's existing 10-trial F and test numbers (v6_g2_e1), paired by task.
 
 About 400 trials per method (~$100 at ~$0.25/trial), so ~$300 for all three.
 
-**Executed (2026-10-21):** 5 trials per task (3 + a 2-trial top-up at fresh seeds), not 3; results on the `parsec-history` branch under `results/v6/v6_t4_e1/` (`summary.md`, `RESULTS_FOR_PAPER.md`).
+**Executed (2026-10-21):** 5 trials per task (3 + a 2-trial top-up at fresh seeds), not 3; results in the `skillberry-runs/parsec` repo (private) under `results/v6/v6_t4_e1/` (`summary.md`, `RESULTS_FOR_PAPER.md`; public copies: [summary](https://skillberry-runs.github.io/dashboard/parsec/results/v6/v6_t4_e1/summary.html), [results for paper](https://skillberry-runs.github.io/dashboard/parsec/results/v6/v6_t4_e1/RESULTS_FOR_PAPER.html)).
 
 **Execution:** one LSF job per task, on its own node (the h4 pattern, `benchmarks/parsec/examples/rca_prompts/RUN_H4.md`),
 at most 20 concurrent. No shared lane queue.
 
 ## Files
 
-- `artifacts/v6/v6_t4_e1/merge_inputs/` (on `parsec-history`): `seed/` (8 files) and `tasks/<task>/{edit.diff, instruction.md,
+- `artifacts/v6/v6_t4_e1/merge_inputs/` (in `skillberry-runs/parsec`, private; artifacts are not published): `seed/` (8 files) and `tasks/<task>/{edit.diff, instruction.md,
   PROCESS.md}`. PROCESS.md has every score, reward, trial count and percentage removed.
-- `artifacts/v6/v6_t4_e1/m3_smart/`, `m1_order/`, `m2_nonconflict/` (on `parsec-history`): each merged bundle plus its merge log.
+- `artifacts/v6/v6_t4_e1/m3_smart/`, `m1_order/`, `m2_nonconflict/` (in `skillberry-runs/parsec`, private): each merged bundle plus its merge log.

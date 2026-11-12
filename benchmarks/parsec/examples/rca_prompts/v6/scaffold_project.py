@@ -10,7 +10,7 @@
       optimizer -> benchmarks/parsec/examples/rca_prompts/v6/optimizer   (multi-task, generalization-aware)
 
 ``--seed-artifact`` is verified byte-for-byte against ``--expect`` (a directory of the
-same 8 files, e.g. a checkout of parsec-history's artifacts/v5/seed) when given:
+same 8 files, e.g. a checkout of skillberry-runs/parsec's (private) artifacts/v5/seed) when given:
 a run seeded from the wrong bundle is the failure v5_t1_e1 was discarded for.
 
 Usage:
