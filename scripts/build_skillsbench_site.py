@@ -27,10 +27,19 @@ from pathlib import Path
 import markdown as md_lib
 
 # Where the rendered content lives (source links point here) vs. the code repo
-# (footer link). They used to be the same repo, on different branches.
+# (footer + nav link). They used to be the same repo, on different branches.
+# Defaults describe the normal source; pages.yml overrides them (--source-repo,
+# --source-ref, --source-public) when it falls back to the legacy public branch,
+# so the links always point at the repo/ref that was actually rendered.
 SOURCE_REPO = "skillberry-runs/skillsbench"
 SOURCE_REF = "main"
+# Access policy (2026-11): the SkillsBench results repo is PRIVATE. Its write-ups are
+# rendered publicly on this site; its artifacts/ (seed/, best/, PROCESS.md) are not
+# published. Links into the repo work for skillberry-runs org members only, so every
+# such link is labelled private and the notes below say so.
+SOURCE_PRIVATE = True
 CODE_REPO = "skillberry-ai/cap-evolve"
+PRIVATE_TITLE = "Private repo: only skillberry-runs org members can open this (others get a 404)"
 # .github/.gitignore are source-repo housekeeping, not site content.
 SKIP_TOP = {"artifacts", ".git", ".github", ".gitignore"}
 MD_EXTENSIONS = ["tables", "fenced_code", "toc", "attr_list", "sane_lists"]
@@ -46,15 +55,27 @@ NAV_ITEMS = [
     ("harbor.html", "Harbor"),
 ]
 
-DEFERRED_ARTIFACTS_NOTE = (
-    '<div class="callout callout-warn">'
-    '<div class="callout-title">Level 3 material is partial here</div>'
-    "<p>This page is rendered on-site from the <code>skillberry-runs/skillsbench</code> repo, "
-    "but the underlying skill packages it discusses (<code>seed/</code>, <code>best/</code>, "
-    "<code>PROCESS.md</code> under <code>artifacts/</code>) are not folded into the site yet "
-    '— follow the <a class="ext-link" href="{artifacts_url}">GitHub ↗</a> links below to see them.</p>'
-    "</div>"
-)
+def deferred_artifacts_note(artifacts_url: str) -> str:
+    """Level-3 callout on per-task report pages: where the skill packages are, and who can see them."""
+    head = (
+        '<div class="callout callout-warn">'
+        '<div class="callout-title">Level 3 material is partial here</div>'
+        f"<p>This page is rendered on-site from the <code>{SOURCE_REPO}</code> repo, "
+        "but the underlying skill packages it discusses (<code>seed/</code>, <code>best/</code>, "
+        "<code>PROCESS.md</code> under <code>artifacts/</code>) are not published on this site. "
+    )
+    if SOURCE_PRIVATE:
+        body = (
+            f"They are in that repo, which is <strong>private</strong>: the "
+            f'<a class="ext-link" href="{artifacts_url}" title="{PRIVATE_TITLE}">GitHub ↗ (private)</a> '
+            "links below open only for members of the <code>skillberry-runs</code> GitHub org. "
+            "Anyone else gets a 404, which means no access, not a broken link.</p>"
+        )
+    else:
+        body = (
+            f'Follow the <a class="ext-link" href="{artifacts_url}">GitHub ↗</a> links below to see them.</p>'
+        )
+    return head + body + "</div>"
 
 
 def artifacts_tree_url(rel_path: str, is_dir: bool) -> str:
@@ -86,7 +107,8 @@ def rewrite_links(html: str, src_root: Path, cur_rel_dir: str) -> tuple[str, boo
             touched_artifacts = True
             is_dir = path.endswith("/") or (src_root / resolved).is_dir()
             new_href = artifacts_tree_url(resolved, is_dir)
-            return f'href={quote}{new_href}{quote} class="ext-link"'
+            title = f' title="{PRIVATE_TITLE}"' if SOURCE_PRIVATE else ""
+            return f'href={quote}{new_href}{quote} class="ext-link"{title}'
         if path.endswith(".md"):
             new_path = path[: -len(".md")] + ".html"
             new_href = new_path + ("#" + fragment if fragment else "")
@@ -116,6 +138,10 @@ def render_chrome(title: str, description: str, body_html: str, rel_path: str, s
         f'      <a href="{site_root}/{href}">{label}</a>' for href, label in NAV_ITEMS
     )
     source_url = f"https://github.com/{SOURCE_REPO}/blob/{SOURCE_REF}/{source_rel}"
+    source_link = (
+        f'<a class="ext-link" href="{source_url}" title="{PRIVATE_TITLE}">view source on GitHub ↗ (private)</a>'
+        if SOURCE_PRIVATE else f'<a class="ext-link" href="{source_url}">view source on GitHub ↗</a>'
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -142,7 +168,7 @@ def render_chrome(title: str, description: str, body_html: str, rel_path: str, s
     <div class="nav-links" id="nav-links">
 {nav_links}
       <a href="{hub}/index.html">SkillsBench</a>
-      <a class="gh" href="{source_url}">GitHub</a>
+      <a class="gh" href="https://github.com/{CODE_REPO}">GitHub</a>
       <button class="theme-toggle" type="button" aria-label="Switch theme">
         <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
@@ -154,7 +180,7 @@ def render_chrome(title: str, description: str, body_html: str, rel_path: str, s
 <main class="page-narrow doc">
   <p class="lead" style="margin-bottom:0.6rem;font-size:0.95rem;">
     <a href="{hub}/index.html">SkillsBench research</a> ·
-    <a class="ext-link" href="{source_url}">view source on GitHub ↗</a>
+    {source_link}
   </p>
 {body_html}
 </main>
@@ -188,7 +214,7 @@ def convert_markdown(src_file: Path, src_root: Path, out_root: Path) -> bool:
         artifacts_url = artifacts_tree_url(
             f"artifacts/task-by-task/{Path(rel).stem}", is_dir=True
         )
-        body = DEFERRED_ARTIFACTS_NOTE.format(artifacts_url=artifacts_url) + body
+        body = deferred_artifacts_note(artifacts_url) + body
     title = rel.rsplit("/", 1)[-1][: -len(".html")]
     page = render_chrome(
         title=f"{title} — SkillsBench",
@@ -432,11 +458,21 @@ def check(src: Path, out: Path) -> int:
 
 
 def main() -> int:
+    global SOURCE_REPO, SOURCE_REF, SOURCE_PRIVATE
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", required=True, type=Path, help="skillberry-runs/skillsbench checkout")
     ap.add_argument("--out", required=True, type=Path, help="output dir (e.g. site/skillsbench)")
     ap.add_argument("--check", action="store_true", help="exit non-zero if --out is stale")
+    ap.add_argument("--source-repo", default=SOURCE_REPO, help=f"repo source links point at (default {SOURCE_REPO})")
+    ap.add_argument("--source-ref", default=SOURCE_REF, help=f"branch source links point at (default {SOURCE_REF})")
+    vis = ap.add_mutually_exclusive_group()
+    vis.add_argument("--source-private", dest="source_private", action="store_true", default=SOURCE_PRIVATE,
+                     help="label source/artifact links as private (default)")
+    vis.add_argument("--source-public", dest="source_private", action="store_false",
+                     help="the source repo/ref is public: no private labels")
     args = ap.parse_args()
+
+    SOURCE_REPO, SOURCE_REF, SOURCE_PRIVATE = args.source_repo, args.source_ref, args.source_private
 
     if args.check:
         return check(args.src, args.out)
