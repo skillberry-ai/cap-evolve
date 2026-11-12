@@ -37,93 +37,42 @@ Box archive with `rclone`. The companion checklist is `docs/VERIFICATION_SCAN.md
 
 ## Why this protocol, not "copy everything now, process later"
 
-Most of what an organized archive offers can be produced **later**, by a person or an agent working
-from a raw copy: a common layout, metrics tables, summaries, the verification scan, checking
-published claims. If the raw copy were complete, "copy everything now, process with Claude later"
-would be enough.
+The backup has four objectives: it must be **comprehensive**, **authentic**, **reproducible** and
+**usable for analysis**. Most of the organizing work (a common layout, metrics, summaries, the
+verification scan) can be done at any time, by a person or an agent working from a copy. What a
+later stage cannot do is recover what the copy never held. A raw copy of the disks at hand falls
+short of each objective in a way that later processing cannot repair:
 
-It is not complete. A raw copy captures only what is on the disk you point it at, as it is at that
-moment. The reasons below are all ways in which a raw copy is **too little**, and later processing
-cannot make up for them, because by then the missing data is gone or was never reachable. They are
-ordered by how much they lose.
+1. **Comprehensive.** A raw copy holds only what is on the disk it was pointed at, at that moment.
+   Much of a run lives elsewhere or expires before anyone processes the copy, and a gap noticed
+   later can only be recorded as lost. *Examples:* the sealed held-out data sits in a sibling
+   `<project>.sealed/` directory, outside the run dir; Harbor job dirs are deleted 6 hours after a
+   CI run.
+2. **Authentic.** Proof that the archive is the original needs the original: hashes taken on the
+   source at capture. A raw copy can show only that it matches itself, and it does not say what it
+   lacks. *Examples:* the GitHub copy of a tau2 final-eval window holds about 1% of the bytes of the
+   Box copy, and none of the rollouts; that Box copy holds 1,815 of the 7,200 planned jobs.
+3. **Reproducible.** Much of what a repeat needs is live state, not files, and it changes unless it
+   is queried at capture. *Examples:* SWE-bench evaluation images built locally, which exist only
+   in the container store; the subagent model a CLI inherits from user settings.
+4. **Usable for analysis.** Some facts are in no file, and only the people who ran the experiment
+   know them. Without their answers, analysis of the archive has to guess. *Examples:* which
+   attempts are re-runs of the same plan after a fix; why a run was discarded.
 
-1. **"Everything" is not in one place.** A run's own directory is only part of the run. The parts that
-   matter most live elsewhere:
-   - the sealed held-out data, which in pooled mode sits in a sibling `<project>.sealed/` directory;
-   - optimizer and agent transcripts, in each CLI's own store (for example `~/.claude/projects/…`);
-   - evaluation state written by external harnesses and services: Harbor and BenchFlow job dirs,
-     tau2's `native_sims/` (the only per-episode latency), parsec's service log (the only cost
-     record), the Skillberry store database;
-   - the benchmark clones and data at the commit that ran;
-   - side copies that agents made in `/tmp`.
+**Where this procedure meets each objective.**
 
-   A raw copy of the working directory misses all of these, and later processing finds the run
-   "complete" because it cannot know what was never copied.
-2. **Much of a run is not on this machine.** For example:
-   - cluster workareas and LSF logs;
-   - CI runner caches and work dirs;
-   - model-gateway usage ledgers, sometimes the only token record;
-   - runs made on a colleague's machine;
-   - tracking issues and PR comments, which can be edited or deleted.
-3. **Evidence disappears on its own schedule.** Some sources go on a timer:
-   - harness job dirs are deleted after 6 hours;
-   - CI work dirs are wiped by the next run of the same tier;
-   - per-model result slots are overwritten;
-   - `/tmp` is lost on a restart;
-   - result branches are pruned or moved to other repos.
-
-   This has already happened once: a pod restart during a backup wiped `/tmp` sources that had been
-   seen but not yet staged.
-4. **Gaps can only be closed while the source still exists.** A gap found at capture time can still be
-   filled:
-   - a missing transcript can be fetched from the other machine;
-   - a record can be taken from a branch before it is pruned;
-   - a job dir can be copied before it is deleted.
-
-   The same check run later can only write "lost". One known case: a Box copy of a tau2 final-eval
-   window holds 1,815 of the 7,200 planned jobs, because it was taken mid-run. Its GitHub copy holds
-   about 1% of the bytes and none of the rollouts.
-5. **Live state is not a file.** Some things must be queried at capture time, because they will have
-   changed by later:
-   - locally built container images;
-   - CLI and tool versions as installed;
-   - the settings each CLI inherits;
-   - running services and their state;
-   - package freezes of environments that are rebuilt on the next setup.
-6. **Proof of fidelity needs the original.** Hashing the source and comparing it with the archive
-   proves that the archive is the source. After the source is gone, hashes can only show that the
-   archive matches itself.
-7. **Context that is in no file.** Some facts only the people who ran the experiment know:
-   - which attempts belong together;
-   - why a run was discarded;
-   - which split or model was intended;
-   - where a missing piece might be.
-
-   Asked now, the answer is still remembered.
-
-**Where this procedure does each of these.** The goals are C = comprehensive, A = authentic,
-R = reproducible, N = usable for analysis.
-
-| # | Component or operation | Needed for | Section |
-|---|---|---|---|
-| 1 | Sealed held-out data | C, R, N | §5.3(a), §3 |
-| 1 | Optimizer and agent-CLI transcripts | C, N | §5.3(e) |
-| 1 | External harness and service state | C, N, R | §5.3(d), §8 |
-| 1 | Benchmark clones and data at the commit that ran | R | §5.3(d), §8 |
-| 1 | Side copies agents made | C, N | §5.3(j) |
-| 2 | Cluster workareas, LSF logs, other hosts | C, R | §5.3(f) |
-| 2 | CI runner caches and work dirs | C | §5.3(b) |
-| 2 | Gateway and proxy usage ledgers | C, N | §5.3(h) |
-| 2 | Issue, PR and workflow posts, from the API | C, A, N | §5.3(i) |
-| 3 | Capture order, most volatile first | C | §5.4 |
-| 3 | Git result sources pinned by commit, snapshot first | C, A | §5.2 |
-| 3 | Discovery repeated at the end of capture | C | §5.9 |
-| 4 | Capture gate | C, A | §5.10 |
-| 4 | Gap report per folder and roll-up per backup | C, A, R, N | §6, §12 |
-| 5 | Live-state snapshots | R | §5.6, §8 |
-| 6 | Source hashes on the host, compared with the archive | A | §5.5, §10, §11 |
-| 7 | Owner answers recorded with the run | C, N | §5.7 |
-| — | Organizing stage (may run later) | N, A | §7, §8, §9 |
+| Objective | Component or operation | Section |
+|---|---|---|
+| Comprehensive | Discovery beyond the run dir: sealed data, CLI transcripts, harness and service state, benchmark clones, agents' side copies | §5.3(a), (d), (e), (j) |
+| Comprehensive | Sources on other hosts: cluster workareas, CI runners, gateway ledgers, posts from the API | §5.3(b), (f), (h), (i) |
+| Comprehensive | Capture order (most volatile first), git sources pinned by commit and snapshotted first, discovery repeated at the end | §5.2, §5.4, §5.9 |
+| Comprehensive | Capture gate: every required item present or recorded as a gap, with fetch attempts | §5.10 |
+| Authentic | Source hashes taken on the host, compared with the archive and with Box | §5.5, §10, §11 |
+| Authentic | Gap report per folder (requirement list, gap classes, coverage per source and union) and roll-up per backup | §6, §12 |
+| Reproducible | Live-state snapshots: images, versions, inherited settings, services, freezes, host | §5.6, §8 |
+| Reproducible | Code, upstream clones and benchmark data at the commits that ran; reproducibility level | §5.3(d), §8 |
+| Usable for analysis | Owner answers recorded with the run | §5.7 |
+| Usable for analysis | Common layout, profiles, schemas, metrics, verification scan (may run later) | §3, §4, §7, §9 |
 
 ---
 
@@ -454,7 +403,7 @@ Record in `BACKUP_RESULTS_<TS>.md`:
 ### 5.4 Duplicates and capture order
 
 **Duplicates.** Before copying a run, compare it with every existing Box folder. That means every
-user's folder under **both roots** (the old root of §2.6, and the new root, for earlier backups made
+user's folder under **both roots** (the old root of §2.6, and the new root, which holds the backups made
 with this procedure), including other windows of the same campaign. Compare by run id, by window and arm × seed,
 and by sha256. Use the folders' `MANIFEST.json`, or the `.tar.sha256` files and member manifests
 where they exist. Otherwise list in parallel, one `rclone lsjson --recursive` per sub-directory,
@@ -537,8 +486,8 @@ Record the time of the gate in `runmeta.captured.end`.
 
 Every folder has a gap report: `GAPS.json` (Appendix A.6) and `GAPS.md`, which shows the same content.
 It says exactly what is missing, how much, why, what it affects, and where it might still be. A
-folder with no gaps says "no gaps". The gap report replaces the free-form `LOST_SOURCES.json` used in
-earlier folders.
+folder with no gaps says "no gaps". A `LOST_SOURCES.json` in a folder under the old root is read as
+a list of gaps.
 
 ### 6.1 The requirement list
 
@@ -1106,7 +1055,7 @@ stated otherwise.
 | Gold | `<tree>/_run/tasks/*/tests/{verify.py,expected.json}`; trial `verifier/reward-detail.json`. Allowed: F-split verifier output. Forbidden: C / test material and `expected.json`. |
 | Isolation | none |
 | External state | `$PARSEC_V*N/_run/`: `jobs/`, `logs/sims/parsec-live.log` (**the cost source**), `h4-lanes/`, `v6-queue/`; `<proj>.sealed/`; the podman image. |
-| Sources | cluster LSF logs (`$CCC_LOGS`); `skillberry-runs/parsec` (= `parsec-history`); `records/parsec-v6-g2-and-tmrg` (unmerged, an earlier edit of two `benchmark-history` records: archive both). |
+| Sources | cluster LSF logs (`$CCC_LOGS`); `skillberry-runs/parsec` (= `parsec-history`); `records/parsec-v6-g2-and-tmrg` (unmerged; two records whose content differs from the `benchmark-history` versions: archive both). |
 | Reproduce | code commit **before `aeee7126d`**; private task bundles (MD5s in `build_v6_tree.py`); the podman image tar. |
 | Licence | private; none stated. |
 | Secrets | `config.local.yaml` LiteLLM key; `LLM_API_KEY`. |
@@ -1136,14 +1085,14 @@ stated otherwise.
 | Reproduce | dataset revision is not pinned: snapshot the dataset with its fingerprint. |
 | Licence | user data, or the dataset card. |
 
-### B.12 `tau2-custom-airline` (retired) — removed `examples/tau2_custom/{direct,blackbox}`
+### B.12 `tau2-custom-airline` (retired) — code at `5e570d29f^:examples/tau2_custom/{direct,blackbox}`
 
-The predecessor of `tau2-sierra-airline`, on a tau2 fork. Removed in `5e570d29f` (2026-11-08). Read
-the code at `5e570d29f^:examples/tau2_custom/`, and the earlier CI tiers at `8860d243a^:ci/benchmarks/tau2_custom/`.
+tau2 airline on the `skillberry-benchmarks` fork of tau2, with the `direct` and `blackbox` arms. Code:
+`5e570d29f^:examples/tau2_custom/`. CI tiers: `8860d243a^:ci/benchmarks/tau2_custom/`.
 
 | Key | Value |
 |---|---|
-| Bench names | `tau2_custom_direct`, `tau2_custom_blackbox`, `tau2_custom_spa`, `skillberry_tau2_direct`, `skillberry_tau2_spa`. `spa` is the earlier name of `blackbox` (branch `rename_intervention_spa_to_blackbox`). `<setting>` = the arm, `direct` or `blackbox`. |
+| Bench names | `tau2_custom_direct`, `tau2_custom_blackbox`, `tau2_custom_spa`, `skillberry_tau2_direct`, `skillberry_tau2_spa`. `spa` and `blackbox` name the same arm. `<setting>` = the arm, `direct` or `blackbox`. |
 | Reward | as `tau2-airline` (tau2 reward, binary per trial; pass^k). |
 | Infra rule | as `tau2-airline`. |
 | Telemetry, cost | as `tau2-sierra-airline`; the blackbox arm's agent cost is not measured. |
@@ -1159,8 +1108,8 @@ the code at `5e570d29f^:examples/tau2_custom/`, and the earlier CI tiers at `886
 | Licence | not recorded |
 | Secrets | as B.3. |
 
-`tau2_blackbox` (branch `tau2_vanilla_blackbox`, `ci/benchmarks/tau2_blackbox`, removed in
-`8860d243a`) is the blackbox arm on **vanilla** tau2 with tailoring applied from outside. It is
+`tau2_blackbox` (branch `tau2_vanilla_blackbox`; CI tier at `8860d243a^:ci/benchmarks/tau2_blackbox`)
+is the blackbox arm on **vanilla** tau2, with tailoring applied from outside. It is
 profiled as `tau2-sierra-airline`, setting `blackbox`.
 
 ### B.13 `epic-creator` (retired) — no adapter in any cap-evolve branch
