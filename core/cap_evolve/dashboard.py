@@ -3081,7 +3081,7 @@ def _read_dir_files(d: Path) -> dict[str, str]:
     for f in sorted(d.rglob("*")):
         if f.is_file():
             rel = str(f.relative_to(d))
-            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in ("trajectories", "guidance"):
+            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in ("trajectories", "guidance", "feedback_full"):
                 continue
             try:
                 out[rel] = f.read_text(encoding="utf-8")

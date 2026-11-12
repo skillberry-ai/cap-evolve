@@ -1,15 +1,14 @@
-"""A prompt over the kernel's 128 KiB per-argument limit still reaches the optimizer, whole.
+"""The optimizer prompt stays inside the inline limit, and a bigger one still never fails exec.
 
-With full LLM-judge feedback (every trial's rationale, never shortened) one iteration's
-INSTRUCTIONS.md reached 460 KB on a 12-task x 3-trial run. ``claude -p {prompt_text}``
-put all of it in ONE argv string, Linux caps that at MAX_ARG_STRLEN = 128 KiB, and exec
-failed with E2BIG before Claude Code started: iteration 1 proposed nothing and the loop
-went on to score an unedited candidate.
+With full LLM-judge feedback (every trial's rationale) one iteration's INSTRUCTIONS.md once
+reached 460 KB on a 12-task x 3-trial run. ``claude -p {prompt_text}`` put all of it in ONE
+argv string, Linux caps that at MAX_ARG_STRLEN = 128 KiB, and exec failed with E2BIG.
 
-Pinned here: a ``prompt_stdin`` row (claude-code) gets the whole prompt byte-for-byte on
-stdin; a row that still inlines ``{prompt_text}`` gets a pointer to the prompt file
-instead of an exec failure; and the template renderer no longer doubles the failure
-index by also expanding the backtick-quoted ``{{FAILURES}}`` mention in its prose.
+Pinned here: the rendered prompt is bounded (each failure-index entry at
+``feedback_digest.entry_chars()``, at most ``DEFAULT_MAX_LISTED`` entries), so every row can
+inline it; a row whose prompt is over the limit anyway gets a pointer to the prompt file
+instead of an exec failure; and the template renderer no longer doubles the failure index
+by also expanding the backtick-quoted ``{{FAILURES}}`` mention in its prose.
 """
 
 from __future__ import annotations
@@ -66,14 +65,6 @@ def _run(tmp: Path, row_lines: list[str]) -> dict:
             "stderr": p.stderr}
 
 
-def test_a_prompt_stdin_row_gets_the_whole_oversized_prompt_on_stdin(tmp_path):
-    r = _run(tmp_path, ['  command_template: "{cli} -p --model x"', '  prompt_stdin: "true"'])
-    sent = r["prompt"].read_text(encoding="utf-8")
-    assert r["seen"]["stdin"] == sent, "the prompt on stdin is not the prompt file, byte for byte"
-    assert r["seen"]["stdin"].endswith(TAIL)
-    assert all(len(a.encode("utf-8")) < ARG_LIMIT for a in r["seen"]["argv"]), r["seen"]["argv"]
-
-
 def test_an_inlining_row_gets_a_pointer_instead_of_an_exec_failure(tmp_path):
     r = _run(tmp_path, ['  command_template: "{cli} -p {prompt_text}"'])
     argv = r["seen"]["argv"]
@@ -99,11 +90,11 @@ def test_a_small_inlined_prompt_is_unchanged():
     assert run_optimizer.inline_prompt_text("short prompt", "/p") == ("short prompt", False)
 
 
-def test_claude_code_reads_its_prompt_from_stdin_not_argv():
-    row = read_yaml((REPO / "skills" / "optimizers" / "registry.yaml").read_text(encoding="utf-8"))[
-        "claude-code"]
-    assert str(row.get("prompt_stdin")).lower() == "true"
-    assert "{prompt_text}" not in row["command_template"]
+def test_no_optimizer_row_depends_on_stdin():
+    """Every row gets its prompt the way it did before (inline or by path); none on stdin."""
+    reg = read_yaml((REPO / "skills" / "optimizers" / "registry.yaml").read_text(encoding="utf-8"))
+    assert not [n for n, row in reg.items() if isinstance(row, dict) and row.get("prompt_stdin")]
+    assert "{prompt_text}" in reg["claude-code"]["command_template"]
 
 
 def _per(n_tasks: int, n_trials: int, fb_len: int) -> list[dict]:
@@ -116,18 +107,19 @@ def _per(n_tasks: int, n_trials: int, fb_len: int) -> list[dict]:
     return per
 
 
-def test_rendered_prompt_carries_every_trial_feedback_exactly_once(tmp_path):
-    """The default template once listed the failure index twice (its prose mentions the slot)."""
+def test_rendered_prompt_lists_each_task_once_and_fits_inline(tmp_path):
+    """12 tasks x 3 trials x 6 KB of judge text: the size that once crashed exec (460 KB)."""
     per = _per(12, 3, 6000)
     cur = SplitResult(split="val", reward=0.6, stderr=0.02, per_task=per, n_tasks=12, n_scored=12)
     text = harness._focus_instructions(cur, None, "every failing task", capabilities=["skill-package"],
                                        seed_empty=False)
-    assert "EMPTY SEED" not in text
-    for i in range(12):
-        for k in range(3):
-            assert text.count(f"VERDICT-{i}-{k}") == 1, (i, k, text.count(f"VERDICT-{i}-{k}"))
-    assert "{{" not in text
-    assert len(text.encode("utf-8")) > ARG_LIMIT  # i.e. this prompt NEEDS the stdin path
+    assert "EMPTY SEED" not in text and "{{" not in text
+    for i in range(12):   # the failure index is listed ONCE (the template's prose mentions the slot)
+        assert text.count(f"- t{i} (reward") == 1, (i, text.count(f"- t{i} (reward"))
+        assert f"VERDICT-{i}-0" in text, "the lowest-scoring trial's verdict must survive the cut"
+    sys.path.insert(0, str(RUN_OPT.parent))
+    import run as run_optimizer  # noqa: E402
+    assert len(text.encode("utf-8")) <= run_optimizer.MAX_INLINE_PROMPT_BYTES, len(text.encode("utf-8"))
 
 
 def test_fill_slots_leaves_quoted_mentions_and_filled_values_alone():

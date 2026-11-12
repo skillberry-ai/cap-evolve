@@ -129,7 +129,7 @@ def capability_diff_lines(parent_dir, cand_dir) -> int:
     """Changed (+/-, non-blank) lines between two capability dirs, counting only files inside sub-dirs
     (policy/, tools/, ...): root-level memory files and read-only context dirs are not the edit."""
     import difflib
-    skip = {"trajectories", "guidance", "prior_iterations", "__pycache__", ".claude", ".git"}
+    skip = {"trajectories", "guidance", "prior_iterations", "feedback_full", "__pycache__", ".claude", ".git"}
 
     def files(d):
         d = Path(d)

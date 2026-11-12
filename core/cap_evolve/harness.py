@@ -342,6 +342,10 @@ def _live(adapter, candidate_dir: Path):
 
 # ---- evaluation -----------------------------------------------------------
 
+#: A rollout file is ``<task>__<tag>__t<k>.json``; every tag cap-evolve writes is this charset.
+_ROLLOUT_TAG_RE = re.compile(r"[A-Za-z0-9_.-]+")
+
+
 def _join_trial_feedback(trials: list) -> str:
     """One task's feedback from ALL its trials, each labelled with that trial's reward.
 
@@ -349,7 +353,8 @@ def _join_trial_feedback(trials: list) -> str:
     ``"<tag> <index>"`` when several tags' rollouts are pooled. A single trial (or every
     trial saying the same thing) gives its text unchanged; otherwise each distinct text is
     kept once, under the trials that produced it — an LLM judge's verdict varies between
-    trials, and the last one alone may praise a task whose mean is low. Never shortened.
+    trials, and the last one alone may praise a task whose mean is low. Never shortened
+    here: the prompt bounds each task's entry (``feedback_digest``), the full text stays.
     """
     def order(t):   # by tag, then numerically by trial index
         tag, _, k = str(t[0]).rpartition(" ")
@@ -369,7 +374,9 @@ def _join_trial_feedback(trials: list) -> str:
             by_text.setdefault(fb, []).append((k, r))
     out = []
     for fb, ks in by_text.items():
-        head = ", ".join(name(k) + ("" if r is None else f" reward {float(r):.3f}") for k, r in ks)
+        # An errored trial (reward None) never ran the target; say so, so its infra text is
+        # never read as a capability failure.
+        head = ", ".join(name(k) + (" errored" if r is None else f" reward {float(r):.3f}") for k, r in ks)
         out.append(f"[{head}]\n{fb}")
     return "\n\n".join(out)
 
@@ -935,6 +942,11 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     from .stats import mean, stderr
     errored_policy = resolve_errored_policy(errored_policy, run_dir)
     tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
+    # A tag becomes part of a glob under the rollout dir: refuse one that is not a plain
+    # rollout-file tag (no path separators, no glob metacharacters, no "..").
+    for t in tags:
+        if not _ROLLOUT_TAG_RE.fullmatch(t) or ".." in t:
+            raise ValueError(f"not a rollout tag: {t!r}")
     vdir = run_dir.rollout_dir(split)
     by_task: dict[str, list[float]] = {}
     feedback: dict[str, list] = {}   # tid -> [(trial, reward, text)]
@@ -1242,6 +1254,10 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
     def _run(workdir: Path, instructions: str) -> dict | None:
         prompt_path = workdir / "INSTRUCTIONS.md"
         prompt_path.write_text(instructions, encoding="utf-8")
+        # Every ./feedback_full/<file> the failure index links to, copied in beside the prompt.
+        # The files live under the run dir, which is the workdir's grandparent (run/work/<cid>).
+        from . import feedback_digest
+        feedback_digest.copy_linked_from(instructions, workdir)
         cmd = [c.format(workdir=str(workdir), prompt=str(prompt_path)) for c in cmd_template]
         env = dict(os.environ)
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
@@ -1980,7 +1996,7 @@ def _capability_files(d: Path) -> dict[str, str]:
             continue
         rel = str(f.relative_to(d))
         top = rel.split("/", 1)[0]
-        if rel in _CAP_DIFF_SKIP or top in ("trajectories", "guidance", "prior_iterations"):
+        if rel in _CAP_DIFF_SKIP or top in ("trajectories", "guidance", "prior_iterations", "feedback_full"):
             continue
         try:
             out[rel] = f.read_text(encoding="utf-8")
@@ -4303,9 +4319,15 @@ def _classify(per):
     return errored, always_fail, flaky, solid
 
 
-def _fmt(pt) -> str:
-    return f"- {pt.get('task_id')} (reward {float(pt.get('reward', 0) or 0):.2f}): " \
-           f"{str(pt.get('feedback', '')).strip()}"
+def _fmt(pt, digest: dict | None = None, link: str | None = None) -> str:
+    """One failure-index line. ``digest`` holds the bounded body of a task whose feedback is over
+    ``feedback_digest.entry_chars()`` (summary or fallback); ``link`` points at its full text."""
+    head = f"- {pt.get('task_id')} (reward {float(pt.get('reward', 0) or 0):.2f}): "
+    tid = str(pt.get("task_id"))
+    if digest and tid in digest:
+        body = digest[tid] + (f"\n  (full feedback, every trial: {link})" if link else "")
+        return head + body.replace("\n", "\n  ")
+    return head + str(pt.get("feedback", "")).strip()
 
 
 def _passing_block(solid, *, max_ids: int = 60) -> str:
@@ -4354,7 +4376,7 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # test_native_skills.test_snapshot_ignores_every_vendor_dir_the_registry_declares enforces that.
 # (Kept literal rather than read from the registry: an installed core has no skills/ tree
 # beside it, so the literal list has to be complete anyway.)
-_SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
+_SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations", "feedback_full",
                     "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
                     "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md",
                     "FOCUS.md", "REFLECTION.md",
@@ -4362,16 +4384,19 @@ _SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
                     "CLAUDE.md", "AGENTS.md", "GEMINI.md")
 
 
-#: Optional cap on how many always-failing / flaky tasks the failure index lists inline
-#: (``CAPEVOLVE_MAX_LISTED_FAILURES``); unset or 0 lists every one. The full rollouts are in
-#: ./trajectories/ either way — the cap only bounds the prompt, for a benchmark whose
-#: hundreds of identical binary failures would add length and no information.
-def _cap_listed(rows: list) -> list:
+#: How many always-failing + flaky tasks the failure index lists inline, worst first
+#: (``CAPEVOLVE_MAX_LISTED_FAILURES``, default 40). With each entry bounded at
+#: ``feedback_digest.entry_chars()`` (800), 40 entries keep the whole prompt near 55 KB, inside
+#: every optimizer row's inline limit. The rest are named, and every task's full text is on disk.
+DEFAULT_MAX_LISTED = 40
+
+
+def _max_listed() -> int:
     try:
-        n = int(os.environ.get("CAPEVOLVE_MAX_LISTED_FAILURES") or 0)
+        n = int(os.environ.get("CAPEVOLVE_MAX_LISTED_FAILURES") or DEFAULT_MAX_LISTED)
     except ValueError:
-        n = 0
-    return rows[:n] if n > 0 else list(rows)
+        n = DEFAULT_MAX_LISTED
+    return n if n > 0 else DEFAULT_MAX_LISTED
 
 
 #: A template slot: ``{{NAME}}``. Optionally inside backticks, which marks a MENTION of the
@@ -4397,20 +4422,48 @@ def _fill_slots(text: str, repl: dict) -> str:
     return _SLOT_RE.sub(sub, text)
 
 
-def _failures_block(always_fail, flaky, errored) -> str:
-    """The per-iteration (a)/(b)/errored failure index for the prompt."""
+def _failures_block(always_fail, flaky, errored, run_dir=None) -> str:
+    """The per-iteration (a)/(b)/errored failure index for the prompt.
+
+    At most ``_max_listed()`` tasks are listed (always-failing first, then flaky, each worst
+    first). A task whose feedback is over ``feedback_digest.entry_chars()`` gets a bounded
+    entry — a summary, else a deterministic cut — that always represents its lowest-scoring
+    trial; with ``run_dir`` its full text is written there and linked. Without ``run_dir``
+    (a unit render) long entries get the deterministic cut and no link.
+    """
+    from . import feedback_digest as fd
+    flaky = sorted(flaky, key=lambda pt: float(pt.get("reward", 0) or 0))
+    cap = _max_listed()
+    shown_af = always_fail[:cap]
+    shown_fl = flaky[:max(0, cap - len(shown_af))]
+    shown = shown_af + shown_fl
+    digest = fd.condense(shown, run_dir)
+    links = ({str(pt.get("task_id")): fd.store_full(run_dir, pt) for pt in shown
+              if str(pt.get("task_id")) in digest} if run_dir is not None else {})
+    fmt = lambda pt: _fmt(pt, digest, links.get(str(pt.get("task_id"))))
     lines: list[str] = []
+    if digest:
+        lines.append(f"(Entries over {fd.entry_chars()} chars are condensed; each condensed entry "
+                     "starts with every trial's reward and leads with the LOWEST-scoring trial. "
+                     + ("Its full feedback, every trial, is in the linked file under ./"
+                        f"{fd.DIR}/.)" if links else "Full traces are in ./trajectories/.)"))
+        lines.append("")
     if always_fail:
         lines.append(f"## (a) {len(always_fail)} ALWAYS-failing task(s) — fix the shared "
                      "root cause (full traces in ./trajectories/):")
-        lines += [_fmt(pt) for pt in _cap_listed(always_fail)]
+        lines += [fmt(pt) for pt in shown_af]
         lines.append("")
     if flaky:
         lines.append(f"## (b) {len(flaky)} FLAKY task(s) — pass sometimes; make the good "
                      "behavior consistent (full traces in ./trajectories/):")
-        lines.append("(reward is the mean over trials — the honest signal; listed lowest reward "
-                     "first. With several trials, each trial's feedback is shown under its own reward.)")
-        lines += [_fmt(pt) for pt in _cap_listed(sorted(flaky, key=lambda pt: float(pt.get("reward", 0) or 0)))]
+        lines.append("(reward is the mean over trials — the honest signal; listed lowest reward first.)")
+        lines += [fmt(pt) for pt in shown_fl]
+        lines.append("")
+    rest = always_fail[len(shown_af):] + flaky[len(shown_fl):]
+    if rest:
+        lines.append(f"(+{len(rest)} more failing task(s) not listed, over the {cap}-task limit "
+                     f"(CAPEVOLVE_MAX_LISTED_FAILURES): " + ", ".join(str(pt.get("task_id")) for pt in rest)
+                     + ". Their traces are in ./trajectories/.)")
         lines.append("")
     if not always_fail and not flaky:
         lines.append("## No actionable failures in focus — seek a robustness/generalization gain "
@@ -4863,9 +4916,10 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         instructions_file=None, bench_repo: str | None = None,
                         optimizer_name: str | None = None,
                         seed_empty: bool | None = None,
-                        target_reader: str = "") -> str:
+                        target_reader: str = "", run_dir=None) -> str:
     """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
-    optimizer-instructions template.
+    optimizer-instructions template. ``run_dir`` enables the feedback summarizer and the
+    full-feedback files (``feedback_digest``); without it long entries are cut, not summarized.
 
     The static framing (analyze → ideate → edit, the read-pointers, the code-bearing
     tools guidance, the economy footer) lives in the template file — authored by the
@@ -4893,7 +4947,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} {scope}."
     )
-    failures = _failures_block(always_fail, flaky, errored)
+    failures = _failures_block(always_fail, flaky, errored, run_dir=run_dir)
     passing = _passing_block(protect) if history_enabled() else ""
     cap = _capability_brief(capabilities)
     algo = _algorithm_brief(current_val, algorithm)
@@ -5200,7 +5254,7 @@ class OptimizerContext:
 
     def instructions(self, current_val: SplitResult, focus_ids, label: str, *,
                      algorithm: str, parent_dir: Path | None = None,
-                     extra: str = "") -> str:
+                     extra: str = "", run_dir: RunDir | None = None) -> str:
         """Render this iteration's prompt from the shared template.
 
         ``parent_dir`` (the candidate being forked) enables the empty-seed note;
@@ -5212,7 +5266,7 @@ class OptimizerContext:
             current_val, focus_ids, label, capabilities=list(self.capabilities),
             algorithm=algorithm, instructions_file=self.instructions_file,
             bench_repo=self.bench_repo, optimizer_name=self.optimizer_name,
-            seed_empty=seed_empty, target_reader=self.target_reader)
+            seed_empty=seed_empty, target_reader=self.target_reader, run_dir=run_dir)
         return (text.rstrip() + "\n\n" + extra.strip() + "\n") if extra.strip() else text
 
 
@@ -5349,7 +5403,7 @@ def hill_climb_loop(
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
         instructions = ctx.instructions(current_val, focus_ids, label,
-                                        algorithm=algorithm, parent_dir=parent_dir)
+                                        algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.

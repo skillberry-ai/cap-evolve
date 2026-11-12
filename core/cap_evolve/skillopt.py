@@ -313,7 +313,8 @@ def skillopt_loop(
             instructions = ctx.instructions(current_val, minibatch_ids, label,
                                             algorithm=algorithm, parent_dir=parent_dir,
                                             extra=_buffer_block(L, step_buffer,
-                                                                rejected_this_epoch))
+                                                                rejected_this_epoch),
+                                            run_dir=run_dir)
             step = harness.run_step(
                 adapter, run_dir=run_dir, parent_dir=parent_dir,
                 optimizer=optimizer, instructions=instructions, current_val=current_val,
@@ -502,7 +503,8 @@ def _run_slow_update(
     extra = (_slow_update_instructions(epoch, categories) + "\n"
              + _buffer_block(edit_budget, [], []))
     instructions = ctx.instructions(current_val, sample_ids, f"epoch {epoch} slow/meta update",
-                                   algorithm="skillopt", parent_dir=parent_dir, extra=extra)
+                                   algorithm="skillopt", parent_dir=parent_dir, extra=extra,
+                                   run_dir=run_dir)
     step = harness.run_step(
         adapter, run_dir=run_dir, parent_dir=parent_dir,
         optimizer=optimizer, instructions=instructions, current_val=current_val,

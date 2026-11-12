@@ -331,7 +331,8 @@ GOAL_NOTE = ("Aim for the edit with the largest expected reward gain on the WHOL
 
 
 def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm: str, params: HC2Params,
-                       shown: dict, rejected_notes, retry_note: str = "", role: str = "cluster") -> str:
+                       shown: dict, rejected_notes, retry_note: str = "", role: str = "cluster",
+                       run_dir=None) -> str:
     if role == "broad":
         label = f"failing traces of {len(cluster)} task(s) across ALL failure types on the feedback stratum"
         lead = ("This proposal is one of several made in parallel from the same incumbent. Your traces in "
@@ -355,7 +356,7 @@ def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm
     if retry_note:
         extra.append(retry_note)
     return ctx.instructions(adapter_val, list(cluster), label, algorithm=algorithm,
-                            parent_dir=parent_dir, extra="\n\n".join(extra))
+                            parent_dir=parent_dir, extra="\n\n".join(extra), run_dir=run_dir)
 
 
 # ---- merging survivors --------------------------------------------------------------------------
@@ -438,7 +439,7 @@ def take_merge_pool(run_dir) -> dict | None:
 
 # ---- diversity gate -----------------------------------------------------------------------------
 
-_SKIP_DIRS = {"trajectories", "contrast", "guidance", "notes", "__pycache__"}
+_SKIP_DIRS = {"trajectories", "contrast", "guidance", "notes", "__pycache__", "feedback_full"}
 _SKIP_FILES = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
                "PROCESS.md", "cross_trace_summary.md", "DIAGNOSIS.json"}
 
@@ -546,8 +547,15 @@ def _pooled_split_result(traces, tasks):
     for tid in sorted(tasks if tasks is not None else by):
         ts = by.get(tid, [])
         if ts:
+            # Every failing draw's signature, each distinct text once under its own trial and
+            # reward (the same join hill-climb, GEPA and SkillOpt use), not only the first one's.
+            from .harness import _join_trial_feedback
+            failing = sorted((t for t in ts if t.reward < 1.0), key=lambda t: (t.tag, t.trial))
+            tags = {t.tag for t in failing}
             rows.append({"task_id": tid, "reward": sum(t.reward for t in ts) / len(ts),
-                         "feedback": next((t.signature for t in ts if t.reward < 1.0), "")})
+                         "feedback": _join_trial_feedback(
+                             [(t.trial if len(tags) == 1 else f"{t.tag} {t.trial}", t.reward, t.signature)
+                              for t in failing])})
     mean = sum(r["reward"] for r in rows) / len(rows) if rows else 0.0
     return SplitResult(split="feedback", reward=mean, stderr=0.0, per_task=rows,
                        n_tasks=len(rows), n_scored=len(rows))
@@ -691,7 +699,8 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
         (wd / "cross_trace_summary.md").write_text(cross_trace_summary(cl, failed), encoding="utf-8")
     instr = ctx.augment_instructions(
         build_instructions(ctx, view, cl, parent_dir=incumbent_dir, algorithm=algorithm, params=params,
-                           shown=shown, rejected_notes=notes, retry_note=retry_note, role=role), wd, run_dir)
+                           shown=shown, rejected_notes=notes, retry_note=retry_note, role=role,
+                           run_dir=run_dir), wd, run_dir)
     return wd, instr, shown
 
 
