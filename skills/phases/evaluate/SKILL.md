@@ -93,13 +93,12 @@ python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project
   - At most 40 tasks, worst first (`CAPEVOLVE_MAX_LISTED_FAILURES`). The rest are named.
   - At most 800 chars per task (`CAPEVOLVE_FEEDBACK_ENTRY_CHARS`). A shorter entry is
     shown as it is.
-  - A longer one is summarized, at most 10 tasks per call, by a model set ONLY through
-    the environment: `CAPEVOLVE_FEEDBACK_SUMMARY_MODEL`, else `ANTHROPIC_DEFAULT_HAIKU_MODEL`,
-    else `claude-haiku-4-5`. The gateway is `CAPEVOLVE_FEEDBACK_SUMMARY_BASE_URL` /
-    `_API_KEY`, else `ANTHROPIC_*`. `CAPEVOLVE_FEEDBACK_SUMMARY=off` disables it.
-  - With no summarizer, or on a failed call, a deterministic cut is used instead. It
-    keeps the start and the end of each text. A `feedback_summary` event records which
-    was used.
+  - A longer one is summarized by the run's OWN optimizer: the same agent CLI and model
+    the algorithm proposes edits with, at most 10 tasks per call. Its spend counts as
+    optimizer spend. `CAPEVOLVE_FEEDBACK_SUMMARY=off` disables it.
+  - With no optimizer, or a call that gives no usable result, a deterministic cut is used
+    instead. It keeps the start and the end of each text. A `feedback_summary` event
+    records which was used.
   - Either way, a condensed entry starts with every trial's reward, the lowest marked,
     and represents the lowest-scoring trial. A later good trial never hides a failure.
   - The full text is in `./feedback_full/<task>-<hash>.md`, linked from the entry. The

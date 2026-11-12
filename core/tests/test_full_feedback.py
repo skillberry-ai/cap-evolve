@@ -7,8 +7,11 @@ does.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "core"))
@@ -41,7 +44,8 @@ def test_hill_climb_failure_index_bounds_each_entry_and_keeps_the_verdict(tmp_pa
     assert len(entries) == 2
     for e in entries:
         assert TAIL in e
-        assert len(e.split("\n  (full feedback")[0]) <= fd.entry_chars() + 40
+        body = e.split("\n    (full feedback")[0]
+        assert len(body) < len(e) and len(body) <= fd.entry_chars() + 40, len(body)
     links = fd._LINK_RE.findall(block)
     assert len(links) == 2
     assert all((rd.root / fd.DIR / n).read_text(encoding="utf-8").count(LONG) == 1 for n in links)
@@ -54,11 +58,11 @@ def test_gepa_reflection_keeps_full_feedback(tmp_path):
     assert f"- Feedback: {LONG}" in (tmp_path / "REFLECTION.md").read_text(encoding="utf-8")
 
 
-def test_skillopt_slow_update_keeps_full_feedback():
+def test_skillopt_slow_update_keeps_each_tasks_verdict():
     text = skillopt._slow_update_instructions(
         2, {"regressed": [_pt("a", 0.0)], "persistent_fail": [_pt("b", 0.0)],
             "stable_success": []})
-    assert text.count(LONG) == 2
+    assert text.count(TAIL) == 2 and LONG not in text      # bounded, the end of each kept
 
 
 def test_hc2_pooled_feedback_keeps_full_signature():
@@ -211,97 +215,117 @@ def test_skillopt_clusters_ignore_the_pooled_evaluation_headers():
 
 # ---- bounded entries, the lowest trial, errored trials, HC2 (review round 3) ----------
 
-def test_a_later_good_trial_never_hides_an_earlier_failure(monkeypatch):
+def _fake_optimizer(reply=None, calls=None, cost=None, fail=None):
+    """An OptimizerFn that 'summarizes' by writing ./summaries.json, as the real CLI is told to."""
+    def opt(workdir, prompt):
+        files = {f.name: f.read_text(encoding="utf-8") for f in sorted(Path(workdir).glob("tasks/*.md"))}
+        if calls is not None:
+            calls.append((files, prompt))
+        if fail:
+            raise fail
+        ids = re.findall(r"^- tasks/\S+ -> (\S+)$", prompt, re.M)
+        (Path(workdir) / "summaries.json").write_text(
+            json.dumps({i: (reply(i) if callable(reply) else reply) for i in ids}), encoding="utf-8")
+        return cost
+    opt.command = "fake-optimizer --model m1"
+    return opt
+
+
+def test_a_later_good_trial_never_hides_an_earlier_failure(tmp_path):
     """The lowest-scoring trial is in the entry the optimizer reads, summary or fallback."""
-    from cap_evolve import feedback_digest as fd
+    from cap_evolve import RunDir, feedback_digest as fd
 
     fail = "FAIL-SIGNAL: the review missed the misfiled initiative. " + "detail " * 300
     good = "the review flagged the item correctly. " + "detail " * 300
     pt = {"task_id": "t0", "reward": 0.5,
           "feedback": harness._join_trial_feedback([(0, 0.0, fail), (1, 1.0, good), (2, 1.0, good)])}
-    # 1) no summarizer: the deterministic fallback leads with the lowest trial
-    monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY", "off")
+    # 1) no optimizer: the deterministic fallback leads with the lowest trial
     body = fd.condense([pt])["t0"]
     assert body.startswith("trials: trial 0 0.000 (lowest), trial 1 1.000, trial 2 1.000")
     assert "lowest (trial 0): FAIL-SIGNAL" in body and len(body) <= fd.entry_chars()
-    # 2) a summarizer that only talks about the good trials still gets the code-written header
-    monkeypatch.delenv("CAPEVOLVE_FEEDBACK_SUMMARY")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-
-    class RD:
-        root = None
-        events = []
-
-        def log_event(self, kind, **kw):
-            self.events.append((kind, kw))
-
-    import tempfile
-    rd = RD()
-    rd.root = Path(tempfile.mkdtemp())
-    seen = {}
-
-    def call(cfg, prompt):
-        seen["prompt"] = prompt
-        return json.dumps({"t0": "The review is good."})
-
-    body = fd.condense([pt], rd, call=call)["t0"]
-    assert "FAIL-SIGNAL" in seen["prompt"] and '"reward": 0.0' in seen["prompt"]
+    # 2) the run's optimizer summarizes; it sees the failing trial with its reward, and even a
+    #    summary that only talks about the good trials still gets the code-written header
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t")
+    calls = []
+    body = fd.condense([pt], rd, _fake_optimizer("The review is good.", calls))["t0"]
+    task_file = calls[0][0]["00.md"]
+    assert "## trial 0 - reward 0.000" in task_file and "FAIL-SIGNAL" in task_file
+    assert "LOWEST-scoring trial" in calls[0][1]
     assert body.splitlines()[0] == "trials: trial 0 0.000 (lowest), trial 1 1.000, trial 2 1.000"
-    assert rd.events[0][0] == "feedback_summary" and rd.events[0][1]["summarized"] == 1
+    assert body.splitlines()[1] == "The review is good."
 
 
-def test_summarizer_failure_falls_back_and_is_logged(tmp_path, monkeypatch):
+def test_the_summary_uses_the_runs_optimizer_and_counts_its_spend(tmp_path):
+    """Same optimizer (its command keys the cache), 10 tasks per call, spend recorded."""
     from cap_evolve import RunDir, feedback_digest as fd
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
     rd = RunDir.create(tmp_path / ".capevolve", ts="t")
-    rows = [_pt(f"t{i}", 0.0) for i in range(23)]   # 3 batches of at most 10
-
+    rows = [_pt(f"t{i}", 0.0) for i in range(23)]
     calls = []
-
-    def boom(cfg, prompt):
-        calls.append(prompt)
-        raise TimeoutError("gateway down")
-
-    out = fd.condense(rows, rd, call=boom)
-    assert len(calls) == 3
-    assert set(out) == {f"t{i}" for i in range(23)} and all(TAIL in v for v in out.values())
+    opt = _fake_optimizer(lambda i: f"summary of {i}", calls, cost={"cost_usd": 0.25, "tokens": 1000})
+    out = fd.condense(rows, rd, opt)
+    assert len(calls) == 3 and sorted(len(files) for files, _ in calls) == [3, 10, 10]
+    assert all(out[f"t{i}"] == f"summary of t{i}" for i in range(23))
+    spent = rd.spent
+    assert spent.optimizer_usd == pytest.approx(0.75) and spent.optimizer_tokens == 3000
     ev = [json.loads(ln) for ln in (rd.root / "events.jsonl").read_text().splitlines()]
     s = [e for e in ev if e["kind"] == "feedback_summary"][-1]
-    assert s["fallback"] == 23 and s["summarized"] == 0 and "gateway down" in s["errors"][0]
+    assert s["optimizer"] == "fake-optimizer --model m1" and s["summarized"] == 23 and s["calls"] == 3
+    # the cache is keyed by the optimizer command: same command = no new call, another = new calls
+    fd.condense(rows, rd, opt)
+    assert len(calls) == 3
+    other = _fake_optimizer("x", calls)
+    other.command = "fake-optimizer --model m2"
+    fd.condense(rows, rd, other)
+    assert len(calls) == 6
+    assert not list((rd.root / "work").glob("feedback_summary_*"))   # scratch removed
 
 
-def test_summaries_are_cached_by_content(tmp_path, monkeypatch):
+def test_summarizer_failure_falls_back_and_is_logged(tmp_path):
     from cap_evolve import RunDir, feedback_digest as fd
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
     rd = RunDir.create(tmp_path / ".capevolve", ts="t")
-    n = []
-    call = lambda cfg, p: (n.append(1), json.dumps({"a": "short summary"}))[1]
-    fd.condense([_pt("a", 0.0)], rd, call=call)
-    fd.condense([_pt("a", 0.0)], rd, call=call)
-    assert len(n) == 1
+    rows = [_pt(f"t{i}", 0.0) for i in range(23)]
+    calls = []
+    err = RuntimeError("optimizer failed (1): rate limited")
+    err.cost = {"cost_usd": 0.1, "tokens": 50}
+    out = fd.condense(rows, rd, _fake_optimizer(calls=calls, fail=err))
+    assert len(calls) == 3
+    assert set(out) == {f"t{i}" for i in range(23)} and all(TAIL in v for v in out.values())
+    assert rd.spent.optimizer_usd == pytest.approx(0.3)   # a failed call is still paid
+    ev = [json.loads(ln) for ln in (rd.root / "events.jsonl").read_text().splitlines()]
+    s = [e for e in ev if e["kind"] == "feedback_summary"][-1]
+    assert s["fallback"] == 23 and s["summarized"] == 0 and "rate limited" in s["errors"][0]
+    # an optimizer that writes no summaries.json is a fallback too, not a crash
+    lazy = lambda wd, p: None
+    lazy.command = "lazy"
+    assert all(TAIL in v for v in fd.condense(rows[:2], rd, lazy).values())
 
 
-def test_summarizer_model_and_gateway_come_from_the_environment_only(monkeypatch):
-    from cap_evolve import feedback_digest as fd
+def test_the_summary_can_be_switched_off(tmp_path, monkeypatch):
+    from cap_evolve import RunDir, feedback_digest as fd
 
-    for k in ("CAPEVOLVE_FEEDBACK_SUMMARY", "CAPEVOLVE_FEEDBACK_SUMMARY_MODEL",
-              "CAPEVOLVE_FEEDBACK_SUMMARY_BASE_URL", "CAPEVOLVE_FEEDBACK_SUMMARY_API_KEY",
-              "ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"):
-        monkeypatch.delenv(k, raising=False)
-    assert fd.summarizer_config() is None                      # no credentials: fallback only
-    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "tok")
-    assert fd.summarizer_config()["model"] == "claude-haiku-4-5"
-    monkeypatch.setenv("ANTHROPIC_DEFAULT_HAIKU_MODEL", "claude/ibm/claude-haiku-4-5")
-    assert fd.summarizer_config()["model"] == "claude/ibm/claude-haiku-4-5"
-    monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY_MODEL", "rits/zai-org/glm-5-3")
-    monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY_BASE_URL", "https://gw.example/")
-    monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY_API_KEY", "k2")
-    cfg = fd.summarizer_config()
-    assert (cfg["model"], cfg["base_url"], cfg["bearer"]) == ("rits/zai-org/glm-5-3", "https://gw.example", "k2")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t")
+    calls = []
     monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY", "off")
-    assert fd.summarizer_config() is None
+    out = fd.condense([_pt("a", 0.0)], rd, _fake_optimizer("s", calls))
+    assert calls == [] and TAIL in out["a"]
+
+
+def test_the_slow_update_prompt_is_bounded_too(tmp_path):
+    """Round 4: SkillOpt's slow/meta update listed up to 20 tasks' full feedback (243 KB)."""
+    from cap_evolve import RunDir, feedback_digest as fd
+
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t")
+    rows = [{"task_id": f"t{i}", "reward": 0.3, "feedback": harness._join_trial_feedback(
+        [(k, 0.1 * k, f"task {i} trial {k} " + "z" * 4000 + f" VERDICT-{i}") for k in range(3)])}
+        for i in range(20)]
+    cats = {"regressed": rows[:10], "persistent_fail": rows[10:], "stable_success": []}
+    text = skillopt._slow_update_instructions(2, cats, rd)
+    assert len(text.encode("utf-8")) < 30_000, len(text.encode("utf-8"))
+    assert all(f"VERDICT-{i}" in text for i in range(20))          # the end of each text survives
+    assert len(fd._LINK_RE.findall(text)) == 20
+    assert "trials: trial 0 0.000 (lowest)" in text
 
 
 def test_short_feedback_is_shown_unchanged(tmp_path):
@@ -314,7 +338,6 @@ def test_short_feedback_is_shown_unchanged(tmp_path):
 
 
 def test_the_failure_index_lists_at_most_40_tasks_and_names_the_rest(monkeypatch):
-    monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY", "off")
     af = [{"task_id": f"a{i}", "reward": 0.0, "feedback": "x" * 5000} for i in range(30)]
     fl = [{"task_id": f"f{i}", "reward": 0.1 + i / 100, "feedback": "y" * 5000} for i in range(30)]
     block = harness._failures_block(af, fl, [])
@@ -325,9 +348,8 @@ def test_the_failure_index_lists_at_most_40_tasks_and_names_the_rest(monkeypatch
     assert len([ln for ln in harness._failures_block(af, fl, []).splitlines() if ln.startswith("- ")]) == 5
 
 
-def test_a_large_run_keeps_the_whole_prompt_inside_the_inline_limit(monkeypatch):
+def test_a_large_run_keeps_the_whole_prompt_inside_the_inline_limit():
     """200 failing tasks x 3 trials x 4 KB: the size review round 3 measured at 3.75 MB."""
-    monkeypatch.setenv("CAPEVOLVE_FEEDBACK_SUMMARY", "off")
     per = []
     for i in range(200):
         per.append({"task_id": f"t{i}", "reward": 0.3, "feedback": harness._join_trial_feedback(

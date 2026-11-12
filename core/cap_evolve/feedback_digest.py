@@ -5,23 +5,17 @@ characters per trial, times every trial. The optimizer prompt lists one entry pe
 so each entry is bounded at ``entry_chars()`` (default 800). An entry that fits is shown
 as it is. A longer one is condensed:
 
-* by a summarizer model, ``summarize_batches`` — at most ``BATCH`` tasks per call; or,
-  when no summarizer is reachable or a reply is unusable,
+* by the run's OWN optimizer — the same agent CLI, model and per-call budget flags the
+  algorithm uses to propose edits (``harness.optimizer_from_command`` records the
+  command) — on at most ``BATCH`` tasks per call, each call in its own scratch workdir;
+  or, when there is no optimizer command or a call gives no usable result,
 * by ``fallback`` — deterministic, no model.
 
 Either way the entry starts with a code-written ``trials:`` line (every trial's reward,
 the lowest marked), and the LOWEST-scoring trial is represented: a later good trial can
 never hide an earlier failure. The full, untruncated text is written to
-``feedback_full/<name>.md``; the entry ends with a pointer to it.
-
-The summarizer is configured by the environment only, never by the run spec, so the
-same run can use any model (``CAPEVOLVE_FEEDBACK_SUMMARY_MODEL``, else the Claude
-default haiku alias ``ANTHROPIC_DEFAULT_HAIKU_MODEL``, else ``claude-haiku-4-5``) on any
-Anthropic-Messages gateway (``CAPEVOLVE_FEEDBACK_SUMMARY_BASE_URL`` /
-``CAPEVOLVE_FEEDBACK_SUMMARY_API_KEY``, else ``ANTHROPIC_BASE_URL`` /
-``ANTHROPIC_AUTH_TOKEN`` or ``ANTHROPIC_API_KEY``). ``CAPEVOLVE_FEEDBACK_SUMMARY=off``
-keeps the deterministic fallback only; ``CAPEVOLVE_FEEDBACK_SUMMARY_MAX_TOKENS`` sets the
-output budget per call (default 32000). Pure stdlib.
+``feedback_full/<name>.md``; the entry ends with a pointer to it. The summary calls count
+as optimizer spend. ``CAPEVOLVE_FEEDBACK_SUMMARY=off`` keeps the fallback only. Pure stdlib.
 """
 
 from __future__ import annotations
@@ -31,7 +25,8 @@ import json
 import os
 import re
 import shutil
-import urllib.request
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ENV_CHARS = "CAPEVOLVE_FEEDBACK_ENTRY_CHARS"
@@ -158,6 +153,13 @@ def store_full(run_dir, pt: dict) -> str:
     return f"./{DIR}/{name}"
 
 
+def store_links(run_dir, rows: list[dict], digest: dict) -> dict:
+    """``{task_id: link}`` for every row ``digest`` condensed; ``{}`` without a run dir."""
+    if run_dir is None:
+        return {}
+    return {str(pt.get("task_id")): store_full(run_dir, pt) for pt in rows if str(pt.get("task_id")) in digest}
+
+
 def copy_linked(instructions: str, workdir: Path, run_dir) -> int:
     """Copy every ``./feedback_full/<name>.md`` the prompt links to into the optimizer's workdir."""
     return 0 if run_dir is None else _copy(instructions, Path(run_dir.root) / DIR, Path(workdir))
@@ -187,92 +189,91 @@ def _copy(instructions: str, src_root: Path, workdir: Path) -> int:
     return n
 
 
-# ---- the summarizer -----------------------------------------------------------------
+# ---- the summarizer: the run's own optimizer ---------------------------------------
 
-def summarizer_config() -> dict | None:
-    """Model + gateway from the environment, or None (fallback only)."""
-    if str(os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY", "")).lower() in ("off", "0", "false", "no"):
-        return None
-    base = (os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY_BASE_URL") or os.environ.get("ANTHROPIC_BASE_URL")
-            or "https://api.anthropic.com")
-    key = os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY_API_KEY")
-    bearer = key or os.environ.get("ANTHROPIC_AUTH_TOKEN")
-    api_key = None if key else os.environ.get("ANTHROPIC_API_KEY")
-    if not (bearer or api_key):
-        return None
-    model = (os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY_MODEL") or os.environ.get("ANTHROPIC_DEFAULT_HAIKU_MODEL")
-             or "claude-haiku-4-5")
-    return {"base_url": base.rstrip("/"), "model": model, "bearer": bearer, "api_key": api_key}
+def enabled() -> bool:
+    return str(os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY", "")).lower() not in ("off", "0", "false", "no")
 
 
-_INSTRUCTIONS = """You condense scorer feedback for an optimizer that improves an AI agent.
-Each task below has one or more trials. A trial's feedback explains why it got its reward (often the
-rationale of an LLM judge). For EACH task, write a summary of at most {n} characters that keeps:
+_RULES = """You condense scorer feedback for an optimizer that improves an AI agent. This is NOT an
+editing task: do not change, create or delete any file except ./summaries.json.
+
+Each file in ./tasks/ is one task: its trials, each trial's reward, and each trial's feedback
+(often the rationale of an LLM judge). Read EVERY file in full.
+
+For EACH task write a summary of at most {n} characters that keeps:
 1. the issues of the LOWEST-scoring trial, first, in the scorer's own terms;
 2. the issues that recur across trials;
 3. when trials differ, what the higher-scoring trials did differently.
-Rules: keep scores and verdicts exactly as the scorer states them. Do not invent facts, causes or
+Keep scores and verdicts exactly as the scorer states them. Do not invent facts, causes or
 advice the feedback does not contain. No preamble.
-Reply with ONLY a JSON object that maps each task id to its summary string."""
+
+Write ./summaries.json: ONE JSON object that maps each task id below to its summary string.
+Then stop.
+
+Task ids (file -> id):
+{index}
+"""
 
 
-def _max_tokens() -> int:
-    """Output budget per call. Generous: a reasoning model (GLM, for example) may think for many
-    thousand tokens before it writes the JSON; 10 summaries themselves need about 3k."""
-    try:
-        return max(1024, int(os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY_MAX_TOKENS") or 32000))
-    except ValueError:
-        return 32000
+def _write_batch(workdir: Path, rows: list[dict], budget: int) -> str:
+    """The batch as one markdown file per task, plus the instructions; returns the prompt."""
+    if workdir.exists():
+        shutil.rmtree(workdir)
+    (workdir / "tasks").mkdir(parents=True)
+    index = []
+    for i, pt in enumerate(rows):
+        name = f"tasks/{i:02d}.md"
+        lines = [f"# task {pt.get('task_id')}", f"mean reward: {_num(pt.get('reward'))}", ""]
+        for t, r, text in trials_of(pt):
+            lines += [f"## {t or 'only trial'} - " + ("errored (no reward)" if r is None else f"reward {r:.3f}"),
+                      "", text, ""]
+        (workdir / name).write_text("\n".join(lines), encoding="utf-8")
+        index.append(f"- {name} -> {pt.get('task_id')}")
+    return _RULES.format(n=budget, index="\n".join(index))
 
 
-def _call(cfg: dict, prompt: str, timeout: float = 600.0) -> str:
-    headers = {"content-type": "application/json", "anthropic-version": "2023-06-01"}
-    if cfg.get("bearer"):
-        headers["authorization"] = f"Bearer {cfg['bearer']}"
-    if cfg.get("api_key"):
-        headers["x-api-key"] = cfg["api_key"]
-    body = json.dumps({"model": cfg["model"], "max_tokens": _max_tokens(),
-                       "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
-    req = urllib.request.Request(cfg["base_url"] + "/v1/messages", data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 — configured gateway URL
-        data = json.loads(resp.read().decode("utf-8"))
-    text = "".join(b.get("text", "") for b in data.get("content") or [] if b.get("type") == "text")
-    if not text.strip() and data.get("stop_reason") == "max_tokens":
-        raise ValueError(f"the reply hit max_tokens ({_max_tokens()}) before any text "
-                         "(raise CAPEVOLVE_FEEDBACK_SUMMARY_MAX_TOKENS)")
-    return text
-
-
-def _parse(reply: str) -> dict:
-    s, e = reply.find("{"), reply.rfind("}")
-    if s < 0 or e <= s:
-        raise ValueError("no JSON object in the summarizer reply")
-    obj = json.loads(reply[s:e + 1])
+def _read_summaries(workdir: Path) -> dict:
+    obj = json.loads((workdir / "summaries.json").read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
-        raise ValueError("summarizer reply is not a JSON object")
+        raise ValueError("summaries.json is not a JSON object")
     return {str(k): str(v) for k, v in obj.items()}
 
 
-def summarize_batches(rows: list[dict], budget: int, cfg: dict, call=_call) -> tuple[dict, list[str]]:
-    """``({task_id: summary}, [errors])`` for ``rows``, ``BATCH`` tasks per model call."""
-    out, errors = {}, []
-    for i in range(0, len(rows), BATCH):
-        chunk = rows[i:i + BATCH]
-        tasks = []
-        for pt in chunk:
-            trials = trials_of(pt)
-            tasks.append({"task_id": str(pt.get("task_id")), "mean_reward": _num(pt.get("reward")),
-                          "trials": [{"trial": n or "only", "reward": r, "feedback": t} for n, r, t in trials]})
-        prompt = _INSTRUCTIONS.format(n=budget) + "\n\nTASKS:\n" + json.dumps(tasks, ensure_ascii=False, indent=1)
+def summarize_batches(rows: list[dict], budget: int, optimizer, scratch: Path,
+                      run_dir=None) -> tuple[dict, list[str]]:
+    """``({task_id: summary}, [errors])``: ``optimizer(workdir, prompt)`` on ``BATCH`` tasks per
+    call, the calls run concurrently, each in its own workdir under ``scratch``."""
+    chunks = [rows[i:i + BATCH] for i in range(0, len(rows), BATCH)]
+
+    def one(k):
+        wd = scratch / f"batch_{k:02d}"
+        t0 = time.time()
         try:
-            got = _parse(call(cfg, prompt))
+            report = optimizer(wd, _write_batch(wd, chunks[k], budget)) or {}
         except Exception as e:  # noqa: BLE001 — one bad batch never costs the iteration
-            errors.append(f"batch {i // BATCH}: {type(e).__name__}: {str(e)[:200]}")
-            continue
-        for pt in chunk:
-            s = got.get(str(pt.get("task_id")), "").strip()
-            if s:
-                out[str(pt.get("task_id"))] = s
+            report, err = getattr(e, "cost", None) or {}, f"batch {k}: {type(e).__name__}: {str(e)[:200]}"
+        else:
+            err = None
+        if run_dir is not None and hasattr(run_dir, "update_spent"):
+            run_dir.update_spent(optimizer_seconds=time.time() - t0,
+                                 optimizer_usd=float(report.get("cost_usd") or 0.0),
+                                 optimizer_tokens=int(report.get("tokens") or 0))
+        if err:
+            return {}, err
+        try:
+            return _read_summaries(wd), None
+        except Exception as e:  # noqa: BLE001
+            return {}, f"batch {k}: no usable summaries.json ({type(e).__name__}: {str(e)[:150]})"
+
+    out, errors = {}, []
+    with ThreadPoolExecutor(max_workers=min(4, len(chunks) or 1)) as pool:
+        for got, err in pool.map(one, range(len(chunks))):
+            if err:
+                errors.append(err)
+            for pt_id, text in got.items():
+                if text.strip():
+                    out[pt_id] = text.strip()
     return out, errors
 
 
@@ -280,36 +281,39 @@ def _cache_path(run_dir) -> Path:
     return Path(run_dir.root) / "feedback_summaries.json"
 
 
-def condense(rows: list[dict], run_dir=None, *, call=_call) -> dict:
+def condense(rows: list[dict], run_dir=None, optimizer=None) -> dict:
     """``{task_id: bounded entry body}`` for every row whose feedback is over the bound.
 
-    Rows within the bound are not returned (shown as they are). With ``run_dir`` the
-    summarizer runs and its results are cached there by content, so an unchanged task is
-    never summarized twice; without it (or with no summarizer configured) every long row
-    gets the deterministic ``fallback``.
+    Rows within the bound are not returned (shown as they are). With ``run_dir`` and the
+    run's ``optimizer`` (the ``OptimizerFn`` the algorithm proposes edits with) the long rows
+    are summarized by it, and cached by content in the run dir so an unchanged task is never
+    summarized twice. Every row with no summary gets ``fallback``.
     """
+    optimizer_key = str(getattr(optimizer, "command", "") or getattr(optimizer, "__qualname__", ""))
     n = entry_chars()
     long_rows = [pt for pt in rows if len(str(pt.get("feedback") or "").strip()) > n]
     if not long_rows:
         return {}
     budgets = {str(pt.get("task_id")): n - len(header(pt)) - 1 for pt in long_rows}
-    cfg = summarizer_config() if run_dir is not None else None
     out: dict = {}
-    cache: dict = {}
-    if cfg is not None:
+    if run_dir is not None and optimizer is not None and enabled():
         try:
             cache = json.loads(_cache_path(run_dir).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cache = {}
-        key = lambda pt: hashlib.sha256(f"{cfg['model']}|{n}|{pt.get('feedback')}".encode("utf-8")).hexdigest()
+        key = lambda pt: hashlib.sha256(
+            f"{optimizer_key}|{n}|{pt.get('task_id')}|{pt.get('feedback')}".encode("utf-8")).hexdigest()
         todo = [pt for pt in long_rows if key(pt) not in cache]
         errors: list[str] = []
         if todo:
-            got, errors = summarize_batches(todo, max(150, min(budgets.values())), cfg, call=call)
+            scratch = Path(run_dir.root) / "work" / f"feedback_summary_{int(time.time() * 1000)}"
+            got, errors = summarize_batches(todo, max(150, min(budgets.values())), optimizer,
+                                            scratch, run_dir)
             for pt in todo:
                 s = got.get(str(pt.get("task_id")))
                 if s:
                     cache[key(pt)] = s
+            shutil.rmtree(scratch, ignore_errors=True)
             try:
                 _cache_path(run_dir).write_text(json.dumps(cache), encoding="utf-8")
             except OSError:
@@ -322,9 +326,9 @@ def condense(rows: list[dict], run_dir=None, *, call=_call) -> dict:
                 out[tid] = ((h + "\n") if h else "") + middle_cut(s, budgets[tid])
                 used += 1
         if hasattr(run_dir, "log_event"):
-            run_dir.log_event("feedback_summary", model=cfg["model"], long=len(long_rows), summarized=used,
-                              fallback=len(long_rows) - used, calls=-(-len(todo) // BATCH) if todo else 0,
-                              errors=errors[:5])
+            run_dir.log_event("feedback_summary", optimizer=optimizer_key[:200], long=len(long_rows),
+                              summarized=used, fallback=len(long_rows) - used,
+                              calls=-(-len(todo) // BATCH) if todo else 0, errors=errors[:5])
     for pt in long_rows:
         out.setdefault(str(pt.get("task_id")), fallback(pt, n))
     return out

@@ -610,7 +610,8 @@ def gepa_loop(
             parent_mb, mb, f"GEPA minibatch of {len(mb)} train tasks, component focus "
                            f"{focus_label}",
             algorithm="gepa", parent_dir=parent_dir,
-            extra=_instructions(refl_summary, focus_label, mb), run_dir=run_dir)
+            extra=_instructions(refl_summary, focus_label, mb), run_dir=run_dir,
+            optimizer=optimizer)
         instructions = ctx.augment_instructions(instructions, workdir, run_dir)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather

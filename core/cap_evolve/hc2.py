@@ -332,7 +332,7 @@ GOAL_NOTE = ("Aim for the edit with the largest expected reward gain on the WHOL
 
 def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm: str, params: HC2Params,
                        shown: dict, rejected_notes, retry_note: str = "", role: str = "cluster",
-                       run_dir=None) -> str:
+                       run_dir=None, optimizer=None) -> str:
     if role == "broad":
         label = f"failing traces of {len(cluster)} task(s) across ALL failure types on the feedback stratum"
         lead = ("This proposal is one of several made in parallel from the same incumbent. Your traces in "
@@ -356,7 +356,8 @@ def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm
     if retry_note:
         extra.append(retry_note)
     return ctx.instructions(adapter_val, list(cluster), label, algorithm=algorithm,
-                            parent_dir=parent_dir, extra="\n\n".join(extra), run_dir=run_dir)
+                            parent_dir=parent_dir, extra="\n\n".join(extra), run_dir=run_dir,
+                            optimizer=optimizer)
 
 
 # ---- merging survivors --------------------------------------------------------------------------
@@ -683,7 +684,7 @@ def _internal_estimate_pending(run_dir) -> bool:
 
 
 def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbent_dir, traces, failed,
-             c_ids, algorithm, notes, retry_note="", others=(), role="cluster"):
+             c_ids, algorithm, notes, retry_note="", others=(), role="cluster", optimizer=None):
     """Build the workdir and the full prompt for one proposal (used for the first try AND retries, so a
     retry never loses the memory/consolidation parts)."""
     wd = Path(run_dir.root) / "work" / cid
@@ -700,7 +701,7 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
     instr = ctx.augment_instructions(
         build_instructions(ctx, view, cl, parent_dir=incumbent_dir, algorithm=algorithm, params=params,
                            shown=shown, rejected_notes=notes, retry_note=retry_note, role=role,
-                           run_dir=run_dir), wd, run_dir)
+                           run_dir=run_dir, optimizer=optimizer), wd, run_dir)
     return wd, instr, shown
 
 
@@ -729,7 +730,7 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
     view = _pooled_split_result(traces, None)
     notes = _rejected_notes(run_dir, window)
     kw = dict(incumbent_dir=incumbent_dir, traces=traces, failed=failed, c_ids=c_ids,
-              algorithm=algorithm, notes=notes)
+              algorithm=algorithm, notes=notes, optimizer=optimizer)
 
     # slots: [merged survivors] + [broad] + clusters, K in all; the merged candidate needs no proposer
     merged = _build_merged(run_dir, incumbent_id, incumbent_dir, base + 1, params) if params.merge_survivors else None

@@ -1283,6 +1283,9 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
         if proc.stderr and proc.stderr.strip():
             report["stderr"] = proc.stderr
         return report or None
+    # The command names the agent CLI and model: the feedback-summary cache key, so a run that
+    # switches optimizer never reuses another optimizer's summaries.
+    _run.command = " ".join(cmd_template)  # type: ignore[attr-defined]
     return _run
 
 
@@ -4422,14 +4425,14 @@ def _fill_slots(text: str, repl: dict) -> str:
     return _SLOT_RE.sub(sub, text)
 
 
-def _failures_block(always_fail, flaky, errored, run_dir=None) -> str:
+def _failures_block(always_fail, flaky, errored, run_dir=None, optimizer=None) -> str:
     """The per-iteration (a)/(b)/errored failure index for the prompt.
 
     At most ``_max_listed()`` tasks are listed (always-failing first, then flaky, each worst
     first). A task whose feedback is over ``feedback_digest.entry_chars()`` gets a bounded
-    entry — a summary, else a deterministic cut — that always represents its lowest-scoring
-    trial; with ``run_dir`` its full text is written there and linked. Without ``run_dir``
-    (a unit render) long entries get the deterministic cut and no link.
+    entry — a summary by the run's own ``optimizer``, else a deterministic cut — that always
+    represents its lowest-scoring trial; with ``run_dir`` its full text is written there and
+    linked. Without ``run_dir`` (a unit render) long entries get the deterministic cut, no link.
     """
     from . import feedback_digest as fd
     flaky = sorted(flaky, key=lambda pt: float(pt.get("reward", 0) or 0))
@@ -4437,9 +4440,8 @@ def _failures_block(always_fail, flaky, errored, run_dir=None) -> str:
     shown_af = always_fail[:cap]
     shown_fl = flaky[:max(0, cap - len(shown_af))]
     shown = shown_af + shown_fl
-    digest = fd.condense(shown, run_dir)
-    links = ({str(pt.get("task_id")): fd.store_full(run_dir, pt) for pt in shown
-              if str(pt.get("task_id")) in digest} if run_dir is not None else {})
+    digest = fd.condense(shown, run_dir, optimizer)
+    links = fd.store_links(run_dir, shown, digest)
     fmt = lambda pt: _fmt(pt, digest, links.get(str(pt.get("task_id"))))
     lines: list[str] = []
     if digest:
@@ -4461,9 +4463,10 @@ def _failures_block(always_fail, flaky, errored, run_dir=None) -> str:
         lines.append("")
     rest = always_fail[len(shown_af):] + flaky[len(shown_fl):]
     if rest:
+        ids = [str(pt.get("task_id")) for pt in rest]
+        named = ", ".join(ids[:60]) + (f" … (+{len(ids) - 60} more)" if len(ids) > 60 else "")
         lines.append(f"(+{len(rest)} more failing task(s) not listed, over the {cap}-task limit "
-                     f"(CAPEVOLVE_MAX_LISTED_FAILURES): " + ", ".join(str(pt.get("task_id")) for pt in rest)
-                     + ". Their traces are in ./trajectories/.)")
+                     f"(CAPEVOLVE_MAX_LISTED_FAILURES): {named}. Their traces are in ./trajectories/.)")
         lines.append("")
     if not always_fail and not flaky:
         lines.append("## No actionable failures in focus — seek a robustness/generalization gain "
@@ -4916,10 +4919,11 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         instructions_file=None, bench_repo: str | None = None,
                         optimizer_name: str | None = None,
                         seed_empty: bool | None = None,
-                        target_reader: str = "", run_dir=None) -> str:
+                        target_reader: str = "", run_dir=None, optimizer=None) -> str:
     """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
-    optimizer-instructions template. ``run_dir`` enables the feedback summarizer and the
-    full-feedback files (``feedback_digest``); without it long entries are cut, not summarized.
+    optimizer-instructions template. ``run_dir`` enables the full-feedback files and, with the
+    run's ``optimizer``, the feedback summaries (``feedback_digest``); without them long entries
+    are cut, not summarized.
 
     The static framing (analyze → ideate → edit, the read-pointers, the code-bearing
     tools guidance, the economy footer) lives in the template file — authored by the
@@ -4947,7 +4951,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} {scope}."
     )
-    failures = _failures_block(always_fail, flaky, errored, run_dir=run_dir)
+    failures = _failures_block(always_fail, flaky, errored, run_dir=run_dir, optimizer=optimizer)
     passing = _passing_block(protect) if history_enabled() else ""
     cap = _capability_brief(capabilities)
     algo = _algorithm_brief(current_val, algorithm)
@@ -5254,7 +5258,8 @@ class OptimizerContext:
 
     def instructions(self, current_val: SplitResult, focus_ids, label: str, *,
                      algorithm: str, parent_dir: Path | None = None,
-                     extra: str = "", run_dir: RunDir | None = None) -> str:
+                     extra: str = "", run_dir: RunDir | None = None,
+                     optimizer: "OptimizerFn | None" = None) -> str:
         """Render this iteration's prompt from the shared template.
 
         ``parent_dir`` (the candidate being forked) enables the empty-seed note;
@@ -5266,7 +5271,8 @@ class OptimizerContext:
             current_val, focus_ids, label, capabilities=list(self.capabilities),
             algorithm=algorithm, instructions_file=self.instructions_file,
             bench_repo=self.bench_repo, optimizer_name=self.optimizer_name,
-            seed_empty=seed_empty, target_reader=self.target_reader, run_dir=run_dir)
+            seed_empty=seed_empty, target_reader=self.target_reader, run_dir=run_dir,
+            optimizer=optimizer)
         return (text.rstrip() + "\n\n" + extra.strip() + "\n") if extra.strip() else text
 
 
@@ -5403,7 +5409,8 @@ def hill_climb_loop(
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
         instructions = ctx.instructions(current_val, focus_ids, label,
-                                        algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir)
+                                        algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir,
+                                        optimizer=optimizer)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.
