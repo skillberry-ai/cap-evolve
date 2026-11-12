@@ -59,8 +59,9 @@ from .rundir import RunDir
 _MAX_FAILURES_PER_STEP = 10      # failure-pattern clusters carried per step
 _MAX_TASK_IDS_PER_PATTERN = 3    # task ids shown per cluster
 _MAX_BUFFER_STEPS = 12           # most recent steps kept in the per-epoch buffer
-# A multi-trial feedback label line, as harness._join_trial_feedback writes it.
-_TRIAL_LABEL_RE = re.compile(r"^\[(?:\S+ )?trial \d+[^\]\n]*\]$", re.MULTILINE)
+# A feedback label line: a trial label (harness._join_trial_feedback) or a pooled
+# evaluation header (loop.pooled_feedback).
+_TRIAL_LABEL_RE = re.compile(r"^\[(?:(?:\S+ )?trial \d+[^\]\n]*|evaluation \d+ of \d+)\]$", re.MULTILINE)
 
 
 # ---- failure-pattern clustering -------------------------------------------

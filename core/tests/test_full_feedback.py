@@ -139,3 +139,60 @@ def test_skillopt_clusters_ignore_the_multi_trial_labels():
                                        {"task_id": "y", "reward": 0.5, "feedback": y}])
     assert len(pats) == 1 and pats[0]["n"] == 2, pats
     assert not pats[0]["pattern"].startswith("[")
+
+
+def test_pooled_round_tags_keep_their_full_tag_in_the_label(tmp_path):
+    """Round tags hold "__" themselves; two rounds of one stage must not share a label."""
+    from cap_evolve import RunDir
+    from cap_evolve.splits import Splits
+
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t")
+    rd.write_splits(Splits(train=["t0"], val=["t0"], test=["t0"], seed=0))
+    vdir = rd.rollout_dir("val")
+    vdir.mkdir(parents=True, exist_ok=True)
+    tags = ["r000__cand_0003__rung1_0", "r001__cand_0003__rung1_0"]
+    for tag, r in zip(tags, (0.0, 1.0)):
+        (vdir / f"t0__{tag}__t1000.json").write_text(json.dumps(
+            {"score": {"task_id": "t0", "reward": r, "feedback": f"judge on {tag}"}}), encoding="utf-8")
+    fb = harness.split_result_from_rollouts(rd, tags, "val").per_task[0]["feedback"]
+    assert "[r000__cand_0003__rung1_0 trial 1000 reward 0.000]" in fb
+    assert "[r001__cand_0003__rung1_0 trial 1000 reward 1.000]" in fb
+
+
+def _one_task(fb, reward=0.5):
+    return SplitResult(split="val", reward=reward, stderr=0.0, n_tasks=1, n_scored=1,
+                       per_task=[{"task_id": "t0", "reward": reward, "trial_rewards": [reward],
+                                  "feedback": fb}])
+
+
+def test_pooling_keeps_a_side_whose_text_is_inside_the_other():
+    """The dedup is an exact match: a shorter rationale contained in a longer one is kept."""
+    from cap_evolve.loop import pool_split_results
+
+    a, b = "wrong tool: book_flight; wrong cabin", "wrong cabin"
+    fb = pool_split_results(_one_task(a), _one_task(b)).per_task[0]["feedback"]
+    assert f"[evaluation 1 of 2]\n{a}" in fb and f"[evaluation 2 of 2]\n{b}" in fb
+
+
+def test_pooling_names_each_evaluation_and_does_not_nest_on_repeat():
+    """Each evaluation numbers its trials from 0; the header says which evaluation a label is in."""
+    from cap_evolve.loop import pool_split_results
+
+    side = lambda r: harness._join_trial_feedback([(0, r, f"judge {r}"), (1, r, "same")])
+    once = pool_split_results(_one_task(side(0.5)), _one_task(side(0.9)))
+    twice = pool_split_results(once, _one_task(side(0.1)))   # the missing-retry loop pools again
+    fb = twice.per_task[0]["feedback"]
+    assert [ln for ln in fb.splitlines() if ln.startswith("[evaluation")] == [
+        "[evaluation 1 of 3]", "[evaluation 2 of 3]", "[evaluation 3 of 3]"]
+    assert fb.count("[trial 0 reward") == 3
+    assert pool_split_results(_one_task("same"), _one_task("same")).per_task[0]["feedback"] == "same"
+
+
+def test_skillopt_clusters_ignore_the_pooled_evaluation_headers():
+    from cap_evolve.loop import pool_split_results
+
+    p = "Wrong tool: called cancel_reservation before the user confirmed the change"
+    x = pool_split_results(_one_task(p + " (a)", 0.0), _one_task(p + " (b)", 0.0)).per_task[0]["feedback"]
+    pats = skillopt._failure_patterns([{"task_id": "x", "reward": 0.0, "feedback": x},
+                                       {"task_id": "y", "reward": 0.0, "feedback": p + " (c)"}])
+    assert len(pats) == 1 and pats[0]["n"] == 2, pats

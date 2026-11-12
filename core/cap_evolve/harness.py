@@ -942,7 +942,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     metrics_by_task: dict[str, list] = {}
     cost_by_task: dict[str, list[float]] = {}  # #676: per-task cost, every trial counts
     if vdir.exists():
-        for f in sorted(g for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
+        for f, ftag in sorted((g, t) for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
             if min_trial and int(f.stem.rsplit("__t", 1)[1]) < min_trial:
                 continue   # not a fresh trial (see ``min_trial``)
             rec = _json.loads(f.read_text(encoding="utf-8"))
@@ -950,7 +950,9 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             tid = sc.get("task_id") or f.name.split("__")[0]
             trial_k = int(f.stem.rsplit("__t", 1)[1])
             # Pooled tags each number their trials from 0: name the tag so labels stay unique.
-            trial_label = trial_k if len(tags) == 1 else f"{f.stem.rsplit('__', 2)[1]} {trial_k}"
+            # The FULL tag, as globbed: round tags hold "__" themselves (r000__<cid>__rung1_0),
+            # so a split on "__" would give two rounds' tags the same label.
+            trial_label = trial_k if len(tags) == 1 else f"{ftag} {trial_k}"
             cost_by_task.setdefault(tid, []).append(
                 float((rec.get("rollout") or {}).get("cost_usd") or 0.0))
             # carry the structured infra flag + trial counts forward across resume.
