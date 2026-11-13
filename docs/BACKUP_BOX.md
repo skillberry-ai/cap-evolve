@@ -12,8 +12,9 @@ Box archive with `rclone`. The companion checklist is `docs/VERIFICATION_SCAN.md
   - `BACKUP_RESULTS_<TS>.md`, one at the root of each user folder that receives runs (§12).
 
   `<TS>` is a full UTC timestamp, `YYYYMMDDTHHMMSSZ`, taken when that step starts. If a rule here is
-  wrong or a benchmark profile (Appendix B) is incomplete, say so in `BACKUP_RESULTS_<TS>.md`, apply
-  the corrected rule there explicitly, and open an issue that proposes the change to this document.
+  wrong, say so in `BACKUP_RESULTS_<TS>.md`, apply the corrected rule there explicitly, and open an
+  issue that proposes the change to this document. Benchmark profiles (`docs/backup_profiles/`) are
+  not part of this procedure: they are created and corrected as Appendix B says.
 - **Box is a private experiment archive, not redistribution.** Upload everything a run produced,
   including gold, benchmark data and licence-restricted material. Record each licence in `NOTICE.md`
   (§7.4). Never leave data out because of its licence.
@@ -93,7 +94,8 @@ short of each objective in a way that later processing cannot repair:
   is byte-identical to a file on a source. A redacted file is a source copy with secrets removed. A
   derived file is written by this procedure (summaries, metrics, indexes, `README.md`).
 - **Gap.** Something the procedure requires that is not in the folder (§6).
-- **Profile.** The per-benchmark facts this procedure needs (Appendix B).
+- **Profile.** The per-benchmark facts this procedure needs: one file per benchmark in
+  `docs/backup_profiles/` (§4, Appendix B).
 - **Partial export.** A source that holds only part of a run: git result branches and repos, CI
   artifacts, committed `run_full/` dirs, dashboard UI snapshots.
 
@@ -142,12 +144,11 @@ it is listed in `runmeta.contributors`.
 
 ### 2.2 Benchmark ids
 
-`<bench-id>` is one of the ids in Appendix B, including the retired ones (B.12–B.15). Map every
-bench name to its id with the table in B.16, so that names are never confused. For example,
+`<bench-id>` is the id of the benchmark's profile. Map every bench name to its id with the table in
+`docs/backup_profiles/INDEX.md`, so that names are never confused. For example,
 `benchmarks/swe_bench` is `swebench-lite`, while CI `swebench` runs the Harbor adapter and is
-`swebench-verified-harbor`. A benchmark that is not listed gets a new
-id, lowercase with hyphens, and a profile written into `BACKUP_RESULTS_<TS>/profiles/<bench-id>.md`
-(§4).
+`swebench-verified-harbor`. A bench name that is not listed gets a new id
+and a new profile (§4, Appendix B.2).
 
 ### 2.3 Folder names
 
@@ -183,7 +184,7 @@ benchmark's `INDEX.md`, so it can change without renaming on Box.
 
 These rules apply to new content:
 - **At a user folder's root:** `BACKUP_RESULTS_<TS>.md`, `BACKUP_RESULTS_<TS>/` (evidence, rclone
-  logs, the git snapshot, corrected profiles), and `<bench-id>/` folders.
+  logs, the git snapshot), and `<bench-id>/` folders.
 - **In a `<bench-id>/` folder:** `INDEX.md` and run folders.
 
 Nothing else. No probe or test files are uploaded, because nothing on Box can be deleted.
@@ -213,7 +214,7 @@ Every folder of every kind has this tree:
 
 ```
 <run-folder>/
-  README.md  NOTICE.md  runmeta.json  MANIFEST.json  SYMLINKS.txt
+  README.md  NOTICE.md  PROFILE.md  runmeta.json  MANIFEST.json  SYMLINKS.txt
   SCAN_RESULTS_<TS>.md  SCAN_RESULTS_<TS>.json
   GAPS.json  GAPS.md  REDACTIONS.json  MOVES.json          (always present; may be empty)
   data/           README.md, metrics_full.jsonl, metrics_full.html, metrics_summary.json,
@@ -279,7 +280,8 @@ run (Appendix A.4).
 
 ## 4. Benchmark profiles
 
-Every benchmark difference this procedure needs is in that benchmark's profile (Appendix B):
+Every benchmark difference this procedure needs is in that benchmark's profile, a file in
+`docs/backup_profiles/`:
 - reward, success criterion and second-level metric;
 - the rule used for infra errors;
 - where each metric field is recorded;
@@ -294,19 +296,24 @@ Every benchmark difference this procedure needs is in that benchmark's profile (
 - licence;
 - extra secret locations.
 
-The procedure steps are the same for every benchmark; only the profile values differ.
+The procedure steps are the same for every benchmark; only the profile values differ. Profile values
+that every benchmark shares are in `docs/backup_profiles/_core.md`.
 
-**Before backing up a benchmark's first run in a backup,** check its profile against that run:
-- every path and field it names exists, or is explained;
-- every source of the run maps to a profile key.
+**For each run, before capturing it:**
+1. **Look the profile up.** Find the run's bench name in `docs/backup_profiles/INDEX.md`, and load the
+   profile it names, together with `_core.md`.
+2. **If there is no profile,** create one as Appendix B.2 says. Use it for this backup, and propose it
+   in a pull request.
+3. **Check the profile, the first time it is used in a backup,** against that run:
+   - every path and field it names exists, or is explained;
+   - every source of the run maps to a profile key;
+   - every `unverified` value is now settled, if the run settles it.
 
-Then:
-- **If the profile is correct,** record `profile checked against <run>` in `BACKUP_RESULTS_<TS>.md`.
-- **If it is wrong or incomplete,** write the corrected profile to
-  `BACKUP_RESULTS_<TS>/profiles/<bench-id>.md`, use that for this backup, list the corrections, and
-  propose them in an issue (Rules).
-- **If the benchmark has no profile,** write one in that file, in the format of Appendix B, before
-  capturing.
+   If anything is wrong or missing, correct the profile as Appendix B.3 says. Otherwise record
+   `profile checked against <run>` in `BACKUP_RESULTS_<TS>.md`, and set the profile's status in
+   `INDEX.md` the same way.
+4. **Record the profile used** in the run folder (`PROFILE.md`) and in `runmeta.profile`
+   (Appendix B.4).
 
 ## 5. Capture stage (at backup time)
 
@@ -379,7 +386,7 @@ and search at least:
 - **(g) Git result sources** (§5.2), as partial exports and as published claims: `benchmark-history`
   `records/`, `runs/` and `live/` (live-monitor snapshots), the `*-history` branches, `results/*`
   and `records/*` branches, and the `skillberry-runs/*` repos. Retired benchmarks are found mainly
-  here (B.12–B.15).
+  here.
 - **(h) Gateway and proxy usage ledgers** for the run's time window (`sources.ledgers`), which are
   sometimes the only token record.
 - **(i) Posts:** every comment on the tracking issue(s) and PRs, and the workflow runs, fetched from
@@ -755,6 +762,7 @@ optimizer_provider, gate_k_se, algorithm, warm_seed, reward_metric, conclusion`.
 
 ```
 schema: "runmeta v2", procedure: "BACKUP_BOX v2.0"
+profile: {bench_id, path: "docs/backup_profiles/<bench-id>.md", commit, sha256, state: as-is|corrected|new}
 kind: training-run | test-window | campaign-material
 bench_id, method, method_version, setting, replicate
 owner: <user-id>, contributors: [{name, email, role}]
@@ -867,324 +875,85 @@ Holds the same content as the `.md` (VERIFICATION_SCAN, format):
  checks: [{id, result, severity, evidence: [], gap_ids: []}], known_gaps: []}
 ```
 
-## Appendix B. Benchmark profiles
+## Appendix B. Benchmark profiles: format, and how to create or correct one
 
-**Status of these profiles.** Every benchmark in `benchmarks/` and every retired benchmark found in
-the results has a profile, so every run is eligible for backup. They were drafted on 2026-11-11 and
-2026-11-12 from the adapters, configs, CI tiers and committed results (for retired benchmarks, from
-their code at the commit before removal and from their records), not from a backup of a real run. The first backup of each benchmark
-checks its profile against a real run (§4). Every path is relative to the cap-evolve repo unless
-stated otherwise.
+Profiles are files in `docs/backup_profiles/`:
+- one file per benchmark id, `<bench-id>.md`;
+- `_core.md`, the values every benchmark shares (they come from cap-evolve's core);
+- `INDEX.md`, which maps every bench name to its profile file and records each profile's status.
 
-### B.0 Values shared by every benchmark (from core)
+The profiles are not part of this procedure, and they are not read-only. They are corrected and
+extended through pull requests.
 
-- **Rollouts:** `rollouts/<split>/<task>__<cand>__t<k>.json`, holding `{input, rollout, score}`.
-  `Rollout` has `cost_usd`, `tokens` (one total), `error`, `trace`, `tool_calls` and `metadata`.
-  There is no per-episode latency in core.
-- **Episode index:** `eval_index.jsonl`. Per-evaluation seconds are in the `evaluate` events. Run
-  totals are in `state.json` `spent` (including `usersim_usd`, which is a list-price estimate already
-  inside `usd`).
-- **Infra errors:** core drops errored trials from the mean by default (`errored_trial_policy: drop`).
-- **Test seal:** core seals test. In pooled mode, the sealed stratum is in `<project>.sealed/<run>/`
-  or `$CAPEVOLVE_SEALED_DIR`.
-- **Optimizer:** `claude -p … --allowedTools Bash` (`skills/optimizers/registry.yaml`). There is no
-  sandbox unless the profile says so. Transcripts are in
-  `~/.claude/projects/<slug of the work dir>/`, unless `CAPEVOLVE_OPTIMIZER_TRANSCRIPT` was set.
-  Agent-mode runs also write `<run>/host/transcript.jsonl`.
-- **CI:** the run dir is under `ci/benchmarks/.work/` and is wiped by the next run of the same
-  tier×bench. If a tier has no `split_ids.json`, train = val = test (no holdout).
-- **False positive in gold greps:** the term `ao_focus_canary`.
+### B.1 Format
 
-### B.1 `appworld` — `benchmarks/appworld/examples/react_agent`
+A profile starts with a title line, `# Backup profile: \`<bench-id>\` — <where the code is>`, then
+a pointer to `_core.md` and a one-line description. It then has a two-column table (`Key | Value`)
+with the keys below, in this order. Every key is present, and its value is exactly one of:
+- the value itself;
+- `as _core.md`, or `as <other-profile>`;
+- `not applicable: <reason>`;
+- `unverified: <what was found> — <why it could not be confirmed>`.
 
-| Key | Value |
+| Key | What it holds |
 |---|---|
-| Reward | `success` (every requirement passes): binary. Success = `success`. Group metric SGC: per trial k, a scenario passes iff all its tasks pass (scenario = task-id prefix before `_`), averaged over k. TGC = mean task success. Analysis in `scripts/analyze.py`. |
-| Infra rule | published: errors and missing cells count as failures (`analyze.py`); core search: drop. Detectors: `Rollout.error` "infrastructure: …", `metadata.infra_error`. |
-| Telemetry | `prompt_tokens`, `completion_tokens`, `n_steps`, `termination`, `wall_seconds` / `episode_seconds`, all in rollout metadata; window: `runs/final/results.jsonl`. |
-| Cost | agent: `cost_source="unpriced"` (RITS), `zero_means: unknown`. Optimizer: `state.json` `spent.optimizer_usd`, from the CLI. |
-| Splits | train 90 / dev 57 / test_normal 168. Search split = train ∪ dev (fit). Test sealed by the adapter, scored in `scripts/final_window.py`. |
-| Baselines | seed |
-| Gold | `$AW_EVAL/root_full/data/tasks/*/ground_truth/` (`answer.json`, `compiled_solution.py`, `metadata.json`), `private_data`, `appworld/generate/`. Allowed to the optimizer: none. `root_opt` keeps train/dev ground truth: access to it is a finding to grade. Canary is release-wide, so only test ids count as evidence. |
-| Isolation | `sandbox/` shim (bubblewrap or namespace), `progress/optimizer_guard.log`, `runs/isolation_check/*/report.json`, `scripts/isolation_gate.py`. |
-| Agent evidence | per-episode `fs_probe`, `guard_blocked`, `guard_probe`. |
-| Models as used | transcripts; window `results.jsonl`. |
-| External state | `$AW_EVAL` (default `/tmp/aw_eval`, **volatile**): `root_opt`, `root_full`, `runs/` (manifest, final, isolation_check, optimizer_transcripts), `progress/`, `scratch/`, `reference/`, `lint_cache.json`. |
-| Sources | posts: tracking issues. |
-| Reproduce | launch: `scripts/setup_project.sh`, `capevolve.yaml`, `optimizer/INSTRUCTIONS.template.md`; data: `root_full`; clones: AppWorld @ `42b5bcf` + `patches/`; env: `venv-aw` freeze. |
-| Licence | Apache-2.0; the protected part (API docs and implementations, solutions, tests, and `reference/api_index.md`) must not be published in plain text. |
-| Secrets | the repo `.env`. |
+| Bench names | every name the benchmark appears under (CI bench, record `bench`, repo dir, run-dir names), and the closed list of `<setting>` values (§2.3) |
+| Code | the adapter and config paths, at the commit where they exist |
+| Reward | the primary reward and its range; the **success** criterion; the second-level (group) metric and its grouping key; secondary metrics; where the published metric's name is recorded |
+| Infra rule | the rule the published results used (`drop` or `fail`, or something else, stated); the detectors that mark an episode as infra-errored |
+| Telemetry | for each of prompt tokens, completion tokens, latency, steps and termination: where it is recorded, or `not-produced` |
+| Cost | for each category (agent, usersim, judge, simulator, proxy, optimizer): its source, whether it is measured, reported or estimated, and `zero_means: zero` or `zero_means: unknown` |
+| Splits | the split files or rules, their sizes, and whether there is a held-out split |
+| Baselines | every baseline arm the benchmark uses, and how to tell which one a run used |
+| Capability | what the optimizer edits, and how it is delivered to the agent |
+| Gold | gold paths and file names; gold carried inside records; `allowed_to_optimizer`; `forbidden`; false-positive grep terms |
+| Isolation | the isolation mechanism and its evidence files, or `none` |
+| Agent evidence | where to look to check that the agent under test did not touch gold |
+| Models as used | the record that gives each model as actually used, per role |
+| External state | every location outside the run dir that the run writes or reads, each marked `volatile` when it expires or is overwritten |
+| Sources | other hosts, archives, git sources, results repo, gateway ledgers, posts |
+| Reproduce | launch files; data to copy; upstream clones and where their commits are recorded; services; images; environment freezes; `unpinnable` items; the smoke command (E5) |
+| Licence | the licence of each data source; restrictions and protected paths (for `NOTICE.md`) |
+| Secrets | secret locations beyond the host's secret files (for example tokens on command lines, keys in service configs) |
 
-### B.2 `tau2-airline` — `benchmarks/tau2/template`, `benchmarks/tau2/examples/airline`; CI `tau2`
+### B.2 Creating a profile
 
-| Key | Value |
-|---|---|
-| Reward | tau2 `reward_info.reward`, binary per trial in airline. Success: reward = 1. Group metric: pass^k (`final.json` `pass_k`). Secondary: `db_match`. |
-| Infra rule | published: drop. Detectors: termination `INFRASTRUCTURE_ERROR`, `UNEXPECTED_ERROR`, `TIMEOUT`; user-simulator `###STOP###` leak. |
-| Telemetry | tokens: sum of `trace[].usage`; latency: `<run>/native_sims/<tag>/<split>/results_*.json` `duration`; steps: count from the trace; termination: `metadata.termination_reason`. |
-| Cost | agent: `metadata.cost_source` (`tau2`, `partial_messages`, `unpriced`), `zero_means: unknown` unless tagged `tau2`. User simulator: `metadata.usersim`, list estimate, **already inside `usd`** (report it apart). Optimizer: `step` events; in agent mode it may be null or hand-entered. |
-| Splits | template: core ratios. airline: `split_ids.json` 50/50/50 (no holdout), `agentopt_split.json` 26/12/12 (holdout), `smoke_split.json`, `itest_split.json`. |
-| Baselines | seed |
-| Gold | `vendor/tau2-bench/data/tau2/domains/airline/tasks.json` (`evaluation_criteria`), `src/tau2/evaluator/`. In records: `metadata.tau2_reward_info.action_checks`, which is copied into `work/*/trajectories/`. Allowed: train/val. Forbidden: test ids. |
-| Isolation | none |
-| Agent evidence | the candidate's `tools.py` runs in-process. |
-| Models as used | `native_sims` `info.agent_info.llm`, `info.user_info.llm`. |
-| External state | `native_sims/`, `vendor/tau2-bench*`. |
-| Sources | committed exports `run_full/`, `run_agentopt*/` (some made on another host); `erezh/_campaign/` on Box (duplicate check); git `research/capevolve-paper-*` branches. |
-| Reproduce | launch: `setup.sh`, `run.sh`, `capevolve*.yaml`, split files; clone: tau2-bench at the recorded SHA (unpinned `main`; check `TAU2_COMMIT.txt` against `demo.cast`); unpinnable: gateway backends. |
-| Licence | not recorded |
-| Secrets | `native_sims/**` `llm_args`; `OPENAI_API_KEY` in `.env`. |
+Do this when a run's bench name is not in `INDEX.md` (§4). Use the benchmark's code **at the run's
+own commit**.
+1. **Choose the id.** Lowercase with hyphens, naming the benchmark and, when one benchmark has
+   several environments, the environment (for example `tau2-airline`). It must not be an id already
+   in `INDEX.md`.
+2. **Read the sources, in this order:**
+   1. the adapter (`tasks`, `run_target`, `score`, and the rollout metadata it writes);
+   2. `capevolve*.yaml` and the split files;
+   3. `setup.sh`, `run.sh` and any launch scripts;
+   4. the CI tier: `ci/benchmarks/<bench>/<tier>/` (`overrides.env`, `split_ids.json`) and the
+      bench's branch of `ci/benchmarks/lib/run_suite.sh`;
+   5. the optimizer instructions;
+   6. the benchmark's README and docs;
+   7. one real run of the benchmark: rollout files, events, and the external dirs it names.
+3. **Fill every key of B.1.** Next to each value, cite its evidence as `path:line`, or as the run path.
+   Where a value equals core's, write `as _core.md`. Where it equals another profile's, write `as
+   <profile>`. Never guess: a value the sources do not settle is `unverified`, with what was found.
+4. **Save it.** Write it to `docs/backup_profiles/<bench-id>.md`, add its bench names to the `INDEX.md`
+   table and its row to the status table (`draft, checked against <run>`), and open a pull request
+   for both. Use the new profile for this backup without waiting for the merge.
 
-### B.3 `tau2-sierra-airline` — `benchmarks/tau2/examples/sierra_airline/{direct,blackbox}`; CI `tau2_sierra`, `tau2_sierra_blackbox`
+### B.3 Correcting a profile
 
-| Key | Value |
-|---|---|
-| Reward | as `tau2-airline`. |
-| Infra rule | as `tau2-airline`. |
-| Telemetry | no `tokens`. Trace = `sim.model_dump()` (`duration`, `termination_reason`, `messages[].usage`). |
-| Cost | agent not measured (`zero_means: unknown`); SPA reports no usage. User simulator: `sim.user_cost`. |
-| Splits | `split_ids_budget.json`: 7 = 7 = 7 (no holdout); `split_ids.json`; `split_ids_smoke.json`. |
-| Baselines | seed |
-| Gold | **allowed by design:** `runner_repo_path: ../../vendor/tau2-bench`, and gold actions in `trajectories/`. Check for hardcoded task ids or values (VERIFICATION_SCAN A1b). |
-| Isolation | none |
-| Agent evidence | direct: in-process tools; blackbox: SPA (port 7000) + env manager (port 8004). |
-| Models as used | native results `info.*.llm` (the spec, PROJECT.md and REPRODUCE disagree). |
-| External state | `.capevolve/`, `.capevolve-blackbox/`, `vendor/{tau2-bench,skillberry-store,skillberry-agent}` and their venvs, the store DB, `/tmp/skillberry-*.log`, `/tmp/env_manager.log`, `/tmp/tools-*.log` (**volatile**). |
-| Reproduce | tau2 @ `TAU2_REFERENCE_SHA`; store `aviweit/skillberry-store@c39d472`; SPA `skillberry-ai/skillberry-agent@e359494`. |
-| Licence | not recorded |
-| Secrets | `llm_args`; `.env`. |
+When the check of §4 finds a value that is wrong or missing:
+- edit the profile file;
+- set its `INDEX.md` status to `checked against <run>, corrected`;
+- list each correction, with its evidence, in `BACKUP_RESULTS_<TS>.md`;
+- open a pull request.
 
-### B.4 `skillsbench` — `benchmarks/skillsbench/{template,examples/shared_skills}`; CI `skillsbench`
+Use the corrected profile for this backup.
 
-| Key | Value |
-|---|---|
-| Reward | verifier `reward.txt`, `result*.json` or CTRF all-pass: binary. Success: all verifier tests pass. Group metric: pass^k. |
-| Infra rule | published: drop. Detectors: no reward found, launch failure, timeout. |
-| Telemetry | `cost_usd = 0` and `tokens = 0` are hard-coded (`not_recorded`). Latency, steps, termination: BenchFlow `result.json` under the jobs dir, if present. |
-| Cost | agent (Claude Code in a container): not metered (`zero_means: unknown`). Optimizer: `step` events. |
-| Splits | example: train = val = 7 tasks, test 3. smoke 1/1/1. |
-| Baselines | seed |
-| Gold | `vendor/skillsbench/tasks/<id>/{tests,solution}`, `.bench_cwd` dataset clone. Allowed: train-task verifiers (`runner_repo_path`). Forbidden: the 3 test tasks' tests and solutions. |
-| Isolation | none |
-| Agent evidence | `--sandbox docker`. |
-| Models as used | the bench command (`--model`) and the agent trajectories. |
-| External state | `<run>/bench_jobs/`, `.bench_cwd`, `vendor/skillsbench`, Docker images. |
-| Sources | git `skillsbench-history`, `skillberry-runs/skillsbench`; CI records. |
-| Reproduce | clone at the recorded SHA (`SKILLSBENCH_COMMIT.txt`), but tasks run from BenchFlow's own `--source-ref main` cache: record its SHA. `benchflow` version. |
-| Licence | the four seed skills are Anthropic-licensed, not for redistribution (not to be published). |
-| Secrets | `--agent-env ANTHROPIC_AUTH_TOKEN=…` on the command line, in logs and job configs; `.env`. |
+### B.4 Recording which profile was used
 
-### B.5 `spreadsheetbench` — `benchmarks/spreadsheetbench/template`; CI `spreadsheetbench`
-
-| Key | Value |
-|---|---|
-| Reward | `SPREADSHEETBENCH_SCORING` (soft / hard) × `REWARD_RECALC`; name in `runmeta.reward_metric`. Success: hard = 1. Group metric: hard vs soft over the 3 cases (912/200 only); `instruction_type`. |
-| Infra rule | published (exp895 campaign): infra retried, never scored 0, candidate errors score 0. Core: drop. Detector: `metadata.error_kind`. |
-| Telemetry | `tokens` (sum over turns); steps from the `trace`; no latency or termination. Campaign: phase totals in `results/usage.json` (`phase_total`). |
-| Cost | agent: litellm `response_cost` (`zero_means: unknown`). |
-| Splits | smoke: fit; pilot 5/50/5; full 182/91/639; full_verified 80/40/280 (`split_source.json`). |
-| Baselines | seed, `no_skill`, `warm_seed` (`seed_capability_warm`), empty seed (`SB_EMPTY_SEED`), reused-from-slot (`SB_REUSE_LATEST_BASELINE`). Find which from the seed snapshot, not from runmeta. |
-| Gold | `<DATA>/spreadsheet/<id>/*_answer.xlsx`, `*golden.xlsx` in `~/.cache/capevolve-ci/spreadsheetbench-data/`; `third_party/spreadsheetbench/evaluation/`. |
-| Isolation | none for the optimizer. |
-| Agent evidence | gold-free agent view; `$OUT/gold_separate_from_agent_mount`. |
-| External state | the data cache; kept slot `~/.cache/capevolve-latest/spreadsheetbench-slots/` (**volatile**, overwritten); `outputs/*.xlsx`; Docker executor. |
-| Sources | `skillberry-runs/spreadsheetbench` (= `spreadsheet-history`): 11 systems × 3 seeds, each `results/<system>/s<k>/{search,test}`. Raw data stated at `cap-evolve-archive/spreadsheetbench-exp895/` (not found in any repo or on this host on 2026-11-11). Cluster workareas named in `run_meta.txt`. |
-| Reproduce | data fetched from raw `main` (unpinned; hash the tree); harness @ `0d9dc14`; `recipes/<system>/` from the results repo. |
-| Licence | CC BY-SA 4.0 (data); split ids MIT. |
-| Secrets | `.env`. |
-
-### B.6 `swebench-lite` — `benchmarks/swe_bench/template` (local only)
-
-| Key | Value |
-|---|---|
-| Reward | resolved: binary. Success: resolved. Group metric: per `metadata.repo`. |
-| Infra rule | published: drop. Detectors: `error_ids`, `incomplete_ids`, missing report (`raw.errored`). |
-| Telemetry | `tokens`, `cost_usd`; single step; no latency or termination. |
-| Cost | agent: litellm (`zero_means: unknown`). |
-| Splits | core ratios 0.34 / 0.33 / 0.33 over HF `princeton-nlp/SWE-bench_Lite` test. |
-| Baselines | seed |
-| Gold | HF fields `patch`, `test_patch`, `FAIL_TO_PASS`, `PASS_TO_PASS`; `_oracle` dataset. `SWEBENCH_ORACLE=1` puts gold-derived text into `Task.input`: disclose it. |
-| Isolation | none |
-| External state | HF cache; Docker images `sweb.*` (built locally). |
-| Reproduce | dataset snapshot and fingerprint; `swebench` package version; images saved. |
-| Licence | code MIT; dataset licence unstated. |
-
-### B.7 `swebench-verified-harbor` and `harbor-<dataset>` — `benchmarks/generic/harbor/template`; CI `swebench`
-
-| Key | Value |
-|---|---|
-| Reward | verifier `reward.json` / `reward.txt` (possibly partial). Success: reward ≥ 1. Group metric: repo, from the instance-id prefix. |
-| Infra rule | published: drop. Detector: `exception_info` with no reward. |
-| Telemetry | trial `result.json` `stats` (input, output and cache tokens separately); latency per `harbor run` only. |
-| Cost | agent: CLI-reported in `result.json` (`reported`). |
-| Splits | CI full 100/50/100 (`split_ids.json`); pilot and smoke: fit. |
-| Baselines | seed |
-| Gold | task `tests/test.sh`, `solution/solve.sh` in Harbor's task cache; trial `verifier/`. |
-| Isolation | none; the container network is public. |
-| Agent evidence | packaged mode runs `/capability/score.sh` from the candidate (check that the grader is not candidate-supplied); registry mode delivers only `prompt.md` (B2 "capability as delivered"). |
-| External state | `$HARBOR_JOBS_DIR/<job>/<trial>/` (**volatile: reaped after 6 h** by CI setup); containerd images; npm cache. |
-| Reproduce | Harbor CLI version; dataset name and version; Claude Code npm version per container (unpinnable unless recorded). |
-| Licence | SWE-bench Verified: none stated on its card. |
-
-### B.8 `rfe-creator` — `benchmarks/rfe_creator/template`; CI `rfe-creator`
-
-| Key | Value |
-|---|---|
-| Reward | `_reward/judges.json` `reward`: a weighted mean of 10 checks and 2 LLM judges, continuous. **Success: undefined** (the overlay sets `gate: false`): `success` is `null` with that reason. Group metric: per judge (`raw.per_judge`). |
-| Infra rule | published: drop. |
-| Telemetry | `tokens` not set (`not_recorded`); no latency, steps or termination. |
-| Cost | agent: `run_result.json` `cost_usd` (`reported`). **Judges:** not recorded anywhere, and billed on the optimizer's gateway (`aux_call`, `null` with that reason). |
-| Splits | none: train = val = test (no holdout). |
-| Baselines | seed |
-| Gold | `rfe-creator/eval/dataset/cases/*/annotations.yaml`, judge prompts in `eval.yaml`. **The agent's worktree contains them.** |
-| Isolation | none |
-| External state | `$RFE_RUNS_DIR` (`/tmp/cap-evolve-rfe-creator/runs/`, **volatile**); worktrees; clones in `~/.cache/capevolve-ci/rfe-creator-src/`. |
-| Reproduce | rfe-creator and agent-eval-harness at the recorded SHAs (reset to `main` on every setup: record them). |
-| Licence | rfe-creator unlicensed; agent-eval-harness Apache-2.0. |
-
-### B.9 `parsec-rca` — `benchmarks/parsec/examples/rca_prompts`; CI `parsec`
-
-| Key | Value |
-|---|---|
-| Reward | Harbor verifier `reward.json` (partial credit in [0, 1]: tool calls and answer, with a completion gate). Success: reward = 1.0 (convention). Group metric: per category. |
-| Infra rule | published: drop. Detector: `_agent_failure` (dead agent). |
-| Telemetry | `tokens` and `cost_usd` from parsec-live `usage` log lines; time window in `metadata.parsec_usage_window`. |
-| Cost | agent: log-derived, 0 if the log is missing (`zero_means: unknown`). **Simulator LLMs:** not recorded (`aux_call` null). Merger (v6_t4): optimizer cost. |
-| Splits | v6: pooled F / C / test (sealed dir). v4_t2_e1, h4, v6_t2: no holdout. |
-| Baselines | seed |
-| Gold | `<tree>/_run/tasks/*/tests/{verify.py,expected.json}`; trial `verifier/reward-detail.json`. Allowed: F-split verifier output. Forbidden: C / test material and `expected.json`. |
-| Isolation | none |
-| External state | `$PARSEC_V*N/_run/`: `jobs/`, `logs/sims/parsec-live.log` (**the cost source**), `h4-lanes/`, `v6-queue/`; `<proj>.sealed/`; the podman image. |
-| Sources | cluster LSF logs (`$CCC_LOGS`); `skillberry-runs/parsec` (= `parsec-history`); `records/parsec-v6-g2-and-tmrg` (unmerged; two records whose content differs from the `benchmark-history` versions: archive both). |
-| Reproduce | code commit **before `aeee7126d`**; private task bundles (MD5s in `build_v6_tree.py`); the podman image tar. |
-| Licence | private; none stated. |
-| Secrets | `config.local.yaml` LiteLLM key; `LLM_API_KEY`. |
-
-### B.10 `toy` — `benchmarks/toy/examples/{calc,skill}`
-
-| Key | Value |
-|---|---|
-| Reward | exact match: binary. |
-| Cost | real $0 (`zero_means: zero`). |
-| Splits | core ratios. |
-| Gold | `target`, which also appears in the feedback (allowed). |
-| Optimizer | mock (no transcripts: `not-produced`). |
-| External state | `/tmp/toy_*`. |
-| Licence | in-repo. |
-
-### B.11 `generic-jsonl`, `generic-hf` — `benchmarks/generic/{jsonl_litellm,huggingface_litellm}/template`
-
-| Key | Value |
-|---|---|
-| Reward | exact / contains / regex: binary. |
-| Cost | litellm `response_cost`, 0 when unpriced (`zero_means: unknown`). |
-| Telemetry | `tokens` only. |
-| Splits | core ratios. For HF, `HF_SPLIT` (default `test`) is re-split by core: name both. |
-| Gold | the `target` field (`TASKS_FILE`, or `TARGET_FIELD`). |
-| External state | the HF cache. |
-| Reproduce | dataset revision is not pinned: snapshot the dataset with its fingerprint. |
-| Licence | user data, or the dataset card. |
-
-### B.12 `tau2-custom-airline` (retired) — code at `5e570d29f^:examples/tau2_custom/{direct,blackbox}`
-
-tau2 airline on the `skillberry-benchmarks` fork of tau2, with the `direct` and `blackbox` arms. Code:
-`5e570d29f^:examples/tau2_custom/`. CI tiers: `8860d243a^:ci/benchmarks/tau2_custom/`.
-
-| Key | Value |
-|---|---|
-| Bench names | `tau2_custom_direct`, `tau2_custom_blackbox`, `tau2_custom_spa`, `skillberry_tau2_direct`, `skillberry_tau2_spa`. `spa` and `blackbox` name the same arm. `<setting>` = the arm, `direct` or `blackbox`. |
-| Reward | as `tau2-airline` (tau2 reward, binary per trial; pass^k). |
-| Infra rule | as `tau2-airline`. |
-| Telemetry, cost | as `tau2-sierra-airline`; the blackbox arm's agent cost is not measured. |
-| Splits | `split_ids.json` 25 / 12 / 13 (seeded 0.5 / 0.25 / 0.25 over the 50 airline tasks); `smoke_split.json`; `split_ids_task9.json`. CI smoke: 10 tasks. |
-| Baselines | seed |
-| Capability | `tools` (the agent's tool surface); blackbox: the store skill `my_skill` + `primitive_tools/`. |
-| Gold | `runner_repo_path: ../../vendor/skillberry-benchmarks` (tau2 fork): task definitions and reward checks are readable by the optimizer (allowed by design for train/val, as in B.3). Forbidden: test ids. |
-| Isolation | none |
-| Models as used | native results `info.*.llm`. The yaml says optimizer `claude-opus-4-6`; the CI records say `claude-opus-4-8`: a B2 item. |
-| External state | `vendor/skillberry-benchmarks` (at `BENCH_REF`, recorded as `BENCH_SHA` by `setup.sh`), blackbox services as in B.3. |
-| Sources | `benchmark-history` `records/*tau2_custom*`, `*skillberry_tau2*`; `runs/*/ui`; `live/<run_id>__<tier>-<bench>/data` (live-monitor snapshots, partial exports); branches `ci_skillberry_benchmarks_tau2*`, `rename_intervention_spa_to_blackbox`, `remove_ci_all`, `blackbox_require_make`. All are CI runs, so the owner is the workflow's triggering actor. |
-| Reproduce | the code commit of the run (`runmeta.sha`); `skillberry-ai/skillberry-benchmarks` at `BENCH_SHA`; store and SPA SHAs as in B.3. |
-| Licence | not recorded |
-| Secrets | as B.3. |
-
-`tau2_blackbox` (branch `tau2_vanilla_blackbox`; CI tier at `8860d243a^:ci/benchmarks/tau2_blackbox`)
-is the blackbox arm on **vanilla** tau2, with tailoring applied from outside. It is
-profiled as `tau2-sierra-airline`, setting `blackbox`.
-
-### B.13 `epic-creator` (retired) — no adapter in any cap-evolve branch
-
-| Key | Value |
-|---|---|
-| Bench names | `epic-creator`; experiment `epic-intake-v1`. |
-| Run | `benchmark-history/runs/203__full-epic-creator/`: `baseline.json`, `final.json`, `state.json`, `report.md`, `candidates/`, `work/`, `rollouts/`, `ui/`. Made on `/Users/avalappi/Documents/ET/ACE/cap-evolve/.capevolve/run_epic-intake-v1`. Owner: `avalappi`. |
-| Reward | per case `score.raw.verdicts`: deterministic checks (`budget_check`, `artifact_contract`, `dag_valid`, `implementation_type_rules`, `mandated_acceptance_criteria`, `run_report_consistent`, `review_discipline`, …), combined into a reward in [0, 1]. Success: reward = 1. Group metric: per check (pass rate of each verdict). The first backup confirms the combination rule from the adapter. |
-| Infra rule | published: drop (core default). |
-| Telemetry | `cost_usd` per rollout; `tokens` = 0 (`not_recorded`); `metadata.{segments, exit_code, seed}`. |
-| Cost | agent: `cost_usd`, CLI-reported (the agent is GLM 5.3 in a Claude Code harness; budget cap $40 per case). Optimizer: `state.json` `spent.optimizer_usd`. A judge, if one is used: not recorded (`aux_call` null). |
-| Splits | `splits.json` in the run; test n = 21. |
-| Baselines | seed |
-| Capability | skill package |
-| Gold | the test cases' expected artifacts and review criteria. **Location unknown**: in the adapter's project, which is not in the repo. |
-| Isolation | none known |
-| Models as used | agent GLM 5.3 (Claude Code harness); optimizer GLM 5.3 via the PriceTag AI Gateway (record). Confirm from transcripts. |
-| External state, sources | the run dir and project on the owner's machine (`may_exist_at`: the path above, and the ACE repo); `benchmark-history` record `203__full-epic-creator`. The git copy has rollouts but no transcripts or adapter, so expect `partial-export`. |
-| Reproduce | adapter and project code: gap until found. Agent and optimizer endpoints are unpinnable. |
-| Licence | not recorded |
-
-### B.14 `epic-decompose` (retired) — no adapter in any cap-evolve branch
-
-As `epic-creator` (B.13), except:
-
-| Key | Value |
-|---|---|
-| Bench names | `epic-decompose`; experiment `epic-glm53-v5`. |
-| Run | `benchmark-history/runs/202__full-epic-decompose/`: `candidates/`, `work/`, `rollouts/`, `ui/`, `epic-run/` (candidate skills `epic-decompose/SKILL.md` with `prompts/{decompose,fetch,review}-agent.md`). Made on `/Users/avalappi/Documents/ET/ACE/cap-evolve/.capevolve/run_epic-glm53-v5`. No `state.json` or `final.json` in the git copy. |
-| Reward | checks plus a judge ("judge overflow fixed in this run", record note). Test n = 10. |
-| Cost | as B.13. The record notes the optimizer hit GLM 5.3's 275k context limit: a C4 (truncation) item. |
-
-### B.15 `rh-swebench` (retired) — Harbor on SWE-bench Verified
-
-Values as B.7 (`swebench-verified-harbor`), except:
-
-| Key | Value |
-|---|---|
-| Bench names | `rh-swebench`; runs `manual__full-rh-swebench-v4` and `manual__full-rh-swebench-v4__full-rh-swebench` (`<setting>` = `v4`). |
-| Reward | resolved, on 119 SWE-bench Verified tasks. The published result is val, **a fit metric** (`results/rh-swe-bench-image-and-reorder` README: 0.580 → 0.765). |
-| Capability | skill package + system prompt |
-| Models | agent `claude-sonnet-4-6`, optimizer `claude-opus-4-6` (record). |
-| Cost | `eval_usd` 0 in the record: unknown, not $0 (`zero_means: unknown`). |
-| Sources | `benchmark-history` `runs/manual__full-rh-swebench-v4*/ui` (UI exports, `compare_ids_*`), `records/manual__full-rh-swebench-v4.json`; branch `results/rh-swe-bench-image-and-reorder` (`site/results.html`, `site/assets/rh_swe_bench.png`). Owner: `avalappi`. The full run dir is on the owner's machine (`may_exist_at`). |
-
-Runs `200`, `201`, `202__full-swebench-verified` (bench name `swebench-verified`; `ui/` only; made in
-`/private/tmp/ce-runs/s<k>/run_suite` by `avalappi`) are profiled as `swebench-verified-harbor`
-(B.7), with `<replicate>` = `s<k>`. Their adapter at the run's commit is confirmed at the first
-backup.
-
-### B.16 Bench names → profile
-
-Every bench name seen in the repo, CI and results maps to exactly one profile:
-
-| Bench name (CI, records, run dirs) | Profile |
-|---|---|
-| `appworld` | B.1 `appworld` |
-| `tau2` | B.2 `tau2-airline` |
-| `tau2_sierra`, `tau2_sierra_blackbox`, `tau2_blackbox`, `sierra`, `direct`, `blackbox` (run-dir names under the sierra example) | B.3 `tau2-sierra-airline` |
-| `skillsbench` | B.4 `skillsbench` |
-| `spreadsheetbench` | B.5 `spreadsheetbench` |
-| `swe_bench` (local template) | B.6 `swebench-lite` |
-| `swebench` (CI), `swebench-verified` | B.7 `swebench-verified-harbor` |
-| any other Harbor dataset | B.7 `harbor-<dataset>` |
-| `rfe-creator`, `rfe_creator` | B.8 `rfe-creator` |
-| `parsec` | B.9 `parsec-rca` |
-| `toy` | B.10 `toy` |
-| `jsonl_litellm`, `huggingface_litellm` | B.11 `generic-jsonl`, `generic-hf` |
-| `tau2_custom_direct`, `tau2_custom_blackbox`, `tau2_custom_spa`, `skillberry_tau2_direct`, `skillberry_tau2_spa`, `spa` | B.12 `tau2-custom-airline` |
-| `epic-creator` | B.13 `epic-creator` |
-| `epic-decompose` | B.14 `epic-decompose` |
-| `rh-swebench`, `rh-swebench-v4` | B.15 `rh-swebench` |
-
-A bench name not in this table gets a new profile (§4) before its runs are captured.
+Copy the profile used for a run into the run folder as `PROFILE.md` (a source copy). Record it in
+`runmeta.profile` (Appendix A.1): the bench id, the repo path, the commit it was read at (or
+`uncommitted`), its sha256, and its state (`as-is`, `corrected` or `new`).
 
 ## Appendix C. User ids
 
