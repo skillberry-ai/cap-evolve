@@ -1,0 +1,26 @@
+# Backup profile: `spreadsheetbench` — `benchmarks/spreadsheetbench/template`; CI `spreadsheetbench`
+
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+
+SpreadsheetBench, with a CodeAct agent in a Jupyter kernel-gateway container and LibreOffice recalculation.
+
+| Key | Value |
+|---|---|
+| Bench names | `spreadsheetbench`; tiers `smoke`, `pilot`, `full`, `full_verified`, `full_verified_probe`; settings: the system name in the exp895 campaign (`capevolve`, `capevolve_v2`, `gepa`, `gepa_full`, `miprov2`, `skillopt`, `evoskill`, `trace2skill`, `meta_harness`, `wikiskill`, `ace`), seed variant `warm`, `v2`, `empty` |
+| Code | `benchmarks/spreadsheetbench/template/` (`adapter.py`, `seed_capability/`, `seed_capability_warm/` (`PROVENANCE.md`), `seed_capability_v2/`, `SEED_V2.md`); CI `ci/benchmarks/spreadsheetbench/{smoke,pilot,full,full_verified}/` (`overrides.env`, `split_ids*.json`, `split_source.json`), `fetch_data.sh`, `utils/`; harness `third_party/spreadsheetbench/` |
+| Reward | `SPREADSHEETBENCH_SCORING` (`soft` = matched cases / cases, `hard` = all cases match) × `REWARD_RECALC` (as saved, or after LibreOffice recalculation); all four in `score.metrics`; reward name in `$OUT/reward_metric` and `runmeta.reward_metric`. Success: hard = 1. Group metric: hard vs soft over the 3 cases (912 / 200 only; equal on verified_400); `metadata.instruction_type` |
+| Infra rule | exp895 campaign: infra failures retried, never scored 0, candidate errors score 0 (`skillberry-runs/spreadsheetbench` README); core: drop; detector `metadata.error_kind` (`infra` or `candidate`) |
+| Telemetry | tokens: `tokens` (sum of `total_tokens` over turns); steps: count of turns in `trace`; latency and termination: `not-produced`; campaign phase totals: `results/usage.json` (`search_agent`, `search_optimizer`, `test_agent`: calls, prompt, completion, cached; wall hours) → `phase_total` |
+| Cost | agent: litellm `response_cost` (`zero_means: unknown`; RITS models are unpriced); optimizer: as `_core.md` |
+| Splits | smoke: no split (fit, 10 tasks); pilot 5/50/5; full 182/91/639; full_verified 80/40/280 (SkillOpt's split, `full_verified/split_source.json`); older runs: `split_ids.capevolve_seed42.json` (a different partition) |
+| Baselines | seed, `no_skill` control (tier `no_skill_control`), `warm_seed` (`seed_capability_warm`), empty seed (`SB_EMPTY_SEED=1`, only in `latest.json.empty_seed`), reused from a slot (`SB_REUSE_LATEST_BASELINE`, re-scored into `$WORK/reused_seed_run`); tell which from the seed candidate snapshot |
+| Capability | system prompt (`prompt.md` + `task_template.md`); `seed_capability_v2` adds skills (`[system-prompt, skill]`, needs `helpers.enabled`) |
+| Gold | `<DATA>/spreadsheet/<id>/<n>_<id>_answer.xlsx`, `*_golden.xlsx`, `golden.xlsx` (DATA = `~/.cache/capevolve-ci/spreadsheetbench-data/{sample_data_200,all_data_912_v0.1,spreadsheetbench_verified_400}`, or `SPREADSHEETBENCH_GOLD_DIR`); evaluator `third_party/spreadsheetbench/evaluation/evaluation.py`. Feedback carries gold-derived counts and mismatch classes, never values. Allowed: none. Forbidden: answer files |
+| Isolation | none for the optimizer |
+| Agent evidence | gold-free agent view `$WORK/sb_agent_view` and its start-up gold check; `$OUT/gold_separate_from_agent_mount` (`SB_AGENT_VIEW=0` with `ALLOW_GOLD_IN_MOUNT=1` exposes gold) |
+| Models as used | rollout `metadata.model`; `score.raw.scorer` (evaluation.py sha, LibreOffice version) |
+| External state | data cache `~/.cache/capevolve-ci/spreadsheetbench-data/`; `$WORK/sb_agent_view/` with per-rollout `outputs/` (deleted after scoring unless `KEEP_OUTPUTS`); **volatile:** kept slot `~/.cache/capevolve-latest/spreadsheetbench-slots/<tier>__<model>/` (`run_suite` copy, `outputs/*_output.xlsx`, `*.norecalc.xlsx`, `latest.json`), overwritten by the next run of that tier and model; Docker executor containers; LibreOffice profile dirs |
+| Sources | `docs/experiments/2026-09-26-spreadsheetbench-full_verified-gemma-4-31b/`; git `skillberry-runs/spreadsheetbench` (= `spreadsheet-history`): `results/<system>/s<k>/{search,test}/` (`run_meta.txt`, `run_summary.json`, `isolation_scan.json`, `budget_probe.json`, `val_evals.jsonl`, `run_main/`, `per_task_test_scores.json`, `registry.json`, `summary.json`), `results/usage.json`, `results/full_table.json`, `recipes/<system>/` (incl. `deviations_<system>.json`, `BUILD_RECORD.json`), `docs/decisions.md`, `reports/`; `benchmark-history` `*spreadsheetbench*` runs and records; archive `cap-evolve-archive/spreadsheetbench-exp895/` (raw ledgers, gateway call ledgers, LSF logs, full run folders; not found in any repo or on the backup host on 2026-11-11: `may_exist_at`); hosts: CCC hosts and job ids in `run_meta.txt` (for example `cccxc550`); ledgers: the exp895 gateway call ledgers |
+| Reproduce | data: the fetched tree (raw `main`, no checksum: hash it); harness at `0d9dc14`; `split_source.json` (names HF `KAKA22/SpreadsheetBench@ab0b742b`, a different source from the download: record both); recipes from the results repo; LibreOffice version; executor image digest; unpinnable: the agent endpoint |
+| Licence | data CC BY-SA 4.0 (`third_party/spreadsheetbench/NOTICE.md`); split ids MIT (SkillOpt) |
+| Secrets | as `_core.md` |
