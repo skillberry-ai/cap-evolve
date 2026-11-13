@@ -199,3 +199,6 @@ already-correct record changes nothing.
   `benchmark-history` branch.
 - `.github/workflows/benchmarks.yml` — the CI path these steps mirror (`Write run metadata`,
   `Export CapEvolve UI snapshot`, `aggregate history`).
+- [`docs/skillberry-runs.md`](../../docs/skillberry-runs.md) — the `skillberry-runs` org: the
+  dashboard that is replacing `benchmark-history`, the per-benchmark results repos, and how to add a
+  benchmark there.
