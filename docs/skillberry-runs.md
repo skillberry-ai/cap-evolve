@@ -72,15 +72,20 @@ scripts/build_reports.py   renders a per-benchmark repo into site/<bench>/
     `ibm-ete-int` / `ibm-ete`).
   - Settings and outcome: `gate_k_se`, `algorithm`, `warm_seed`, `conclusion`, `has_ui`.
   - Results: per-task `tasks`, per-iteration `steps`, and the `suite` rollup. The rollup is `null`
-    unless `conclusion == "success"`.
+    unless `conclusion == "success"`, and also when no task has paired numeric baseline and
+    optimized rewards.
   - An optional `summary_url`.
 - **`bench` and `tier` are free text.** Nothing validates them, and the page has no per-benchmark
   code: a new `bench` value simply appears as a new filterable value. Experiment-style benchmarks use
   `tier` for the experiment version (parsec records have tiers `pilot`, `v2`, `v6`).
-- **The Source column** links to the PR when `pr` is set, otherwise to `summary_url`. For
-  benchmarks with a section, `summary_url` points into that section, e.g.
-  `https://skillberry-runs.github.io/dashboard/parsec/results/v6/v6_g2_e1/summary.html`. This link is
-  what connects a row in the runs table to the write-up behind it.
+- **The Source column** links to the PR when `pr` is set, otherwise to `summary_url`. With
+  neither, it is plain text. `summary_url` is what connects a row in the runs table to the write-up
+  behind it. Only **hand-published** records set it today: 4 parsec records point into the parsec
+  section, e.g. `https://skillberry-runs.github.io/dashboard/parsec/results/v6/v6_g2_e1/summary.html`,
+  and 7 skillsbench records point at the cap-evolve SkillsBench pages or `/notes/`. **CI records
+  never set it**, so none of the 92 spreadsheetbench rows (all from CI) links to the
+  spreadsheetbench section. To link a CI row to its write-up, add `summary_url` to that record by
+  hand.
 
 ### Deploy
 
@@ -207,7 +212,10 @@ Steps 1–2 are done in the new repo, step 3 on the `skillberry-bot` account, an
 
 6. **Add its runs to the table**: one `records/<id>.json` per run (see
    [the next section](#adding-runs-to-an-existing-benchmark)), with `"bench": "<bench>"` and
-   `summary_url` pointing at the run's write-up in the new section.
+   `summary_url` pointing at the run's write-up in the new section. Commit hand-published records
+   directly to `skillberry-runs/dashboard`. Records from CI runs do **not** arrive here
+   automatically yet (see [Migration status](#migration-status)): copy them from cap-evolve's
+   `benchmark-history:records/`, adding `summary_url` as you copy.
 
 7. **Optional, recommended: redeploy on push.** Copy skillsbench's `notify-cap-evolve-pages.yml` into
    the new repo, retargeted to `gh workflow run pages.yml --repo skillberry-runs/dashboard --ref main`.
@@ -227,6 +235,7 @@ Steps 1–2 are done in the new repo, step 3 on the `skillberry-bot` account, an
 
    To preview before pushing:
    ```bash
+   pip install markdown            # build_reports.py needs it; the deploy installs it the same way
    git clone git@github.com:skillberry-runs/<bench>.git _src_<bench>
    python3 scripts/build_reports.py --src _src_<bench> --out site/<bench> \
      --repo skillberry-runs/<bench> --title "<Title>"
@@ -236,14 +245,19 @@ Steps 1–2 are done in the new repo, step 3 on the `skillberry-bot` account, an
 
 If CI should also run the benchmark (smoke/pilot/full legs), that is separate work on cap-evolve
 `main` (`ci/benchmarks/<bench>/<tier>/tasks.json`, adapter), and goes through the `open-pr`/`testing`
-skills. Its records then arrive automatically (see [Migration status](#migration-status) for where
-they currently land).
+skills. CI then builds its records automatically, but for now pushes them to cap-evolve's
+`benchmark-history`, not to the dashboard (see [Migration status](#migration-status)).
 
 ## Adding runs to an existing benchmark
 
 - **Write-ups:** commit to `skillberry-runs/<bench>` in its existing layout, then redeploy the
   dashboard (see the end of [Deploy](#deploy)).
-- **A CI run:** `benchmarks.yml` builds and pushes the record by itself.
+- **A CI run:** `benchmarks.yml` builds the record by itself, but pushes it to cap-evolve's
+  `benchmark-history` branch (`benchmarks.yml`, step "Push to benchmark-history"), not to
+  `skillberry-runs/dashboard`. Until CI is repointed (see [Migration status](#migration-status)),
+  the run appears only on cap-evolve's own benchmarks page. To show it on the dashboard now, copy
+  `records/<id>.json` from `benchmark-history` into `skillberry-runs/dashboard/records/`, adding
+  `summary_url` if the run has a write-up.
 - **A run finished, resumed or run outside CI:** build the record with the same scripts CI uses,
   following `ci/benchmarks/PUBLISHING.md` steps 1–4 (`metrics.py suite`, a hand-written
   `runmeta.json` with an honest `source`, `record.py build`). Then:
@@ -271,7 +285,7 @@ rendered on the site. The bot tokens, all owned by `skillberry-bot` and fine-gra
 | token | lives in | grants |
 |---|---|---|
 | `RESULTS_READ_TOKEN` | `dashboard` | read the benchmark repos |
-| `SKILLSBENCH_READ_TOKEN` | cap-evolve | read skillsbench |
+| `SKILLSBENCH_READ_TOKEN` | cap-evolve (set 2026-11-11; no workflow on `main` reads it yet, only PR #961's `pages.yml`) | read skillsbench |
 | `CAP_EVOLVE_DISPATCH_TOKEN` | skillsbench | dispatch cap-evolve's Pages deploy |
 
 ## Existing documentation, compared
