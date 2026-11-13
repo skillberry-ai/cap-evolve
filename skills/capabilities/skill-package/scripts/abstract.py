@@ -304,10 +304,15 @@ def _helpers_on() -> bool:
 
 
 def _skills_root(capability_dir: Path) -> Path | None:
-    """With helpers on, a candidate that keeps its skill packages under ``skills/`` (next to prompt.md)
-    is validated as a multi-skill root."""
+    """A candidate that keeps its skill packages under ``skills/`` (next to prompt.md, or next to
+    other editable files such as rfe-creator's ``types/``) is a multi-skill root.
+
+    Not gated on helpers: that layout is a real, non-empty capability either way. Gating it made
+    a helpers-off ``skills/`` + ``types/`` seed read as EMPTY — validation skipped every skill
+    and the optimizer was told to "create the capability from scratch". Only the risky-import
+    rule (``_validate_scripts``) depends on helpers."""
     sk = Path(capability_dir) / "skills"
-    if _helpers_on() and not (Path(capability_dir) / "SKILL.md").exists() and _subpackages(sk):
+    if not (Path(capability_dir) / "SKILL.md").exists() and _subpackages(sk):
         return sk
     return None
 
