@@ -1,20 +1,24 @@
 # Backup profiles: values shared by every benchmark (from core)
 
-Every profile in this folder adds to these values. A profile key whose value is "as `_core.md`" takes it from here.
+Every profile in this folder builds on these values. A profile value written "as `_core.md`" is taken from here. Format: `docs/BACKUP_BOX.md` Appendix B.
 
-- **Rollouts:** `rollouts/<split>/<task>__<cand>__t<k>.json`, holding `{input, rollout, score}`.
-  `Rollout` has `cost_usd`, `tokens` (one total), `error`, `trace`, `tool_calls` and `metadata`.
-  There is no per-episode latency in core.
-- **Episode index:** `eval_index.jsonl`. Per-evaluation seconds are in the `evaluate` events. Run
-  totals are in `state.json` `spent` (including `usersim_usd`, which is a list-price estimate already
-  inside `usd`).
-- **Infra errors:** core drops errored trials from the mean by default (`errored_trial_policy: drop`).
-- **Test seal:** core seals test. In pooled mode, the sealed stratum is in `<project>.sealed/<run>/`
-  or `$CAPEVOLVE_SEALED_DIR`.
-- **Optimizer:** `claude -p … --allowedTools Bash` (`skills/optimizers/registry.yaml`). There is no
-  sandbox unless the profile says so. Transcripts are in
-  `~/.claude/projects/<slug of the work dir>/`, unless `CAPEVOLVE_OPTIMIZER_TRANSCRIPT` was set.
-  Agent-mode runs also write `<run>/host/transcript.jsonl`.
-- **CI:** the run dir is under `ci/benchmarks/.work/` and is wiped by the next run of the same
-  tier×bench. If a tier has no `split_ids.json`, train = val = test (no holdout).
-- **False positive in gold greps:** the term `ao_focus_canary`.
+| Key | Value |
+|---|---|
+| Bench names | not applicable: set by each profile |
+| Code | core: `core/cap_evolve/` (`rundir.py`, `harness.py`, `types.py`, `splits.py`, `optimizer_cost.py`); optimizer registry `skills/optimizers/registry.yaml`; CI harness `ci/benchmarks/lib/run_suite.sh`, `ci/benchmarks/lib/ci_setup.sh`, workflow `.github/workflows/benchmarks.yml` |
+| Reward | `Score.reward` in [0, 1], the mean over `trial_rewards`; `final.json` also holds `pass_k` and `pass_at_k`. Success and group metric: set by each profile |
+| Infra rule | core drops errored trials from the mean by default (`errored_trial_policy: drop`, `harness.py`); flags `raw.errored`, `errored_trials`, `valid_trials`, `metadata.error_kind` |
+| Telemetry | `Rollout.tokens` is one total (no prompt/completion split); no per-episode latency, steps or termination in core; per-evaluation `seconds` in `evaluate` events; per-step `optimizer_seconds`, `runner_seconds`, `opt_cost_usd`, `opt_tokens` in `step` events |
+| Cost | agent: `Rollout.cost_usd` (default `0.0`, so `zero_means: unknown` unless the profile says otherwise); user simulator: `state.json` `spent.usersim_usd`, a list-price estimate **already inside** `spent.usd`; optimizer: `spent.optimizer_usd`/`optimizer_tokens`, from the CLI's `total_cost_usd` or from transcript tokens at list price (`optimizer_cost.py`, `optimizer_cost_seen.json`) |
+| Splits | `<run>/splits.json` (`test_used`); without a split file, a seeded 0.5 / 0.25 / 0.25 shuffle (seed 0, `splits.py`); CI tiers without `split_ids.json`: train = val = test (no holdout); pooled mode: the full partition in the sealed dir (`splits_full.json`) |
+| Baselines | the seed (`baseline.json`) |
+| Capability | set by each profile (`capabilities` in `capevolve*.yaml`) |
+| Gold | false-positive grep term `ao_focus_canary` (agent-optimize); the optimizer receives the best candidate's rollout files in `<run>/work/<cand>/trajectories/`, so gold inside rollout metadata reaches it |
+| Isolation | none by default: `claude -p … --permission-mode acceptEdits --allowedTools Bash` (`registry.yaml`) |
+| Agent evidence | set by each profile |
+| Models as used | optimizer: the CLI transcripts (per model and role); agent: set by each profile |
+| External state | **run dirs:** `<project>/.capevolve*/run_<name>/` (`state.json`, `splits.json`, `events.jsonl`, `graph.jsonl`, `eval_index.jsonl`, `history.jsonl`, `rejected.jsonl`, `baseline.json`, `final.json`, `candidates/`, `rollouts/<split>/`, `work/`, `report.md`, `dashboard.html`, `optimizer_sessions.json`, `optimizer_cost_seen.json`) and `<project>/.capevolve*/project/`; **sealed:** `<project>.sealed/<run>/` (`splits_full.json`, `rollouts/confirm/`, `private/`) or `$CAPEVOLVE_SEALED_DIR`; **optimizer sessions:** `~/.claude/projects/<slug of <run>/work/cand_NNNN>/*.jsonl` with `subagents/`, `<run>/work/<cid>.optimizer.stderr`, the file named by `$CAPEVOLVE_OPTIMIZER_TRANSCRIPT`, agent mode `<run>/host/transcript.jsonl` and conductor `*.transcript.jsonl`; other CLIs: their own session stores (`registry.yaml` rows); also `/tmp/claude-<uid>/`, `~/.claude/file-history/`, `~/.claude/session-env/`; **CI** (volatile, wiped by the next run of the same tier×bench): `ci/benchmarks/.work/suite_<tier>_<bench>_proj/.capevolve/run_suite/` and `ci/benchmarks/.work/suite_<tier>_<bench>/` (`runmeta.json`, `metrics.jsonl`, `steps.jsonl`, `report.md`, `reward_metric`), cache `${CAPEVOLVE_CI_CACHE:-~/.cache/capevolve-ci}`; RITS proxy log `$RITS_PROXY_DIR/proxy.log` (a `mktemp -d`, volatile) |
+| Sources | **CI artifacts:** `benchmarks-<tier>-<bench>` on the workflow run (expire after 90 days; files cut to 256 KiB); **git** (snapshot by commit, `docs/BACKUP_BOX.md` §5.2): `benchmark-history` `records/<run_id>__<tier>-<bench>.json`, `runs/<run_id>__<tier>-<bench>/`, `live/<run_id>__<tier>-<bench>/data/`; `skillberry-runs/dashboard` `records/`; **posts:** the benchmarks workflow's PR comments, tracking issues named in run docs; **ledgers:** model-gateway usage ledgers (RITS, `ibm-ete-int`, `ibm-ete`) are not stored in the repo: ask the owner where they are, else a gap with `may_exist_at` = the gateway |
+| Reproduce | code: the run's commit (`runmeta.sha`, `state.json` start time); environments: the `CAPEVOLVE_PY` venv freeze, `python -V`, the optimizer CLI version (`claude --version`); inherited config: `~/.claude/settings.json` and project settings (redacted); unpinnable: model endpoint backends; smoke: `cap-evolve check` |
+| Licence | cap-evolve: Apache-2.0 (`LICENSE`) |
+| Secrets | the repo `.env`, `~/.claude/settings.json` and credential stores, `secrets/` dirs, credential-named environment variables |

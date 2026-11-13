@@ -916,6 +916,24 @@ with the keys below, in this order. Every key is present, and its value is exact
 | Licence | the licence of each data source; restrictions and protected paths (for `NOTICE.md`) |
 | Secrets | secret locations beyond the host's secret files (for example tokens on command lines, keys in service configs) |
 
+**Locations.** Together with `_core.md`, the keys **Code**, **External state**, **Sources** and
+**Reproduce** must name every place where the benchmark's runs leave data. Check them against these
+categories, and name concrete paths, with each volatile one marked:
+1. code and configs (adapter, configs, split files, launch scripts, CI tiers);
+2. run dirs and sealed dirs;
+3. session transcripts of every CLI involved (optimizer, an agent under test that is a CLI, judges);
+4. harness, service and evaluation state (job dirs, native results, window results, databases);
+5. clones, caches, datasets and container images;
+6. logs (progress, service, proxy);
+7. other hosts and archives;
+8. git sources and results repos;
+9. posts (issues, PRs, workflow runs);
+10. gateway and proxy usage ledgers;
+11. docs (plans, results pages).
+
+A category the benchmark does not use is `not applicable`. A location that the sources name but that
+cannot be found is `unverified`, with where it may be (`may_exist_at`).
+
 ### B.2 Creating a profile
 
 Do this when a run's bench name is not in `INDEX.md` (§4). Use the benchmark's code **at the run's
@@ -932,7 +950,7 @@ own commit**.
    5. the optimizer instructions;
    6. the benchmark's README and docs;
    7. one real run of the benchmark: rollout files, events, and the external dirs it names.
-3. **Fill every key of B.1.** Next to each value, cite its evidence as `path:line`, or as the run path.
+3. **Fill every key of B.1, and cover every location category.** Next to each value, cite its evidence as `path:line`, or as the run path.
    Where a value equals core's, write `as _core.md`. Where it equals another profile's, write `as
    <profile>`. Never guess: a value the sources do not settle is `unverified`, with what was found.
 4. **Save it.** Write it to `docs/backup_profiles/<bench-id>.md`, add its bench names to the `INDEX.md`
