@@ -8,7 +8,8 @@
 - the published claims hold.
 
 It applies to every benchmark. Benchmark differences come only from the benchmark's profile
-(`docs/BACKUP_BOX.md` Appendix B, or the corrected profile in `BACKUP_RESULTS_<TS>/profiles/`).
+(`docs/backup_profiles/<bench-id>.md`, as used for the run and copied into its folder as `PROFILE.md`;
+`docs/BACKUP_BOX.md` §4).
 
 **Rules for the executing agent**
 - **This document is read-only.** Never edit it. Write the findings for each run into
