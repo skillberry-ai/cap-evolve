@@ -169,6 +169,18 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     )
 
 
+def pooled_feedback(parts: list) -> str:
+    """One task's feedback from several pooled evaluations of the same candidate.
+
+    One part (or none) is returned as it is. Several are each put under an
+    ``[evaluation i of n]`` line: every evaluation numbers its own trials from 0, so its
+    ``[trial k ...]`` labels are unique only inside that evaluation.
+    """
+    if len(parts) <= 1:
+        return parts[0] if parts else ""
+    return "\n\n".join(f"[evaluation {i} of {len(parts)}]\n{p}" for i, p in enumerate(parts, 1))
+
+
 def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2)) -> SplitResult:
     """Pool two evaluations of the SAME unmodified candidate into one honest SplitResult.
 
@@ -184,7 +196,7 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
     trials — nothing is discarded, nothing is invented.
     """
     by_task: dict[str, list[float]] = {}
-    feedback: dict[str, str] = {}
+    feedback: dict[str, list[str]] = {}   # tid -> one text per pooled evaluation
     errored: dict[str, bool] = {}
     errored_trials: dict[str, int] = {}
     for res in (a, b):
@@ -195,16 +207,23 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
             raw = pt.get("raw") or {}
             trials = pt.get("trial_rewards") or []
             by_task.setdefault(tid, []).extend(float(x) for x in trials)
-            if pt.get("feedback"):
-                feedback[tid] = pt["feedback"]
+            # Every pooled evaluation's feedback, each distinct text once (an exact match, not
+            # a substring test). A side that is itself a pooled result carries its parts in
+            # raw["feedback_parts"], so pooling again extends one flat list, never nests.
+            parts = raw.get("feedback_parts") or [str(pt.get("feedback") or "")]
+            seen = feedback.setdefault(tid, [])
+            for fb in (str(x).strip() for x in parts):
+                if fb and fb not in seen:
+                    seen.append(fb)
             errored[tid] = errored.get(tid, False) or bool(raw.get("errored"))
             errored_trials[tid] = errored_trials.get(tid, 0) + int(raw.get("errored_trials") or 0)
     from .stats import mean, stderr
     scores = [
-        Score(task_id=t, reward=mean(tr), feedback=feedback.get(t, ""),
+        Score(task_id=t, reward=mean(tr), feedback=pooled_feedback(feedback.get(t, [])),
               n=len(tr), stderr=stderr(tr), trial_rewards=tr,
               raw={"errored": errored.get(t, False), "errored_trials": errored_trials.get(t, 0),
-                   "valid_trials": len(tr), "n_trials": len(tr)})
+                   "valid_trials": len(tr), "n_trials": len(tr),
+                   **({"feedback_parts": feedback[t]} if len(feedback.get(t, [])) > 1 else {})})
         for t, tr in by_task.items()
     ]
     return aggregate_scores(a.split or b.split, scores, ks=ks)

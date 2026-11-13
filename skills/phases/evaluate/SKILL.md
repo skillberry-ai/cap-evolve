@@ -85,6 +85,24 @@ python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project
   (`harness.py:49-57`); scoring stays serial so the numbers match a serial run.
   Keep it at 1 if `run_target` is not thread-safe (shared scratch dir, one live
   container, module-global client) — `harness.py:225-227`.
+- Per-task `feedback` carries **every** trial's scorer feedback, untruncated: each
+  distinct text once, under a `[trial k reward r]` label (`[trial k errored]` for an
+  infra error) when trials disagree.
+- The optimizer's failure index bounds what it inlines, so the prompt fits every
+  optimizer row:
+  - At most 40 tasks, worst first (`CAPEVOLVE_MAX_LISTED_FAILURES`). The rest are named.
+  - At most 800 chars per task (`CAPEVOLVE_FEEDBACK_ENTRY_CHARS`). A shorter entry is
+    shown as it is.
+  - A longer one is summarized by the run's OWN optimizer: the same agent CLI and model
+    the algorithm proposes edits with, at most 10 tasks per call. Its spend counts as
+    optimizer spend. `CAPEVOLVE_FEEDBACK_SUMMARY=off` disables it.
+  - With no optimizer, or a call that gives no usable result, a deterministic cut is used
+    instead. It keeps the start and the end of each text. A `feedback_summary` event
+    records which was used.
+  - Either way, a condensed entry starts with every trial's reward, the lowest marked,
+    and represents the lowest-scoring trial. A later good trial never hides a failure.
+  - The full text is in `./feedback_full/<task>-<hash>.md`, linked from the entry. The
+    full rollouts stay in `./trajectories/`.
 - A subset/triage eval (`ids=`) is **never** gateable: its `n_tasks` is the subset,
   so `coverage` reads 1.0 (`harness.py:229-237`).
 

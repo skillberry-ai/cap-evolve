@@ -348,6 +348,28 @@ def _run_and_stream(cmd: list[str], *, cwd: str, env: dict,
     return proc.returncode, "".join(stdout_chunks), "".join(stderr_chunks)
 
 
+#: Largest prompt inlined into argv via ``{prompt_text}``. Linux caps ONE argument at
+#: MAX_ARG_STRLEN = 128 KiB (and all of argv+env at ARG_MAX), so a bigger prompt fails the
+#: exec with E2BIG before the CLI even starts. The harness bounds the prompt well below
+#: this (the failure index is cut to entry_chars() per task, ``feedback_digest``), so the
+#: pointer below is a safety net, not a path a normal run takes.
+MAX_INLINE_PROMPT_BYTES = 96 * 1024
+
+
+def inline_prompt_text(prompt_text: str, prompt_path: str) -> tuple[str, bool]:
+    """The ``{prompt_text}`` value for a row that inlines the prompt into argv.
+
+    Returns ``(text, replaced)``. Within ``MAX_INLINE_PROMPT_BYTES`` the prompt is inlined
+    unchanged; above it, a short pointer to the prompt FILE (which the agent can read in
+    full, in its cwd) replaces it, since exec would otherwise fail outright.
+    """
+    if len(prompt_text.encode("utf-8")) <= MAX_INLINE_PROMPT_BYTES:
+        return prompt_text, False
+    return (f"Your full instructions are in {prompt_path} (also ./INSTRUCTIONS.md in your "
+            "working directory) — too large to pass on the command line. Read that file IN "
+            "FULL, every section, before doing anything else, then follow it exactly."), True
+
+
 def build_command(template: str, *, workdir: str, prompt: str, prompt_text: str,
                   model: str | None, self_dir: str) -> list[str]:
     """Expand the template into argv.
@@ -436,8 +458,19 @@ def main(argv=None) -> int:
         return 2
     prompt_text = prompt_path.read_text(encoding="utf-8")
 
-    cmd = build_command(str(row.get("command_template", "")), workdir=workdir,
-                        prompt=str(prompt_path), prompt_text=prompt_text,
+    # A row that inlines {prompt_text} is bounded by the per-argument exec limit. Test the
+    # EXPANDED template: the generic/openclaw rows carry their command in an env var
+    # (``${CAPEVOLVE_OPTIMIZER_CMD}``), and that may inline {prompt_text} too.
+    template = str(row.get("command_template", ""))
+    argv_prompt_text = prompt_text
+    if "{prompt_text}" in os.path.expandvars(template):
+        argv_prompt_text, replaced = inline_prompt_text(prompt_text, str(prompt_path))
+        if replaced:
+            print(f"warning: run-optimizer: the {len(prompt_text.encode('utf-8'))}-byte prompt is "
+                  f"over the {MAX_INLINE_PROMPT_BYTES}-byte argv limit for {name!r}; passing a "
+                  f"pointer to {prompt_path} instead", file=sys.stderr, flush=True)
+    cmd = build_command(template, workdir=workdir,
+                        prompt=str(prompt_path), prompt_text=argv_prompt_text,
                         model=args.model, self_dir=_self_dir())
 
     # Optional headless structured output: append the row's json_flag so the CLI

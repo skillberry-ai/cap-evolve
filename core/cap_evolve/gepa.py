@@ -269,7 +269,7 @@ def _write_reflection(workdir: Path, parent_mb: SplitResult) -> str:
         ]
         if raw.get("trace"):
             lines.append(f"- Trajectory: {str(raw.get('trace'))[:800]}")
-        lines.append(f"- Feedback: {str(pt.get('feedback', ''))[:800]}")
+        lines.append(f"- Feedback: {str(pt.get('feedback', ''))}")
         lines.append("")
     if not actionable:
         lines.append("- (no actionable failures sampled; pursue robustness/generalization)")
@@ -610,7 +610,8 @@ def gepa_loop(
             parent_mb, mb, f"GEPA minibatch of {len(mb)} train tasks, component focus "
                            f"{focus_label}",
             algorithm="gepa", parent_dir=parent_dir,
-            extra=_instructions(refl_summary, focus_label, mb))
+            extra=_instructions(refl_summary, focus_label, mb), run_dir=run_dir,
+            optimizer=optimizer)
         instructions = ctx.augment_instructions(instructions, workdir, run_dir)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather

@@ -9,7 +9,10 @@
 #                      {prompt} is the path to INSTRUCTIONS.md; {prompt_text} is
 #                      its CONTENTS (use when the CLI takes the prompt inline).
 #                      {model} expands to the resolved model, or is dropped (with
-#                      its preceding token) when no model is set.
+#                      its preceding token) when no model is set. An inlined
+#                      {prompt_text} over run.py's MAX_INLINE_PROMPT_BYTES (the kernel
+#                      caps one argv string at 128 KiB) is replaced by a pointer to
+#                      the {prompt} file, with a warning.
 #   env_keys         : comma-separated env vars the CLI reads for auth (doc only;
 #                      the runner reports which are present).
 #   install_url      : where to get the CLI (printed when it is not on PATH).
