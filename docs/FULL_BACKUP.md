@@ -156,7 +156,9 @@ user folder, created without asking or notifying anyone**. The id is derived as 
    stripped: `136134023+yyualvin@users.noreply.github.com` → `yyualvin`;
 3. aliases of one person are merged by GitHub login before applying rule 1.
 
-Create it with `rclone mkdir $LOC/user/<user-id>` and check it with `rclone lsd $LOC/user`. A person
+Create it with `rclone mkdir $LOC/user/<user-id>` and check it with `rclone lsd $LOC/user`. On a
+remote without real directories (§5.1 check 4), skip the `lsd` check: the folder exists once the
+first file is uploaded into it, and the `rclone check` of §11 confirms it. A person
 who already has a folder at the location, in any layout, keeps the **same** id. Record the new id and
 its derivation in `BACKUP_RESULTS_<TS>.md`.
 
@@ -178,12 +180,20 @@ and a new profile (§4, Appendix B.2).
 ```
 
 - `YYYY-MM-DD` is the run's start date (UTC).
-- `<bench-id>` is a profile id and may contain `-` (`tau2-airline`). Every other slot is lowercase
-  `[a-z0-9.]`, with no `-`, or `none` if empty. The slot order is fixed. So a name parses
-  uniquely: the date, then the longest bench id from `docs/backup_profiles/INDEX.md` that matches,
-  then six slots split at `-`. Model names are
-  shortened by removing the provider prefix and `-`, `_` and `/`, for example
+- Model names are shortened by removing the provider prefix, then normalized as below, for example
   `aws/claude-sonnet-5-5` → `claudesonnet55`.
+- `<bench-id>` is a profile id and may contain `-` (`tau2-airline`). Every other slot is lowercase
+  `[a-z0-9.]`, with no `-`, or `none` if empty. The slot order is fixed.
+- **Normalize every slot value except `<bench-id>`:** lowercase it, remove `-` and `_`, and remove
+  every other character that is not in `[a-z0-9.]` (for example `:` or `@` in model ids). The
+  profiles' setting values are written as they appear in the sources: `abl-full` → `ablfull`,
+  `v4_t2_e1` → `v4t2e1`, `task-by-task-87` → `taskbytask87`, `full_verified` → `fullverified`. The
+  raw values stay in `runmeta.method`, `runmeta.setting` and `runmeta.models`.
+- For a `harbor-<dataset>` id, `<dataset>` is normalized in the same way, so the id is `harbor-`
+  plus one token with no `-`.
+- So a name parses uniquely: the date; then the longest bench id from
+  `docs/backup_profiles/INDEX.md` that matches, or `harbor-` and the next token; then six slots
+  split at `-`.
 - `<method>`: `capevolve`, or the other method's name.
 - `<method-version>`: a release (`v014`), or the first 7 hex digits of the method's code commit.
   Use `none` when the commit is not recorded; never an estimate (keep an estimate in
@@ -413,15 +423,15 @@ value of `EXPERIMENT_BACKUP_LOCATION`; `<remote>` is its part before the first `
      nothing; skip this confirmation, because check 8 proves the write into the folder.
    - Folders for other users are created later as in §2.2, without asking.
 8. **Write permission, read-back and hashes.** Write the results of checks 1–7 as
-   `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/location_check.json` with `rclone copyto --immutable`.
-   Record checks 8–10 in `BACKUP_RESULTS_<TS>.md`. Read it
-   back with `rclone cat` and compare its sha256 with the local file. They must be equal.
+   `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/location_check.json` with
+   `rclone copyto --immutable`. Read it back with `rclone cat` and compare its sha256 with the local file. They must be equal.
    - Record the hash types the remote reports (`rclone lsjson --hash` on that file, or
      `rclone backend features <remote>:`, field `Hashes`).
    - If the remote shares a hash type with the local disk (Box: SHA-1; S3: MD5 for non-multipart
      objects), `rclone check` (§11) is a content check. Otherwise §11 uses `rclone check --download`.
    - Write the file again only as a new version under a new name (`location_check_2.json`); never
      overwrite it.
+   - Record checks 8–10 in `BACKUP_RESULTS_<TS>.md`.
 9. **Space and limits.** If `rclone about <remote>:` is supported, record the free space and compare it
    with the staging size. Record any known rate limit of the remote (Box handles about 4.5 files/s per
    account) to plan §11.
@@ -575,6 +585,8 @@ Record the time of the gate in `runmeta.captured.end`.
 ## 6. Gap report
 
 Every folder has a gap report: `GAPS.json` (Appendix A.6) and `GAPS.md`, which shows the same content.
+After a second pass the current report is the newest `GAPS_<TS>.json`/`.md` (§2.6); the same holds for
+`MANIFEST_<TS>.json`.
 It says exactly what is missing, how much, why, what it affects, and where it might still be. A
 folder with no gaps says "no gaps". A `LOST_SOURCES.json` in a pre-existing folder (§2.7) is read as
 a list of gaps.
@@ -767,7 +779,8 @@ Run **`docs/VERIFICATION_SCAN.md`** on every assembled folder:
 The scan writes `SCAN_RESULTS_<TS>.md` and `SCAN_RESULTS_<TS>.json` into the folder.
 - If a finding changes a run's status before upload, update `runmeta.status` and `README.md` in
   staging. After upload, write `STATUS_<TS>.json` and a new index row instead (§2.6). Say so in
-  `BACKUP_RESULTS_<TS>.md`. The folder name does not change.
+  `BACKUP_RESULTS_<TS>.md`; if that file is already at the location, write a new one with a new
+  `<TS>`. The folder name does not change.
 - Never hide a finding by leaving data out.
 
 ## 10. Before upload
