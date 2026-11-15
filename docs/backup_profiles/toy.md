@@ -1,6 +1,6 @@
 # Backup profile: `toy` — `benchmarks/toy/examples/{calc,skill}`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 A zero-API, mocked proof of the loop.
 

@@ -1,7 +1,7 @@
 # Verification scan of an evaluation run: procedure
 
-**Procedure v2.0.** A generic checklist, run on each assembled run folder of `docs/BACKUP_BOX.md`
-(v2.0, §9). It checks four things:
+**Procedure v3.0.** A generic checklist, run on each assembled run folder of `docs/FULL_BACKUP.md`
+(v3.0, §9; formerly `docs/BACKUP_BOX.md` v2.0). It checks four things:
 - the run's result can be trusted;
 - the folder is complete, and its gaps are reported;
 - the run can be reproduced;
@@ -9,16 +9,16 @@
 
 It applies to every benchmark. Benchmark differences come only from the benchmark's profile
 (`docs/backup_profiles/<bench-id>.md`, as used for the run and copied into its folder as `PROFILE.md`;
-`docs/BACKUP_BOX.md` §4).
+`docs/FULL_BACKUP.md` §4).
 
 **Rules for the executing agent**
 - **This document is read-only.** Never edit it. Write the findings for each run into
   `SCAN_RESULTS_<TS>.md` and `SCAN_RESULTS_<TS>.json`, in **that run's folder**. The `.json` has the
-  same content (`docs/BACKUP_BOX.md` Appendix A.8). `<TS>` is the full UTC timestamp at which the scan
+  same content (`docs/FULL_BACKUP.md` Appendix A.8). `<TS>` is the full UTC timestamp at which the scan
   started, `YYYYMMDDTHHMMSSZ`, and it is the same for every run in one scan. If a rule here is wrong,
   say so in the results and propose the change in an issue.
 - **Two stages.**
-  - **Capture gate** (at backup time, `docs/BACKUP_BOX.md` §5.10): D1, D2, D3 and D5.
+  - **Capture gate** (at backup time, `docs/FULL_BACKUP.md` §5.10): D1, D2, D3 and D5.
   - **Later**, from the captured copy: every other check. A check whose evidence is a live source
     (for example a transcript store) must have had that evidence captured. Otherwise the check is
     `not run (gap G<n>)`.
@@ -49,7 +49,7 @@ It applies to every benchmark. Benchmark differences come only from the benchmar
 | **not applicable** | the check does not apply to this run's design; reason stated |
 | **not run** | the check could not be run; reason stated, with the gap id if data is missing |
 
-**The run's status** (`docs/BACKUP_BOX.md` §2.4) follows from the worst finding:
+**The run's status** (`docs/FULL_BACKUP.md` §2.5) follows from the worst finding:
 - INVALIDATES → `invalid`;
 - QUALIFIES → `qualified`;
 - otherwise `scored`.
@@ -194,13 +194,13 @@ D1, D2, D3 and D5 run in the capture gate. The rest may run later.
    `REDACTIONS.json` or `GAPS.json`.
 2. **Required items.** These must be present for every round, attempt and unit: the ledger, journal
    and insights files, every round's workdir, the run state and events, the candidates, and every
-   item of the requirement list (`docs/BACKUP_BOX.md` §6.1). Anything missing is a gap, with its class
+   item of the requirement list (`docs/FULL_BACKUP.md` §6.1). Anything missing is a gap, with its class
    and fetch attempts.
 3. **Posts.** The posts must be complete: every comment on the tracking issue(s) and PRs for this run,
    the full threads, the linked issues and PRs, and the workflow runs. Each item has its URL and
    timestamps.
 4. **Metrics.** `data/metrics_full.jsonl`, `data/metrics_summary.json` / `.md` and
-   `data/reward_check.json` follow `docs/BACKUP_BOX.md` Appendix A.3–A.5.
+   `data/reward_check.json` follow `docs/FULL_BACKUP.md` Appendix A.3–A.5.
    - Every value names its source.
    - Unpriced costs are `null` with a reason, never `0`. A recorded 0 counts as $0 only where the
      profile says `zero_means: zero`.
@@ -254,7 +254,7 @@ These checks are static, from hashes and checkouts. No repeat run is made.
 4. **Known gaps.**
    - Anything a repeat needs that could not be captured is listed as a known gap: every one of the
      profile's `unpinnable` items, and every `reproduce/` slot that is not filled.
-   - `runmeta.reproducibility` equals the level that `docs/BACKUP_BOX.md` §8.2 computes from the
+   - `runmeta.reproducibility` equals the level that `docs/FULL_BACKUP.md` §8.2 computes from the
      filled slots.
    - A folder whose README claims a higher level than this is **QUALIFIES**. `record-only` is INFO
      when disclosed.
@@ -287,11 +287,11 @@ cover numbers, models, isolation and budgets.
 
 ## `SCAN_RESULTS_<TS>.md` format
 
-The `.json` file holds the same content (`docs/BACKUP_BOX.md` Appendix A.8).
+The `.json` file holds the same content (`docs/FULL_BACKUP.md` Appendix A.8).
 
 ```
 # Verification scan: <run folder name>
-Scan started: <TS>   ·   Procedure: VERIFICATION_SCAN v2.0 @ <commit>   ·   Profile: <bench-id> (<source>)
+Scan started: <TS>   ·   Procedure: VERIFICATION_SCAN v3.0 @ <commit>   ·   Profile: <bench-id> (<source>)
 Holdout: <yes | no>   ·   Coverage: <items %, by main type> (<source kind>)   ·   Reproducibility: <level>
 Status: <scored | qualified | invalid | discarded | superseded | smoke> — <one line why>
 

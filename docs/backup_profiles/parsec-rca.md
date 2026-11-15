@@ -1,6 +1,6 @@
 # Backup profile: `parsec-rca` — `benchmarks/parsec/examples/rca_prompts`; CI `parsec`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 Multi-agent root-cause-analysis prompts for parsec-live, scored by Harbor verifiers against simulator MCP services.
 

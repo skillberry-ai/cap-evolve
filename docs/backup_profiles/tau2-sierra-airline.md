@@ -1,6 +1,6 @@
 # Backup profile: `tau2-sierra-airline` — `benchmarks/tau2/examples/sierra_airline/{direct,blackbox}`; CI `tau2_sierra`, `tau2_sierra_blackbox`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 tau2 airline on pinned vanilla tau2, with a direct arm and a blackbox delivery arm (Skillberry store + SPA).
 

@@ -1,6 +1,6 @@
 # Backup profile: `epic-creator` — retired; no adapter in any cap-evolve branch
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 Epic creation from intake documents, by a GLM 5.3 agent in a Claude Code harness, scored by deterministic checks.
 
