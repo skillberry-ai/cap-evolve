@@ -1,6 +1,6 @@
 # Backup profile: `swebench-verified-harbor` — `benchmarks/generic/harbor/template` + `capevolve_harbor/`; CI `swebench`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 Any Harbor dataset, run through Harbor with Claude Code as the agent; CI `swebench` runs SWE-bench Verified this way. For another Harbor dataset, use id `harbor-<dataset>` with these values.
 

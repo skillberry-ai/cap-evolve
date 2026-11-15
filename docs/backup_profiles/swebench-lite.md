@@ -1,6 +1,6 @@
 # Backup profile: `swebench-lite` — `benchmarks/swe_bench/template` (local only)
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 SWE-bench Lite with a single-shot litellm coding agent, scored by the SWE-bench Docker harness. CI `swebench` uses Harbor instead (`swebench-verified-harbor`).
 

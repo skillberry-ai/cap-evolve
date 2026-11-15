@@ -1,9 +1,11 @@
-# Evaluation-run backup to Box: procedure
+# Evaluation-run full backup: procedure
 
-**Procedure v2.0.** It applies to every benchmark in `benchmarks/`, every method (cap-evolve and
-others) and every evaluation window. Each evaluation run found on any source is captured in full,
-organized into one common folder layout, and checked for gaps and validity. It is then copied to the
-Box archive with `rclone`. The companion checklist is `docs/VERIFICATION_SCAN.md` (v2.0).
+**Procedure FULL_BACKUP v3.0** (formerly `BACKUP_BOX.md` v2.0). It applies to every benchmark in
+`benchmarks/`, every method (cap-evolve and others) and every evaluation window. Each evaluation run
+found on any source is captured in full, organized into one common folder layout, and checked for
+gaps and validity. It is then copied with `rclone` to **the backup location**: one folder on any
+rclone remote, named by the environment variable `EXPERIMENT_BACKUP_LOCATION` (§2.1). The companion
+checklist is `docs/VERIFICATION_SCAN.md` (v3.0).
 
 **Rules for the executing agent**
 - **This document and `docs/VERIFICATION_SCAN.md` are read-only.** Never edit them. Everything you
@@ -15,19 +17,21 @@ Box archive with `rclone`. The companion checklist is `docs/VERIFICATION_SCAN.md
   wrong, say so in `BACKUP_RESULTS_<TS>.md`, apply the corrected rule there explicitly, and open an
   issue that proposes the change to this document. Benchmark profiles (`docs/backup_profiles/`) are
   not part of this procedure: they are created and corrected as Appendix B says.
-- **Box is a private experiment archive, not redistribution.** Upload everything a run produced,
+- **The backup location is a private experiment archive, not redistribution.** Upload everything a run produced,
   including gold, benchmark data and licence-restricted material. Record each licence in `NOTICE.md`
   (§7.4). Never leave data out because of its licence.
 - **Never drop data.** Re-organize it into the layout of §3, but keep every source byte. A source file
   is either copied unchanged, or redacted for secrets only (`REDACTIONS.json`). Anything required
   that is not in the folder is reported in the gap report (§6). Every re-organization is recorded in
   `MOVES.json`.
-- **Never upload secrets.** Values from the host's secret files and environment never reach Box
-  (§5.5).
-- **Never delete or overwrite anything on Box.** Use `rclone copy`, never `sync`, `move` or `purge`.
-  Never rename on Box, because a rename is a delete. Never change or delete a source on the host.
+- **Never upload secrets.** Values from the host's secret files and environment never reach the
+  backup location (§5.5).
+- **Never delete or overwrite anything at the backup location.** Use `rclone copy`, never `sync`,
+  `move` or `purge`. Never rename there, because on most remotes a rename is a copy and a delete.
+  This holds even when the operator's role on the remote allows deletes. Never change or delete a
+  source on the host.
 - **Never rewrite git history.** If a merge is needed, it is done on a new branch (§5.8).
-- **Existing Box folders are never written to** (§2.6).
+- **Existing folders at the backup location are never written to** (§2.7).
 - **Two stages.** The capture stage (§5, §6) must be done at backup time. It ends only when the
   capture gate passes (§5.10). The organizing stage (§7, §8, the verification scan) may run then or
   later, from the captured copy.
@@ -52,7 +56,7 @@ short of each objective in a way that later processing cannot repair:
 2. **Authentic.** Proof that the archive is the original needs the original: hashes taken on the
    source at capture. A raw copy can show only that it matches itself, and it does not say what it
    lacks. *Examples:* the GitHub copy of a tau2 final-eval window holds about 1% of the bytes of the
-   Box copy, and none of the rollouts; that Box copy holds 1,815 of the 7,200 planned jobs.
+   archived copy, and none of the rollouts; that archived copy holds 1,815 of the 7,200 planned jobs.
 3. **Reproducible.** Much of what a repeat needs is live state, not files, and it changes unless it
    is queried at capture. *Examples:* SWE-bench evaluation images built locally, which exist only
    in the container store; the subagent model a CLI inherits from user settings.
@@ -68,7 +72,8 @@ short of each objective in a way that later processing cannot repair:
 | Comprehensive | Sources on other hosts: cluster workareas, CI runners, gateway ledgers, posts from the API | §5.3(b), (f), (h), (i) |
 | Comprehensive | Capture order (most volatile first), git sources pinned by commit and snapshotted first, discovery repeated at the end | §5.2, §5.4, §5.9 |
 | Comprehensive | Capture gate: every required item present or recorded as a gap, with fetch attempts | §5.10 |
-| Authentic | Source hashes taken on the host, compared with the archive and with Box | §5.5, §10, §11 |
+| Authentic | Backup location validated before capture: remote, access, permissions, hash support | §5.1 |
+| Authentic | Source hashes taken on the host, compared with the staged copy and with the backup location | §5.5, §10, §11 |
 | Authentic | Gap report per folder (requirement list, gap classes, coverage per source and union) and roll-up per backup | §6, §12 |
 | Reproducible | Live-state snapshots: images, versions, inherited settings, services, freezes, host | §5.6, §8 |
 | Reproducible | Code, upstream clones and benchmark data at the commits that ran; reproducibility level | §5.3(d), §8 |
@@ -99,33 +104,48 @@ short of each objective in a way that later processing cannot repair:
 - **Partial export.** A source that holds only part of a run: git result branches and repos, CI
   artifacts, committed `run_full/` dirs, dashboard UI snapshots.
 
-## 2. Where things go on Box
+## 2. Where things go: the backup location
 
-### 2.1 User folders
+### 2.1 The backup location
+
+There is exactly **one** backup location. It is an rclone path, `<remote>:<path>`, given by the
+environment variable `EXPERIMENT_BACKUP_LOCATION`, for example:
+
+```
+export EXPERIMENT_BACKUP_LOCATION=box:skillberry-share/runs-backup
+export EXPERIMENT_BACKUP_LOCATION=s3team:experiments/backup
+```
+
+- The remote may be of any type rclone supports (Box, S3, Google Drive, SFTP, a local path…). The
+  procedure is the same; only the checks of §5.1 depend on the remote's features.
+- `$LOC` below stands for the value of `EXPERIMENT_BACKUP_LOCATION`. Every path in this procedure
+  that is on the remote is written relative to it. No other remote, root or rclone alias is used as
+  a backup target or as a source of existing backups.
+- The location is created once by its **owner** (the person who administers it), who also grants
+  access to the operators (§5.1). An operator never creates the location. If it is missing or not
+  visible, the operator stops and asks the owner, because a folder created in its place would be a
+  lookalike outside the archive.
+- Several operators may share one location (for example through a shared folder on Box). Each runs
+  this procedure against the same `$LOC`.
+
+### 2.2 User folders
 
 Every run goes to the folder of the person **its data comes from**, not the person doing the backup:
 
 ```
-box:skillberry-runs-backup/user/<user-id>/<bench-id>/<run-folder>/
+$LOC/user/<user-id>/<bench-id>/<run-folder>/
 ```
 
-- **The new root.** The root `skillberry-runs-backup/` on the `box:` remote, and the prefix
-  `skillberry-runs-backup/user/`, are fixed. Every backup made with this procedure goes there.
-  - The root was created by the owner on 2026-11-12, and was empty when checked that day.
-  - Create `user/` and each `user/<user-id>/` the first time they are needed (§5.1).
-  - Address every folder directly, as `box:skillberry-runs-backup/user/<user-id>/`. No rclone alias
-    is needed.
-- **The old root.** `box:cap-evolve-paper-data/user/` holds the folders made before this procedure
-  (§2.6), with the same internal structure. It is read-only for this procedure. The rclone alias
-  `eval-data`, if present, points into it (`box:cap-evolve-paper-data/user/<operator-id>`). Leave the
-  alias unchanged, and never use it as an upload target.
+- Create `$LOC/user/` and each `$LOC/user/<user-id>/` the first time they are needed (§5.1).
+- Content at the location that is not under `user/` in this layout (folders made before this
+  procedure, or under an earlier layout) is **pre-existing content** (§2.7).
 
 Find the person with the first rule that applies:
 
 | Where the data comes from | Person | How to find them |
 |---|---|---|
 | A human-authored git commit (history branches, `skillberry-runs/*`, `results/*` branches, run dirs committed under `benchmarks/`, `docs/experiments/`) | the **author** of the first commit that added the data | `git log --follow --diff-filter=A --format='%an <%ae>' -- <path>`. Skip pure moves and history migrations (for example `aeee7126d`, the `benchmarks/` move). Never use the committer field: it is often `GitHub <noreply@github.com>` (web merges), or whoever migrated a repo. |
-| A `skillberry-bot` commit (`benchmark-history` runs and records) | the person who started the CI run | `gh api repos/skillberry-ai/cap-evolve/actions/runs/<run_id> --jq .triggering_actor.login`. For a local record with no run id, use the record's `source` field (for example `bcarmeli`). |
+| A `skillberry-bot` commit (`benchmark-history` runs and records) | the person who started the CI run | `gh api repos/skillberry-ai/cap-evolve/actions/runs/<run_id> --jq .triggering_actor.login`. If that is itself a bot (for example `skillberry-bot` on a PR-triggered run), use the author of the triggering PR. For a local record with no run id, use the record's `source` field (for example `bcarmeli`). |
 | Not from git (local `.capevolve*`, cluster workareas, archives) | the person who launched the run | owner of the run dir or workarea, LSF job user, `run_meta.txt`. If these disagree, ask the owner and record the answer (§5.7). |
 
 Map the person to a `<user-id>` with the table in Appendix C. A person not in the table gets a **new
@@ -135,14 +155,14 @@ user folder, created without asking or notifying anyone**. The id is derived as 
    stripped: `136134023+yyualvin@users.noreply.github.com` → `yyualvin`;
 3. aliases of one person are merged by GitHub login before applying rule 1.
 
-Create it with `rclone mkdir box:skillberry-runs-backup/user/<user-id>` and check it with
-`rclone lsd`. A person who already has a folder under the old root gets one under the new root
-with the **same** id. Record the new id and its derivation in `BACKUP_RESULTS_<TS>.md`.
+Create it with `rclone mkdir $LOC/user/<user-id>` and check it with `rclone lsd $LOC/user`. A person
+who already has a folder at the location, in any layout, keeps the **same** id. Record the new id and
+its derivation in `BACKUP_RESULTS_<TS>.md`.
 
 A run goes to exactly one user folder: the person who launched it. Everyone else whose data is in
 it is listed in `runmeta.contributors`.
 
-### 2.2 Benchmark ids
+### 2.3 Benchmark ids
 
 `<bench-id>` is the id of the benchmark's profile. Map every bench name to its id with the table in
 `docs/backup_profiles/INDEX.md`, so that names are never confused. For example,
@@ -150,7 +170,7 @@ it is listed in `runmeta.contributors`.
 `swebench-verified-harbor`. A bench name that is not listed gets a new id
 and a new profile (§4, Appendix B.2).
 
-### 2.3 Folder names
+### 2.4 Folder names
 
 ```
 <YYYY-MM-DD>-<bench-id>-<method>-<method-version>-<setting>-<replicate>-<agent>-<optimizer>
@@ -162,16 +182,20 @@ and a new profile (§4, Appendix B.2).
   `aws/claude-sonnet-5-5` → `claudesonnet55`.
 - `<method>`: `capevolve`, or the other method's name.
 - `<method-version>`: a release (`v014`), or the first 7 hex digits of the method's code commit.
+  Use `none` when the commit is not recorded; never an estimate (keep an estimate in
+  `runmeta.extra`).
 - `<setting>`: one value from the profile's closed list. Examples: capability scope `p`, `pt`, `m`,
-  `ptm`; an ablation name; a gate setting `k02`.
-- `<replicate>`: `s<k>` for search seed k, or `s0` for a run with a single replicate.
+  `ptm`; an ablation name; a gate setting `k02`; a CI tier.
+- `<replicate>`: `s<k>` for search seed k, or `s0` for a run with a single replicate. If two runs
+  would otherwise get the same folder name, append `.r<run id>` to this slot (for example
+  `s0.r39118080899`).
 - A test-window folder uses `<method>` = the window id followed by the method of the champion it
   scores, for example `testall5-gepa`.
 
 **The status is never in the folder name.** It is in `runmeta.status`, `README.md` and the
-benchmark's `INDEX.md`, so it can change without renaming on Box.
+benchmark's `INDEX.md`, so it can change without renaming at the backup location.
 
-### 2.4 Status
+### 2.5 Status
 
 `status` is one of `scored`, `qualified`, `invalid`, `discarded`, `superseded` or `smoke`.
 - The first three follow from the worst finding of the verification scan: INVALIDATES → `invalid`;
@@ -180,31 +204,32 @@ benchmark's `INDEX.md`, so it can change without renaming on Box.
 - `runmeta.inert_champion: true` marks a search whose champion is the seed. It is a field, not a
   status.
 
-### 2.5 What may sit where
+### 2.6 What may sit where
 
 These rules apply to new content:
 - **At a user folder's root:** `BACKUP_RESULTS_<TS>.md`, `BACKUP_RESULTS_<TS>/` (evidence, rclone
   logs, the git snapshot), and `<bench-id>/` folders.
 - **In a `<bench-id>/` folder:** `INDEX.md` and run folders.
 
-Nothing else. No probe or test files are uploaded, because nothing on Box can be deleted.
+Nothing else. No probe or test files are uploaded, because nothing at the location can be deleted.
 
 `<bench-id>/INDEX.md` has one row per run folder, with these columns: folder, kind, method,
 replicate, status, source kind, coverage, reproducibility, and the runs it shares windows with. Add
 rows; never edit or remove an existing row. A status change is a new row dated with the change.
 
-### 2.6 Existing folders
+### 2.7 Existing folders
 
-Folders made before this procedure are under the **old root**, `box:cap-evolve-paper-data/user/`.
-They stay as they are, and are never migrated, renamed, copied to the new root, or added to:
-- `erezh/appworld/`, `erezh/_campaign/`, `erezh/_campaign_pipeline_test/`,
-  `erezh/_throughput_probe_20261104/`, and the `BACKUP_RESULTS_*` files at `erezh/`'s root;
-- `osher.elhadad/overnight-backup/`;
-- anything else found under the old root.
+Folders already at the location stay as they are. That includes pre-existing content (§2.2) and the
+run folders of earlier backups. They are never migrated, renamed, moved, re-uploaded or added to,
+except that a later pass of the same backup may add new files (§11).
 
 They are still used, read-only:
 - for the duplicate check (§5.4);
 - as other copies in coverage comparisons (§6.4).
+
+Archives that are not at the location do not count as existing backups. If the owner wants them to
+count, the owner moves them under the location (with the remote's own move, which keeps the content;
+never `rclone move`) before the backup starts.
 
 ## 3. Folder layout
 
@@ -247,7 +272,8 @@ Every folder of every kind has this tree:
   rounds.
 - **Re-organization never replaces a source copy.** Derived slots (`champion/`, `baselines/`,
   `rounds/`, `data/`) are views. The source they are made from always stays under the source slots.
-- **Symlinks** cannot be stored on Box. List every one, with its target, in `SYMLINKS.txt`. Copy the
+- **Symlinks** are not stored by `rclone copy` on most remotes (Box, S3, Drive). List every one,
+  with its target, in `SYMLINKS.txt`. Copy the
   target's content if it belongs to the run.
 
 ### 3.2 Where existing layouts go
@@ -268,8 +294,9 @@ Each move is one line in `MOVES.json`: the canonical path, the source path, and 
 
 ### 3.3 No packing or compression
 
-Upload plain, uncompressed trees, whatever the file count. Box handles about 4.5 files/s, so large
-trees take long. Plan for that, and raise rclone parallelism (§11) instead of using tars.
+Upload plain, uncompressed trees, whatever the file count. Many remotes accept only a few files per
+second (Box: about 4.5 files/s per account), so large trees take long. Plan for that, and raise
+rclone parallelism (§11) instead of using tars.
 
 ### 3.4 Shared windows
 
@@ -317,36 +344,65 @@ that every benchmark shares are in `docs/backup_profiles/_core.md`.
 
 ## 5. Capture stage (at backup time)
 
-### 5.1 Check the rclone setup (before the capture starts)
+### 5.1 Validate the backup location (before the capture starts)
 
-Never print a token. Show only remote names, types and the alias target.
-1. **rclone installed.** If missing, install the official release, checksum-verified, at least two
-   weeks old, in user space only.
-2. **The `box` remote exists** (`rclone listremotes --long` lists `box:` with type `box`). If it is
-   missing, ask the user to create it. `rclone config create box box` needs a browser login, which
-   only the user can do. On a host without a browser, the user runs `rclone authorize "box"` on a
-   machine with one and pastes the token. Wait until the user says it is done.
-3. **The `box` token is valid.** Run `rclone lsd box: --max-depth 1`. If it
-   fails with an authentication error (`invalid_grant`, `token expired`, `401`), ask the user to run
-   `rclone config reconnect box:` and log in. Wait for the user, then repeat the call. Do not start
-   the capture until it succeeds.
-4. **The new root and the user folders.**
-   - `rclone lsd box: --max-depth 1` must list `skillberry-runs-backup`. If it is missing, ask the
-     user to create it, or to confirm that you may create it. Never create a different root.
-   - If `box:skillberry-runs-backup/user` is missing, create it with `rclone mkdir`, and check it
-     with `rclone lsd`.
+Run every check below before anything is captured, and stop at the first one that fails. Never print
+a token or a remote's credentials: show only remote names, remote types and paths. `$LOC` is the
+value of `EXPERIMENT_BACKUP_LOCATION`; `<remote>` is its part before the first `:`.
+
+1. **rclone installed.** `rclone version` works. If rclone is missing, install the official release,
+   checksum-verified, at least two weeks old, in user space only.
+2. **The location is defined.** `EXPERIMENT_BACKUP_LOCATION` is set, non-empty, and of the form
+   `<remote>:<path>` with a non-empty `<path>`. If it is not, ask the user for the location; never
+   guess or default one.
+3. **The remote exists.** `rclone listremotes --long` lists `<remote>:`. Record its type. If it is
+   missing, ask the user to create it (`rclone config`). Remotes that log in through a browser (Box,
+   Google Drive, OneDrive, Dropbox) need the user to do that login. On a host without a browser, the
+   user runs `rclone authorize "<type>"` on a machine with one and pastes the token. Wait until the
+   user says it is done.
+4. **The remote works.** `rclone lsd <remote>:` succeeds.
+   - On an authentication error (`invalid_grant`, `token expired`, `401`, `403`), ask the user to run
+     `rclone config reconnect <remote>:`, wait, then repeat the call.
+   - On `429` or `temporarily_unavailable`, wait and retry with back-off. If it persists, ask the
+     user, because the provider or an administrator may be blocking the client.
+   - Do not start the capture until this succeeds.
+5. **The location exists and is visible.** `rclone lsf "$LOC" --max-depth 1` succeeds.
+   - If the path is missing, **stop and ask the location's owner**. Never create the location, nor
+     any folder in its place: a missing shared folder usually means a share that was not sent or not
+     accepted, and a folder created instead would be a lookalike outside the archive.
+   - Record what is at the top of the location. Everything that is not `user/` is pre-existing content
+     (§2.7).
+6. **Read permission.** `rclone lsjson "$LOC/user" --max-depth 1`, when `user/` exists, lists the user
+   folders. Then read one existing small file, for example a `<bench-id>/INDEX.md` or a
+   `BACKUP_RESULTS_*.md`, with `rclone cat --count 1024 <file>`. If the location is still empty,
+   check 8 tests reading instead. A role that can upload but cannot list (for example Box "Uploader")
+   is not enough: the duplicate check (§5.4) and `rclone check` (§11) need listing.
+7. **Folder-create permission.**
+   - Create `$LOC/user/` if it is missing (`rclone mkdir`).
    - Find the operator's id in Appendix C. If they are not listed, ask them, and check the existing
-     ids under both roots. Create `box:skillberry-runs-backup/user/<operator-id>` if it is missing.
-   - Folders for other users are created as in §2.1, without asking.
-5. **The old root, for reading.** `rclone lsd box:cap-evolve-paper-data/user` lists the existing
-   user folders, which are needed for the duplicate check (§5.4). If the `eval-data` alias exists,
-   `rclone config show eval-data` should show type `alias` pointing into the old root. Record what
-   it shows, and leave it unchanged.
-6. **Access, end to end.** `rclone lsd box:skillberry-runs-backup/user` lists the user folders.
-   Upload no test file.
+     ids at the location. Create `$LOC/user/<operator-id>/` if it is missing.
+   - Always create `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/`. `<TS>` is new for every backup,
+     so this always tests creating a folder. It is allowed content (§2.6), not a probe.
+   - Confirm each with `rclone lsd`. Folders for other users are created later as in §2.2, without
+     asking.
+8. **Write permission, read-back and hashes.** Write the results of checks 1–9 as
+   `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/location_check.json` with `rclone copyto`. Read it
+   back with `rclone cat` and compare its sha256 with the local file. They must be equal.
+   - Record the hash types the remote reports (`rclone lsjson --hash` on that file, or
+     `rclone backend features <remote>:`, field `Hashes`).
+   - If the remote shares a hash type with the local disk (Box: SHA-1; S3: MD5 for non-multipart
+     objects), `rclone check` (§11) is a content check. Otherwise §11 uses `rclone check --download`.
+   - Write the file again only as a new version under a new name (`location_check_2.json`); never
+     overwrite it.
+9. **Space and limits.** If `rclone about <remote>:` is supported, record the free space and compare it
+   with the staging size. Record any known rate limit of the remote (Box handles about 4.5 files/s per
+   account) to plan §11.
+10. **Delete permission is not needed and is never tested.** A role that allows deletes does not
+    change the rules: nothing at the location is deleted, overwritten or renamed.
 
 Record in `BACKUP_RESULTS_<TS>.md` what was found, what was built or fixed, and every point where the
-user was asked to act. Box tokens expire, so repeat check 3 before the first `rclone copy` (§11).
+user was asked to act. Tokens expire and limits change, so repeat checks 4 and 5 before the first
+`rclone copy` (§11), and whenever an upload stage starts after a long pause.
 
 ### 5.2 Snapshot the git result sources first
 
@@ -400,7 +456,7 @@ and search at least:
 For each candidate decide:
 - **Is it an evaluation run, and which?** Apply the grouping rules of §1 and record why.
 - **Its kind** (§1).
-- **Its owner** (§2.1).
+- **Its owner** (§2.2).
 
 Record in `BACKUP_RESULTS_<TS>.md`:
 - the full list;
@@ -409,14 +465,13 @@ Record in `BACKUP_RESULTS_<TS>.md`:
 
 ### 5.4 Duplicates and capture order
 
-**Duplicates.** Before copying a run, compare it with every existing Box folder. That means every
-user's folder under **both roots** (the old root of §2.6, and the new root, which holds the backups made
-with this procedure), including other windows of the same campaign. Compare by run id, by window and arm × seed,
-and by sha256. Use the folders' `MANIFEST.json`, or the `.tar.sha256` files and member manifests
+**Duplicates.** Before copying a run, compare it with every existing folder at the backup location:
+every user's folder, and the pre-existing content (§2.7), including other windows of the same
+campaign. Compare by run id, by window and arm × seed, and by sha256. Use the folders' `MANIFEST.json`, or the `.tar.sha256` files and member manifests
 where they exist. Otherwise list in parallel, one `rclone lsjson --recursive` per sub-directory,
 about 32 at a time. A serial listing of a large folder can take hours.
-- **Already archived in full:** do not upload it again. Record "already archived at `<box path>`".
-- **Partly archived:** make a new folder that holds only the files not yet on Box. Its `README.md`
+- **Already archived in full:** do not upload it again. Record "already archived at `<path at $LOC>`".
+- **Partly archived:** make a new folder that holds only the files not yet at the location. Its `README.md`
   points to the existing folder, and its gap report compares both copies (§6.4).
 
 **Capture order.** Most volatile first, by the profile's `volatile: true` entries: harness job dirs
@@ -493,7 +548,7 @@ Record the time of the gate in `runmeta.captured.end`.
 
 Every folder has a gap report: `GAPS.json` (Appendix A.6) and `GAPS.md`, which shows the same content.
 It says exactly what is missing, how much, why, what it affects, and where it might still be. A
-folder with no gaps says "no gaps". A `LOST_SOURCES.json` in a folder under the old root is read as
+folder with no gaps says "no gaps". A `LOST_SOURCES.json` in a pre-existing folder (§2.7) is read as
 a list of gaps.
 
 ### 6.1 The requirement list
@@ -533,7 +588,7 @@ gives a count, derive it from the configuration (splits × trials × candidates)
 - `required_by`: the slot, profile key or check;
 - `expected`: count or bytes, and how it was derived;
 - `present` and `coverage`;
-- `may_exist_at`: other hosts, archives, branches, Box folders;
+- `may_exist_at`: other hosts, archives, branches, folders at the backup location;
 - `fetch_attempts`: what was tried at capture, when, and with what result;
 - `impact`:
   - the goals affected (C, A, R, N);
@@ -548,7 +603,7 @@ Coverage goes at the top of `GAPS.md`, and also into `runmeta.coverage`:
   transcripts, candidates, logs, results. A single overall percentage hides the difference between
   "every spec, no rollouts" and "a quarter of the jobs, complete".
 - per slot, and overall.
-- **when other copies of the run are known** (an existing Box folder in any user's folder, another
+- **when other copies of the run are known** (an existing folder at the backup location, another
   host, another branch):
   - coverage per source and for their union;
   - what is **unique to each source**;
@@ -557,7 +612,7 @@ Coverage goes at the top of `GAPS.md`, and also into `runmeta.coverage`:
 
   Match copies by run id, by window and arm × seed, and by hash.
 
-A gap found in an existing Box copy (for example `snapshot-incomplete`) is reported in the new
+A gap found in an existing copy at the backup location (for example `snapshot-incomplete`) is reported in the new
 folder's gap report. The existing folder is never edited.
 
 ### 6.5 Git-origin runs
@@ -567,7 +622,7 @@ coverage. `may_exist_at` lists every location the git copy itself names:
 - archive paths in its README;
 - cluster hosts in `run_meta.txt`;
 - run dirs named in `state.json`;
-- Box folders found in §5.4.
+- folders at the backup location found in §5.4.
 
 ## 7. Organizing stage (now or later, from the captured copy)
 
@@ -602,7 +657,8 @@ value from the sources the profile names.
   `runmeta.reward_metric`, and compare it with the published value in `reward_check.json`.
 
 Render `metrics_full.jsonl` into `data/metrics_full.html`: one self-contained file, with inline CSS,
-no scripts and no external resources, so that Box's preview shows it. It holds:
+no scripts and no external resources, so that a remote's web preview (for example Box's) shows
+it. It holds:
 - a header naming the source file and its sha256;
 - the run total and per-arm summary first;
 - then one table per row level.
@@ -703,17 +759,27 @@ The scan writes `SCAN_RESULTS_<TS>.md` and `SCAN_RESULTS_<TS>.json` into the fol
 
 ## 11. Upload
 
-For each run, after repeating check 3 of §5.1:
+For each run, after repeating checks 4 and 5 of §5.1:
 
 ```
-rclone copy <staging>/<run> box:skillberry-runs-backup/user/<user-id>/<bench-id>/<run> \
-       --transfers 16 --checkers 32 --log-file <log> --log-level INFO
-rclone check <staging>/<run> box:skillberry-runs-backup/user/<user-id>/<bench-id>/<run> --one-way
+rclone copy <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" \
+       --transfers 16 --checkers 32 --retries 10 --low-level-retries 30 \
+       --log-file <log> --log-level INFO
+rclone check <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" --one-way
 ```
 
 - Upload folder trees as they are, uncompressed.
-- `rclone check` must report 0 differences and 0 missing files for every run. Box keeps SHA-1, so this
-  is a content check.
+- **Parallelism.** Copy several run folders at once (for example 8–12 `rclone copy` processes, each
+  with `--transfers 8`), largest file count first. The remote's rate limit (§5.1 check 9) is the
+  ceiling, so raise parallelism only while the throughput still grows.
+- **Only for a run folder that did not exist before this backup** (§5.4), add `--no-traverse
+  --no-check-dest`. They skip listing the destination, which saves one API call per file. Never use
+  them on a folder that already holds files, because they would overwrite.
+- `rclone check` must report 0 differences and 0 missing files for every run. It is a content check
+  when the remote shares a hash type with the local disk (§5.1 check 8); otherwise add `--download`.
+- A check that fails only because listing failed (`429`, an expired token) is not a content difference.
+  Fix the cause (§5.1 check 4) and run the check again. Re-copy only files that are really missing:
+  that adds files and overwrites nothing.
 - Append the run's row to `<bench-id>/INDEX.md`.
 - Keep the rclone logs in `<user-id>/BACKUP_RESULTS_<TS>/`.
 
@@ -736,11 +802,11 @@ Then a list of every `may_exist_at` location across the backup, to follow up.
 It then records:
 - what was searched, which runs were found, and how they were grouped, attributed and named;
 - user folders created, with their ids and how each was derived;
-- duplicates skipped, with their existing Box path;
+- duplicates skipped, with their existing path at the backup location;
 - every excluded candidate, with the reason;
 - profiles checked or corrected (§4);
 - merges made (branch names);
-- per run: Box path, files, bytes, status and its reason, with a pointer to that run's
+- per run: path at the backup location, files, bytes, status and its reason, with a pointer to that run's
   `SCAN_RESULTS_<TS>.md`;
 - verification outcomes: tool checks, completeness, secret scan, conformance, `rclone check`;
 - the owner's answers, the decisions taken with the owner, and anything still open;
@@ -761,7 +827,7 @@ agent_model, optimizer_model, agent_model_requested, optimizer_model_requested, 
 optimizer_provider, gate_k_se, algorithm, warm_seed, reward_metric, conclusion`. In addition:
 
 ```
-schema: "runmeta v2", procedure: "BACKUP_BOX v2.0"
+schema: "runmeta v2", procedure: "FULL_BACKUP v3.0"
 profile: {bench_id, path: "docs/backup_profiles/<bench-id>.md", commit, sha256, state: as-is|corrected|new}
 kind: training-run | test-window | campaign-material
 bench_id, method, method_version, setting, replicate
@@ -773,7 +839,7 @@ seed_variant, baselines: [<baseline-id>]
 trials: {search, final}
 models: {agent, usersim, judge, simulator, optimizer: {<role>: …}}   each {requested, actual, actual_source}
 dates: {start, end, attempts: [{label, start, end, status}]}
-champion_training_run: <box path> | null
+champion_training_run: <path at the backup location> | null
 completeness: full | partial-export
 coverage: {items: {<type>: {expected, present}}, bytes: {<type>: {expected, present}}}
 reproducibility: full | procedure | record-only
@@ -852,7 +918,7 @@ One object per arm.
 ```
 {schema: "gaps v2", coverage: {by_type: {<type>: {expected, present, expected_bytes, present_bytes}},
   by_slot: {...}, overall: {...},
-  sources: [{name, box_or_host_path, by_type: {...}, unique: [...]}], union: {...},
+  sources: [{name, box_or_host_path, by_type: {...}, unique: [...]}], union: {...},   (box_or_host_path: a path at the backup location or on a host; the key keeps its v2 name)
   agreement: [{type, compared, identical}]},
  gaps: [{id, item, class, required_by, expected, present, coverage, may_exist_at: [],
    fetch_attempts: [{what, when, result}],
@@ -897,7 +963,7 @@ with the keys below, in this order. Every key is present, and its value is exact
 
 | Key | What it holds |
 |---|---|
-| Bench names | every name the benchmark appears under (CI bench, record `bench`, repo dir, run-dir names), and the closed list of `<setting>` values (§2.3) |
+| Bench names | every name the benchmark appears under (CI bench, record `bench`, repo dir, run-dir names), and the closed list of `<setting>` values (§2.4) |
 | Code | the adapter and config paths, at the commit where they exist |
 | Reward | the primary reward and its range; the **success** criterion; the second-level (group) metric and its grouping key; secondary metrics; where the published metric's name is recorded |
 | Infra rule | the rule the published results used (`drop` or `fail`, or something else, stated); the detectors that mark an episode as infra-errored |
@@ -975,8 +1041,8 @@ Copy the profile used for a run into the run folder as `PROFILE.md` (a source co
 
 ## Appendix C. User ids
 
-The same ids are used under both roots. On 2026-11-12, the old root had folders for `boazc`,
-`eranra`, `erezh` and `osher.elhadad`. The new root was empty.
+The same ids are used for every folder at the backup location, in any layout (§2.2). The table maps
+the people known so far.
 
 | Person (e-mails, GitHub logins) | `<user-id>` |
 |---|---|
@@ -985,7 +1051,7 @@ The same ids are used under both roots. On 2026-11-12, the old root had folders 
 | Erez Hadad — `erezh@il.ibm.com` | `erezh` |
 | Osher Elhadad — `osher.elhadad@live.biu.ac.il`, `OsherElhadad` | `osher.elhadad` |
 
-Expected new ids (§2.1):
+Expected new ids (§2.2):
 - `AIMikav` / Anamika (`avalappi@redhat.com`, `44390109+AIMikav@users.noreply.github.com`) → `avalappi`.
   This is the owner of the `epic-creator`, `epic-decompose`, `rh-swebench` and `swebench-verified` runs.
 - `yyualvin` → `yyualvin`. Record each new id in `BACKUP_RESULTS_<TS>.md`. This table is updated by a change

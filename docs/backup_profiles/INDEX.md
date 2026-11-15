@@ -1,18 +1,18 @@
 # Backup profiles: index
 
-One profile per benchmark id. A profile holds every benchmark-specific fact that the Box backup
-procedure (`docs/BACKUP_BOX.md`) needs. Its format, and how to create or correct one, are in
-`docs/BACKUP_BOX.md` Appendix B.
+One profile per benchmark id. A profile holds every benchmark-specific fact that the full backup
+procedure (`docs/FULL_BACKUP.md`) needs. Its format, and how to create or correct one, are in
+`docs/FULL_BACKUP.md` Appendix B.
 
 **Lookup.** Find the run's bench name (CI bench, record `bench`, repo directory or run-dir name) in
 the table below. It gives the profile file. Values shared by every benchmark are in
 [`_core.md`](_core.md). A bench name that is not in the table needs a new profile
-(`docs/BACKUP_BOX.md` §4).
+(`docs/FULL_BACKUP.md` §4).
 
 **Status.** Every profile listed here is a draft. Each was written from the benchmark's adapter,
 configs, CI tiers and committed results (for retired benchmarks, from their code at the last commit
 that had it, and from their records). None has yet been checked against a backup of a real run.
-The first backup of each benchmark does that check (`docs/BACKUP_BOX.md` §4), and records the result
+The first backup of each benchmark does that check (`docs/FULL_BACKUP.md` §4), and records the result
 in the Status column. Paths are relative to the cap-evolve repo unless stated otherwise.
 
 | Bench name (CI, records, run dirs) | Profile |
@@ -34,7 +34,7 @@ in the Status column. Paths are relative to the cap-evolve repo unless stated ot
 | `epic-decompose` | [`epic-decompose`](epic-decompose.md) |
 | `rh-swebench`, `rh-swebench-v4` | [`rh-swebench`](rh-swebench.md) |
 
-A bench name not in this table gets a new profile (`docs/BACKUP_BOX.md` §4) before its runs are captured.
+A bench name not in this table gets a new profile (`docs/FULL_BACKUP.md` §4) before its runs are captured.
 
 | Profile | Status |
 |---|---|

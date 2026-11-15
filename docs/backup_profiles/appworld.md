@@ -1,6 +1,6 @@
 # Backup profile: `appworld` — `benchmarks/appworld/examples/react_agent`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 AppWorld's own task suite, with a ReAct agent, an AST-guarded REPL, and an optimizer sandbox. The held-out window is scored outside core.
 
@@ -20,7 +20,7 @@ AppWorld's own task suite, with a ReAct agent, an AST-guarded REPL, and an optim
 | Agent evidence | per-episode `metadata.fs_probe`, `guard_blocked`, `guard_probe`, `collateral_damage` |
 | Models as used | agent: rollout metadata and `runs/final/results.jsonl`; optimizer: transcripts |
 | External state | `$AW_EVAL` (default `/tmp/aw_eval`, **volatile**): `appworld/` (clone), `venv-aw/`, `root_full/`, `root_opt/`, `lint_cache.json`, `reference/`, `runs/manifest.json`, `runs/<cape>/.capevolve/{project,run_<cape>}/`, `runs/final/{artifacts/,results.jsonl,results.json,tables.md,status.json}`, `runs/isolation_check/`, `runs/isolation_scan.json`, `runs/optimizer_transcripts/<TS>/` (namespace mode), `progress/{<TS>.log,<TS>.out,final.log,PROGRESS.md,optimizer_guard.log}`, `scratch/aw_eps_*`; `/tmp/aw_ns_*` (volatile); optimizer sessions in sandbox mode: `~/.claude/projects/*cape-hc*` |
-| Sources | Box old root `erezh/appworld/` (training runs, `test_all_5_trials/`, `test_abl_5_trials/`, `BACKUP_LOG.json`, `timing.json`) for the duplicate check; git branches named in each run's `runmeta.source`/`branch` (for example `eval5`, `eval-abl`, `test-all`, `cap-evolve-impr2`, `optimizer-isolation`) with `docs/EVAL_APPWORLD_5*.md`, `docs/ABLATIONS.md`, `docs/TEST_ALL.md`; posts: tracking issues named there (for example #881, #918); ledgers: as `_core.md` |
+| Sources | earlier backups at `box:cap-evolve-paper-data/user/erezh/appworld/` (training runs, `test_all_5_trials/`, `test_abl_5_trials/`, `BACKUP_LOG.json`, `timing.json`), which count for the duplicate check only once they are under `$EXPERIMENT_BACKUP_LOCATION` (`docs/FULL_BACKUP.md` §2.7); git branches named in each run's `runmeta.source`/`branch` (for example `eval5`, `eval-abl`, `test-all`, `cap-evolve-impr2`, `optimizer-isolation`) with `docs/EVAL_APPWORLD_5*.md`, `docs/ABLATIONS.md`, `docs/TEST_ALL.md`; posts: tracking issues named there (for example #881, #918); ledgers: as `_core.md` |
 | Reproduce | launch: `scripts/setup_project.sh`, `capevolve.yaml`, rendered `optimizer/INSTRUCTIONS.md`; data: `root_full` (copy in full) + `runs/manifest.json` hashes; clones: AppWorld at `42b5bcf` + `patches/` (`git lfs pull`, `appworld download data`); env: `venv-aw` freeze (pinned pydantic, fastapi, starlette); unpinnable: the RITS endpoint backend; smoke: `cap-evolve check` with `itest_split.json` |
 | Licence | Apache-2.0; the protected part (API docs and implementations, task solutions, evaluation tests, and the derived `reference/api_index.md`) must not be published in plain text |
 | Secrets | as `_core.md` |

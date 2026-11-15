@@ -1,6 +1,6 @@
 # Backup profile: `skillsbench` — `benchmarks/skillsbench/{template,examples/shared_skills}`; CI `skillsbench`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 SkillsBench tasks run by BenchFlow (`bench eval run`), with Claude Code as the agent, in Docker.
 

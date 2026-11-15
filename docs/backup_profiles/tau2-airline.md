@@ -1,6 +1,6 @@
 # Backup profile: `tau2-airline` — `benchmarks/tau2/template`, `benchmarks/tau2/examples/airline`; CI `tau2`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 tau2-bench airline, run through tau2's own runner with a user simulator.
 
@@ -20,7 +20,7 @@ tau2-bench airline, run through tau2's own runner with a user simulator.
 | Agent evidence | the candidate's `tools.py` runs in-process: grep trajectories and the tools code for file access |
 | Models as used | `native_sims` results `info.agent_info.llm`, `info.user_info.llm`; env `TAU2_AGENT_MODEL`, `TAU2_USER_MODEL` |
 | External state | `<run>/native_sims/<tag>/<split>/results_*.json`, `<run>/native_sims/<tag>/started_env_ids_*.txt`; `vendor/tau2-bench/` and `vendor/tau2-bench.COMMIT`; the example's `.capevolve/` project |
-| Sources | committed exports `benchmarks/tau2/examples/airline/run_full/` (`TAU2_COMMIT.txt`, `final.json`, `PATCHES.md`, `demo.cast`, `ui/`) and `benchmarks/tau2/examples/airline/run_agentopt{,_v2,_v3,_v4}/` (made on another host: `may_exist_at` the owner's machine); Box old root `erezh/_campaign/` (`INDEX.md`, `runs/`, `final_eval/`, `other/`) and `osher.elhadad/overnight-backup/` for the duplicate check; git `research/capevolve-paper-20261011` (`research/capevolve-paper/experiments/final/manifests/`, `analysis/out/`) and `archive/20261104/*` branches; `benchmark-history` `*-tau2` runs and records; docs `docs/REPRODUCE_tau2.md`, `docs/TAU2_SUMMARY.md`, `docs/RESULTS.md`; ledgers: the ETE gateway (as `_core.md`) |
+| Sources | committed exports `benchmarks/tau2/examples/airline/run_full/` (`TAU2_COMMIT.txt`, `final.json`, `PATCHES.md`, `demo.cast`, `ui/`) and `benchmarks/tau2/examples/airline/run_agentopt{,_v2,_v3,_v4}/` (made on another host: `may_exist_at` the owner's machine); earlier backups at `box:cap-evolve-paper-data/user/erezh/_campaign/` (`INDEX.md`, `runs/`, `final_eval/`, `other/`) and `…/user/osher.elhadad/overnight-backup/`, which count for the duplicate check only once they are under `$EXPERIMENT_BACKUP_LOCATION` (`docs/FULL_BACKUP.md` §2.7); git `research/capevolve-paper-20261011` (`research/capevolve-paper/experiments/final/manifests/`, `analysis/out/`) and `archive/20261104/*` branches; `benchmark-history` `*-tau2` runs and records; docs `docs/REPRODUCE_tau2.md`, `docs/TAU2_SUMMARY.md`, `docs/RESULTS.md`; ledgers: the ETE gateway (as `_core.md`) |
 | Reproduce | launch: `setup.sh`, `run.sh`, `capevolve*.yaml`, split files; data: `vendor/tau2-bench/data/tau2/domains/airline/`; clone: tau2-bench at the recorded SHA (cloned from `main`, unpinned; `run_full` has two SHAs, `TAU2_COMMIT.txt` vs `demo.cast`: both recorded); env: the tau2 venv freeze; unpinnable: gateway backends; smoke: `smoke.sh` |
 | Licence | unverified: tau2-bench's licence is not recorded in the repo — read it from the clone |
 | Secrets | `native_sims/**` `llm_args`; `OPENAI_API_KEY`, `OPENAI_BASE_URL` in `.env` |

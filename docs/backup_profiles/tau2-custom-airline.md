@@ -1,6 +1,6 @@
 # Backup profile: `tau2-custom-airline` — retired; code at `5e570d29f^:examples/tau2_custom/{direct,blackbox}`
 
-Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/BACKUP_BOX.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
+Shared values: [`_core.md`](_core.md). Format, and how to create or correct a profile: `docs/FULL_BACKUP.md` Appendix B. Status: [`INDEX.md`](INDEX.md).
 
 tau2 airline on the `skillberry-benchmarks` fork of tau2, with a direct and a blackbox arm.
 
