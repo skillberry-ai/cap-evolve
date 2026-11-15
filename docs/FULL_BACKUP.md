@@ -26,15 +26,16 @@ checklist is `docs/VERIFICATION_SCAN.md` (v3.0).
   `MOVES.json`.
 - **Never upload secrets.** Values from the host's secret files and environment never reach the
   backup location (§5.5).
-- **Never delete or overwrite anything at the backup location.** Use `rclone copy`, never `sync`,
-  `move` or `purge`. Never rename there, because on most remotes a rename is a copy and a delete.
+- **Never delete or overwrite anything at the backup location.** Use `rclone copy` or `copyto`
+  with `--immutable`, never `sync`, `move` or `purge`. Every file there is written once (§2.6). Never rename there, because on most remotes a rename is a copy and a delete.
   This holds even when the operator's role on the remote allows deletes. Never change or delete a
   source on the host.
 - **Never rewrite git history.** If a merge is needed, it is done on a new branch (§5.8).
 - **Existing folders at the backup location are never written to** (§2.7).
 - **Two stages.** The capture stage (§5, §6) must be done at backup time. It ends only when the
   capture gate passes (§5.10). The organizing stage (§7, §8, the verification scan) may run then or
-  later, from the captured copy.
+  later, from the captured (staging) copy. A folder is uploaded only after both stages and §10
+  (§11); what changes after upload is added as new versioned files (§2.6).
 - **Comprehensiveness comes before speed.** Do not leave out data that belongs to a run because it is
   large, odd or in an unexpected place.
 
@@ -51,8 +52,8 @@ short of each objective in a way that later processing cannot repair:
 1. **Comprehensive.** A raw copy holds only what is on the disk it was pointed at, at that moment.
    Much of a run lives elsewhere or expires before anyone processes the copy, and a gap noticed
    later can only be recorded as lost. *Examples:* the sealed held-out data sits in a sibling
-   `<project>.sealed/` directory, outside the run dir; Harbor job dirs are deleted 6 hours after a
-   CI run.
+   `<project>.sealed/` directory, outside the run dir; Harbor job dirs older than 6 hours are
+   deleted by the next CI run's setup.
 2. **Authentic.** Proof that the archive is the original needs the original: hashes taken on the
    source at capture. A raw copy can show only that it matches itself, and it does not say what it
    lacks. *Examples:* the GitHub copy of a tau2 final-eval window holds about 1% of the bytes of the
@@ -159,8 +160,8 @@ Create it with `rclone mkdir $LOC/user/<user-id>` and check it with `rclone lsd 
 who already has a folder at the location, in any layout, keeps the **same** id. Record the new id and
 its derivation in `BACKUP_RESULTS_<TS>.md`.
 
-A run goes to exactly one user folder: the person who launched it. Everyone else whose data is in
-it is listed in `runmeta.contributors`.
+A run goes to exactly one user folder: the person the table above gives. Everyone else whose data
+is in it is listed in `runmeta.contributors`.
 
 ### 2.3 Benchmark ids
 
@@ -177,7 +178,10 @@ and a new profile (§4, Appendix B.2).
 ```
 
 - `YYYY-MM-DD` is the run's start date (UTC).
-- Each slot is lowercase `[a-z0-9.]`, or `none` if empty. The slot order is fixed. Model names are
+- `<bench-id>` is a profile id and may contain `-` (`tau2-airline`). Every other slot is lowercase
+  `[a-z0-9.]`, with no `-`, or `none` if empty. The slot order is fixed. So a name parses
+  uniquely: the date, then the longest bench id from `docs/backup_profiles/INDEX.md` that matches,
+  then six slots split at `-`. Model names are
   shortened by removing the provider prefix and `-`, `_` and `/`, for example
   `aws/claude-sonnet-5-5` → `claudesonnet55`.
 - `<method>`: `capevolve`, or the other method's name.
@@ -189,11 +193,14 @@ and a new profile (§4, Appendix B.2).
 - `<replicate>`: `s<k>` for search seed k, or `s0` for a run with a single replicate. If two runs
   would otherwise get the same folder name, append `.r<run id>` to this slot (for example
   `s0.r39118080899`).
-- A test-window folder uses `<method>` = the window id followed by the method of the champion it
-  scores, for example `testall5-gepa`.
+- `<agent>`: the agent model under test, as actually used. `<optimizer>`: the optimizer's main-loop
+  model. Both are shortened as above, and are `none` when there is no such model.
+- A test-window folder uses `<method>` = the window id, a `.`, and the method of the champion it
+  scores, for example `testall5.gepa`. A `campaign-material` folder uses `<method>` = `campaign`
+  and names the material in `<setting>`.
 
 **The status is never in the folder name.** It is in `runmeta.status`, `README.md` and the
-benchmark's `INDEX.md`, so it can change without renaming at the backup location.
+benchmark's index rows (§2.6), so it can change without renaming at the backup location.
 
 ### 2.5 Status
 
@@ -209,19 +216,31 @@ benchmark's `INDEX.md`, so it can change without renaming at the backup location
 These rules apply to new content:
 - **At a user folder's root:** `BACKUP_RESULTS_<TS>.md`, `BACKUP_RESULTS_<TS>/` (evidence, rclone
   logs, the git snapshot), and `<bench-id>/` folders.
-- **In a `<bench-id>/` folder:** `INDEX.md` and run folders.
+- **In a `<bench-id>/` folder:** the `INDEX/` folder and run folders.
 
 Nothing else. No probe or test files are uploaded, because nothing at the location can be deleted.
 
-`<bench-id>/INDEX.md` has one row per run folder, with these columns: folder, kind, method,
-replicate, status, source kind, coverage, reproducibility, and the runs it shares windows with. Add
-rows; never edit or remove an existing row. A status change is a new row dated with the change.
+**Write once.** No file at the location is ever replaced, so nothing at the location is edited or
+appended to. Everything that would change is a new file with a new name:
+- **The bench index** is the folder `<bench-id>/INDEX/`, with one file per row:
+  `INDEX/<TS>__<run-folder>.md`. The row has these columns: folder, kind, method, replicate, status,
+  source kind, coverage, reproducibility, and the runs it shares windows with. A status change is a
+  new row file with the new `<TS>`. Several operators can add rows at the same time without losing
+  any. A reader lists `INDEX/` and takes, for each run folder, the row with the latest `<TS>`.
+- **A run folder** is uploaded once, complete (§11). After that only new files are added to it:
+  - a later scan: `SCAN_RESULTS_<TS>.md` and `.json`;
+  - a status change: `STATUS_<TS>.json` (`{status, status_reason, scan, when, who}`). The newest
+    `STATUS_<TS>.json`, if any, overrides `runmeta.status` and the status in `README.md`;
+  - a second pass (§11): the new files, plus `GAPS_<TS>.json`, `GAPS_<TS>.md` and
+    `MANIFEST_<TS>.json` for the folder as it is after that pass. The newest of each is current.
+- `rclone copy` and `copyto` always run with `--immutable` (§11), so that an attempt to replace a
+  file fails instead of overwriting it.
 
 ### 2.7 Existing folders
 
 Folders already at the location stay as they are. That includes pre-existing content (§2.2) and the
 run folders of earlier backups. They are never migrated, renamed, moved, re-uploaded or added to,
-except that a later pass of the same backup may add new files (§11).
+except for the new versioned files of §2.6.
 
 They are still used, read-only:
 - for the duplicate check (§5.4);
@@ -301,7 +320,7 @@ rclone parallelism (§11) instead of using tars.
 ### 3.4 Shared windows
 
 A window that scores several runs is copied **in full** into each run's `eval/window/<window-id>/`,
-so that every folder stands alone. `INDEX.md` lists the runs that share it. Their copies must have
+so that every folder stands alone. The index rows (§2.6) list the runs that share it. Their copies must have
 identical sha256 for every file. Cost totals count a shared window once per window, never once per
 run (Appendix A.4).
 
@@ -360,21 +379,28 @@ value of `EXPERIMENT_BACKUP_LOCATION`; `<remote>` is its part before the first `
    Google Drive, OneDrive, Dropbox) need the user to do that login. On a host without a browser, the
    user runs `rclone authorize "<type>"` on a machine with one and pastes the token. Wait until the
    user says it is done.
-4. **The remote works.** `rclone lsd <remote>:` succeeds.
+4. **The remote works.** `rclone lsf "$LOC" --max-depth 1` succeeds, or fails only because the
+   path is missing (check 5). Test the location itself, not `<remote>:`: a credential scoped to one
+   bucket or folder may not list the remote's root. Record `rclone backend features <remote>:`
+   (fields `Hashes` and `CanHaveEmptyDirectories`).
    - On an authentication error (`invalid_grant`, `token expired`, `401`, `403`), ask the user to run
      `rclone config reconnect <remote>:`, wait, then repeat the call.
    - On `429` or `temporarily_unavailable`, wait and retry with back-off. If it persists, ask the
      user, because the provider or an administrator may be blocking the client.
    - Do not start the capture until this succeeds.
 5. **The location exists and is visible.** `rclone lsf "$LOC" --max-depth 1` succeeds.
+   - On a remote without real directories (`CanHaveEmptyDirectories: false`: S3, GCS, Azure Blob,
+     B2), a prefix exists only while it holds an object. On these remotes the owner creates the
+     location by writing `LOCATION.md` (who owns it, who may write) at its top, and the location
+     exists when that file is there.
    - If the path is missing, **stop and ask the location's owner**. Never create the location, nor
      any folder in its place: a missing shared folder usually means a share that was not sent or not
      accepted, and a folder created instead would be a lookalike outside the archive.
    - Record what is at the top of the location. Everything that is not `user/` is pre-existing content
      (§2.7).
 6. **Read permission.** `rclone lsjson "$LOC/user" --max-depth 1`, when `user/` exists, lists the user
-   folders. Then read one existing small file, for example a `<bench-id>/INDEX.md` or a
-   `BACKUP_RESULTS_*.md`, with `rclone cat --count 1024 <file>`. If the location is still empty,
+   folders. Then read one existing small file, for example a row in `<bench-id>/INDEX/`,
+   `LOCATION.md` or a `BACKUP_RESULTS_*.md`, with `rclone cat --count 1024 <file>`. If the location is still empty,
    check 8 tests reading instead. A role that can upload but cannot list (for example Box "Uploader")
    is not enough: the duplicate check (§5.4) and `rclone check` (§11) need listing.
 7. **Folder-create permission.**
@@ -383,10 +409,12 @@ value of `EXPERIMENT_BACKUP_LOCATION`; `<remote>` is its part before the first `
      ids at the location. Create `$LOC/user/<operator-id>/` if it is missing.
    - Always create `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/`. `<TS>` is new for every backup,
      so this always tests creating a folder. It is allowed content (§2.6), not a probe.
-   - Confirm each with `rclone lsd`. Folders for other users are created later as in §2.2, without
-     asking.
-8. **Write permission, read-back and hashes.** Write the results of checks 1–9 as
-   `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/location_check.json` with `rclone copyto`. Read it
+   - Confirm each with `rclone lsd`. On a remote without real directories, `rclone mkdir` creates
+     nothing; skip this confirmation, because check 8 proves the write into the folder.
+   - Folders for other users are created later as in §2.2, without asking.
+8. **Write permission, read-back and hashes.** Write the results of checks 1–7 as
+   `$LOC/user/<operator-id>/BACKUP_RESULTS_<TS>/location_check.json` with `rclone copyto --immutable`.
+   Record checks 8–10 in `BACKUP_RESULTS_<TS>.md`. Read it
    back with `rclone cat` and compare its sha256 with the local file. They must be equal.
    - Record the hash types the remote reports (`rclone lsjson --hash` on that file, or
      `rclone backend features <remote>:`, field `Hashes`).
@@ -737,15 +765,16 @@ Run **`docs/VERIFICATION_SCAN.md`** on every assembled folder:
 - the rest may run later.
 
 The scan writes `SCAN_RESULTS_<TS>.md` and `SCAN_RESULTS_<TS>.json` into the folder.
-- If a finding changes a run's status, update `runmeta.status` and `README.md`, add an `INDEX.md`
-  row, and say so in `BACKUP_RESULTS_<TS>.md`. The folder name does not change.
+- If a finding changes a run's status before upload, update `runmeta.status` and `README.md` in
+  staging. After upload, write `STATUS_<TS>.json` and a new index row instead (§2.6). Say so in
+  `BACKUP_RESULTS_<TS>.md`. The folder name does not change.
 - Never hide a finding by leaving data out.
 
 ## 10. Before upload
 
 - **cap-evolve tools,** run read-only on the staging copy of each complete cap-evolve run dir:
-  - `cap-evolve tail <run_dir> --from-start --idle-timeout 5` must exit 0, or exit 3 (idle timeout)
-    after reading at least one event;
+  - `cap-evolve tail <run_dir> --from-start --idle-timeout 5` must exit 0 and print at least one
+    line. Exit 3 (timed out with no event shown) is a failure;
   - `RunDir.open` + `dashboard.reduce_run` + `render_html` must succeed.
 
   Do not use `dashboard --export`: it overwrites the run's `dashboard.html`. For partial exports,
@@ -762,7 +791,7 @@ The scan writes `SCAN_RESULTS_<TS>.md` and `SCAN_RESULTS_<TS>.json` into the fol
 For each run, after repeating checks 4 and 5 of §5.1:
 
 ```
-rclone copy <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" \
+rclone copy <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" --immutable \
        --transfers 16 --checkers 32 --retries 10 --low-level-retries 30 \
        --log-file <log> --log-level INFO
 rclone check <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" --one-way
@@ -772,25 +801,26 @@ rclone check <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" --one-way
 - **Parallelism.** Copy several run folders at once (for example 8–12 `rclone copy` processes, each
   with `--transfers 8`), largest file count first. The remote's rate limit (§5.1 check 9) is the
   ceiling, so raise parallelism only while the throughput still grows.
-- **Only for a run folder that did not exist before this backup** (§5.4), add `--no-traverse
-  --no-check-dest`. They skip listing the destination, which saves one API call per file. Never use
-  them on a folder that already holds files, because they would overwrite.
+- **Only on the first copy attempt of a run folder,** and only when `rclone lsf` shows, just before,
+  that the folder does not exist, add `--no-traverse --no-check-dest`. They skip listing the
+  destination, which saves one API call per file. `--no-check-dest` turns off the `--immutable`
+  check, so never use it on a retry or on a folder that holds files.
 - `rclone check` must report 0 differences and 0 missing files for every run. It is a content check
   when the remote shares a hash type with the local disk (§5.1 check 8); otherwise add `--download`.
 - A check that fails only because listing failed (`429`, an expired token) is not a content difference.
-  Fix the cause (§5.1 check 4) and run the check again. Re-copy only files that are really missing:
-  that adds files and overwrites nothing.
-- Append the run's row to `<bench-id>/INDEX.md`.
+  Fix the cause (§5.1 check 4) and run the check again. Re-copy with `--immutable`: missing files
+  are added, and a file that differs makes the copy fail instead of replacing it.
+- Add the run's row file to `<bench-id>/INDEX/` (§2.6).
 - Keep the rclone logs in `<user-id>/BACKUP_RESULTS_<TS>/`.
 
 Record per run the capture times (`runmeta.captured`), the upload end time, and the file and byte
-counts. If data is added later (a second pass), it only adds files: the gap report is regenerated as
-a new version, and both passes are reported.
+counts. If data is added later (a second pass), it only adds files: the new files and the versioned
+`GAPS_<TS>.*` and `MANIFEST_<TS>.json` (§2.6), and both passes are reported.
 
 ## 12. Backup results
 
-Write one `BACKUP_RESULTS_<TS>.md` at the root of each user folder that received runs, all with the
-same `<TS>`. Each lists its own runs and links to the others.
+Write one `BACKUP_RESULTS_<TS>.md` at the root of each user folder that received runs, and of the
+operator's folder (which holds the evidence, §5.1), all with the same `<TS>`. Each lists its own runs and links to the others.
 
 It **opens with the gap roll-up.** For each run:
 - source kind, coverage (items and bytes), reproducibility level;
@@ -828,7 +858,7 @@ optimizer_provider, gate_k_se, algorithm, warm_seed, reward_metric, conclusion`.
 
 ```
 schema: "runmeta v2", procedure: "FULL_BACKUP v3.0"
-profile: {bench_id, path: "docs/backup_profiles/<bench-id>.md", commit, sha256, state: as-is|corrected|new}
+profile: {bench_id, path: "docs/backup_profiles/<file>.md" (the real file, Appendix B), commit, sha256, state: as-is|corrected|new}
 kind: training-run | test-window | campaign-material
 bench_id, method, method_version, setting, replicate
 owner: <user-id>, contributors: [{name, email, role}]
@@ -944,7 +974,9 @@ Holds the same content as the `.md` (VERIFICATION_SCAN, format):
 ## Appendix B. Benchmark profiles: format, and how to create or correct one
 
 Profiles are files in `docs/backup_profiles/`:
-- one file per benchmark id, `<bench-id>.md`;
+- one file per benchmark id, `<bench-id>.md`, or one file for a family of ids where `INDEX.md` says
+  so (`generic.md` for `generic-jsonl` and `generic-hf`; `swebench-verified-harbor.md` for every
+  `harbor-<dataset>` id). `runmeta.profile.path` records the real file;
 - `_core.md`, the values every benchmark shares (they come from cap-evolve's core);
 - `INDEX.md`, which maps every bench name to its profile file and records each profile's status.
 
@@ -960,6 +992,21 @@ with the keys below, in this order. Every key is present, and its value is exact
 - `as _core.md`, or `as <other-profile>`;
 - `not applicable: <reason>`;
 - `unverified: <what was found> — <why it could not be confirmed>`.
+
+Names used in the text of this procedure and of `docs/VERIFICATION_SCAN.md` map to these keys:
+
+| Name in the text | Profile key |
+|---|---|
+| `gold.paths`, `gold.in_records`, `allowed_to_optimizer`, `forbidden`, `false_positive_terms` | Gold |
+| `infra_error.published_rule`, `infra_error.detectors` | Infra rule |
+| `isolation_mechanism` | Isolation |
+| `agent_under_test_evidence` | Agent evidence |
+| `models_as_used_source` | Models as used |
+| `external_state`, `volatile` | External state |
+| `sources.hosts`, `sources.archives`, `sources.ledgers` | Sources |
+| `reproduce`, `unpinnable` | Reproduce |
+| `zero_means` | Cost |
+| `secrets_extra` | Secrets |
 
 | Key | What it holds |
 |---|---|
