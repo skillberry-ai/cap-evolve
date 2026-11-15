@@ -7,7 +7,7 @@ tau2 airline on the `skillberry-benchmarks` fork of tau2, with a direct and a bl
 | Key | Value |
 |---|---|
 | Bench names | `tau2_custom_direct`, `tau2_custom_blackbox`, `tau2_custom_spa`, `skillberry_tau2_direct`, `skillberry_tau2_spa`, `spa`; `spa` and `blackbox` name the same arm; settings: `direct`, `blackbox` |
-| Code | `5e570d29f^:examples/tau2_custom/` (`PROMPT.md`, `{direct,blackbox}/adapters/{adapter.py,gateway.py}`, `capevolve*.yaml`, `optimizer/INSTRUCTIONS.md`, `setup.sh`, `run.sh`, split files, `seed_capability/`); CI tiers `8860d243a^:ci/benchmarks/tau2_custom/{direct,blackbox}/{smoke,full,integration}/` |
+| Code | `5e570d29f^:examples/tau2_custom/` (`PROMPT.md`, `{direct,blackbox}/adapters/{adapter.py,gateway.py}`, `capevolve*.yaml`, `optimizer/INSTRUCTIONS.md`, `setup.sh`, `run.sh`, split files, `seed_capability/`); CI tiers `8860d243a^:ci/benchmarks/tau2_custom/{direct,blackbox}/{smoke,full,integration}/` (`8860d243a` is only on branch `tau2_vanilla_blackbox`, not on `main`: bundle that branch, §5.2) |
 | Reward | as `tau2-airline` |
 | Infra rule | as `tau2-airline` |
 | Telemetry | as `tau2-sierra-airline` |

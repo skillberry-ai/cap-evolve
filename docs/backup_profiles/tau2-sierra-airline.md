@@ -7,7 +7,7 @@ tau2 airline on pinned vanilla tau2, with a direct arm and a blackbox delivery a
 | Key | Value |
 |---|---|
 | Bench names | `tau2_sierra`, `tau2_sierra_blackbox`, `tau2_blackbox`, run-dir names `sierra`, `direct`, `blackbox`; settings: `direct`, `blackbox` |
-| Code | `benchmarks/tau2/examples/sierra_airline/{direct,blackbox}/` (`adapters/adapter.py`, `direct/adapters/tau2_tailoring.py`, `capevolve.yaml`, split files, `optimizer/INSTRUCTIONS.md`, `PROJECT.md`, `setup.sh`, `run.sh`), `benchmarks/tau2/examples/sierra_airline/PROMPT.md`; `skills/interventions/llm-proxies/blackbox/` (`scripts/blackbox_env.py`); CI `ci/benchmarks/tau2_sierra/{smoke,full,integration}/`, `ci/benchmarks/tau2_sierra_blackbox/`; `tau2_blackbox` at `8860d243a^:ci/benchmarks/tau2_blackbox` |
+| Code | `benchmarks/tau2/examples/sierra_airline/{direct,blackbox}/` (`adapters/adapter.py`, `direct/adapters/tau2_tailoring.py`, `capevolve.yaml`, split files, `optimizer/INSTRUCTIONS.md`, `PROJECT.md`, `setup.sh`, `run.sh`), `benchmarks/tau2/examples/sierra_airline/PROMPT.md`; `skills/interventions/llm-proxies/blackbox/` (`scripts/blackbox_env.py`); CI `ci/benchmarks/tau2_sierra/{smoke,full,integration}/`, `ci/benchmarks/tau2_sierra_blackbox/`; `tau2_blackbox` at `8860d243a:ci/benchmarks/tau2_blackbox` (commit `8860d243a` adds it; only on branch `tau2_vanilla_blackbox`, not on `main`: bundle that branch, §5.2) |
 | Reward | as `tau2-airline`; direct adds `raw.db_match` |
 | Infra rule | as `tau2-airline` |
 | Telemetry | `tokens` not set (`not_recorded`); trace = `sim.model_dump()`: `duration`, `termination_reason`, `messages[].usage`, `agent_cost`, `user_cost` |

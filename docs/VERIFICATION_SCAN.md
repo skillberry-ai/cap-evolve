@@ -213,8 +213,8 @@ D1, D2, D3 and D5 run in the capture gate. The rest may run later.
      shares the window. The case rules of Appendix A.4 were applied, and every rule used is named in
      `rules_applied`.
 5. **Symlinks.** Every symlink is listed in `SYMLINKS.txt` with its target.
-6. **cap-evolve tools.** The cap-evolve tools load the copy. `cap-evolve tail --from-start` exits 0,
-   or exits 3 after reading at least one event. The dashboard renders in memory. **Not applicable**
+6. **cap-evolve tools.** The cap-evolve tools load the copy. `cap-evolve tail --from-start` exits 0
+   and prints at least one line; exit 3 (timed out with no event shown) is a failure. The dashboard renders in memory. **Not applicable**
    to partial exports, other methods and test windows.
 7. **Secrets.** The secret scan finds 0 hits. Every redaction and every excluded secret store is
    listed in `REDACTIONS.json`.
