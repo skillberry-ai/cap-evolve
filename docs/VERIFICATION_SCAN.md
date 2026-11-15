@@ -34,6 +34,9 @@ It applies to every benchmark. Benchmark differences come only from the benchmar
 
   `not run` and `not applicable` are never a pass.
 - **Do not change the run's data to make a check pass.**
+- **Current versions.** Where a check names `GAPS.json`, `GAPS.md` or `MANIFEST.json`, use the newest
+  `GAPS_<TS>.*` or `MANIFEST_<TS>.json` when the folder has them (`docs/FULL_BACKUP.md` §2.6), and the
+  newest `STATUS_<TS>.json` for the run's status.
 - **Use the profile's values** wherever a check names one: gold paths, allowed gold, isolation
   mechanism, agent-under-test evidence, models-as-used source, infra detectors, success criterion,
   group metric.
