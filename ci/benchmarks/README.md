@@ -416,6 +416,12 @@ git commit -m "chore: init benchmark-history branch" && git push origin benchmar
 To publish a run the `aggregate` job never handled — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
+**The dashboard.** Results are also published at <https://skillberry-runs.github.io/dashboard/>, from the
+[`skillberry-runs/dashboard`](https://github.com/skillberry-runs/dashboard) repo (records, plus the
+write-ups of the benchmarks kept in the `skillberry-runs` org). CI still writes here, to
+`benchmark-history`; the dashboard's **Sync from cap-evolve** workflow copies new records across on
+demand. Hand-published runs can be added to the dashboard directly (see [PUBLISHING.md](PUBLISHING.md)).
+
 ### Per-run CapEvolve UI snapshots
 
 Each `bench` job also best-effort-exports its raw `.capevolve` run directory as a static

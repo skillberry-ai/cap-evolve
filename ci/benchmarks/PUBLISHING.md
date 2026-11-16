@@ -9,6 +9,21 @@ artifact.
 Nothing here is a special "manual mode": you are running the same three scripts the CI job runs,
 in the same order.
 
+## Where the record goes
+
+Steps 1–4 build one record file. **Where you put it** (step 5) depends on where you want it to show:
+
+| Destination | Use it for | What it needs |
+|---|---|---|
+| **The dashboard** — [`skillberry-runs/dashboard`](https://github.com/skillberry-runs/dashboard), shown at <https://skillberry-runs.github.io/dashboard/> | Hand-published runs and new experiments. **The recommended place.** | A pull request adding the record there |
+| **`benchmark-history`** on this repo | What CI still does; also shows the row on this site's benchmarks page | A push to the branch, then a Pages deploy |
+
+The two do not feed each other automatically. A row added only to the dashboard does **not** appear on
+this site's `benchmarks.html`, and a row on `benchmark-history` reaches the dashboard only when its
+**Sync from cap-evolve** workflow is run. The dashboard's
+[PUBLISHING.md](https://github.com/skillberry-runs/dashboard/blob/main/PUBLISHING.md) covers everything on
+that side: adding rows, write-ups, new benchmarks, syncing, and tokens.
+
 ## How the page gets its data
 
 ```
@@ -127,7 +142,24 @@ The filename **must** be `<run_id>__<tier>-<bench>.json`. That is what keeps `sm
 the same benchmark from overwriting each other, and re-publishing under the same name is how you
 correct a record (idempotent).
 
-## Step 5 — push to benchmark-history
+## Step 5 — publish the record
+
+### Option 1 (recommended): the dashboard
+
+```bash
+git clone git@github.com:skillberry-runs/dashboard.git /tmp/dash && cd /tmp/dash
+git switch -c add-<label>
+cp /tmp/pub/30987147147__pilot-spreadsheetbench.json records/
+python3 scripts/check_records.py records/30987147147__pilot-spreadsheetbench.json   # must say 0 errors
+git add records && git commit -m "records: add pilot-spreadsheetbench (manual publish)"
+git push -u origin HEAD        # then open a pull request
+```
+
+Merging the pull request deploys the dashboard automatically; there is no separate Pages step. Record
+names there are `<id>__<label>.json` (any sortable id; see the dashboard's PUBLISHING.md, section A). The
+per-run "Open UI" snapshot (the optional section below) is not hosted on the dashboard yet.
+
+### Option 2: push to benchmark-history (what CI does)
 
 ```bash
 git clone --depth 1 --branch benchmark-history \
@@ -144,11 +176,15 @@ Only `records/` (and `runs/`, for the optional UI snapshot) get committed here �
 Pages-deploy time, so there's nothing to hand-edit or regenerate locally. Adding the record file is
 the entire publish step.
 
+To get this record onto the dashboard as well, run **Sync from cap-evolve** there (Actions → Run
+workflow in `skillberry-runs/dashboard`; section D of its PUBLISHING.md). It copies records it does
+not have yet, and skips the ones it does.
+
 CI treats this branch as single-writer (`concurrency: benchmark-history-write`). A manual push while
 a benchmarks run is finishing can lose the race; if `git push` is rejected, delete `/tmp/hist` and
 redo this step rather than force-pushing.
 
-## Step 6 — trigger a Pages deploy, then verify
+## Step 6 (Option 2 only) — trigger a Pages deploy, then verify
 
 Trigger **Actions → Deploy GitHub Pages → Run workflow** (`workflow_dispatch`) — this is the step
 that actually renders your new record into `benchmarks.json`. Once it completes, reload
@@ -160,9 +196,10 @@ curl -s "https://skillberry-ai.github.io/cap-evolve/benchmarks.json" \
   | python3 -c "import json,sys;print([(r['run_id'],r['tier'],r['bench'],r['suite']) for r in json.load(sys.stdin)][:3])"
 ```
 
-## Optional — the per-run "Open UI" snapshot
+## Optional — the per-run "Open UI" snapshot (`benchmark-history` only)
 
-Only needed if you want the row's dashboard link to work. It is a full dashboard shell plus the
+Only needed if you want the row's dashboard link to work. These snapshots are still served from this
+repo's `benchmark-history` branch and site, for rows on either page. It is a full dashboard shell plus the
 run's exported data, and unlike the table it **does** require a Pages deploy:
 
 ```bash
@@ -191,10 +228,14 @@ python3 ci/benchmarks/utils/rebuild_record.py /tmp/pub/run_suite/final.json \
 ```
 
 Then commit, push, and trigger a Pages deploy (steps 5–6). It is idempotent, so running it on an
-already-correct record changes nothing.
+already-correct record changes nothing. For a record on the dashboard, point it at that repo's
+`records/<name>.json` and send the fix as a pull request; the sync workflow's *update existing* option
+copies a correction made on `benchmark-history`.
 
 ## Related
 
+- [`skillberry-runs/dashboard` PUBLISHING.md](https://github.com/skillberry-runs/dashboard/blob/main/PUBLISHING.md)
+  — adding rows to the dashboard, publishing write-ups and new benchmarks, syncing from this repo.
 - `ci/benchmarks/README.md` — the benchmarks suite, tiers, and how to bootstrap the
   `benchmark-history` branch.
 - `.github/workflows/benchmarks.yml` — the CI path these steps mirror (`Write run metadata`,
