@@ -195,7 +195,7 @@
   }
   document.getElementById("lang").addEventListener("click", function (e) {
     var l = e.target.getAttribute("data-lang"); if (!l) return;
-    lang = l; try { localStorage.setItem("ce-edu-lang", l); } catch (err) {}
+    lang = l === "he" ? "he" : "en"; try { localStorage.setItem("ce-edu-lang", lang); } catch (err) {}
     render();
   });
   render();
