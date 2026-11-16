@@ -1,0 +1,843 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 5 · Anatomy of a run</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  /* deck-specific: keep diagram labels at or above 14px, compact tables */
+  svg.diagram .label { font-size: 14px; }
+  svg.diagram .lane { stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4 5; }
+  svg.diagram .seg { stroke-width: 1.5; }
+  svg.diagram .ret { stroke: var(--muted); stroke-width: 1.6; fill: none; stroke-dasharray: 6 5; }
+  .slide table.tight td { padding: 6px 10px; font-size: 17px; }
+  .slide table.tight th { padding: 6px 10px; }
+  .slide pre.sm { font-size: 15px; line-height: 1.45; padding: 12px 16px; }
+  .slide .tree.sm { font-size: 15px; line-height: 1.45; }
+  .slide h2 { margin-bottom: 16px; }
+</style>
+</head>
+<body data-chapter="Chapter 5 · Anatomy of a run" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ 1. Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 5 of 8</div>
+  <h1>Anatomy of a run</h1>
+  <p class="lead">We follow one <code>cap-evolve run</code> from the command line to the last git commit, and we map every process, thread and lock on the way.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: deep engineering</span><span class="pill amber">harness.py · cli.py · rundir.py</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:40]</span> Welcome to chapter 5. This is the deepest engineering chapter. Until now we talked about concepts and objects. Now we watch the code run.</p>
+    <p>We trace one command, <code>cap-evolve run</code>, from the entry point to the final commit. Then we look at the process and threading model: what runs in parallel, what is a child process, what is shared, and how a crashed run continues. Keep chapter 4 in mind: the run dir and <code>events.jsonl</code> are the objects we will see written again and again.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:40]</span> ברוכים הבאים לפרק 5. זה הפרק ההנדסי העמוק ביותר. עד עכשיו דיברנו על מושגים ועל אובייקטים, ועכשיו אנחנו מסתכלים על הקוד כשהוא רץ.</p>
+    <p>נעקוב אחרי פקודה אחת, <code>cap-evolve run</code>, מנקודת הכניסה ועד ה-commit האחרון. אחר כך נעבור על מודל התהליכים וה-threads: מה רץ במקביל, מה רץ כ-child process, מה משותף, ואיך run שקרס ממשיך מאיפה שעצר. תזכרו את פרק 4: ה-run dir ו-<code>events.jsonl</code> הם האובייקטים שנראה נכתבים שוב ושוב.</p>
+  </aside>
+</section>
+
+<!-- ═══ 2. Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-2">
+    <div class="card blue">
+      <h3>Part A · The execution path</h3>
+      <ul>
+        <li><code>cli.py</code> → spec → hard check gate</li>
+        <li>Phases run as separate Python processes</li>
+        <li><code>hill_climb_loop</code> → <code>run_step</code>: one iteration, call by call</li>
+        <li>The optimizer workdir and the optimizer subprocess</li>
+        <li><code>evaluate_candidate</code>, checks, gate, commit, events</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <h3>Part B · Processes and threads</h3>
+      <ul>
+        <li>A timeline of one iteration</li>
+        <li>What runs in parallel, and which knob controls it</li>
+        <li>Shared state: locks, atomic writes, append-only logs</li>
+        <li>Budgets and stop conditions</li>
+        <li>Crashes, Ctrl-C, <code>--resume</code>, agent mode</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted mt">Statistics of the gate are chapter 6. Algorithm variety is chapter 7. Debug tools are chapter 8.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:40–1:30]</span> The chapter has two parts. Part A is the execution path. We start in <code>cli.py</code>, load the spec, pass the hard check gate, and start the phases. Then we zoom into one iteration of the hill-climb algorithm and name every function it calls.</p>
+    <p>Part B is the process and threading model. We draw a timeline of one iteration. We list every place that runs work in parallel and the setting that controls it. We look at how shared files are protected, how budgets stop the loop, and what happens on a crash or Ctrl-C.</p>
+    <p>I will not explain the gate math here. That is chapter 6. Here the gate is just one function call.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:40–1:30]</span> לפרק יש שני חלקים. חלק A הוא מסלול הביצוע. מתחילים ב-<code>cli.py</code>, טוענים את ה-spec, עוברים את ה-check gate הקשיח, ומפעילים את ה-phases. אחר כך עושים zoom לאיטרציה אחת של אלגוריתם ה-hill-climb ונותנים שם לכל פונקציה שהיא קוראת.</p>
+    <p>חלק B הוא מודל התהליכים וה-threads. נצייר ציר זמן של איטרציה אחת, נעבור על כל מקום שמריץ עבודה במקביל ועל ההגדרה ששולטת בו, ונראה איך קבצים משותפים מוגנים, איך תקציבים עוצרים את הלולאה, ומה קורה בקריסה או ב-Ctrl-C.</p>
+    <p>את המתמטיקה של ה-gate לא נסביר כאן, זה פרק 6. כאן ה-gate הוא פשוט קריאה לפונקציה אחת.</p>
+  </aside>
+</section>
+
+<!-- ═══ 3. Process tree ═══ -->
+<section class="slide">
+  <h2>One command, a tree of processes</h2>
+  <svg class="diagram" viewBox="0 0 1136 470">
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <!-- root -->
+    <rect class="box blue" x="18" y="180" width="230" height="110" rx="12"/>
+    <text class="title" x="133" y="212" text-anchor="middle">cap-evolve run</text>
+    <text class="label mono" x="133" y="236" text-anchor="middle">cli.main → _cmd_run</text>
+    <text class="label" x="133" y="258" text-anchor="middle">waits in subprocess.run()</text>
+    <text class="label" x="133" y="278" text-anchor="middle">one step at a time</text>
+    <!-- thread + server -->
+    <rect class="box" x="18" y="40" width="230" height="70" rx="10"/>
+    <text class="title" x="133" y="68" text-anchor="middle">follow thread</text>
+    <text class="label" x="133" y="92" text-anchor="middle">--follow / --tui, daemon</text>
+    <path class="line dash" d="M133,180 L133,112" marker-end="url(#a3)"/>
+    <rect class="box" x="18" y="360" width="230" height="78" rx="10"/>
+    <text class="title" x="133" y="388" text-anchor="middle">dashboard server</text>
+    <text class="label mono" x="133" y="412" text-anchor="middle">Popen, not waited for</text>
+    <path class="line dash" d="M133,290 L133,358" marker-end="url(#a3)"/>
+    <!-- phase processes -->
+    <rect class="box" x="330" y="20" width="270" height="70" rx="10"/>
+    <text class="title" x="465" y="50" text-anchor="middle">① baseline/scripts/run.py</text>
+    <text class="label" x="465" y="74" text-anchor="middle">split + score seed on val</text>
+    <rect class="box violet" x="330" y="125" width="270" height="200" rx="10"/>
+    <text class="title" x="465" y="155" text-anchor="middle">② hill-climb/scripts/run.py</text>
+    <text class="label mono" x="465" y="180" text-anchor="middle">harness.hill_climb_loop()</text>
+    <text class="label" x="465" y="206" text-anchor="middle">in-process: adapter, gate,</text>
+    <text class="label" x="465" y="226" text-anchor="middle">RunDir, eval thread pool</text>
+    <text class="label" x="465" y="256" text-anchor="middle">lives for the whole search</text>
+    <rect class="box" x="330" y="355" width="270" height="44" rx="10"/>
+    <text class="title" x="465" y="383" text-anchor="middle">③ finalize/scripts/run.py</text>
+    <rect class="box" x="330" y="412" width="270" height="44" rx="10"/>
+    <text class="title" x="465" y="440" text-anchor="middle">④ report/scripts/run.py</text>
+    <path class="line" d="M248,215 L328,55" marker-end="url(#a3)"/>
+    <path class="line" d="M248,230 L328,225" marker-end="url(#a3)"/>
+    <path class="line" d="M248,250 L328,377" marker-end="url(#a3)"/>
+    <path class="line" d="M248,265 L328,434" marker-end="url(#a3)"/>
+    <!-- children of algorithm -->
+    <rect class="box amber" x="690" y="110" width="200" height="80" rx="10"/>
+    <text class="title" x="790" y="140" text-anchor="middle">run-optimizer</text>
+    <text class="label mono" x="790" y="164" text-anchor="middle">scripts/run.py</text>
+    <text class="label" x="790" y="182" text-anchor="middle">one per iteration</text>
+    <rect class="box amber" x="940" y="110" width="180" height="80" rx="10"/>
+    <text class="title" x="1030" y="140" text-anchor="middle">agent CLI</text>
+    <text class="label mono" x="1030" y="164" text-anchor="middle">claude -p …</text>
+    <text class="label" x="1030" y="182" text-anchor="middle">cwd = work/cand_N</text>
+    <rect class="box" x="690" y="235" width="200" height="66" rx="10"/>
+    <text class="title" x="790" y="263" text-anchor="middle">git</text>
+    <text class="label mono" x="790" y="287" text-anchor="middle">store.commit()</text>
+    <rect class="box green" x="940" y="235" width="180" height="66" rx="10"/>
+    <text class="title" x="1030" y="263" text-anchor="middle">adapter children</text>
+    <text class="label" x="1030" y="287" text-anchor="middle">if the runner spawns</text>
+    <path class="line" d="M600,170 L688,150" marker-end="url(#a3)"/>
+    <path class="line" d="M890,150 L938,150" marker-end="url(#a3)"/>
+    <path class="line" d="M600,235 L688,268" marker-end="url(#a3)"/>
+    <path class="line dash" d="M600,290 C760,330 900,320 1030,303" marker-end="url(#a3)"/>
+    <text class="label" x="790" y="345" text-anchor="middle">solid = child process · dashed = thread or detached</text>
+  </svg>
+  <p class="small muted">Source: core/cap_evolve/cli.py (_cmd_run), core/cap_evolve/harness.py, core/cap_evolve/store.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:30–2:40]</span> First, the big shape. The <code>cap-evolve</code> process does very little work itself. It is a sequencer. It starts each phase as a separate Python process with <code>subprocess.run</code> and waits for it. Each phase script prints one JSON document on stdout, and the CLI parses it.</p>
+    <p>The algorithm process, here <code>hill-climb/scripts/run.py</code>, is the long one. It imports <code>cap_evolve</code>, loads the adapter in-process, and runs the whole search. From it come more children: one <code>run-optimizer</code> process per iteration, which starts the agent CLI, for example <code>claude -p</code>. It also runs <code>git</code> for each commit.</p>
+    <p>Beside the tree there are two helpers: an optional follow thread that prints progress, and the dashboard server, started with <code>Popen</code> and never waited for. So a crash in one phase never kills the dashboard.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:30–2:40]</span> קודם כל, התמונה הגדולה. התהליך של <code>cap-evolve</code> עצמו כמעט לא עושה עבודה. הוא sequencer. הוא מפעיל כל phase כתהליך Python נפרד עם <code>subprocess.run</code> ומחכה לו. כל סקריפט phase מדפיס מסמך JSON אחד ל-stdout, וה-CLI מפענח אותו.</p>
+    <p>תהליך האלגוריתם, כאן <code>hill-climb/scripts/run.py</code>, הוא הארוך. הוא עושה import ל-<code>cap_evolve</code>, טוען את ה-adapter בתוך התהליך, ומריץ את כל החיפוש. ממנו יוצאים עוד ילדים: תהליך <code>run-optimizer</code> אחד לכל איטרציה, שמפעיל את ה-agent CLI, למשל <code>claude -p</code>. הוא גם מריץ <code>git</code> בכל commit.</p>
+    <p>לצד העץ יש שני עוזרים: follow thread אופציונלי שמדפיס התקדמות, ושרת ה-dashboard, שמופעל עם <code>Popen</code> ואף אחד לא מחכה לו. כך קריסה של phase אחד לא מפילה את ה-dashboard.</p>
+  </aside>
+</section>
+
+<!-- ═══ 4. Entry and spec ═══ -->
+<section class="slide">
+  <h2>Step 1 · Entry point and spec loading</h2>
+<pre class="sm"><span class="c"># core/pyproject.toml:  cap-evolve = "cap_evolve.cli:main"</span>
+<span class="f">main</span>(argv) → COMMANDS[<span class="s">"run"</span>] → <span class="f">_cmd_run</span>(argv)
+  skills_dir = args.skills_dir <span class="k">or</span> <span class="f">_find_skills_dir</span>()   <span class="c"># CAPEVOLVE_SKILLS_DIR, .claude/skills…</span>
+  spec_path  = <span class="f">_resolve_spec</span>(args.spec, args.project)  <span class="c"># default &lt;project&gt;/capevolve.yaml</span>
+  spec       = <span class="f">read_yaml</span>(spec_path.read_text())       <span class="c"># PyYAML if present, else stdlib subset</span>
+  <span class="k">for</span> flag <span class="k">in</span> (max_iterations, max_usd, stall, stop_at_reward, optimizer_max_turns, …):
+      <span class="k">if</span> getattr(args, flag) <span class="k">is not None</span>: spec[key] = value   <span class="c"># CLI flag beats spec</span>
+  os.environ[<span class="s">"CAPEVOLVE_ERRORED_TRIAL_POLICY"</span>] = …      <span class="c"># children inherit env</span>
+  opt_cmd = <span class="s">f"{python} run-optimizer/scripts/run.py --name {optimizer_skill} --json …"</span></pre>
+  <div class="grid-3 mt">
+    <div class="term"><span class="name">python -m cap_evolve</span><span class="kind">__main__.py</span><div class="def">A second, tiny entry: only <code>version</code>, <code>splits</code>, <code>check</code>. JSON on stdout for hosts.</div></div>
+    <div class="term amber"><span class="name">specfile.read_yaml</span><span class="kind">stdlib</span><div class="def">Core stays pure stdlib. PyYAML is used only when it is installed.</div></div>
+    <div class="term green"><span class="name">env for children</span><span class="kind">contract</span><div class="def"><code>CAPEVOLVE_LOG_LEVEL</code>, <code>CAPEVOLVE_HELPERS</code>, <code>CAPEVOLVE_HISTORY</code> reach every phase.</div></div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/cli.py, __main__.py, specfile.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:40–3:35]</span> The console script <code>cap-evolve</code> maps to <code>cli.main</code>. It looks up the command in a table and calls <code>_cmd_run</code>. There is also <code>python -m cap_evolve</code>, a very small entry with three commands for hosts that cannot install the CLI.</p>
+    <p><code>_cmd_run</code> finds the skills folder. It needs a built <code>_registry/manifest.json</code>, so a random <code>.claude/skills</code> folder is not picked by mistake. It resolves the spec relative to <code>--project</code>, never to the current directory. Then the budget flags overwrite spec keys, but only when you pass them. An explicit zero still counts.</p>
+    <p>Some settings travel to the children as environment variables, for example the errored trial policy. This way every evaluation in the run, in every process, uses one rule. The CLI also builds the optimizer command string once, here.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:40–3:35]</span> ה-console script בשם <code>cap-evolve</code> ממופה ל-<code>cli.main</code>. הוא מחפש את הפקודה בטבלה וקורא ל-<code>_cmd_run</code>. יש גם <code>python -m cap_evolve</code>, נקודת כניסה קטנה מאוד עם שלוש פקודות, בשביל hosts שלא יכולים להתקין את ה-CLI.</p>
+    <p><code>_cmd_run</code> מוצא את תיקיית ה-skills. הוא דורש <code>_registry/manifest.json</code> בנוי, כדי שלא ייבחר בטעות סתם <code>.claude/skills</code>. הוא מוצא את ה-spec ביחס ל-<code>--project</code>, אף פעם לא ביחס לתיקייה הנוכחית. אחר כך דגלי התקציב דורסים מפתחות ב-spec, אבל רק אם העברתם אותם. גם אפס מפורש נחשב.</p>
+    <p>חלק מההגדרות עוברות לילדים כמשתני סביבה, למשל ה-errored trial policy. כך כל הערכה ב-run, בכל תהליך, משתמשת באותו כלל. ה-CLI גם בונה כאן, פעם אחת, את מחרוזת הפקודה של ה-optimizer.</p>
+  </aside>
+</section>
+
+<!-- ═══ 5. Preflight ═══ -->
+<section class="slide">
+  <h2>Step 2 · Preflight, before any money is spent</h2>
+  <div class="flow">
+    <div class="step blue"><b>Dashboard</b><span><code>dashboard_launch .maybe_launch()</code></span></div><div class="arrow">→</div>
+    <div class="step"><b>Intervention</b><span><code>intervention .preflight()</code></span></div><div class="arrow">→</div>
+    <div class="step"><b>--plan-only?</b><span>print plan, exit</span></div><div class="arrow">→</div>
+    <div class="step red"><b>Hard gate</b><span><code>check.run_check()</code></span></div><div class="arrow">→</div>
+    <div class="step"><b>Resume ts</b><span><code>RunDir.latest()</code></span></div><div class="arrow">→</div>
+    <div class="step violet"><b>Follower</b><span><code>_spawn_follower()</code></span></div>
+  </div>
+  <div class="grid-2 mt-lg">
+    <div class="card red">
+      <h3><code>run_check(project)</code> — implement-and-check</h3>
+      <ul>
+        <li>No <code>IMPLEMENT-ME</code> stubs in the adapter</li>
+        <li><code>tasks(split)</code> is non-empty and stable</li>
+        <li><code>score()</code> twice gives the same reward</li>
+        <li>Fails → one JSON error, exit 1, zero spend</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <h3>Note: intake is not run here</h3>
+      <ul>
+        <li>The plan lists <code>intake</code>, but <code>_cmd_run</code> does not start it</li>
+        <li>Intake is the user's (or agent's) job before <code>run</code></li>
+        <li>If <code>&lt;project&gt;/intake.json</code> exists, its cost is recorded as an <code>intake</code> event</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted mt">Source: cli.py (_cmd_run), check.py (run_check), dashboard_launch.py, intervention.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:35–4:30]</span> Before the first rollout, the CLI does six cheap things in order. It starts the dashboard first, so you can watch from second zero. It checks the intervention, which is how a candidate is delivered. For an out-of-process stack a dead service would error every rollout, so we fail early.</p>
+    <p>Then comes the hard gate, <code>run_check</code>, the code half of the implement-and-check phase. It runs in-process. It refuses stubs, an empty task list, or a scorer that is not deterministic.</p>
+    <p>One honest detail: the run plan prints "intake" as the first step, but <code>_cmd_run</code> never runs it. The comment says intake is the user's job before run. If intake wrote <code>intake.json</code>, its spend is copied into the run. Last, with <code>--follow</code>, a thread starts tailing <code>events.jsonl</code> before the run dir even exists.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:35–4:30]</span> לפני ה-rollout הראשון, ה-CLI עושה שישה דברים זולים לפי הסדר. הוא מפעיל קודם את ה-dashboard, כדי שאפשר יהיה לצפות מהשנייה הראשונה. הוא בודק את ה-intervention, כלומר איך candidate נמסר. ב-stack שרץ מחוץ לתהליך, שירות מת היה מכשיל כל rollout, אז עדיף להיכשל מוקדם.</p>
+    <p>אחר כך מגיע ה-gate הקשיח, <code>run_check</code>, חצי הקוד של phase ה-implement-and-check. הוא רץ בתוך התהליך, ומסרב ל-stubs, לרשימת tasks ריקה, או ל-scorer שאינו דטרמיניסטי.</p>
+    <p>פרט חשוב: תוכנית ה-run מדפיסה "intake" כצעד ראשון, אבל <code>_cmd_run</code> לא מריץ אותו. ההערה בקוד אומרת ש-intake הוא העבודה של המשתמש לפני run. אם intake כתב <code>intake.json</code>, העלות שלו מועתקת ל-run. ולבסוף, עם <code>--follow</code>, thread מתחיל לעקוב אחרי <code>events.jsonl</code> עוד לפני שה-run dir קיים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 6. Phases as processes ═══ -->
+<section class="slide">
+  <h2>Step 3 · Each phase is a process with a JSON reply</h2>
+  <table class="tight">
+    <tr><th>Phase</th><th>Started as</th><th>Main calls inside</th><th>stdout JSON</th></tr>
+    <tr><td><b>baseline</b></td><td><code>baseline/scripts/run.py --base --project …</code></td><td><code>ensure_splits</code>, <code>harness.baseline</code>, <code>stage_capability_guidance</code></td><td><code>run_dir</code>, <code>baseline_val</code>, <code>headroom</code></td></tr>
+    <tr><td><b>algorithm</b></td><td><code>hill-climb/scripts/run.py --run-dir --optimizer "{opt_cmd}" …</code></td><td><code>harness.hill_climb_loop</code> → <code>run_step</code> × N</td><td><code>best_id</code>, <code>stop_reason</code>, <code>steps</code></td></tr>
+    <tr><td><b>finalize</b></td><td><code>finalize/scripts/run.py --run-dir --project</code></td><td><code>harness.finalize</code> on the sealed test split</td><td>test score</td></tr>
+    <tr><td><b>report</b></td><td><code>report/scripts/run.py --run-dir --dashboard-url</code></td><td>writes <code>report.md</code>, <code>dashboard.html</code></td><td>paths</td></tr>
+  </table>
+  <div class="grid-3 mt">
+    <div class="card"><h3>One cwd</h3><p>Every step runs with <code>cwd=workdir</code>, the folder that holds <code>.capevolve/</code>.</p></div>
+    <div class="card"><h3>Stdout is sacred</h3><p><code>_json_payload()</code> takes the last JSON object. Noise goes to stderr.</p></div>
+    <div class="card red"><h3>Failure record</h3><p><code>_step_failure()</code>: returncode, signal name, stderr head + tail.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:30–5:25]</span> Here are the four steps that <code>_cmd_run</code> starts in deterministic mode. Baseline creates the run dir. It freezes the split and scores the seed on val. It also copies the capability guidance into the run dir and logs a <code>headroom</code> event. The CLI reads <code>run_dir</code> from its JSON.</p>
+    <p>The algorithm step gets a long command line built from the spec: trials, gate mode, <code>k_se</code>, store, capabilities, instruction file, protected paths, and so on. A spec key that is absent adds no flag, so old specs give identical command lines.</p>
+    <p>Finalize scores the champion on test once, and report writes the outputs. Why processes and not function calls? Isolation. A native crash in a scorer kills one step. The CLI then records the signal name, for example SIGSEGV or SIGKILL, instead of a silent stop.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:30–5:25]</span> אלה ארבעת הצעדים ש-<code>_cmd_run</code> מפעיל ב-deterministic mode. Baseline יוצר את ה-run dir, מקפיא את ה-split ומודד את ה-seed על val. הוא גם מעתיק את ה-guidance של ה-capability לתוך ה-run dir ורושם אירוע <code>headroom</code>. ה-CLI קורא את <code>run_dir</code> מתוך ה-JSON שלו.</p>
+    <p>צעד האלגוריתם מקבל שורת פקודה ארוכה שנבנית מה-spec: trials, gate mode, <code>k_se</code>, store, capabilities, קובץ הוראות, protected paths וכן הלאה. מפתח שלא קיים ב-spec לא מוסיף דגל, כך ש-specs ישנים נותנים בדיוק אותה שורת פקודה.</p>
+    <p>Finalize מודד את ה-champion על test פעם אחת, ו-report כותב את התוצרים. למה תהליכים ולא קריאות לפונקציות? בידוד. קריסה native ב-scorer הורגת צעד אחד, וה-CLI רושם את שם ה-signal, למשל SIGSEGV או SIGKILL, במקום עצירה שקטה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 7. Inside the algorithm process ═══ -->
+<section class="slide">
+  <h2>Step 4 · Inside the algorithm process</h2>
+  <div class="row">
+    <div class="col">
+<pre class="sm"><span class="c"># skills/algorithms/hill-climb/scripts/run.py</span>
+run_dir = RunDir.<span class="f">open</span>(args.run_dir)
+harness.DEFAULT_WORKERS = <span class="f">max</span>(<span class="n">1</span>, args.workers)
+ctx = harness.OptimizerContext.<span class="f">from_args</span>(args)
+store = <span class="f">make_store</span>({<span class="s">"store"</span>: args.store}, run_dir.root)
+adapter = <span class="f">load_adapter</span>(project)
+optimizer = harness.<span class="f">optimizer_from_command</span>(cmd)
+current_val = <span class="f">resume_val</span>(…) <span class="k">if</span> args.resume \
+              <span class="k">else</span> baseline.json[<span class="s">"val"</span>]
+result = harness.<span class="f">hill_climb_loop</span>(adapter, …)
+<span class="f">print</span>(json.dumps(result))</pre>
+    </div>
+    <div class="col">
+<pre class="sm"><span class="c"># harness.hill_climb_loop (simplified)</span>
+<span class="k">for</span> i <span class="k">in</span> <span class="f">range</span>(max_iterations):
+    exhausted, why = run_dir.<span class="f">budget_exhausted</span>()
+    <span class="k">if</span> exhausted: <span class="k">break</span>
+    parent_dir = run_dir.<span class="f">candidate_dir</span>(best_id)
+    instr = ctx.<span class="f">instructions</span>(current_val, focus…)
+    <span class="k">if</span> convergence: signal = <span class="f">assess</span>(steps)
+    step = <span class="f">run_step</span>(adapter, parent_dir, …)
+    <span class="k">if</span> step[<span class="s">"accepted"</span>]:
+        current_val = step[<span class="s">"candidate_val"</span>]
+<span class="k">return</span> {best_id, stop_reason, steps}</pre>
+    </div>
+  </div>
+  <div class="callout mt"><b>Parent = current best.</b> <code>--focus</code> only changes which failing val tasks the prompt emphasizes: <code>all</code>, <code>cyclic</code>, <code>hardest-first</code>.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:25–6:20]</span> The algorithm script is a thin wrapper. It opens the run dir, sets the process-wide worker count, and builds the shared <code>OptimizerContext</code>. Every algorithm builds the optimizer read-context the same way, so no algorithm gets a thinner prompt than its siblings. It makes the version store, loads the adapter, and wraps the optimizer command into a Python function with <code>optimizer_from_command</code>.</p>
+    <p>The loop itself is short. At the top of every iteration it asks the run dir if the budget is exhausted. It takes the current best as the parent, renders the prompt, and optionally injects a convergence signal. Then it calls <code>run_step</code>, which does all the real work. If the step is accepted, the candidate's val result becomes the new bar.</p>
+    <p>gepa and skillopt have their own loops, but they call the same harness pieces. Chapter 7 covers them.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:25–6:20]</span> סקריפט האלגוריתם הוא עטיפה דקה. הוא פותח את ה-run dir, קובע את מספר ה-workers לכל התהליך, ובונה את ה-<code>OptimizerContext</code> המשותף. כל אלגוריתם בונה את הקונטקסט של ה-optimizer באותה דרך, כך שאף אלגוריתם לא מקבל prompt דל יותר מהאחרים. הוא יוצר את ה-version store, טוען את ה-adapter, ועוטף את פקודת ה-optimizer בפונקציית Python בעזרת <code>optimizer_from_command</code>.</p>
+    <p>הלולאה עצמה קצרה. בתחילת כל איטרציה היא שואלת את ה-run dir אם התקציב נגמר. היא לוקחת את ה-best הנוכחי כ-parent, מרנדרת את ה-prompt, ואופציונלית מוסיפה סיגנל convergence. אחר כך היא קוראת ל-<code>run_step</code>, שעושה את כל העבודה האמיתית. אם הצעד התקבל, תוצאת ה-val של ה-candidate הופכת לרף החדש.</p>
+    <p>ל-gepa ול-skillopt יש לולאות משלהם, אבל הם קוראים לאותם חלקים ב-harness. פרק 7 מכסה אותם.</p>
+  </aside>
+</section>
+
+<!-- ═══ 8. run_step in nine moves ═══ -->
+<section class="slide">
+  <h2>Step 5 · <code>run_step()</code> in nine moves</h2>
+  <div class="row">
+    <div class="col">
+      <table class="tight">
+        <tr><td><b class="accent">1</b></td><td><code>shutil.copytree(parent_dir, work/cand_N)</code></td></tr>
+        <tr><td><b class="accent">2</b></td><td><code>ctx.inject()</code> + <code>ctx.augment_instructions()</code></td></tr>
+        <tr><td><b class="accent">3</b></td><td><code>integrity.snapshot()</code> if <code>protected_paths</code></td></tr>
+        <tr><td><b class="amber">4</b></td><td><code>optimizer(workdir, instructions)</code> → subprocess</td></tr>
+        <tr><td><b class="red">5</b></td><td><code>integrity.verify()</code>, <code>_capability_validate()</code></td></tr>
+        <tr><td><b class="green">6</b></td><td><code>evaluate_candidate(split="val")</code></td></tr>
+        <tr><td><b class="amber">7</b></td><td><code>footprint()</code>, <code>_paired_deltas()</code>, <code>gate.decide()</code></td></tr>
+        <tr><td><b class="accent">8</b></td><td><code>run_dir.snapshot()</code>, <code>set_best()</code> on accept</td></tr>
+        <tr><td><b class="accent">9</b></td><td><code>record_iteration()</code>, memory, <code>store.commit()</code></td></tr>
+      </table>
+    </div>
+    <div class="col" style="flex:0.7">
+      <div class="card green"><h3>Cheap checks first</h3><p>Moves 3 and 5 run before any rollout is paid for.</p></div>
+      <div class="card amber mt"><h3>Failures cost an iteration</h3><p>An optimizer crash leaves workdir = parent. The gate rejects it. The run goes on.</p></div>
+      <div class="card red mt"><h3>But not forever</h3><p>3 evaluation errors in a row (<code>_MAX_CONSECUTIVE_EVAL_ERRORS</code>) raise. That is a broken environment.</p></div>
+    </div>
+  </div>
+  <p class="small muted mt">Source: core/cap_evolve/harness.py · run_step()</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:20–7:10]</span> Here is <code>run_step</code>, about 450 lines, in nine moves. The candidate id is <code>cand_</code> plus the next iteration number, padded to four digits. The parent is copied to <code>work/cand_N</code>. The context is injected. If protected paths are set, the eval surface is hashed.</p>
+    <p>Then the optimizer edits the workdir in place. After it, two cheap checks run before we pay for any rollout: tamper detection and the capability's own validator. Then we evaluate, compute the footprint and the paired deltas, and call the gate. Every candidate is snapshotted, accepted or not, so the dashboard can diff it. Only an accepted one becomes the best. Last, we record the iteration and commit.</p>
+    <p>Note the error policy. One failure costs one iteration. Three evaluation errors in a row stop the run with a loud error, because that pattern means the environment is broken.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:20–7:10]</span> זה <code>run_step</code>, בערך 450 שורות, בתשעה מהלכים. ה-id של ה-candidate הוא <code>cand_</code> ועוד מספר האיטרציה הבאה, בארבע ספרות. ה-parent מועתק ל-<code>work/cand_N</code>, הקונטקסט מוזרק, ואם מוגדרים protected paths, משטח ההערכה עובר hash.</p>
+    <p>אחר כך ה-optimizer עורך את ה-workdir במקום. אחריו רצות שתי בדיקות זולות לפני שמשלמים על rollout כלשהו: זיהוי tamper וה-validator של ה-capability עצמו. אז מעריכים, מחשבים את ה-footprint ואת ה-paired deltas, וקוראים ל-gate. כל candidate נשמר כ-snapshot, התקבל או לא, כדי שה-dashboard יוכל להציג diff. רק candidate שהתקבל הופך ל-best. ולבסוף רושמים את האיטרציה ועושים commit.</p>
+    <p>שימו לב למדיניות השגיאות. כישלון אחד עולה איטרציה אחת. שלוש שגיאות הערכה ברצף עוצרות את ה-run עם שגיאה ברורה, כי הדפוס הזה אומר שהסביבה שבורה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 9. Sequence diagram ═══ -->
+<section class="slide">
+  <h2>One iteration as a sequence diagram</h2>
+  <svg class="diagram" viewBox="0 0 1136 505">
+    <defs>
+      <marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker>
+    </defs>
+    <!-- lane headers -->
+    <rect class="box blue" x="5" y="4" width="132" height="48" rx="8"/><text class="title" x="71" y="25" text-anchor="middle" style="font-size:15px">hill_climb_loop</text><text class="label" x="71" y="44" text-anchor="middle">harness.py</text>
+    <rect class="box blue" x="147" y="4" width="132" height="48" rx="8"/><text class="title" x="213" y="25" text-anchor="middle" style="font-size:15px">run_step</text><text class="label" x="213" y="44" text-anchor="middle">harness.py</text>
+    <rect class="box violet" x="289" y="4" width="132" height="48" rx="8"/><text class="title" x="355" y="25" text-anchor="middle" style="font-size:14px">OptimizerContext</text><text class="label" x="355" y="44" text-anchor="middle">inject()</text>
+    <rect class="box amber" x="431" y="4" width="132" height="48" rx="8"/><text class="title" x="497" y="25" text-anchor="middle" style="font-size:15px">run-optimizer</text><text class="label" x="497" y="44" text-anchor="middle">process</text>
+    <rect class="box amber" x="573" y="4" width="132" height="48" rx="8"/><text class="title" x="639" y="25" text-anchor="middle" style="font-size:15px">agent CLI</text><text class="label" x="639" y="44" text-anchor="middle">process</text>
+    <rect class="box green" x="715" y="4" width="132" height="48" rx="8"/><text class="title" x="781" y="25" text-anchor="middle" style="font-size:14px">evaluate_candidate</text><text class="label" x="781" y="44" text-anchor="middle">harness.py</text>
+    <rect class="box green" x="857" y="4" width="132" height="48" rx="8"/><text class="title" x="923" y="25" text-anchor="middle" style="font-size:15px">adapter</text><text class="label" x="923" y="44" text-anchor="middle">adapters/adapter.py</text>
+    <rect class="box" x="999" y="4" width="132" height="48" rx="8"/><text class="title" x="1065" y="25" text-anchor="middle" style="font-size:15px">gate · RunDir</text><text class="label" x="1065" y="44" text-anchor="middle">gate.py · store.py</text>
+    <!-- lifelines -->
+    <path class="lane" d="M71,54 L71,500"/><path class="lane" d="M213,54 L213,500"/><path class="lane" d="M355,54 L355,500"/>
+    <path class="lane" d="M497,54 L497,500"/><path class="lane" d="M639,54 L639,500"/><path class="lane" d="M781,54 L781,500"/>
+    <path class="lane" d="M923,54 L923,500"/><path class="lane" d="M1065,54 L1065,500"/>
+    <!-- 1 -->
+    <path class="line" d="M71,84 L211,84" marker-end="url(#a9)"/><text class="label mono" x="141" y="77" text-anchor="middle">run_step()</text>
+    <!-- 2 -->
+    <path class="line" d="M213,116 L353,116" marker-end="url(#a9)"/><text class="label mono" x="283" y="109" text-anchor="middle">inject(work/cand_N)</text>
+    <!-- 3 -->
+    <path class="ret" d="M355,146 L215,146" marker-end="url(#a9)"/><text class="label" x="283" y="140" text-anchor="middle">guidance, trajectories, LEDGER…</text>
+    <!-- 4 -->
+    <path class="line" d="M213,178 L495,178" marker-end="url(#a9)"/><text class="label mono" x="354" y="171" text-anchor="middle">subprocess.run(opt_cmd)</text>
+    <!-- 5 -->
+    <path class="line" d="M497,210 L637,210" marker-end="url(#a9)"/><text class="label mono" x="567" y="203" text-anchor="middle">Popen(cwd=workdir)</text>
+    <!-- self edit -->
+    <path class="line" d="M639,226 C690,226 690,256 641,256" marker-end="url(#a9)"/><text class="label" x="698" y="246">edits files</text>
+    <!-- 6 -->
+    <path class="ret" d="M639,282 L499,282" marker-end="url(#a9)"/><text class="label mono" x="567" y="276" text-anchor="middle">total_cost_usd</text>
+    <!-- 7 -->
+    <path class="ret" d="M497,312 L215,312" marker-end="url(#a9)"/><text class="label mono" x="354" y="306" text-anchor="middle">{"cost": …} on stdout</text>
+    <!-- self check -->
+    <path class="line" d="M213,326 C160,326 160,354 211,354" marker-end="url(#a9)"/><text class="label mono" x="40" y="345">verify · validate</text>
+    <!-- 8 -->
+    <path class="line" d="M213,378 L779,378" marker-end="url(#a9)"/><text class="label mono" x="496" y="371" text-anchor="middle">evaluate_candidate(split="val", n_trials)</text>
+    <!-- 9 -->
+    <path class="line" d="M781,404 L921,404" marker-end="url(#a9)"/><text class="label mono" x="851" y="397" text-anchor="middle">run_trials · score</text>
+    <!-- 10 -->
+    <path class="ret" d="M923,428 L783,428" marker-end="url(#a9)"/><text class="label mono" x="851" y="422" text-anchor="middle">Rollout, Score</text>
+    <!-- 11 -->
+    <path class="ret" d="M781,452 L215,452" marker-end="url(#a9)"/><text class="label mono" x="496" y="446" text-anchor="middle">SplitResult (reward, stderr, per_task)</text>
+    <!-- 12 -->
+    <path class="line" d="M213,486 L1063,486" marker-end="url(#a9)"/><text class="label mono" x="640" y="479" text-anchor="middle">decide() → snapshot → record_iteration() → store.commit()</text>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:10–8:50]</span> Now the same nine moves as a sequence. Read it top to bottom. The loop calls <code>run_step</code>. <code>run_step</code> asks the <code>OptimizerContext</code> to fill the workdir. Then it starts the <code>run-optimizer</code> process and blocks. That process builds the agent command line and starts the agent CLI with its working directory set to <code>work/cand_N</code>. The agent edits files in place, for example it rewrites a prompt section and adds a tool. It ends with a JSON result that includes <code>total_cost_usd</code>.</p>
+    <p><code>run-optimizer</code> prints its own JSON with the cost. Back in <code>run_step</code>, the tamper check and the capability validator run. Then <code>evaluate_candidate</code> drives the adapter for all val tasks and trials, and returns a <code>SplitResult</code>. Finally, the gate decides, and the run dir and git store record the result.</p>
+    <p>Key point: the only network spend is in two places, the agent CLI and the adapter.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:10–8:50]</span> עכשיו אותם תשעה מהלכים כ-sequence. קוראים מלמעלה למטה. הלולאה קוראת ל-<code>run_step</code>. <code>run_step</code> מבקש מה-<code>OptimizerContext</code> למלא את ה-workdir. אחר כך הוא מפעיל את התהליך <code>run-optimizer</code> ונחסם. התהליך הזה בונה את שורת הפקודה של ה-agent ומפעיל את ה-agent CLI עם תיקיית עבודה <code>work/cand_N</code>. ה-agent עורך קבצים במקום, למשל משכתב סעיף ב-prompt ומוסיף tool. הוא מסיים עם תוצאת JSON שכוללת <code>total_cost_usd</code>.</p>
+    <p><code>run-optimizer</code> מדפיס JSON משלו עם העלות. בחזרה ב-<code>run_step</code>, רצים בדיקת ה-tamper וה-validator של ה-capability. אז <code>evaluate_candidate</code> מפעיל את ה-adapter על כל ה-tasks וה-trials של val, ומחזיר <code>SplitResult</code>. בסוף ה-gate מחליט, וה-run dir וה-git store רושמים את התוצאה.</p>
+    <p>הנקודה החשובה: הוצאה על רשת יש רק בשני מקומות, ה-agent CLI וה-adapter.</p>
+  </aside>
+</section>
+
+<!-- ═══ 10. Workdir ═══ -->
+<section class="slide">
+  <h2>What <code>inject()</code> builds: the optimizer workdir</h2>
+  <div class="row">
+    <div class="col">
+      <div class="tree sm"><span class="d">.capevolve/run_&lt;ts&gt;/work/cand_0004/</span>
+├── <span class="h">prompt.md, tools.json, …</span>  <span class="c"># parent copy (the edit target)</span>
+├── INSTRUCTIONS.md             <span class="c"># this iteration's prompt</span>
+├── <span class="d">guidance/</span>
+│   ├── <span class="d">&lt;capability&gt;/</span>SKILL.md      <span class="c"># edit menu + boundaries</span>
+│   ├── <span class="d">diagnose/</span>                <span class="c"># failure-clustering method</span>
+│   ├── <span class="d">sources/</span>                 <span class="c"># capability_sources, verbatim</span>
+│   └── <span class="d">optimizer/</span>&lt;name&gt;.md      <span class="c"># backend features</span>
+├── <span class="d">.claude/skills/</span> + CLAUDE.md   <span class="c"># native skills + pointer</span>
+├── <span class="d">trajectories/</span>                <span class="c"># parent's val traces only</span>
+├── LEDGER.md  RUNMAP.md         <span class="c"># framework facts</span>
+├── JOURNAL.md  PROCESS.md       <span class="c"># optimizer-written</span>
+├── INSIGHTS.md  META_INSIGHTS.md …
+└── <span class="d">prior_iterations/</span>&lt;cid&gt;/       <span class="c"># PROCESS.md + diff</span></div>
+    </div>
+    <div class="col" style="flex:0.62">
+      <div class="term violet"><span class="name">_inject_optimizer_context</span><div class="def">trajectories → guidance → optimizer ref → native skills</div></div>
+      <div class="term mt"><span class="name">seed_framework_memory</span><div class="def">LEDGER, JOURNAL, RUNMAP, accumulators, PROCESS. Built from <code>step</code> events.</div></div>
+      <div class="term amber mt"><span class="name">_inject_native_skills</span><div class="def">Uses the registry row's <code>skills_dir</code> and <code>instructions_file</code>.</div></div>
+      <div class="term red mt"><span class="name">_SNAPSHOT_IGNORE</span><div class="def">All scratch above is dropped when the candidate is snapshotted.</div></div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:50–9:45]</span> This is the folder the optimizer agent wakes up in. The base is a copy of the parent candidate, which is what it may edit. Next to it is <code>INSTRUCTIONS.md</code>, written by <code>optimizer_from_command</code> just before launch.</p>
+    <p><code>guidance/</code> holds the selected capability skills, the diagnose method, the supporting source files, and a reference for the chosen backend. For claude-code, the same skills are also placed in <code>.claude/skills/</code>, and <code>CLAUDE.md</code> gets a pointer block, because a headless agent loads skills most reliably from its native path.</p>
+    <p><code>trajectories/</code> has only the parent's traces, not every rejected attempt. The memory files are rebuilt from the <code>step</code> events each iteration. Note the clean ownership: LEDGER and RUNMAP are framework facts, JOURNAL and PROCESS are written by the optimizer. At snapshot time all scratch is ignored, so the stored candidate is the capability only.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:50–9:45]</span> זו התיקייה שבה ה-optimizer agent מתעורר. הבסיס הוא העתק של ה-parent candidate, וזה מה שמותר לו לערוך. לידו יש <code>INSTRUCTIONS.md</code>, שנכתב על ידי <code>optimizer_from_command</code> רגע לפני ההפעלה.</p>
+    <p>ב-<code>guidance/</code> יש את ה-capability skills שנבחרו, את שיטת ה-diagnose, את קבצי המקור התומכים, וקובץ reference ל-backend שנבחר. ב-claude-code אותם skills מונחים גם ב-<code>.claude/skills/</code>, ו-<code>CLAUDE.md</code> מקבל בלוק הפניה, כי agent שרץ headless טוען skills הכי אמין מהנתיב הטבעי שלו.</p>
+    <p>ב-<code>trajectories/</code> יש רק את ה-traces של ה-parent, לא את כל הניסיונות שנדחו. קבצי הזיכרון נבנים מחדש מאירועי <code>step</code> בכל איטרציה. שימו לב לחלוקת הבעלות: LEDGER ו-RUNMAP הם עובדות של ה-framework, JOURNAL ו-PROCESS נכתבים על ידי ה-optimizer. בזמן ה-snapshot כל ה-scratch מסונן, כך שה-candidate השמור הוא רק ה-capability.</p>
+  </aside>
+</section>
+
+<!-- ═══ 11. Diagnose and the prompt ═══ -->
+<section class="slide">
+  <h2>Where "diagnose" happens in deterministic mode</h2>
+  <div class="flow">
+    <div class="step blue"><b>per_task rows</b><span>parent's <code>SplitResult</code></span></div><div class="arrow">→</div>
+    <div class="step"><b><code>_classify()</code></b><span>errored · always_fail · flaky · solid</span></div><div class="arrow">→</div>
+    <div class="step violet"><b><code>_focus_instructions()</code></b><span>fills the template slots</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>optimizer</b><span>clusters, then edits</span></div><div class="arrow">→</div>
+    <div class="step green"><b>PROCESS.md</b><span>+ optional DIAGNOSIS.json</span></div>
+  </div>
+  <div class="grid-2 mt-lg">
+    <div class="card">
+      <h3>Template slots (INSTRUCTIONS.md)</h3>
+      <p><code>{{FAILURES}}</code> <code>{{PASSING}}</code> <code>{{CAP_BRIEF}}</code> <code>{{TARGET_READER}}</code> <code>{{ALGO_BRIEF}}</code> <code>{{PARALLEL_NOTE}}</code> <code>{{BENCH_REPO}}</code></p>
+      <p class="small muted">Template: <code>optimizer/INSTRUCTIONS.md</code> from intake, else the built-in default.</p>
+    </div>
+    <div class="card amber">
+      <h3>The optimizer does the clustering</h3>
+      <ul>
+        <li>No separate diagnose process per iteration</li>
+        <li>Method: <code>guidance/diagnose/</code> (the phase skill)</li>
+        <li><code>solid</code> tasks = the protect set in <code>{{PASSING}}</code></li>
+        <li><code>_validate_diagnosis_json()</code> is advisory only</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted mt">Source: harness.py (_classify, _failures_block, _focus_instructions), skills/phases/diagnose/</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:45–10:35]</span> The brief says "diagnose failing traces". Where is that in code? In deterministic mode there is no separate diagnose process each iteration. The harness classifies the parent's per-task rows into four buckets with <code>_classify</code>. A task is infra-ignored only when most trials errored and the mean is near zero. Always-fail tasks need a root cause. Flaky tasks need consistency. Solid tasks are the protect set.</p>
+    <p><code>_focus_instructions</code> renders those buckets into the template slots. The optimizer agent then follows the diagnose skill in <code>guidance/diagnose/</code>: it clusters failures, ranks them, and writes the table in <code>PROCESS.md</code>. The diagnose phase script with <code>cluster.py</code> exists too, and agent-mode loops call it. A <code>DIAGNOSIS.json</code> file is checked, but a problem in it never blocks a step.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:45–10:35]</span> בתיאור כתוב "diagnose failing traces". איפה זה בקוד? ב-deterministic mode אין תהליך diagnose נפרד בכל איטרציה. ה-harness ממיין את השורות per-task של ה-parent לארבעה סלים עם <code>_classify</code>. task מסומן כ-infra ומתעלמים ממנו רק אם רוב ה-trials נכשלו בשגיאה והממוצע קרוב לאפס. tasks שתמיד נכשלים צריכים root cause. tasks שהם flaky צריכים עקביות. tasks יציבים הם ה-protect set.</p>
+    <p><code>_focus_instructions</code> מכניס את הסלים האלה לתוך ה-slots של ה-template. ה-optimizer agent עוקב אחרי ה-diagnose skill שב-<code>guidance/diagnose/</code>: הוא מקבץ כישלונות, מדרג אותם, וכותב את הטבלה ב-<code>PROCESS.md</code>. סקריפט ה-diagnose phase עם <code>cluster.py</code> קיים גם הוא, ולולאות של agent mode קוראות לו. קובץ <code>DIAGNOSIS.json</code> נבדק, אבל בעיה בו לעולם לא חוסמת צעד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 12. Optimizer subprocess ═══ -->
+<section class="slide">
+  <h2>The optimizer subprocess: command line and cost</h2>
+  <div class="row">
+    <div class="col">
+<pre class="sm"><span class="c"># optimizers/registry.yaml (claude-code)</span>
+command_template: <span class="s">"claude -p {prompt_text}
+  --permission-mode acceptEdits
+  --allowedTools Bash
+  --disallowedTools Monitor --model {model}"</span>
+json_flag:       <span class="s">"--output-format json"</span>
+budget_flag:     <span class="s">"--max-turns {budget}"</span>
+usd_budget_flag: <span class="s">"--max-budget-usd {usd}"</span>
+skills_dir: <span class="s">".claude/skills"</span>   parallel: <span class="s">"true"</span></pre>
+      <div class="flow vertical mt" style="gap:0">
+        <div class="step"><b><code>build_command()</code></b><span>fill {prompt_text} {model}; drop <code>--model</code> if unset</span></div>
+      </div>
+    </div>
+    <div class="col">
+      <table class="tight">
+        <tr><th>Spec key</th><th>Becomes</th></tr>
+        <tr><td><code>optimizer_skill</code></td><td><code>--name</code> → registry row</td></tr>
+        <tr><td><code>optimizer_model</code></td><td><code>--model</code> ("propose" role)</td></tr>
+        <tr><td><code>optimizer_max_turns</code></td><td><code>--budget</code> → <code>--max-turns N</code></td></tr>
+        <tr><td><code>optimizer_usd_per_iter</code></td><td><code>--usd-budget</code> → <code>--max-budget-usd</code></td></tr>
+        <tr><td><code>max_optimizer_usd</code></td><td>run total, checked by the loop</td></tr>
+      </table>
+      <div class="callout amber mt" style="font-size:17px"><b>Cost:</b> <code>parse_cost()</code> reads <code>total_cost_usd</code> → <code>_parse_optimizer_cost()</code> → <code>update_spent(optimizer_usd=…)</code>. On a non-zero exit the cost is still kept (<code>err.cost</code>).</div>
+      <div class="callout red mt" style="font-size:17px"><b>No wall-clock timeout</b> on this subprocess in core. Bound it with turns and USD caps.</div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:35–11:35]</span> The optimizer is two processes deep. <code>run-optimizer</code> reads the registry row and fills the template. For claude-code it inlines the prompt text and adds the model. Because the CLI passed <code>--json</code>, it appends the json flag. If the spec sets <code>optimizer_max_turns</code> or <code>optimizer_usd_per_iter</code>, it appends <code>--max-turns</code> and <code>--max-budget-usd</code>. The agent CLI enforces those caps itself.</p>
+    <p>It runs the agent with <code>Popen</code>, reads stdout on the main thread, and drains stderr on a second thread to avoid a pipe deadlock. Then <code>parse_cost</code> finds <code>total_cost_usd</code>. The harness adds it to the optimizer spend, even when the CLI exits non-zero after hitting its cap.</p>
+    <p>Important: I found no wall-clock timeout on this subprocess in the deterministic path. A hung agent is bounded only by its own turn and dollar caps.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:35–11:35]</span> ה-optimizer נמצא שני תהליכים לעומק. <code>run-optimizer</code> קורא את השורה ב-registry וממלא את ה-template. ב-claude-code הוא מכניס את טקסט ה-prompt ישירות ומוסיף את המודל. כי ה-CLI העביר <code>--json</code>, הוא מוסיף את ה-json flag. אם ה-spec מגדיר <code>optimizer_max_turns</code> או <code>optimizer_usd_per_iter</code>, הוא מוסיף <code>--max-turns</code> ו-<code>--max-budget-usd</code>, וה-agent CLI אוכף את התקרות האלה בעצמו.</p>
+    <p>הוא מריץ את ה-agent עם <code>Popen</code>, קורא את stdout ב-thread הראשי, ומרוקן את stderr ב-thread שני כדי להימנע מ-deadlock של pipes. אחר כך <code>parse_cost</code> מוצא את <code>total_cost_usd</code>. ה-harness מוסיף אותו להוצאה של ה-optimizer, גם כשה-CLI יוצא עם קוד שגיאה אחרי שפגע בתקרה.</p>
+    <p>חשוב: לא מצאתי timeout של זמן אמת על התהליך הזה במסלול הדטרמיניסטי. agent תקוע מוגבל רק על ידי תקרות ה-turns והדולרים שלו עצמו.</p>
+  </aside>
+</section>
+
+<!-- ═══ 13. evaluate_candidate ═══ -->
+<section class="slide">
+  <h2>Inside <code>evaluate_candidate()</code></h2>
+  <svg class="diagram" viewBox="0 0 1136 400">
+    <defs><marker id="a13" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box" x="0" y="20" width="190" height="74" rx="10"/><text class="title" x="95" y="50" text-anchor="middle">reserve (opt-in)</text><text class="label mono" x="95" y="74" text-anchor="middle">reserve_metric_calls</text>
+    <rect class="box" x="215" y="20" width="245" height="74" rx="10"/><text class="title" x="337" y="50" text-anchor="middle">seed offset</text><text class="label mono" x="337" y="74" text-anchor="middle">eval_index.next_trial_idx</text>
+    <rect class="box blue" x="485" y="20" width="185" height="74" rx="10"/><text class="title" x="577" y="50" text-anchor="middle">eval_start event</text><text class="label mono" x="577" y="74" text-anchor="middle">_live(adapter)</text>
+    <path class="line" d="M190,57 L213,57" marker-end="url(#a13)"/><path class="line" d="M460,57 L483,57" marker-end="url(#a13)"/>
+    <!-- branches -->
+    <rect class="box green" x="700" y="0" width="436" height="56" rx="10"/><text class="title" x="918" y="24" text-anchor="middle">① adapter.run_trials(tasks, n_trials, base_seed)</text><text class="label" x="918" y="44" text-anchor="middle">whole task × trial grid in one call · adapter owns concurrency</text>
+    <rect class="box green" x="700" y="66" width="436" height="56" rx="10"/><text class="title" x="918" y="90" text-anchor="middle">② adapter.run_batch(tasks, seed) per trial</text><text class="label" x="918" y="110" text-anchor="middle">one call per trial k</text>
+    <rect class="box amber" x="700" y="132" width="436" height="56" rx="10"/><text class="title" x="918" y="156" text-anchor="middle">③ run_trials_pool(run_target, max_workers)</text><text class="label" x="918" y="176" text-anchor="middle">only when workers &gt; 1 · ThreadPoolExecutor</text>
+    <rect class="box" x="700" y="198" width="436" height="56" rx="10"/><text class="title" x="918" y="222" text-anchor="middle">④ serial for-loop over run_target</text><text class="label" x="918" y="242" text-anchor="middle">default · emit_progress() after each rollout</text>
+    <path class="line" d="M670,57 L698,28" marker-end="url(#a13)"/><path class="line" d="M670,62 L698,94" marker-end="url(#a13)"/>
+    <path class="line" d="M670,67 L698,160" marker-end="url(#a13)"/><path class="line" d="M670,72 L698,226" marker-end="url(#a13)"/>
+    <!-- persist -->
+    <rect class="box violet" x="300" y="290" width="400" height="100" rx="10"/><text class="title" x="500" y="318" text-anchor="middle">_persist_trial(k) — always serial</text>
+    <text class="label" x="500" y="342" text-anchor="middle">score_batch or score() · errored trial = missing, not 0.0</text>
+    <text class="label mono" x="500" y="366" text-anchor="middle">rollouts/val/&lt;task&gt;__&lt;tag&gt;__t&lt;k&gt;.json</text>
+    <path class="line" d="M918,254 L918,330 L702,330" marker-end="url(#a13)"/>
+    <rect class="box blue" x="0" y="290" width="260" height="100" rx="10"/><text class="title" x="130" y="318" text-anchor="middle">close out</text>
+    <text class="label mono" x="130" y="342" text-anchor="middle">eval_index.record()</text>
+    <text class="label mono" x="130" y="362" text-anchor="middle">update_spent(metric_calls)</text>
+    <text class="label mono" x="130" y="382" text-anchor="middle">"evaluate" event</text>
+    <path class="line" d="M300,340 L262,340" marker-end="url(#a13)"/>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:35–12:30]</span> <code>evaluate_candidate</code> is the one place rollouts happen. If the spec sets <code>budget_reserve</code>, it first reserves the rollouts in <code>state.json</code> and refuses before dispatch when they do not fit. It picks a seed offset from the evidence ledger, so a new tag of the same bytes gets fresh seeds. It logs <code>eval_start</code> and enters the adapter's <code>live()</code> context.</p>
+    <p>Then there are four generation paths, tried in this order. If the adapter has <code>run_trials</code>, it gets the whole grid in one call. Else <code>run_batch</code> per trial. Else, if workers is above one, the framework thread pool. Else a plain serial loop.</p>
+    <p>Whatever the path, scoring and persistence go through <code>_persist_trial</code>, serially, in task order. That is why a parallel run gives byte-identical numbers. At the end the ledger is updated, spend is charged, and an <code>evaluate</code> event closes the bracket.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:35–12:30]</span> <code>evaluate_candidate</code> הוא המקום היחיד שבו קורים rollouts. אם ה-spec מגדיר <code>budget_reserve</code>, הוא קודם שומר את ה-rollouts ב-<code>state.json</code> ומסרב לפני השליחה אם הם לא נכנסים בתקציב. הוא בוחר seed offset מתוך ה-evidence ledger, כך ש-tag חדש של אותם bytes מקבל seeds חדשים. הוא רושם <code>eval_start</code> ונכנס ל-context של <code>live()</code> של ה-adapter.</p>
+    <p>אחר כך יש ארבעה מסלולים ליצירת rollouts, לפי הסדר הזה. אם ל-adapter יש <code>run_trials</code>, הוא מקבל את כל הגריד בקריאה אחת. אחרת <code>run_batch</code> לכל trial. אחרת, אם workers גדול מאחד, ה-thread pool של ה-framework. אחרת לולאה סדרתית פשוטה.</p>
+    <p>לא משנה איזה מסלול, הניקוד והשמירה עוברים דרך <code>_persist_trial</code>, באופן סדרתי ולפי סדר ה-tasks. בגלל זה run מקבילי נותן בדיוק אותם מספרים. בסוף ה-ledger מתעדכן, ההוצאה נרשמת, ואירוע <code>evaluate</code> סוגר את הסוגריים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 14. Checks, gate, commit ═══ -->
+<section class="slide">
+  <h2>Post-edit checks, gate call, commit</h2>
+  <table class="tight">
+    <tr><th>Check</th><th>Code</th><th>On failure</th></tr>
+    <tr><td>Tamper seal</td><td><code>integrity.snapshot/verify</code> (spec <code>protected_paths</code>)</td><td><code>tamper_detected</code>, step is <b>indecisive</b>, no rollouts paid</td></tr>
+    <tr><td>Capability rules</td><td><code>_capability_validate</code> → each <code>abstract.validate()</code>, e.g. <code>tool_surface.validate</code></td><td><code>capability_invalid</code>, indecisive; only <i>new</i> problems count</td></tr>
+    <tr><td>Footprint</td><td><code>footprint.footprint()</code> (spec <code>gate_footprint</code>)</td><td>none: limits which tasks enter the paired delta</td></tr>
+    <tr><td>Gate</td><td><code>gate.decide(…, paired_deltas, coverage, broke, fixed)</code></td><td>accept · reject · indecisive (chapter 6)</td></tr>
+    <tr><td>No-regression</td><td>spec <code>gate_no_regression</code>, <code>move_is_resolved()</code></td><td>turns an accept into a reject</td></tr>
+  </table>
+  <div class="row mt">
+    <div class="col"><div class="callout green" style="font-size:17px"><b>Commit:</b> <code>run_dir.snapshot(cid)</code> → <code>set_best</code> (accept) → <code>record_iteration</code> → <code>store.commit("iter N: ACCEPT …", tag="best")</code>. Git ignores <code>rollouts/</code> and <code>work/</code>.</div></div>
+    <div class="col"><div class="callout amber" style="font-size:17px"><b>Not in this path:</b> <code>constraints.py</code> (agent-optimize <code>spend.py</code>) and <code>skillcheck.py</code> (skill <code>check.py</code> contract tests).</div></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:30–13:25]</span> Here are the post-edit checks in order. The tamper seal is opt-in through <code>protected_paths</code>. Files are hashed before the optimizer runs and verified after. A changed or added protected file makes the step indecisive. It is not a zero, because the score would measure a compromised harness.</p>
+    <p>The capability validator calls each capability's own <code>validate</code>. For the tools capability that is <code>tool_surface.validate</code>. Problems the parent already had are ignored. Then the footprint limits the paired delta to tasks the edit can reach. The gate decides, and the optional no-regression rule can veto.</p>
+    <p>A correction to a common assumption: <code>constraints.py</code> and <code>skillcheck.py</code> are not called in this loop. The first parses free-text stop conditions for agent-optimize. The second is a helper for skill self-tests.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:30–13:25]</span> אלה הבדיקות אחרי העריכה, לפי הסדר. ה-tamper seal הוא opt-in דרך <code>protected_paths</code>. הקבצים עוברים hash לפני שה-optimizer רץ ונבדקים אחריו. קובץ מוגן ששונה או נוסף הופך את הצעד ל-indecisive. זה לא אפס, כי הציון היה מודד harness שנפגע.</p>
+    <p>ה-capability validator קורא ל-<code>validate</code> של כל capability. ב-tools capability זה <code>tool_surface.validate</code>. בעיות שכבר היו ב-parent לא נספרות. אחר כך ה-footprint מגביל את ה-paired delta ל-tasks שהעריכה יכולה להשפיע עליהם. ה-gate מחליט, וכלל ה-no-regression האופציונלי יכול להטיל וטו.</p>
+    <p>תיקון להנחה נפוצה: <code>constraints.py</code> ו-<code>skillcheck.py</code> לא נקראים בלולאה הזו. הראשון מפענח stop conditions בטקסט חופשי בשביל agent-optimize. השני הוא כלי עזר לבדיקות עצמיות של skills.</p>
+  </aside>
+</section>
+
+<!-- ═══ 15. Events per iteration ═══ -->
+<section class="slide">
+  <h2>Events written during one iteration</h2>
+  <div class="flow">
+    <div class="step"><b>convergence</b><span>if not ok</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>optimizer_stderr</b><span>or optimizer_error</span></div><div class="arrow">→</div>
+    <div class="step red"><b>tamper_detected</b><span>capability_invalid</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>eval_start</b><span>eval_progress …</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>evaluate</b><span>reward, stderr, cost</span></div><div class="arrow">→</div>
+    <div class="step"><b>gate_footprint</b><span>promotion</span></div><div class="arrow">→</div>
+    <div class="step green"><b>step</b><span>the iteration record</span></div>
+  </div>
+  <div class="grid-2 mt-lg">
+    <div>
+<pre class="sm"><span class="c"># RunDir.log_event — append-only, one line per event</span>
+rec = {<span class="s">"t"</span>: time.time(), <span class="s">"kind"</span>: kind, **fields}
+<span class="k">with</span> events_path.<span class="f">open</span>(<span class="s">"a"</span>) <span class="k">as</span> f:
+    f.<span class="f">write</span>(json.dumps(rec) + <span class="s">"\n"</span>)
+<span class="k">for</span> obs <span class="k">in</span> self._observers:   <span class="c"># telemetry</span>
+    obs.<span class="f">on_event</span>(kind, rec)</pre>
+    </div>
+    <div class="card">
+      <ul>
+        <li><code>step</code> feeds LEDGER, RUNMAP, graph, dashboard, TUI</li>
+        <li><code>eval_progress</code>: heartbeat every 30 s (<code>CAPEVOLVE_EVAL_PROGRESS_INTERVAL</code>)</li>
+        <li><code>eval_start</code> with no <code>evaluate</code> = an eval that never returned</li>
+        <li>Then <code>step_indecisive</code>, <code>budget_warning</code> (50% / 80%)</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:25–14:10]</span> Every move writes an event, and you can read the iteration from <code>events.jsonl</code> alone. In order: a convergence signal if it is not ok, the optimizer's stderr or error, a tamper or validation event if a check failed, then <code>eval_start</code>, throttled <code>eval_progress</code> heartbeats, and <code>evaluate</code>. Then the footprint and, if promotion is on, a promotion event. Last is <code>step</code>, the single canonical iteration record.</p>
+    <p><code>log_event</code> is very simple: open in append mode, write one JSON line. Observers, for example OpenTelemetry or MLflow, receive each event, and their errors are swallowed. Note that there is no event named "gate". The gate verdict lives inside the <code>step</code> event as <code>accept</code> and <code>reason</code>. Chapter 8 shows how the dashboard and TUI read this stream.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:25–14:10]</span> כל מהלך כותב אירוע, ואפשר לקרוא את כל האיטרציה מתוך <code>events.jsonl</code> בלבד. לפי הסדר: סיגנל convergence אם הוא לא ok, ה-stderr או השגיאה של ה-optimizer, אירוע tamper או validation אם בדיקה נכשלה, אחר כך <code>eval_start</code>, פעימות <code>eval_progress</code> מווסתות, ו-<code>evaluate</code>. אחריהם ה-footprint, ואם promotion פעיל, אירוע promotion. האחרון הוא <code>step</code>, רשומת האיטרציה הקנונית היחידה.</p>
+    <p><code>log_event</code> פשוט מאוד: פותחים במצב append וכותבים שורת JSON אחת. Observers, למשל OpenTelemetry או MLflow, מקבלים כל אירוע, והשגיאות שלהם נבלעות. שימו לב שאין אירוע בשם "gate". ההחלטה של ה-gate נמצאת בתוך אירוע ה-<code>step</code>, בשדות <code>accept</code> ו-<code>reason</code>. בפרק 8 נראה איך ה-dashboard וה-TUI קוראים את הזרם הזה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 16. Timeline of threads and processes ═══ -->
+<section class="slide">
+  <h2>Timeline: who is running during one iteration</h2>
+  <svg class="diagram" viewBox="0 0 1136 450">
+    <!-- phase header -->
+    <text class="label" x="290" y="22" text-anchor="middle">inject</text>
+    <text class="label" x="480" y="22" text-anchor="middle">optimize (minutes)</text>
+    <text class="label" x="660" y="22" text-anchor="middle">checks</text>
+    <text class="label" x="830" y="22" text-anchor="middle">evaluate (minutes–hours)</text>
+    <text class="label" x="1020" y="22" text-anchor="middle">gate</text>
+    <text class="label" x="1092" y="22" text-anchor="middle">git</text>
+    <path class="lane" d="M320,30 L320,440"/><path class="lane" d="M640,30 L640,440"/><path class="lane" d="M680,30 L680,440"/>
+    <path class="lane" d="M980,30 L980,440"/><path class="lane" d="M1060,30 L1060,440"/>
+    <!-- rows -->
+    <text class="title" x="0" y="62" style="font-size:15px">cap-evolve CLI</text><text class="label" x="0" y="80">main thread</text>
+    <rect class="box seg" x="260" y="48" width="866" height="30" rx="6"/><text class="label" x="690" y="68" text-anchor="middle">blocked in subprocess.run(alg_cmd)</text>
+    <text class="title" x="0" y="112" style="font-size:15px">follow thread</text><text class="label" x="0" y="130">daemon, optional</text>
+    <rect class="box blue seg" x="260" y="98" width="866" height="30" rx="6"/><text class="label" x="690" y="118" text-anchor="middle">polls events.jsonl every 0.5 s → stderr</text>
+    <text class="title" x="0" y="162" style="font-size:15px">dashboard server</text><text class="label" x="0" y="180">separate process</text>
+    <rect class="box blue seg" x="260" y="148" width="866" height="30" rx="6"/><text class="label" x="690" y="168" text-anchor="middle">reads the run dir; not a child that is waited for</text>
+    <text class="title" x="0" y="212" style="font-size:15px">algorithm process</text><text class="label" x="0" y="230">main thread</text>
+    <rect class="box violet seg" x="260" y="198" width="60" height="30" rx="6"/>
+    <rect class="box seg" x="320" y="198" width="320" height="30" rx="6"/><text class="label" x="480" y="218" text-anchor="middle">waits for run-optimizer</text>
+    <rect class="box violet seg" x="640" y="198" width="40" height="30" rx="6"/>
+    <rect class="box violet seg" x="680" y="198" width="300" height="30" rx="6"/><text class="label" x="830" y="218" text-anchor="middle">_persist_trial: score + write</text>
+    <rect class="box violet seg" x="980" y="198" width="146" height="30" rx="6"/>
+    <text class="title" x="0" y="262" style="font-size:15px">eval workers</text><text class="label" x="0" y="280">ThreadPoolExecutor</text>
+    <rect class="box green seg" x="680" y="248" width="300" height="30" rx="6"/><text class="label" x="830" y="268" text-anchor="middle">workers × adapter.run_target</text>
+    <text class="title" x="0" y="312" style="font-size:15px">run-optimizer</text><text class="label" x="0" y="330">process + stderr thread</text>
+    <rect class="box amber seg" x="320" y="298" width="320" height="30" rx="6"/><text class="label" x="480" y="318" text-anchor="middle">Popen · tee stdout · drain stderr</text>
+    <text class="title" x="0" y="362" style="font-size:15px">agent CLI</text><text class="label" x="0" y="380">process (+ subagents)</text>
+    <rect class="box amber seg" x="330" y="348" width="300" height="30" rx="6"/><text class="label" x="480" y="368" text-anchor="middle">claude -p … edits work/cand_N</text>
+    <text class="title" x="0" y="412" style="font-size:15px">git</text><text class="label" x="0" y="430">short processes</text>
+    <rect class="box seg" x="1062" y="398" width="64" height="30" rx="6"/>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:10–15:30]</span> This is the picture to remember. Time goes left to right through one iteration. The CLI's main thread is blocked the whole time. The follow thread and the dashboard server only read files, so they can never slow down or corrupt the run.</p>
+    <p>The algorithm process does the inject quickly, then waits for the optimizer for minutes. During that time two more processes are alive: <code>run-optimizer</code> with its stderr drain thread, and the agent CLI, which may start its own subagents. When the agent exits, the checks run. Then evaluation starts. With <code>workers</code> above one, a thread pool generates rollouts, while the main thread waits. Scoring then happens on the main thread. Finally the gate, the record, and a few short <code>git</code> processes.</p>
+    <p>Notice: optimize and evaluate never overlap in the default loop. Only HC-2 runs several proposals at once.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:10–15:30]</span> זו התמונה שכדאי לזכור. הזמן זורם משמאל לימין לאורך איטרציה אחת. ה-thread הראשי של ה-CLI חסום כל הזמן. ה-follow thread ושרת ה-dashboard רק קוראים קבצים, ולכן הם לא יכולים להאט או לקלקל את ה-run.</p>
+    <p>תהליך האלגוריתם עושה את ה-inject מהר, ואז מחכה ל-optimizer כמה דקות. בזמן הזה חיים עוד שני תהליכים: <code>run-optimizer</code> עם ה-thread שמרוקן את stderr, וה-agent CLI, שיכול להפעיל subagents משלו. כשה-agent יוצא, רצות הבדיקות. אחר כך מתחילה ההערכה. עם <code>workers</code> גדול מאחד, thread pool מייצר rollouts, וה-thread הראשי מחכה. הניקוד קורה אחר כך ב-thread הראשי. ולבסוף ה-gate, הרישום, וכמה תהליכי <code>git</code> קצרים.</p>
+    <p>שימו לב: בלולאה הרגילה optimize ו-evaluate אף פעם לא חופפים. רק HC-2 מריץ כמה הצעות במקביל.</p>
+  </aside>
+</section>
+
+<!-- ═══ 17. Parallelism and its knobs ═══ -->
+<section class="slide">
+  <h2>What runs in parallel, and what controls it</h2>
+  <table class="tight">
+    <tr><th>Parallel work</th><th>Mechanism</th><th>Knob</th><th>Default</th></tr>
+    <tr><td>Rollouts of one eval (plain adapter)</td><td><code>run_trials_pool</code>, <code>ThreadPoolExecutor</code></td><td>spec <code>workers</code> → <code>--workers</code> → <code>harness.DEFAULT_WORKERS</code>; env <code>CAPEVOLVE_WORKERS</code></td><td>1 (serial)</td></tr>
+    <tr><td>Task × trial grid (fast path)</td><td>adapter <code>run_trials()</code>, often via <code>run_trials_pool</code></td><td>adapter env, e.g. <code>SKILLSBENCH_CONCURRENCY</code>, <code>TAU2_MAX_CONCURRENCY</code></td><td>adapter's</td></tr>
+    <tr><td>K proposals per round (HC-2)</td><td><code>hc2.py</code> <code>ThreadPoolExecutor</code> over <code>_propose</code></td><td>spec <code>hc2: true</code>, <code>hc2_k</code>, <code>workers</code></td><td>off</td></tr>
+    <tr><td>P2 rung / confirm jobs</td><td><code>evaluator.thread_map(workers)</code></td><td>same <code>workers</code>; inner evaluator forced to 1</td><td>off</td></tr>
+    <tr><td>Optimizer subagents</td><td>inside the agent CLI</td><td>registry <code>parallel: "true"</code> → <code>{{PARALLEL_NOTE}}</code></td><td>claude-code</td></tr>
+  </table>
+  <div class="grid-3 mt">
+    <div class="card green"><h3>Always serial</h3><p>Scoring, the gate, state writes, one optimizer per iteration.</p></div>
+    <div class="card amber"><h3>Opt-in on purpose</h3><p>Use <code>workers &gt; 1</code> only if <code>run_target</code> is thread-safe.</p></div>
+    <div class="card"><h3>Same numbers</h3><p><code>test_parallel_eval.py</code>: parallel result == serial result.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:30–16:20]</span> I grepped the core for threading, futures, multiprocessing and asyncio. There is no multiprocessing and no asyncio in core. All parallel work is threads, plus child processes.</p>
+    <p>The main knob is the spec key <code>workers</code>. The CLI passes it as <code>--workers</code> to baseline and to the algorithm, which sets <code>harness.DEFAULT_WORKERS</code>. Phase scripts started by agent mode can use <code>CAPEVOLVE_WORKERS</code> instead. It only affects adapters without their own fast path. Most real adapters implement <code>run_trials</code> and read their own concurrency variable. SkillsBench defaults to seven workers.</p>
+    <p>HC-2 is the one mode that runs several optimizer subprocesses at once, from a thread pool. To avoid nested pools, it forces the evaluator's own workers to one. The test file <code>test_parallel_eval.py</code> pins the rule that parallel and serial runs give identical results.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:30–16:20]</span> עשיתי grep בליבה על threading, futures, multiprocessing ו-asyncio. אין multiprocessing ואין asyncio בליבה. כל העבודה המקבילית היא threads, ועוד child processes.</p>
+    <p>הכפתור העיקרי הוא מפתח ה-spec בשם <code>workers</code>. ה-CLI מעביר אותו כ-<code>--workers</code> ל-baseline ולאלגוריתם, וזה קובע את <code>harness.DEFAULT_WORKERS</code>. סקריפטי phase שמופעלים מ-agent mode יכולים להשתמש ב-<code>CAPEVOLVE_WORKERS</code> במקום. זה משפיע רק על adapters בלי fast path משלהם. רוב ה-adapters האמיתיים מממשים <code>run_trials</code> וקוראים משתנה concurrency משלהם. ב-SkillsBench ברירת המחדל היא שבעה workers.</p>
+    <p>HC-2 הוא המצב היחיד שמריץ כמה תהליכי optimizer במקביל, מתוך thread pool. כדי להימנע מ-pools מקוננים, הוא מכריח את ה-workers של ה-evaluator להיות אחד. קובץ הבדיקה <code>test_parallel_eval.py</code> מקבע את הכלל שריצה מקבילית וסדרתית נותנות תוצאות זהות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 18. Shared state protection ═══ -->
+<section class="slide">
+  <h2>Shared state, and how each piece is protected</h2>
+  <table class="tight">
+    <tr><th>Shared thing</th><th>Writers</th><th>Protection</th></tr>
+    <tr><td><code>state.json</code> (best, budget, spent, reservations)</td><td>any phase, any thread</td><td><code>_file_lock</code> (O_CREAT|O_EXCL, steal after 10 s) + <code>_atomic_write</code> (fsync + <code>os.replace</code>)</td></tr>
+    <tr><td><code>events.jsonl</code></td><td>everyone</td><td>append mode, one <code>write()</code> per JSON line, never rewritten</td></tr>
+    <tr><td><code>eval_index.jsonl</code></td><td>each eval</td><td><code>_file_lock</code> + tmp file + <code>os.replace</code></td></tr>
+    <tr><td><code>rollouts/&lt;split&gt;/…__t&lt;k&gt;.json</code></td><td>main thread only</td><td>unique name per task × tag × trial</td></tr>
+    <tr><td>process <code>sys.stdout</code></td><td>runners, scorers</td><td><code>redirect_stdout(sys.stderr)</code> once, outside the pool</td></tr>
+    <tr><td>live candidate roots</td><td>eval threads</td><td><code>trials._ROOTS_LOCK</code> (<code>threading.Lock</code>)</td></tr>
+    <tr><td>a whole agent-optimize round</td><td>conductor / <code>round.py</code></td><td><code>RunDir.run_lock()</code>: <code>fcntl.flock</code>, released by the OS on crash</td></tr>
+  </table>
+  <p class="small muted mt">Source: core/cap_evolve/rundir.py, eval_index.py, trials.py, harness.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:20–17:10]</span> Now, what is shared and how is it protected. <code>state.json</code> holds the seal, the budget and the spend, so it gets the strongest care. Every change is a read-modify-write under an advisory lock file created with O_EXCL. A lock older than ten seconds is treated as stale and stolen. The write itself is a temp file, fsync, and <code>os.replace</code>, so a reader sees the old or the new file, never half.</p>
+    <p><code>events.jsonl</code> is append-only, one write per line, no lock. The evidence ledger uses the same lock plus replace. Rollout files never collide because each name is unique. Two subtle ones: stdout is redirected once around the whole thread pool, because <code>redirect_stdout</code> is process-global and not thread-safe. And the candidate-fault registry has its own <code>threading.Lock</code>. The agent-optimize conductor adds <code>flock</code>, which the OS releases even on SIGKILL.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:20–17:10]</span> עכשיו, מה משותף ואיך הוא מוגן. <code>state.json</code> מחזיק את ה-seal, התקציב וההוצאה, ולכן הוא מקבל את ההגנה החזקה ביותר. כל שינוי הוא read-modify-write תחת קובץ נעילה שנוצר עם O_EXCL. נעילה שעברו עליה עשר שניות נחשבת stale ונלקחת. הכתיבה עצמה היא קובץ זמני, fsync ו-<code>os.replace</code>, כך שקורא רואה את הקובץ הישן או החדש, אף פעם לא חצי.</p>
+    <p><code>events.jsonl</code> הוא append-only, כתיבה אחת לכל שורה, בלי נעילה. ה-evidence ledger משתמש באותה נעילה ועוד replace. קבצי rollout אף פעם לא מתנגשים כי כל שם ייחודי. ושני מקרים עדינים: stdout מופנה פעם אחת סביב כל ה-thread pool, כי <code>redirect_stdout</code> הוא גלובלי לתהליך ולא thread-safe. ול-registry של candidate faults יש <code>threading.Lock</code> משלו. ה-conductor של agent-optimize מוסיף <code>flock</code>, שמערכת ההפעלה משחררת גם ב-SIGKILL.</p>
+  </aside>
+</section>
+
+<!-- ═══ 19. Budgets and stop conditions ═══ -->
+<section class="slide">
+  <h2>Budgets and stop conditions</h2>
+  <div class="row">
+    <div class="col">
+<pre class="sm"><span class="c"># RunDir.budget_exhausted(), top of each iteration</span>
+<span class="k">if</span> state.unfunded: <span class="k">return</span> <span class="s">"budget_reserved"</span>
+<span class="k">if</span> best_val &gt;= stop_at_reward: <span class="k">return</span> <span class="s">"reward ceiling"</span>
+<span class="k">if</span> iterations &gt;= max_iterations: …
+<span class="k">if</span> metric_calls &gt;= max_metric_calls: …  <span class="c"># + live reservations</span>
+<span class="k">if</span> total_usd &gt;= max_usd: …   <span class="c"># runner + optimizer + intake</span>
+<span class="k">if</span> optimizer_usd &gt;= max_optimizer_usd: …
+<span class="k">if</span> stall &gt;= stall: …         <span class="c"># consecutive rejects</span></pre>
+      <p class="small muted">Values: spec → <code>baseline --max-*</code> → <code>Budget</code> in <code>state.json</code>. 0 = unlimited.</p>
+    </div>
+    <div class="col" style="flex:0.8">
+      <div class="term"><span class="name">indecisive</span><span class="kind">stall</span><div class="def">Does not move the stall counter.</div></div>
+      <div class="term amber mt"><span class="name">budget_reserve</span><span class="kind">opt-in</span><div class="def">Without it, spend is checked only between iterations, so one eval can overshoot.</div></div>
+      <div class="term violet mt"><span class="name">convergence.assess</span><span class="kind">--convergence</span><div class="def"><code>ok → warn → paradigm_shift → stop</code>. Advice goes into the prompt.</div></div>
+      <div class="term green mt"><span class="name">lr_schedule</span><span class="kind">skillopt only</span><div class="def">Edit budget per epoch, not a stop rule.</div></div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:10–18:00]</span> Budgets live in <code>state.json</code>. The CLI passes them to baseline, which freezes them. Each iteration, the loop calls <code>budget_exhausted</code>, which checks the reasons in this order and returns the first one. That string becomes <code>stop_reason</code> in the algorithm's JSON.</p>
+    <p>Two details matter in practice. First, the check runs between iterations. Without <code>budget_reserve</code>, one large evaluation can push you past <code>max_usd</code>. With it, the rollouts are reserved first and a <code>BudgetExhausted</code> stops the loop cleanly with <code>budget_reserved</code>. Second, indecisive steps do not count toward stall, because an infra outage says nothing about the optimizer's ideas.</p>
+    <p><code>stop_at_reward</code> still finalizes on test. Convergence is a graded signal, recomputed from the steps each time, so it is resume-safe. <code>lr_schedule</code> is only used by skillopt.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:10–18:00]</span> התקציבים נמצאים ב-<code>state.json</code>. ה-CLI מעביר אותם ל-baseline, שמקפיא אותם. בכל איטרציה הלולאה קוראת ל-<code>budget_exhausted</code>, שבודק את הסיבות בסדר הזה ומחזיר את הראשונה. המחרוזת הזו הופכת ל-<code>stop_reason</code> ב-JSON של האלגוריתם.</p>
+    <p>שני פרטים חשובים בפועל. ראשון, הבדיקה רצה בין איטרציות. בלי <code>budget_reserve</code>, הערכה גדולה אחת יכולה לעבור את <code>max_usd</code>. איתו, ה-rollouts נשמרים מראש, ו-<code>BudgetExhausted</code> עוצר את הלולאה בצורה נקייה עם <code>budget_reserved</code>. שני, צעדים שהם indecisive לא נספרים ל-stall, כי תקלת תשתית לא אומרת כלום על הרעיונות של ה-optimizer.</p>
+    <p><code>stop_at_reward</code> עדיין עושה finalize על test. Convergence הוא סיגנל מדורג שמחושב מחדש מה-steps בכל פעם, ולכן הוא בטוח ל-resume. <code>lr_schedule</code> משמש רק את skillopt.</p>
+  </aside>
+</section>
+
+<!-- ═══ 20. Crash, Ctrl-C, resume ═══ -->
+<section class="slide">
+  <h2>Crashes, Ctrl-C, and <code>--resume</code></h2>
+  <div class="row">
+    <div class="col">
+      <div class="card red">
+        <h3>When something dies</h3>
+        <ul>
+          <li><code>faulthandler</code> on import: native traceback to stderr</li>
+          <li><code>_step_failure</code>: returncode + signal name + hint</li>
+          <li>Ctrl-C: no custom handler. SIGINT hits the whole process group</li>
+          <li>Dead pid → its reservation is ignored; stale lock stolen</li>
+          <li>TUI restores the terminal on SIGTERM too</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="flow vertical">
+        <div class="step blue"><b><code>cap-evolve run --resume</code></b><span><code>--run-ts</code>, else <code>RunDir.latest()</code></span></div><div class="arrow">↓</div>
+        <div class="step"><b>baseline <code>--resume</code></b><span><code>baseline.json</code> exists → skip the eval</span></div><div class="arrow">↓</div>
+        <div class="step violet"><b>algorithm <code>--resume</code></b><span><code>resume_val(best_id)</code> from rollouts on disk</span></div><div class="arrow">↓</div>
+        <div class="step"><b>next id</b><span><code>cand_{iterations+1}</code>; old <code>work/cand_N</code> is removed</span></div><div class="arrow">↓</div>
+        <div class="step green"><b>finalize</b><span>skipped if <code>test_used</code>; report only</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="small muted mt">Source: cli.py, rundir.py (create exist_ok, update_budget), harness.resume_val · Tests: test_resume.py, test_crash_visibility.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:00–19:00]</span> Crash first. Importing <code>cap_evolve</code> turns on <code>faulthandler</code>, so even a segfault in a C extension leaves a traceback. The CLI keeps the head and the tail of stderr and names the signal. <code>test_crash_visibility.py</code> pins this.</p>
+    <p>Ctrl-C: <code>cap-evolve run</code> installs no SIGINT handler. The terminal sends SIGINT to the whole foreground group, so the CLI, the phase, the optimizer and the agent all get it. A reservation whose pid is dead stops counting, and a stale lock file is stolen after ten seconds.</p>
+    <p>Then resume. <code>--resume</code> reopens the latest run dir with <code>exist_ok</code>, so state is kept. Baseline sees <code>baseline.json</code> and skips. The algorithm reads the champion's val result back from rollout files and continues at the next candidate id. The half-done iteration is simply redone. If test was already scored, finalize is skipped. Budget flags on the resume command extend the frozen budget.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:00–19:00]</span> קודם קריסה. import של <code>cap_evolve</code> מפעיל <code>faulthandler</code>, כך שגם segfault בהרחבת C משאיר traceback. ה-CLI שומר את ההתחלה והסוף של stderr ונותן שם ל-signal. <code>test_crash_visibility.py</code> מקבע את זה.</p>
+    <p>Ctrl-C: <code>cap-evolve run</code> לא מתקין handler ל-SIGINT. הטרמינל שולח SIGINT לכל קבוצת התהליכים בחזית, כך שה-CLI, ה-phase, ה-optimizer וה-agent כולם מקבלים אותו. reservation שה-pid שלה מת מפסיקה להיספר, וקובץ נעילה ישן נלקח אחרי עשר שניות.</p>
+    <p>ואז resume. <code>--resume</code> פותח מחדש את ה-run dir האחרון עם <code>exist_ok</code>, כך שה-state נשמר. Baseline רואה את <code>baseline.json</code> ומדלג. האלגוריתם קורא את תוצאת ה-val של ה-champion מתוך קבצי ה-rollout וממשיך מה-id הבא של candidate. האיטרציה שנקטעה פשוט רצה מחדש. אם test כבר נמדד, מדלגים על finalize. דגלי תקציב בפקודת ה-resume מרחיבים את התקציב המוקפא.</p>
+  </aside>
+</section>
+
+<!-- ═══ 21. Agent mode ═══ -->
+<section class="slide">
+  <h2>Agent orchestration mode: the hand-off</h2>
+  <svg class="diagram" viewBox="0 0 1136 300">
+    <defs><marker id="a21" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="0" y="110" width="200" height="80" rx="10"/><text class="title" x="100" y="145" text-anchor="middle">check → baseline</text><text class="label" x="100" y="170" text-anchor="middle">same as deterministic</text>
+    <path class="line" d="M200,150 L268,150" marker-end="url(#a21)"/>
+    <rect class="box amber" x="270" y="105" width="190" height="90" rx="10"/><text class="title" x="365" y="140" text-anchor="middle">orchestration_mode</text><text class="label mono" x="365" y="166" text-anchor="middle">== "agent"</text>
+    <path class="line" d="M460,130 L578,40" marker-end="url(#a21)"/>
+    <path class="line" d="M460,150 L578,150" marker-end="url(#a21)"/>
+    <path class="line" d="M460,170 L578,260" marker-end="url(#a21)"/>
+    <rect class="box" x="580" y="5" width="556" height="70" rx="10"/><text class="title" x="858" y="35" text-anchor="middle">default: print handoff JSON and return</text><text class="label mono" x="858" y="60" text-anchor="middle">{"mode":"agent","run_dir":…,"next":"… finalize/scripts/run.py"}</text>
+    <rect class="box violet" x="580" y="115" width="556" height="70" rx="10"/><text class="title" x="858" y="145" text-anchor="middle">--agent-driver claude-code</text><text class="label mono" x="858" y="170" text-anchor="middle">agent-optimize/scripts/host.py (+ watchdog.py relaunch)</text>
+    <rect class="box green" x="580" y="225" width="556" height="70" rx="10"/><text class="title" x="858" y="255" text-anchor="middle">spec ao_engine: conductor</text><text class="label mono" x="858" y="280" text-anchor="middle">conductor.py supervise — relaunch until exit 0</text>
+  </svg>
+  <div class="grid-3 mt">
+    <div class="card"><h3>No algorithm subprocess</h3><p>The agent is the optimizer. It reads the algorithm's Agent-mode loop.</p></div>
+    <div class="card"><h3>Same core rules</h3><p>Split, val gate, test seal stay in <code>core/</code>.</p></div>
+    <div class="card"><h3>Agent seals test</h3><p>It runs the finalize phase script itself, once.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:00–19:35]</span> One slide on agent mode, because the run is different there. <code>cap-evolve run</code> still does the check and the baseline. Then it does not start an algorithm process. By default it prints a hand-off JSON with the run dir and returns. The conversational agent then drives the loop itself, using core primitives, and runs the finalize script at the end.</p>
+    <p>Two opt-in variants exist. <code>--agent-driver</code> runs <code>host.py</code>, a headless driver, and <code>watchdog.py</code> can relaunch it if it dies. And <code>ao_engine: conductor</code> runs a supervisor that relaunches the conductor until it exits zero. Chapter 7 goes deeper.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:00–19:35]</span> שקופית אחת על agent mode, כי שם ה-run נראה אחרת. <code>cap-evolve run</code> עדיין עושה check ו-baseline, אבל אז הוא לא מפעיל תהליך אלגוריתם. כברירת מחדל הוא מדפיס JSON של hand-off עם ה-run dir וחוזר. ה-agent השיחתי מנהל את הלולאה בעצמו, בעזרת primitives של הליבה, ומריץ בסוף את סקריפט ה-finalize.</p>
+    <p>יש שתי אפשרויות opt-in. <code>--agent-driver</code> מריץ את <code>host.py</code>, driver שרץ headless, ו-<code>watchdog.py</code> יכול להפעיל אותו מחדש אם הוא מת. ו-<code>ao_engine: conductor</code> מריץ supervisor שמפעיל את ה-conductor מחדש עד שהוא יוצא עם אפס. פרק 7 נכנס לזה לעומק.</p>
+  </aside>
+</section>
+
+<!-- ═══ 22. Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <div class="card blue"><h3>A sequencer of processes</h3><p><code>cap-evolve run</code> = check gate + phase scripts, each with one JSON reply.</p></div>
+    <div class="card violet"><h3><code>run_step</code> is the iteration</h3><p>copy → inject → optimize → checks → evaluate → gate → snapshot → record → commit.</p></div>
+    <div class="card green"><h3>Parallel generation, serial judgment</h3><p>Threads make rollouts. Scoring, gate and state stay on one thread.</p></div>
+    <div class="card amber"><h3>Files are the shared memory</h3><p>Locked atomic <code>state.json</code>, append-only <code>events.jsonl</code>, so <code>--resume</code> just reads them back.</p></div>
+  </div>
+  <div class="callout mt-lg"><b>Next · Chapter 6, Honest evaluation:</b> what <code>gate.decide()</code> computes, pass^k and SE, indecisive verdicts, promotion, and how the test seal is enforced.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:35–20:00]</span> Four things to keep. One: <code>cap-evolve run</code> is a sequencer of processes with a JSON contract on stdout. Two: one iteration is <code>run_step</code>, nine moves, cheap checks before paid rollouts. Three: parallel work only generates rollouts or proposals. Judgment stays serial, so numbers do not depend on worker count. Four: all shared state is in files with clear protection, which is exactly why resume works.</p>
+    <p>In chapter 6 we open the one call I skipped today, <code>gate.decide</code>, and see why each honesty rule exists.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:35–20:00]</span> ארבעה דברים לקחת. אחד: <code>cap-evolve run</code> הוא sequencer של תהליכים עם חוזה JSON על stdout. שתיים: איטרציה אחת היא <code>run_step</code>, תשעה מהלכים, בדיקות זולות לפני rollouts שעולים כסף. שלוש: עבודה מקבילית רק מייצרת rollouts או הצעות. השיפוט נשאר סדרתי, ולכן המספרים לא תלויים במספר ה-workers. ארבע: כל ה-state המשותף נמצא בקבצים עם הגנה ברורה, וזו בדיוק הסיבה ש-resume עובד.</p>
+    <p>בפרק 6 נפתח את הקריאה היחידה שדילגתי עליה היום, <code>gate.decide</code>, ונראה למה כל כלל של יושרה קיים.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>
