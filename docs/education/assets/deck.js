@@ -86,24 +86,24 @@
   help.addEventListener("click", function () { help.classList.remove("open"); });
 
   // ── presenter window markup ────────────────────────────────────────
-  var pres = null;
+  var presenterEl = null;
   if (isPresenter) {
     document.body.classList.add("presenter");
-    pres = document.createElement("div"); pres.id = "presenter";
-    pres.innerHTML =
+    presenterEl = document.createElement("div"); presenterEl.id = "presenter";
+    presenterEl.innerHTML =
       '<div class="p-head"><span class="clock" id="p-clock">00:00</span><button id="p-reset">Restart timer</button>' +
       '<span id="p-pos"></span><span class="sp"></span><span id="p-target"></span>' +
       '<button data-l="en">English</button><button data-l="he">עברית</button></div>' +
       '<div class="p-left"><div class="p-label">Current</div><div class="p-frame" id="p-cur"></div>' +
       '<div class="p-label">Next</div><div class="p-frame" id="p-next"></div></div>' +
       '<div class="p-notes" id="p-notes"></div>';
-    document.body.appendChild(pres);
-    pres.querySelector(".p-head").addEventListener("click", function (e) {
+    document.body.appendChild(presenterEl);
+    presenterEl.querySelector(".p-head").addEventListener("click", function (e) {
       var l = e.target.getAttribute("data-l"); if (l) setLang(l);
       if (e.target.id === "p-reset") startTime = Date.now();
     });
     var target = document.body.getAttribute("data-minutes");
-    if (target) pres.querySelector("#p-target").textContent = "Target: " + target + " min";
+    if (target) presenterEl.querySelector("#p-target").textContent = "Target: " + target + " min";
     startTime = Date.now();
     setInterval(function () {
       var s = Math.floor((Date.now() - startTime) / 1000);
@@ -145,7 +145,7 @@
       pn.setAttribute("dir", lang === "he" ? "rtl" : "ltr");
       pn.setAttribute("lang", lang);
       document.getElementById("p-pos").textContent = "Slide " + (idx + 1) + " / " + slides.length + (f.length ? "  · step " + frag + "/" + f.length : "");
-      pres.querySelectorAll("[data-l]").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-l") === lang); });
+      presenterEl.querySelectorAll("[data-l]").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-l") === lang); });
     }
     if (location.hash !== "#/" + (idx + 1)) history.replaceState(null, "", "#/" + (idx + 1));
     if (broadcast !== false && peer && !peer.closed) {
