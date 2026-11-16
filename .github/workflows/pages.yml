@@ -4,7 +4,8 @@ name: Deploy GitHub Pages
 #
 # Triggers:
 #   - push to main that touches site/ or this workflow → auto-deploy
-#   - manual dispatch → deploy on demand
+#   - manual dispatch → deploy on demand (also how skillberry-runs/skillsbench's
+#     notify-cap-evolve-pages.yml triggers a redeploy when its results change)
 #   - the Benchmarks workflow completing → redeploy so a new run's CapEvolve UI
 #     snapshot (benchmark-history's runs/**) becomes browsable, and its record
 #     is reflected in the rendered benchmarks.json/meta.json (see below)
@@ -106,19 +107,62 @@ jobs:
             empty_feed
           fi
 
-      # skillsbench-history's summaries, heatmaps and per-task reports are rendered
-      # at deploy time by scripts/build_skillsbench_site.py — see that script's
-      # docstring for the design. site/skillsbench/index.html is the one file in
-      # this tree that's hand-authored and committed on main; everything else here
-      # is generated fresh from the branch on every deploy.
-      - name: Fold in skillsbench-history (rendered)
+      # SkillsBench summaries, heatmaps and per-task reports are rendered at deploy
+      # time by scripts/build_skillsbench_site.py — see that script's docstring for
+      # the design. site/skillsbench/index.html is the one file in this tree that's
+      # hand-authored and committed on main; everything else here is generated fresh
+      # on every deploy.
+      #
+      # Source: the private skillberry-runs/skillsbench repo (migrated, full history,
+      # from this repo's skillsbench-history orphan branch on 2026-11-09). Reading it
+      # needs SKILLSBENCH_READ_TOKEN — a skillberry-bot fine-grained token with
+      # Contents: read on skillberry-runs/skillsbench. That repo's
+      # notify-cap-evolve-pages.yml dispatches this workflow on every push to its main.
+      #
+      # Access policy: skillberry-runs/skillsbench is PRIVATE. Its write-ups are rendered
+      # publicly here; its artifacts/ are not published, and every link into the repo is
+      # labelled "(private)" (org members only). See build_skillsbench_site.py.
+      #
+      # Token expiry: the token is a fine-grained PAT with a fixed expiry date (rotated
+      # yearly; it is the same token as skillberry-runs/dashboard's RESULTS_READ_TOKEN).
+      # This step logs the date on every run and warns 30 days ahead. An expired or
+      # broken token fails the deploy (the last good deploy stays live).
+      #
+      # Transition fallback, while the secret isn't configured yet: render the legacy
+      # skillsbench-history branch instead (kept until the secret is in place), so the
+      # live site doesn't change. If neither source is reachable, the committed
+      # site/skillsbench/ snapshot deploys as-is, with a warning.
+      - name: Fold in SkillsBench results (rendered)
+        env:
+          SKILLSBENCH_READ_TOKEN: ${{ secrets.SKILLSBENCH_READ_TOKEN }}
         run: |
           rm -rf _sbh
-          git clone --depth 1 --branch skillsbench-history \
-            "https://github.com/${{ github.repository }}.git" _sbh || {
-              echo "skillsbench-history branch not found — deploying without it"; exit 0; }
+          if [ -n "$SKILLSBENCH_READ_TOKEN" ]; then
+            git clone --depth 1 --branch main \
+              "https://x-access-token:${SKILLSBENCH_READ_TOKEN}@github.com/skillberry-runs/skillsbench.git" _sbh || {
+                echo "::error::SKILLSBENCH_READ_TOKEN is set but cloning skillberry-runs/skillsbench failed — expired or under-scoped token?"; exit 1; }
+            SRC_ARGS="--source-repo skillberry-runs/skillsbench --source-ref main --source-private"
+            # Fine-grained tokens expire on a fixed date. Log it on every deploy and warn
+            # 30 days ahead, so an expiry never surprises anyone as a failed deploy.
+            exp=$(curl -sI -H "Authorization: Bearer $SKILLSBENCH_READ_TOKEN" https://api.github.com/repos/skillberry-runs/skillsbench \
+              | tr -d '\r' | awk -F': ' 'tolower($1)=="github-authentication-token-expiration"{print $2}')
+            if [ -n "$exp" ]; then
+              days=$(python3 -c 'import sys,datetime as d; e=d.datetime.strptime(sys.argv[1][:19],"%Y-%m-%d %H:%M:%S"); print((e-d.datetime.utcnow()).days)' "$exp")
+              echo "SKILLSBENCH_READ_TOKEN expires $exp ($days days from now)"
+              if [ "$days" -lt 30 ]; then
+                echo "::warning::SKILLSBENCH_READ_TOKEN expires in $days days ($exp). Regenerate skillberry-bot's 'skillberry-runs-read' token and update this secret (and RESULTS_READ_TOKEN in skillberry-runs/dashboard, which uses the same token)."
+              fi
+            fi
+          else
+            echo "::warning::SKILLSBENCH_READ_TOKEN not set — rendering the legacy skillsbench-history branch instead"
+            git clone --depth 1 --branch skillsbench-history \
+              "https://github.com/${{ github.repository }}.git" _sbh || {
+                echo "::warning::no SkillsBench source reachable — deploying the committed site/skillsbench/ snapshot"; exit 0; }
+            # Links must point at what was actually rendered: the public legacy branch.
+            SRC_ARGS="--source-repo ${{ github.repository }} --source-ref skillsbench-history --source-public"
+          fi
           pip install --quiet markdown
-          python3 scripts/build_skillsbench_site.py --src _sbh --out site/skillsbench
+          python3 scripts/build_skillsbench_site.py --src _sbh --out site/skillsbench $SRC_ARGS
           test -f site/skillsbench/ui/heatmap.html || {
             echo "site/skillsbench/ui/heatmap.html missing after render — failing loudly"; exit 1; }
 
