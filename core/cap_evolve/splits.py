@@ -132,8 +132,15 @@ def make_splits(
     if counts is not None:
         n_tr, n_va, n_te = (int(c) for c in counts)
     else:
-        r_tr, r_va, r_te = ratios
+        ratios = tuple(ratios)
+        if len(ratios) != 3:
+            raise ValueError(f"need exactly 3 ratios (train,val,test), got {len(ratios)}")
+        r_tr, r_va, r_te = (float(r) for r in ratios)
+        if any(not (r >= 0) or r == float("inf") for r in (r_tr, r_va, r_te)):
+            raise ValueError(f"ratios must be numbers >= 0, got {r_tr},{r_va},{r_te}")
         total = r_tr + r_va + r_te
+        if total <= 0:
+            raise ValueError("ratios must not all be zero")
         r_tr, r_va, r_te = r_tr / total, r_va / total, r_te / total
         n_tr = int(round(n * r_tr))
         n_va = int(round(n * r_va))

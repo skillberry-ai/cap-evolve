@@ -29,11 +29,25 @@ def _cmd_splits(argv: list[str]) -> int:
     args = p.parse_args(argv)
 
     if args.ids.startswith("@"):
-        ids = [l.strip() for l in open(args.ids[1:], encoding="utf-8") if l.strip()]
+        path = args.ids[1:]
+        try:
+            with open(path, encoding="utf-8") as fh:
+                ids = [l.strip() for l in fh if l.strip()]
+        except OSError as e:
+            print(f"error: cannot read ids file {path!r}: {e.strerror or e}", file=sys.stderr)
+            return 2
     else:
         ids = [x.strip() for x in args.ids.split(",") if x.strip()]
-    ratios = tuple(float(x) for x in args.ratios.split(","))
-    sp = make_splits(ids, seed=args.seed, ratios=ratios)
+    try:
+        ratios = tuple(float(x) for x in args.ratios.split(","))
+    except ValueError:
+        print(f"error: --ratios must be 3 comma-separated numbers >= 0, got {args.ratios!r}", file=sys.stderr)
+        return 2
+    try:
+        sp = make_splits(ids, seed=args.seed, ratios=ratios)
+    except ValueError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
     print(json.dumps(sp.to_dict(), indent=2))
     return 0
 
