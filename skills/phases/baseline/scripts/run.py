@@ -16,6 +16,7 @@ import _bootstrap  # noqa: F401
 
 from cap_evolve import Budget, RunDir, harness
 from cap_evolve.check import load_adapter, run_check
+from cap_evolve.rundir import baseline_already_ran, missing_resume_error, reuse_baseline_error
 
 
 def _refuse_degenerate_split(splits, run_dir) -> bool:
@@ -103,26 +104,18 @@ def main(argv=None) -> int:
     # --resume with a named run that does not exist must not quietly start a fresh run
     # (new split, paid baseline). Same check `cap-evolve run --resume` makes; repeated
     # here because this script can be called on its own.
-    if args.resume and args.run_ts and not (Path(args.base) / f"run_{args.run_ts}" / "state.json").is_file():
-        existing = sorted(p.name for p in Path(args.base).glob("run_*") if (p / "state.json").is_file())
-        hint = (f"; existing runs: {', '.join(existing)}" if existing
-                else "; no run_* exists there yet")
-        print(json.dumps({"step": "resume", "error": (
-            f"--resume: no run named run_{args.run_ts} under {args.base}{hint}")}), file=sys.stderr)
-        return 1
+    if args.resume and args.run_ts:
+        resume_err = missing_resume_error(Path(args.base), args.run_ts)
+        if resume_err:
+            print(json.dumps({"step": "resume", "error": resume_err}), file=sys.stderr)
+            return 1
 
     # --reuse-baseline must name a real prior run dir; check it before RunDir.create so a
     # bad path leaves no empty run_* behind (one `--resume` and the dashboard would pick up).
-    if args.reuse_baseline:
-        prior = Path(args.reuse_baseline)
-        reuse_err = None
-        if not prior.is_dir():
-            reuse_err = f"--reuse-baseline: {prior} is not a run dir (no such directory)"
-        else:
-            for name in ("splits.json", "baseline.json"):
-                if not (prior / name).is_file():
-                    reuse_err = f"--reuse-baseline: {prior} is not a run dir (no {name})"
-                    break
+    # Skipped when resuming a run whose baseline already ran: that path returns early
+    # below and never reads the prior run dir, which may be cleaned up by now.
+    if args.reuse_baseline and not (args.resume and baseline_already_ran(Path(args.base), args.run_ts)):
+        reuse_err = reuse_baseline_error(Path(args.reuse_baseline))
         if reuse_err:
             print(json.dumps({"step": "baseline", "error": reuse_err}), file=sys.stderr)
             return 1

@@ -625,16 +625,6 @@ def _json_payload(text: str) -> dict:
     raise json.JSONDecodeError("no JSON object found in phase stdout", text, 0)
 
 
-def reuse_baseline_error(path: Path):
-    """Why ``path`` cannot be used for --reuse-baseline, or None when it can."""
-    if not path.is_dir():
-        return f"--reuse-baseline: {path} is not a run dir (no such directory)"
-    for name in ("splits.json", "baseline.json"):
-        if not (path / name).is_file():
-            return f"--reuse-baseline: {path} is not a run dir (no {name})"
-    return None
-
-
 def _cmd_run(argv):
     import argparse
     import subprocess
@@ -718,12 +708,17 @@ def _cmd_run(argv):
         v = getattr(args, flag)
         if v is not None:
             spec[key] = v
+    # The steps run with cwd set to the project's grandparent (see `workdir` below), so
+    # a relative path must be made absolute HERE: the --reuse-baseline flag against the
+    # user's own cwd, a `reuse_baseline:` value from the yaml against that work dir
+    # (like the other spec paths, e.g. split_ids_file).
     if args.reuse_baseline is not None:
-        spec["reuse_baseline"] = args.reuse_baseline
-    if spec.get("reuse_baseline"):
-        # The steps run with cwd set to the project's grandparent (see `workdir` below),
-        # so a relative path must be made absolute HERE, against the user's own cwd.
-        spec["reuse_baseline"] = str(Path(str(spec["reuse_baseline"])).expanduser().resolve())
+        spec["reuse_baseline"] = str(Path(str(args.reuse_baseline)).expanduser().resolve())
+    elif spec.get("reuse_baseline"):
+        _yaml_reuse = Path(str(spec["reuse_baseline"])).expanduser()
+        if not _yaml_reuse.is_absolute():
+            _yaml_reuse = Path(args.project).resolve().parent.parent / _yaml_reuse
+        spec["reuse_baseline"] = str(_yaml_reuse.resolve())
 
     if _report_bad_numbers(spec):
         return 1
@@ -907,17 +902,6 @@ def _cmd_run(argv):
                           "sequence": sequence}, indent=2))
         return 0
 
-    # --reuse-baseline must name a real prior run dir. Checked before the check gate and
-    # the baseline step, so a bad path fails with a plain message and leaves no empty
-    # run_* dir behind (one that `run --resume` and the dashboard would pick up).
-    if spec.get("reuse_baseline"):
-        reuse_err = reuse_baseline_error(Path(spec["reuse_baseline"]))
-        if reuse_err:
-            print(json.dumps({"step": "baseline", "error": reuse_err}))
-            if _stderr_is_usable():
-                print(reuse_err, file=sys.stderr)
-            return 1
-
     # Hard gate: cap-evolve check must pass before any budget is spent (intake is the
     # user's job before `run`; here we enforce the check half of implement-and-check).
     from .check import run_check as _run_check
@@ -931,6 +915,9 @@ def _cmd_run(argv):
     # to reopen — the explicit --run-ts, else the latest run_* under the base — and feed
     # its ts to baseline so RunDir.create(exist_ok=True) reopens it in place.
     from .rundir import RunDir as _RunDir
+    from .rundir import baseline_already_ran as _baseline_already_ran
+    from .rundir import missing_resume_error as _missing_resume_error
+    from .rundir import reuse_baseline_error as _reuse_baseline_error
     resume_ts = args.run_ts
     if args.resume and not resume_ts:
         try:
@@ -940,16 +927,27 @@ def _cmd_run(argv):
             print(json.dumps({"step": "resume", "error": (
                 f"--resume: no run_* found under {proj_abs.parent}; pass --run-ts to name one")}))
             return 1
-    elif args.resume and not (proj_abs.parent / f"run_{resume_ts}" / "state.json").is_file():
+    elif args.resume:
         # Without this, a mistyped --run-ts would quietly start a brand-new run (new
         # split, paid baseline, full budget) instead of continuing the named one.
-        existing = sorted(p.name for p in proj_abs.parent.glob("run_*")
-                          if (p / "state.json").is_file())
-        hint = (f"; existing runs: {', '.join(existing)}" if existing
-                else "; no run_* exists there yet")
-        print(json.dumps({"step": "resume", "error": (
-            f"--resume: no run named run_{resume_ts} under {proj_abs.parent}{hint}")}))
-        return 1
+        resume_err = _missing_resume_error(proj_abs.parent, resume_ts)
+        if resume_err:
+            print(json.dumps({"step": "resume", "error": resume_err}))
+            return 1
+
+    # --reuse-baseline must name a real prior run dir. Checked before the baseline step,
+    # so a bad path fails with a plain message and leaves no empty run_* dir behind (one
+    # that `run --resume` and the dashboard would pick up). Skipped when resuming a run
+    # whose baseline already ran: baseline then returns early and never reads it, so a
+    # cleaned-up prior run dir must not block the resume.
+    if spec.get("reuse_baseline") and not (
+            args.resume and _baseline_already_ran(proj_abs.parent, resume_ts)):
+        reuse_err = _reuse_baseline_error(Path(spec["reuse_baseline"]))
+        if reuse_err:
+            print(json.dumps({"step": "baseline", "error": reuse_err}))
+            if _stderr_is_usable():
+                print(reuse_err, file=sys.stderr)
+            return 1
 
     # --follow: start tailing events.jsonl now, BEFORE baseline creates the run dir, so
     # the very first events (splits/baseline) are seen. `seen` freezes the pre-existing
