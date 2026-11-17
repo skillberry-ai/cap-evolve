@@ -171,6 +171,18 @@ def test_missing_spec_names_the_command_that_creates_it(tmp_path):
     assert err["fix"].startswith("cap-evolve init")
 
 
+def test_run_and_estimate_report_a_missing_spec_the_same_way(tmp_path):
+    """Both commands share one find-and-read-the-spec helper: same error, same output."""
+    proj = str(tmp_path / "nothing")
+    rc_run, out_run, err_run = _run("run", "--project", proj, "--dashboard", "off")
+    rc_est, out_est, err_est = _run("estimate", "--project", proj)
+    assert rc_run == rc_est == 1
+    assert json.loads(out_run) == json.loads(out_est)
+    assert json.loads(out_run)["step"] == "spec"
+    assert "no spec at" in err_run and err_run == err_est
+    assert "→ cap-evolve init" in err_run
+
+
 def test_relative_spec_resolves_under_project_for_run_and_estimate(tmp_path, monkeypatch):
     """``--spec capevolve.yaml`` means ``<project>/capevolve.yaml``, not ``<cwd>/...``."""
     from cap_evolve import cli

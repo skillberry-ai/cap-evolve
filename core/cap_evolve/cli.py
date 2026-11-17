@@ -542,6 +542,23 @@ def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]
                       "fix": f"fix the YAML, then: cap-evolve doctor --project {project}"}
 
 
+def _read_spec_or_report(spec: str | None, project: str,
+                         command: str) -> tuple[Path, dict] | None:
+    """``(spec_path, spec)`` — find and read the project's spec, or ``None``.
+
+    On ``None`` the error was already printed: the JSON error to stdout and the
+    ``{error}\\n  → {fix}`` line to stderr; the caller just exits 1.
+    """
+    spec_path, err = _resolve_spec(spec, project, command)
+    if err is None:
+        loaded, err = _load_spec(spec_path, project)
+    if err is not None:
+        print(json.dumps(err))
+        print(f"{err['error']}\n  → {err['fix']}", file=sys.stderr)
+        return None
+    return spec_path, loaded
+
+
 def _json_payload(text: str) -> dict:
     """Extract a phase subprocess's JSON payload from its captured stdout.
 
@@ -649,16 +666,10 @@ def _cmd_run(argv):
         print(json.dumps({"error": "skills dir not found; set CAPEVOLVE_SKILLS_DIR or --skills-dir"}))
         return 1
     skills = _resolve_skills(skills_dir)
-    spec_path, spec_err = _resolve_spec(args.spec, args.project)
-    if spec_err is not None:
-        print(json.dumps(spec_err))
-        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+    found = _read_spec_or_report(args.spec, args.project, "run")
+    if found is None:
         return 1
-    spec, spec_err = _load_spec(spec_path, args.project)
-    if spec_err is not None:
-        print(json.dumps(spec_err))
-        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
-        return 1
+    spec_path, spec = found
 
     # CLI budget flags override the spec (None = "not passed", leave spec value).
     for flag, key in (("max_iterations", "max_iterations"), ("max_metric_calls", "max_metric_calls"),
@@ -1441,16 +1452,10 @@ def _cmd_estimate(argv):
     for flag, val in (("--price-in", args.price_in), ("--price-out", args.price_out)):
         if val is not None and not math.isfinite(val):
             p.error(f"{flag} must be a finite number (got {val})")
-    spec_path, spec_err = _resolve_spec(args.spec, args.project, "estimate")
-    if spec_err is not None:
-        print(json.dumps(spec_err, indent=2))
-        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+    found = _read_spec_or_report(args.spec, args.project, "estimate")
+    if found is None:
         return 1
-    spec, spec_err = _load_spec(spec_path, args.project)
-    if spec_err is not None:
-        print(json.dumps(spec_err))
-        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
-        return 1
+    spec_path, spec = found
     if _report_bad_numbers(spec):
         return 1
     out = _estimate_core(spec, Path(args.project), args.price_in, args.price_out)
