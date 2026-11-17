@@ -91,7 +91,7 @@ every command grouped by what it's for.
 cap-evolve                         # home: the 3-step path + all commands
 cap-evolve init                    # scaffold a project and write capevolve.yaml
 cap-evolve doctor                  # readiness check: what's missing + the command that fixes it
-cap-evolve algorithms              # the five algorithms and the exact spec lines to pick one
+cap-evolve algorithms              # the four algorithms and the exact spec lines to pick one
 cap-evolve help <command>          # full help with copy-paste examples
 ```
 

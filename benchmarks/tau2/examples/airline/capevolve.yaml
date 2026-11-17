@@ -47,7 +47,8 @@ gate_mode: paired                        # paired (recommended) | significant | 
 gate_k_se: 0.2                           # accept gains that clear a 0.2·SE bar (on the paired SE)
 
 # --- budget -----------------------------------------------------------------
-# Run `cap-evolve estimate --spec capevolve.yaml` first to preview call counts + a
+# Run `cap-evolve estimate --project .capevolve/project` (from the repo root, after
+# setup.sh) first to preview call counts + a
 # $ range before spending. All caps below are hard stops; 0 = unlimited/off.
 max_iterations: 10          # optimizer iterations (dominant cost knob)
 stall: 0                    # run all max_iterations (do not early-stop on rejects)
