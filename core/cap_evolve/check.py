@@ -20,11 +20,18 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from .adapter import CapabilityAdapter, stub_methods
 from .types import Rollout, Task
+
+#: Who drives the run that loaded the adapter. ``load_adapter`` sets it to ``DRIVER_CAP_EVOLVE``. An optimizer outside
+#: cap-evolve imports the adapter itself, so for it the variable is unset or holds a value of its own (for example
+#: ``external:gepa``). An adapter treats every value except ``DRIVER_CAP_EVOLVE`` as an external caller.
+DRIVER_ENV = "CAPEVOLVE_DRIVER"
+DRIVER_CAP_EVOLVE = "cap-evolve"
 
 
 @dataclass
@@ -67,7 +74,12 @@ def _check_intervention(rep, project_dir: Path) -> None:
 
 
 def load_adapter(project_dir: Path) -> CapabilityAdapter:
-    """Import ``adapters/adapter.py`` and return its ``Adapter()`` instance."""
+    """Import ``adapters/adapter.py`` and return its ``Adapter()`` instance.
+
+    Every cap-evolve entry point loads the adapter here. Before the module runs, this sets ``CAPEVOLVE_DRIVER`` to
+    ``cap-evolve``, so the adapter can tell that cap-evolve, and not an external optimizer, drives the run. The value
+    is set for the whole process, and a subprocess that this process starts inherits it.
+    """
     project_dir = Path(project_dir)
     mod_path = project_dir / "adapters" / "adapter.py"
     if not mod_path.exists():
@@ -79,6 +91,7 @@ def load_adapter(project_dir: Path) -> CapabilityAdapter:
     if adir not in sys.path:
         sys.path.insert(0, adir)
 
+    os.environ[DRIVER_ENV] = DRIVER_CAP_EVOLVE
     spec = importlib.util.spec_from_file_location("forge_project_adapter", mod_path)
     mod = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
