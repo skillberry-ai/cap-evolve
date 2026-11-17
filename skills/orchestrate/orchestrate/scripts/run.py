@@ -93,7 +93,7 @@ def main(argv=None) -> int:
     spec = {}
     if spec_path.exists():
         try:
-            spec = read_yaml(spec_path.read_text(), source=args.spec)
+            spec = read_yaml(spec_path.read_text(), strict=True, source=args.spec)
         except SpecError as e:
             print(f"orchestrate: {e}", file=sys.stderr)
             return 1
