@@ -6,9 +6,9 @@ provider — configure via env vars (see model_config.py).
 
 SETUP:
   1. Get the harness code (Docker/Jupyter sandbox + prompt/scoring helpers). cap-evolve
-     vendors it as a filtered git subtree at third_party/spreadsheetbench — point at that,
-     or clone+filter upstream yourself (see third_party/spreadsheetbench/NOTICE.md):
-       SPREADSHEETBENCH_HARNESS_DIR=/path/to/cap-evolve/third_party/spreadsheetbench
+     vendors it as a filtered git subtree at benchmarks/spreadsheetbench/harness — point at that,
+     or clone+filter upstream yourself (see benchmarks/spreadsheetbench/harness/NOTICE.md):
+       SPREADSHEETBENCH_HARNESS_DIR=/path/to/cap-evolve/benchmarks/spreadsheetbench/harness
 
   2. Fetch the dataset (NOT vendored — tens of MB of xlsx files, fetched at run time):
        ci/benchmarks/spreadsheetbench/fetch_data.sh /some/cache/dir
@@ -240,7 +240,7 @@ _DEFAULT_SYSTEM_PROMPT = (Path(__file__).resolve().parent / "seed_capability" / 
 
 
 class _Vendor:
-    """Lazily-imported callables from third_party/spreadsheetbench (see SETUP)."""
+    """Lazily-imported callables from benchmarks/spreadsheetbench/harness (see SETUP)."""
 
     _mod: dict = {}
 
@@ -253,7 +253,7 @@ class _Vendor:
             raise RuntimeError(
                 "SPREADSHEETBENCH_HARNESS_DIR is not set. Point it at a checkout of "
                 "the SpreadsheetBench harness code — cap-evolve vendors one at "
-                "third_party/spreadsheetbench. See this file's SETUP docstring."
+                "benchmarks/spreadsheetbench/harness. See this file's SETUP docstring."
             )
         base = Path(HARNESS_DIR).expanduser()
         code_dir, eval_dir, inf_dir = base / "code_exec_docker", base / "evaluation", base / "inference"
@@ -510,8 +510,8 @@ def _libreoffice_bin() -> str | None:
 #
 # This wrapper adds the missing lifecycle call: a `/release` route that shuts one conv_id's
 # container down NOW. It imports the vendored handler rather than editing it, because
-# `third_party/` is a filtered subtree that must stay byte-identical to upstream for
-# `git subtree pull` to keep working (see third_party/spreadsheetbench/NOTICE.md) — and
+# `harness/` is a filtered copy of upstream that must stay byte-identical to it so it
+# can be refreshed cleanly (see benchmarks/spreadsheetbench/harness/NOTICE.md) — and
 # api.py builds its Application under `if __name__ == "__main__"`, so importing it yields
 # ExecuteHandler + cleanup_kernels with no side effect beyond module import.
 _RELEASE_SERVER = '''\
@@ -596,7 +596,7 @@ if __name__ == "__main__":
 # The vendored jupyter.py stops reading at the shell channel's execute_reply, but iopub
 # stream output travels on another socket and can arrive after it; the late output is then
 # dropped and the call returns "[Code executed successfully with no output]" (intermittent,
-# seen after long idle). third_party/ must stay byte-identical to upstream, so the staged
+# seen after long idle). harness/ must stay byte-identical to upstream, so the staged
 # copy is patched: wait for the iopub status:idle that follows the reply (5 s grace).
 _WAIT_FOR_MESSAGES_FIXED = r'''        async def wait_for_messages():
             # The kernel publishes stream/iopub output and the shell channel's

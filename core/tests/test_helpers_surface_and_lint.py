@@ -294,7 +294,7 @@ def _vendored_exec_code(monkeypatch):
     stub = types.ModuleType("jupyter_kernel_cli")
     stub.ClientJupyterKernel = object
     monkeypatch.setitem(sys.modules, "jupyter_kernel_cli", stub)
-    path = Path(__file__).resolve().parents[2] / "third_party/spreadsheetbench/inference/code_exec.py"
+    path = Path(__file__).resolve().parents[2] / "benchmarks/spreadsheetbench/harness/inference/code_exec.py"
     spec = importlib.util.spec_from_file_location("_vendored_code_exec", path)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
