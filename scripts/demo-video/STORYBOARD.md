@@ -321,7 +321,7 @@ label **"Made at"**, in the hero and again in the footer, using `site/assets/ibm
 and `site/assets/redhat-logo.svg` — both already committed. No logo was fetched from
 anywhere. Beyond that label, `docs/RESULTS.md` states as fact that the runner and user
 simulator were served **via IBM RITS** and **via an IBM ete litellm proxy**, and that other
-runs used **Qwen 2.5 14B via vLLM on Red Hat OpenShift**. `presentation/README.md` refers to
+runs used **Qwen 2.5 14B via vLLM on Red Hat OpenShift**. `docs/management-presentation/README.md` refers to
 "Working with Red Hat (Parsec PoC + head-to-head)". The git identity on this work is an
 `@ibm.com` address.
 
