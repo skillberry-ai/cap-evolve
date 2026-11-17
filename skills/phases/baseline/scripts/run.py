@@ -111,6 +111,22 @@ def main(argv=None) -> int:
             f"--resume: no run named run_{args.run_ts} under {args.base}{hint}")}), file=sys.stderr)
         return 1
 
+    # --reuse-baseline must name a real prior run dir; check it before RunDir.create so a
+    # bad path leaves no empty run_* behind (one `--resume` and the dashboard would pick up).
+    if args.reuse_baseline:
+        prior = Path(args.reuse_baseline)
+        reuse_err = None
+        if not prior.is_dir():
+            reuse_err = f"--reuse-baseline: {prior} is not a run dir (no such directory)"
+        else:
+            for name in ("splits.json", "baseline.json"):
+                if not (prior / name).is_file():
+                    reuse_err = f"--reuse-baseline: {prior} is not a run dir (no {name})"
+                    break
+        if reuse_err:
+            print(json.dumps({"step": "baseline", "error": reuse_err}), file=sys.stderr)
+            return 1
+
     Path(args.base).mkdir(parents=True, exist_ok=True)
     budget = Budget(max_iterations=args.max_iterations, stall=args.stall,
                     max_metric_calls=args.max_metric_calls, max_usd=args.max_usd,

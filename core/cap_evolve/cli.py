@@ -613,6 +613,16 @@ def _json_payload(text: str) -> dict:
     raise json.JSONDecodeError("no JSON object found in phase stdout", text, 0)
 
 
+def reuse_baseline_error(path: Path):
+    """Why ``path`` cannot be used for --reuse-baseline, or None when it can."""
+    if not path.is_dir():
+        return f"--reuse-baseline: {path} is not a run dir (no such directory)"
+    for name in ("splits.json", "baseline.json"):
+        if not (path / name).is_file():
+            return f"--reuse-baseline: {path} is not a run dir (no {name})"
+    return None
+
+
 def _cmd_run(argv):
     import argparse
     import subprocess
@@ -698,6 +708,10 @@ def _cmd_run(argv):
             spec[key] = v
     if args.reuse_baseline is not None:
         spec["reuse_baseline"] = args.reuse_baseline
+    if spec.get("reuse_baseline"):
+        # The steps run with cwd set to the project's grandparent (see `workdir` below),
+        # so a relative path must be made absolute HERE, against the user's own cwd.
+        spec["reuse_baseline"] = str(Path(str(spec["reuse_baseline"])).expanduser().resolve())
 
     if _report_bad_numbers(spec):
         return 1
@@ -880,6 +894,17 @@ def _cmd_run(argv):
                                      "optimizer_max_turns": spec.get("optimizer_max_turns", 0)},
                           "sequence": sequence}, indent=2))
         return 0
+
+    # --reuse-baseline must name a real prior run dir. Checked before the check gate and
+    # the baseline step, so a bad path fails with a plain message and leaves no empty
+    # run_* dir behind (one that `run --resume` and the dashboard would pick up).
+    if spec.get("reuse_baseline"):
+        reuse_err = reuse_baseline_error(Path(spec["reuse_baseline"]))
+        if reuse_err:
+            print(json.dumps({"step": "baseline", "error": reuse_err}))
+            if _stderr_is_usable():
+                print(reuse_err, file=sys.stderr)
+            return 1
 
     # Hard gate: cap-evolve check must pass before any budget is spent (intake is the
     # user's job before `run`; here we enforce the check half of implement-and-check).
