@@ -1217,13 +1217,18 @@ _EXT_GATE_CONFIGS: dict[tuple, tuple | None] = {}
 _EXT_GATE_SKIP_NOTED = False                # the "skipped inside a cap-evolve run" line is printed once per process
 
 
-class HelperGateConfigError(RuntimeError):
+class HelperGateConfigError(BaseException):
     """CAPEVOLVE_HELPERS_SPEC is set but the helper gate cannot run. The run's fault, not a candidate's.
 
     Raised when the Adapter is created, from live() and from run_target. A caller that fails at Adapter() stops
     before its first rollout. If the config breaks later, run_target raises too, and a caller that runs rollouts in
-    a thread pool sees the error when it collects the results. It is never scored 0, and it is never returned as an
-    infrastructure rollout, which a caller would retry and then drop as missing data."""
+    a thread pool sees the error when it collects the results. It is never returned as an infrastructure rollout,
+    which a caller would retry and then drop as missing data.
+
+    A BaseException, not an Exception: some external optimizers catch every Exception (GEPA with
+    raise_on_exception=False goes on to the next iteration; EvoSkill scores it 0), and the error must stop them too.
+    recipes/evoskill/evoskill_port.py uses the same pattern for its BudgetExhausted. Inside a cap-evolve run the
+    external gate is off, so cap-evolve's own handlers never see this error."""
 
 
 def _external_gate_config() -> tuple | None:
@@ -1705,8 +1710,8 @@ def _replay_code(solution_code: str, input_name: str, case_input_name: str,
 class Adapter(CapabilityAdapter):
 
     def __init__(self) -> None:
-        # An external caller's helper gate config is checked here, before its first rollout: every caller turns a
-        # raise from run_target into a per-trial error, so this is where a broken config can stop the run.
+        # An external caller's helper gate config is checked here: this is the earliest place a broken config can
+        # stop the run, before the first rollout. run_target raises it too, if the config breaks later.
         _external_gate_config()
 
     # ---- tasks -------------------------------------------------------------

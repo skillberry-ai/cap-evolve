@@ -36,5 +36,7 @@ that call `run_target` themselves, without a cap-evolve loop.
 - **A refused candidate** scores 0 on each rollout (`error_kind=candidate`, no LLM call). The caller still pays its
   own budget for those rollouts.
 - **A config the gate cannot run on** raises `HelperGateConfigError` from `Adapter()`, `live()` and `run_target`: the
-  spec enables helpers but `CAPEVOLVE_HELPERS` is unset, no seed, an unreadable `ids_file`. It is never scored 0 and
-  never returned as an infra rollout, which a caller would retry and then drop as missing data.
+  spec enables helpers but `CAPEVOLVE_HELPERS` is unset, no seed, an unreadable `ids_file`. It is never returned as
+  an infra rollout, which a caller would retry and then drop as missing data. It derives from `BaseException`, so a
+  caller that catches every `Exception` (GEPA with `raise_on_exception=False`, EvoSkill) does not swallow it or score
+  it 0.

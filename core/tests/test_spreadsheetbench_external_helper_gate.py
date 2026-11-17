@@ -221,6 +221,37 @@ def test_run_target_raises_when_the_config_breaks_mid_run(on, tmp_path, monkeypa
         adapter.run_target(_task(on), _tree(tmp_path / "c", CLEAN), seed=0)
 
 
+def _broken_mid_run(on, tmp_path, monkeypatch):
+    """An adapter whose gate config was fine at Adapter() and broke afterwards (the ids_file was deleted)."""
+    adapter = on.Adapter()
+    (Path(os.environ["CAPEVOLVE_HELPERS_SPEC"]).parent / "ids.txt").unlink()
+    monkeypatch.setattr(on, "_task_template_error", lambda ctx: None)
+    return adapter, _tree(tmp_path / "c", CLEAN)
+
+
+def test_a_config_error_passes_a_caller_that_catches_exception(on, tmp_path, monkeypatch, no_llm):
+    # GEPA with raise_on_exception=False, and EvoSkill (which scores an Exception 0), catch every Exception. The
+    # config error must still stop them, so it is not an Exception.
+    adapter, cand = _broken_mid_run(on, tmp_path, monkeypatch)
+
+    def caller():
+        try:
+            return adapter.run_target(_task(on), cand, seed=0)
+        except Exception:  # noqa: BLE001 - this is what the caller under test does
+            return "swallowed"
+
+    with pytest.raises(on.HelperGateConfigError, match="ids_file"):
+        caller()
+
+
+def test_a_config_error_reaches_a_thread_pool_caller(on, tmp_path, monkeypatch, no_llm):
+    # CommonRollout runs run_target in a ThreadPoolExecutor and collects the results with map().
+    from concurrent.futures import ThreadPoolExecutor
+    adapter, cand = _broken_mid_run(on, tmp_path, monkeypatch)
+    with ThreadPoolExecutor(max_workers=2) as ex, pytest.raises(on.HelperGateConfigError):
+        list(ex.map(lambda s: adapter.run_target(_task(on), cand, seed=s), range(3)))
+
+
 def test_an_unreadable_helper_file_is_the_candidates_fault(on, tmp_path):
     cand = _tree(tmp_path / "c", CLEAN)
     f = cand / "skills" / "spreadsheet-helpers" / "scripts" / "h.py"
