@@ -816,3 +816,39 @@ def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):
     cfg = reduce_run(rd)["summary"]["config"]
     assert cfg["spec_missing"] is True
     assert [f["path"] for f in cfg["files"]] == ["adapters/adapter.py"]
+
+
+def test_broken_project_spec_does_not_crash_reduce_or_export(tmp_path, capsys):
+    """A YAML syntax error in the project's capevolve.yaml must not crash the reducer
+    or `dashboard --export` (which would leave the run with no dashboard and drop it
+    from the hub). The spec is shown empty and the error is recorded with file + line."""
+    from cap_evolve import cli, dashboard
+    proj = _mk_project(tmp_path)
+    spec = proj / "capevolve.yaml"
+    spec.write_text('max_usd: "5\nsplits: [a, b\n', encoding="utf-8")
+    rd = _mk_run(tmp_path, events=_BASE_EVENTS, baseline=_BASELINE)
+
+    r = dashboard.reduce_run(rd)
+    cfg = r["summary"]["config"]
+    assert cfg["project_dir"] == str(proj)
+    assert cfg["spec_missing"] is False
+    assert cfg["spec_error"] and str(spec) in cfg["spec_error"]
+    assert "line" in cfg["spec_error"]
+    # no spec values leaked in from a lenient re-read; only the default intervention
+    keys = {i["key"] for g in cfg["spec_groups"] for i in g["items"]}
+    assert keys == {"intervention"}
+    _parse_html(dashboard.render_html(r, rd))
+
+    rc = cli.main(["dashboard", "--export", str(rd.root)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "Traceback" not in captured.err
+    out = json.loads(captured.out.strip().splitlines()[-1])
+    assert Path(out["dashboard_html"]).exists()
+
+
+def test_good_project_spec_has_no_spec_error(tmp_path):
+    from cap_evolve import dashboard
+    _mk_project(tmp_path)
+    rd = _mk_run(tmp_path, events=_BASE_EVENTS, baseline=_BASELINE)
+    assert dashboard.reduce_run(rd)["summary"]["config"]["spec_error"] is None

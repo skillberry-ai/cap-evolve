@@ -1216,10 +1216,21 @@ def _read_config(run_dir) -> dict:
     from . import specfile
     spec_file = specfile.resolve_spec_path(run_dir, project_dir)
     spec = {}
+    spec_error = None
     if spec_file is not None:
+        # A bad spec must never crash the reducer or hide the run (same rule as
+        # ``specfile.spec_for_run``): show the run with an empty spec and record why.
         try:
-            spec = specfile.read_yaml(spec_file.read_text(encoding="utf-8")) or {}
-        except OSError:
+            spec = specfile.read_yaml(spec_file.read_text(encoding="utf-8"),
+                                      source=str(spec_file), strict=True) or {}
+        except OSError as e:
+            spec = {}
+            spec_error = f"could not read {spec_file}: {e}"
+        except Exception as e:  # noqa: BLE001 - SpecError or any other parse failure
+            spec = {}
+            spec_error = str(e)
+        if not isinstance(spec, dict):
+            spec_error = spec_error or f"{spec_file} is not a YAML mapping"
             spec = {}
     groups: dict[str, list] = {}
     # `intervention` absent means direct, so render that rather than nothing: two runs of one
@@ -1238,7 +1249,7 @@ def _read_config(run_dir) -> dict:
 
     skip = {"PROJECT.md"} | ({spec_file.name} if spec_file is not None else {"capevolve.yaml"})
     files = _read_project_files(project_dir, skip)
-    if not spec_groups and not project_md and not files:
+    if not spec_groups and not project_md and not files and not spec_error:
         return {}
     return {
         "project_dir": str(project_dir),
@@ -1246,6 +1257,10 @@ def _read_config(run_dir) -> dict:
         # --spec nor project/capevolve.yaml). The section says so and still lists the
         # artifacts that ARE there, instead of disappearing without explanation.
         "spec_missing": spec_file is None,
+        # The spec file exists but could not be read/parsed (e.g. a YAML syntax error):
+        # the message names the file and line, so the panel can say so instead of
+        # showing a quietly empty spec. ``None`` when the spec read fine.
+        "spec_error": spec_error,
         "spec_groups": spec_groups,
         "project_md": project_md,
         "files": files,
