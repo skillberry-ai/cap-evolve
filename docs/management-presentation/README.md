@@ -1,4 +1,4 @@
-# cap-evolve — Management review presentation
+# cap-evolve — Management presentation
 
 17-slide HTML deck for the cap-evolve management review.
 Framework: [Reveal.js 5.1](https://revealjs.com) (vendored, offline-safe).
@@ -7,10 +7,10 @@ Framework: [Reveal.js 5.1](https://revealjs.com) (vendored, offline-safe).
 
 ```bash
 # Simplest — open directly in a browser
-open presentation/index.html         # macOS
+open docs/management-presentation/index.html         # macOS
 
 # Or serve locally (recommended)
-python3 -m http.server 8000 -d presentation
+python3 -m http.server 8000 -d docs/management-presentation
 # → http://localhost:8000
 ```
 
@@ -71,7 +71,7 @@ line. Grep for `⚠` or `TO CONFIRM` in `index.html`. Current placeholders:
 ## File layout
 
 ```
-presentation/
+docs/management-presentation/
 ├── README.md                        # this file
 ├── index.html                       # the deck — all slides inline
 └── reveal/                          # vendored Reveal.js 5.1

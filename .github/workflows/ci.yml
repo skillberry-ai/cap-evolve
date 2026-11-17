@@ -276,7 +276,7 @@ jobs:
         uses: codespell-project/actions-codespell@v2
         with:
           path: README.md docs
-          skip: docs/sources.bib,docs/assets,docs/superpowers,*.diff,*.patch,*.jsonl
+          skip: docs/sources.bib,docs/assets,docs/superpowers,docs/management-presentation/reveal,*.diff,*.patch,*.jsonl
           ignore_words_list: nd,te,ba,alls,ist,fo,ans,crate,ede,hel,optimizer,capevolve,noteb,fpr
 
 # Made with Bob
