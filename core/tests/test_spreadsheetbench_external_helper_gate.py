@@ -6,8 +6,8 @@ SAME gate when ``CAPEVOLVE_HELPERS_SPEC`` names a spec. What is proved here:
 
 * it is off unless ``CAPEVOLVE_HELPERS_SPEC`` is set (every run so far), and then nothing changes;
 * its verdict is the shared gate's, for a clean, a leaking and a broken helper;
-* a config that cannot run stops the caller at ``Adapter()`` / ``live()``, and is an infra error (never a 0) in
-  ``run_target``: the agent not loading the helpers the gate checks, no ``CAPEVOLVE_HELPERS_SEED``, an unreadable
+* a config that cannot run stops the caller: it raises at ``Adapter()``, in ``live()`` and in ``run_target`` (never
+  a 0, and never an infra rollout that a caller would retry and then drop as missing data): the agent not loading the helpers the gate checks, no ``CAPEVOLVE_HELPERS_SEED``, an unreadable
   ``ids_file``, an invalid ``helpers:`` table;
 * the verdict cache: one check per distinct tree, reset by anything the verdict depends on (any file of the
   tree, the config, the ids_file bytes, the seed), with a lock per tree so other trees are not blocked;
@@ -211,13 +211,14 @@ def test_run_target_scores_a_refused_candidate_0_without_an_llm_call(on, tmp_pat
     assert r.metadata == {"error_kind": "candidate", "helper_gate": "failed"}
 
 
-def test_run_target_reports_a_config_broken_mid_run_as_infra_not_as_a_0(on, tmp_path, monkeypatch, no_llm):
+def test_run_target_raises_when_the_config_breaks_mid_run(on, tmp_path, monkeypatch, no_llm):
+    # run_target has an outer ``except Exception`` that turns any error into a rollout without error_kind, which
+    # an external caller counts as infra and retries. The config error must pass through it and stop the caller.
     adapter = on.Adapter()
     (Path(os.environ["CAPEVOLVE_HELPERS_SPEC"]).parent / "ids.txt").unlink()
     monkeypatch.setattr(on, "_task_template_error", lambda ctx: None)
-    r = adapter.run_target(_task(on), _tree(tmp_path / "c", CLEAN), seed=0)
-    assert r.error.startswith("HELPER_GATE_CONFIG_ERROR") and "ids_file" in r.error
-    assert r.metadata == {"error_kind": "infra", "helper_gate": "config_error"}
+    with pytest.raises(on.HelperGateConfigError, match="ids_file"):
+        adapter.run_target(_task(on), _tree(tmp_path / "c", CLEAN), seed=0)
 
 
 def test_an_unreadable_helper_file_is_the_candidates_fault(on, tmp_path):

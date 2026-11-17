@@ -1220,9 +1220,10 @@ _EXT_GATE_SKIP_NOTED = False                # the "skipped inside a cap-evolve r
 class HelperGateConfigError(RuntimeError):
     """CAPEVOLVE_HELPERS_SPEC is set but the helper gate cannot run. The run's fault, not a candidate's.
 
-    Raised when the Adapter is created and from live(), so a caller fails before its first rollout; run_target
-    returns it as an infrastructure error (retried, never scored 0), because every caller turns a raise from
-    run_target into a per-trial error."""
+    Raised when the Adapter is created, from live() and from run_target. A caller that fails at Adapter() stops
+    before its first rollout. If the config breaks later, run_target raises too, and a caller that runs rollouts in
+    a thread pool sees the error when it collects the results. It is never scored 0, and it is never returned as an
+    infrastructure rollout, which a caller would retry and then drop as missing data."""
 
 
 def _external_gate_config() -> tuple | None:
@@ -1777,12 +1778,9 @@ class Adapter(CapabilityAdapter):
                                metadata={"error_kind": "candidate"})
 
             # The helper gate for optimizers that call run_target directly (off unless CAPEVOLVE_HELPERS_SPEC is
-            # set; cap-evolve's own loops gate before any rollout). A broken gate config is the run's fault.
-            try:
-                gate_error = _external_gate_error(ctx)
-            except HelperGateConfigError as e:
-                return Rollout(task_id=task.id, error=f"HELPER_GATE_CONFIG_ERROR: {e}",
-                               metadata={"error_kind": "infra", "helper_gate": "config_error"})
+            # set; cap-evolve's own loops gate before any rollout). A broken gate config is the run's fault: the
+            # HelperGateConfigError is not caught here, and the handler at the end of this method lets it through.
+            gate_error = _external_gate_error(ctx)
             if gate_error:
                 return Rollout(task_id=task.id, error=gate_error,
                                metadata={"error_kind": "candidate", "helper_gate": "failed"})
@@ -2027,6 +2025,10 @@ class Adapter(CapabilityAdapter):
                 tokens=tokens,
                 metadata=meta,
             )
+        except HelperGateConfigError:
+            # The run's fault, not this rollout's. The handler below would turn it into a rollout without
+            # error_kind, which a caller counts as infra, retries and then drops as missing data.
+            raise
         except Exception as e:  # noqa: BLE001
             return Rollout(task_id=task.id, error=f"run_target failed: {e}")
         finally:
