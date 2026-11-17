@@ -437,6 +437,51 @@ def _persist_gepa_state(run_dir: RunDir, *, lineage: dict, accepts: int,
         "comp_cursor": comp_cursor, "steps": n_steps}, indent=2))
 
 
+class GepaStateError(SystemExit):
+    """``gepa_state.json`` can't be used for ``--resume``.
+
+    A ``SystemExit`` subclass so the gepa skill's process stops with exit 1 and just
+    the message on stderr (no traceback), the way other resume errors read.
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self) -> str:
+        return self.message
+
+
+def _read_gepa_state(state_path: Path) -> dict:
+    """Load ``gepa_state.json`` for resume, or stop with a plain error.
+
+    A crash can leave the file truncated or garbled. Falling back to a seed-only pool
+    would quietly drop the saved lineage, so instead name the file and the way out.
+    """
+    def _fail(why: str) -> GepaStateError:
+        return GepaStateError(
+            f"--resume: {state_path} {why}, so the GEPA search state (pool, lineage, "
+            f"counters) can't be restored. Restore that file from a backup, or delete it "
+            f"to resume from the seed only (accepted candidates are then dropped from the "
+            f"pool), or start a new run without --resume.")
+    try:
+        raw = state_path.read_bytes()
+    except OSError as e:
+        raise _fail(f"can't be read ({e.strerror or e})") from None
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise _fail("is not UTF-8 text") from None
+    try:
+        st = json.loads(text)
+    except ValueError as e:
+        raise _fail(f"is not valid JSON ({e})") from None
+    if not isinstance(st, dict):
+        kind = {list: "array", str: "string", bool: "boolean"}.get(type(st), type(st).__name__)
+        raise _fail(f"holds a JSON {kind}, not the expected object")
+    return st
+
+
 def _reconstruct_gepa(run_dir: RunDir, seed_val: SplitResult):
     """Rebuild (pool, lineage, accepts, merges_done, comp_cursor, step_offset).
 
@@ -445,7 +490,7 @@ def _reconstruct_gepa(run_dir: RunDir, seed_val: SplitResult):
     persisted rollouts (no re-eval). A candidate whose snapshot is missing (a torn
     accept) is skipped so the frontier stays consistent. No ``gepa_state.json`` (an
     older run, or a crash before the first checkpoint) → seed-only pool, i.e. exactly
-    today's fresh behavior.
+    today's fresh behavior. An unreadable or invalid one stops with ``GepaStateError``.
     """
     seed_dir = run_dir.candidate_dir("seed")
     pool: list[dict] = [_entry("seed", seed_dir, seed_val, parent=None)]
@@ -453,7 +498,7 @@ def _reconstruct_gepa(run_dir: RunDir, seed_val: SplitResult):
     state_path = run_dir.root / "gepa_state.json"
     if not state_path.exists():
         return pool, lineage, 0, 0, 0, 0
-    st = json.loads(state_path.read_text(encoding="utf-8"))
+    st = _read_gepa_state(state_path)
     for cid, parent in (st.get("lineage") or {}).items():
         if cid == "seed":
             continue

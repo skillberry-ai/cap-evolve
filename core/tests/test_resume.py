@@ -306,3 +306,37 @@ def test_existing_run_error_helper(tmp_path):
     assert existing_run_error(tmp_path, "x") is None
     (tmp_path / "run_x").mkdir()
     assert "run_x already exists" in existing_run_error(tmp_path, "x")
+
+
+# ---- gepa --resume on a corrupt gepa_state.json ---------------------------
+
+_BAD_GEPA_STATES = {"truncated": '{"lineage":', "not_an_object": "[]",
+                    "not_utf8": b"\xff\xfe{}"}
+
+
+@pytest.mark.parametrize("kind", sorted(_BAD_GEPA_STATES))
+def test_gepa_resume_corrupt_state_stops_with_clear_error(tmp_path, kind):
+    run_dir, _ = _gepa_run(tmp_path, "grbad", max_metric_calls=200, max_iterations=2)
+    state = run_dir.root / "gepa_state.json"
+    bad = _BAD_GEPA_STATES[kind]
+    state.write_bytes(bad if isinstance(bad, bytes) else bad.encode())
+
+    # In-process: a clean SystemExit naming the file and the way out, never a
+    # silent seed-only pool (that would drop the saved lineage without a word).
+    with pytest.raises(SystemExit) as ei:
+        _gepa_run(tmp_path, "grbad", resume=True, max_metric_calls=200, max_iterations=4)
+    msg = str(ei.value)
+    assert str(state) in msg and "--resume" in msg
+    assert "delete" in msg or "restore" in msg
+
+    # As a process (how the gepa skill runs it): exit 1, the message, no traceback.
+    code = (
+        "import sys; sys.path.insert(0, sys.argv[1])\n"
+        "from cap_evolve import RunDir, gepa\n"
+        "rd = RunDir.open(sys.argv[2])\n"
+        "gepa._reconstruct_gepa(rd, gepa.split_result_from_rollouts(rd, 'seed', 'val'))\n")
+    proc = subprocess.run([sys.executable, "-c", code, str(CORE), str(run_dir.root)],
+                          capture_output=True, text=True, timeout=60)
+    assert proc.returncode == 1
+    assert "Traceback" not in proc.stderr
+    assert "gepa_state.json" in proc.stderr
