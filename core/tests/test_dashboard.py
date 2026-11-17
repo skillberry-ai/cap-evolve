@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
 sys.path.insert(0, str(CORE))
@@ -845,6 +847,25 @@ def test_broken_project_spec_does_not_crash_reduce_or_export(tmp_path, capsys):
     assert "Traceback" not in captured.err
     out = json.loads(captured.out.strip().splitlines()[-1])
     assert Path(out["dashboard_html"]).exists()
+
+
+@pytest.mark.parametrize("events", [
+    [{"kind": "intake", "note": "started"}],
+    [{"kind": "run_config", "algorithm": "agent-optimize"}, {"kind": "intake", "note": "started"}],
+], ids=["no-algorithm-label", "algorithm-label"])
+def test_non_utf8_project_spec_does_not_crash_reduce(tmp_path, events):
+    """A capevolve.yaml that is not UTF-8 must not crash the reducer (which would
+    hide the run from the web list and show a stack trace elsewhere). The spec is
+    treated as unreadable, just like a missing one."""
+    from cap_evolve import dashboard
+    proj = tmp_path / "project"
+    proj.mkdir()
+    (proj / "capevolve.yaml").write_bytes(b"\xff\xfe")
+    rd = _mk_run(tmp_path, events=events)
+    r = dashboard.reduce_run(rd)
+    assert r["summary"] is not None
+    assert dashboard._algorithm_from_spec(rd.root) is None
+    assert dashboard._orchestration_mode(rd.root) is None
 
 
 def test_good_project_spec_has_no_spec_error(tmp_path):

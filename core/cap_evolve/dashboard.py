@@ -584,7 +584,8 @@ def _algorithm_from_spec(root: Path) -> str | None:
                     val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
                     if val:
                         return val
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            # unreadable or not UTF-8: treat it like a missing spec, never crash
             continue
     return None
 
@@ -693,7 +694,8 @@ def _orchestration_mode(root: Path) -> str | None:
                     val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
                     if val:
                         return val
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            # unreadable or not UTF-8: treat it like a missing spec, never crash
             continue
     return None
 
