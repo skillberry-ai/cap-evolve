@@ -93,3 +93,82 @@ def test_resolve_spec_path_prefers_the_run_s_own_recorded_spec():
             '{"kind": "run_config", "spec": "%s"}\n' % variant, encoding="utf-8")
         assert resolve_spec_path(_RD, project) == variant
         assert spec_for_run(_RD, project)["gate_mode"] == "pareto"
+
+
+# ---- invalid YAML must be reported, never silently misread ---------------------
+
+import io
+import json
+import sys
+from contextlib import redirect_stderr, redirect_stdout
+
+import pytest
+
+from cap_evolve.specfile import SpecError
+
+_BROKEN = 'algorithm_skill: hill-climb\nmax_usd: "5\nsplits: [a, b\n'
+
+
+def test_malformed_yaml_raises_with_line_number():
+    with pytest.raises(SpecError) as ei:
+        read_yaml("a: 1\nsplits: [a, b\n", source="capevolve.yaml")
+    e = ei.value
+    assert e.line == 3
+    assert "capevolve.yaml" in str(e) and "line 3" in str(e)
+
+
+def test_unclosed_quote_names_the_line_it_was_opened_on():
+    with pytest.raises(SpecError) as ei:
+        read_yaml(_BROKEN, source="capevolve.yaml")
+    assert ei.value.line is not None
+    assert "opened at line 2" in str(ei.value)
+
+
+def test_tab_indent_raises():
+    with pytest.raises(SpecError) as ei:
+        read_yaml("a: 1\n\tb: 2\n")
+    assert ei.value.line == 2
+
+
+def test_valid_yaml_still_parses():
+    assert read_yaml('max_usd: 5\nsplits: [a, b]\nname: "x"\n') == {
+        "max_usd": 5, "splits": ["a", "b"], "name": "x"}
+
+
+def test_fallback_reader_used_only_without_pyyaml(monkeypatch):
+    monkeypatch.setitem(sys.modules, "yaml", None)  # `import yaml` -> ImportError
+    assert read_yaml("max_usd: 5\nsplits: [a, b]\nnested:\n  k: v\n") == {
+        "max_usd": 5, "splits": ["a", "b"], "nested": {"k": "v"}}
+
+
+def _broken_project(tmp_path):
+    proj = tmp_path / ".capevolve" / "project"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "capevolve.yaml").write_text(_BROKEN, encoding="utf-8")
+    return proj
+
+
+def test_doctor_fails_the_spec_row_on_broken_yaml(tmp_path):
+    from cap_evolve.cli import _doctor_checks
+    rows = {r["name"]: r for r in _doctor_checks(_broken_project(tmp_path))}
+    assert rows["spec"]["status"] == "fail"
+    assert "invalid YAML" in rows["spec"]["detail"] and "line" in rows["spec"]["detail"]
+
+
+def test_check_reports_broken_yaml_as_a_problem(tmp_path):
+    from cap_evolve import check
+    rep = check.run_check(_broken_project(tmp_path))
+    assert not rep.ok
+    assert any("invalid YAML" in p for p in rep.problems)
+
+
+def test_run_refuses_a_broken_spec_without_a_traceback(tmp_path):
+    from cap_evolve import cli
+    proj = _broken_project(tmp_path)
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        rc = cli.main(["run", "--project", str(proj)])
+    assert rc == 1
+    payload = json.loads(out.getvalue().strip().splitlines()[-1])
+    assert payload["step"] == "spec" and "invalid YAML" in payload["error"]
+    assert "Traceback" not in err.getvalue()

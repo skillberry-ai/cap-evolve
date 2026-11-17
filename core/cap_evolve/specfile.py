@@ -79,12 +79,50 @@ def _strip_comment(line: str) -> str:
     return out
 
 
-def read_yaml(text: str) -> dict:
+class SpecError(ValueError):
+    """A YAML document (e.g. ``capevolve.yaml``) has a syntax error.
+
+    Raised instead of quietly falling back to the minimal reader: that reader never
+    fails, so a broken spec (unclosed quote/bracket, a tab) used to turn into WRONG
+    values — e.g. ``max_usd: "5`` read as the string ``'"5'`` — and every check said ok.
+    ``line`` is 1-based, or ``None`` when PyYAML did not report a position.
+    """
+
+    def __init__(self, message: str, *, source: str | None = None, line: int | None = None):
+        self.source = source
+        self.line = line
+        where = source or "YAML"
+        if line is not None:
+            where = f"{where}, line {line}"
+        super().__init__(f"invalid YAML in {where}: {message}")
+
+
+def read_yaml(text: str, source: str | None = None) -> dict:
+    """Parse ``text``. Raises ``SpecError`` (with the line number) on a YAML syntax error.
+
+    The minimal fallback reader is used ONLY when PyYAML is not installed. ``source``
+    (e.g. the file path) is named in the error message.
+    """
     try:
         import yaml  # type: ignore
-        return yaml.safe_load(text) or {}
-    except Exception:
-        pass
+    except ImportError:
+        yaml = None
+    if yaml is not None:
+        try:
+            return yaml.safe_load(text) or {}
+        except yaml.YAMLError as e:
+            pmark = getattr(e, "problem_mark", None)
+            cmark = getattr(e, "context_mark", None)
+            mark = pmark or cmark
+            line = mark.line + 1 if mark is not None else None
+            problem = getattr(e, "problem", None) or str(e).splitlines()[0]
+            context = getattr(e, "context", None)
+            msg = f"{context}; {problem}" if context else str(problem)
+            if cmark is not None and pmark is not None and cmark.line != pmark.line:
+                # e.g. an unclosed quote: the error surfaces at end of file, but the
+                # line the user must fix is where the quote/bracket was opened.
+                msg += f" (opened at line {cmark.line + 1})"
+            raise SpecError(msg, source=source, line=line) from e
     data: dict = {}
     # stack entries: (indent, container, kind) — kind is "map" (container is a dict,
     # grown by "key: val" lines) or "seq" (container is a list, grown by "- " lines).
@@ -153,7 +191,7 @@ def read_frontmatter(md_path: Path) -> dict:
     if not txt.startswith("---"):
         return {}
     end = txt.find("\n---", 3)
-    return read_yaml(txt[3:end]) if end != -1 else {}
+    return read_yaml(txt[3:end], source=str(md_path)) if end != -1 else {}
 
 
 def resolve_project_path(project, value) -> Path:

@@ -507,6 +507,21 @@ def _resolve_spec(spec: str | None, project: str) -> tuple[Path | None, dict | N
     return path, None
 
 
+def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]:
+    """``(spec, error)`` — parse the resolved spec, or an error dict on invalid YAML.
+
+    A broken spec must stop the run with a clear message (file + line), not a
+    traceback and never a silent misread: the spec holds the spending limit.
+    """
+    from .specfile import SpecError, read_yaml
+    try:
+        return read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path)), None
+    except SpecError as e:
+        return None, {"step": "spec", "error": str(e), "spec": str(spec_path),
+                      "line": e.line,
+                      "fix": f"fix the YAML, then: cap-evolve doctor --project {project}"}
+
+
 def _json_payload(text: str) -> dict:
     """Extract a phase subprocess's JSON payload from its captured stdout.
 
@@ -547,7 +562,6 @@ def _json_payload(text: str) -> dict:
 def _cmd_run(argv):
     import argparse
     import subprocess
-    from .specfile import read_yaml
 
     p = argparse.ArgumentParser(prog="cap-evolve run",
         description=_summary("run"),
@@ -619,7 +633,11 @@ def _cmd_run(argv):
         print(json.dumps(spec_err))
         print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
         return 1
-    spec = read_yaml(spec_path.read_text(encoding="utf-8"))
+    spec, spec_err = _load_spec(spec_path, args.project)
+    if spec_err is not None:
+        print(json.dumps(spec_err))
+        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+        return 1
 
     # CLI budget flags override the spec (None = "not passed", leave spec value).
     for flag, key in (("max_iterations", "max_iterations"), ("max_metric_calls", "max_metric_calls"),
@@ -1369,7 +1387,6 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
 def _cmd_estimate(argv):
     """Pre-run cost estimate without spending anything."""
     import argparse
-    from .specfile import read_yaml
 
     p = argparse.ArgumentParser(prog="cap-evolve estimate",
         description=_summary("estimate"),
@@ -1386,7 +1403,11 @@ def _cmd_estimate(argv):
         print(json.dumps(spec_err, indent=2))
         print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
         return 1
-    spec = read_yaml(spec_path.read_text(encoding="utf-8"))
+    spec, spec_err = _load_spec(spec_path, args.project)
+    if spec_err is not None:
+        print(json.dumps(spec_err))
+        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+        return 1
     out = _estimate_core(spec, Path(args.project), args.price_in, args.price_out)
     out["spec_path"] = str(spec_path)
     print(json.dumps(out, indent=2))
@@ -1491,9 +1512,11 @@ def _doctor_checks(project: Path) -> list[dict]:
         add("spec", "fail", f"no {spec_path}", f"cap-evolve init --project {project}")
         return rows
     try:
-        spec = read_yaml(spec_path.read_text(encoding="utf-8")) or {}
+        spec = read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path)) or {}
     except Exception as e:  # noqa: BLE001
-        add("spec", "fail", f"{spec_path} is unreadable: {e!r}",
+        from .specfile import SpecError
+        detail = str(e) if isinstance(e, SpecError) else f"{spec_path} is unreadable: {e!r}"
+        add("spec", "fail", detail,
             f"fix the YAML, then: cap-evolve doctor --project {project}")
         return rows
     add("spec", "ok", str(spec_path))

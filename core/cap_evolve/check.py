@@ -54,7 +54,7 @@ def _check_intervention(rep, project_dir: Path) -> None:
         return
     try:
         spec = read_yaml(spec_path.read_text(encoding="utf-8")) or {}
-    except Exception:  # a broken spec is reported by other checks
+    except Exception:  # a broken spec is reported by _check_spec_syntax
         return
     try:
         rt = _intervention.declared(spec)
@@ -64,6 +64,25 @@ def _check_intervention(rep, project_dir: Path) -> None:
     if rt != _intervention.DIRECT:
         rep.notes.append(f"intervention: {rt} (candidate delivered out-of-process; "
                          "readiness is checked at run time, not here)")
+
+
+def _check_spec_syntax(rep, project_dir: Path) -> None:
+    """A spec with a YAML syntax error is a hard problem (file + line in the message).
+
+    It must never pass: the spec holds the spending limit (``max_usd``), and a
+    misread spec would run with the wrong values.
+    """
+    from .specfile import SpecError, read_yaml
+
+    spec_path = Path(project_dir) / "capevolve.yaml"
+    if not spec_path.exists():
+        return
+    try:
+        read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path))
+    except SpecError as e:
+        rep.problems.append(str(e))
+    except Exception as e:  # noqa: BLE001
+        rep.problems.append(f"{spec_path} is unreadable: {e!r}")
 
 
 def load_adapter(project_dir: Path) -> CapabilityAdapter:
@@ -119,6 +138,7 @@ def _check_consuming_model(rep: "CheckReport", adapter, project_dir: Path) -> No
 
 def run_check(project_dir: Path, *, tolerance: float = 1e-6) -> CheckReport:
     rep = CheckReport()
+    _check_spec_syntax(rep, Path(project_dir))
     try:
         adapter = load_adapter(Path(project_dir))
     except Exception as e:  # noqa: BLE001
