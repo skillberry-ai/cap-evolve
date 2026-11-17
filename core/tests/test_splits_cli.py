@@ -34,6 +34,15 @@ def test_bad_input_clean_error(tmp_path, args, needle):
     assert len(r.stderr.strip().splitlines()) == 1
 
 
+def test_ids_file_that_is_not_utf8_gives_a_clean_error(tmp_path):
+    (tmp_path / "ids.bin").write_bytes(b"a\n\xff\xfe\n")
+    r = _run("--ids", "@ids.bin", cwd=tmp_path)
+    assert r.returncode == 2
+    assert "Traceback" not in r.stderr
+    assert "cannot read ids file" in r.stderr and "not UTF-8" in r.stderr
+    assert len(r.stderr.strip().splitlines()) == 1
+
+
 def test_good_call_still_works(tmp_path):
     (tmp_path / "ids.txt").write_text("a\nb\nc\nd\n", encoding="utf-8")
     r = _run("--ids", "@ids.txt", "--ratios", "2,1,1", cwd=tmp_path)

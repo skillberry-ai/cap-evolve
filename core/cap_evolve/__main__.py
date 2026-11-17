@@ -36,6 +36,10 @@ def _cmd_splits(argv: list[str]) -> int:
         except OSError as e:
             print(f"error: cannot read ids file {path!r}: {e.strerror or e}", file=sys.stderr)
             return 2
+        except UnicodeDecodeError as e:  # a ValueError, not an OSError
+            print(f"error: cannot read ids file {path!r}: not UTF-8 text ({e.reason}); "
+                  "save it as UTF-8, one id per line", file=sys.stderr)
+            return 2
     else:
         ids = [x.strip() for x in args.ids.split(",") if x.strip()]
     try:
