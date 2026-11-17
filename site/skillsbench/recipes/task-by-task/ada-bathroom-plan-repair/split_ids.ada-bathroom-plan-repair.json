@@ -1,5 +1,0 @@
-{
-  "train": ["ada-bathroom-plan-repair"],
-  "val": ["ada-bathroom-plan-repair"],
-  "test": ["ada-bathroom-plan-repair"]
-}

@@ -1,5 +1,0 @@
-{
-  "train": ["adaptive-cruise-control"],
-  "val": ["adaptive-cruise-control"],
-  "test": ["adaptive-cruise-control"]
-}

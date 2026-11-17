@@ -1,5 +1,0 @@
-{
-  "train": ["software-dependency-audit"],
-  "val": ["software-dependency-audit"],
-  "test": ["software-dependency-audit"]
-}

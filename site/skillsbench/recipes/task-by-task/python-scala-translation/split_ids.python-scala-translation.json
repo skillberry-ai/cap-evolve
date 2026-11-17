@@ -1,5 +1,0 @@
-{
-  "train": ["python-scala-translation"],
-  "val": ["python-scala-translation"],
-  "test": ["python-scala-translation"]
-}
