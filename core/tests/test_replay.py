@@ -131,6 +131,29 @@ def test_replay_of_a_recorded_run_dir_matches_a_direct_reduce():
         assert abs(s["test_reward"] - DEMO_TEST) < 1e-9
 
 
+def test_replay_skips_a_bad_middle_line_and_a_cut_off_last_line():
+    """A killed run leaves a half-written last line; one record may be garbage. Replay
+    must follow ``tail``'s rules: no traceback, a WARNING line, the good events kept."""
+    from cap_evolve import tui
+    events = _demo_events()
+    mid = len(events) // 2
+    lines = [json.dumps(e) + "\n" for e in events]
+    lines.insert(mid, "{this is not json\n")
+    body = "".join(lines) + '{"kind": "step", "cand'  # cut off, no newline
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d) / "run_x"
+        root.mkdir()
+        (root / "events.jsonl").write_text(body, encoding="utf-8")
+        for name in ("baseline.json", "final.json"):
+            (root / name).write_bytes((tui.DEMO_DIR / name).read_bytes())
+        buf = _Plain()
+        tui.replay(root, stream=buf, color=False, speed=10_000.0, max_gap=0.0)
+    out = buf.getvalue()
+    assert "WARNING  1 unreadable record(s) skipped in events.jsonl" in out
+    assert "FINALIZE" in out  # good events on both sides of the bad line still replayed
+    assert DEMO_BEST_ID in out
+
+
 # ---- the CLI surface --------------------------------------------------------
 
 def _cli(*argv):
