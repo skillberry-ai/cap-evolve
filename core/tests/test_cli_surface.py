@@ -223,8 +223,16 @@ def test_doctor_warns_that_reserved_metric_keys_have_no_effect(tmp_path):
     assert len(rows) == 1 and rows[0]["status"] == "warn"
     assert "metric_primary" in rows[0]["detail"] and "no effect" in rows[0]["detail"]
     assert "primary" in rows[0]["detail"]
+    assert "metric_primary has no effect" in rows[0]["detail"]
     assert not [r for r in _doctor_checks(proj)
                 if r["status"] == "fail" and "metric" in r["detail"]]
+
+    # Two keys set: one row naming both, with plural grammar.
+    spec.write_text(spec.read_text(encoding="utf-8").replace(
+        "metrics_display: []", "metrics_display: [accuracy]"), encoding="utf-8")
+    rows = [r for r in _doctor_checks(proj) if r["name"] == "metrics"]
+    assert len(rows) == 1 and rows[0]["status"] == "warn"
+    assert "metric_primary, metrics_display have no effect" in rows[0]["detail"]
 
 
 # ---- init ------------------------------------------------------------------

@@ -183,7 +183,7 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
   Write the choice into `capevolve.yaml`'s `objectives:` block (or leave it absent for
   single-objective) and note it in `PROJECT.md`.
 
-- **metrics**: the gate ALWAYS uses the adapter's `primary` score (the scalar reward `score()` returns). Extra numbers the adapter puts in `Score.metrics` are shown only, never gated on.
+- **metrics**: the gate uses the adapter's `primary` score (the scalar reward `score()` returns); multi-objective gate modes also use cost (see **objectives** above). Extra numbers the adapter puts in `Score.metrics` are shown only, never gated on.
   - `metric_primary`, `metrics_display`, `metric_directions`: **reserved, not used yet.** No code reads them today, so setting them changes nothing (`cap-evolve doctor` warns if any is set). Leave them blank; do not ask the user for them.
 - **github_integration** (default `false`): if `true`, intake runs `gh auth status`; when authed, cap-evolve may mirror the algorithm's work items as issues and ship the winner as a PR (`Closes #n`). WHAT gets mirrored is algorithm-specific — the chosen `algorithm_skill` defines it (e.g. evograph mirrors *weaknesses*; a candidate-based algorithm might mirror candidates/iterations). GitHub is NEVER the source of truth — the run dir is. If unauthed, intake offers `gh auth login` or skip.
 - **orchestration_mode** (default `deterministic`): `deterministic` = cap-evolve sequences the loop (code-enforced honesty). `agent` = the coding agent drives the loop via cap-evolve primitives and seals with the finalize phase script (`skills/phases/finalize/scripts/run.py`). Agent mode also uses `stop_condition`.

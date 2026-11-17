@@ -80,7 +80,7 @@ you want intake to ask):
 - source:     <the benchmark's own verifier  OR  your score() function in adapter.py>
 - feedback:   must be GENERAL and gold-SAFE — it is the learning signal; never leak the gold answer
 - objective:  maximize mean reward on the VAL split
-- gate metric: the adapter's `primary` score (the scalar reward score() returns) — ALWAYS; nothing else gates.
+- gate metric: the adapter's `primary` score (the scalar reward score() returns). Multi-objective gate modes (`pareto`, `epsilon_constraint`, `reward_gated`) also use cost; extra `Score.metrics` numbers and the reserved `metric_*` keys never gate.
                       # extra numbers go in Score.metrics and are shown only — see docs/ADAPTER_CONTRACT.md
 - metrics_display / metric_primary / metric_directions:
                       # RESERVED, NOT USED YET: these spec keys have no effect today (no code reads

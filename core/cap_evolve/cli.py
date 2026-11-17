@@ -1528,8 +1528,8 @@ def _doctor_checks(project: Path) -> list[dict]:
                 if spec.get(k) not in (None, "", [], {})]
     if reserved:
         add("metrics", "warn",
-            f"{', '.join(reserved)} has no effect yet (reserved); the gate always uses "
-            "the adapter's `primary` score",
+            f"{', '.join(reserved)} {'has' if len(reserved) == 1 else 'have'} no effect yet "
+            "(reserved); the gate uses the adapter's `primary` score, not these keys",
             f"remove or blank {', '.join(reserved)} in {spec_path}")
 
     adapter = project / "adapters" / "adapter.py"
