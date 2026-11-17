@@ -10,6 +10,8 @@ handles: ``key: scalar``, ``key: [a, b]``, ``key: {a: b}``, one level of nesting
 
 from __future__ import annotations
 
+import json as _json
+import re
 from pathlib import Path
 
 
@@ -29,8 +31,18 @@ def _coerce(val: str):
             k, _, v = pair.partition(":")
             d[k.strip()] = _coerce(v.strip())
         return d
-    if (s[0], s[-1]) in (('"', '"'), ("'", "'")):
+    if len(s) >= 2 and (s[0], s[-1]) == ("'", "'"):
+        return s[1:-1].replace("''", "'")  # '' is an escaped ' inside '...'
+    if len(s) >= 2 and (s[0], s[-1]) == ('"', '"'):
+        try:  # YAML's "..." escapes (\" \n \\) are JSON's for everything we write
+            out = _json.loads(s)
+            if isinstance(out, str):
+                return out
+        except ValueError:
+            pass
         return s[1:-1]
+    if s in ("~", "null", "Null", "NULL"):
+        return None
     if s.lower() in ("true", "false"):
         return s.lower() == "true"
     # exact round-trip only, so "007"/"1_000"/versions stay strings
@@ -48,9 +60,16 @@ def _coerce(val: str):
 
 
 def _split_list(inner: str) -> list[str]:
-    out, buf, depth = [], "", 0
+    out, buf, depth, q = [], "", 0, ""
     for ch in inner:
-        if ch in "[{":
+        if q:  # inside a quoted item: commas and brackets are text
+            buf += ch
+            if ch == q:
+                q = ""
+            continue
+        if ch in "\"'" and not buf.strip():
+            q = ch
+        elif ch in "[{":
             depth += 1
         elif ch in "]}":
             depth -= 1
@@ -102,52 +121,256 @@ class SpecError(ValueError):
 NOT_A_MAPPING = "capevolve.yaml must be a mapping of keys and values"
 
 
+def _mark_line(e: Exception) -> tuple[int | None, str]:
+    """``(1-based line, message)`` for a PyYAML error, from its marks when it has them."""
+    pmark = getattr(e, "problem_mark", None)
+    cmark = getattr(e, "context_mark", None)
+    mark = pmark or cmark
+    line = mark.line + 1 if mark is not None else None
+    problem = getattr(e, "problem", None) or (str(e).splitlines() or [repr(e)])[0]
+    context = getattr(e, "context", None)
+    msg = f"{context}; {problem}" if context else str(problem)
+    if cmark is not None and pmark is not None and cmark.line != pmark.line:
+        # e.g. an unclosed quote: the error surfaces at end of file, but the
+        # line the user must fix is where the quote/bracket was opened.
+        msg += f" (opened at line {cmark.line + 1})"
+    return line, msg
+
+
+def _bad_value_line(yaml, text: str) -> int | None:
+    """The 1-based line of the first value PyYAML parses but cannot build, or ``None``.
+
+    Such errors (a ValueError for ``2024-13-01``) carry no position, so compose the
+    document (no values built yet) and build each plain value on its own.
+    """
+    try:
+        root = yaml.compose(text, Loader=yaml.SafeLoader)
+        loader = yaml.SafeLoader("")
+    except Exception:  # noqa: BLE001
+        return None
+    bad, todo = [], [root] if root is not None else []
+    while todo:
+        node = todo.pop()
+        if isinstance(node, yaml.ScalarNode):
+            try:
+                loader.construct_object(node, deep=True)
+            except Exception:  # noqa: BLE001
+                bad.append(node.start_mark.line + 1)
+        elif isinstance(node, yaml.SequenceNode):
+            todo.extend(node.value)
+        elif isinstance(node, yaml.MappingNode):
+            for k, v in node.value:
+                todo.extend((k, v))
+    return min(bad) if bad else None
+
+
 def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dict:
     """Parse ``text`` with PyYAML, or the minimal fallback reader.
 
     ``strict=True`` (use it for the user's ``capevolve.yaml`` spec): a YAML syntax error
-    raises ``SpecError`` with the line number, and the fallback reader is used ONLY when
-    PyYAML is not installed. ``source`` (e.g. the file path) is named in the message.
+    raises ``SpecError`` with the line number. ``source`` (e.g. the file path) is named in
+    the message. This holds WITH OR WITHOUT PyYAML: core has no runtime dependencies, so
+    without PyYAML the built-in reader runs in strict mode and raises the same
+    ``SpecError`` for an unclosed quote or bracket, a tab in the indentation, a top level
+    that is not a mapping, and the other cases in ``_read_yaml_minimal``'s strict checks.
 
     ``strict=True`` also requires the top level to be a mapping: a spec like
     ``- max_usd: 5`` or ``just a string`` is valid YAML, but every caller then does
     ``spec.get(...)`` and crashed with a traceback. An empty document gives ``{}``.
 
-    ``strict=False`` (the default; skill ``meta.yaml`` / SKILL.md frontmatter): when
-    PyYAML fails, fall back to the lenient minimal reader — several skill files carry
-    e.g. an unquoted colon in a summary, which is not strict YAML but must still load.
+    ``strict=False`` (the default; skill ``meta.yaml`` / SKILL.md frontmatter): never
+    fails. When PyYAML fails for ANY reason, fall back to the lenient minimal reader —
+    several skill files carry e.g. an unquoted colon in a summary, which is not strict
+    YAML but must still load.
     """
     try:
         import yaml  # type: ignore
     except ImportError:
         yaml = None
-    if yaml is not None:
+    if yaml is None:
+        return _read_yaml_minimal(text, strict=strict, source=source)
+    try:
+        data = yaml.safe_load(text) or {}
+    except Exception as e:  # noqa: BLE001
+        # Not only yaml.YAMLError: PyYAML builds typed values after parsing, and a bad
+        # one raises a plain error — `created: 2024-13-01` is a ValueError, `a: !!int x`
+        # a ValueError, `a: !!timestamp x` an AttributeError.
+        if not strict:
+            return _read_yaml_minimal(text)
+        if isinstance(e, yaml.YAMLError):
+            line, msg = _mark_line(e)
+        else:
+            line, msg = _bad_value_line(yaml, text), f"cannot read this value: {e}"
+        raise SpecError(msg, source=source, line=line) from e
+    if strict and not isinstance(data, dict):
+        raise SpecError(f"{NOT_A_MAPPING} (got {type(data).__name__}: "
+                        f"{str(data)[:60]!r})", source=source, what="invalid spec")
+    return data
+
+
+# ---- strict checks for the built-in reader (used only when PyYAML is missing) --------
+
+#: ``|`` / ``>`` block text, e.g. ``notes: |`` or ``notes: >-``.
+_BLOCK_SCALAR = re.compile(r"^[|>][-+0-9]*$")
+
+#: A plain value PyYAML reads as a date (and refuses when the date is not real).
+_DATE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+
+#: Added to messages about valid YAML that the built-in reader cannot read.
+_NEEDS_PYYAML = "the built-in YAML reader cannot read this; put the value on one line, or install PyYAML"
+
+
+def _scan_quoted(s: str, i: int) -> int:
+    """Index just past the quote that closes the quoted value opened at ``s[i]``, or -1."""
+    q, j = s[i], i + 1
+    while j < len(s):
+        c = s[j]
+        if q == '"' and c == "\\":
+            j += 2
+            continue
+        if c == q:
+            if q == "'" and s[j + 1:j + 2] == "'":  # '' is an escaped ' inside '...'
+                j += 2
+                continue
+            return j + 1
+        j += 1
+    return -1
+
+
+def _scan_flow(s: str, i: int) -> int:
+    """Index just past the bracket that closes the ``[``/``{`` at ``s[i]``, or -1.
+
+    Quotes count only where a value starts (after ``[ { , :``), so ``[don't]`` is fine.
+    ``s`` may run over several lines (comments start at `` #``). A wrong closer
+    (``[a}``) returns ``-(index + 2)`` so the caller can name it.
+    """
+    want, last, j = [], "", i
+    while j < len(s):
+        c = s[j]
+        if c in "\"'" and last in "[{,:":
+            end = _scan_quoted(s, j)
+            if end == -1:
+                return -1
+            j, last = end, c
+            continue
+        if c == "#" and (j == 0 or s[j - 1] in " \t\n"):
+            nl = s.find("\n", j)
+            if nl == -1:
+                return -1
+            j = nl
+            continue
+        if c in "[{":
+            want.append("]" if c == "[" else "}")
+        elif c in "]}":
+            if not want or c != want[-1]:
+                return -(j + 2)
+            want.pop()
+            if not want:
+                return j + 1
+        if not c.isspace():
+            last = c
+        j += 1
+    return -1
+
+
+def _plain_part(v: str) -> str:
+    """A plain (unquoted) value without its trailing `` # comment``."""
+    m = re.search(r"(^|\s)#", v)
+    return (v[:m.start()] if m else v).rstrip()
+
+
+def _key_split(content: str):
+    """``(key, value)`` for a ``key: value`` / ``key:`` line, else ``None``."""
+    if content[:1] in ("\"", "'"):
+        end = _scan_quoted(content, 0)
+        if end == -1 or content[end:end + 1] != ":":
+            return None
+        return content[:end], content[end + 1:]
+    m = re.search(r":(\s|$)", _plain_part(content))
+    if m is None:
+        return None
+    return content[:m.start()], content[m.start() + 1:]
+
+
+def _strict_value(val: str, n: int, lines: list[str], source: str | None, eof: int) -> None:
+    """Raise ``SpecError`` if one value (the text after ``key:`` or ``- ``) is broken."""
+    v = val.strip()
+    if not v or v.startswith("#"):
+        return
+    c = v[0]
+    if c in "\"'" or c in "[{":
+        end = _scan_quoted(v, 0) if c in "\"'" else _scan_flow(v, 0)
+        what = "quoted value" if c in "\"'" else ("list" if c == "[" else "mapping")
+        if end < -1:
+            raise SpecError(f"found {v[-end - 2]!r} that does not close the {what} "
+                            f"opened here", source=source, line=n)
+        if end == -1:
+            # Not closed on this line. Valid YAML may continue it on the next lines, but
+            # the built-in reader would misread that; an unclosed one is a plain error.
+            rest = "\n".join([v] + lines[n:])
+            later = _scan_quoted(rest, 0) if c in "\"'" else _scan_flow(rest, 0)
+            if later > 0:
+                raise SpecError(f"this {what} is not closed on its line; if it is meant "
+                                f"to run over several lines, {_NEEDS_PYYAML}",
+                                source=source, line=n)
+            raise SpecError(f"found unexpected end of stream; the {what} is never closed "
+                            f"(opened at line {n})", source=source, line=eof)
+        tail = v[end:].strip()
+        if tail and not tail.startswith("#"):
+            raise SpecError(f"unexpected text {tail[:30]!r} after the closing "
+                            f"{'quote' if c in chr(34) + chr(39) else 'bracket'}",
+                            source=source, line=n)
+        return
+    if c in "@`":
+        raise SpecError(f"found character {c!r} that cannot start any token",
+                        source=source, line=n)
+    if c in "!&*":
+        raise SpecError(f"YAML tags, anchors and aliases ({v.split()[0]!r}) are not "
+                        f"supported here; {_NEEDS_PYYAML}", source=source, line=n)
+    plain = _plain_part(v)
+    if _DATE.match(plain):
+        # PyYAML reads `2024-01-31` as a date and refuses `2024-13-01`; so must we.
+        import datetime as _dt
         try:
-            data = yaml.safe_load(text) or {}
-        except yaml.YAMLError as e:
-            if not strict:
-                return _read_yaml_minimal(text)
-            pmark = getattr(e, "problem_mark", None)
-            cmark = getattr(e, "context_mark", None)
-            mark = pmark or cmark
-            line = mark.line + 1 if mark is not None else None
-            problem = getattr(e, "problem", None) or str(e).splitlines()[0]
-            context = getattr(e, "context", None)
-            msg = f"{context}; {problem}" if context else str(problem)
-            if cmark is not None and pmark is not None and cmark.line != pmark.line:
-                # e.g. an unclosed quote: the error surfaces at end of file, but the
-                # line the user must fix is where the quote/bracket was opened.
-                msg += f" (opened at line {cmark.line + 1})"
-            raise SpecError(msg, source=source, line=line) from e
-        if strict and not isinstance(data, dict):
-            raise SpecError(f"{NOT_A_MAPPING} (got {type(data).__name__}: "
-                            f"{str(data)[:60]!r})", source=source, what="invalid spec")
-        return data
-    return _read_yaml_minimal(text)
+            _dt.date(*(int(x) for x in plain.split("-")))
+        except ValueError as e:
+            raise SpecError(f"invalid date {plain!r}: {e} (put it in quotes if it is "
+                            "not a date)", source=source, line=n) from e
+    if _BLOCK_SCALAR.match(plain):
+        raise SpecError(f"block text ({plain}) is not supported here; {_NEEDS_PYYAML}",
+                        source=source, line=n)
+    if re.search(r":(\s|$)", plain):
+        raise SpecError("mapping values are not allowed here (put a value that holds "
+                        "': ' in quotes)", source=source, line=n)
 
 
-def _read_yaml_minimal(text: str) -> dict:
-    """The minimal, never-failing reader (see ``read_yaml``)."""
+def _clean_value(v: str) -> str:
+    """A checked value without its comment: ``"a # b"  # c`` -> ``"a # b"``."""
+    v = v.strip()
+    if v[:1] in ("\"", "'"):
+        return v[:_scan_quoted(v, 0)]
+    if v[:1] in ("[", "{"):
+        return v[:_scan_flow(v, 0)]
+    return _plain_part(v)
+
+
+def _is_dash(content: str) -> bool:
+    return content == "-" or content.startswith("- ")
+
+
+def _read_yaml_minimal(text: str, strict: bool = False, source: str | None = None) -> dict:
+    """The minimal reader (see ``read_yaml``).
+
+    ``strict=False``: never fails. ``strict=True`` (only when PyYAML is missing): raise
+    ``SpecError`` with the line instead of guessing, for the cases PyYAML would refuse —
+    a tab in the indentation; a quote or ``[``/``{`` that is never closed; text after a
+    closing quote or bracket; a top level that is a list or a plain string; a line with no
+    ``key: value``; ``: `` inside an unquoted value; a line indented under a key that
+    already has a value; a value that starts with ``@`` or a backquote. It also refuses
+    valid YAML that this reader cannot read right (a quoted value or list over several
+    lines, ``|``/``>`` block text, list items not indented under their key), and says
+    so: reading it wrong without a word is the bug strict mode exists to stop.
+    """
     data: dict = {}
     # stack entries: (indent, container, kind) — kind is "map" (container is a dict,
     # grown by "key: val" lines) or "seq" (container is a list, grown by "- " lines).
@@ -160,18 +383,68 @@ def _read_yaml_minimal(text: str) -> dict:
     # all (every "- " line was silently dropped — ":" not in a bare "- name: reward"
     # dash line was true, but the OLD key/value split on it still mangled the result).
     pending: tuple | None = None
-    for raw in text.splitlines():
-        line = _strip_comment(raw).rstrip()
-        if not line.strip():
-            continue
+    lines = text.splitlines()
+    eof = text.count("\n") + 1  # the line PyYAML names for "end of stream"
+    first = True
+    # strict: the column where the last `key: scalar` key started — a line indented
+    # past it is a continuation PyYAML refuses (or a multi-line value we cannot read)
+    scalar_col: int | None = None
+
+    def fail(msg: str, n: int, what: str = "invalid YAML") -> None:
+        raise SpecError(msg, source=source, line=n, what=what)
+
+    for n, raw in enumerate(lines, 1):
+        if strict:
+            body = raw.strip()
+            if not body or body.startswith("#"):
+                continue
+            lead = raw[:len(raw) - len(raw.lstrip())]
+            if "\t" in lead:
+                fail("found a tab in the indentation; YAML needs spaces", n)
+            if body in ("---", "...") or body.startswith("%"):
+                continue
+            # Check the line, then read it with its comment cut the YAML way (a quote
+            # only opens a value at its start, so `don't # x` is `don't`).
+            if _is_dash(body):
+                rest = body[1:].strip()
+                kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
+                if kv is not None:
+                    _strict_value(kv[1], n, lines, source, eof)
+                    clean = f"- {kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
+                else:
+                    _strict_value(rest, n, lines, source, eof)
+                    clean = f"- {_clean_value(rest)}" if rest else "-"
+            else:
+                kv = _key_split(body)
+                if kv is None:
+                    if first:
+                        fail(f"{NOT_A_MAPPING} (got str: {_plain_part(body)[:60]!r})", n,
+                             what="invalid spec")
+                    fail("could not find expected ':' (a 'key: value' line); if this "
+                         f"continues the value above, {_NEEDS_PYYAML}", n)
+                _strict_value(kv[1], n, lines, source, eof)
+                clean = f"{kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
+            line = (lead + clean).rstrip()
+        else:
+            line = _strip_comment(raw).rstrip()
+            if not line.strip():
+                continue
         indent = len(line) - len(line.lstrip())
         content = line.strip()
+
+        if strict:
+            if first and _is_dash(content):
+                fail(f"{NOT_A_MAPPING} (got list: {content[:60]!r})", n, what="invalid spec")
+            if scalar_col is not None and indent > scalar_col and pending is None:
+                fail("this line is indented under a key that already has a value; "
+                     f"if it continues that value, {_NEEDS_PYYAML}", n)
+            first = False
 
         if pending is not None:
             pend_indent, parent, key = pending
             pending = None
             if indent > pend_indent:
-                is_seq = content.startswith("- ") or content == "-"
+                is_seq = _is_dash(content)
                 container = [] if is_seq else {}
                 parent[key] = container
                 stack.append((pend_indent, container, "seq" if is_seq else "map"))
@@ -179,12 +452,17 @@ def _read_yaml_minimal(text: str) -> dict:
         while stack and indent <= stack[-1][0]:
             stack.pop()
         _, container, kind = stack[-1] if stack else (-1, data, "map")
+        scalar_col = None
 
-        if kind == "seq" and (content.startswith("- ") or content == "-"):
+        if kind == "seq" and _is_dash(content):
             rest = content[1:].strip()
-            if rest and ":" in rest and rest[0] not in "{[\"'":
-                k, _, v = rest.partition(":")
-                k, v = k.strip(), v.strip()
+            if strict:
+                kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
+            else:
+                kv = rest.partition(":")[::2] if (rest and ":" in rest
+                                                  and rest[0] not in "{[\"'") else None
+            if kv is not None:
+                k, v = kv[0].strip(), kv[1].strip()
                 item: dict = {}
                 container.append(item)
                 # Siblings of `k` (more "key: val" lines of the SAME item) are
@@ -195,19 +473,27 @@ def _read_yaml_minimal(text: str) -> dict:
                     pending = (indent, item, k)
                 else:
                     item[k] = _coerce(v)
+                    scalar_col = indent + len(content) - len(rest)
             else:
                 container.append(_coerce(rest))
             continue
 
-        if ":" not in content:
-            continue
-        key, _, val = content.partition(":")
-        key, val = key.strip(), val.strip()
+        if strict and _is_dash(content):
+            fail("found a list item where a 'key: value' line was expected (indent list "
+                 "items under their key, e.g. '  - a')", n)
+        if strict:
+            k, v = _key_split(content)
+        else:
+            if ":" not in content:
+                continue
+            k, _, v = content.partition(":")
+        key, val = k.strip(), v.strip()
         if val == "":
             container[key] = {}
             pending = (indent, container, key)
         else:
             container[key] = _coerce(val)
+            scalar_col = indent
     return data
 
 
@@ -217,6 +503,25 @@ def read_frontmatter(md_path: Path) -> dict:
         return {}
     end = txt.find("\n---", 3)
     return read_yaml(txt[3:end], source=str(md_path)) if end != -1 else {}
+
+
+def read_spec_file(path) -> dict:
+    """Read a ``capevolve.yaml`` spec file strictly; every failure is a ``SpecError``.
+
+    A syntax error names the file and line (``read_yaml(strict=True)``). A file that is
+    not UTF-8 text, or cannot be read, is a ``SpecError`` too (``what="unreadable
+    spec"``), so a script that catches ``SpecError`` gives a clean message, not a
+    ``UnicodeDecodeError`` traceback.
+    """
+    path = Path(path)
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        raise SpecError(f"not UTF-8 text ({e.reason}); save the spec as UTF-8",
+                        source=str(path), what="unreadable spec") from e
+    except OSError as e:
+        raise SpecError(str(e.strerror or e), source=str(path), what="unreadable spec") from e
+    return read_yaml(text, source=str(path), strict=True) or {}
 
 
 def resolve_project_path(project, value) -> Path:
@@ -305,35 +610,81 @@ def resolve_spec_path(run_dir, project: Path | None = None) -> Path | None:
     return None
 
 
-def spec_for_run(run_dir, project: Path | None = None) -> dict:
+#: (run dir, spec path) pairs already warned about by ``spec_for_run``, so a long run
+#: that reads its spec many times says it once per process.
+_SPEC_WARNED: set[tuple[str, str]] = set()
+
+
+def _warn_spec_unreadable(run_dir, path: Path, error: Exception) -> None:
+    """Say once (stderr + a ``spec_unreadable`` event) that the run's spec has a syntax
+    error and is read leniently. The step goes on; it must not go on without a word."""
+    root = str(getattr(run_dir, "root", run_dir))
+    if (root, str(path)) in _SPEC_WARNED:
+        return
+    _SPEC_WARNED.add((root, str(path)))
+    import sys as _sys
+    print(f"cap-evolve: WARNING: the run's spec cannot be read strictly ({error}); this "
+          "step reads it with the lenient reader instead, so the values it can read (e.g. "
+          "split_mode, budget_reserve) stay as they are. Fix the spec.", file=_sys.stderr)
+    log = getattr(run_dir, "log_event", None)
+    if callable(log):
+        try:
+            log("spec_unreadable", spec=str(path), error=str(error), fallback="lenient")
+        except Exception:  # noqa: BLE001 - a warning must never stop the step
+            pass
+
+
+def spec_for_run(run_dir, project: Path | None = None, *, warn: bool = True) -> dict:
     """The spec THIS run was started with, read from the run dir first.
 
     See ``resolve_spec_path`` for which file this is and why it is not simply
     ``read_yaml(project / "capevolve.yaml")``. Returns ``{}`` rather than raising when
-    the resolved file is missing/malformed, so a bad spec cannot block a budget readout.
+    the resolved file is missing or unreadable, so a bad spec cannot block a budget readout.
+
+    The entry points (``cap-evolve run``, the baseline phase, agent-optimize's host) refuse
+    a spec with a syntax error before the run starts. So a syntax error here means the
+    spec was edited DURING the run. Then this warns once and reads the file the old,
+    lenient way: going to ``{}`` would quietly turn in-run settings (``split_mode:
+    pooled``, ``budget_reserve``, ``errored_trial_policy``) back to their defaults.
+    ``warn=False`` is for read-only viewers (the dashboard): they must not write events
+    into a run dir or print run warnings; they show the error their own way.
     """
     path = resolve_spec_path(run_dir, project)
     if path is None:
         return {}
     try:
-        return read_yaml(path.read_text(encoding="utf-8"), strict=True) or {}
-    except Exception:  # noqa: BLE001
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
         return {}
+    try:
+        return read_yaml(text, source=str(path), strict=True) or {}
+    except Exception as e:  # noqa: BLE001 - SpecError, or anything else a reader raised
+        if warn:
+            _warn_spec_unreadable(run_dir, path, e)
+        try:
+            data = read_yaml(text)
+        except Exception:  # noqa: BLE001
+            return {}
+        return data if isinstance(data, dict) else {}
 
 
 # Numeric spec keys the run/estimate/doctor code reads, and the kind each must be.
 _SPEC_INT_KEYS = ("max_iterations", "max_metric_calls", "num_trials", "stall", "workers",
                   "split_seed")
 _SPEC_FLOAT_KEYS = ("max_usd", "max_optimizer_usd", "split_train", "split_val", "split_test")
+#: Keys where a negative value is fine: any whole number is a valid ``random.Random`` seed.
+_SPEC_SIGNED_KEYS = ("split_seed",)
 
 
 def numeric_spec_errors(spec: dict) -> list[dict]:
     """``[{key, error, fix}]`` for numeric spec keys that are not a usable number.
 
     An unset key (missing or ``null``) is fine — the code uses its default. A set key must
-    be a finite, non-negative number; the int keys must also be whole numbers. Catching
-    ``max_usd: five`` here means a typo in the spending cap fails up front with a plain
-    message instead of a traceback (or a silent pass) later.
+    be a finite number, 0 or more (``split_seed`` may be negative: it is only a seed); the
+    int keys must also be whole numbers. A quoted number (``max_usd: "5"``) is a string,
+    not a number, and is refused too. Catching ``max_usd: five`` here means a typo in the
+    spending cap fails up front with a plain message instead of a traceback (or a silent
+    pass) later.
     """
     import math
 
@@ -343,13 +694,15 @@ def numeric_spec_errors(spec: dict) -> list[dict]:
         if val is None:
             continue
         want_int = key in _SPEC_INT_KEYS
+        signed = key in _SPEC_SIGNED_KEYS
         kind = "a whole number" if want_int else "a number"
         ok = (isinstance(val, (int, float)) and not isinstance(val, bool)
-              and math.isfinite(val) and val >= 0
+              and math.isfinite(val) and (signed or val >= 0)
               and (not want_int or float(val).is_integer()))
         if not ok:
             example = "10" if want_int else "5.0"
             out.append({"key": key,
-                        "error": f"{key} must be {kind}, 0 or more (got {val!r})",
+                        "error": f"{key} must be {kind}{'' if signed else ', 0 or more'} "
+                                 f"(got {val!r})",
                         "fix": f"set {key} to {kind} in capevolve.yaml, e.g. {key}: {example}"})
     return out

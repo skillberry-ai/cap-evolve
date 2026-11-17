@@ -242,16 +242,20 @@ def test_a_spec_that_cannot_be_parsed_is_warned_about_once(tmp_path, monkeypatch
 
 
 def test_a_spec_with_a_yaml_syntax_error_is_warned_about(tmp_path, monkeypatch, capsys):
-    # spec_for_run reads the spec strictly: a real syntax error gives {} (no lenient half-read values), and the
-    # gate says so instead of going off silently
+    # A spec edited mid-run into a syntax error: spec_for_run warns once (stderr + a spec_unreadable event) and
+    # reads it leniently, so the gate the spec turned on stays on instead of going off with {}
     from cap_evolve import harness
     monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
     adapter = _toy_adapter()
-    rd, base = _fresh_run(tmp_path, adapter, spec_text="helpers:\n  enabled: [true\n")
-    harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=_with_helper(CLEAN),
-                     instructions="x", current_val=base, gate_kwargs=GATE)
-    assert len(_events(rd, "helper_gate_spec_unreadable")) == 1
-    assert "cannot be read or parsed" in capsys.readouterr().err
+    rd, base = _fresh_run(tmp_path, adapter, spec_text='helpers:\n  enabled: true\nrun_name: "oops\n')
+    for _ in range(2):
+        harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=_with_helper(CLEAN),
+                         instructions="x", current_val=base, gate_kwargs=GATE)
+    unreadable = _events(rd, "spec_unreadable")
+    assert len(unreadable) == 1 and "line" in unreadable[0]["error"] and unreadable[0]["fallback"] == "lenient"
+    assert capsys.readouterr().err.count("cannot be read strictly") == 1
+    assert _events(rd, "helper_gate_spec_unreadable") == []
+    assert [e["ok"] for e in _events(rd, "helper_gate")] == [True, True]
 
 
 @pytest.mark.parametrize("text", ["\n", "# only a comment\n\n  # and another\n"])

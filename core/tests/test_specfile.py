@@ -244,3 +244,142 @@ def test_run_and_estimate_refuse_a_non_mapping_spec(tmp_path, kind, cmd):
     assert payload["step"] == "spec"
     assert "must be a mapping of keys and values" in payload["error"]
     assert "Traceback" not in err.getvalue()
+
+
+# --- strict reading WITHOUT PyYAML (core has no runtime deps; CI installs none) -------
+
+_STRICT_CASES = {
+    "unclosed-quote": ('algorithm_skill: hill-climb\nmax_usd: "5\nsplits: [a, b\n', "opened at line 2"),
+    "unclosed-bracket": ("a: 1\nsplits: [a, b\n", "opened at line 2"),
+    "tab-indent": ("a: 1\n\tb: 2\n", "line 2"),
+    "list-top-level": ("- max_usd: 5\n", "must be a mapping of keys and values"),
+    "string-top-level": ("just a string\n", "must be a mapping of keys and values"),
+    "unquoted-colon": ("name: gepa\nsummary: Reflective evolution: mutate it\n", "line 2"),
+    "bad-date": ("max_usd: 5\ncreated: 2024-13-01\n", "line 2"),
+    "bad-tag": ("max_usd: 5\na: !!int x\n", "line 2"),
+    "wrong-closer": ("splits: [a, b}\n", "line 1"),
+    "text-after-quote": ('run_name: "a" b\n', "line 1"),
+    "indented-under-a-value": ("max_usd: 5\n  stall: 2\n", "line 2"),
+}
+
+
+@pytest.fixture(params=["with-pyyaml", "without-pyyaml"])
+def yaml_env(request, monkeypatch):
+    """Run a test with PyYAML (when installed) and with ``import yaml`` hidden."""
+    if request.param == "with-pyyaml":
+        pytest.importorskip("yaml")
+    else:
+        monkeypatch.setitem(sys.modules, "yaml", None)
+    return request.param
+
+
+@pytest.mark.parametrize("case", sorted(_STRICT_CASES))
+def test_strict_read_refuses_broken_specs_with_and_without_pyyaml(yaml_env, case):
+    text, needle = _STRICT_CASES[case]
+    with pytest.raises(SpecError) as ei:
+        read_yaml(text, source="capevolve.yaml", strict=True)
+    assert "capevolve.yaml" in str(ei.value) and needle in str(ei.value)
+    # lenient reading (skill meta.yaml / frontmatter) never fails, on any of them
+    read_yaml(text)
+
+
+def test_strict_read_without_pyyaml_uses_the_built_in_reader(monkeypatch):
+    monkeypatch.setitem(sys.modules, "yaml", None)  # `import yaml` -> ImportError
+    with pytest.raises(SpecError) as ei:
+        read_yaml('max_usd: "5\nnum_trials: 1\n', source="capevolve.yaml", strict=True)
+    assert ei.value.line == 3 and "opened at line 1" in str(ei.value)
+    good = ("max_usd: 5  # cap\nsplits: [a, 'b, c']\nrun_name: \"x # y\"\nnote: don't # z\n"
+            "objectives:\n  - name: reward\n    direction: maximize\nseed: ~\n")
+    assert read_yaml(good, strict=True) == {
+        "max_usd": 5, "splits": ["a", "b, c"], "run_name": "x # y", "note": "don't",
+        "objectives": [{"name": "reward", "direction": "maximize"}], "seed": None}
+
+
+@pytest.mark.parametrize("text", ["notes: |\n  hi\n", "splits: [a,\n  b]\n", "objectives:\n- a\n"])
+def test_strict_built_in_reader_refuses_valid_yaml_it_cannot_read(monkeypatch, text):
+    # valid YAML, but the built-in reader would misread it: refuse with a clear message
+    monkeypatch.setitem(sys.modules, "yaml", None)
+    with pytest.raises(SpecError) as ei:
+        read_yaml(text, source="capevolve.yaml", strict=True)
+    assert "line" in str(ei.value)
+
+
+def test_every_shipped_spec_reads_the_same_with_and_without_pyyaml(monkeypatch):
+    yaml = pytest.importorskip("yaml")
+    import re
+    import subprocess
+    repo = Path(__file__).resolve().parents[2]
+    files = subprocess.run(["git", "ls-files"], cwd=repo, capture_output=True, text=True).stdout.split()
+    specs = [f for f in files if re.search(r"(^|/)capevolve[^/]*\.ya?ml$", f)]
+    assert specs
+    for f in specs:
+        # appworld templates hold `@NAME@` placeholders a setup script fills in
+        text = re.sub(r"@[A-Z_]+@", "placeholder", (repo / f).read_text(encoding="utf-8"))
+        assert read_yaml(text, source=f, strict=True) == yaml.safe_load(text), f
+    monkeypatch.setitem(sys.modules, "yaml", None)
+    for f in specs:
+        text = re.sub(r"@[A-Z_]+@", "placeholder", (repo / f).read_text(encoding="utf-8"))
+        read_yaml(text, source=f, strict=True)  # must not raise
+
+
+# --- PyYAML errors that are not yaml.YAMLError (bad values built after parsing) -------
+
+_BAD_VALUES = ["created: 2024-13-01\n", "a: !!int x\n", "a: !!timestamp x\n"]
+
+
+@pytest.mark.parametrize("text", _BAD_VALUES)
+def test_bad_values_are_a_spec_error_in_strict_and_a_dict_in_lenient(yaml_env, text):
+    with pytest.raises(SpecError) as ei:
+        read_yaml("max_usd: 5\n" + text, source="capevolve.yaml", strict=True)
+    assert ei.value.line == 2 and "capevolve.yaml, line 2" in str(ei.value)
+    assert isinstance(read_yaml("max_usd: 5\n" + text), dict)
+
+
+@pytest.mark.parametrize("cmd", [["run", "--dry-run"], ["estimate"]])
+@pytest.mark.parametrize("text", _BAD_VALUES)
+def test_run_and_estimate_refuse_a_bad_value_without_a_traceback(tmp_path, yaml_env, cmd, text):
+    from cap_evolve import cli
+    proj = _project_with(tmp_path, "max_usd: 5\n" + text)
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        rc = cli.main([*cmd, "--project", str(proj)])
+    assert rc == 1
+    payload = json.loads(out.getvalue().strip().splitlines()[-1])
+    assert payload["step"] == "spec" and payload["line"] == 2
+    assert "Traceback" not in err.getvalue()
+
+
+# --- split_seed may be negative; other numbers may not --------------------------------
+
+def test_a_negative_split_seed_is_allowed():
+    from cap_evolve.specfile import numeric_spec_errors
+    assert numeric_spec_errors({"split_seed": -1}) == []
+    assert numeric_spec_errors({"split_seed": 0}) == []
+    assert [e["key"] for e in numeric_spec_errors({"split_seed": 1.5})] == ["split_seed"]
+    assert "0 or more" not in numeric_spec_errors({"split_seed": "x"})[0]["error"]
+    assert [e["key"] for e in numeric_spec_errors({"max_usd": -1})] == ["max_usd"]
+    assert [e["key"] for e in numeric_spec_errors({"max_usd": "5"})] == ["max_usd"]
+
+
+# --- a spec broken DURING a run keeps its in-run settings (spec_for_run) --------------
+
+def test_mid_run_syntax_error_keeps_pooled_and_warns_once(tmp_path, yaml_env, capsys):
+    from cap_evolve import RunDir
+    from cap_evolve.gatecfg import GateConfig
+    proj = tmp_path / "project"
+    proj.mkdir()
+    spec = proj / "capevolve.yaml"
+    spec.write_text("split_mode: pooled\nbudget_reserve: true\n", encoding="utf-8")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="midrun")
+    rd.log_event("spec_resolved", spec=str(spec))
+    assert GateConfig.for_run(rd).split_mode == "pooled"
+    # someone edits the spec while the run goes on, and leaves an unclosed quote
+    spec.write_text('split_mode: pooled\nbudget_reserve: true\nrun_name: "oops\n', encoding="utf-8")
+    for _ in range(3):
+        cfg = GateConfig.for_run(rd)
+        assert cfg.split_mode == "pooled" and cfg.budget_reserve is True
+    err = capsys.readouterr().err
+    assert err.count("cannot be read strictly") == 1 and str(spec) in err
+    events = [json.loads(ln) for ln in rd.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    unreadable = [e for e in events if e.get("kind") == "spec_unreadable"]
+    assert len(unreadable) == 1 and unreadable[0]["spec"] == str(spec) and "line" in unreadable[0]["error"]
