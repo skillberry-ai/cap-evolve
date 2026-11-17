@@ -622,6 +622,25 @@ def test_non_numeric_spec_numbers_fail_cleanly_in_doctor_estimate_and_dry_run(tm
         assert key in err and "Traceback" not in err
 
 
+def test_a_bad_number_from_a_flag_names_the_flag_not_the_yaml(tmp_path):
+    proj = _project(tmp_path, "flagnum", "deterministic")
+    rc, out, err = _run("run", "--project", str(proj), "--dry-run", "--max-usd", "-1")
+    assert rc == 1, out
+    payload = json.loads(out)
+    prob = payload["problems"][0]
+    assert payload["error"] == "bad numbers in command-line flags"
+    assert prob["key"] == "max_usd" and prob["flag"] == "--max-usd"
+    assert prob["error"].startswith("--max-usd must be a number, 0 or more")
+    assert "pass --max-usd" in prob["fix"] and "set max_usd" not in prob["fix"]
+    assert "--max-usd must be a number" in err and "Traceback" not in err
+    # the same bad value from the yaml still points at the yaml
+    spec = proj / "capevolve.yaml"
+    spec.write_text(spec.read_text(encoding="utf-8") + "max_usd: -1\n", encoding="utf-8")
+    rc, out, err = _run("run", "--project", str(proj), "--dry-run")
+    assert rc == 1
+    assert "set max_usd" in json.loads(out)["problems"][0]["fix"]
+
+
 def test_good_spec_numbers_still_pass(tmp_path):
     from cap_evolve.cli import _doctor_checks
     from cap_evolve.specfile import numeric_spec_errors

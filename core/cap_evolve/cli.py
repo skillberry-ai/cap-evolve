@@ -701,6 +701,8 @@ def _cmd_run(argv):
     spec_path, spec = found
 
     # CLI budget flags override the spec (None = "not passed", leave spec value).
+    # from_flags: which keys a flag set, so a bad value names the flag, not the yaml.
+    from_flags: dict[str, str] = {}
     for flag, key in (("max_iterations", "max_iterations"), ("max_metric_calls", "max_metric_calls"),
                       ("max_usd", "max_usd"), ("max_optimizer_usd", "max_optimizer_usd"),
                       ("stall", "stall"), ("stop_at_reward", "stop_at_reward"),
@@ -708,6 +710,7 @@ def _cmd_run(argv):
         v = getattr(args, flag)
         if v is not None:
             spec[key] = v
+            from_flags[key] = "--" + flag.replace("_", "-")
     # The steps run with cwd set to the project's grandparent (see `workdir` below), so
     # a relative path must be made absolute HERE: the --reuse-baseline flag against the
     # user's own cwd, a `reuse_baseline:` value from the yaml against that work dir
@@ -720,7 +723,7 @@ def _cmd_run(argv):
             _yaml_reuse = Path(args.project).resolve().parent.parent / _yaml_reuse
         spec["reuse_baseline"] = str(_yaml_reuse.resolve())
 
-    if _report_bad_numbers(spec):
+    if _report_bad_numbers(spec, from_flags):
         return 1
 
     if args.dry_run:
@@ -1500,16 +1503,29 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     return out
 
 
-def _report_bad_numbers(spec: dict) -> bool:
+def _report_bad_numbers(spec: dict, from_flags: dict[str, str] | None = None) -> bool:
     """Print a clean error for non-numeric/negative spec budget or split keys.
 
-    Returns True when something was wrong (the caller then exits 1).
+    ``from_flags`` maps a key to the command-line flag that set it (``max_usd`` ->
+    ``--max-usd``): then the message names the flag, not capevolve.yaml, since editing
+    the yaml would not fix it. Returns True when something was wrong (the caller then
+    exits 1).
     """
     from .specfile import numeric_spec_errors
     errs = numeric_spec_errors(spec)
     if not errs:
         return False
-    print(json.dumps({"error": "bad numbers in spec", "problems": errs}))
+    for e in errs:
+        flag = (from_flags or {}).get(e["key"])
+        if flag:
+            e["error"] = flag + e["error"][len(e["key"]):]
+            e["flag"] = flag
+            example = e["fix"].rsplit(": ", 1)[-1]
+            e["fix"] = (f"pass {flag} {example}, or leave {flag} out to use "
+                        f"{e['key']} from capevolve.yaml")
+    print(json.dumps({"error": ("bad numbers in command-line flags"
+                                if all(e.get("flag") for e in errs) else "bad numbers in spec"),
+                      "problems": errs}))
     for e in errs:
         print(f"{e['error']}\n  → {e['fix']}", file=sys.stderr)
     return True
