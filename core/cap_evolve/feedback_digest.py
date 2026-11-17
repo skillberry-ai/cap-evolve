@@ -1,21 +1,35 @@
-"""Bounded per-task feedback for the optimizer prompt, with the full text one link away.
+"""Per-trial scorer feedback for the optimizer: one shared format, one budget per prompt.
 
 A scorer's feedback (an LLM judge's rationale above all) can run to thousands of
-characters per trial, times every trial. The optimizer prompt lists one entry per task,
-so each entry is bounded at ``entry_chars()`` (default 800). An entry that fits is shown
-as it is. A longer one is condensed:
+characters per trial, times every trial. This module is the ONE place that handles it:
 
-* by the run's OWN optimizer — the same agent CLI, model and per-call budget flags the
-  algorithm uses to propose edits (``harness.optimizer_from_command`` records the
-  command) — on at most ``BATCH`` tasks per call, each call in its own scratch workdir;
-  or, when there is no optimizer command or a call gives no usable result,
-* by ``fallback`` — deterministic, no model.
+* **The trial-label grammar.** ``join_trial_feedback`` joins a task's trials into one text,
+  each distinct text under a ``[trial k reward r]`` label (``[trial k errored]`` for an
+  infra error); ``pooled_feedback`` puts several evaluations of one candidate under
+  ``[evaluation i of n]`` lines; ``trials_of`` parses both back; ``strip_labels`` removes
+  them. Core, HC2, SkillOpt and agent-optimize all go through these functions.
 
-Either way the entry starts with a code-written ``trials:`` line (every trial's reward,
-the lowest marked), and the LOWEST-scoring trial is represented: a later good trial can
-never hide an earlier failure. The full, untruncated text is written to
-``feedback_full/<name>.md``; the entry ends with a pointer to it. The summary calls count
-as optimizer spend. ``CAPEVOLVE_FEEDBACK_SUMMARY=off`` keeps the fallback only. Pure stdlib.
+* **One feedback budget per optimizer prompt** (``CAPEVOLVE_FEEDBACK_BUDGET_BYTES``,
+  default ``DEFAULT_BUDGET``). It covers ALL feedback text in one prompt: the failure
+  index, GEPA's reflection, SkillOpt's slow/meta-update block. ``fit`` shares it between
+  the tasks of one block: when everything fits, every entry is shown in full and nothing
+  is summarized; otherwise only the LONGEST entries are condensed, all to one common size
+  chosen so the block fills the budget (short entries keep their text, and what they leave
+  goes to the long ones), and only as many tasks are listed as can each get a useful
+  ``MIN_ENTRY`` bytes; the rest are named. It is in UTF-8 bytes because that is what the
+  optimizer row's inline-argv limit counts (``run-optimizer``'s ``MAX_INLINE_PROMPT_BYTES``).
+
+* **Condensing.** A condensed entry is summarized by the run's OWN optimizer (the same
+  agent CLI, model and budget flags the algorithm proposes edits with), or, without one or
+  when a call gives no usable result, cut deterministically by ``fallback``. Either way it
+  starts with a code-written, bounded ``trials:`` line (every trial's reward, the lowest
+  marked) and represents the LOWEST-scoring trial: a later good trial can never hide an
+  earlier failure. Its full text is written to ``<run>/feedback_full/<name>.md`` and
+  linked; ``provide_linked`` copies the linked files into the optimizer's workdir.
+
+The summary calls count as optimizer spend, are not started when the run's USD budget has
+no room for them, and run at the run's ``workers`` concurrency.
+``CAPEVOLVE_FEEDBACK_SUMMARY=off`` keeps the deterministic cut only. Pure stdlib.
 """
 
 from __future__ import annotations
@@ -25,49 +39,108 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
 from pathlib import Path
 
-ENV_CHARS = "CAPEVOLVE_FEEDBACK_ENTRY_CHARS"
-DEFAULT_CHARS = 800
-BATCH = 10
+ENV_BUDGET = "CAPEVOLVE_FEEDBACK_BUDGET_BYTES"
+#: The default feedback budget of one optimizer prompt. The rest of a rendered prompt (the
+#: template, the capability and algorithm briefs, the passing-task ids, section headers) is
+#: about 25 KB, so the whole prompt stays well under the 96 KiB inline-argv limit.
+DEFAULT_BUDGET = 48_000
+MIN_BUDGET = 4_000
+#: The smallest condensed entry body worth showing: a task that cannot get this much is
+#: named, not listed.
+MIN_ENTRY = 300
 DIR = "feedback_full"
-_LINK_RE = re.compile(r"\./" + DIR + r"/([A-Za-z0-9._-]+\.md)")
-# A trial label line, as harness._join_trial_feedback writes it.
-_LABEL_RE = re.compile(r"^\[((?:\S+ )?trial \d+[^\]\n]*)\]$", re.MULTILINE)
+LINK_RE = re.compile(r"\./" + DIR + r"/([A-Za-z0-9._-]+\.md)")
+
+# ---- the trial-label grammar ------------------------------------------------------------
+
+#: A trial label line, e.g. ``[trial 0 reward 0.500, trial 2 errored]`` (``<tag> trial k``
+#: when several tags' rollouts are pooled).
+TRIAL_LABEL_RE = re.compile(r"^\[((?:\S+ )?trial \d+[^\]\n]*)\]$", re.MULTILINE)
+#: A pooled evaluation's header line, e.g. ``[evaluation 1 of 2]``.
+EVAL_LABEL_RE = re.compile(r"^\[evaluation (\d+) of (\d+)\]$", re.MULTILINE)
+#: Either label line.
+LABEL_LINE_RE = re.compile(r"^\[(?:(?:\S+ )?trial \d+[^\]\n]*|evaluation \d+ of \d+)\]$", re.MULTILINE)
 _TRIAL_RE = re.compile(r"((?:\S+ )?trial \d+)(?: (errored)| reward (-?[0-9.]+))?")
+#: The text shown under trials that gave no feedback, so their rewards are still listed.
+NO_FEEDBACK = "(no feedback)"
 
 
-def entry_chars() -> int:
-    try:
-        return max(200, int(os.environ.get(ENV_CHARS) or DEFAULT_CHARS))
-    except ValueError:
-        return DEFAULT_CHARS
+def join_trial_feedback(trials: list) -> str:
+    """One task's feedback from ALL its trials, each labelled with that trial's reward.
 
-
-# ---- parsing the joined multi-trial text --------------------------------------------
-
-def trials_of(pt: dict) -> list[tuple[str, float | None, str]]:
-    """``[(trial name, reward or None, text)]`` for one per-task row.
-
-    A row joined by ``harness._join_trial_feedback`` carries ``[trial k reward r]`` label
-    lines; each label may name several trials that gave the same text. A row without
-    labels is one block, rewarded with the row's own reward.
+    ``trials`` is ``[(trial_label, reward_or_None, feedback)]``; the label is the trial index,
+    or ``"<tag> <index>"`` when several tags' rollouts are pooled; a reward of ``None`` is an
+    errored trial (it never ran the target). The text is returned unlabelled only when every
+    trial gave the SAME text and none errored. Otherwise each distinct text is kept once,
+    under the trials that produced it, and trials that gave no text are listed under
+    ``(no feedback)``: an LLM judge's verdict varies between trials, the last one alone may
+    praise a task whose mean is low, and an infra error must never read as a capability
+    failure. Never shortened here: ``fit`` bounds the prompt, the full text stays on disk.
     """
-    fb = str(pt.get("feedback") or "").strip()
-    marks = list(_LABEL_RE.finditer(fb))
-    if not marks:
-        return [("", _num(pt.get("reward")), fb)] if fb else []
+    def order(t):   # by tag, then numerically by trial index
+        tag, _, k = str(t[0]).rpartition(" ")
+        return tag, int(k)
+
+    def name(k) -> str:
+        tag, _, i = str(k).rpartition(" ")
+        return f"{tag} trial {i}" if tag else f"trial {i}"
+
+    rows = [(k, r, str(fb or "").strip()) for k, r, fb in sorted(trials, key=order)]
+    texts = [fb for _, _, fb in rows if fb]
+    if not texts:
+        return ""
+    if len(set(texts)) == 1 and len(texts) == len(rows) and all(r is not None for _, r, _ in rows):
+        return texts[0]
+    by_text: dict[str, list] = {}
+    for k, r, fb in rows:
+        by_text.setdefault(fb or NO_FEEDBACK, []).append((k, r))
     out = []
-    for i, m in enumerate(marks):
-        end = marks[i + 1].start() if i + 1 < len(marks) else len(fb)
-        text = fb[m.end():end].strip()
-        for part in m.group(1).split(", "):     # one label may name several trials
-            t = _TRIAL_RE.fullmatch(part.strip())
-            if t:
-                out.append((t.group(1), None if t.group(2) else _num(t.group(3)), text))
-    return out
+    for fb, ks in by_text.items():
+        head = ", ".join(name(k) + (" errored" if r is None else f" reward {float(r):.3f}") for k, r in ks)
+        out.append(f"[{head}]\n{fb}")
+    return "\n\n".join(out)
+
+
+def has_labels(text: str) -> bool:
+    return bool(LABEL_LINE_RE.search(str(text or "")))
+
+
+def label_unlabelled(text: str, trial_rewards) -> str:
+    """``text`` under a label naming every trial, when it has no labels yet.
+
+    ``join_trial_feedback`` leaves a text unlabelled only when all trials gave it; once two
+    evaluations are pooled side by side, each needs its rewards stated again.
+    """
+    text = str(text or "").strip()
+    if not text or has_labels(text) or not trial_rewards:
+        return text
+    head = ", ".join(f"trial {k} reward {float(r):.3f}" for k, r in enumerate(trial_rewards))
+    return f"[{head}]\n{text}"
+
+
+def pooled_feedback(parts: list) -> str:
+    """One task's feedback from several pooled evaluations of the same candidate.
+
+    ``parts`` holds one ``(text, trial_rewards or None)`` per evaluation, distinct texts only.
+    One part is returned as it is. Several are each put under an ``[evaluation i of n]``
+    line (every evaluation numbers its own trials from 0), each one labelled.
+    """
+    parts = [(str(t or "").strip(), r) for t, r in parts if str(t or "").strip()]
+    if len(parts) <= 1:
+        return parts[0][0] if parts else ""
+    return "\n\n".join(f"[evaluation {i} of {len(parts)}]\n{label_unlabelled(t, r)}"
+                       for i, (t, r) in enumerate(parts, 1))
+
+
+def strip_labels(text: str) -> str:
+    """``text`` without its trial and evaluation label lines."""
+    return LABEL_LINE_RE.sub("", str(text or "")).strip()
 
 
 def _num(x) -> float | None:
@@ -77,26 +150,84 @@ def _num(x) -> float | None:
         return None
 
 
-def _lowest(trials):
-    """The lowest-scoring scored trial (errored trials only when nothing was scored)."""
-    scored = [t for t in trials if t[1] is not None]
-    return min(scored, key=lambda t: t[1]) if scored else (trials[0] if trials else None)
+def trials_of(pt: dict) -> list[tuple[str, float | None, str]]:
+    """``[(trial name, reward or None, text)]`` for one per-task row; no text is ever dropped.
+
+    Trial names are unique: inside a pooled ``[evaluation i of n]`` section they are prefixed
+    ``e<i>``. Text with no trial label (a whole row, or a section, that every trial agreed
+    on) is one block with the row's mean reward.
+    """
+    fb = str(pt.get("feedback") or "").strip()
+    if not fb:
+        return []
+    row_r = _num(pt.get("reward"))
+    evals = list(EVAL_LABEL_RE.finditer(fb))
+    sections: list[tuple[str, str]] = []          # (name prefix, text)
+    if not evals:
+        sections.append(("", fb))
+    else:
+        if fb[:evals[0].start()].strip():
+            sections.append(("", fb[:evals[0].start()]))
+        for i, m in enumerate(evals):
+            end = evals[i + 1].start() if i + 1 < len(evals) else len(fb)
+            sections.append((f"e{m.group(1)} ", fb[m.end():end]))
+    out = []
+    for prefix, sec in sections:
+        sec = sec.strip()
+        marks = list(TRIAL_LABEL_RE.finditer(sec))
+        lead = sec[:marks[0].start()].strip() if marks else sec
+        if lead:
+            out.append((f"evaluation {prefix[1:].strip()}" if prefix else ("" if not marks else "unlabelled"),
+                        row_r, lead))
+        for i, m in enumerate(marks):
+            end = marks[i + 1].start() if i + 1 < len(marks) else len(sec)
+            text = sec[m.end():end].strip()
+            for part in m.group(1).split(", "):     # one label may name several trials
+                t = _TRIAL_RE.fullmatch(part.strip())
+                if t:
+                    out.append((prefix + t.group(1), None if t.group(2) else _num(t.group(3)), text))
+    return out
 
 
-def header(pt: dict) -> str:
-    """The code-written first line of a condensed entry: every trial's reward, lowest marked."""
+def _lowest_index(trials) -> int | None:
+    """The lowest-scoring scored trial (an errored one only when nothing was scored)."""
+    scored = [i for i, t in enumerate(trials) if t[1] is not None]
+    if scored:
+        return min(scored, key=lambda i: trials[i][1])
+    return 0 if trials else None
+
+
+def header(pt: dict, limit: int | None = None) -> str:
+    """The code-written first line of a condensed entry: every trial's reward, lowest marked.
+
+    Over ``limit`` bytes (many pooled trials, long tag names) it becomes a compact line: the
+    trial count, the reward range and the lowest trial.
+    """
     trials = trials_of(pt)
     if len(trials) <= 1:
         return ""
-    low = _lowest(trials)
+    low = _lowest_index(trials)
     parts = []
-    for name, r, _ in trials:
+    for i, (name, r, _) in enumerate(trials):
         s = f"{name} " + ("errored" if r is None else f"{r:.3f}")
-        parts.append(s + (" (lowest)" if (name, r) == (low[0], low[1]) else ""))
-    return "trials: " + ", ".join(parts)
+        parts.append(s + (" (lowest)" if i == low else ""))
+    full = "trials: " + ", ".join(parts)
+    if limit is None or _size(full) <= limit:
+        return full
+    scored = [r for _, r, _ in trials if r is not None]
+    n_err = len(trials) - len(scored)
+    lname, lr = trials[low][0], trials[low][1]
+    compact = (f"trials: {len(trials)}" + (f" ({n_err} errored)" if n_err else "")
+               + (f", rewards {min(scored):.3f} to {max(scored):.3f}" if scored else "")
+               + f", lowest: {lname} " + ("errored" if lr is None else f"{lr:.3f}"))
+    return compact if _size(compact) <= limit else _clip(compact, limit)
 
 
-# ---- the deterministic fallback -----------------------------------------------------
+# ---- sizes and cuts ---------------------------------------------------------------------
+
+def _size(s: str) -> int:
+    return len(s.encode("utf-8"))
+
 
 def middle_cut(text: str, n: int) -> str:
     """``text`` cut to at most ``n`` chars from the MIDDLE: a judge's verdict is often last."""
@@ -104,40 +235,205 @@ def middle_cut(text: str, n: int) -> str:
     if len(text) <= n:
         return text
     mark = " … "
+    if n < 4 * len(mark):
+        return text[:max(0, n)]
     head = max(0, int((n - len(mark)) * 0.35))
     return text[:head].rstrip() + mark + text[len(text) - (n - len(mark) - head):].lstrip()
 
 
-def fallback(pt: dict, budget: int) -> str:
-    """A bounded entry without a model: the lowest trial's text first, then the best one's."""
+def _clip(text: str, n: int, measure=None) -> str:
+    """``middle_cut`` of ``text`` to at most ``n`` by ``measure`` (UTF-8 bytes by default).
+
+    Always cuts the ORIGINAL text (shrinking the char target), so there is one cut mark."""
+    measure = measure or _size
+    text = str(text or "").strip()
+    if measure(text) <= n:
+        return text
+    m = min(len(text), max(0, n))
+    for _ in range(12):
+        out = middle_cut(text, m)
+        over = measure(out) - n
+        if over <= 0:
+            return out
+        m = max(0, m - max(1, over))
+    return text.encode("utf-8")[:max(0, n)].decode("utf-8", errors="ignore")
+
+
+def render(head: str, body: str, link: str | None = None) -> str:
+    """One listed entry: ``head`` then the body, every continuation line indented two spaces
+    (so a multi-line body stays inside its markdown list item), then the link line."""
+    out = head + body.replace("\n", "\n  ")
+    if link:
+        out += _link_line(link)
+    return out
+
+
+def _link_line(link: str) -> str:
+    return f"\n  (full feedback, every trial: {link})"
+
+
+def _rendered_size(body: str) -> int:
+    return _size(body) + 2 * body.count("\n")
+
+
+def _fit_rendered(body: str, n: int) -> str:
+    """``body`` at a RENDERED size (with ``render``'s indentation) of at most ``n``: a safety
+    net, since the pieces are sized to fit already."""
+    return body if _rendered_size(body) <= n else _clip(body, n, _rendered_size)
+
+
+def _join_lines(first: str, rest: str, n: int) -> str:
+    """``first`` (the header, may be empty), then ``rest`` cut to what remains of ``n``."""
+    if not first:
+        return _clip(rest, n, _rendered_size)
+    room = n - _rendered_size(first) - 3          # the newline and its two-space indent
+    return first + "\n" + _clip(rest, max(0, room), _rendered_size)
+
+
+def fallback(pt: dict, n: int) -> str:
+    """A body of at most ``n`` rendered bytes, without a model: the bounded ``trials:`` line,
+    then the lowest trial's text, then the best one's."""
     trials = trials_of(pt)
     if not trials:
         return ""
-    head_line = header(pt)
-    room = budget - len(head_line) - (1 if head_line else 0)
-    if len(trials) == 1 or len({t[2] for t in trials}) == 1:
-        body = middle_cut(trials[0][2], room)
+    h = header(pt, max(40, n // 3))
+    room = n - (_rendered_size(h) + 3 if h else 0)
+    clip = lambda t, k: _clip(t, max(0, k), _rendered_size)
+    if len({t[2] for t in trials}) == 1:
+        body = clip(trials[0][2], room)
     else:
-        low = _lowest(trials)
+        low = trials[_lowest_index(trials)]
         scored = [t for t in trials if t[1] is not None and t[2] != low[2]]
         best = max(scored, key=lambda t: t[1]) if scored else None
-        low_txt = f"lowest ({low[0]}): "
-        if best is None or room < 300:
-            body = low_txt + middle_cut(low[2], room - len(low_txt))
+        low_txt = f"lowest ({low[0] or 'only trial'}): "
+        if best is None or room < MIN_ENTRY:
+            body = low_txt + clip(low[2], room - _size(low_txt))
         else:
             best_txt = f"\nbest ({best[0]}): "
-            low_room = int((room - len(low_txt) - len(best_txt)) * 0.65)
-            body = (low_txt + middle_cut(low[2], low_room) + best_txt
-                    + middle_cut(best[2], room - len(low_txt) - len(best_txt) - low_room))
-    return (head_line + "\n" + body) if head_line else body
+            avail = room - _size(low_txt) - _rendered_size(best_txt)
+            low_room = int(avail * 0.65)
+            body = low_txt + clip(low[2], low_room) + best_txt + clip(best[2], avail - low_room)
+    return _fit_rendered((h + "\n" + body) if h else body, n)
 
 
-# ---- full text on disk --------------------------------------------------------------
+# ---- the budget -------------------------------------------------------------------------
+
+def budget_bytes() -> int:
+    """The feedback budget of one optimizer prompt (``CAPEVOLVE_FEEDBACK_BUDGET_BYTES``)."""
+    try:
+        return max(MIN_BUDGET, int(os.environ.get(ENV_BUDGET) or DEFAULT_BUDGET))
+    except ValueError:
+        return DEFAULT_BUDGET
+
+
+class Budget:
+    """What is left of one optimizer prompt's feedback budget, shared by its blocks."""
+
+    def __init__(self, total: int | None = None):
+        self.total = budget_bytes() if total is None else max(0, int(total))
+        self.used = 0
+
+    @property
+    def left(self) -> int:
+        return max(0, self.total - self.used)
+
+    def spend(self, n: int) -> None:
+        self.used += max(0, int(n))
+
+
+def rest_line(rest: list[dict]) -> str:
+    """The line naming the tasks the budget left out (at most 60 ids, then a count)."""
+    if not rest:
+        return ""
+    ids = [str(pt.get("task_id")) for pt in rest]
+    named = ", ".join(ids[:60]) + (f" … (+{len(ids) - 60} more)" if len(ids) > 60 else "")
+    return (f"(+{len(rest)} more failing task(s) not listed, over the feedback budget "
+            f"({ENV_BUDGET}): {named}. Their traces are in ./trajectories/.)")
+
+
+@dataclass
+class Fit:
+    """``fit``'s result: the rendered entry of every listed task, in order."""
+    entries: dict = field(default_factory=dict)     # task id -> rendered entry
+    shown: list = field(default_factory=list)       # listed rows, in the given order
+    rest: list = field(default_factory=list)        # rows over the budget (name them)
+    used: int = 0                                   # bytes: entries + the rest line
+    condensed: int = 0
+    cut: int | None = None                          # the common condensed body size, if any
+
+    @property
+    def rest_line(self) -> str:
+        return rest_line(self.rest)
+
+
+def fit(rows: list[dict], limit: int, *, head=lambda pt: "", run_dir=None, optimizer=None) -> Fit:
+    """Share ``limit`` bytes between ``rows`` (most important first) and render their entries.
+
+    * Everything fits: every entry in full, nothing summarized.
+    * Otherwise as many rows are listed as can each get ``MIN_ENTRY`` bytes (a short entry
+      costs only its own size), and the rest are named in ``rest_line``.
+    * The listed rows share the room: the largest common cap ``c`` is found such that each
+      entry shorter than ``c`` is shown in full and each longer one is condensed to ``c``;
+      what short entries do not use goes to the long ones.
+
+    ``head(pt)`` is each entry's first-line prefix (``"- t7 (reward 0.00): "``). With
+    ``run_dir`` a condensed entry's full text is written there and linked; with the run's
+    ``optimizer`` too, condensed entries are summarized by it (``_summaries``).
+    """
+    if not rows:
+        return Fit()
+    heads = [head(pt) for pt in rows]
+    full = [render(h, str(pt.get("feedback") or "").strip()) for h, pt in zip(heads, rows)]
+    sizes = [_size(e) for e in full]
+    if sum(sizes) <= limit:
+        return Fit(entries={str(pt.get("task_id")): e for pt, e in zip(rows, full)},
+                   shown=list(rows), used=sum(sizes))
+    links = [link_for(pt) if run_dir is not None else None for pt in rows]
+    link_sz = [_size(_link_line(lk)) if lk else 0 for lk in links]
+    head_sz = [_size(h) for h in heads]
+
+    def cost(i, c):
+        return sizes[i] if sizes[i] - head_sz[i] <= c else head_sz[i] + c + link_sz[i]
+
+    n = len(rows)
+    while n > 1 and sum(cost(i, MIN_ENTRY) for i in range(n)) + _size(rest_line(rows[n:])) > limit:
+        n -= 1
+    room = limit - _size(rest_line(rows[n:]))
+    lo = MIN_ENTRY if sum(cost(i, MIN_ENTRY) for i in range(n)) <= room else \
+        max(40, room - head_sz[0] - link_sz[0])
+    hi = max(lo, max(sizes[i] - head_sz[i] for i in range(n)))
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if sum(cost(i, mid) for i in range(n)) <= room:
+            lo = mid
+        else:
+            hi = mid - 1
+    c = lo
+    shown = rows[:n]
+    long_rows = [pt for i, pt in enumerate(shown) if sizes[i] - head_sz[i] > c]
+    bodies = _condense(long_rows, c, run_dir, optimizer)
+    entries = {}
+    for i, pt in enumerate(shown):
+        tid = str(pt.get("task_id"))
+        if tid in bodies:
+            link = store_full(run_dir, pt) if run_dir is not None else None
+            entries[tid] = render(heads[i], bodies[tid], link)
+        else:
+            entries[tid] = full[i]
+    used = sum(_size(e) for e in entries.values()) + _size(rest_line(rows[n:]))
+    return Fit(entries=entries, shown=shown, rest=rows[n:], used=used, condensed=len(bodies), cut=c)
+
+
+# ---- full text on disk ------------------------------------------------------------------
 
 def _file_name(task_id, text: str) -> str:
     """Content-addressed, so concurrent candidates with different parents never collide."""
     safe = re.sub(r"[^A-Za-z0-9._-]+", "_", str(task_id)).strip("._")[:120] or "task"
     return f"{safe}-{hashlib.sha256(text.encode('utf-8')).hexdigest()[:10]}.md"
+
+
+def link_for(pt: dict) -> str:
+    return f"./{DIR}/{_file_name(pt.get('task_id'), str(pt.get('feedback') or ''))}"
 
 
 def store_full(run_dir, pt: dict) -> str:
@@ -153,32 +449,18 @@ def store_full(run_dir, pt: dict) -> str:
     return f"./{DIR}/{name}"
 
 
-def store_links(run_dir, rows: list[dict], digest: dict) -> dict:
-    """``{task_id: link}`` for every row ``digest`` condensed; ``{}`` without a run dir."""
+def provide_linked(instructions: str, workdir, run_dir) -> int:
+    """Copy every ``./feedback_full/<name>.md`` the prompt links to into ``workdir``.
+
+    Called where the algorithm hands the prompt to its optimizer, for EVERY kind of
+    ``OptimizerFn`` and wherever its workdir is. Returns the number of files copied.
+    """
     if run_dir is None:
-        return {}
-    return {str(pt.get("task_id")): store_full(run_dir, pt) for pt in rows if str(pt.get("task_id")) in digest}
-
-
-def copy_linked(instructions: str, workdir: Path, run_dir) -> int:
-    """Copy every ``./feedback_full/<name>.md`` the prompt links to into the optimizer's workdir."""
-    return 0 if run_dir is None else _copy(instructions, Path(run_dir.root) / DIR, Path(workdir))
-
-
-def copy_linked_from(instructions: str, workdir: Path) -> int:
-    """``copy_linked`` for a workdir under the run dir (``<run>/work/<cid>``): the files are
-    found by walking up from it, so the optimizer runner needs no run-dir handle."""
-    for up in Path(workdir).resolve().parents:
-        if (up / DIR).is_dir():
-            return _copy(instructions, up / DIR, Path(workdir))
-    return 0
-
-
-def _copy(instructions: str, src_root: Path, workdir: Path) -> int:
-    names = set(_LINK_RE.findall(instructions or ""))
+        return 0
+    names = set(LINK_RE.findall(instructions or ""))
     if not names:
         return 0
-    dst_root = workdir / DIR
+    src_root, dst_root = Path(run_dir.root) / DIR, Path(workdir) / DIR
     dst_root.mkdir(parents=True, exist_ok=True)
     n = 0
     for name in names:
@@ -189,7 +471,7 @@ def _copy(instructions: str, src_root: Path, workdir: Path) -> int:
     return n
 
 
-# ---- the summarizer: the run's own optimizer ---------------------------------------
+# ---- the summarizer: the run's own optimizer -------------------------------------------
 
 def enabled() -> bool:
     return str(os.environ.get("CAPEVOLVE_FEEDBACK_SUMMARY", "")).lower() not in ("off", "0", "false", "no")
@@ -216,11 +498,9 @@ Task ids (file -> id):
 """
 
 
-def _write_batch(workdir: Path, rows: list[dict], budget: int) -> str:
+def _write_batch(workdir: Path, rows: list[dict], target: int) -> str:
     """The batch as one markdown file per task, plus the instructions; returns the prompt."""
-    if workdir.exists():
-        shutil.rmtree(workdir)
-    (workdir / "tasks").mkdir(parents=True)
+    (workdir / "tasks").mkdir(parents=True, exist_ok=True)
     index = []
     for i, pt in enumerate(rows):
         name = f"tasks/{i:02d}.md"
@@ -230,7 +510,7 @@ def _write_batch(workdir: Path, rows: list[dict], budget: int) -> str:
                       "", text, ""]
         (workdir / name).write_text("\n".join(lines), encoding="utf-8")
         index.append(f"- {name} -> {pt.get('task_id')}")
-    return _RULES.format(n=budget, index="\n".join(index))
+    return _RULES.format(n=target, index="\n".join(index))
 
 
 def _read_summaries(workdir: Path) -> dict:
@@ -240,95 +520,175 @@ def _read_summaries(workdir: Path) -> dict:
     return {str(k): str(v) for k, v in obj.items()}
 
 
-def summarize_batches(rows: list[dict], budget: int, optimizer, scratch: Path,
-                      run_dir=None) -> tuple[dict, list[str]]:
-    """``({task_id: summary}, [errors])``: ``optimizer(workdir, prompt)`` on ``BATCH`` tasks per
-    call, the calls run concurrently, each in its own workdir under ``scratch``."""
-    chunks = [rows[i:i + BATCH] for i in range(0, len(rows), BATCH)]
+def batches(rows: list[dict], limit: int) -> list[list[dict]]:
+    """``rows`` in order, packed into batches of at most ``limit`` bytes of feedback each (a
+    row larger than ``limit`` alone is its own batch). A summary call reads no more feedback
+    than one optimizer prompt may carry."""
+    out: list[list[dict]] = []
+    cur, cur_sz = [], 0
+    for pt in rows:
+        sz = _size(str(pt.get("feedback") or ""))
+        if cur and cur_sz + sz > limit:
+            out.append(cur)
+            cur, cur_sz = [], 0
+        cur.append(pt)
+        cur_sz += sz
+    if cur:
+        out.append(cur)
+    return out
+
+
+def _workers() -> int:
+    """The run's own concurrency setting (``--workers`` / ``CAPEVOLVE_WORKERS``)."""
+    from .harness import _resolve_workers
+    return _resolve_workers(None)
+
+
+def usd_headroom(run_dir) -> float | None:
+    """USD the run may still spend on the optimizer (the tighter of ``max_optimizer_usd`` and
+    ``max_usd``), or None when neither is set."""
+    try:
+        b, s = run_dir.budget, run_dir.spent
+    except Exception:  # noqa: BLE001 — a run dir double without budgets
+        return None
+    caps = []
+    if getattr(b, "max_optimizer_usd", 0):
+        caps.append(float(b.max_optimizer_usd) - float(s.optimizer_usd))
+    if getattr(b, "max_usd", 0):
+        caps.append(float(b.max_usd) - float(s.total_usd))
+    return min(caps) if caps else None
+
+
+def summarize_batches(chunks: list[list[dict]], target: int, optimizer, scratch: Path,
+                      run_dir=None, workers: int | None = None) -> tuple[dict, list[str], int]:
+    """``({task_id: summary}, [errors], skipped)``: ``optimizer(workdir, prompt)`` once per
+    batch, each in its own workdir under ``scratch``, at most ``workers`` calls at a time.
+
+    Before each wave of calls the run's USD headroom is checked: none left, no more calls
+    (``skipped`` batches fall back). While the cost of one call is not yet known the first
+    wave is a single call; after that a wave is as many calls as the headroom pays for, at
+    the mean cost seen so far. Every call's cost counts as optimizer spend, a failed one too.
+    """
+    workers = max(1, int(workers or _workers()))
 
     def one(k):
         wd = scratch / f"batch_{k:02d}"
         t0 = time.time()
         try:
-            report = optimizer(wd, _write_batch(wd, chunks[k], budget)) or {}
+            report = optimizer(wd, _write_batch(wd, chunks[k], target)) or {}
         except Exception as e:  # noqa: BLE001 — one bad batch never costs the iteration
             report, err = getattr(e, "cost", None) or {}, f"batch {k}: {type(e).__name__}: {str(e)[:200]}"
         else:
             err = None
+        usd = float(report.get("cost_usd") or 0.0)
         if run_dir is not None and hasattr(run_dir, "update_spent"):
-            run_dir.update_spent(optimizer_seconds=time.time() - t0,
-                                 optimizer_usd=float(report.get("cost_usd") or 0.0),
+            run_dir.update_spent(optimizer_seconds=time.time() - t0, optimizer_usd=usd,
                                  optimizer_tokens=int(report.get("tokens") or 0))
         if err:
-            return {}, err
+            return {}, err, usd
         try:
-            return _read_summaries(wd), None
+            return _read_summaries(wd), None, usd
         except Exception as e:  # noqa: BLE001
-            return {}, f"batch {k}: no usable summaries.json ({type(e).__name__}: {str(e)[:150]})"
+            return {}, f"batch {k}: no usable summaries.json ({type(e).__name__}: {str(e)[:150]})", usd
 
-    out, errors = {}, []
-    with ThreadPoolExecutor(max_workers=min(4, len(chunks) or 1)) as pool:
-        for got, err in pool.map(one, range(len(chunks))):
-            if err:
-                errors.append(err)
-            for pt_id, text in got.items():
-                if text.strip():
-                    out[pt_id] = text.strip()
-    return out, errors
+    out, errors, costs = {}, [], []
+    todo = list(range(len(chunks)))
+    while todo:
+        room = usd_headroom(run_dir) if run_dir is not None else None
+        if room is None:
+            wave = todo[:workers]
+        elif room <= 0:
+            break
+        elif not costs:
+            wave = todo[:1]
+        else:
+            per_call = sum(costs) / len(costs)
+            k = workers if per_call <= 0 else min(workers, int(room // per_call))
+            if k < 1:
+                break
+            wave = todo[:k]
+        todo = todo[len(wave):]
+        with ThreadPoolExecutor(max_workers=len(wave)) as pool:
+            for got, err, usd in pool.map(one, wave):
+                costs.append(usd)
+                if err:
+                    errors.append(err)
+                for pt_id, text in got.items():
+                    if text.strip():
+                        out[pt_id] = text.strip()
+    return out, errors, len(todo)
 
 
 def _cache_path(run_dir) -> Path:
     return Path(run_dir.root) / "feedback_summaries.json"
 
 
-def condense(rows: list[dict], run_dir=None, optimizer=None) -> dict:
-    """``{task_id: bounded entry body}`` for every row whose feedback is over the bound.
-
-    Rows within the bound are not returned (shown as they are). With ``run_dir`` and the
-    run's ``optimizer`` (the ``OptimizerFn`` the algorithm proposes edits with) the long rows
-    are summarized by it, and cached by content in the run dir so an unchanged task is never
-    summarized twice. Every row with no summary gets ``fallback``.
-    """
-    optimizer_key = str(getattr(optimizer, "command", "") or getattr(optimizer, "__qualname__", ""))
-    n = entry_chars()
-    long_rows = [pt for pt in rows if len(str(pt.get("feedback") or "").strip()) > n]
-    if not long_rows:
+def _read_cache(run_dir) -> dict:
+    try:
+        obj = json.loads(_cache_path(run_dir).read_text(encoding="utf-8"))
+        return obj if isinstance(obj, dict) else {}
+    except (OSError, ValueError):
         return {}
-    budgets = {str(pt.get("task_id")): n - len(header(pt)) - 1 for pt in long_rows}
+
+
+def _merge_cache(run_dir, new: dict) -> None:
+    """Merge ``new`` into the cache file under the run dir's file lock, written atomically:
+    concurrent prompt builders never lose each other's (paid-for) summaries."""
+    if not new:
+        return
+    from .rundir import _atomic_write, _file_lock
+    path = _cache_path(run_dir)
+    try:
+        with _file_lock(path.with_name(path.name + ".lock")):
+            cur = _read_cache(run_dir)
+            cur.update(new)
+            _atomic_write(path, json.dumps(cur))
+    except OSError:
+        pass
+
+
+def _condense(rows: list[dict], c: int, run_dir=None, optimizer=None) -> dict:
+    """``{task_id: body}`` of at most ``c`` rendered bytes for each of ``rows``: the run's
+    optimizer's summary (cached by content, reused while it fits), else ``fallback``."""
+    if not rows:
+        return {}
     out: dict = {}
     if run_dir is not None and optimizer is not None and enabled():
-        try:
-            cache = json.loads(_cache_path(run_dir).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            cache = {}
+        optimizer_key = str(getattr(optimizer, "command", "") or getattr(optimizer, "__qualname__", ""))
+        hdr = {str(pt.get("task_id")): header(pt, max(40, c // 3)) for pt in rows}
+        room = {tid: c - (_rendered_size(h) + 3 if h else 0) for tid, h in hdr.items()}
         key = lambda pt: hashlib.sha256(
-            f"{optimizer_key}|{n}|{pt.get('task_id')}|{pt.get('feedback')}".encode("utf-8")).hexdigest()
-        todo = [pt for pt in long_rows if key(pt) not in cache]
+            f"{optimizer_key}|{pt.get('task_id')}|{pt.get('feedback')}".encode("utf-8")).hexdigest()
+        cache = _read_cache(run_dir)
+        # A cached summary is reused while it fits this prompt's room; a too-long one is redone.
+        fits = lambda pt: (key(pt) in cache
+                           and _rendered_size(cache[key(pt)]) <= room[str(pt.get("task_id"))])
+        todo = [pt for pt in rows if not fits(pt)]
         errors: list[str] = []
+        calls = skipped = 0
         if todo:
-            scratch = Path(run_dir.root) / "work" / f"feedback_summary_{int(time.time() * 1000)}"
-            got, errors = summarize_batches(todo, max(150, min(budgets.values())), optimizer,
-                                            scratch, run_dir)
-            for pt in todo:
-                s = got.get(str(pt.get("task_id")))
-                if s:
-                    cache[key(pt)] = s
-            shutil.rmtree(scratch, ignore_errors=True)
+            target = max(MIN_ENTRY // 2, min(room[str(pt.get("task_id"))] for pt in todo))
+            work = Path(run_dir.root) / "work"
+            work.mkdir(parents=True, exist_ok=True)
+            scratch = Path(tempfile.mkdtemp(prefix="feedback_summary_", dir=work))
+            chunks = batches(todo, budget_bytes())
             try:
-                _cache_path(run_dir).write_text(json.dumps(cache), encoding="utf-8")
-            except OSError:
-                pass
-        used = 0
-        for pt in long_rows:
+                got, errors, skipped = summarize_batches(chunks, target, optimizer, scratch, run_dir)
+            finally:
+                shutil.rmtree(scratch, ignore_errors=True)
+            calls = len(chunks) - skipped
+            new = {key(pt): got[str(pt.get("task_id"))] for pt in todo if got.get(str(pt.get("task_id")))}
+            _merge_cache(run_dir, new)
+            cache.update(new)
+        for pt in rows:
+            tid = str(pt.get("task_id"))
             s = cache.get(key(pt))
             if s:
-                tid, h = str(pt.get("task_id")), header(pt)
-                out[tid] = ((h + "\n") if h else "") + middle_cut(s, budgets[tid])
-                used += 1
+                out[tid] = _fit_rendered(_join_lines(hdr[tid], s.strip(), c), c)
         if hasattr(run_dir, "log_event"):
-            run_dir.log_event("feedback_summary", optimizer=optimizer_key[:200], long=len(long_rows),
-                              summarized=used, fallback=len(long_rows) - used,
-                              calls=-(-len(todo) // BATCH) if todo else 0, errors=errors[:5])
-    for pt in long_rows:
-        out.setdefault(str(pt.get("task_id")), fallback(pt, n))
+            run_dir.log_event("feedback_summary", optimizer=optimizer_key[:200], condensed=len(rows),
+                              summarized=len(out), fallback=len(rows) - len(out), cut=c,
+                              calls=calls, skipped_for_budget=skipped, errors=errors[:5])
+    for pt in rows:
+        out.setdefault(str(pt.get("task_id")), fallback(pt, c))
     return out

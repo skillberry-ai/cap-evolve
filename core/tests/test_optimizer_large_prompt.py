@@ -4,9 +4,9 @@ With full LLM-judge feedback (every trial's rationale) one iteration's INSTRUCTI
 reached 460 KB on a 12-task x 3-trial run. ``claude -p {prompt_text}`` put all of it in ONE
 argv string, Linux caps that at MAX_ARG_STRLEN = 128 KiB, and exec failed with E2BIG.
 
-Pinned here: the rendered prompt is bounded (each failure-index entry at
-``feedback_digest.entry_chars()``, at most ``DEFAULT_MAX_LISTED`` entries), so every row can
-inline it; a row whose prompt is over the limit anyway gets a pointer to the prompt file
+Pinned here: the rendered prompt is bounded (all its feedback shares one budget,
+``feedback_digest.budget_bytes()``), so every row can inline it; a row whose prompt is over
+the limit anyway gets a pointer to the prompt file
 instead of an exec failure; and the template renderer no longer doubles the failure index
 by also expanding the backtick-quoted ``{{FAILURES}}`` mention in its prose.
 """
@@ -23,7 +23,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "core"))
 RUN_OPT = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.py"
 
-from cap_evolve import harness  # noqa: E402
+from cap_evolve import feedback_digest, harness  # noqa: E402
 from cap_evolve.loop import SplitResult  # noqa: E402
 from cap_evolve.specfile import read_yaml  # noqa: E402
 
@@ -103,7 +103,7 @@ def _per(n_tasks: int, n_trials: int, fb_len: int) -> list[dict]:
         trials = [(k, 0.5 + 0.1 * k, f"[task {i} trial {k}] " + "x" * fb_len + f" VERDICT-{i}-{k}")
                   for k in range(n_trials)]
         per.append({"task_id": f"t{i}", "reward": 0.6, "trial_rewards": [0.5, 0.6, 0.7],
-                    "feedback": harness._join_trial_feedback(trials)})
+                    "feedback": feedback_digest.join_trial_feedback(trials)})
     return per
 
 

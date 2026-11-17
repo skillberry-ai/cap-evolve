@@ -46,10 +46,9 @@ from __future__ import annotations
 
 import math
 import random
-import re
 from pathlib import Path
 
-from . import harness
+from . import feedback_digest, harness
 from .lr_schedule import build_schedule
 from .loop import SplitResult
 from .rundir import RunDir
@@ -59,9 +58,6 @@ from .rundir import RunDir
 _MAX_FAILURES_PER_STEP = 10      # failure-pattern clusters carried per step
 _MAX_TASK_IDS_PER_PATTERN = 3    # task ids shown per cluster
 _MAX_BUFFER_STEPS = 12           # most recent steps kept in the per-epoch buffer
-# A feedback label line: a trial label (harness._join_trial_feedback) or a pooled
-# evaluation header (loop.pooled_feedback).
-_TRIAL_LABEL_RE = re.compile(r"^\[(?:(?:\S+ )?trial \d+[^\]\n]*|evaluation \d+ of \d+)\]$", re.MULTILINE)
 
 
 # ---- failure-pattern clustering -------------------------------------------
@@ -85,10 +81,10 @@ def _failure_patterns(per_task: list, focus_ids=None) -> list[dict]:
             continue
         if (pt.get("raw") or {}).get("errored"):
             continue  # infra noise, not an actionable failure pattern
-        # The multi-trial "[trial k reward r]" labels (harness._join_trial_feedback) are
-        # dropped first: they carry per-trial rewards, so two tasks with the same failure
-        # would otherwise key apart, and the label would crowd out the failure's own words.
-        fb = _TRIAL_LABEL_RE.sub("", str(pt.get("feedback", "") or "")).strip()
+        # The trial and evaluation labels (feedback_digest) are dropped first: they carry
+        # per-trial rewards, so two tasks with the same failure would otherwise key apart,
+        # and the label would crowd out the failure's own words.
+        fb = feedback_digest.strip_labels(pt.get("feedback", ""))
         # Normalized signature: first ~8 words, lowercased — a cheap, deterministic
         # clustering key (same idea as diagnose's default signature fn).
         sig = " ".join(fb.lower().split()[:8]) or "(no feedback)"
@@ -144,23 +140,23 @@ def _buffer_block(edit_budget: int, step_buffer: list[dict], rejected_this_epoch
 
 
 def _slow_update_instructions(epoch: int, categories: dict[str, list[dict]], run_dir=None,
-                              optimizer=None) -> str:
-    """Longitudinal (epoch N vs N-1) instruction for the gated slow update."""
+                              optimizer=None, budget: "feedback_digest.Budget | None" = None) -> str:
+    """Longitudinal (epoch N vs N-1) instruction for the gated slow update.
+
+    The regressed, then the persistent tasks share HALF of what is left of the prompt's
+    feedback ``budget`` (``feedback_digest.fit``); the failure index rendered after this block
+    gets the rest, including whatever this block does not use.
+    """
     regressed = categories.get("regressed", [])
     persistent = categories.get("persistent_fail", [])
     stable = categories.get("stable_success", [])
-    # Each task's feedback is bounded the same way as the failure index (feedback_digest).
-    from . import feedback_digest as fd
-    listed = regressed[:_MAX_FAILURES_PER_STEP] + persistent[:_MAX_FAILURES_PER_STEP]
-    digest = fd.condense(listed, run_dir, optimizer)
-    links = fd.store_links(run_dir, listed, digest)
-
-    def entry(pt) -> str:
-        tid = str(pt.get("task_id"))
-        if tid not in digest:
-            return f"- {tid}: {str(pt.get('feedback', ''))}"
-        link = f"\n(full feedback, every trial: {links[tid]})" if tid in links else ""
-        return f"- {tid}: " + (digest[tid] + link).replace("\n", "\n  ")
+    fd = feedback_digest
+    budget = budget if budget is not None else fd.Budget()
+    got = fd.fit(regressed + persistent, budget.left // 2, head=lambda pt: f"- {pt.get('task_id')}: ",
+                 run_dir=run_dir, optimizer=optimizer)
+    budget.spend(got.used)
+    shown = {str(pt.get("task_id")) for pt in got.shown}
+    listed = lambda rows: [got.entries[str(pt.get("task_id"))] for pt in rows if str(pt.get("task_id")) in shown]
 
     lines = [
         f"# SkillOpt slow / meta update — epoch {epoch} vs epoch {epoch - 1}",
@@ -172,15 +168,15 @@ def _slow_update_instructions(epoch: int, categories: dict[str, list[dict]], run
         "",
         f"## REGRESSED — passed at epoch start, now failing ({len(regressed)})",
     ]
-    for pt in regressed[:_MAX_FAILURES_PER_STEP]:
-        lines.append(entry(pt))
+    lines += listed(regressed)
     if not regressed:
         lines.append("- (none — good; do not destabilize current passes)")
     lines += ["", f"## PERSISTENT failures — failing both epochs ({len(persistent)})"]
-    for pt in persistent[:_MAX_FAILURES_PER_STEP]:
-        lines.append(entry(pt))
+    lines += listed(persistent)
     if not persistent:
         lines.append("- (none)")
+    if got.rest:
+        lines += ["", got.rest_line]
     lines += ["", f"## STABLE SUCCESS — passing both epochs, DO NOT BREAK ({len(stable)})",
               "- " + ", ".join(str(pt.get("task_id")) for pt in stable[:25])
               if stable else "- (none)"]
@@ -514,11 +510,12 @@ def _run_slow_update(
     parent_dir = run_dir.candidate_dir(run_dir.best_id)
     # Same shared read-context as a normal step; the longitudinal block is this step's
     # own addition (+ the consolidating L budget).
-    extra = (_slow_update_instructions(epoch, categories, run_dir, optimizer) + "\n"
+    budget = feedback_digest.Budget()      # ONE feedback budget for the whole prompt
+    extra = (_slow_update_instructions(epoch, categories, run_dir, optimizer, budget) + "\n"
              + _buffer_block(edit_budget, [], []))
     instructions = ctx.instructions(current_val, sample_ids, f"epoch {epoch} slow/meta update",
                                    algorithm="skillopt", parent_dir=parent_dir, extra=extra,
-                                   run_dir=run_dir, optimizer=optimizer)
+                                   run_dir=run_dir, optimizer=optimizer, feedback_budget=budget)
     step = harness.run_step(
         adapter, run_dir=run_dir, parent_dir=parent_dir,
         optimizer=optimizer, instructions=instructions, current_val=current_val,

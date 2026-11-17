@@ -40,7 +40,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import feedback_digest
 from .evaluator import thread_map
+from .types import NON_CAPABILITY_DIRS
 
 
 @dataclass(frozen=True)
@@ -440,7 +442,8 @@ def take_merge_pool(run_dir) -> dict | None:
 
 # ---- diversity gate -----------------------------------------------------------------------------
 
-_SKIP_DIRS = {"trajectories", "contrast", "guidance", "notes", "__pycache__", "feedback_full"}
+# Every read-context dir (types.NON_CAPABILITY_DIRS), plus HC2's own contrast/notes scratch.
+_SKIP_DIRS = set(NON_CAPABILITY_DIRS) | {"contrast", "notes"}
 _SKIP_FILES = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
                "PROCESS.md", "cross_trace_summary.md", "DIAGNOSIS.json"}
 
@@ -550,11 +553,10 @@ def _pooled_split_result(traces, tasks):
         if ts:
             # Every failing draw's signature, each distinct text once under its own trial and
             # reward (the same join hill-climb, GEPA and SkillOpt use), not only the first one's.
-            from .harness import _join_trial_feedback
             failing = sorted((t for t in ts if t.reward < 1.0), key=lambda t: (t.tag, t.trial))
             tags = {t.tag for t in failing}
             rows.append({"task_id": tid, "reward": sum(t.reward for t in ts) / len(ts),
-                         "feedback": _join_trial_feedback(
+                         "feedback": feedback_digest.join_trial_feedback(
                              [(t.trial if len(tags) == 1 else f"{t.tag} {t.trial}", t.reward, t.signature)
                               for t in failing])})
     mean = sum(r["reward"] for r in rows) / len(rows) if rows else 0.0
@@ -702,6 +704,7 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
         build_instructions(ctx, view, cl, parent_dir=incumbent_dir, algorithm=algorithm, params=params,
                            shown=shown, rejected_notes=notes, retry_note=retry_note, role=role,
                            run_dir=run_dir, optimizer=optimizer), wd, run_dir)
+    feedback_digest.provide_linked(instr, wd, run_dir)      # the ./feedback_full/ files it links to
     return wd, instr, shown
 
 

@@ -351,8 +351,8 @@ def _run_and_stream(cmd: list[str], *, cwd: str, env: dict,
 #: Largest prompt inlined into argv via ``{prompt_text}``. Linux caps ONE argument at
 #: MAX_ARG_STRLEN = 128 KiB (and all of argv+env at ARG_MAX), so a bigger prompt fails the
 #: exec with E2BIG before the CLI even starts. The harness bounds the prompt well below
-#: this (the failure index is cut to entry_chars() per task, ``feedback_digest``), so the
-#: pointer below is a safety net, not a path a normal run takes.
+#: this (all feedback in one prompt shares one budget, ``feedback_digest.budget_bytes()``),
+#: so the pointer below is a safety net, not a path a normal run takes.
 MAX_INLINE_PROMPT_BYTES = 96 * 1024
 
 

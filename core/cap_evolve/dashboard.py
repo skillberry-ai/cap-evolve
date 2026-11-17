@@ -96,6 +96,7 @@ from pathlib import Path
 
 from . import dashboard_views
 from . import graph as graph_mod
+from .types import NON_CAPABILITY_DIRS
 
 # ---------------------------------------------------------------------------
 # Secret redaction
@@ -3081,7 +3082,7 @@ def _read_dir_files(d: Path) -> dict[str, str]:
     for f in sorted(d.rglob("*")):
         if f.is_file():
             rel = str(f.relative_to(d))
-            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in ("trajectories", "guidance", "feedback_full"):
+            if rel in _DIFF_SKIP or rel.split("/", 1)[0] in NON_CAPABILITY_DIRS:
                 continue
             try:
                 out[rel] = f.read_text(encoding="utf-8")
