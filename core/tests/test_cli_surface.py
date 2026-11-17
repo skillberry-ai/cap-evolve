@@ -456,3 +456,70 @@ def test_check_flags_a_real_project_as_passing(tmp_path):
     rc, out, _ = _run("check", "--project", str(proj))
     assert json.loads(out)["ok"] is True, out
     assert rc == 0
+
+
+def test_estimate_prices_must_be_finite(tmp_path):
+    import pytest
+    proj = _project(tmp_path, "p", "deterministic")
+    for bad in (["--price-in", "nan", "--price-out", "3"],
+                ["--price-in", "3", "--price-out", "inf"]):
+        from cap_evolve import cli
+        err = io.StringIO()
+        with pytest.raises(SystemExit) as exc, redirect_stderr(err), \
+                redirect_stdout(io.StringIO()):
+            cli.main(["estimate", "--project", str(proj), *bad])
+        assert exc.value.code != 0
+        assert "must be a finite number" in err.getvalue()
+    # both valid prices still give a cost
+    rc, out, _err = _run("estimate", "--project", str(proj), "--price-in", "3",
+                         "--price-out", "15")
+    assert rc == 0
+    cost = json.loads(out)["cost_usd"]
+    assert cost is not None and cost["expected"] >= 0
+
+
+def test_non_numeric_spec_numbers_fail_cleanly_in_doctor_estimate_and_dry_run(tmp_path):
+    """``max_iterations: ten`` used to crash estimate/run --dry-run/doctor with a
+    ValueError traceback, and ``max_usd: five`` passed doctor as "ok"."""
+    from cap_evolve.cli import _doctor_checks
+    for line, key in (("max_iterations: ten", "max_iterations"),
+                      ("max_usd: five", "max_usd"),
+                      ("split_train: abc", "split_train"),
+                      ("num_trials: -2", "num_trials")):
+        proj = _project(tmp_path, key, "deterministic")
+        spec = proj / "capevolve.yaml"
+        text = spec.read_text(encoding="utf-8").replace("max_iterations: 3\n", "")
+        spec.write_text(text + line + "\n", encoding="utf-8")
+
+        rows = [r for r in _doctor_checks(proj) if r["status"] == "fail" and key in r["detail"]]
+        assert rows, f"doctor did not FAIL on {line!r}"
+        assert key in rows[0]["fix"]
+        assert not any(r["status"] == "ok" and r["name"] == "budget" and key == "max_usd"
+                       for r in _doctor_checks(proj))
+
+        rc, out, err = _run("estimate", "--project", str(proj))
+        assert rc == 1, out
+        assert key in err and "Traceback" not in err
+        assert json.loads(out)["problems"][0]["key"] == key
+
+        rc, out, err = _run("run", "--project", str(proj), "--dry-run")
+        assert rc == 1, out
+        assert key in err and "Traceback" not in err
+
+
+def test_good_spec_numbers_still_pass(tmp_path):
+    from cap_evolve.cli import _doctor_checks
+    from cap_evolve.specfile import numeric_spec_errors
+    proj = _project(tmp_path, "p", "deterministic")
+    spec = proj / "capevolve.yaml"
+    spec.write_text(spec.read_text(encoding="utf-8")
+                    + "max_usd: 5.0\nnum_trials: 2\nsplit_train: 0.5\nsplit_seed: 0\n",
+                    encoding="utf-8")
+    assert not [r for r in _doctor_checks(proj) if r["name"] == "spec-numbers"]
+    budget = [r for r in _doctor_checks(proj) if r["name"] == "budget"]
+    assert budget and budget[0]["status"] == "ok"
+    rc, out, _err = _run("estimate", "--project", str(proj))
+    assert rc == 0 and "spec_summary" in json.loads(out)
+    assert numeric_spec_errors({"max_iterations": None, "workers": 4}) == []
+    assert numeric_spec_errors({"max_iterations": True})[0]["key"] == "max_iterations"
+    assert numeric_spec_errors({"max_iterations": 2.5})[0]["key"] == "max_iterations"

@@ -319,3 +319,37 @@ def spec_for_run(run_dir, project: Path | None = None) -> dict:
         return read_yaml(path.read_text(encoding="utf-8"), strict=True) or {}
     except Exception:  # noqa: BLE001
         return {}
+
+
+# Numeric spec keys the run/estimate/doctor code reads, and the kind each must be.
+_SPEC_INT_KEYS = ("max_iterations", "max_metric_calls", "num_trials", "stall", "workers",
+                  "split_seed")
+_SPEC_FLOAT_KEYS = ("max_usd", "max_optimizer_usd", "split_train", "split_val", "split_test")
+
+
+def numeric_spec_errors(spec: dict) -> list[dict]:
+    """``[{key, error, fix}]`` for numeric spec keys that are not a usable number.
+
+    An unset key (missing or ``null``) is fine — the code uses its default. A set key must
+    be a finite, non-negative number; the int keys must also be whole numbers. Catching
+    ``max_usd: five`` here means a typo in the spending cap fails up front with a plain
+    message instead of a traceback (or a silent pass) later.
+    """
+    import math
+
+    out: list[dict] = []
+    for key in _SPEC_INT_KEYS + _SPEC_FLOAT_KEYS:
+        val = (spec or {}).get(key)
+        if val is None:
+            continue
+        want_int = key in _SPEC_INT_KEYS
+        kind = "a whole number" if want_int else "a number"
+        ok = (isinstance(val, (int, float)) and not isinstance(val, bool)
+              and math.isfinite(val) and val >= 0
+              and (not want_int or float(val).is_integer()))
+        if not ok:
+            example = "10" if want_int else "5.0"
+            out.append({"key": key,
+                        "error": f"{key} must be {kind}, 0 or more (got {val!r})",
+                        "fix": f"set {key} to {kind} in capevolve.yaml, e.g. {key}: {example}"})
+    return out

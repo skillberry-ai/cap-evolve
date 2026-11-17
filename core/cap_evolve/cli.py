@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import signal
 import sys
@@ -669,6 +670,9 @@ def _cmd_run(argv):
             spec[key] = v
     if args.reuse_baseline is not None:
         spec["reuse_baseline"] = args.reuse_baseline
+
+    if _report_bad_numbers(spec):
+        return 1
 
     if args.dry_run:
         print(json.dumps(_estimate_core(spec, Path(args.project)), indent=2))
@@ -1404,6 +1408,21 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     return out
 
 
+def _report_bad_numbers(spec: dict) -> bool:
+    """Print a clean error for non-numeric/negative spec budget or split keys.
+
+    Returns True when something was wrong (the caller then exits 1).
+    """
+    from .specfile import numeric_spec_errors
+    errs = numeric_spec_errors(spec)
+    if not errs:
+        return False
+    print(json.dumps({"error": "bad numbers in spec", "problems": errs}))
+    for e in errs:
+        print(f"{e['error']}\n  → {e['fix']}", file=sys.stderr)
+    return True
+
+
 def _cmd_estimate(argv):
     """Pre-run cost estimate without spending anything."""
     import argparse
@@ -1419,6 +1438,9 @@ def _cmd_estimate(argv):
     p.add_argument("--price-in", type=float, default=None, help="optimizer/runner input $/MTok")
     p.add_argument("--price-out", type=float, default=None, help="optimizer/runner output $/MTok")
     args = p.parse_args(argv)
+    for flag, val in (("--price-in", args.price_in), ("--price-out", args.price_out)):
+        if val is not None and not math.isfinite(val):
+            p.error(f"{flag} must be a finite number (got {val})")
     spec_path, spec_err = _resolve_spec(args.spec, args.project, "estimate")
     if spec_err is not None:
         print(json.dumps(spec_err, indent=2))
@@ -1428,6 +1450,8 @@ def _cmd_estimate(argv):
     if spec_err is not None:
         print(json.dumps(spec_err))
         print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+        return 1
+    if _report_bad_numbers(spec):
         return 1
     out = _estimate_core(spec, Path(args.project), args.price_in, args.price_out)
     out["spec_path"] = str(spec_path)
@@ -1644,6 +1668,11 @@ def _doctor_checks(project: Path) -> list[dict]:
                     f"none of {', '.join(keys)} is set — {row.get('auth_notes') or ''}".strip(),
                     f"export {keys[0]}=…   # or use the CLI's own login")
 
+    from .specfile import numeric_spec_errors
+    bad_numbers = numeric_spec_errors(spec)
+    for e in bad_numbers:
+        add("spec-numbers", "fail", e["error"], e["fix"])
+
     ids_file = str(spec.get("split_ids_file") or "")
     if ids_file:
         p = Path(ids_file)
@@ -1657,8 +1686,13 @@ def _doctor_checks(project: Path) -> list[dict]:
                 "or clear split_ids_file to use ratios")
     else:
         r = (spec.get("split_train"), spec.get("split_val"), spec.get("split_test"))
-        add("splits", "ok", f"ratios {r[0]}/{r[1]}/{r[2]} seed {spec.get('split_seed')}")
+        split_keys = {"split_train", "split_val", "split_test", "split_seed"}
+        if not any(e["key"] in split_keys for e in bad_numbers):
+            add("splits", "ok", f"ratios {r[0]}/{r[1]}/{r[2]} seed {spec.get('split_seed')}")
 
+    budget_keys = {"max_iterations", "max_metric_calls", "max_usd", "max_optimizer_usd", "stall"}
+    if any(e["key"] in budget_keys for e in bad_numbers):
+        return rows  # the FAIL rows above already name the bad budget key
     it = int(spec.get("max_iterations") or 0)
     if it <= 0 and not (spec.get("max_metric_calls") or spec.get("max_usd")):
         add("budget", "warn", "no cap set (max_iterations/max_metric_calls/max_usd all 0)",
