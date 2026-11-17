@@ -499,3 +499,29 @@ def test_cache_get_put_roundtrip(tmp_path):
     # persisted: a fresh instance reads it back
     c2 = EvalCache(tmp_path / "cache.json")
     assert c2.get("h", "t0")["reward"] == 0.7
+
+
+def test_cache_non_utf8_file_is_treated_as_empty(tmp_path):
+    from cap_evolve import EvalCache
+    p = tmp_path / "cache.json"
+    p.write_bytes(b"\xff\xfe")
+    c = EvalCache(p)
+    assert len(c) == 0
+    c.put("h", "t0", reward=1.0)
+    assert EvalCache(p).get("h", "t0")["reward"] == 1.0
+
+
+def test_cache_non_object_json_is_treated_as_empty(tmp_path):
+    from cap_evolve import EvalCache
+    p = tmp_path / "cache.json"
+    p.write_text("[1]", encoding="utf-8")
+    c = EvalCache(p)
+    assert c.get("h", "t0") is None
+    assert len(c) == 0
+
+
+def test_cache_bad_json_is_treated_as_empty(tmp_path):
+    from cap_evolve import EvalCache
+    p = tmp_path / "cache.json"
+    p.write_text("{bad", encoding="utf-8")
+    assert len(EvalCache(p)) == 0
