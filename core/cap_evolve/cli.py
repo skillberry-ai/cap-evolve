@@ -509,6 +509,11 @@ def _resolve_spec(spec: str | None, project: str,
                               if not spec else
                               f"cap-evolve {command} --project {project}   "
                               "# omit --spec to use the project's own capevolve.yaml")}
+    if not path.is_file():
+        return None, {"step": "spec", "error": f"--spec is not a file: {path}",
+                      "spec": str(path), "project": str(proj),
+                      "fix": (f"point --spec at the capevolve.yaml file, e.g. "
+                              f"--spec {path / 'capevolve.yaml'}")}
     if not _is_inside(path, proj):
         return None, {
             "step": "spec",
@@ -528,7 +533,8 @@ def _is_inside(path: Path, proj: Path) -> bool:
 
 
 def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]:
-    """``(spec, error)`` — parse the resolved spec, or an error dict on invalid YAML.
+    """``(spec, error)`` — parse the resolved spec, or an error dict on invalid YAML
+    or a file that cannot be read or is not UTF-8 text.
 
     A broken spec must stop the run with a clear message (file + line), not a
     traceback and never a silent misread: the spec holds the spending limit.
@@ -540,6 +546,17 @@ def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]
         return None, {"step": "spec", "error": str(e), "spec": str(spec_path),
                       "line": e.line,
                       "fix": f"fix the YAML, then: cap-evolve doctor --project {project}"}
+    except UnicodeDecodeError as e:
+        return None, {"step": "spec",
+                      "error": f"{spec_path} is unreadable: not UTF-8 text ({e.reason})",
+                      "spec": str(spec_path),
+                      "fix": "save the spec as UTF-8 text (a capevolve.yaml file)"}
+    except OSError as e:
+        return None, {"step": "spec",
+                      "error": f"{spec_path} is unreadable: {e.strerror or e}",
+                      "spec": str(spec_path),
+                      "fix": "point --spec at a readable capevolve.yaml file "
+                              "(check the file's permissions)"}
 
 
 def _read_spec_or_report(spec: str | None, project: str,

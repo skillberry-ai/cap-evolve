@@ -12,10 +12,13 @@ contracts that must not bend for any of them.
 
 import io
 import json
+import os
 import re
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
@@ -181,6 +184,52 @@ def test_run_and_estimate_report_a_missing_spec_the_same_way(tmp_path):
     assert json.loads(out_run)["step"] == "spec"
     assert "no spec at" in err_run and err_run == err_est
     assert "→ cap-evolve init" in err_run
+
+
+def _assert_clean_spec_error(rc, out, err, words):
+    assert rc == 1
+    payload = json.loads(out)
+    assert payload["step"] == "spec" and words in payload["error"]
+    assert "→ " in err and "Traceback" not in out + err
+
+
+def test_spec_that_is_a_folder_fails_cleanly_for_run_and_estimate(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    (proj / "sub").mkdir()
+    for argv in (("run", "--dashboard", "off"), ("estimate",)):
+        rc, out, err = _run(*argv, "--project", str(proj), "--spec", "sub")
+        _assert_clean_spec_error(rc, out, err, "not a file")
+        assert "capevolve.yaml" in err
+
+
+def test_spec_that_is_not_utf8_fails_cleanly(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    (proj / "capevolve.yaml").write_bytes(b"algorithm_skill: \xff\xfe bad\n")
+    rc, out, err = _run("estimate", "--project", str(proj))
+    _assert_clean_spec_error(rc, out, err, "not UTF-8")
+    assert "→ save the spec as UTF-8" in err
+
+
+def test_load_spec_reports_an_unreadable_path(tmp_path):
+    from cap_evolve import cli
+    spec, err = cli._load_spec(tmp_path, str(tmp_path))
+    assert spec is None and err["step"] == "spec" and str(tmp_path) in err["error"]
+    assert "is unreadable" in err["error"]
+
+
+@pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0,
+                    reason="root can read a chmod 000 file")
+def test_spec_without_read_permission_fails_cleanly(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    spec = proj / "capevolve.yaml"
+    spec.chmod(0)
+    try:
+        for argv in (("run", "--dashboard", "off"), ("estimate",)):
+            rc, out, err = _run(*argv, "--project", str(proj))
+            _assert_clean_spec_error(rc, out, err, "is unreadable")
+            assert str(spec) in err and "→ point --spec at a readable" in err
+    finally:
+        spec.chmod(0o644)
 
 
 def test_relative_spec_resolves_under_project_for_run_and_estimate(tmp_path, monkeypatch):
