@@ -264,6 +264,19 @@ def test_absolute_and_cwd_relative_spec_still_work(tmp_path, monkeypatch):
     assert err is None and path == want
 
 
+def test_cwd_relative_spec_in_another_project_says_outside_project(tmp_path, monkeypatch):
+    from cap_evolve import cli
+    mine = _project(tmp_path, "mine", "agent")
+    other = _project(tmp_path, "other", "agent")
+    monkeypatch.chdir(tmp_path)
+    rel_other = str((other / "capevolve.yaml").relative_to(tmp_path))
+    (mine / "capevolve.yaml").rename(mine / "kept.yaml")  # so <mine>/<rel_other> is missing
+    path, err = cli._resolve_spec(rel_other, str(mine))
+    assert path is None
+    assert "outside --project" in err["error"] and str(other / "capevolve.yaml") in err["error"]
+    assert f"--project {other}" in err["fix"]
+
+
 def test_estimate_fix_hints_name_estimate(tmp_path):
     a = _project(tmp_path, "a", "deterministic")
     b = _project(tmp_path, "b", "agent")

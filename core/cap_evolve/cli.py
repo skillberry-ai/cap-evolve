@@ -512,7 +512,18 @@ def _resolve_spec(spec: str | None, project: str,
     else:
         path = (proj / spec).resolve()
         legacy = Path(spec).resolve()
-        if not path.exists() and legacy.exists() and _is_inside(legacy, proj):
+        if not path.exists() and legacy.exists():
+            if not _is_inside(legacy, proj):
+                # The file is there, relative to the cwd, but in another project: say
+                # so, instead of "no spec at <project path>" (which reads as missing).
+                return None, {
+                    "step": "spec",
+                    "error": (f"no spec at {path}; {legacy} exists but is outside --project "
+                              f"({proj}): refusing to optimize one project's capability "
+                              "against another's spec"),
+                    "spec": str(legacy), "project": str(proj),
+                    "fix": f"cap-evolve {command} --project {legacy.parent}   "
+                           "# or pass the project's own spec"}
             path = legacy
     if not path.exists():
         return None, {"step": "spec", "error": f"no spec at {path}",
