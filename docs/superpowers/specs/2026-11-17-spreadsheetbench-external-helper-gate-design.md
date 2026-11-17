@@ -6,8 +6,9 @@ Date: 2026-11-17. Follows the review of #964 (eranra, [comment](https://github.c
 
 #964 runs the helper gate (`cap_evolve.helper_gate`) inside every cap-evolve algorithm. External optimizers
 (the #895 competitors) do not run a cap-evolve loop. They call the SpreadsheetBench adapter's `run_target`
-directly, through `recipes/common/rollout.py` (`CommonRollout`) on the `spreadsheet-history` branch. This PR
-keeps the gate for those callers in the SpreadsheetBench adapter, and answers the four review points on #964.
+directly, through `recipes/common/rollout.py` (`CommonRollout`) in
+[skillberry-runs/spreadsheetbench](https://github.com/skillberry-runs/spreadsheetbench/blob/main/recipes/common/rollout.py)
+(it was on cap-evolve's `spreadsheet-history` branch). This PR keeps the gate for those callers in the SpreadsheetBench adapter, and answers the four review points on #964.
 
 ## Goals
 

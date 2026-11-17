@@ -1227,7 +1227,8 @@ class HelperGateConfigError(BaseException):
 
     A BaseException, not an Exception: some external optimizers catch every Exception (GEPA with
     raise_on_exception=False goes on to the next iteration; EvoSkill scores it 0), and the error must stop them too.
-    recipes/evoskill/evoskill_port.py uses the same pattern for its BudgetExhausted. Inside a cap-evolve run the
+    The #895 EvoSkill port (recipes/evoskill/evoskill_port.py in github.com/skillberry-runs/spreadsheetbench) uses
+    the same pattern for its BudgetExhausted. Inside a cap-evolve run the
     external gate is off, so cap-evolve's own handlers never see this error."""
 
 
