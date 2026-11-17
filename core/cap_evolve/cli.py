@@ -1523,6 +1523,15 @@ def _doctor_checks(project: Path) -> list[dict]:
             f"remove the key, or set algorithm_skill to one of "
             f"{', '.join(sorted(CONVERGENCE_ALGORITHMS))}")
 
+    # Reserved metric keys: documented once as working settings, but nothing reads them.
+    reserved = [k for k in ("metric_primary", "metrics_display", "metric_directions")
+                if spec.get(k) not in (None, "", [], {})]
+    if reserved:
+        add("metrics", "warn",
+            f"{', '.join(reserved)} has no effect yet (reserved); the gate always uses "
+            "the adapter's `primary` score",
+            f"remove or blank {', '.join(reserved)} in {spec_path}")
+
     adapter = project / "adapters" / "adapter.py"
     if not adapter.exists():
         add("adapter", "fail", f"no {adapter}",

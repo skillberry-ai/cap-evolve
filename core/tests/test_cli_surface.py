@@ -206,6 +206,27 @@ def test_doctor_flags_an_agent_algorithm_in_deterministic_mode(tmp_path):
     assert "agent-driven" in rows["algorithm"]["detail"]
 
 
+def test_doctor_warns_that_reserved_metric_keys_have_no_effect(tmp_path):
+    """metric_primary / metrics_display / metric_directions are reserved: doctor
+    warns (never fails) when one is set, and is silent for the plain scaffold."""
+    from cap_evolve.cli import _doctor_checks
+    proj = tmp_path / ".capevolve" / "project"
+    rc, _out, err = _run("init", "--project", str(proj), "--algorithm", "gepa",
+                         "--optimizer", "mock", "--yes")
+    assert rc == 0, err
+    assert not [r for r in _doctor_checks(proj) if r["name"] == "metrics"]
+
+    spec = proj / "capevolve.yaml"
+    spec.write_text(spec.read_text(encoding="utf-8").replace(
+        'metric_primary: ""', "metric_primary: accuracy"), encoding="utf-8")
+    rows = [r for r in _doctor_checks(proj) if r["name"] == "metrics"]
+    assert len(rows) == 1 and rows[0]["status"] == "warn"
+    assert "metric_primary" in rows[0]["detail"] and "no effect" in rows[0]["detail"]
+    assert "primary" in rows[0]["detail"]
+    assert not [r for r in _doctor_checks(proj)
+                if r["status"] == "fail" and "metric" in r["detail"]]
+
+
 # ---- init ------------------------------------------------------------------
 
 def test_init_writes_a_spec_with_the_chosen_algorithm(tmp_path):
