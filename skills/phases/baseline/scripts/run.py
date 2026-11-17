@@ -100,6 +100,17 @@ def main(argv=None) -> int:
                           "report": rep.to_dict()}, indent=2), file=sys.stderr)
         return 1
 
+    # --resume with a named run that does not exist must not quietly start a fresh run
+    # (new split, paid baseline). Same check `cap-evolve run --resume` makes; repeated
+    # here because this script can be called on its own.
+    if args.resume and args.run_ts and not (Path(args.base) / f"run_{args.run_ts}" / "state.json").is_file():
+        existing = sorted(p.name for p in Path(args.base).glob("run_*") if (p / "state.json").is_file())
+        hint = (f"; existing runs: {', '.join(existing)}" if existing
+                else "; no run_* exists there yet")
+        print(json.dumps({"step": "resume", "error": (
+            f"--resume: no run named run_{args.run_ts} under {args.base}{hint}")}), file=sys.stderr)
+        return 1
+
     Path(args.base).mkdir(parents=True, exist_ok=True)
     budget = Budget(max_iterations=args.max_iterations, stall=args.stall,
                     max_metric_calls=args.max_metric_calls, max_usd=args.max_usd,

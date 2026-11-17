@@ -210,3 +210,49 @@ def test_baseline_materializes_guidance_for_every_declared_capability(tmp_path):
     run_dir = Path(json.loads(r.stdout)["run_dir"])
     assert (run_dir / "guidance" / "system-prompt" / "SKILL.md").exists()
     assert (run_dir / "guidance" / "diagnose" / "SKILL.md").exists()
+
+
+# ---- --resume with a --run-ts that does not exist -------------------------
+
+def _baseline_project(tmp_path):
+    project = tmp_path / ".capevolve" / "project"
+    (project / "adapters").mkdir(parents=True)
+    shutil.copy(EXAMPLE / "adapter.py", project / "adapters" / "adapter.py")
+    seed = tmp_path / "seed_capability"
+    shutil.copytree(EXAMPLE / "capability", seed)
+    return project, seed
+
+
+def test_baseline_resume_unknown_run_ts_fails_without_creating_a_run(tmp_path):
+    project, seed = _baseline_project(tmp_path)
+    base = tmp_path / ".capevolve"
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    r = subprocess.run([sys.executable, str(BASELINE_RUN), "--base", str(base),
+                        "--project", str(project), "--capability", str(seed),
+                        "--run-ts", "nosuch", "--resume"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 1
+    err = json.loads(r.stderr.strip().splitlines()[-1])
+    assert err["step"] == "resume" and "run_nosuch" in err["error"]
+    assert not (base / "run_nosuch").exists()
+
+
+def test_cli_resume_unknown_run_ts_fails_and_names_existing_runs(tmp_path, capsys):
+    from cap_evolve import cli
+    os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
+    project, _seed = _baseline_project(tmp_path)
+    spec = project / "capevolve.yaml"
+    spec.write_text((REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml")
+                    .read_text(encoding="utf-8"), encoding="utf-8")
+    base = tmp_path / ".capevolve"
+    from cap_evolve import Budget, RunDir
+    RunDir.create(base, ts="real1", budget=Budget(max_iterations=1))
+    rc = cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
+                   "--run-ts", "nosuch", "--resume"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    err = json.loads(out.strip().splitlines()[-1])
+    assert err["step"] == "resume"
+    assert "run_nosuch" in err["error"] and str(base) in err["error"]
+    assert "run_real1" in err["error"]
+    assert not (base / "run_nosuch").exists()

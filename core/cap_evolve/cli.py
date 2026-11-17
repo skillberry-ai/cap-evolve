@@ -903,6 +903,16 @@ def _cmd_run(argv):
             print(json.dumps({"step": "resume", "error": (
                 f"--resume: no run_* found under {proj_abs.parent}; pass --run-ts to name one")}))
             return 1
+    elif args.resume and not (proj_abs.parent / f"run_{resume_ts}" / "state.json").is_file():
+        # Without this, a mistyped --run-ts would quietly start a brand-new run (new
+        # split, paid baseline, full budget) instead of continuing the named one.
+        existing = sorted(p.name for p in proj_abs.parent.glob("run_*")
+                          if (p / "state.json").is_file())
+        hint = (f"; existing runs: {', '.join(existing)}" if existing
+                else "; no run_* exists there yet")
+        print(json.dumps({"step": "resume", "error": (
+            f"--resume: no run named run_{resume_ts} under {proj_abs.parent}{hint}")}))
+        return 1
 
     # --follow: start tailing events.jsonl now, BEFORE baseline creates the run dir, so
     # the very first events (splits/baseline) are seen. `seen` freezes the pre-existing
