@@ -1207,12 +1207,14 @@ def _read_task_template(ctx) -> str:
 # opts in here: CAPEVOLVE_HELPERS_SPEC names the run's capevolve.yaml and CAPEVOLVE_HELPERS_SEED the seed
 # capability dir. The rules are the shared gate's (one copy); only the caching and the error reporting live here.
 # A refused candidate scores 0 on each rollout (error_kind=candidate): the external caller pays for those
-# rollouts, because its budget is counted outside cap-evolve.
+# rollouts, because its budget is counted outside cap-evolve. Inside a cap-evolve run (CAPEVOLVE_DRIVER=cap-evolve)
+# this gate is off: the loop gate runs there, with the candidate's real parent.
 
 _EXT_GATE_LOCK = threading.Lock()           # guards the two dicts below; never held during a check
 _EXT_GATE_TREE_LOCKS: dict[str, threading.Lock] = {}
 _EXT_GATE_VERDICTS: dict[str, str | None] = {}
 _EXT_GATE_CONFIGS: dict[tuple, tuple | None] = {}
+_EXT_GATE_SKIP_NOTED = False                # the "skipped inside a cap-evolve run" line is printed once per process
 
 
 class HelperGateConfigError(RuntimeError):
@@ -1226,7 +1228,9 @@ class HelperGateConfigError(RuntimeError):
 def _external_gate_config() -> tuple | None:
     """``(cfg, seed, fingerprint)`` for the external gate, or None when it is off.
 
-    Off unless CAPEVOLVE_HELPERS_SPEC is set and the shared gate is active for that spec. The cached entry is
+    Off unless CAPEVOLVE_HELPERS_SPEC is set and the shared gate is active for that spec. Also off inside a
+    cap-evolve run (CAPEVOLVE_DRIVER=cap-evolve, set by check.load_adapter): the loop runs the gate there, and
+    this function then prints one line and returns None. The cached entry is
     keyed on everything that can change it: the spec file (path + mtime), CAPEVOLVE_HELPERS,
     CAPEVOLVE_HELPER_GATE and CAPEVOLVE_HELPERS_SEED. ``fingerprint`` hashes what a verdict depends on beyond the
     candidate's own files (the resolved config and the seed path), so changing either resets the cached verdicts.
@@ -1236,8 +1240,20 @@ def _external_gate_config() -> tuple | None:
 
     from cap_evolve import helper_gate
 
+    from cap_evolve.check import DRIVER_CAP_EVOLVE, DRIVER_ENV
+
+    global _EXT_GATE_SKIP_NOTED
     spec_path = os.environ.get("CAPEVOLVE_HELPERS_SPEC", "")
     if not spec_path:
+        return None
+    if os.environ.get(DRIVER_ENV) == DRIVER_CAP_EVOLVE:
+        # cap-evolve drives this run: its loop already runs the shared gate, with the candidate's real parent. This
+        # gate can only use the seed as parent, so a second gate could refuse a candidate the loop accepted.
+        with _EXT_GATE_LOCK:
+            first, _EXT_GATE_SKIP_NOTED = not _EXT_GATE_SKIP_NOTED, True
+        if first:
+            print("spreadsheetbench: cap-evolve drives this run, so its loop gate checks the helpers; "
+                  "CAPEVOLVE_HELPERS_SPEC is ignored (helper gate skipped)", file=sys.stderr)
         return None
     seed_env = os.environ.get("CAPEVOLVE_HELPERS_SEED", "")
     try:

@@ -50,6 +50,11 @@ def _load():
 def mod(monkeypatch):
     for k in ("CAPEVOLVE_HELPERS", "CAPEVOLVE_HELPERS_SPEC", "CAPEVOLVE_HELPERS_SEED", "CAPEVOLVE_HELPER_GATE"):
         monkeypatch.delenv(k, raising=False)
+    # No test may inherit CAPEVOLVE_DRIVER from another test: check.load_adapter sets it for the whole process, and
+    # a stale "cap-evolve" would skip the gate and make these tests pass for the wrong reason. setenv first, so
+    # monkeypatch remembers the variable was unset and removes whatever a test sets.
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", "placeholder")
+    monkeypatch.delenv("CAPEVOLVE_DRIVER")
     return _load()
 
 
@@ -343,3 +348,50 @@ def test_identical_trees_share_one_check(counted, tmp_path):
     assert on._external_gate_error(_tree(tmp_path / "a", CLEAN)) is None
     assert on._external_gate_error(_tree(tmp_path / "b", CLEAN)) is None
     assert calls == ["a"]
+
+
+# ---- inside a cap-evolve run -----------------------------------------------------------------------------
+#
+# check.load_adapter sets CAPEVOLVE_DRIVER=cap-evolve. Then cap-evolve's loop already runs the shared gate, with the
+# candidate's real parent, so the adapter gate (which can only use the seed as parent) must not run a second time.
+
+def test_inside_a_cap_evolve_run_the_adapter_gate_does_not_run(on, tmp_path, monkeypatch):
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", "cap-evolve")
+    calls = []
+    monkeypatch.setattr(helper_gate, "gate", lambda *a, **k: calls.append(1))
+    assert on._external_gate_error(_tree(tmp_path / "c", LEAK)) is None
+    assert calls == []
+
+
+def test_inside_a_cap_evolve_run_a_broken_spec_does_not_raise(on, tmp_path, monkeypatch):
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", "cap-evolve")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    adapter = on.Adapter()
+    assert on._external_gate_error(_tree(tmp_path / "c", LEAK)) is None
+    monkeypatch.setattr(on, "_task_template_error", lambda ctx: None)
+    with adapter.live(_tree(tmp_path / "d", CLEAN)):
+        pass
+
+
+@pytest.mark.parametrize("driver", ["external:gepa", "", "CAP-EVOLVE"])
+def test_an_external_driver_value_keeps_the_gate_on(on, tmp_path, monkeypatch, driver):
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", driver)
+    err = on._external_gate_error(_tree(tmp_path / "c", LEAK))
+    assert err and err.startswith("CANDIDATE_HELPER_GATE")
+
+
+def test_the_skip_is_announced_once_per_process(on, tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", "cap-evolve")
+    on.Adapter()
+    cand = _tree(tmp_path / "c", CLEAN)
+    for _ in range(3):
+        on._external_gate_error(cand)
+    err = capsys.readouterr().err
+    assert err.count("skipped") == 1 and "CAPEVOLVE_HELPERS_SPEC" in err
+
+
+def test_no_skip_line_when_no_spec_is_set(mod, tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", "cap-evolve")
+    mod.Adapter()
+    assert mod._external_gate_error(_tree(tmp_path / "c", LEAK)) is None
+    assert capsys.readouterr().err == ""
