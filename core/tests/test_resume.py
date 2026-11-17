@@ -24,6 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
 EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
 MOCK_RUN = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.py"
+GEPA_RUN = REPO / "skills" / "algorithms" / "gepa" / "scripts" / "run.py"
 BASELINE_RUN = REPO / "skills" / "phases" / "baseline" / "scripts" / "run.py"
 
 sys.path.insert(0, str(CORE))
@@ -372,22 +373,29 @@ def test_gepa_resume_corrupt_state_stops_with_clear_error(tmp_path, kind):
     bad = _BAD_GEPA_STATES[kind]
     state.write_bytes(bad if isinstance(bad, bytes) else bad.encode())
 
-    # In-process: a clean SystemExit naming the file and the way out, never a
-    # silent seed-only pool (that would drop the saved lineage without a word).
-    with pytest.raises(SystemExit) as ei:
+    # In-process: a plain GepaStateError naming the file and the way out, never a
+    # silent seed-only pool (that would drop the saved lineage without a word). It
+    # is a normal exception, not SystemExit, so in-process callers can catch it.
+    from cap_evolve.gepa import GepaStateError
+    with pytest.raises(GepaStateError) as ei:
         _gepa_run(tmp_path, "grbad", resume=True, max_metric_calls=200, max_iterations=4)
+    assert isinstance(ei.value, Exception)
+    assert not isinstance(ei.value, SystemExit)
     msg = str(ei.value)
     assert str(state) in msg and "--resume" in msg
     assert "delete" in msg or "restore" in msg
 
-    # As a process (how the gepa skill runs it): exit 1, the message, no traceback.
-    code = (
-        "import sys; sys.path.insert(0, sys.argv[1])\n"
-        "from cap_evolve import RunDir, gepa\n"
-        "rd = RunDir.open(sys.argv[2])\n"
-        "gepa._reconstruct_gepa(rd, gepa.split_result_from_rollouts(rd, 'seed', 'val'))\n")
-    proc = subprocess.run([sys.executable, "-c", code, str(CORE), str(run_dir.root)],
-                          capture_output=True, text=True, timeout=60)
+    # As a process (the gepa skill's run.py): exit 1, the message, no traceback.
+    project = tmp_path / "proj"
+    (project / "adapters").mkdir(parents=True)
+    shutil.copy(EXAMPLE / "adapter.py", project / "adapters" / "adapter.py")
+    optimizer = (f"python3 {MOCK_RUN} --name mock --workdir {{workdir}} "
+                 f"--prompt {{prompt}}")
+    proc = subprocess.run(
+        [sys.executable, str(GEPA_RUN), "--run-dir", str(run_dir.root),
+         "--project", str(project), "--optimizer", optimizer, "--resume",
+         "--max-iterations", "2", "--max-merges", "0"],
+        capture_output=True, text=True, timeout=120)
     assert proc.returncode == 1
     assert "Traceback" not in proc.stderr
-    assert "gepa_state.json" in proc.stderr
+    assert str(state) in proc.stderr and "Restore that file" in proc.stderr

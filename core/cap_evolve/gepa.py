@@ -437,11 +437,12 @@ def _persist_gepa_state(run_dir: RunDir, *, lineage: dict, accepts: int,
         "comp_cursor": comp_cursor, "steps": n_steps}, indent=2))
 
 
-class GepaStateError(SystemExit):
+class GepaStateError(ValueError):
     """``gepa_state.json`` can't be used for ``--resume``.
 
-    A ``SystemExit`` subclass so the gepa skill's process stops with exit 1 and just
-    the message on stderr (no traceback), the way other resume errors read.
+    A plain exception (not ``SystemExit``), so code running gepa in-process can catch
+    it. The gepa skill's ``run.py`` catches it and prints just the message to stderr
+    with exit 1 (no traceback), the way other resume errors read.
     """
 
     def __init__(self, message: str):

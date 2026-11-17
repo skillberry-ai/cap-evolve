@@ -364,3 +364,13 @@ def test_cache_hit_carries_output_trace_for_reflection(tmp_path):
     assert "3 actionable failing task(s)" in md          # boom excluded
     assert "failed with run/infra errors" in md and "boom" in md
     assert "- Agent output: \n" not in md               # no empty output lines
+
+
+def test_gepa_state_error_is_a_normal_exception():
+    # Library code must not raise SystemExit: in-process callers catching Exception
+    # must see it. The gepa skill's run.py turns it into a clean exit 1.
+    from cap_evolve.gepa import GepaStateError
+    err = GepaStateError("--resume: gepa_state.json is broken")
+    assert isinstance(err, Exception) and isinstance(err, ValueError)
+    assert isinstance(err, SystemExit) is False
+    assert str(err) == "--resume: gepa_state.json is broken"
