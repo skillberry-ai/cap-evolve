@@ -1870,7 +1870,7 @@ def _cmd_init(argv) -> int:
     p.add_argument("--optimizer", default=None, help="optimizer name (mock for zero-API)")
     p.add_argument("--capability-path", default=None, help="dir holding the artifact to optimize")
     p.add_argument("--yes", "-y", action="store_true", help="accept defaults, ask nothing")
-    p.add_argument("--force", action="store_true", help="overwrite an existing spec")
+    p.add_argument("--force", action="store_true", help="overwrite an existing capevolve.yaml (other files are kept)")
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args(argv)
 
@@ -1915,7 +1915,9 @@ def _cmd_init(argv) -> int:
     project.mkdir(parents=True, exist_ok=True)
     for item in sorted(template.iterdir()):
         dst = project / item.name
-        if dst.exists() and not args.force:
+        # --force resets only the spec; the adapter, PROJECT.md and the optimizer
+        # instructions are the user's work and are never overwritten.
+        if dst.exists() and not (args.force and item.name == "capevolve.yaml"):
             continue
         if item.is_dir():
             _shutil.copytree(item, dst, dirs_exist_ok=True)

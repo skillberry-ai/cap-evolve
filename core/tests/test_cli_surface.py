@@ -344,6 +344,21 @@ def test_init_refuses_to_clobber_an_existing_spec(tmp_path):
     assert "already exists" in err and "--force" in err
 
 
+def test_init_force_resets_only_the_spec(tmp_path):
+    proj = tmp_path / ".capevolve" / "project"
+    assert _run("init", "--project", str(proj), "--yes")[0] == 0
+    spec, adapter, pmd = (proj / "capevolve.yaml", proj / "adapters" / "adapter.py",
+                          proj / "PROJECT.md")
+    fresh_spec = spec.read_text(encoding="utf-8")
+    spec.write_text(fresh_spec + "\nmy_edit: 1\n", encoding="utf-8")
+    adapter.write_text("# my adapter\n", encoding="utf-8")
+    pmd.write_text("# my project\n", encoding="utf-8")
+    assert _run("init", "--project", str(proj), "--yes", "--force")[0] == 0
+    assert spec.read_text(encoding="utf-8") == fresh_spec      # reset to template
+    assert adapter.read_text(encoding="utf-8") == "# my adapter\n"   # kept
+    assert pmd.read_text(encoding="utf-8") == "# my project\n"       # kept
+
+
 def test_set_spec_key_preserves_comments_and_appends_missing_keys():
     from cap_evolve.cli import _set_spec_key
     src = "algorithm_skill: hill-climb   # pick one\nother: 1\n"
