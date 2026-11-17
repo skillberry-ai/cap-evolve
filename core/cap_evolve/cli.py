@@ -1254,7 +1254,15 @@ def _cmd_dashboard(argv):
     if args.export:
         from . import dashboard
         from .rundir import RunDir
-        out = dashboard.write_dashboard(RunDir.open(Path(args.export)))
+        export_dir = Path(args.export)
+        try:
+            rd = RunDir.open(export_dir)
+        except FileNotFoundError:
+            print(f"no run state at {export_dir}", file=sys.stderr)
+            print("hint: pass a run_* dir (one with a state.json), e.g. from "
+                  "`cap-evolve tail`", file=sys.stderr)
+            return 2
+        out = dashboard.write_dashboard(rd)
         print(json.dumps({"dashboard_html": str(out)}))
         return 0
 

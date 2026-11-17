@@ -896,3 +896,22 @@ def test_reduce_run_never_writes_into_a_run_with_a_broken_spec(tmp_path, monkeyp
     # control: a run step (warn=True, the default) on the same run does warn and log
     harness.split_result_from_rollouts(rd, "seed", "val")
     assert b"spec_unreadable" in rd.events_path.read_bytes()
+
+
+def test_cli_export_missing_run_dir_is_a_clean_error(tmp_path, capsys):
+    from cap_evolve import cli
+    missing = tmp_path / "nonexistent"
+    rc = cli.main(["dashboard", "--export", str(missing)])
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert f"no run state at {missing}" in err
+    assert "Traceback" not in err
+
+
+def test_cli_export_writes_dashboard_for_a_real_run(tmp_path, capsys):
+    from cap_evolve import cli
+    rd = _mk_run(tmp_path, events=[])
+    rc = cli.main(["dashboard", "--export", str(rd.root)])
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert Path(out["dashboard_html"]).exists()
