@@ -324,7 +324,9 @@ def _spec(project: Path, spec_path: Path | None) -> dict:
     path = spec_path or (project / "capevolve.yaml")
     if not path.exists():
         return {}
-    return read_yaml(path.read_text(encoding="utf-8")) or {}
+    # strict: a typo like `max_usd: "5` must fail with the line, not be read as '"5'.
+    # Raises SpecError; main() turns it into a JSON error.
+    return read_yaml(path.read_text(encoding="utf-8"), source=str(path), strict=True) or {}
 
 
 def _known_agents() -> list[str]:
@@ -1132,7 +1134,13 @@ def main(argv=None) -> int:
         print(json.dumps({"error": f"project dir not found: {project}"}, indent=2))
         return 2
 
-    spec = _spec(project, Path(args.spec).resolve() if args.spec else None)
+    from cap_evolve.specfile import SpecError
+    try:
+        spec = _spec(project, Path(args.spec).resolve() if args.spec else None)
+    except SpecError as e:
+        print(json.dumps({"error": str(e),
+                          "fix": "fix the YAML syntax at that line of the spec"}, indent=2))
+        return 2
     rounds = int(spec.get("max_iterations", 0) or 0) or 10
 
     if args.seal_only:

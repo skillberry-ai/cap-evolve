@@ -77,6 +77,17 @@ def main(argv=None) -> int:
                    help="path to capevolve.yaml spec (for observer config)")
     args = p.parse_args(argv)
 
+    # A broken capevolve.yaml (e.g. `max_usd: "5`) must stop here with the file and line,
+    # before a run dir exists — not be read quietly as wrong values further down.
+    spec_file = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
+    if spec_file.is_file():
+        from cap_evolve.specfile import SpecError, read_yaml as _strict_read
+        try:
+            _strict_read(spec_file.read_text(encoding="utf-8"), source=str(spec_file), strict=True)
+        except SpecError as e:
+            print(json.dumps({"step": "baseline", "error": str(e)}), file=sys.stderr)
+            return 1
+
     # The hard gate, on THIS path too. `cap-evolve run` checks the adapter before it
     # calls us (cli.py:721-726), but /cap-evolve:baseline is reachable directly and the
     # needs/provides DAG validates declared order, not runtime state — so without this
@@ -120,7 +131,7 @@ def main(argv=None) -> int:
             from capevolve_telemetry import load_observers, load_observers_from_state
             spec_path = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
             spec_text = spec_path.read_text(encoding="utf-8")
-            full_spec = read_yaml(spec_text)
+            full_spec = read_yaml(spec_text, source=str(spec_path), strict=True)
             obs_config = full_spec.get("observers")
             caps = full_spec.get("capabilities")
             run_name = str(full_spec.get("run_name", "")).strip()
