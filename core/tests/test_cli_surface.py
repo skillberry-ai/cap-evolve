@@ -408,6 +408,41 @@ def test_diff_on_a_run_without_snapshots_explains_itself(tmp_path):
     assert "cap-evolve watch" in err        # what to do instead
 
 
+def test_diff_best_on_a_missing_run_dir_says_no_such_run_dir(tmp_path):
+    missing = tmp_path / "nope"
+    rc, out, err = _run("diff", "--best", "--run-dir", str(missing))
+    assert rc != 0 and out == ""
+    assert f"no such run dir: {missing}" in err
+    assert "no best candidate" not in err
+
+
+def test_diff_candidate_on_a_missing_run_dir_says_no_such_run_dir(tmp_path):
+    missing = tmp_path / "typo_run"
+    rc, out, err = _run("diff", "cand_0003", "--run-dir", str(missing))
+    assert rc != 0 and out == ""
+    assert f"no such run dir: {missing}" in err
+    assert "no snapshot for" not in err
+    assert "cap-evolve watch" not in err    # no hint to wait on a run that isn't there
+
+
+def test_replay_on_a_missing_run_dir_says_no_such_run_dir(tmp_path):
+    missing = tmp_path / "typo_run"
+    rc, out, err = _run("replay", str(missing), "--no-color")
+    assert rc != 0 and out == ""
+    assert f"no such run dir: {missing}" in err
+
+
+def test_tail_and_watch_still_wait_for_a_not_yet_created_run_dir(tmp_path):
+    # tail/watch may attach before `cap-evolve run` creates the dir: they wait
+    # (here until a short idle timeout) instead of failing with "no such run dir".
+    pending = tmp_path / "run_later"
+    for cmd in ("tail", "watch"):
+        rc, _out, err = _run(cmd, str(pending), "--idle-timeout", "0.2", "--no-color")
+        assert rc == 3, (cmd, err)
+        assert "no such run dir" not in err
+        assert "waiting for" in err
+
+
 def test_diff_stat_and_files_views(tmp_path):
     root = _run_dir(tmp_path)
     assert "1 file changed" in _run("diff", "c1", "--run-dir", str(root),

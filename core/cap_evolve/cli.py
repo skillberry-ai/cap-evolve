@@ -274,12 +274,19 @@ def _cmd_tail(argv):
     return 0
 
 
-def _resolve_run_dir(run_dir: str | None, base: str):
+def _resolve_run_dir(run_dir: str | None, base: str, *, must_exist: bool = False):
     """(root, exit_code) — the run dir to attach to. Mirrors ``_cmd_tail``'s rules:
     explicit path wins, else the newest ``run_*`` under ``--base``; exit 1 when the
-    base has no runs, 2 when the named path can never become a run dir."""
+    base has no runs, 2 when the named path can never become a run dir.
+
+    ``must_exist`` is for commands that only read finished data (diff, replay):
+    a named path that is not an existing directory is an error right away, instead
+    of being accepted as a run that may start later (right for tail/watch)."""
     if run_dir:
         root = Path(run_dir)
+        if must_exist and not root.is_dir():
+            print(f"no such run dir: {root}", file=sys.stderr)
+            return None, 2
         if not root.exists() and not root.parent.is_dir():
             print(f"no such run dir: {root}", file=sys.stderr)
             return None, 2
@@ -357,7 +364,12 @@ def _cmd_replay(argv):
     if bool(args.demo) == bool(args.run_dir):
         p.error("pass exactly one of run_dir or --demo")
 
-    src = tui.DEMO_DIR if args.demo else Path(args.run_dir)
+    if args.demo:
+        src = tui.DEMO_DIR
+    else:
+        src, code = _resolve_run_dir(args.run_dir, ".capevolve", must_exist=True)
+        if src is None:
+            return code
     if not (src / "events.jsonl").exists():
         print(f"no events.jsonl under {src}", file=sys.stderr)
         return 2
@@ -1969,7 +1981,7 @@ def _cmd_diff(argv) -> int:
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args(argv)
 
-    root, code = _resolve_run_dir(args.run_dir, args.base)
+    root, code = _resolve_run_dir(args.run_dir, args.base, must_exist=True)
     if root is None:
         return code
     if not args.best and not args.candidate:
