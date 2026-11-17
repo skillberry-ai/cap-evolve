@@ -305,7 +305,58 @@ def test_existing_run_error_helper(tmp_path):
     assert existing_run_error(tmp_path, None) is None
     assert existing_run_error(tmp_path, "x") is None
     (tmp_path / "run_x").mkdir()
+    (tmp_path / "run_x" / "state.json").write_text("{}", encoding="utf-8")
     assert "run_x already exists" in existing_run_error(tmp_path, "x")
+
+
+# ---- a torn run dir (run_<ts>/ exists, no state.json) ---------------------
+
+def test_torn_run_dir_helpers_agree_with_create_exist_ok(tmp_path):
+    from cap_evolve import RunDir
+    from cap_evolve.rundir import existing_run_error, missing_resume_error
+    (tmp_path / "run_torn").mkdir()
+    # --resume may continue it: RunDir.create(exist_ok=True) starts a fresh state there
+    assert missing_resume_error(tmp_path, "torn") is None
+    msg = existing_run_error(tmp_path, "torn")
+    assert "no state.json" in msg and "--resume" in msg and "already exists" not in msg
+    RunDir.create(tmp_path, ts="torn", exist_ok=True)
+    assert (tmp_path / "run_torn" / "state.json").is_file()
+    # a dir that is not there at all is still refused
+    assert "no run named run_gone" in missing_resume_error(tmp_path, "gone")
+
+
+def test_baseline_torn_run_dir_fresh_refused_resume_continues(tmp_path):
+    project, seed = _baseline_project(tmp_path)
+    base = tmp_path / ".capevolve"
+    (base / "run_torn").mkdir(parents=True)
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    common = [sys.executable, str(BASELINE_RUN), "--base", str(base),
+              "--project", str(project), "--capability", str(seed), "--run-ts", "torn"]
+    r1 = subprocess.run(common, capture_output=True, text=True, env=env)
+    assert r1.returncode == 1 and "Traceback" not in r1.stderr
+    err = json.loads(r1.stderr.strip().splitlines()[-1])
+    assert "no state.json" in err["error"] and "--resume" in err["error"]
+    r2 = subprocess.run([*common, "--resume"], capture_output=True, text=True, env=env)
+    assert r2.returncode == 0, r2.stderr
+    assert json.loads(r2.stdout)["run_dir"].endswith("run_torn")
+    assert (base / "run_torn" / "state.json").is_file()
+    assert (base / "run_torn" / "baseline.json").is_file()
+
+
+def test_cli_torn_run_dir_without_resume_points_at_resume(tmp_path, capsys):
+    from cap_evolve import cli
+    os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
+    project, _seed = _baseline_project(tmp_path)
+    spec = project / "capevolve.yaml"
+    spec.write_text((REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml")
+                    .read_text(encoding="utf-8"), encoding="utf-8")
+    base = tmp_path / ".capevolve"
+    (base / "run_torn2").mkdir(parents=True)
+    rc = cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
+                   "--run-ts", "torn2"])
+    assert rc == 1
+    err = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert "no state.json" in err["error"] and "--resume" in err["error"]
 
 
 # ---- gepa --resume on a corrupt gepa_state.json ---------------------------

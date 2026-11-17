@@ -205,7 +205,10 @@ def missing_resume_error(base: Path, ts: str):
     baseline, full budget), so callers stop on this message instead.
     """
     base = Path(base)
-    if (base / f"run_{ts}" / "state.json").is_file():
+    # A dir with no state.json is a torn create (the process stopped between mkdir and
+    # writing state.json). RunDir.create(exist_ok=True) initializes a fresh state into
+    # it on purpose, so --resume may continue it; only a missing dir is an error.
+    if (base / f"run_{ts}").is_dir():
         return None
     existing = sorted(p.name for p in base.glob("run_*") if (p / "state.json").is_file())
     hint = (f"; existing runs: {', '.join(existing)}" if existing
@@ -222,7 +225,12 @@ def existing_run_error(base: Path, ts):
     if not ts:
         return None
     base = Path(base)
-    if (base / f"run_{ts}").exists():
+    run = base / f"run_{ts}"
+    if run.is_dir() and not (run / "state.json").is_file():
+        return (f"run_{ts} exists under {base} but has no state.json (a run that stopped "
+                f"while it was being created); pass --resume to start it fresh in that "
+                f"dir, delete it, or pick another --run-ts")
+    if run.exists():
         return (f"run_{ts} already exists under {base}; pass --resume to continue it, "
                 f"or pick another --run-ts")
     return None
