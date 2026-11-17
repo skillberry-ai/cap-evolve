@@ -231,7 +231,7 @@ def test_a_spec_that_cannot_be_parsed_is_warned_about_once(tmp_path, monkeypatch
     monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
     adapter = _toy_adapter()
     rd, base = _fresh_run(tmp_path, adapter, spec_text="helpers:\n  enabled: true\n")
-    monkeypatch.setattr(specfile, "read_yaml", lambda text: (_ for _ in ()).throw(ValueError("bad yaml")))
+    monkeypatch.setattr(specfile, "read_yaml", lambda text, **kw: (_ for _ in ()).throw(ValueError("bad yaml")))
     for _ in range(2):
         step = harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"),
                                 optimizer=_with_helper(CLEAN), instructions="x", current_val=base,
@@ -239,6 +239,19 @@ def test_a_spec_that_cannot_be_parsed_is_warned_about_once(tmp_path, monkeypatch
     assert step["candidate_val"] is not None
     assert len(_events(rd, "helper_gate_spec_unreadable")) == 1
     assert capsys.readouterr().err.count("cannot be read or parsed") == 1
+
+
+def test_a_spec_with_a_yaml_syntax_error_is_warned_about(tmp_path, monkeypatch, capsys):
+    # spec_for_run reads the spec strictly: a real syntax error gives {} (no lenient half-read values), and the
+    # gate says so instead of going off silently
+    from cap_evolve import harness
+    monkeypatch.delenv("CAPEVOLVE_HELPERS", raising=False)
+    adapter = _toy_adapter()
+    rd, base = _fresh_run(tmp_path, adapter, spec_text="helpers:\n  enabled: [true\n")
+    harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=_with_helper(CLEAN),
+                     instructions="x", current_val=base, gate_kwargs=GATE)
+    assert len(_events(rd, "helper_gate_spec_unreadable")) == 1
+    assert "cannot be read or parsed" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("text", ["\n", "# only a comment\n\n  # and another\n"])
