@@ -111,7 +111,7 @@ _BROKEN = 'algorithm_skill: hill-climb\nmax_usd: "5\nsplits: [a, b\n'
 
 def test_malformed_yaml_raises_with_line_number():
     with pytest.raises(SpecError) as ei:
-        read_yaml("a: 1\nsplits: [a, b\n", source="capevolve.yaml")
+        read_yaml("a: 1\nsplits: [a, b\n", source="capevolve.yaml", strict=True)
     e = ei.value
     assert e.line == 3
     assert "capevolve.yaml" in str(e) and "line 3" in str(e)
@@ -119,15 +119,33 @@ def test_malformed_yaml_raises_with_line_number():
 
 def test_unclosed_quote_names_the_line_it_was_opened_on():
     with pytest.raises(SpecError) as ei:
-        read_yaml(_BROKEN, source="capevolve.yaml")
+        read_yaml(_BROKEN, source="capevolve.yaml", strict=True)
     assert ei.value.line is not None
     assert "opened at line 2" in str(ei.value)
 
 
 def test_tab_indent_raises():
     with pytest.raises(SpecError) as ei:
-        read_yaml("a: 1\n\tb: 2\n")
+        read_yaml("a: 1\n\tb: 2\n", strict=True)
     assert ei.value.line == 2
+    assert "invalid YAML at line 2" in str(ei.value) and "YAML in YAML" not in str(ei.value)
+
+
+_META_UNQUOTED_COLON = (
+    "name: gepa\n"
+    "kind: algorithm\n"
+    "summary: Reflective evolution: mutate the prompt from failures\n"
+)
+
+
+def test_lenient_default_loads_skill_meta_with_unquoted_colon():
+    # Skill meta.yaml / SKILL.md frontmatter is not always strict YAML; the default
+    # (strict=False) must fall back to the minimal reader instead of raising.
+    data = read_yaml(_META_UNQUOTED_COLON, source="meta.yaml")
+    assert data["name"] == "gepa" and data["kind"] == "algorithm"
+    assert data["summary"].startswith("Reflective evolution")
+    with pytest.raises(SpecError):
+        read_yaml(_META_UNQUOTED_COLON, source="meta.yaml", strict=True)
 
 
 def test_valid_yaml_still_parses():

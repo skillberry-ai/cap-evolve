@@ -515,7 +515,7 @@ def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]
     """
     from .specfile import SpecError, read_yaml
     try:
-        return read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path)), None
+        return read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path), strict=True), None
     except SpecError as e:
         return None, {"step": "spec", "error": str(e), "spec": str(spec_path),
                       "line": e.line,
@@ -1512,7 +1512,7 @@ def _doctor_checks(project: Path) -> list[dict]:
         add("spec", "fail", f"no {spec_path}", f"cap-evolve init --project {project}")
         return rows
     try:
-        spec = read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path)) or {}
+        spec = read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path), strict=True) or {}
     except Exception as e:  # noqa: BLE001
         from .specfile import SpecError
         detail = str(e) if isinstance(e, SpecError) else f"{spec_path} is unreadable: {e!r}"

@@ -53,7 +53,7 @@ def _check_intervention(rep, project_dir: Path) -> None:
     if not spec_path.exists():
         return
     try:
-        spec = read_yaml(spec_path.read_text(encoding="utf-8")) or {}
+        spec = read_yaml(spec_path.read_text(encoding="utf-8"), strict=True) or {}
     except Exception:  # a broken spec is reported by _check_spec_syntax
         return
     try:
@@ -78,7 +78,7 @@ def _check_spec_syntax(rep, project_dir: Path) -> None:
     if not spec_path.exists():
         return
     try:
-        read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path))
+        read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path), strict=True)
     except SpecError as e:
         rep.problems.append(str(e))
     except Exception as e:  # noqa: BLE001

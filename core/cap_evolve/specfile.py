@@ -91,17 +91,22 @@ class SpecError(ValueError):
     def __init__(self, message: str, *, source: str | None = None, line: int | None = None):
         self.source = source
         self.line = line
-        where = source or "YAML"
+        where = f" in {source}" if source else ""
         if line is not None:
-            where = f"{where}, line {line}"
-        super().__init__(f"invalid YAML in {where}: {message}")
+            where = f"{where}, line {line}" if where else f" at line {line}"
+        super().__init__(f"invalid YAML{where}: {message}")
 
 
-def read_yaml(text: str, source: str | None = None) -> dict:
-    """Parse ``text``. Raises ``SpecError`` (with the line number) on a YAML syntax error.
+def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dict:
+    """Parse ``text`` with PyYAML, or the minimal fallback reader.
 
-    The minimal fallback reader is used ONLY when PyYAML is not installed. ``source``
-    (e.g. the file path) is named in the error message.
+    ``strict=True`` (use it for the user's ``capevolve.yaml`` spec): a YAML syntax error
+    raises ``SpecError`` with the line number, and the fallback reader is used ONLY when
+    PyYAML is not installed. ``source`` (e.g. the file path) is named in the message.
+
+    ``strict=False`` (the default; skill ``meta.yaml`` / SKILL.md frontmatter): when
+    PyYAML fails, fall back to the lenient minimal reader — several skill files carry
+    e.g. an unquoted colon in a summary, which is not strict YAML but must still load.
     """
     try:
         import yaml  # type: ignore
@@ -111,6 +116,8 @@ def read_yaml(text: str, source: str | None = None) -> dict:
         try:
             return yaml.safe_load(text) or {}
         except yaml.YAMLError as e:
+            if not strict:
+                return _read_yaml_minimal(text)
             pmark = getattr(e, "problem_mark", None)
             cmark = getattr(e, "context_mark", None)
             mark = pmark or cmark
@@ -123,6 +130,11 @@ def read_yaml(text: str, source: str | None = None) -> dict:
                 # line the user must fix is where the quote/bracket was opened.
                 msg += f" (opened at line {cmark.line + 1})"
             raise SpecError(msg, source=source, line=line) from e
+    return _read_yaml_minimal(text)
+
+
+def _read_yaml_minimal(text: str) -> dict:
+    """The minimal, never-failing reader (see ``read_yaml``)."""
     data: dict = {}
     # stack entries: (indent, container, kind) — kind is "map" (container is a dict,
     # grown by "key: val" lines) or "seq" (container is a list, grown by "- " lines).
@@ -291,6 +303,6 @@ def spec_for_run(run_dir, project: Path | None = None) -> dict:
     if path is None:
         return {}
     try:
-        return read_yaml(path.read_text(encoding="utf-8")) or {}
+        return read_yaml(path.read_text(encoding="utf-8"), strict=True) or {}
     except Exception:  # noqa: BLE001
         return {}
