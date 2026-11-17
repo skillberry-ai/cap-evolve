@@ -39,7 +39,7 @@ def _cand(root: Path, name: str, scripts: dict, prompt="solve with {skills_root}
 
 
 def test_no_mount_no_vendor_change_no_new_sandbox_machinery(mod):
-    src = (REPO / "third_party/spreadsheetbench/code_exec_docker/jupyter.py").read_text()
+    src = (REPO / "benchmarks/spreadsheetbench/harness/code_exec_docker/jupyter.py").read_text()
     assert "/mnt/skills" not in src and "skills_path" not in src
     assert not hasattr(mod, "_get_skills_sandbox")
 
@@ -165,7 +165,7 @@ def _through_exec_code(chunks):
     stub.ClientJupyterKernel = object
     sys.modules.setdefault("jupyter_kernel_cli", stub)
     spec = importlib.util.spec_from_file_location(
-        "_vendored_code_exec_sb", REPO / "third_party/spreadsheetbench/inference/code_exec.py")
+        "_vendored_code_exec_sb", REPO / "benchmarks/spreadsheetbench/harness/inference/code_exec.py")
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
     return m.exec_code(types.SimpleNamespace(execute=lambda code: "\n\n\n\n".join(chunks)), "x")

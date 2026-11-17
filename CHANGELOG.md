@@ -8,6 +8,11 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Changed
+- The vendored SpreadsheetBench harness moved from `third_party/spreadsheetbench` to
+  `benchmarks/spreadsheetbench/harness`, next to the adapter that uses it. CI sets
+  `SPREADSHEETBENCH_HARNESS_DIR` to the new path; a local run that set it to the old path must update it.
+  `NOTICE.md` describes the new upstream refresh procedure.
 ### Removed
 - `examples/tau2_custom` (the direct and blackbox approaches on the Skillberry tau2 fork). It is superseded by
   `examples/tau2_sierra_airline`, the same two approaches on vanilla tau2 pinned at `TAU2_REFERENCE_SHA`, which the

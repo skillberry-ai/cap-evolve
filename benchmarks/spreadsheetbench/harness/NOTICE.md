@@ -28,15 +28,25 @@ time — see `ci/benchmarks/spreadsheetbench/fetch_data.sh`.
 
 This was vendored via a filtered scratch clone (to keep upstream's ~136MB of
 data/image blobs out of cap-evolve's history entirely), not a raw
-`git subtree add` of the upstream repo. To pull upstream changes:
+`git subtree add` of the upstream repo. It first lived at
+`third_party/spreadsheetbench` and moved here (next to the adapter that uses it)
+in 2026-11. The old `git subtree pull --prefix=third_party/...` command no
+longer applies, because `git subtree` finds its last squash by the old prefix.
+To pull upstream changes, replace the upstream files in place:
 
 ```bash
 rm -rf /tmp/sb-upstream
 git clone https://github.com/RUCKBReasoning/SpreadsheetBench /tmp/sb-upstream
 cd /tmp/sb-upstream
+git checkout <new-upstream-commit>
 git filter-repo --force \
   --path code_exec_docker --path evaluation --path inference \
   --path README.md --path requirements.txt --path .gitignore
 cd -
-git subtree pull --prefix=third_party/spreadsheetbench /tmp/sb-upstream main --squash
+rsync -a --delete --exclude NOTICE.md --exclude .git \
+  /tmp/sb-upstream/ benchmarks/spreadsheetbench/harness/
 ```
+
+Then update "Vendored at upstream commit" above and commit. Keep every file
+except this `NOTICE.md` byte-identical to upstream: the adapter patches staged
+copies instead of editing these files.

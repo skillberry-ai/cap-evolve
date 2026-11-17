@@ -228,6 +228,7 @@ jobs:
             --offline --no-progress --include-fragments
             --exclude-path benchmarks/tau2/examples/airline/run_full
             --exclude-path benchmarks/skillsbench/examples/shared_skills/run_full
+            --exclude-path benchmarks/spreadsheetbench/harness
             "README.md" "docs/**/*.md" "benchmarks/**/*.md" "*.md"
           fail: true
 

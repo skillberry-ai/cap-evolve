@@ -127,7 +127,7 @@ instruction's 3 test cases whose output workbook matches the expected cells
 - **Prerequisites:** `pip install pandas openpyxl docker tornado requests`; Docker;
   LibreOffice (optional — recalculates formula-only cells before scoring; scoring
   degrades gracefully without it). Harness code is vendored at
-  `third_party/spreadsheetbench` (see its `NOTICE.md`); the dataset is fetched at
+  `benchmarks/spreadsheetbench/harness` (see its `NOTICE.md`); the dataset is fetched at
   run time via `ci/benchmarks/spreadsheetbench/fetch_data.sh` (not committed — ~19MB
   of xlsx files).
 - **Keep it cheap:** each task gets its own Docker container. Pin a small subset with
