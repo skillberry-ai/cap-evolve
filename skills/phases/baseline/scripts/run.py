@@ -16,7 +16,8 @@ import _bootstrap  # noqa: F401
 
 from cap_evolve import Budget, RunDir, harness
 from cap_evolve.check import load_adapter, run_check
-from cap_evolve.rundir import baseline_already_ran, missing_resume_error, reuse_baseline_error
+from cap_evolve.rundir import (baseline_already_ran, existing_run_error, missing_resume_error,
+                               reuse_baseline_error)
 
 
 def _refuse_degenerate_split(splits, run_dir) -> bool:
@@ -108,6 +109,14 @@ def main(argv=None) -> int:
         resume_err = missing_resume_error(Path(args.base), args.run_ts)
         if resume_err:
             print(json.dumps({"step": "resume", "error": resume_err}), file=sys.stderr)
+            return 1
+
+    # A fresh run on a --run-ts that already exists: stop with a plain message rather
+    # than letting RunDir.create raise FileExistsError.
+    if not args.resume:
+        exists_err = existing_run_error(Path(args.base), args.run_ts)
+        if exists_err:
+            print(json.dumps({"step": "baseline", "error": exists_err}), file=sys.stderr)
             return 1
 
     # --reuse-baseline must name a real prior run dir; check it before RunDir.create so a

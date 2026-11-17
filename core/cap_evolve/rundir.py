@@ -213,6 +213,21 @@ def missing_resume_error(base: Path, ts: str):
     return f"--resume: no run named run_{ts} under {base}{hint}"
 
 
+def existing_run_error(base: Path, ts):
+    """Why a fresh run cannot use ``run_<ts>`` under ``base``, or None when it can.
+
+    Without --resume, ``RunDir.create`` would raise FileExistsError on a run dir that
+    is already there; callers stop on this plain message instead of a traceback.
+    """
+    if not ts:
+        return None
+    base = Path(base)
+    if (base / f"run_{ts}").exists():
+        return (f"run_{ts} already exists under {base}; pass --resume to continue it, "
+                f"or pick another --run-ts")
+    return None
+
+
 def baseline_already_ran(base: Path, ts) -> bool:
     """True when ``run_<ts>`` under ``base`` already has its baseline (baseline.json).
 

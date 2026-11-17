@@ -916,6 +916,7 @@ def _cmd_run(argv):
     # its ts to baseline so RunDir.create(exist_ok=True) reopens it in place.
     from .rundir import RunDir as _RunDir
     from .rundir import baseline_already_ran as _baseline_already_ran
+    from .rundir import existing_run_error as _existing_run_error
     from .rundir import missing_resume_error as _missing_resume_error
     from .rundir import reuse_baseline_error as _reuse_baseline_error
     resume_ts = args.run_ts
@@ -933,6 +934,16 @@ def _cmd_run(argv):
         resume_err = _missing_resume_error(proj_abs.parent, resume_ts)
         if resume_err:
             print(json.dumps({"step": "resume", "error": resume_err}))
+            return 1
+    elif resume_ts:
+        # A fresh run on a --run-ts that already exists would crash in baseline's
+        # RunDir.create (FileExistsError traceback), and --follow would first attach
+        # to the old run's events. Stop here with a plain message instead.
+        exists_err = _existing_run_error(proj_abs.parent, resume_ts)
+        if exists_err:
+            print(json.dumps({"step": "baseline", "error": exists_err}))
+            if _stderr_is_usable():
+                print(exists_err, file=sys.stderr)
             return 1
 
     # --reuse-baseline must name a real prior run dir. Checked before the baseline step,

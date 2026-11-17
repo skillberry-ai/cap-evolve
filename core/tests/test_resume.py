@@ -256,3 +256,53 @@ def test_cli_resume_unknown_run_ts_fails_and_names_existing_runs(tmp_path, capsy
     assert "run_nosuch" in err["error"] and str(base) in err["error"]
     assert "run_real1" in err["error"]
     assert not (base / "run_nosuch").exists()
+
+
+# ---- a --run-ts that already exists, without --resume ---------------------
+
+def test_baseline_existing_run_ts_without_resume_fails_plainly(tmp_path):
+    project, seed = _baseline_project(tmp_path)
+    base = tmp_path / ".capevolve"
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    common = [sys.executable, str(BASELINE_RUN), "--base", str(base),
+              "--project", str(project), "--capability", str(seed), "--run-ts", "dup1"]
+    r1 = subprocess.run(common, capture_output=True, text=True, env=env)
+    assert r1.returncode == 0, r1.stderr
+    r2 = subprocess.run(common, capture_output=True, text=True, env=env)
+    assert r2.returncode != 0
+    assert "Traceback" not in r2.stderr and "FileExistsError" not in r2.stderr
+    err = json.loads(r2.stderr.strip().splitlines()[-1])
+    assert "run_dup1 already exists" in err["error"] and str(base) in err["error"]
+    assert "--resume" in err["error"]
+    # --resume on the same run still reopens it.
+    r3 = subprocess.run([*common, "--resume"], capture_output=True, text=True, env=env)
+    assert r3.returncode == 0, r3.stderr
+    assert json.loads(r3.stdout)["resumed"] is True
+
+
+def test_cli_existing_run_ts_without_resume_fails_plainly(tmp_path, capsys):
+    from cap_evolve import cli
+    os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
+    project, _seed = _baseline_project(tmp_path)
+    spec = project / "capevolve.yaml"
+    spec.write_text((REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml")
+                    .read_text(encoding="utf-8"), encoding="utf-8")
+    base = tmp_path / ".capevolve"
+    from cap_evolve import Budget, RunDir
+    RunDir.create(base, ts="dup2", budget=Budget(max_iterations=1))
+    rc = cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
+                   "--run-ts", "dup2"])
+    assert rc != 0
+    cap = capsys.readouterr()
+    assert "Traceback" not in cap.out + cap.err
+    err = json.loads(cap.out.strip().splitlines()[-1])
+    assert "run_dup2 already exists" in err["error"] and str(base) in err["error"]
+    assert "--resume" in err["error"]
+
+
+def test_existing_run_error_helper(tmp_path):
+    from cap_evolve.rundir import existing_run_error
+    assert existing_run_error(tmp_path, None) is None
+    assert existing_run_error(tmp_path, "x") is None
+    (tmp_path / "run_x").mkdir()
+    assert "run_x already exists" in existing_run_error(tmp_path, "x")
