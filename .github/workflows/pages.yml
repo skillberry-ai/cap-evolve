@@ -24,6 +24,7 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "docs/education/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
   workflow_run:
@@ -70,6 +71,19 @@ jobs:
           mkdir -p site/assets/demo
           cp docs/assets/demo/cap-evolve-demo.mp4 site/assets/demo/
           ls -la site/assets/demo/
+
+      # The onboarding course lives once, at docs/education/, and is folded in here like the
+      # demo video. Its decks load four screenshots from ../assets/screenshots/ (docs/assets/
+      # in the repo), so those files are copied next to it at the same relative path.
+      - name: Fold the onboarding course into site/education/
+        run: |
+          test -f docs/education/index.html || { echo "docs/education/index.html is missing — site/index.html links to it"; exit 1; }
+          cp -R docs/education site/education
+          mkdir -p site/assets/screenshots
+          for f in $(grep -ho 'src="\.\./assets/screenshots/[^"]*"' docs/education/*.html | sed 's|src="\.\./assets/screenshots/||; s|"$||' | sort -u); do
+            cp "docs/assets/screenshots/$f" site/assets/screenshots/ || { echo "missing docs/assets/screenshots/$f"; exit 1; }
+          done
+          ls -la site/education site/assets/screenshots
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
