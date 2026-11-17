@@ -87,9 +87,9 @@ heatmap, per-iteration git diffs, the lineage tree, and gate decisions.
 ## Skill library
 
 22 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
-the core. `cap-evolve algorithms` offers 4 of the 5: `evograph` is deprecated, and is kept
-only so old evograph run dirs stay readable. Extending is one folder or one registry row — see
-[`EXTENDING.md`](EXTENDING.md).
+the core. `cap-evolve algorithms` offers 4 of the 5: `evograph` is deprecated. It is kept so
+an existing spec that names it still resolves and old evograph run dirs stay readable.
+Extending is one folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
 
 **How the counts are defined.** A *skill* is one `skills/<component>/<name>/SKILL.md`, i.e.
 one row of the generated [`skills/_registry/manifest.json`](../skills/_registry/manifest.json)
