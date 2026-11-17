@@ -1,5 +1,0 @@
-{
-  "train": ["flood-risk-analysis"],
-  "val": ["flood-risk-analysis"],
-  "test": ["flood-risk-analysis"]
-}

@@ -1,5 +1,0 @@
-{
-  "train": ["travel-planning"],
-  "val": ["travel-planning"],
-  "test": ["travel-planning"]
-}

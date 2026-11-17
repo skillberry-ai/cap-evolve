@@ -8,7 +8,7 @@ this page.
 **SkillsBench results live in their own repo.** The full per-task sweeps, the evolved
 skill packages, and the analysis write-ups are in
 [`skillberry-runs/skillsbench`](https://github.com/skillberry-runs/skillsbench)
-(private; rendered publicly at [the site's SkillsBench section](https://skillberry-ai.github.io/cap-evolve/skillsbench/))
+(rendered on the [dashboard's SkillsBench section](https://skillberry-runs.github.io/dashboard/skillsbench/))
 — that repo is the source of truth for SkillsBench optimization output. See
 [SkillsBench sweeps](#skillsbench-sweeps-the-full-result-set) below for what is there and
 which numbers to quote.

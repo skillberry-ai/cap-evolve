@@ -1,5 +1,0 @@
-{
-  "train": ["civ6-adjacency-optimizer"],
-  "val": ["civ6-adjacency-optimizer"],
-  "test": ["civ6-adjacency-optimizer"]
-}
