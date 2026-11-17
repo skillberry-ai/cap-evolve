@@ -1521,9 +1521,14 @@ def _cmd_estimate(argv):
     p.add_argument("--price-in", type=float, default=None, help="optimizer/runner input $/MTok")
     p.add_argument("--price-out", type=float, default=None, help="optimizer/runner output $/MTok")
     args = p.parse_args(argv)
+    if (args.price_in is None) != (args.price_out is None):
+        p.error("--price-in and --price-out must be given together "
+                "(both are needed to price a run)")
     for flag, val in (("--price-in", args.price_in), ("--price-out", args.price_out)):
         if val is not None and not math.isfinite(val):
             p.error(f"{flag} must be a finite number (got {val})")
+        if val is not None and val < 0:
+            p.error(f"{flag} must not be negative (got {val})")
     found = _read_spec_or_report(args.spec, args.project, "estimate")
     if found is None:
         return 1

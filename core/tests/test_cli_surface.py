@@ -554,18 +554,22 @@ def test_check_flags_a_real_project_as_passing(tmp_path):
     assert rc == 0
 
 
-def test_estimate_prices_must_be_finite(tmp_path):
+def test_estimate_prices_must_come_together_be_finite_and_non_negative(tmp_path):
     import pytest
     proj = _project(tmp_path, "p", "deterministic")
-    for bad in (["--price-in", "nan", "--price-out", "3"],
-                ["--price-in", "3", "--price-out", "inf"]):
+    for bad, msg in ((["--price-in", "3"], "must be given together"),
+                     (["--price-out", "3"], "must be given together"),
+                     (["--price-in", "-5", "--price-out", "-5"], "must not be negative"),
+                     (["--price-in", "3", "--price-out", "-1"], "must not be negative"),
+                     (["--price-in", "nan", "--price-out", "3"], "must be a finite number"),
+                     (["--price-in", "3", "--price-out", "inf"], "must be a finite number")):
         from cap_evolve import cli
         err = io.StringIO()
         with pytest.raises(SystemExit) as exc, redirect_stderr(err), \
                 redirect_stdout(io.StringIO()):
             cli.main(["estimate", "--project", str(proj), *bad])
         assert exc.value.code != 0
-        assert "must be a finite number" in err.getvalue()
+        assert msg in err.getvalue()
     # both valid prices still give a cost
     rc, out, _err = _run("estimate", "--project", str(proj), "--price-in", "3",
                          "--price-out", "15")
