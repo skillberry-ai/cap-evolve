@@ -190,3 +190,57 @@ def test_run_refuses_a_broken_spec_without_a_traceback(tmp_path):
     payload = json.loads(out.getvalue().strip().splitlines()[-1])
     assert payload["step"] == "spec" and "invalid YAML" in payload["error"]
     assert "Traceback" not in err.getvalue()
+
+
+# --- a spec that is valid YAML but not a mapping (T-6) -----------------------------
+
+_NOT_A_MAPPING = {"list": "- max_usd: 5\n", "string": "just a string\n"}
+
+
+def _project_with(tmp_path, text):
+    proj = tmp_path / ".capevolve" / "project"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "capevolve.yaml").write_text(text, encoding="utf-8")
+    return proj
+
+
+@pytest.mark.parametrize("kind", sorted(_NOT_A_MAPPING))
+def test_strict_read_rejects_a_non_mapping_spec(kind):
+    with pytest.raises(SpecError) as ei:
+        read_yaml(_NOT_A_MAPPING[kind], source="capevolve.yaml", strict=True)
+    assert "must be a mapping of keys and values" in str(ei.value)
+    # lenient (skill metadata) reading and an empty spec are unchanged
+    read_yaml(_NOT_A_MAPPING[kind])
+    assert read_yaml("", strict=True) == {}
+
+
+@pytest.mark.parametrize("kind", sorted(_NOT_A_MAPPING))
+def test_doctor_fails_the_spec_row_on_a_non_mapping_spec(tmp_path, kind):
+    from cap_evolve.cli import _doctor_checks
+    rows = {r["name"]: r for r in _doctor_checks(_project_with(tmp_path, _NOT_A_MAPPING[kind]))}
+    assert rows["spec"]["status"] == "fail"
+    assert "must be a mapping of keys and values" in rows["spec"]["detail"]
+    assert "fix the YAML" in rows["spec"]["fix"]
+
+
+@pytest.mark.parametrize("kind", sorted(_NOT_A_MAPPING))
+def test_check_reports_a_non_mapping_spec(tmp_path, kind):
+    from cap_evolve import check
+    rep = check.run_check(_project_with(tmp_path, _NOT_A_MAPPING[kind]))
+    assert not rep.ok
+    assert any("must be a mapping of keys and values" in p for p in rep.problems)
+
+
+@pytest.mark.parametrize("cmd", [["run", "--dry-run"], ["estimate"]])
+@pytest.mark.parametrize("kind", sorted(_NOT_A_MAPPING))
+def test_run_and_estimate_refuse_a_non_mapping_spec(tmp_path, kind, cmd):
+    from cap_evolve import cli
+    proj = _project_with(tmp_path, _NOT_A_MAPPING[kind])
+    out, err = io.StringIO(), io.StringIO()
+    with redirect_stdout(out), redirect_stderr(err):
+        rc = cli.main([*cmd, "--project", str(proj)])
+    assert rc == 1
+    payload = json.loads(out.getvalue().strip().splitlines()[-1])
+    assert payload["step"] == "spec"
+    assert "must be a mapping of keys and values" in payload["error"]
+    assert "Traceback" not in err.getvalue()

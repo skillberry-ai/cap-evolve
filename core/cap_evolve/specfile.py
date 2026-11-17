@@ -88,13 +88,18 @@ class SpecError(ValueError):
     ``line`` is 1-based, or ``None`` when PyYAML did not report a position.
     """
 
-    def __init__(self, message: str, *, source: str | None = None, line: int | None = None):
+    def __init__(self, message: str, *, source: str | None = None, line: int | None = None,
+                 what: str = "invalid YAML"):
         self.source = source
         self.line = line
         where = f" in {source}" if source else ""
         if line is not None:
             where = f"{where}, line {line}" if where else f" at line {line}"
-        super().__init__(f"invalid YAML{where}: {message}")
+        super().__init__(f"{what}{where}: {message}")
+
+
+#: Message for a spec that parses but whose top level is a list/string/number.
+NOT_A_MAPPING = "capevolve.yaml must be a mapping of keys and values"
 
 
 def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dict:
@@ -103,6 +108,10 @@ def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dic
     ``strict=True`` (use it for the user's ``capevolve.yaml`` spec): a YAML syntax error
     raises ``SpecError`` with the line number, and the fallback reader is used ONLY when
     PyYAML is not installed. ``source`` (e.g. the file path) is named in the message.
+
+    ``strict=True`` also requires the top level to be a mapping: a spec like
+    ``- max_usd: 5`` or ``just a string`` is valid YAML, but every caller then does
+    ``spec.get(...)`` and crashed with a traceback. An empty document gives ``{}``.
 
     ``strict=False`` (the default; skill ``meta.yaml`` / SKILL.md frontmatter): when
     PyYAML fails, fall back to the lenient minimal reader — several skill files carry
@@ -114,7 +123,7 @@ def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dic
         yaml = None
     if yaml is not None:
         try:
-            return yaml.safe_load(text) or {}
+            data = yaml.safe_load(text) or {}
         except yaml.YAMLError as e:
             if not strict:
                 return _read_yaml_minimal(text)
@@ -130,6 +139,10 @@ def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dic
                 # line the user must fix is where the quote/bracket was opened.
                 msg += f" (opened at line {cmark.line + 1})"
             raise SpecError(msg, source=source, line=line) from e
+        if strict and not isinstance(data, dict):
+            raise SpecError(f"{NOT_A_MAPPING} (got {type(data).__name__}: "
+                            f"{str(data)[:60]!r})", source=source, what="invalid spec")
+        return data
     return _read_yaml_minimal(text)
 
 
