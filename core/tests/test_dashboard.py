@@ -875,3 +875,24 @@ def test_good_project_spec_has_no_spec_error(tmp_path):
     _mk_project(tmp_path)
     rd = _mk_run(tmp_path, events=_BASE_EVENTS, baseline=_BASELINE)
     assert dashboard.reduce_run(rd)["summary"]["config"]["spec_error"] is None
+
+
+def test_reduce_run_never_writes_into_a_run_with_a_broken_spec(tmp_path, monkeypatch, capsys):
+    """reduce_run (every dashboard view, and --export) reads the run's spec through
+    split_result_from_rollouts -> resolve_errored_policy. As a viewer it must not write a
+    spec_unreadable event into the run, nor print the run's warning."""
+    from cap_evolve import cli, dashboard, harness
+    monkeypatch.delenv(harness.ERRORED_POLICY_ENV, raising=False)
+    proj = _mk_project(tmp_path)
+    spec = proj / "capevolve.yaml"
+    spec.write_text('split_mode: pooled\nrun_name: "oops\n', encoding="utf-8")
+    rd = _mk_run(tmp_path, events=_BASE_EVENTS + [{"kind": "spec_resolved", "spec": str(spec)}],
+                 baseline=_BASELINE)
+    before = rd.events_path.read_bytes()
+    dashboard.reduce_run(rd)
+    assert cli.main(["dashboard", "--export", str(rd.root)]) == 0
+    assert rd.events_path.read_bytes() == before
+    assert "cannot be read strictly" not in capsys.readouterr().err
+    # control: a run step (warn=True, the default) on the same run does warn and log
+    harness.split_result_from_rollouts(rd, "seed", "val")
+    assert b"spec_unreadable" in rd.events_path.read_bytes()

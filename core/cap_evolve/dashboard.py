@@ -240,7 +240,8 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     """
     try:
         from . import harness
-        sr = harness.split_result_from_rollouts(run_dir, tag, split)
+        # warn=False: a viewer must not write a spec_unreadable event into the run
+        sr = harness.split_result_from_rollouts(run_dir, tag, split, warn=False)
     except Exception:  # noqa: BLE001 — degrade: a missing/odd rollout shouldn't crash the report
         return {}, {}, {}
     rows = sr.to_dict().get("per_task", [])

@@ -246,3 +246,20 @@ def test_objectives_gate_params_come_from_run_spec(recorded):
     (run / "capevolve.yaml").write_text("reward_gated:\n  theta: 0.5\n  max_reward: 1.0\n")
     o = recorded.get(f"/api/runs/{RID}/objectives").json()
     assert o["theta"] == 0.5 and o["gate_cfg_source"] == "spec:reward_gated"
+
+
+def test_objectives_view_never_writes_into_a_run_with_a_broken_spec(tmp_base, make_run, capsys):
+    """A viewer must not write a spec_unreadable event into the run it shows (nor print the run's
+    warning): reading the run's spec here is read-only, even when the spec has a syntax error."""
+    from capevolve_dashboard import objectives_view
+    proj = tmp_base / "project"
+    proj.mkdir()
+    spec = proj / "capevolve.yaml"
+    spec.write_text('split_mode: pooled\nrun_name: "oops\n', encoding="utf-8")
+    rd = make_run("run_broken", events=BASE_EVENTS + [{"t": 9, "kind": "spec_resolved", "spec": str(spec)}],
+                  baseline={"val": {"reward": 0.25, "per_task": []}})
+    before = rd.events_path.read_bytes()
+    objectives_view.run_objectives(rd.root)
+    _client(tmp_base).get("/api/runs/run_broken")
+    assert rd.events_path.read_bytes() == before
+    assert "cannot be read strictly" not in capsys.readouterr().err

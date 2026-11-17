@@ -82,7 +82,8 @@ def run_objectives(run_path: Path) -> dict:
 
 def _compute(rd, spec_path) -> dict:
     nodes = {n["id"]: n for n in dashboard.reduce_run(rd)["graph"]["nodes"]}
-    spec = specfile.spec_for_run(rd, dashboard._find_project_dir(rd.root))
+    # warn=False: a viewer must not write a spec_unreadable event into the run it shows
+    spec = specfile.spec_for_run(rd, dashboard._find_project_dir(rd.root), warn=False)
     cfg = ob.cfg_from_spec(spec)
     theta = ob.success_theta(cfg)
     gate_src = ("spec:reward_gated" if (spec.get("reward_gated") or {}) else "GateCfg defaults (no reward_gated in spec)")
