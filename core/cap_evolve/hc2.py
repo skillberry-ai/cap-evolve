@@ -786,6 +786,17 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
             dropped[cid] = "empty diff" + (f" (optimizer error: {errors[cid][:200]})" if errors[cid] else "")
             continue
         diffs[cid] = d
+    # The helper gate (cap_evolve.helper_gate), before the round pays for any rollout: a proposal whose helper
+    # scripts are refused is dropped, like an empty or duplicate diff, and never enters the round.
+    from . import helper_gate
+    for cid in list(diffs):
+        refusal = helper_gate.check_candidate(run_dir, workdirs[cid], parent_dir=incumbent_dir,
+                                              parent_id=incumbent_id, project=ctx.project_dir)
+        if refusal is not None:
+            run_dir.log_event("helper_gate_refused", candidate=cid, parent=incumbent_id,
+                              report=refusal.to_dict(), reason=refusal.reason)
+            dropped[cid] = refusal.reason
+            del diffs[cid]
     for c in costs.values():
         run_dir.update_spent(optimizer_usd=c["usd"], optimizer_tokens=c["tokens"])
     pend = {"incumbent": incumbent_id, "cids": cids, "round_id": None, "dropped": dropped, "shown": shown,
@@ -974,7 +985,8 @@ def _snap_ignore(harness):
 def _status(pend, cid, v1, v2, cv):
     """(status, reason, indecisive) for one candidate. Only the C verdict BIT is ever written."""
     if cid in pend["dropped"]:
-        return "dropped", f"hc2 diversity gate: {pend['dropped'][cid]}", True
+        why = pend["dropped"][cid]
+        return "dropped", (why if why.startswith("the helper gate") else f"hc2 diversity gate: {why}"), True
     if cv is not None:
         return cv.status, f"P2 confirmation {cv.bit()}", cv.status == "unconfirmed"
     rv = v2 or v1

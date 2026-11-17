@@ -19,10 +19,12 @@ One trace is not enough. Name the traces in the hypothesis.
 - General procedure only. A task id, an answer literal, a branch on task identity, or a lookup table of answers
   is rejected by the lint before any rollout is charged.
 
-**What the checks do (all free, run in the pregate).** `helper_surface` (executable files only in declared dirs,
+**What the checks do (all free, before any rollout is charged).** Every algorithm runs the same helper gate
+(`cap_evolve.helper_gate`) on each candidate it proposes: `helper_surface` (executable files only in declared dirs,
 size caps), `helper_lint`, and `helper_smoke` (the helper imports, two runs give identical output, it writes only
-its declared outputs, no network, no gold). A failure leaves the candidate `proposed` with the reason; fix it and
-propose again.
+its declared outputs, no network, no gold). All three run, so the reason lists every finding. A failure makes
+the step indecisive: the candidate is not measured, no budget is spent, and the reason is filed in the rejected
+memory you read next step; fix it and propose again.
 
 **What a helper crash costs.** A rollout that fails because the candidate's own helper raised is scored 0
 (`error_kind=candidate`), not treated as missing. A flaky helper is worse than prose.

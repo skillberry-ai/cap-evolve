@@ -530,6 +530,10 @@ def pregate_failure(run_dir, project, parent_tag: str, cand_dir: Path, cmd: str 
         # Config errors (an unknown helpers key, a bad CAPEVOLVE_HELPERS) propagate: they are not a pre-gate
         # crash, and failing open would run the experiment with the check silently off.
         hcfg = helpers_mod.resolve(spec)
+        # The same for the helper gate's own config (an unreadable ids_file, a missing seed): checked here, outside
+        # the fail-open try below, so a gate that cannot run stops the round instead of being skipped.
+        from cap_evolve import helper_gate
+        helper_gate.check_config(hcfg, seed=run_dir.candidate_dir("seed"))
         traces = [Path(t) for t in cfg.get("traces") or []]
         if hcfg["enabled"] and hcfg["smoke"]:  # recorded helper calls of the parent's FEEDBACK rollouts only
             traces += helper_smoke_mod.fixture_traces(run_dir.rollouts, parent_tag, hcfg["fixture_splits"])

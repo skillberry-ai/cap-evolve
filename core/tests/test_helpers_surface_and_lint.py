@@ -433,6 +433,7 @@ def test_a_helpers_config_error_propagates_out_of_the_round_pregate_not_fail_ope
                                log_event=lambda *a, **k: None)
     cand = tmp_path / "cand"
     cand.mkdir()
+    (tmp_path / "seed").mkdir()     # a real run always has its seed snapshot; the helper gate requires it
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True, "bogus": 1}})
     with pytest.raises(ValueError, match="unknown helpers key"):
         rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
@@ -451,9 +452,23 @@ def test_round_pregate_hands_the_smoke_only_feedback_rollouts_of_the_parent(monk
     rd = types.SimpleNamespace(candidate_dir=lambda t: tmp_path / t, rollouts=tmp_path / "rollouts", root=tmp_path,
                                log_event=lambda *a, **k: None)
     seen = {}
+    (tmp_path / "seed").mkdir()     # a real run always has its seed snapshot; the helper gate requires it
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
     monkeypatch.setattr(rnd.pregate, "run", lambda *a, **k: (seen.update(k), {"ok": True, "warnings": []})[1])
     cand = tmp_path / "cand"
     cand.mkdir()
     assert rnd.pregate_failure(rd, tmp_path, "parent", cand, None) is None
     assert [p.parent.name for p in seen["traces"]] == ["feedback"]
+
+
+def test_a_missing_seed_snapshot_stops_the_round_pregate_not_fail_open(monkeypatch, tmp_path):
+    import types
+    from cap_evolve import helper_gate
+    rnd = _round_module(monkeypatch)
+    rd = types.SimpleNamespace(candidate_dir=lambda t: tmp_path / t, rollouts=tmp_path / "rollouts", root=tmp_path,
+                               log_event=lambda *a, **k: None)
+    cand = tmp_path / "cand"
+    cand.mkdir()
+    monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
+    with pytest.raises(helper_gate.GateConfigError, match="seed"):
+        rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
