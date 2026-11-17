@@ -429,7 +429,9 @@ def resolve_budget_reserve(explicit=None, run_dir=None) -> bool:
         return env.strip().lower() in ("1", "true", "yes", "on")
     if run_dir is not None:
         from .specfile import spec_for_run
-        return bool((spec_for_run(run_dir) or {}).get("budget_reserve"))
+        # _truthy, not bool(): `budget_reserve: "no"` / "off" (a string) must be off
+        from .gatecfg import _truthy
+        return _truthy((spec_for_run(run_dir) or {}).get("budget_reserve"))
     return False
 
 

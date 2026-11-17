@@ -446,3 +446,14 @@ def test_read_spec_file_drops_a_bom(tmp_path, yaml_env):
     f.write_bytes(b"\xef\xbb\xbfmax_usd: 5\n")
     assert read_spec_file(f) == {"max_usd": 5}
 
+
+@pytest.mark.parametrize("value, want", [('"no"', False), ('"off"', False), ("no", False),
+                                         ('"yes"', True), ("true", True), (None, False)])
+def test_budget_reserve_reads_no_and_off_as_off(tmp_path, monkeypatch, value, want):
+    from cap_evolve import RunDir, harness
+    monkeypatch.delenv(harness.BUDGET_RESERVE_ENV, raising=False)
+    spec = tmp_path / "capevolve.yaml"
+    spec.write_text("max_usd: 5\n" + (f"budget_reserve: {value}\n" if value else ""), encoding="utf-8")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="br")
+    rd.log_event("spec_resolved", spec=str(spec))
+    assert harness.resolve_budget_reserve(None, rd) is want
