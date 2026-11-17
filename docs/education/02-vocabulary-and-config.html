@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 2 · Vocabulary and config</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  .slide table.tight td { padding: 6px 10px; font-size: 16px; }
+  .slide table.tight th { padding: 6px 10px; }
+  .slide table.gloss td { padding: 4px 8px; font-size: 15px; line-height: 1.3; }
+  .slide table.gloss td:first-child { white-space: nowrap; }
+  .slide table.gloss th { padding: 4px 8px; }
+  .slide .card ul.cmds { list-style: none; padding-left: 0; }
+  .slide .card ul.cmds li { font-size: 16px; margin-bottom: 7px; }
+  .slide .card ul.cmds code { font-size: 15px; }
+  .slide pre.sm { font-size: 15px; line-height: 1.45; padding: 12px 16px; }
+  .verdict { font-family: var(--mono); font-size: 34px; line-height: 1; margin-bottom: 6px; }
+  .slide .terms-stack { display: flex; flex-direction: column; gap: 12px; }
+</style>
+</head>
+<body data-chapter="Chapter 2 · Vocabulary and config" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ 1. Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 2 of 8</div>
+  <h1>Vocabulary and config</h1>
+  <p class="lead">The words the rest of the course uses, the objects they name, and the one spec file that controls a run.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: concepts</span><span class="pill amber">capevolve.yaml</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:40]</span> Welcome to chapter two. In chapter one we saw why cap-evolve exists and what the loop looks like from far away. Now we learn the language.</p>
+    <p>Every later chapter uses words like candidate, champion, gate, indecisive, run dir, and LEDGER. If those words are clear, the code in chapters four to eight reads easily. So this chapter is a dictionary with pictures.</p>
+    <p>We will also walk through the spec file, <code>capevolve.yaml</code>, field by field, and the CLI commands. At the end there is a one-slide glossary you can keep open while you read code.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:40]</span> ברוכים הבאים לפרק השני. בפרק הראשון ראינו למה cap-evolve קיים ואיך הלולאה נראית ממבט על. עכשיו לומדים את השפה.</p>
+    <p>כל פרק שבא אחרי זה משתמש במילים כמו candidate, champion, gate, indecisive, run dir ו-LEDGER. אם המילים האלה ברורות, הקוד בפרקים ארבע עד שמונה נקרא בקלות. אז הפרק הזה הוא בעצם מילון עם תמונות.</p>
+    <p>נעבור גם על קובץ ה-spec, <code>capevolve.yaml</code>, שדה אחרי שדה, ועל פקודות ה-CLI. בסוף יש שקף glossary אחד שכדאי להשאיר פתוח בזמן שקוראים קוד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 2. Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-3">
+    <div class="card blue"><h3>1 · The objects</h3><ul><li>capability and its 4 kinds</li><li>seed, candidate, champion, lineage</li><li>adapter · Task · Rollout · Score</li></ul></div>
+    <div class="card amber"><h3>2 · Measurement</h3><ul><li>train / val / test, sealed test</li><li>trial, seed per trial, pass^k</li><li>iteration and gate verdicts</li></ul></div>
+    <div class="card violet"><h3>3 · The machinery</h3><ul><li>phase, skill, algorithm</li><li>optimizer backend, host</li><li>orchestration mode, run dir</li></ul></div>
+  </div>
+  <div class="grid-3 mt">
+    <div class="card green"><h3>4 · The spec</h3><p><code>capevolve.yaml</code> field by field, plus a real tau2 example.</p></div>
+    <div class="card"><h3>5 · The CLI</h3><p>14 commands in 3 groups: set up, optimize, inspect.</p></div>
+    <div class="card"><h3>6 · Shared files</h3><p><code>LEDGER.md</code>, <code>JOURNAL.md</code>, <code>PROCESS.md</code>, <code>RUNMAP.md</code>, and a glossary.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:40–1:20]</span> Here is the plan. We go in six blocks.</p>
+    <ul>
+      <li>First, the objects: what is optimized, the versions of it, and the adapter that connects cap-evolve to your agent.</li>
+      <li>Second, measurement: splits, trials, pass^k, and what the gate can say.</li>
+      <li>Third, the machinery: phases, skills, algorithms, optimizer backends, hosts, and the two orchestration modes.</li>
+      <li>Then the spec file, the CLI, and the files that carry memory from one iteration to the next.</li>
+    </ul>
+    <p>Each term gets a short definition here. The deep version comes later: the object model in chapter four, the statistics in chapter six, the algorithms in chapter seven.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:40–1:20]</span> זו התוכנית. נעבור בשישה בלוקים.</p>
+    <ul>
+      <li>קודם האובייקטים: מה עובר אופטימיזציה, הגרסאות שלו, וה-adapter שמחבר את cap-evolve לסוכן שלכם.</li>
+      <li>אחר כך מדידה: splits, trials, pass^k, ומה ה-gate יכול להחליט.</li>
+      <li>אחר כך המנגנון: phases, skills, algorithms, optimizer backends, hosts ושני מצבי ה-orchestration.</li>
+      <li>ובסוף קובץ ה-spec, ה-CLI, והקבצים שמעבירים זיכרון מ-iteration ל-iteration.</li>
+    </ul>
+    <p>כל מונח מקבל כאן הגדרה קצרה. הגרסה העמוקה מגיעה בהמשך: מודל האובייקטים בפרק ארבע, הסטטיסטיקה בפרק שש, והאלגוריתמים בפרק שבע.</p>
+  </aside>
+</section>
+
+<!-- ═══ 3. Core objects in one picture ═══ -->
+<section class="slide">
+  <h2>The core objects in one picture</h2>
+  <svg class="diagram" viewBox="0 0 1136 440">
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <!-- Task -->
+    <rect class="box" x="500" y="10" width="200" height="66" rx="12"/>
+    <text class="title" x="600" y="38" text-anchor="middle">Task</text>
+    <text class="label mono" x="600" y="60" text-anchor="middle">adapter.tasks(split)</text>
+    <path class="line" d="M600,76 L600,150" marker-end="url(#a3)"/>
+    <!-- row 1 -->
+    <rect class="box" x="10" y="150" width="190" height="86" rx="12" style="stroke:#64748b"/>
+    <text class="title" x="105" y="185" text-anchor="middle">Seed capability</text>
+    <text class="label mono" x="105" y="210" text-anchor="middle">seed_capability/</text>
+    <path class="line" d="M200,193 L270,193" marker-end="url(#a3)"/>
+    <text class="label" x="235" y="180" text-anchor="middle">copy</text>
+    <rect class="box violet" x="270" y="150" width="190" height="86" rx="12"/>
+    <text class="title" x="365" y="185" text-anchor="middle">Candidate</text>
+    <text class="label mono" x="365" y="210" text-anchor="middle">cand_0001 …</text>
+    <path class="line" d="M460,193 L500,193" marker-end="url(#a3)"/>
+    <rect class="box blue" x="500" y="150" width="200" height="86" rx="12"/>
+    <text class="title" x="600" y="185" text-anchor="middle">Adapter</text>
+    <text class="label mono" x="600" y="210" text-anchor="middle">run_target(task, ctx)</text>
+    <path class="line" d="M700,193 L750,193" marker-end="url(#a3)"/>
+    <rect class="box" x="750" y="150" width="150" height="86" rx="12"/>
+    <text class="title" x="825" y="185" text-anchor="middle">Rollout</text>
+    <text class="label" x="825" y="210" text-anchor="middle">output + trace</text>
+    <path class="line" d="M900,193 L960,193" marker-end="url(#a3)"/>
+    <text class="label mono" x="930" y="180" text-anchor="middle">score()</text>
+    <rect class="box" x="960" y="150" width="166" height="86" rx="12"/>
+    <text class="title" x="1043" y="185" text-anchor="middle">Score</text>
+    <text class="label" x="1043" y="210" text-anchor="middle">reward + feedback</text>
+    <!-- optimizer -->
+    <path class="line dash" d="M365,236 L365,262" />
+    <text class="label" x="378" y="256">optimizer edits the copy</text>
+    <!-- row 2 -->
+    <path class="line" d="M1043,236 L1043,330 L930,330" marker-end="url(#a3)"/>
+    <text class="label" x="1052" y="290">on val</text>
+    <rect class="box amber" x="700" y="295" width="230" height="80" rx="12" style="fill:rgba(245,158,11,.06)"/>
+    <text class="title" x="815" y="328" text-anchor="middle">Gate</text>
+    <text class="label mono" x="815" y="352" text-anchor="middle">Δ &gt; k·SE ?</text>
+    <path class="line" d="M700,335 L470,335" marker-end="url(#a3)"/>
+    <text class="label" x="585" y="323" text-anchor="middle">accept → set_best()</text>
+    <rect class="box amber" x="270" y="295" width="200" height="80" rx="12"/>
+    <text class="title" x="370" y="328" text-anchor="middle">Champion</text>
+    <text class="label mono" x="370" y="352" text-anchor="middle">state.json: best_id</text>
+    <path class="line dash" d="M270,335 L200,335 L200,262 L270,262 L270,236" />
+    <text class="label" x="60" y="300">parent of the</text>
+    <text class="label" x="60" y="318">next candidate</text>
+    <path class="line dash" d="M815,375 L815,415" marker-end="url(#a3)"/>
+    <text class="label" x="830" y="410">reject → rejected.jsonl</text>
+  </svg>
+  <p class="small muted">Source: core/cap_evolve/types.py · adapter.py · gate.py · rundir.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:20–2:30]</span> This is the whole vocabulary in one picture. Read it from left to right.</p>
+    <p>The <b>seed capability</b> is your original artifact, for example a system prompt in a folder called <code>seed_capability</code>. cap-evolve never edits it. It makes a copy. A copy that the optimizer has edited is a <b>candidate</b>, with an id like <code>cand_0001</code>.</p>
+    <p>The <b>adapter</b> is your code. It takes a <b>Task</b>, runs your agent with the candidate live, and returns a <b>Rollout</b>: the output and the trace. Then <code>score()</code> turns the rollout into a <b>Score</b>: a reward between 0 and 1 plus text feedback.</p>
+    <p>Scores on the val split go to the <b>gate</b>. If the gain is larger than k standard errors, the candidate becomes the new <b>champion</b>. Its id is stored as <code>best_id</code> in <code>state.json</code>, and it becomes the parent of the next candidate.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:20–2:30]</span> זה כל אוצר המילים בתמונה אחת. קוראים משמאל לימין.</p>
+    <p>ה-<b>seed capability</b> הוא הארטיפקט המקורי שלכם, למשל system prompt בתיקייה שנקראת <code>seed_capability</code>. cap-evolve אף פעם לא עורך אותו, הוא עושה עותק. עותק שה-optimizer ערך הוא <b>candidate</b>, עם מזהה כמו <code>cand_0001</code>.</p>
+    <p>ה-<b>adapter</b> הוא הקוד שלכם. הוא מקבל <b>Task</b>, מריץ את הסוכן כשה-candidate פעיל, ומחזיר <b>Rollout</b>: הפלט וה-trace. אחר כך <code>score()</code> הופך את ה-rollout ל-<b>Score</b>: reward בין 0 ל-1 ועוד feedback בטקסט.</p>
+    <p>הציונים על ה-val split הולכים ל-<b>gate</b>. אם השיפור גדול מ-k שגיאות תקן, ה-candidate הופך ל-<b>champion</b> החדש. המזהה שלו נשמר כ-<code>best_id</code> בתוך <code>state.json</code>, והוא נהיה ה-parent של ה-candidate הבא.</p>
+  </aside>
+</section>
+
+<!-- ═══ 4. Capability kinds ═══ -->
+<section class="slide">
+  <h2>Capability: what the agent reads</h2>
+  <p class="small muted" style="margin-top:-10px">A capability is the artifact under optimization. Each kind is a capability skill in <code>skills/capabilities/</code>.</p>
+  <div class="grid-4">
+    <div class="card blue"><h3><code>system-prompt</code></h3><p>Prompt, developer message, or policy text.</p><p class="small muted">Add, merge, or change rules. Never drop a needed rule.</p></div>
+    <div class="card violet"><h3><code>tools</code></h3><p>The agent's own tool surface: code, docs, return values.</p><p class="small muted">Wrap or replace a tool. Never bare-remove it.</p></div>
+    <div class="card green"><h3><code>mcp-tool</code></h3><p>Tool surface of an external MCP server the agent calls.</p><p class="small muted">Names, descriptions, schemas, tool subset.</p></div>
+    <div class="card amber"><h3><code>skill-package</code></h3><p>An Agent Skill: <code>SKILL.md</code>, references, scripts.</p><p class="small muted">So the agent triggers it and follows it.</p></div>
+  </div>
+  <div class="row mt">
+    <div class="col">
+      <pre><span class="c"># combine kinds: one run edits all of them jointly</span>
+<span class="f">capabilities</span>: [<span class="s">system-prompt</span>, <span class="s">tools</span>]
+<span class="f">capability_path</span>: <span class="s">seed_capability</span>   <span class="c"># the seed dir</span></pre>
+    </div>
+    <div class="col v-center">
+      <div class="callout">Weights never change. cap-evolve edits the <b>files</b> the agent reads.</div>
+    </div>
+  </div>
+  <p class="small muted">Source: skills/capabilities/*/SKILL.md · benchmarks/tau2/examples/airline/capevolve.yaml</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:30–3:40]</span> A <b>capability</b> is the thing we optimize. It is always files that the agent reads at runtime. It is never model weights.</p>
+    <p>There are four kinds. Each kind is a capability skill: a folder with a <code>SKILL.md</code> that tells the optimizer what it may change and what it must keep.</p>
+    <ul>
+      <li><code>system-prompt</code>: rules and policy text.</li>
+      <li><code>tools</code>: the agent's own tools. The optimizer may edit tool code, so a rule becomes code the model cannot skip.</li>
+      <li><code>mcp-tool</code>: the surface of an external MCP server.</li>
+      <li><code>skill-package</code>: when the thing you ship is itself a skill.</li>
+    </ul>
+    <p>You can combine kinds. The tau2 airline example uses <code>[system-prompt, tools]</code>, so one candidate can change the policy and the tools together.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:30–3:40]</span> <b>capability</b> הוא הדבר שעושים לו אופטימיזציה. זה תמיד קבצים שהסוכן קורא בזמן ריצה. זה אף פעם לא משקלות של מודל.</p>
+    <p>יש ארבעה סוגים. כל סוג הוא capability skill: תיקייה עם <code>SKILL.md</code> שמסבירה ל-optimizer מה מותר לשנות ומה חייב להישאר.</p>
+    <ul>
+      <li><code>system-prompt</code>: חוקים וטקסט מדיניות.</li>
+      <li><code>tools</code>: הכלים של הסוכן עצמו. ה-optimizer יכול לערוך קוד של כלי, וכך חוק הופך לקוד שהמודל לא יכול לדלג עליו.</li>
+      <li><code>mcp-tool</code>: המשטח של שרת MCP חיצוני.</li>
+      <li><code>skill-package</code>: כשהדבר שאתם משחררים הוא בעצמו skill.</li>
+    </ul>
+    <p>אפשר לשלב סוגים. הדוגמה של tau2 airline משתמשת ב-<code>[system-prompt, tools]</code>, כך ש-candidate אחד יכול לשנות את המדיניות ואת הכלים ביחד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 5. Seed, candidate, champion, lineage ═══ -->
+<section class="slide">
+  <h2>Seed, candidate, champion, lineage</h2>
+  <div class="row">
+    <div class="col" style="flex:1.25">
+      <svg class="diagram" viewBox="0 0 620 400">
+        <defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+        <rect class="box" x="20" y="160" width="150" height="76" rx="12" style="stroke:#64748b"/>
+        <text class="title mono" x="95" y="192" text-anchor="middle">seed</text>
+        <text class="label" x="95" y="216" text-anchor="middle">val 0.00</text>
+        <path class="line" d="M170,198 L240,198" marker-end="url(#a5)"/>
+        <rect class="box amber" x="240" y="160" width="160" height="76" rx="12"/>
+        <text class="title mono" x="320" y="192" text-anchor="middle">cand_0001 ★</text>
+        <text class="label" x="320" y="216" text-anchor="middle">val 1.00 · accepted</text>
+        <path class="line" d="M400,185 L450,95" marker-end="url(#a5)"/>
+        <path class="line" d="M400,212 L450,300" marker-end="url(#a5)"/>
+        <rect class="box red" x="450" y="50" width="160" height="76" rx="12"/>
+        <text class="title mono" x="530" y="82" text-anchor="middle">cand_0002</text>
+        <text class="label" x="530" y="106" text-anchor="middle">val 1.00 · rejected</text>
+        <rect class="box red" x="450" y="270" width="160" height="76" rx="12"/>
+        <text class="title mono" x="530" y="302" text-anchor="middle">cand_0003</text>
+        <text class="label" x="530" y="326" text-anchor="middle">val 1.00 · rejected</text>
+        <text class="label" x="205" y="186" text-anchor="middle">parent</text>
+        <text class="label" x="20" y="30">A real toy_calc run (run_demo): 3 iterations,</text>
+        <text class="label" x="20" y="48">then stop after 2 rejects in a row (stall: 2).</text>
+        <text class="label" x="20" y="380">Δ = 0 is not a gain, so both children are rejected.</text>
+      </svg>
+    </div>
+    <div class="col terms-stack">
+      <div class="term" style="border-left-color:#64748b"><span class="name">seed</span><span class="kind">candidate id</span><div class="def">The unmodified capability. Scored on val at baseline.</div></div>
+      <div class="term violet"><span class="name">candidate</span><span class="kind">cand_NNNN</span><div class="def">One edited version. Snapshot in <code>candidates/&lt;id&gt;/</code>.</div></div>
+      <div class="term amber"><span class="name">champion · best</span><span class="kind">best_id</span><div class="def">The current best accepted candidate. Code says "best".</div></div>
+      <div class="term"><span class="name">lineage</span><span class="kind">parent → child</span><div class="def">Each candidate records its parent. Together: a tree.</div></div>
+    </div>
+  </div>
+  <p class="small muted">Source: a real run of benchmarks/toy/examples/calc/run.sh · events.jsonl "step" events</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:40–4:50]</span> These four words describe versions of the capability. The picture is a real toy_calc run that I ran for this slide.</p>
+    <p>The <b>seed</b> is the starting version. Its id is literally the string <code>seed</code>. It scored 0.0 on val. The optimizer made <code>cand_0001</code>, which scored 1.0. The gate accepted it, so it became the <b>champion</b>. The code mostly says "best": <code>best_id</code>, <code>set_best()</code>, <code>cap-evolve diff --best</code>. The docs often say champion. They mean the same thing.</p>
+    <p>Then <code>cand_0002</code> and <code>cand_0003</code> were built on top of the champion. They also scored 1.0, but a delta of zero is not a gain, so both were rejected. Two rejects in a row hit <code>stall: 2</code>, and the run stopped.</p>
+    <p><b>Lineage</b> is the parent link of every candidate. In hill-climb the parent is always the current best. Other algorithms branch more. Chapter four shows the candidate graph.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:40–4:50]</span> ארבע המילים האלה מתארות גרסאות של ה-capability. התמונה היא ריצה אמיתית של toy_calc שהרצתי בשביל השקף הזה.</p>
+    <p>ה-<b>seed</b> הוא הגרסה ההתחלתית. המזהה שלו הוא ממש המחרוזת <code>seed</code>. הוא קיבל 0.0 על val. ה-optimizer יצר את <code>cand_0001</code>, שקיבל 1.0. ה-gate קיבל אותו, ולכן הוא נהיה ה-<b>champion</b>. בקוד בדרך כלל כתוב "best": <code>best_id</code>, <code>set_best()</code>, <code>cap-evolve diff --best</code>. בתיעוד הרבה פעמים כתוב champion. זה אותו דבר.</p>
+    <p>אחר כך נבנו <code>cand_0002</code> ו-<code>cand_0003</code> מעל ה-champion. גם הם קיבלו 1.0, אבל delta של אפס הוא לא שיפור, ולכן שניהם נדחו. שתי דחיות ברצף הגיעו ל-<code>stall: 2</code>, והריצה עצרה.</p>
+    <p><b>lineage</b> זה הקישור ל-parent של כל candidate. ב-hill-climb ה-parent הוא תמיד ה-best הנוכחי. אלגוריתמים אחרים מתפצלים יותר. בפרק ארבע נראה את ה-candidate graph.</p>
+  </aside>
+</section>
+
+<!-- ═══ 6. Adapter ═══ -->
+<section class="slide">
+  <h2>The adapter: your glue code</h2>
+  <div class="row">
+    <div class="col" style="flex:1.2">
+      <pre class="sm"><span class="c"># .capevolve/project/adapters/adapter.py</span>
+<span class="k">class</span> <span class="f">Adapter</span>(CapabilityAdapter):
+    <span class="c"># 1. where tasks come from: train | val | test | all</span>
+    <span class="k">def</span> <span class="f">tasks</span>(self, split) -&gt; list[Task]: ...
+
+    <span class="c"># 2. run the agent with the candidate live as ctx</span>
+    <span class="k">def</span> <span class="f">run_target</span>(self, task, ctx, *, seed=<span class="n">0</span>): ...  <span class="c"># Rollout</span>
+
+    <span class="c"># 3. reward in [0, 1] + feedback, deterministic</span>
+    <span class="k">def</span> <span class="f">score</span>(self, task, rollout) -&gt; Score: ...</pre>
+      <div class="callout amber"><code>cap-evolve check</code> refuses to run while any of the three is still an <code>IMPLEMENT ME</code> stub.</div>
+    </div>
+    <div class="col">
+      <h3>Optional hooks (defaults exist)</h3>
+      <table class="tight">
+        <tr><td><code>materialize()</code></td><td>write edits into a candidate dir</td></tr>
+        <tr><td><code>live()</code></td><td>make a candidate live, yield <code>ctx</code></td></tr>
+        <tr><td><code>trajectories()</code></td><td>the runner's native trace dir</td></tr>
+        <tr><td><code>run_batch()</code></td><td>use the benchmark's own batch runner</td></tr>
+        <tr><td><code>run_trials()</code></td><td>all trials in one concurrent pass</td></tr>
+        <tr><td><code>score_batch()</code></td><td>score a whole trial in one call</td></tr>
+      </table>
+      <p class="small muted mt">Chapter 4 covers the full contract.</p>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/adapter.py (CapabilityAdapter) · docs/ADAPTER_CONTRACT.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:50–6:00]</span> The <b>adapter</b> is the only code you write to connect cap-evolve to a new agent or benchmark. It lives in <code>.capevolve/project/adapters/adapter.py</code> and subclasses <code>CapabilityAdapter</code>.</p>
+    <p>Three methods are abstract and required. <code>tasks(split)</code> returns the evaluation data and must return the same list every time. <code>run_target</code> runs the agent under test with the candidate live, and returns a Rollout. It does no scoring. If the agent is random, forward the <code>seed</code>. <code>score</code> returns a reward between zero and one plus feedback. It must be deterministic for a fixed rollout, and the feedback must never leak the gold answer.</p>
+    <p>On the right are optional hooks with working defaults. Three of them, <code>run_batch</code>, <code>run_trials</code>, and <code>score_batch</code>, are not on the base class at all. The harness checks for them with <code>hasattr</code>. Chapter four goes deep.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:50–6:00]</span> ה-<b>adapter</b> הוא הקוד היחיד שכותבים כדי לחבר את cap-evolve לסוכן חדש או ל-benchmark חדש. הוא נמצא ב-<code>.capevolve/project/adapters/adapter.py</code> ויורש מ-<code>CapabilityAdapter</code>.</p>
+    <p>שלוש מתודות הן abstract וחובה. <code>tasks(split)</code> מחזירה את נתוני ההערכה, וחייבת להחזיר את אותה רשימה בכל פעם. <code>run_target</code> מריצה את הסוכן שנבדק כשה-candidate פעיל, ומחזירה Rollout. היא לא נותנת ציון. אם הסוכן אקראי, מעבירים הלאה את ה-<code>seed</code>. <code>score</code> מחזירה reward בין אפס לאחת ועוד feedback. היא חייבת להיות דטרמיניסטית על rollout קבוע, וה-feedback אסור שידליף את התשובה הנכונה.</p>
+    <p>בצד ימין יש hooks אופציונליים עם ברירות מחדל שעובדות. שלושה מהם, <code>run_batch</code>, <code>run_trials</code> ו-<code>score_batch</code>, בכלל לא נמצאים ב-base class. ה-harness בודק אותם עם <code>hasattr</code>. בפרק ארבע נצלול לזה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 7. Task / Rollout / Score ═══ -->
+<section class="slide">
+  <h2>Task, Rollout, Score</h2>
+  <div class="flow">
+    <div class="step"><b>Task</b><span>one unit of eval work</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>run_target()</b><span>agent + candidate</span></div><div class="arrow">→</div>
+    <div class="step"><b>Rollout</b><span>what happened</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>score()</b><span>judge it</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>Score</b><span>how good, and why</span></div>
+  </div>
+  <div class="grid-3 mt-lg">
+    <div class="card"><h3>Task</h3><ul><li><code>id</code></li><li><code>input</code> · <code>target</code></li><li><code>metadata</code></li></ul></div>
+    <div class="card"><h3>Rollout</h3><ul><li><code>task_id</code> · <code>output</code> · <code>trace</code></li><li><code>tool_calls</code> · <code>cost_usd</code> · <code>tokens</code></li><li><code>error</code>: infra failure, not a zero</li></ul></div>
+    <div class="card amber"><h3>Score</h3><ul><li><code>reward</code>: clamped to [0, 1]</li><li><code>feedback</code>: the learning signal</li><li><code>trial_rewards</code> · <code>stderr</code> · <code>metrics</code></li></ul></div>
+  </div>
+  <p class="small muted mt">Source: core/cap_evolve/types.py (dataclasses with to_dict / from_dict)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:00–6:50]</span> These three dataclasses in <code>types.py</code> are the shared vocabulary of the pipeline. Every skill script speaks in them, and they round-trip as JSON.</p>
+    <p>A <b>Task</b> is one unit of evaluation work: an id, an input, an optional target, and metadata. A <b>Rollout</b> is what happened when the agent ran on that task: the output, the trace, tool calls, cost, and tokens. If the infrastructure failed, for example a network error, the adapter sets <code>error</code>. That is not counted as a zero score.</p>
+    <p>A <b>Score</b> holds the <code>reward</code>, which is clamped to the range zero to one, and the <code>feedback</code> text. The feedback is what the optimizer learns from. Think of it as a textual gradient. A Score can also carry a <code>metrics</code> list, for example cost, but only the primary metric, the reward, ever moves the gate.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:00–6:50]</span> שלושת ה-dataclasses האלה ב-<code>types.py</code> הם אוצר המילים המשותף של כל ה-pipeline. כל סקריפט של skill מדבר בהם, והם עוברים הלוך ושוב כ-JSON.</p>
+    <p><b>Task</b> הוא יחידת עבודה אחת של הערכה: מזהה, input, target אופציונלי ו-metadata. <b>Rollout</b> הוא מה שקרה כשהסוכן רץ על ה-task: הפלט, ה-trace, קריאות לכלים, עלות וטוקנים. אם התשתית נכשלה, למשל שגיאת רשת, ה-adapter ממלא את <code>error</code>. זה לא נספר כציון אפס.</p>
+    <p><b>Score</b> מחזיק את ה-<code>reward</code>, שנחתך לטווח אפס עד אחת, ואת טקסט ה-<code>feedback</code>. ה-feedback הוא מה שה-optimizer לומד ממנו, מעין gradient טקסטואלי. Score יכול גם להחזיק רשימת <code>metrics</code>, למשל עלות, אבל רק ה-primary metric, כלומר ה-reward, משפיע על ה-gate.</p>
+  </aside>
+</section>
+
+<!-- ═══ 8. Splits ═══ -->
+<section class="slide">
+  <h2>Splits: train, val, and the sealed test</h2>
+  <svg class="diagram" viewBox="0 0 1136 300">
+    <rect class="box blue" x="20" y="40" width="548" height="80" rx="10"/>
+    <text class="title" x="294" y="76" text-anchor="middle">train · 50%</text>
+    <text class="label mono" x="294" y="100" text-anchor="middle">a5 a2 a6 a3</text>
+    <rect class="box green" x="578" y="40" width="269" height="80" rx="10"/>
+    <text class="title" x="712" y="76" text-anchor="middle">val · 25%</text>
+    <text class="label mono" x="712" y="100" text-anchor="middle">a1 a4</text>
+    <rect class="box red" x="857" y="40" width="269" height="80" rx="10"/>
+    <text class="title" x="991" y="76" text-anchor="middle">test · 25% 🔒</text>
+    <text class="label mono" x="991" y="100" text-anchor="middle">a8 a7</text>
+    <text x="294" y="160" text-anchor="middle" style="font-size:17px">minibatches for gepa, skillopt</text>
+    <text x="712" y="160" text-anchor="middle" style="font-size:17px">baseline · diagnose · gate</text>
+    <text x="991" y="160" text-anchor="middle" style="font-size:17px">scored once, at finalize</text>
+    <text class="label" x="20" y="16">toy_calc, 8 tasks, split_seed: 0 → splits.json (written once)</text>
+    <rect class="box" x="20" y="200" width="1106" height="80" rx="10"/>
+    <text class="title mono" x="40" y="232">RunDir.consume_test()</text>
+    <text x="40" y="260" style="font-size:16px">sets test_used = true. A second call raises TestSealError.</text>
+    <text class="title mono" x="640" y="232">gate.decide(split="val")</text>
+    <text x="640" y="260" style="font-size:16px">any other split raises TrainGateError.</text>
+  </svg>
+  <p class="small muted mt">Source: core/cap_evolve/splits.py (make_splits) · rundir.py · gate.py · docs/HONEST_EVAL.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:50–7:50]</span> The tasks are split once, with a seed, into three parts. The default ratio is 50, 25, 25. The ids on the slide are the real toy_calc split from <code>splits.json</code>.</p>
+    <ul>
+      <li><b>train</b> is used by algorithms that work on mini-batches, like gepa and skillopt.</li>
+      <li><b>val</b> is where decisions happen: the baseline score, the diagnosis of failures, and the gate.</li>
+      <li><b>test</b> is <b>sealed</b>. It is scored exactly once, in the finalize phase.</li>
+    </ul>
+    <p>The seal is enforced in code, not by good manners. <code>consume_test()</code> flips the <code>test_used</code> flag, and a second call raises <code>TestSealError</code>. The gate raises <code>TrainGateError</code> for any split except val. You can also pin an official split with <code>split_ids_file</code>. Chapter six explains why each rule exists.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:50–7:50]</span> ה-tasks מחולקים פעם אחת, עם seed, לשלושה חלקים. היחס ברירת המחדל הוא 50, 25, 25. המזהים על השקף הם החלוקה האמיתית של toy_calc מתוך <code>splits.json</code>.</p>
+    <ul>
+      <li><b>train</b> משמש אלגוריתמים שעובדים עם mini-batches, כמו gepa ו-skillopt.</li>
+      <li><b>val</b> זה המקום שבו מתקבלות החלטות: ציון ה-baseline, ניתוח הכישלונות וה-gate.</li>
+      <li><b>test</b> הוא <b>sealed</b>, חתום. מקבל ציון פעם אחת בדיוק, בשלב ה-finalize.</li>
+    </ul>
+    <p>החתימה נאכפת בקוד, לא בנימוס. <code>consume_test()</code> מדליקה את הדגל <code>test_used</code>, וקריאה שנייה זורקת <code>TestSealError</code>. ה-gate זורק <code>TrainGateError</code> על כל split שהוא לא val. אפשר גם לנעול חלוקה רשמית עם <code>split_ids_file</code>. בפרק שש נסביר למה כל חוק קיים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 9. Trials and pass^k ═══ -->
+<section class="slide">
+  <h2>Trial, seed per trial, pass^k</h2>
+  <div class="row">
+    <div class="col">
+      <table>
+        <tr><th>task</th><th>t0</th><th>t1</th><th>t2</th><th>t3</th><th>mean</th><th>pass^2</th></tr>
+        <tr><td><code>a1</code></td><td class="green">1</td><td class="green">1</td><td class="red">0</td><td class="green">1</td><td>0.75</td><td>0.50</td></tr>
+        <tr><td><code>a4</code></td><td class="green">1</td><td class="green">1</td><td class="green">1</td><td class="green">1</td><td>1.00</td><td>1.00</td></tr>
+        <tr><td class="muted">seed</td><td class="muted">s+0</td><td class="muted">s+1</td><td class="muted">s+2</td><td class="muted">s+3</td><td></td><td></td></tr>
+      </table>
+      <pre class="mt"><span class="c"># stats.pass_k: c passes of n</span>
+pass^k = C(c,k) / C(n,k)  <span class="c"># a1: 3/6 = 0.5</span>
+<span class="c"># k &gt; n → None, never 0.0</span></pre>
+    </div>
+    <div class="col terms-stack">
+      <div class="term"><span class="name">trial</span><div class="def">One run of one candidate on one task. <code>num_trials</code> sets how many.</div></div>
+      <div class="term"><span class="name">seed per trial</span><div class="def">Trial k runs with <code>seed = base_seed + k</code>, so trials are independent draws.</div></div>
+      <div class="term amber"><span class="name">pass^k</span><div class="def">Chance that k independent trials <b>all</b> pass. A reliability number.</div></div>
+      <p class="small muted">On disk: <code>rollouts/&lt;split&gt;/&lt;task&gt;__&lt;cand&gt;__t&lt;k&gt;.json</code></p>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/stats.py (pass_k, pass_at_k) · trials.py · rundir.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:50–8:50]</span> LLM agents are random, so one run per task is not enough. A <b>trial</b> is one run of a candidate on one task. The spec key <code>num_trials</code> sets how many. The default is one. The tau2 example uses ten.</p>
+    <p>Each trial gets its own seed: trial k uses base seed plus k. If all trials used the same seed, you would measure the same draw many times and your error bars would lie.</p>
+    <p><b>pass^k</b> comes from tau-bench. It is the chance that k independent trials all succeed. In the example, task a1 passed three of four trials. pass^2 is C(3,2) over C(4,2), which is one half. Note one rule: if k is larger than the number of trials, pass^k is undefined. The code returns <code>None</code>, never zero, because zero would read as "never reliable".</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:50–8:50]</span> סוכני LLM הם אקראיים, אז ריצה אחת לכל task לא מספיקה. <b>trial</b> הוא ריצה אחת של candidate על task אחד. מפתח ה-spec <code>num_trials</code> קובע כמה. ברירת המחדל היא אחד. בדוגמה של tau2 משתמשים בעשרה.</p>
+    <p>כל trial מקבל seed משלו: trial מספר k משתמש ב-base seed ועוד k. אם כל ה-trials היו עם אותו seed, הייתם מודדים את אותה הגרלה הרבה פעמים, ופסי השגיאה היו משקרים.</p>
+    <p><b>pass^k</b> מגיע מ-tau-bench. זו ההסתברות ש-k trials בלתי תלויים כולם מצליחים. בדוגמה, task a1 עבר שלושה מתוך ארבעה trials. pass^2 הוא C(3,2) חלקי C(4,2), כלומר חצי. חוק אחד חשוב: אם k גדול ממספר ה-trials, pass^k לא מוגדר. הקוד מחזיר <code>None</code> ולא אפס, כי אפס ייקרא כמו "אף פעם לא אמין".</p>
+  </aside>
+</section>
+
+<!-- ═══ 10. Iteration and gate verdicts ═══ -->
+<section class="slide">
+  <h2>Iteration and the three gate verdicts</h2>
+  <div class="flow">
+    <div class="step"><b>diagnose</b><span>cluster val failures</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>propose</b><span>optimizer edits a copy</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>evaluate</b><span>N trials on val</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>gate</b><span>paired Δ &gt; k·SE ?</span></div><div class="arrow">→</div>
+    <div class="step green"><b>commit</b><span>git snapshot, memory</span></div>
+  </div>
+  <p class="small muted center" style="margin-top:8px">One iteration = one candidate = one <code>step</code> event in <code>events.jsonl</code></p>
+  <div class="grid-3 mt">
+    <div class="card green"><div class="verdict green">✓ accept</div><p>Real gain. <code>set_best()</code>, row in <code>history.jsonl</code>.</p></div>
+    <div class="card red"><div class="verdict red">✗ reject</div><p>No real gain. Row in <code>rejected.jsonl</code>. Stall counter +1.</p></div>
+    <div class="card blue"><div class="verdict accent">~ indecisive</div><p>Gate could not judge. <code>step_indecisive</code> event. Not a reject, no stall.</p></div>
+  </div>
+  <p class="small mt">agent-optimize books one more outcome, <code>inconclusive</code>, plus a non-booked <code>provisional</code>.</p>
+  <p class="small muted">Source: core/cap_evolve/gate.py (GateDecision.accept, .indecisive) · tui.py GLYPHS · skills/algorithms/agent-optimize/scripts/commit.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:50–10:00]</span> An <b>iteration</b> is one turn of the loop and produces exactly one candidate. Diagnose the failing val traces, let the optimizer propose an edit, evaluate it on val, ask the gate, then commit the result to git and update memory. Each iteration writes one <code>step</code> event.</p>
+    <p>The gate returns a <code>GateDecision</code> with two flags, <code>accept</code> and <code>indecisive</code>. That gives three verdicts.</p>
+    <ul>
+      <li><b>accept</b>: the gain beats k standard errors. The candidate becomes the best.</li>
+      <li><b>reject</b>: no significant gain. It goes into the rejected memory, and the stall counter goes up.</li>
+      <li><b>indecisive</b>: the gate declined to judge, for example because too few val tasks produced a valid score. This is not "the edit was bad". It does not count toward stall.</li>
+    </ul>
+    <p>The live view shows these as tick, cross, and tilde. The agent-optimize algorithm uses the word <code>inconclusive</code> for a similar case, and also has <code>provisional</code>. Chapter six covers re-gating.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:50–10:00]</span> <b>iteration</b> הוא סיבוב אחד של הלולאה, והוא מייצר candidate אחד בדיוק. מנתחים את ה-traces הכושלים ב-val, נותנים ל-optimizer להציע עריכה, מעריכים אותה על val, שואלים את ה-gate, ואז עושים commit ל-git ומעדכנים זיכרון. כל iteration כותב event אחד מסוג <code>step</code>.</p>
+    <p>ה-gate מחזיר <code>GateDecision</code> עם שני דגלים, <code>accept</code> ו-<code>indecisive</code>. זה נותן שלוש תוצאות.</p>
+    <ul>
+      <li><b>accept</b>: השיפור עובר k שגיאות תקן. ה-candidate נהיה ה-best.</li>
+      <li><b>reject</b>: אין שיפור מובהק. הוא נכנס לזיכרון הדחיות, ומונה ה-stall עולה.</li>
+      <li><b>indecisive</b>: ה-gate סירב לשפוט, למשל כי מעט מדי tasks ב-val נתנו ציון תקין. זה לא אומר שהעריכה גרועה, וזה לא נספר ל-stall.</li>
+    </ul>
+    <p>התצוגה החיה מראה אותם כוי, איקס וטילדה. האלגוריתם agent-optimize משתמש במילה <code>inconclusive</code> למקרה דומה, ויש לו גם <code>provisional</code>. בפרק שש נדבר על re-gate.</p>
+  </aside>
+</section>
+
+<!-- ═══ 11. Phases ═══ -->
+<section class="slide">
+  <h2>Phases: the pipeline in six steps</h2>
+  <div class="flow">
+    <div class="step"><b>intake</b><span>interview, scaffold, wire adapter</span></div><div class="arrow">→</div>
+    <div class="step red"><b>implement-and-check</b><span>hard gate: <code>cap-evolve check</code></span></div><div class="arrow">→</div>
+    <div class="step blue"><b>baseline</b><span>freeze split, score seed on val</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>algorithm</b><span>the iterations</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>finalize</b><span>score best on test, once</span></div><div class="arrow">→</div>
+    <div class="step green"><b>report</b><span><code>report.md</code>, <code>dashboard.html</code></span></div>
+  </div>
+  <div class="grid-2 mt-lg">
+    <div class="card"><h3>Before any spend</h3><p>intake asks for every NEEDED input. It never makes one up.</p><p><code>check</code> must print <code>{"ok": true}</code>: real methods, stable tasks, deterministic score.</p></div>
+    <div class="card"><h3>Each phase is a skill</h3><p><code>skills/phases/&lt;name&gt;/</code> with a <code>SKILL.md</code> and <code>scripts/run.py</code>.</p><p>The live view labels them: intake · check · baseline · optimize · finalize · report.</p></div>
+  </div>
+  <p class="small muted mt">Source: docs/ARCHITECTURE.md · RUN.md · core/cap_evolve/tui.py (PHASES)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:00–10:50]</span> A <b>phase</b> is one stage of the pipeline. There are six, always in this order.</p>
+    <p><b>intake</b> interviews you, scaffolds <code>.capevolve/project</code>, and wires the adapter. If a needed input is missing, it asks. <b>implement-and-check</b> is the hard gate. <code>cap-evolve check</code> must print ok before any budget is spent, so you never pay for a run against a stub. <b>baseline</b> creates the run dir, freezes the split, and scores the seed on val. <b>algorithm</b> runs the iterations. <b>finalize</b> scores the best candidate on the sealed test, once. <b>report</b> writes <code>report.md</code> and a self-contained dashboard.</p>
+    <p>Each phase is itself a skill under <code>skills/phases</code>. One small naming detail: the live view in <code>tui.py</code> shows "check" and "optimize" as short labels for the second and fourth phases.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:00–10:50]</span> <b>phase</b> הוא שלב אחד ב-pipeline. יש שישה, תמיד בסדר הזה.</p>
+    <p><b>intake</b> מראיין אתכם, בונה את <code>.capevolve/project</code> ומחבר את ה-adapter. אם חסר קלט נדרש, הוא שואל. <b>implement-and-check</b> הוא ה-gate הקשיח. <code>cap-evolve check</code> חייב להדפיס ok לפני שמוציאים תקציב, כך שאף פעם לא משלמים על ריצה מול stub. <b>baseline</b> יוצר את ה-run dir, מקפיא את החלוקה ונותן ציון ל-seed על val. <b>algorithm</b> מריץ את ה-iterations. <b>finalize</b> נותן ציון ל-candidate הטוב ביותר על ה-test החתום, פעם אחת. <b>report</b> כותב את <code>report.md</code> ו-dashboard עצמאי.</p>
+    <p>כל phase הוא בעצמו skill תחת <code>skills/phases</code>. פרט קטן של שמות: התצוגה החיה ב-<code>tui.py</code> מציגה "check" ו-"optimize" כתוויות קצרות לשלב השני ולשלב הרביעי.</p>
+  </aside>
+</section>
+
+<!-- ═══ 12. Skill, algorithm, optimizer backend ═══ -->
+<section class="slide">
+  <h2>Skill, algorithm, optimizer backend</h2>
+  <table>
+    <tr><th>Term</th><th>What it is</th><th>Where</th><th>Count</th></tr>
+    <tr><td><b>skill</b></td><td>A folder of instructions + scripts an agent can load</td><td><code>skills/&lt;component&gt;/&lt;name&gt;/SKILL.md</code></td><td>22</td></tr>
+    <tr><td><b>algorithm</b></td><td>The search strategy: how parents and edits are chosen</td><td><code>meta.yaml</code> <code>component: algorithm</code></td><td>5</td></tr>
+    <tr><td><b>optimizer backend</b></td><td>The coding-agent CLI that proposes each edit</td><td><code>skills/optimizers/registry.yaml</code> row</td><td>14</td></tr>
+  </table>
+  <div class="grid-2 mt">
+    <div class="card violet"><h3>Algorithms</h3><p><span class="pill blue">hill-climb</span> <span class="pill blue">gepa</span> <span class="pill blue">skillopt</span> run in a fixed loop.</p><p><span class="pill amber">agent-optimize</span> agent mode only. <span class="pill">evograph</span> deprecated.</p></div>
+    <div class="card"><h3>Optimizer backends</h3><p class="small"><code>mock</code> · <code>generic</code> · <code>claude-code</code> · <code>codex</code> · <code>gemini-cli</code> · <code>opencode</code> · <code>openclaw</code> · <code>ibm-bob</code> · <code>cursor</code> · <code>droid</code> · <code>copilot</code> · <code>kimi</code> · <code>pi</code> · <code>antigravity</code></p></div>
+  </div>
+  <p class="small muted mt">Source: skills/_registry/manifest.json · skills/optimizers/registry.yaml · core/cap_evolve/branding.py (ALGORITHMS)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:50–11:50]</span> Three words that people mix up.</p>
+    <p>A <b>skill</b> is the packaging unit. It is a folder with a <code>SKILL.md</code>. Phases, capabilities, algorithms, the optimizer runner, interventions, memory, and orchestrate are all skills. The registry manifest lists 22.</p>
+    <p>An <b>algorithm</b> is a skill whose job is the search strategy. hill-climb is the default: the parent is always the current best. gepa is reflective Pareto search. skillopt runs epochs with a shrinking edit budget. agent-optimize runs only in agent mode. evograph is deprecated and stays only so old specs still resolve.</p>
+    <p>An <b>optimizer backend</b> is the coding-agent CLI that actually writes the edit, for example <code>claude-code</code> or <code>codex</code>. It is one row of <code>registry.yaml</code>. The <code>mock</code> backend makes no API calls. CI and the toy example use it. These counts are checked by <code>test_advertised_counts.py</code>.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:50–11:50]</span> שלוש מילים שאנשים מבלבלים ביניהן.</p>
+    <p><b>skill</b> היא יחידת האריזה. זו תיקייה עם <code>SKILL.md</code>. phases, capabilities, algorithms, מריץ ה-optimizer, interventions, memory ו-orchestrate הם כולם skills. ה-manifest של ה-registry מונה 22.</p>
+    <p><b>algorithm</b> הוא skill שהתפקיד שלו הוא אסטרטגיית החיפוש. hill-climb הוא ברירת המחדל: ה-parent הוא תמיד ה-best הנוכחי. gepa הוא חיפוש Pareto רפלקטיבי. skillopt רץ ב-epochs עם תקציב עריכה שהולך וקטן. agent-optimize רץ רק ב-agent mode. evograph הוא deprecated ונשאר רק כדי ש-specs ישנים עדיין יעבדו.</p>
+    <p><b>optimizer backend</b> הוא ה-CLI של סוכן הקוד שבאמת כותב את העריכה, למשל <code>claude-code</code> או <code>codex</code>. זו שורה אחת ב-<code>registry.yaml</code>. ה-backend <code>mock</code> לא עושה שום קריאת API. ה-CI ודוגמת ה-toy משתמשים בו. המספרים האלה נבדקים ב-<code>test_advertised_counts.py</code>.</p>
+  </aside>
+</section>
+
+<!-- ═══ 13. Host and orchestration mode ═══ -->
+<section class="slide">
+  <h2>Host and orchestration mode</h2>
+  <svg class="diagram" viewBox="0 0 1136 380">
+    <defs><marker id="a13" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <text class="title" x="20" y="24">orchestration_mode: deterministic  (default)</text>
+    <rect class="box blue" x="20" y="40" width="250" height="110" rx="12"/>
+    <text class="title mono" x="145" y="82" text-anchor="middle">cap-evolve run</text>
+    <text class="label" x="145" y="106" text-anchor="middle">core sequences the loop</text>
+    <text class="label" x="145" y="126" text-anchor="middle">hill-climb · gepa · skillopt</text>
+    <path class="line" d="M270,95 L420,95" marker-end="url(#a13)"/>
+    <text class="label" x="345" y="84" text-anchor="middle">each iteration</text>
+    <rect class="box violet" x="420" y="40" width="270" height="110" rx="12"/>
+    <text class="title" x="555" y="82" text-anchor="middle">optimizer subprocess</text>
+    <text class="label mono" x="555" y="106" text-anchor="middle">claude-code · codex · mock</text>
+    <text class="label" x="555" y="126" text-anchor="middle">edits the candidate dir</text>
+    <path class="line" d="M690,95 L830,95" marker-end="url(#a13)"/>
+    <rect class="box amber" x="830" y="40" width="286" height="110" rx="12"/>
+    <text class="title" x="973" y="82" text-anchor="middle">engine: evaluate + gate</text>
+    <text class="label" x="973" y="106" text-anchor="middle">then finalize + report</text>
+    <text class="title" x="20" y="214">orchestration_mode: agent</text>
+    <rect class="box blue" x="20" y="230" width="250" height="110" rx="12"/>
+    <text class="title mono" x="145" y="272" text-anchor="middle">cap-evolve run</text>
+    <text class="label" x="145" y="296" text-anchor="middle">check → baseline,</text>
+    <text class="label" x="145" y="316" text-anchor="middle">prints a handoff, returns</text>
+    <path class="line" d="M270,285 L420,285" marker-end="url(#a13)"/>
+    <text class="label mono" x="345" y="274" text-anchor="middle">run_dir</text>
+    <rect class="box green" x="420" y="230" width="696" height="110" rx="12"/>
+    <text class="title" x="768" y="270" text-anchor="middle">the host agent drives the loop itself (it IS the optimizer)</text>
+    <text class="label" x="768" y="296" text-anchor="middle">same conversational agent that ran intake · agent-optimize or any algorithm's agent-mode loop</text>
+    <text class="label" x="768" y="318" text-anchor="middle">same core guarantees: splits.py · gate.py · rundir.py</text>
+  </svg>
+  <p class="small"><b>host</b> = the coding-agent CLI where you load the cap-evolve skills: the Claude Code plugin (<code>/cap-evolve:&lt;skill&gt;</code>) or any host via <code>./install.sh</code>.</p>
+  <p class="small muted">Source: docs/AGENT_ORCHESTRATION.md · RUN.md · install.sh</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:50–12:50]</span> A <b>host</b> is the coding-agent CLI you talk to, where the cap-evolve skills are installed. With Claude Code you load the plugin, and every skill becomes a <code>/cap-evolve:</code> command plus honesty hooks. Other hosts, like Codex, Gemini CLI, or Cursor, get the skills copied by <code>./install.sh</code>.</p>
+    <p>Do not confuse the host with the optimizer backend. The host is the conversation. The backend is the CLI the engine spawns to write each edit. They can be the same product, but they are different processes.</p>
+    <p>The <b>orchestration mode</b> decides who drives the loop. In <code>deterministic</code> mode, the default, <code>cap-evolve run</code> runs everything and spawns an optimizer subprocess per iteration. In <code>agent</code> mode, <code>run</code> does check and baseline, prints the run dir, and returns. Then the host agent itself drives the rounds. In that mode the agent is the optimizer. The honesty rules live in core, so both modes have the same guarantees.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:50–12:50]</span> <b>host</b> הוא ה-CLI של סוכן הקוד שאתם מדברים איתו, שבו מותקנים ה-skills של cap-evolve. ב-Claude Code טוענים את ה-plugin, וכל skill הופך לפקודה <code>/cap-evolve:</code> ועוד hooks של יושר. hosts אחרים, כמו Codex, Gemini CLI או Cursor, מקבלים את ה-skills דרך העתקה עם <code>./install.sh</code>.</p>
+    <p>לא לבלבל בין ה-host ל-optimizer backend. ה-host הוא השיחה. ה-backend הוא ה-CLI שהמנוע מפעיל כדי לכתוב כל עריכה. זה יכול להיות אותו מוצר, אבל אלה תהליכים שונים.</p>
+    <p>ה-<b>orchestration mode</b> קובע מי מניע את הלולאה. במצב <code>deterministic</code>, ברירת המחדל, <code>cap-evolve run</code> מריץ הכל ומפעיל subprocess של optimizer בכל iteration. במצב <code>agent</code>, ה-<code>run</code> עושה check ו-baseline, מדפיס את ה-run dir וחוזר. מכאן סוכן ה-host בעצמו מניע את הסבבים. במצב הזה הסוכן הוא ה-optimizer. חוקי היושר נמצאים ב-core, ולכן לשני המצבים יש אותן הבטחות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 14. Run dir ═══ -->
+<section class="slide">
+  <h2>The run dir: one folder per run</h2>
+  <div class="row">
+    <div class="col" style="flex:1.15">
+      <div class="tree"><span class="d">.capevolve/</span>
+├── <span class="d">project/</span>          <span class="c"># capevolve.yaml, adapters/</span>
+└── <span class="d">run_demo/</span>         <span class="c"># run_&lt;ts&gt;, from --run-ts</span>
+    ├── <span class="h">state.json</span>    <span class="c"># best_id, budget, spent</span>
+    ├── <span class="h">splits.json</span>   <span class="c"># frozen split, test_used</span>
+    ├── events.jsonl  <span class="c"># append-only audit log</span>
+    ├── history.jsonl · rejected.jsonl
+    ├── <span class="d">candidates/</span>   <span class="c"># seed/, cand_0001/ … snapshots</span>
+    ├── <span class="d">rollouts/</span>     <span class="c"># per split, task, trial</span>
+    ├── <span class="d">work/</span>         <span class="c"># optimizer workdir per iteration</span>
+    ├── baseline.json · final.json
+    └── report.md · dashboard.html</div>
+    </div>
+    <div class="col terms-stack">
+      <div class="term"><span class="name">run dir</span><div class="def">The durable checkpoint of one run. <code>--resume</code> continues from it.</div></div>
+      <div class="term amber"><span class="name">RunDir</span><span class="kind">rundir.py</span><div class="def">The only module that owns run state, so the seal and the budget cannot be bypassed.</div></div>
+      <div class="term"><span class="name">store</span><span class="kind">spec key</span><div class="def">How each iteration is versioned: <code>git</code> (default), <code>copy</code>, <code>command</code>.</div></div>
+    </div>
+  </div>
+  <p class="small muted mt">Source: core/cap_evolve/rundir.py docstring · listing of a real toy_calc run</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:50–13:40]</span> The <b>run dir</b> is one folder per run, under <code>.capevolve</code>, named <code>run_</code> plus a timestamp or your <code>--run-ts</code>. This tree is the real listing from my toy_calc run, shortened a little.</p>
+    <p>Key files: <code>state.json</code> holds the best id, the budget, and what was spent. <code>splits.json</code> holds the frozen split and the <code>test_used</code> flag. <code>events.jsonl</code> is the append-only audit log that the live view and the dashboard both read. <code>candidates</code> has a snapshot of every candidate, and <code>work</code> has the optimizer's working dir for each iteration.</p>
+    <p>All writes go through the <code>RunDir</code> class in <code>rundir.py</code>. That is why a skill cannot peek at test or overspend. Because the run dir is durable, <code>cap-evolve run --resume</code> reuses the baseline and every finished iteration. Chapter four walks the layout in detail.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:50–13:40]</span> ה-<b>run dir</b> הוא תיקייה אחת לכל ריצה, תחת <code>.capevolve</code>, בשם <code>run_</code> ועוד timestamp או מה שנתתם ב-<code>--run-ts</code>. העץ הזה הוא הרשימה האמיתית מריצת ה-toy_calc שלי, קצת מקוצרת.</p>
+    <p>הקבצים החשובים: <code>state.json</code> מחזיק את ה-best id, את התקציב ואת מה שהוצא. <code>splits.json</code> מחזיק את החלוקה הקפואה ואת הדגל <code>test_used</code>. <code>events.jsonl</code> הוא יומן ביקורת שרק מוסיפים לו, וגם התצוגה החיה וגם ה-dashboard קוראים ממנו. ב-<code>candidates</code> יש snapshot של כל candidate, וב-<code>work</code> יש את תיקיית העבודה של ה-optimizer לכל iteration.</p>
+    <p>כל הכתיבות עוברות דרך המחלקה <code>RunDir</code> ב-<code>rundir.py</code>. לכן skill לא יכול להציץ ב-test או לחרוג מהתקציב. ובגלל שה-run dir עמיד, <code>cap-evolve run --resume</code> משתמש מחדש ב-baseline ובכל iteration שהסתיים. בפרק ארבע נעבור על המבנה בפירוט.</p>
+  </aside>
+</section>
+
+<!-- ═══ 15. Spec part 1 ═══ -->
+<section class="slide">
+  <h2><code>capevolve.yaml</code> (1/2): what, who, how</h2>
+  <pre class="sm"><span class="c"># --- what to optimize</span>
+<span class="f">capabilities</span>: [<span class="s">system-prompt</span>]      <span class="c"># capability skills, optimized jointly</span>
+<span class="f">capability_path</span>: <span class="s">seed_capability</span>   <span class="c"># the seed dir; a COPY is edited</span>
+<span class="f">capability_sources</span>: []             <span class="c"># read-only data-model files for the optimizer</span>
+<span class="f">target_model</span>: <span class="s">""</span>                   <span class="c"># model that READS the capability at runtime</span>
+<span class="c"># --- who proposes edits</span>
+<span class="f">optimizer_skill</span>: <span class="s">mock</span>              <span class="c"># optimizer backend name (registry.yaml)</span>
+<span class="f">optimizer_model</span>: <span class="s">""</span>                <span class="c"># model of the optimizer CLI</span>
+<span class="f">optimizer_max_turns</span>: <span class="n">0</span>             <span class="c"># per-iteration turn cap (0 = off)</span>
+<span class="f">optimizer_usd_per_iter</span>: <span class="n">0.0</span>        <span class="c"># per-iteration $ cap (0 = off)</span>
+<span class="f">optimizer_instructions_file</span>: <span class="s">optimizer/INSTRUCTIONS.md</span>
+<span class="c"># --- how to iterate</span>
+<span class="f">algorithm_skill</span>: <span class="s">hill-climb</span>        <span class="c"># hill-climb | gepa | skillopt | agent-optimize</span>
+<span class="f">algorithm_focus</span>: <span class="s">all</span>               <span class="c"># all | cyclic | hardest-first</span>
+<span class="f">orchestration_mode</span>: <span class="s">deterministic</span>  <span class="c"># deterministic | agent</span></pre>
+  <p class="small">Also here: <code>actions: [edit]</code> · <code>memory_skill: md-files | wiki</code> · <code>runner_repo_path</code> · optional <code>model_routing:</code> per role.</p>
+  <p class="small muted">Source: benchmarks/_scaffold/project/capevolve.yaml (the template <code>cap-evolve init</code> copies) · core/cap_evolve/specfile.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:40–14:40]</span> The <b>spec</b> is <code>capevolve.yaml</code> in the project dir. <code>cap-evolve init</code> copies the commented template from <code>benchmarks/_scaffold/project</code> and patches four keys: algorithm, optimizer, capability path, and orchestration mode. The file is read by <code>specfile.read_yaml</code>, a small reader that works without PyYAML. That is why the template stays flat.</p>
+    <p>The first block is what to optimize. Note the difference between two models. <code>target_model</code> is the model of the agent under test, the one that reads the capability. It can be a model id or a tier: frontier, strong, mid, weak. <code>optimizer_model</code> is the model that writes the edits.</p>
+    <p>The second block bounds each optimizer call, with turns and dollars per iteration. <code>optimizer_instructions_file</code> is the prompt template that intake writes. Relative paths always resolve against the project dir, not your current directory. The third block picks the algorithm and the mode.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:40–14:40]</span> ה-<b>spec</b> הוא <code>capevolve.yaml</code> בתיקיית הפרויקט. <code>cap-evolve init</code> מעתיק את התבנית המתועדת מ-<code>benchmarks/_scaffold/project</code> ומעדכן ארבעה מפתחות: algorithm, optimizer, capability path ו-orchestration mode. הקובץ נקרא על ידי <code>specfile.read_yaml</code>, קורא קטן שעובד גם בלי PyYAML. בגלל זה התבנית שטוחה.</p>
+    <p>הבלוק הראשון הוא מה עושים לו אופטימיזציה. שימו לב להבדל בין שני מודלים. <code>target_model</code> הוא המודל של הסוכן הנבדק, זה שקורא את ה-capability. זה יכול להיות מזהה מודל או tier: frontier, strong, mid, weak. <code>optimizer_model</code> הוא המודל שכותב את העריכות.</p>
+    <p>הבלוק השני מגביל כל קריאה ל-optimizer, בתורות ובדולרים לכל iteration. <code>optimizer_instructions_file</code> הוא תבנית ה-prompt ש-intake כותב. נתיבים יחסיים תמיד מחושבים יחסית לתיקיית הפרויקט, לא לתיקייה הנוכחית שלכם. הבלוק השלישי בוחר את האלגוריתם ואת המצב.</p>
+  </aside>
+</section>
+
+<!-- ═══ 16. Spec part 2 ═══ -->
+<section class="slide">
+  <h2><code>capevolve.yaml</code> (2/2): data, gate, budget</h2>
+  <pre class="sm"><span class="c"># --- data + splits</span>
+<span class="f">dataset_source</span>: <span class="s">tasks.jsonl</span>   <span class="c"># a file, or "adapter" to call tasks()</span>
+<span class="f">split_seed</span>: <span class="n">0</span>                 <span class="c"># split_train 0.5 · split_val 0.25 · split_test 0.25</span>
+<span class="f">split_ids_file</span>: <span class="s">""</span>            <span class="c"># or pin an official split (JSON of ids)</span>
+<span class="f">num_trials</span>: <span class="n">1</span>                 <span class="c"># trials per task; trial k uses seed base + k</span>
+<span class="c"># --- acceptance gate</span>
+<span class="f">gate_mode</span>: <span class="s">paired</span>             <span class="c"># paired | significant | threshold | strict | pareto | ...</span>
+<span class="f">gate_k_se</span>: <span class="n">0.2</span>                <span class="c"># accept only when paired Δ &gt; k · SE</span>
+<span class="c"># --- budget: hard stops, 0 = off</span>
+<span class="f">max_iterations</span>: <span class="n">10</span>            <span class="c"># optimizer iterations, the main cost knob</span>
+<span class="f">stall</span>: <span class="n">2</span>                      <span class="c"># stop after N rejects in a row</span>
+<span class="f">max_usd</span>: <span class="n">0.0</span>                  <span class="c"># total $; also max_optimizer_usd, max_metric_calls</span>
+<span class="f">stop_at_reward</span>: <span class="n">0.0</span>           <span class="c"># stop once best val reaches this</span>
+<span class="f">store</span>: <span class="s">git</span>                   <span class="c"># git | copy | command</span></pre>
+  <div class="grid-2">
+    <div class="card"><p class="small"><b>Optional, off by default:</b> <code>protected_paths</code> (seal files from edits), <code>convergence</code>, <code>stop_condition</code> (agent mode), <code>observers</code> (MLflow / OTel).</p></div>
+    <div class="card"><p class="small"><b>Advanced gate keys</b> (<code>gatecfg.py</code>, <code>optimizer_config.py</code>): <code>split_mode</code>, <code>coverage_policy</code>, <code>promotion_rule</code>, <code>optimizer.ablation.*</code>. Chapter 6.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:40–15:40]</span> The second half is about measurement and money.</p>
+    <p><code>dataset_source</code> is a tasks file, or the word <code>adapter</code>, which means "call <code>tasks()</code>". The split keys we saw before. <code>num_trials</code> sets the trials per task.</p>
+    <p>The gate block: <code>paired</code> is the recommended mode. It compares candidate and parent on the same val tasks. <code>gate_k_se</code> is the k in delta greater than k times SE. Do not set <code>strict</code> on a random scorer. It means delta greater than zero, and it banks noise.</p>
+    <p>The budget block: every cap is a hard stop, and zero means off. <code>max_iterations</code> is the main cost knob. <code>stall</code> stops after that many rejects in a row. Run <code>cap-evolve estimate</code> first to see a dollar range.</p>
+    <p>At the bottom are optional keys. For example, <code>protected_paths</code> hashes files like the scorer, and an edit to them makes the step indecisive, never a zero. The advanced gate keys are read by <code>gatecfg.py</code> and <code>optimizer_config.py</code>. We cover them in chapter six.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:40–15:40]</span> החצי השני עוסק במדידה ובכסף.</p>
+    <p><code>dataset_source</code> הוא קובץ tasks, או המילה <code>adapter</code>, שמשמעותה "תקרא ל-<code>tasks()</code>". את מפתחות החלוקה כבר ראינו. <code>num_trials</code> קובע כמה trials לכל task.</p>
+    <p>בלוק ה-gate: <code>paired</code> הוא המצב המומלץ. הוא משווה candidate ו-parent על אותם tasks של val. <code>gate_k_se</code> הוא ה-k בנוסחה delta גדול מ-k כפול SE. לא לשים <code>strict</code> על scorer אקראי. המשמעות שלו היא delta גדול מאפס, וזה פשוט אוסף רעש.</p>
+    <p>בלוק התקציב: כל תקרה היא עצירה קשיחה, ואפס אומר כבוי. <code>max_iterations</code> הוא כפתור העלות הראשי. <code>stall</code> עוצר אחרי כמה דחיות ברצף. כדאי להריץ קודם <code>cap-evolve estimate</code> כדי לראות טווח בדולרים.</p>
+    <p>למטה יש מפתחות אופציונליים. למשל <code>protected_paths</code> עושה hash לקבצים כמו ה-scorer, ועריכה שלהם הופכת את ה-step ל-indecisive, אף פעם לא לאפס. מפתחות ה-gate המתקדמים נקראים על ידי <code>gatecfg.py</code> ו-<code>optimizer_config.py</code>. נכסה אותם בפרק שש.</p>
+  </aside>
+</section>
+
+<!-- ═══ 17. Real example: tau2 airline ═══ -->
+<section class="slide">
+  <h2>A real spec: tau2 airline</h2>
+  <div class="row">
+    <div class="col" style="flex:1.4">
+      <pre class="sm"><span class="f">capabilities</span>: [<span class="s">system-prompt</span>, <span class="s">tools</span>]  <span class="c"># policy AND tools</span>
+<span class="f">capability_sources</span>: [<span class="s">seed_capability/reference/data_model.py</span>]
+<span class="f">optimizer_skill</span>: <span class="s">claude-code</span>
+<span class="f">optimizer_model</span>: <span class="s">claude-opus-4-6</span>
+<span class="f">optimizer_usd_per_iter</span>: <span class="n">40.0</span>    <span class="c"># --max-budget-usd per step</span>
+<span class="f">target_model</span>: <span class="s">aws/gpt-oss-120b</span>   <span class="c"># the agent under test</span>
+<span class="f">algorithm_skill</span>: <span class="s">hill-climb</span>
+<span class="f">dataset_source</span>: <span class="s">adapter</span>
+<span class="f">split_ids_file</span>: <span class="s">split_ids.json</span>  <span class="c"># official split, pinned</span>
+<span class="hl"><span class="f">num_trials</span>: <span class="n">10</span></span>                  <span class="c"># stochastic → mean, SE, pass^k</span>
+<span class="f">gate_mode</span>: <span class="s">paired</span>    <span class="c"># gate_k_se: 0.2</span>
+<span class="f">max_iterations</span>: <span class="n">10</span>    <span class="c"># stall: 0 = never stop early</span>
+<span class="f">max_usd</span>: <span class="n">400.0</span></pre>
+    </div>
+    <div class="col terms-stack">
+      <div class="card blue"><h3>Two models</h3><p>Opus proposes edits. gpt-oss-120b runs the tasks.</p></div>
+      <div class="card amber"><h3>Ten trials</h3><p>gpt-oss is random. Ten trials make SE and pass^k real.</p></div>
+      <div class="card"><h3>Variants</h3><p class="small"><code>capevolve.smoke.yaml</code>, <code>.agentopt.yaml</code> run with <code>--spec</code>.</p></div>
+    </div>
+  </div>
+  <p class="small muted">Source: benchmarks/tau2/examples/airline/capevolve.yaml (comments shortened)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:40–16:20]</span> Here is a real spec from the repo, the tau2 airline benchmark. I removed the comments and kept the important lines.</p>
+    <p>It optimizes the airline policy and the tools together. It copies the airline data model into the optimizer's guidance folder, so new tool code uses the real types.</p>
+    <p>Two different models appear. The optimizer is Claude Code with Opus, with a forty dollar cap per iteration. The agent under test is gpt-oss-120b. The split is pinned to an official id file. Because gpt-oss is random, it uses ten trials per task. With one trial, the standard error would be zero and mean nothing.</p>
+    <p>One project folder can hold several specs. The airline folder has a smoke spec and agent-optimize variants. You pick one with <code>cap-evolve run --spec</code>, and the run dir records which spec it used.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:40–16:20]</span> זה spec אמיתי מה-repo, ה-benchmark של tau2 airline. הורדתי את ההערות והשארתי את השורות החשובות.</p>
+    <p>הוא עושה אופטימיזציה למדיניות של חברת התעופה ולכלים ביחד. הוא מעתיק את ה-data model של התעופה לתיקיית ה-guidance של ה-optimizer, כדי שקוד כלים חדש ישתמש בטיפוסים האמיתיים.</p>
+    <p>מופיעים כאן שני מודלים שונים. ה-optimizer הוא Claude Code עם Opus, עם תקרה של ארבעים דולר לכל iteration. הסוכן הנבדק הוא gpt-oss-120b. החלוקה נעולה לקובץ מזהים רשמי. ובגלל ש-gpt-oss אקראי, משתמשים בעשרה trials לכל task. עם trial אחד, שגיאת התקן הייתה אפס ולא אומרת כלום.</p>
+    <p>תיקיית פרויקט אחת יכולה להחזיק כמה specs. בתיקייה של airline יש spec של smoke וגרסאות של agent-optimize. בוחרים אחד עם <code>cap-evolve run --spec</code>, וה-run dir רושם באיזה spec הוא השתמש.</p>
+  </aside>
+</section>
+
+<!-- ═══ 18. CLI ═══ -->
+<section class="slide">
+  <h2>The CLI: 14 commands in 3 groups</h2>
+  <div class="flow" style="max-width:820px">
+    <div class="step blue"><b><code>cap-evolve init</code></b><span>scaffold + spec</span></div><div class="arrow">→</div>
+    <div class="step blue"><b><code>cap-evolve doctor</code></b><span>ready?</span></div><div class="arrow">→</div>
+    <div class="step amber"><b><code>cap-evolve run --tui</code></b><span>optimize, live view</span></div>
+  </div>
+  <p class="small muted" style="margin-top:6px">The golden path on the home screen</p>
+  <div class="grid-3 mt">
+    <div class="card blue"><h3>set up</h3><ul class="cmds">
+      <li><code>init</code> scaffold the project</li>
+      <li><code>doctor</code> what is missing + fix</li>
+      <li><code>check</code> the hard gate</li>
+      <li><code>algorithms</code> pick a search</li>
+      <li><code>splits</code> preview a split</li></ul></div>
+    <div class="card amber"><h3>optimize</h3><ul class="cmds">
+      <li><code>run</code> the whole pipeline</li>
+      <li class="small muted">--resume · --plan-only · --dry-run</li>
+      <li><code>estimate</code> cost range, spends nothing</li></ul></div>
+    <div class="card"><h3>inspect</h3><ul class="cmds">
+      <li><code>diff</code> what a candidate changed</li>
+      <li><code>watch</code> · <code>tail</code> live events</li>
+      <li><code>replay</code> re-play a run (<code>--demo</code>)</li>
+      <li><code>dashboard</code> web UI</li>
+      <li><code>version</code> · <code>help</code></li></ul></div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/branding.py (COMMANDS, home) · cli.py (COMMANDS dispatch)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:20–17:20]</span> Type <code>cap-evolve</code> with no arguments and you get the home screen. It shows a golden path of three commands and then the commands in three groups. The catalog lives in one place, <code>branding.COMMANDS</code>, and drives the home screen, <code>help</code>, and each command's <code>--help</code>.</p>
+    <ul>
+      <li><b>set up</b>: <code>init</code> writes the project and spec. <code>doctor</code> lists what is missing with the fix. <code>check</code> is the adapter hard gate. <code>algorithms</code> explains each algorithm and its spec lines.</li>
+      <li><b>optimize</b>: <code>run</code> is the pipeline. Try <code>--plan-only</code> first. <code>estimate</code> shows call counts and a dollar range.</li>
+      <li><b>inspect</b>: <code>diff --best</code> shows seed versus winner. <code>watch</code> and <code>tail</code> follow <code>events.jsonl</code>. <code>replay --demo</code> needs no API key.</li>
+    </ul>
+    <p>One design rule: human output goes to stderr, and stdout stays machine-readable JSON.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:20–17:20]</span> כותבים <code>cap-evolve</code> בלי ארגומנטים ומקבלים את מסך הבית. הוא מציג golden path של שלוש פקודות, ואחר כך את הפקודות בשלוש קבוצות. הקטלוג נמצא במקום אחד, <code>branding.COMMANDS</code>, והוא מזין את מסך הבית, את <code>help</code> ואת ה-<code>--help</code> של כל פקודה.</p>
+    <ul>
+      <li><b>set up</b>: <code>init</code> כותב את הפרויקט ואת ה-spec. <code>doctor</code> מראה מה חסר ואיך לתקן. <code>check</code> הוא ה-gate הקשיח של ה-adapter. <code>algorithms</code> מסביר כל אלגוריתם ואת שורות ה-spec שלו.</li>
+      <li><b>optimize</b>: <code>run</code> הוא ה-pipeline. כדאי לנסות קודם <code>--plan-only</code>. <code>estimate</code> מראה מספר קריאות וטווח בדולרים.</li>
+      <li><b>inspect</b>: <code>diff --best</code> מראה seed מול המנצח. <code>watch</code> ו-<code>tail</code> עוקבים אחרי <code>events.jsonl</code>. <code>replay --demo</code> לא צריך מפתח API.</li>
+    </ul>
+    <p>כלל עיצוב אחד: פלט לבני אדם הולך ל-stderr, ו-stdout נשאר JSON שמכונה יכולה לקרוא.</p>
+  </aside>
+</section>
+
+<!-- ═══ 19. Cross-iteration files ═══ -->
+<section class="slide">
+  <h2>Cross-iteration files: who owns what</h2>
+  <table>
+    <tr><th>File</th><th>Owner</th><th>Kind</th><th>What it holds</th></tr>
+    <tr><td><code>LEDGER.md</code></td><td><span class="pill blue">framework</span></td><td>facts</td><td>Every iteration's outcome + the exact val tasks it broke or fixed</td></tr>
+    <tr><td><code>JOURNAL.md</code></td><td><span class="pill amber">optimizer</span></td><td>judgment</td><td>Append-only handover: tried, worked, regressed, refuted, focus next</td></tr>
+    <tr><td><code>PROCESS.md</code></td><td><span class="pill amber">optimizer</span></td><td>explainability</td><td>How this iteration was done. Fresh each time, snapshotted with the candidate</td></tr>
+    <tr><td><code>RUNMAP.md</code></td><td><span class="pill blue">framework</span></td><td>manifest</td><td>Index of prior iterations; their PROCESS.md + diff in <code>prior_iterations/</code></td></tr>
+  </table>
+  <div class="callout mt">Rule: <b>facts</b> are deterministic and owned by the framework. <b>Judgment</b> and <b>process</b> belong to the optimizer. The framework stamps a <b>RESULT</b> line under each JOURNAL entry.</div>
+  <p class="small muted mt">Also optimizer-owned: <code>INSIGHTS.md</code>, <code>META_INSIGHTS.md</code>, <code>FRAMEWORK_IMPROVEMENTS.md</code>. Source: core/cap_evolve/harness.py · docs/ARCHITECTURE.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:20–18:10]</span> Each iteration's optimizer starts fresh, with no memory. So cap-evolve puts files in its working dir that carry knowledge across iterations. Ownership is strict, because an older design with a shared memory file confused everyone.</p>
+    <ul>
+      <li><code>LEDGER.md</code> is facts. The framework regenerates it each iteration: outcomes and which tasks each candidate broke or fixed.</li>
+      <li><code>JOURNAL.md</code> is the optimizer's diary. It appends one entry per iteration and never edits old ones. The optimizer cannot know its own gate result while it writes, so the framework adds a RESULT line below each entry later.</li>
+      <li><code>PROCESS.md</code> explains how this iteration was done.</li>
+      <li><code>RUNMAP.md</code> is the framework's index of prior iterations.</li>
+    </ul>
+    <p>You saw them in the <code>work/cand_0001</code> folder of the toy run. These files are excluded from the content hash, so they never count as a capability edit. The <code>history</code> ablation switch removes them, for experiments.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:20–18:10]</span> ה-optimizer של כל iteration מתחיל מאפס, בלי זיכרון. לכן cap-evolve שם בתיקיית העבודה שלו קבצים שמעבירים ידע בין iterations. הבעלות קפדנית, כי עיצוב ישן עם קובץ זיכרון משותף בלבל את כולם.</p>
+    <ul>
+      <li><code>LEDGER.md</code> הוא עובדות. ה-framework מייצר אותו מחדש בכל iteration: תוצאות, ואילו tasks כל candidate שבר או תיקן.</li>
+      <li><code>JOURNAL.md</code> הוא היומן של ה-optimizer. הוא מוסיף רשומה אחת לכל iteration ולא עורך רשומות ישנות. ה-optimizer לא יכול לדעת את תוצאת ה-gate שלו בזמן שהוא כותב, אז ה-framework מוסיף שורת RESULT מתחת לכל רשומה אחר כך.</li>
+      <li><code>PROCESS.md</code> מסביר איך ה-iteration הזה נעשה.</li>
+      <li><code>RUNMAP.md</code> הוא האינדקס של ה-framework ל-iterations קודמים.</li>
+    </ul>
+    <p>ראיתם אותם בתיקייה <code>work/cand_0001</code> של ריצת ה-toy. הקבצים האלה לא נכללים ב-content hash, כך שהם אף פעם לא נחשבים כעריכה של ה-capability. מתג ה-ablation שנקרא <code>history</code> מוריד אותם, לצורך ניסויים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 20. Glossary ═══ -->
+<section class="slide">
+  <h2>Glossary</h2>
+  <div class="grid-2" style="gap:24px">
+    <table class="gloss">
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td><b>capability</b></td><td>Files the agent reads; what is optimized</td></tr>
+      <tr><td><b>seed</b></td><td>The unmodified capability; candidate id <code>seed</code></td></tr>
+      <tr><td><b>candidate</b></td><td>One edited version, <code>cand_NNNN</code></td></tr>
+      <tr><td><b>champion / best</b></td><td>Best accepted candidate, <code>best_id</code></td></tr>
+      <tr><td><b>lineage</b></td><td>Parent links between candidates</td></tr>
+      <tr><td><b>adapter</b></td><td><code>tasks</code> · <code>run_target</code> · <code>score</code></td></tr>
+      <tr><td><b>Task / Rollout / Score</b></td><td>Input · what happened · reward + feedback</td></tr>
+      <tr><td><b>split</b></td><td>train / val / test, frozen in <code>splits.json</code></td></tr>
+      <tr><td><b>sealed test</b></td><td>Scored once at finalize, <code>TestSealError</code></td></tr>
+      <tr><td><b>trial</b></td><td>One run on one task, seed = base + k</td></tr>
+      <tr><td><b>pass^k</b></td><td>Chance all k trials pass</td></tr>
+    </table>
+    <table class="gloss">
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td><b>iteration</b></td><td>One candidate: propose → eval → gate</td></tr>
+      <tr><td><b>gate verdict</b></td><td>accept · reject · indecisive</td></tr>
+      <tr><td><b>phase</b></td><td>intake → check → baseline → algorithm → finalize → report</td></tr>
+      <tr><td><b>skill</b></td><td>A <code>SKILL.md</code> folder; 22 in the registry</td></tr>
+      <tr><td><b>algorithm</b></td><td>Search strategy, e.g. <code>hill-climb</code></td></tr>
+      <tr><td><b>optimizer backend</b></td><td>CLI that writes edits, e.g. <code>claude-code</code></td></tr>
+      <tr><td><b>host</b></td><td>The coding-agent CLI you talk to</td></tr>
+      <tr><td><b>orchestration mode</b></td><td><code>deterministic</code> or <code>agent</code></td></tr>
+      <tr><td><b>run dir</b></td><td><code>.capevolve/run_&lt;ts&gt;/</code>, durable state</td></tr>
+      <tr><td><b>spec</b></td><td><code>capevolve.yaml</code></td></tr>
+      <tr><td><b>LEDGER / JOURNAL</b></td><td>Framework facts / optimizer handover</td></tr>
+    </table>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:10–19:10]</span> This is the glossary. I suggest you keep this slide open while you read code in the first weeks.</p>
+    <p>Let me do a quick test. Read the left column top to bottom and try to say each definition before you read it. Capability: the files the agent reads. Seed: the original. Candidate: one edited copy. Champion: the best accepted one, stored as <code>best_id</code>.</p>
+    <p>On the right, three pairs are easy to confuse. Host versus optimizer backend: the host is the conversation, the backend is the process that writes edits. Skill versus algorithm: every algorithm is a skill, but not every skill is an algorithm. Reject versus indecisive: reject says the edit did not help, indecisive says the measurement could not tell.</p>
+    <p>If any line is not clear, ask now, because the next chapters assume all of them.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:10–19:10]</span> זה ה-glossary. אני ממליץ להשאיר את השקף הזה פתוח בזמן שקוראים קוד בשבועות הראשונים.</p>
+    <p>בואו נעשה בדיקה קצרה. קראו את העמודה השמאלית מלמעלה למטה ונסו להגיד כל הגדרה לפני שאתם קוראים אותה. capability: הקבצים שהסוכן קורא. seed: המקור. candidate: עותק ערוך אחד. champion: הטוב ביותר שהתקבל, שנשמר כ-<code>best_id</code>.</p>
+    <p>בצד ימין יש שלושה זוגות שקל לבלבל. host מול optimizer backend: ה-host הוא השיחה, ה-backend הוא התהליך שכותב את העריכות. skill מול algorithm: כל algorithm הוא skill, אבל לא כל skill הוא algorithm. reject מול indecisive: reject אומר שהעריכה לא עזרה, indecisive אומר שהמדידה לא הצליחה להכריע.</p>
+    <p>אם שורה כלשהי לא ברורה, תשאלו עכשיו, כי הפרקים הבאים מניחים את כולן.</p>
+  </aside>
+</section>
+
+<!-- ═══ 21. Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <div class="card blue"><h3>Objects</h3><p>seed → candidates → champion. The adapter turns a Task into a Rollout and a Score.</p></div>
+    <div class="card amber"><h3>Measurement</h3><p>Decide on val. Test is sealed. Trials use their own seeds. The gate can say "I cannot tell".</p></div>
+    <div class="card violet"><h3>Machinery</h3><p>Phases and algorithms are skills. The optimizer backend writes edits. The mode decides who drives.</p></div>
+    <div class="card green"><h3>Config and files</h3><p>One <code>capevolve.yaml</code>. One run dir. LEDGER is facts, JOURNAL is judgment.</p></div>
+  </div>
+  <div class="callout mt-lg"><b>Next · Chapter 3, Repository map and build</b> (<code>03-repo-map-and-build.html</code>): where each of these objects lives in the repo, and how to build and install it.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:10–20:00]</span> Let me sum up in four lines.</p>
+    <ul>
+      <li>Objects: a seed becomes candidates, and the gate picks a champion. The adapter connects it all with three methods.</li>
+      <li>Measurement: decisions use val only, the test is opened once, every trial has its own seed, and the gate is allowed to say indecisive.</li>
+      <li>Machinery: everything is a skill. The optimizer backend writes edits. The orchestration mode decides whether core or the agent drives the loop.</li>
+      <li>Config and files: one spec, one run dir, and clear ownership of the shared memory files.</li>
+    </ul>
+    <p>In chapter three we open the repository. We map every top-level folder, the modules of the core package, and the build and install paths. Now that you know the words, the folder names will make sense.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:10–20:00]</span> נסכם בארבע שורות.</p>
+    <ul>
+      <li>אובייקטים: seed הופך ל-candidates, וה-gate בוחר champion. ה-adapter מחבר את הכל עם שלוש מתודות.</li>
+      <li>מדידה: החלטות רק על val, ה-test נפתח פעם אחת, לכל trial יש seed משלו, וה-gate רשאי להגיד indecisive.</li>
+      <li>מנגנון: הכל הוא skill. ה-optimizer backend כותב עריכות. ה-orchestration mode קובע אם ה-core או הסוכן מניעים את הלולאה.</li>
+      <li>קונפיגורציה וקבצים: spec אחד, run dir אחד, ובעלות ברורה על קבצי הזיכרון המשותפים.</li>
+    </ul>
+    <p>בפרק שלוש נפתח את ה-repository. נמפה כל תיקייה ברמה העליונה, את המודולים של חבילת ה-core, ואת מסלולי הבנייה וההתקנה. עכשיו כשאתם מכירים את המילים, שמות התיקיות יהיו הגיוניים.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

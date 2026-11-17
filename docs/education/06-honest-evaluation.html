@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 6 · Honest evaluation and the gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  .formula { font-family: var(--mono); font-size: 21px; color: var(--ink); background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin: 6px 0 10px; }
+  .slide table.tight td, .slide table.tight th { padding: 6px 10px; }
+  .slide table.tight td { font-size: 17px; }
+  .testname { font-family: var(--mono); font-size: 15px; color: var(--green-ink); }
+  .src { position: absolute; bottom: 40px; left: 72px; }
+  svg.diagram .label { font-size: 14px; }
+  svg.diagram .ok { fill: var(--green-ink); }
+  svg.diagram .bad { fill: var(--red-ink); }
+  svg.diagram .warn { fill: var(--amber-ink); }
+  svg.diagram .acc { fill: var(--accent-ink); }
+</style>
+</head>
+<body data-chapter="Chapter 6 · Honest evaluation and the gate" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ 1. Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 6 of 8</div>
+  <h1>Honest evaluation and the gate</h1>
+  <p class="lead">How cap-evolve makes its numbers mean something: frozen splits, measured variance, a paired significance gate, and a test split that is scored exactly once.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: deep</span><span class="pill amber">math explained simply</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:45]</span> Welcome to chapter 6. In chapter 5 we followed one iteration of a run. One step in that iteration was the gate. Today we open the gate and everything around it.</p>
+    <p>This is the part of cap-evolve that makes it different. Many tools can edit a prompt and re-score it. Few tools can tell you if the new score is real. Our rule is simple: an accepted edit must be better by more than the noise of the measurement, and the number we report must come from data the optimizer never touched.</p>
+    <p>There is some math in this chapter. All of it is mean, standard error, and counting. I will show a small worked example with six tasks, so you can do it on paper.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:45]</span> ברוכים הבאים לפרק 6. בפרק 5 עקבנו אחרי iteration אחד של ריצה. אחד השלבים בו היה ה-gate. היום אנחנו פותחים את ה-gate ואת כל מה שמסביבו.</p>
+    <p>זה החלק שמבדיל את cap-evolve. הרבה כלים יודעים לשנות prompt ולמדוד שוב. מעט כלים יודעים להגיד אם הציון החדש אמיתי. הכלל שלנו פשוט: עריכה מתקבלת רק אם היא טובה יותר מהרעש של המדידה, והמספר שמדווחים מגיע מנתונים שה-optimizer מעולם לא נגע בהם.</p>
+    <p>יש קצת מתמטיקה בפרק, אבל זה רק ממוצע, standard error וספירה. נעבור על דוגמה קטנה עם שש משימות, שאפשר לחשב על דף.</p>
+  </aside>
+</section>
+
+<!-- ═══ 2. Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-3">
+    <div class="card blue"><h3>1 · Data discipline</h3><ul><li>Why honesty is a design goal</li><li>Seeded splits, written once</li><li>Trials and per-trial seeds</li></ul></div>
+    <div class="card amber"><h3>2 · The math</h3><ul><li><code>pass^k</code> and <code>pass@k</code></li><li>Standard error (SE)</li><li>The paired gate <code>Δ̄ &gt; k·SE</code></li></ul></div>
+    <div class="card green"><h3>3 · Verdicts</h3><ul><li>Accept, reject, indecisive</li><li>Infra errors are not zeros</li><li>Footprint: what the edit can reach</li></ul></div>
+    <div class="card violet"><h3>4 · Cheaper evidence</h3><ul><li>Screen ladder (kill-only)</li><li>Promotion rules P and P2, racing</li><li>Posterior and multi-objective gates</li></ul></div>
+    <div class="card red"><h3>5 · The seal</h3><ul><li>Test scored exactly once</li><li><code>rundir.py</code>, <code>integrity.py</code></li><li>The <code>PreToolUse</code> hook</li></ul></div>
+    <div class="card"><h3>6 · Lessons</h3><ul><li>Holdout protocol</li><li>Measurement findings</li><li>Tests that read like rules</li></ul></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:45–1:30]</span> Here is the plan. First, data discipline: how tasks are split and how trials get their seeds. Second, the math: pass^k, standard error, and the paired gate. Third, the verdicts the gate can give and what the loop does after each one. Here we also see two rules that are easy to miss: an infrastructure error is not a zero, and the gate should only measure tasks the edit can reach.</p>
+    <p>Fourth, the cheaper ways to get evidence: screens, promotion rules, racing. Fifth, the sealed test split and the three layers that enforce it. We finish with lessons from real runs, and with the test files that guard each rule. Their names read like rules, so they are a good map.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:45–1:30]</span> זו התוכנית. קודם משמעת נתונים: איך מחלקים משימות ואיך כל trial מקבל seed. אחר כך המתמטיקה: pass^k, standard error וה-gate המזווג. אחר כך ההחלטות שה-gate יכול לתת ומה הלולאה עושה אחרי כל אחת. שם נראה גם שני כללים שקל לפספס: שגיאת תשתית היא לא אפס, וה-gate צריך למדוד רק משימות שהעריכה יכולה להשפיע עליהן.</p>
+    <p>אחר כך דרכים זולות יותר להשיג ראיות: screens, כללי promotion ו-racing. אחר כך ה-test split החתום ושלוש השכבות שאוכפות אותו. נסיים בלקחים מריצות אמיתיות ובקבצי הבדיקות ששומרים על כל כלל. השמות שלהם נקראים כמו כללים, אז הם מפה טובה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 3. Why honesty is a design goal ═══ -->
+<section class="slide">
+  <h2>Why honesty is a design goal</h2>
+  <div class="grid-3">
+    <div class="card red"><div class="icon">📈</div><h3>Overfitting to val</h3><p>Every accept uses val as a signal. After many rounds, val is selected against and reads too high.</p></div>
+    <div class="card red"><div class="icon">🎲</div><h3>Cherry-picking</h3><p>Screen 20 candidates. The best one is often best by luck (the "winner's curse").</p></div>
+    <div class="card red"><div class="icon">🔑</div><h3>Leaking gold</h3><p>An LLM optimizer can edit the scorer, the answer key, or the test ids instead of the capability.</p></div>
+  </div>
+  <div class="callout amber mt-lg"><b>Search is a noise amplifier.</b> A rule of <code>Δ &gt; 0</code> banks noise as progress: the val curve climbs while nothing improved. So the rules live in code (<code>core/cap_evolve</code>), not in skill text.</div>
+  <p class="small muted mt">Source: docs/HONEST_EVAL.md, core/cap_evolve/gate.py (module docstring)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:30–2:45]</span> Why do we spend so much code on honesty? Because an optimizer is a machine that finds whatever the metric rewards. Three failures show up again and again.</p>
+    <ul><li>Overfitting to val. Every accept decision reads val. After ten rounds, the champion was chosen because it scored high on val, so its val number is optimistic.</li>
+    <li>Cherry-picking. If you try twenty candidates that are all truly equal, one of them still looks best. A "greater than zero" rule would accept it.</li>
+    <li>Leaking gold. The optimizer is an LLM agent with file access. It can edit the gold answers or the scorer. That is reward hacking.</li></ul>
+    <p>The design answer: the only places that split tasks, aggregate rewards, apply the gate, and seal test are in the core package. Algorithm skills call these functions. They cannot gate on train or re-score test, because the core raises an error.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:30–2:45]</span> למה אנחנו משקיעים כל כך הרבה קוד ביושר? כי optimizer הוא מכונה שמוצאת כל מה שהמטריקה מתגמלת. שלוש תקלות חוזרות שוב ושוב.</p>
+    <ul><li>Overfitting ל-val. כל החלטת accept קוראת את val. אחרי עשרה סבבים, ה-champion נבחר כי הוא קיבל ציון גבוה על val, ולכן המספר שלו על val אופטימי מדי.</li>
+    <li>Cherry-picking. אם מנסים עשרים candidates שכולם שווים באמת, אחד מהם עדיין ייראה הכי טוב. כלל של "גדול מאפס" יקבל אותו.</li>
+    <li>דליפת gold. ה-optimizer הוא סוכן LLM עם גישה לקבצים. הוא יכול לערוך את התשובות הנכונות או את ה-scorer. זה reward hacking.</li></ul>
+    <p>התשובה בעיצוב: המקומות היחידים שמחלקים משימות, מאגדים rewards, מפעילים את ה-gate וחותמים את test נמצאים בחבילת ה-core. ה-skills של האלגוריתמים קוראים לפונקציות האלה. הם לא יכולים לעשות gate על train או למדוד את test שוב, כי ה-core זורק שגיאה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 4. The four guarantees map ═══ -->
+<section class="slide">
+  <h2>Three splits, three jobs, one seal</h2>
+  <svg class="diagram" viewBox="0 0 1136 430">
+    <defs><marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box" x="10" y="170" width="150" height="84" rx="12"/>
+    <text class="title" x="85" y="205" text-anchor="middle">all task ids</text>
+    <text class="label mono" x="85" y="228" text-anchor="middle">adapter.tasks("all")</text>
+    <rect class="box blue" x="210" y="170" width="190" height="84" rx="12"/>
+    <text class="title mono" x="305" y="203" text-anchor="middle">make_splits(seed)</text>
+    <text class="label mono" x="305" y="228" text-anchor="middle">→ splits.json (once)</text>
+    <path class="line" d="M160,212 L210,212" marker-end="url(#ar4)"/>
+
+    <rect class="box blue" x="470" y="30" width="170" height="74" rx="12"/><text class="title" x="555" y="63" text-anchor="middle">train</text><text class="label" x="555" y="86" text-anchor="middle">ratio 0.5</text>
+    <rect class="box amber" x="470" y="175" width="170" height="74" rx="12"/><text class="title" x="555" y="208" text-anchor="middle">val</text><text class="label" x="555" y="231" text-anchor="middle">ratio 0.25</text>
+    <rect class="box red" x="470" y="320" width="170" height="74" rx="12"/><text class="title" x="555" y="353" text-anchor="middle">test</text><text class="label" x="555" y="376" text-anchor="middle">ratio 0.25 · sealed</text>
+    <path class="line" d="M400,200 L470,67" marker-end="url(#ar4)"/>
+    <path class="line" d="M400,212 L470,212" marker-end="url(#ar4)"/>
+    <path class="line" d="M400,224 L470,357" marker-end="url(#ar4)"/>
+
+    <rect class="box violet" x="720" y="30" width="200" height="74" rx="12"/><text class="title" x="820" y="62" text-anchor="middle">optimizer</text><text class="label mono" x="820" y="85" text-anchor="middle">reads trajectories/</text>
+    <rect class="box amber" x="720" y="175" width="200" height="74" rx="12"/><text class="title mono" x="820" y="207" text-anchor="middle">gate.decide()</text><text class="label mono" x="820" y="230" text-anchor="middle">split="val" only</text>
+    <rect class="box red" x="720" y="320" width="200" height="74" rx="12"/><text class="title" x="820" y="352" text-anchor="middle">finalize</text><text class="label mono" x="820" y="375" text-anchor="middle">reserve → commit_test</text>
+    <path class="line" d="M640,67 L720,67" marker-end="url(#ar4)"/>
+    <path class="line" d="M640,212 L720,212" marker-end="url(#ar4)"/>
+    <path class="line" d="M640,357 L720,357" marker-end="url(#ar4)"/>
+
+    <rect class="box green" x="980" y="175" width="146" height="74" rx="12"/><text class="title" x="1053" y="207" text-anchor="middle">verdict</text><text class="label" x="1053" y="230" text-anchor="middle">accept / reject</text>
+    <rect class="box" x="980" y="320" width="146" height="74" rx="12"/><text class="title mono" x="1053" y="352" text-anchor="middle">final.json</text><text class="label" x="1053" y="375" text-anchor="middle">the reported number</text>
+    <path class="line" d="M920,212 L980,212" marker-end="url(#ar4)"/>
+    <path class="line" d="M920,357 L980,357" marker-end="url(#ar4)"/>
+
+    <path class="line dash" d="M640,90 C690,130 690,150 720,190"/>
+    <text class="label bad mono" x="700" y="138" text-anchor="end">TrainGateError</text>
+    <text class="label" x="1053" y="80" text-anchor="middle">variance measured:</text>
+    <text class="label mono" x="1053" y="100" text-anchor="middle">num_trials, stats.py</text>
+  </svg>
+  <p class="small muted">Source: docs/HONEST_EVAL.md "The four guarantees" · core/cap_evolve/splits.py, gate.py, rundir.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:45–3:40]</span> This is the whole chapter in one picture. HONEST_EVAL.md lists four guarantees. One: splits are seeded and frozen. make_splits partitions the task ids once and the result goes to splits.json in the run dir. Two: the test split is sealed. Only finalize scores it, once. Three: acceptance is gated on val, with significance. gate.decide refuses any other split and raises TrainGateError if you pass train. Four: variance is measured, not assumed, through trials and the functions in stats.py.</p>
+    <p>Each split has one job. Train feeds the optimizer: it reads the train trajectories to find failures. Val feeds the gate. Test feeds the one number we report, in final.json. The default ratios in the scaffold spec are 0.5, 0.25 and 0.25.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:45–3:40]</span> זה כל הפרק בתמונה אחת. HONEST_EVAL.md מונה ארבע הבטחות. אחת: ה-splits נוצרים עם seed ומוקפאים. make_splits מחלק את ה-task ids פעם אחת, והתוצאה נכתבת ל-splits.json בתיקיית הריצה. שתיים: ה-test split חתום. רק finalize מודד אותו, פעם אחת. שלוש: ההחלטה מתקבלת על val, עם מובהקות. gate.decide מסרב לכל split אחר וזורק TrainGateError אם מעבירים train. ארבע: השונות נמדדת ולא מונחת, דרך trials והפונקציות ב-stats.py.</p>
+    <p>לכל split יש תפקיד אחד. train מזין את ה-optimizer, שקורא את ה-trajectories של train כדי למצוא כשלונות. val מזין את ה-gate. test מזין את המספר האחד שמדווחים, ב-final.json. יחסי ברירת המחדל ב-spec של ה-scaffold הם 0.5, 0.25 ו-0.25.</p>
+  </aside>
+</section>
+
+<!-- ═══ 5. Splits: how they are made ═══ -->
+<section class="slide">
+  <h2>Splits: seeded, deterministic, written once</h2>
+  <div class="row">
+    <div class="col" style="flex:1.15">
+      <pre><span class="c"># core/cap_evolve/splits.py</span>
+<span class="k">def</span> <span class="f">make_splits</span>(task_ids, seed=<span class="n">0</span>,
+                ratios=(<span class="n">0.5</span>, <span class="n">0.25</span>, <span class="n">0.25</span>), counts=<span class="k">None</span>):
+    ids = <span class="f">dedup</span>(task_ids)     <span class="c"># dict.fromkeys</span>
+    rng = random.Random(seed)
+    rng.shuffle(ids)        <span class="c"># same seed → same split</span>
+    ...
+    <span class="k">return</span> Splits(train, val, test, seed=seed)
+
+<span class="c"># core/cap_evolve/harness.py</span>
+<span class="k">def</span> <span class="f">ensure_splits</span>(adapter, run_dir, *, seed, ...):
+    <span class="hl"><span class="k">if</span> run_dir.splits_path.exists():</span>
+<span class="hl">        <span class="k">return</span> run_dir.read_splits() <span class="c"># frozen</span></span></pre>
+    </div>
+    <div class="col">
+      <div class="tree"><span class="c"># capevolve.yaml</span>
+split_seed: 0
+split_train: 0.5
+split_val: 0.25
+split_test: 0.25
+<span class="h">split_ids_file: ""</span>  <span class="c"># pin a split</span></div>
+      <div class="term amber mt"><span class="name">split_ids_file</span><span class="kind">user input</span><div class="def">JSON <code>{"train":[..],"val":[..],"test":[..]}</code>. Locks an official split. If test overlaps train/val, a <code>splits_warning</code> event says "report it as a fit metric".</div></div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/splits.py · harness.ensure_splits · benchmarks/_scaffold/project/capevolve.yaml · tests: test_core.py::test_splits_deterministic, test_splits_input.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:40–4:50]</span> How is a split made? make_splits takes the task ids, removes duplicates, shuffles them with random.Random of the seed, and cuts by ratio. You can also pass absolute counts. The same ids and the same seed always give the same split. That makes a run reproducible.</p>
+    <p>The key line is in harness.ensure_splits: if splits.json already exists, read it and return. So the split is written once, at intake or baseline time, and every later skill reads it back. No skill re-splits.</p>
+    <p>A user can also provide the split. The spec key split_ids_file points to a JSON file with train, val and test lists. Use it to lock a benchmark's official split. You can even set train equal to val equal to test for a deliberate fit with no holdout. Then the harness logs a splits_warning event. test_splits_input.py pins both cases, including that a second call does not re-split.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:40–4:50]</span> איך נוצר split? make_splits מקבל את ה-task ids, מסיר כפילויות, מערבב אותם עם random.Random של ה-seed, וחותך לפי היחסים. אפשר גם להעביר counts מוחלטים. אותם ids ואותו seed נותנים תמיד אותו split, ולכן הריצה ניתנת לשחזור.</p>
+    <p>השורה החשובה נמצאת ב-harness.ensure_splits: אם splits.json כבר קיים, קוראים אותו ומחזירים. כך ה-split נכתב פעם אחת, בזמן intake או baseline, וכל skill אחר רק קורא אותו. אף skill לא מחלק מחדש.</p>
+    <p>המשתמש יכול גם לספק split בעצמו. המפתח split_ids_file ב-spec מצביע על קובץ JSON עם רשימות train, val ו-test. משתמשים בזה כדי לנעול split רשמי של benchmark. אפשר אפילו לשים train שווה ל-val שווה ל-test, כ-fit מכוון בלי holdout, ואז ה-harness רושם אירוע splits_warning. test_splits_input.py בודק את שני המקרים, כולל שקריאה שנייה לא מחלקת מחדש.</p>
+  </aside>
+</section>
+
+<!-- ═══ 6. What each split is for ═══ -->
+<section class="slide">
+  <h2>What each split is used for</h2>
+  <table class="tight">
+    <tr><th>Split</th><th>Who reads it</th><th>Used for</th><th>Never used for</th></tr>
+    <tr><td><span class="pill blue">train</span></td><td>optimizer, diagnose, GEPA minibatches</td><td>finding failures, trajectories, proposals</td><td>accept decisions (<code>TrainGateError</code>)</td></tr>
+    <tr><td><span class="pill amber">val</span></td><td><code>gate.decide</code>, screens</td><td>accept / reject / indecisive</td><td>the reported headline number</td></tr>
+    <tr><td><span class="pill red">test</span></td><td>finalize only</td><td><code>final.json</code>: <code>FINAL</code> vs <code>FINAL_seed</code></td><td>choosing, tuning, stopping</td></tr>
+    <tr><td><span class="pill">feedback F</span></td><td>proposer, rungs</td><td>pooled mode: ranking candidates</td><td>final confirmation</td></tr>
+    <tr><td><span class="pill">confirm C</span></td><td>evaluator only</td><td>pooled mode: one fresh confirmation</td><td>anything a proposer can read</td></tr>
+  </table>
+  <div class="callout mt"><code>split_mode: pooled</code> (opt-in, <code>gatecfg.py</code>): pool = train + val, split once into F and a hidden C (<code>confirm_fraction: 0.48</code>), stratified by seed pass rate. C ids live in a sealed dir outside the run dir.</div>
+  <p class="small muted">Source: splits.py make_pooled_partition · rundir.py write_splits / sealed_dir · test_sealed_confirm_data.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:50–5:40]</span> This table is worth remembering. Train is the optimizer's data. It sees the train trajectories and can learn anything from them. Val is the gate's data. It decides accept or reject but it is never the number we publish, because it has been selected against. Test is finalize's data. It produces the headline number and nothing else: it never chooses a candidate, tunes a threshold, or decides to stop.</p>
+    <p>There is an opt-in fourth design, split_mode pooled. Train and val are pooled, then split once into a feedback stratum F and a hidden confirm stratum C, by default 48 percent. The split is stratified by the seed's pass rate so both parts have the same difficulty mix. The C ids are written to a sealed directory next to the project, outside every tree a proposer can read. test_sealed_confirm_data.py walks those trees and checks that no C id appears in any file name or content.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:50–5:40]</span> כדאי לזכור את הטבלה הזו. train הוא הנתונים של ה-optimizer. הוא רואה את ה-trajectories של train ויכול ללמוד מהם הכול. val הוא הנתונים של ה-gate. הוא מחליט accept או reject, אבל הוא אף פעם לא המספר שמפרסמים, כי בחרו לפיו. test הוא הנתונים של finalize. הוא מייצר את המספר הראשי ותו לא: הוא לא בוחר candidate, לא מכוונן סף ולא מחליט מתי לעצור.</p>
+    <p>יש עיצוב רביעי, אופציונלי: split_mode pooled. מאחדים את train ו-val, ואז מחלקים פעם אחת ל-feedback stratum בשם F ול-confirm stratum נסתר בשם C, כברירת מחדל 48 אחוז. החלוקה מרובדת לפי pass rate של ה-seed, כדי ששני החלקים יהיו באותו קושי. ה-ids של C נכתבים לתיקייה חתומה ליד הפרויקט, מחוץ לכל עץ שה-proposer יכול לקרוא. test_sealed_confirm_data.py סורק את העצים האלה ובודק ששום id של C לא מופיע בשם קובץ או בתוכן.</p>
+  </aside>
+</section>
+
+<!-- ═══ 7. Trials and per-trial seeds ═══ -->
+<section class="slide">
+  <h2>Trials: one task, several independent draws</h2>
+  <div class="row">
+    <div class="col" style="flex:1.35">
+      <svg class="diagram" viewBox="0 0 700 360">
+        <text class="label" x="110" y="24" text-anchor="middle">task</text>
+        <text class="label mono" x="230" y="24" text-anchor="middle">seed+0</text>
+        <text class="label mono" x="320" y="24" text-anchor="middle">seed+1</text>
+        <text class="label mono" x="410" y="24" text-anchor="middle">seed+2</text>
+        <text class="label mono" x="500" y="24" text-anchor="middle">seed+3</text>
+        <text class="label" x="620" y="24" text-anchor="middle">mean · SE</text>
+        <!-- t1 -->
+        <text class="title mono" x="110" y="80" text-anchor="middle">t1</text>
+        <rect class="box green" x="195" y="50" width="70" height="50" rx="8"/><text class="title" x="230" y="82" text-anchor="middle">1</text>
+        <rect class="box green" x="285" y="50" width="70" height="50" rx="8"/><text class="title" x="320" y="82" text-anchor="middle">1</text>
+        <rect class="box green" x="375" y="50" width="70" height="50" rx="8"/><text class="title" x="410" y="82" text-anchor="middle">1</text>
+        <rect class="box green" x="465" y="50" width="70" height="50" rx="8"/><text class="title" x="500" y="82" text-anchor="middle">1</text>
+        <text class="title mono" x="620" y="82" text-anchor="middle">1.00 · 0.00</text>
+        <!-- t2 -->
+        <text class="title mono" x="110" y="150" text-anchor="middle">t2</text>
+        <rect class="box green" x="195" y="120" width="70" height="50" rx="8"/><text class="title" x="230" y="152" text-anchor="middle">1</text>
+        <rect class="box red" x="285" y="120" width="70" height="50" rx="8"/><text class="title" x="320" y="152" text-anchor="middle">0</text>
+        <rect class="box green" x="375" y="120" width="70" height="50" rx="8"/><text class="title" x="410" y="152" text-anchor="middle">1</text>
+        <rect class="box green" x="465" y="120" width="70" height="50" rx="8"/><text class="title" x="500" y="152" text-anchor="middle">1</text>
+        <text class="title mono" x="620" y="152" text-anchor="middle">0.75 · 0.25</text>
+        <!-- t3 -->
+        <text class="title mono" x="110" y="220" text-anchor="middle">t3</text>
+        <rect class="box red" x="195" y="190" width="70" height="50" rx="8"/><text class="title" x="230" y="222" text-anchor="middle">0</text>
+        <rect class="box red" x="285" y="190" width="70" height="50" rx="8"/><text class="title" x="320" y="222" text-anchor="middle">0</text>
+        <rect class="box green" x="375" y="190" width="70" height="50" rx="8"/><text class="title" x="410" y="222" text-anchor="middle">1</text>
+        <rect class="box red" x="465" y="190" width="70" height="50" rx="8"/><text class="title" x="500" y="222" text-anchor="middle">0</text>
+        <text class="title mono" x="620" y="222" text-anchor="middle">0.25 · 0.25</text>
+        <text class="label mono" x="365" y="285" text-anchor="middle">rollouts/val/&lt;task&gt;__&lt;tag&gt;__t{k}.json</text>
+        <text class="label" x="365" y="312" text-anchor="middle">trials.run_trials_pool runs the task × trial grid in a thread pool</text>
+        <text class="label" x="365" y="336" text-anchor="middle">bounded by max_workers; trial order is preserved</text>
+      </svg>
+    </div>
+    <div class="col">
+      <div class="formula">seed(trial k) = base_seed + k</div>
+      <ul class="small" style="font-size:19px">
+        <li><code>base_seed</code> defaults to the frozen split seed</li>
+        <li>The adapter must forward <code>seed</code> to every random part</li>
+        <li><code>num_trials: 1</code> is the scaffold default</li>
+        <li>At 1 trial, per-task SE is 0, so the gate's SE can collapse</li>
+      </ul>
+      <div class="callout amber" style="font-size:17px">SE = 0 → <code>gate_warning</code> event, then a declared STRICT fallback. Never a silent one.</div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/trials.py · harness._run_and_score · gate._warn_se_zero · test_trials.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:40–6:40]</span> A trial is one rollout of one task. With num_trials above one, each task runs several times. The seed contract is simple: trial k runs with seed equal to base_seed plus k. base_seed defaults to the split seed. So two trials are independent draws, and a rerun of the same run gets the same seeds.</p>
+    <p>The adapter is responsible for passing the seed to the agent, the user simulator, any sampler. If it ignores the seed, all trials look the same and the variance is fake.</p>
+    <p>The helper trials.run_trials_pool runs the whole task-by-trial grid in a thread pool. Each cell becomes a rollout file named task, tag, and trial index.</p>
+    <p>Look at the right column. With one trial, every per-task stderr is zero. If all SEs are zero, the gate cannot tell noise from signal. The code does not hide this. It logs a gate_warning event and falls back to strict mode, accept if delta is above zero, in the open.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:40–6:40]</span> trial הוא rollout אחד של משימה אחת. כש-num_trials גדול מאחד, כל משימה רצה כמה פעמים. חוזה ה-seed פשוט: trial מספר k רץ עם seed ששווה base_seed ועוד k. base_seed הוא כברירת מחדל ה-seed של ה-split. כך שני trials הם דגימות בלתי תלויות, וריצה חוזרת מקבלת אותם seeds.</p>
+    <p>ה-adapter אחראי להעביר את ה-seed לסוכן, ל-user simulator ולכל רכיב אקראי. אם הוא מתעלם מה-seed, כל ה-trials נראים אותו דבר והשונות מזויפת.</p>
+    <p>הפונקציה trials.run_trials_pool מריצה את כל הרשת של משימות כפול trials ב-thread pool. כל תא הופך לקובץ rollout עם שם המשימה, ה-tag ומספר ה-trial.</p>
+    <p>שימו לב לעמודה הימנית. עם trial אחד, ה-stderr של כל משימה הוא אפס. אם כל ה-SE הם אפס, ה-gate לא יכול להבדיל בין רעש לאות. הקוד לא מסתיר את זה: הוא רושם אירוע gate_warning ועובר ל-strict mode, כלומר accept אם הדלתא מעל אפס, בגלוי.</p>
+  </aside>
+</section>
+
+<!-- ═══ 8. pass^k and pass@k ═══ -->
+<section class="slide">
+  <h2>pass^k and pass@k: reliability vs capability</h2>
+  <div class="row">
+    <div class="col">
+      <div class="term amber"><span class="name">pass^k</span><span class="kind">reliability</span><div class="def">Chance that <b>all</b> k trials pass. <code>C(c,k) / C(n,k)</code></div></div>
+      <div class="term mt"><span class="name">pass@k</span><span class="kind">capability</span><div class="def">Chance that <b>at least one</b> of k passes. <code>1 − C(n−c,k) / C(n,k)</code></div></div>
+      <p class="small mt">n = trials, c = passing trials (reward ≥ 1.0)</p>
+      <div class="formula" style="font-size:18px">t2 = [1, 0, 1, 1] → n=4, c=3<br>pass^2 = C(3,2)/C(4,2) = 3/6 = <span class="amber">0.50</span><br>pass@2 = 1 − C(1,2)/C(4,2) = <span class="green">1.00</span></div>
+    </div>
+    <div class="col">
+      <div class="card red"><h3>k &gt; n is undefined, not zero</h3>
+        <ul><li><code>stats.pass_k(rewards, 5)</code> → <code>None</code></li>
+        <li><code>aggregate_scores</code> omits any k above the minimum trial count</li>
+        <li><code>num_trials: 1</code> emits only <code>{"1": ...}</code></li>
+        <li>Reports and dashboard list only the measured ks</li></ul>
+      </div>
+      <div class="callout mt" style="font-size:18px">Why: <code>pass^2 = 0.0</code> on a 1-trial run reads as "0% reliable". The truth is "not enough trials" (issue #112).</div>
+      <p class="testname mt">test_pass_k_undefined.py · test_report_pass_k_render.py</p>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/stats.py pass_k, pass_at_k · loop.aggregate_scores</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:40–7:50]</span> Two statistics come from trials. pass^k, from tau-bench, is reliability: the chance that all k independent tries pass. pass@k is capability: the chance that at least one of k tries passes. A customer-service agent needs pass^k. A code generator with a test runner may only need pass@k.</p>
+    <p>Both use counting. With c passes out of n trials, pass^k is "choose k from c" over "choose k from n". That is the unbiased estimate without replacement. For task t2 with three passes out of four, pass^2 is 3 over 6, so 0.5. pass@2 is 1.0, because any two trials include at least one pass.</p>
+    <p>The important rule is on the right. If k is larger than the number of trials, the statistic is undefined. stats.pass_k returns None, and aggregate_scores leaves the key out. Before issue 112, a one-trial run reported pass^2 as zero. That is a false claim. test_pass_k_undefined.py now pins it, including the edge k equal to n plus one.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:40–7:50]</span> שני מדדים נגזרים מה-trials. pass^k, מ-tau-bench, הוא אמינות: הסיכוי שכל k הניסיונות הבלתי תלויים יצליחו. pass@k הוא יכולת: הסיכוי שלפחות אחד מ-k יצליח. סוכן שירות לקוחות צריך pass^k. מחולל קוד עם test runner אולי צריך רק pass@k.</p>
+    <p>שניהם ספירה. עם c הצלחות מתוך n trials, pass^k הוא "בחירת k מתוך c" חלקי "בחירת k מתוך n". זה האומד הלא מוטה בלי החזרה. במשימה t2, עם שלוש הצלחות מתוך ארבע, pass^2 הוא 3 חלקי 6, כלומר 0.5. pass@2 הוא 1.0, כי כל שני trials כוללים לפחות הצלחה אחת.</p>
+    <p>הכלל החשוב מימין. אם k גדול ממספר ה-trials, המדד לא מוגדר. stats.pass_k מחזיר None, ו-aggregate_scores משמיט את המפתח. לפני issue 112, ריצה עם trial אחד דיווחה pass^2 שווה אפס. זו טענה שקרית. test_pass_k_undefined.py נועל את זה עכשיו, כולל המקרה ש-k שווה n ועוד אחד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 9. Standard error ═══ -->
+<section class="slide">
+  <h2>Standard error: how sure is the mean?</h2>
+  <div class="row">
+    <div class="col">
+      <div class="term"><span class="name">stats.stderr(xs)</span><span class="kind">per task, over trials</span><div class="def">sample SD ÷ √n. t2 = [1,0,1,1] → SD 0.5, n 4 → <b>0.25</b></div></div>
+      <div class="term amber mt"><span class="name">stats.combined_stderr</span><span class="kind">whole split</span><div class="def">Mixes two error sources of the split mean.</div></div>
+      <div class="formula" style="font-size:18px">between² = var(task means) / n<br>within²  = Σ SE_t² / n²<br>SE = √(between² + within²)</div>
+    </div>
+    <div class="col">
+      <table class="tight">
+        <tr><th>Example (3 tasks)</th><th>value</th></tr>
+        <tr><td>task means</td><td><code>1.00, 0.75, 0.25</code></td></tr>
+        <tr><td>task SEs</td><td><code>0.00, 0.25, 0.25</code></td></tr>
+        <tr><td>split mean</td><td><code>0.667</code></td></tr>
+        <tr><td>between² = 0.1458 / 3</td><td><code>0.0486</code></td></tr>
+        <tr><td>within² = 0.125 / 9</td><td><code>0.0139</code></td></tr>
+        <tr><td><b>SE</b> = √0.0625</td><td><b class="amber">0.25</b></td></tr>
+      </table>
+      <div class="callout mt" style="font-size:18px">Rule of thumb from <code>GateDecision.resolvable_effect_size</code>: a round can resolve effects of about <b>2·SE</b>, no smaller.</div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/stats.py · gate.GateDecision · test_core.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:50–8:50]</span> Standard error answers one question: if I measured this again, how much would the mean move? stats.stderr is the textbook version: the sample standard deviation divided by the square root of n. For t2 that is 0.5 over 2, so 0.25.</p>
+    <p>For a whole split, the mean has two sources of error. Between-task error: tasks differ, and a different set of tasks would give a different mean. Within-task error: each task mean is itself noisy because it comes from a few trials. combined_stderr adds the two squares and takes the root. In the example the total SE is 0.25 on a mean of 0.667. That is a wide error bar, and that is honest for three tasks.</p>
+    <p>Every gate decision also carries resolvable_effect_size, which is 2 times SE. It tells the reader, before the delta, what size of effect this round could even detect. This came from tau2 airline: four runs of null results were read as "bad edits" when the gate simply could not see effects that small.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:50–8:50]</span> standard error עונה על שאלה אחת: אם אמדוד שוב, כמה הממוצע יזוז? stats.stderr היא הגרסה של ספר הלימוד: סטיית התקן של המדגם חלקי שורש n. ל-t2 זה 0.5 חלקי 2, כלומר 0.25.</p>
+    <p>לממוצע של split שלם יש שני מקורות שגיאה. שגיאה בין משימות: משימות שונות זו מזו, וקבוצת משימות אחרת הייתה נותנת ממוצע אחר. שגיאה בתוך משימה: כל ממוצע של משימה רועש בעצמו, כי הוא בא מכמה trials בלבד. combined_stderr מחבר את שני הריבועים ומוציא שורש. בדוגמה ה-SE הכולל הוא 0.25 על ממוצע של 0.667. זה טווח שגיאה רחב, וזה כן עבור שלוש משימות.</p>
+    <p>כל החלטת gate נושאת גם resolvable_effect_size, שהוא פעמיים SE. הוא אומר לקורא, עוד לפני הדלתא, איזה גודל אפקט הסבב הזה בכלל יכול לזהות. זה הגיע מ-tau2 airline: ארבע ריצות עם תוצאות אפס נקראו כ"עריכות גרועות", כשבפועל ה-gate פשוט לא יכול היה לראות אפקטים כל כך קטנים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 10. The paired gate concept ═══ -->
+<section class="slide">
+  <h2>The paired gate: compare each task with itself</h2>
+  <div class="row">
+    <div class="col" style="flex:1.1">
+      <svg class="diagram" viewBox="0 0 620 440">
+        <line class="line" x1="60" y1="380" x2="600" y2="380"/>
+        <line class="line" x1="60" y1="50" x2="60" y2="380"/>
+        <text class="label" x="50" y="384" text-anchor="end">0</text>
+        <text class="label" x="50" y="224" text-anchor="end">0.5</text>
+        <text class="label" x="50" y="64" text-anchor="end">1</text>
+        <line class="line dash" x1="60" y1="220" x2="600" y2="220" style="stroke-width:1;opacity:.4"/>
+        <line class="line dash" x1="60" y1="60" x2="600" y2="60" style="stroke-width:1;opacity:.4"/>
+        <!-- T1 .5→.75 -->
+        <line x1="120" y1="220" x2="120" y2="140" stroke="#22c55e" stroke-width="3"/>
+        <circle cx="120" cy="220" r="9" fill="#64748b"/><circle cx="120" cy="140" r="9" fill="#3b82f6"/>
+        <!-- T2 .25→.5 -->
+        <line x1="210" y1="300" x2="210" y2="220" stroke="#22c55e" stroke-width="3"/>
+        <circle cx="210" cy="300" r="9" fill="#64748b"/><circle cx="210" cy="220" r="9" fill="#3b82f6"/>
+        <!-- T3 1→1 -->
+        <circle cx="300" cy="60" r="9" fill="#64748b"/><circle cx="300" cy="60" r="5" fill="#3b82f6"/>
+        <!-- T4 .75→1 -->
+        <line x1="390" y1="140" x2="390" y2="60" stroke="#22c55e" stroke-width="3"/>
+        <circle cx="390" cy="140" r="9" fill="#64748b"/><circle cx="390" cy="60" r="9" fill="#3b82f6"/>
+        <!-- T5 .5→.75 -->
+        <line x1="480" y1="220" x2="480" y2="140" stroke="#22c55e" stroke-width="3"/>
+        <circle cx="480" cy="220" r="9" fill="#64748b"/><circle cx="480" cy="140" r="9" fill="#3b82f6"/>
+        <!-- T6 1→.75 -->
+        <line x1="570" y1="60" x2="570" y2="140" stroke="#ef4444" stroke-width="3"/>
+        <circle cx="570" cy="60" r="9" fill="#64748b"/><circle cx="570" cy="140" r="9" fill="#3b82f6"/>
+        <text class="label mono" x="120" y="405" text-anchor="middle">T1</text><text class="label mono" x="210" y="405" text-anchor="middle">T2</text>
+        <text class="label mono" x="300" y="405" text-anchor="middle">T3</text><text class="label mono" x="390" y="405" text-anchor="middle">T4</text>
+        <text class="label mono" x="480" y="405" text-anchor="middle">T5</text><text class="label mono" x="570" y="405" text-anchor="middle">T6</text>
+        <circle cx="90" cy="25" r="7" fill="#64748b"/><text class="label" x="104" y="30">current (parent)</text>
+        <circle cx="260" cy="25" r="7" fill="#3b82f6"/><text class="label" x="274" y="30">candidate</text>
+        <text class="label" x="400" y="30">line = per-task Δ[t]</text>
+      </svg>
+    </div>
+    <div class="col">
+      <p class="small"><b>paired</b> (default of every real run)</p>
+      <div class="formula" style="font-size:18px">Δ[t] = cand[t] − curr[t]<br>accept ⇔ mean(Δ) &gt; k · SE(Δ)</div>
+      <p class="small"><b>significant</b> (unpaired fallback)</p>
+      <div class="formula" style="font-size:18px">accept ⇔ Δ &gt; k · √(SE_c² + SE_p²)</div>
+      <div class="callout green" style="font-size:18px">Pairing cancels task difficulty. Tasks range from 0.25 to 1.0, but the Δs are steady. Only the spread of the Δs counts.</div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/gate.py _verdict (modes paired, significant) · harness._paired_deltas</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:50–9:50]</span> Now the gate itself. Both the current champion and the candidate are scored on the same val tasks. So we can compare each task with itself. For each task t, delta t is candidate reward minus current reward. The paired rule accepts when the mean of the deltas is bigger than k times the standard error of the deltas.</p>
+    <p>Look at the chart. Gray is the parent, blue is the candidate. The tasks themselves are very different: some are at 0.25, some at 1.0. That spread is task difficulty. It is large, and it has nothing to do with the edit. The unpaired test, mode significant, counts that spread as noise. The paired test removes it, because difficulty appears on both sides of each pair and cancels. Only the spread of the green and red lines remains.</p>
+    <p>That is why paired is the default. The loop selects it whenever per-task data exists, and the scaffold spec says gate_mode paired. significant is only correct when the two sides were not scored on the same tasks.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:50–9:50]</span> עכשיו ה-gate עצמו. גם ה-champion הנוכחי וגם ה-candidate נמדדים על אותן משימות val. לכן אפשר להשוות כל משימה לעצמה. לכל משימה t, הדלתא היא ה-reward של ה-candidate פחות ה-reward הנוכחי. הכלל המזווג מקבל כשממוצע הדלתאות גדול מ-k כפול ה-standard error של הדלתאות.</p>
+    <p>הסתכלו על הגרף. אפור זה ה-parent, כחול זה ה-candidate. המשימות עצמן שונות מאוד: חלקן ב-0.25, חלקן ב-1.0. הפיזור הזה הוא קושי המשימה. הוא גדול, ואין לו קשר לעריכה. המבחן הלא מזווג, mode significant, סופר את הפיזור הזה כרעש. המבחן המזווג מסיר אותו, כי הקושי מופיע בשני הצדדים של כל זוג ומתבטל. נשאר רק הפיזור של הקווים הירוקים והאדומים.</p>
+    <p>לכן paired היא ברירת המחדל. הלולאה בוחרת בה בכל פעם שיש נתונים לפי משימה, וה-spec של ה-scaffold אומר gate_mode paired. significant נכון רק כששני הצדדים לא נמדדו על אותן משימות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 11. Worked example ═══ -->
+<section class="slide">
+  <h2>Worked example: six val tasks, one decision</h2>
+  <div class="row">
+    <div class="col" style="flex:0.9">
+      <table class="tight">
+        <tr><th>task</th><th>curr</th><th>cand</th><th>Δ[t]</th></tr>
+        <tr><td>T1</td><td>0.50</td><td>0.75</td><td class="green">+0.25</td></tr>
+        <tr><td>T2</td><td>0.25</td><td>0.50</td><td class="green">+0.25</td></tr>
+        <tr><td>T3</td><td>1.00</td><td>1.00</td><td>0</td></tr>
+        <tr><td>T4</td><td>0.75</td><td>1.00</td><td class="green">+0.25</td></tr>
+        <tr><td>T5</td><td>0.50</td><td>0.75</td><td class="green">+0.25</td></tr>
+        <tr><td>T6</td><td>1.00</td><td>0.75</td><td class="red">−0.25</td></tr>
+        <tr><td><b>mean</b></td><td>0.667</td><td>0.792</td><td><b>+0.125</b></td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <div class="card green"><h3>paired, k = 1.0</h3>
+        <p class="mono" style="font-size:16px">SD(Δ) = √(0.04375) = 0.209<br>SE = 0.209 / √6 = <b>0.0854</b><br>bar = 1.0 × 0.0854<br>0.125 &gt; 0.0854 → <b class="green">ACCEPT</b></p></div>
+      <div class="card red mt"><h3>significant, k = 1.0</h3>
+        <p class="mono" style="font-size:16px">SE_p = 0.124, SE_c = 0.077<br>SE = √(0.124² + 0.077²) = <b>0.1455</b><br>0.125 ≤ 0.1455 → <b class="red">REJECT</b></p></div>
+    </div>
+  </div>
+  <p class="small mt">Same data, two answers. Pairing buys power. With the shipped <code>gate_k_se: 0.2</code> the paired bar is only <code>0.0171</code>.</p>
+  <p class="small muted">Numbers checked with <code>gate.decide(mode="paired", paired_deltas=Δ, k_se=1.0)</code>: reason "paired Δ̄=+0.1250 &gt; 1.0·SE=0.0854 (n=6, resolvable effect size 2·SE=0.1708)"</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:50–11:10]</span> Let us do it by hand. Six val tasks, each a mean over four trials. Four tasks went up by a quarter, one stayed, one went down by a quarter. The mean delta is plus 0.125.</p>
+    <p>Paired: the standard deviation of the six deltas is about 0.209. Divide by the square root of 6 and the SE is 0.0854. With k equal to 1, the bar is 0.0854. The mean delta, 0.125, is above it. Accept. This is the exact reason string that gate.decide prints; I ran the real function.</p>
+    <p>Now the unpaired test on the same numbers. The parent's split SE alone, from task difficulty, is 0.124. The candidate's is 0.077. Combined, 0.1455. The delta is below it, so reject. Same data, opposite answer. That difference is what pairing buys.</p>
+    <p>One note on k. decide's own default is 1.0, but the scaffold spec ships gate_k_se 0.2, and cap-evolve run passes that. At 0.2 the bar here would be 0.017. Also note the resolvable effect size, 0.17: this six-task round could not reliably see a gain smaller than that.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:50–11:10]</span> בואו נחשב ביד. שש משימות val, כל אחת ממוצע של ארבעה trials. ארבע משימות עלו ברבע, אחת נשארה, אחת ירדה ברבע. ממוצע הדלתא הוא פלוס 0.125.</p>
+    <p>Paired: סטיית התקן של שש הדלתאות היא בערך 0.209. מחלקים בשורש 6 ומקבלים SE של 0.0854. עם k שווה 1, הסף הוא 0.0854. ממוצע הדלתא, 0.125, מעליו. Accept. זו בדיוק מחרוזת ה-reason ש-gate.decide מדפיס; הרצתי את הפונקציה האמיתית.</p>
+    <p>עכשיו המבחן הלא מזווג על אותם מספרים. ה-SE של ה-parent לבדו, מקושי המשימות, הוא 0.124. של ה-candidate הוא 0.077. ביחד 0.1455. הדלתא מתחתיו, אז reject. אותם נתונים, תשובה הפוכה. ההבדל הזה הוא מה שהזיווג קונה.</p>
+    <p>הערה על k. ברירת המחדל של decide עצמה היא 1.0, אבל ה-spec של ה-scaffold מגיע עם gate_k_se 0.2, ו-cap-evolve run מעביר את זה. ב-0.2 הסף כאן היה 0.017. שימו לב גם ל-resolvable effect size, 0.17: סבב של שש משימות לא יכול לראות באמינות שיפור קטן מזה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 12. Decision diagram ═══ -->
+<section class="slide">
+  <h2>Inside <code>gate.decide()</code>: the decision path</h2>
+  <svg class="diagram" viewBox="0 0 1136 470">
+    <defs><marker id="ar12" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <!-- row 1 questions -->
+    <rect class="box blue" x="10" y="20" width="196" height="84" rx="12"/><text class="title mono" x="108" y="56" text-anchor="middle">split == "val"?</text><text class="label" x="108" y="80" text-anchor="middle">checked first</text>
+    <rect class="box blue" x="234" y="20" width="196" height="84" rx="12"/><text class="title" x="332" y="52" text-anchor="middle">coverage ≥</text><text class="title mono" x="332" y="76" text-anchor="middle">min_coverage 0.6?</text>
+    <rect class="box blue" x="458" y="20" width="196" height="84" rx="12"/><text class="title mono" x="556" y="56" text-anchor="middle">paired_deltas?</text><text class="label" x="556" y="80" text-anchor="middle">per-task data exists</text>
+    <rect class="box blue" x="682" y="20" width="196" height="84" rx="12"/><text class="title" x="780" y="56" text-anchor="middle">SE &gt; 0 ?</text><text class="label" x="780" y="80" text-anchor="middle">after paired_se_floor</text>
+    <rect class="box amber" x="906" y="20" width="196" height="84" rx="12"/><text class="title mono" x="1004" y="56" text-anchor="middle">Δ̄ &gt; k·SE ?</text><text class="label mono" x="1004" y="80" text-anchor="middle">k = gate_k_se</text>
+    <path class="line" d="M206,62 L234,62" marker-end="url(#ar12)"/><text class="label ok" x="220" y="54" text-anchor="middle">yes</text>
+    <path class="line" d="M430,62 L458,62" marker-end="url(#ar12)"/><text class="label ok" x="444" y="54" text-anchor="middle">yes</text>
+    <path class="line" d="M654,62 L682,62" marker-end="url(#ar12)"/><text class="label ok" x="668" y="54" text-anchor="middle">yes</text>
+    <path class="line" d="M878,62 L906,62" marker-end="url(#ar12)"/><text class="label ok" x="892" y="54" text-anchor="middle">yes</text>
+    <!-- row 2 exits -->
+    <rect class="box red" x="10" y="170" width="196" height="84" rx="12"/><text class="title mono" x="108" y="206" text-anchor="middle">TrainGateError</text><text class="label" x="108" y="230" text-anchor="middle">raised, no verdict</text>
+    <rect class="box amber" x="234" y="170" width="196" height="84" rx="12"/><text class="title" x="332" y="206" text-anchor="middle">INDECISIVE</text><text class="label" x="332" y="230" text-anchor="middle">+ gate_warning (coverage)</text>
+    <rect class="box" x="458" y="170" width="196" height="84" rx="12"/><text class="title mono" x="556" y="204" text-anchor="middle">mode=significant</text><text class="label mono" x="556" y="228" text-anchor="middle">SE = √(SEc² + SEp²)</text>
+    <rect class="box amber" x="682" y="170" width="196" height="84" rx="12"/><text class="title" x="780" y="204" text-anchor="middle">STRICT fallback</text><text class="label" x="780" y="228" text-anchor="middle">gate_warning, Δ̄ &gt; 0</text>
+    <rect class="box green" x="906" y="170" width="196" height="84" rx="12"/><text class="title" x="1004" y="206" text-anchor="middle">ACCEPT</text><text class="label" x="1004" y="230" text-anchor="middle">threshold = k·SE</text>
+    <path class="line" d="M108,104 L108,170" marker-end="url(#ar12)"/><text class="label bad" x="118" y="140">no</text>
+    <path class="line" d="M332,104 L332,170" marker-end="url(#ar12)"/><text class="label bad" x="342" y="140">no</text>
+    <path class="line" d="M556,104 L556,170" marker-end="url(#ar12)"/><text class="label bad" x="566" y="140">no</text>
+    <path class="line" d="M780,104 L780,170" marker-end="url(#ar12)"/><text class="label bad" x="790" y="140">no</text>
+    <path class="line" d="M1004,104 L1004,170" marker-end="url(#ar12)"/><text class="label ok" x="1014" y="140">yes</text>
+    <path class="line dash" d="M654,212 C668,212 668,120 690,104" marker-end="url(#ar12)"/>
+    <!-- reject -->
+    <rect class="box red" x="906" y="300" width="196" height="70" rx="12"/><text class="title" x="1004" y="332" text-anchor="middle">REJECT</text><text class="label" x="1004" y="354" text-anchor="middle">Δ̄ ≤ k·SE</text>
+    <path class="line" d="M1102,62 L1124,62 L1124,335 L1102,335" marker-end="url(#ar12)"/><text class="label bad" x="1118" y="200" text-anchor="end">no</text>
+    <!-- veto -->
+    <rect class="box violet" x="10" y="300" width="860" height="70" rx="12"/>
+    <text class="title" x="30" y="330">then decide() records broke / fixed (harness.movement)</text>
+    <text class="label mono" x="30" y="354">opt-in gate_max_broke: may turn ACCEPT into REJECT · never the reverse · never touches INDECISIVE</text>
+    <path class="line" d="M906,250 L870,300" marker-end="url(#ar12)"/>
+    <text class="label" x="10" y="410">Other modes reuse the same bars: threshold (Δ &gt; T), strict (Δ &gt; 0), pareto, epsilon_constraint, reward_gated. Any other name raises ValueError.</text>
+    <text class="label" x="10" y="436">Only the primary metric (scalar reward) moves the verdict. Secondary Score.metrics are display only.</text>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:10–12:20]</span> This diagram is the code path of gate._verdict, left to right. First check: the split must be val, or the function raises TrainGateError. Not a reject, an exception. Second: coverage. If fewer than 60 percent of val tasks produced a valid score, the gate refuses to judge. It returns indecisive and logs a gate_warning. We come back to this.</p>
+    <p>Third: are there paired deltas? If not, the mode drops to significant and uses the combined SE. Fourth: is the SE above zero? paired_se_floor can raise the SE when per-task trial noise is larger than the cross-task spread suggests. If SE is still zero, gate_warning and the declared strict fallback.</p>
+    <p>Finally the real test: mean delta above k times SE. Accept or reject. After that, decide adds the composition: which tasks broke and which were fixed. It is descriptive. Only the opt-in gate_max_broke can use it, and only to subtract an accept.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:10–12:20]</span> התרשים הזה הוא נתיב הקוד של gate._verdict, משמאל לימין. בדיקה ראשונה: ה-split חייב להיות val, אחרת הפונקציה זורקת TrainGateError. לא reject, אלא exception. שנייה: coverage. אם פחות מ-60 אחוז ממשימות ה-val הניבו ציון תקף, ה-gate מסרב לשפוט. הוא מחזיר indecisive ורושם gate_warning. נחזור לזה.</p>
+    <p>שלישית: האם יש paired deltas? אם לא, ה-mode יורד ל-significant ומשתמש ב-SE המשולב. רביעית: האם ה-SE גדול מאפס? paired_se_floor יכול להעלות את ה-SE כשרעש ה-trials בכל משימה גדול ממה שהפיזור בין המשימות מראה. אם ה-SE עדיין אפס, gate_warning ו-fallback מוצהר ל-strict.</p>
+    <p>ולבסוף המבחן האמיתי: ממוצע הדלתא מעל k כפול SE. Accept או reject. אחרי זה decide מוסיף את ההרכב: אילו משימות נשברו ואילו תוקנו. זה תיאורי בלבד. רק gate_max_broke האופציונלי יכול להשתמש בזה, ורק כדי להוריד accept.</p>
+  </aside>
+</section>
+
+<!-- ═══ 13. Three outcomes ═══ -->
+<section class="slide">
+  <h2>Three outcomes, three different next steps</h2>
+  <div class="grid-3">
+    <div class="card green"><h3>accept</h3><ul><li>Candidate becomes the champion (<code>set_best</code>)</li><li>Committed to the store (git)</li><li>Stall counter resets</li></ul></div>
+    <div class="card red"><h3>reject</h3><ul><li>Stall counter +1 (<code>stall: 2</code> stops the run)</li><li>Filed in the rejected memory: "this edit did not work"</li><li>The champion stays</li></ul></div>
+    <div class="card amber"><h3>indecisive / inconclusive</h3><ul><li>Iteration is charged, stall is <b>not</b></li><li>Not filed as a refutation</li><li>Agent mode: <code>commit.py --decision inconclusive</code>, then re-gate with more trials</li></ul></div>
+  </div>
+  <table class="tight mt">
+    <tr><th>Rule</th><th>Guarded by</th></tr>
+    <tr><td>An unresolved gate is not a rejection</td><td class="testname">test_an_unresolved_gate_is_not_a_rejection.py</td></tr>
+    <tr><td>A re-gate pools the earlier control replicates, never overwrites them</td><td class="testname">test_a_regate_accumulates_evidence.py</td></tr>
+    <tr><td>A gate that crashed is a failure, not an empty verdict</td><td class="testname">test_a_failed_gate_is_not_a_verdict.py</td></tr>
+  </table>
+  <p class="small muted">Source: harness.record_iteration (indecisive=True) · agent-optimize round.py (verdict_stable) · commit.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:20–13:30]</span> The gate can end in three ways, and the loop treats them differently. Accept: the candidate becomes the champion and is committed. Reject: the champion stays, the stall counter goes up, and the edit is filed in rejected memory, so the optimizer does not try it again. With stall equal to 2, two rejects in a row stop the run.</p>
+    <p>The third outcome is the subtle one. Indecisive means the gate did not judge: low coverage, a tampered candidate, an evaluation that crashed. In agent mode, round.py also marks a candidate inconclusive when its verdict flips between byte-identical control replicates. In all these cases the iteration is charged, but the stall counter is not. Stall means "the optimizer ran out of ideas", and an ambiguous measurement is no evidence of that.</p>
+    <p>The three tests in the table are each a real incident. In one smoke run, a re-gate overwrote its first control readings, so 200 rollouts bought no new evidence. Now a re-gate uses new tags and pools all replicates.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:20–13:30]</span> ה-gate יכול להסתיים בשלוש דרכים, והלולאה מתייחסת לכל אחת אחרת. Accept: ה-candidate הופך ל-champion ונשמר ב-commit. Reject: ה-champion נשאר, מונה ה-stall עולה, והעריכה נרשמת בזיכרון ה-rejected, כדי שה-optimizer לא ינסה אותה שוב. עם stall שווה 2, שני rejects ברצף עוצרים את הריצה.</p>
+    <p>התוצאה השלישית היא העדינה. Indecisive אומר שה-gate לא שפט: coverage נמוך, candidate שעבר tampering, או הערכה שקרסה. ב-agent mode, round.py מסמן candidate גם כ-inconclusive כשההחלטה שלו מתהפכת בין control replicates זהים בבתים. בכל המקרים האלה ה-iteration נספר, אבל מונה ה-stall לא. stall אומר "ל-optimizer נגמרו הרעיונות", ומדידה עמומה היא לא ראיה לזה.</p>
+    <p>שלוש הבדיקות בטבלה הן כל אחת תקרית אמיתית. בריצת smoke אחת, re-gate דרס את קריאות ה-control הראשונות שלו, כך ש-200 rollouts לא קנו שום ראיה חדשה. עכשיו re-gate משתמש ב-tags חדשים ומאחד את כל ה-replicates.</p>
+  </aside>
+</section>
+
+<!-- ═══ 14. Infra errors are not zeros ═══ -->
+<section class="slide">
+  <h2>Infra errors are not zeros</h2>
+  <div class="flow">
+    <div class="step"><b>run_one raises</b><span>trial k of task t</span></div><div class="arrow">→</div>
+    <div class="step"><b>error Rollout</b><span>Rollout.error is set</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>who raised it?</b><span>candidate code or infra</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>missing data</b><span>valid_trials = 0</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>excluded</b><span>from mean and paired Δ</span></div><div class="arrow">→</div>
+    <div class="step"><b>coverage</b><span>n_scored / n_tasks</span></div>
+  </div>
+  <div class="row mt">
+    <div class="col">
+      <div class="card red"><h3>The incident</h3><p>Docker Hub returned HTTP 429. 50 trials never ran, but each arrived as reward 0.0. The paired gate read <code>Δ̄ = −0.64</code> and rejected a candidate that was never evaluated.</p></div>
+    </div>
+    <div class="col">
+      <table class="tight">
+        <tr><th>Key</th><th>Default</th><th>Effect</th></tr>
+        <tr><td><code>errored_trial_policy</code></td><td><code>drop</code></td><td><code>fail</code>: <code>error_kind=candidate</code> scores 0.0</td></tr>
+        <tr><td><code>fault_attribution</code></td><td><code>false</code></td><td>tag the candidate's own exceptions</td></tr>
+        <tr><td><code>coverage_policy</code></td><td><code>veto</code></td><td><code>tipping</code>: retry, quarantine, impute −0.5</td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="small muted">Source: loop.has_valid_trials, aggregate_scores · trials.py · coverage.py · gatecfg.py · <span class="testname">test_infra_errors_not_zeros.py, test_coverage_quarantine.py</span></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:30–14:20]</span> Rule: an unscored trial is missing data, not a reward of zero. When run_one raises, the trial pool turns the exception into an error rollout. The harness counts valid trials per task. A task with zero valid trials stays in the per-task report, but it is excluded from the split mean and from the paired deltas. SplitResult.coverage is the fraction that scored, and the gate goes indecisive below 0.6.</p>
+    <p>Why so strict? Read the box. In a SWE-bench run, Docker Hub rate-limited the image pulls. Every crashed trial arrived as "task not solved". Pairing made it worse: an unscored task that the parent passed counted as minus one. A candidate was rejected at minus 0.64 without one task evaluated.</p>
+    <p>There is one exception, and it is opt-in. If the candidate's own code raised the error, for example an edited tool that crashes, that is a real failure. With fault_attribution and errored_trial_policy fail, those trials score zero. Network errors, timeouts and HTTP 429 or 5xx are never blamed on the candidate.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:30–14:20]</span> הכלל: trial שלא נמדד הוא נתון חסר, לא reward של אפס. כש-run_one זורק exception, ה-pool הופך אותו ל-rollout עם שגיאה. ה-harness סופר trials תקפים לכל משימה. משימה עם אפס trials תקפים נשארת בדוח לפי משימה, אבל לא נכנסת לממוצע של ה-split ולא ל-paired deltas. SplitResult.coverage הוא החלק שנמדד, וה-gate הופך ל-indecisive מתחת ל-0.6.</p>
+    <p>למה כל כך מחמיר? קראו את התיבה. בריצת SWE-bench, Docker Hub הגביל את קצב משיכת ה-images. כל trial שקרס הגיע כ"משימה לא נפתרה". הזיווג החמיר את זה: משימה שלא נמדדה וה-parent עבר אותה נספרה כמינוס אחד. candidate נדחה במינוס 0.64 בלי שאף משימה נבדקה.</p>
+    <p>יש חריג אחד, והוא אופציונלי. אם הקוד של ה-candidate עצמו זרק את השגיאה, למשל tool ערוך שקורס, זה כשלון אמיתי. עם fault_attribution ו-errored_trial_policy fail, ה-trials האלה מקבלים אפס. שגיאות רשת, timeouts ו-HTTP 429 או 5xx אף פעם לא נזקפים ל-candidate.</p>
+  </aside>
+</section>
+
+<!-- ═══ 15. Footprint ═══ -->
+<section class="slide">
+  <h2>The gate measures only what the edit can reach</h2>
+  <div class="row">
+    <div class="col" style="flex:1.2">
+      <svg class="diagram" viewBox="0 0 640 300">
+        <text class="title" x="10" y="24">30 val tasks · the edit touches tool <tspan class="mono acc">lookup()</tspan></text>
+        <g>
+          <rect class="box green" x="10" y="44" width="34" height="34" rx="6"/><rect class="box green" x="50" y="44" width="34" height="34" rx="6"/><rect class="box green" x="90" y="44" width="34" height="34" rx="6"/>
+          <rect class="box" x="130" y="44" width="34" height="34" rx="6"/><rect class="box" x="170" y="44" width="34" height="34" rx="6"/><rect class="box" x="210" y="44" width="34" height="34" rx="6"/><rect class="box" x="250" y="44" width="34" height="34" rx="6"/><rect class="box" x="290" y="44" width="34" height="34" rx="6"/><rect class="box" x="330" y="44" width="34" height="34" rx="6"/><rect class="box" x="370" y="44" width="34" height="34" rx="6"/><rect class="box" x="410" y="44" width="34" height="34" rx="6"/><rect class="box" x="450" y="44" width="34" height="34" rx="6"/><rect class="box" x="490" y="44" width="34" height="34" rx="6"/><rect class="box" x="530" y="44" width="34" height="34" rx="6"/><rect class="box" x="570" y="44" width="34" height="34" rx="6"/>
+        </g>
+        <text class="label" x="10" y="100">3 tasks call lookup() in their rollouts</text>
+        <text class="label" x="370" y="100">27 cannot be reached (15 shown)</text>
+        <text class="title" x="10" y="150">without footprint</text>
+        <text class="label mono" x="10" y="174">Δ = [+.3, +.2, +.3, ±noise × 27] → SE dominated by noise</text>
+        <text class="title" x="10" y="220">with footprint (zero-padded)</text>
+        <text class="label mono" x="10" y="244">Δ = [+.3, +.2, +.3, 0, 0, … 0] → same length, same scale</text>
+        <text class="label" x="10" y="284">Unsure which tasks are reached? footprint returns None → full split.</text>
+      </svg>
+    </div>
+    <div class="col">
+      <div class="term"><span class="name">gate_footprint</span><span class="kind">spec key</span><div class="def">On by default for hill-climb. GEPA never masks. Built from the diff's touched symbols and the rollouts that call them.</div></div>
+      <div class="term amber mt"><span class="name">move_is_resolved</span><span class="kind">per task</span><div class="def">A task "broke" or "fixed" only if <code>|cand − par| &gt; 2·SE</code>, with SE = √(se_p² + se_c²).</div></div>
+      <div class="term violet mt"><span class="name">task_ownership.py</span><span class="kind">decides nothing</span><div class="def">Which candidate scores best per task (GEPA style). Used for parent choice only.</div></div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/footprint.py · harness._paired_deltas, move_is_resolved · <span class="testname">test_gate_measures_only_what_the_edit_can_reach.py</span></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:20–15:10]</span> An audit of run_finalrun6 found the gate had no power. Each edit touched a few tasks, but the delta was averaged over all 30 val tasks. The 27 untouched tasks added only re-measurement noise. SE ran 0.022 to 0.035, while real effects were 0.011 to 0.05.</p>
+    <p>The fix is the footprint. footprint.py reads the named symbols in the diff and finds the val tasks whose rollouts exercise them. Outside the footprint, delta is zero by construction, so the code writes a zero instead of the noisy measurement. The vector keeps its full length, so the mean stays on the val scale. This is dangerous if the footprint is too small, because a hidden regression would be zeroed. So when the code is not sure, footprint returns None and the full split is used.</p>
+    <p>The same audit gave move_is_resolved: one flipped rollout out of ten is not a behavioural break. And a note: task_ownership.py tracks per-task best scorers, but it decides nothing.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:20–15:10]</span> ביקורת על run_finalrun6 מצאה שלא היה ל-gate כוח סטטיסטי. כל עריכה נגעה בכמה משימות, אבל הדלתא חושבה על כל 30 משימות ה-val. 27 המשימות שלא נגעו בהן הוסיפו רק רעש של מדידה חוזרת. ה-SE היה 0.022 עד 0.035, כשהאפקטים האמיתיים היו 0.011 עד 0.05.</p>
+    <p>התיקון הוא ה-footprint. footprint.py קורא את הסמלים בשם שמופיעים ב-diff ומוצא את משימות ה-val שה-rollouts שלהן מפעילים אותם. מחוץ ל-footprint, הדלתא היא אפס מעצם ההגדרה, אז הקוד כותב אפס במקום המדידה הרועשת. הווקטור שומר על אורכו המלא, כך שהממוצע נשאר בסקאלה של val. זה מסוכן אם ה-footprint קטן מדי, כי רגרסיה נסתרת תאופס. לכן כשהקוד לא בטוח, footprint מחזיר None ומשתמשים בכל ה-split.</p>
+    <p>אותה ביקורת הולידה את move_is_resolved: rollout אחד שהתהפך מתוך עשרה הוא לא שבירה התנהגותית. והערה: task_ownership.py עוקב אחרי מי הכי טוב בכל משימה, אבל הוא לא מחליט שום דבר.</p>
+  </aside>
+</section>
+
+<!-- ═══ 16. Screen ladder ═══ -->
+<section class="slide">
+  <h2>Screen ladder: cheap triage that may never accept</h2>
+  <div class="flow">
+    <div class="step violet"><b>candidate</b><span>new edit</span></div><div class="arrow">→</div>
+    <div class="step"><b>tier 1</b><span>25% of val (≥ <code>MIN_K</code> 6)</span></div><div class="arrow">→</div>
+    <div class="step"><b>tier 2</b><span>50% of val</span></div><div class="arrow">→</div>
+    <div class="step"><b>tier 3</b><span>75% of val</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>full-val gate</b><span>the only accept</span></div>
+  </div>
+  <div class="row mt">
+    <div class="col">
+      <div class="card red"><h3>kill rule (subsample.py)</h3><p><code>screen_decision</code> prints <code>kill</code> or <code>promote</code>, never <code>accept</code>.</p><p>Kill iff <code>mean(Δ) ≤ GROSS_KILL_DELTA</code> (−0.15), whatever the SE.</p></div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>subset = informative + holdout</h3><p>Failing and high-variance tasks, plus a random holdout of tasks the parent passes, so a screen can see a regression.</p></div>
+    </div>
+    <div class="col">
+      <div class="card blue"><h3>screen_accounting.py</h3><p>affected + sentinel + random stratum with known inclusion odds → Horvitz-Thompson estimate. <code>role: scheduling_signal</code>, <code>result: false</code>.</p></div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/subsample.py (TIER_FRAC, MIN_K, GROSS_KILL_DELTA) · agent-optimize scripts/screen.py · <span class="testname">test_subsample.py, test_round_requires_screen_ladder.py, test_screen_accounting.py</span></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:10–16:00]</span> A full-val evaluation is the main cost of a run. Most edits are not close calls; they are clearly neutral or clearly harmful. So there is a screen ladder: rung one screens a quarter of val, never fewer than six tasks; then half; then three quarters.</p>
+    <p>The hard rule: a screen may kill, never accept. Errors here are not symmetric. A false kill throws away a good edit and leaves no trace. A false promote costs one full-val evaluation, and then the honest gate decides. So the screen leans toward promote. The kill rule changed in issue 684: the old significance test could never fire on 5 to 11 tasks, so now a screen kills only on a gross drop of 0.15 or more.</p>
+    <p>In agent-optimize, round.py refuses a candidate with no screen record unless the driver passes skip-screen-ladder. screen_accounting is an opt-in design with known inclusion probabilities, so the screen gives an unbiased estimate. It is still labelled a scheduling signal, not a result.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:10–16:00]</span> הערכה מלאה על val היא העלות העיקרית של ריצה. רוב העריכות הן לא מקרים גבוליים; הן ניטרליות בבירור או מזיקות בבירור. לכן יש screen ladder: השלב הראשון בודק רבע מ-val, ולא פחות משש משימות; אחר כך חצי; אחר כך שלושה רבעים.</p>
+    <p>הכלל הקשיח: screen יכול להרוג, אף פעם לא לקבל. הטעויות כאן לא סימטריות. kill שגוי זורק עריכה טובה ולא משאיר עקבות. promote שגוי עולה הערכת val מלאה אחת, ואז ה-gate הכן מחליט. לכן ה-screen נוטה ל-promote. כלל ה-kill השתנה ב-issue 684: מבחן המובהקות הישן לא יכול היה לפעול על 5 עד 11 משימות, אז עכשיו screen הורג רק בירידה גסה של 0.15 או יותר.</p>
+    <p>ב-agent-optimize, round.py מסרב ל-candidate בלי רשומת screen, אלא אם ה-driver מעביר skip-screen-ladder. screen_accounting הוא עיצוב אופציונלי עם הסתברויות הכללה ידועות, כך שה-screen נותן אומד לא מוטה. הוא עדיין מסומן כ-scheduling signal ולא כתוצאה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 17. Promotion, racing, posterior, objectives ═══ -->
+<section class="slide">
+  <h2>Stronger accept rules (all opt-in)</h2>
+  <table class="tight">
+    <tr><th>Module</th><th>Rule in one line</th><th>Turn on with</th></tr>
+    <tr><td><code>promotion.py</code> rule P</td><td>Paired screen <code>mean &gt; k·SE</code> on the unmasked vector, then <b>confirm</b> with 10 fresh trials: mean ≥ 0.02 and z ≥ 2.0</td><td><code>promotion_rule: P</code></td></tr>
+    <tr><td><code>racing.py</code> + <code>evaluator</code> rule P2</td><td>K=8 candidates race on F: kill-only <code>halve</code> rungs (12, 36 tasks); ≤ 2 survivors <code>confirm_with_control</code> on hidden C (z ≥ 1.7)</td><td><code>promotion_rule: P2</code> + <code>split_mode: pooled</code></td></tr>
+    <tr><td><code>racing.gs_decide</code></td><td>K=1: group-sequential looks (12…147 rollouts), O'Brien-Fleming boundary: accept / kill / continue</td><td>rule P2, single candidate</td></tr>
+    <tr><td><code>posterior.py</code></td><td>Beta posterior per task; accept iff P(D &gt; 0.02) ≥ 0.95; budget out undecided → inconclusive</td><td><code>optimizer.ablation.active_eval</code></td></tr>
+    <tr><td><code>objectives.py</code></td><td><code>reward_gated</code>: reward feasibility first, then matched-success cost; a trade-off is archived, never champion</td><td><code>cost_gating</code> (agent-optimize)</td></tr>
+    <tr><td><code>gate.py</code> multi-objective</td><td><code>pareto</code>: not dominated + a real win; <code>epsilon_constraint</code>: max reward under a ceiling</td><td><code>gate_mode</code> + <code>objectives</code> / <code>constraints</code></td></tr>
+  </table>
+  <div class="callout amber mt" style="font-size:18px">Common idea: the measurement that <b>selected</b> a candidate is biased upward. Confirm on fresh trials or a hidden stratum.</div>
+  <p class="small muted">Tests: <span class="testname">test_promotion_rule_p.py, test_p2_evaluator.py, test_p2_null_calibration.py, test_posterior_rule_never_accepts_replicate_nulls.py, test_objectives.py, test_gate_pareto.py</span></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:00–16:50]</span> The paired gate is the default. These are stronger rules for when you need them. They share one idea: the measurement that picked the winner is biased upward, so confirm it on new data.</p>
+    <p>Rule P screens with the paired gate, then re-measures candidate and incumbent with ten fresh trials and new seeds. It promotes only if the confirmed mean is at least 0.02 and z is at least 2. Rule P2 is a racing design. Eight candidates race on the feedback stratum with kill-only successive halving. At most two survivors get one confirmation on the hidden stratum C, against a control measured at the same time. With one candidate, gs_decide uses group-sequential looks.</p>
+    <p>posterior.py is a Bayesian rule; test_posterior_rule_never_accepts_replicate_nulls checks it on byte-identical replicates. objectives.py handles cost honestly: cost is compared only on tasks both arms solve. Pareto and epsilon-constraint require each objective to clear its own k times SE bar.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:00–16:50]</span> ה-gate המזווג הוא ברירת המחדל. אלה כללים חזקים יותר למקרה שצריך אותם. יש להם רעיון משותף: המדידה שבחרה את המנצח מוטה כלפי מעלה, ולכן מאמתים על נתונים חדשים.</p>
+    <p>כלל P עושה screen עם ה-gate המזווג, ואז מודד מחדש את ה-candidate ואת ה-incumbent עם עשרה trials חדשים ו-seeds חדשים. הוא מקדם רק אם הממוצע המאומת לפחות 0.02 ו-z לפחות 2. כלל P2 הוא עיצוב של racing. שמונה candidates מתחרים על ה-feedback stratum עם successive halving שרק הורג. לכל היותר שני שורדים מקבלים אימות אחד על ה-stratum הנסתר C, מול control שנמדד באותו זמן. עם candidate אחד, gs_decide משתמש ב-group-sequential looks.</p>
+    <p>posterior.py הוא כלל בייסיאני; test_posterior_rule_never_accepts_replicate_nulls בודק אותו על replicates זהים בבתים. objectives.py מטפל בעלות בכנות: משווים עלות רק על משימות ששני הצדדים פותרים. Pareto ו-epsilon-constraint דורשים שכל objective יעבור את סף ה-k כפול SE שלו.</p>
+  </aside>
+</section>
+
+<!-- ═══ 18. Sealed test: lifecycle ═══ -->
+<section class="slide">
+  <h2>The sealed test split: scored exactly once</h2>
+  <div class="flow">
+    <div class="step blue"><b>write_splits</b><span><code>test_used: false</code></span></div><div class="arrow">→</div>
+    <div class="step"><b>reserve_test()</b><span>raise if seal burned</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>begin_test_attempt()</b><span>refuse if <code>rollouts/test/*.json</code> exist</span></div><div class="arrow">→</div>
+    <div class="step"><b>score test</b><span><code>FINAL</code> + <code>FINAL_seed</code></span></div><div class="arrow">→</div>
+    <div class="step red"><b>commit_test()</b><span><code>mark_test_used</code> → true</span></div>
+  </div>
+  <div class="row mt">
+    <div class="col">
+      <div class="card green"><h3>Seal on success</h3><p>Crash <b>before</b> scoring: the seal is unused, a retry may score test once.</p></div>
+    </div>
+    <div class="col">
+      <div class="card amber"><h3>Second-look guard</h3><p>Crash <b>after</b> scoring, before commit: test rollouts exist, so a retry raises <code>TestSealError</code>.</p></div>
+    </div>
+    <div class="col">
+      <div class="card red"><h3>Override</h3><p><code>CAPEVOLVE_ALLOW_TEST_RESCORE=1</code>: deliberate, and recorded so the report discloses it.</p></div>
+    </div>
+  </div>
+  <p class="small mt">One finalize is two evals: the best as <code>FINAL</code> and the untouched seed as <code>FINAL_seed</code>, so the reader can see if the edit beat the start.</p>
+  <p class="small muted">Source: rundir.py reserve_test / begin_test_attempt / commit_test · splits.Splits.mark_test_used · harness.finalize · <span class="testname">test_test_seal_rescore_guard.py, test_core.py::test_test_split_sealed_after_one_use</span></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:50–17:40]</span> Now the seal. splits.json carries a flag, test_used. It starts false. finalize does four steps. reserve_test checks the flag without flipping it. begin_test_attempt is called once per finalize attempt: if test rollout files already exist, it refuses. Then finalize scores test twice: the best candidate as FINAL and the seed as FINAL_seed. Only after both results are written does commit_test flip the flag.</p>
+    <p>Why this order? The first version, consume_test, burned the seal before scoring. A transient crash then destroyed the run's headline number forever. So now the seal burns only on success. But that opened a hole: a finalize killed by a timeout after scoring could be retried, and the headline became a second look at test. This happened in a real run. begin_test_attempt closes it.</p>
+    <p>If you really must re-score, set CAPEVOLVE_ALLOW_TEST_RESCORE. It is an env var on purpose, so the bypass is visible.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:50–17:40]</span> עכשיו החותם. splits.json נושא דגל בשם test_used. הוא מתחיל כ-false. finalize עושה ארבעה צעדים. reserve_test בודק את הדגל בלי להפוך אותו. begin_test_attempt נקרא פעם אחת בכל ניסיון finalize: אם כבר קיימים קבצי rollout של test, הוא מסרב. אחר כך finalize מודד את test פעמיים: את ה-candidate הטוב ביותר כ-FINAL ואת ה-seed כ-FINAL_seed. רק אחרי ששתי התוצאות נכתבו, commit_test הופך את הדגל.</p>
+    <p>למה הסדר הזה? הגרסה הראשונה, consume_test, שרפה את החותם לפני המדידה. קריסה רגעית הרסה אז את המספר הראשי של הריצה לתמיד. לכן עכשיו החותם נשרף רק בהצלחה. אבל זה פתח חור: finalize שנהרג ב-timeout אחרי המדידה יכול היה לרוץ שוב, והמספר הראשי הפך למבט שני על test. זה קרה בריצה אמיתית. begin_test_attempt סוגר את החור.</p>
+    <p>אם באמת חייבים למדוד שוב, מגדירים CAPEVOLVE_ALLOW_TEST_RESCORE. זה משתנה סביבה בכוונה, כדי שהעקיפה תהיה גלויה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 19. Tamper defenses ═══ -->
+<section class="slide">
+  <h2>Three layers keep the optimizer away from test and gold</h2>
+  <svg class="diagram" viewBox="0 0 1136 300">
+    <defs><marker id="ar19" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box violet" x="10" y="110" width="170" height="80" rx="12"/><text class="title" x="95" y="145" text-anchor="middle">LLM optimizer</text><text class="label" x="95" y="168" text-anchor="middle">edits candidate files</text>
+    <rect class="box blue" x="260" y="10" width="270" height="80" rx="12"/><text class="title" x="395" y="42" text-anchor="middle">1 · PreToolUse hook</text><text class="label mono" x="395" y="66" text-anchor="middle">deny_sealed_edits.py</text>
+    <rect class="box amber" x="260" y="110" width="270" height="80" rx="12"/><text class="title" x="395" y="142" text-anchor="middle">2 · integrity manifest</text><text class="label mono" x="395" y="166" text-anchor="middle">integrity.snapshot / verify</text>
+    <rect class="box red" x="260" y="210" width="270" height="80" rx="12"/><text class="title" x="395" y="242" text-anchor="middle">3 · the core seal</text><text class="label mono" x="395" y="266" text-anchor="middle">TestSealError, TrainGateError</text>
+    <path class="line" d="M180,140 L260,50" marker-end="url(#ar19)"/>
+    <path class="line" d="M180,150 L260,150" marker-end="url(#ar19)"/>
+    <path class="line" d="M180,160 L260,250" marker-end="url(#ar19)"/>
+    <text class="label" x="580" y="34">Blocks Edit/Write/MultiEdit/NotebookEdit on: splits.json, rollouts/test/,</text>
+    <text class="label" x="580" y="56">*test*gold* / *gold*test*, files named after a sealed test id. Exit 2 = blocked.</text>
+    <text class="label" x="580" y="78" style="fill:#fbbf24">Only works when the optimizer runs inside Claude Code.</text>
+    <text class="label" x="580" y="134"><tspan class="mono">protected_paths: [default]</tspan> → *gold*, tasks/*, data/*, tests/*,</text>
+    <text class="label" x="580" y="156">conftest.py, scorer.py, adapter.py, splits.json. Hashed before, verified</text>
+    <text class="label" x="580" y="178" style="fill:#4ade80">before any rollout is paid. Host-independent. Tamper → INDECISIVE.</text>
+    <text class="label" x="580" y="234">Even if both layers fail, only finalize can score test, once,</text>
+    <text class="label" x="580" y="256">and the gate refuses every split except val.</text>
+  </svg>
+  <div class="callout red mt" style="font-size:18px">A tampered candidate is <b>discarded</b>, never scored 0.0: the number describes a broken harness, not the edit. Added files count as tampering.</div>
+  <p class="small muted">Source: plugins/cap-evolve/hooks/hooks.json, deny_sealed_edits.py · core/cap_evolve/integrity.py · <span class="testname">test_integrity.py, test_integrity_wiring.py::test_tampered_candidate_is_indecisive_and_costs_nothing</span></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:40–18:20]</span> How do we stop the optimizer from editing gold? Three layers. Layer one is a Claude Code plugin hook. hooks.json registers deny_sealed_edits.py as a PreToolUse hook on Edit, Write, MultiEdit and NotebookEdit. It blocks splits.json, test rollouts, gold answer files, and files named after a test id. Exit code 2 blocks the call and tells the model why. The limit: it only works when Claude Code runs the edit.</p>
+    <p>Layer two is host-independent. With protected_paths in the spec, integrity.snapshot hashes the protected files before the optimizer runs, and verify checks them before any rollout is paid. Codex, Gemini or a shell script cannot get past a hash. A tampered candidate is indecisive: discarded, not scored zero. This layer is off by default.</p>
+    <p>Layer three is the core seal from the previous slide. Even if both other layers fail, the core will not score test twice or gate on train.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:40–18:20]</span> איך מונעים מה-optimizer לערוך את ה-gold? שלוש שכבות. שכבה ראשונה היא hook של ה-plugin ל-Claude Code. hooks.json רושם את deny_sealed_edits.py כ-PreToolUse hook על Edit, Write, MultiEdit ו-NotebookEdit. הוא חוסם את splits.json, rollouts של test, קבצי תשובות gold, וקבצים ששמם הוא id של משימת test. exit code 2 חוסם את הקריאה ומסביר למודל למה. המגבלה: זה עובד רק כש-Claude Code מבצע את העריכה.</p>
+    <p>שכבה שנייה לא תלויה ב-host. עם protected_paths ב-spec, integrity.snapshot מחשב hash לקבצים המוגנים לפני שה-optimizer רץ, ו-verify בודק אותם לפני שמשלמים על rollout כלשהו. Codex, Gemini או סקריפט shell לא יכולים לעבור hash. candidate שעבר tampering הוא indecisive: נזרק, לא מקבל אפס. השכבה הזו כבויה כברירת מחדל.</p>
+    <p>שכבה שלישית היא החותם של ה-core מהשקף הקודם. גם אם שתי השכבות האחרות נכשלות, ה-core לא ימדוד את test פעמיים ולא יעשה gate על train.</p>
+  </aside>
+</section>
+
+<!-- ═══ 20. Lessons ═══ -->
+<section class="slide">
+  <h2>Lessons from real runs</h2>
+  <div class="grid-2">
+    <div class="card amber"><h3>HOLDOUT_PROTOCOL.md (tau2 airline)</h3>
+      <ul><li>50 tasks: 0-29 are train = val, so val is "selection-biased"</li>
+      <li>Tasks 30-49 were scored once: "development-exposed"</li>
+      <li>No test traces in edits, prompts or fixtures</li>
+      <li>Every report states ids, seeds, candidates tried</li>
+      <li>Do not invent a fresh holdout that does not exist</li></ul></div>
+    <div class="card blue"><h3>MEASUREMENT_FINDINGS.md</h3>
+      <ul><li>Byte-identical code, same seeds, temp 0: arms still differ by ~binomial SE</li>
+      <li>Calibrate first: two identical arms give the real bar</li>
+      <li>Verified per-task gains do not compose: a 6-mechanism merge measured −0.0146</li>
+      <li>Per-task attribution needs n≈40; n=10 tables only suggest hypotheses</li></ul></div>
+  </div>
+  <div class="callout mt" style="font-size:18px">Explore fast, gate slow. Integrate one change at a time, with canaries from the whole suite.</div>
+  <p class="small muted">Source: docs/HOLDOUT_PROTOCOL.md · docs/MEASUREMENT_FINDINGS.md (sections 1, 2, 5)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:20–19:00]</span> Two docs hold the lessons from tau2 airline. HOLDOUT_PROTOCOL is about labels. Airline has only 50 tasks. Tasks 0 to 29 served as both train and val, so any val number there is a fit metric. Tasks 30 to 49 were already scored once, so they are "development-exposed". The protocol says this plainly and does not pretend a fresh holdout exists. Every report must state the ids, the seeds, and how many candidates were tried.</p>
+    <p>MEASUREMENT_FINDINGS is about the instrument. Byte-identical code on identical seeds at temperature zero still did not reproduce. Once a load-dependent excess was removed, the rest matched plain binomial noise. The lesson: measure two identical arms first, and that is your bar. Second lesson: gains verified one at a time did not compose. A merge of six verified mechanisms measured slightly negative. So integrate one step at a time.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:20–19:00]</span> שני מסמכים מחזיקים את הלקחים מ-tau2 airline. HOLDOUT_PROTOCOL עוסק בתיוג. ל-airline יש רק 50 משימות. משימות 0 עד 29 שימשו גם כ-train וגם כ-val, ולכן כל מספר val שם הוא מדד fit. משימות 30 עד 49 כבר נמדדו פעם אחת, ולכן הן "development-exposed". הפרוטוקול אומר את זה בפשטות ולא מעמיד פנים שיש holdout טרי. כל דוח חייב לציין את ה-ids, ה-seeds, וכמה candidates נוסו.</p>
+    <p>MEASUREMENT_FINDINGS עוסק במכשיר המדידה. קוד זהה בבתים על seeds זהים ב-temperature אפס עדיין לא שוחזר. אחרי שהוסר עודף שתלוי בעומס, מה שנשאר התאים לרעש בינומי רגיל. הלקח: למדוד קודם שתי זרועות זהות, וזה הסף שלכם. לקח שני: שיפורים שאומתו אחד אחד לא הצטברו. מיזוג של שישה מנגנונים מאומתים נמדד קצת שלילי. לכן משלבים צעד אחד בכל פעם.</p>
+  </aside>
+</section>
+
+<!-- ═══ 21. Tests that read like rules ═══ -->
+<section class="slide">
+  <h2>Tests that read like rules</h2>
+  <div class="grid-2">
+    <div class="tree"><span class="d">core/tests/</span>
+├── <span class="h">test_a_failed_gate_is_not_a_verdict.py</span>
+├── <span class="h">test_an_unresolved_gate_is_not_a_rejection.py</span>
+├── <span class="h">test_a_regate_accumulates_evidence.py</span>
+├── <span class="h">test_gate_measures_only_what_the_edit_can_reach.py</span>
+├── <span class="h">test_infra_errors_not_zeros.py</span>
+├── test_pass_k_undefined.py
+└── test_posterior_rule_never_accepts_replicate_nulls.py</div>
+    <div class="tree"><span class="d">core/tests/</span>
+├── test_core.py  <span class="c"># splits, seal, train gate</span>
+├── test_splits_input.py
+├── test_test_seal_rescore_guard.py
+├── test_sealed_confirm_data.py
+├── test_integrity_wiring.py
+├── test_round_requires_screen_ladder.py
+└── test_coverage_quarantine.py</div>
+  </div>
+  <div class="callout green mt" style="font-size:19px">Each docstring names the run and the numbers that exposed the bug. Read the docstring before you change the rule.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:00–19:30]</span> Here is your reading list. The test file names state the rules: a failed gate is not a verdict; an unresolved gate is not a rejection; a re-gate accumulates evidence; the gate measures only what the edit can reach; infra errors are not zeros.</p>
+    <p>Open any of them and the docstring tells the story: which run, which numbers, what went wrong. For example, test_infra_errors_not_zeros starts with the Docker Hub 429 incident and the minus 0.64 delta. If you ever want to relax one of these rules, read that docstring first. Most of these rules exist because a plausible shortcut failed in a real run. Chapter 8 covers how to run these tests and how to add one.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:00–19:30]</span> זו רשימת הקריאה שלכם. שמות קבצי הבדיקות מנסחים את הכללים: gate שנכשל הוא לא החלטה; gate לא מוכרע הוא לא דחייה; re-gate צובר ראיות; ה-gate מודד רק מה שהעריכה יכולה להשפיע עליו; שגיאות תשתית הן לא אפסים.</p>
+    <p>פתחו כל אחד מהם וה-docstring מספר את הסיפור: איזו ריצה, אילו מספרים, מה השתבש. למשל, test_infra_errors_not_zeros מתחיל בתקרית של Docker Hub 429 והדלתא של מינוס 0.64. אם פעם תרצו להקל על אחד הכללים, קראו קודם את ה-docstring. רוב הכללים קיימים כי קיצור דרך סביר נכשל בריצה אמיתית. פרק 8 מסביר איך מריצים את הבדיקות ואיך מוסיפים אחת.</p>
+  </aside>
+</section>
+
+<!-- ═══ 22. Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <div>
+      <ul>
+        <li>Splits are seeded and frozen in <code>splits.json</code>; nothing re-splits</li>
+        <li>Gate on val only; accept iff <code>Δ̄ &gt; k·SE</code>, paired by task</li>
+        <li>Missing data is not 0.0; low coverage is indecisive</li>
+        <li>Indecisive charges the iteration, never the stall</li>
+        <li>Screens may kill, never accept</li>
+        <li>Test is scored once, at finalize, with <code>FINAL_seed</code> beside it</li>
+      </ul>
+    </div>
+    <div class="v-center">
+      <div class="card amber"><h3>Next: Chapter 7</h3><p><code>07-algorithms-optimizers-skills.html</code></p><p>The skill library: hill-climb, GEPA, skillopt, agent-optimize, optimizer backends, and how they all call this gate.</p></div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:30–20:00]</span> Six things to remember. The split is made once and frozen. The gate reads val only and needs the mean paired delta to beat k standard errors. A trial that did not run is missing, not zero, and when too much is missing the gate does not judge. Indecisive costs an iteration but does not count toward stopping. Screens are triage: they kill, they never accept. And test is scored once, next to the seed, so the reported number has a baseline.</p>
+    <p>In chapter 7 we look at the algorithms and optimizers. You will see that every one of them calls the same gate we studied today.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:30–20:00]</span> שישה דברים לזכור. ה-split נוצר פעם אחת ומוקפא. ה-gate קורא רק val ודורש שממוצע הדלתא המזווגת יעבור k שגיאות תקן. trial שלא רץ הוא חסר, לא אפס, וכשחסר יותר מדי ה-gate לא שופט. indecisive עולה iteration אבל לא נספר לעצירה. screens הם מיון ראשוני: הם הורגים, אף פעם לא מקבלים. ו-test נמדד פעם אחת, לצד ה-seed, כך שלמספר המדווח יש נקודת השוואה.</p>
+    <p>בפרק 7 נסתכל על האלגוריתמים וה-optimizers. תראו שכל אחד מהם קורא לאותו gate שלמדנו היום.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

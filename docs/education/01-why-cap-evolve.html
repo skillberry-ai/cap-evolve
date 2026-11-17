@@ -1,0 +1,693 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 1 · Why cap-evolve</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  .shot { width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: 10px; background: #000; }
+  .map td { padding: 7px 12px; font-size: 17px; }
+  .map td.n { font-family: var(--mono); color: var(--accent-ink); width: 40px; }
+  .map td.t { font-family: var(--mono); color: var(--muted); width: 90px; text-align: right; }
+  .map tr.here td { background: var(--amber-soft); }
+  .res td { font-size: 17px; }
+  .card.amber, .card.green, .card.red, .card.violet, .step.amber, .step.green, .step.red, .step.violet { color: var(--body); }
+  .res td.num { font-family: var(--mono); white-space: nowrap; }
+</style>
+</head>
+<body data-chapter="Chapter 1 · Why cap-evolve" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ 1. Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 1 of 8</div>
+  <h1>Why cap-evolve</h1>
+  <p class="lead">The problem it solves, what it optimizes, how one honest number is produced, and how to see it work in two minutes.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: intro</span><span class="pill amber">no API key needed</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:45]</span> Welcome to the cap-evolve onboarding course. This is chapter one of eight. Each chapter is about twenty minutes.</p>
+    <p>This chapter is the big picture. We do not go deep here. The goal is simple: after twenty minutes you can explain to a colleague what cap-evolve does, why it exists, and why its numbers can be trusted. You will also know how to run a full optimization on your laptop in two minutes, with no API key and no model call.</p>
+    <p>Later chapters go into the vocabulary, the repository, the object model, the run itself, the statistics, and the skill library. So when I skip a detail today, it is on purpose. I will tell you which chapter covers it.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:45]</span> ברוכים הבאים לקורס ההכשרה של cap-evolve. זה פרק אחד מתוך שמונה, וכל פרק הוא בערך עשרים דקות.</p>
+    <p>הפרק הזה הוא התמונה הגדולה. אנחנו לא צוללים לעומק. המטרה פשוטה: אחרי עשרים דקות תוכלו להסביר לחבר צוות מה cap-evolve עושה, למה הוא קיים, ולמה אפשר לסמוך על המספרים שהוא מוציא. תדעו גם איך להריץ אופטימיזציה מלאה על הלפטופ בשתי דקות, בלי API key ובלי קריאה למודל.</p>
+    <p>הפרקים הבאים נכנסים למונחים, ל-repository, למודל האובייקטים, לריצה עצמה, לסטטיסטיקה ולספריית ה-skills. אז כשאני מדלג היום על פרט מסוים, זה בכוונה, ואגיד באיזה פרק הוא מופיע.</p>
+  </aside>
+</section>
+
+<!-- ═══ 2. Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-2">
+    <div class="card blue"><h3>1 · The problem</h3><p>Agents fail on real tasks. Hand-tuning is slow and not measured honestly.</p></div>
+    <div class="card violet"><h3>2 · The idea</h3><p>Optimize what the agent <b>reads</b>, not the model weights.</p></div>
+    <div class="card amber"><h3>3 · The loop + honest eval</h3><p>Evaluate → diagnose → propose → gate on val → commit. Test scored once.</p></div>
+    <div class="card green"><h3>4 · Results and positioning</h3><p>What each published number means, and how it compares to related work.</p></div>
+    <div class="card"><h3>5 · How to use it</h3><p>Three paths: Claude Code plugin, other hosts, manual adapter + CLI.</p></div>
+    <div class="card"><h3>6 · Demo + course map</h3><p><code>toy_calc</code> in two minutes, the dashboard, and the 8 chapters.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:45–1:30]</span> Here is the plan for today, in six parts.</p>
+    <ul>
+      <li>First, the problem: why agents need improvement, and why the usual way of improving them is weak.</li>
+      <li>Second, the core idea: we change the text and code the agent reads. We never touch model weights.</li>
+      <li>Third, the optimization loop at a high level, and the idea of honest evaluation.</li>
+      <li>Fourth, the published results, with their caveats, and how cap-evolve sits next to GEPA, DSPy and similar work.</li>
+      <li>Fifth, the three ways people use it.</li>
+      <li>Last, a two-minute demo called toy_calc, a look at the dashboard, and the map of the whole course.</li>
+    </ul>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:45–1:30]</span> זו התוכנית להיום, בשישה חלקים.</p>
+    <ul>
+      <li>קודם, הבעיה: למה סוכנים צריכים שיפור, ולמה הדרך הרגילה לשפר אותם חלשה.</li>
+      <li>שנית, הרעיון המרכזי: אנחנו משנים את הטקסט והקוד שהסוכן קורא. אנחנו אף פעם לא נוגעים במשקלות של המודל.</li>
+      <li>שלישית, הלולאה של האופטימיזציה ברמה גבוהה, והרעיון של הערכה כנה.</li>
+      <li>רביעית, התוצאות שפורסמו, עם ההסתייגויות שלהן, ואיך cap-evolve עומד ליד GEPA, DSPy ועבודות דומות.</li>
+      <li>חמישית, שלוש הדרכים שבהן משתמשים בו.</li>
+      <li>ולסיום, דמו של שתי דקות בשם toy_calc, הצצה ל-dashboard, ומפת הקורס כולו.</li>
+    </ul>
+  </aside>
+</section>
+
+<!-- ═══ 3. Problem: agents fail ═══ -->
+<section class="slide">
+  <h2>The problem: agents fail on real tasks</h2>
+  <div class="grid-3">
+    <div class="card red"><div class="icon">✗</div><h3>Policy gaps</h3><p>The system prompt misses a rule. The agent breaks it on a real case.</p></div>
+    <div class="card red"><div class="icon">✗</div><h3>Weak tools</h3><p>A tool returns a vague error. The agent loops or gives up.</p></div>
+    <div class="card red"><div class="icon">✗</div><h3>Thin skills</h3><p>A skill package has no script for the hard step. The agent improvises.</p></div>
+  </div>
+  <div class="callout mt-lg">Example: τ²-bench airline, a seed policy + tools scored <b>0.536</b> mean reward over 50 tasks. Almost half the work is lost.</div>
+  <p class="small muted mt">Source: docs/RESULTS.md (τ²-Bench airline, fit-metric run)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:30–2:30]</span> Let us start with the problem. An LLM agent is a model plus things it reads: a system prompt, tools, maybe MCP servers, maybe skill packages. On real benchmarks, agents fail a lot.</p>
+    <p>The failures have typical shapes. The prompt misses a rule, so the agent breaks a policy. A tool returns a vague error, so the agent loops. A skill package explains a task but has no script for the hardest step, so the agent improvises and gets it wrong.</p>
+    <p>A concrete example from our own results. On τ²-bench airline, a customer-service benchmark, the seed policy and tools scored 0.536 mean reward over all 50 tasks. That is close to half the tasks lost. Note that a better model is not always an option. You may be tied to one model for cost or policy reasons. So the question is: can we fix the agent without changing the model?</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:30–2:30]</span> נתחיל מהבעיה. סוכן LLM הוא מודל ועוד דברים שהוא קורא: system prompt, כלים, אולי שרתי MCP, אולי skill packages. על benchmarks אמיתיים, סוכנים נכשלים הרבה.</p>
+    <p>לכשלונות יש צורות קבועות. ב-prompt חסר כלל, אז הסוכן מפר מדיניות. כלי מחזיר שגיאה לא ברורה, אז הסוכן נכנס ללולאה. skill package מסביר את המשימה אבל אין בו סקריפט לשלב הקשה, אז הסוכן מאלתר וטועה.</p>
+    <p>דוגמה קונקרטית מהתוצאות שלנו. ב-τ²-bench airline, benchmark של שירות לקוחות, ה-policy והכלים ההתחלתיים קיבלו reward ממוצע של 0.536 על כל 50 המשימות. זה קרוב לחצי מהמשימות שהולכות לאיבוד. ושימו לב, מודל חזק יותר זה לא תמיד אופציה. לפעמים אתם קשורים למודל אחד בגלל עלות או מדיניות. אז השאלה היא: אפשר לתקן את הסוכן בלי לשנות את המודל?</p>
+  </aside>
+</section>
+
+<!-- ═══ 4. Hand-tuning ═══ -->
+<section class="slide">
+  <h2>Hand-tuning is slow and not measured honestly</h2>
+  <div class="row">
+    <div class="col">
+      <div class="flow vertical">
+        <div class="step"><b>Read a few failures</b><span>by hand, a handful of traces</span></div><div class="arrow">↓</div>
+        <div class="step"><b>Edit the prompt</b><span>one small tweak at a time</span></div><div class="arrow">↓</div>
+        <div class="step"><b>Re-run the same tasks</b><span>the ones you just looked at</span></div><div class="arrow">↓</div>
+        <div class="step red"><b>"It went up"</b><span>one noisy run, no error bar</span></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card red"><h3>What goes wrong</h3>
+        <ul>
+          <li>Slow: hours per idea</li>
+          <li>Tuned and reported on the same tasks</li>
+          <li>Noise looks like progress</li>
+          <li>Old wins break without anyone noticing</li>
+          <li>No record of what was tried</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:30–3:30]</span> The usual fix is hand-tuning. An engineer reads a few failed traces, edits the prompt, re-runs, and looks at the number. This has two big problems.</p>
+    <p>It is slow. Each idea costs hours of reading and re-running.</p>
+    <p>And it is not measured honestly. You tune on the same tasks you report. One run of a stochastic agent is noisy, so a random bump looks like progress. A fix for task 12 can silently break task 30. And nobody keeps a record of what was tried and rejected, so the next person tries it again.</p>
+    <p>Example: if you try ten prompt variants and keep the best-looking one, it is often best by luck. The number climbs, but the agent did not get better. cap-evolve is built to fix both problems: automate the loop, and make the measurement honest by construction.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:30–3:30]</span> הפתרון הרגיל הוא כיוונון ידני. מהנדס קורא כמה traces שנכשלו, משנה את ה-prompt, מריץ שוב ומסתכל על המספר. יש בזה שתי בעיות גדולות.</p>
+    <p>זה איטי. כל רעיון עולה שעות של קריאה והרצה.</p>
+    <p>וזה לא נמדד ביושר. מכווננים על אותן משימות שעליהן מדווחים. ריצה אחת של סוכן סטוכסטי היא רועשת, אז קפיצה אקראית נראית כמו התקדמות. תיקון למשימה 12 יכול לשבור בשקט את משימה 30. ואף אחד לא שומר תיעוד של מה נוסה ונדחה, אז האדם הבא מנסה את זה שוב.</p>
+    <p>דוגמה: אם מנסים עשר גרסאות של prompt ושומרים את זו שנראית הכי טוב, הרבה פעמים היא הכי טובה במקרה. המספר עולה, אבל הסוכן לא השתפר. cap-evolve בנוי לפתור את שתי הבעיות: לאוטמט את הלולאה, ולהפוך את המדידה לכנה מעצם המבנה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 5. Core idea ═══ -->
+<section class="slide">
+  <h2>The core idea: optimize what the agent reads</h2>
+  <svg class="diagram" viewBox="0 0 1136 400">
+    <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box" x="20" y="150" width="230" height="110" rx="12"/>
+    <text class="title" x="135" y="196" text-anchor="middle" font-size="22">Model weights</text>
+    <text class="label" x="135" y="224" text-anchor="middle" font-size="15">frozen · never trained</text>
+    <rect class="box blue" x="440" y="20" width="300" height="72" rx="12"/>
+    <text class="title" x="590" y="52" text-anchor="middle" font-size="19">System prompt</text>
+    <text class="label mono" x="590" y="76" text-anchor="middle" font-size="14">system-prompt</text>
+    <rect class="box blue" x="440" y="114" width="300" height="72" rx="12"/>
+    <text class="title" x="590" y="146" text-anchor="middle" font-size="19">Tool code</text>
+    <text class="label mono" x="590" y="170" text-anchor="middle" font-size="14">tools</text>
+    <rect class="box blue" x="440" y="208" width="300" height="72" rx="12"/>
+    <text class="title" x="590" y="240" text-anchor="middle" font-size="19">MCP tool surface</text>
+    <text class="label mono" x="590" y="264" text-anchor="middle" font-size="14">mcp-tool</text>
+    <rect class="box blue" x="440" y="302" width="300" height="72" rx="12"/>
+    <text class="title" x="590" y="334" text-anchor="middle" font-size="19">Skill package</text>
+    <text class="label mono" x="590" y="358" text-anchor="middle" font-size="14">skill-package</text>
+    <rect class="box amber" x="900" y="150" width="216" height="110" rx="12"/>
+    <text class="title" x="1008" y="196" text-anchor="middle" font-size="22">Agent</text>
+    <text class="label" x="1008" y="224" text-anchor="middle" font-size="15">model + what it reads</text>
+    <path class="line dash" d="M250,205 L900,205" marker-end="url(#ar5)"/>
+    <path class="line" d="M740,56 C830,56 830,190 900,190" marker-end="url(#ar5)"/>
+    <path class="line" d="M740,150 C820,150 840,198 900,198"/>
+    <path class="line" d="M740,244 C820,244 840,212 900,212"/>
+    <path class="line" d="M740,338 C830,338 830,222 900,222" marker-end="url(#ar5)"/>
+    <text class="label" x="345" y="196" text-anchor="middle" font-size="15">unchanged</text>
+    <text class="label" x="590" y="398" text-anchor="middle" font-size="15">capabilities: the files cap-evolve edits (one or several, jointly)</text>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:30–4:45]</span> This is the core idea. An agent is a model plus what it reads. cap-evolve leaves the model weights alone. No fine-tuning, no gradients. It edits the files the agent reads at runtime.</p>
+    <p>We call each kind of file a <b>capability</b>. There are four capability types, and each has its own skill in the library: <code>system-prompt</code>, <code>tools</code> for executable tool code, <code>mcp-tool</code> for an MCP tool surface, and <code>skill-package</code> for an Agent Skill folder with SKILL.md, references and scripts.</p>
+    <p>You can pick one or several and optimize them together. For example, the τ²-bench run used <code>[system-prompt, tools]</code>: the optimizer rewrote the airline policy and also edited the Python tool code.</p>
+    <p>Why this matters: it works with any model, including closed API models you cannot train. And every change is a readable diff you can review.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:30–4:45]</span> זה הרעיון המרכזי. סוכן הוא מודל ועוד מה שהוא קורא. cap-evolve לא נוגע במשקלות של המודל. אין fine-tuning ואין gradients. הוא עורך את הקבצים שהסוכן קורא בזמן ריצה.</p>
+    <p>לכל סוג קובץ כזה אנחנו קוראים <b>capability</b>. יש ארבעה סוגים, ולכל אחד skill משלו בספרייה: <code>system-prompt</code>, <code>tools</code> לקוד של כלים, <code>mcp-tool</code> למשטח כלים של MCP, ו-<code>skill-package</code> לתיקיית Agent Skill עם SKILL.md, references וסקריפטים.</p>
+    <p>אפשר לבחור אחד או כמה ולעשות להם אופטימיזציה ביחד. למשל, הריצה על τ²-bench השתמשה ב-<code>[system-prompt, tools]</code>: ה-optimizer כתב מחדש את ה-policy של חברת התעופה וגם ערך את קוד ה-Python של הכלים.</p>
+    <p>למה זה חשוב: זה עובד עם כל מודל, כולל מודלים סגורים דרך API שאי אפשר לאמן. וכל שינוי הוא diff קריא שאפשר לבדוק.</p>
+  </aside>
+</section>
+
+<!-- ═══ 6. Capabilities table ═══ -->
+<section class="slide">
+  <h2>Four capabilities, each with clear limits</h2>
+  <table>
+    <tr><th>Capability skill</th><th>What the optimizer may change</th><th>Rule</th></tr>
+    <tr><td><code>system-prompt</code></td><td>Rules, examples, output contract</td><td>Change, merge, add. Never drop a needed rule.</td></tr>
+    <tr><td><code>tools</code></td><td>Tool <b>code</b>, docs, return values, wrappers</td><td>Add, wrap, swap. Never bare-remove a tool.</td></tr>
+    <tr><td><code>mcp-tool</code></td><td>Tool docs, in-description examples, which tools are exposed</td><td>Safe edits only.</td></tr>
+    <tr><td><code>skill-package</code></td><td><code>SKILL.md</code> body, references, scripts</td><td>The whole Agent Skill folder.</td></tr>
+  </table>
+  <div class="callout amber mt-lg">"A tool body the model cannot skip beats a sentence it can forget."</div>
+  <p class="small muted mt">Source: README.md, docs/ARCHITECTURE.md, skills/capabilities/</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:45–5:45]</span> Here are the four capabilities with their edit limits. Each capability skill gives the optimizer a menu called "What you can change here" and a set of boundaries.</p>
+    <p>For a system prompt, the optimizer may rewrite, merge and add rules, but it must never drop a rule that is still needed. For tools, it may edit the actual Python code, improve error messages, and wrap or swap a tool, but never just delete one. For MCP, only safe edits: docs, examples, and which tools are exposed. For a skill package, it may change the whole folder.</p>
+    <p>The quote at the bottom is from the architecture doc, and it is a key design opinion. If a policy must always hold, enforce it in tool code. For example, a tool that refuses to cancel a non-refundable ticket is stronger than a prompt line that asks the model to check. The τ²-bench run grew <code>tools.py</code> from 593 to 832 lines for this reason.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:45–5:45]</span> אלה ארבעת ה-capabilities עם גבולות העריכה שלהם. כל capability skill נותן ל-optimizer תפריט שנקרא "What you can change here" וסט של גבולות.</p>
+    <p>ב-system prompt, ה-optimizer יכול לכתוב מחדש, לאחד ולהוסיף כללים, אבל אסור לו למחוק כלל שעדיין נחוץ. בכלים, הוא יכול לערוך את קוד ה-Python עצמו, לשפר הודעות שגיאה, ולעטוף או להחליף כלי, אבל לא סתם למחוק אותו. ב-MCP רק עריכות בטוחות: תיעוד, דוגמאות, ואילו כלים חשופים. ב-skill package הוא יכול לשנות את כל התיקייה.</p>
+    <p>הציטוט למטה הוא מתוך מסמך הארכיטקטורה, והוא עמדת תכנון חשובה. אם מדיניות חייבת להתקיים תמיד, אוכפים אותה בקוד של הכלי. למשל, כלי שמסרב לבטל כרטיס שלא ניתן להחזר חזק יותר משורה ב-prompt שמבקשת מהמודל לבדוק. בריצה על τ²-bench הקובץ <code>tools.py</code> גדל מ-593 ל-832 שורות בגלל זה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 7. Bring your agent and your eval ═══ -->
+<section class="slide">
+  <h2>Bring your agent and your eval</h2>
+  <div class="row">
+    <div class="col">
+      <p>You write one small <b>adapter</b>. Three required methods:</p>
+      <pre><span class="f">tasks</span>(split)                   -&gt; list[Task]
+    <span class="c"># your eval cases: 'train'|'val'|'test'|'all'</span>
+<span class="f">run_target</span>(task, ctx, *, seed) -&gt; Rollout
+    <span class="c"># run your agent with the candidate live</span>
+<span class="f">score</span>(task, rollout)           -&gt; Score
+    <span class="c"># reward in [0,1] + feedback, never the gold</span></pre>
+      <p class="small muted">Source: README.md, docs/ADAPTER_CONTRACT.md</p>
+    </div>
+    <div class="col">
+      <div class="card green"><h3>The core gives you the rest</h3>
+        <ul>
+          <li>Splits and trials</li>
+          <li>The significance gate</li>
+          <li>pass^k and error bars</li>
+          <li>The sealed test split</li>
+          <li>Memory across iterations</li>
+          <li>Dashboard and reports</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:45–6:45]</span> The second promise is "bring your agent and your eval". cap-evolve does not ship its own agent framework. You already have an agent and some way to score it. You connect them through one small class called an <b>adapter</b>.</p>
+    <p>It has three required methods. <code>tasks(split)</code> returns your eval cases. <code>run_target(task, ctx, seed)</code> runs your agent once on one task, with the candidate files live. The result is a <code>Rollout</code>. <code>score(task, rollout)</code> returns a reward between zero and one, plus text feedback for the optimizer. The feedback must never leak the gold answer.</p>
+    <p>Everything else comes from the core: splits, trials, the gate, pass^k, the sealed test, memory, the dashboard. For common cases you do not even write the adapter. There are templates for JSONL, HuggingFace, tau2-bench, SWE-bench and SkillsBench. Chapter 4 covers the adapter contract and its optional hooks in detail.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:45–6:45]</span> ההבטחה השנייה היא "תביאו את הסוכן שלכם ואת ה-eval שלכם". cap-evolve לא מגיע עם framework של סוכנים משלו. כבר יש לכם סוכן ודרך כלשהי לתת לו ציון. מחברים אותם דרך מחלקה קטנה אחת שנקראת <b>adapter</b>.</p>
+    <p>יש לה שלוש מתודות חובה. <code>tasks(split)</code> מחזירה את מקרי ה-eval. <code>run_target(task, ctx, seed)</code> מריצה את הסוכן פעם אחת על משימה אחת, כשקבצי ה-candidate פעילים. התוצאה היא <code>Rollout</code>. <code>score(task, rollout)</code> מחזירה reward בין אפס לאחת, ועוד feedback טקסטואלי ל-optimizer. ה-feedback אסור שידליף את התשובה הנכונה.</p>
+    <p>כל השאר מגיע מה-core: splits, trials, ה-gate, pass^k, ה-test החתום, memory וה-dashboard. במקרים נפוצים אפילו לא כותבים adapter. יש templates ל-JSONL, HuggingFace, tau2-bench, SWE-bench ו-SkillsBench. פרק 4 מפרט את חוזה ה-adapter וה-hooks האופציונליים שלו.</p>
+  </aside>
+</section>
+
+<!-- ═══ 8. The loop ═══ -->
+<section class="slide">
+  <h2>The loop at a high level</h2>
+  <svg class="diagram" viewBox="0 0 1136 430">
+    <defs><marker id="ar8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="20" y="60" width="190" height="90" rx="12"/>
+    <text class="title" x="115" y="98" text-anchor="middle" font-size="20">Evaluate</text>
+    <text class="label" x="115" y="124" text-anchor="middle" font-size="14">run current best on val</text>
+    <rect class="box" x="250" y="60" width="190" height="90" rx="12"/>
+    <text class="title" x="345" y="98" text-anchor="middle" font-size="20">Diagnose</text>
+    <text class="label" x="345" y="124" text-anchor="middle" font-size="14">cluster failed traces</text>
+    <rect class="box violet" x="480" y="60" width="190" height="90" rx="12"/>
+    <text class="title" x="575" y="98" text-anchor="middle" font-size="20">Propose</text>
+    <text class="label" x="575" y="124" text-anchor="middle" font-size="14">optimizer edits files</text>
+    <rect class="box amber" x="710" y="60" width="190" height="90" rx="12"/>
+    <text class="title" x="805" y="98" text-anchor="middle" font-size="20">Gate on val</text>
+    <text class="label" x="805" y="124" text-anchor="middle" font-size="14">Δ &gt; k·SE ?</text>
+    <rect class="box green" x="940" y="60" width="176" height="90" rx="12"/>
+    <text class="title" x="1028" y="98" text-anchor="middle" font-size="20">Commit</text>
+    <text class="label" x="1028" y="124" text-anchor="middle" font-size="14">new best · git</text>
+    <path class="line" d="M210,105 L250,105" marker-end="url(#ar8)"/>
+    <path class="line" d="M440,105 L480,105" marker-end="url(#ar8)"/>
+    <path class="line" d="M670,105 L710,105" marker-end="url(#ar8)"/>
+    <path class="line" d="M900,105 L940,105" marker-end="url(#ar8)"/>
+    <text class="label" x="920" y="48" text-anchor="middle" font-size="14">accept</text>
+    <path class="line dash" d="M805,150 L805,215 L345,215 L345,150" marker-end="url(#ar8)"/>
+    <text class="label" x="575" y="236" text-anchor="middle" font-size="14">reject: remember it, keep the old best, try again</text>
+    <path class="line" d="M1028,150 L1028,250 L115,250 L115,150" marker-end="url(#ar8)"/>
+    <text class="label" x="575" y="272" text-anchor="middle" font-size="14">next iteration builds on the new best</text>
+    <rect class="box red" x="700" y="320" width="416" height="90" rx="12"/>
+    <text class="title" x="908" y="356" text-anchor="middle" font-size="20">Finalize: sealed test, once</text>
+    <text class="label" x="908" y="384" text-anchor="middle" font-size="14">after the loop stops · best candidate only</text>
+    <rect class="box" x="20" y="320" width="560" height="90" rx="12"/>
+    <text class="title" x="300" y="356" text-anchor="middle" font-size="18">Stop: max_iterations · stall · max_usd</text>
+    <text class="label" x="300" y="384" text-anchor="middle" font-size="14">budget knobs in capevolve.yaml</text>
+    <path class="line" d="M580,365 L700,365" marker-end="url(#ar8)"/>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:45–8:00]</span> This is the loop. One pass is called an <b>iteration</b>.</p>
+    <p>Evaluate: run the current best version of the files on the validation split. Diagnose: read the failed traces and group them into failure clusters. Propose: a coding agent, which we call the <b>optimizer</b>, edits the files. The result is a new <b>candidate</b>. Gate: score the candidate on val and accept it only if the gain is bigger than k standard errors. Commit: the accepted candidate becomes the new best and is saved as a git commit.</p>
+    <p>A rejected candidate is not wasted. It goes into memory, so the optimizer will not propose it again. The optimizer also sees which tasks each earlier edit broke and fixed, so it protects the wins.</p>
+    <p>The loop stops on a budget: <code>max_iterations</code>, <code>stall</code> (consecutive rejects), or <code>max_usd</code>. Then finalize scores the best candidate on the sealed test split exactly once. Chapter 5 walks one iteration step by step.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:45–8:00]</span> זו הלולאה. מעבר אחד נקרא <b>iteration</b>.</p>
+    <p>Evaluate: מריצים את הגרסה הטובה ביותר הנוכחית של הקבצים על ה-validation split. Diagnose: קוראים את ה-traces שנכשלו ומקבצים אותם לאשכולות כשל. Propose: סוכן קוד, שאנחנו קוראים לו <b>optimizer</b>, עורך את הקבצים. התוצאה היא <b>candidate</b> חדש. Gate: נותנים ל-candidate ציון על val ומקבלים אותו רק אם השיפור גדול מ-k שגיאות תקן. Commit: ה-candidate שהתקבל הופך להיות הטוב ביותר ונשמר כ-git commit.</p>
+    <p>candidate שנדחה לא הולך לפח. הוא נכנס ל-memory, כדי שה-optimizer לא יציע אותו שוב. ה-optimizer גם רואה אילו משימות כל עריכה קודמת שברה ותיקנה, כך שהוא שומר על ההצלחות.</p>
+    <p>הלולאה עוצרת לפי תקציב: <code>max_iterations</code>, <code>stall</code> כלומר דחיות ברצף, או <code>max_usd</code>. ואז finalize נותן ציון ל-candidate הטוב ביותר על ה-test split החתום, פעם אחת בדיוק. פרק 5 עובר על iteration אחד צעד אחר צעד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 9. Pipeline phases ═══ -->
+<section class="slide">
+  <h2>The full pipeline: six phases</h2>
+  <div class="flow">
+    <div class="step"><b>intake</b><span>wire the adapter, write the spec</span></div><div class="arrow">→</div>
+    <div class="step red"><b>implement-and-check</b><span>hard gate: <code>cap-evolve check</code></span></div><div class="arrow">→</div>
+    <div class="step blue"><b>baseline</b><span>freeze splits, score the seed</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>algorithm</b><span>the loop: hill-climb, gepa, …</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>finalize</b><span>sealed test, once</span></div><div class="arrow">→</div>
+    <div class="step green"><b>report</b><span><code>report.md</code> + <code>dashboard.html</code></span></div>
+  </div>
+  <div class="grid-3 mt-lg">
+    <div class="card fragment"><h3>Before any spend</h3><p>intake and check run first. No budget is spent against a stub adapter.</p></div>
+    <div class="card fragment"><h3>The seed</h3><p>The unmodified files. Every candidate must beat it.</p></div>
+    <div class="card fragment"><h3>Pluggable algorithm</h3><p><code>hill-climb</code> is the default. <code>gepa</code>, <code>skillopt</code>, <code>agent-optimize</code> also exist.</p></div>
+  </div>
+  <p class="small muted mt">Source: docs/ARCHITECTURE.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:00–9:00]</span> The loop is one phase of a longer pipeline. There are six phases.</p>
+    <p><b>intake</b> does the integration work: it installs the benchmark, wires the adapter, and writes the spec file <code>capevolve.yaml</code>. <b>implement-and-check</b> is a hard gate. The command <code>cap-evolve check</code> refuses to continue until every adapter method is real and <code>score()</code> is deterministic. So you never pay for a run against a stub.</p>
+    <p><b>baseline</b> freezes the train, val and test split and scores the <b>seed</b>, which is your unmodified files. <b>algorithm</b> is the loop from the last slide. The default is <code>hill-climb</code>; there are others, covered in chapter 7. <b>finalize</b> scores test once. <b>report</b> writes <code>report.md</code> and a self-contained <code>dashboard.html</code>.</p>
+    <p>Each phase is a skill. That is why the same pipeline runs on many coding-agent hosts.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:00–9:00]</span> הלולאה היא שלב אחד בתוך pipeline ארוך יותר. יש שישה שלבים.</p>
+    <p><b>intake</b> עושה את עבודת האינטגרציה: מתקין את ה-benchmark, מחבר את ה-adapter, וכותב את קובץ ה-spec <code>capevolve.yaml</code>. <b>implement-and-check</b> הוא שער קשיח. הפקודה <code>cap-evolve check</code> מסרבת להמשיך עד שכל מתודה ב-adapter אמיתית ו-<code>score()</code> דטרמיניסטית. כך אף פעם לא משלמים על ריצה מול stub.</p>
+    <p><b>baseline</b> מקבע את החלוקה ל-train, val ו-test ונותן ציון ל-<b>seed</b>, כלומר לקבצים המקוריים שלכם. <b>algorithm</b> הוא הלולאה מהשקף הקודם. ברירת המחדל היא <code>hill-climb</code>, ויש עוד אלגוריתמים שמכוסים בפרק 7. <b>finalize</b> נותן ציון על test פעם אחת. <b>report</b> כותב <code>report.md</code> ו-<code>dashboard.html</code> שעומד בפני עצמו.</p>
+    <p>כל שלב הוא skill. בגלל זה אותו pipeline רץ על הרבה hosts של סוכני קוד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 10. Honest evaluation ═══ -->
+<section class="slide">
+  <h2>Why "honest" evaluation matters</h2>
+  <svg class="diagram" viewBox="0 0 1136 200">
+    <rect class="box" x="20" y="30" width="520" height="70" rx="10"/>
+    <text class="title" x="280" y="62" text-anchor="middle" font-size="20">train</text>
+    <text class="label" x="280" y="86" text-anchor="middle" font-size="14">the optimizer may read these traces</text>
+    <rect class="box blue" x="560" y="30" width="270" height="70" rx="10"/>
+    <text class="title" x="695" y="62" text-anchor="middle" font-size="20">val</text>
+    <text class="label" x="695" y="86" text-anchor="middle" font-size="14">the gate decides here only</text>
+    <rect class="box red" x="850" y="30" width="266" height="70" rx="10"/>
+    <text class="title" x="983" y="62" text-anchor="middle" font-size="20">test 🔒</text>
+    <text class="label" x="983" y="86" text-anchor="middle" font-size="14">sealed · scored once</text>
+    <text class="label mono" x="20" y="140" font-size="15">splits.json — seeded, written once, never re-split</text>
+    <text class="label mono" x="850" y="140" font-size="15">RunDir.consume_test()</text>
+    <text class="label mono" x="560" y="140" font-size="15">gate.decide(...)</text>
+  </svg>
+  <div class="grid-2">
+    <div class="card amber"><h3>Fit metric</h3><p><code>train == val == test</code>. Shows the loop works. Not a generalization claim. The engine logs a <code>splits_warning</code>.</p></div>
+    <div class="card green"><h3>Held-out</h3><p>Test ids the optimizer never saw, scored exactly once at <code>finalize</code>. The stronger claim.</p></div>
+  </div>
+  <div class="callout mt">These rules live in the Python core, not in editable skill text. An optimizer cannot talk its way around them.</div>
+  <p class="small muted mt">Source: docs/HONEST_EVAL.md, docs/RESULTS.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:00–10:15]</span> Now the most important idea of the project: honest evaluation. The project doc says it plainly: "cap-evolve's one differentiator is that its numbers mean something."</p>
+    <p>The tasks are split three ways with a fixed seed, and the split is written once to <code>splits.json</code>. The optimizer learns from train. The gate decides only on val; <code>gate.decide</code> raises an error for any other split. Test is sealed: <code>RunDir.consume_test()</code> sets a flag and raises <code>TestSealError</code> on a second access. These rules live in the Python core, not in editable instructions, so an optimizer cannot talk its way around them.</p>
+    <p>Every result we publish carries one of two labels. A <b>fit metric</b> means train, val and test are the same tasks. It proves the loop works, but it is not a generalization claim. <b>Held-out</b> means test was never seen and was scored once. Chapter 6 is all about this.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:00–10:15]</span> עכשיו הרעיון הכי חשוב בפרויקט: הערכה כנה. המסמך של הפרויקט אומר את זה ישר: היתרון היחיד של cap-evolve הוא שהמספרים שלו אומרים משהו.</p>
+    <p>המשימות מחולקות לשלושה חלקים עם seed קבוע, והחלוקה נכתבת פעם אחת ל-<code>splits.json</code>. ה-optimizer לומד מ-train. ה-gate מחליט רק על val, ו-<code>gate.decide</code> זורק שגיאה על כל split אחר. ה-test חתום: <code>RunDir.consume_test()</code> מדליק דגל וזורק <code>TestSealError</code> בגישה שנייה. הכללים האלה חיים בקוד ה-Python של ה-core, לא בהוראות שאפשר לערוך, כך שה-optimizer לא יכול לעקוף אותם.</p>
+    <p>כל תוצאה שאנחנו מפרסמים מקבלת אחת משתי תוויות. <b>fit metric</b> אומר ש-train, val ו-test הם אותן משימות. זה מוכיח שהלולאה עובדת, אבל זו לא טענה על הכללה. <b>held-out</b> אומר שה-test לא נראה מעולם וקיבל ציון פעם אחת. פרק 6 כולו על הנושא הזה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 11. Significance gate idea ═══ -->
+<section class="slide">
+  <h2>Why the gate is Δ &gt; k·SE and not Δ &gt; 0</h2>
+  <div class="row">
+    <div class="col">
+      <div class="card red"><h3>Δ &gt; 0</h3><p>Screen many candidates. The best-looking one is often best by luck. The val curve climbs while nothing improved.</p></div>
+      <div class="card green mt"><h3>Δ &gt; k·SE (paired)</h3><p>Compare per task, on the <b>same</b> val tasks. Accept only a gain larger than the noise of the measurement.</p></div>
+    </div>
+    <div class="col">
+      <pre><span class="c"># capevolve.yaml (scaffold defaults)</span>
+<span class="k">gate_mode</span>: <span class="s">paired</span>
+<span class="k">gate_k_se</span>: <span class="n">0.2</span>
+<span class="k">num_trials</span>: <span class="n">1</span>
+<span class="k">split_train</span>: <span class="n">0.5</span>
+<span class="k">split_val</span>: <span class="n">0.25</span>
+<span class="k">split_test</span>: <span class="n">0.25</span></pre>
+      <p class="small muted">Source: benchmarks/_scaffold/project/capevolve.yaml, docs/HONEST_EVAL.md</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:15–11:15]</span> One more honest-eval idea, at a high level. Why not accept any candidate that scores higher?</p>
+    <p>Because search amplifies noise. If you score twenty candidates on a noisy agent, the top one is often there by luck. A "greater than zero" rule banks that luck, and your val curve rises while the agent stays the same.</p>
+    <p>So the default gate is <code>paired</code>. For each val task, it takes the difference between candidate and parent. It accepts only when the mean difference is larger than k times its standard error. Comparing on the same tasks cancels out task difficulty, so the test is more powerful.</p>
+    <p>On the right are the scaffold defaults: paired gate, k of 0.2, one trial, and a 50/25/25 split. With more trials per task, the standard error is real and the gate becomes meaningful. We will see in the demo what happens when it is zero.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:15–11:15]</span> עוד רעיון אחד של הערכה כנה, ברמה גבוהה. למה לא לקבל כל candidate שקיבל ציון גבוה יותר?</p>
+    <p>כי חיפוש מגביר רעש. אם נותנים ציון לעשרים candidates על סוכן רועש, הראשון ברשימה הרבה פעמים נמצא שם במקרה. כלל של "גדול מאפס" שומר את המזל הזה, ועקומת ה-val עולה בזמן שהסוכן נשאר אותו דבר.</p>
+    <p>לכן ה-gate בברירת מחדל הוא <code>paired</code>. לכל משימת val הוא לוקח את ההפרש בין ה-candidate להורה שלו. הוא מקבל רק כשההפרש הממוצע גדול מ-k כפול שגיאת התקן שלו. השוואה על אותן משימות מבטלת את השונות בקושי בין משימות, כך שהמבחן חזק יותר.</p>
+    <p>בצד ימין ערכי ברירת המחדל מה-scaffold: gate מסוג paired, k של 0.2, trial אחד, וחלוקה של 50/25/25. עם יותר trials לכל משימה, שגיאת התקן אמיתית וה-gate מקבל משמעות. בדמו נראה מה קורה כשהיא אפס.</p>
+  </aside>
+</section>
+
+<!-- ═══ 12. Results table ═══ -->
+<section class="slide">
+  <h2>Published results</h2>
+  <table class="res">
+    <tr><th>Benchmark</th><th>Capabilities</th><th>Split</th><th>Baseline → optimized</th><th>Gain</th></tr>
+    <tr><td><b>τ²-bench airline</b></td><td>policy + tools</td><td><span class="pill green">held-out</span> test, 20</td><td class="num">30.0 → 47.5</td><td class="num">+17.5 pp</td></tr>
+    <tr><td><b>SkillsBench</b></td><td>skill packages</td><td><span class="pill green">held-out</span> test, 3</td><td class="num">0.556 → 0.667</td><td class="num">+0.111</td></tr>
+    <tr><td><b>τ²-bench airline</b></td><td>policy + tools</td><td><span class="pill amber">fit metric</span> 50</td><td class="num">0.536 → 0.712</td><td class="num">+0.176</td></tr>
+    <tr><td><b>RH-SWE-bench</b></td><td>skill + prompt</td><td><span class="pill amber">fit metric</span> 119</td><td class="num">0.580 → 0.765</td><td class="num">+0.185</td></tr>
+    <tr><td><b>toy_calc</b></td><td>system prompt</td><td>sealed test</td><td class="num">0.0 → 1.0</td><td class="num">proof</td></tr>
+  </table>
+  <p class="small muted mt">Reward = mean task reward in [0, 1]; τ²-bench held-out is quoted ×100. Source: docs/RESULTS.md, README.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:15–12:15]</span> These are the headline results from <code>docs/RESULTS.md</code>. I sorted them by how strong the claim is.</p>
+    <p>The strongest is τ²-bench airline held-out: 30 tasks for train and val, 20 sealed test tasks. Test went from 30.0 to 47.5, plus 17.5 points, which is 58 percent relative. SkillsBench held-out: the four office-document skill packages, sealed test 0.556 to 0.667. Only three test tasks, so the error bar is wide.</p>
+    <p>Then two fit metrics. τ²-bench on all 50 tasks with 10 trials each: 0.536 to 0.712 on val. RH-SWE-bench: 119 SWE-bench Verified tasks run through Harbor, 0.580 to 0.765. Fit metric means the optimizer saw these tasks, so this shows fitting, not generalization.</p>
+    <p>toy_calc is not a benchmark. It is a deterministic proof that the pipeline works end to end. We run it in a few minutes.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:15–12:15]</span> אלה התוצאות המרכזיות מתוך <code>docs/RESULTS.md</code>. סידרתי אותן לפי עוצמת הטענה.</p>
+    <p>החזקה ביותר היא τ²-bench airline עם held-out: 30 משימות ל-train ו-val, ו-20 משימות test חתומות. ה-test עלה מ-30.0 ל-47.5, תוספת של 17.5 נקודות, שזה 58 אחוז יחסית. SkillsBench עם held-out: ארבעת ה-skill packages למסמכי office, test חתום מ-0.556 ל-0.667. רק שלוש משימות test, אז טווח השגיאה רחב.</p>
+    <p>אחר כך שני fit metrics. τ²-bench על כל 50 המשימות עם 10 trials לכל אחת: מ-0.536 ל-0.712 על val. RH-SWE-bench: 119 משימות מ-SWE-bench Verified שרצו דרך Harbor, מ-0.580 ל-0.765. fit metric אומר שה-optimizer ראה את המשימות האלה, אז זה מראה התאמה ולא הכללה.</p>
+    <p>toy_calc הוא לא benchmark. הוא הוכחה דטרמיניסטית שה-pipeline עובד מקצה לקצה. נריץ אותו בעוד כמה דקות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 13. Caveats ═══ -->
+<section class="slide">
+  <h2>Read the numbers with their caveats</h2>
+  <div class="grid-2">
+    <div class="card red"><h3>RH-SWE-bench</h3><ul><li>No committed run artifact in the repo</li><li>The bar chart (55.7 → 73.1) disagrees with the table (58.0 → 76.5)</li><li>Treat both pairs as unconfirmed</li></ul></div>
+    <div class="card amber"><h3>τ²-bench held-out</h3><ul><li>Its <code>run_full</code> artifact is "committed separately"</li><li>The artifact-backed τ² run is the fit metric</li></ul></div>
+    <div class="card amber"><h3>Small test splits</h3><ul><li>SkillsBench test = 3 tasks</li><li>Wide error bars, conservative gate</li></ul></div>
+    <div class="card green"><h3>Null results are published</h3><ul><li>Several <code>agent-optimize</code> runs found nothing</li><li>RESULTS.md explains why, defect by defect</li></ul></div>
+  </div>
+  <p class="small muted mt">Source: docs/RESULTS.md (RH-SWE-bench caveats; τ²-Bench held-out; null-result sections)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:15–13:15]</span> We keep the caveats next to the numbers. You should too, when you talk about the project.</p>
+    <p>RH-SWE-bench is the only row with no committed run artifact. The numbers were transcribed from the site. Also, the published chart shows 55.7 to 73.1, while the table says 58.0 to 76.5. RESULTS.md says this is unresolved, and to treat both pairs as unconfirmed.</p>
+    <p>The τ²-bench held-out run: RESULTS.md says its artifact is committed separately. The artifact you can open today under <code>benchmarks/tau2/examples/airline/run_full/</code> is the fit-metric run.</p>
+    <p>SkillsBench has only three test tasks. And one thing I like: RESULTS.md also publishes null results. Several <code>agent-optimize</code> runs on gpt-oss-120b accepted nothing, and the doc explains the measurement defects found. Honest reporting includes the failures.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:15–13:15]</span> אנחנו שומרים את ההסתייגויות ליד המספרים. גם אתם צריכים, כשאתם מדברים על הפרויקט.</p>
+    <p>RH-SWE-bench היא השורה היחידה שאין לה run artifact ב-repo. המספרים הועתקו מהאתר. בנוסף, הגרף שפורסם מראה 55.7 ל-73.1, בזמן שהטבלה אומרת 58.0 ל-76.5. RESULTS.md אומר שזה לא נפתר, ושצריך להתייחס לשני הזוגות כלא מאומתים.</p>
+    <p>ריצת ה-held-out של τ²-bench: לפי RESULTS.md ה-artifact שלה נשמר בנפרד. ה-artifact שאפשר לפתוח היום תחת <code>benchmarks/tau2/examples/airline/run_full/</code> הוא של ריצת ה-fit metric.</p>
+    <p>ב-SkillsBench יש רק שלוש משימות test. ועוד דבר שאני אוהב: RESULTS.md מפרסם גם תוצאות אפס. כמה ריצות של <code>agent-optimize</code> על gpt-oss-120b לא קיבלו אף שינוי, והמסמך מסביר את פגמי המדידה שנמצאו. דיווח כנה כולל גם את הכישלונות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 14. Related work ═══ -->
+<section class="slide">
+  <h2>How it compares to related work</h2>
+  <table>
+    <tr><th>Criterion</th><th>cap-evolve</th><th>DSPy</th><th>GEPA</th><th>promptfoo</th></tr>
+    <tr><td>Optimizes prompts</td><td>✅</td><td>✅</td><td>✅</td><td>❌ eval only</td></tr>
+    <tr><td>Optimizes tools/MCP and skill packages</td><td>✅</td><td>➖</td><td>➖</td><td>❌</td></tr>
+    <tr><td>Sealed test + significance gate in code</td><td>✅</td><td>➖</td><td>➖</td><td>➖</td></tr>
+    <tr><td>Host- and agent-agnostic</td><td>✅</td><td>❌</td><td>❌</td><td>➖</td></tr>
+    <tr><td>Git-versioned iterations + memory</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+    <tr><td>Zero runtime dependencies</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+  </table>
+  <p class="mt">Ideas reused, no third-party code: <code>gepa</code> and <code>skillopt</code> skills implement the GEPA and SkillOpt papers. Ideas from DSPy and Agent Skills.</p>
+  <p class="small muted">Source: docs/COMPARISON.md, README.md (Acknowledgements)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:15–14:15]</span> How does this compare to related work? This table is from <code>docs/COMPARISON.md</code>. Each criterion is defined there.</p>
+    <p>DSPy and GEPA also optimize prompts, and do it well. The differences are scope and discipline. cap-evolve also edits tool code, MCP surfaces and whole skill packages. It enforces the sealed test and the gate in code. It is not tied to one framework: the optimizer is any coding-agent CLI. Every iteration is a git commit. The core uses only the Python standard library.</p>
+    <p>Important: cap-evolve contains no third-party code. The <code>gepa</code> and <code>skillopt</code> algorithm skills are our own implementations of those two papers, running on top of our gate and splits. So you can run GEPA-style Pareto search with the same honesty rules.</p>
+    <p>COMPARISON.md also lists external numbers, like EvoTool on the original τ-Bench. They use different benchmark versions and models, so the doc calls them context, not a leaderboard.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:15–14:15]</span> איך זה עומד מול עבודות קשורות? הטבלה הזו לקוחה מ-<code>docs/COMPARISON.md</code>, וכל קריטריון מוגדר שם.</p>
+    <p>גם DSPy וגם GEPA עושים אופטימיזציה ל-prompts, ועושים את זה טוב. ההבדלים הם בהיקף ובמשמעת. cap-evolve עורך גם קוד של כלים, משטחי MCP ו-skill packages שלמים. הוא אוכף את ה-test החתום ואת ה-gate בקוד. הוא לא קשור ל-framework אחד: ה-optimizer הוא כל CLI של סוכן קוד. כל iteration הוא git commit. וה-core משתמש רק בספרייה הסטנדרטית של Python.</p>
+    <p>חשוב: ב-cap-evolve אין קוד של צד שלישי. ה-skills של האלגוריתמים <code>gepa</code> ו-<code>skillopt</code> הם מימושים שלנו של שני המאמרים האלה, שרצים מעל ה-gate וה-splits שלנו. כך אפשר להריץ חיפוש Pareto בסגנון GEPA עם אותם כללי יושר.</p>
+    <p>ב-COMPARISON.md יש גם מספרים חיצוניים, כמו EvoTool על τ-Bench המקורי. הם משתמשים בגרסאות benchmark ומודלים אחרים, ולכן המסמך מציג אותם כהקשר ולא כטבלת דירוג.</p>
+  </aside>
+</section>
+
+<!-- ═══ 15. Three ways ═══ -->
+<section class="slide">
+  <h2>Three ways to use it</h2>
+  <div class="grid-3">
+    <div class="card blue"><h3>1 · Claude Code plugin</h3><p>Slash commands + honesty hooks.</p>
+      <pre class="mt">claude --plugin-dir \
+  ./plugins/cap-evolve</pre><p class="small">Then follow <code>RUN.md</code>.</p></div>
+    <div class="card violet"><h3>2 · Another host</h3><p>Codex, Gemini, opencode, Cursor, Copilot, IBM Bob, bare …</p>
+      <pre class="mt">./install.sh --host codex</pre><p class="small">Copies <code>skills/</code> into the host's skills dir.</p></div>
+    <div class="card green"><h3>3 · Manual adapter + CLI</h3><p>Write the adapter yourself. Drive the CLI.</p>
+      <pre class="mt">cap-evolve check
+cap-evolve run --spec …</pre><p class="small">See <code>docs/OPTIMIZE_YOUR_OWN.md</code>.</p></div>
+  </div>
+  <div class="callout mt">All three share the same core install (<code>pip install ./core</code>) and the same honesty guarantees.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:15–15:15]</span> There are three ways to use cap-evolve.</p>
+    <p>One: as a Claude Code plugin. You start Claude with <code>--plugin-dir ./plugins/cap-evolve</code>. Every skill becomes a slash command like <code>/cap-evolve:intake</code>. The plugin also arms hooks. For example, a PreToolUse hook denies edits to the sealed test or gold files.</p>
+    <p>Two: any other coding-agent host. <code>install.sh --host</code> copies the skills folder into that host's skills directory. It knows Codex, Gemini, opencode, openclaw, Cursor, Droid, Copilot, Kimi, Pi, Antigravity and IBM Bob. Then you tell the agent to follow <code>RUN.md</code>. It runs intake, writes the adapter, passes check, and runs the loop.</p>
+    <p>Three: no agent host at all. You write the adapter and call the <code>cap-evolve</code> CLI directly. This is what CI does. All three use the same core package, so the guarantees are the same.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:15–15:15]</span> יש שלוש דרכים להשתמש ב-cap-evolve.</p>
+    <p>אחת: כ-plugin של Claude Code. מפעילים את Claude עם <code>--plugin-dir ./plugins/cap-evolve</code>. כל skill הופך ל-slash command, למשל <code>/cap-evolve:intake</code>. ה-plugin גם מפעיל hooks. למשל, hook מסוג PreToolUse חוסם עריכה של קבצי ה-test החתום או ה-gold.</p>
+    <p>שתיים: כל host אחר של סוכן קוד. <code>install.sh --host</code> מעתיק את תיקיית ה-skills לתיקיית ה-skills של ה-host. הוא מכיר את Codex, Gemini, opencode, openclaw, Cursor, Droid, Copilot, Kimi, Pi, Antigravity ו-IBM Bob. ואז אומרים לסוכן לעקוב אחרי <code>RUN.md</code>. הוא מריץ intake, כותב את ה-adapter, עובר check ומריץ את הלולאה.</p>
+    <p>שלוש: בלי host בכלל. כותבים את ה-adapter בעצמכם וקוראים ל-CLI של <code>cap-evolve</code> ישירות. זה מה שה-CI עושה. שלושתן משתמשות באותה חבילת core, אז ההבטחות זהות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 16. toy_calc what ═══ -->
+<section class="slide">
+  <h2>toy_calc: a deterministic stand-in agent</h2>
+  <div class="row">
+    <div class="col">
+      <pre><span class="k">def</span> <span class="f">run_target</span>(self, task, ctx, *, seed=<span class="n">0</span>):
+    prompt = (Path(ctx) / <span class="s">"prompt.txt"</span>).read_text()
+    <span class="k">if</span> <span class="s">"[CALC]"</span> <span class="k">in</span> prompt:
+        out = str(_safe_eval(task.input))
+    <span class="k">else</span>:
+        out = <span class="s">f"I think {expr} is roughly some number."</span>
+    <span class="k">return</span> Rollout(task_id=task.id, output=out, ...)</pre>
+      <p class="small muted">Source: benchmarks/toy/examples/calc/adapter.py (shortened)</p>
+    </div>
+    <div class="col" style="flex:0.75">
+      <div class="tree"><span class="d">benchmarks/toy/examples/calc/</span>
+├── adapter.py      <span class="c"># 3 methods + apply</span>
+├── <span class="d">capability/</span>
+│   └── prompt.txt  <span class="c"># seed, no [CALC]</span>
+├── mock_script.json <span class="c"># the edit</span>
+├── tasks.jsonl     <span class="c"># 8 sums</span>
+└── <span class="h">run.sh</span></div>
+      <div class="callout amber mt">The <code>mock</code> optimizer applies <code>ensure_contains "[CALC] …"</code>. No model is called.</div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:15–16:00]</span> Now the demo. toy_calc is the smallest end-to-end proof, and it is also our CI gate.</p>
+    <p>The "agent" is fake and deterministic. It reads <code>prompt.txt</code> from the candidate folder. If the prompt contains the marker <code>[CALC]</code>, it computes the arithmetic correctly. If not, it rambles: "I think 3 + 4 is roughly some number." The scorer is exact match, so the seed prompt scores zero.</p>
+    <p>The optimizer is the <code>mock</code> backend. It reads <code>mock_script.json</code>, which has one edit: make sure <code>prompt.txt</code> contains the <code>[CALC]</code> line. So the score must rise from 0 to 1, and no model is called. That makes it a perfect first run: zero cost, a few seconds, and it exercises every phase of the real pipeline.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:15–16:00]</span> עכשיו הדמו. toy_calc הוא ההוכחה הקטנה ביותר מקצה לקצה, והוא גם שער ה-CI שלנו.</p>
+    <p>ה"סוכן" מזויף ודטרמיניסטי. הוא קורא את <code>prompt.txt</code> מתיקיית ה-candidate. אם ב-prompt יש את הסימן <code>[CALC]</code>, הוא מחשב את התרגיל נכון. אם לא, הוא מדבר סתם: "I think 3 + 4 is roughly some number". ה-scorer בודק התאמה מדויקת, אז ה-prompt ההתחלתי מקבל אפס.</p>
+    <p>ה-optimizer הוא ה-backend שנקרא <code>mock</code>. הוא קורא את <code>mock_script.json</code>, שיש בו עריכה אחת: לוודא ש-<code>prompt.txt</code> מכיל את השורה עם <code>[CALC]</code>. אז הציון חייב לעלות מאפס לאחת, ושום מודל לא נקרא. זו ריצה ראשונה מושלמת: אפס עלות, כמה שניות, והיא מפעילה כל שלב של ה-pipeline האמיתי.</p>
+  </aside>
+</section>
+
+<!-- ═══ 17. toy_calc run ═══ -->
+<section class="slide">
+  <h2>Run it: two minutes, no API key</h2>
+  <div class="row">
+    <div class="col">
+      <pre>git clone …/skillberry-ai/cap-evolve.git
+cd cap-evolve
+python3 -m venv .venv
+source .venv/bin/activate
+pip install ./core  <span class="c"># CLI: cap-evolve</span>
+bash benchmarks/toy/examples/calc/run.sh</pre>
+      <div class="callout green">Docs summary: <code>baseline_val 0.0 -&gt; test_reward 1.0</code><br>(gate-accepted, test sealed) + <code>dashboard.html</code></div>
+    </div>
+    <div class="col" style="flex:0.7">
+      <pre><span class="c"># final JSON on stdout (abridged)</span>
+{
+  <span class="s">"best_id"</span>: <span class="s">"cand_0001"</span>,
+  <span class="s">"finalized"</span>: <span class="n">true</span>,
+  <span class="s">"baseline_val"</span>: <span class="n">0.0</span>,
+  <span class="s">"best_val"</span>: <span class="n">1.0</span>,
+  <span class="s">"test_reward"</span>: <span class="n">1.0</span>,
+  <span class="s">"test_baseline_reward"</span>: <span class="n">0.0</span>,
+  <span class="s">"iterations"</span>: <span class="n">3</span>,
+  <span class="s">"dashboard"</span>: <span class="s">"…/run_demo/dashboard.html"</span>
+}</pre>
+    </div>
+  </div>
+  <p class="small muted">Source: README.md, docs/GETTING_STARTED.md; JSON from a local run of run.sh on main</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:00–17:00]</span> These are the commands. Clone, make a virtual env, <code>pip install ./core</code>, and run <code>run.sh</code>. The core has zero runtime dependencies, so the install is quick.</p>
+    <p><code>run.sh</code> makes a temp working directory, copies in the adapter, the seed capability, and the scaffold <code>capevolve.yaml</code>, and calls <code>cap_evolve.cli run</code>.</p>
+    <p>The docs summarize the result in one line: baseline val 0.0, test reward 1.0. Note that the script does not print that line literally. What it prints on stdout is a JSON object, shown on the right from a real run. <code>best_id</code> is <code>cand_0001</code>. Test baseline is 0.0, test reward is 1.0. Three iterations ran. You may also see a note that the live dashboard server is skipped because the dashboard package is not installed. That is fine; the static <code>dashboard.html</code> is still written.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:00–17:00]</span> אלה הפקודות. עושים clone, יוצרים virtual env, מריצים <code>pip install ./core</code>, ומריצים את <code>run.sh</code>. ל-core אין תלויות בזמן ריצה, אז ההתקנה מהירה.</p>
+    <p><code>run.sh</code> יוצר תיקיית עבודה זמנית, מעתיק אליה את ה-adapter, את ה-seed capability ואת קובץ <code>capevolve.yaml</code> מה-scaffold, וקורא ל-<code>cap_evolve.cli run</code>.</p>
+    <p>המסמכים מסכמים את התוצאה בשורה אחת: baseline val של 0.0 ו-test reward של 1.0. שימו לב שהסקריפט לא מדפיס את השורה הזו מילה במילה. מה שהוא מדפיס ל-stdout זה אובייקט JSON, שמוצג מימין מריצה אמיתית. <code>best_id</code> הוא <code>cand_0001</code>. ה-test baseline הוא 0.0 וה-test reward הוא 1.0. רצו שלושה iterations. ייתכן שתראו גם הודעה שה-dashboard server לא עלה כי חבילת ה-dashboard לא מותקנת. זה בסדר, הקובץ הסטטי <code>dashboard.html</code> עדיין נכתב.</p>
+  </aside>
+</section>
+
+<!-- ═══ 18. What happened in the run ═══ -->
+<section class="slide">
+  <h2>What happened inside the demo run</h2>
+  <div class="flow">
+    <div class="step blue"><b>splits</b><span>train 4 · val 2 · test 2</span></div><div class="arrow">→</div>
+    <div class="step"><b>baseline</b><span>seed val = 0.0</span></div><div class="arrow">→</div>
+    <div class="step green"><b>cand_0001</b><span>ACCEPT · val 1.0</span></div><div class="arrow">→</div>
+    <div class="step red"><b>cand_0002, 0003</b><span>reject · mean Δ = 0</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>finalize</b><span>test 1.0 · sealed</span></div>
+  </div>
+  <div class="grid-2 mt-lg">
+    <div class="card"><h3>Why it stopped</h3><p>Two rejects in a row hit <code>stall: 2</code>. Then finalize ran once.</p></div>
+    <div class="card amber"><h3>Honest warnings, even here</h3><p><code>splits_warning</code>: val has only 2 tasks. <code>gate_warning</code>: SE is 0, so the gate fell back to STRICT.</p></div>
+  </div>
+  <p class="small muted mt">Source: <code>.capevolve/run_demo/events.jsonl</code> from the run (event kinds <code>splits</code>, <code>step</code>, <code>gate_warning</code>)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:00–18:00]</span> Here is what happened, read from the run's <code>events.jsonl</code> file. Every run writes this typed event log, and the terminal view and the dashboard both read it.</p>
+    <p>The eight tasks were split 4, 2 and 2. Baseline scored the seed at 0.0 on val. Iteration one: <code>cand_0001</code> added the marker, scored 1.0, and was accepted. Iterations two and three made no further gain, so they were rejected. Two rejects in a row hit the <code>stall: 2</code> setting, and the loop stopped. Finalize then scored test once: 1.0.</p>
+    <p>Notice the warnings. Even in a toy run, the engine says honestly that val has only two tasks, and that the standard error is zero because there is one deterministic trial, so the paired gate fell back to strict mode. On a real run you would raise <code>num_trials</code> and use more val tasks. Chapter 8 uses this same demo for debugging practice.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:00–18:00]</span> זה מה שקרה, כפי שנקרא מקובץ ה-<code>events.jsonl</code> של הריצה. כל ריצה כותבת את יומן האירועים הזה, וגם תצוגת הטרמינל וגם ה-dashboard קוראים ממנו.</p>
+    <p>שמונה המשימות חולקו ל-4, 2 ו-2. ה-baseline נתן ל-seed ציון 0.0 על val. ב-iteration הראשון, <code>cand_0001</code> הוסיף את הסימן, קיבל 1.0 והתקבל. ב-iterations השני והשלישי לא היה שיפור נוסף, אז הם נדחו. שתי דחיות ברצף הגיעו להגדרה <code>stall: 2</code> והלולאה עצרה. ואז finalize נתן ציון ל-test פעם אחת: 1.0.</p>
+    <p>שימו לב לאזהרות. אפילו בריצת צעצוע, המנוע אומר ביושר שב-val יש רק שתי משימות, ושגיאת התקן היא אפס כי יש trial דטרמיניסטי אחד, אז ה-gate מסוג paired נפל חזרה למצב strict. בריצה אמיתית מעלים את <code>num_trials</code> ומשתמשים ביותר משימות val. פרק 8 משתמש באותו דמו לתרגול debugging.</p>
+  </aside>
+</section>
+
+<!-- ═══ 19. Dashboard ═══ -->
+<section class="slide">
+  <h2>What the dashboard looks like</h2>
+  <div class="row">
+    <div class="col" style="flex:2.1">
+      <img class="shot" src="../assets/screenshots/dash_full_overview.png" alt="Dashboard Overview tab for the tau2 airline run_full: baseline val 53.6%, best val 71.2%, sealed test 69.4%, cumulative-best chart">
+    </div>
+    <div class="col">
+      <div class="card"><h3>Overview tab</h3><ul><li>KPIs: baseline val, best val, Δ, sealed test</li><li>Cumulative-best stair, accepted green, rejected red</li><li>One card per phase</li></ul></div>
+      <p class="small mt">Tabs: Overview, Candidates, Gate, Tasks, Cost, Logs, Diffs, Trajectories, Memory, Files.</p>
+      <pre class="mt">cap-evolve dashboard</pre>
+    </div>
+  </div>
+  <p class="small muted">Screenshot: docs/assets/screenshots/dash_full_overview.png (τ²-bench airline fit-metric run)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:00–19:00]</span> This is the dashboard, showing the τ²-bench airline fit-metric run. At the top are the key numbers: baseline val 53.6 percent, best val 71.2 percent from <code>cand_0007</code>, the delta of plus 0.176, and the sealed test at 69.4 percent. Below are verdicts, spend, time and tokens. This run cost about 148 dollars of optimizer spend.</p>
+    <p>The chart is the cumulative-best stair. Green dots are accepted candidates, red dots are rejected. Five of ten were accepted.</p>
+    <p>Every run gets the same tabs, whatever algorithm produced it. The Tasks tab is a tasks by iterations heatmap. Diffs shows each candidate's change. Gate shows the math behind each decision. You start it with <code>cap-evolve dashboard</code>, or just open the static <code>dashboard.html</code> that every run writes. Chapter 8 tours each tab.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:00–19:00]</span> זה ה-dashboard, והוא מציג את ריצת ה-fit metric של τ²-bench airline. למעלה המספרים החשובים: baseline val של 53.6 אחוז, best val של 71.2 אחוז מ-<code>cand_0007</code>, הפרש של 0.176, וה-test החתום על 69.4 אחוז. מתחת יש החלטות, הוצאות, זמן ו-tokens. הריצה הזו עלתה בערך 148 דולר על ה-optimizer.</p>
+    <p>הגרף הוא מדרגות ה-cumulative best. נקודות ירוקות הן candidates שהתקבלו, אדומות הן שנדחו. חמישה מתוך עשרה התקבלו.</p>
+    <p>כל ריצה מקבלת אותן לשוניות, לא משנה איזה אלגוריתם הריץ אותה. הלשונית Tasks היא heatmap של משימות מול iterations. Diffs מראה את השינוי של כל candidate. Gate מראה את החישוב מאחורי כל החלטה. מפעילים את זה עם <code>cap-evolve dashboard</code>, או פשוט פותחים את הקובץ הסטטי <code>dashboard.html</code> שכל ריצה כותבת. פרק 8 עובר על כל לשונית.</p>
+  </aside>
+</section>
+
+<!-- ═══ 20. Course map ═══ -->
+<section class="slide">
+  <h2>The course map</h2>
+  <table class="map">
+    <tr><th>#</th><th>Chapter</th><th style="text-align:right">Starts at</th></tr>
+    <tr class="here"><td class="n">1</td><td><b>Why cap-evolve</b> · problem, idea, loop, results, demo</td><td class="t">0:00</td></tr>
+    <tr><td class="n">2</td><td><b>Vocabulary and config</b> · terms, <code>capevolve.yaml</code>, CLI</td><td class="t">0:20</td></tr>
+    <tr><td class="n">3</td><td><b>Repo map and build</b> · folders, modules, dashboard, CI</td><td class="t">0:40</td></tr>
+    <tr><td class="n">4</td><td><b>Object model</b> · <code>types.py</code>, adapter, run dir, events</td><td class="t">1:00</td></tr>
+    <tr><td class="n">5</td><td><b>Anatomy of a run</b> · one iteration, processes, threads</td><td class="t">1:20</td></tr>
+    <tr><td class="n">6</td><td><b>Honest evaluation</b> · splits, pass^k, gate, sealed test</td><td class="t">1:40</td></tr>
+    <tr><td class="n">7</td><td><b>Algorithms, optimizers, skills</b> · and how to extend</td><td class="t">2:00</td></tr>
+    <tr><td class="n">8</td><td><b>Debug, observe, test</b> · tools, tests, CI, first week</td><td class="t">2:20</td></tr>
+  </table>
+  <p class="small muted mt">8 × 20 min ≈ 2 h 40 min. Chapters 1–4 build the map; 5–8 go deep.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:00–19:40]</span> Here is the whole course. Eight chapters, twenty minutes each, about two hours forty in total. The right column is the start time of each chapter.</p>
+    <p>Chapter 2 gives you the vocabulary and the spec file, field by field. Chapter 3 is the repository map and the build. Chapter 4 is the object model: the dataclasses, the adapter contract, and the run directory on disk. Those four chapters give you the map.</p>
+    <p>Chapters 5 to 8 go deep. Chapter 5 walks a run through the code, including processes and threads. Chapter 6 is the statistics and the seal. Chapter 7 is the skill library and how to extend it. Chapter 8 is debugging, observability and the test environment, and it ends with a plan for your first week.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:00–19:40]</span> זה הקורס כולו. שמונה פרקים, עשרים דקות כל אחד, בערך שעתיים וארבעים בסך הכל. העמודה הימנית היא זמן ההתחלה של כל פרק.</p>
+    <p>פרק 2 נותן את אוצר המילים ואת קובץ ה-spec, שדה אחרי שדה. פרק 3 הוא מפת ה-repository וה-build. פרק 4 הוא מודל האובייקטים: ה-dataclasses, חוזה ה-adapter, ותיקיית הריצה על הדיסק. ארבעת הפרקים האלה נותנים את המפה.</p>
+    <p>פרקים 5 עד 8 צוללים לעומק. פרק 5 עובר על ריצה בתוך הקוד, כולל processes ו-threads. פרק 6 הוא הסטטיסטיקה והחתימה של ה-test. פרק 7 הוא ספריית ה-skills ואיך מרחיבים אותה. פרק 8 הוא debugging, observability וסביבת הבדיקות, והוא נגמר בתוכנית לשבוע הראשון שלכם.</p>
+  </aside>
+</section>
+
+<!-- ═══ 21. Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <div class="card blue"><h3>What it optimizes</h3><p>What the agent reads: prompt, tool code, MCP surface, skill packages. Never weights.</p></div>
+    <div class="card violet"><h3>What you bring</h3><p>Your agent and your eval, joined by a 3-method adapter.</p></div>
+    <div class="card amber"><h3>How it decides</h3><p>Paired gate on val only. Test sealed and scored once, enforced in code.</p></div>
+    <div class="card green"><h3>How to start</h3><p><code>bash benchmarks/toy/examples/calc/run.sh</code>, then open <code>dashboard.html</code>.</p></div>
+  </div>
+  <div class="callout mt-lg"><b>Next chapter:</b> Chapter 2 · Vocabulary and config, with every term and every <code>capevolve.yaml</code> field.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:40–20:00]</span> Four things to remember.</p>
+    <ul>
+      <li>cap-evolve optimizes what the agent reads, not the model.</li>
+      <li>You bring your agent and your eval, through a small adapter.</li>
+      <li>It decides with a paired significance gate on val, and the test split is sealed and scored once. The core code enforces this.</li>
+      <li>You can see the whole thing work today, in two minutes, with toy_calc.</li>
+    </ul>
+    <p>Homework before chapter 2: run toy_calc and open the dashboard. In chapter 2 we name every object you just saw: seed, candidate, champion, trial, and the spec file.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:40–20:00]</span> ארבעה דברים לזכור.</p>
+    <ul>
+      <li>cap-evolve עושה אופטימיזציה למה שהסוכן קורא, לא למודל.</li>
+      <li>אתם מביאים את הסוכן ואת ה-eval שלכם, דרך adapter קטן.</li>
+      <li>הוא מחליט עם paired significance gate על val, וה-test split חתום ומקבל ציון פעם אחת. קוד ה-core אוכף את זה.</li>
+      <li>אפשר לראות את כל זה עובד כבר היום, בשתי דקות, עם toy_calc.</li>
+    </ul>
+    <p>שיעורי בית לפני פרק 2: להריץ את toy_calc ולפתוח את ה-dashboard. בפרק 2 ניתן שם לכל אובייקט שראיתם: seed, candidate, champion, trial, וקובץ ה-spec.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

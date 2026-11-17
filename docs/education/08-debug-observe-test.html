@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 8 · Debugging, observability, testing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  .shot { display: block; width: 100%; border: 1px solid var(--border); border-radius: 10px; object-fit: cover; object-position: top left; }
+  .slide table.tight td { padding: 6px 10px; font-size: 16px; }
+  .slide table.tight th { padding: 6px 10px; }
+  .slide .cap { font-size: 15px; color: var(--muted); margin: 6px 0 0; }
+  .slide .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .slide .grid-4 .card { min-width: 0; overflow-wrap: anywhere; }
+  .slide .grid-4 .card p { font-size: 16px; }
+  .slide .grid-4 .card code { font-size: 14px; }
+  .day { font-family: var(--mono); color: var(--amber-ink); font-weight: 600; }
+</style>
+</head>
+<body data-chapter="Chapter 8 · Debugging, observability, testing" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- 1 ═══ Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 8 of 8</div>
+  <h1>Debugging, observability and testing</h1>
+  <p class="lead">How to see what a run did, find why it went wrong, and prove your change with the right tests.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: deep and practical</span><span class="pill amber">Part A: observe · Part B: test</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:40]</span> Welcome to the last chapter. Chapters 1 to 7 explained what cap-evolve is and how a run works inside. This chapter is about your daily work. Part A is observability and debugging: how to look at a run that is live, a run that finished, and a run that crashed. Part B is the test environment: how the tests are organized, how CI runs them, and how this team expects you to test a change before review. We end with a plan for your first week. Everything here is practical. You can try each command on the toy example on your own laptop, with no API key.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:40]</span> ברוכים הבאים לפרק האחרון. בפרקים 1 עד 7 ראינו מה זה cap-evolve ואיך run עובד מבפנים. הפרק הזה הוא על העבודה היומיומית שלכם. חלק A הוא observability ו-debugging: איך מסתכלים על run שרץ עכשיו, על run שהסתיים, ועל run שקרס. חלק B הוא סביבת הבדיקות: איך הטסטים מאורגנים, איך ה-CI מריץ אותם, ומה הצוות מצפה שתריצו לפני review. נסיים בתוכנית לשבוע הראשון. הכול פרקטי, ואפשר לנסות כל פקודה על ה-toy example במחשב שלכם, בלי API key.</p>
+  </aside>
+</section>
+
+<!-- 2 ═══ Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-2">
+    <div class="card blue">
+      <h3>Part A · Observe and debug</h3>
+      <ul>
+        <li><code>events.jsonl</code>: the one source of truth</li>
+        <li>CLI views: doctor, watch, replay, diff, dashboard</li>
+        <li>Read a run dir by hand</li>
+        <li>Logs, env vars, crashes, transcripts</li>
+        <li>Resume, telemetry, top troubleshooting</li>
+        <li>Debug the core locally with toy_calc</li>
+      </ul>
+    </div>
+    <div class="card green">
+      <h3>Part B · The test environment</h3>
+      <ul>
+        <li><code>core/tests</code>: ~250 files, one rule per file</li>
+        <li>Commands, fixtures, test kinds</li>
+        <li>CI workflows and when they run</li>
+        <li>Model providers for real runs</li>
+        <li>The dev skills: open-pr → testing → review</li>
+        <li>Write a test · your first week</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:40–1:30]</span> Here is the plan. On the left, Part A. We start with one file, <code>events.jsonl</code>, because every view of a run reads it. Then we go through the CLI commands that show a run, the dashboard, and how to read a run directory by hand when you have one specific question. Then logging, crash evidence, resume and telemetry, and a recipe to debug the core in your editor. On the right, Part B. We look at the test folder and its naming rule, the commands, the kinds of tests, the GitHub workflows, and the model providers for paid runs. Then the repository's own development skills, which tell you which tests a change needs. We finish with how to write a test and a first-week plan.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:40–1:30]</span> זו התוכנית. משמאל, חלק A. מתחילים מקובץ אחד, <code>events.jsonl</code>, כי כל תצוגה של run קוראת אותו. אחר כך פקודות ה-CLI שמציגות run, ה-dashboard, ואיך קוראים run dir ביד כשיש שאלה ספציפית. אחר כך logging, ראיות לקריסה, resume ו-telemetry, ומתכון ל-debug של ה-core מתוך ה-editor. מימין, חלק B: תיקיית הטסטים וכלל השמות שלה, הפקודות, סוגי הטסטים, ה-workflows ב-GitHub, וה-model providers ל-runs בתשלום. אחר כך ה-development skills של הריפו, שאומרים איזה טסטים כל שינוי צריך. נסיים באיך כותבים טסט ובתוכנית לשבוע הראשון.</p>
+  </aside>
+</section>
+
+<!-- 3 ═══ events.jsonl ═══ -->
+<section class="slide">
+  <h2>One source of truth: <code>events.jsonl</code></h2>
+  <svg class="diagram" viewBox="0 0 1136 430">
+    <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box violet" x="10" y="150" width="180" height="110" rx="12"/>
+    <text class="title" x="100" y="190" text-anchor="middle">phase scripts</text>
+    <text class="label mono" x="100" y="214" text-anchor="middle">harness.py · gate.py</text>
+    <text class="label" x="100" y="236" text-anchor="middle">one process per phase</text>
+    <path class="line" d="M190,205 L290,205" marker-end="url(#ar3)"/>
+    <text class="label mono" x="240" y="193" text-anchor="middle">log_event()</text>
+    <rect class="box amber" x="292" y="150" width="210" height="110" rx="12"/>
+    <text class="title mono" x="397" y="192" text-anchor="middle">events.jsonl</text>
+    <text class="label" x="397" y="216" text-anchor="middle">append-only, one JSON</text>
+    <text class="label" x="397" y="236" text-anchor="middle">object per line</text>
+    <!-- branch 1 -->
+    <path class="line" d="M502,180 L560,60 L600,60" marker-end="url(#ar3)"/>
+    <rect class="box blue" x="602" y="20" width="250" height="80" rx="10"/>
+    <text class="title mono" x="727" y="52" text-anchor="middle">eventstream.py</text>
+    <text class="label mono" x="727" y="76" text-anchor="middle">follow_events · format_event</text>
+    <path class="line" d="M852,60 L900,60" marker-end="url(#ar3)"/>
+    <text class="mono" x="908" y="55" font-size="15">tail · run --follow</text>
+    <text class="mono" x="908" y="76" font-size="15">dashboard SSE /stream</text>
+    <!-- branch 2 -->
+    <path class="line" d="M502,205 L600,205" marker-end="url(#ar3)"/>
+    <rect class="box blue" x="602" y="160" width="250" height="90" rx="10"/>
+    <text class="title mono" x="727" y="193" text-anchor="middle">dashboard.reduce_run()</text>
+    <text class="label" x="727" y="216" text-anchor="middle">the projection: graph + summary</text>
+    <text class="label" x="727" y="236" text-anchor="middle">(+ dashboard_views.enrich)</text>
+    <path class="line" d="M852,180 L900,150" marker-end="url(#ar3)"/>
+    <text class="mono" x="908" y="140" font-size="15">tui.render_frame</text>
+    <text class="label" x="908" y="160">watch · run --tui · replay</text>
+    <path class="line" d="M852,205 L900,205" marker-end="url(#ar3)"/>
+    <text class="mono" x="908" y="200" font-size="15">capevolve_dashboard</text>
+    <text class="label" x="908" y="220">runs.py → /api/runs/{id}</text>
+    <path class="line" d="M852,232 L900,262" marker-end="url(#ar3)"/>
+    <text class="mono" x="908" y="268" font-size="15">write_dashboard()</text>
+    <text class="label" x="908" y="288">static dashboard.html</text>
+    <!-- branch 3 -->
+    <path class="line dash" d="M502,235 L560,350 L600,350" marker-end="url(#ar3)"/>
+    <rect class="box green" x="602" y="312" width="250" height="80" rx="10"/>
+    <text class="title mono" x="727" y="344" text-anchor="middle">RunObserver.on_event</text>
+    <text class="label" x="727" y="368" text-anchor="middle">capevolve_telemetry (optional)</text>
+    <path class="line" d="M852,352 L900,352" marker-end="url(#ar3)"/>
+    <text class="mono" x="908" y="357" font-size="15">MLflow · OpenTelemetry</text>
+  </svg>
+  <p class="small muted">Source: core/cap_evolve/rundir.py (log_event), eventstream.py, dashboard.py, tui.py, observer.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:30–2:50]</span> This is the most important picture of Part A. Every phase script writes events through one method, <code>RunDir.log_event</code>. It appends one JSON line with a time stamp and a <code>kind</code>, for example <code>evaluate</code>, <code>step</code>, <code>gate_warning</code> or <code>finalize</code>. Nothing else is the source of truth for "what happened".</p>
+    <p>Three kinds of readers use it. First, <code>eventstream.py</code> follows the file by byte offset. It feeds <code>cap-evolve tail</code>, <code>run --follow</code>, and the dashboard's live SSE route. Second, <code>dashboard.reduce_run</code> folds all events and run files into one projection. The terminal UI and the web dashboard both render that same projection, so they cannot disagree. Third, optional observers get each event after it is written, for MLflow or OpenTelemetry. An observer that crashes is caught and never stops the run.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:30–2:50]</span> זו התמונה הכי חשובה בחלק A. כל phase script כותב events דרך מתודה אחת, <code>RunDir.log_event</code>. היא מוסיפה שורת JSON אחת עם זמן ו-<code>kind</code>, למשל <code>evaluate</code>, <code>step</code>, <code>gate_warning</code> או <code>finalize</code>. זה מקור האמת היחיד ל"מה קרה".</p>
+    <p>יש שלושה סוגי קוראים. ראשון, <code>eventstream.py</code> עוקב אחרי הקובץ לפי byte offset, ומזין את <code>cap-evolve tail</code>, את <code>run --follow</code> ואת ה-SSE של ה-dashboard. שני, <code>dashboard.reduce_run</code> מקפל את כל ה-events וקבצי ה-run ל-projection אחד. ה-TUI וה-dashboard מציגים את אותו projection, ולכן הם לא יכולים לסתור זה את זה. שלישי, observers אופציונליים מקבלים כל event אחרי שנכתב, ל-MLflow או OpenTelemetry. observer שקורס נתפס ולא עוצר את ה-run.</p>
+  </aside>
+</section>
+
+<!-- 4 ═══ CLI tools ═══ -->
+<section class="slide">
+  <h2>CLI tools for looking at a run</h2>
+  <table class="tight">
+    <tr><th>Command</th><th>Use it when</th><th>Notes</th></tr>
+    <tr><td><code>cap-evolve doctor</code></td><td>Before a run: is anything missing?</td><td>ok / warn / FAIL rows, each with a fix · <code>--json</code></td></tr>
+    <tr><td><code>cap-evolve check [dir]</code></td><td>The hard gate on the adapter</td><td>must print <code>{"ok": true}</code></td></tr>
+    <tr><td><code>run --follow</code> · <code>run --tui [--diff]</code></td><td>Watch the run you start</td><td>view on stderr, final JSON on stdout</td></tr>
+    <tr><td><code>tail</code> · <code>watch [--diff]</code></td><td>Attach to a run that is already going</td><td>exit 0 done · 2 bad dir · 3 idle timeout</td></tr>
+    <tr><td><code>replay &lt;run_dir&gt;</code> · <code>replay --demo</code></td><td>Re-watch a recorded run</td><td><code>--speed N</code> · demo needs no API key</td></tr>
+    <tr><td><code>diff --best</code> · <code>diff cand_0003</code></td><td>What did a candidate change?</td><td>vs parent · <code>--vs X</code> · <code>--stat</code> · <code>--files</code></td></tr>
+    <tr><td><code>dashboard --base .capevolve</code></td><td>Explore runs in the browser</td><td>port 7878 · <code>--export RUN_DIR</code> → html</td></tr>
+  </table>
+  <p class="small muted mt">Source: core/cap_evolve/cli.py (_cmd_doctor, _cmd_watch, _cmd_replay, _cmd_diff, _cmd_dashboard)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:50–4:00]</span> These are the commands you will use most. <code>doctor</code> is a readiness check before you spend money. <code>check</code> is the hard gate from chapter 5: it runs the adapter and refuses to continue on a stub or a non-deterministic score.</p>
+    <p>For a live run, add <code>--follow</code> for one line per event, or <code>--tui</code> for a full-screen view. Both write to stderr, so stdout stays the machine-readable final JSON. If the run is already going, maybe in CI or in another shell, use <code>tail</code> or <code>watch</code>. They have useful exit codes: 3 means the run went quiet, not that it finished.</p>
+    <p><code>replay</code> feeds a recorded <code>events.jsonl</code> through the same view. <code>diff</code> shows what a candidate changed, read from its snapshot under <code>candidates/</code>. <code>dashboard</code> starts the web UI.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:50–4:00]</span> אלה הפקודות שתשתמשו בהן הכי הרבה. <code>doctor</code> הוא בדיקת מוכנות לפני שמוציאים כסף. <code>check</code> הוא ה-hard gate מפרק 5: הוא מריץ את ה-adapter ומסרב להמשיך אם יש stub או score לא דטרמיניסטי.</p>
+    <p>ל-run חי מוסיפים <code>--follow</code> לשורה לכל event, או <code>--tui</code> לתצוגה במסך מלא. שניהם כותבים ל-stderr, כך ש-stdout נשאר ה-JSON הסופי. אם ה-run כבר רץ, למשל ב-CI או ב-shell אחר, משתמשים ב-<code>tail</code> או <code>watch</code>. ל-exit codes יש משמעות: 3 אומר שה-run השתתק, לא שהוא הסתיים.</p>
+    <p><code>replay</code> מזין <code>events.jsonl</code> מוקלט לאותה תצוגה. <code>diff</code> מראה מה candidate שינה, מתוך ה-snapshot שלו תחת <code>candidates/</code>. <code>dashboard</code> מפעיל את ה-web UI.</p>
+  </aside>
+</section>
+
+<!-- 5 ═══ doctor + diff screenshots ═══ -->
+<section class="slide">
+  <h2>doctor before, diff after</h2>
+  <div class="row">
+    <div class="col">
+      <img class="shot" src="../assets/screenshots/cli_doctor.png" alt="cap-evolve doctor output" style="height:330px">
+      <p class="cap"><code>cap-evolve doctor</code>: two FAIL rows, each with an arrow to the fix.</p>
+    </div>
+    <div class="col">
+      <img class="shot" src="../assets/screenshots/cli_diff.png" alt="cap-evolve diff output" style="height:330px">
+      <p class="cap"><code>cap-evolve diff c1_verify --unified 2</code>: the edit, read from the snapshot.</p>
+    </div>
+  </div>
+  <div class="callout mt">Exit codes are part of the contract: <code>doctor</code> returns 1 when any row is FAIL; <code>diff</code> with no candidate lists the ids and suggests <code>--best</code>.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:00–4:50]</span> Two real screenshots. On the left, <code>doctor</code> on a fresh project. It checks the spec, the algorithm, the adapter, the capability folder, the skills folder, the optimizer, the splits and the budget. Here the adapter still has three <code>IMPLEMENT ME</code> methods and the seed capability folder is empty. Each row tells you exactly what to do next.</p>
+    <p>On the right, <code>diff</code>. It compares two candidate snapshots: by default the candidate and its parent, with <code>--best</code> the seed and the winner. The layout picks unified or side by side from your terminal width. Use <code>--stat</code> when you only want per-file line counts. This is the fastest way to answer "what did the optimizer actually do".</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:00–4:50]</span> שני צילומי מסך אמיתיים. משמאל, <code>doctor</code> על פרויקט חדש. הוא בודק את ה-spec, ה-algorithm, ה-adapter, תיקיית ה-capability, תיקיית ה-skills, ה-optimizer, ה-splits וה-budget. כאן ל-adapter יש עוד שלוש מתודות <code>IMPLEMENT ME</code>, ותיקיית ה-seed ריקה. כל שורה אומרת בדיוק מה לעשות.</p>
+    <p>מימין, <code>diff</code>. הוא משווה שני snapshots: כברירת מחדל ה-candidate וההורה שלו, ועם <code>--best</code> את ה-seed מול המנצח. התצוגה בוחרת unified או side by side לפי רוחב הטרמינל. <code>--stat</code> נותן רק ספירת שורות לכל קובץ. זו הדרך המהירה לענות על "מה ה-optimizer באמת עשה".</p>
+  </aside>
+</section>
+
+<!-- 6 ═══ TUI ═══ -->
+<section class="slide">
+  <h2>The live view: <code>run --tui</code>, <code>watch</code>, <code>replay</code></h2>
+  <div class="row">
+    <div class="col" style="flex:1.25">
+      <img class="shot" src="../assets/screenshots/cli_live_view.png" alt="cap-evolve live terminal view" style="height:470px">
+    </div>
+    <div class="col">
+      <div class="term"><span class="name">header</span><div class="def">spec, split, gate mode, trials, spend</div></div>
+      <div class="term amber mt"><span class="name">cumulative best</span><div class="def">step chart of the best val</div></div>
+      <div class="term green mt"><span class="name">lineage</span><div class="def">✓ accept · ✗ reject · ~ indecisive, with the gate reason</div></div>
+      <div class="term violet mt"><span class="name">per-task val</span><div class="def">heatmap: candidate × task</div></div>
+      <div class="term mt"><span class="name">activity</span><div class="def">the last events, one line each</div></div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/tui.py · demo data: core/cap_evolve/demo_session (synthetic)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:50–5:50]</span> This screenshot is <code>cap-evolve replay --demo</code>. It replays a synthetic session that ships inside the package, so you can see the UI with no key. The banner says the numbers are synthetic.</p>
+    <p>The design rule in <code>tui.py</code> is one sentence: the renderer is a pure function of one state object. <code>render_frame(reduced, size)</code> touches no terminal, no clock and no file. So <code>watch</code>, <code>run --tui</code> and <code>replay</code> differ only in what feeds events into the same reducer. That is also why it is easy to unit test, see <code>test_tui.py</code>.</p>
+    <p>Read the lineage panel first. It shows each candidate, its val with standard error, the delta to its parent, and the gate's reason string. Note <code>cand_0004</code>: indecisive, "not a reject". Chapter 6 explained why that matters.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:50–5:50]</span> הצילום הזה הוא <code>cap-evolve replay --demo</code>. הוא מריץ מחדש session סינתטי שנמצא בתוך החבילה, כך שאפשר לראות את ה-UI בלי key. הבאנר אומר שהמספרים סינתטיים.</p>
+    <p>כלל העיצוב ב-<code>tui.py</code> הוא משפט אחד: ה-renderer הוא פונקציה טהורה של state אחד. <code>render_frame(reduced, size)</code> לא נוגע בטרמינל, בשעון או בקבצים. לכן <code>watch</code>, <code>run --tui</code> ו-<code>replay</code> שונים רק במה שמזין events לאותו reducer. בגלל זה גם קל לבדוק אותו, ראו <code>test_tui.py</code>.</p>
+    <p>תקראו קודם את ה-lineage. הוא מראה כל candidate, את ה-val שלו עם standard error, את ה-delta מול ההורה, ואת הסיבה של ה-gate. שימו לב ל-<code>cand_0004</code>: indecisive, "not a reject". בפרק 6 הסברנו למה זה חשוב.</p>
+  </aside>
+</section>
+
+<!-- 7 ═══ Dashboard ═══ -->
+<section class="slide">
+  <h2>The dashboard: live server or one static file</h2>
+  <div class="row">
+    <div class="col" style="flex:1.1">
+      <div class="flow vertical">
+        <div class="step blue"><b>dashboard_launch.maybe_launch()</b><span>spawns <code>python -m capevolve_dashboard.server</code> · never breaks the run</span></div>
+        <div class="arrow">↓</div>
+        <div class="step"><b>FastAPI · app.py</b><span><code>/api/runs/{id}</code> · <code>/diff/{cand}</code> · <code>/stream</code> (SSE)</span></div>
+        <div class="arrow">↓</div>
+        <div class="step violet"><b>React SPA · buildTabs()</b><span>tabs come from what the run recorded</span></div>
+      </div>
+      <div class="callout amber mt" style="font-size:17px">No backend? <code>report</code> writes <code>run_dir/dashboard.html</code>. Rebuild it: <code>cap-evolve dashboard --export RUN_DIR</code></div>
+    </div>
+    <div class="col">
+      <img class="shot" src="../assets/screenshots/dash_full_overview.png" alt="dashboard overview tab" style="height:240px">
+      <p class="small mt"><b>Always:</b> Overview · Candidates · Gate · Cost · Logs · Memory · Files</p>
+      <p class="small"><b>When recorded:</b> Tasks · Diffs · Trajectories · Config · Timeline · Optimizer story</p>
+      <p class="small"><b>Per algorithm:</b> Rounds · GEPA · SkillOpt · Weakness graph · Process</p>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/dashboard_launch.py · dashboard/backend/capevolve_dashboard/app.py · dashboard/frontend/src/routes/RunDeepDive.tsx</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:50–7:00]</span> The core is pure stdlib, so it never imports the web stack. Instead, <code>dashboard_launch.maybe_launch</code> starts the optional <code>capevolve-dashboard</code> package as a detached process on port 7878. If the package is not installed, it returns "skipped" with a hint, and the run continues. You saw that in the toy run output: <code>dashboard_server: skipped</code>.</p>
+    <p>The backend calls the same <code>reduce_run</code>. The frontend builds its tabs in <code>buildTabs</code> from what the run actually recorded. A missing signal means a missing tab, never an empty or invented one. For example, a gepa run gets a GEPA tab, and the Tasks tab appears only when per-task data exists.</p>
+    <p>Without a server, open <code>dashboard.html</code> in the run dir. It is self-contained, so you can attach it to an issue.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:50–7:00]</span> ה-core הוא stdlib בלבד, ולכן הוא לא מייבא את ה-web stack. במקום זה, <code>dashboard_launch.maybe_launch</code> מפעיל את החבילה האופציונלית <code>capevolve-dashboard</code> כתהליך נפרד על פורט 7878. אם החבילה לא מותקנת, הוא מחזיר "skipped" עם רמז, וה-run ממשיך. ראינו את זה בפלט של ה-toy run: <code>dashboard_server: skipped</code>.</p>
+    <p>ה-backend קורא לאותו <code>reduce_run</code>. ה-frontend בונה את הטאבים ב-<code>buildTabs</code> לפי מה שה-run באמת הקליט. signal חסר פירושו טאב חסר, אף פעם לא טאב ריק או מומצא. למשל, run של gepa מקבל טאב GEPA, וטאב Tasks מופיע רק כשיש נתונים לכל task.</p>
+    <p>בלי שרת, פותחים את <code>dashboard.html</code> ב-run dir. הוא עומד בפני עצמו, אפשר לצרף אותו ל-issue.</p>
+  </aside>
+</section>
+
+<!-- 8 ═══ Run dir by hand ═══ -->
+<section class="slide">
+  <h2>Read a run dir by hand: start from the question</h2>
+  <table class="tight">
+    <tr><th>Question</th><th>Open first</th><th>Then</th></tr>
+    <tr><td>Why was this candidate rejected?</td><td><code>events.jsonl</code> → <code>kind: step</code> (accept, reason, broke, fixed)</td><td><code>rejected.jsonl</code> · <code>graph.jsonl</code></td></tr>
+    <tr><td>What did the optimizer see?</td><td><code>work/&lt;cand&gt;/prompt.txt</code> · <code>INSTRUCTIONS.md</code></td><td><code>LEDGER.md</code> · <code>JOURNAL.md</code> · <code>RUNMAP.md</code> · <code>trajectories/</code></td></tr>
+    <tr><td>What did it change?</td><td><code>cap-evolve diff &lt;cand&gt;</code></td><td><code>candidates/&lt;cand&gt;/</code> · <code>git log</code> in the run dir</td></tr>
+    <tr><td>Why did a task fail?</td><td><code>rollouts/val/&lt;task&gt;__&lt;cand&gt;__t0.json</code></td><td><code>eval_index.jsonl</code></td></tr>
+    <tr><td>What did it cost?</td><td><code>state.json</code> → <code>spent</code> (usd, optimizer_usd, tokens)</td><td><code>evaluate</code> / <code>step</code> events · Cost tab</td></tr>
+    <tr><td>What is the final result?</td><td><code>report.md</code> · <code>final.json</code></td><td><code>baseline.json</code> · <code>splits.json</code></td></tr>
+  </table>
+  <pre class="mt" style="font-size:15px">python3 -c "import json; [print(e['candidate'], e['accept'], e['reason']) for e in
+  map(json.loads, open('events.jsonl')) if e['kind'] == 'step']"</pre>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:00–8:10]</span> The dashboard is good for browsing. When you have one precise question, open the files directly. These names come from a real toy_calc run directory.</p>
+    <p>Why rejected: look at the <code>step</code> event for that candidate. It has <code>accept</code>, the gate <code>reason</code>, the parent val, and the lists of tasks it <code>broke</code> and <code>fixed</code>. What the optimizer saw: the <code>work/&lt;cand&gt;</code> folder is the optimizer's working dir, with the rendered <code>prompt.txt</code>, the instructions and the memory files from chapter 2. Why a task failed: each rollout is one file, named task, candidate and trial. Cost: <code>state.json</code> has the <code>spent</code> block, split into runner, optimizer and intake.</p>
+    <p>The one-liner at the bottom prints every gate decision of a run. In the toy run it shows <code>cand_0001 True</code>, then two rejects with Δ = 0.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:00–8:10]</span> ה-dashboard טוב לשיטוט. כשיש שאלה מדויקת אחת, פותחים את הקבצים ישירות. השמות כאן לקוחים מ-run dir אמיתי של toy_calc.</p>
+    <p>למה נדחה: מסתכלים על ה-event מסוג <code>step</code> של ה-candidate. יש בו <code>accept</code>, את ה-<code>reason</code> של ה-gate, את ה-val של ההורה, ואת רשימות ה-tasks ששבר ותיקן, <code>broke</code> ו-<code>fixed</code>. מה ה-optimizer ראה: התיקייה <code>work/&lt;cand&gt;</code> היא תיקיית העבודה שלו, עם <code>prompt.txt</code>, ההוראות, וקבצי הזיכרון מפרק 2. למה task נכשל: כל rollout הוא קובץ, לפי task, candidate ו-trial. עלות: ב-<code>state.json</code> יש בלוק <code>spent</code>, מחולק ל-runner, optimizer ו-intake.</p>
+    <p>ה-one-liner למטה מדפיס כל החלטת gate. ב-toy run הוא מראה <code>cand_0001 True</code> ואחריו שני rejects עם Δ = 0.</p>
+  </aside>
+</section>
+
+<!-- 9 ═══ Logs and env vars ═══ -->
+<section class="slide">
+  <h2>Log levels and useful environment variables</h2>
+  <div class="row">
+    <div class="col">
+      <pre><span class="c"># cap_evolve/__init__.py, at import time</span>
+<span class="f">CAPEVOLVE_LOG_LEVEL</span>=DEBUG  <span class="c"># per-task/per-trial</span>
+<span class="c"># same thing, for the run's child processes:</span>
+cap-evolve run --log-level DEBUG
+
+<span class="c"># unset = Python default (WARNING), no surprise</span>
+<span class="c"># output for a host that embeds cap_evolve</span></pre>
+      <div class="callout small">Logging goes to <b>stderr</b>. stdout stays the JSON contract between skill scripts and core.</div>
+      <p class="small muted mt">Tested by core/tests/test_log_level.py (in a subprocess)</p>
+    </div>
+    <div class="col">
+      <table class="tight">
+        <tr><th>Variable</th><th>Effect</th></tr>
+        <tr><td><code>CAPEVOLVE_SKILLS_DIR</code></td><td>which skills tree to use</td></tr>
+        <tr><td><code>CAPEVOLVE_WORKERS</code></td><td>eval concurrency</td></tr>
+        <tr><td><code>CAPEVOLVE_EVAL_PROGRESS_INTERVAL</code></td><td><code>eval_progress</code> every N s (30)</td></tr>
+        <tr><td><code>CAPEVOLVE_ERRORED_TRIAL_POLICY</code></td><td><code>drop</code> | <code>fail</code></td></tr>
+        <tr><td><code>CAPEVOLVE_OPTIMIZER_TRANSCRIPT</code></td><td>full optimizer output file</td></tr>
+        <tr><td><code>CAPEVOLVE_NO_FAULTHANDLER</code></td><td>turn off crash dumps</td></tr>
+        <tr><td><code>CAPEVOLVE_MOCK_SCRIPT</code></td><td>edit script for the mock optimizer</td></tr>
+      </table>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:10–9:00]</span> cap-evolve had no debug mode until issue 589. Now <code>CAPEVOLVE_LOG_LEVEL</code> is read once in <code>cap_evolve/__init__.py</code>. If it is set, it calls <code>logging.basicConfig</code> with that level. If it is unset, nothing changes. The <code>--log-level</code> flag on <code>run</code> only sets this variable, so every phase subprocess inherits it. At DEBUG you get a line per task and trial from <code>harness.evaluate_candidate</code>.</p>
+    <p>The table lists the variables you will touch most when debugging. <code>CAPEVOLVE_EVAL_PROGRESS_INTERVAL=0</code> gives one progress event per rollout, which tests use. <code>CAPEVOLVE_WORKERS=1</code> makes evaluation serial, which helps with a debugger. There are about 25 <code>CAPEVOLVE_*</code> variables in the core; grep for them when you need one.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:10–9:00]</span> עד issue 589 לא היה ל-cap-evolve מצב debug. היום <code>CAPEVOLVE_LOG_LEVEL</code> נקרא פעם אחת ב-<code>cap_evolve/__init__.py</code>. אם הוא מוגדר, נקרא <code>logging.basicConfig</code> עם הרמה הזו. אם לא, שום דבר לא משתנה. הדגל <code>--log-level</code> של <code>run</code> רק מגדיר את המשתנה הזה, כך שכל phase subprocess יורש אותו. ב-DEBUG מקבלים שורה לכל task ו-trial מתוך <code>harness.evaluate_candidate</code>.</p>
+    <p>הטבלה מראה את המשתנים שתשתמשו בהם הכי הרבה ב-debugging. <code>CAPEVOLVE_EVAL_PROGRESS_INTERVAL=0</code> נותן progress event לכל rollout, והטסטים משתמשים בזה. <code>CAPEVOLVE_WORKERS=1</code> הופך את ה-evaluation לסדרתי, וזה עוזר עם debugger. יש בערך 25 משתני <code>CAPEVOLVE_*</code> ב-core, תעשו grep כשצריך.</p>
+  </aside>
+</section>
+
+<!-- 10 ═══ Crash visibility ═══ -->
+<section class="slide">
+  <h2>Crashes, optimizer stderr and transcripts leave evidence</h2>
+  <div class="grid-3">
+    <div class="card red">
+      <h3>A phase crashes</h3>
+      <ul>
+        <li>steps run with <code>capture_output</code></li>
+        <li><code>_step_failure</code>: returncode + signal name + hint</li>
+        <li><code>_clip</code> keeps the <b>head</b> and the tail of stderr</li>
+        <li><code>faulthandler</code> on: native SIGSEGV prints a stack</li>
+      </ul>
+    </div>
+    <div class="card amber">
+      <h3>The optimizer talks</h3>
+      <ul>
+        <li>stderr of a successful step is kept</li>
+        <li>file: <code>work/&lt;cand&gt;.optimizer.stderr</code></li>
+        <li>event: <code>optimizer_stderr</code> with a tail</li>
+        <li>failures: <code>optimizer_error</code> in the step</li>
+      </ul>
+    </div>
+    <div class="card violet">
+      <h3>What did the agent do?</h3>
+      <ul>
+        <li><code>run-optimizer --transcript PATH</code></li>
+        <li>uses the registry row's <code>transcript_flag</code></li>
+        <li>every turn and tool call, secrets redacted</li>
+        <li>agent mode: <code>host/transcript.jsonl</code></li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted mt">Source: core/cap_evolve/cli.py (_step_failure, _clip) · harness.py (_record_optimizer_stderr) · skills/optimizers/run-optimizer/scripts/run.py · tests: test_crash_visibility.py, test_optimizer_subprocess_silence.py, test_optimizer_transcript.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:00–9:50]</span> Many of these rules come from real CI runs that failed without a clue. Run 30608405812 died with return code minus 11 and nothing else. The stderr window held only the tail, which was 40 kilobytes of routine scoring chatter. Now the failure record names the signal, gives a hint per signal, and keeps the first and last part of stderr. <code>faulthandler</code> is enabled at import, so a segfault in a C extension prints a Python stack.</p>
+    <p>Second, an optimizer that exits 0 but explains a problem on stderr used to be silent. Now that text goes to a file next to the candidate and into an event. Third, one run spent four hours doing nothing, and only 800 characters of output were kept. So <code>--transcript</code> now records the full stream of turns.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:00–9:50]</span> הרבה מהכללים כאן באו מ-runs אמיתיים ב-CI שנכשלו בלי שום רמז. run 30608405812 מת עם return code מינוס 11 ותו לא. חלון ה-stderr החזיק רק את הזנב, 40 קילובייט של רעש scoring. היום רשומת הכישלון נותנת את שם ה-signal, רמז לכל signal, ושומרת את ההתחלה והסוף של stderr. <code>faulthandler</code> מופעל ב-import, כך ש-segfault ב-C extension מדפיס stack של Python.</p>
+    <p>שנית, optimizer שיוצא עם 0 אבל מסביר בעיה ב-stderr היה שקט. היום הטקסט נשמר לקובץ ליד ה-candidate ול-event. שלישית, run אחד בזבז ארבע שעות בלי לעשות כלום, ונשמרו רק 800 תווים. לכן <code>--transcript</code> מקליט היום את כל ה-turns.</p>
+  </aside>
+</section>
+
+<!-- 11 ═══ Resume + telemetry ═══ -->
+<section class="slide">
+  <h2>Resume an interrupted run · send events to telemetry</h2>
+  <div class="row">
+    <div class="col">
+      <h3>Resume</h3>
+      <pre>cap-evolve run --resume --run-ts demo \
+    --max-iterations 20   <span class="c"># optional: extend</span></pre>
+      <ul class="small">
+        <li>reopens the run dir, keeps <code>state.json</code></li>
+        <li>skips the baseline if it is done</li>
+        <li>continues at iteration N+1 from the best</li>
+        <li>already finalized? only rebuilds the report</li>
+      </ul>
+      <p class="small muted">tests: test_resume.py</p>
+    </div>
+    <div class="col">
+      <h3>Telemetry (optional)</h3>
+      <pre><span class="c"># capevolve.yaml</span>
+<span class="k">observers</span>:
+  - <span class="k">backend</span>: <span class="s">mlflow</span>
+    <span class="k">tracking_uri</span>: <span class="s">http://localhost:5000</span>
+  - <span class="k">backend</span>: <span class="s">otel</span></pre>
+      <div class="flow">
+        <div class="step"><b>baseline</b><span>load_observers</span></div><div class="arrow">→</div>
+        <div class="step amber"><b>state file</b><span>observer_state.json</span></div><div class="arrow">→</div>
+        <div class="step"><b>later phases</b><span>from_state</span></div>
+      </div>
+      <p class="small muted mt">pip install capevolve-telemetry[all] · capevolve_telemetry/config.py</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:50–10:40]</span> Long runs get interrupted: a crash, a CI timeout, a pod eviction. Re-run the same command with <code>--resume</code>. With <code>--run-ts</code> you name the run; without it, the newest run under the base is used. It keeps rollouts, accepted candidates, spend and git history. The sealed test is never scored twice: if the run had already finalized, resume only regenerates the report. Explicit budget flags extend the budget, so you can keep climbing.</p>
+    <p>Telemetry lives in a separate package, <code>capevolve_telemetry</code>, with MLflow and OpenTelemetry observers. You add an <code>observers</code> list to the spec. The baseline phase builds the observers and saves their state to <code>observer_state.json</code>. Each later phase is a new process, so it rebuilds them from that state. That is how one MLflow run spans all phases.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:50–10:40]</span> runs ארוכים נקטעים: קריסה, timeout ב-CI, pod eviction. מריצים שוב את אותה פקודה עם <code>--resume</code>. עם <code>--run-ts</code> בוחרים את ה-run; בלעדיו, נלקח ה-run החדש ביותר. נשמרים ה-rollouts, ה-candidates שהתקבלו, ההוצאה, וה-git history. ה-test החתום לא נמדד פעמיים: אם ה-run כבר עשה finalize, ה-resume רק בונה מחדש את ה-report. דגלי budget מפורשים מרחיבים את התקציב.</p>
+    <p>ה-telemetry נמצא בחבילה נפרדת, <code>capevolve_telemetry</code>, עם observers ל-MLflow ול-OpenTelemetry. מוסיפים רשימת <code>observers</code> ל-spec. ה-phase של baseline בונה את ה-observers ושומר את ה-state שלהם ב-<code>observer_state.json</code>. כל phase אחר הוא תהליך חדש, ולכן בונה אותם מחדש מה-state. כך run אחד ב-MLflow מכסה את כל ה-phases.</p>
+  </aside>
+</section>
+
+<!-- 12 ═══ Troubleshooting ═══ -->
+<section class="slide">
+  <h2>Top issues from <code>docs/TROUBLESHOOTING.md</code></h2>
+  <table class="tight">
+    <tr><th>Symptom</th><th>Cause and fix</th></tr>
+    <tr><td><code>cap-evolve: command not found</code></td><td>core not installed in this env → <code>pip install ./core</code></td></tr>
+    <tr><td>toy run does not print <code>test_reward 1.0</code></td><td>run from the repo root; same check: <code>pytest core/tests/test_e2e_slice.py</code></td></tr>
+    <tr><td><code>check</code> prints <code>{"ok": false}</code></td><td>the hard gate works: <code>IMPLEMENT ME</code> stub, unstable <code>tasks()</code>, random <code>score()</code></td></tr>
+    <tr><td>missing credentials at runtime</td><td>optimizer and runner credentials are <b>separate</b>; runner ones go in <code>.env</code></td></tr>
+    <tr><td><code>TestSealError</code> · "test already scored"</td><td>by design: test is scored once per run → start a new run dir</td></tr>
+    <tr><td>a real gain was rejected</td><td>Δ ≤ k·SE: add <code>num_trials</code>, lower <code>gate_k_se</code>, or accept noise</td></tr>
+    <tr><td>dashboard does not launch</td><td><code>pip install ./dashboard/backend</code>, or open <code>dashboard.html</code></td></tr>
+  </table>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:40–11:20]</span> These are the issues new users report most. Read the full file once, it is short. Three of them are worth a comment. First, a red <code>check</code> is not a bug in cap-evolve. It is the gate refusing to spend money on an adapter that cannot give a stable score. Second, the credentials for the optimizer, for example a logged-in Claude Code, say nothing about the runner model. They are checked separately. Third, a "rejected gain" is usually the gate doing its job. On a small val split, a gain of one task is often inside the noise. The fix is more evidence, more trials or more tasks, not a weaker gate. When none of these match, open an issue with the exact command and output.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:40–11:20]</span> אלה הבעיות שמשתמשים חדשים מדווחים עליהן הכי הרבה. תקראו את הקובץ המלא פעם אחת, הוא קצר. שלוש מהן שוות הערה. ראשית, <code>check</code> אדום הוא לא באג ב-cap-evolve. זה ה-gate שמסרב להוציא כסף על adapter שלא נותן score יציב. שנית, ה-credentials של ה-optimizer, למשל Claude Code מחובר, לא אומרים כלום על מודל ה-runner. בודקים אותם בנפרד. שלישית, "שיפור שנדחה" הוא בדרך כלל ה-gate שעושה את העבודה. על val קטן, שיפור של task אחד הוא לרוב בתוך הרעש. הפתרון הוא יותר ראיות, יותר trials או יותר tasks, לא gate חלש יותר. אם שום דבר לא מתאים, פותחים issue עם הפקודה והפלט המדויקים.</p>
+  </aside>
+</section>
+
+<!-- 13 ═══ Debug recipe ═══ -->
+<section class="slide">
+  <h2>Recipe: debug the core locally</h2>
+  <div class="row">
+    <div class="col" style="flex:1.3">
+      <pre style="font-size:15px"><span class="c"># 1. editable install, in a venv</span>
+pip install -e <span class="s">"./core[dev]"</span> -e <span class="s">"./dashboard/backend[dev]"</span>
+<span class="c"># 2. zero-API run: toy_calc + mock optimizer</span>
+bash benchmarks/toy/examples/calc/run.sh
+<span class="c"># 3. look at it</span>
+cap-evolve replay $WORKDIR/.capevolve/run_demo --speed 20
+<span class="c"># 4. set breakpoint() in harness.evaluate_candidate</span>
+<span class="c">#    or gate.decide, then run ONE in-process test:</span>
+python -m pytest core/tests/test_e2e_slice.py \
+    -k test_full_slice -s
+<span class="c"># 5. or stop at the first failure</span>
+python -m pytest core/tests/test_e2e_slice.py -x --pdb</pre>
+    </div>
+    <div class="col">
+      <div class="callout red" style="font-size:17px"><b>Why not a breakpoint in <code>cap-evolve run</code>?</b> Each phase is a <code>skills/phases/*/scripts/run.py</code> subprocess with <code>capture_output</code>. pdb never gets your terminal.</div>
+      <div class="callout green mt" style="font-size:17px"><code>test_e2e_slice.py</code> calls <code>harness.baseline</code>, <code>run_step</code> and <code>finalize</code> <b>in your process</b>. Only the mock optimizer is a subprocess.</div>
+      <p class="small mt"><code>run --plan-only</code> prints the phase sequence: intake → implement-and-check → baseline → hill-climb → finalize → report.</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:20–12:30]</span> Here is a recipe that works on day one. Install the core and the dashboard backend in editable mode. Run the toy example: it uses the deterministic <code>mock</code> optimizer, which applies the edit script in <code>mock_script.json</code>. Baseline val is 0.0, and the test reward is 1.0. The script prints its temporary working dir, so you can replay the run.</p>
+    <p>Now the important detail. <code>cap-evolve run</code> starts every phase as a subprocess and captures its output. A <code>breakpoint()</code> there will hang or be swallowed. So debug through a test instead. <code>test_e2e_slice.py</code> drives the real toy adapter through baseline, one step and finalize in the test process. Put a breakpoint in <code>harness.evaluate_candidate</code> or in <code>gate.decide</code>, run it with <code>-s</code>, and you can step through one full iteration. Set <code>CAPEVOLVE_WORKERS=1</code> if threads get in the way.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:20–12:30]</span> הנה מתכון שעובד מהיום הראשון. מתקינים את ה-core וה-dashboard backend במצב editable. מריצים את ה-toy example: הוא משתמש ב-optimizer הדטרמיניסטי <code>mock</code>, שמפעיל את ה-edit script שב-<code>mock_script.json</code>. ה-baseline val הוא 0.0 וה-test reward הוא 1.0. הסקריפט מדפיס את תיקיית העבודה הזמנית, אז אפשר לעשות replay.</p>
+    <p>עכשיו הפרט החשוב. <code>cap-evolve run</code> מפעיל כל phase כ-subprocess ותופס את הפלט שלו. <code>breakpoint()</code> שם ייתקע או ייבלע. לכן עושים debug דרך טסט. <code>test_e2e_slice.py</code> מריץ את ה-toy adapter האמיתי דרך baseline, step אחד ו-finalize בתוך תהליך הטסט. שמים breakpoint ב-<code>harness.evaluate_candidate</code> או ב-<code>gate.decide</code>, מריצים עם <code>-s</code>, ועוברים צעד צעד על iteration שלם. אם threads מפריעים, <code>CAPEVOLVE_WORKERS=1</code>.</p>
+  </aside>
+</section>
+
+<!-- 14 ═══ Test layout ═══ -->
+<section class="slide">
+  <h2>Part B · How the tests are organized</h2>
+  <div class="row">
+    <div class="col">
+      <div class="tree"><span class="d">conftest.py</span>          <span class="c"># root: intentionally empty</span>
+<span class="d">core/tests/</span>          <span class="c"># 248 test_*.py files</span>
+├── conftest.py      <span class="c"># sets 2 spreadsheetbench env vars</span>
+├── <span class="d">fixtures/</span>        <span class="c"># recorded runs, gate decisions,</span>
+│                    <span class="c"># microcases, run_schema_v2 …</span>
+├── ao2_fakes.py · p2_fakes.py  <span class="c"># shared fakes</span>
+├── <span class="h">test_a_failed_gate_is_not_a_verdict.py</span>
+├── <span class="h">test_infra_errors_not_zeros.py</span>
+├── test_e2e_slice.py
+└── test_spreadsheetbench_*.py  <span class="c"># 23 files</span>
+<span class="d">dashboard/backend/tests/</span>   <span class="c"># + conftest make_run</span>
+<span class="d">dashboard/frontend/src/test/</span> <span class="c"># 30 vitest files</span>
+<span class="d">capevolve_telemetry/tests/</span>
+<span class="d">ci/benchmarks/lib/</span>     <span class="c"># pytest + test_*.sh</span></div>
+    </div>
+    <div class="col" style="flex:0.8">
+      <div class="card amber">
+        <h3>The file name is the rule</h3>
+        <p><code>test_an_unresolved_gate_is_not_a_rejection.py</code></p>
+        <p><code>test_pass_k_undefined.py</code></p>
+        <p>The docstring tells the incident: run id, issue number, what broke.</p>
+      </div>
+      <div class="card mt">
+        <h3>Plain pytest</h3>
+        <p>No custom markers. <code>testpaths = ["tests"]</code> in <code>core/pyproject.toml</code>.</p>
+      </div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:30–13:20]</span> Part B. Most tests live in <code>core/tests</code>, about 250 files, flat. Many file names are a full sentence that states a rule: "a failed gate is not a verdict", "infra errors are not zeros". When such a test fails, its name already tells you which promise you broke. Open the docstring: it usually names the CI run or the issue that caused it, and explains the bug. These docstrings are some of the best documentation in the repo.</p>
+    <p>Shared data lives in <code>fixtures</code>: recorded runs, gate decisions, micro cases. The root <code>conftest.py</code> is empty on purpose. The core one only sets two environment variables for the spreadsheetbench tests. There are no custom markers and no slow tier inside pytest; slow, paid work lives in separate CI workflows.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:30–13:20]</span> חלק B. רוב הטסטים נמצאים ב-<code>core/tests</code>, בערך 250 קבצים, בלי תתי-תיקיות. הרבה משמות הקבצים הם משפט שלם שמנסח כלל: "a failed gate is not a verdict", "infra errors are not zeros". כשטסט כזה נכשל, השם כבר אומר איזו הבטחה שברתם. תפתחו את ה-docstring: הוא בדרך כלל מציין את ה-CI run או ה-issue שגרם לו ומסביר את הבאג. ה-docstrings האלה הם מהתיעוד הכי טוב בריפו.</p>
+    <p>נתונים משותפים נמצאים ב-<code>fixtures</code>: runs מוקלטים, החלטות gate, micro cases. ה-<code>conftest.py</code> בשורש ריק בכוונה. זה של ה-core רק מגדיר שני משתני סביבה לטסטים של spreadsheetbench. אין markers מיוחדים ואין שכבת slow בתוך pytest; עבודה איטית ובתשלום נמצאת ב-workflows נפרדים.</p>
+  </aside>
+</section>
+
+<!-- 15 ═══ How to run ═══ -->
+<section class="slide">
+  <h2>Run the unit tier: the same commands as CI</h2>
+  <pre><span class="c"># Python: core + dashboard backend</span>
+pip install -e <span class="s">"./core[dev]"</span> -e <span class="s">"./dashboard/backend[dev]"</span>
+python -m pytest core/tests -q
+python -m pytest dashboard/backend/tests -q
+<span class="c"># one file, one test, or by keyword</span>
+python -m pytest core/tests/test_gate_epsilon_constraint.py -q -k <span class="s">"rejects"</span>
+<span class="c"># skills: manifest + authoring lint</span>
+python skills/_registry/build_manifest.py skills
+python skills/_registry/lint_skills.py skills
+<span class="c"># frontend: build, vitest, and commit dist/</span>
+cd dashboard/frontend &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; npm test</pre>
+  <div class="grid-3">
+    <div class="card"><p><b>Zero API.</b> No test needs a key or the network.</p></div>
+    <div class="card"><p><b><code>[dev]</code> extras</b> bring <code>openpyxl</code> and <code>pandas</code>, or xlsx tests skip silently.</p></div>
+    <div class="card"><p><b>Full suite is slow</b> (~30+ min on a laptop). Use <code>-k</code> or one file while you work.</p></div>
+  </div>
+  <p class="small muted">Source: .claude/skills/testing/SKILL.md · .github/workflows/ci.yml</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:20–14:00]</span> These are the exact commands of tier 1 in the <code>testing</code> skill, and they mirror <code>ci.yml</code>. Note the <code>[dev]</code> extras. Without <code>openpyxl</code> and <code>pandas</code>, every test that builds a real spreadsheet calls <code>importorskip</code> and skips. That once hid a whole test file in CI. The comment in <code>core/pyproject.toml</code> tells this story.</p>
+    <p>The full core suite is slow: on a laptop it can take half an hour or more, because many tests start real subprocesses: phase scripts, the mock optimizer, the CLI. While you work, run one file or use <code>-k</code>. Before you push, run the full set. If you change the frontend, you must rebuild and commit <code>dist/</code>, because the backend serves the built files and CI fails on a stale bundle.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:20–14:00]</span> אלה בדיוק הפקודות של tier 1 ב-skill של <code>testing</code>, והן משקפות את <code>ci.yml</code>. שימו לב ל-<code>[dev]</code>. בלי <code>openpyxl</code> ו-<code>pandas</code>, כל טסט שבונה spreadsheet אמיתי עושה <code>importorskip</code> ומדלג. פעם זה הסתיר קובץ טסטים שלם ב-CI. ההערה ב-<code>core/pyproject.toml</code> מספרת את הסיפור.</p>
+    <p>ה-suite המלא של ה-core איטי: על לפטופ זה יכול לקחת חצי שעה ויותר, כי הרבה טסטים מפעילים subprocesses אמיתיים: phase scripts, ה-mock optimizer, ה-CLI. בזמן עבודה מריצים קובץ אחד או <code>-k</code>. לפני push מריצים הכול. אם שיניתם את ה-frontend, חייבים לבנות מחדש ולעשות commit ל-<code>dist/</code>, כי ה-backend מגיש את הקבצים הבנויים וה-CI נכשל על bundle ישן.</p>
+  </aside>
+</section>
+
+<!-- 16 ═══ Test kinds ═══ -->
+<section class="slide">
+  <h2>Kinds of tests and what each one protects</h2>
+  <div class="grid-4">
+    <div class="card blue"><h3>Unit · rule</h3><p>one behavior, one file: <code>test_pass_k_undefined.py</code>, <code>test_gate_*.py</code></p></div>
+    <div class="card green"><h3>E2E slice</h3><p><code>test_e2e_slice.py</code>: toy_calc + mock, check → baseline → step → finalize; seal holds</p></div>
+    <div class="card violet"><h3>Parity</h3><p><code>test_*_parity.py</code>: every algorithm gets the same optimizer context and writes the same iteration record</p></div>
+    <div class="card amber"><h3>Docs = code</h3><p><code>test_advertised_counts.py</code>, <code>test_skill_code_claims.py</code>: numbers and claims match the repo</p></div>
+    <div class="card"><h3>Skill lint</h3><p><code>lint_skills.py</code> is blocking; <code>test_skill_authoring_lint.py</code> tests the lint itself</p></div>
+    <div class="card"><h3>Dashboard</h3><p>backend: pytest + <code>make_run</code> fixture · frontend: vitest + Testing Library</p></div>
+    <div class="card"><h3>Benchmark adapters</h3><p><code>test_spreadsheetbench_*</code>, <code>test_tau2_*</code> in core/tests · appworld, parsec in their own <code>tests/</code></p></div>
+    <div class="card"><h3>Zero-API runs</h3><p><code>ci/e2e_all_algorithms.sh</code>: all algorithms on toy_calc</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:00–14:50]</span> Here are the kinds. Most tests are rule tests: one behavior per file. The e2e slice is the proof that the whole pipeline works with no model. Parity tests exist because algorithms drifted apart: gepa once skipped the shared step and wrote no <code>step</code> event and no journal. The parity tests run each algorithm and compare.</p>
+    <p>A special family keeps the docs honest. <code>test_advertised_counts.py</code> counts SKILL.md files and registry rows on disk and compares them with the numbers in README and on the site. <code>test_skill_code_claims.py</code> pins sentences in skills to code behavior. The skill lint applies the same authoring rules that cap-evolve sells to users. Note: the appworld and parsec example tests are not in <code>ci.yml</code>; run them by hand when you touch those adapters.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:00–14:50]</span> אלה הסוגים. רוב הטסטים הם rule tests: התנהגות אחת לקובץ. ה-e2e slice הוא ההוכחה שכל ה-pipeline עובד בלי מודל. טסטי parity קיימים כי ה-algorithms התפצלו: gepa פעם דילג על ה-step המשותף ולא כתב event מסוג <code>step</code> ולא journal. טסטי ה-parity מריצים כל algorithm ומשווים.</p>
+    <p>משפחה מיוחדת שומרת על התיעוד כן. <code>test_advertised_counts.py</code> סופר קבצי SKILL.md ושורות registry על הדיסק ומשווה למספרים ב-README ובאתר. <code>test_skill_code_claims.py</code> מצמיד משפטים ב-skills להתנהגות בקוד. ה-skill lint מחיל את אותם כללי כתיבה ש-cap-evolve מוכר למשתמשים. שימו לב: הטסטים של appworld ו-parsec לא נמצאים ב-<code>ci.yml</code>; תריצו אותם ביד כשנוגעים ב-adapters האלה.</p>
+  </aside>
+</section>
+
+<!-- 17 ═══ CI workflows ═══ -->
+<section class="slide">
+  <h2>CI: which workflow runs what, and when</h2>
+  <table class="tight">
+    <tr><th>Workflow</th><th>Trigger</th><th>What it runs</th></tr>
+    <tr><td><code>ci.yml</code></td><td>every PR + push to main</td><td>pytest core + backend · frontend build + vitest + stale <code>dist/</code> · toy_calc · install smoke · lychee links + CLI subcommands · skill lint · codespell · ci lib tests</td></tr>
+    <tr><td><code>integration-tests.yml</code></td><td>dispatch · PR label <code>integration-test</code></td><td>one task end to end: tau2 · tau2_sierra(_blackbox) · appworld, self-hosted runner</td></tr>
+    <tr><td><code>benchmarks.yml</code></td><td>dispatch · PR label <code>benchmark-&lt;tier&gt;-&lt;bench&gt;</code></td><td>curated tiers smoke / pilot / full / full_verified, per benchmark and algorithm</td></tr>
+    <tr><td><code>codeql.yml</code></td><td>PR, push, weekly</td><td>security scan</td></tr>
+    <tr><td><code>pages.yml</code></td><td>push to <code>site/**</code>, after Benchmarks</td><td>build and deploy the site</td></tr>
+    <tr><td><code>sync-model-lists.yml</code></td><td>schedule, twice an hour</td><td>sync model pickers with served models</td></tr>
+    <tr><td>DCO (probot app)</td><td>every PR</td><td>every commit needs <code>Signed-off-by</code> → <code>git commit -s</code></td></tr>
+  </table>
+  <p class="small muted mt">Also: Bob workflows (test/fix PR, label issues and PRs) · benchmark-history-prune.yml</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:50–15:50]</span> The free tier is <code>ci.yml</code>. It runs on every pull request and every push to main, with parallel jobs. Two jobs need a word. "Toy example" asserts the outcome, baseline 0.0 to test reward 1.0, not only the exit code. "Install smoke" runs <code>install.sh</code> into a clean home and runs toy_calc from the install, outside the repo, because an install that cannot find the optimizer exits 0 with no improvement.</p>
+    <p>The paid tiers do not run by default. <code>integration-tests.yml</code> runs one task per leg on a self-hosted runner, and only for known collaborators. <code>benchmarks.yml</code> runs the curated tiers. Both start by manual dispatch or by a PR label. DCO is not a workflow file; it is the probot app. Always commit with <code>-s</code>.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:50–15:50]</span> השכבה החינמית היא <code>ci.yml</code>. היא רצה על כל pull request ועל כל push ל-main, עם jobs במקביל. שני jobs שווים מילה. "Toy example" בודק את התוצאה, baseline 0.0 ל-test reward 1.0, ולא רק את ה-exit code. "Install smoke" מריץ <code>install.sh</code> לתוך home נקי ומריץ toy_calc מההתקנה, מחוץ לריפו, כי התקנה שלא מוצאת את ה-optimizer יוצאת עם 0 בלי שום שיפור.</p>
+    <p>השכבות בתשלום לא רצות כברירת מחדל. <code>integration-tests.yml</code> מריץ task אחד לכל leg על self-hosted runner, ורק ל-collaborators מוכרים. <code>benchmarks.yml</code> מריץ את ה-tiers המלאים. שניהם מופעלים ב-dispatch ידני או ב-label על ה-PR. DCO הוא לא קובץ workflow, זו אפליקציית probot. תמיד עושים commit עם <code>-s</code>.</p>
+  </aside>
+</section>
+
+<!-- 18 ═══ Model providers ═══ -->
+<section class="slide">
+  <h2>Real runs: model providers and their order</h2>
+  <svg class="diagram" viewBox="0 0 1136 170">
+    <defs><marker id="ar18" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box green" x="20" y="30" width="300" height="100" rx="12"/>
+    <text class="title" x="170" y="68" text-anchor="middle">1 · RITS</text>
+    <text class="label mono" x="170" y="92" text-anchor="middle">ibm-rits/…</text>
+    <text class="label" x="170" y="112" text-anchor="middle">no budget</text>
+    <rect class="box blue" x="418" y="30" width="300" height="100" rx="12"/>
+    <text class="title" x="568" y="68" text-anchor="middle">2 · ETE-INT</text>
+    <text class="label mono" x="568" y="92" text-anchor="middle">ibm-ete-int/…</text>
+    <text class="label" x="568" y="112" text-anchor="middle">the team's main gateway</text>
+    <rect class="box amber" x="816" y="30" width="300" height="100" rx="12"/>
+    <text class="title" x="966" y="68" text-anchor="middle">3 · ETE</text>
+    <text class="label mono" x="966" y="92" text-anchor="middle">ibm-ete/…</text>
+    <text class="label" x="966" y="112" text-anchor="middle">own budget · last choice</text>
+    <path class="line" d="M320,80 L416,80" marker-end="url(#ar18)"/>
+    <text class="label" x="368" y="70" text-anchor="middle">cannot serve</text>
+    <path class="line" d="M718,80 L814,80" marker-end="url(#ar18)"/>
+    <text class="label" x="766" y="70" text-anchor="middle">over budget</text>
+  </svg>
+  <div class="row">
+    <div class="col">
+      <pre style="font-size:15px">R=skillberry-ai/cap-evolve
+gh workflow run <span class="s">"Integration tests"</span> \
+  --repo $R -f bench=tau2_sierra
+gh workflow run <span class="s">"Benchmarks"</span> \
+  --repo $R -f benchmark=tau2 -f tier=smoke</pre>
+    </div>
+    <div class="col">
+      <ul class="small">
+        <li>pick a <b>plain name</b> (<code>claude-opus-5</code>): CI tries the order</li>
+        <li>prefixed id pins one gateway, no fallback</li>
+        <li>one provider per run, chosen before it starts</li>
+        <li>rule lives in <code>ci/benchmarks/model_catalog.txt</code></li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:50–16:40]</span> Paid runs reach models through three IBM providers. RITS first, because it has no budget. Then ETE-INT, the team's main gateway. ETE only when ETE-INT cannot serve the model or is over budget. You do not choose by hand: pick a plain model name in the dispatch form, and the preflight in <code>ci_setup.sh</code> tries each provider in the order from <code>model_catalog.txt</code>. It sends one real completion and keeps the first that answers.</p>
+    <p>The choice is made once per run. If a budget runs out in the middle, the run fails instead of switching. That keeps baseline and candidates on the same gateway, so the comparison stays fair. After the run, the job summary and the run record show <code>agent_provider</code>, <code>optimizer_provider</code> and why other providers were skipped. Note: the skill text says <code>-f bench=tau2</code> for Benchmarks, but the workflow input is named <code>benchmark</code>.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:50–16:40]</span> runs בתשלום מגיעים למודלים דרך שלושה providers של IBM. קודם RITS, כי אין לו budget. אחר כך ETE-INT, ה-gateway הראשי של הצוות. ETE רק כש-ETE-INT לא יכול להגיש את המודל או שעבר את ה-budget. לא בוחרים ביד: בוחרים שם מודל פשוט בטופס ה-dispatch, וה-preflight ב-<code>ci_setup.sh</code> מנסה כל provider לפי הסדר ב-<code>model_catalog.txt</code>. הוא שולח completion אמיתי אחד ושומר את הראשון שעונה.</p>
+    <p>הבחירה נעשית פעם אחת לכל run. אם budget נגמר באמצע, ה-run נכשל ולא מחליף. כך ה-baseline וה-candidates נמדדים על אותו gateway, וההשוואה הוגנת. אחרי ה-run, ה-job summary וה-run record מראים <code>agent_provider</code>, <code>optimizer_provider</code>, ולמה providers אחרים דולגו. הערה: ב-skill כתוב <code>-f bench=tau2</code> ל-Benchmarks, אבל שם ה-input ב-workflow הוא <code>benchmark</code>.</p>
+  </aside>
+</section>
+
+<!-- 19 ═══ Dev skills ═══ -->
+<section class="slide">
+  <h2>The repo's development skills: which tests a change needs</h2>
+  <svg class="diagram" viewBox="0 0 1136 250">
+    <defs><marker id="ar19" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="10" y="85" width="200" height="80" rx="12"/>
+    <text class="title mono" x="110" y="120" text-anchor="middle">open-pr</text>
+    <text class="label" x="110" y="144" text-anchor="middle">branch · identity · track</text>
+    <rect class="box green" x="330" y="10" width="380" height="66" rx="10"/>
+    <text class="title mono" x="350" y="38">testing</text>
+    <text class="label" x="350" y="60">code: unit tier always + real run if it can change one</text>
+    <rect class="box violet" x="330" y="92" width="380" height="66" rx="10"/>
+    <text class="title mono" x="350" y="120">dashboard-change</text>
+    <text class="label" x="350" y="142">frontend/src only: build + before/after screenshots</text>
+    <rect class="box" x="330" y="174" width="380" height="66" rx="10"/>
+    <text class="title mono" x="350" y="202">docs-change</text>
+    <text class="label" x="350" y="224">docs only: link check, no run</text>
+    <path class="line" d="M210,110 L328,43" marker-end="url(#ar19)"/>
+    <path class="line" d="M210,125 L328,125" marker-end="url(#ar19)"/>
+    <path class="line" d="M210,140 L328,207" marker-end="url(#ar19)"/>
+    <rect class="box amber" x="850" y="85" width="276" height="80" rx="12"/>
+    <text class="title mono" x="988" y="120" text-anchor="middle">review-cycles</text>
+    <text class="label" x="988" y="144" text-anchor="middle">3 rounds × 2 reviewers</text>
+    <path class="line" d="M710,43 L848,110" marker-end="url(#ar19)"/>
+    <path class="line" d="M710,125 L848,125" marker-end="url(#ar19)"/>
+    <path class="line" d="M710,207 L848,140" marker-end="url(#ar19)"/>
+  </svg>
+  <div class="grid-2 mt">
+    <div class="callout green" style="font-size:17px"><b>Tier 2 trigger:</b> harness or loop, an adapter, gate / seal / splits, the CLI, CI benchmark dispatch. Run zero-API first: toy_calc, <code>init</code> + <code>check</code>, <code>ci/e2e_all_algorithms.sh</code>.</div>
+    <div class="callout" style="font-size:17px"><b>Report evidence on the PR:</b> run link, leg and tier, provider, <code>best_val</code>, <code>test_reward</code>, <code>test_delta</code>, cost.</div>
+  </div>
+  <p class="small muted">Source: .claude/skills/{open-pr,testing,dashboard-change,docs-change,review-cycles}/SKILL.md · CLAUDE.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:40–17:30]</span> The repo has its own development skills in <code>.claude/skills</code>. They are written for an agent, but they are also the house rules for people. Every task starts at <code>open-pr</code>: a worktree from fresh main, your own git identity, and a track. The track depends on the file list. Code goes to <code>testing</code>. Frontend-only goes to <code>dashboard-change</code>. Docs-only goes to <code>docs-change</code>. A PR can need more than one track.</p>
+    <p>"Unit tier always, real end-to-end run when the change can affect one" means this. Tier 1 is the CI commands, plus a new or updated test for any logic change; a missing test is a blocker. Tier 2 is needed when the change touches what a real run does, scores or costs. Start with the free zero-API runs. Dispatch a paid run only when those cannot show the effect. Then <code>review-cycles</code> runs three rounds of two independent reviewers.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:40–17:30]</span> לריפו יש development skills משלו ב-<code>.claude/skills</code>. הם כתובים ל-agent, אבל הם גם כללי הבית לאנשים. כל משימה מתחילה ב-<code>open-pr</code>: worktree מ-main עדכני, ה-git identity שלכם, ובחירת track. ה-track נקבע לפי רשימת הקבצים. קוד הולך ל-<code>testing</code>. frontend בלבד הולך ל-<code>dashboard-change</code>. תיעוד בלבד הולך ל-<code>docs-change</code>. PR יכול לדרוש יותר מ-track אחד.</p>
+    <p>"Unit tier always, real end-to-end run when the change can affect one" פירושו כך. tier 1 הוא פקודות ה-CI, ועוד טסט חדש או מעודכן לכל שינוי לוגיקה; טסט חסר הוא blocker. tier 2 נדרש כשהשינוי נוגע במה ש-run אמיתי עושה, מודד או עולה. מתחילים מה-runs החינמיים בלי API. מריצים run בתשלום רק כשהם לא מראים את ההשפעה. אחר כך <code>review-cycles</code> מריץ שלושה סבבים של שני reviewers בלתי תלויים.</p>
+  </aside>
+</section>
+
+<!-- 20 ═══ Write a new test ═══ -->
+<section class="slide">
+  <h2>How to write a new test</h2>
+  <div class="row">
+    <div class="col" style="flex:1.35">
+      <pre style="font-size:15px"><span class="c"># core/tests/test_pass_k_undefined.py (shortened)</span>
+<span class="s">"""pass^k is OMITTED (N/A) when k &gt; num_trials,
+never emitted as 0.0. Honesty guard for issue #112."""</span>
+<span class="k">from</span> cap_evolve.loop <span class="k">import</span> aggregate_scores
+<span class="k">from</span> cap_evolve.types <span class="k">import</span> Score
+
+<span class="k">def</span> <span class="f">test_single_trial_omits_k2</span>():
+    scores = [Score(task_id=<span class="s">"t1"</span>, reward=<span class="n">1.0</span>),
+              Score(task_id=<span class="s">"t2"</span>, reward=<span class="n">1.0</span>)]
+    r = aggregate_scores(<span class="s">"val"</span>, scores, ks=(<span class="n">1</span>, <span class="n">2</span>))
+    <span class="k">assert</span> r.pass_k == {<span class="s">"1"</span>: <span class="n">1.0</span>}   <span class="c"># NOT {"2": 0.0}</span>
+    <span class="k">assert</span> <span class="s">"2"</span> <span class="k">not in</span> r.to_dict()[<span class="s">"pass_k"</span>]</pre>
+    </div>
+    <div class="col">
+      <ol class="small">
+        <li>Name the file as the rule it protects.</li>
+        <li>Docstring: the incident, run id or issue.</li>
+        <li>Build tiny inputs: <code>Score</code>, <code>RunDir.create(tmp_path, …)</code>.</li>
+        <li>Test the boundary too (k = n and k = n + 1).</li>
+        <li>Zero API: toy adapter + <code>mock</code> optimizer.</li>
+        <li>Global side effects (logging)? Use a subprocess.</li>
+      </ol>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:30–18:20]</span> Here is a short, real test from the repo. Issue 112: a run with one trial reported pass^2 as 0.0, which reads as "zero percent reliable". The truth is that the statistic is not defined with one trial. The fix omits the key. The test builds two <code>Score</code> objects by hand, calls <code>aggregate_scores</code>, and checks that the key "2" is absent, also after serialization.</p>
+    <p>The same file also tests the exact boundary, k equal to n and k equal to n plus one, because a reviewer showed that a wrong boundary passed the first tests. That is the style here: small inputs, the rule in the name, the story in the docstring, and the edge case pinned. For run-level behavior, use <code>tmp_path</code> with <code>RunDir.create</code> and the toy adapter, as <code>test_e2e_slice.py</code> does. For process-wide state, run a subprocess, as <code>test_log_level.py</code> does.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:30–18:20]</span> הנה טסט קצר ואמיתי מהריפו. issue 112: run עם trial אחד דיווח pass^2 כ-0.0, וזה נקרא כמו "אפס אחוז אמינות". האמת היא שהסטטיסטיקה לא מוגדרת עם trial אחד. התיקון משמיט את המפתח. הטסט בונה שני אובייקטי <code>Score</code> ביד, קורא ל-<code>aggregate_scores</code>, ובודק שהמפתח "2" לא קיים, גם אחרי serialization.</p>
+    <p>אותו קובץ בודק גם את הגבול המדויק, k שווה n ו-k שווה n ועוד אחד, כי reviewer הראה שגבול שגוי עבר את הטסטים הראשונים. זה הסגנון כאן: קלטים קטנים, הכלל בשם, הסיפור ב-docstring, ומקרה הקצה מקובע. להתנהגות ברמת run, משתמשים ב-<code>tmp_path</code> עם <code>RunDir.create</code> וה-toy adapter, כמו ב-<code>test_e2e_slice.py</code>. ל-state גלובלי של התהליך, מריצים subprocess, כמו ב-<code>test_log_level.py</code>.</p>
+  </aside>
+</section>
+
+<!-- 21 ═══ First week ═══ -->
+<section class="slide">
+  <h2>Your first week</h2>
+  <table class="tight">
+    <tr><th>Day</th><th>Do</th><th>Done when</th></tr>
+    <tr><td class="day">Day 1</td><td>Clone, venv, editable install · <code>doctor</code> · toy_calc · <code>replay --demo</code> · <code>diff --best</code></td><td>you see baseline 0.0 → test 1.0</td></tr>
+    <tr><td class="day">Day 2</td><td>Read <code>docs/ARCHITECTURE.md</code>, <code>types.py</code>, <code>rundir.py</code>, <code>harness.py</code> (ch. 4–5)</td><td>you can explain one iteration</td></tr>
+    <tr><td class="day">Day 3</td><td>Read <code>gate.py</code>, <code>splits.py</code>, <code>stats.py</code>, one algorithm <code>run.py</code> (ch. 6–7) · open the toy run dir by hand</td><td>you can say why cand_0002 was rejected</td></tr>
+    <tr><td class="day">Day 4</td><td>Run the full unit tier · step through <code>test_e2e_slice.py</code> in a debugger · read 5 rule-named tests</td><td>all green on your machine</td></tr>
+    <tr><td class="day">Day 5</td><td>Small PR via <code>open-pr</code>: a fix or a missing test · <code>git commit -s</code> · <code>review-cycles</code></td><td>PR open, CI green, DCO green</td></tr>
+  </table>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:20–19:20]</span> Here is a plan for your first week. Day 1 is setup and the zero-API tour: install, run <code>doctor</code>, run toy_calc, replay the demo, and diff the winner. Day 2 and day 3 follow the deep chapters of this course. Read the files in the order of the chapters: object model, then the run, then the gate and the algorithms. At the end of day 3, open the toy run directory and answer one question by hand, for example why <code>cand_0002</code> was rejected. The answer is in its <code>step</code> event: Δ was 0, and the gate needs a strict gain.</p>
+    <p>Day 4 is the test suite. Run everything, then step through the e2e slice in a debugger. Day 5 is a small PR. A good first PR is a missing test for a rule you found while reading. Go through <code>open-pr</code>, sign off every commit, and run the review cycles.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:20–19:20]</span> הנה תוכנית לשבוע הראשון. יום 1 הוא התקנה וסיור בלי API: התקנה, <code>doctor</code>, toy_calc, replay של ה-demo, ו-diff של המנצח. ימים 2 ו-3 הולכים לפי הפרקים העמוקים של הקורס. קוראים את הקבצים לפי סדר הפרקים: object model, אחר כך ה-run, אחר כך ה-gate וה-algorithms. בסוף יום 3, פותחים את ה-run dir של ה-toy ועונים על שאלה אחת ביד, למשל למה <code>cand_0002</code> נדחה. התשובה ב-event מסוג <code>step</code> שלו: Δ היה 0, וה-gate דורש שיפור ממשי.</p>
+    <p>יום 4 הוא ה-test suite. מריצים הכול, ואז עוברים על ה-e2e slice צעד צעד ב-debugger. יום 5 הוא PR קטן. PR ראשון טוב הוא טסט חסר לכלל שמצאתם בזמן הקריאה. עוברים דרך <code>open-pr</code>, עושים sign-off לכל commit, ומריצים את ה-review cycles.</p>
+  </aside>
+</section>
+
+<!-- 22 ═══ Takeaways + read more ═══ -->
+<section class="slide">
+  <h2>Key takeaways · where to read more</h2>
+  <div class="row">
+    <div class="col" style="flex:0.9">
+      <ul class="small">
+        <li><code>events.jsonl</code> is the truth; TUI and dashboard share <code>reduce_run</code></li>
+        <li>Start from the question, open the right file</li>
+        <li>Debug through an in-process test, not through <code>cap-evolve run</code></li>
+        <li>A test file name is a rule; its docstring is the incident</li>
+        <li>Unit tier always; real run when the change can affect one</li>
+        <li>Plain model name; CI picks RITS → ETE-INT → ETE</li>
+      </ul>
+      <div class="callout green small">This is the last chapter. Next: your first PR.</div>
+    </div>
+    <div class="col">
+      <table class="tight">
+        <tr><th>Topic</th><th>Read</th></tr>
+        <tr><td>Troubleshooting</td><td><code>docs/TROUBLESHOOTING.md</code></td></tr>
+        <tr><td>Run schema, views</td><td><code>docs/RUN_SCHEMA_V2.md</code></td></tr>
+        <tr><td>Live views</td><td><code>eventstream.py</code> · <code>tui.py</code> · <code>dashboard.py</code></td></tr>
+        <tr><td>Testing rules</td><td><code>.claude/skills/testing/SKILL.md</code></td></tr>
+        <tr><td>CI and providers</td><td><code>.github/workflows/ci.yml</code> · <code>ci/benchmarks/README.md</code></td></tr>
+        <tr><td>Telemetry</td><td><code>capevolve_telemetry/README.md</code></td></tr>
+        <tr><td>Contributing, DCO</td><td><code>CONTRIBUTING.md</code> · <code>CLAUDE.md</code></td></tr>
+      </table>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:20–20:00]</span> To close. Every view of a run reads one append-only file, and the terminal and the web share one projection, so trust them equally. When you debug, start from the exact question and open the matching file. To step through the core, use an in-process test, because the CLI runs phases as subprocesses. Treat test names as the list of promises the project makes. Run the unit tier for every change, and add a real run only when the change can affect one, starting with the free toy runs. The table on the right is your reading list for this chapter. This is the end of the course. Thank you, and we look forward to your first PR.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:20–20:00]</span> לסיכום. כל תצוגה של run קוראת קובץ אחד שרק מוסיפים לו, והטרמינל וה-web חולקים projection אחד, אז אפשר לסמוך על שניהם באותה מידה. כשעושים debug, מתחילים מהשאלה המדויקת ופותחים את הקובץ המתאים. כדי לעבור צעד צעד על ה-core, משתמשים בטסט בתוך התהליך, כי ה-CLI מריץ phases כ-subprocesses. שמות הטסטים הם רשימת ההבטחות של הפרויקט. מריצים unit tier לכל שינוי, ומוסיפים run אמיתי רק כשהשינוי יכול להשפיע עליו, ומתחילים מה-toy runs החינמיים. הטבלה מימין היא רשימת הקריאה לפרק הזה. זה סוף הקורס. תודה, ומחכים ל-PR הראשון שלכם.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

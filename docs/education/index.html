@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cap-evolve Onboarding Course</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#07090d; --panel:#0d1117; --panel-2:#141b24; --border:#1e2733; --ink:#e6edf3; --body:#c2ccd8; --muted:#8b98a9;
+          --accent:#3b82f6; --accent-soft:rgba(59,130,246,.16); --accent-ink:#93c5fd; --amber:#f59e0b; --amber-ink:#fbbf24;
+          --green:#22c55e; --green-soft:rgba(34,197,94,.15);
+          --font:"Fira Sans",system-ui,-apple-system,Helvetica,Arial,sans-serif; --mono:"Fira Code",ui-monospace,Menlo,monospace; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(1000px 500px at 100% 0%, rgba(59,130,246,.10), transparent 60%), var(--bg); color: var(--body); font-family: var(--font); }
+  main { max-width: 1080px; margin: 0 auto; padding: 44px 16px 72px; }
+  .kicker { font-size: 14px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber-ink); }
+  h1 { font-size: 46px; color: var(--ink); margin: 10px 0 12px; line-height: 1.1; }
+  h2 { font-size: 26px; color: var(--ink); margin: 44px 0 14px; }
+  h3 { font-size: 19px; color: var(--ink); margin: 0 0 8px; }
+  p, li { font-size: 17px; line-height: 1.55; }
+  a { color: var(--accent-ink); }
+  code, kbd { font-family: var(--mono); font-size: 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--accent-ink); }
+  pre { font-family: var(--mono); font-size: 14px; background: #0b1017; border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; overflow-x: auto; color: var(--ink); }
+  .lead { font-size: 20px; max-width: 840px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 16px; }
+  .stat b { display: block; font-size: 24px; color: var(--amber-ink); }
+  .stat span { font-size: 14px; color: var(--muted); }
+
+  /* toolbar: notes language + mode */
+  .controls { position: sticky; top: 0; z-index: 5; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; background: rgba(7,9,13,.92); backdrop-filter: blur(6px); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-top: 28px; }
+  .controls .lbl { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-right: 6px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { font: inherit; font-size: 15px; background: var(--panel); color: var(--body); border: 0; padding: 7px 14px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.on { background: var(--accent-soft); color: var(--accent-ink); }
+  .seg button[data-lang="he"] { font-family: "Rubik", var(--font); }
+  .controls .hint { font-size: 14px; color: var(--muted); flex: 1; min-width: 220px; }
+
+  /* chapter cards */
+  .chapters { display: grid; gap: 12px; margin-top: 16px; }
+  .ch { display: grid; grid-template-columns: 56px 1fr; gap: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; transition: border-color .15s; }
+  .ch:hover { border-color: var(--accent); }
+  .ch .n { font-size: 34px; font-weight: 800; color: var(--accent); opacity: .75; line-height: 1; }
+  .ch .t { font-size: 20px; font-weight: 700; color: var(--ink); }
+  .ch .t small { font-family: var(--mono); font-size: 13px; color: var(--amber-ink); font-weight: 400; margin-left: 10px; }
+  .ch .d { font-size: 15px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+  .ch .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .btn { display: inline-block; font-size: 14px; text-decoration: none; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--body); }
+  .btn:hover { border-color: var(--accent); color: var(--ink); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: #2563eb; }
+  .lvl { display: inline-flex; gap: 4px; vertical-align: middle; margin-left: 10px; }
+  .lvl span { height: 6px; width: 18px; border-radius: 3px; background: #1e2733; }
+  .lvl span.on { background: var(--accent); }
+
+  /* how-to */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; }
+  .card ol, .card ul { padding-left: 20px; margin: 6px 0 0; }
+  .card li { font-size: 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  td, th { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+  .path { word-break: break-all; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } .ch { grid-template-columns: 1fr; } h1 { font-size: 34px; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">cap-evolve · team onboarding</div>
+  <h1>cap-evolve, from the idea to the threads</h1>
+  <p class="lead">An onboarding course for a software engineer who joins the cap-evolve team. It starts with the
+    motivation and goes deep into the code: the object model, the execution and threading model, the gate math,
+    and the tests. The slides are in English. Every slide has speaker notes in English and in Hebrew.</p>
+  <div class="stats">
+    <div class="stat"><b>8</b><span>chapters</span></div>
+    <div class="stat"><b>~2h 40m</b><span>total, 20 min each</span></div>
+    <div class="stat"><b>168</b><span>slides</span></div>
+    <div class="stat"><b>EN + HE</b><span>speaker notes</span></div>
+  </div>
+
+  <div class="controls">
+    <div><span class="lbl">Notes language</span>
+      <span class="seg" id="lang"><button data-lang="en" class="on">English</button><button data-lang="he">עברית</button></span></div>
+    <div class="hint">The links below open in the language you pick here. You can still switch inside a deck with <kbd>L</kbd>.</div>
+  </div>
+
+  <h2>Chapters</h2>
+  <div class="chapters" id="chapters"></div>
+
+  <h2>How to run the course</h2>
+  <div class="grid-2">
+    <div class="card">
+      <h3>One screen (notes under the slide)</h3>
+      <ol>
+        <li>Pick the notes language above.</li>
+        <li>Click <b>Present with notes</b> on a chapter.</li>
+        <li>The notes panel opens under the slide. <kbd>N</kbd> hides or shows it.</li>
+        <li>Move with <kbd>→</kbd> / <kbd>Space</kbd> and <kbd>←</kbd>. Some slides show their parts one key press at a time.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Two screens (projector + presenter view)</h3>
+      <ol>
+        <li>Click <b>Slides only</b> and move that window to the projector. Press <kbd>F</kbd> for full screen.</li>
+        <li>Press <kbd>P</kbd> in it. A presenter window opens with the current slide, the next slide, the notes and a timer.</li>
+        <li>Keep the presenter window on your laptop screen. Moving in either window moves both.</li>
+        <li>If the browser blocks the pop-up, allow pop-ups for this page and press <kbd>P</kbd> again.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Reading copy and PDF</h3>
+      <ul>
+        <li><b>Handout</b> shows every slide with its notes, one after another.</li>
+        <li>Print it to PDF (<kbd>⌘</kbd> <kbd>P</kbd> → Save as PDF) for a copy to read or send ahead.</li>
+        <li>Inside any deck, <kbd>D</kbd> switches the handout on and off.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Timing</h3>
+      <ul>
+        <li>Each slide's notes start with a time marker, for example <code>[4:00–5:30]</code>.</li>
+        <li>Every chapter adds up to about 20 minutes.</li>
+        <li>The presenter window shows a timer and the target length. <b>Restart timer</b> resets it.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Keyboard</h2>
+  <table>
+    <tr><th>Key</th><th>Action</th></tr>
+    <tr><td><kbd>→</kbd> <kbd>Space</kbd> / <kbd>←</kbd></td><td>Next / previous step or slide</td></tr>
+    <tr><td><kbd>Home</kbd> / <kbd>End</kbd></td><td>First / last slide</td></tr>
+    <tr><td><kbd>N</kbd></td><td>Show or hide the speaker notes panel under the slide</td></tr>
+    <tr><td><kbd>L</kbd></td><td>Switch the notes language: English / Hebrew. The slides stay in English.</td></tr>
+    <tr><td><kbd>P</kbd></td><td>Open the presenter window: current and next slide, notes, timer</td></tr>
+    <tr><td><kbd>O</kbd></td><td>Overview of all slides. Click one to jump to it.</td></tr>
+    <tr><td><kbd>D</kbd></td><td>Handout: all slides with notes</td></tr>
+    <tr><td><kbd>F</kbd></td><td>Full screen</td></tr>
+    <tr><td><kbd>?</kbd> / <kbd>Esc</kbd></td><td>Keyboard help / close overview, handout or help</td></tr>
+  </table>
+
+  <h2>URL options</h2>
+  <p>Add these to the end of a deck's address. They can be combined with <code>&amp;</code>.</p>
+  <table>
+    <tr><th>Option</th><th>Effect</th><th>Example</th></tr>
+    <tr><td><code>?notes</code></td><td>Open with the notes panel showing</td><td><code>01-why-cap-evolve.html?notes</code></td></tr>
+    <tr><td><code>?lang=he</code></td><td>Start with Hebrew notes (<code>en</code> is the default)</td><td><code>01-why-cap-evolve.html?notes&amp;lang=he</code></td></tr>
+    <tr><td><code>?handout</code></td><td>Open the handout (all slides with notes)</td><td><code>06-honest-evaluation.html?handout&amp;lang=he</code></td></tr>
+    <tr><td><code>#/N</code></td><td>Jump to slide N</td><td><code>05-anatomy-of-a-run.html?notes#/9</code></td></tr>
+  </table>
+
+  <h2>Where the files are</h2>
+  <p>Folder: <code class="path" id="folder">docs/education/</code></p>
+  <p>Open this page from the terminal:</p>
+  <pre id="opencmd">open -a "Google Chrome" docs/education/index.html</pre>
+  <p>The decks work offline from the local files. With no network, the fonts fall back to system fonts.
+    See <a href="README.md">README.md</a> for how to edit a deck and run the layout check.</p>
+</main>
+
+<script>
+(function () {
+  var chapters = [
+    ["01-why-cap-evolve.html", "Why cap-evolve", 21, 1, "The problem, the idea (optimize what the agent reads, not the weights), the loop, honest results, a two-minute demo, and the course map."],
+    ["02-vocabulary-and-config.html", "Vocabulary and config", 21, 2, "Every term the team uses: capability, seed, candidate, champion, adapter, split, trial, pass^k, gate, phase, algorithm, optimizer, host. The capevolve.yaml spec and the CLI."],
+    ["03-repo-map-and-build.html", "Repository map and build", 19, 3, "Every top-level folder, the zero-dependency core package, the module map, the skills registry, the dashboard build, plugins, CI and the developer workflow."],
+    ["04-object-model.html", "Object model and data", 22, 4, "The dataclasses in types.py, the adapter contract, the run directory on disk, events.jsonl and reduce_run, the candidate graph, cache and memory."],
+    ["05-anatomy-of-a-run.html", "Anatomy of a run", 22, 5, "What happens from cap-evolve run to the report. One iteration step by step, the optimizer subprocess, and the process and threading model."],
+    ["06-honest-evaluation.html", "Honest evaluation and the gate", 22, 5, "Splits, trials, pass^k, standard error, the paired significance gate with a worked example, indecisive results, and how the sealed test split is enforced."],
+    ["07-algorithms-optimizers-skills.html", "Algorithms, optimizers, skills", 19, 5, "The skill library, hill-climb / GEPA / SkillOpt / agent-optimize, the 14 optimizer backends, hosts and plugin hooks, and how to extend each part."],
+    ["08-debug-observe-test.html", "Debugging, observability, testing", 22, 5, "Watch, replay, diff and the dashboard; reading a run directory; debugging locally; the test suite, CI and the review workflow; a first-week plan."]
+  ];
+  var lang = "en";
+  try { lang = localStorage.getItem("ce-edu-lang") === "he" ? "he" : "en"; } catch (e) {}
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function render() {
+    var q = "lang=" + lang;
+    var html = chapters.map(function (c, i) {
+      var f = c[0], lv = "";
+      for (var k = 1; k <= 5; k++) lv += '<span' + (k <= c[3] ? ' class="on"' : '') + '></span>';
+      return '<div class="ch"><div class="n">' + (i + 1) + '</div><div>' +
+        '<div class="t">' + esc(c[1]) + '<small>20 min · ' + c[2] + ' slides</small><span class="lvl" title="Depth">' + lv + '</span></div>' +
+        '<div class="d">' + esc(c[4]) + '</div>' +
+        '<div class="acts">' +
+          '<a class="btn primary" href="' + f + '?notes&' + q + '">Present with notes</a>' +
+          '<a class="btn" href="' + f + '?' + q + '">Slides only</a>' +
+          '<a class="btn" href="' + f + '?handout&' + q + '">Handout (' + (lang === "he" ? "Hebrew" : "English") + ' notes)</a>' +
+        '</div></div></div>';
+    }).join("");
+    document.getElementById("chapters").innerHTML = html;
+    document.querySelectorAll("#lang button").forEach(function (b) { b.classList.toggle("on", b.getAttribute("data-lang") === lang); });
+  }
+  document.getElementById("lang").addEventListener("click", function (e) {
+    var l = e.target.getAttribute("data-lang"); if (!l) return;
+    lang = l === "he" ? "he" : "en"; try { localStorage.setItem("ce-edu-lang", lang); } catch (err) {}
+    render();
+  });
+  render();
+
+  // show the real folder path when opened from disk
+  if (location.protocol === "file:") {
+    var dir = decodeURIComponent(location.pathname.replace(/[^/]*$/, ""));
+    document.getElementById("folder").textContent = dir;
+    document.getElementById("opencmd").textContent = 'open -a "Google Chrome" "' + dir + 'index.html"';
+  }
+})();
+</script>
+</body>
+</html>

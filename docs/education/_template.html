@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter N · Title</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+</head>
+<!-- data-chapter: shown at the top of every slide. data-minutes: target length, shown in the presenter window. -->
+<body data-chapter="Chapter N · Title" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ Title slide ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter N of 8</div>
+  <h1>Chapter title</h1>
+  <p class="lead">One sentence that says what the listener will know after 20 minutes.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: intro</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–1:00]</span> Short, simple sentences that the speaker can read aloud.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–1:00]</span> אותם דברים בעברית. מונחים טכניים נשארים באנגלית: adapter, gate, candidate.</p>
+  </aside>
+</section>
+
+<!-- ═══ Flow diagram + fragments (appear one per key press) ═══ -->
+<section class="slide">
+  <h2>The loop in one picture</h2>
+  <div class="flow">
+    <div class="step blue"><b>Evaluate</b><span>run the agent on val</span></div><div class="arrow">→</div>
+    <div class="step"><b>Diagnose</b><span>cluster failures</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>Propose</b><span>optimizer edits files</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>Gate</b><span>Δ &gt; k·SE ?</span></div><div class="arrow">→</div>
+    <div class="step green"><b>Commit</b><span>git snapshot</span></div>
+  </div>
+  <div class="grid-3 mt-lg">
+    <div class="card fragment"><div class="icon">🎯</div><h3>Point one</h3><p>Short text.</p></div>
+    <div class="card fragment"><div class="icon">🧪</div><h3>Point two</h3><p>Short text.</p></div>
+    <div class="card fragment"><div class="icon">🔒</div><h3>Point three</h3><p>Short text.</p></div>
+  </div>
+  <aside class="notes" lang="en"><p>Notes.</p></aside>
+  <aside class="notes" lang="he"><p>הערות.</p></aside>
+</section>
+
+<!-- ═══ Terms, code, folder tree, table ═══ -->
+<section class="slide">
+  <h2>Components you can use</h2>
+  <div class="row">
+    <div class="col">
+      <div class="term"><span class="name">Rollout</span><span class="kind">dataclass</span><div class="def">One run of the agent on one task.</div></div>
+      <pre class="mt"><span class="k">def</span> <span class="f">score</span>(task, rollout) -&gt; Score:   <span class="c"># 0..1</span>
+    ...</pre>
+    </div>
+    <div class="col">
+      <div class="tree"><span class="d">core/cap_evolve/</span>
+├── types.py      <span class="c"># Task, Rollout, Score</span>
+└── <span class="h">harness.py</span>    <span class="c"># the run</span></div>
+    </div>
+  </div>
+  <aside class="notes" lang="en"><p>Notes.</p></aside>
+  <aside class="notes" lang="he"><p>הערות.</p></aside>
+</section>
+
+<!-- ═══ Inline SVG diagram ═══ -->
+<section class="slide">
+  <h2>Inline SVG diagram</h2>
+  <svg class="diagram" viewBox="0 0 1136 300">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="20" y="100" width="220" height="90" rx="12"/><text class="title" x="130" y="150" text-anchor="middle">Harness</text>
+    <rect class="box amber" x="460" y="100" width="220" height="90" rx="12"/><text class="title" x="570" y="150" text-anchor="middle">Adapter</text>
+    <path class="line" d="M240,145 L460,145" marker-end="url(#ar)"/><text class="label" x="350" y="135" text-anchor="middle">run_target()</text>
+  </svg>
+  <aside class="notes" lang="en"><p>Notes.</p></aside>
+  <aside class="notes" lang="he"><p>הערות.</p></aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>
