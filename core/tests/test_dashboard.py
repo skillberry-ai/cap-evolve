@@ -836,10 +836,12 @@ def test_broken_project_spec_does_not_crash_reduce_or_export(tmp_path, capsys):
     assert cfg["spec_missing"] is False
     assert cfg["spec_error"] and str(spec) in cfg["spec_error"]
     assert "line" in cfg["spec_error"]
-    # no spec values leaked in from a lenient re-read; only the default intervention
-    keys = {i["key"] for g in cfg["spec_groups"] for i in g["items"]}
-    assert keys == {"intervention"}
-    _parse_html(dashboard.render_html(r, rd))
+    # no spec values leaked in from a lenient re-read, and no default `intervention: direct`
+    # row that would look like the spec's own value
+    assert cfg["spec_groups"] == []
+    page = dashboard.render_html(r, rd)
+    _parse_html(page)
+    assert "CFG.spec_error" in page  # the static export shows the error too
 
     rc = cli.main(["dashboard", "--export", str(rd.root)])
     captured = capsys.readouterr()
