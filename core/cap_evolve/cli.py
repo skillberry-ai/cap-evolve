@@ -467,7 +467,8 @@ def _clip(text: str | None, *, head: int, tail: int) -> str:
     return f"{text[:head]}\n\n... [{dropped} chars omitted] ...\n\n{text[-tail:]}"
 
 
-def _resolve_spec(spec: str | None, project: str) -> tuple[Path | None, dict | None]:
+def _resolve_spec(spec: str | None, project: str,
+                  command: str = "run") -> tuple[Path | None, dict | None]:
     """``(spec_path, error)`` — the spec that belongs to ``--project``.
 
     ``--spec`` used to default to the literal ``.capevolve/project/capevolve.yaml``
@@ -482,29 +483,47 @@ def _resolve_spec(spec: str | None, project: str) -> tuple[Path | None, dict | N
       paths, instead of being run;
     * the resolved path is echoed at startup and logged into the run dir
       (``run_config``), so a finished run is self-describing.
+
+    A relative ``--spec`` is resolved against ``--project`` (``--spec capevolve.yaml``
+    means ``<project>/capevolve.yaml``); an absolute one is used as given. For older
+    commands that spell the path from the cwd (``--spec .capevolve/project/capevolve.yaml``)
+    a cwd-relative path is still accepted, but only when the project-relative one does
+    not exist and the cwd-relative file is inside the project — so it can never pick a
+    different project's spec. ``command`` names the subcommand in the fix hints.
     """
     proj = Path(project).resolve()
-    path = (proj / "capevolve.yaml") if not spec else Path(spec).resolve()
+    if not spec:
+        path = proj / "capevolve.yaml"
+    elif Path(spec).is_absolute():
+        path = Path(spec).resolve()
+    else:
+        path = (proj / spec).resolve()
+        legacy = Path(spec).resolve()
+        if not path.exists() and legacy.exists() and _is_inside(legacy, proj):
+            path = legacy
     if not path.exists():
         return None, {"step": "spec", "error": f"no spec at {path}",
                       "project": str(proj),
                       "fix": (f"cap-evolve init --project {project}"
                               if not spec else
-                              f"cap-evolve run --project {project}   "
+                              f"cap-evolve {command} --project {project}   "
                               "# omit --spec to use the project's own capevolve.yaml")}
-    try:
-        inside = path.is_relative_to(proj)
-    except AttributeError:  # pragma: no cover — Python < 3.9
-        inside = str(path).startswith(str(proj))
-    if not inside:
+    if not _is_inside(path, proj):
         return None, {
             "step": "spec",
             "error": ("--spec is outside --project: refusing to optimize one project's "
                       "capability against another's spec"),
             "spec": str(path), "project": str(proj),
-            "fix": f"cap-evolve run --project {path.parent}   # or pass the project's own spec",
+            "fix": f"cap-evolve {command} --project {path.parent}   # or pass the project's own spec",
         }
     return path, None
+
+
+def _is_inside(path: Path, proj: Path) -> bool:
+    try:
+        return path.is_relative_to(proj)
+    except AttributeError:  # pragma: no cover — Python < 3.9
+        return str(path).startswith(str(proj))
 
 
 def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]:
@@ -568,8 +587,9 @@ def _cmd_run(argv):
         epilog=_epilog("run"),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--spec", default=None,
-                   help="run spec (default: <project>/capevolve.yaml — resolved relative "
-                        "to --project, never to the cwd)")
+                   help="run spec (default: <project>/capevolve.yaml — a relative path is "
+                        "resolved against --project, and a spec outside --project is "
+                        "refused)")
     p.add_argument("--project", default=".capevolve/project")
     p.add_argument("--skills-dir", default=None)
     p.add_argument("--plan-only", action="store_true", help="print the command plan, don't execute")
@@ -1393,12 +1413,13 @@ def _cmd_estimate(argv):
         epilog=_epilog("estimate"),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--spec", default=None,
-                   help="run spec (default: <project>/capevolve.yaml)")
+                   help="run spec (default: <project>/capevolve.yaml — a relative path is "
+                        "resolved against --project)")
     p.add_argument("--project", default=".capevolve/project")
     p.add_argument("--price-in", type=float, default=None, help="optimizer/runner input $/MTok")
     p.add_argument("--price-out", type=float, default=None, help="optimizer/runner output $/MTok")
     args = p.parse_args(argv)
-    spec_path, spec_err = _resolve_spec(args.spec, args.project)
+    spec_path, spec_err = _resolve_spec(args.spec, args.project, "estimate")
     if spec_err is not None:
         print(json.dumps(spec_err, indent=2))
         print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)

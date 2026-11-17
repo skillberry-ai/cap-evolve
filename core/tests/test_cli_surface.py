@@ -171,6 +171,49 @@ def test_missing_spec_names_the_command_that_creates_it(tmp_path):
     assert err["fix"].startswith("cap-evolve init")
 
 
+def test_relative_spec_resolves_under_project_for_run_and_estimate(tmp_path, monkeypatch):
+    """``--spec capevolve.yaml`` means ``<project>/capevolve.yaml``, not ``<cwd>/...``."""
+    from cap_evolve import cli
+    proj = _project(tmp_path, "work", "agent")
+    monkeypatch.chdir(tmp_path)                 # no capevolve.yaml here
+    rel_proj = str(proj.relative_to(tmp_path))
+
+    path, err = cli._resolve_spec("capevolve.yaml", rel_proj)
+    assert err is None and path == (proj / "capevolve.yaml").resolve()
+
+    rc, out, _e = _run("run", "--project", rel_proj, "--spec", "capevolve.yaml",
+                       "--dashboard", "off", "--plan-only")
+    assert rc == 0
+    assert json.loads(out)["spec_path"] == str((proj / "capevolve.yaml").resolve())
+
+    rc, out, err_text = _run("estimate", "--project", rel_proj, "--spec", "capevolve.yaml")
+    assert "no spec at" not in out + err_text and "outside" not in out + err_text
+
+
+def test_absolute_and_cwd_relative_spec_still_work(tmp_path, monkeypatch):
+    from cap_evolve import cli
+    proj = _project(tmp_path, "work", "agent")
+    monkeypatch.chdir(tmp_path)
+    rel_proj = str(proj.relative_to(tmp_path))
+    want = (proj / "capevolve.yaml").resolve()
+    path, err = cli._resolve_spec(str(proj / "capevolve.yaml"), rel_proj)
+    assert err is None and path == want
+    # the older documented spelling, relative to the cwd, still lands in the project
+    path, err = cli._resolve_spec(f"{rel_proj}/capevolve.yaml", rel_proj)
+    assert err is None and path == want
+
+
+def test_estimate_fix_hints_name_estimate(tmp_path):
+    a = _project(tmp_path, "a", "deterministic")
+    b = _project(tmp_path, "b", "agent")
+    rc, _out, err_text = _run("estimate", "--project", str(a), "--spec", "missing.yaml")
+    assert rc == 1 and "no spec at" in err_text
+    assert "→ cap-evolve estimate --project" in err_text
+    rc, _out, err_text = _run("estimate", "--project", str(a), "--spec", str(b / "capevolve.yaml"))
+    assert rc == 1 and "outside" in err_text
+    assert "→ cap-evolve estimate --project" in err_text
+
+
 # ---- doctor ----------------------------------------------------------------
 
 def test_doctor_reports_a_missing_spec_with_its_fix(tmp_path):
