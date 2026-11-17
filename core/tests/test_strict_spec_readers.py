@@ -89,3 +89,51 @@ def test_baseline_fails_on_unclosed_quote_and_leaves_no_run_dir(tmp_path):
     err = json.loads(p.stderr.strip().splitlines()[-1])
     assert "capevolve.yaml" in err["error"] and "line" in err["error"]
     assert not (base / "run_broken").exists()
+
+
+# --- a spec that is not UTF-8: a clean error, not a UnicodeDecodeError traceback ------
+
+NOT_UTF8 = b"algorithm_skill: hill-climb\nrun_name: \xff\xfe\n"
+
+
+def test_host_main_reports_a_non_utf8_spec_as_json(tmp_path):
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_bytes(NOT_UTF8)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    p = subprocess.run([sys.executable, str(HOST), "--run-dir", str(run_dir),
+                        "--project", str(project)],
+                       capture_output=True, text=True, env=_env())
+    assert p.returncode == 2, p.stdout + p.stderr
+    out = json.loads(p.stdout)
+    assert "not UTF-8" in out["error"] and "capevolve.yaml" in out["error"]
+    assert "UTF-8" in out["fix"]
+    assert "Traceback" not in p.stderr
+
+
+def test_baseline_reports_a_non_utf8_spec_and_leaves_no_run_dir(tmp_path):
+    from cap_evolve.skillcheck import seed_capability_dir
+    project = _project(tmp_path)
+    (project / "capevolve.yaml").write_bytes(NOT_UTF8)
+    seed = seed_capability_dir(tmp_path, level=3)
+    base = tmp_path / ".capevolve"
+    p = subprocess.run([sys.executable, str(BASELINE), "--base", str(base),
+                        "--project", str(project), "--capability", str(seed),
+                        "--run-ts", "notutf8"],
+                       capture_output=True, text=True, cwd=tmp_path, env=_env())
+    assert p.returncode == 1, p.stdout + p.stderr
+    assert "Traceback" not in p.stderr
+    err = json.loads(p.stderr.strip().splitlines()[-1])
+    assert "not UTF-8" in err["error"] and "capevolve.yaml" in err["error"]
+    assert not (base / "run_notutf8").exists()
+
+
+def test_read_spec_file_turns_decode_and_read_errors_into_spec_errors(tmp_path):
+    import pytest
+    from cap_evolve.specfile import SpecError, read_spec_file
+    bad = tmp_path / "capevolve.yaml"
+    bad.write_bytes(NOT_UTF8)
+    with pytest.raises(SpecError, match="unreadable spec in .*not UTF-8"):
+        read_spec_file(bad)
+    with pytest.raises(SpecError, match="unreadable spec"):
+        read_spec_file(tmp_path)  # a folder

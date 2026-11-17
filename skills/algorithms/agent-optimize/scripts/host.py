@@ -319,14 +319,15 @@ GATE_CONCURRENCY = 8
 
 
 def _spec(project: Path, spec_path: Path | None) -> dict:
-    from cap_evolve.specfile import read_yaml
+    from cap_evolve.specfile import read_spec_file
 
     path = spec_path or (project / "capevolve.yaml")
     if not path.exists():
         return {}
     # strict: a typo like `max_usd: "5` must fail with the line, not be read as '"5'.
-    # Raises SpecError; main() turns it into a JSON error.
-    return read_yaml(path.read_text(encoding="utf-8"), source=str(path), strict=True) or {}
+    # A file that is not UTF-8 (or cannot be read) is a SpecError too, not a traceback.
+    # main() turns it into a JSON error.
+    return read_spec_file(path)
 
 
 def _known_agents() -> list[str]:
@@ -1139,7 +1140,9 @@ def main(argv=None) -> int:
         spec = _spec(project, Path(args.spec).resolve() if args.spec else None)
     except SpecError as e:
         print(json.dumps({"error": str(e),
-                          "fix": "fix the YAML syntax at that line of the spec"}, indent=2))
+                          "fix": ("save the spec as UTF-8 text" if "not UTF-8" in str(e)
+                                  else "fix the spec at that line" if e.line
+                                  else "fix the spec file")}, indent=2))
         return 2
     rounds = int(spec.get("max_iterations", 0) or 0) or 10
 

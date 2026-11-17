@@ -81,9 +81,9 @@ def main(argv=None) -> int:
     # before a run dir exists — not be read quietly as wrong values further down.
     spec_file = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
     if spec_file.is_file():
-        from cap_evolve.specfile import SpecError, read_yaml as _strict_read
+        from cap_evolve.specfile import SpecError, read_spec_file
         try:
-            _strict_read(spec_file.read_text(encoding="utf-8"), source=str(spec_file), strict=True)
+            read_spec_file(spec_file)  # a syntax error, not UTF-8, or unreadable
         except SpecError as e:
             print(json.dumps({"step": "baseline", "error": str(e)}), file=sys.stderr)
             return 1
