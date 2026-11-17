@@ -295,7 +295,8 @@ def test_strict_read_without_pyyaml_uses_the_built_in_reader(monkeypatch):
         "objectives": [{"name": "reward", "direction": "maximize"}], "seed": None}
 
 
-@pytest.mark.parametrize("text", ["notes: |\n  hi\n", "splits: [a,\n  b]\n", "objectives:\n- a\n"])
+@pytest.mark.parametrize("text", ["notes: |\n  hi\n", "splits: [a,\n  b]\n", '{"max_usd": 5}\n',
+                                  "[1, 2]\n"])
 def test_strict_built_in_reader_refuses_valid_yaml_it_cannot_read(monkeypatch, text):
     # valid YAML, but the built-in reader would misread it: refuse with a clear message
     monkeypatch.setitem(sys.modules, "yaml", None)
@@ -312,14 +313,14 @@ def test_every_shipped_spec_reads_the_same_with_and_without_pyyaml(monkeypatch):
     files = subprocess.run(["git", "ls-files"], cwd=repo, capture_output=True, text=True).stdout.split()
     specs = [f for f in files if re.search(r"(^|/)capevolve[^/]*\.ya?ml$", f)]
     assert specs
+    texts, want = {}, {}
     for f in specs:
         # appworld templates hold `@NAME@` placeholders a setup script fills in
-        text = re.sub(r"@[A-Z_]+@", "placeholder", (repo / f).read_text(encoding="utf-8"))
-        assert read_yaml(text, source=f, strict=True) == yaml.safe_load(text), f
-    monkeypatch.setitem(sys.modules, "yaml", None)
+        texts[f] = re.sub(r"@[A-Z_]+@", "placeholder", (repo / f).read_text(encoding="utf-8"))
+        want[f] = yaml.safe_load(texts[f])
+    monkeypatch.setitem(sys.modules, "yaml", None)  # now the built-in reader
     for f in specs:
-        text = re.sub(r"@[A-Z_]+@", "placeholder", (repo / f).read_text(encoding="utf-8"))
-        read_yaml(text, source=f, strict=True)  # must not raise
+        assert read_yaml(texts[f], source=f, strict=True) == want[f], f
 
 
 # --- PyYAML errors that are not yaml.YAMLError (bad values built after parsing) -------
@@ -383,3 +384,65 @@ def test_mid_run_syntax_error_keeps_pooled_and_warns_once(tmp_path, yaml_env, ca
     events = [json.loads(ln) for ln in rd.events_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
     unreadable = [e for e in events if e.get("kind") == "spec_unreadable"]
     assert len(unreadable) == 1 and unreadable[0]["spec"] == str(spec) and "line" in unreadable[0]["error"]
+
+
+
+# --- the built-in strict reader reads valid YAML the same as PyYAML (round 2) ---------
+# Each case: (text, the value PyYAML gives). The built-in reader is checked against that
+# value in every environment; when PyYAML is installed, the value itself is checked too.
+
+_SAME_AS_PYYAML = {
+    "bom": ("\ufeffmax_usd: 5\nmax_iterations: 3\n", {"max_usd": 5, "max_iterations": 3}),
+    "quoted-keys": ('"max_usd": 5\n\'stall\': 2\n"a:b": 1\n', {"max_usd": 5, "stall": 2, "a:b": 1}),
+    "yaml11-bools": ("budget_reserve: no\ndashboard: off\na: yes\nb: On\nc: NO\nd: yEs\n"
+                     "helpers:\n  enabled: no\n",
+                     {"budget_reserve": False, "dashboard": False, "a": True, "b": True, "c": False,
+                      "d": "yEs", "helpers": {"enabled": False}}),
+    "empty-values": ("a: 1\nmax_usd:\nrun_name:\nb: 2\nobservers:\n",
+                     {"a": 1, "max_usd": None, "run_name": None, "b": 2, "observers": None}),
+    "bare-dash-items": ("x:\n  -\n    k: v\n    j: 2\n  -\n  - 3\n",
+                        {"x": [{"k": "v", "j": 2}, None, 3]}),
+    "dash-key-with-no-value": ("o:\n  - name:\n    b: 1\n  - name:\n      c: 2\n",
+                               {"o": [{"name": None, "b": 1}, {"name": {"c": 2}}]}),
+    "numbers": ("a: .5\nb: +5\nc: 1_000\nd: 0x1F\ne: 1.50\nf: 3.\ng: 1.5e+3\nh: 1e3\ni: 007\n"
+                "j: 1.2.3\nk: -2\n",
+                {"a": 0.5, "b": 5, "c": 1000, "d": 31, "e": 1.5, "f": 3.0, "g": 1500.0, "h": "1e3",
+                 "i": 7, "j": "1.2.3", "k": -2}),
+    "flush-list-items": ("capabilities:\n- system-prompt\n- tools\nobjectives:\n- name: reward\n"
+                         "  direction: maximize\nmax_usd: 5\n",
+                         {"capabilities": ["system-prompt", "tools"],
+                          "objectives": [{"name": "reward", "direction": "maximize"}], "max_usd": 5}),
+}
+
+
+@pytest.mark.parametrize("case", sorted(_SAME_AS_PYYAML))
+def test_built_in_strict_reader_reads_valid_yaml_like_pyyaml(case, monkeypatch):
+    text, want = _SAME_AS_PYYAML[case]
+    try:
+        import yaml
+    except ImportError:
+        yaml = None
+    if yaml is not None:
+        assert yaml.safe_load(text.lstrip("\ufeff")) == want  # the expected value is PyYAML's
+    monkeypatch.setitem(sys.modules, "yaml", None)
+    assert read_yaml(text, source="capevolve.yaml", strict=True) == want
+
+
+def test_the_built_in_reader_never_raises_a_non_spec_error(monkeypatch):
+    # any failure inside the built-in reader is a SpecError with the line in strict mode, and
+    # never an exception at all in lenient mode
+    from cap_evolve import specfile
+    monkeypatch.setitem(sys.modules, "yaml", None)
+    monkeypatch.setattr(specfile, "_coerce", lambda v: (_ for _ in ()).throw(TypeError("boom")))
+    with pytest.raises(SpecError) as ei:
+        read_yaml("a: 1\n", source="capevolve.yaml", strict=True)
+    assert ei.value.line == 1 and "TypeError" in str(ei.value)
+    assert read_yaml("a: 1\n") == {}
+
+
+def test_read_spec_file_drops_a_bom(tmp_path, yaml_env):
+    from cap_evolve.specfile import read_spec_file
+    f = tmp_path / "capevolve.yaml"
+    f.write_bytes(b"\xef\xbb\xbfmax_usd: 5\n")
+    assert read_spec_file(f) == {"max_usd": 5}
+

@@ -43,20 +43,48 @@ def _coerce(val: str):
         return s[1:-1]
     if s in ("~", "null", "Null", "NULL"):
         return None
-    if s.lower() in ("true", "false"):
-        return s.lower() == "true"
-    # exact round-trip only, so "007"/"1_000"/versions stay strings
-    try:
-        if str(int(s)) == s:
-            return int(s)
-    except ValueError:
-        pass
-    try:
-        if str(float(s)) == s:
-            return float(s)
-    except ValueError:
-        pass
+    # YAML 1.1 booleans, exactly the forms PyYAML reads (`yEs` stays a string there too)
+    if s in _YAML_TRUE:
+        return True
+    if s in _YAML_FALSE:
+        return False
+    # numbers: the same forms as PyYAML's resolver (no base-60), so `.5`, `+5`, `1_000`,
+    # `0x1F`, `1.50` read as numbers; anything else (a version like `1.2.3`) stays a string
+    t = s.replace("_", "")
+    if _YAML_INT.match(s):
+        return int(t, 10)
+    if _YAML_OCT.match(s):
+        return int(t, 8)
+    if _YAML_HEX.match(s):
+        return int(t, 16)
+    if _YAML_BIN.match(s):
+        return int(t, 2)
+    if _YAML_FLOAT.match(s):
+        return float(t)
+    if _YAML_INF.match(s):
+        return float("-inf") if s.startswith("-") else float("inf")
+    if _YAML_NAN.match(s):
+        return float("nan")
     return s
+
+
+_YAML_TRUE = frozenset(("true", "True", "TRUE", "yes", "Yes", "YES", "on", "On", "ON"))
+_YAML_FALSE = frozenset(("false", "False", "FALSE", "no", "No", "NO", "off", "Off", "OFF"))
+_YAML_INT = re.compile(r"^[-+]?(0|[1-9][0-9_]*)$")
+_YAML_OCT = re.compile(r"^[-+]?0[0-7_]+$")
+_YAML_HEX = re.compile(r"^[-+]?0x[0-9a-fA-F_]+$")
+_YAML_BIN = re.compile(r"^[-+]?0b[01_]+$")
+_YAML_FLOAT = re.compile(r"^([-+]?[0-9][0-9_]*\.[0-9_]*([eE][-+][0-9]+)?|\.[0-9_]+([eE][-+][0-9]+)?)$")
+_YAML_INF = re.compile(r"^[-+]?\.(inf|Inf|INF)$")
+_YAML_NAN = re.compile(r"^\.(nan|NaN|NAN)$")
+
+
+def _unquote_key(k: str) -> str:
+    """``"max_usd"`` / ``'max_usd'`` -> ``max_usd`` (a quoted key), else ``k`` as is."""
+    if len(k) >= 2 and k[0] == k[-1] and k[0] in "\"'":
+        out = _coerce(k)
+        return out if isinstance(out, str) else k[1:-1]
+    return k
 
 
 def _split_list(inner: str) -> list[str]:
@@ -183,6 +211,10 @@ def read_yaml(text: str, source: str | None = None, strict: bool = False) -> dic
     several skill files carry e.g. an unquoted colon in a summary, which is not strict
     YAML but must still load.
     """
+    if text.startswith("\ufeff"):
+        # a UTF-8 BOM (Windows editors add one; read_text keeps it): drop it, or the
+        # built-in reader names the first key "\ufeffmax_usd" and the cap is unset
+        text = text[1:]
     try:
         import yaml  # type: ignore
     except ImportError:
@@ -368,8 +400,15 @@ def _read_yaml_minimal(text: str, strict: bool = False, source: str | None = Non
     ``key: value``; ``: `` inside an unquoted value; a line indented under a key that
     already has a value; a value that starts with ``@`` or a backquote. It also refuses
     valid YAML that this reader cannot read right (a quoted value or list over several
-    lines, ``|``/``>`` block text, list items not indented under their key), and says
-    so: reading it wrong without a word is the bug strict mode exists to stop.
+    lines, ``|``/``>`` block text, a flow ``{...}``/``[...]`` where a ``key: value`` line
+    is expected, e.g. a one-line JSON spec), and says so: reading it wrong without a word
+    is the bug strict mode exists to stop. Any other error inside this reader is a
+    ``SpecError`` with the line in strict mode; lenient mode keeps what it read.
+
+    What it reads the way PyYAML does (both modes): a leading BOM is dropped; quoted keys
+    are unquoted; ``key:`` with no indented child is ``None``; a bare ``-`` takes the
+    mapping on the lines below it; list items may sit flush with their key; YAML 1.1
+    booleans (``yes/no/on/off``) and numbers (``.5``, ``+5``, ``1_000``, ``0x1F``).
     """
     data: dict = {}
     # stack entries: (indent, container, kind) — kind is "map" (container is a dict,
@@ -377,12 +416,14 @@ def _read_yaml_minimal(text: str, strict: bool = False, source: str | None = Non
     stack = [(-1, data, "map")]
     # A `key:` line with a blank value doesn't yet know whether its child block is a
     # nested mapping or a sequence — that is only decided by the NEXT line, so the
-    # placeholder {} written for it is held here (as (indent, parent, key)) and
-    # resolved (possibly replaced with a list) one line later. See #676: `objectives:`
+    # placeholder None written for it is held here (as (indent, parent, key)) and
+    # resolved (to a dict or list, or left None) one line later. See #676: `objectives:`
     # is a block sequence of mappings, which this used to have no representation for at
     # all (every "- " line was silently dropped — ":" not in a bare "- name: reward"
     # dash line was true, but the OLD key/value split on it still mangled the result).
     pending: tuple | None = None
+    if text.startswith("\ufeff"):
+        text = text[1:]
     lines = text.splitlines()
     eof = text.count("\n") + 1  # the line PyYAML names for "end of stream"
     first = True
@@ -393,108 +434,158 @@ def _read_yaml_minimal(text: str, strict: bool = False, source: str | None = Non
     def fail(msg: str, n: int, what: str = "invalid YAML") -> None:
         raise SpecError(msg, source=source, line=n, what=what)
 
-    for n, raw in enumerate(lines, 1):
+    n = 0
+    try:
+        for n, raw in enumerate(lines, 1):
+            pending, scalar_col, first = _minimal_line(
+                n, raw, lines, eof, strict, source, stack, data, pending, scalar_col, first, fail)
+    except SpecError:
+        raise
+    except Exception as e:  # noqa: BLE001
+        # A form this reader gets wrong must never be a traceback: strict mode names the
+        # line; lenient mode (never fails) keeps what it read so far.
         if strict:
-            body = raw.strip()
-            if not body or body.startswith("#"):
-                continue
-            lead = raw[:len(raw) - len(raw.lstrip())]
-            if "\t" in lead:
-                fail("found a tab in the indentation; YAML needs spaces", n)
-            if body in ("---", "...") or body.startswith("%"):
-                continue
-            # Check the line, then read it with its comment cut the YAML way (a quote
-            # only opens a value at its start, so `don't # x` is `don't`).
-            if _is_dash(body):
-                rest = body[1:].strip()
-                kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
-                if kv is not None:
-                    _strict_value(kv[1], n, lines, source, eof)
-                    clean = f"- {kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
-                else:
-                    _strict_value(rest, n, lines, source, eof)
-                    clean = f"- {_clean_value(rest)}" if rest else "-"
-            else:
-                kv = _key_split(body)
-                if kv is None:
-                    if first:
-                        fail(f"{NOT_A_MAPPING} (got str: {_plain_part(body)[:60]!r})", n,
-                             what="invalid spec")
-                    fail("could not find expected ':' (a 'key: value' line); if this "
-                         f"continues the value above, {_NEEDS_PYYAML}", n)
-                _strict_value(kv[1], n, lines, source, eof)
-                clean = f"{kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
-            line = (lead + clean).rstrip()
-        else:
-            line = _strip_comment(raw).rstrip()
-            if not line.strip():
-                continue
-        indent = len(line) - len(line.lstrip())
-        content = line.strip()
+            fail(f"cannot read this line ({type(e).__name__}: {e}); {_NEEDS_PYYAML}", n)
+        return _close_pending(data, pending)
+    return _close_pending(data, pending)
 
-        if strict:
-            if first and _is_dash(content):
-                fail(f"{NOT_A_MAPPING} (got list: {content[:60]!r})", n, what="invalid spec")
-            if scalar_col is not None and indent > scalar_col and pending is None:
-                fail("this line is indented under a key that already has a value; "
-                     f"if it continues that value, {_NEEDS_PYYAML}", n)
-            first = False
 
-        if pending is not None:
-            pend_indent, parent, key = pending
-            pending = None
-            if indent > pend_indent:
-                is_seq = _is_dash(content)
-                container = [] if is_seq else {}
-                parent[key] = container
-                stack.append((pend_indent, container, "seq" if is_seq else "map"))
-
-        while stack and indent <= stack[-1][0]:
-            stack.pop()
-        _, container, kind = stack[-1] if stack else (-1, data, "map")
-        scalar_col = None
-
-        if kind == "seq" and _is_dash(content):
-            rest = content[1:].strip()
-            if strict:
-                kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
-            else:
-                kv = rest.partition(":")[::2] if (rest and ":" in rest
-                                                  and rest[0] not in "{[\"'") else None
-            if kv is not None:
-                k, v = kv[0].strip(), kv[1].strip()
-                item: dict = {}
-                container.append(item)
-                # Siblings of `k` (more "key: val" lines of the SAME item) are
-                # indented past the dash itself — same depth `k` started at.
-                stack.append((indent, item, "map"))
-                if v == "":
-                    item[k] = {}
-                    pending = (indent, item, k)
-                else:
-                    item[k] = _coerce(v)
-                    scalar_col = indent + len(content) - len(rest)
-            else:
-                container.append(_coerce(rest))
-            continue
-
-        if strict and _is_dash(content):
-            fail("found a list item where a 'key: value' line was expected (indent list "
-                 "items under their key, e.g. '  - a')", n)
-        if strict:
-            k, v = _key_split(content)
-        else:
-            if ":" not in content:
-                continue
-            k, _, v = content.partition(":")
-        key, val = k.strip(), v.strip()
-        if val == "":
-            container[key] = {}
-            pending = (indent, container, key)
-        else:
-            container[key] = _coerce(val)
-            scalar_col = indent
+def _close_pending(data: dict, pending) -> dict:
+    """A ``key:`` with no indented child is null (PyYAML: ``None``), not ``{}``."""
+    if pending is not None:
+        _, parent, key = pending
+        parent[key] = None
     return data
+
+
+def _minimal_line(n, raw, lines, eof, strict, source, stack, data, pending, scalar_col, first,
+                  fail):
+    """Read one line into ``stack``/``data``; returns the new (pending, scalar_col, first)."""
+    keep = (pending, scalar_col, first)
+    if strict:
+        body = raw.strip()
+        if not body or body.startswith("#"):
+            return keep
+        lead = raw[:len(raw) - len(raw.lstrip())]
+        if "\t" in lead:
+            fail("found a tab in the indentation; YAML needs spaces", n)
+        if body in ("---", "...") or body.startswith("%"):
+            return keep
+        # Check the line, then read it with its comment cut the YAML way (a quote
+        # only opens a value at its start, so `don't # x` is `don't`).
+        if _is_dash(body):
+            rest = body[1:].strip()
+            kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
+            if kv is not None:
+                _strict_value(kv[1], n, lines, source, eof)
+                clean = f"- {kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
+            else:
+                _strict_value(rest, n, lines, source, eof)
+                clean = f"- {_clean_value(rest)}" if rest else "-"
+        else:
+            if body[0] in "{[":
+                # e.g. a one-line JSON spec: valid YAML, but this reader reads block style
+                fail("a flow mapping or list ({ } or [ ]) where a 'key: value' line was "
+                     "expected; write the spec in block style (one 'key: value' per line), "
+                     "or install PyYAML", n)
+            kv = _key_split(body)
+            if kv is None:
+                if first:
+                    fail(f"{NOT_A_MAPPING} (got str: {_plain_part(body)[:60]!r})", n,
+                         what="invalid spec")
+                fail("could not find expected ':' (a 'key: value' line); if this "
+                     f"continues the value above, {_NEEDS_PYYAML}", n)
+            _strict_value(kv[1], n, lines, source, eof)
+            clean = f"{kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
+        line = (lead + clean).rstrip()
+    else:
+        line = _strip_comment(raw).rstrip()
+        if not line.strip():
+            return keep
+    indent = len(line) - len(line.lstrip())
+    content = line.strip()
+
+    if strict:
+        if first and _is_dash(content):
+            fail(f"{NOT_A_MAPPING} (got list: {content[:60]!r})", n, what="invalid spec")
+        if scalar_col is not None and indent > scalar_col and pending is None:
+            fail("this line is indented under a key that already has a value; "
+                 f"if it continues that value, {_NEEDS_PYYAML}", n)
+    first = False
+
+    if pending is not None:
+        pend_indent, parent, key = pending
+        pending = None
+        if indent > pend_indent:
+            is_seq = _is_dash(content)
+            container = [] if is_seq else {}
+            parent[key] = container
+            stack.append((pend_indent, container, "seq" if is_seq else "map"))
+        elif indent == pend_indent and _is_dash(content) and isinstance(parent, dict):
+            # `caps:\n- a\n- b`: list items flush with their key (valid YAML, common).
+            # The seq sits half a column left of its dashes, so the dashes do not pop it
+            # but the next `key:` line at that indent does (see the loop below).
+            container = []
+            parent[key] = container
+            stack.append((pend_indent - 0.5, container, "seq"))
+        else:
+            parent[key] = None  # `key:` with no indented child is null, as in PyYAML
+
+    while stack and (indent <= stack[-1][0]
+                     or (stack[-1][0] % 1 and not _is_dash(content)
+                         and indent <= stack[-1][0] + 0.5)):
+        stack.pop()
+    _, container, kind = stack[-1] if stack else (-1, data, "map")
+    scalar_col = None
+
+    if kind == "seq" and _is_dash(content):
+        rest = content[1:].strip()
+        if strict:
+            kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
+        else:
+            kv = rest.partition(":")[::2] if (rest and ":" in rest
+                                              and rest[0] not in "{[\"'") else None
+        if kv is not None:
+            k, v = _unquote_key(kv[0].strip()), kv[1].strip()
+            item: dict = {}
+            container.append(item)
+            # Siblings of `k` (more "key: val" lines of the SAME item) are
+            # indented past the dash itself — same depth `k` started at.
+            stack.append((indent, item, "map"))
+            key_col = indent + len(content) - len(rest)
+            if v == "":
+                item[k] = None
+                # a child of `k` must be indented past `k` itself, not only past the
+                # dash: `- name:\n  b: 1` is a sibling `b`, as PyYAML reads it
+                pending = (key_col, item, k)
+            else:
+                item[k] = _coerce(v)
+                scalar_col = key_col
+        elif rest == "":
+            # a bare `-`: its value (a mapping or list) is on the following lines
+            container.append(None)
+            pending = (indent, container, len(container) - 1)
+        else:
+            container.append(_coerce(rest))
+        return pending, scalar_col, first
+
+    if strict and _is_dash(content):
+        fail("found a list item where a 'key: value' line was expected (indent list "
+             "items under their key, e.g. '  - a')", n)
+    if strict:
+        k, v = _key_split(content)
+    else:
+        if ":" not in content:
+            return pending, scalar_col, first
+        k, _, v = content.partition(":")
+    key, val = _unquote_key(k.strip()), v.strip()
+    if val == "":
+        container[key] = None
+        pending = (indent, container, key)
+    else:
+        container[key] = _coerce(val)
+        scalar_col = indent
+    return pending, scalar_col, first
 
 
 def read_frontmatter(md_path: Path) -> dict:
