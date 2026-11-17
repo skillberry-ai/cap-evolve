@@ -3715,6 +3715,8 @@ def run_step(
     ctx.inject(adapter, run_dir, workdir, split=eval_split)
 
     instructions = ctx.augment_instructions(instructions, workdir, run_dir)
+    # The ./feedback_full/ files the prompt links to: written BEFORE the seal below.
+    feedback_digest.provide_linked(instructions, workdir, run_dir)
 
     # Seal the eval surface (hash manifest + best-effort read-only bits) AFTER the
     # context injection wrote its scratch files, so nothing we add ourselves reads as
@@ -3731,7 +3733,6 @@ def run_step(
     opt_cost_usd, opt_tokens = 0.0, 0
     _opt_t0 = time.time()
     try:
-        feedback_digest.provide_linked(instructions, workdir, run_dir)   # ./feedback_full/ links
         opt_report = optimizer(workdir, instructions)  # mutates workdir in place
         if isinstance(opt_report, dict):
             opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)

@@ -630,6 +630,9 @@ def gepa_loop(
             extra=_instructions(refl_summary, focus_label, mb), run_dir=run_dir,
             optimizer=optimizer, feedback_budget=budget)
         instructions = ctx.augment_instructions(instructions, workdir, run_dir)
+        # The ./feedback_full/ files the prompt links to: written BEFORE the seal below, so
+        # the framework's own files never read as tampering.
+        feedback_digest.provide_linked(instructions, workdir, run_dir)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather
         # than via ``harness.run_step``, so it needs the same two calls. None = off.
@@ -642,7 +645,6 @@ def gepa_loop(
         opt_cost_usd, opt_tokens = 0.0, 0
         _t0 = time.time()
         try:
-            feedback_digest.provide_linked(instructions, workdir, run_dir)   # ./feedback_full/ links
             opt_report = optimizer(workdir, instructions)
             if isinstance(opt_report, dict):
                 opt_cost_usd = float(opt_report.get("cost_usd") or 0.0)

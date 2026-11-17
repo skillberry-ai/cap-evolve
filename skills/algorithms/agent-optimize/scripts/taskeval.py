@@ -204,6 +204,9 @@ def main() -> int:
         key=lambda pt: (pt["reward"], pt["task_id"]))
     fitted = feedback_digest.fit([pt for pt in failing if pt["feedback"]], feedback_digest.budget_bytes(),
                                  run_dir=rd_fb)
+    if rd_fb is not None:
+        # This JSON is read from any cwd: the full-text links name the files where they are.
+        fitted.entries = {tid: feedback_digest.absolute_links(e, rd_fb) for tid, e in fitted.entries.items()}
 
     per_task = {
         tid: {

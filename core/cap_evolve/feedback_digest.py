@@ -47,10 +47,14 @@ from pathlib import Path
 
 ENV_BUDGET = "CAPEVOLVE_FEEDBACK_BUDGET_BYTES"
 #: The default feedback budget of one optimizer prompt. The rest of a rendered prompt (the
-#: template, the capability and algorithm briefs, the passing-task ids, section headers) is
-#: about 25 KB, so the whole prompt stays well under the 96 KiB inline-argv limit.
+#: template, the capability and algorithm briefs, the passing-task ids, section headers and
+#: ``augment_instructions``) is about 20-40 KB (40 KB with the largest shipped template, tau2's
+#: 22 KB one), so the whole prompt stays under the 96 KiB inline-argv limit.
 DEFAULT_BUDGET = 48_000
 MIN_BUDGET = 4_000
+#: The largest budget a setting can ask for: above it the prompt would pass the inline-argv
+#: limit with a large project template, and the pointer fallback would become the normal path.
+MAX_BUDGET = 56_000
 #: The smallest condensed entry body worth showing: a task that cannot get this much is
 #: named, not listed.
 MIN_ENTRY = 300
@@ -59,14 +63,19 @@ LINK_RE = re.compile(r"\./" + DIR + r"/([A-Za-z0-9._-]+\.md)")
 
 # ---- the trial-label grammar ------------------------------------------------------------
 
-#: A trial label line, e.g. ``[trial 0 reward 0.500, trial 2 errored]`` (``<tag> trial k``
-#: when several tags' rollouts are pooled).
-TRIAL_LABEL_RE = re.compile(r"^\[((?:\S+ )?trial \d+[^\]\n]*)\]$", re.MULTILINE)
+#: One trial in a label: ``trial 0 reward 0.500``, ``trial 2 errored`` (``<tag> trial k`` when
+#: several tags' rollouts are pooled).
+_TRIAL_RE = re.compile(r"((?:\S+ )?trial \d+)(?: (errored)| reward (-?[0-9.]+))")
+_ONE = r"(?:\S+ )?trial \d+ (?:errored|reward -?[0-9.]+)"
+#: A trial label line: ``[`` one or more trials, comma-separated, ``]``. Every part must be a
+#: trial as ``join_trial_feedback`` writes it, so a judge's own ``[trial 2 of the protocol]``
+#: line is text, never a label.
+TRIAL_LABEL_RE = re.compile(r"^\[(" + _ONE + r"(?:, " + _ONE + r")*)\]$", re.MULTILINE)
 #: A pooled evaluation's header line, e.g. ``[evaluation 1 of 2]``.
 EVAL_LABEL_RE = re.compile(r"^\[evaluation (\d+) of (\d+)\]$", re.MULTILINE)
 #: Either label line.
-LABEL_LINE_RE = re.compile(r"^\[(?:(?:\S+ )?trial \d+[^\]\n]*|evaluation \d+ of \d+)\]$", re.MULTILINE)
-_TRIAL_RE = re.compile(r"((?:\S+ )?trial \d+)(?: (errored)| reward (-?[0-9.]+))?")
+LABEL_LINE_RE = re.compile(r"^\[(?:" + _ONE + r"(?:, " + _ONE + r")*|evaluation \d+ of \d+)\]$",
+                           re.MULTILINE)
 #: The text shown under trials that gave no feedback, so their rewards are still listed.
 NO_FEEDBACK = "(no feedback)"
 
@@ -139,8 +148,11 @@ def pooled_feedback(parts: list) -> str:
 
 
 def strip_labels(text: str) -> str:
-    """``text`` without its trial and evaluation label lines."""
-    return LABEL_LINE_RE.sub("", str(text or "")).strip()
+    """``text`` without its trial and evaluation label lines, and without the ``(no feedback)``
+    placeholder lines: the scorer's own words only (SkillOpt clusters on them)."""
+    out = LABEL_LINE_RE.sub("", str(text or ""))
+    out = re.sub(r"^" + re.escape(NO_FEEDBACK) + r"$", "", out, flags=re.MULTILINE)
+    return out.strip()
 
 
 def _num(x) -> float | None:
@@ -249,14 +261,18 @@ def _clip(text: str, n: int, measure=None) -> str:
     text = str(text or "").strip()
     if measure(text) <= n:
         return text
-    m = min(len(text), max(0, n))
-    for _ in range(12):
-        out = middle_cut(text, m)
-        over = measure(out) - n
-        if over <= 0:
-            return out
-        m = max(0, m - max(1, over))
-    return text.encode("utf-8")[:max(0, n)].decode("utf-8", errors="ignore")
+    if n <= 0:
+        return ""
+    # The largest char target whose cut fits: a binary search, since a char is 1 to 4 bytes
+    # (and a newline costs 3 rendered bytes), so no single char/byte ratio is right.
+    lo, hi = 0, min(len(text), n)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if measure(middle_cut(text, mid)) <= n:
+            lo = mid
+        else:
+            hi = mid - 1
+    return middle_cut(text, lo) if lo else ""
 
 
 def render(head: str, body: str, link: str | None = None) -> str:
@@ -319,9 +335,10 @@ def fallback(pt: dict, n: int) -> str:
 # ---- the budget -------------------------------------------------------------------------
 
 def budget_bytes() -> int:
-    """The feedback budget of one optimizer prompt (``CAPEVOLVE_FEEDBACK_BUDGET_BYTES``)."""
+    """The feedback budget of one optimizer prompt (``CAPEVOLVE_FEEDBACK_BUDGET_BYTES``),
+    clamped to ``[MIN_BUDGET, MAX_BUDGET]``."""
     try:
-        return max(MIN_BUDGET, int(os.environ.get(ENV_BUDGET) or DEFAULT_BUDGET))
+        return min(MAX_BUDGET, max(MIN_BUDGET, int(os.environ.get(ENV_BUDGET) or DEFAULT_BUDGET)))
     except ValueError:
         return DEFAULT_BUDGET
 
@@ -341,14 +358,19 @@ class Budget:
         self.used += max(0, int(n))
 
 
-def rest_line(rest: list[dict]) -> str:
-    """The line naming the tasks the budget left out (at most 60 ids, then a count)."""
+def rest_line(rest: list[dict], limit: int | None = None) -> str:
+    """The line naming the tasks the budget left out: at most 60 ids, then a count; only the
+    count when the named form is over ``limit`` bytes."""
     if not rest:
         return ""
-    ids = [str(pt.get("task_id")) for pt in rest]
-    named = ", ".join(ids[:60]) + (f" … (+{len(ids) - 60} more)" if len(ids) > 60 else "")
-    return (f"(+{len(rest)} more failing task(s) not listed, over the feedback budget "
+    ids = [str(pt.get("task_id")) for pt in rest[:60]]
+    named = ", ".join(ids) + (f" … (+{len(rest) - 60} more)" if len(rest) > 60 else "")
+    line = (f"(+{len(rest)} more failing task(s) not listed, over the feedback budget "
             f"({ENV_BUDGET}): {named}. Their traces are in ./trajectories/.)")
+    if limit is not None and _size(line) > limit:
+        line = (f"(+{len(rest)} more failing task(s) not listed, over the feedback budget "
+                f"({ENV_BUDGET}). Their traces are in ./trajectories/.)")
+    return line
 
 
 @dataclass
@@ -360,10 +382,7 @@ class Fit:
     used: int = 0                                   # bytes: entries + the rest line
     condensed: int = 0
     cut: int | None = None                          # the common condensed body size, if any
-
-    @property
-    def rest_line(self) -> str:
-        return rest_line(self.rest)
+    rest_line: str = ""                             # names the rows in ``rest``
 
 
 def fit(rows: list[dict], limit: int, *, head=lambda pt: "", run_dir=None, optimizer=None) -> Fit:
@@ -395,10 +414,15 @@ def fit(rows: list[dict], limit: int, *, head=lambda pt: "", run_dir=None, optim
     def cost(i, c):
         return sizes[i] if sizes[i] - head_sz[i] <= c else head_sz[i] + c + link_sz[i]
 
+    rest_cap = max(0, limit // 4)            # the rest line never takes more than a quarter
+    floor = [0]                              # floor[n]: the cost of listing rows[:n] at MIN_ENTRY
+    for i in range(len(rows)):
+        floor.append(floor[-1] + cost(i, MIN_ENTRY))
     n = len(rows)
-    while n > 1 and sum(cost(i, MIN_ENTRY) for i in range(n)) + _size(rest_line(rows[n:])) > limit:
+    while n > 1 and floor[n] + _size(rest_line(rows[n:], rest_cap)) > limit:
         n -= 1
-    room = limit - _size(rest_line(rows[n:]))
+    rest_txt = rest_line(rows[n:], rest_cap)
+    room = limit - _size(rest_txt)
     lo = MIN_ENTRY if sum(cost(i, MIN_ENTRY) for i in range(n)) <= room else \
         max(40, room - head_sz[0] - link_sz[0])
     hi = max(lo, max(sizes[i] - head_sz[i] for i in range(n)))
@@ -420,8 +444,9 @@ def fit(rows: list[dict], limit: int, *, head=lambda pt: "", run_dir=None, optim
             entries[tid] = render(heads[i], bodies[tid], link)
         else:
             entries[tid] = full[i]
-    used = sum(_size(e) for e in entries.values()) + _size(rest_line(rows[n:]))
-    return Fit(entries=entries, shown=shown, rest=rows[n:], used=used, condensed=len(bodies), cut=c)
+    used = sum(_size(e) for e in entries.values()) + _size(rest_txt)
+    return Fit(entries=entries, shown=shown, rest=rows[n:], used=used, condensed=len(bodies), cut=c,
+               rest_line=rest_txt)
 
 
 # ---- full text on disk ------------------------------------------------------------------
@@ -447,6 +472,13 @@ def store_full(run_dir, pt: dict) -> str:
         path.write_text(f"# {pt.get('task_id')} — full scorer feedback (reward "
                         f"{float(pt.get('reward', 0) or 0):.3f})\n\n{fb}\n", encoding="utf-8")
     return f"./{DIR}/{name}"
+
+
+def absolute_links(text: str, run_dir) -> str:
+    """``text`` with each ``./feedback_full/<name>.md`` link made an absolute path under the run
+    dir: for output read from no particular workdir (agent-optimize's ``taskeval.py``)."""
+    root = (Path(run_dir.root) / DIR).resolve()
+    return LINK_RE.sub(lambda m: str(root / m.group(1)), text or "")
 
 
 def provide_linked(instructions: str, workdir, run_dir) -> int:
@@ -546,7 +578,7 @@ def _workers() -> int:
 
 def usd_headroom(run_dir) -> float | None:
     """USD the run may still spend on the optimizer (the tighter of ``max_optimizer_usd`` and
-    ``max_usd``), or None when neither is set."""
+    ``max_usd``, the latter less what in-flight evaluations reserved), or None when neither is set."""
     try:
         b, s = run_dir.budget, run_dir.spent
     except Exception:  # noqa: BLE001 — a run dir double without budgets
@@ -555,7 +587,13 @@ def usd_headroom(run_dir) -> float | None:
     if getattr(b, "max_optimizer_usd", 0):
         caps.append(float(b.max_optimizer_usd) - float(s.optimizer_usd))
     if getattr(b, "max_usd", 0):
-        caps.append(float(b.max_usd) - float(s.total_usd))
+        held = 0.0                           # USD that in-flight evaluations have reserved
+        try:
+            held = sum(float(v.get("usd") or 0.0)
+                       for v in run_dir._live_reservations(run_dir._read_state()).values())
+        except Exception:  # noqa: BLE001 — a run dir double without reservations
+            pass
+        caps.append(float(b.max_usd) - float(s.total_usd) - held)
     return min(caps) if caps else None
 
 
@@ -660,10 +698,9 @@ def _condense(rows: list[dict], c: int, run_dir=None, optimizer=None) -> dict:
         key = lambda pt: hashlib.sha256(
             f"{optimizer_key}|{pt.get('task_id')}|{pt.get('feedback')}".encode("utf-8")).hexdigest()
         cache = _read_cache(run_dir)
-        # A cached summary is reused while it fits this prompt's room; a too-long one is redone.
-        fits = lambda pt: (key(pt) in cache
-                           and _rendered_size(cache[key(pt)]) <= room[str(pt.get("task_id"))])
-        todo = [pt for pt in rows if not fits(pt)]
+        # A cached summary is ALWAYS reused (cut to this prompt's room when it is longer): the
+        # same optimizer, task and feedback are never paid for twice.
+        todo = [pt for pt in rows if key(pt) not in cache]
         errors: list[str] = []
         calls = skipped = 0
         if todo:

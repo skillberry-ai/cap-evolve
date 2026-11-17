@@ -756,3 +756,151 @@ def test_taskeval_uses_the_cores_feedback_code(tmp_path, monkeypatch):
     broken = per["broken"]["feedback"]
     assert "BROKEN-VERDICT" in broken and len(broken.encode()) <= fd.budget_bytes()
     assert "trial 0 errored" in broken and "lowest" in broken.split("\n", 1)[0]
+
+
+# ---- local review of 2f9b6805d -------------------------------------------------------
+
+def test_linked_files_are_written_before_the_integrity_seal(tmp_path, monkeypatch):
+    """The framework's own ./feedback_full/ copy must never read as tampering, even when a task
+    id matches a protected pattern (``*gold*``)."""
+    from cap_evolve import Budget, RunDir, integrity
+    example, adapter = _toy()
+    monkeypatch.setenv("CAPEVOLVE_CORE", str(REPO / "core"))
+    monkeypatch.setenv("CAPEVOLVE_TOY_DATA", str(example))
+    monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(REPO / "skills"))
+    seed = tmp_path / "seed_capability"
+    shutil.copytree(example / "seed_capability", seed)
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t", budget=Budget(max_iterations=3))
+    harness.ensure_splits(adapter, rd, seed=0, ratios=(0.2, 0.4, 0.4))
+    base = harness.baseline(adapter, seed, run_dir=rd)
+    monkeypatch.setenv(fd.ENV_BUDGET, "4000")
+    instructions = harness._failures_block([_pt("gold_answer_17", 0.0), _pt("b", 0.0)], [], [], run_dir=rd)
+    assert any(n.startswith("gold_answer_17") for n in fd.LINK_RE.findall(instructions))
+    harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=lambda wd, p: None,
+                     instructions=instructions, current_val=base,
+                     protected_patterns=integrity.DEFAULT_PATTERNS)
+    kinds = [json.loads(ln)["kind"] for ln in (rd.root / "events.jsonl").read_text().splitlines()]
+    assert "tamper_detected" not in kinds
+
+
+def test_pooling_with_one_side_silent_keeps_every_trials_reward(tmp_path):
+    """A side with no text still lists its rewards, so the other side's text is never read as
+    every trial's, pooled once or twice."""
+    from cap_evolve.loop import pool_split_results
+
+    def res(fb, rewards):
+        return SplitResult(split="val", reward=sum(rewards) / len(rewards), stderr=0.0, n_tasks=1, n_scored=1,
+                           per_task=[{"task_id": "t0", "reward": sum(rewards) / len(rewards),
+                                      "trial_rewards": rewards, "feedback": fb}])
+    bad = res(join([(0, 0.0, "BAD: wrong tool"), (1, 0.0, "BAD: wrong tool")]), [0.0, 0.0])
+    silent = res("", [1.0, 1.0])
+    once = pool_split_results(bad, silent)
+    fb = once.per_task[0]["feedback"]
+    assert "[trial 0 reward 0.000, trial 1 reward 0.000]\nBAD: wrong tool" in fb
+    assert f"[trial 0 reward 1.000, trial 1 reward 1.000]\n{fd.NO_FEEDBACK}" in fb
+    twice = pool_split_results(once, res(join([(0, 0.0, "OTHER: timeout")]), [0.0])).per_task[0]["feedback"]
+    sections = re.split(r"^\[evaluation \d+ of 3\]\n", twice, flags=re.M)[1:]
+    assert len(sections) == 3
+    (bad_sec,) = [x for x in sections if "BAD: wrong tool" in x]
+    assert bad_sec.startswith("[trial 0 reward 0.000, trial 1 reward 0.000]\nBAD")   # not the 1.000 trials
+    # no evaluation gave any text: no placeholder text either
+    assert pool_split_results(res("", [0.0]), res("", [1.0])).per_task[0]["feedback"] == ""
+
+
+def test_the_no_feedback_placeholder_never_splits_a_skillopt_cluster():
+    p = "timeout calling search tool after retry loop exhausted"
+    rows = [{"task_id": "a", "reward": 0.0, "feedback": join([(0, 0.0, ""), (1, 0.0, p)])},
+            {"task_id": "b", "reward": 0.0, "feedback": join([(0, 0.0, p), (1, 0.0, "")])},
+            {"task_id": "c", "reward": 0.0, "feedback": p}]
+    pats = skillopt._failure_patterns(rows)
+    assert len(pats) == 1 and pats[0]["n"] == 3, pats
+
+
+@pytest.mark.parametrize("ch", ["判", "é", "щ", "ש"])
+def test_non_ascii_feedback_is_cut_to_its_room_not_to_nothing(ch):
+    text = "start " + ch * 3000 + " VERDICT-" + ch * 5
+    assert 590 <= fd._size(fd._clip(text, 600)) <= 600
+    rows = [{"task_id": f"t{i}", "reward": 0.3, "feedback": join(
+        [(k, 0.1 * k, f"{ch * 4000} LOW-{i}-{k}") for k in range(3)])} for i in range(200)]
+    got = fd.fit(rows, 48_000, head=harness._fmt_head)
+    assert got.used > 0.95 * 48_000                  # the budget is used, not lost
+    for pt in got.shown:
+        body = got.entries[pt["task_id"]].split("lowest (trial 0): ", 1)[1]
+        assert ch in body and f"LOW-{pt['task_id'][1:]}-0" in body
+
+
+def test_a_cached_summary_is_never_paid_for_twice(tmp_path):
+    """A summary longer than its room (bullet lines, over the asked size, non-ASCII) is cut on
+    reuse, not requested again."""
+    rd = _rd(tmp_path)
+    rows = [{"task_id": f"t{i}", "reward": 0.0, "feedback": f"t{i} " + "q" * 20_000} for i in range(10)]
+    calls = []
+    long_reply = lambda i: "- issue line\n" * 400 + "判" * 300
+    for _ in range(3):
+        harness._failures_block(rows, [], [], run_dir=rd,
+                                optimizer=_fake_optimizer(long_reply, calls, cost={"cost_usd": 0.5}))
+    assert len(calls) == len(fd.batches(rows, fd.budget_bytes()))
+    assert rd.spent.optimizer_usd == pytest.approx(0.5 * len(calls))
+
+
+def test_a_judge_line_that_looks_like_a_label_is_kept_as_text():
+    fb = "Judge notes:\n[trial 2 of the protocol was cited]\nThe answer FAILED: wrong dosage VERDICT"
+    pt = {"task_id": "x", "reward": 0.0, "feedback": fb}
+    assert fd.trials_of(pt) == [("", 0.0, fb)]
+    assert "VERDICT" in fd.fallback(pt, 300)
+    assert fd.label_unlabelled(fb, [0.0, 0.0]).startswith("[trial 0 reward 0.000, trial 1 reward 0.000]\n")
+    assert fd.strip_labels(fb) == fb
+
+
+def test_the_budget_setting_is_clamped_below_the_inline_limit(monkeypatch):
+    monkeypatch.setenv(fd.ENV_BUDGET, "200000")
+    assert fd.budget_bytes() == fd.MAX_BUDGET
+    monkeypatch.setenv(fd.ENV_BUDGET, "10")
+    assert fd.budget_bytes() == fd.MIN_BUDGET
+
+
+def test_the_rest_line_never_takes_the_whole_budget():
+    rows = [{"task_id": "task_with_a_long_identifier_" + "x" * 80 + str(i), "reward": 0.0,
+             "feedback": "f" * 5000} for i in range(100)]
+    got = fd.fit(rows, 2000)
+    assert got.used <= 2000 and got.rest and _size(got.rest_line) <= 500
+    assert "more failing task(s) not listed" in got.rest_line
+
+
+def test_fit_is_fast_with_many_rows():
+    rows = [{"task_id": f"t{i}", "reward": 0.0, "feedback": "g" * 3000} for i in range(10_000)]
+    t0 = time.time()
+    fd.fit(rows, 48_000)
+    assert time.time() - t0 < 2.0
+
+
+def test_usd_headroom_counts_what_in_flight_evaluations_reserved(tmp_path):
+    rd = _rd(tmp_path, max_usd=1.0)
+    rd.reserve_metric_calls(1, label="eval", est_usd=0.75)
+    assert fd.usd_headroom(rd) == pytest.approx(0.25)
+
+
+def test_taskeval_links_name_the_files_where_they_are(tmp_path, monkeypatch):
+    from cap_evolve import RunDir
+    rd = RunDir.create(tmp_path / ".capevolve", ts="t")
+    proj = tmp_path / "proj"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "adapters" / "adapter.py").write_text(_ADAPTER, encoding="utf-8")
+    cand = tmp_path / "cand"
+    cand.mkdir()
+    out = tmp_path / "out.json"
+    scripts = REPO / "skills" / "algorithms" / "agent-optimize" / "scripts"
+    sys.path.insert(0, str(scripts))
+    spec = importlib.util.spec_from_file_location("taskeval_ff2", scripts / "taskeval.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    monkeypatch.setattr(sys, "argv", ["taskeval.py", str(cand), "broken", "--project", str(proj), "--n", "3",
+                                      "--json", str(out), "--run-dir", str(rd.root)])
+    monkeypatch.chdir(tmp_path)                       # a cwd with no feedback_full/ in it
+    with contextlib.redirect_stdout(open(tmp_path / "stdout", "w")), \
+            contextlib.redirect_stderr(open(tmp_path / "stderr", "w")):
+        assert mod.main() == 0
+    fb = json.loads(out.read_text())["per_task"]["broken"]["feedback"]
+    links = re.findall(r"\(full feedback, every trial: (.+)\)", fb)
+    assert len(links) == 1 and Path(links[0]).is_absolute() and Path(links[0]).is_file()
+    assert "BROKEN-VERDICT" in Path(links[0]).read_text(encoding="utf-8")
