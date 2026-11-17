@@ -381,10 +381,14 @@ def test_pooling_keeps_a_side_whose_text_is_inside_the_other():
     assert f"[evaluation 2 of 2]\n[trial 0 reward 0.500]\n{b}" in fb
 
 
-def test_pooling_keeps_the_same_words_at_different_rewards_apart():
+def test_pooling_the_same_words_follows_the_join_rule():
+    """The same UNLABELLED words from every evaluation: every trial gave them, so the text alone
+    (join_trial_feedback's rule). Labelled ones keep every evaluation and its rewards."""
     from cap_evolve.loop import pool_split_results
 
-    fb = pool_split_results(_one_task("same", 0.0), _one_task("same", 1.0)).per_task[0]["feedback"]
+    assert pool_split_results(_one_task("same", 0.0), _one_task("same", 1.0)).per_task[0]["feedback"] == "same"
+    a, b = join([(0, 0.0, "same"), (1, 0.0, "other")]), join([(0, 1.0, "same"), (1, 1.0, "other")])
+    fb = pool_split_results(_one_task(a, 0.0), _one_task(b, 1.0)).per_task[0]["feedback"]
     assert "[trial 0 reward 0.000]\nsame" in fb and "[trial 0 reward 1.000]\nsame" in fb
 
 
@@ -617,7 +621,7 @@ def test_concurrent_prompt_builders_never_share_scratch_or_lose_cached_summaries
         t.join()
     assert len(set(dirs)) == 4                       # one scratch dir per prompt builder
     cache = json.loads((rd.root / "feedback_summaries.json").read_text())
-    assert len(cache) == 12                          # nobody's paid-for summaries were lost
+    assert len([k for k in cache if k != "__meta__"]) == 12   # nobody's paid-for summaries were lost
 
 
 # ---- the full text reaches every optimizer (item 12) --------------------------------------
@@ -904,3 +908,106 @@ def test_taskeval_links_name_the_files_where_they_are(tmp_path, monkeypatch):
     links = re.findall(r"\(full feedback, every trial: (.+)\)", fb)
     assert len(links) == 1 and Path(links[0]).is_absolute() and Path(links[0]).is_file()
     assert "BROKEN-VERDICT" in Path(links[0]).read_text(encoding="utf-8")
+
+
+# ---- second local review of 509110801 --------------------------------------------------
+
+def test_identical_pooled_evaluations_name_every_trial():
+    """Two evaluations with the same words AND rewards are still two evaluations."""
+    from cap_evolve.loop import pool_split_results
+
+    def res(rewards):
+        fb = join([(k, r, "expected X got Y" if r < 1 else "") for k, r in enumerate(rewards)])
+        return SplitResult(split="val", reward=sum(rewards) / len(rewards), stderr=0.0, n_tasks=1, n_scored=1,
+                           per_task=[{"task_id": "t0", "reward": sum(rewards) / len(rewards),
+                                      "trial_rewards": rewards, "feedback": fb}])
+    pt = pool_split_results(res([0.0, 1.0]), res([0.0, 1.0])).per_task[0]
+    assert len(fd.trials_of(pt)) == len(pt["trial_rewards"]) == 4
+    again = pool_split_results(pool_split_results(res([0.0, 1.0]), res([0.0, 1.0])), res([0.0, 1.0])).per_task[0]
+    assert len(fd.trials_of(again)) == len(again["trial_rewards"]) == 6
+    assert pool_split_results(_one_task("same"), _one_task("same")).per_task[0]["feedback"] == "same"
+
+
+def test_a_summary_made_for_a_small_room_is_made_again_for_a_much_larger_one(tmp_path):
+    rd = _rd(tmp_path)
+    calls = []
+    sized = lambda i: None   # replaced below: reply exactly the size the prompt asks for
+
+    def opt(workdir, prompt):
+        n = int(re.search(r"at most (\d+) characters", prompt).group(1))
+        ids = re.findall(r"^- tasks/\S+ -> (\S+)$", prompt, re.M)
+        calls.append(n)
+        (Path(workdir) / "summaries.json").write_text(json.dumps({i: f"{i} " + "s" * (n - 10) for i in ids}))
+    opt.command = "sized"
+    rows = [{"task_id": f"t{i}", "reward": 0.0, "feedback": f"t{i} " + "q" * 20_000} for i in range(150)]
+    fd.fit(rows, 48_000, run_dir=rd, optimizer=opt)              # a small room per task
+    n_small = len(calls)
+    big = fd.fit(rows[:4], 24_000, run_dir=rd, optimizer=opt)    # 4 of them, a large room each
+    assert len(calls) > n_small                                  # made again, for the larger room
+    assert all(_size(e) > 0.8 * big.cut for e in big.entries.values()), [_size(e) for e in big.entries.values()]
+    n_big = len(calls)
+    fd.fit(rows[:4], 24_000, run_dir=rd, optimizer=opt)          # the same room again: reused
+    assert len(calls) == n_big
+
+
+@pytest.mark.parametrize("reply", [None, 5, ["a"], "", "   "])
+def test_a_summary_that_is_not_text_falls_back_and_is_not_cached(tmp_path, reply):
+    rd = _rd(tmp_path)
+    pt = {"task_id": "t0", "reward": 0.5, "feedback": join([(0, 0.0, "FAIL: " + "x" * 5000 + " LOW-VERDICT"),
+                                                            (1, 1.0, "good " + "y" * 5000)])}
+    got = fd.fit([pt], 1500, run_dir=rd, optimizer=_fake_optimizer(reply))
+    assert "LOW-VERDICT" in got.entries["t0"] and "None" not in got.entries["t0"]
+    cache = json.loads((rd.root / "feedback_summaries.json").read_text()) \
+        if (rd.root / "feedback_summaries.json").exists() else {}
+    assert [k for k in cache if k != "__meta__"] == []
+
+
+def test_a_corrupt_cache_never_breaks_a_prompt_build(tmp_path):
+    rd = _rd(tmp_path)
+    pt = _pt("t0", 0.0)
+    calls = []
+    opt = _fake_optimizer("ok summary", calls)
+    fd.fit([pt], 1500, run_dir=rd, optimizer=opt)
+    cache = json.loads((rd.root / "feedback_summaries.json").read_text())
+    for k in [k for k in cache if k != "__meta__"]:
+        cache[k] = {"text": {"not": "text"}}
+    cache["__meta__"] = "garbage"
+    (rd.root / "feedback_summaries.json").write_text(json.dumps(cache))
+    got = fd.fit([pt], 1500, run_dir=rd, optimizer=opt)           # no crash; made again
+    assert got.entries["t0"].startswith("ok summary") and len(calls) == 2
+
+
+def test_a_summarizer_that_keeps_failing_is_stopped(tmp_path):
+    rd = _rd(tmp_path)
+    calls = []
+    opt = _fake_optimizer(calls=calls, fail=RuntimeError("down"))
+    for i in range(fd.FAILED_BUILDS_LIMIT + 3):
+        rows = [{"task_id": f"b{i}", "reward": 0.0, "feedback": f"b{i} " + "x" * 5000 + " VERDICT"}]
+        got = fd.fit(rows, 1000, run_dir=rd, optimizer=opt)
+        assert "VERDICT" in got.entries[f"b{i}"]                  # the cut, every time
+    assert len(calls) == fd.FAILED_BUILDS_LIMIT
+    ev = [json.loads(ln) for ln in (rd.root / "events.jsonl").read_text().splitlines()]
+    assert any(e.get("summarizer_disabled") for e in ev if e["kind"] == "feedback_summary")
+
+
+def test_the_known_call_cost_stops_a_probe_call_the_budget_cannot_pay_for(tmp_path):
+    """Build 1 learns that a call costs $0.40; build 2, with $0.20 left, makes no call."""
+    rd = _rd(tmp_path, max_usd=1.0)
+    calls = []
+    opt = _fake_optimizer("s", calls, cost={"cost_usd": 0.4})
+    rows = lambda g: [{"task_id": f"{g}{i}", "reward": 0.0, "feedback": f"{g}{i} " + "v" * 30_000} for i in range(4)]
+    fd.fit(rows("a"), 8000, run_dir=rd, optimizer=opt)
+    assert len(calls) == 2 and rd.spent.optimizer_usd == pytest.approx(0.8)
+    fd.fit(rows("b"), 8000, run_dir=rd, optimizer=opt)
+    assert len(calls) == 2 and rd.spent.optimizer_usd <= 1.0
+
+
+def test_the_fallback_gives_the_best_trial_what_the_lowest_does_not_use():
+    pt = {"task_id": "t0", "reward": 0.5,
+          "feedback": join([(0, 0.0, "short low VERDICT"), (1, 1.0, "best " + "b" * 5000 + " BEST-END")])}
+    body = fd.fallback(pt, 2000)
+    assert "short low VERDICT" in body and "BEST-END" in body and _rendered_size_ok(body, 2000)
+
+
+def _rendered_size_ok(body, n):
+    return 0.9 * n <= fd._rendered_size(body) <= n

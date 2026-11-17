@@ -90,7 +90,7 @@ python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project
   infra error), unless every trial gave the same text and none errored. Trials with no
   text are listed under `(no feedback)`, so their rewards are still shown.
 - All feedback text in ONE optimizer prompt shares ONE budget,
-  `CAPEVOLVE_FEEDBACK_BUDGET_BYTES` (default 48000 bytes). That covers the failure index,
+  `CAPEVOLVE_FEEDBACK_BUDGET_BYTES` (default 48000 bytes, clamped to 4000–52000). That covers the failure index,
   GEPA's reflection and SkillOpt's slow/meta-update block, and keeps the prompt under
   every optimizer row's inline limit:
   - When everything fits, every entry is shown in full and nothing is summarized.
@@ -103,7 +103,9 @@ python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project
     model the algorithm proposes edits with. Each call gets at most one budget's worth of
     feedback, and calls run at the run's `workers` concurrency. A call is not started when
     the run's `max_optimizer_usd`/`max_usd` has no room left. Its spend counts as
-    optimizer spend. `CAPEVOLVE_FEEDBACK_SUMMARY=off` disables it.
+    optimizer spend. A summary is cached and reused until a prompt has more than twice the
+    room it was made for. After 3 prompt builds in a row whose calls all failed, the run
+    stops calling the summarizer. `CAPEVOLVE_FEEDBACK_SUMMARY=off` disables it.
   - With no optimizer, or a call that gives no usable result, a deterministic cut is used
     instead. It keeps the start and the end of each text. A `feedback_summary` event
     records which was used.

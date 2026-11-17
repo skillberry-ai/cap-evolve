@@ -53,8 +53,17 @@ ENV_BUDGET = "CAPEVOLVE_FEEDBACK_BUDGET_BYTES"
 DEFAULT_BUDGET = 48_000
 MIN_BUDGET = 4_000
 #: The largest budget a setting can ask for: above it the prompt would pass the inline-argv
-#: limit with a large project template, and the pointer fallback would become the normal path.
-MAX_BUDGET = 56_000
+#: limit with a large project template and long task ids (their id lists are outside the
+#: budget), and the pointer fallback would become the normal path.
+MAX_BUDGET = 52_000
+#: A cached summary is reused while this prompt's room is at most this many times the room it
+#: was made for; above that it is made again for the larger room. Each remake at least doubles
+#: the room, so one task is summarized at most about log2(MAX_BUDGET / MIN_ENTRY) times.
+REUSE_RATIO = 2
+#: After this many prompt builds in a row whose summary calls all failed, the run stops
+#: calling the summarizer (the deterministic cut is used): a broken summarizer is not paid
+#: for on every build.
+FAILED_BUILDS_LIMIT = 3
 #: The smallest condensed entry body worth showing: a task that cannot get this much is
 #: named, not listed.
 MIN_ENTRY = 300
@@ -136,7 +145,7 @@ def label_unlabelled(text: str, trial_rewards) -> str:
 def pooled_feedback(parts: list) -> str:
     """One task's feedback from several pooled evaluations of the same candidate.
 
-    ``parts`` holds one ``(text, trial_rewards or None)`` per evaluation, distinct texts only.
+    ``parts`` holds one ``(text, trial_rewards or None)`` per evaluation, every evaluation.
     One part is returned as it is. Several are each put under an ``[evaluation i of n]``
     line (every evaluation numbers its own trials from 0), each one labelled.
     """
@@ -327,8 +336,10 @@ def fallback(pt: dict, n: int) -> str:
         else:
             best_txt = f"\nbest ({best[0]}): "
             avail = room - _size(low_txt) - _rendered_size(best_txt)
-            low_room = int(avail * 0.65)
-            body = low_txt + clip(low[2], low_room) + best_txt + clip(best[2], avail - low_room)
+            # The lowest trial first, up to 65 %; what it does not use goes to the best trial.
+            low_part = clip(low[2], int(avail * 0.65))
+            body = (low_txt + low_part + best_txt
+                    + clip(best[2], avail - _rendered_size(low_part)))
     return _fit_rendered((h + "\n" + body) if h else body, n)
 
 
@@ -549,7 +560,8 @@ def _read_summaries(workdir: Path) -> dict:
     obj = json.loads((workdir / "summaries.json").read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
         raise ValueError("summaries.json is not a JSON object")
-    return {str(k): str(v) for k, v in obj.items()}
+    # Only real text: a null, a number or a list is "no summary" (that task uses the cut).
+    return {str(k): v.strip() for k, v in obj.items() if isinstance(v, str) and v.strip()}
 
 
 def batches(rows: list[dict], limit: int) -> list[list[dict]]:
@@ -579,33 +591,37 @@ def _workers() -> int:
 def usd_headroom(run_dir) -> float | None:
     """USD the run may still spend on the optimizer (the tighter of ``max_optimizer_usd`` and
     ``max_usd``, the latter less what in-flight evaluations reserved), or None when neither is set."""
-    try:
-        b, s = run_dir.budget, run_dir.spent
-    except Exception:  # noqa: BLE001 — a run dir double without budgets
-        return None
+    held = 0.0                               # USD that in-flight evaluations have reserved
+    try:                                     # ONE read of the state: budget, spend, reservations
+        from .rundir import Budget as _B, Spent as _S
+        st = run_dir._read_state()
+        b, s = _B.from_dict(st.get("budget")), _S.from_dict(st.get("spent"))
+        held = sum(float(v.get("usd") or 0.0) for v in run_dir._live_reservations(st).values())
+    except Exception:  # noqa: BLE001 — a run dir double: its own budget and spend, no reservations
+        try:
+            b, s = run_dir.budget, run_dir.spent
+        except Exception:  # noqa: BLE001
+            return None
     caps = []
     if getattr(b, "max_optimizer_usd", 0):
         caps.append(float(b.max_optimizer_usd) - float(s.optimizer_usd))
     if getattr(b, "max_usd", 0):
-        held = 0.0                           # USD that in-flight evaluations have reserved
-        try:
-            held = sum(float(v.get("usd") or 0.0)
-                       for v in run_dir._live_reservations(run_dir._read_state()).values())
-        except Exception:  # noqa: BLE001 — a run dir double without reservations
-            pass
         caps.append(float(b.max_usd) - float(s.total_usd) - held)
     return min(caps) if caps else None
 
 
 def summarize_batches(chunks: list[list[dict]], target: int, optimizer, scratch: Path,
-                      run_dir=None, workers: int | None = None) -> tuple[dict, list[str], int]:
-    """``({task_id: summary}, [errors], skipped)``: ``optimizer(workdir, prompt)`` once per
-    batch, each in its own workdir under ``scratch``, at most ``workers`` calls at a time.
+                      run_dir=None, workers: int | None = None,
+                      known_cost: float | None = None) -> tuple[dict, list[str], int, list]:
+    """``({task_id: summary}, [errors], skipped, [cost of each call])``: ``optimizer(workdir,
+    prompt)`` once per batch, each in its own workdir under ``scratch``, at most ``workers``
+    calls at a time.
 
     Before each wave of calls the run's USD headroom is checked: none left, no more calls
-    (``skipped`` batches fall back). While the cost of one call is not yet known the first
-    wave is a single call; after that a wave is as many calls as the headroom pays for, at
-    the mean cost seen so far. Every call's cost counts as optimizer spend, a failed one too.
+    (``skipped`` batches fall back). The cost of one call is the mean seen so far, or
+    ``known_cost`` (the run's mean from earlier builds). While it is not known at all the
+    first wave is a single call; after that a wave is as many calls as the headroom pays for.
+    Every call's cost counts as optimizer spend, a failed one too.
     """
     workers = max(1, int(workers or _workers()))
 
@@ -633,14 +649,14 @@ def summarize_batches(chunks: list[list[dict]], target: int, optimizer, scratch:
     todo = list(range(len(chunks)))
     while todo:
         room = usd_headroom(run_dir) if run_dir is not None else None
+        per_call = (sum(costs) / len(costs)) if costs else known_cost
         if room is None:
             wave = todo[:workers]
         elif room <= 0:
             break
-        elif not costs:
+        elif per_call is None:
             wave = todo[:1]
         else:
-            per_call = sum(costs) / len(costs)
             k = workers if per_call <= 0 else min(workers, int(room // per_call))
             if k < 1:
                 break
@@ -652,9 +668,9 @@ def summarize_batches(chunks: list[list[dict]], target: int, optimizer, scratch:
                 if err:
                     errors.append(err)
                 for pt_id, text in got.items():
-                    if text.strip():
+                    if isinstance(text, str) and text.strip():
                         out[pt_id] = text.strip()
-    return out, errors, len(todo)
+    return out, errors, len(todo), costs
 
 
 def _cache_path(run_dir) -> Path:
@@ -669,10 +685,30 @@ def _read_cache(run_dir) -> dict:
         return {}
 
 
-def _merge_cache(run_dir, new: dict) -> None:
+_META = "__meta__"     # the cache file's own record: mean call cost, failed builds in a row
+
+
+def _cached(cache: dict, key: str) -> dict | None:
+    """``{"text", "target"}`` for ``key``, or None when absent or malformed (a hand-edited file)."""
+    v = cache.get(key)
+    if isinstance(v, dict) and isinstance(v.get("text"), str) and v["text"].strip():
+        try:
+            return {"text": v["text"], "target": int(v.get("target") or 0)}
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _meta(cache: dict) -> dict:
+    m = cache.get(_META)
+    return m if isinstance(m, dict) else {}
+
+
+def _merge_cache(run_dir, new: dict, meta_update=None) -> None:
     """Merge ``new`` into the cache file under the run dir's file lock, written atomically:
-    concurrent prompt builders never lose each other's (paid-for) summaries."""
-    if not new:
+    concurrent prompt builders never lose each other's (paid-for) summaries. ``meta_update``
+    (``old meta -> new meta``) is applied to the meta record in the same lock hold."""
+    if not new and meta_update is None:
         return
     from .rundir import _atomic_write, _file_lock
     path = _cache_path(run_dir)
@@ -680,6 +716,8 @@ def _merge_cache(run_dir, new: dict) -> None:
         with _file_lock(path.with_name(path.name + ".lock")):
             cur = _read_cache(run_dir)
             cur.update(new)
+            if meta_update is not None:
+                cur[_META] = meta_update(_meta(cur))
             _atomic_write(path, json.dumps(cur))
     except OSError:
         pass
@@ -687,7 +725,13 @@ def _merge_cache(run_dir, new: dict) -> None:
 
 def _condense(rows: list[dict], c: int, run_dir=None, optimizer=None) -> dict:
     """``{task_id: body}`` of at most ``c`` rendered bytes for each of ``rows``: the run's
-    optimizer's summary (cached by content, reused while it fits), else ``fallback``."""
+    optimizer's summary, else ``fallback``.
+
+    Summaries are cached by content (optimizer command, task id, feedback), with the room each
+    was made for. A cached one is reused, cut to the room when longer, while this room is at
+    most ``REUSE_RATIO`` times its own: the same summary is never paid for twice at the same
+    size, and a short one made for a small room is made again for a much larger one.
+    """
     if not rows:
         return {}
     out: dict = {}
@@ -698,34 +742,54 @@ def _condense(rows: list[dict], c: int, run_dir=None, optimizer=None) -> dict:
         key = lambda pt: hashlib.sha256(
             f"{optimizer_key}|{pt.get('task_id')}|{pt.get('feedback')}".encode("utf-8")).hexdigest()
         cache = _read_cache(run_dir)
-        # A cached summary is ALWAYS reused (cut to this prompt's room when it is longer): the
-        # same optimizer, task and feedback are never paid for twice.
-        todo = [pt for pt in rows if key(pt) not in cache]
+        meta = _meta(cache)
+
+        def usable(pt):
+            got = _cached(cache, key(pt))
+            return got is not None and room[str(pt.get("task_id"))] <= REUSE_RATIO * max(1, got["target"])
+        todo = [pt for pt in rows if not usable(pt)]
         errors: list[str] = []
         calls = skipped = 0
-        if todo:
+        new: dict = {}
+        disabled = int(meta.get("failed_builds") or 0) >= FAILED_BUILDS_LIMIT
+        if todo and not disabled:
             target = max(MIN_ENTRY // 2, min(room[str(pt.get("task_id"))] for pt in todo))
             work = Path(run_dir.root) / "work"
             work.mkdir(parents=True, exist_ok=True)
             scratch = Path(tempfile.mkdtemp(prefix="feedback_summary_", dir=work))
             chunks = batches(todo, budget_bytes())
+            known = meta.get("mean_call_usd")
             try:
-                got, errors, skipped = summarize_batches(chunks, target, optimizer, scratch, run_dir)
+                got, errors, skipped, costs = summarize_batches(
+                    chunks, target, optimizer, scratch, run_dir,
+                    known_cost=float(known) if isinstance(known, (int, float)) else None)
             finally:
                 shutil.rmtree(scratch, ignore_errors=True)
             calls = len(chunks) - skipped
-            new = {key(pt): got[str(pt.get("task_id"))] for pt in todo if got.get(str(pt.get("task_id")))}
-            _merge_cache(run_dir, new)
+            new = {key(pt): {"text": got[str(pt.get("task_id"))], "target": target}
+                   for pt in todo if got.get(str(pt.get("task_id")))}
+
+            def update(m):
+                n_old = int(m.get("n_calls") or 0)
+                tot = float(m.get("mean_call_usd") or 0.0) * n_old + sum(costs)
+                m = dict(m, n_calls=n_old + len(costs))
+                if m["n_calls"]:
+                    m["mean_call_usd"] = tot / m["n_calls"]
+                if calls:     # this build called the summarizer: did any call give a summary?
+                    m["failed_builds"] = 0 if new else int(m.get("failed_builds") or 0) + 1
+                return m
+            _merge_cache(run_dir, new, update)
             cache.update(new)
         for pt in rows:
             tid = str(pt.get("task_id"))
-            s = cache.get(key(pt))
-            if s:
-                out[tid] = _fit_rendered(_join_lines(hdr[tid], s.strip(), c), c)
+            got_c = _cached(cache, key(pt))
+            if got_c is not None and (key(pt) in new or usable(pt)):     # fresh, or still fits
+                out[tid] = _fit_rendered(_join_lines(hdr[tid], got_c["text"].strip(), c), c)
         if hasattr(run_dir, "log_event"):
             run_dir.log_event("feedback_summary", optimizer=optimizer_key[:200], condensed=len(rows),
                               summarized=len(out), fallback=len(rows) - len(out), cut=c,
-                              calls=calls, skipped_for_budget=skipped, errors=errors[:5])
+                              calls=calls, skipped_for_budget=skipped, errors=errors[:5],
+                              **({"summarizer_disabled": True} if disabled and todo else {}))
     for pt in rows:
         out.setdefault(str(pt.get("task_id")), fallback(pt, c))
     return out

@@ -169,12 +169,20 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     )
 
 
+def _collapses(parts: list) -> bool:
+    """True when every pooled evaluation gave the same UNLABELLED text: then every pooled trial
+    gave it, and the text alone says so (``join_trial_feedback``'s rule)."""
+    first = parts[0][0] if parts else ""
+    return (bool(first) and first != feedback_digest.NO_FEEDBACK
+            and not feedback_digest.has_labels(first) and all(t == first for t, _ in parts))
+
+
 def _pooled_text(parts: list) -> str:
-    """One distinct evaluation: its text as it is (every pooled trial gave it; no text at all
-    is ""). Several: each, labelled, under its evaluation line."""
+    """One evaluation, or the same unlabelled text from all: that text as it is. No text at
+    all: "". Otherwise every evaluation, labelled, under its own evaluation line."""
     if not any(feedback_digest.strip_labels(text) for text, _ in parts):
         return ""                                  # no evaluation gave any text
-    if len(parts) == 1:
+    if len(parts) == 1 or _collapses(parts):
         return parts[0][0]
     return feedback_digest.pooled_feedback([(lb, None) for _, lb in parts])
 
@@ -205,11 +213,9 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
             raw = pt.get("raw") or {}
             trials = pt.get("trial_rewards") or []
             by_task.setdefault(tid, []).extend(float(x) for x in trials)
-            # Every pooled evaluation's feedback, each distinct one once: compared AFTER each
-            # side's text is labelled with its own trial rewards (feedback_digest), so the same
-            # words at different rewards stay two evaluations, and an exact match, not a
-            # substring test, merges. A side that is itself a pooled result carries its
-            # (labelled) parts in raw["feedback_parts"]: pooling again extends one flat list.
+            # Every pooled evaluation's feedback, each labelled with its own trial rewards
+            # (feedback_digest). A side that is itself a pooled result carries its (labelled)
+            # parts in raw["feedback_parts"]: pooling again extends one flat list.
             # A side whose trials gave no text still counts: its rewards are listed under
             # "(no feedback)", so the other side's text is never read as every trial's.
             if raw.get("feedback_parts"):
@@ -217,10 +223,9 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
             else:
                 fb = str(pt.get("feedback") or "").strip() or (feedback_digest.NO_FEEDBACK if trials else "")
                 parts = [(fb, feedback_digest.label_unlabelled(fb, trials))]
-            seen = feedback.setdefault(tid, [])
-            for text, labelled in parts:
-                if text and labelled not in (lb for _, lb in seen):
-                    seen.append((text, labelled))
+            # EVERY evaluation is kept (nothing is discarded): two evaluations with the same
+            # words and rewards are still two evaluations, and their trials are all named.
+            feedback.setdefault(tid, []).extend((t, lb) for t, lb in parts if t)
             errored[tid] = errored.get(tid, False) or bool(raw.get("errored"))
             errored_trials[tid] = errored_trials.get(tid, 0) + int(raw.get("errored_trials") or 0)
     from .stats import mean, stderr
@@ -230,7 +235,7 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
               raw={"errored": errored.get(t, False), "errored_trials": errored_trials.get(t, 0),
                    "valid_trials": len(tr), "n_trials": len(tr),
                    **({"feedback_parts": [lb for _, lb in feedback[t]]}
-                      if len(feedback.get(t, [])) > 1 else {})})
+                      if len(feedback.get(t, [])) > 1 and not _collapses(feedback[t]) else {})})
         for t, tr in by_task.items()
     ]
     return aggregate_scores(a.split or b.split, scores, ks=ks)
