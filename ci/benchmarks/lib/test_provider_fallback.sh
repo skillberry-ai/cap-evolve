@@ -185,9 +185,10 @@ check "an unknown plain name aborts" "$RC:$(wc -l < "$CALLS" | tr -d ' ')" "1:0"
 # 14. The whole preflight block, as ci_setup.sh runs it: both roles in parallel, then the
 # chosen ids exported and a job-summary table written.
 preflight_src="$(awk '/^if command -v curl >\/dev\/null; then$/,/^fi$/' "$LIB_DIR/ci_setup.sh")"
-set_all_secrets; LIST_INT="aws/gpt-oss-120b claude-opus-4-8"; LIST_EXT="claude-opus-4-8"
+# claude-opus-5: a model both gateways list (claude-opus-4-8 has no ibm-ete-int id since #980).
+set_all_secrets; LIST_INT="aws/gpt-oss-120b aws/claude-opus-5"; LIST_EXT="aws/claude-opus-5"
 SCN_INT=budget; SCN_EXT=ok
-export AGENT_MODEL="gemma-4-31B-it" OPTIMIZER_MODEL="claude-opus-4-8"
+export AGENT_MODEL="gemma-4-31B-it" OPTIMIZER_MODEL="claude-opus-5"
 export GITHUB_STEP_SUMMARY="$WORK/summary.md"
 SCN_RITS=ok
 ( set -e; eval "$preflight_src"
@@ -195,9 +196,9 @@ SCN_RITS=ok
 ) > "$WORK/log" 2>&1
 check "preflight block exits 0" "$?" "0"
 check "preflight exports both roles' choices" "$(cat "$WORK/exported" 2>/dev/null)" \
-  "ibm-rits/google/gemma-4-31B-it|ibm-rits|ibm-ete/claude-opus-4-8|ibm-ete|ibm-ete-int:over-budget"
+  "ibm-rits/google/gemma-4-31B-it|ibm-rits|ibm-ete/aws/claude-opus-5|ibm-ete|ibm-ete-int:over-budget"
 case "$(cat "$GITHUB_STEP_SUMMARY" 2>/dev/null)" in
-  *"| optimizer | \`claude-opus-4-8\` | \`ibm-ete/claude-opus-4-8\` | ibm-ete | ibm-ete-int:over-budget |"*)
+  *"| optimizer | \`claude-opus-5\` | \`ibm-ete/aws/claude-opus-5\` | ibm-ete | ibm-ete-int:over-budget |"*)
     echo "ok: the job summary shows the fallback" ;;
   *) echo "FAIL: job summary: $(cat "$GITHUB_STEP_SUMMARY" 2>/dev/null)"; fail=1 ;;
 esac

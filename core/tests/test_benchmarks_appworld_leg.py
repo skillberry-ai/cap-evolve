@@ -47,6 +47,9 @@ def _run_suite(tmp_path: Path, **env_extra) -> tuple[subprocess.CompletedProcess
         "AW_EVAL": str(aw_eval), "AGENT_MODEL": "gpt-oss-120b-a100", "OPTIMIZER_MODEL": "claude-opus-4-8",
         "IBM_RITS_API_BASE": "http://lite-rits.invalid:4000", "IBM_RITS_API_KEY": "rits-secret-key",
         "IBM_ETE_INT_API_BASE": "http://ete.invalid", "IBM_ETE_INT_API_KEY": "ete-secret-key",
+        # claude-opus-4-8 is served only by ibm-ete since #980 (ibm-ete-int stopped listing it), so the
+        # optimizer resolves there, as in a real CI run, which has these secrets too.
+        "IBM_ETE_API_BASE": "http://ete-ext.invalid", "IBM_ETE_API_KEY": "ete-ext-secret-key",
         "ITERATIONS": "1", "NUM_TRIALS": "1",
         **env_extra,
     }
