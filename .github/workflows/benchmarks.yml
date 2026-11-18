@@ -765,21 +765,54 @@ jobs:
       # Best-effort diagnostics for the upload below. The artifact service is NOT github.com: the
       # runner talks to Actions' results service and Azure blob storage. On 2026-11-18 the upload
       # from skillberry-1 timed out (CreateArtifact, 5 attempts) while github.com itself worked,
-      # so this records which endpoints answer from the runner, and how fast.
+      # so this records which endpoints answer from the runner, and how fast. The canary run the same
+      # day showed every host answering, but each after ~8.5 s (normally well under 1 s), so this
+      # also splits that time into DNS / TCP connect / TLS / first byte, and checks DNS directly.
       - name: Check the runner can reach GitHub's artifact service
         if: always()
         continue-on-error: true
-        timeout-minutes: 2
+        timeout-minutes: 4
         run: |
-          probe() { printf '  %-58s ' "$1"; curl -sS -o /dev/null -m 15 -w '%{http_code} in %{time_total}s\n' "$1" 2>&1 | tail -1; }
-          echo "ACTIONS_RESULTS_URL host: $(echo "${ACTIONS_RESULTS_URL:-unset}" | sed -E 's#^(https?://[^/]+).*#\1#')"
+          set +e
+          echo "runner: ${RUNNER_NAME:-?}"
+          echo "== curl timing (seconds): dns / connect / tls / first byte / total"
+          probe() {
+            printf '  %-56s %s ' "$1" "${2:-   }"
+            curl $2 -sS -o /dev/null -m 20 \
+              -w 'http %{http_code}  dns %{time_namelookup}  connect %{time_connect}  tls %{time_appconnect}  first-byte %{time_starttransfer}  total %{time_total}  ip %{remote_ip}\n' \
+              "$1" 2>&1 | tail -1
+          }
           probe "https://github.com"
+          probe "https://github.com" -4
+          probe "https://github.com" -6
           probe "https://api.github.com"
-          [ -n "${ACTIONS_RESULTS_URL:-}" ] && probe "$(echo "$ACTIONS_RESULTS_URL" | sed -E 's#^(https?://[^/]+).*#\1#')/"
           probe "https://results-receiver.actions.githubusercontent.com/"
           probe "https://productionresultssa0.blob.core.windows.net/"
           probe "https://pipelines.actions.githubusercontent.com/"
-          [ -n "${HTTPS_PROXY:-${https_proxy:-}}" ] && echo "  (an HTTPS proxy is configured on this runner)"
+          echo "== DNS"
+          # nameservers are shown by position, not address (this log is public)
+          grep -E '^(search|options|domain)' /etc/resolv.conf 2>/dev/null | sed 's/^/  resolv.conf: /'
+          echo "  resolv.conf nameservers: $(grep -c '^nameserver' /etc/resolv.conf 2>/dev/null)"
+          [ -L /etc/resolv.conf ] && echo "  resolv.conf -> $(readlink -f /etc/resolv.conf)"
+          for h in github.com results-receiver.actions.githubusercontent.com; do
+            t0=$(date +%s.%N); getent ahosts "$h" >/dev/null; rc=$?; t1=$(date +%s.%N)
+            printf '  getent ahosts %-48s rc=%s in %.2fs\n' "$h" "$rc" "$(awk -v a="$t0" -v b="$t1" 'BEGIN{print b-a}')"
+          done
+          if command -v dig >/dev/null; then
+            i=0
+            for ns in $(awk '/^nameserver/{print $2}' /etc/resolv.conf); do
+              i=$((i+1))
+              printf '  nameserver #%s: github.com A -> %s\n' "$i" \
+                "$(dig +tries=1 +time=4 @"$ns" github.com A | awk '/Query time|timed out|no servers/{print; exit}')"
+            done
+          else
+            echo "  (dig not installed; per-nameserver check skipped)"
+          fi
+          echo "== proxy"
+          for v in HTTPS_PROXY https_proxy HTTP_PROXY http_proxy NO_PROXY no_proxy; do
+            [ -n "${!v:-}" ] && echo "  $v is set"
+          done
+          exit 0
 
       - name: Upload artifacts (metrics + optimized capabilities)
         if: always()
