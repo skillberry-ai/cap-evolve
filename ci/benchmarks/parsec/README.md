@@ -43,8 +43,7 @@ Consequences, all deliberate:
 
 `parsec` is absent from `benchmarks.yml`'s `BENCHES` list and its dispatch
 `options`, from `ALL_BENCHES` in `core/tests/test_benchmarks_plan_legs.py`, from
-`BENCHES` in `core/tests/test_site_live_panel_tiers.py`, from `JOB_RE` in
-`site/benchmarks.js`, and from the `case` block in `ci/benchmarks/lib/ci_setup.sh`.
+the live-panel check (`scripts/check_site.py` in skillberry-runs/dashboard), and from the `case` block in `ci/benchmarks/lib/ci_setup.sh`.
 
 That is the intended end state for now, not an oversight. Every one of those
 gates CI-dispatchability, and a dispatched parsec leg could only ever fail: the

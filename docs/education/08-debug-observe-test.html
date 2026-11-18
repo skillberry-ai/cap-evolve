@@ -552,7 +552,7 @@ cd dashboard/frontend &amp;&amp; npm ci &amp;&amp; npm run build &amp;&amp; npm 
     <tr><td><code>sync-model-lists.yml</code></td><td>schedule, twice an hour</td><td>sync model pickers with served models</td></tr>
     <tr><td>DCO (probot app)</td><td>every PR</td><td>every commit needs <code>Signed-off-by</code> → <code>git commit -s</code></td></tr>
   </table>
-  <p class="small muted mt">Also: Bob workflows (test/fix PR, label issues and PRs) · benchmark-history-prune.yml</p>
+  <p class="small muted mt">Also: Bob workflows (test/fix PR, label issues and PRs)</p>
   <aside class="notes" lang="en">
     <p><span class="time">[14:50–15:50]</span> The free tier is <code>ci.yml</code>. It runs on every pull request and every push to main, with parallel jobs. Two jobs need a word. "Toy example" asserts the outcome, baseline 0.0 to test reward 1.0, not only the exit code. "Install smoke" runs <code>install.sh</code> into a clean home and runs toy_calc from the install, outside the repo, because an install that cannot find the optimizer exits 0 with no improvement.</p>
     <p>The paid tiers do not run by default. <code>integration-tests.yml</code> runs one task per leg on a self-hosted runner, and only for known collaborators. <code>benchmarks.yml</code> runs the curated tiers. Both start by manual dispatch or by a PR label. DCO is not a workflow file; it is the probot app. Always commit with <code>-s</code>.</p>

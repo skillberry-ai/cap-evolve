@@ -113,8 +113,10 @@ host/
   transcript.jsonl.gz  full optimizer transcript (152 KB gz) — every tool call and decision
 ```
 
-The 9 MB interactive UI snapshot is not duplicated here; it is published at
-`runs/36175707483__full_verified-spreadsheetbench/` on the `benchmark-history` branch.
+The 9 MB interactive UI snapshot is not duplicated here; its data is in
+[`skillberry-runs/spreadsheetbench`](https://github.com/skillberry-runs/spreadsheetbench) at
+`ci_ui/36175707483__full_verified-spreadsheetbench/`, and the run's row on the
+[dashboard](https://skillberry-runs.github.io/dashboard/) opens it ("Open UI").
 
 ---
 

@@ -108,11 +108,12 @@ def test_a_dispatch_for_an_unpopulated_tier_fails_the_step():
 def test_tier_all_does_not_sweep_in_the_pilot():
     """`tier=all` must only sweep smoke+full — never pilot or full_verified.
 
-    pilot is a measurement rig whose rewards are not comparable, and the aggregate job
-    publishes every leg to benchmark-history — so "all" must not pick it up.
+    pilot is a measurement rig whose rewards are not comparable, and every bench job
+    publishes its leg to the benchmark dashboard — so "all" must not pick it up.
     """
     legs = _run_plan(event="workflow_dispatch", tier_sel="all", bench_sel="tau2")
     assert [b for t, b in legs if t == "pilot"] == [], "pilot leaked into tier=all"
+    assert [b for t, b in legs if t == "canary"] == [], "canary (a pipeline check) leaked into tier=all"
     assert sorted(legs) == [("full", "tau2"), ("smoke", "tau2")]
 
 

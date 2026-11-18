@@ -618,10 +618,9 @@ cap-evolve dashboard --base .capevolve --port 7878</pre>
     <tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr>
     <tr><td><code>ci.yml</code></td><td>push, PR</td><td>8 jobs: core + backend pytest, CI-lib tests, frontend build + vitest, toy_calc, install smoke, link + CLI check, skill lint, spellcheck</td></tr>
     <tr><td><code>codeql.yml</code></td><td>push, PR, weekly</td><td>Code scanning</td></tr>
-    <tr><td><code>pages.yml</code></td><td>site/** on main, after Benchmarks</td><td>Deploys <code>site/</code> plus benchmark-history snapshots to GitHub Pages</td></tr>
+    <tr><td><code>pages.yml</code></td><td>site/** on main</td><td>Deploys <code>site/</code> to GitHub Pages (benchmark results live on the skillberry-runs dashboard)</td></tr>
     <tr><td><code>benchmarks.yml</code> · <code>integration-tests.yml</code></td><td>manual</td><td>Real runs on the self-hosted <code>ibm-vpc</code> runner; publish results</td></tr>
     <tr><td><code>sync-model-lists.yml</code></td><td>cron, manual</td><td>Keeps model pickers in line with what the gateway serves</td></tr>
-    <tr><td><code>benchmark-history-prune.yml</code></td><td>manual</td><td>Deletes old run records</td></tr>
     <tr><td><code>label-*</code> · <code>*-with-bob*</code></td><td>issues, PRs, reviews</td><td>Labeling and IBM Bob automation, from shared <code>skillberry-common</code> workflows</td></tr>
   </table>
   <p class="small mt"><code>ci/</code>: <code>check_cli_subcommands.py</code>, <code>e2e_all_algorithms.sh</code>, <code>ci/benchmarks/</code> (lib, runner, per-benchmark legs, <code>model_catalog.txt</code>). DCO is checked by the <code>probot/dco</code> app.</p>

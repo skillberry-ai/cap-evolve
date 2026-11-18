@@ -8,7 +8,7 @@ WHY THIS EXISTS
     never lost — they are in the run's `final.json`, which the run's artifact retains — so a
     record can be repaired without re-running anything.
 
-    The aggregate job checks out at the DISPATCH sha, so a run already in flight when the
+    A bench job checks out at the DISPATCH sha, so a run already in flight when the
     fix merged will also publish a stale record. This repairs those too.
 
 USAGE
@@ -21,7 +21,7 @@ USAGE
     # Or from a downloaded artifact, for a run whose workspace is long gone:
     gh run download <run_id> --repo <owner>/<repo> --dir /tmp/art
     python3 ci/benchmarks/utils/rebuild_record.py /tmp/art records/<run_id>__<tier>-<bench>.json
-    # 3. inspect, then commit the record to the benchmark-history branch
+    # 3. inspect, then add the record to skillberry-runs/dashboard (records/), via a PR
 
 Idempotent: re-running on an already-correct record produces identical output.
 """
@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
-from record import rollup  # noqa: E402  (the SAME rollup the aggregate job uses)
+from record import rollup  # noqa: E402  (the SAME rollup the publish step uses)
 
 
 def _load_final(source: Path) -> dict:
@@ -124,7 +124,7 @@ def main() -> int:
 
     record["tasks"] = tasks
     # rollup() returns None unless BOTH sides are present, which is exactly why suite was
-    # null before; recompute it from the repaired rows using the aggregate job's own code.
+    # null before; recompute it from the repaired rows using the publish step's own code.
     record["suite"] = (rollup(tasks, record.get("steps") or [])
                        if record.get("conclusion") == "success" else None)
     record["rebuilt_from_artifact"] = True
