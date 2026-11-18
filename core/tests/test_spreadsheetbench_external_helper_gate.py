@@ -427,3 +427,20 @@ def test_no_skip_line_when_no_spec_is_set(mod, tmp_path, monkeypatch, capsys):
     mod.Adapter()
     assert mod._external_gate_error(_tree(tmp_path / "c", LEAK)) is None
     assert capsys.readouterr().err == ""
+
+
+def test_inside_a_cap_evolve_run_run_target_goes_past_the_gate(on, tmp_path, monkeypatch, no_llm):
+    # run_target itself, not only _external_gate_error: with a broken spec and a cheating candidate, a cap-evolve
+    # run must neither stop at the adapter gate nor refuse the candidate there. The next step after the gate
+    # (loading the helpers) is replaced by a marker, so the test stops right after the gate, with no LLM call.
+    monkeypatch.setenv("CAPEVOLVE_DRIVER", "cap-evolve")
+    monkeypatch.setenv("CAPEVOLVE_HELPERS_SPEC", str(tmp_path / "nope.yaml"))
+    monkeypatch.setattr(on, "_task_template_error", lambda ctx: None)
+
+    def past_the_gate(ctx):
+        raise RuntimeError("PAST_THE_GATE")
+
+    monkeypatch.setattr(on._helpers, "has_skills", past_the_gate)
+    r = on.Adapter().run_target(_task(on), _tree(tmp_path / "c", LEAK), seed=0)
+    assert "PAST_THE_GATE" in (r.error or "")
+    assert (r.metadata or {}).get("helper_gate") is None

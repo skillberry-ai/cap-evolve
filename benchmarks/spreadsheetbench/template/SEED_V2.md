@@ -24,7 +24,9 @@ that call `run_target` themselves, without a cap-evolve loop.
   is ignored, and the adapter prints one line saying so. Any other value, or no value, means an external caller. An
   external harness may set its own value, for example `external:<name>`.
 - **How an external optimizer turns it on.** Set `CAPEVOLVE_HELPERS_SPEC` (the run's `capevolve.yaml`),
-  `CAPEVOLVE_HELPERS_SEED` (the seed capability dir) and `CAPEVOLVE_HELPERS=1`.
+  `CAPEVOLVE_HELPERS_SEED` (the seed capability dir) and `CAPEVOLVE_HELPERS=1`. Import the adapter directly, not
+  through `cap_evolve.check.load_adapter`: that function sets `CAPEVOLVE_DRIVER=cap-evolve` for the whole process
+  and its subprocesses, and the adapter gate is then off.
 - **The seed is the parent.** `run_target(task, ctx, seed)` has no parameter for the candidate's parent, and one
   process can evaluate several candidates at the same time, so an environment variable cannot carry it. The verdict
   can therefore differ from the loop gate's:
@@ -32,7 +34,8 @@ that call `run_target` themselves, without a cap-evolve loop.
     passes, because it adds no new finding against the seed.
   - Smoke can be more strict. It imports every helper that differs from the seed, including helpers that earlier
     candidates added.
-  - Smoke replays no fixtures, because an external caller gives no rollout traces.
+  - Smoke replays no fixtures from rollout traces, because an external caller gives none. It does replay a fixtures
+    file declared in `helpers.fixtures`.
 - **A refused candidate** scores 0 on each rollout (`error_kind=candidate`, no LLM call). The caller still pays its
   own budget for those rollouts.
 - **A config the gate cannot run on** raises `HelperGateConfigError` from `Adapter()`, `live()` and `run_target`: the
