@@ -98,7 +98,7 @@ import datetime, json, sys
 path, archive, runner, size, sha = sys.argv[1:]
 json.dump({
     "archive": archive,                       # relative to the skillberry-runs-backup folder (Box)
-    "location": f"runner {runner}: ~/skillberry-runs-backup/ (to be moved to Box)",
+    "location": f"on runner {runner} in ~/skillberry-runs-backup/, to be moved to Box",
     "bytes": int(size), "sha256": sha,
     "created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }, open(path, "w"), indent=2)

@@ -137,7 +137,7 @@ def test_the_run_folder_says_where_the_archive_is(tmp_path):
     spec.loader.exec_module(rf)
     out = _work(tmp_path)
     (out / "backup.json").write_text(json.dumps({"archive": f"user/bcarmeli/tau/{NAME}.tar.zst",
-                                                 "location": "runner r1: ~/skillberry-runs-backup/ (to be moved to Box)",
+                                                 "location": "on runner r1 in ~/skillberry-runs-backup/, to be moved to Box",
                                                  "bytes": 5_000_000}))
     d = rf.build(out, tmp_path / "folder", None, None, None, None, "tau", False)
     assert (d / "backup.json").is_file()
