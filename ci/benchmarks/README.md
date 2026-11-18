@@ -25,8 +25,9 @@ not a leaderboard.
   `cap-evolve run` (`train == val == test == all tier tasks`, a no-holdout FIT — see
   `run_suite.sh`'s header). Baseline and optimized are both measured within that same run;
   nothing is pre-frozen or reused across runs.
-- Results are uploaded as an artifact and posted as a sticky PR comment (metrics table +
-  optimized-capability diff).
+- Each job publishes its own results to the [skillberry-runs dashboard](https://skillberry-runs.github.io/dashboard/)
+  (see below), posts them as a sticky PR comment (metrics table + optimized-capability diff), and
+  uploads its files as an artifact when it can (best-effort; publishing does not depend on it).
 
 > **Also in this tree, but not part of the CI suite: [`parsec`](parsec/README.md)**
 > (**local-only / internal-only**). Red Hat's LLM-agentic troubleshooting tool; tiers
@@ -159,7 +160,7 @@ Runs come in several **tiers** (a first-class dimension in the workflow, same wo
   — but unlike `pilot` that exclusion is about **cost**, not about the numbers being
   meaningless: a `full_verified` result is a real held-out number.
 - **`canary`** — a minimal **pipeline check**: 1 task, 1 trial, 1 iteration. It exercises the whole
-  run → live → artifact → publish path in minutes; its reward numbers mean **nothing**. Only runs
+  run → live → publish path in minutes; its reward numbers mean **nothing**. Only runs
   when named (`tier=canary`, or a `benchmark-canary-<bench>` label), never under `all`.
 - **`pilot`** — a cost/runtime measurement rig whose reward numbers are **not comparable to
   anything**. Explicit dispatch only.
@@ -402,7 +403,9 @@ directly (id + tag + agent, same shape across `smoke`/`full`/`integration`) and 
 Results are published to the [`skillberry-runs`](https://github.com/skillberry-runs) org and shown at
 **<https://skillberry-runs.github.io/dashboard/>** (this site's `benchmarks.html` redirects there).
 Since 2026-11 CI writes there directly; until then it wrote to this repo's `benchmark-history`
-branch. Every run's `aggregate` job publishes, with the `SKILLBERRY_RUNS_RESULTS_TOKEN` secret:
+branch. Each `bench` job publishes its own results when it ends (step `Publish results to
+skillberry-runs`, [`lib/publish_results.sh`](lib/publish_results.sh)), with plain git and the
+`SKILLBERRY_RUNS_RESULTS_TOKEN` secret, which only that step receives:
 
 | What | Where | Notes |
 |---|---|---|
@@ -412,9 +415,16 @@ branch. Every run's `aggregate` job publishes, with the `SKILLBERRY_RUNS_RESULTS
 Which repo holds which bench is the dashboard's [`sections.json`](https://github.com/skillberry-runs/dashboard/blob/main/sections.json)
 (`benches`). A bench that isn't listed still gets its record, and a `::warning::` says its Open UI
 data was not published: add it there to keep future runs' data. Records are validated with the
-dashboard's `scripts/check_records.py` before anything is pushed.
+dashboard's `scripts/check_records.py` before anything is pushed. The Open UI data goes first and the
+record says `has_ui` only if that push succeeded; legs that publish at the same moment retry on a
+fresh clone (each adds only its own files, so a retry never conflicts).
 
-To publish a run the `aggregate` job never handled — one you resumed by hand, or drove directly on
+Until 2026-11-18 a separate GitHub-hosted `aggregate` job published from the bench jobs' uploaded
+artifacts. After IBM's network change the self-hosted runners' artifact uploads time out
+(CreateArtifact; slow DNS on the runner, see the job's `Check the runner's DNS` step) while git to
+github.com still works, so publishing no longer goes through the artifact service.
+
+To publish a run its bench job never published — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
 ### Live monitoring while a run is in progress

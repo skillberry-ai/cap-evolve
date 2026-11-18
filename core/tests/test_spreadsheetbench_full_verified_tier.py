@@ -251,7 +251,9 @@ def test_the_tier_starts_from_the_pristine_seed():
 
 def test_the_tier_is_a_known_tier_in_the_benchmarks_workflow():
     wf = WORKFLOW.read_text(encoding="utf-8")
-    assert 'TIERS = ["smoke", "pilot", "full", "full_verified"]' in wf, (
+    m = re.search(r"^\s*TIERS = \[([^\]]*)\]", wf, re.M)
+    assert m, "the planner's TIERS list was not found"
+    assert "full_verified" in re.findall(r'"([^"]+)"', m.group(1)), (
         "an unregistered tier can never be dispatched — the planner emits no leg for it"
     )
 
@@ -295,7 +297,7 @@ def test_the_tier_is_dispatchable_from_the_workflow_ui():
     options = _tier_input_options()
     # Guards the parser itself: if this stops finding the real list, the assertion below
     # would pass vacuously on some other `options:` line.
-    assert options[:4] == ["all", "smoke", "pilot", "full"], f"parsed the wrong list: {options}"
+    assert options[:2] == ["all", "smoke"] and {"pilot", "full"} <= set(options), f"parsed the wrong list: {options}"
     assert "full_verified" in options, f"tier input cannot select full_verified: {options}"
 
 
@@ -304,7 +306,9 @@ def test_the_tier_does_not_join_the_tier_all_sweep_yet():
     would launch two four-figure legs per dispatch, and the tier's model axis is still open.
     It runs when named — `tier=full_verified`, or a `benchmark-full_verified-spreadsheetbench` label."""
     wf = WORKFLOW.read_text(encoding="utf-8")
-    assert 'EXPLICIT_ONLY_TIERS = {"pilot", "full_verified"}' in wf
+    m = re.search(r"^\s*EXPLICIT_ONLY_TIERS = \{([^}]*)\}", wf, re.M)
+    assert m, "EXPLICIT_ONLY_TIERS was not found"
+    assert "full_verified" in re.findall(r'"([^"]+)"', m.group(1))
 
 
 # --- documentation ------------------------------------------------------------------------

@@ -1,9 +1,10 @@
 # Publishing a run to the benchmarks page, by hand
 
 The [benchmarks page](https://skillberry-runs.github.io/dashboard/) (the skillberry-runs dashboard) is
-normally filled in by the `aggregate history` job in `.github/workflows/benchmarks.yml`. This document
-is for the case where that job never ran or produced nothing — a run that was interrupted and resumed
-by hand, a run driven directly on the runner, or a job that died before uploading its artifact.
+normally filled in by each bench job's `Publish results to skillberry-runs` step in
+`.github/workflows/benchmarks.yml` (`ci/benchmarks/lib/publish_results.sh`). This document is for the
+case where that step never ran or published nothing — a run that was interrupted and resumed by hand,
+a run driven directly on the runner, or a job that died before publishing.
 
 Nothing here is a special "manual mode": you are running the same scripts the CI job runs, in the
 same order.
@@ -158,4 +159,4 @@ already-correct record changes nothing.
 - The dashboard's [PUBLISHING.md](https://github.com/skillberry-runs/dashboard/blob/main/PUBLISHING.md) — adding records, Open UI data, write-ups and new benchmarks.
 - `ci/benchmarks/README.md` — the benchmarks suite, tiers, and where CI publishes results.
 - `.github/workflows/benchmarks.yml` — the CI path these steps mirror (`Write run metadata`,
-  `Export CapEvolve UI snapshot`, `aggregate history`).
+  `Export CapEvolve UI snapshot`, `Publish results to skillberry-runs`).
