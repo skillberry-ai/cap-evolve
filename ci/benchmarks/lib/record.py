@@ -2,7 +2,7 @@
 """Build & aggregate benchmark records for the skillberry-runs dashboard.
 
   record.py build <metrics.jsonl> --runmeta <runmeta.json> [--steps <steps.jsonl>]
-                                                             # -> record JSON on stdout
+                [--has-ui] [--report-url <url>]              # -> record JSON on stdout
   record.py aggregate <records_dir> --now <iso> --out <dir>  # -> benchmarks.json + meta.json
 
 One record per (run x benchmark): the run metadata (from runmeta.json) merged with the
@@ -115,6 +115,8 @@ def main(argv: list[str]) -> int:
     b.add_argument("--runmeta", required=True)
     b.add_argument("--steps", default=None)
     b.add_argument("--has-ui", action="store_true")
+    b.add_argument("--report-url", default=None,
+                   help="the run's page (its ci_runs/ folder README), shown as the row's Report link")
     a = sub.add_parser("aggregate")
     a.add_argument("records_dir")
     a.add_argument("--now", required=True)
@@ -129,7 +131,10 @@ def main(argv: list[str]) -> int:
         if "gold_separate_from_agent_mount" not in runmeta and gold_flag.is_file():
             runmeta["gold_separate_from_agent_mount"] = gold_flag.read_text(encoding="utf-8").strip() == "true"
         steps_path = Path(ns.steps) if ns.steps else None
-        print(json.dumps(build_record(Path(ns.metrics), runmeta, steps_path, has_ui=ns.has_ui)))
+        rec = build_record(Path(ns.metrics), runmeta, steps_path, has_ui=ns.has_ui)
+        if ns.report_url:
+            rec["report_url"] = ns.report_url
+        print(json.dumps(rec))
         return 0
     if ns.cmd == "aggregate":
         recs, meta = aggregate(Path(ns.records_dir), ns.now)

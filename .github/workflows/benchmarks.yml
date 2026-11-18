@@ -786,6 +786,8 @@ jobs:
 
       # Each leg publishes its own results to the skillberry-runs org
       # (https://skillberry-runs.github.io/dashboard/), with plain git to github.com:
+      #   ci_runs/<run_id>__<tier>-<bench>/      -> the benchmark's own repo (the run's folder: README,
+      #                                             report, metrics, optimized capability, recipe)
       #   ci_ui/<run_id>__<tier>-<bench>/        -> the benchmark's own repo (its "Open UI" data)
       #   records/<run_id>__<tier>-<bench>.json  -> skillberry-runs/dashboard (its push deploys the site)
       # Until 2026-11-18 a GitHub-hosted `aggregate` job did this from uploaded artifacts; after
