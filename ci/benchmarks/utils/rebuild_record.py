@@ -21,7 +21,7 @@ USAGE
     # Or from a downloaded artifact, for a run whose workspace is long gone:
     gh run download <run_id> --repo <owner>/<repo> --dir /tmp/art
     python3 ci/benchmarks/utils/rebuild_record.py /tmp/art records/<run_id>__<tier>-<bench>.json
-    # 3. inspect, then commit the record to the benchmark-history branch
+    # 3. inspect, then add the record to skillberry-runs/dashboard (records/), via a PR
 
 Idempotent: re-running on an already-correct record produces identical output.
 """

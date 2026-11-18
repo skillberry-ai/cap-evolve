@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build & aggregate benchmark-history records for the CI history page.
+"""Build & aggregate benchmark records for the skillberry-runs dashboard.
 
   record.py build <metrics.jsonl> --runmeta <runmeta.json> [--steps <steps.jsonl>]
                                                              # -> record JSON on stdout
@@ -8,7 +8,8 @@
 One record per (run x benchmark): the run metadata (from runmeta.json) merged with the
 per-task reward rows (from the suite's metrics.jsonl), the per-iteration latency/cost
 timeline (from steps.jsonl), and a suite rollup. The aggregate step concatenates all
-committed records into benchmarks.json (newest first) for the Pages page.
+committed records into benchmarks.json (newest first); the dashboard runs it at deploy time
+(skillberry-runs/dashboard keeps a copy as scripts/record.py).
 """
 from __future__ import annotations
 

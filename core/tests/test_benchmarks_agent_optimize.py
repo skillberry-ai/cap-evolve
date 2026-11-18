@@ -364,7 +364,7 @@ def test_workflow_offers_every_algorithm_the_suite_can_run():
 def test_runmeta_records_which_algorithm_produced_the_number():
     src = WORKFLOW.read_text(encoding="utf-8")
     assert '"algorithm"' in src, (
-        "runmeta.json must record the algorithm — benchmark-history compares numbers "
+        "runmeta.json must record the algorithm — the benchmark dashboard compares numbers "
         "across runs, and hill-climb vs agent-optimize is not a like-for-like comparison")
 
 

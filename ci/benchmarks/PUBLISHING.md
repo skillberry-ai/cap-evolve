@@ -1,13 +1,12 @@
 # Publishing a run to the benchmarks page, by hand
 
-The [benchmarks page](https://skillberry-ai.github.io/cap-evolve/benchmarks.html) is normally
-filled in by the `aggregate history` job in `.github/workflows/benchmarks.yml`. This document is
-for the case where that job never ran or produced nothing — a run that was interrupted and
-resumed by hand, a run driven directly on the runner, or a job that died before uploading its
-artifact.
+The [benchmarks page](https://skillberry-runs.github.io/dashboard/) (the skillberry-runs dashboard) is
+normally filled in by the `aggregate history` job in `.github/workflows/benchmarks.yml`. This document
+is for the case where that job never ran or produced nothing — a run that was interrupted and resumed
+by hand, a run driven directly on the runner, or a job that died before uploading its artifact.
 
-Nothing here is a special "manual mode": you are running the same three scripts the CI job runs,
-in the same order.
+Nothing here is a special "manual mode": you are running the same scripts the CI job runs, in the
+same order.
 
 ## How the page gets its data
 
@@ -17,21 +16,15 @@ run dir  --metrics.py-->  metrics.jsonl + steps.jsonl
                                     |
                              record.py build
                                     |
-                     records/<run_id>__<tier>-<bench>.json   on the benchmark-history branch
+          records/<run_id>__<tier>-<bench>.json   in skillberry-runs/dashboard   (step 5)
+          ci_ui/<run_id>__<tier>-<bench>/          in the benchmark's repo         (optional)
                                     |
-                       (Pages deploy clones benchmark-history, runs record.py aggregate)
-                                    |
-                       benchmarks.json + meta.json           rendered into the Pages artifact,
-                                    |                          NOT committed to the branch
-                    site/benchmarks.js fetches it same-origin from the deployed site
+             the dashboard deploys on that push and renders benchmarks.json from records/
 ```
 
-`benchmarks.json`/`meta.json` are rendered fresh from `records/` **at Pages-deploy time**
-(`.github/workflows/pages.yml`) — they are never committed to `benchmark-history`. So **a push to
-that branch is NOT enough on its own**: `pages.yml` only auto-runs off the *Benchmarks* workflow
-completing, and a manual publish bypasses that trigger entirely. After pushing your record (step
-5), you must also trigger **Actions → Deploy GitHub Pages → Run workflow** (`workflow_dispatch`)
-before the new row shows up on the page.
+Steps 1–4 below build the record here, with cap-evolve's scripts. Step 5, adding it (and optionally
+its "Open UI" data) to the dashboard, is documented in the dashboard's own
+[PUBLISHING.md](https://github.com/skillberry-runs/dashboard/blob/main/PUBLISHING.md): there is no separate Pages step, merging deploys it.
 
 ## Step 1 — collect the run dir
 
@@ -127,57 +120,23 @@ The filename **must** be `<run_id>__<tier>-<bench>.json`. That is what keeps `sm
 the same benchmark from overwriting each other, and re-publishing under the same name is how you
 correct a record (idempotent).
 
-## Step 5 — push to benchmark-history
+## Step 5 — add it to the dashboard
 
-```bash
-git clone --depth 1 --branch benchmark-history \
-  git@github.com:skillberry-ai/cap-evolve.git /tmp/hist
-cp /tmp/pub/30987147147__pilot-spreadsheetbench.json /tmp/hist/records/
-cd /tmp/hist
-git add records
-git commit -m "bench: record run 30987147147 (manual publish)"
-git push origin benchmark-history
-```
+Follow the dashboard's [PUBLISHING.md](https://github.com/skillberry-runs/dashboard/blob/main/PUBLISHING.md):
 
-Only `records/` (and `runs/`, for the optional UI snapshot) get committed here — `benchmarks.json`/
-`meta.json` are no longer persisted on this branch at all; they're rendered fresh from `records/` at
-Pages-deploy time, so there's nothing to hand-edit or regenerate locally. Adding the record file is
-the entire publish step.
-
-CI treats this branch as single-writer (`concurrency: benchmark-history-write`). A manual push while
-a benchmarks run is finishing can lose the race; if `git push` is rejected, delete `/tmp/hist` and
-redo this step rather than force-pushing.
-
-## Step 6 — trigger a Pages deploy, then verify
-
-Trigger **Actions → Deploy GitHub Pages → Run workflow** (`workflow_dispatch`) — this is the step
-that actually renders your new record into `benchmarks.json`. Once it completes, reload
-<https://skillberry-ai.github.io/cap-evolve/benchmarks.html>; the new row should appear, with a real
-base→opt reward rather than `—`. To check the data without the browser:
-
-```bash
-curl -s "https://skillberry-ai.github.io/cap-evolve/benchmarks.json" \
-  | python3 -c "import json,sys;print([(r['run_id'],r['tier'],r['bench'],r['suite']) for r in json.load(sys.stdin)][:3])"
-```
-
-## Optional — the per-run "Open UI" snapshot
-
-Only needed if you want the row's dashboard link to work. It is a full dashboard shell plus the
-run's exported data, and unlike the table it **does** require a Pages deploy:
+- **section A** adds the record file you just built to `skillberry-runs/dashboard/records/` with a pull
+  request (it runs the same validation CI does, and merging deploys the dashboard);
+- **section F** adds the run's "Open UI" data, if you want the row's **Open UI** link to work: export it
+  with `capevolve_dashboard.export_static` (below), copy the `data/` folder to
+  `<benchmark repo>/ci_ui/<run_id>__<tier>-<bench>/`, mask it with the dashboard's
+  `scripts/mask_secrets.py`, and set `"has_ui": true` in the record.
 
 ```bash
 PYTHONPATH=dashboard/backend python3 -m capevolve_dashboard.export_static \
   --base /tmp/pub --run-id run_suite --out /tmp/pub/ui/data      # /tmp/pub holds run_suite/
-cd dashboard/frontend && npm ci && VITE_STATIC=1 npx vite build --outDir /tmp/pub/ui_shell && cd -
-
-mkdir -p /tmp/hist/runs/30987147147__pilot-spreadsheetbench/ui
-cp -R /tmp/pub/ui_shell/. /tmp/hist/runs/30987147147__pilot-spreadsheetbench/ui/
-cp -R /tmp/pub/ui/data    /tmp/hist/runs/30987147147__pilot-spreadsheetbench/ui/data
 ```
 
-Then set `"has_ui": true` in the record (or rebuild it with `record.py build --has-ui`), commit,
-push, and trigger **Actions → Deploy GitHub Pages → Run workflow** so the deploy both folds
-`runs/**` into `benchmark-ui/runs/**` and renders the updated record into `benchmarks.json`.
+Only the data is needed: the dashboard has one shared viewer for every run.
 
 ## Repairing a record that is already published
 
@@ -186,16 +145,17 @@ If the row exists but shows `—` in the reward column, the record was built bef
 `final.json`:
 
 ```bash
+git clone git@github.com:skillberry-runs/dashboard.git /tmp/dash
 python3 ci/benchmarks/utils/rebuild_record.py /tmp/pub/run_suite/final.json \
-  /tmp/hist/records/<run_id>__<tier>-<bench>.json
+  /tmp/dash/records/<run_id>__<tier>-<bench>.json
 ```
 
-Then commit, push, and trigger a Pages deploy (steps 5–6). It is idempotent, so running it on an
+Then send it as a pull request to the dashboard (step 5). It is idempotent, so running it on an
 already-correct record changes nothing.
 
 ## Related
 
-- `ci/benchmarks/README.md` — the benchmarks suite, tiers, and how to bootstrap the
-  `benchmark-history` branch.
+- The dashboard's [PUBLISHING.md](https://github.com/skillberry-runs/dashboard/blob/main/PUBLISHING.md) — adding records, Open UI data, write-ups and new benchmarks.
+- `ci/benchmarks/README.md` — the benchmarks suite, tiers, and where CI publishes results.
 - `.github/workflows/benchmarks.yml` — the CI path these steps mirror (`Write run metadata`,
   `Export CapEvolve UI snapshot`, `aggregate history`).

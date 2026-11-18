@@ -232,7 +232,7 @@ because with `algorithm_focus: all` the train split is never evaluated.
 > **Pilot reward numbers are not comparable to anything** — not to SkillOpt, not to `full`, not
 > across pilot runs. A 5-task test split is a cost probe, not a measurement of quality. This is
 > why `pilot` is excluded from `tier=all`: the aggregate job publishes every leg to
-> `benchmark-history`, and sweeping it in would put meaningless rows on the benchmarks page.
+> the dashboard, and sweeping it in would put meaningless rows on the benchmarks page.
 
 Pilot tasks are drawn **only from `full`'s train ids**, so `full`'s selection and test splits
 stay untouched by any pilot run. Regenerate with:

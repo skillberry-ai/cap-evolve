@@ -426,7 +426,7 @@ jobs:
           # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
           # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
           # so its rewards are not comparable to anything, and the aggregate job publishes
-          # EVERY leg to benchmark-history. Letting "all" pick it up would put meaningless
+          # EVERY leg to the skillberry-runs dashboard. Letting "all" pick it up would put meaningless
           # numbers on the benchmarks page. A `benchmark-pilot-<bench>` label still works,
           # because that names both the tier and the bench deliberately.
           # `full_verified` is a REAL comparison tier, unlike pilot — it is excluded for COST,
@@ -622,8 +622,10 @@ jobs:
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
       - name: Start live snapshot poller
+        # Live data goes to its own branch in skillberry-runs/live (see live_push.sh). The token
+        # can reach that repo ONLY, so a poller bug cannot touch records or benchmark data.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SKILLBERRY_RUNS_LIVE_TOKEN }}
         run: |
           run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
           nohup bash ci/benchmarks/lib/live_push.sh "$run_dir" "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
@@ -645,7 +647,7 @@ jobs:
         # `::warning::` below is what a cleanup failure is allowed to cost.
         timeout-minutes: 3
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SKILLBERRY_RUNS_LIVE_TOKEN }}
         run: |
           bash ci/benchmarks/lib/live_push.sh --cleanup "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
             "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid" \
@@ -673,7 +675,7 @@ jobs:
       # Ordered BEFORE the publishing steps, not last. `job.status` is evaluated when a step
       # runs, so a gate placed after "Write run metadata" leaves runmeta.json recording
       # "conclusion": "success" for a run that then fails the gate — and the aggregate job
-      # publishes that to benchmark-history, where a crashed run reads as a clean success
+      # publishes that to the dashboard, where a crashed run reads as a clean success
       # (runs 30553822478 and 30608405812 are both recorded that way). Everything downstream
       # is `if: always()`, so metrics/UI/artifacts/PR-comment are still published on failure;
       # only the recorded conclusion changes.
@@ -789,20 +791,21 @@ jobs:
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
 
-  # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
-  # writer → no push races). benchmarks.json/meta.json are no longer committed here — they're
-  # regenerated from records/ at Pages-deploy time (pages.yml) to avoid an ever-growing file
-  # being rewritten in full on every run.
+  # Publish each run's per-(run x bench) record, and its Open UI data, to the skillberry-runs org
+  # (single writer per run; concurrent runs serialize on the concurrency group and retry on push
+  # races). The dashboard renders benchmarks.json from records/ at its own deploy time, which the
+  # record push triggers. Until 2026-11 this wrote to cap-evolve's benchmark-history branch.
   # Runs on a GitHub-hosted runner (JSON + git only; no VPC access needed).
   aggregate:
     name: aggregate history
     needs: [bench]
     if: always()
     runs-on: ubuntu-latest
+    # Writes go to skillberry-runs with SKILLBERRY_RUNS_RESULTS_TOKEN; nothing is written here.
     permissions:
-      contents: write
+      contents: read
     concurrency:
-      group: benchmark-history-write
+      group: skillberry-runs-write
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4              # for ci/benchmarks/lib/record.py
@@ -818,36 +821,23 @@ jobs:
           # download-artifact ignores it, so it only ever looked like a safeguard.
           pattern: benchmarks-*
 
-      - name: Check for UI snapshots
-        id: uicheck
-        run: |
-          if find _artifacts -type d -path '*/ui/data' 2>/dev/null | grep -q .; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
+      # Results are published to the skillberry-runs org (https://skillberry-runs.github.io/dashboard/):
+      #   records/<run_id>__<tier>-<bench>.json  -> skillberry-runs/dashboard (its push deploys the site)
+      #   ci_ui/<run_id>__<tier>-<bench>/        -> the benchmark's own repo (its "Open UI" data)
+      # Which repo holds which bench is the dashboard's sections.json ("benches"); masking and record
+      # validation are the dashboard's scripts, so CI and hand-publishing apply the same rules.
+      - name: Fetch the dashboard (bench -> repo map, masking and validation tools)
+        run: git clone -q --depth 1 https://github.com/skillberry-runs/dashboard.git _dash
 
-      - name: Set up Node.js 22
-        if: steps.uicheck.outputs.found == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Build static dashboard shell
-        if: steps.uicheck.outputs.found == 'true'
-        working-directory: dashboard/frontend
-        run: |
-          npm ci
-          VITE_STATIC=1 npx vite build --outDir "$RUNNER_TEMP/ui_shell"
-
-      - name: Build records + assemble UI snapshots
+      - name: Build records + stage Open UI data
+        id: build
         run: |
           # upload-artifact stores files flat at the artifact root (the least-common-ancestor
           # of ci/benchmarks/.work/suite_<tier>_<bench>/** is that dir), so runmeta.json/
           # metrics.jsonl/ui/ live directly under _artifacts/benchmarks-<tier>-<bench>/. The dir
           # suffix is the <tier>-<bench> slug — use it verbatim to keep record files unique
           # per (run, tier, bench) so smoke and full of the same bench never collide.
-          mkdir -p _new_records _hist_runs
+          mkdir -p _new_records _ci_ui
           have=0; built=0
           for d in _artifacts/benchmarks-*; do
             [ -d "$d" ] || continue
@@ -856,17 +846,25 @@ jobs:
             [ -f "$rm" ] || { echo "::warning::no runmeta for $slug, skipping"; continue; }
             have=$((have+1))
             rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
+            bench="$(python3 -c "import json;print(json.load(open('$rm'))['bench'])")"
+            repo="$(python3 -c "
+          import json,sys
+          for s in json.load(open('_dash/sections.json')):
+              if sys.argv[1] in s.get('benches', [s['repo']]): print(s['repo']); break
+          " "$bench")"
             has_ui_flag=""
             if [ -d "$d/ui/data" ] && [ -n "$(ls -A "$d/ui/data" 2>/dev/null)" ]; then
-              dest="_hist_runs/${rid}__${slug}/ui"
-              mkdir -p "$dest"
-              cp -R "$RUNNER_TEMP/ui_shell/." "$dest/"
-              cp -R "$d/ui/data" "$dest/data"
-              has_ui_flag="--has-ui"
+              if [ -n "$repo" ]; then
+                mkdir -p "_ci_ui/$repo"
+                cp -R "$d/ui/data" "_ci_ui/$repo/${rid}__${slug}"
+                has_ui_flag="--has-ui"
+              else
+                echo "::warning::bench '$bench' has no repo in skillberry-runs/dashboard's sections.json, so its Open UI data is not published; add it there (PUBLISHING.md, section E) to keep future runs' data"
+              fi
             fi
             python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" --steps "$steps" $has_ui_flag \
               > "_new_records/${rid}__${slug}.json" && built=$((built+1))
-            echo "built _new_records/${rid}__${slug}.json"
+            echo "built _new_records/${rid}__${slug}.json${repo:+ (Open UI data -> $repo)}"
           done
           ls -la _new_records || true
           # Guard: if artifacts with runmeta exist but produced no records, fail loudly
@@ -874,28 +872,62 @@ jobs:
           if [ "$have" -gt 0 ] && [ "$built" -lt "$have" ]; then
             echo "::error::found $have runmeta artifact(s) but built only $built record(s)"; exit 1
           fi
+          if [ -n "$(ls -A _new_records 2>/dev/null)" ]; then
+            python3 _dash/scripts/check_records.py _new_records/*.json
+          fi
+          # Mask what IBM Vault Radar flags in run data (all false positives so far), the same as a
+          # hand-published run; see the dashboard's scripts/mask_secrets.py.
+          if [ -n "$(ls -A _ci_ui 2>/dev/null)" ]; then
+            python3 _dash/scripts/mask_secrets.py _ci_ui
+          fi
+          echo "records=$(ls _new_records | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
-      - name: Push to benchmark-history (single writer, with rebase-retry)
+      - name: Publish Open UI data to the benchmark repos
+        if: steps.build.outputs.records != '0'
+        env:
+          TOKEN: ${{ secrets.SKILLBERRY_RUNS_RESULTS_TOKEN }}
         run: |
-          [ -n "$(ls -A _new_records 2>/dev/null)" ] || { echo "no records to push"; exit 0; }
-          git config --global user.name "skillberry-bot"
-          git config --global user.email "actions@github.com"
-          for attempt in 1 2 3 4 5; do
-            rm -rf _hist
-            git clone --depth 1 --branch benchmark-history \
-              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _hist || {
-                echo "branch missing — bootstrap it per ci/benchmarks/README.md"; exit 1; }
-            mkdir -p _hist/records
-            cp _new_records/*.json _hist/records/
-            if [ -d _hist_runs ] && [ -n "$(ls -A _hist_runs 2>/dev/null)" ]; then
-              mkdir -p _hist/runs
-              cp -R _hist_runs/. _hist/runs/
-            fi
-            cd _hist
-            git add records
-            [ -d runs ] && git add runs
-            git commit -m "bench: record run ${{ github.run_id }}" || { echo "nothing to commit"; exit 0; }
-            if git push origin benchmark-history; then echo "pushed"; exit 0; fi
-            echo "push race, retrying ($attempt)"; cd ..; sleep 3
+          [ -n "$(ls -A _ci_ui 2>/dev/null)" ] || { echo "no Open UI data to publish"; exit 0; }
+          [ -n "$TOKEN" ] || { echo "::error::SKILLBERRY_RUNS_RESULTS_TOKEN is not set"; exit 1; }
+          BOT=(-c user.name=skillberry-bot -c user.email=281869455+skillberry-bot@users.noreply.github.com)
+          for dir in _ci_ui/*/; do
+            repo="$(basename "$dir")"
+            ok=""
+            for attempt in 1 2 3 4 5; do
+              rm -rf _r
+              # Partial, sparse clone: the repo's existing ci_ui/ (can be GBs) is never downloaded.
+              git clone -q --depth 1 --filter=blob:none --sparse \
+                "https://x-access-token:${TOKEN}@github.com/skillberry-runs/${repo}.git" _r || { sleep 3; continue; }
+              slugs=$(ls "$dir")
+              # shellcheck disable=SC2086
+              git -C _r sparse-checkout set $(for s in $slugs; do echo "ci_ui/$s"; done)
+              mkdir -p _r/ci_ui
+              cp -R "$dir." _r/ci_ui/
+              git -C _r add ci_ui
+              git -C _r "${BOT[@]}" commit -q -m "ci_ui: Open UI data of run ${{ github.run_id }}" || { ok=1; break; }
+              if git -C _r push -q origin HEAD; then ok=1; echo "pushed Open UI data to skillberry-runs/$repo"; break; fi
+              echo "push race on $repo, retrying ($attempt)"; sleep 3
+            done
+            [ -n "$ok" ] || { echo "::error::failed to push Open UI data to skillberry-runs/$repo"; exit 1; }
           done
-          echo "failed to push after retries"; exit 1
+
+      # Last, so the dashboard deploy this push triggers already sees the Open UI data above.
+      - name: Publish records to the dashboard
+        if: steps.build.outputs.records != '0'
+        env:
+          TOKEN: ${{ secrets.SKILLBERRY_RUNS_RESULTS_TOKEN }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::error::SKILLBERRY_RUNS_RESULTS_TOKEN is not set"; exit 1; }
+          BOT=(-c user.name=skillberry-bot -c user.email=281869455+skillberry-bot@users.noreply.github.com)
+          for attempt in 1 2 3 4 5; do
+            rm -rf _d
+            git clone -q --depth 1 "https://x-access-token:${TOKEN}@github.com/skillberry-runs/dashboard.git" _d \
+              || { sleep 3; continue; }
+            mkdir -p _d/records
+            cp _new_records/*.json _d/records/
+            git -C _d add records
+            git -C _d "${BOT[@]}" commit -q -m "records: run ${{ github.run_id }}" || { echo "nothing to commit"; exit 0; }
+            if git -C _d push -q origin HEAD; then echo "pushed $(ls _new_records | wc -l | tr -d ' ') record(s)"; exit 0; fi
+            echo "push race, retrying ($attempt)"; sleep 3
+          done
+          echo "::error::failed to push records after retries"; exit 1

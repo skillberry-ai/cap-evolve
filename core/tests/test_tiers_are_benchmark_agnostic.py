@@ -16,7 +16,6 @@ WHERE SPECIFICITY BELONGS
 WHERE IT DOES NOT
     .github/workflows/benchmarks.yml    tier list, dispatch inputs, planner
     ci/benchmarks/README.md             the suite's own tier overview
-    site/benchmarks.js                  the live panel's tier matcher
     everything in the shared shell libs OUTSIDE a `<bench>)` arm
 
 This file enforces that split so it cannot erode as tiers are added.
@@ -30,12 +29,11 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 WORKFLOW = REPO / ".github" / "workflows" / "benchmarks.yml"
 SUITE_README = REPO / "ci" / "benchmarks" / "README.md"
-SITE_JS = REPO / "site" / "benchmarks.js"
 RUN_SUITE = REPO / "ci" / "benchmarks" / "lib" / "run_suite.sh"
 CI_SETUP = REPO / "ci" / "benchmarks" / "lib" / "ci_setup.sh"
 
 # Files that must stay benchmark-agnostic end to end.
-GENERIC_FILES = [WORKFLOW, SUITE_README, SITE_JS]
+GENERIC_FILES = [WORKFLOW, SUITE_README]  # the live panel moved to skillberry-runs/dashboard (2026-11)
 
 # Benchmark names the suite knows about. A generic file may LIST these (the planner's BENCHES,
 # the dispatch combobox, the live panel's allowlist) — what it may not do is explain a TIER in

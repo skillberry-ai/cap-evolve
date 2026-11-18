@@ -11,8 +11,10 @@ Run 36304767214 (`full_verified / spreadsheetbench`):
 
 Step 4 was SKIPPED, so the poller never started and there was no live/ dir to delete and no
 process to kill -- yet the stop step still hung, because it called `live_push.sh --cleanup`
-unconditionally. Cleanup clones the `benchmark-history` branch, whose tip is ~1.4 GB across
-24k files, and nothing bounded that clone or its push. Two costs followed: GitHub serves no
+unconditionally. Cleanup then cloned the `benchmark-history` branch, whose tip was ~1.4 GB across
+24k files, and nothing bounded that clone or its push. (Since 2026-11 live data is one branch per
+run in skillberry-runs/live and cleanup deletes that branch -- no clone -- but every bound below
+still applies to its git calls.) Two costs followed: GitHub serves no
 step log until the job ends, so the step-3 error was unreachable for as long as the hang
 lasted (and was lost for good when the run was cancelled to force a flush); and the job's
 `timeout-minutes: 1440` -- sized for a 912-task suite -- became the cleanup step's budget on
@@ -28,7 +30,8 @@ WHAT THIS PINS
    `timeout-minutes` is a FAILED step, which would fail the job over best-effort cleanup.
    The internal bound is what keeps the outer bound from ever being reached.
 4. The workflow step declares a `timeout-minutes`, so the outer backstop cannot be dropped.
-5. Cleanup still does its job: against a real (local) remote the live/ dir is deleted.
+5. Cleanup still does its job: against a real (local) remote the run's branch is deleted, and
+   only that branch. A snapshot push leaves exactly one commit on the run's branch.
 
 Deliberately pytest and not another `ci/benchmarks/lib/test_*.sh`: nothing in the workflows
 runs those, so a regression there would be invisible.
@@ -138,8 +141,8 @@ def test_cleanup_with_a_stale_pidfile_naming_a_dead_pid_returns_promptly(tmp_pat
 
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert elapsed < 10.0, f"a dead pid turned into a {elapsed:.1f}s wait"
-    assert log.exists() and "clone" in log.read_text(), (
-        "the poller had started, so its live/ dir must still be deleted; git was never called:\n"
+    assert log.exists() and "--delete" in log.read_text(), (
+        "the poller had started, so its live branch must still be deleted; git was never called:\n"
         f"{proc.stdout}\n{proc.stderr}"
     )
     assert not pidfile.exists(), "the pidfile must be removed so a retry stays a no-op"
@@ -161,7 +164,7 @@ def test_cleanup_kills_a_live_poller(tmp_path):
         proc, _ = _run_cleanup(tmp_path, pidfile=pidfile, path=f"{bindir}:/usr/bin:/bin")
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert poller.poll() is not None or poller.wait(timeout=5) is not None, (
-            "the poller survived cleanup and can push its live/ dir back after the delete"
+            "the poller survived cleanup and can push its live branch back after the delete"
         )
     finally:
         if poller.poll() is None:
@@ -217,7 +220,7 @@ def test_cleanups_worst_case_fits_inside_the_step_bound():
 
     A step killed by `timeout-minutes` is a FAILED step, and a failed best-effort cleanup must
     not fail the job -- so cleanup's own worst case has to sit strictly inside the step's
-    budget. Cleanup makes at most two network git calls per attempt (clone, then push), each
+    budget. Cleanup makes at most two network git calls per attempt (ls-remote, then push --delete), each
     capped at LIVE_PUSH_GIT_TIMEOUT, plus the inter-attempt backoff.
     """
     git_timeout = _default_git_timeout()
@@ -312,7 +315,7 @@ def _start_step() -> str:
 
 def test_the_two_steps_agree_on_the_pidfile_path():
     """Cross-file drift here is silent and total: the stop step would see no pidfile for a
-    poller that IS running, skip cleanup, and leave the live/ dir behind forever."""
+    poller that IS running, skip cleanup, and leave the live branch behind until the sweep."""
     pat = re.compile(r'\$RUNNER_TEMP/live_push_[^"]*\.pid')
     written = set(pat.findall(_start_step()))
     read = set(pat.findall(_stop_step()))
@@ -325,30 +328,37 @@ def test_the_two_steps_agree_on_the_pidfile_path():
 # --- 5. cleanup still cleans up --------------------------------------------------------------
 
 
-@pytest.mark.skipif(GIT is None, reason="git not installed")
-def test_cleanup_still_deletes_the_live_dir(tmp_path):
-    """Bounding must not quietly turn cleanup into a no-op. Real git, local remote."""
-    genv = {**os.environ, "GIT_CONFIG_GLOBAL": str(tmp_path / "gitconfig"),
+def _git_env(tmp_path: Path) -> dict:
+    return {**os.environ, "GIT_CONFIG_GLOBAL": str(tmp_path / "gitconfig"),
             "GIT_CONFIG_NOSYSTEM": "1", "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t", "HOME": str(tmp_path)}
 
-    def g(cwd, *args):
-        p = subprocess.run([GIT, *args], cwd=cwd, capture_output=True, text=True, env=genv)
-        assert p.returncode == 0, f"git {args}: {p.stdout}{p.stderr}"
 
+def _bare_origin(tmp_path: Path, genv: dict, branches: list[str]) -> Path:
+    """A local bare repo standing in for skillberry-runs/live, holding one branch per name."""
     origin = tmp_path / "origin.git"
-    seed = tmp_path / "seed"
-    seed.mkdir()
-    g(seed, "init", "-q", "-b", "benchmark-history")
-    keep = seed / "live" / "99__other-bench" / "data"
-    keep.mkdir(parents=True)
-    (keep / "index.json").write_text("{}", encoding="utf-8")
-    mine = seed / "live" / SLUG_DIR / "data"
-    mine.mkdir(parents=True)
-    (mine / "index.json").write_text("{}", encoding="utf-8")
-    g(seed, "add", "-A")
-    g(seed, "commit", "-qm", "seed")
-    g(tmp_path, "clone", "-q", "--bare", str(seed), str(origin))
+    subprocess.run([GIT, "init", "-q", "--bare", str(origin)], check=True, env=genv)
+    for b in branches:
+        seed = tmp_path / f"seed_{b}"
+        (seed / "data").mkdir(parents=True)
+        (seed / "data" / "index.json").write_text("{}", encoding="utf-8")
+        for args in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "seed"],
+                     ["push", "-q", str(origin), f"HEAD:refs/heads/{b}"]):
+            subprocess.run([GIT, *args], cwd=seed, check=True, capture_output=True, env=genv)
+    return origin
+
+
+def _branches(origin: Path, genv: dict) -> set[str]:
+    out = subprocess.run([GIT, f"--git-dir={origin}", "for-each-ref", "--format=%(refname:short)",
+                          "refs/heads"], capture_output=True, text=True, env=genv).stdout
+    return set(out.split())
+
+
+@pytest.mark.skipif(GIT is None, reason="git not installed")
+def test_cleanup_still_deletes_the_live_branch(tmp_path):
+    """Bounding must not quietly turn cleanup into a no-op. Real git, local remote."""
+    genv = _git_env(tmp_path)
+    origin = _bare_origin(tmp_path, genv, [SLUG_DIR, "99__other-bench"])
 
     pidfile = tmp_path / "live_push.pid"
     pidfile.write_text(f"{_dead_pid()}\n", encoding="utf-8")
@@ -358,10 +368,28 @@ def test_cleanup_still_deletes_the_live_dir(tmp_path):
                    "GIT_CONFIG_NOSYSTEM": "1"},
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+    left = _branches(origin, genv)
+    assert SLUG_DIR not in left, f"the run's live branch was not deleted: {left}\n{proc.stdout}"
+    assert "99__other-bench" in left, f"cleanup deleted another run's live branch: {left}"
 
-    listing = subprocess.run([GIT, "ls-tree", "-r", "--name-only", "benchmark-history"],
-                             cwd=origin, capture_output=True, text=True, env=genv).stdout
-    assert f"live/{SLUG_DIR}/" not in listing, f"the live dir was not deleted:\n{listing}\n{proc.stdout}"
-    assert "live/99__other-bench/data/index.json" in listing, (
-        f"cleanup deleted another run's live dir:\n{listing}"
-    )
+
+@pytest.mark.skipif(GIT is None, reason="git not installed")
+def test_a_snapshot_push_keeps_exactly_one_commit_on_the_runs_branch(tmp_path):
+    """The whole point of a branch per run: each 5-minute snapshot REPLACES the last, so live
+    data never accumulates history (on benchmark-history one run left 1,138 commits)."""
+    genv = _git_env(tmp_path)
+    origin = _bare_origin(tmp_path, genv, ["99__other-bench"])
+    env = {**genv, "LIVE_REMOTE": str(origin), "RUNNER_TEMP": str(tmp_path)}
+    for i in (1, 2, 3):
+        snap = tmp_path / f"snap{i}"
+        snap.mkdir()
+        (snap / "index.json").write_text(f'{{"v": {i}}}', encoding="utf-8")
+        p = subprocess.run(["bash", "-c", f'source "{LIVE_PUSH}"; push_live "{snap}" "{SLUG_DIR}"'],
+                           capture_output=True, text=True, env=env)
+        assert p.returncode == 0, p.stdout + p.stderr
+    gd = [GIT, f"--git-dir={origin}"]
+    count = subprocess.run([*gd, "rev-list", "--count", SLUG_DIR], capture_output=True, text=True, env=genv).stdout.strip()
+    latest = subprocess.run([*gd, "show", f"{SLUG_DIR}:data/index.json"], capture_output=True, text=True, env=genv).stdout
+    assert count == "1", f"the run's branch has {count} commits after 3 snapshots; it must have 1"
+    assert '"v": 3' in latest, f"the branch does not hold the latest snapshot: {latest!r}"
+    assert _branches(origin, genv) == {SLUG_DIR, "99__other-bench"}, "another run's branch was touched"

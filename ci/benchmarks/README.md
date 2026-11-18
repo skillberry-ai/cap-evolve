@@ -294,7 +294,7 @@ model gemma-4-31B-it  ibm-rits/google/gemma-4-31B-it
   still fails; it does not switch gateways halfway, so baseline and candidates are never
   measured on different gateways.
 - **Where to see the choice:** the job summary has a "Model providers" table. The run record
-  (`records/<run>.json` on `benchmark-history`) has `agent_provider`, `optimizer_provider`,
+  (`records/<run>.json` in `skillberry-runs/dashboard`) has `agent_provider`, `optimizer_provider`,
   the `*_requested` names, and `*_provider_skipped` with the reason for each skipped provider
   (`over-budget`, `not-listed`, `not-entitled`, `unreachable`, `no-secrets`, `http-<code>`
   for any other non-200 answer such as 401, 404 or a rate-limit 429, and `probe-failed` for a
@@ -394,60 +394,37 @@ optimized within the same run. To change what a tier covers, edit `<bench>/<tier
 directly (id + tag + agent, same shape across `smoke`/`full`/`integration`) and re-run
 `ci/benchmarks/lib/run_suite.sh <bench>` (set `TIER=<tier>` for anything other than `smoke`).
 
-## Benchmark history page
+## Benchmark results: the skillberry-runs dashboard
 
-Every run appends a per-`(run×bench)` record to the **`benchmark-history`** orphan branch
-(`records/<run_id>__<bench>.json`) via the single-writer `aggregate` job (no races). That job no
-longer commits `benchmarks.json`/`meta.json` to the branch — an aggregate over every run ever
-recorded rewritten in full on every single run would grow that file's git history quadratically.
-Instead, `.github/workflows/pages.yml` clones this branch and runs `record.py aggregate` against
-its `records/` **at deploy time**, rendering `benchmarks.json`/`meta.json` straight into the Pages
-artifact (never committed to git). The Pages page `site/benchmarks.html` fetches that same-origin
-`benchmarks.json` at load and renders a sortable/filterable table (rollup rows expand to per-task
-detail). Bootstrap the branch once:
+Results are published to the [`skillberry-runs`](https://github.com/skillberry-runs) org and shown at
+**<https://skillberry-runs.github.io/dashboard/>** (this site's `benchmarks.html` redirects there).
+Since 2026-11 CI writes there directly; until then it wrote to this repo's `benchmark-history`
+branch. Every run's `aggregate` job publishes, with the `SKILLBERRY_RUNS_RESULTS_TOKEN` secret:
 
-```bash
-git switch --orphan benchmark-history
-mkdir -p records && : > records/.gitkeep
-git add records/.gitkeep
-git commit -m "chore: init benchmark-history branch" && git push origin benchmark-history
-```
+| What | Where | Notes |
+|---|---|---|
+| one record per `(run × tier × bench)` | `skillberry-runs/dashboard`: `records/<run_id>__<tier>-<bench>.json` | the push deploys the dashboard, which renders `benchmarks.json` from `records/` (never committed) |
+| the run's "Open UI" data (`export_static` output) | the benchmark's repo: `ci_ui/<run_id>__<tier>-<bench>/` | data only; one shared viewer on the dashboard opens it. Masked first with the dashboard's `scripts/mask_secrets.py` |
+
+Which repo holds which bench is the dashboard's [`sections.json`](https://github.com/skillberry-runs/dashboard/blob/main/sections.json)
+(`benches`). A bench that isn't listed still gets its record, and a `::warning::` says its Open UI
+data was not published: add it there to keep future runs' data. Records are validated with the
+dashboard's `scripts/check_records.py` before anything is pushed.
 
 To publish a run the `aggregate` job never handled — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
-### Per-run CapEvolve UI snapshots
-
-Each `bench` job also best-effort-exports its raw `.capevolve` run directory as a static
-CapEvolve dashboard snapshot (`export_static.py` + a `VITE_STATIC=1` Vite build), assembled
-by the `aggregate` job into `runs/<run_id>__<tier>-<bench>/ui/` on `benchmark-history`
-alongside its record, which gets `"has_ui": true`. `pages.yml` redeploys on every Benchmarks
-completion and folds `benchmark-history`'s `runs/**` into the deployed site under
-`benchmark-ui/runs/**`, so `benchmarks.html` can link "Open UI" straight to a specific run's
-dashboard. Records/snapshots are **kept forever by default** — there is no automatic expiry.
-
-To reclaim space, run **Actions → "Prune benchmark-history" → Run workflow** with a `days`
-input (default `30`) — it deletes any record (and its paired UI snapshot) older than that
-many days, directly on `benchmark-history`. This only removes files from the branch's current
-tree; it does not rewrite git history, so it doesn't reclaim `.git` object storage — that's
-an accepted tradeoff for keeping "keep forever unless a human explicitly prunes" simple.
-
 ### Live monitoring while a run is in progress
 
-Each `bench` job also backgrounds `ci/benchmarks/lib/live_push.sh` around "Run suite":
-every 5 minutes it exports the in-progress run's static dashboard data and overwrites
-`live/<run_id>__<tier>-<bench>/data/` on `benchmark-history` — always the latest
-snapshot only, never a history of intermediate ones. When the job ends (any outcome),
-it deletes that `live/` entry; the permanent snapshot lands moments later via the
-`aggregate` job's `runs/<slug>/` write, same as always.
+Each `bench` job backgrounds `ci/benchmarks/lib/live_push.sh` around "Run suite": every 5 minutes it
+exports the in-progress run's dashboard data and force-pushes it, as a single fresh commit, to the
+job's own branch `<run_id>__<tier>-<bench>` of [`skillberry-runs/live`](https://github.com/skillberry-runs/live)
+(`data/` at the branch root). A branch never holds more than the latest snapshot. When the job ends
+(any outcome) the branch is deleted; the permanent Open UI data lands moments later via `aggregate`.
+The poller authenticates with `SKILLBERRY_RUNS_LIVE_TOKEN`, which can reach that repo only.
 
-`benchmarks.html` polls the GitHub Actions API client-side (unauthenticated, no new
-CI-side status reporting) to show a "Running now" panel with a "Watch live" link per
-in-progress `<tier>/<bench>` job. Unlike the finished-run UI (a full shell+data copy
-committed per run), the live view points one generic dashboard shell — built once per
-Pages deploy at `site/dashboard-ui/` — at the live data via a `?dataBase=` query param,
-so no Pages redeploy is needed while a run is in progress.
-
-Orphaned `live/` entries (e.g. a hard runner crash before cleanup runs) are harmless:
-"what's running" is always derived from the GitHub Actions API, never from `live/`'s
-existence, so an orphan is simply never linked to.
+The dashboard's "Running now" panel polls the GitHub Actions API client-side (unauthenticated) for
+in-progress `<tier> / <bench>` jobs and links each to the shared viewer on its live branch via
+`?dataBase=`. "What's running" always comes from the Actions API, never from which branches exist,
+so a leftover branch (a job killed before cleanup) is never linked to; the live repo's hourly
+`sweep-stale-branches.yml` deletes any branch untouched for 26 hours.
