@@ -429,6 +429,28 @@ github.com still works, so publishing no longer goes through the artifact servic
 To publish a run its bench job never published — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
+### Raw run data: archived on the runner (interim, for Box)
+
+What gets published is a summary. The raw run data, meaning the run dir with every candidate, trace and
+rollout, plus the job's output dir, would otherwise be lost when the next job's checkout cleans the
+workspace. So each bench job archives it first (step `Back up the raw run data on the runner`,
+[`lib/backup_run.sh`](lib/backup_run.sh)), **on the runner, outside the workspace**, in the same layout
+as the Box folder `skillberry-runs-backup`:
+
+```
+~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst
+```
+
+`<repo>` is the benchmark's skillberry-runs repo (from the dashboard's `sections.json`). The run's
+`ci_runs/` folder gets a `backup.json` (archive path, size, sha256, runner) and its README names the
+archive, so the archive can be found from the run's page.
+
+**Interim:** moving the archives to Box is manual for now, by someone with access to the runner (a plain
+copy of `~/skillberry-runs-backup/` into the Box folder, then deleting what was copied), until CI can
+upload to Box itself (rclone or an approved Box app, both unavailable since IBM's network change). The
+step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips (with
+a warning) when the runner's disk would drop below 20 GB free.
+
 ### Live monitoring while a run is in progress
 
 Each `bench` job backgrounds `ci/benchmarks/lib/live_push.sh` around "Run suite": every 5 minutes it
