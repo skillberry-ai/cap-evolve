@@ -1,7 +1,9 @@
 /**
  * cap-evolve brand mark — the capybara logo. `state="live"` adds a soft amber
  * pulse ring (disabled under prefers-reduced-motion via the global CSS guard).
- * Served from /cap-evolve-logo.png (public/, downscaled to 256px).
+ * Served from public/cap-evolve-logo.png (downscaled to 256px), resolved against Vite's base:
+ * '/' for the live server, './' for the static export (VITE_STATIC=1), which is hosted under a
+ * subpath (e.g. GitHub Pages). An absolute '/cap-evolve-logo.png' 404s there.
  */
 type Props = {
   size?: number
@@ -24,7 +26,7 @@ export function BrandLogo({ size = 32, state = 'idle', className = '', title = '
         />
       )}
       <img
-        src="/cap-evolve-logo.png"
+        src={`${import.meta.env.BASE_URL}cap-evolve-logo.png`}
         width={size}
         height={size}
         alt={title}
