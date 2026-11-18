@@ -158,6 +158,9 @@ Runs come in several **tiers** (a first-class dimension in the workflow, same wo
   (`tier=full_verified`, or a `benchmark-full_verified-<bench>` label), never under `tier=all`
   — but unlike `pilot` that exclusion is about **cost**, not about the numbers being
   meaningless: a `full_verified` result is a real held-out number.
+- **`canary`** — a minimal **pipeline check**: 1 task, 1 trial, 1 iteration. It exercises the whole
+  run → live → artifact → publish path in minutes; its reward numbers mean **nothing**. Only runs
+  when named (`tier=canary`, or a `benchmark-canary-<bench>` label), never under `all`.
 - **`pilot`** — a cost/runtime measurement rig whose reward numbers are **not comparable to
   anything**. Explicit dispatch only.
 

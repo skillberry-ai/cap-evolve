@@ -52,10 +52,10 @@ on:
         default: direct
         options: [direct, blackbox]
       tier:
-        description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
+        description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. canary is a minimal pipeline check (1 task, 1 trial, 1 iteration) whose rewards mean nothing. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
         type: choice
         default: smoke
-        options: [all, smoke, pilot, full, full_verified]
+        options: [all, smoke, canary, pilot, full, full_verified]
       iterations:
         description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step. WHAT ONE ITERATION BUYS DEPENDS ON THE ALGORITHM: on the hill-climb (deterministic) path it is one optimizer call; under agent-optimize it is one CANDIDATE taken to a gate decision, so a wave of three parallel siblings spends three iterations at once. Budget accordingly — 3 under agent-optimize can mean a single wave and no iteration at all."
         type: string
@@ -409,7 +409,7 @@ jobs:
           # any bench that gains one uses the same tier rather than inventing a name with its
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
-          TIERS = ["smoke", "pilot", "full", "full_verified"]
+          TIERS = ["smoke", "canary", "pilot", "full", "full_verified"]
           # tau2_sierra / tau2_sierra_blackbox are the DELIVERY ARMS of benchmarks/tau2/examples/sierra_airline
           # (vanilla tau2 pinned at its TAU2_REFERENCE_SHA): same tasks and tiers, candidate
           # delivered in-process versus through the Skillberry Store + Proxy-Agent. They stay
@@ -429,11 +429,13 @@ jobs:
           # EVERY leg to the skillberry-runs dashboard. Letting "all" pick it up would put meaningless
           # numbers on the benchmarks page. A `benchmark-pilot-<bench>` label still works,
           # because that names both the tier and the bench deliberately.
+          # `canary` is a pipeline check (1 task x 1 trial x 1 iteration): it exists to exercise the
+          # run -> live -> artifact -> publish path cheaply, and its numbers mean nothing.
           # `full_verified` is a REAL comparison tier, unlike pilot — it is excluded for COST,
           # not for honesty. A benchmark populating both whole-set tiers would put two of them
           # in every `all` dispatch, and each is a full-length run on its own. Run it by name:
           # `tier=full_verified`, or a `benchmark-full_verified-<bench>` label.
-          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified"}
+          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified", "canary"}
 
           # Is the repository actually checked out here? See the fail-open note below.
           tree_present = os.path.isdir("ci/benchmarks")
@@ -563,7 +565,7 @@ jobs:
       # so a dispatch of iterations=5 on smoke was silently ignored and the operator learned it
       # only by reading ITERATIONS in the job log. Smoke is the tier you iterate the algorithm
       # on, so pinning it was the wrong knob to make unreachable.
-      ITERATIONS: ${{ github.event.inputs.iterations || (matrix.tier == 'smoke' && '3') || '10' }}
+      ITERATIONS: ${{ github.event.inputs.iterations || (matrix.tier == 'canary' && '1') || (matrix.tier == 'smoke' && '3') || '10' }}
       # Smoke pins 3 trials, same as it pins iterations, and for a measurable reason.
       # Run 31183768756 was dispatched with trials=1 and re-scored the SAME seed capability at
       # 0.400 (baseline) then 0.200 (finalize) — pytest-dev__pytest-7432 flipped 1.000 -> 0.000
@@ -585,7 +587,7 @@ jobs:
       # trials, is the dominant noise term (val SE 0.158 at 10 tasks x 3 vs ~0.079 at 40 x 1),
       # and `grow.py` exists to buy replication only where a candidate looks promising.
       # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
-      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
+      NUM_TRIALS: ${{ github.event.inputs.trials || ((matrix.tier == 'canary' || matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || (matrix.tier == 'smoke' && '3') || '10' }}
       # Plain catalog names by default, so a PR-label run also gets provider fallback. The
       # provider actually used is chosen by ci_setup.sh and exported as *_MODEL_RESOLVED.
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'gpt-oss-120b' }}
@@ -759,6 +761,25 @@ jobs:
           }
           JSON
           cat "$out/runmeta.json"
+
+      # Best-effort diagnostics for the upload below. The artifact service is NOT github.com: the
+      # runner talks to Actions' results service and Azure blob storage. On 2026-11-18 the upload
+      # from skillberry-1 timed out (CreateArtifact, 5 attempts) while github.com itself worked,
+      # so this records which endpoints answer from the runner, and how fast.
+      - name: Check the runner can reach GitHub's artifact service
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          probe() { printf '  %-58s ' "$1"; curl -sS -o /dev/null -m 15 -w '%{http_code} in %{time_total}s\n' "$1" 2>&1 | tail -1; }
+          echo "ACTIONS_RESULTS_URL host: $(echo "${ACTIONS_RESULTS_URL:-unset}" | sed -E 's#^(https?://[^/]+).*#\1#')"
+          probe "https://github.com"
+          probe "https://api.github.com"
+          [ -n "${ACTIONS_RESULTS_URL:-}" ] && probe "$(echo "$ACTIONS_RESULTS_URL" | sed -E 's#^(https?://[^/]+).*#\1#')/"
+          probe "https://results-receiver.actions.githubusercontent.com/"
+          probe "https://productionresultssa0.blob.core.windows.net/"
+          probe "https://pipelines.actions.githubusercontent.com/"
+          [ -n "${HTTPS_PROXY:-${https_proxy:-}}" ] && echo "  (an HTTPS proxy is configured on this runner)"
 
       - name: Upload artifacts (metrics + optimized capabilities)
         if: always()
