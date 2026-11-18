@@ -26,11 +26,13 @@ published by hand uses the same layout, see ci/benchmarks/PUBLISHING.md):
   capability.diff           the optimized capability vs the seed
   optimized_capability/     the optimized capability itself (no __pycache__)
   recipe/                   capevolve.yaml, split_ids.json, the tier's overrides.env
+  backup.json               where the raw run data archive is (when backup_run.sh made one)
 
 SkillsBench skills are Anthropic-licensed, so for skillsbench only a diffstat is kept
 (capability.diffstat.txt), as run_suite.sh already does. Anything over MAX_BYTES is left out,
 and the README says so. Raw run data (traces, candidates, logs) is NOT here: the run's
-"Open UI" data covers browsing it, and the full run dir is backed up separately.
+"Open UI" data covers browsing it, and the full run dir is archived separately (backup_run.sh;
+backup.json and the README say where).
 """
 from __future__ import annotations
 
@@ -62,6 +64,7 @@ FILES = [  # (path, description); listed in the README only if present
     ("recipe/capevolve.yaml", "the run's cap-evolve spec"),
     ("recipe/split_ids.json", "the train / val / test task ids"),
     ("recipe/overrides.env", "the tier's committed overrides"),
+    ("backup.json", "where the run's raw data archive is (backup_run.sh)"),
 ]
 
 
@@ -163,6 +166,11 @@ def readme(meta: dict, dest: Path, name: str, repo: str | None, has_ui: bool, sk
             L.append(f"- [`{rel}`]({rel}) — {desc}")
     for s in skipped:
         L.append(f"- not included: {s}")
+    if (dest / "backup.json").is_file():
+        b = json.loads((dest / "backup.json").read_text(encoding="utf-8"))
+        L.append(f"- **Raw run data** (run dir with candidates, traces and rollouts, {b.get('bytes', 0) / 1e6:.0f} MB "
+                 f"compressed): `{b.get('archive')}` in the `skillberry-runs-backup` archive "
+                 f"({b.get('location', '')}).")
     if not (dest / "recipe" / "capevolve.yaml").exists():
         L.append("- `recipe/` was not available for this run (published from its CI artifact); the tier's "
                  f"definition is `ci/benchmarks/{bench}/{tier}/` at the commit above.")
@@ -190,7 +198,7 @@ def build(out: Path, dest: Path, project: Path | None, run_dir: Path | None, tie
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
     skipped: list[str] = []
-    for f in ("report.md", "runmeta.json", "metrics.jsonl", "steps.jsonl"):
+    for f in ("report.md", "runmeta.json", "metrics.jsonl", "steps.jsonl", "backup.json"):
         _put(out / f, dest / f, skipped, f)
     if run_dir:
         _put(run_dir / "final.json", dest / "final.json", skipped, "final.json")

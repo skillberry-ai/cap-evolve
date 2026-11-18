@@ -784,6 +784,24 @@ jobs:
           JSON
           cat "$out/runmeta.json"
 
+      # The raw run data (the whole work area: run dir with candidates, traces, rollouts, plus the
+      # output dir) is otherwise lost when the next job's checkout cleans the workspace. Archived on
+      # the runner, outside the workspace, in the same layout as the Box folder skillberry-runs-backup:
+      #   ~/skillberry-runs-backup/user/<who triggered it>/<repo>/<run_id>__<tier>-<bench>.tar.zst
+      # Interim: someone with access to the runner moves the archives to Box, until CI can upload
+      # there itself. Best-effort: never fails the run. See ci/benchmarks/lib/backup_run.sh.
+      - name: Back up the raw run data on the runner
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          # attacker-influenced text (a username) goes through the environment, not the shell source
+          BACKUP_USER: ${{ github.triggering_actor }}
+        run: |
+          PY="${CAPEVOLVE_PY:-python3}" bash ci/benchmarks/lib/backup_run.sh \
+            "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}" \
+            "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}"
+
       # Each leg publishes its own results to the skillberry-runs org
       # (https://skillberry-runs.github.io/dashboard/), with plain git to github.com:
       #   ci_runs/<run_id>__<tier>-<bench>/      -> the benchmark's own repo (the run's folder: README,
