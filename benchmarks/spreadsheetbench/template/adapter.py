@@ -1228,8 +1228,8 @@ class HelperGateConfigError(BaseException):
     A BaseException, not an Exception: some external optimizers catch every Exception (GEPA with
     raise_on_exception=False goes on to the next iteration; EvoSkill scores it 0), and the error must stop them too.
     The #895 EvoSkill port (recipes/evoskill/evoskill_port.py in github.com/skillberry-runs/spreadsheetbench) uses
-    the same pattern for its BudgetExhausted. Inside a cap-evolve run the
-    external gate is off, so cap-evolve's own handlers never see this error."""
+    the same pattern for its BudgetExhausted. Inside a cap-evolve run the external gate is off, so cap-evolve's own
+    handlers never see this error."""
 
 
 def _external_gate_config() -> tuple | None:
@@ -1246,7 +1246,6 @@ def _external_gate_config() -> tuple | None:
     import hashlib
 
     from cap_evolve import helper_gate
-
     from cap_evolve.check import DRIVER_CAP_EVOLVE, DRIVER_ENV
 
     global _EXT_GATE_SKIP_NOTED
@@ -1259,8 +1258,10 @@ def _external_gate_config() -> tuple | None:
         with _EXT_GATE_LOCK:
             first, _EXT_GATE_SKIP_NOTED = not _EXT_GATE_SKIP_NOTED, True
         if first:
-            print("spreadsheetbench: cap-evolve drives this run, so its loop gate checks the helpers; "
-                  "CAPEVOLVE_HELPERS_SPEC is ignored (helper gate skipped)", file=sys.stderr)
+            print("spreadsheetbench: CAPEVOLVE_DRIVER=cap-evolve, so the cap-evolve loop gate checks the helpers; "
+                  "CAPEVOLVE_HELPERS_SPEC is ignored (helper gate skipped). If this is not a cap-evolve run, the "
+                  "process loaded the adapter with cap_evolve.check.load_adapter: import it directly instead",
+                  file=sys.stderr)
         return None
     seed_env = os.environ.get("CAPEVOLVE_HELPERS_SEED", "")
     try:
@@ -2032,8 +2033,9 @@ class Adapter(CapabilityAdapter):
                 metadata=meta,
             )
         except HelperGateConfigError:
-            # The run's fault, not this rollout's. The handler below would turn it into a rollout without
-            # error_kind, which a caller counts as infra, retries and then drops as missing data.
+            # The run's fault, not this rollout's: it must reach the caller. As a BaseException it already passes
+            # the handler below; this clause states that, and keeps it so if the base class ever changes. That
+            # handler would turn it into a rollout without error_kind, which a caller retries as infra and drops.
             raise
         except Exception as e:  # noqa: BLE001
             return Rollout(task_id=task.id, error=f"run_target failed: {e}")
